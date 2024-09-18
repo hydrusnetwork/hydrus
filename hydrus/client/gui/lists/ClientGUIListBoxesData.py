@@ -6,7 +6,7 @@ from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusTags
 
 from hydrus.client.metadata import ClientTags
-from hydrus.client.search import ClientSearch
+from hydrus.client.search import ClientSearchPredicate
 
 class ListBoxItem( object ):
     
@@ -45,7 +45,7 @@ class ListBoxItem( object ):
         raise NotImplementedError()
         
     
-    def GetSearchPredicates( self ) -> typing.List[ ClientSearch.Predicate ]:
+    def GetSearchPredicates( self ) -> typing.List[ ClientSearchPredicate.Predicate ]:
         
         raise NotImplementedError()
         
@@ -89,7 +89,7 @@ class ListBoxItemTagSlice( ListBoxItem ):
         return self._tag_slice
         
     
-    def GetSearchPredicates( self ) -> typing.List[ ClientSearch.Predicate ]:
+    def GetSearchPredicates( self ) -> typing.List[ ClientSearchPredicate.Predicate ]:
         
         return []
         
@@ -162,7 +162,7 @@ class ListBoxItemNamespaceColour( ListBoxItem ):
         return ( self._namespace, self._colour )
         
     
-    def GetSearchPredicates( self ) -> typing.List[ ClientSearch.Predicate ]:
+    def GetSearchPredicates( self ) -> typing.List[ ClientSearchPredicate.Predicate ]:
         
         return []
         
@@ -254,9 +254,9 @@ class ListBoxItemTextTag( ListBoxItem ):
         return self._tag
         
     
-    def GetSearchPredicates( self ) -> typing.List[ ClientSearch.Predicate ]:
+    def GetSearchPredicates( self ) -> typing.List[ ClientSearchPredicate.Predicate ]:
         
-        return [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, value = self._tag ) ]
+        return [ ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_TAG, value = self._tag ) ]
         
     
     def GetRowCount( self, show_parent_rows: bool ):
@@ -373,11 +373,11 @@ class ListBoxItemTextTagWithCounts( ListBoxItemTextTag ):
             
         
     
-    def GetSearchPredicates( self ) -> typing.List[ ClientSearch.Predicate ]:
+    def GetSearchPredicates( self ) -> typing.List[ ClientSearchPredicate.Predicate ]:
         
         # with counts? or just merge this into texttag???
         
-        return [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, value = self._tag ) ]
+        return [ ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_TAG, value = self._tag ) ]
         
     
     def GetRowsOfPresentationTextsWithNamespaces( self, render_for_user: bool, sibling_decoration_allowed: bool, sibling_connector_string: str, sibling_connector_namespace: typing.Optional[ str ], parent_decoration_allowed: bool, show_parent_rows: bool ) -> typing.List[ typing.List[ typing.Tuple[ str, str, str ] ] ]:
@@ -463,7 +463,7 @@ class ListBoxItemTextTagWithCounts( ListBoxItemTextTag ):
     
 class ListBoxItemPredicate( ListBoxItem ):
     
-    def __init__( self, predicate: ClientSearch.Predicate ):
+    def __init__( self, predicate: ClientSearchPredicate.Predicate ):
         
         super().__init__()
         
@@ -493,18 +493,18 @@ class ListBoxItemPredicate( ListBoxItem ):
     
     def GetCopyableText( self, with_counts: bool = False ) -> str:
         
-        if self._predicate.GetType() == ClientSearch.PREDICATE_TYPE_NAMESPACE:
+        if self._predicate.GetType() == ClientSearchPredicate.PREDICATE_TYPE_NAMESPACE:
             
             namespace = self._predicate.GetValue()
             
             # this is useful for workflow
             text = '{}:*'.format( namespace )
             
-        elif self._predicate.GetType() == ClientSearch.PREDICATE_TYPE_PARENT:
+        elif self._predicate.GetType() == ClientSearchPredicate.PREDICATE_TYPE_PARENT:
             
             text = HydrusTags.CleanTag( self._predicate.GetValue() )
             
-        elif self._predicate.GetType() == ClientSearch.PREDICATE_TYPE_WILDCARD:
+        elif self._predicate.GetType() == ClientSearchPredicate.PREDICATE_TYPE_WILDCARD:
             
             wildcard = self._predicate.GetValue()
             
@@ -518,7 +518,7 @@ class ListBoxItemPredicate( ListBoxItem ):
         return text
         
     
-    def GetPredicate( self ) -> ClientSearch.Predicate:
+    def GetPredicate( self ) -> ClientSearchPredicate.Predicate:
         
         return self._predicate
         
@@ -580,9 +580,9 @@ class ListBoxItemPredicate( ListBoxItem ):
         return rows_of_texts_and_namespaces
         
     
-    def GetSearchPredicates( self ) -> typing.List[ ClientSearch.Predicate ]:
+    def GetSearchPredicates( self ) -> typing.List[ ClientSearchPredicate.Predicate ]:
         
-        if self._predicate.GetType() in ( ClientSearch.PREDICATE_TYPE_LABEL, ClientSearch.PREDICATE_TYPE_PARENT ):
+        if self._predicate.GetType() in ( ClientSearchPredicate.PREDICATE_TYPE_LABEL, ClientSearchPredicate.PREDICATE_TYPE_PARENT ):
             
             return []
             
@@ -594,7 +594,7 @@ class ListBoxItemPredicate( ListBoxItem ):
     
     def GetTags( self ) -> typing.Set[ str ]:
         
-        if self._predicate.GetType() == ClientSearch.PREDICATE_TYPE_TAG:
+        if self._predicate.GetType() == ClientSearchPredicate.PREDICATE_TYPE_TAG:
             
             tag = self._predicate.GetValue()
             

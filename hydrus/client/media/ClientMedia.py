@@ -20,7 +20,7 @@ from hydrus.client.media import ClientMediaManagers
 from hydrus.client.media import ClientMediaResult
 from hydrus.client.metadata import ClientContentUpdates
 from hydrus.client.metadata import ClientTags
-from hydrus.client.search import ClientSearch
+from hydrus.client.search import ClientSearchTagContext
 
 def CanDisplayMedia( media: "MediaSingleton" ) -> bool:
     
@@ -474,7 +474,7 @@ class MediaCollect( HydrusSerialisable.SerialisableBase ):
         
         if tag_context is None:
             
-            tag_context = ClientSearch.TagContext( service_key = CC.COMBINED_TAG_SERVICE_KEY )
+            tag_context = ClientSearchTagContext.TagContext( service_key = CC.COMBINED_TAG_SERVICE_KEY )
             
         
         self.namespaces = namespaces
@@ -507,7 +507,7 @@ class MediaCollect( HydrusSerialisable.SerialisableBase ):
             
             ( namespaces, serialisable_rating_service_keys, collect_unmatched ) = old_serialisable_info
             
-            tag_context = ClientSearch.TagContext( service_key = CC.COMBINED_TAG_SERVICE_KEY )
+            tag_context = ClientSearchTagContext.TagContext( service_key = CC.COMBINED_TAG_SERVICE_KEY )
             
             serialisable_tag_context = tag_context.GetSerialisableTuple()
             
@@ -2354,7 +2354,7 @@ class MediaSort( HydrusSerialisable.SerialisableBase ):
         
         if tag_context is None:
             
-            tag_context = ClientSearch.TagContext( service_key = CC.COMBINED_TAG_SERVICE_KEY )
+            tag_context = ClientSearchTagContext.TagContext( service_key = CC.COMBINED_TAG_SERVICE_KEY )
             
         
         ( sort_metatype, sort_data ) = sort_type
@@ -2457,7 +2457,7 @@ class MediaSort( HydrusSerialisable.SerialisableBase ):
             
             ( sort_metatype, serialisable_sort_data, sort_order ) = old_serialisable_info
             
-            tag_context = ClientSearch.TagContext( service_key = CC.COMBINED_TAG_SERVICE_KEY )
+            tag_context = ClientSearchTagContext.TagContext( service_key = CC.COMBINED_TAG_SERVICE_KEY )
             
             serialisable_tag_context = tag_context.GetSerialisableTuple()
             

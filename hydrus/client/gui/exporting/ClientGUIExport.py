@@ -41,7 +41,7 @@ from hydrus.client.metadata import ClientContentUpdates
 from hydrus.client.metadata import ClientMetadataMigrationExporters
 from hydrus.client.metadata import ClientMetadataMigrationImporters
 from hydrus.client.metadata import ClientTags
-from hydrus.client.search import ClientSearch
+from hydrus.client.search import ClientSearchFileSearchContext
 
 class EditExportFoldersPanel( ClientGUIScrolledPanels.EditPanel ):
     
@@ -90,7 +90,7 @@ class EditExportFoldersPanel( ClientGUIScrolledPanels.EditPanel ):
         
         default_location_context = CG.client_controller.new_options.GetDefaultLocalLocationContext()
         
-        file_search_context = ClientSearch.FileSearchContext( location_context = default_location_context )
+        file_search_context = ClientSearchFileSearchContext.FileSearchContext( location_context = default_location_context )
         
         metadata_routers = new_options.GetDefaultExportFilesMetadataRouters()
         

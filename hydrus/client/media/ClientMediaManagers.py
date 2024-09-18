@@ -16,7 +16,7 @@ from hydrus.client import ClientLocation
 from hydrus.client import ClientTime
 from hydrus.client.metadata import ClientContentUpdates
 from hydrus.client.metadata import ClientTags
-from hydrus.client.search import ClientSearch
+from hydrus.client.search import ClientSearchTagContext
 
 class FileDuplicatesManager( object ):
     
@@ -1874,7 +1874,7 @@ class TagsManager( object ):
             
         
     
-    def GetNumTags( self, tag_context: ClientSearch.TagContext, tag_display_type ):
+    def GetNumTags( self, tag_context: ClientSearchTagContext.TagContext, tag_display_type ):
         
         with self._lock:
             

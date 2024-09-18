@@ -1,7 +1,4 @@
-import collections
 import datetime
-import re
-import threading
 import typing
 
 from hydrus.core import HydrusConstants as HC
@@ -10,15 +7,13 @@ from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTags
-from hydrus.core import HydrusText
 from hydrus.core import HydrusTime
 
-from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientData
 from hydrus.client import ClientGlobals as CG
-from hydrus.client import ClientLocation
-from hydrus.client import ClientTime
+from hydrus.client.media import ClientMediaResult
 from hydrus.client.metadata import ClientTags
+from hydrus.client.search import ClientNumberTest
 
 PREDICATE_TYPE_TAG = 0
 PREDICATE_TYPE_NAMESPACE = 1
@@ -126,19 +121,6 @@ SYSTEM_PREDICATE_TYPES = {
     PREDICATE_TYPE_SYSTEM_HAS_FORCED_FILETYPE
 }
 
-IGNORED_TAG_SEARCH_CHARACTERS = '[](){}/\\"\'-_'
-IGNORED_TAG_SEARCH_CHARACTERS_UNICODE_TRANSLATE = { ord( char ) : ' ' for char in IGNORED_TAG_SEARCH_CHARACTERS }
-
-def CollapseWildcardCharacters( text ):
-    
-    while '**' in text:
-        
-        text = text.replace( '**', '*' )
-        
-    
-    return text
-    
-
 def ConvertSpecificFiletypesToSummary( specific_mimes: typing.Collection[ int ], only_searchable = True ) -> typing.Collection[ int ]:
     
     specific_mimes_to_process = set( specific_mimes )
@@ -163,24 +145,6 @@ def ConvertSpecificFiletypesToSummary( specific_mimes: typing.Collection[ int ],
     summary_mimes.update( specific_mimes_to_process )
     
     return summary_mimes
-    
-
-def ConvertSubtagToSearchable( subtag ):
-    
-    if subtag == '':
-        
-        return ''
-        
-    
-    subtag = CollapseWildcardCharacters( subtag )
-    
-    subtag = subtag.translate( IGNORED_TAG_SEARCH_CHARACTERS_UNICODE_TRANSLATE )
-    
-    subtag = HydrusText.re_one_or_more_whitespace.sub( ' ', subtag )
-    
-    subtag = subtag.strip()
-    
-    return subtag
     
 
 def ConvertSummaryFiletypesToSpecific( summary_mimes: typing.Collection[ int ], only_searchable = True ) -> typing.Collection[ int ]:
@@ -222,1378 +186,6 @@ def ConvertSummaryFiletypesToString( summary_mimes: typing.Collection[ int ] ) -
     
     return mime_text
     
-
-def ConvertTagToSearchable( tag ):
-    
-    ( namespace, subtag ) = HydrusTags.SplitTag( tag )
-    
-    searchable_subtag = ConvertSubtagToSearchable( subtag )
-    
-    return HydrusTags.CombineTag( namespace, searchable_subtag )
-    
-
-def MergePredicates( predicates ):
-    
-    master_predicate_dict = {}
-    
-    for predicate in predicates:
-        
-        # this works because predicate.__hash__ exists
-        
-        if predicate in master_predicate_dict:
-            
-            master_predicate_dict[ predicate ].GetCount().AddCounts( predicate.GetCount() )
-            
-        else:
-            
-            master_predicate_dict[ predicate ] = predicate
-            
-        
-    
-    return list( master_predicate_dict.values() )
-    
-
-def IsComplexWildcard( search_text ):
-    
-    num_stars = search_text.count( '*' )
-    
-    if num_stars > 1:
-        
-        return True
-        
-    
-    if num_stars == 1 and not search_text.endswith( '*' ):
-        
-        return True
-        
-    
-    return False
-    
-
-def SortPredicates( predicates ):
-    
-    key = lambda p: ( - p.GetCount().GetMinCount(), p.ToString() )
-    
-    predicates.sort( key = key )
-    
-    return predicates
-    
-
-def SubtagIsEmpty( search_text: str ):
-    
-    ( namespace, subtag ) = HydrusTags.SplitTag( search_text )
-    
-    return subtag == ''
-    
-
-NUMBER_TEST_OPERATOR_LESS_THAN = 0
-NUMBER_TEST_OPERATOR_GREATER_THAN = 1
-NUMBER_TEST_OPERATOR_EQUAL = 2
-NUMBER_TEST_OPERATOR_APPROXIMATE_PERCENT = 3
-NUMBER_TEST_OPERATOR_NOT_EQUAL = 4
-NUMBER_TEST_OPERATOR_APPROXIMATE_ABSOLUTE = 5
-
-number_test_operator_to_str_lookup = {
-    NUMBER_TEST_OPERATOR_LESS_THAN : '<',
-    NUMBER_TEST_OPERATOR_GREATER_THAN : '>',
-    NUMBER_TEST_OPERATOR_EQUAL : '=',
-    NUMBER_TEST_OPERATOR_APPROXIMATE_PERCENT : HC.UNICODE_APPROX_EQUAL,
-    NUMBER_TEST_OPERATOR_NOT_EQUAL : HC.UNICODE_NOT_EQUAL,
-    NUMBER_TEST_OPERATOR_APPROXIMATE_ABSOLUTE : HC.UNICODE_APPROX_EQUAL
-}
-
-number_test_str_to_operator_lookup = { value : key for ( key, value ) in number_test_operator_to_str_lookup.items() if key != NUMBER_TEST_OPERATOR_APPROXIMATE_ABSOLUTE }
-
-class NumberTest( HydrusSerialisable.SerialisableBase ):
-    
-    SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_NUMBER_TEST
-    SERIALISABLE_NAME = 'Number Test'
-    SERIALISABLE_VERSION = 2
-    
-    def __init__( self, operator = NUMBER_TEST_OPERATOR_EQUAL, value = 1, extra_value = None ):
-        
-        super().__init__()
-        
-        if operator == NUMBER_TEST_OPERATOR_APPROXIMATE_PERCENT and value == 0:
-            
-            operator = NUMBER_TEST_OPERATOR_EQUAL
-            extra_value = None
-            
-        
-        self.operator = operator
-        self.value = value
-        
-        if extra_value is None:
-            
-            if self.operator == NUMBER_TEST_OPERATOR_APPROXIMATE_PERCENT:
-                
-                extra_value = 0.15
-                
-            elif self.operator == NUMBER_TEST_OPERATOR_APPROXIMATE_ABSOLUTE:
-                
-                extra_value = 1
-                
-            
-        
-        self.extra_value = extra_value
-        
-    
-    def __eq__( self, other ):
-        
-        if isinstance( other, NumberTest ):
-            
-            return self.__hash__() == other.__hash__()
-            
-        
-        return NotImplemented
-        
-    
-    def __hash__( self ):
-        
-        return ( self.operator, self.value, self.extra_value ).__hash__()
-        
-    
-    def __repr__( self ):
-        
-        return self.ToString()
-        
-    
-    def _GetSerialisableInfo( self ):
-        
-        return ( self.operator, self.value, self.extra_value )
-        
-    
-    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
-        
-        ( self.operator, self.value, self.extra_value ) = serialisable_info
-        
-    
-    def _UpdateSerialisableInfo( self, version, old_serialisable_info ):
-        
-        if version == 1:
-            
-            ( operator, value ) = old_serialisable_info
-            
-            if operator == NUMBER_TEST_OPERATOR_APPROXIMATE_PERCENT:
-                
-                extra_value = 0.15
-                
-            else:
-                
-                extra_value = None
-                
-            
-            new_serialisable_info = ( operator, value, extra_value )
-            
-            return ( 2, new_serialisable_info )
-            
-        
-    
-    def GetLambda( self ):
-        
-        if self.operator == NUMBER_TEST_OPERATOR_LESS_THAN:
-            
-            if self.value > 0:
-                
-                return lambda x: x is None or x < self.value
-                
-            else:
-                
-                return lambda x: x is not None and x < self.value
-                
-            
-        elif self.operator == NUMBER_TEST_OPERATOR_GREATER_THAN:
-            
-            if self.value < 0:
-                
-                return lambda x: x is None or x > self.value
-                
-            else:
-                
-                return lambda x: x is not None and x > self.value
-                
-            
-        elif self.operator == NUMBER_TEST_OPERATOR_EQUAL:
-            
-            if self.value == 0:
-                
-                return lambda x: x is None or x == self.value
-                
-            else:
-                
-                return lambda x: x == self.value
-                
-            
-        elif self.operator == NUMBER_TEST_OPERATOR_APPROXIMATE_PERCENT:
-            
-            lower = self.value * ( 1 - self.extra_value )
-            upper = self.value * ( 1 + self.extra_value )
-            
-            if lower <= 0:
-                
-                return lambda x: x is None or x < upper
-                
-            else:
-                
-                return lambda x: x is not None and lower < x < upper
-                
-            
-        elif self.operator == NUMBER_TEST_OPERATOR_APPROXIMATE_ABSOLUTE:
-            
-            lower = self.value - self.extra_value
-            upper = self.value + self.extra_value
-            
-            if lower <= 0:
-                
-                return lambda x: x is None or x < upper
-                
-            else:
-                
-                return lambda x: x is not None and lower < x < upper
-                
-            
-        elif self.operator == NUMBER_TEST_OPERATOR_NOT_EQUAL:
-            
-            if self.value == 0:
-                
-                return lambda x: x is not None and x != self.value
-                
-            else:
-                
-                return lambda x: x is None or x != self.value
-                
-            
-        
-    
-    def GetSQLitePredicates( self, variable_name ):
-        
-        if self.operator == NUMBER_TEST_OPERATOR_LESS_THAN:
-            
-            if self.value > 0:
-                
-                return [ f'( {variable_name} IS NULL OR {variable_name} < {self.value} )' ]
-                
-            else:
-                
-                return [ f'{variable_name} < {self.value}' ]
-                
-            
-        elif self.operator == NUMBER_TEST_OPERATOR_GREATER_THAN:
-            
-            if self.value < 0:
-                
-                return [ f'( {variable_name} IS NULL OR {variable_name} > {self.value} )' ]
-                
-            else:
-                
-                return [ f'{variable_name} > {self.value}' ]
-                
-            
-        elif self.operator == NUMBER_TEST_OPERATOR_EQUAL:
-            
-            if self.value == 0:
-                
-                return [ f'( {variable_name} IS NULL OR {variable_name} = {self.value} )' ]
-                
-            else:
-                
-                return [ f'{variable_name} = {self.value}' ]
-                
-            
-        elif self.operator == NUMBER_TEST_OPERATOR_APPROXIMATE_PERCENT:
-            
-            lower = self.value * ( 1 - self.extra_value )
-            upper = self.value * ( 1 + self.extra_value )
-            
-            if lower <= 0:
-                
-                return [ f'( {variable_name} is NULL OR {variable_name} < {upper} )' ]
-                
-            else:
-                
-                return [ f'{variable_name} > {lower}', f'{variable_name} < {upper}' ]
-                
-            
-        elif self.operator == NUMBER_TEST_OPERATOR_APPROXIMATE_ABSOLUTE:
-            
-            lower = self.value - self.extra_value
-            upper = self.value + self.extra_value
-            
-            if lower <= 0:
-                
-                return [ f'( {variable_name} IS NULL OR {variable_name} < {upper} )' ]
-                
-            else:
-                
-                return [ f'{variable_name} > {lower}', f'{variable_name} < {upper}' ]
-                
-            
-        elif self.operator == NUMBER_TEST_OPERATOR_NOT_EQUAL:
-            
-            if self.value == 0:
-                
-                return [ f'{variable_name} IS NOT NULL AND {variable_name} != {self.value}' ]
-                
-            else:
-                
-                return [ f'( {variable_name} IS NULL OR {variable_name} != {self.value} )' ]
-                
-            
-        
-        return []
-        
-    
-    def IsAnythingButZero( self ):
-        
-        return self.operator in ( NUMBER_TEST_OPERATOR_NOT_EQUAL, NUMBER_TEST_OPERATOR_GREATER_THAN ) and self.value == 0
-        
-    
-    def IsZero( self ):
-        
-        actually_zero = self.operator == NUMBER_TEST_OPERATOR_EQUAL and self.value == 0
-        less_than_one = self.operator == NUMBER_TEST_OPERATOR_LESS_THAN and self.value == 1
-        
-        return actually_zero or less_than_one
-        
-    
-    def ToString( self, absolute_number_renderer: typing.Optional[ typing.Callable ] = None ) -> str:
-        
-        if absolute_number_renderer is None:
-            
-            absolute_number_renderer = HydrusNumbers.ToHumanInt
-            
-        
-        result = f'{number_test_operator_to_str_lookup[ self.operator ]} {absolute_number_renderer( self.value )}'
-        
-        if self.operator == NUMBER_TEST_OPERATOR_APPROXIMATE_PERCENT:
-            
-            result += f' {HC.UNICODE_PLUS_OR_MINUS}{HydrusNumbers.FloatToPercentage(self.extra_value)}'
-            
-        elif self.operator == NUMBER_TEST_OPERATOR_APPROXIMATE_ABSOLUTE:
-            
-            result += f' {HC.UNICODE_PLUS_OR_MINUS}{absolute_number_renderer(self.extra_value)}'
-            
-        
-        return result
-        
-    
-    def WantsZero( self ):
-        
-        return self.GetLambda()( 0 )
-        
-    
-    @staticmethod
-    def STATICCreateFromCharacters( operator_str: str, value: int ) -> "NumberTest":
-        
-        operator = number_test_str_to_operator_lookup[ operator_str ]
-        
-        return NumberTest( operator, value )
-        
-    
-    @staticmethod
-    def STATICCreateMegaLambda( number_tests: typing.Collection[ "NumberTest" ] ):
-        
-        lambdas = [ number_test.GetLambda() for number_test in number_tests ]
-        
-        return lambda x: False not in ( lamb( x ) for lamb in lambdas )
-        
-    
-
-HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_NUMBER_TEST ] = NumberTest
-
-class FileSystemPredicates( object ):
-    
-    def __init__( self, system_predicates: typing.Collection[ "Predicate" ] ):
-        
-        self._has_system_everything = False
-        
-        self._inbox = False
-        self._archive = False
-        self._local = False
-        self._not_local = False
-        
-        self._common_info = {}
-        self._system_pred_types_to_timestamp_ranges_ms = collections.defaultdict( dict )
-        
-        self._limit = None
-        self._similar_to_files = None
-        self._similar_to_data = None
-        
-        self._required_file_service_statuses = collections.defaultdict( set )
-        self._excluded_file_service_statuses = collections.defaultdict( set )
-        
-        self._ratings_predicates = []
-        
-        self._num_tags_predicates = []
-        self._num_urls_predicates = []
-        
-        self._duplicate_count_predicates = []
-        
-        self._king_filter = None
-        
-        self._file_viewing_stats_predicates = []
-        
-        new_options = CG.client_controller.new_options
-        
-        for predicate in system_predicates:
-            
-            predicate_type = predicate.GetType()
-            value = predicate.GetValue()
-            
-            if predicate_type == PREDICATE_TYPE_SYSTEM_EVERYTHING: self._has_system_everything = True
-            if predicate_type == PREDICATE_TYPE_SYSTEM_INBOX: self._inbox = True
-            if predicate_type == PREDICATE_TYPE_SYSTEM_ARCHIVE: self._archive = True
-            if predicate_type == PREDICATE_TYPE_SYSTEM_LOCAL: self._local = True
-            if predicate_type == PREDICATE_TYPE_SYSTEM_NOT_LOCAL: self._not_local = True
-            
-            for number_test_predicate_type in [
-                PREDICATE_TYPE_SYSTEM_WIDTH,
-                PREDICATE_TYPE_SYSTEM_HEIGHT,
-                PREDICATE_TYPE_SYSTEM_NUM_NOTES,
-                PREDICATE_TYPE_SYSTEM_NUM_WORDS,
-                PREDICATE_TYPE_SYSTEM_NUM_URLS,
-                PREDICATE_TYPE_SYSTEM_NUM_FRAMES,
-                PREDICATE_TYPE_SYSTEM_DURATION,
-                PREDICATE_TYPE_SYSTEM_FRAMERATE
-            ]:
-                
-                if predicate_type == number_test_predicate_type:
-                    
-                    if number_test_predicate_type not in self._common_info:
-                        
-                        self._common_info[ number_test_predicate_type ] = []
-                        
-                    
-                    number_test = value
-                    
-                    self._common_info[ number_test_predicate_type ].append( number_test )
-                    
-                
-            
-            if predicate_type == PREDICATE_TYPE_SYSTEM_KNOWN_URLS:
-                
-                ( operator, rule_type, rule, description ) = value
-                
-                if 'known_url_rules' not in self._common_info:
-                    
-                    self._common_info[ 'known_url_rules' ] = []
-                    
-                
-                self._common_info[ 'known_url_rules' ].append( ( operator, rule_type, rule ) )
-                
-            
-            if predicate_type == PREDICATE_TYPE_SYSTEM_HAS_AUDIO:
-                
-                has_audio = value
-                
-                self._common_info[ 'has_audio' ] = has_audio
-                
-            
-            if predicate_type == PREDICATE_TYPE_SYSTEM_HAS_TRANSPARENCY:
-                
-                has_transparency = value
-                
-                self._common_info[ 'has_transparency' ] = has_transparency
-                
-            
-            if predicate_type == PREDICATE_TYPE_SYSTEM_HAS_EXIF:
-                
-                has_exif = value
-                
-                self._common_info[ 'has_exif' ] = has_exif
-                
-            
-            if predicate_type == PREDICATE_TYPE_SYSTEM_HAS_HUMAN_READABLE_EMBEDDED_METADATA:
-                
-                has_human_readable_embedded_metadata = value
-                
-                self._common_info[ 'has_human_readable_embedded_metadata' ] = has_human_readable_embedded_metadata
-                
-            
-            if predicate_type == PREDICATE_TYPE_SYSTEM_HAS_ICC_PROFILE:
-                
-                has_icc_profile = value
-                
-                self._common_info[ 'has_icc_profile' ] = has_icc_profile
-                
-            
-            if predicate_type == PREDICATE_TYPE_SYSTEM_HAS_FORCED_FILETYPE:
-                
-                has_forced_filetype = value
-                
-                self._common_info[ 'has_forced_filetype' ] = has_forced_filetype
-                
-            
-            if predicate_type == PREDICATE_TYPE_SYSTEM_HASH:
-                
-                ( hashes, hash_type ) = value
-                
-                self._common_info[ 'hash' ] = ( hashes, hash_type, predicate.IsInclusive() )
-                
-            
-            if predicate_type in ( PREDICATE_TYPE_SYSTEM_AGE, PREDICATE_TYPE_SYSTEM_LAST_VIEWED_TIME, PREDICATE_TYPE_SYSTEM_MODIFIED_TIME, PREDICATE_TYPE_SYSTEM_ARCHIVED_TIME ):
-                
-                ( operator, age_type, age_value ) = value
-                
-                if age_type == 'delta':
-                    
-                    ( years, months, days, hours ) = age_value
-                    
-                    dt = HydrusTime.CalendarDeltaToDateTime( years, months, days, hours )
-                    
-                    time_pivot_ms = HydrusTime.DateTimeToTimestampMS( dt )
-                    
-                    # this is backwards (less than means min timestamp) because we are talking about age, not timestamp
-                    
-                    # the before/since semantic logic is:
-                    # '<' 7 days age means 'since that date'
-                    # '>' 7 days ago means 'before that date'
-                    
-                    if operator == '<':
-                        
-                        self._system_pred_types_to_timestamp_ranges_ms[ predicate_type ][ '>' ] = time_pivot_ms
-                        
-                    elif operator == '>':
-                        
-                        self._system_pred_types_to_timestamp_ranges_ms[ predicate_type ][ '<' ] = time_pivot_ms
-                        
-                    elif operator == HC.UNICODE_APPROX_EQUAL:
-                        
-                        rough_timedelta_gap = HydrusTime.CalendarDeltaToRoughDateTimeTimeDelta( years, months, days, hours ) * 0.15
-                        
-                        earliest_dt = dt - rough_timedelta_gap
-                        latest_dt = dt + rough_timedelta_gap
-                        
-                        earliest_time_pivot_ms = HydrusTime.DateTimeToTimestampMS( earliest_dt )
-                        latest_time_pivot_ms = HydrusTime.DateTimeToTimestampMS( latest_dt )
-                        
-                        self._system_pred_types_to_timestamp_ranges_ms[ predicate_type ][ '>' ] = earliest_time_pivot_ms
-                        self._system_pred_types_to_timestamp_ranges_ms[ predicate_type ][ '<' ] = latest_time_pivot_ms
-                        
-                    
-                elif age_type == 'date':
-                    
-                    ( year, month, day, hour, minute ) = age_value
-                    
-                    dt = HydrusTime.GetDateTime( year, month, day, hour, minute )
-                    
-                    time_pivot_ms = HydrusTime.DateTimeToTimestampMS( dt )
-                    
-                    dt_day_of_start = HydrusTime.GetDateTime( year, month, day, 0, 0 )
-                    
-                    day_of_start_timestamp_ms = HydrusTime.DateTimeToTimestampMS( dt_day_of_start )
-                    day_of_end_timestamp_ms = HydrusTime.DateTimeToTimestampMS( ClientTime.CalendarDelta( dt_day_of_start, day_delta = 1 ) )
-                    
-                    # the before/since semantic logic is:
-                    # '<' 2022-05-05 means 'before that date'
-                    # '>' 2022-05-05 means 'since that date'
-                    
-                    if operator == '<':
-                        
-                        self._system_pred_types_to_timestamp_ranges_ms[ predicate_type ][ '<' ] = time_pivot_ms
-                        
-                    elif operator == '>':
-                        
-                        self._system_pred_types_to_timestamp_ranges_ms[ predicate_type ][ '>' ] = time_pivot_ms
-                        
-                    elif operator == '=':
-                        
-                        self._system_pred_types_to_timestamp_ranges_ms[ predicate_type ][ '>' ] = day_of_start_timestamp_ms
-                        self._system_pred_types_to_timestamp_ranges_ms[ predicate_type ][ '<' ] = day_of_end_timestamp_ms
-                        
-                    elif operator == HC.UNICODE_APPROX_EQUAL:
-                        
-                        previous_month_timestamp_ms = HydrusTime.DateTimeToTimestampMS( ClientTime.CalendarDelta( dt, month_delta = -1 ) )
-                        next_month_timestamp_ms = HydrusTime.DateTimeToTimestampMS( ClientTime.CalendarDelta( dt, month_delta = 1 ) )
-                        
-                        self._system_pred_types_to_timestamp_ranges_ms[ predicate_type ][ '>' ] = previous_month_timestamp_ms
-                        self._system_pred_types_to_timestamp_ranges_ms[ predicate_type ][ '<' ] = next_month_timestamp_ms
-                        
-                    
-                
-            
-            if predicate_type == PREDICATE_TYPE_SYSTEM_MIME:
-                
-                summary_mimes = value
-                
-                if isinstance( summary_mimes, int ):
-                    
-                    summary_mimes = ( summary_mimes, )
-                    
-                
-                self._common_info[ 'mimes' ] = ConvertSummaryFiletypesToSpecific( summary_mimes )
-                
-            
-            if predicate_type == PREDICATE_TYPE_SYSTEM_NUM_TAGS:
-                
-                self._num_tags_predicates.append( predicate )
-                
-            
-            if predicate_type == PREDICATE_TYPE_SYSTEM_RATING:
-                
-                ( operator, value, service_key ) = value
-                
-                self._ratings_predicates.append( ( operator, value, service_key ) )
-                
-            
-            if predicate_type == PREDICATE_TYPE_SYSTEM_RATIO:
-                
-                ( operator, ratio_width, ratio_height ) = value
-                
-                if operator == '=': self._common_info[ 'ratio' ] = ( ratio_width, ratio_height )
-                elif operator == 'wider than':
-                    
-                    self._common_info[ 'min_ratio' ] = ( ratio_width, ratio_height )
-                    
-                elif operator == 'taller than':
-                    
-                    self._common_info[ 'max_ratio' ] = ( ratio_width, ratio_height )
-                    
-                elif operator == HC.UNICODE_NOT_EQUAL:
-                    
-                    self._common_info[ 'not_ratio' ] = ( ratio_width, ratio_height )
-                    
-                elif operator == HC.UNICODE_APPROX_EQUAL:
-                    
-                    self._common_info[ 'min_ratio' ] = ( ratio_width * 0.85, ratio_height )
-                    self._common_info[ 'max_ratio' ] = ( ratio_width * 1.15, ratio_height )
-                    
-                
-            
-            if predicate_type == PREDICATE_TYPE_SYSTEM_SIZE:
-                
-                ( operator, size, unit ) = value
-                
-                size = size * unit
-                
-                if operator == '<': self._common_info[ 'max_size' ] = size
-                elif operator == '>': self._common_info[ 'min_size' ] = size
-                elif operator == '=': self._common_info[ 'size' ] = size
-                elif operator == HC.UNICODE_NOT_EQUAL: self._common_info[ 'not_size' ] = size
-                elif operator == HC.UNICODE_APPROX_EQUAL:
-                    
-                    self._common_info[ 'min_size' ] = int( size * 0.85 )
-                    self._common_info[ 'max_size' ] = int( size * 1.15 )
-                    
-                
-            
-            if predicate_type == PREDICATE_TYPE_SYSTEM_TAG_AS_NUMBER:
-                
-                ( namespace, operator, num ) = value
-                
-                if operator == '<': self._common_info[ 'max_tag_as_number' ] = ( namespace, num )
-                elif operator == '>': self._common_info[ 'min_tag_as_number' ] = ( namespace, num )
-                elif operator == HC.UNICODE_APPROX_EQUAL:
-                    
-                    self._common_info[ 'min_tag_as_number' ] = ( namespace, int( num * 0.85 ) )
-                    self._common_info[ 'max_tag_as_number' ] = ( namespace, int( num * 1.15 ) )
-                    
-                
-            
-            if predicate_type == PREDICATE_TYPE_SYSTEM_NUM_PIXELS:
-                
-                ( operator, num_pixels, unit ) = value
-                
-                num_pixels = num_pixels * unit
-                
-                if operator == '<': self._common_info[ 'max_num_pixels' ] = num_pixels
-                elif operator == '>': self._common_info[ 'min_num_pixels' ] = num_pixels
-                elif operator == '=': self._common_info[ 'num_pixels' ] = num_pixels
-                elif operator == HC.UNICODE_NOT_EQUAL: self._common_info[ 'not_num_pixels' ] = num_pixels
-                elif operator == HC.UNICODE_APPROX_EQUAL:
-                    
-                    self._common_info[ 'min_num_pixels' ] = int( num_pixels * 0.85 )
-                    self._common_info[ 'max_num_pixels' ] = int( num_pixels * 1.15 )
-                    
-                
-            
-            if predicate_type == PREDICATE_TYPE_SYSTEM_HAS_NOTE_NAME:
-                
-                ( operator, name ) = value
-                
-                if operator:
-                    
-                    label = 'has_note_names'
-                    
-                else:
-                    
-                    label = 'not_has_note_names'
-                    
-                
-                if label not in self._common_info:
-                    
-                    self._common_info[ label ] = set()
-                    
-                
-                self._common_info[ label ].add( name )
-                
-            
-            if predicate_type == PREDICATE_TYPE_SYSTEM_LIMIT:
-                
-                limit = value
-                
-                if self._limit is None:
-                    
-                    self._limit = limit
-                    
-                else:
-                    
-                    self._limit = min( limit, self._limit )
-                    
-                
-            
-            if predicate_type == PREDICATE_TYPE_SYSTEM_FILE_SERVICE:
-                
-                ( operator, status, service_key ) = value
-                
-                if operator:
-                    
-                    self._required_file_service_statuses[ service_key ].add( status )
-                    
-                else:
-                    
-                    self._excluded_file_service_statuses[ service_key ].add( status )
-                    
-                
-            
-            if predicate_type == PREDICATE_TYPE_SYSTEM_SIMILAR_TO_FILES:
-                
-                ( hashes, max_hamming ) = value
-                
-                self._similar_to_files = ( hashes, max_hamming )
-                
-            
-            if predicate_type == PREDICATE_TYPE_SYSTEM_SIMILAR_TO_DATA:
-                
-                ( pixel_hashes, perceptual_hashes, max_hamming ) = value
-                
-                self._similar_to_data = ( pixel_hashes, perceptual_hashes, max_hamming )
-                
-            
-            if predicate_type == PREDICATE_TYPE_SYSTEM_FILE_RELATIONSHIPS_COUNT:
-                
-                ( operator, num_relationships, dupe_type ) = value
-                
-                self._duplicate_count_predicates.append( ( operator, num_relationships, dupe_type ) )
-                
-            
-            if predicate_type == PREDICATE_TYPE_SYSTEM_FILE_RELATIONSHIPS_KING:
-                
-                king = value
-                
-                self._king_filter = king
-                
-            
-            if predicate_type == PREDICATE_TYPE_SYSTEM_FILE_VIEWING_STATS:
-                
-                ( view_type, viewing_locations, operator, viewing_value ) = value
-                
-                self._file_viewing_stats_predicates.append( ( view_type, viewing_locations, operator, viewing_value ) )
-                
-            
-        
-    
-    def GetDuplicateRelationshipCountPredicates( self ):
-        
-        return self._duplicate_count_predicates
-        
-    
-    def GetFileServiceStatuses( self ):
-        
-        return ( self._required_file_service_statuses, self._excluded_file_service_statuses )
-        
-    
-    def GetFileViewingStatsPredicates( self ):
-        
-        return self._file_viewing_stats_predicates
-        
-    
-    def GetKingFilter( self ):
-        
-        return self._king_filter
-        
-    
-    def GetLimit( self, apply_implicit_limit = True ):
-        
-        if self._limit is None and apply_implicit_limit:
-            
-            forced_search_limit = CG.client_controller.new_options.GetNoneableInteger( 'forced_search_limit' )
-            
-            return forced_search_limit
-            
-        
-        return self._limit
-        
-    
-    def GetNumTagsNumberTests( self ) -> typing.Dict[ str, typing.List[ NumberTest ] ]:
-        
-        namespaces_to_tests = collections.defaultdict( list )
-        
-        for predicate in self._num_tags_predicates:
-            
-            ( namespace, operator, value ) = predicate.GetValue()
-            
-            test = NumberTest.STATICCreateFromCharacters( operator, value )
-            
-            namespaces_to_tests[ namespace ].append( test )
-            
-        
-        return namespaces_to_tests
-        
-    
-    def GetRatingsPredicates( self ):
-        
-        return self._ratings_predicates
-        
-    
-    def GetSimilarToData( self ):
-        
-        return self._similar_to_data
-        
-    
-    def GetSimilarToFiles( self ):
-        
-        return self._similar_to_files
-        
-    
-    def GetSimpleInfo( self ):
-        
-        return self._common_info
-        
-    
-    def GetTimestampRangesMS( self ):
-        
-        return self._system_pred_types_to_timestamp_ranges_ms
-        
-    
-    def HasSimilarToData( self ):
-        
-        return self._similar_to_data is not None
-        
-    
-    def HasSimilarToFiles( self ):
-        
-        return self._similar_to_files is not None
-        
-    
-    def HasSystemEverything( self ):
-        
-        return self._has_system_everything
-        
-    
-    def HasSystemLimit( self ):
-        
-        return self._limit is not None
-        
-    
-    def MustBeArchive( self ): return self._archive
-    
-    def MustBeInbox( self ): return self._inbox
-    
-    def MustBeLocal( self ): return self._local
-    
-    def MustNotBeLocal( self ): return self._not_local
-    
-
-SEARCH_TYPE_AND = 0
-SEARCH_TYPE_OR = 1
-
-class FileSearchContext( HydrusSerialisable.SerialisableBase ):
-    
-    SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_FILE_SEARCH_CONTEXT
-    SERIALISABLE_NAME = 'File Search Context'
-    SERIALISABLE_VERSION = 5
-    
-    def __init__( self, location_context = None, tag_context = None, search_type = SEARCH_TYPE_AND, predicates = None ):
-        
-        if location_context is None:
-            
-            location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY )
-            
-        
-        if tag_context is None:
-            
-            tag_context = TagContext()
-            
-        
-        if predicates is None:
-            
-            predicates = []
-            
-        
-        self._location_context = location_context
-        self._tag_context = tag_context
-        
-        self._search_type = search_type
-        
-        self._predicates = predicates
-        
-        self._search_complete = False
-        
-        self._InitialiseTemporaryVariables()
-        
-    
-    def _GetSerialisableInfo( self ):
-        
-        serialisable_predicates = [ predicate.GetSerialisableTuple() for predicate in self._predicates ]
-        serialisable_location_context = self._location_context.GetSerialisableTuple()
-        
-        return ( serialisable_location_context, self._tag_context.GetSerialisableTuple(), self._search_type, serialisable_predicates, self._search_complete )
-        
-    
-    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
-        
-        ( serialisable_location_context, serialisable_tag_context, self._search_type, serialisable_predicates, self._search_complete ) = serialisable_info
-        
-        self._location_context = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_location_context )
-        self._tag_context = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_tag_context )
-        
-        self._predicates = [ HydrusSerialisable.CreateFromSerialisableTuple( pred_tuple ) for pred_tuple in serialisable_predicates ]
-        
-        self._InitialiseTemporaryVariables()
-        
-    
-    def _InitialiseTemporaryVariables( self ):
-        
-        system_predicates = [ predicate for predicate in self._predicates if predicate.GetType() in SYSTEM_PREDICATE_TYPES ]
-        
-        self._system_predicates = FileSystemPredicates( system_predicates )
-        
-        tag_predicates = [ predicate for predicate in self._predicates if predicate.GetType() == PREDICATE_TYPE_TAG ]
-        
-        self._tags_to_include = []
-        self._tags_to_exclude = []
-        
-        for predicate in tag_predicates:
-            
-            tag = predicate.GetValue()
-            
-            if predicate.GetInclusive(): self._tags_to_include.append( tag )
-            else: self._tags_to_exclude.append( tag )
-            
-        
-        namespace_predicates = [ predicate for predicate in self._predicates if predicate.GetType() == PREDICATE_TYPE_NAMESPACE ]
-        
-        self._namespaces_to_include = []
-        self._namespaces_to_exclude = []
-        
-        for predicate in namespace_predicates:
-            
-            namespace = predicate.GetValue()
-            
-            if predicate.GetInclusive(): self._namespaces_to_include.append( namespace )
-            else: self._namespaces_to_exclude.append( namespace )
-            
-        
-        wildcard_predicates = [ predicate for predicate in self._predicates if predicate.GetType() == PREDICATE_TYPE_WILDCARD ]
-        
-        self._wildcards_to_include = []
-        self._wildcards_to_exclude = []
-        
-        for predicate in wildcard_predicates:
-            
-            # this is an important convert. preds store nice looking text, but convert for the actual search
-            wildcard = ConvertTagToSearchable( predicate.GetValue() )
-            
-            if predicate.GetInclusive(): self._wildcards_to_include.append( wildcard )
-            else: self._wildcards_to_exclude.append( wildcard )
-            
-        
-        self._or_predicates = [ predicate for predicate in self._predicates if predicate.GetType() == PREDICATE_TYPE_OR_CONTAINER ]
-        
-    
-    def _UpdateSerialisableInfo( self, version, old_serialisable_info ):
-        
-        if version == 1:
-            
-            ( file_service_key_hex, tag_service_key_hex, include_current_tags, include_pending_tags, serialisable_predicates, search_complete ) = old_serialisable_info
-            
-            search_type = SEARCH_TYPE_AND
-            
-            new_serialisable_info = ( file_service_key_hex, tag_service_key_hex, search_type, include_current_tags, include_pending_tags, serialisable_predicates, search_complete )
-            
-            return ( 2, new_serialisable_info )
-            
-        
-        if version == 2:
-            
-            ( file_service_key_hex, tag_service_key_hex, search_type, include_current_tags, include_pending_tags, serialisable_predicates, search_complete ) = old_serialisable_info
-            
-            # screwed up the serialisation code for the previous update, so these were getting swapped
-            
-            search_type = SEARCH_TYPE_AND
-            include_current_tags = True
-            
-            new_serialisable_info = ( file_service_key_hex, tag_service_key_hex, search_type, include_current_tags, include_pending_tags, serialisable_predicates, search_complete )
-            
-            return ( 3, new_serialisable_info )
-            
-        
-        if version == 3:
-            
-            ( file_service_key_hex, tag_service_key_hex, search_type, include_current_tags, include_pending_tags, serialisable_predicates, search_complete ) = old_serialisable_info
-            
-            tag_service_key = bytes.fromhex( tag_service_key_hex )
-            
-            tag_context = TagContext( service_key = tag_service_key, include_current_tags = include_current_tags, include_pending_tags = include_pending_tags )
-            
-            serialisable_tag_context = tag_context.GetSerialisableTuple()
-            
-            new_serialisable_info = ( file_service_key_hex, serialisable_tag_context, search_type, serialisable_predicates, search_complete )
-            
-            return ( 4, new_serialisable_info )
-            
-        
-        if version == 4:
-            
-            ( file_service_key_hex, serialisable_tag_context, search_type, serialisable_predicates, search_complete ) = old_serialisable_info
-            
-            file_service_key = bytes.fromhex( file_service_key_hex )
-            
-            location_context = ClientLocation.LocationContext.STATICCreateSimple( file_service_key )
-            
-            serialisable_location_context = location_context.GetSerialisableTuple()
-            
-            new_serialisable_info = ( serialisable_location_context, serialisable_tag_context, search_type, serialisable_predicates, search_complete )
-            
-            return ( 5, new_serialisable_info )
-            
-        
-    
-    def FixMissingServices( self, filter_method ):
-        
-        self._location_context.FixMissingServices( filter_method )
-        self._tag_context.FixMissingServices( filter_method )
-        
-    
-    def GetLocationContext( self ) -> ClientLocation.LocationContext:
-        
-        return self._location_context
-        
-    
-    def GetNamespacesToExclude( self ): return self._namespaces_to_exclude
-    def GetNamespacesToInclude( self ): return self._namespaces_to_include
-    def GetORPredicates( self ): return self._or_predicates
-    def GetPredicates( self ): return self._predicates
-    
-    def GetSystemPredicates( self ) -> FileSystemPredicates:
-        
-        return self._system_predicates
-        
-    
-    def GetTagContext( self ) -> "TagContext":
-        
-        return self._tag_context
-        
-    
-    def GetTagsToExclude( self ): return self._tags_to_exclude
-    def GetTagsToInclude( self ): return self._tags_to_include
-    def GetWildcardsToExclude( self ): return self._wildcards_to_exclude
-    def GetWildcardsToInclude( self ): return self._wildcards_to_include
-    
-    def HasNoPredicates( self ):
-        
-        return len( self._predicates ) == 0
-        
-    
-    def IsComplete( self ):
-        
-        return self._search_complete
-        
-    
-    def IsJustSystemEverything( self ):
-        
-        return len( self._predicates ) == 1 and self._system_predicates.HasSystemEverything()
-        
-    
-    def SetComplete( self ):
-        
-        self._search_complete = True
-        
-    
-    def SetLocationContext( self, location_context: ClientLocation.LocationContext ):
-        
-        self._location_context = location_context
-        
-    
-    def SetIncludeCurrentTags( self, value ):
-        
-        self._tag_context.include_current_tags = value
-        
-    
-    def SetIncludePendingTags( self, value ):
-        
-        self._tag_context.include_pending_tags = value
-        
-    
-    def SetPredicates( self, predicates ):
-        
-        self._predicates = predicates
-        
-        self._InitialiseTemporaryVariables()
-        
-    
-    def SetTagServiceKey( self, tag_service_key ):
-        
-        self._tag_context.service_key = tag_service_key
-        self._tag_context.display_service_key = tag_service_key
-        
-    
-HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_FILE_SEARCH_CONTEXT ] = FileSearchContext
-
-class TagContext( HydrusSerialisable.SerialisableBase ):
-    
-    SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_tag_context
-    SERIALISABLE_NAME = 'Tag Search Context'
-    SERIALISABLE_VERSION = 2
-    
-    def __init__( self, service_key = CC.COMBINED_TAG_SERVICE_KEY, include_current_tags = True, include_pending_tags = True, display_service_key = None ):
-        
-        self.service_key = service_key
-        
-        self.include_current_tags = include_current_tags
-        self.include_pending_tags = include_pending_tags
-        
-        if display_service_key is None:
-            
-            self.display_service_key = self.service_key
-            
-        else:
-            
-            self.display_service_key = display_service_key
-            
-        
-    
-    def __eq__( self, other ):
-        
-        if isinstance( other, TagContext ):
-            
-            return self.__hash__() == other.__hash__()
-            
-        
-        return NotImplemented
-        
-    
-    def __hash__( self ):
-        
-        return ( self.service_key, self.include_current_tags, self.include_pending_tags, self.display_service_key ).__hash__()
-        
-    
-    def _GetSerialisableInfo( self ):
-        
-        return ( self.service_key.hex(), self.include_current_tags, self.include_pending_tags, self.display_service_key.hex() )
-        
-    
-    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
-        
-        ( encoded_service_key, self.include_current_tags, self.include_pending_tags, encoded_display_service_key ) = serialisable_info
-        
-        self.service_key = bytes.fromhex( encoded_service_key )
-        self.display_service_key = bytes.fromhex( encoded_display_service_key )
-        
-    
-    def _UpdateSerialisableInfo( self, version, old_serialisable_info ):
-        
-        if version == 1:
-            
-            ( encoded_service_key, self.include_current_tags, self.include_pending_tags ) = old_serialisable_info
-            
-            encoded_display_service_key = encoded_service_key
-            
-            new_serialisable_info = ( encoded_service_key, self.include_current_tags, self.include_pending_tags, encoded_display_service_key )
-            
-            return ( 2, new_serialisable_info )
-            
-        
-    
-    def FixMissingServices( self, filter_method ):
-        
-        if len( filter_method( [ self.service_key ] ) ) == 0:
-            
-            self.service_key = CC.COMBINED_TAG_SERVICE_KEY
-            
-        
-    
-    def IsAllKnownTags( self ):
-        
-        return self.service_key == CC.COMBINED_TAG_SERVICE_KEY
-        
-    
-    def ToString( self, name_method ):
-        
-        return name_method( self.service_key )
-        
-    
-    def ToDictForAPI( self ):
-        
-        return {
-            'service_key' : self.service_key.hex(), 
-            'include_current_tags' : self.include_current_tags, 
-            'include_pending_tags' : self.include_pending_tags, 
-            'display_service_key' : self.display_service_key.hex()
-        }
-        
-    
-
-HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_tag_context ] = TagContext
-
-class FavouriteSearchManager( HydrusSerialisable.SerialisableBase ):
-    
-    SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_FAVOURITE_SEARCH_MANAGER
-    SERIALISABLE_NAME = 'Favourite Search Manager'
-    SERIALISABLE_VERSION = 1
-    
-    def __init__( self ):
-        
-        super().__init__()
-        
-        self._favourite_search_rows = []
-        
-        self._lock = threading.Lock()
-        self._dirty = False
-        
-    
-    def _GetSerialisableInfo( self ):
-        
-        serialisable_favourite_search_info = []
-        
-        for row in self._favourite_search_rows:
-            
-            ( folder, name, file_search_context, synchronised, media_sort, media_collect ) = row
-            
-            serialisable_file_search_context = file_search_context.GetSerialisableTuple()
-            
-            if media_sort is None:
-                
-                serialisable_media_sort = None
-                
-            else:
-                
-                serialisable_media_sort = media_sort.GetSerialisableTuple()
-                
-            
-            if media_collect is None:
-                
-                serialisable_media_collect = None
-                
-            else:
-                
-                serialisable_media_collect = media_collect.GetSerialisableTuple()
-                
-            
-            serialisable_row = ( folder, name, serialisable_file_search_context, synchronised, serialisable_media_sort, serialisable_media_collect )
-            
-            serialisable_favourite_search_info.append( serialisable_row )
-            
-        
-        return serialisable_favourite_search_info
-        
-    
-    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
-        
-        self._favourite_search_rows = []
-        
-        for serialisable_row in serialisable_info:
-            
-            ( folder, name, serialisable_file_search_context, synchronised, serialisable_media_sort, serialisable_media_collect ) = serialisable_row
-            
-            file_search_context = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_file_search_context )
-            
-            if serialisable_media_sort is None:
-                
-                media_sort = None
-                
-            else:
-                
-                media_sort = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_media_sort )
-                
-            
-            if serialisable_media_collect is None:
-                
-                media_collect = None
-                
-            else:
-                
-                media_collect = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_media_collect )
-                
-            
-            row = ( folder, name, file_search_context, synchronised, media_sort, media_collect )
-            
-            self._favourite_search_rows.append( row )
-            
-        
-    
-    def GetFavouriteSearch( self, desired_folder_name, desired_name ):
-        
-        with self._lock:
-            
-            for ( folder, name, file_search_context, synchronised, media_sort, media_collect ) in self._favourite_search_rows:
-                
-                if folder == desired_folder_name and name == desired_name:
-                    
-                    return ( file_search_context, synchronised, media_sort, media_collect )
-                    
-                
-            
-        
-        raise HydrusExceptions.DataMissing( 'Could not find a favourite search named "{}"!'.format( desired_name ) )
-        
-    
-    def GetFavouriteSearchRows( self ):
-        
-        return list( self._favourite_search_rows )
-        
-    
-    def GetFoldersToNames( self ):
-        
-        with self._lock:
-            
-            folders_to_names = collections.defaultdict( list )
-            
-            for ( folder, name, file_search_context, synchronised, media_sort, media_collect ) in self._favourite_search_rows:
-                
-                folders_to_names[ folder ].append( name )
-                
-            
-            return folders_to_names
-            
-        
-    
-    def IsDirty( self ):
-        
-        with self._lock:
-            
-            return self._dirty
-            
-        
-    
-    def SetClean( self ):
-        
-        with self._lock:
-            
-            self._dirty = False
-            
-        
-    
-    def SetDirty( self ):
-        
-        with self._lock:
-            
-            self._dirty = True
-            
-        
-    
-    def SetFavouriteSearchRows( self, favourite_search_rows ):
-        
-        with self._lock:
-            
-            self._favourite_search_rows = list( favourite_search_rows )
-            
-            self._dirty = True
-            
-        
-    
-HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_FAVOURITE_SEARCH_MANAGER ] = FavouriteSearchManager
 
 class PredicateCount( object ):
     
@@ -1919,7 +511,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
             
         elif self._predicate_type in ( PREDICATE_TYPE_SYSTEM_WIDTH, PREDICATE_TYPE_SYSTEM_HEIGHT, PREDICATE_TYPE_SYSTEM_NUM_NOTES, PREDICATE_TYPE_SYSTEM_NUM_WORDS, PREDICATE_TYPE_SYSTEM_NUM_URLS, PREDICATE_TYPE_SYSTEM_NUM_FRAMES, PREDICATE_TYPE_SYSTEM_DURATION, PREDICATE_TYPE_SYSTEM_FRAMERATE ):
             
-            number_test: NumberTest = self._value
+            number_test: ClientNumberTest.NumberTest = self._value
             
             serialisable_value = number_test.GetSerialisableTuple()
             
@@ -2169,17 +761,17 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                 
                 ( operator, value ) = serialisable_value
                 
-                number_test = NumberTest.STATICCreateFromCharacters( operator, value )
+                number_test = ClientNumberTest.NumberTest.STATICCreateFromCharacters( operator, value )
                 
                 if predicate_type in ( PREDICATE_TYPE_SYSTEM_FRAMERATE, PREDICATE_TYPE_SYSTEM_DURATION ):
                     
                     if operator == '=':
                         
-                        number_test = NumberTest( operator = NUMBER_TEST_OPERATOR_APPROXIMATE_PERCENT, value = value, extra_value = 0.05 )
+                        number_test = ClientNumberTest.NumberTest( operator = ClientNumberTest.NUMBER_TEST_OPERATOR_APPROXIMATE_PERCENT, value = value, extra_value = 0.05 )
                         
                     elif operator == HC.UNICODE_NOT_EQUAL:
                         
-                        number_test = NumberTest( operator = NUMBER_TEST_OPERATOR_LESS_THAN, value = value )
+                        number_test = ClientNumberTest.NumberTest( operator = ClientNumberTest.NUMBER_TEST_OPERATOR_LESS_THAN, value = value )
                         
                     
                 
@@ -2190,6 +782,11 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
             
             return ( 8, new_serialisable_info )
             
+        
+    
+    def CanTestMediaResult( self ) -> bool:
+        
+        return self._predicate_type in ( PREDICATE_TYPE_SYSTEM_MIME, )
         
     
     def GetCopy( self ):
@@ -2312,17 +909,17 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
             
         elif self._predicate_type in ( PREDICATE_TYPE_SYSTEM_NUM_NOTES, PREDICATE_TYPE_SYSTEM_NUM_WORDS, PREDICATE_TYPE_SYSTEM_NUM_URLS, PREDICATE_TYPE_SYSTEM_NUM_FRAMES, PREDICATE_TYPE_SYSTEM_DURATION ):
             
-            number_test: NumberTest = self._value
+            number_test: ClientNumberTest.NumberTest = self._value
             
             if number_test is not None:
                 
                 if number_test.IsZero():
                     
-                    return Predicate( self._predicate_type, NumberTest.STATICCreateFromCharacters( '>', 0 ) )
+                    return Predicate( self._predicate_type, ClientNumberTest.NumberTest.STATICCreateFromCharacters( '>', 0 ) )
                     
                 elif number_test.IsAnythingButZero():
                     
-                    return Predicate( self._predicate_type, NumberTest.STATICCreateFromCharacters( '=', 0 ) )
+                    return Predicate( self._predicate_type, ClientNumberTest.NumberTest.STATICCreateFromCharacters( '=', 0 ) )
                     
                 
             
@@ -2535,6 +1132,18 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
         self._RecalculateMatchableSearchTexts()
         
     
+    def TestMediaResult( self, media_result: ClientMediaResult.MediaResult ) -> bool:
+        
+        if self._predicate_type == PREDICATE_TYPE_SYSTEM_MIME:
+            
+            mimes = ConvertSummaryFiletypesToSpecific( self._value )
+            
+            return media_result.GetMime() in mimes
+            
+        
+        return False
+        
+    
     def ToString( self, with_count: bool = True, render_for_user: bool = False, or_under_construction: bool = False, for_parsable_export: bool = False ) -> str:
         
         base = ''
@@ -2631,7 +1240,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                 
                 if self._value is not None:
                     
-                    number_test: NumberTest = self._value
+                    number_test: ClientNumberTest.NumberTest = self._value
                     
                     if number_test.IsZero() and not_has_phrase is not None:
                         
@@ -2673,7 +1282,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                     
                     ( namespace, operator, value ) = self._value
                     
-                    number_test = NumberTest.STATICCreateFromCharacters( operator, value )
+                    number_test = ClientNumberTest.NumberTest.STATICCreateFromCharacters( operator, value )
                     
                     any_namespace = namespace is None or namespace == '*'
                     
@@ -3382,91 +1991,34 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
         
     
 
-def FilterPredicatesBySearchText( service_key, search_text, predicates: typing.Collection[ Predicate ] ):
+def MergePredicates( predicates: typing.Collection[ Predicate ] ):
     
-    def compile_re( s ):
-        
-        regular_parts_of_s = s.split( '*' )
-        
-        escaped_parts_of_s = [ re.escape( rpos ) for rpos in regular_parts_of_s ]
-        
-        s = '.*'.join( escaped_parts_of_s )
-        
-        # \A is start of string
-        # \Z is end of string
-        # \s is whitespace
-        
-        # ':' is no longer escaped to '\:' in py 3.7 lmaooooo, so some quick hackery
-        if re.escape( ':' ) == r'\:':
-            
-            s = s.replace( r'\:', ':' )
-            
-        
-        if ':' in s:
-            
-            ( namespace, subtag ) = s.split( ':', 1 )
-            
-            if namespace == '.*':
-                
-                beginning = r'(\A|:|\s)'
-                s = subtag
-                
-            else:
-                
-                beginning = r'\A'
-                s = r'{}:(.*\s)?{}'.format( namespace, subtag )
-                
-            
-        elif s.startswith( '.*' ):
-            
-            beginning = r'(\A|:)'
-            
-        else:
-            
-            beginning = r'(\A|:|\s)'
-            
-        
-        if s.endswith( '.*' ):
-            
-            end = r'\Z' # end of string
-            
-        else:
-            
-            end = r'(\s|\Z)' # whitespace or end of string
-            
-        
-        return re.compile( beginning + s + end )
-        
-    
-    re_predicate = compile_re( search_text )
-    
-    matches = []
+    master_predicate_dict = {}
     
     for predicate in predicates:
         
-        ( predicate_type, value, inclusive ) = predicate.GetInfo()
+        # this works because predicate.__hash__ exists
         
-        if predicate_type != PREDICATE_TYPE_TAG:
+        if predicate in master_predicate_dict:
             
-            continue
+            master_predicate_dict[ predicate ].GetCount().AddCounts( predicate.GetCount() )
             
-        
-        possible_tags = predicate.GetMatchableSearchTexts()
-        
-        searchable_tags = { ConvertTagToSearchable( possible_tag ) for possible_tag in possible_tags }
-        
-        for searchable_tag in searchable_tags:
+        else:
             
-            if re_predicate.search( searchable_tag ) is not None:
-                
-                matches.append( predicate )
-                
-                break
-                
+            master_predicate_dict[ predicate ] = predicate
             
         
     
-    return matches
+    return list( master_predicate_dict.values() )
+    
+
+def SortPredicates( predicates: typing.Collection[ Predicate ] ):
+    
+    key = lambda p: ( - p.GetCount().GetMinCount(), p.ToString() )
+    
+    predicates.sort( key = key )
+    
+    return predicates
     
 
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_PREDICATE ] = Predicate

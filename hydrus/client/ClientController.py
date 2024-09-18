@@ -1233,13 +1233,13 @@ class Controller( ClientControllerInterface.ClientControllerInterface, HydrusCon
         
         self.frame_splash_status.SetSubtext( 'favourite searches' )
         
-        from hydrus.client.search import ClientSearch
+        from hydrus.client.search import ClientSearchFavouriteSearches
         
         favourite_search_manager = self.Read( 'serialisable', HydrusSerialisable.SERIALISABLE_TYPE_FAVOURITE_SEARCH_MANAGER )
         
         if favourite_search_manager is None:
             
-            favourite_search_manager = ClientSearch.FavouriteSearchManager()
+            favourite_search_manager = ClientSearchFavouriteSearches.FavouriteSearchManager()
             
             ClientDefaults.SetDefaultFavouriteSearchManagerData( favourite_search_manager )
             

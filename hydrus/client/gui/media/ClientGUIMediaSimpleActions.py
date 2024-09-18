@@ -14,7 +14,7 @@ from hydrus.client import ClientLocation
 from hydrus.client import ClientPaths
 from hydrus.client.media import ClientMedia
 from hydrus.client.metadata import ClientContentUpdates
-from hydrus.client.search import ClientSearch
+from hydrus.client.search import ClientSearchPredicate
 
 def GetLocalMediaPaths( medias: typing.Collection[ ClientMedia.Media ] ):
     
@@ -389,7 +389,7 @@ def ShowFilesInNewDuplicatesFilterPage( hashes: typing.Collection[ bytes ], loca
     
     activate_window = CG.client_controller.new_options.GetBoolean( 'activate_window_on_tag_search_page_activation' )
     
-    predicates = [ ClientSearch.Predicate( predicate_type = ClientSearch.PREDICATE_TYPE_SYSTEM_HASH, value = ( tuple( hashes ), 'sha256' ) ) ]
+    predicates = [ ClientSearchPredicate.Predicate( predicate_type = ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HASH, value = ( tuple( hashes ), 'sha256' ) ) ]
     
     page_name = 'duplicates'
     
@@ -415,7 +415,7 @@ def ShowSimilarFilesInNewPage( media: typing.Collection[ ClientMedia.MediaSingle
     
     if len( hashes ) > 0:
         
-        initial_predicates = [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_SIMILAR_TO_FILES, ( tuple( hashes ), max_hamming ) ) ]
+        initial_predicates = [ ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_SIMILAR_TO_FILES, ( tuple( hashes ), max_hamming ) ) ]
         
         CG.client_controller.pub( 'new_page_query', location_context, initial_predicates = initial_predicates )
         

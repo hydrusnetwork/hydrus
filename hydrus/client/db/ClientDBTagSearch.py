@@ -24,7 +24,10 @@ from hydrus.client.db import ClientDBServices
 from hydrus.client.db import ClientDBTagDisplay
 from hydrus.client.db import ClientDBTagSiblings
 from hydrus.client.metadata import ClientTags
-from hydrus.client.search import ClientSearch
+from hydrus.client.search import ClientSearchAutocomplete
+from hydrus.client.search import ClientSearchFileSearchContext
+from hydrus.client.search import ClientSearchPredicate
+from hydrus.client.search import ClientSearchTagContext
 
 # Sqlite can handle -( 2 ** 63 ) -> ( 2 ** 63 ) - 1
 MIN_CACHED_INTEGER = - ( 2 ** 63 )
@@ -322,7 +325,7 @@ class ClientDBTagSearch( ClientDBModule.ClientDBModule ):
                 
                 for ( subtag_id, subtag ) in subtag_ids_and_subtags:
                     
-                    searchable_subtag = ClientSearch.ConvertSubtagToSearchable( subtag )
+                    searchable_subtag = ClientSearchTagContext.ConvertSubtagToSearchable( subtag )
                     
                     if searchable_subtag != subtag:
                         
@@ -485,7 +488,7 @@ class ClientDBTagSearch( ClientDBModule.ClientDBModule ):
     def GetAutocompletePredicates(
         self,
         tag_display_type: int,
-        file_search_context: ClientSearch.FileSearchContext,
+        file_search_context: ClientSearchFileSearchContext.FileSearchContext,
         search_text: str = '',
         exact_match = False,
         inclusive = True,
@@ -578,7 +581,7 @@ class ClientDBTagSearch( ClientDBModule.ClientDBModule ):
                 
             
         
-        predicates = ClientSearch.MergePredicates( all_predicates )
+        predicates = ClientSearchPredicate.MergePredicates( all_predicates )
         
         return predicates
         
@@ -713,7 +716,7 @@ class ClientDBTagSearch( ClientDBModule.ClientDBModule ):
         return integer_subtags_table_name
         
     
-    def GetMappingTables( self, tag_display_type, file_service_key: bytes, tag_context: ClientSearch.TagContext ):
+    def GetMappingTables( self, tag_display_type, file_service_key: bytes, tag_context: ClientSearchTagContext.TagContext ):
         
         mapping_and_tag_table_names = self.GetMappingAndTagTables( tag_display_type, file_service_key, tag_context )
         
@@ -722,7 +725,7 @@ class ClientDBTagSearch( ClientDBModule.ClientDBModule ):
         return mapping_table_names
         
     
-    def GetMappingAndTagTables( self, tag_display_type, file_service_key: bytes, tag_context: ClientSearch.TagContext ):
+    def GetMappingAndTagTables( self, tag_display_type, file_service_key: bytes, tag_context: ClientSearchTagContext.TagContext ):
         
         file_service_id = self.modules_services.GetServiceId( file_service_key )
         tag_service_key = tag_context.service_key
@@ -859,7 +862,7 @@ class ClientDBTagSearch( ClientDBModule.ClientDBModule ):
                     query = 'SELECT docid FROM {};'.format( subtags_fts4_table_name )
                     query_args = ()
                     
-                elif ClientSearch.IsComplexWildcard( subtag_wildcard ) or not wildcard_has_fts4_searchable_characters:
+                elif ClientSearchAutocomplete.IsComplexWildcard( subtag_wildcard ) or not wildcard_has_fts4_searchable_characters:
                     
                     # FTS4 does not support complex wildcards, so instead we'll search our raw subtags
                     # however, since we want to search 'searchable' text, we use the 'searchable subtags map' to cross between real and searchable
@@ -974,7 +977,7 @@ class ClientDBTagSearch( ClientDBModule.ClientDBModule ):
                     query = self._Execute( 'SELECT docid FROM {};'.format( subtags_fts4_table_name ) )
                     query_args = ()
                     
-                elif ClientSearch.IsComplexWildcard( subtag_wildcard ) or not wildcard_has_fts4_searchable_characters:
+                elif ClientSearchAutocomplete.IsComplexWildcard( subtag_wildcard ) or not wildcard_has_fts4_searchable_characters:
                     
                     # FTS4 does not support complex wildcards, so instead we'll search our raw subtags
                     # however, since we want to search 'searchable' text, we use the 'searchable subtags map' to cross between real and searchable
@@ -1305,7 +1308,7 @@ class ClientDBTagSearch( ClientDBModule.ClientDBModule ):
     def GetTagIdPredicates(
         self,
         tag_display_type: int,
-        file_search_context: ClientSearch.FileSearchContext,
+        file_search_context: ClientSearchFileSearchContext.FileSearchContext,
         tag_ids: typing.Collection[ int ],
         inclusive = True,
         zero_count_ok = False,
@@ -1354,7 +1357,7 @@ class ClientDBTagSearch( ClientDBModule.ClientDBModule ):
                 
             
         
-        predicates = ClientSearch.MergePredicates( all_predicates )
+        predicates = ClientSearchPredicate.MergePredicates( all_predicates )
         
         return predicates
         
@@ -1362,7 +1365,7 @@ class ClientDBTagSearch( ClientDBModule.ClientDBModule ):
     def GetTagPredicates(
         self,
         tag_display_type: int,
-        file_search_context: ClientSearch.FileSearchContext,
+        file_search_context: ClientSearchFileSearchContext.FileSearchContext,
         tags: typing.Collection[ str ],
         inclusive = True,
         zero_count_ok = False,
@@ -1532,7 +1535,7 @@ class ClientDBTagSearch( ClientDBModule.ClientDBModule ):
                 
                 ( subtag, ) = result
                 
-                searchable_subtag = ClientSearch.ConvertSubtagToSearchable( subtag )
+                searchable_subtag = ClientSearchTagContext.ConvertSubtagToSearchable( subtag )
                 
                 if searchable_subtag != subtag:
                     
@@ -1573,7 +1576,7 @@ class ClientDBTagSearch( ClientDBModule.ClientDBModule ):
             
             ( subtag, ) = result
             
-            searchable_subtag = ClientSearch.ConvertSubtagToSearchable( subtag )
+            searchable_subtag = ClientSearchTagContext.ConvertSubtagToSearchable( subtag )
             
             if searchable_subtag != subtag:
                 

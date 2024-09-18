@@ -1403,6 +1403,11 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
         return result
         
     
+    def IsPaused( self ):
+        
+        return self._paused
+        
+    
     def LowerCaseQueries( self ):
         
         for query_header in self._query_headers:
@@ -1441,7 +1446,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
     
     def PauseResume( self ):
         
-        self._paused = not self._paused
+        self.SetPaused( not self._paused )
         
     
     def RemoveQueryTexts( self, removee_query_texts: typing.Iterable[ str ], enforce_case: bool = True ):
@@ -1551,6 +1556,11 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
     def SetFileImportOptions( self, file_import_options ):
         
         self._file_import_options = file_import_options.Duplicate()
+        
+    
+    def SetPaused( self, value ):
+        
+        self._paused = value
         
     
     def SetPresentationOptions( self, show_a_popup_while_working, publish_files_to_popup_button, publish_files_to_page, publish_label_override, merge_query_publish_events ):

@@ -409,6 +409,19 @@ class HDDImport( HydrusSerialisable.SerialisableBase ):
             
             ClientImportControl.CheckImporterCanDoFileWorkBecausePaused( self._paused, self._file_seed_cache, self._page_key )
             
+            try:
+                
+                real_file_import_options = FileImportOptions.GetRealFileImportOptions( self._file_import_options, FileImportOptions.IMPORT_TYPE_LOUD )
+                
+                ClientImportControl.CheckImporterCanDoFileWorkBecausePausifyingProblem( real_file_import_options )
+                
+            except HydrusExceptions.VetoException:
+                
+                self._paused = True
+                
+                raise
+                
+            
         
         return True
         

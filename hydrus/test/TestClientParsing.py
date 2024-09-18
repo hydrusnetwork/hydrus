@@ -397,7 +397,7 @@ class TestStringMatch( unittest.TestCase ):
         
         #
         
-        alpha_string_match = ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FLEXIBLE, match_value = ClientStrings.ALPHA )
+        alpha_string_match = ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FLEXIBLE, match_value = ClientStrings.FLEXIBLE_MATCH_ALPHA )
         
         self.assertFalse( alpha_string_match.Matches( '123' ) )
         self.assertTrue( alpha_string_match.Matches( 'abc' ) )
@@ -405,19 +405,39 @@ class TestStringMatch( unittest.TestCase ):
         
         #
         
-        alphanum_string_match = ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FLEXIBLE, match_value = ClientStrings.ALPHANUMERIC )
+        alphanum_string_match = ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FLEXIBLE, match_value = ClientStrings.FLEXIBLE_MATCH_ALPHANUMERIC )
         
         self.assertTrue( alphanum_string_match.Matches( '123' ) )
         self.assertTrue( alphanum_string_match.Matches( 'abc' ) )
         self.assertTrue( alphanum_string_match.Matches( 'abc123' ) )
+        self.assertFalse( alphanum_string_match.Matches( 'abc123@' ) )
         
         #
         
-        num_string_match = ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FLEXIBLE, match_value = ClientStrings.NUMERIC )
+        num_string_match = ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FLEXIBLE, match_value = ClientStrings.FLEXIBLE_MATCH_NUMERIC )
         
         self.assertTrue( num_string_match.Matches( '123' ) )
         self.assertFalse( num_string_match.Matches( 'abc' ) )
         self.assertFalse( num_string_match.Matches( 'abc123' ) )
+        
+        #
+        
+        hex_string_match = ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FLEXIBLE, match_value = ClientStrings.FLEXIBLE_MATCH_HEX )
+        
+        self.assertTrue( hex_string_match.Matches( '123' ) )
+        self.assertTrue( hex_string_match.Matches( 'abc' ) )
+        self.assertTrue( hex_string_match.Matches( 'abc123' ) )
+        self.assertFalse( hex_string_match.Matches( 'abc123z' ) )
+        
+        #
+        
+        base64_string_match = ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FLEXIBLE, match_value = ClientStrings.FLEXIBLE_MATCH_BASE64 )
+        
+        self.assertTrue( base64_string_match.Matches( '123' ) )
+        self.assertTrue( base64_string_match.Matches( 'abc' ) )
+        self.assertTrue( base64_string_match.Matches( 'abc123+' ) )
+        self.assertTrue( base64_string_match.Matches( 'abc123+=' ) )
+        self.assertFalse( base64_string_match.Matches( 'abc123+]' ) )
         
         #
         
@@ -678,7 +698,7 @@ class TestStringProcessor( unittest.TestCase ):
         
         processing_steps.append( ClientStrings.StringSplitter( separator = ',', max_splits = 2 ) )
         
-        processing_steps.append( ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FLEXIBLE, match_value = ClientStrings.NUMERIC ) )
+        processing_steps.append( ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FLEXIBLE, match_value = ClientStrings.FLEXIBLE_MATCH_NUMERIC ) )
         
         conversions = [ ( ClientStrings.STRING_CONVERSION_APPEND_TEXT, 'abc' ) ]
         

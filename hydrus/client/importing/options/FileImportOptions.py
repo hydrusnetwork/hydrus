@@ -14,7 +14,7 @@ from hydrus.client import ClientLocation
 from hydrus.client.importing.options import PresentationImportOptions
 from hydrus.client.media import ClientMediaResult
 from hydrus.client.metadata import ClientContentUpdates
-from hydrus.client.search import ClientSearch
+from hydrus.client.search import ClientSearchPredicate
 
 IMPORT_TYPE_QUIET = 0
 IMPORT_TYPE_LOUD = 1
@@ -55,7 +55,7 @@ class FileImportOptions( HydrusSerialisable.SerialisableBase ):
         self._preimport_url_check_type = DO_CHECK
         self._preimport_url_check_looks_for_neighbour_spam = True
         self._allow_decompression_bombs = True
-        self._filetype_filter_predicate = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_MIME, value = set( HC.GENERAL_FILETYPES ) )
+        self._filetype_filter_predicate = ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_MIME, value = set( HC.GENERAL_FILETYPES ) )
         self._min_size = None
         self._max_size = None
         self._max_gif_size = None
@@ -236,7 +236,7 @@ class FileImportOptions( HydrusSerialisable.SerialisableBase ):
             
             ( exclude_deleted, do_not_check_known_urls_before_importing, do_not_check_hashes_before_importing, allow_decompression_bombs, min_size, max_size, max_gif_size, min_resolution, max_resolution, serialisable_import_destination_location_context ) = pre_import_options
             
-            filetype_filter_predicate = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_MIME, value = set( HC.GENERAL_FILETYPES ) )
+            filetype_filter_predicate = ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_MIME, value = set( HC.GENERAL_FILETYPES ) )
             
             serialisable_filetype_filter_predicate = filetype_filter_predicate.GetSerialisableTuple()
             
@@ -297,7 +297,7 @@ class FileImportOptions( HydrusSerialisable.SerialisableBase ):
                 mimes.append( HC.GENERAL_APPLICATION_ARCHIVE )
                 mimes.append( HC.GENERAL_IMAGE_PROJECT )
                 
-                filetype_filter_predicate = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_MIME, value = mimes )
+                filetype_filter_predicate = ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_MIME, value = mimes )
                 
             
             serialisable_filetype_filter_predicate = filetype_filter_predicate.GetSerialisableTuple()
@@ -435,7 +435,7 @@ class FileImportOptions( HydrusSerialisable.SerialisableBase ):
     
     def GetAllowedSpecificFiletypes( self ) -> typing.Collection[ int ]:
         
-        return ClientSearch.ConvertSummaryFiletypesToSpecific( self._filetype_filter_predicate.GetValue(), only_searchable = False )
+        return ClientSearchPredicate.ConvertSummaryFiletypesToSpecific( self._filetype_filter_predicate.GetValue(), only_searchable = False )
         
     
     def GetAlreadyInDBPostImportContentUpdatePackage( self, media_result: ClientMediaResult.MediaResult ):
@@ -522,7 +522,7 @@ class FileImportOptions( HydrusSerialisable.SerialisableBase ):
         
         statements = []
         
-        statements.append( 'allowing {}'.format( ClientSearch.ConvertSummaryFiletypesToString( self._filetype_filter_predicate.GetValue() ) ) )
+        statements.append( 'allowing {}'.format( ClientSearchPredicate.ConvertSummaryFiletypesToString( self._filetype_filter_predicate.GetValue() ) ) )
         
         if self._exclude_deleted:
             
@@ -593,9 +593,9 @@ class FileImportOptions( HydrusSerialisable.SerialisableBase ):
     
     def SetAllowedSpecificFiletypes( self, mimes ) -> None:
         
-        mimes = ClientSearch.ConvertSpecificFiletypesToSummary( mimes, only_searchable = False )
+        mimes = ClientSearchPredicate.ConvertSpecificFiletypesToSummary( mimes, only_searchable = False )
         
-        self._filetype_filter_predicate = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_MIME, value = mimes )
+        self._filetype_filter_predicate = ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_MIME, value = mimes )
         
     
     def SetDestinationLocationContext( self, location_context: ClientLocation.LocationContext ):

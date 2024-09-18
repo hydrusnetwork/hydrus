@@ -615,9 +615,11 @@ STRING_MATCH_FLEXIBLE = 1
 STRING_MATCH_REGEX = 2
 STRING_MATCH_ANY = 3
 
-ALPHA = 0
-ALPHANUMERIC = 1
-NUMERIC = 2
+FLEXIBLE_MATCH_ALPHA = 0
+FLEXIBLE_MATCH_ALPHANUMERIC = 1
+FLEXIBLE_MATCH_NUMERIC = 2
+FLEXIBLE_MATCH_HEX = 3
+FLEXIBLE_MATCH_BASE64 = 4
 
 class StringMatch( StringProcessingStep ):
     
@@ -724,20 +726,35 @@ class StringMatch( StringProcessingStep ):
             
             if self._match_type == STRING_MATCH_FLEXIBLE:
                 
-                if self._match_value == ALPHA:
+                if self._match_value == FLEXIBLE_MATCH_ALPHA:
                     
                     r = '^[a-zA-Z]+$'
                     fail_reason = ' had non-alpha characters'
                     
-                elif self._match_value == ALPHANUMERIC:
+                elif self._match_value == FLEXIBLE_MATCH_ALPHANUMERIC:
                     
                     r = '^[a-zA-Z\\d]+$'
                     fail_reason = ' had non-alphanumeric characters'
                     
-                elif self._match_value == NUMERIC:
+                elif self._match_value == FLEXIBLE_MATCH_NUMERIC:
                     
                     r = '^\\d+$'
                     fail_reason = ' had non-numeric characters'
+                    
+                elif self._match_value == FLEXIBLE_MATCH_HEX:
+                    
+                    r = '^[\\da-fA-F]+$'
+                    fail_reason = ' had non-hex characters'
+                    
+                elif self._match_value == FLEXIBLE_MATCH_BASE64:
+                    
+                    r = '^[a-zA-Z\\d+/]+={0,2}$'
+                    fail_reason = ' had non-base64 characters'
+                    
+                else:
+                    
+                    r = ''
+                    fail_reason = ' (unknown error, this object is probably from a newer client)'
                     
                 
             elif self._match_type == STRING_MATCH_REGEX:
@@ -822,17 +839,29 @@ class StringMatch( StringProcessingStep ):
             
         elif self._match_type == STRING_MATCH_FLEXIBLE:
             
-            if self._match_value == ALPHA:
+            if self._match_value == FLEXIBLE_MATCH_ALPHA:
                 
                 result += 'alphabetical characters'
                 
-            elif self._match_value == ALPHANUMERIC:
+            elif self._match_value == FLEXIBLE_MATCH_ALPHANUMERIC:
                 
                 result += 'alphanumeric characters'
                 
-            elif self._match_value == NUMERIC:
+            elif self._match_value == FLEXIBLE_MATCH_NUMERIC:
                 
                 result += 'numeric characters'
+                
+            elif self._match_value == FLEXIBLE_MATCH_HEX:
+                
+                result += 'hex characters'
+                
+            elif self._match_value == FLEXIBLE_MATCH_BASE64:
+                
+                result += 'base-64 characters'
+                
+            else:
+                
+                result += 'unknown characters, this object is probably from a newer client'
                 
             
         elif self._match_type == STRING_MATCH_REGEX:

@@ -290,7 +290,7 @@ class URLClass( HydrusSerialisable.SerialisableBaseNamed ):
             
             p = URLClassParameterFixedName(
                 name = 'id',
-                value_string_match = ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FLEXIBLE, match_value = ClientStrings.NUMERIC, example_string = '123456' )
+                value_string_match = ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FLEXIBLE, match_value = ClientStrings.FLEXIBLE_MATCH_NUMERIC, example_string = '123456' )
             )
             
             parameters.append( p )

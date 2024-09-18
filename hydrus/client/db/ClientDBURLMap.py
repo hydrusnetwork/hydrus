@@ -7,7 +7,7 @@ from hydrus.core import HydrusData
 
 from hydrus.client.db import ClientDBMaster
 from hydrus.client.db import ClientDBModule
-from hydrus.client.search import ClientSearch
+from hydrus.client.search import ClientNumberTest
 
 class ClientDBURLMap( ClientDBModule.ClientDBModule ):
     
@@ -57,7 +57,7 @@ class ClientDBURLMap( ClientDBModule.ClientDBModule ):
         return hash_ids
         
     
-    def GetHashIdsFromCountTests( self, number_tests: typing.List[ ClientSearch.NumberTest ], hash_ids: typing.Collection[ int ], hash_ids_table_name: str ):
+    def GetHashIdsFromCountTests( self, number_tests: typing.List[ ClientNumberTest.NumberTest ], hash_ids: typing.Collection[ int ], hash_ids_table_name: str ):
         
         # we'll have to natural join 'urls' or 'urls-class-map-cache' or whatever when we add a proper filter to this guy
         
@@ -74,7 +74,7 @@ class ClientDBURLMap( ClientDBModule.ClientDBModule ):
         
         specific_number_tests = [ number_test for number_test in number_tests if not ( number_test.IsZero() or number_test.IsAnythingButZero() ) ]
         
-        megalambda = ClientSearch.NumberTest.STATICCreateMegaLambda( specific_number_tests )
+        megalambda = ClientNumberTest.NumberTest.STATICCreateMegaLambda( specific_number_tests )
         
         is_zero = True in ( number_test.IsZero() for number_test in number_tests )
         is_anything_but_zero = True in ( number_test.IsAnythingButZero() for number_test in number_tests )

@@ -19,7 +19,7 @@ from hydrus.client.gui.lists import ClientGUIListCtrl
 from hydrus.client.gui.pages import ClientGUIResultsSortCollect
 from hydrus.client.gui.panels import ClientGUIScrolledPanels
 from hydrus.client.gui.widgets import ClientGUICommon
-from hydrus.client.search import ClientSearch
+from hydrus.client.search import ClientSearchFileSearchContext
 
 class EditFavouriteSearchPanel( ClientGUIScrolledPanels.EditPanel ):
     
@@ -220,7 +220,7 @@ class EditFavouriteSearchesPanel( ClientGUIScrolledPanels.EditPanel ):
             
             default_location_context = CG.client_controller.new_options.GetDefaultLocalLocationContext()
             
-            file_search_context = ClientSearch.FileSearchContext( location_context = default_location_context )
+            file_search_context = ClientSearchFileSearchContext.FileSearchContext( location_context = default_location_context )
             
             synchronised = True
             media_sort = None

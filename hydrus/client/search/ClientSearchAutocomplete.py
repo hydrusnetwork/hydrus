@@ -1,11 +1,117 @@
+import re
 import typing
 
 from hydrus.core import HydrusData
 from hydrus.core import HydrusTags
 
 from hydrus.client.metadata import ClientTagsHandling
-from hydrus.client.search import ClientSearch
 from hydrus.client.search import ClientSearchParseSystemPredicates
+from hydrus.client.search import ClientSearchPredicate
+from hydrus.client.search import ClientSearchTagContext
+
+def FilterPredicatesBySearchText( service_key, search_text, predicates: typing.Collection[ ClientSearchPredicate.Predicate ] ):
+    
+    def compile_re( s ):
+        
+        regular_parts_of_s = s.split( '*' )
+        
+        escaped_parts_of_s = [ re.escape( rpos ) for rpos in regular_parts_of_s ]
+        
+        s = '.*'.join( escaped_parts_of_s )
+        
+        # \A is start of string
+        # \Z is end of string
+        # \s is whitespace
+        
+        # ':' is no longer escaped to '\:' in py 3.7 lmaooooo, so some quick hackery
+        if re.escape( ':' ) == r'\:':
+            
+            s = s.replace( r'\:', ':' )
+            
+        
+        if ':' in s:
+            
+            ( namespace, subtag ) = s.split( ':', 1 )
+            
+            if namespace == '.*':
+                
+                beginning = r'(\A|:|\s)'
+                s = subtag
+                
+            else:
+                
+                beginning = r'\A'
+                s = r'{}:(.*\s)?{}'.format( namespace, subtag )
+                
+            
+        elif s.startswith( '.*' ):
+            
+            beginning = r'(\A|:)'
+            
+        else:
+            
+            beginning = r'(\A|:|\s)'
+            
+        
+        if s.endswith( '.*' ):
+            
+            end = r'\Z' # end of string
+            
+        else:
+            
+            end = r'(\s|\Z)' # whitespace or end of string
+            
+        
+        return re.compile( beginning + s + end )
+        
+    
+    re_predicate = compile_re( search_text )
+    
+    matches = []
+    
+    for predicate in predicates:
+        
+        ( predicate_type, value, inclusive ) = predicate.GetInfo()
+        
+        if predicate_type != ClientSearchPredicate.PREDICATE_TYPE_TAG:
+            
+            continue
+            
+        
+        possible_tags = predicate.GetMatchableSearchTexts()
+        
+        searchable_tags = { ClientSearchTagContext.ConvertTagToSearchable( possible_tag ) for possible_tag in possible_tags }
+        
+        for searchable_tag in searchable_tags:
+            
+            if re_predicate.search( searchable_tag ) is not None:
+                
+                matches.append( predicate )
+                
+                break
+                
+            
+        
+    
+    return matches
+    
+
+def IsComplexWildcard( search_text ):
+    
+    num_stars = search_text.count( '*' )
+    
+    if num_stars > 1:
+        
+        return True
+        
+    
+    if num_stars == 1 and not search_text.endswith( '*' ):
+        
+        return True
+        
+    
+    return False
+    
 
 def SearchTextIsFetchAll( search_text: str ):
     
@@ -43,6 +149,13 @@ def SearchTextIsNamespaceFetchAll( search_text: str ):
     return False
     
 
+def SubtagIsEmpty( search_text: str ):
+    
+    ( namespace, subtag ) = HydrusTags.SplitTag( search_text )
+    
+    return subtag == ''
+    
+
 class ParsedAutocompleteText( object ):
     
     def __init__( self, raw_input: str, tag_autocomplete_options: ClientTagsHandling.TagAutocompleteOptions, collapse_search_characters: bool ):
@@ -78,7 +191,7 @@ class ParsedAutocompleteText( object ):
     
     def _GetSearchText( self, always_autocompleting: bool, force_do_not_collapse: bool = False, allow_auto_wildcard_conversion: bool = False ) -> str:
         
-        text = ClientSearch.CollapseWildcardCharacters( self.raw_content )
+        text = ClientSearchTagContext.CollapseWildcardCharacters( self.raw_content )
         
         if len( text ) == 0:
             
@@ -87,7 +200,7 @@ class ParsedAutocompleteText( object ):
         
         if self._collapse_search_characters and not force_do_not_collapse:
             
-            text = ClientSearch.ConvertTagToSearchable( text )
+            text = ClientSearchTagContext.ConvertTagToSearchable( text )
             
         
         if allow_auto_wildcard_conversion and self._tag_autocomplete_options.UnnamespacedSearchGivesAnyNamespaceWildcards():
@@ -125,7 +238,7 @@ class ParsedAutocompleteText( object ):
     
     def GetAddTagPredicate( self ):
         
-        return ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, self.raw_content, self.inclusive )
+        return ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_TAG, self.raw_content, self.inclusive )
         
     
     def GetImmediateFileSearchPredicate( self, allow_auto_wildcard_conversion ):
@@ -142,7 +255,7 @@ class ParsedAutocompleteText( object ):
             return non_tag_predicates[0]
             
         
-        tag_search_predicate = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, self.raw_content, self.inclusive )
+        tag_search_predicate = ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_TAG, self.raw_content, self.inclusive )
         
         return tag_search_predicate
         
@@ -159,7 +272,7 @@ class ParsedAutocompleteText( object ):
                 
                 ( namespace, subtag ) = HydrusTags.SplitTag( search_text )
                 
-                predicate = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_NAMESPACE, namespace, self.inclusive )
+                predicate = ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_NAMESPACE, namespace, self.inclusive )
                 
                 predicates.append( predicate )
                 
@@ -184,7 +297,7 @@ class ParsedAutocompleteText( object ):
                 
                 search_texts = HydrusData.DedupeList( search_texts )
                 
-                predicates.extend( ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_WILDCARD, search_text, self.inclusive ) for search_text in search_texts ) )
+                predicates.extend( ( ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_WILDCARD, search_text, self.inclusive ) for search_text in search_texts ) )
                 
             
         
@@ -290,7 +403,7 @@ class ParsedAutocompleteText( object ):
         
         search_text = self._GetSearchText( False )
         
-        if ClientSearch.SubtagIsEmpty( search_text ):
+        if SubtagIsEmpty( search_text ):
             
             return False
             
@@ -346,7 +459,7 @@ class ParsedAutocompleteText( object ):
     
 class PredicateResultsCache( object ):
     
-    def __init__( self, predicates: typing.Iterable[ ClientSearch.Predicate ] ):
+    def __init__( self, predicates: typing.Iterable[ ClientSearchPredicate.Predicate ] ):
         
         self._predicates = list( predicates )
         
@@ -358,7 +471,7 @@ class PredicateResultsCache( object ):
     
     def FilterPredicates( self, service_key: bytes, search_text: str ):
         
-        return ClientSearch.FilterPredicatesBySearchText( service_key, search_text, self._predicates )
+        return FilterPredicatesBySearchText( service_key, search_text, self._predicates )
         
     
     def GetPredicates( self ):
@@ -384,7 +497,7 @@ class PredicateResultsCacheMedia( PredicateResultsCache ):
     
 class PredicateResultsCacheTag( PredicateResultsCache ):
     
-    def __init__( self, predicates: typing.Iterable[ ClientSearch.Predicate ], strict_search_text: str, exact_match: bool ):
+    def __init__( self, predicates: typing.Iterable[ ClientSearchPredicate.Predicate ], strict_search_text: str, exact_match: bool ):
         
         PredicateResultsCache.__init__( self, predicates )
         

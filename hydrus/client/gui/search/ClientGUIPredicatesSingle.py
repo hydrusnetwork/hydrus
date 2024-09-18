@@ -24,7 +24,8 @@ from hydrus.client.gui.widgets import ClientGUIBytes
 from hydrus.client.gui.widgets import ClientGUICommon
 from hydrus.client.gui.widgets import ClientGUINumberTest
 from hydrus.client.gui.widgets import ClientGUIRegex
-from hydrus.client.search import ClientSearch
+from hydrus.client.search import ClientNumberTest
+from hydrus.client.search import ClientSearchPredicate
 
 class StaticSystemPredicateButton( QW.QWidget ):
     
@@ -81,7 +82,7 @@ class StaticSystemPredicateButton( QW.QWidget ):
         self.predicatesRemoved.emit( self )
         
     
-    def GetPredicates( self ) -> typing.List[ ClientSearch.Predicate ]:
+    def GetPredicates( self ) -> typing.List[ ClientSearchPredicate.Predicate ]:
         
         return self._predicates
         
@@ -118,7 +119,7 @@ class TimeDeltaOperator( ClientGUICommon.BetterRadioBox ):
 
 class InvertiblePredicateButton( ClientGUICommon.BetterButton ):
     
-    def __init__( self, parent: QW.QWidget, predicate: ClientSearch.Predicate ):
+    def __init__( self, parent: QW.QWidget, predicate: ClientSearchPredicate.Predicate ):
         
         self._predicate = predicate
         
@@ -183,29 +184,29 @@ def GetPredicateFromSimpleTagText( simple_tag_text: str ):
             raise Exception( 'Please enter some namespace text!' )
             
         
-        return ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_NAMESPACE, namespace, inclusive = inclusive )
+        return ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_NAMESPACE, namespace, inclusive = inclusive )
         
     elif '*' in simple_tag_text:
         
         wildcard = simple_tag_text
         
-        return ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_WILDCARD, wildcard, inclusive = inclusive )
+        return ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_WILDCARD, wildcard, inclusive = inclusive )
         
     else:
         
         tag = simple_tag_text
         
-        return ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, tag, inclusive = inclusive )
+        return ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_TAG, tag, inclusive = inclusive )
         
     
 
 class PanelPredicateSimpleTagTypes( QW.QWidget ):
     
-    def __init__( self, parent: QW.QWidget, predicate: ClientSearch.Predicate ):
+    def __init__( self, parent: QW.QWidget, predicate: ClientSearchPredicate.Predicate ):
         
         super().__init__( parent )
         
-        if predicate.GetType() not in ( ClientSearch.PREDICATE_TYPE_TAG, ClientSearch.PREDICATE_TYPE_NAMESPACE, ClientSearch.PREDICATE_TYPE_WILDCARD ):
+        if predicate.GetType() not in ( ClientSearchPredicate.PREDICATE_TYPE_TAG, ClientSearchPredicate.PREDICATE_TYPE_NAMESPACE, ClientSearchPredicate.PREDICATE_TYPE_WILDCARD ):
             
             raise Exception( 'Launched a SimpleTextPredicateControl without a Tag, Namespace, or Wildcard Pred!' )
             
@@ -214,7 +215,7 @@ class PanelPredicateSimpleTagTypes( QW.QWidget ):
         
         inclusive = predicate.IsInclusive()
         
-        if predicate.GetType() == ClientSearch.PREDICATE_TYPE_NAMESPACE:
+        if predicate.GetType() == ClientSearchPredicate.PREDICATE_TYPE_NAMESPACE:
             
             namespace = predicate.GetValue()
             
@@ -302,7 +303,7 @@ class PanelPredicateSystem( QW.QWidget ):
     
 class PanelPredicateSystemSingle( PanelPredicateSystem ):
     
-    def _GetPredicateToInitialisePanelWith( self, predicate: ClientSearch.Predicate ) -> ClientSearch.Predicate:
+    def _GetPredicateToInitialisePanelWith( self, predicate: ClientSearchPredicate.Predicate ) -> ClientSearchPredicate.Predicate:
         
         default_predicate = self.GetDefaultPredicate()
         
@@ -328,7 +329,7 @@ class PanelPredicateSystemSingle( PanelPredicateSystem ):
         CG.client_controller.new_options.ClearCustomDefaultSystemPredicates( comparable_predicate = default_predicate )
         
     
-    def GetDefaultPredicate( self ) -> ClientSearch.Predicate:
+    def GetDefaultPredicate( self ) -> ClientSearchPredicate.Predicate:
         
         raise NotImplementedError()
         
@@ -410,7 +411,7 @@ class PanelPredicateSystemDate( PanelPredicateSystemSingle ):
         raise NotImplementedError()
         
     
-    def GetDefaultPredicate( self ) -> ClientSearch.Predicate:
+    def GetDefaultPredicate( self ) -> ClientSearchPredicate.Predicate:
         
         qt_dt = QC.QDate.currentDate()
         
@@ -425,7 +426,7 @@ class PanelPredicateSystemDate( PanelPredicateSystemSingle ):
         
         predicate_type = self._GetPredicateType()
         
-        return ClientSearch.Predicate( predicate_type, ( '>', 'date', ( year, month, day, hour, minute ) ) )
+        return ClientSearchPredicate.Predicate( predicate_type, ( '>', 'date', ( year, month, day, hour, minute ) ) )
         
     
     def GetPredicates( self ):
@@ -443,7 +444,7 @@ class PanelPredicateSystemDate( PanelPredicateSystemSingle ):
         
         predicate_type = self._GetPredicateType()
         
-        predicates = ( ClientSearch.Predicate( predicate_type, ( self._sign.GetValue(), 'date', ( year, month, day, hour, minute ) ) ), )
+        predicates = ( ClientSearchPredicate.Predicate( predicate_type, ( self._sign.GetValue(), 'date', ( year, month, day, hour, minute ) ) ), )
         
         return predicates
         
@@ -458,10 +459,10 @@ class PanelPredicateSystemAgeDate( PanelPredicateSystemDate ):
     
     def _GetPredicateType( self ) -> int:
         
-        return ClientSearch.PREDICATE_TYPE_SYSTEM_AGE
+        return ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_AGE
         
     
-    def GetDefaultPredicate( self ) -> ClientSearch.Predicate:
+    def GetDefaultPredicate( self ) -> ClientSearchPredicate.Predicate:
         
         qt_dt = QC.QDate.currentDate()
         
@@ -476,7 +477,7 @@ class PanelPredicateSystemAgeDate( PanelPredicateSystemDate ):
         
         predicate_type = self._GetPredicateType()
         
-        return ClientSearch.Predicate( predicate_type, ( '<', 'date', ( year, month, day, hour, minute ) ) )
+        return ClientSearchPredicate.Predicate( predicate_type, ( '<', 'date', ( year, month, day, hour, minute ) ) )
         
     
 
@@ -489,7 +490,7 @@ class PanelPredicateSystemLastViewedDate( PanelPredicateSystemDate ):
     
     def _GetPredicateType( self ) -> int:
         
-        return ClientSearch.PREDICATE_TYPE_SYSTEM_LAST_VIEWED_TIME
+        return ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_LAST_VIEWED_TIME
         
     
 
@@ -502,7 +503,7 @@ class PanelPredicateSystemArchivedDate( PanelPredicateSystemDate ):
     
     def _GetPredicateType( self ) -> int:
         
-        return ClientSearch.PREDICATE_TYPE_SYSTEM_ARCHIVED_TIME
+        return ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_ARCHIVED_TIME
         
     
 
@@ -515,7 +516,7 @@ class PanelPredicateSystemModifiedDate( PanelPredicateSystemDate ):
     
     def _GetPredicateType( self ) -> int:
         
-        return ClientSearch.PREDICATE_TYPE_SYSTEM_MODIFIED_TIME
+        return ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_MODIFIED_TIME
         
     
 
@@ -569,12 +570,12 @@ class PanelPredicateSystemAgeDelta( PanelPredicateSystemSingle ):
     
     def GetDefaultPredicate( self ):
         
-        return ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_AGE, ( '<', 'delta', ( 0, 0, 7, 0 ) ) )
+        return ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_AGE, ( '<', 'delta', ( 0, 0, 7, 0 ) ) )
         
     
     def GetPredicates( self ):
         
-        predicates = ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_AGE, ( self._sign.GetValue(), 'delta', (self._years.value(), self._months.value(), self._days.value(), self._hours.value() ) ) ), )
+        predicates = ( ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_AGE, ( self._sign.GetValue(), 'delta', (self._years.value(), self._months.value(), self._days.value(), self._hours.value() ) ) ), )
         
         return predicates
         
@@ -629,12 +630,12 @@ class PanelPredicateSystemLastViewedDelta( PanelPredicateSystemSingle ):
     
     def GetDefaultPredicate( self ):
         
-        return ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_LAST_VIEWED_TIME, ( '<', 'delta', ( 0, 0, 7, 0 ) ) )
+        return ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_LAST_VIEWED_TIME, ( '<', 'delta', ( 0, 0, 7, 0 ) ) )
         
     
     def GetPredicates( self ):
         
-        predicates = ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_LAST_VIEWED_TIME, ( self._sign.GetValue(), 'delta', ( self._years.value(), self._months.value(), self._days.value(), self._hours.value() ) ) ), )
+        predicates = ( ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_LAST_VIEWED_TIME, ( self._sign.GetValue(), 'delta', ( self._years.value(), self._months.value(), self._days.value(), self._hours.value() ) ) ), )
         
         return predicates
         
@@ -688,12 +689,12 @@ class PanelPredicateSystemArchivedDelta( PanelPredicateSystemSingle ):
     
     def GetDefaultPredicate( self ):
         
-        return ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_ARCHIVED_TIME, ( '<', 'delta', ( 0, 0, 7, 0 ) ) )
+        return ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_ARCHIVED_TIME, ( '<', 'delta', ( 0, 0, 7, 0 ) ) )
         
     
     def GetPredicates( self ):
         
-        predicates = ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_ARCHIVED_TIME, ( self._sign.GetValue(), 'delta', ( self._years.value(), self._months.value(), self._days.value(), self._hours.value() ) ) ), )
+        predicates = ( ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_ARCHIVED_TIME, ( self._sign.GetValue(), 'delta', ( self._years.value(), self._months.value(), self._days.value(), self._hours.value() ) ) ), )
         
         return predicates
         
@@ -747,12 +748,12 @@ class PanelPredicateSystemModifiedDelta( PanelPredicateSystemSingle ):
     
     def GetDefaultPredicate( self ):
         
-        return ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_MODIFIED_TIME, ( '<', 'delta', ( 0, 0, 7, 0 ) ) )
+        return ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_MODIFIED_TIME, ( '<', 'delta', ( 0, 0, 7, 0 ) ) )
         
     
     def GetPredicates( self ):
         
-        predicates = ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_MODIFIED_TIME, ( self._sign.GetValue(), 'delta', ( self._years.value(), self._months.value(), self._days.value(), self._hours.value() ) ) ), )
+        predicates = ( ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_MODIFIED_TIME, ( self._sign.GetValue(), 'delta', ( self._years.value(), self._months.value(), self._days.value(), self._hours.value() ) ) ), )
         
         return predicates
         
@@ -805,12 +806,12 @@ class PanelPredicateSystemDuplicateRelationships( PanelPredicateSystemSingle ):
         num = 0
         dupe_type = HC.DUPLICATE_MEMBER
         
-        return ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_FILE_RELATIONSHIPS_COUNT, ( sign, num, dupe_type ) )
+        return ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_FILE_RELATIONSHIPS_COUNT, ( sign, num, dupe_type ) )
         
     
     def GetPredicates( self ):
         
-        predicates = ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_FILE_RELATIONSHIPS_COUNT, ( self._sign.GetValue(), self._num.value(), self._dupe_type.GetValue() ) ), )
+        predicates = ( ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_FILE_RELATIONSHIPS_COUNT, ( self._sign.GetValue(), self._num.value(), self._dupe_type.GetValue() ) ), )
         
         return predicates
         
@@ -822,10 +823,10 @@ class PanelPredicateSystemDuration( PanelPredicateSystemSingle ):
         PanelPredicateSystemSingle.__init__( self, parent )
         
         allowed_operators = [
-            ClientSearch.NUMBER_TEST_OPERATOR_LESS_THAN,
-            ClientSearch.NUMBER_TEST_OPERATOR_APPROXIMATE_ABSOLUTE,
-            ClientSearch.NUMBER_TEST_OPERATOR_APPROXIMATE_PERCENT,
-            ClientSearch.NUMBER_TEST_OPERATOR_GREATER_THAN
+            ClientNumberTest.NUMBER_TEST_OPERATOR_LESS_THAN,
+            ClientNumberTest.NUMBER_TEST_OPERATOR_APPROXIMATE_ABSOLUTE,
+            ClientNumberTest.NUMBER_TEST_OPERATOR_APPROXIMATE_PERCENT,
+            ClientNumberTest.NUMBER_TEST_OPERATOR_GREATER_THAN
         ]
         
         self._number_test = ClientGUITime.NumberTestWidgetDuration( self, allowed_operators = allowed_operators, appropriate_absolute_plus_or_minus_default = 30000, appropriate_percentage_plus_or_minus_default = 5 )
@@ -854,16 +855,16 @@ class PanelPredicateSystemDuration( PanelPredicateSystemSingle ):
     
     def GetDefaultPredicate( self ):
         
-        number_test = ClientSearch.NumberTest( operator = ClientSearch.NUMBER_TEST_OPERATOR_GREATER_THAN, value = 0 )
+        number_test = ClientNumberTest.NumberTest( operator = ClientNumberTest.NUMBER_TEST_OPERATOR_GREATER_THAN, value = 0 )
         
-        return ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_DURATION, number_test )
+        return ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_DURATION, number_test )
         
     
     def GetPredicates( self ):
         
         number_test = self._number_test.GetValue()
         
-        predicates = ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_DURATION, number_test ), )
+        predicates = ( ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_DURATION, number_test ), )
         
         return predicates
         
@@ -924,12 +925,12 @@ class PanelPredicateSystemFileService( PanelPredicateSystemSingle ):
         status = HC.CONTENT_STATUS_CURRENT
         file_service_key = bytes()
         
-        return ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_FILE_SERVICE, ( sign, status, file_service_key ) )
+        return ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_FILE_SERVICE, ( sign, status, file_service_key ) )
         
     
     def GetPredicates( self ):
         
-        predicates = ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_FILE_SERVICE, ( self._sign.GetValue(), self._status.GetValue(), self._file_service_key.GetValue() ) ), )
+        predicates = ( ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_FILE_SERVICE, ( self._sign.GetValue(), self._status.GetValue(), self._file_service_key.GetValue() ) ), )
         
         return predicates
         
@@ -989,7 +990,7 @@ class PanelPredicateSystemFileViewingStatsViews( PanelPredicateSystemSingle ):
         sign = '>'
         num = 10
         
-        return ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_FILE_VIEWING_STATS, ( 'views', tuple( viewing_locations ), sign, num ) )
+        return ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_FILE_VIEWING_STATS, ( 'views', tuple( viewing_locations ), sign, num ) )
         
     
     def GetPredicates( self ):
@@ -1005,7 +1006,7 @@ class PanelPredicateSystemFileViewingStatsViews( PanelPredicateSystemSingle ):
         
         num = self._num.value()
         
-        predicates = ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_FILE_VIEWING_STATS, ( 'views', tuple( viewing_locations ), sign, num ) ), )
+        predicates = ( ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_FILE_VIEWING_STATS, ( 'views', tuple( viewing_locations ), sign, num ) ), )
         
         return predicates
         
@@ -1065,7 +1066,7 @@ class PanelPredicateSystemFileViewingStatsViewtime( PanelPredicateSystemSingle )
         sign = '>'
         time_delta = 600
         
-        return ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_FILE_VIEWING_STATS, ( 'viewtime', tuple( viewing_locations ), sign, time_delta ) )
+        return ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_FILE_VIEWING_STATS, ( 'viewtime', tuple( viewing_locations ), sign, time_delta ) )
         
     
     def GetPredicates( self ):
@@ -1081,7 +1082,7 @@ class PanelPredicateSystemFileViewingStatsViewtime( PanelPredicateSystemSingle )
         
         time_delta = self._time_delta.GetValue()
         
-        predicates = ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_FILE_VIEWING_STATS, ( 'viewtime', tuple( viewing_locations ), sign, time_delta ) ), )
+        predicates = ( ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_FILE_VIEWING_STATS, ( 'viewtime', tuple( viewing_locations ), sign, time_delta ) ), )
         
         return predicates
         
@@ -1093,10 +1094,10 @@ class PanelPredicateSystemFramerate( PanelPredicateSystemSingle ):
         PanelPredicateSystemSingle.__init__( self, parent )
         
         allowed_operators = [
-            ClientSearch.NUMBER_TEST_OPERATOR_LESS_THAN,
-            ClientSearch.NUMBER_TEST_OPERATOR_APPROXIMATE_ABSOLUTE,
-            ClientSearch.NUMBER_TEST_OPERATOR_APPROXIMATE_PERCENT,
-            ClientSearch.NUMBER_TEST_OPERATOR_GREATER_THAN
+            ClientNumberTest.NUMBER_TEST_OPERATOR_LESS_THAN,
+            ClientNumberTest.NUMBER_TEST_OPERATOR_APPROXIMATE_ABSOLUTE,
+            ClientNumberTest.NUMBER_TEST_OPERATOR_APPROXIMATE_PERCENT,
+            ClientNumberTest.NUMBER_TEST_OPERATOR_GREATER_THAN
         ]
         
         self._number_test = ClientGUINumberTest.NumberTestWidget( self, allowed_operators = allowed_operators, max = 1000000, unit_string = 'fps', appropriate_absolute_plus_or_minus_default = 1, appropriate_percentage_plus_or_minus_default = 5 )
@@ -1125,16 +1126,16 @@ class PanelPredicateSystemFramerate( PanelPredicateSystemSingle ):
     
     def GetDefaultPredicate( self ):
         
-        number_test = ClientSearch.NumberTest( operator = ClientSearch.NUMBER_TEST_OPERATOR_APPROXIMATE_PERCENT, value = 60, extra_value = 0.05 )
+        number_test = ClientNumberTest.NumberTest( operator = ClientNumberTest.NUMBER_TEST_OPERATOR_APPROXIMATE_PERCENT, value = 60, extra_value = 0.05 )
         
-        return ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_FRAMERATE, number_test )
+        return ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_FRAMERATE, number_test )
         
     
     def GetPredicates( self ):
         
         number_test = self._number_test.GetValue()
         
-        predicates = ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_FRAMERATE, number_test ), )
+        predicates = ( ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_FRAMERATE, number_test ), )
         
         return predicates
         
@@ -1194,7 +1195,7 @@ class PanelPredicateSystemHash( PanelPredicateSystemSingle ):
         hashes = tuple()
         hash_type = 'sha256'
         
-        return ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_HASH, ( hashes, hash_type ) )
+        return ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HASH, ( hashes, hash_type ) )
         
     
     def GetPredicates( self ):
@@ -1207,7 +1208,7 @@ class PanelPredicateSystemHash( PanelPredicateSystemSingle ):
         
         hashes = ClientParsing.ParseHashesFromRawHexText( hash_type, hex_hashes_raw )
         
-        predicates = ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_HASH, ( hashes, hash_type ), inclusive = inclusive ), )
+        predicates = ( ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HASH, ( hashes, hash_type ), inclusive = inclusive ), )
         
         return predicates
         
@@ -1254,7 +1255,7 @@ class PanelPredicateSystemHasNoteName( PanelPredicateSystemSingle ):
         operator = True
         name = ''
         
-        return ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_HAS_NOTE_NAME, ( operator, name ) )
+        return ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HAS_NOTE_NAME, ( operator, name ) )
         
     
     def GetPredicates( self ):
@@ -1266,7 +1267,7 @@ class PanelPredicateSystemHasNoteName( PanelPredicateSystemSingle ):
             name = 'notes'
             
         
-        predicates = ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_HAS_NOTE_NAME, ( self._operator.GetValue(), name ) ), )
+        predicates = ( ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HAS_NOTE_NAME, ( self._operator.GetValue(), name ) ), )
         
         return predicates
         
@@ -1278,12 +1279,12 @@ class PanelPredicateSystemHeight( PanelPredicateSystemSingle ):
         PanelPredicateSystemSingle.__init__( self, parent )
         
         allowed_operators = [
-            ClientSearch.NUMBER_TEST_OPERATOR_LESS_THAN,
-            ClientSearch.NUMBER_TEST_OPERATOR_APPROXIMATE_ABSOLUTE,
-            ClientSearch.NUMBER_TEST_OPERATOR_APPROXIMATE_PERCENT,
-            ClientSearch.NUMBER_TEST_OPERATOR_EQUAL,
-            ClientSearch.NUMBER_TEST_OPERATOR_NOT_EQUAL,
-            ClientSearch.NUMBER_TEST_OPERATOR_GREATER_THAN
+            ClientNumberTest.NUMBER_TEST_OPERATOR_LESS_THAN,
+            ClientNumberTest.NUMBER_TEST_OPERATOR_APPROXIMATE_ABSOLUTE,
+            ClientNumberTest.NUMBER_TEST_OPERATOR_APPROXIMATE_PERCENT,
+            ClientNumberTest.NUMBER_TEST_OPERATOR_EQUAL,
+            ClientNumberTest.NUMBER_TEST_OPERATOR_NOT_EQUAL,
+            ClientNumberTest.NUMBER_TEST_OPERATOR_GREATER_THAN
         ]
         
         self._number_test = ClientGUINumberTest.NumberTestWidget( self, allowed_operators = allowed_operators, unit_string = 'px', appropriate_absolute_plus_or_minus_default = 200 )
@@ -1312,16 +1313,16 @@ class PanelPredicateSystemHeight( PanelPredicateSystemSingle ):
     
     def GetDefaultPredicate( self ):
         
-        number_test = ClientSearch.NumberTest( operator = ClientSearch.NUMBER_TEST_OPERATOR_EQUAL, value = 1080 )
+        number_test = ClientNumberTest.NumberTest( operator = ClientNumberTest.NUMBER_TEST_OPERATOR_EQUAL, value = 1080 )
         
-        return ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_HEIGHT, number_test )
+        return ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HEIGHT, number_test )
         
     
     def GetPredicates( self ):
         
         number_test = self._number_test.GetValue()
         
-        predicates = ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_HEIGHT, number_test ), )
+        predicates = ( ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HEIGHT, number_test ), )
         
         return predicates
         
@@ -1369,7 +1370,7 @@ class PanelPredicateSystemKnownURLsExactURL( PanelPredicateSystemSingle ):
         rule = ''
         description = ''
         
-        return ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_KNOWN_URLS, ( operator, rule_type, rule, description ) )
+        return ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_KNOWN_URLS, ( operator, rule_type, rule, description ) )
         
     
     def GetPredicates( self ):
@@ -1393,7 +1394,7 @@ class PanelPredicateSystemKnownURLsExactURL( PanelPredicateSystemSingle ):
         
         description = operator_description + exact_url
         
-        predicates = ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_KNOWN_URLS, ( operator, rule_type, rule, description ) ), )
+        predicates = ( ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_KNOWN_URLS, ( operator, rule_type, rule, description ) ), )
         
         return predicates
         
@@ -1443,7 +1444,7 @@ class PanelPredicateSystemKnownURLsDomain( PanelPredicateSystemSingle ):
         rule = ''
         description = ''
         
-        return ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_KNOWN_URLS, ( operator, rule_type, rule, description ) )
+        return ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_KNOWN_URLS, ( operator, rule_type, rule, description ) )
         
     
     def GetPredicates( self ):
@@ -1467,7 +1468,7 @@ class PanelPredicateSystemKnownURLsDomain( PanelPredicateSystemSingle ):
         
         description = operator_description + domain
         
-        predicates = ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_KNOWN_URLS, ( operator, rule_type, rule, description ) ), )
+        predicates = ( ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_KNOWN_URLS, ( operator, rule_type, rule, description ) ), )
         
         return predicates
         
@@ -1515,7 +1516,7 @@ class PanelPredicateSystemKnownURLsRegex( PanelPredicateSystemSingle ):
         rule = ''
         description = ''
         
-        return ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_KNOWN_URLS, ( operator, rule_type, rule, description ) )
+        return ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_KNOWN_URLS, ( operator, rule_type, rule, description ) )
         
     
     def CheckValid( self ):
@@ -1553,7 +1554,7 @@ class PanelPredicateSystemKnownURLsRegex( PanelPredicateSystemSingle ):
         
         description = operator_description + regex
         
-        predicates = ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_KNOWN_URLS, ( operator, rule_type, rule, description ) ), )
+        predicates = ( ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_KNOWN_URLS, ( operator, rule_type, rule, description ) ), )
         
         return predicates
         
@@ -1613,7 +1614,7 @@ class PanelPredicateSystemKnownURLsURLClass( PanelPredicateSystemSingle ):
         )
         description = ''
         
-        return ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_KNOWN_URLS, ( operator, rule_type, rule, description ) )
+        return ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_KNOWN_URLS, ( operator, rule_type, rule, description ) )
         
     
     def GetPredicates( self ):
@@ -1630,7 +1631,7 @@ class PanelPredicateSystemKnownURLsURLClass( PanelPredicateSystemSingle ):
         
         description = f'has url with class {url_class_name}' if operator else f'does not have url with class {url_class_name}'
         
-        predicates = ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_KNOWN_URLS, ( operator, rule_type, rule, description ) ), )
+        predicates = ( ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_KNOWN_URLS, ( operator, rule_type, rule, description ) ), )
         
         return predicates
         
@@ -1669,12 +1670,12 @@ class PanelPredicateSystemLimit( PanelPredicateSystemSingle ):
         
         limit = 256
         
-        return ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_LIMIT, limit )
+        return ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_LIMIT, limit )
         
     
     def GetPredicates( self ):
         
-        predicates = ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_LIMIT, self._limit.value() ), )
+        predicates = ( ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_LIMIT, self._limit.value() ), )
         
         return predicates
         
@@ -1698,7 +1699,7 @@ class PanelPredicateSystemMime( PanelPredicateSystemSingle ):
             summary_mimes = ( summary_mimes, )
             
         
-        specific_mimes = ClientSearch.ConvertSummaryFiletypesToSpecific( summary_mimes )
+        specific_mimes = ClientSearchPredicate.ConvertSummaryFiletypesToSpecific( summary_mimes )
         
         self._mimes.SetValue( specific_mimes )
         
@@ -1718,14 +1719,14 @@ class PanelPredicateSystemMime( PanelPredicateSystemSingle ):
         
         specific_mimes = tuple()
         
-        return ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_MIME, specific_mimes )
+        return ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_MIME, specific_mimes )
         
     
     def GetPredicates( self ):
         
         specific_mimes = self._mimes.GetValue()
         
-        predicates = ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_MIME, specific_mimes ), )
+        predicates = ( ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_MIME, specific_mimes ), )
         
         return predicates
         
@@ -1780,12 +1781,12 @@ class PanelPredicateSystemNumPixels( PanelPredicateSystemSingle ):
         num_pixels = 2
         unit = 1000000
         
-        return ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_PIXELS, ( sign, num_pixels, unit ) )
+        return ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_NUM_PIXELS, ( sign, num_pixels, unit ) )
         
     
     def GetPredicates( self ):
         
-        predicates = ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_PIXELS, ( self._sign.GetValue(), self._num_pixels.value(), self._unit.GetValue() ) ), )
+        predicates = ( ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_NUM_PIXELS, ( self._sign.GetValue(), self._num_pixels.value(), self._unit.GetValue() ) ), )
         
         return predicates
         
@@ -1797,12 +1798,12 @@ class PanelPredicateSystemNumFrames( PanelPredicateSystemSingle ):
         PanelPredicateSystemSingle.__init__( self, parent )
         
         allowed_operators = [
-            ClientSearch.NUMBER_TEST_OPERATOR_LESS_THAN,
-            ClientSearch.NUMBER_TEST_OPERATOR_APPROXIMATE_ABSOLUTE,
-            ClientSearch.NUMBER_TEST_OPERATOR_APPROXIMATE_PERCENT,
-            ClientSearch.NUMBER_TEST_OPERATOR_EQUAL,
-            ClientSearch.NUMBER_TEST_OPERATOR_NOT_EQUAL,
-            ClientSearch.NUMBER_TEST_OPERATOR_GREATER_THAN
+            ClientNumberTest.NUMBER_TEST_OPERATOR_LESS_THAN,
+            ClientNumberTest.NUMBER_TEST_OPERATOR_APPROXIMATE_ABSOLUTE,
+            ClientNumberTest.NUMBER_TEST_OPERATOR_APPROXIMATE_PERCENT,
+            ClientNumberTest.NUMBER_TEST_OPERATOR_EQUAL,
+            ClientNumberTest.NUMBER_TEST_OPERATOR_NOT_EQUAL,
+            ClientNumberTest.NUMBER_TEST_OPERATOR_GREATER_THAN
         ]
         
         self._number_test = ClientGUINumberTest.NumberTestWidget( self, allowed_operators = allowed_operators, max = 1000000, appropriate_absolute_plus_or_minus_default = 300 )
@@ -1831,16 +1832,16 @@ class PanelPredicateSystemNumFrames( PanelPredicateSystemSingle ):
     
     def GetDefaultPredicate( self ):
         
-        number_test = ClientSearch.NumberTest( operator = ClientSearch.NUMBER_TEST_OPERATOR_GREATER_THAN, value = 600 )
+        number_test = ClientNumberTest.NumberTest( operator = ClientNumberTest.NUMBER_TEST_OPERATOR_GREATER_THAN, value = 600 )
         
-        return ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_FRAMES, number_test )
+        return ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_NUM_FRAMES, number_test )
         
     
     def GetPredicates( self ):
         
         number_test = self._number_test.GetValue()
         
-        predicates = ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_FRAMES, number_test ), )
+        predicates = ( ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_NUM_FRAMES, number_test ), )
         
         return predicates
         
@@ -1900,7 +1901,7 @@ class PanelPredicateSystemNumTags( PanelPredicateSystemSingle ):
         sign = '>'
         num_tags = 4
         
-        return ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_TAGS, ( namespace, sign, num_tags ) )
+        return ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_NUM_TAGS, ( namespace, sign, num_tags ) )
         
     
     def GetPredicates( self ):
@@ -1912,21 +1913,21 @@ class PanelPredicateSystemNumTags( PanelPredicateSystemSingle ):
         # swap num character tags > 0 with character:*anything*
         if namespace != '*':
             
-            number_test = ClientSearch.NumberTest.STATICCreateFromCharacters( operator, value )
+            number_test = ClientNumberTest.NumberTest.STATICCreateFromCharacters( operator, value )
             
             if number_test.IsZero():
                 
-                predicate = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_NAMESPACE, namespace, inclusive = False )
+                predicate = ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_NAMESPACE, namespace, inclusive = False )
                 
             elif number_test.IsAnythingButZero():
                 
-                predicate = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_NAMESPACE, namespace )
+                predicate = ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_NAMESPACE, namespace )
                 
             
         
         if predicate is None:
             
-            predicate = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_TAGS, ( namespace, operator, value ) )
+            predicate = ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_NUM_TAGS, ( namespace, operator, value ) )
             
         
         predicates = ( predicate, )
@@ -1941,10 +1942,10 @@ class PanelPredicateSystemNumNotes( PanelPredicateSystemSingle ):
         PanelPredicateSystemSingle.__init__( self, parent )
         
         allowed_operators = [
-            ClientSearch.NUMBER_TEST_OPERATOR_LESS_THAN,
-            ClientSearch.NUMBER_TEST_OPERATOR_EQUAL,
-            ClientSearch.NUMBER_TEST_OPERATOR_NOT_EQUAL,
-            ClientSearch.NUMBER_TEST_OPERATOR_GREATER_THAN
+            ClientNumberTest.NUMBER_TEST_OPERATOR_LESS_THAN,
+            ClientNumberTest.NUMBER_TEST_OPERATOR_EQUAL,
+            ClientNumberTest.NUMBER_TEST_OPERATOR_NOT_EQUAL,
+            ClientNumberTest.NUMBER_TEST_OPERATOR_GREATER_THAN
         ]
         
         self._number_test = ClientGUINumberTest.NumberTestWidget( self, allowed_operators = allowed_operators )
@@ -1973,16 +1974,16 @@ class PanelPredicateSystemNumNotes( PanelPredicateSystemSingle ):
     
     def GetDefaultPredicate( self ):
         
-        number_test = ClientSearch.NumberTest( operator = ClientSearch.NUMBER_TEST_OPERATOR_EQUAL, value = 2 )
+        number_test = ClientNumberTest.NumberTest( operator = ClientNumberTest.NUMBER_TEST_OPERATOR_EQUAL, value = 2 )
         
-        return ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_NOTES, number_test )
+        return ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_NUM_NOTES, number_test )
         
     
     def GetPredicates( self ):
         
         number_test = self._number_test.GetValue()
         
-        predicates = ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_NOTES, number_test ), )
+        predicates = ( ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_NUM_NOTES, number_test ), )
         
         return predicates
         
@@ -1995,10 +1996,10 @@ class PanelPredicateSystemNumURLs( PanelPredicateSystemSingle ):
         PanelPredicateSystemSingle.__init__( self, parent )
         
         allowed_operators = [
-            ClientSearch.NUMBER_TEST_OPERATOR_LESS_THAN,
-            ClientSearch.NUMBER_TEST_OPERATOR_EQUAL,
-            ClientSearch.NUMBER_TEST_OPERATOR_NOT_EQUAL,
-            ClientSearch.NUMBER_TEST_OPERATOR_GREATER_THAN
+            ClientNumberTest.NUMBER_TEST_OPERATOR_LESS_THAN,
+            ClientNumberTest.NUMBER_TEST_OPERATOR_EQUAL,
+            ClientNumberTest.NUMBER_TEST_OPERATOR_NOT_EQUAL,
+            ClientNumberTest.NUMBER_TEST_OPERATOR_GREATER_THAN
         ]
         
         self._number_test = ClientGUINumberTest.NumberTestWidget( self, allowed_operators = allowed_operators )
@@ -2027,16 +2028,16 @@ class PanelPredicateSystemNumURLs( PanelPredicateSystemSingle ):
     
     def GetDefaultPredicate( self ):
         
-        number_test = ClientSearch.NumberTest( operator = ClientSearch.NUMBER_TEST_OPERATOR_GREATER_THAN, value = 0 )
+        number_test = ClientNumberTest.NumberTest( operator = ClientNumberTest.NUMBER_TEST_OPERATOR_GREATER_THAN, value = 0 )
         
-        return ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_URLS, number_test )
+        return ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_NUM_URLS, number_test )
         
     
     def GetPredicates( self ):
         
         number_test = self._number_test.GetValue()
         
-        predicates = ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_URLS, number_test ), )
+        predicates = ( ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_NUM_URLS, number_test ), )
         
         return predicates
         
@@ -2049,12 +2050,12 @@ class PanelPredicateSystemNumWords( PanelPredicateSystemSingle ):
         PanelPredicateSystemSingle.__init__( self, parent )
         
         allowed_operators = [
-            ClientSearch.NUMBER_TEST_OPERATOR_LESS_THAN,
-            ClientSearch.NUMBER_TEST_OPERATOR_APPROXIMATE_ABSOLUTE,
-            ClientSearch.NUMBER_TEST_OPERATOR_APPROXIMATE_PERCENT,
-            ClientSearch.NUMBER_TEST_OPERATOR_EQUAL,
-            ClientSearch.NUMBER_TEST_OPERATOR_NOT_EQUAL,
-            ClientSearch.NUMBER_TEST_OPERATOR_GREATER_THAN
+            ClientNumberTest.NUMBER_TEST_OPERATOR_LESS_THAN,
+            ClientNumberTest.NUMBER_TEST_OPERATOR_APPROXIMATE_ABSOLUTE,
+            ClientNumberTest.NUMBER_TEST_OPERATOR_APPROXIMATE_PERCENT,
+            ClientNumberTest.NUMBER_TEST_OPERATOR_EQUAL,
+            ClientNumberTest.NUMBER_TEST_OPERATOR_NOT_EQUAL,
+            ClientNumberTest.NUMBER_TEST_OPERATOR_GREATER_THAN
         ]
         
         self._number_test = ClientGUINumberTest.NumberTestWidget( self, allowed_operators = allowed_operators, max = 100000000, appropriate_absolute_plus_or_minus_default = 5000 )
@@ -2083,16 +2084,16 @@ class PanelPredicateSystemNumWords( PanelPredicateSystemSingle ):
     
     def GetDefaultPredicate( self ):
         
-        number_test = ClientSearch.NumberTest( operator = ClientSearch.NUMBER_TEST_OPERATOR_LESS_THAN, value = 30000 )
+        number_test = ClientNumberTest.NumberTest( operator = ClientNumberTest.NUMBER_TEST_OPERATOR_LESS_THAN, value = 30000 )
         
-        return ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_WORDS, number_test )
+        return ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_NUM_WORDS, number_test )
         
     
     def GetPredicates( self ):
         
         number_test = self._number_test.GetValue()
         
-        predicates = ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_WORDS, number_test ), )
+        predicates = ( ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_NUM_WORDS, number_test ), )
         
         return predicates
         
@@ -2147,12 +2148,12 @@ class PanelPredicateSystemRatio( PanelPredicateSystemSingle ):
         width = 16
         height = 9
         
-        return ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_RATIO, ( sign, width, height ) )
+        return ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_RATIO, ( sign, width, height ) )
         
     
     def GetPredicates( self ):
         
-        predicates = ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_RATIO, ( self._sign.GetValue(), self._width.value(), self._height.value() ) ), )
+        predicates = ( ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_RATIO, ( self._sign.GetValue(), self._width.value(), self._height.value() ) ), )
         
         return predicates
         
@@ -2345,7 +2346,7 @@ class PanelPredicateSystemSimilarToData( PanelPredicateSystemSingle ):
         perceptual_hashes = tuple()
         max_hamming = 8
         
-        return ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_SIMILAR_TO_DATA, ( pixel_hashes, perceptual_hashes, max_hamming ) )
+        return ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_SIMILAR_TO_DATA, ( pixel_hashes, perceptual_hashes, max_hamming ) )
         
     
     def GetPredicates( self ):
@@ -2358,7 +2359,7 @@ class PanelPredicateSystemSimilarToData( PanelPredicateSystemSingle ):
         
         perceptual_hashes = ClientParsing.ParseHashesFromRawHexText( 'perceptual', hex_perceptual_hashes_raw )
         
-        predicates = ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_SIMILAR_TO_DATA, ( pixel_hashes, perceptual_hashes, self._max_hamming.value() ) ), )
+        predicates = ( ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_SIMILAR_TO_DATA, ( pixel_hashes, perceptual_hashes, self._max_hamming.value() ) ), )
         
         return predicates
         
@@ -2426,7 +2427,7 @@ class PanelPredicateSystemSimilarToFiles( PanelPredicateSystemSingle ):
         hashes = tuple()
         max_hamming = 4
         
-        return ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_SIMILAR_TO_FILES, ( hashes, max_hamming ) )
+        return ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_SIMILAR_TO_FILES, ( hashes, max_hamming ) )
         
     
     def GetPredicates( self ):
@@ -2435,7 +2436,7 @@ class PanelPredicateSystemSimilarToFiles( PanelPredicateSystemSingle ):
         
         hashes = ClientParsing.ParseHashesFromRawHexText( 'sha256', hex_hashes_raw )
         
-        predicates = ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_SIMILAR_TO_FILES, ( hashes, self._max_hamming.value() ) ), )
+        predicates = ( ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_SIMILAR_TO_FILES, ( hashes, self._max_hamming.value() ) ), )
         
         return predicates
         
@@ -2484,14 +2485,14 @@ class PanelPredicateSystemSize( PanelPredicateSystemSingle ):
         size = 200
         unit = 1024
         
-        return ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_SIZE, ( sign, size, unit ) )
+        return ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_SIZE, ( sign, size, unit ) )
         
     
     def GetPredicates( self ):
         
         ( size, unit ) = self._bytes.GetSeparatedValue()
         
-        predicates = ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_SIZE, ( self._sign.GetValue(), size, unit ) ), )
+        predicates = ( ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_SIZE, ( self._sign.GetValue(), size, unit ) ), )
         
         return predicates
         
@@ -2543,12 +2544,12 @@ class PanelPredicateSystemTagAsNumber( PanelPredicateSystemSingle ):
         sign = '>'
         num = 0
         
-        return ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_TAG_AS_NUMBER, ( namespace, sign, num ) )
+        return ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_TAG_AS_NUMBER, ( namespace, sign, num ) )
         
     
     def GetPredicates( self ):
         
-        predicates = ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_TAG_AS_NUMBER, ( self._namespace.text(), self._sign.GetValue(), self._num.value() ) ), )
+        predicates = ( ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_TAG_AS_NUMBER, ( self._namespace.text(), self._sign.GetValue(), self._num.value() ) ), )
         
         return predicates
         
@@ -2560,12 +2561,12 @@ class PanelPredicateSystemWidth( PanelPredicateSystemSingle ):
         PanelPredicateSystemSingle.__init__( self, parent )
         
         allowed_operators = [
-            ClientSearch.NUMBER_TEST_OPERATOR_LESS_THAN,
-            ClientSearch.NUMBER_TEST_OPERATOR_APPROXIMATE_ABSOLUTE,
-            ClientSearch.NUMBER_TEST_OPERATOR_APPROXIMATE_PERCENT,
-            ClientSearch.NUMBER_TEST_OPERATOR_EQUAL,
-            ClientSearch.NUMBER_TEST_OPERATOR_NOT_EQUAL,
-            ClientSearch.NUMBER_TEST_OPERATOR_GREATER_THAN
+            ClientNumberTest.NUMBER_TEST_OPERATOR_LESS_THAN,
+            ClientNumberTest.NUMBER_TEST_OPERATOR_APPROXIMATE_ABSOLUTE,
+            ClientNumberTest.NUMBER_TEST_OPERATOR_APPROXIMATE_PERCENT,
+            ClientNumberTest.NUMBER_TEST_OPERATOR_EQUAL,
+            ClientNumberTest.NUMBER_TEST_OPERATOR_NOT_EQUAL,
+            ClientNumberTest.NUMBER_TEST_OPERATOR_GREATER_THAN
         ]
         
         self._number_test = ClientGUINumberTest.NumberTestWidget( self, allowed_operators = allowed_operators, unit_string = 'px',  appropriate_absolute_plus_or_minus_default = 200 )
@@ -2594,16 +2595,16 @@ class PanelPredicateSystemWidth( PanelPredicateSystemSingle ):
     
     def GetDefaultPredicate( self ):
         
-        number_test = ClientSearch.NumberTest( operator = ClientSearch.NUMBER_TEST_OPERATOR_EQUAL, value = 1920 )
+        number_test = ClientNumberTest.NumberTest( operator = ClientNumberTest.NUMBER_TEST_OPERATOR_EQUAL, value = 1920 )
         
-        return ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_WIDTH, number_test )
+        return ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_WIDTH, number_test )
         
     
     def GetPredicates( self ):
         
         number_test = self._number_test.GetValue()
         
-        predicates = ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_WIDTH, number_test ), )
+        predicates = ( ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_WIDTH, number_test ), )
         
         return predicates
         

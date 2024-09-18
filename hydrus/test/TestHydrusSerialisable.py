@@ -20,7 +20,7 @@ from hydrus.client.media import ClientMedia
 from hydrus.client.media import ClientMediaManagers
 from hydrus.client.media import ClientMediaResult
 from hydrus.client.metadata import ClientContentUpdates
-from hydrus.client.search import ClientSearch
+from hydrus.client.search import ClientSearchPredicate
 
 from hydrus.test import HelperFunctions as HF
 from hydrus.test import TestController as TC
@@ -99,9 +99,9 @@ class TestSerialisables( unittest.TestCase ):
         d[ 'test3' ] = 5
         
         d[ 6 ] = HydrusSerialisable.SerialisableDictionary( { i : 'test' + str( i ) for i in range( 20 ) } )
-        d[ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'test pred 1' ) ] = 56
+        d[ ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_TAG, 'test pred 1' ) ] = 56
         
-        d[ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'test pred 2' ) ] = HydrusSerialisable.SerialisableList( [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'test' + str( i ) ) for i in range( 10 ) ] )
+        d[ ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_TAG, 'test pred 2' ) ] = HydrusSerialisable.SerialisableList( [ ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_TAG, 'test' + str( i ) ) for i in range( 10 ) ] )
         
         self.assertEqual( len( list(d.keys()) ), 7 )
         

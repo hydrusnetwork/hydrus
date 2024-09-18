@@ -39,22 +39,79 @@ from hydrus.client.importing import ClientImportSubscriptions
 from hydrus.client.importing import ClientImportSubscriptionQuery
 from hydrus.client.importing import ClientImportSubscriptionLegacy # keep this here so the serialisable stuff is registered, it has to be imported somewhere
 
-def DoAliveOrDeadCheck( win: QW.QWidget, query_headers: typing.Collection[ ClientImportSubscriptionQuery.SubscriptionQueryHeader ] ):
+def DoAliveOrDeadCheck( win: QW.QWidget, subscriptions: typing.Collection[ ClientImportSubscriptions.Subscription ], query_headers: typing.Collection[ ClientImportSubscriptionQuery.SubscriptionQueryHeader ] ):
+    
+    do_paused_subs = True
+    
+    num_paused_subs = sum( ( 1 for subscription in subscriptions if subscription.IsPaused() ) )
+    
+    if 0 < num_paused_subs:
+        
+        message = f'Of the {HydrusNumbers.ToHumanInt(len(subscriptions))} selected subscriptions, {HydrusNumbers.ToHumanInt(num_paused_subs)} are paused. Do you want to unpause these paused subs and check their queries?'
+        
+        if num_paused_subs == len( subscriptions ):
+            
+            choice_tuples = [
+                ( f'yes, unpause them and check their queries', True, 'Unpause and check what is paused.' ),
+                ( f'no, leave them alone', False, 'Exit out of this.' )
+            ]
+            
+        else:
+            
+            choice_tuples = [
+                ( f'yes, check queries within paused subs', True, 'Unpause and check what is paused.' ),
+                ( f'no, just check within unpaused subs', False, 'Only check what is currently active.' )
+            ]
+            
+        
+        try:
+            
+            do_paused_subs = ClientGUIDialogsQuick.SelectFromListButtons( win, 'Check which?', choice_tuples, message = message )
+            
+        except HydrusExceptions.CancelledException:
+            
+            raise
+            
+        
+    
+    if len( subscriptions ) > 0 and len( query_headers ) == 0:
+        
+        if do_paused_subs:
+            
+            subs_to_pull_from = subscriptions
+            
+        else:
+            
+            subs_to_pull_from = [ subscription for subscription in subscriptions if not subscription.IsPaused() ]
+            
+        
+        query_headers = HydrusLists.MassExtend( ( subscription.GetQueryHeaders() for subscription in subs_to_pull_from ) )
+        
     
     do_alive = True
     do_dead = True
     
     num_dead = sum( ( 1 for query_header in query_headers if query_header.IsDead() ) )
     
-    if 0 < num_dead < len( query_headers ):
+    if 0 < num_dead:
         
-        message = f'Of the {HydrusNumbers.ToHumanInt(len(query_headers))} selected queries, {HydrusNumbers.ToHumanInt(num_dead)} are DEAD. Which queries do you want to check?'
+        message = f'Of the {HydrusNumbers.ToHumanInt(len(query_headers))} selected queries, {HydrusNumbers.ToHumanInt(num_dead)} are DEAD. Do you want to check these?'
         
-        choice_tuples = [
-            ( f'all of them', ( True, True ), 'Resuscitate the DEAD queries and check everything.' ),
-            ( f'the {HydrusNumbers.ToHumanInt(len(query_headers)-num_dead)} ALIVE', ( True, False ), 'Check the ALIVE queries.' ),
-            ( f'the {HydrusNumbers.ToHumanInt(num_dead)} DEAD', ( False, True ), 'Resuscitate the DEAD queries and check them.' )
-        ]
+        if num_dead == len( query_headers ):
+            
+            choice_tuples = [
+                ( f'yes, resurrect the DEAD queries', ( False, True ), 'Resuscitate the DEAD queries and check everything.' ),
+                ( f'no, leave them DEAD', ( False, False ), 'Exit out of this.' )
+            ]
+            
+        else:
+            
+            choice_tuples = [
+                ( f'yes, check all of them', ( True, True ), 'Resuscitate the DEAD queries and check everything.' ),
+                ( f'check the {HydrusNumbers.ToHumanInt(len(query_headers)-num_dead)} ALIVE', ( True, False ), 'Check the ALIVE queries.' ),
+                ( f'resurrect and check the {HydrusNumbers.ToHumanInt(num_dead)} DEAD', ( False, True ), 'Resuscitate the DEAD queries and check them.' )
+            ]
+            
         
         try:
             
@@ -66,7 +123,50 @@ def DoAliveOrDeadCheck( win: QW.QWidget, query_headers: typing.Collection[ Clien
             
         
     
-    return ( do_alive, do_dead )
+    if not do_alive:
+        
+        query_headers = [ query_header for query_header in query_headers if query_header.IsDead() ]
+        
+    
+    if not do_dead:
+        
+        query_headers = [ query_header for query_header in query_headers if not query_header.IsDead() ]
+        
+    
+    do_paused_queries = True
+    
+    num_paused_queries = sum( ( 1 for query_header in query_headers if query_header.IsPaused() ) )
+    
+    if 0 < num_paused_queries:
+        
+        message = f'Of the {HydrusNumbers.ToHumanInt(len(query_headers))} selected queries, {HydrusNumbers.ToHumanInt(num_paused_queries)} are paused. Do you want to unpause and check them?'
+        
+        if num_paused_queries == len( query_headers ):
+            
+            choice_tuples = [
+                ( f'yes, check them', True, 'Unpause and check what is paused.' ),
+                ( f'no, leave them alone', False, 'Exit out of this.' )
+            ]
+            
+        else:
+            
+            choice_tuples = [
+                ( f'yes check paused queries', True, 'Unpause and check what is paused.' ),
+                ( f'no just what is currently unpaused', False, 'Only check what is currently active.' )
+            ]
+            
+        
+        try:
+            
+            do_paused_queries = ClientGUIDialogsQuick.SelectFromListButtons( win, 'Check which?', choice_tuples, message = message )
+            
+        except HydrusExceptions.CancelledException:
+            
+            raise
+            
+        
+    
+    return ( do_alive, do_dead, do_paused_subs, do_paused_queries )
     
 
 def GetQueryHeadersQualityInfo( query_headers: typing.Iterable[ ClientImportSubscriptionQuery.SubscriptionQueryHeader ] ):
@@ -439,7 +539,7 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         
         try:
             
-            ( do_alive, do_dead ) = DoAliveOrDeadCheck( self, selected_query_headers )
+            ( do_alive, do_dead, do_paused_subs, do_paused_queries ) = DoAliveOrDeadCheck( self, [], selected_query_headers )
             
         except HydrusExceptions.CancelledException:
             
@@ -461,6 +561,11 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
                     
                     continue
                     
+                
+            
+            if not do_paused_queries and query_header.IsPaused():
+                
+                continue
                 
             
             query_header.CheckNow()
@@ -2146,11 +2251,9 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         subscriptions = self._subscriptions.GetData( only_selected = True )
         
-        query_headers = HydrusLists.MassExtend( ( subscription.GetQueryHeaders() for subscription in subscriptions ) )
-        
         try:
             
-            ( do_alive, do_dead ) = DoAliveOrDeadCheck( self, query_headers )
+            ( do_alive, do_dead, do_paused_subs, do_paused_queries ) = DoAliveOrDeadCheck( self, subscriptions, [] )
             
         except HydrusExceptions.CancelledException:
             
@@ -2158,6 +2261,11 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             
         
         for subscription in subscriptions:
+            
+            if not do_paused_subs and subscription.IsPaused():
+                
+                continue
+                
             
             we_did_some = False
             
@@ -2180,12 +2288,19 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
                         
                     
                 
+                if not do_paused_queries and query_header.IsPaused():
+                    
+                    continue
+                    
+                
                 query_header.CheckNow()
                 
                 we_did_some = True
                 
             
             if we_did_some:
+                
+                subscription.SetPaused( False )
                 
                 subscription.ScrubDelay()
                 

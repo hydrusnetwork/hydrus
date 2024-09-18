@@ -21,7 +21,7 @@ from hydrus.client.gui.widgets import ClientGUICommon
 from hydrus.client.gui.widgets import ClientGUIMenuButton
 from hydrus.client.media import ClientMedia
 from hydrus.client.metadata import ClientTags
-from hydrus.client.search import ClientSearch
+from hydrus.client.search import ClientSearchTagContext
 
 # wew lad
 # https://stackoverflow.com/questions/46456238/checkbox-not-visible-inside-combobox
@@ -488,7 +488,7 @@ class MediaSortControl( QW.QWidget ):
         self._sort_tag_display_type_button = ClientGUIMenuButton.MenuChoiceButton( self, [] )
         self._sort_order_choice = ClientGUIMenuButton.MenuChoiceButton( self, [] )
         
-        tag_context = ClientSearch.TagContext( service_key = CC.COMBINED_TAG_SERVICE_KEY )
+        tag_context = ClientSearchTagContext.TagContext( service_key = CC.COMBINED_TAG_SERVICE_KEY )
         
         self._tag_context_button = ClientGUISearch.TagContextButton( self, tag_context, use_short_label = True )
         
@@ -834,7 +834,7 @@ class MediaSortControl( QW.QWidget ):
         self._BroadcastSort()
         
     
-    def EventTagContextChanged( self, tag_context: ClientSearch.TagContext ):
+    def EventTagContextChanged( self, tag_context: ClientSearchTagContext.TagContext ):
         
         self._UserChoseASort()
         

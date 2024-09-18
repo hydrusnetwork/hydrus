@@ -267,6 +267,14 @@ new_page_goes_string_lookup = {
     NEW_PAGE_GOES_FAR_RIGHT : 'the far right'
 }
 
+CLOSED_PAGE_FOCUS_GOES_LEFT = 0
+CLOSED_PAGE_FOCUS_GOES_RIGHT = 1
+
+closed_page_focus_string_lookup = {
+    CLOSED_PAGE_FOCUS_GOES_LEFT : 'left of the closed page tab',
+    CLOSED_PAGE_FOCUS_GOES_RIGHT : 'right of the closed page tab'
+}
+
 NETWORK_CONTEXT_GLOBAL = 0
 NETWORK_CONTEXT_HYDRUS = 1
 NETWORK_CONTEXT_DOMAIN = 2

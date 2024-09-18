@@ -17,7 +17,9 @@ from hydrus.client.importing import ClientImportFiles
 from hydrus.client.importing.options import FileImportOptions
 from hydrus.client.metadata import ClientContentUpdates
 from hydrus.client.metadata import ClientTags
-from hydrus.client.search import ClientSearch
+from hydrus.client.search import ClientSearchFileSearchContext
+from hydrus.client.search import ClientSearchPredicate
+from hydrus.client.search import ClientSearchTagContext
 
 from hydrus.test import TestController
 
@@ -640,9 +642,9 @@ class TestClientDBTags( unittest.TestCase ):
     def _test_ac( self, search_text, tag_service_key, file_service_key, expected_storage_tags_to_counts, expected_display_tags_to_counts ):
         
         location_context = ClientLocation.LocationContext.STATICCreateSimple( file_service_key )
-        tag_context = ClientSearch.TagContext( tag_service_key )
+        tag_context = ClientSearchTagContext.TagContext( tag_service_key )
         
-        file_search_context = ClientSearch.FileSearchContext( location_context = location_context, tag_context = tag_context )
+        file_search_context = ClientSearchFileSearchContext.FileSearchContext( location_context = location_context, tag_context = tag_context )
         
         preds = self._read( 'autocomplete_predicates', ClientTags.TAG_DISPLAY_STORAGE, file_search_context, search_text = search_text )
         
@@ -1120,8 +1122,8 @@ class TestClientDBTags( unittest.TestCase ):
         
         # and a/c results, both specific and combined
         
-        self._test_ac( 'samu*', self._public_service_key, CC.LOCAL_FILE_SERVICE_KEY, { bad_samus_tag_1 : ClientSearch.PredicateCount.STATICCreateStaticCount( 0, 1 ), bad_samus_tag_2 : ClientSearch.PredicateCount.STATICCreateStaticCount( 0, 1 ) }, { good_samus_tag : ClientSearch.PredicateCount.STATICCreateStaticCount( 0, 1 ) } )
-        self._test_ac( 'samu*', self._public_service_key, CC.COMBINED_FILE_SERVICE_KEY, { bad_samus_tag_1 : ClientSearch.PredicateCount.STATICCreateStaticCount( 0, 1 ), bad_samus_tag_2 : ClientSearch.PredicateCount.STATICCreateStaticCount( 0, 1 ) }, { good_samus_tag : ClientSearch.PredicateCount.STATICCreateStaticCount( 0, 1 ) } )
+        self._test_ac( 'samu*', self._public_service_key, CC.LOCAL_FILE_SERVICE_KEY, { bad_samus_tag_1 : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ), bad_samus_tag_2 : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ) }, { good_samus_tag : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ) } )
+        self._test_ac( 'samu*', self._public_service_key, CC.COMBINED_FILE_SERVICE_KEY, { bad_samus_tag_1 : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ), bad_samus_tag_2 : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ) }, { good_samus_tag : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ) } )
         
         # now we'll currentify the tags in one action
         
@@ -1149,8 +1151,8 @@ class TestClientDBTags( unittest.TestCase ):
         
         # and a/c results, both specific and combined
         
-        self._test_ac( 'samu*', self._public_service_key, CC.LOCAL_FILE_SERVICE_KEY, { bad_samus_tag_1 : ClientSearch.PredicateCount.STATICCreateStaticCount( 1, 0 ), bad_samus_tag_2 : ClientSearch.PredicateCount.STATICCreateStaticCount( 1, 0 ) }, { good_samus_tag : ClientSearch.PredicateCount.STATICCreateStaticCount( 1, 0 ) } )
-        self._test_ac( 'samu*', self._public_service_key, CC.COMBINED_FILE_SERVICE_KEY, { bad_samus_tag_1 : ClientSearch.PredicateCount.STATICCreateStaticCount( 1, 0 ), bad_samus_tag_2 : ClientSearch.PredicateCount.STATICCreateStaticCount( 1, 0 ) }, { good_samus_tag : ClientSearch.PredicateCount.STATICCreateStaticCount( 1, 0 ) } )
+        self._test_ac( 'samu*', self._public_service_key, CC.LOCAL_FILE_SERVICE_KEY, { bad_samus_tag_1 : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ), bad_samus_tag_2 : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ) }, { good_samus_tag : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ) } )
+        self._test_ac( 'samu*', self._public_service_key, CC.COMBINED_FILE_SERVICE_KEY, { bad_samus_tag_1 : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ), bad_samus_tag_2 : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ) }, { good_samus_tag : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ) } )
         
     
     def test_display_pending_to_current_bug_non_ideal_and_ideal( self ):
@@ -1221,8 +1223,8 @@ class TestClientDBTags( unittest.TestCase ):
         
         # and a/c results, both specific and combined
         
-        self._test_ac( 'samu*', self._public_service_key, CC.LOCAL_FILE_SERVICE_KEY, { bad_samus_tag_1 : ClientSearch.PredicateCount.STATICCreateStaticCount( 0, 1 ), good_samus_tag : ClientSearch.PredicateCount.STATICCreateStaticCount( 0, 1 ) }, { good_samus_tag : ClientSearch.PredicateCount.STATICCreateStaticCount( 0, 1 ) } )
-        self._test_ac( 'samu*', self._public_service_key, CC.COMBINED_FILE_SERVICE_KEY, { bad_samus_tag_1 : ClientSearch.PredicateCount.STATICCreateStaticCount( 0, 1 ), good_samus_tag : ClientSearch.PredicateCount.STATICCreateStaticCount( 0, 1 ) }, { good_samus_tag : ClientSearch.PredicateCount.STATICCreateStaticCount( 0, 1 ) } )
+        self._test_ac( 'samu*', self._public_service_key, CC.LOCAL_FILE_SERVICE_KEY, { bad_samus_tag_1 : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ), good_samus_tag : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ) }, { good_samus_tag : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ) } )
+        self._test_ac( 'samu*', self._public_service_key, CC.COMBINED_FILE_SERVICE_KEY, { bad_samus_tag_1 : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ), good_samus_tag : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ) }, { good_samus_tag : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ) } )
         
         # now we'll currentify the tags in one action
         
@@ -1250,8 +1252,8 @@ class TestClientDBTags( unittest.TestCase ):
         
         # and a/c results, both specific and combined
         
-        self._test_ac( 'samu*', self._public_service_key, CC.LOCAL_FILE_SERVICE_KEY, { bad_samus_tag_1 : ClientSearch.PredicateCount.STATICCreateStaticCount( 1, 0 ), good_samus_tag : ClientSearch.PredicateCount.STATICCreateStaticCount( 1, 0 ) }, { good_samus_tag : ClientSearch.PredicateCount.STATICCreateStaticCount( 1, 0 ) } )
-        self._test_ac( 'samu*', self._public_service_key, CC.COMBINED_FILE_SERVICE_KEY, { bad_samus_tag_1 : ClientSearch.PredicateCount.STATICCreateStaticCount( 1, 0 ), good_samus_tag : ClientSearch.PredicateCount.STATICCreateStaticCount( 1, 0 ) }, { good_samus_tag : ClientSearch.PredicateCount.STATICCreateStaticCount( 1, 0 ) } )
+        self._test_ac( 'samu*', self._public_service_key, CC.LOCAL_FILE_SERVICE_KEY, { bad_samus_tag_1 : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ), good_samus_tag : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ) }, { good_samus_tag : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ) } )
+        self._test_ac( 'samu*', self._public_service_key, CC.COMBINED_FILE_SERVICE_KEY, { bad_samus_tag_1 : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ), good_samus_tag : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ) }, { good_samus_tag : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ) } )
         
     
     def test_display_pending_to_current_merge_bug_both_non_ideal( self ):
@@ -1326,8 +1328,8 @@ class TestClientDBTags( unittest.TestCase ):
         
         # and a/c results, both specific and combined
         
-        self._test_ac( 'samu*', self._public_service_key, CC.LOCAL_FILE_SERVICE_KEY, { bad_samus_tag_1 : ClientSearch.PredicateCount.STATICCreateStaticCount( 1, 0 ), bad_samus_tag_2 : ClientSearch.PredicateCount.STATICCreateStaticCount( 0, 1 ) }, { good_samus_tag : ClientSearch.PredicateCount.STATICCreateStaticCount( 1, 1 ) } )
-        self._test_ac( 'samu*', self._public_service_key, CC.COMBINED_FILE_SERVICE_KEY, { bad_samus_tag_1 : ClientSearch.PredicateCount.STATICCreateStaticCount( 1, 0 ), bad_samus_tag_2 : ClientSearch.PredicateCount.STATICCreateStaticCount( 0, 1 ) }, { good_samus_tag : ClientSearch.PredicateCount.STATICCreateStaticCount( 1, 1 ) } )
+        self._test_ac( 'samu*', self._public_service_key, CC.LOCAL_FILE_SERVICE_KEY, { bad_samus_tag_1 : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ), bad_samus_tag_2 : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ) }, { good_samus_tag : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 1 ) } )
+        self._test_ac( 'samu*', self._public_service_key, CC.COMBINED_FILE_SERVICE_KEY, { bad_samus_tag_1 : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ), bad_samus_tag_2 : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ) }, { good_samus_tag : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 1 ) } )
         
         # now we'll currentify the tags in one action
         
@@ -1355,8 +1357,8 @@ class TestClientDBTags( unittest.TestCase ):
         
         # and a/c results, both specific and combined
         
-        self._test_ac( 'samu*', self._public_service_key, CC.LOCAL_FILE_SERVICE_KEY, { bad_samus_tag_1 : ClientSearch.PredicateCount.STATICCreateStaticCount( 1, 0 ), bad_samus_tag_2 : ClientSearch.PredicateCount.STATICCreateStaticCount( 1, 0 ) }, { good_samus_tag : ClientSearch.PredicateCount.STATICCreateStaticCount( 1, 0 ) } )
-        self._test_ac( 'samu*', self._public_service_key, CC.COMBINED_FILE_SERVICE_KEY, { bad_samus_tag_1 : ClientSearch.PredicateCount.STATICCreateStaticCount( 1, 0 ), bad_samus_tag_2 : ClientSearch.PredicateCount.STATICCreateStaticCount( 1, 0 ) }, { good_samus_tag : ClientSearch.PredicateCount.STATICCreateStaticCount( 1, 0 ) } )
+        self._test_ac( 'samu*', self._public_service_key, CC.LOCAL_FILE_SERVICE_KEY, { bad_samus_tag_1 : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ), bad_samus_tag_2 : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ) }, { good_samus_tag : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ) } )
+        self._test_ac( 'samu*', self._public_service_key, CC.COMBINED_FILE_SERVICE_KEY, { bad_samus_tag_1 : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ), bad_samus_tag_2 : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ) }, { good_samus_tag : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ) } )
         
     
     def test_display_pending_to_current_merge_bug_non_ideal_and_ideal( self ):
@@ -1430,8 +1432,8 @@ class TestClientDBTags( unittest.TestCase ):
         
         # and a/c results, both specific and combined
         
-        self._test_ac( 'samu*', self._public_service_key, CC.LOCAL_FILE_SERVICE_KEY, { bad_samus_tag_1 : ClientSearch.PredicateCount.STATICCreateStaticCount( 0, 1 ), good_samus_tag : ClientSearch.PredicateCount.STATICCreateStaticCount( 1, 0 ) }, { good_samus_tag : ClientSearch.PredicateCount.STATICCreateStaticCount( 1, 1 ) } )
-        self._test_ac( 'samu*', self._public_service_key, CC.COMBINED_FILE_SERVICE_KEY, { bad_samus_tag_1 : ClientSearch.PredicateCount.STATICCreateStaticCount( 0, 1 ), good_samus_tag : ClientSearch.PredicateCount.STATICCreateStaticCount( 1, 0 ) }, { good_samus_tag : ClientSearch.PredicateCount.STATICCreateStaticCount( 1, 1 ) } )
+        self._test_ac( 'samu*', self._public_service_key, CC.LOCAL_FILE_SERVICE_KEY, { bad_samus_tag_1 : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ), good_samus_tag : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ) }, { good_samus_tag : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 1 ) } )
+        self._test_ac( 'samu*', self._public_service_key, CC.COMBINED_FILE_SERVICE_KEY, { bad_samus_tag_1 : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ), good_samus_tag : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ) }, { good_samus_tag : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 1 ) } )
         
         # now we'll currentify the tags in one action
         
@@ -1459,8 +1461,8 @@ class TestClientDBTags( unittest.TestCase ):
         
         # and a/c results, both specific and combined
         
-        self._test_ac( 'samu*', self._public_service_key, CC.LOCAL_FILE_SERVICE_KEY, { bad_samus_tag_1 : ClientSearch.PredicateCount.STATICCreateStaticCount( 1, 0 ), good_samus_tag : ClientSearch.PredicateCount.STATICCreateStaticCount( 1, 0 ) }, { good_samus_tag : ClientSearch.PredicateCount.STATICCreateStaticCount( 1, 0 ) } )
-        self._test_ac( 'samu*', self._public_service_key, CC.COMBINED_FILE_SERVICE_KEY, { bad_samus_tag_1 : ClientSearch.PredicateCount.STATICCreateStaticCount( 1, 0 ), good_samus_tag : ClientSearch.PredicateCount.STATICCreateStaticCount( 1, 0 ) }, { good_samus_tag : ClientSearch.PredicateCount.STATICCreateStaticCount( 1, 0 ) } )
+        self._test_ac( 'samu*', self._public_service_key, CC.LOCAL_FILE_SERVICE_KEY, { bad_samus_tag_1 : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ), good_samus_tag : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ) }, { good_samus_tag : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ) } )
+        self._test_ac( 'samu*', self._public_service_key, CC.COMBINED_FILE_SERVICE_KEY, { bad_samus_tag_1 : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ), good_samus_tag : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ) }, { good_samus_tag : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ) } )
         
     
     def test_display_pending_regen( self ):
@@ -1534,11 +1536,11 @@ class TestClientDBTags( unittest.TestCase ):
         
         # and a/c results, both specific and combined
         
-        self._test_ac( 'samu*', self._public_service_key, CC.LOCAL_FILE_SERVICE_KEY, { bad_samus_tag_1 : ClientSearch.PredicateCount.STATICCreateStaticCount( 0, 1 ), bad_samus_tag_2 : ClientSearch.PredicateCount.STATICCreateStaticCount( 0, 1 ) }, { good_samus_tag : ClientSearch.PredicateCount.STATICCreateStaticCount( 0, 1 ) } )
-        self._test_ac( 'samu*', self._public_service_key, CC.COMBINED_FILE_SERVICE_KEY, { bad_samus_tag_1 : ClientSearch.PredicateCount.STATICCreateStaticCount( 0, 1 ), bad_samus_tag_2 : ClientSearch.PredicateCount.STATICCreateStaticCount( 0, 1 ) }, { good_samus_tag : ClientSearch.PredicateCount.STATICCreateStaticCount( 0, 1 ) } )
+        self._test_ac( 'samu*', self._public_service_key, CC.LOCAL_FILE_SERVICE_KEY, { bad_samus_tag_1 : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ), bad_samus_tag_2 : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ) }, { good_samus_tag : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ) } )
+        self._test_ac( 'samu*', self._public_service_key, CC.COMBINED_FILE_SERVICE_KEY, { bad_samus_tag_1 : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ), bad_samus_tag_2 : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ) }, { good_samus_tag : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ) } )
         
-        self._test_ac( 'lara*', self._public_service_key, CC.LOCAL_FILE_SERVICE_KEY, { lara_tag : ClientSearch.PredicateCount.STATICCreateStaticCount( 0, 1 ) }, { lara_tag : ClientSearch.PredicateCount.STATICCreateStaticCount( 0, 1 ) } )
-        self._test_ac( 'lara*', self._public_service_key, CC.COMBINED_FILE_SERVICE_KEY, { lara_tag : ClientSearch.PredicateCount.STATICCreateStaticCount( 0, 1 ) }, { lara_tag : ClientSearch.PredicateCount.STATICCreateStaticCount( 0, 1 ) } )
+        self._test_ac( 'lara*', self._public_service_key, CC.LOCAL_FILE_SERVICE_KEY, { lara_tag : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ) }, { lara_tag : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ) } )
+        self._test_ac( 'lara*', self._public_service_key, CC.COMBINED_FILE_SERVICE_KEY, { lara_tag : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ) }, { lara_tag : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ) } )
         
         # now we'll currentify the tags in one action
         
@@ -1558,11 +1560,11 @@ class TestClientDBTags( unittest.TestCase ):
         
         # and a/c results, both specific and combined
         
-        self._test_ac( 'samu*', self._public_service_key, CC.LOCAL_FILE_SERVICE_KEY, { bad_samus_tag_1 : ClientSearch.PredicateCount.STATICCreateStaticCount( 0, 1 ), bad_samus_tag_2 : ClientSearch.PredicateCount.STATICCreateStaticCount( 0, 1 ) }, { good_samus_tag : ClientSearch.PredicateCount.STATICCreateStaticCount( 0, 1 ) } )
-        self._test_ac( 'samu*', self._public_service_key, CC.COMBINED_FILE_SERVICE_KEY, { bad_samus_tag_1 : ClientSearch.PredicateCount.STATICCreateStaticCount( 0, 1 ), bad_samus_tag_2 : ClientSearch.PredicateCount.STATICCreateStaticCount( 0, 1 ) }, { good_samus_tag : ClientSearch.PredicateCount.STATICCreateStaticCount( 0, 1 ) } )
+        self._test_ac( 'samu*', self._public_service_key, CC.LOCAL_FILE_SERVICE_KEY, { bad_samus_tag_1 : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ), bad_samus_tag_2 : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ) }, { good_samus_tag : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ) } )
+        self._test_ac( 'samu*', self._public_service_key, CC.COMBINED_FILE_SERVICE_KEY, { bad_samus_tag_1 : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ), bad_samus_tag_2 : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ) }, { good_samus_tag : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ) } )
         
-        self._test_ac( 'lara*', self._public_service_key, CC.LOCAL_FILE_SERVICE_KEY, { lara_tag : ClientSearch.PredicateCount.STATICCreateStaticCount( 0, 1 ) }, { lara_tag : ClientSearch.PredicateCount.STATICCreateStaticCount( 0, 1 ) } )
-        self._test_ac( 'lara*', self._public_service_key, CC.COMBINED_FILE_SERVICE_KEY, { lara_tag : ClientSearch.PredicateCount.STATICCreateStaticCount( 0, 1 ) }, { lara_tag : ClientSearch.PredicateCount.STATICCreateStaticCount( 0, 1 ) } )
+        self._test_ac( 'lara*', self._public_service_key, CC.LOCAL_FILE_SERVICE_KEY, { lara_tag : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ) }, { lara_tag : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ) } )
+        self._test_ac( 'lara*', self._public_service_key, CC.COMBINED_FILE_SERVICE_KEY, { lara_tag : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ) }, { lara_tag : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ) } )
         
     
     def test_parents_pairs_lookup( self ):
@@ -2525,28 +2527,28 @@ class TestClientDBTags( unittest.TestCase ):
                         
                         self.assertEqual( hash_ids_to_tags_managers[ self._samus_good_hash_id ].GetCurrentAndPending( CC.COMBINED_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { 'mc good', 'process these', 'pc good', 'pp good', 'character:samus aran' } )
                         
-                        self._test_ac( 'mc bad*', self._my_service_key, CC.COMBINED_FILE_SERVICE_KEY, { 'mc bad' : ClientSearch.PredicateCount.STATICCreateStaticCount( 2, 0 ) }, { 'mc bad' : ClientSearch.PredicateCount.STATICCreateStaticCount( 2, 0 ) } )
-                        self._test_ac( 'pc bad*', self._public_service_key, CC.COMBINED_FILE_SERVICE_KEY, { 'pc bad' : ClientSearch.PredicateCount.STATICCreateStaticCount( 2, 0 ) }, { 'pc bad' : ClientSearch.PredicateCount.STATICCreateStaticCount( 2, 0 ) } )
-                        self._test_ac( 'pp bad*', self._public_service_key, CC.COMBINED_FILE_SERVICE_KEY, { 'pp bad' : ClientSearch.PredicateCount.STATICCreateStaticCount( 0, 2 ) }, { 'pp bad' : ClientSearch.PredicateCount.STATICCreateStaticCount( 0, 2 ) } )
-                        self._test_ac( 'sameus aran*', self._my_service_key, CC.COMBINED_FILE_SERVICE_KEY, { 'sameus aran' : ClientSearch.PredicateCount.STATICCreateStaticCount( 1, 0 ) }, { 'sameus aran' : ClientSearch.PredicateCount.STATICCreateStaticCount( 1, 0 ) } )
-                        self._test_ac( 'samus metroid*', self._public_service_key, CC.COMBINED_FILE_SERVICE_KEY, { 'samus metroid' : ClientSearch.PredicateCount.STATICCreateStaticCount( 1, 0 ) }, { 'samus metroid' : ClientSearch.PredicateCount.STATICCreateStaticCount( 1, 0 ) } )
-                        self._test_ac( 'samus aran*', self._public_service_key, CC.COMBINED_FILE_SERVICE_KEY, { 'character:samus aran' : ClientSearch.PredicateCount.STATICCreateStaticCount( 0, 1 ) }, { 'character:samus aran' : ClientSearch.PredicateCount.STATICCreateStaticCount( 0, 1 ) } )
+                        self._test_ac( 'mc bad*', self._my_service_key, CC.COMBINED_FILE_SERVICE_KEY, { 'mc bad' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 2, 0 ) }, { 'mc bad' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 2, 0 ) } )
+                        self._test_ac( 'pc bad*', self._public_service_key, CC.COMBINED_FILE_SERVICE_KEY, { 'pc bad' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 2, 0 ) }, { 'pc bad' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 2, 0 ) } )
+                        self._test_ac( 'pp bad*', self._public_service_key, CC.COMBINED_FILE_SERVICE_KEY, { 'pp bad' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 2 ) }, { 'pp bad' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 2 ) } )
+                        self._test_ac( 'sameus aran*', self._my_service_key, CC.COMBINED_FILE_SERVICE_KEY, { 'sameus aran' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ) }, { 'sameus aran' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ) } )
+                        self._test_ac( 'samus metroid*', self._public_service_key, CC.COMBINED_FILE_SERVICE_KEY, { 'samus metroid' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ) }, { 'samus metroid' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ) } )
+                        self._test_ac( 'samus aran*', self._public_service_key, CC.COMBINED_FILE_SERVICE_KEY, { 'character:samus aran' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ) }, { 'character:samus aran' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ) } )
                         
                         if on_local_files and not force_no_local_files:
                             
-                            self._test_ac( 'mc bad*', self._my_service_key, CC.LOCAL_FILE_SERVICE_KEY, { 'mc bad' : ClientSearch.PredicateCount.STATICCreateStaticCount( 2, 0 ) }, { 'mc bad' : ClientSearch.PredicateCount.STATICCreateStaticCount( 2, 0 ) } )
-                            self._test_ac( 'pc bad*', self._public_service_key, CC.LOCAL_FILE_SERVICE_KEY, { 'pc bad' : ClientSearch.PredicateCount.STATICCreateStaticCount( 2, 0 ) }, { 'pc bad' : ClientSearch.PredicateCount.STATICCreateStaticCount( 2, 0 ) } )
-                            self._test_ac( 'pp bad*', self._public_service_key, CC.LOCAL_FILE_SERVICE_KEY, { 'pp bad' : ClientSearch.PredicateCount.STATICCreateStaticCount( 0, 2 ) }, { 'pp bad' : ClientSearch.PredicateCount.STATICCreateStaticCount( 0, 2 ) } )
-                            self._test_ac( 'sameus aran*', self._my_service_key, CC.LOCAL_FILE_SERVICE_KEY, { 'sameus aran' : ClientSearch.PredicateCount.STATICCreateStaticCount( 1, 0 ) }, { 'sameus aran' : ClientSearch.PredicateCount.STATICCreateStaticCount( 1, 0 ) } )
-                            self._test_ac( 'samus metroid*', self._public_service_key, CC.LOCAL_FILE_SERVICE_KEY, { 'samus metroid' : ClientSearch.PredicateCount.STATICCreateStaticCount( 1, 0 ) }, { 'samus metroid' : ClientSearch.PredicateCount.STATICCreateStaticCount( 1, 0 ) } )
-                            self._test_ac( 'samus aran*', self._public_service_key, CC.LOCAL_FILE_SERVICE_KEY, { 'character:samus aran' : ClientSearch.PredicateCount.STATICCreateStaticCount( 0, 1 ) }, { 'character:samus aran' : ClientSearch.PredicateCount.STATICCreateStaticCount( 0, 1 ) } )
+                            self._test_ac( 'mc bad*', self._my_service_key, CC.LOCAL_FILE_SERVICE_KEY, { 'mc bad' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 2, 0 ) }, { 'mc bad' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 2, 0 ) } )
+                            self._test_ac( 'pc bad*', self._public_service_key, CC.LOCAL_FILE_SERVICE_KEY, { 'pc bad' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 2, 0 ) }, { 'pc bad' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 2, 0 ) } )
+                            self._test_ac( 'pp bad*', self._public_service_key, CC.LOCAL_FILE_SERVICE_KEY, { 'pp bad' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 2 ) }, { 'pp bad' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 2 ) } )
+                            self._test_ac( 'sameus aran*', self._my_service_key, CC.LOCAL_FILE_SERVICE_KEY, { 'sameus aran' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ) }, { 'sameus aran' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ) } )
+                            self._test_ac( 'samus metroid*', self._public_service_key, CC.LOCAL_FILE_SERVICE_KEY, { 'samus metroid' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ) }, { 'samus metroid' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ) } )
+                            self._test_ac( 'samus aran*', self._public_service_key, CC.LOCAL_FILE_SERVICE_KEY, { 'character:samus aran' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ) }, { 'character:samus aran' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ) } )
                             
-                            self._test_ac( 'mc bad*', CC.COMBINED_TAG_SERVICE_KEY, CC.LOCAL_FILE_SERVICE_KEY, { 'mc bad' : ClientSearch.PredicateCount.STATICCreateStaticCount( 2, 0 ) }, { 'mc bad' : ClientSearch.PredicateCount.STATICCreateStaticCount( 2, 0 ) } )
-                            self._test_ac( 'pc bad*', CC.COMBINED_TAG_SERVICE_KEY, CC.LOCAL_FILE_SERVICE_KEY, { 'pc bad' : ClientSearch.PredicateCount.STATICCreateStaticCount( 2, 0 ) }, { 'pc bad' : ClientSearch.PredicateCount.STATICCreateStaticCount( 2, 0 ) } )
-                            self._test_ac( 'pp bad*', CC.COMBINED_TAG_SERVICE_KEY, CC.LOCAL_FILE_SERVICE_KEY, { 'pp bad' : ClientSearch.PredicateCount.STATICCreateStaticCount( 0, 2 ) }, { 'pp bad' : ClientSearch.PredicateCount.STATICCreateStaticCount( 0, 2 ) } )
-                            self._test_ac( 'sameus aran*', CC.COMBINED_TAG_SERVICE_KEY, CC.LOCAL_FILE_SERVICE_KEY, { 'sameus aran' : ClientSearch.PredicateCount.STATICCreateStaticCount( 1, 0 ) }, { 'sameus aran' : ClientSearch.PredicateCount.STATICCreateStaticCount( 1, 0 ) } )
-                            self._test_ac( 'samus metroid*', CC.COMBINED_TAG_SERVICE_KEY, CC.LOCAL_FILE_SERVICE_KEY, { 'samus metroid' : ClientSearch.PredicateCount.STATICCreateStaticCount( 1, 0 ) }, { 'samus metroid' : ClientSearch.PredicateCount.STATICCreateStaticCount( 1, 0 ) } )
-                            self._test_ac( 'samus aran*', CC.COMBINED_TAG_SERVICE_KEY, CC.LOCAL_FILE_SERVICE_KEY, { 'character:samus aran' : ClientSearch.PredicateCount.STATICCreateStaticCount( 0, 1 ) }, { 'character:samus aran' : ClientSearch.PredicateCount.STATICCreateStaticCount( 0, 1 ) } )
+                            self._test_ac( 'mc bad*', CC.COMBINED_TAG_SERVICE_KEY, CC.LOCAL_FILE_SERVICE_KEY, { 'mc bad' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 2, 0 ) }, { 'mc bad' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 2, 0 ) } )
+                            self._test_ac( 'pc bad*', CC.COMBINED_TAG_SERVICE_KEY, CC.LOCAL_FILE_SERVICE_KEY, { 'pc bad' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 2, 0 ) }, { 'pc bad' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 2, 0 ) } )
+                            self._test_ac( 'pp bad*', CC.COMBINED_TAG_SERVICE_KEY, CC.LOCAL_FILE_SERVICE_KEY, { 'pp bad' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 2 ) }, { 'pp bad' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 2 ) } )
+                            self._test_ac( 'sameus aran*', CC.COMBINED_TAG_SERVICE_KEY, CC.LOCAL_FILE_SERVICE_KEY, { 'sameus aran' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ) }, { 'sameus aran' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ) } )
+                            self._test_ac( 'samus metroid*', CC.COMBINED_TAG_SERVICE_KEY, CC.LOCAL_FILE_SERVICE_KEY, { 'samus metroid' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ) }, { 'samus metroid' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ) } )
+                            self._test_ac( 'samus aran*', CC.COMBINED_TAG_SERVICE_KEY, CC.LOCAL_FILE_SERVICE_KEY, { 'character:samus aran' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ) }, { 'character:samus aran' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ) } )
                             
                         else:
                             
@@ -2758,32 +2760,32 @@ class TestClientDBTags( unittest.TestCase ):
                     self.assertEqual( hash_ids_to_tags_managers[ self._samus_good_hash_id ].GetCurrentAndPending( CC.COMBINED_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { 'mc good', 'process these', 'pc good', 'pp good', 'character:samus aran' } )
                     
                     # now we get more write a/c suggestions, and accurated merged read a/c values
-                    self._test_ac( 'mc bad*', self._my_service_key, CC.COMBINED_FILE_SERVICE_KEY, { 'mc bad' : ClientSearch.PredicateCount.STATICCreateStaticCount( 2, 0 ), 'mc good' : ClientSearch.PredicateCount.STATICCreateStaticCount( 2, 0 ) }, { 'mc good' : ClientSearch.PredicateCount.STATICCreateStaticCount( 3, 0 ) } )
-                    self._test_ac( 'pc bad*', self._public_service_key, CC.COMBINED_FILE_SERVICE_KEY, { 'pc bad' : ClientSearch.PredicateCount.STATICCreateStaticCount( 2, 0 ), 'pc good' : ClientSearch.PredicateCount.STATICCreateStaticCount( 2, 0 ) }, { 'pc good' : ClientSearch.PredicateCount.STATICCreateStaticCount( 3, 0 ) } )
-                    self._test_ac( 'pp bad*', self._public_service_key, CC.COMBINED_FILE_SERVICE_KEY, { 'pp bad' : ClientSearch.PredicateCount.STATICCreateStaticCount( 0, 2 ), 'pp good' : ClientSearch.PredicateCount.STATICCreateStaticCount( 0, 2 ) }, { 'pp good' : ClientSearch.PredicateCount.STATICCreateStaticCount( 0, 3 ) } )
-                    self._test_ac( 'sameus aran*', self._my_service_key, CC.COMBINED_FILE_SERVICE_KEY, { 'sameus aran' : ClientSearch.PredicateCount.STATICCreateStaticCount( 1, 0 ) }, { 'samus metroid' : ClientSearch.PredicateCount.STATICCreateStaticCount( 1, 0 ) } )
-                    self._test_ac( 'samus metroid*', self._public_service_key, CC.COMBINED_FILE_SERVICE_KEY, { 'samus metroid' : ClientSearch.PredicateCount.STATICCreateStaticCount( 1, 0 ), 'character:samus aran' : ClientSearch.PredicateCount.STATICCreateStaticCount( 0, 1 ) }, { 'character:samus aran' : ClientSearch.PredicateCount.STATICCreateStaticCount( 1, 1 ) } )
-                    self._test_ac( 'samus aran*', self._public_service_key, CC.COMBINED_FILE_SERVICE_KEY, { 'samus metroid' : ClientSearch.PredicateCount.STATICCreateStaticCount( 1, 0 ), 'character:samus aran' : ClientSearch.PredicateCount.STATICCreateStaticCount( 0, 1 ) }, { 'character:samus aran' : ClientSearch.PredicateCount.STATICCreateStaticCount( 1, 1 ) } )
+                    self._test_ac( 'mc bad*', self._my_service_key, CC.COMBINED_FILE_SERVICE_KEY, { 'mc bad' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 2, 0 ), 'mc good' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 2, 0 ) }, { 'mc good' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 3, 0 ) } )
+                    self._test_ac( 'pc bad*', self._public_service_key, CC.COMBINED_FILE_SERVICE_KEY, { 'pc bad' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 2, 0 ), 'pc good' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 2, 0 ) }, { 'pc good' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 3, 0 ) } )
+                    self._test_ac( 'pp bad*', self._public_service_key, CC.COMBINED_FILE_SERVICE_KEY, { 'pp bad' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 2 ), 'pp good' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 2 ) }, { 'pp good' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 3 ) } )
+                    self._test_ac( 'sameus aran*', self._my_service_key, CC.COMBINED_FILE_SERVICE_KEY, { 'sameus aran' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ) }, { 'samus metroid' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ) } )
+                    self._test_ac( 'samus metroid*', self._public_service_key, CC.COMBINED_FILE_SERVICE_KEY, { 'samus metroid' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ), 'character:samus aran' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ) }, { 'character:samus aran' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 1 ) } )
+                    self._test_ac( 'samus aran*', self._public_service_key, CC.COMBINED_FILE_SERVICE_KEY, { 'samus metroid' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ), 'character:samus aran' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ) }, { 'character:samus aran' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 1 ) } )
                     
                     if on_local_files:
                         
                         # same deal, just smaller file domain
-                        self._test_ac( 'mc bad*', self._my_service_key, CC.LOCAL_FILE_SERVICE_KEY, { 'mc bad' : ClientSearch.PredicateCount.STATICCreateStaticCount( 2, 0 ), 'mc good' : ClientSearch.PredicateCount.STATICCreateStaticCount( 2, 0 ) }, { 'mc good' : ClientSearch.PredicateCount.STATICCreateStaticCount( 3, 0 ) } )
-                        self._test_ac( 'pc bad*', self._public_service_key, CC.LOCAL_FILE_SERVICE_KEY, { 'pc bad' : ClientSearch.PredicateCount.STATICCreateStaticCount( 2, 0 ), 'pc good' : ClientSearch.PredicateCount.STATICCreateStaticCount( 2, 0 ) }, { 'pc good' : ClientSearch.PredicateCount.STATICCreateStaticCount( 3, 0 ) } )
-                        self._test_ac( 'pp bad*', self._public_service_key, CC.LOCAL_FILE_SERVICE_KEY, { 'pp bad' : ClientSearch.PredicateCount.STATICCreateStaticCount( 0, 2 ), 'pp good' : ClientSearch.PredicateCount.STATICCreateStaticCount( 0, 2 ) }, { 'pp good' : ClientSearch.PredicateCount.STATICCreateStaticCount( 0, 3 ) } )
-                        self._test_ac( 'sameus aran*', self._my_service_key, CC.LOCAL_FILE_SERVICE_KEY, { 'sameus aran' : ClientSearch.PredicateCount.STATICCreateStaticCount( 1, 0 ) }, { 'samus metroid' : ClientSearch.PredicateCount.STATICCreateStaticCount( 1, 0 ) } )
-                        self._test_ac( 'samus metroid*', self._public_service_key, CC.LOCAL_FILE_SERVICE_KEY, { 'samus metroid' : ClientSearch.PredicateCount.STATICCreateStaticCount( 1, 0 ), 'character:samus aran' : ClientSearch.PredicateCount.STATICCreateStaticCount( 0, 1 ) }, { 'character:samus aran' : ClientSearch.PredicateCount.STATICCreateStaticCount( 1, 1 ) } )
-                        self._test_ac( 'samus aran*', self._public_service_key, CC.LOCAL_FILE_SERVICE_KEY, { 'samus metroid' : ClientSearch.PredicateCount.STATICCreateStaticCount( 1, 0 ), 'character:samus aran' : ClientSearch.PredicateCount.STATICCreateStaticCount( 0, 1 ) }, { 'character:samus aran' : ClientSearch.PredicateCount.STATICCreateStaticCount( 1, 1 ) } )
+                        self._test_ac( 'mc bad*', self._my_service_key, CC.LOCAL_FILE_SERVICE_KEY, { 'mc bad' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 2, 0 ), 'mc good' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 2, 0 ) }, { 'mc good' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 3, 0 ) } )
+                        self._test_ac( 'pc bad*', self._public_service_key, CC.LOCAL_FILE_SERVICE_KEY, { 'pc bad' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 2, 0 ), 'pc good' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 2, 0 ) }, { 'pc good' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 3, 0 ) } )
+                        self._test_ac( 'pp bad*', self._public_service_key, CC.LOCAL_FILE_SERVICE_KEY, { 'pp bad' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 2 ), 'pp good' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 2 ) }, { 'pp good' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 3 ) } )
+                        self._test_ac( 'sameus aran*', self._my_service_key, CC.LOCAL_FILE_SERVICE_KEY, { 'sameus aran' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ) }, { 'samus metroid' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ) } )
+                        self._test_ac( 'samus metroid*', self._public_service_key, CC.LOCAL_FILE_SERVICE_KEY, { 'samus metroid' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ), 'character:samus aran' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ) }, { 'character:samus aran' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 1 ) } )
+                        self._test_ac( 'samus aran*', self._public_service_key, CC.LOCAL_FILE_SERVICE_KEY, { 'samus metroid' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ), 'character:samus aran' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ) }, { 'character:samus aran' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 1 ) } )
                         
-                        self._test_ac( 'mc bad*', CC.COMBINED_TAG_SERVICE_KEY, CC.LOCAL_FILE_SERVICE_KEY, { 'mc bad' : ClientSearch.PredicateCount.STATICCreateStaticCount( 2, 0 ), 'mc good' : ClientSearch.PredicateCount.STATICCreateStaticCount( 2, 0 ) }, { 'mc good' : ClientSearch.PredicateCount.STATICCreateStaticCount( 3, 0 ) } )
-                        self._test_ac( 'pc bad*', CC.COMBINED_TAG_SERVICE_KEY, CC.LOCAL_FILE_SERVICE_KEY, { 'pc bad' : ClientSearch.PredicateCount.STATICCreateStaticCount( 2, 0 ), 'pc good' : ClientSearch.PredicateCount.STATICCreateStaticCount( 2, 0 ) }, { 'pc good' : ClientSearch.PredicateCount.STATICCreateStaticCount( 3, 0 ) } )
-                        self._test_ac( 'pp bad*', CC.COMBINED_TAG_SERVICE_KEY, CC.LOCAL_FILE_SERVICE_KEY, { 'pp bad' : ClientSearch.PredicateCount.STATICCreateStaticCount( 0, 2 ), 'pp good' : ClientSearch.PredicateCount.STATICCreateStaticCount( 0, 2 ) }, { 'pp good' : ClientSearch.PredicateCount.STATICCreateStaticCount( 0, 3 ) } )
+                        self._test_ac( 'mc bad*', CC.COMBINED_TAG_SERVICE_KEY, CC.LOCAL_FILE_SERVICE_KEY, { 'mc bad' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 2, 0 ), 'mc good' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 2, 0 ) }, { 'mc good' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 3, 0 ) } )
+                        self._test_ac( 'pc bad*', CC.COMBINED_TAG_SERVICE_KEY, CC.LOCAL_FILE_SERVICE_KEY, { 'pc bad' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 2, 0 ), 'pc good' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 2, 0 ) }, { 'pc good' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 3, 0 ) } )
+                        self._test_ac( 'pp bad*', CC.COMBINED_TAG_SERVICE_KEY, CC.LOCAL_FILE_SERVICE_KEY, { 'pp bad' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 2 ), 'pp good' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 2 ) }, { 'pp good' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 3 ) } )
                         # the storage/write a/c used to get funky here because it was tricky to do siblings over all known tags. it merged all sibling lookups for all fetched tags
                         # but now it is fixed I am pretty sure! each set of positive count tag results is siblinged in a service leaf silo
                         # I basically just fixed these tests to the new results. it seems good in UI. this is more reason that these unit tests are way too complicated and need to be redone
-                        self._test_ac( 'sameus aran*', CC.COMBINED_TAG_SERVICE_KEY, CC.LOCAL_FILE_SERVICE_KEY, { 'sameus aran' : ClientSearch.PredicateCount.STATICCreateStaticCount( 1, 0 ) }, { 'samus metroid' : ClientSearch.PredicateCount.STATICCreateStaticCount( 1, 0 ) } )
-                        self._test_ac( 'samus metroid*', CC.COMBINED_TAG_SERVICE_KEY, CC.LOCAL_FILE_SERVICE_KEY, { 'sameus aran' : ClientSearch.PredicateCount.STATICCreateStaticCount( 1, 0 ), 'samus metroid' : ClientSearch.PredicateCount.STATICCreateStaticCount( 1, 0 ), 'character:samus aran' : ClientSearch.PredicateCount.STATICCreateStaticCount( 0, 1 ) }, { 'character:samus aran' : ClientSearch.PredicateCount.STATICCreateStaticCount( 1, 1 ), 'samus metroid' : ClientSearch.PredicateCount.STATICCreateStaticCount( 1, 0 ) } )
-                        self._test_ac( 'samus aran*', CC.COMBINED_TAG_SERVICE_KEY, CC.LOCAL_FILE_SERVICE_KEY, { 'samus metroid' : ClientSearch.PredicateCount.STATICCreateStaticCount( 1, 0 ), 'character:samus aran' : ClientSearch.PredicateCount.STATICCreateStaticCount( 0, 1 ) }, { 'character:samus aran' : ClientSearch.PredicateCount.STATICCreateStaticCount( 1, 1 ) } )
+                        self._test_ac( 'sameus aran*', CC.COMBINED_TAG_SERVICE_KEY, CC.LOCAL_FILE_SERVICE_KEY, { 'sameus aran' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ) }, { 'samus metroid' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ) } )
+                        self._test_ac( 'samus metroid*', CC.COMBINED_TAG_SERVICE_KEY, CC.LOCAL_FILE_SERVICE_KEY, { 'sameus aran' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ), 'samus metroid' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ), 'character:samus aran' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ) }, { 'character:samus aran' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 1 ), 'samus metroid' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ) } )
+                        self._test_ac( 'samus aran*', CC.COMBINED_TAG_SERVICE_KEY, CC.LOCAL_FILE_SERVICE_KEY, { 'samus metroid' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ), 'character:samus aran' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ) }, { 'character:samus aran' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 1 ) } )
                         
                     else:
                         
@@ -2874,32 +2876,32 @@ class TestClientDBTags( unittest.TestCase ):
                     self.assertEqual( hash_ids_to_tags_managers[ self._samus_good_hash_id ].GetCurrentAndPending( CC.COMBINED_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { 'mc good', 'process these', 'pc good', 'pp good', 'character:samus aran' } )
                     
                     # now we get more write a/c suggestions, and accurated merged read a/c values
-                    self._test_ac( 'mc bad*', self._my_service_key, CC.COMBINED_FILE_SERVICE_KEY, { 'mc bad' : ClientSearch.PredicateCount.STATICCreateStaticCount( 2, 0 ), 'mc good' : ClientSearch.PredicateCount.STATICCreateStaticCount( 2, 0 ) }, { 'mc good' : ClientSearch.PredicateCount.STATICCreateStaticCount( 3, 0 ) } )
-                    self._test_ac( 'pc bad*', self._public_service_key, CC.COMBINED_FILE_SERVICE_KEY, { 'pc bad' : ClientSearch.PredicateCount.STATICCreateStaticCount( 2, 0 ), 'pc good' : ClientSearch.PredicateCount.STATICCreateStaticCount( 2, 0 ) }, { 'pc good' : ClientSearch.PredicateCount.STATICCreateStaticCount( 3, 0 ) } )
-                    self._test_ac( 'pp bad*', self._public_service_key, CC.COMBINED_FILE_SERVICE_KEY, { 'pp bad' : ClientSearch.PredicateCount.STATICCreateStaticCount( 0, 2 ), 'pp good' : ClientSearch.PredicateCount.STATICCreateStaticCount( 0, 2 ) }, { 'pp good' : ClientSearch.PredicateCount.STATICCreateStaticCount( 0, 3 ) } )
-                    self._test_ac( 'sameus aran*', self._my_service_key, CC.COMBINED_FILE_SERVICE_KEY, { 'sameus aran' : ClientSearch.PredicateCount.STATICCreateStaticCount( 1, 0 ) }, { 'character:samus aran' : ClientSearch.PredicateCount.STATICCreateStaticCount( 1, 0 ) } )
-                    self._test_ac( 'samus metroid*', self._public_service_key, CC.COMBINED_FILE_SERVICE_KEY, { 'samus metroid' : ClientSearch.PredicateCount.STATICCreateStaticCount( 1, 0 ), 'character:samus aran' : ClientSearch.PredicateCount.STATICCreateStaticCount( 0, 1 ) }, { 'character:samus aran' : ClientSearch.PredicateCount.STATICCreateStaticCount( 1, 1 ) } )
-                    self._test_ac( 'samus aran*', self._public_service_key, CC.COMBINED_FILE_SERVICE_KEY, { 'samus metroid' : ClientSearch.PredicateCount.STATICCreateStaticCount( 1, 0 ), 'character:samus aran' : ClientSearch.PredicateCount.STATICCreateStaticCount( 0, 1 ) }, { 'character:samus aran' : ClientSearch.PredicateCount.STATICCreateStaticCount( 1, 1 ) } )
+                    self._test_ac( 'mc bad*', self._my_service_key, CC.COMBINED_FILE_SERVICE_KEY, { 'mc bad' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 2, 0 ), 'mc good' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 2, 0 ) }, { 'mc good' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 3, 0 ) } )
+                    self._test_ac( 'pc bad*', self._public_service_key, CC.COMBINED_FILE_SERVICE_KEY, { 'pc bad' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 2, 0 ), 'pc good' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 2, 0 ) }, { 'pc good' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 3, 0 ) } )
+                    self._test_ac( 'pp bad*', self._public_service_key, CC.COMBINED_FILE_SERVICE_KEY, { 'pp bad' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 2 ), 'pp good' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 2 ) }, { 'pp good' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 3 ) } )
+                    self._test_ac( 'sameus aran*', self._my_service_key, CC.COMBINED_FILE_SERVICE_KEY, { 'sameus aran' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ) }, { 'character:samus aran' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ) } )
+                    self._test_ac( 'samus metroid*', self._public_service_key, CC.COMBINED_FILE_SERVICE_KEY, { 'samus metroid' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ), 'character:samus aran' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ) }, { 'character:samus aran' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 1 ) } )
+                    self._test_ac( 'samus aran*', self._public_service_key, CC.COMBINED_FILE_SERVICE_KEY, { 'samus metroid' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ), 'character:samus aran' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ) }, { 'character:samus aran' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 1 ) } )
                     
                     if on_local_files:
                         
                         # same deal, just smaller file domain
-                        self._test_ac( 'mc bad*', self._my_service_key, CC.LOCAL_FILE_SERVICE_KEY, { 'mc bad' : ClientSearch.PredicateCount.STATICCreateStaticCount( 2, 0 ), 'mc good' : ClientSearch.PredicateCount.STATICCreateStaticCount( 2, 0 ) }, { 'mc good' : ClientSearch.PredicateCount.STATICCreateStaticCount( 3, 0 ) } )
-                        self._test_ac( 'pc bad*', self._public_service_key, CC.LOCAL_FILE_SERVICE_KEY, { 'pc bad' : ClientSearch.PredicateCount.STATICCreateStaticCount( 2, 0 ), 'pc good' : ClientSearch.PredicateCount.STATICCreateStaticCount( 2, 0 ) }, { 'pc good' : ClientSearch.PredicateCount.STATICCreateStaticCount( 3, 0 ) } )
-                        self._test_ac( 'pp bad*', self._public_service_key, CC.LOCAL_FILE_SERVICE_KEY, { 'pp bad' : ClientSearch.PredicateCount.STATICCreateStaticCount( 0, 2 ), 'pp good' : ClientSearch.PredicateCount.STATICCreateStaticCount( 0, 2 ) }, { 'pp good' : ClientSearch.PredicateCount.STATICCreateStaticCount( 0, 3 ) } )
-                        self._test_ac( 'sameus aran*', self._my_service_key, CC.LOCAL_FILE_SERVICE_KEY, { 'sameus aran' : ClientSearch.PredicateCount.STATICCreateStaticCount( 1, 0 ) }, { 'character:samus aran' : ClientSearch.PredicateCount.STATICCreateStaticCount( 1, 0 ) } )
-                        self._test_ac( 'samus metroid*', self._public_service_key, CC.LOCAL_FILE_SERVICE_KEY, { 'samus metroid' : ClientSearch.PredicateCount.STATICCreateStaticCount( 1, 0 ), 'character:samus aran' : ClientSearch.PredicateCount.STATICCreateStaticCount( 0, 1 ) }, { 'character:samus aran' : ClientSearch.PredicateCount.STATICCreateStaticCount( 1, 1 ) } )
-                        self._test_ac( 'samus aran*', self._public_service_key, CC.LOCAL_FILE_SERVICE_KEY, { 'samus metroid' : ClientSearch.PredicateCount.STATICCreateStaticCount( 1, 0 ), 'character:samus aran' : ClientSearch.PredicateCount.STATICCreateStaticCount( 0, 1 ) }, { 'character:samus aran' : ClientSearch.PredicateCount.STATICCreateStaticCount( 1, 1 ) } )
+                        self._test_ac( 'mc bad*', self._my_service_key, CC.LOCAL_FILE_SERVICE_KEY, { 'mc bad' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 2, 0 ), 'mc good' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 2, 0 ) }, { 'mc good' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 3, 0 ) } )
+                        self._test_ac( 'pc bad*', self._public_service_key, CC.LOCAL_FILE_SERVICE_KEY, { 'pc bad' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 2, 0 ), 'pc good' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 2, 0 ) }, { 'pc good' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 3, 0 ) } )
+                        self._test_ac( 'pp bad*', self._public_service_key, CC.LOCAL_FILE_SERVICE_KEY, { 'pp bad' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 2 ), 'pp good' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 2 ) }, { 'pp good' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 3 ) } )
+                        self._test_ac( 'sameus aran*', self._my_service_key, CC.LOCAL_FILE_SERVICE_KEY, { 'sameus aran' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ) }, { 'character:samus aran' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ) } )
+                        self._test_ac( 'samus metroid*', self._public_service_key, CC.LOCAL_FILE_SERVICE_KEY, { 'samus metroid' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ), 'character:samus aran' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ) }, { 'character:samus aran' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 1 ) } )
+                        self._test_ac( 'samus aran*', self._public_service_key, CC.LOCAL_FILE_SERVICE_KEY, { 'samus metroid' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ), 'character:samus aran' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ) }, { 'character:samus aran' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 1 ) } )
                         
-                        self._test_ac( 'mc bad*', CC.COMBINED_TAG_SERVICE_KEY, CC.LOCAL_FILE_SERVICE_KEY, { 'mc bad' : ClientSearch.PredicateCount.STATICCreateStaticCount( 2, 0 ), 'mc good' : ClientSearch.PredicateCount.STATICCreateStaticCount( 2, 0 ) }, { 'mc good' : ClientSearch.PredicateCount.STATICCreateStaticCount( 3, 0 ) } )
-                        self._test_ac( 'pc bad*', CC.COMBINED_TAG_SERVICE_KEY, CC.LOCAL_FILE_SERVICE_KEY, { 'pc bad' : ClientSearch.PredicateCount.STATICCreateStaticCount( 2, 0 ), 'pc good' : ClientSearch.PredicateCount.STATICCreateStaticCount( 2, 0 ) }, { 'pc good' : ClientSearch.PredicateCount.STATICCreateStaticCount( 3, 0 ) } )
-                        self._test_ac( 'pp bad*', CC.COMBINED_TAG_SERVICE_KEY, CC.LOCAL_FILE_SERVICE_KEY, { 'pp bad' : ClientSearch.PredicateCount.STATICCreateStaticCount( 0, 2 ), 'pp good' : ClientSearch.PredicateCount.STATICCreateStaticCount( 0, 2 ) }, { 'pp good' : ClientSearch.PredicateCount.STATICCreateStaticCount( 0, 3 ) } )
+                        self._test_ac( 'mc bad*', CC.COMBINED_TAG_SERVICE_KEY, CC.LOCAL_FILE_SERVICE_KEY, { 'mc bad' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 2, 0 ), 'mc good' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 2, 0 ) }, { 'mc good' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 3, 0 ) } )
+                        self._test_ac( 'pc bad*', CC.COMBINED_TAG_SERVICE_KEY, CC.LOCAL_FILE_SERVICE_KEY, { 'pc bad' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 2, 0 ), 'pc good' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 2, 0 ) }, { 'pc good' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 3, 0 ) } )
+                        self._test_ac( 'pp bad*', CC.COMBINED_TAG_SERVICE_KEY, CC.LOCAL_FILE_SERVICE_KEY, { 'pp bad' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 2 ), 'pp good' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 2 ) }, { 'pp good' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 3 ) } )
                         # the storage/write a/c used to get funky here because it was tricky to do siblings over all known tags. it merged all sibling lookups for all fetched tags
                         # but now it is fixed I am pretty sure! each set of positive count tag results is siblinged in a service leaf silo
                         # I basically just fixed these tests to the new results. it seems good in UI. this is more reason that these unit tests are way too complicated and need to be redone
-                        self._test_ac( 'sameus aran*', CC.COMBINED_TAG_SERVICE_KEY, CC.LOCAL_FILE_SERVICE_KEY, { 'sameus aran' : ClientSearch.PredicateCount.STATICCreateStaticCount( 1, 0 ), 'samus metroid' : ClientSearch.PredicateCount.STATICCreateStaticCount( 1, 0 ), 'character:samus aran' : ClientSearch.PredicateCount.STATICCreateStaticCount( 0, 1 ) }, { 'character:samus aran' : ClientSearch.PredicateCount( 1, 1, 2, 1 ) } )
-                        self._test_ac( 'samus metroid*', CC.COMBINED_TAG_SERVICE_KEY, CC.LOCAL_FILE_SERVICE_KEY, { 'sameus aran' : ClientSearch.PredicateCount.STATICCreateStaticCount( 1, 0 ), 'samus metroid' : ClientSearch.PredicateCount.STATICCreateStaticCount( 1, 0 ), 'character:samus aran' : ClientSearch.PredicateCount.STATICCreateStaticCount( 0, 1 ) }, { 'character:samus aran' : ClientSearch.PredicateCount( 1, 1, 2, 1 ) } )
-                        self._test_ac( 'samus aran*', CC.COMBINED_TAG_SERVICE_KEY, CC.LOCAL_FILE_SERVICE_KEY, { 'sameus aran' : ClientSearch.PredicateCount.STATICCreateStaticCount( 1, 0 ), 'samus metroid' : ClientSearch.PredicateCount.STATICCreateStaticCount( 1, 0 ), 'character:samus aran' : ClientSearch.PredicateCount.STATICCreateStaticCount( 0, 1 ) }, { 'character:samus aran' : ClientSearch.PredicateCount( 1, 1, 2, 1 ) } )
+                        self._test_ac( 'sameus aran*', CC.COMBINED_TAG_SERVICE_KEY, CC.LOCAL_FILE_SERVICE_KEY, { 'sameus aran' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ), 'samus metroid' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ), 'character:samus aran' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ) }, { 'character:samus aran' : ClientSearchPredicate.PredicateCount( 1, 1, 2, 1 ) } )
+                        self._test_ac( 'samus metroid*', CC.COMBINED_TAG_SERVICE_KEY, CC.LOCAL_FILE_SERVICE_KEY, { 'sameus aran' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ), 'samus metroid' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ), 'character:samus aran' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ) }, { 'character:samus aran' : ClientSearchPredicate.PredicateCount( 1, 1, 2, 1 ) } )
+                        self._test_ac( 'samus aran*', CC.COMBINED_TAG_SERVICE_KEY, CC.LOCAL_FILE_SERVICE_KEY, { 'sameus aran' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ), 'samus metroid' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ), 'character:samus aran' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ) }, { 'character:samus aran' : ClientSearchPredicate.PredicateCount( 1, 1, 2, 1 ) } )
                         
                     else:
                         
@@ -3063,45 +3065,45 @@ class TestTagParents( unittest.TestCase ):
         
         predicates = []
         
-        predicates.append( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'grandmother', ClientSearch.PredicateCount.STATICCreateCurrentCount( 10 ) ) )
-        predicates.append( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'grandfather', ClientSearch.PredicateCount.STATICCreateCurrentCount( 15 ) ) )
-        predicates.append( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'not_exist', ClientSearch.PredicateCount.STATICCreateCurrentCount( 20 ) ) )
+        predicates.append( ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_TAG, 'grandmother', ClientSearchPredicate.PredicateCount.STATICCreateCurrentCount( 10 ) ) )
+        predicates.append( ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_TAG, 'grandfather', ClientSearchPredicate.PredicateCount.STATICCreateCurrentCount( 15 ) ) )
+        predicates.append( ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_TAG, 'not_exist', ClientSearchPredicate.PredicateCount.STATICCreateCurrentCount( 20 ) ) )
         
         self.assertEqual( self._tag_parents_manager.ExpandPredicates( CC.COMBINED_TAG_SERVICE_KEY, predicates ), predicates )
         
         predicates = []
         
-        predicates.append( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'child', ClientSearch.PredicateCount.STATICCreateCurrentCount( 10 ) ) )
+        predicates.append( ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_TAG, 'child', ClientSearchPredicate.PredicateCount.STATICCreateCurrentCount( 10 ) ) )
         
         results = []
         
-        results.append( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'child', ClientSearch.PredicateCount.STATICCreateCurrentCount( 10 ) ) )
-        results.append( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_PARENT, 'mother' ) )
-        results.append( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_PARENT, 'father' ) )
-        results.append( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_PARENT, 'grandmother' ) )
-        results.append( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_PARENT, 'grandfather' ) )
+        results.append( ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_TAG, 'child', ClientSearchPredicate.PredicateCount.STATICCreateCurrentCount( 10 ) ) )
+        results.append( ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_PARENT, 'mother' ) )
+        results.append( ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_PARENT, 'father' ) )
+        results.append( ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_PARENT, 'grandmother' ) )
+        results.append( ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_PARENT, 'grandfather' ) )
         
         self.assertEqual( set( self._tag_parents_manager.ExpandPredicates( CC.COMBINED_TAG_SERVICE_KEY, predicates ) ), set( results ) )
         
         predicates = []
         
-        predicates.append( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_NAMESPACE, 'series' ) )
-        predicates.append( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'child', ClientSearch.PredicateCount.STATICCreateCurrentCount( 10 ) ) )
-        predicates.append( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'cousin', ClientSearch.PredicateCount.STATICCreateCurrentCount( 5 ) ) )
+        predicates.append( ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_NAMESPACE, 'series' ) )
+        predicates.append( ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_TAG, 'child', ClientSearchPredicate.PredicateCount.STATICCreateCurrentCount( 10 ) ) )
+        predicates.append( ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_TAG, 'cousin', ClientSearchPredicate.PredicateCount.STATICCreateCurrentCount( 5 ) ) )
         
         results = []
         
-        results.append( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_NAMESPACE, 'series' ) )
-        results.append( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'child', ClientSearch.PredicateCount.STATICCreateCurrentCount( 10 ) ) )
-        results.append( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_PARENT, 'mother' ) )
-        results.append( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_PARENT, 'father' ) )
-        results.append( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_PARENT, 'grandmother' ) )
-        results.append( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_PARENT, 'grandfather' ) )
-        results.append( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'cousin', ClientSearch.PredicateCount.STATICCreateCurrentCount( 5 ) ) )
-        results.append( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_PARENT, 'aunt' ) )
-        results.append( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_PARENT, 'uncle' ) )
-        results.append( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_PARENT, 'grandmother' ) )
-        results.append( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_PARENT, 'grandfather' ) )
+        results.append( ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_NAMESPACE, 'series' ) )
+        results.append( ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_TAG, 'child', ClientSearchPredicate.PredicateCount.STATICCreateCurrentCount( 10 ) ) )
+        results.append( ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_PARENT, 'mother' ) )
+        results.append( ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_PARENT, 'father' ) )
+        results.append( ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_PARENT, 'grandmother' ) )
+        results.append( ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_PARENT, 'grandfather' ) )
+        results.append( ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_TAG, 'cousin', ClientSearchPredicate.PredicateCount.STATICCreateCurrentCount( 5 ) ) )
+        results.append( ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_PARENT, 'aunt' ) )
+        results.append( ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_PARENT, 'uncle' ) )
+        results.append( ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_PARENT, 'grandmother' ) )
+        results.append( ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_PARENT, 'grandfather' ) )
         
         self.assertEqual( set( self._tag_parents_manager.ExpandPredicates( CC.COMBINED_TAG_SERVICE_KEY, predicates ) ), set( results ) )
         

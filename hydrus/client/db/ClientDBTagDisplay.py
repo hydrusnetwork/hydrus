@@ -19,7 +19,8 @@ from hydrus.client.db import ClientDBServices
 from hydrus.client.db import ClientDBTagParents
 from hydrus.client.db import ClientDBTagSiblings
 from hydrus.client.metadata import ClientTags
-from hydrus.client.search import ClientSearch
+from hydrus.client.search import ClientSearchPredicate
+from hydrus.client.search import ClientSearchTagContext
 
 class ClientDBTagDisplay( ClientDBModule.ClientDBModule ):
     
@@ -122,7 +123,7 @@ class ClientDBTagDisplay( ClientDBModule.ClientDBModule ):
                 
                 tag = tag_ids_to_tags[ tag_id ]
                 
-                predicate = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, value = tag, inclusive = inclusive, count = ClientSearch.PredicateCount( min_current_count, min_pending_count, max_current_count, max_pending_count ) )
+                predicate = ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_TAG, value = tag, inclusive = inclusive, count = ClientSearchPredicate.PredicateCount( min_current_count, min_pending_count, max_current_count, max_pending_count ) )
                 
                 if tag_id in tag_ids_to_ideal_tag_ids_for_siblings:
                     
@@ -198,7 +199,7 @@ class ClientDBTagDisplay( ClientDBModule.ClientDBModule ):
                 
                 tag = tag_ids_to_tags[ tag_id ]
                 
-                predicate = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, value = tag, inclusive = inclusive, count = ClientSearch.PredicateCount( min_current_count, min_pending_count, max_current_count, max_pending_count ) )
+                predicate = ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_TAG, value = tag, inclusive = inclusive, count = ClientSearchPredicate.PredicateCount( min_current_count, min_pending_count, max_current_count, max_pending_count ) )
                 
                 if tag_id in tag_ids_to_known_chain_tag_ids:
                     
@@ -368,7 +369,7 @@ class ClientDBTagDisplay( ClientDBModule.ClientDBModule ):
         return set( self.modules_tag_siblings.GetInterestedServiceIds( tag_service_id ) ).union( self.modules_tag_parents.GetInterestedServiceIds( tag_service_id ) )
         
     
-    def GetMediaPredicates( self, tag_context: ClientSearch.TagContext, tags_to_counts, inclusive, job_status = None ):
+    def GetMediaPredicates( self, tag_context: ClientSearchTagContext.TagContext, tags_to_counts, inclusive, job_status = None ):
         
         if HG.autocomplete_delay_mode:
             

@@ -66,7 +66,8 @@ from hydrus.client.media import ClientMedia
 from hydrus.client.metadata import ClientContentUpdates
 from hydrus.client.metadata import ClientTags
 from hydrus.client.networking import ClientNetworkingFunctions
-from hydrus.client.search import ClientSearch
+from hydrus.client.search import ClientSearchFileSearchContext
+from hydrus.client.search import ClientSearchPredicate
 
 management_panel_types_to_classes = {}
 
@@ -151,7 +152,7 @@ class ListBoxTagsMediaManagementPanel( ClientGUIListBoxes.ListBoxTagsMedia ):
             
             if shift_down and len( predicates ) > 1:
                 
-                predicates = ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_OR_CONTAINER, value = predicates ), )
+                predicates = ( ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_OR_CONTAINER, value = predicates ), )
                 
             
             CG.client_controller.pub( 'enter_predicates', self._page_key, predicates )
@@ -172,7 +173,7 @@ class ListBoxTagsMediaManagementPanel( ClientGUIListBoxes.ListBoxTagsMedia ):
         return self._management_controller.GetLocationContext()
         
     
-    def _GetCurrentPagePredicates( self ) -> typing.Set[ ClientSearch.Predicate ]:
+    def _GetCurrentPagePredicates( self ) -> typing.Set[ ClientSearchPredicate.Predicate ]:
         
         if self._tag_autocomplete is None:
             
@@ -751,7 +752,7 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
             
         
     
-    def _GetDuplicateFileSearchData( self, optimise_for_search = True ) -> typing.Tuple[ ClientSearch.FileSearchContext, ClientSearch.FileSearchContext, int, int, int ]:
+    def _GetDuplicateFileSearchData( self, optimise_for_search = True ) -> typing.Tuple[ ClientSearchFileSearchContext.FileSearchContext, ClientSearchFileSearchContext.FileSearchContext, int, int, int ]:
         
         file_search_context_1 = self._tag_autocomplete_1.GetFileSearchContext()
         file_search_context_2 = self._tag_autocomplete_2.GetFileSearchContext()
@@ -1108,7 +1109,7 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         self._tag_autocomplete_2.REPEATINGPageUpdate()
         
     
-    def Search1Changed( self, file_search_context: ClientSearch.FileSearchContext ):
+    def Search1Changed( self, file_search_context: ClientSearchFileSearchContext.FileSearchContext ):
         
         self._tag_autocomplete_2.blockSignals( True )
         
@@ -1120,7 +1121,7 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         self._FilterSearchDomainUpdated()
         
     
-    def Search2Changed( self, file_search_context: ClientSearch.FileSearchContext ):
+    def Search2Changed( self, file_search_context: ClientSearchFileSearchContext.FileSearchContext ):
         
         self._tag_autocomplete_1.blockSignals( True )
         
@@ -5979,7 +5980,7 @@ class ManagementPanelQuery( ManagementPanel ):
         self._RefreshQuery()
         
     
-    def SearchChanged( self, file_search_context: ClientSearch.FileSearchContext ):
+    def SearchChanged( self, file_search_context: ClientSearchFileSearchContext.FileSearchContext ):
         
         if self._search_enabled:
             
@@ -6055,7 +6056,7 @@ class ManagementPanelQuery( ManagementPanel ):
             
         
     
-    def THREADDoQuery( self, controller, page_key, query_job_status, file_search_context: ClientSearch.FileSearchContext, sort_by ):
+    def THREADDoQuery( self, controller, page_key, query_job_status, file_search_context: ClientSearchFileSearchContext.FileSearchContext, sort_by ):
         
         def qt_code():
             

@@ -1330,9 +1330,11 @@ class EditStringMatchPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._match_value_flexible_input = ClientGUICommon.BetterChoice( self )
         
-        self._match_value_flexible_input.addItem( 'alphabetic characters (a-zA-Z)', ClientStrings.ALPHA )
-        self._match_value_flexible_input.addItem( 'alphanumeric characters (a-zA-Z0-9)', ClientStrings.ALPHANUMERIC )
-        self._match_value_flexible_input.addItem( 'numeric characters (0-9)', ClientStrings.NUMERIC )
+        self._match_value_flexible_input.addItem( 'alphabetic characters (a-zA-Z)', ClientStrings.FLEXIBLE_MATCH_ALPHA )
+        self._match_value_flexible_input.addItem( 'alphanumeric characters (a-zA-Z0-9)', ClientStrings.FLEXIBLE_MATCH_ALPHANUMERIC )
+        self._match_value_flexible_input.addItem( 'numeric characters (0-9)', ClientStrings.FLEXIBLE_MATCH_NUMERIC )
+        self._match_value_flexible_input.addItem( 'hexadecimal characters (0-9a-fA-F)', ClientStrings.FLEXIBLE_MATCH_HEX )
+        self._match_value_flexible_input.addItem( 'base-64 characters (a-zA-z0-9+/, = padding)', ClientStrings.FLEXIBLE_MATCH_BASE64 )
         
         self._min_chars = ClientGUICommon.NoneableSpinCtrl( self, 16, min = 1, max = 65535, unit = 'characters', none_phrase = 'no limit' )
         self._max_chars = ClientGUICommon.NoneableSpinCtrl( self, 64, min = 1, max = 65535, unit = 'characters', none_phrase = 'no limit' )
@@ -1534,7 +1536,7 @@ class EditStringMatchPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._match_type.SetValue( match_type )
         
-        self._match_value_flexible_input.SetValue( ClientStrings.ALPHA )
+        self._match_value_flexible_input.SetValue( ClientStrings.FLEXIBLE_MATCH_ALPHA )
         
         if match_type == ClientStrings.STRING_MATCH_FIXED:
             

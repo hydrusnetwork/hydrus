@@ -39,19 +39,20 @@ from hydrus.client.gui.search import ClientGUILocation
 from hydrus.client.gui.search import ClientGUISearch
 from hydrus.client.gui.widgets import ClientGUICommon
 from hydrus.client.metadata import ClientTags
-from hydrus.client.metadata import ClientTagSorting
-from hydrus.client.search import ClientSearch
+from hydrus.client.search import ClientSearchFileSearchContext
 from hydrus.client.search import ClientSearchAutocomplete
 from hydrus.client.search import ClientSearchParseSystemPredicates
+from hydrus.client.search import ClientSearchPredicate
+from hydrus.client.search import ClientSearchTagContext
 
 from hydrus.external import LogicExpressionQueryParser
 
 def AppendLoadingPredicate( predicates, label ):
     
-    predicates.append( ClientSearch.Predicate( predicate_type = ClientSearch.PREDICATE_TYPE_LABEL, value = label + HC.UNICODE_ELLIPSIS ) )
+    predicates.append( ClientSearchPredicate.Predicate( predicate_type = ClientSearchPredicate.PREDICATE_TYPE_LABEL, value = label + HC.UNICODE_ELLIPSIS ) )
     
 
-def InsertOtherPredicatesForRead( predicates: list, parsed_autocomplete_text: ClientSearchAutocomplete.ParsedAutocompleteText, include_unusual_predicate_types: bool, under_construction_or_predicate: typing.Optional[ ClientSearch.Predicate ] ):
+def InsertOtherPredicatesForRead( predicates: list, parsed_autocomplete_text: ClientSearchAutocomplete.ParsedAutocompleteText, include_unusual_predicate_types: bool, under_construction_or_predicate: typing.Optional[ ClientSearchPredicate.Predicate ] ):
     
     if include_unusual_predicate_types:
         
@@ -72,7 +73,7 @@ def InsertOtherPredicatesForRead( predicates: list, parsed_autocomplete_text: Cl
         PutAtTopOfMatches( predicates, under_construction_or_predicate )
         
     
-def InsertTagPredicates( predicates: typing.List[ ClientSearch.Predicate ], tag_service_key: bytes, parsed_autocomplete_text: ClientSearchAutocomplete.ParsedAutocompleteText, allow_auto_wildcard_conversion: bool, insert_if_does_not_exist: bool = True ):
+def InsertTagPredicates( predicates: typing.List[ ClientSearchPredicate.Predicate ], tag_service_key: bytes, parsed_autocomplete_text: ClientSearchAutocomplete.ParsedAutocompleteText, allow_auto_wildcard_conversion: bool, insert_if_does_not_exist: bool = True ):
     
     if parsed_autocomplete_text.IsTagSearch( allow_auto_wildcard_conversion ):
         
@@ -114,7 +115,7 @@ def InsertTagPredicates( predicates: typing.List[ ClientSearch.Predicate ], tag_
                 
             
         
-        ClientSearch.SortPredicates( other_matching_predicates )
+        ClientSearchPredicate.SortPredicates( other_matching_predicates )
         
         other_matching_predicates.reverse()
         
@@ -140,7 +141,7 @@ def ReadFetch(
     results_callable,
     parsed_autocomplete_text: ClientSearchAutocomplete.ParsedAutocompleteText,
     qt_media_callable,
-    file_search_context: ClientSearch.FileSearchContext,
+    file_search_context: ClientSearchFileSearchContext.FileSearchContext,
     synchronised,
     include_unusual_predicate_types,
     results_cache: ClientSearchAutocomplete.PredicateResultsCache,
@@ -255,9 +256,9 @@ def ReadFetch(
                     
                 else:
                     
-                    exact_match_matches = ClientSearch.FilterPredicatesBySearchText( tag_service_key, autocomplete_search_text, exact_match_predicates )
+                    exact_match_matches = ClientSearchAutocomplete.FilterPredicatesBySearchText( tag_service_key, autocomplete_search_text, exact_match_predicates )
                     
-                    exact_match_matches = ClientSearch.SortPredicates( exact_match_matches )
+                    exact_match_matches = ClientSearchPredicate.SortPredicates( exact_match_matches )
                     
                     allow_auto_wildcard_conversion = True
                     
@@ -282,7 +283,7 @@ def ReadFetch(
                     
                     if is_explicit_wildcard:
                         
-                        matches = ClientSearch.FilterPredicatesBySearchText( tag_service_key, autocomplete_search_text, predicates )
+                        matches = ClientSearchAutocomplete.FilterPredicatesBySearchText( tag_service_key, autocomplete_search_text, predicates )
                         
                     else:
                         
@@ -367,11 +368,11 @@ def ReadFetch(
                 
                 # we have data sans siblings and parents. send it as prefetch results, user will have _something_
                 
-                prefetch_predicates = [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, value = tag, inclusive = parsed_autocomplete_text.inclusive, count = ClientSearch.PredicateCount( current_count, pending_count, None, None ) ) for ( tag, ( current_count, pending_count ) ) in tags_to_count.items() ]
+                prefetch_predicates = [ ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_TAG, value = tag, inclusive = parsed_autocomplete_text.inclusive, count = ClientSearchPredicate.PredicateCount( current_count, pending_count, None, None ) ) for ( tag, ( current_count, pending_count ) ) in tags_to_count.items() ]
                 
-                prefetch_matches = ClientSearch.FilterPredicatesBySearchText( tag_service_key, autocomplete_search_text, prefetch_predicates )
+                prefetch_matches = ClientSearchAutocomplete.FilterPredicatesBySearchText( tag_service_key, autocomplete_search_text, prefetch_predicates )
                 
-                prefetch_matches = ClientSearch.SortPredicates( prefetch_matches )
+                prefetch_matches = ClientSearchPredicate.SortPredicates( prefetch_matches )
                 
                 allow_auto_wildcard_conversion = True
                 
@@ -404,12 +405,12 @@ def ReadFetch(
                 return
                 
             
-            predicates = ClientSearch.MergePredicates( predicates )
+            predicates = ClientSearchPredicate.MergePredicates( predicates )
             
             matches = predicates
             
         
-        matches = ClientSearch.SortPredicates( matches )
+        matches = ClientSearchPredicate.SortPredicates( matches )
         
         if not parsed_autocomplete_text.inclusive:
             
@@ -433,7 +434,7 @@ def ReadFetch(
     
     CG.client_controller.CallAfterQtSafe( win, 'read a/c full results', results_callable, job_status, parsed_autocomplete_text, results_cache, matches )
     
-def PutAtTopOfMatches( matches: list, predicate: ClientSearch.Predicate, insert_if_does_not_exist: bool = True ):
+def PutAtTopOfMatches( matches: list, predicate: ClientSearchPredicate.Predicate, insert_if_does_not_exist: bool = True ):
     
     # we have to be careful here to preserve autocomplete counts!
     # if it already exists, we move it up, do not replace with the test pred param
@@ -497,7 +498,7 @@ def WriteFetch(
     prefetch_callable,
     results_callable,
     parsed_autocomplete_text: ClientSearchAutocomplete.ParsedAutocompleteText,
-    file_search_context: ClientSearch.FileSearchContext,
+    file_search_context: ClientSearchFileSearchContext.FileSearchContext,
     results_cache: ClientSearchAutocomplete.PredicateResultsCache
 ):
     
@@ -548,9 +549,9 @@ def WriteFetch(
                 
             else:
                 
-                exact_match_matches = ClientSearch.FilterPredicatesBySearchText( display_tag_service_key, autocomplete_search_text, exact_match_predicates )
+                exact_match_matches = ClientSearchAutocomplete.FilterPredicatesBySearchText( display_tag_service_key, autocomplete_search_text, exact_match_predicates )
                 
-                exact_match_matches = ClientSearch.SortPredicates( exact_match_matches )
+                exact_match_matches = ClientSearchPredicate.SortPredicates( exact_match_matches )
                 
                 allow_auto_wildcard_conversion = False
                 
@@ -573,7 +574,7 @@ def WriteFetch(
                 
                 if is_explicit_wildcard:
                     
-                    matches = ClientSearch.FilterPredicatesBySearchText( display_tag_service_key, autocomplete_search_text, predicates )
+                    matches = ClientSearchAutocomplete.FilterPredicatesBySearchText( display_tag_service_key, autocomplete_search_text, predicates )
                     
                 else:
                     
@@ -590,7 +591,7 @@ def WriteFetch(
             
         
     
-    matches = ClientSearch.SortPredicates( matches )
+    matches = ClientSearchPredicate.SortPredicates( matches )
     
     allow_auto_wildcard_conversion = False
     
@@ -637,11 +638,11 @@ class ListBoxTagsPredicatesAC( ClientGUIListBoxes.ListBoxTagsPredicates ):
         return False
         
     
-    def _GenerateTermFromPredicate( self, predicate: ClientSearch.Predicate ):
+    def _GenerateTermFromPredicate( self, predicate: ClientSearchPredicate.Predicate ):
         
         term = ClientGUIListBoxes.ListBoxTagsPredicates._GenerateTermFromPredicate( self, predicate )
         
-        if predicate.GetType() == ClientSearch.PREDICATE_TYPE_OR_CONTAINER:
+        if predicate.GetType() == ClientSearchPredicate.PREDICATE_TYPE_OR_CONTAINER:
             
             term.SetORUnderConstruction( True )
             
@@ -728,12 +729,12 @@ class ListBoxTagsPredicatesAC( ClientGUIListBoxes.ListBoxTagsPredicates ):
                             
                             # now only apply this to simple tags, not wildcards and system tags
                             
-                            if skip_ors and predicate.GetType() == ClientSearch.PREDICATE_TYPE_OR_CONTAINER:
+                            if skip_ors and predicate.GetType() == ClientSearchPredicate.PREDICATE_TYPE_OR_CONTAINER:
                                 
                                 continue
                                 
                             
-                            if skip_countless and predicate.GetType() in ( ClientSearch.PREDICATE_TYPE_PARENT, ClientSearch.PREDICATE_TYPE_TAG ) and predicate.GetCount().HasZeroCount():
+                            if skip_countless and predicate.GetType() in ( ClientSearchPredicate.PREDICATE_TYPE_PARENT, ClientSearchPredicate.PREDICATE_TYPE_TAG ) and predicate.GetCount().HasZeroCount():
                                 
                                 continue
                                 
@@ -1625,9 +1626,9 @@ class ChildrenTab( ListBoxTagsPredicatesAC ):
                 search_location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_TAG_SERVICE_KEY )
                 
             
-            tag_context = ClientSearch.TagContext( service_key = tag_service_key )
+            tag_context = ClientSearchTagContext.TagContext( service_key = tag_service_key )
             
-            file_search_context = ClientSearch.FileSearchContext(
+            file_search_context = ClientSearchFileSearchContext.FileSearchContext(
                 location_context = search_location_context,
                 tag_context = tag_context
             )
@@ -1675,7 +1676,7 @@ class ChildrenTab( ListBoxTagsPredicatesAC ):
                 
                 child_predicates = [ predicate for predicate in child_predicates if predicate.GetValue() not in context_tags ]
                 
-                ClientSearch.SortPredicates( child_predicates )
+                ClientSearchPredicate.SortPredicates( child_predicates )
                 
                 child_predicates = [ predicate.GetCountlessCopy() for predicate in child_predicates ]
                 
@@ -1748,7 +1749,7 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
         self._location_context_button = ClientGUILocation.LocationSearchContextButton( self._dropdown_window, location_context, is_paired_with_tag_domain = True )
         self._location_context_button.setMinimumWidth( 20 )
         
-        tag_context = ClientSearch.TagContext( service_key = self._tag_service_key )
+        tag_context = ClientSearchTagContext.TagContext( service_key = self._tag_service_key )
         
         self._tag_context_button = ClientGUISearch.TagContextButton( self._dropdown_window, tag_context )
         self._tag_context_button.setMinimumWidth( 20 )
@@ -1779,7 +1780,7 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
         raise NotImplementedError()
         
     
-    def _GetCurrentBroadcastTextPredicate( self ) -> typing.Optional[ ClientSearch.Predicate ]:
+    def _GetCurrentBroadcastTextPredicate( self ) -> typing.Optional[ ClientSearchPredicate.Predicate ]:
         
         raise NotImplementedError()
         
@@ -1905,7 +1906,7 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
         raise NotImplementedError()
         
     
-    def _TagContextJustChanged( self, tag_context: ClientSearch.TagContext ):
+    def _TagContextJustChanged( self, tag_context: ClientSearchTagContext.TagContext ):
         
         self._RestoreTextCtrlFocus()
         
@@ -1966,7 +1967,7 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
         
         favourite_tags = sorted( CG.client_controller.new_options.GetStringList( 'favourite_tags' ) )
         
-        predicates = [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, value = tag ) for tag in favourite_tags ]
+        predicates = [ ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_TAG, value = tag ) for tag in favourite_tags ]
         
         self._favourites_list.SetPredicates( predicates )
         
@@ -2003,7 +2004,7 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
         self._SetLocationContext( location_context )
         
     
-    def SetPrefetchResults( self, job_status: ClientThreading.JobStatus, predicates: typing.List[ ClientSearch.Predicate ], parsed_autocomplete_text: ClientSearchAutocomplete.ParsedAutocompleteText ):
+    def SetPrefetchResults( self, job_status: ClientThreading.JobStatus, predicates: typing.List[ ClientSearchPredicate.Predicate ], parsed_autocomplete_text: ClientSearchAutocomplete.ParsedAutocompleteText ):
         
         if self._current_fetch_job_status is not None and self._current_fetch_job_status.GetKey() == job_status.GetKey():
             
@@ -2030,10 +2031,10 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
     
 class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
     
-    searchChanged = QC.Signal( ClientSearch.FileSearchContext )
+    searchChanged = QC.Signal( ClientSearchFileSearchContext.FileSearchContext )
     searchCancelled = QC.Signal()
     
-    def __init__( self, parent: QW.QWidget, page_key, file_search_context: ClientSearch.FileSearchContext, media_sort_widget: typing.Optional[ ClientGUIResultsSortCollect.MediaSortControl ] = None, media_collect_widget: typing.Optional[ ClientGUIResultsSortCollect.MediaCollectControl ] = None, media_callable = None, synchronised = True, include_unusual_predicate_types = True, allow_all_known_files = True, only_allow_local_file_domains = False, force_system_everything = False, hide_favourites_edit_actions = False, fixed_results_list_height = None ):
+    def __init__( self, parent: QW.QWidget, page_key, file_search_context: ClientSearchFileSearchContext.FileSearchContext, media_sort_widget: typing.Optional[ ClientGUIResultsSortCollect.MediaSortControl ] = None, media_collect_widget: typing.Optional[ ClientGUIResultsSortCollect.MediaCollectControl ] = None, media_callable = None, synchronised = True, include_unusual_predicate_types = True, allow_all_known_files = True, only_allow_local_file_domains = False, force_system_everything = False, hide_favourites_edit_actions = False, fixed_results_list_height = None ):
         
         self._page_key = page_key
         
@@ -2150,7 +2151,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
         
         predicates = self._file_search_context.GetPredicates()
         
-        tags = [ predicate.GetValue() for predicate in predicates if predicate.GetType() == ClientSearch.PREDICATE_TYPE_TAG ]
+        tags = [ predicate.GetValue() for predicate in predicates if predicate.GetType() == ClientSearchPredicate.PREDICATE_TYPE_TAG ]
         
         self.SetContextTags( tags )
         
@@ -2188,7 +2189,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
             
             if self._under_construction_or_predicate is None:
                 
-                self._under_construction_or_predicate = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_OR_CONTAINER, value = predicates )
+                self._under_construction_or_predicate = ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_OR_CONTAINER, value = predicates )
                 
             else:
                 
@@ -2201,7 +2202,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
                 
                 or_preds.extend( [ predicate for predicate in predicates if predicate not in or_preds ] )
                 
-                self._under_construction_or_predicate = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_OR_CONTAINER, value = or_preds )
+                self._under_construction_or_predicate = ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_OR_CONTAINER, value = or_preds )
                 
             
         else:
@@ -2223,7 +2224,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
                 
                 or_preds.extend( [ predicate for predicate in predicates if predicate not in or_preds ] )
                 
-                predicates = { ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_OR_CONTAINER, value = or_preds ) }
+                predicates = { ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_OR_CONTAINER, value = or_preds ) }
                 
             
             self._under_construction_or_predicate = None
@@ -2257,7 +2258,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
     
     def _CreateNewOR( self ):
         
-        predicates = { ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_OR_CONTAINER, value = [ ] ) }
+        predicates = { ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_OR_CONTAINER, value = [ ] ) }
         
         try:
             
@@ -2340,7 +2341,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
         CGC.core().PopupMenu( self, menu )
         
     
-    def _GetCurrentBroadcastTextPredicate( self ) -> typing.Optional[ ClientSearch.Predicate ]:
+    def _GetCurrentBroadcastTextPredicate( self ) -> typing.Optional[ ClientSearchPredicate.Predicate ]:
         
         parsed_autocomplete_text = self._GetParsedAutocompleteText()
         
@@ -2561,7 +2562,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
             
             or_preds = or_preds[:-1]
             
-            self._under_construction_or_predicate = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_OR_CONTAINER, value = or_preds )
+            self._under_construction_or_predicate = ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_OR_CONTAINER, value = or_preds )
             
         
         self._UpdateORButtons()
@@ -2612,7 +2613,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
         
         self._file_search_context.SetPredicates( predicates )
         
-        tags = [ predicate.GetValue() for predicate in predicates if predicate.GetType() == ClientSearch.PREDICATE_TYPE_TAG ]
+        tags = [ predicate.GetValue() for predicate in predicates if predicate.GetType() == ClientSearchPredicate.PREDICATE_TYPE_TAG ]
         
         self.SetContextTags( tags )
         
@@ -2674,7 +2675,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
             
         
     
-    def _TagContextJustChanged( self, tag_context: ClientSearch.TagContext ):
+    def _TagContextJustChanged( self, tag_context: ClientSearchTagContext.TagContext ):
         
         it_changed = AutoCompleteDropdownTags._TagContextJustChanged( self, tag_context )
         
@@ -2725,12 +2726,12 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
             
         
     
-    def GetFileSearchContext( self ) -> ClientSearch.FileSearchContext:
+    def GetFileSearchContext( self ) -> ClientSearchFileSearchContext.FileSearchContext:
         
         return self._file_search_context.Duplicate()
         
     
-    def GetPredicates( self ) -> typing.Set[ ClientSearch.Predicate ]:
+    def GetPredicates( self ) -> typing.Set[ ClientSearchPredicate.Predicate ]:
         
         return self._file_search_context.GetPredicates()
         
@@ -2778,7 +2779,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
             
         
     
-    def SetFileSearchContext( self, file_search_context: ClientSearch.FileSearchContext ):
+    def SetFileSearchContext( self, file_search_context: ClientSearchFileSearchContext.FileSearchContext ):
         
         self._ClearInput()
         
@@ -2829,7 +2830,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
     
 class ListBoxTagsActiveSearchPredicates( ClientGUIListBoxes.ListBoxTagsPredicates ):
     
-    def __init__( self, parent: AutoCompleteDropdownTagsRead, page_key, file_search_context: ClientSearch.FileSearchContext ):
+    def __init__( self, parent: AutoCompleteDropdownTagsRead, page_key, file_search_context: ClientSearchFileSearchContext.FileSearchContext ):
         
         ClientGUIListBoxes.ListBoxTagsPredicates.__init__( self, parent, height_num_chars = 6 )
         
@@ -3031,7 +3032,7 @@ class ListBoxTagsActiveSearchPredicates( ClientGUIListBoxes.ListBoxTagsPredicate
         return self._my_ac_parent.GetFileSearchContext().GetLocationContext()
         
     
-    def _GetCurrentPagePredicates( self ) -> typing.Set[ ClientSearch.Predicate ]:
+    def _GetCurrentPagePredicates( self ) -> typing.Set[ ClientSearchPredicate.Predicate ]:
         
         return self.GetPredicates()
         
@@ -3082,7 +3083,7 @@ class ListBoxTagsActiveSearchPredicates( ClientGUIListBoxes.ListBoxTagsPredicate
             
         
     
-    def SetFileSearchContext( self, file_search_context: ClientSearch.FileSearchContext ):
+    def SetFileSearchContext( self, file_search_context: ClientSearchFileSearchContext.FileSearchContext ):
         
         self._Clear()
         
@@ -3173,7 +3174,7 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
             
         
     
-    def _GetCurrentBroadcastTextPredicate( self ) -> typing.Optional[ ClientSearch.Predicate ]:
+    def _GetCurrentBroadcastTextPredicate( self ) -> typing.Optional[ ClientSearchPredicate.Predicate ]:
         
         parsed_autocomplete_text = self._GetParsedAutocompleteText()
         
@@ -3281,9 +3282,9 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
         
         parsed_autocomplete_text = self._GetParsedAutocompleteText()
         
-        tag_context = ClientSearch.TagContext( service_key = self._tag_service_key, display_service_key = self._display_tag_service_key )
+        tag_context = ClientSearchTagContext.TagContext( service_key = self._tag_service_key, display_service_key = self._display_tag_service_key )
         
-        file_search_context = ClientSearch.FileSearchContext( location_context = self._location_context_button.GetValue(), tag_context = tag_context )
+        file_search_context = ClientSearchFileSearchContext.FileSearchContext( location_context = self._location_context_button.GetValue(), tag_context = tag_context )
         
         CG.client_controller.CallToThread( WriteFetch, self, job_status, self.SetPrefetchResults, self.SetFetchedResults, parsed_autocomplete_text, file_search_context, self._results_cache )
         
@@ -3426,16 +3427,16 @@ class EditAdvancedORPredicates( ClientGUIScrolledPanels.EditPanel ):
                             
                             if len( namespace ) > 0 and subtag == '*':
                                 
-                                row_pred = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_NAMESPACE, value = namespace, inclusive = inclusive )
+                                row_pred = ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_NAMESPACE, value = namespace, inclusive = inclusive )
                                 
                             else:
                                 
-                                row_pred = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_WILDCARD, value = tag_string, inclusive = inclusive )
+                                row_pred = ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_WILDCARD, value = tag_string, inclusive = inclusive )
                                 
                             
                         else:
                             
-                            row_pred = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, value = tag_string, inclusive = inclusive )
+                            row_pred = ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_TAG, value = tag_string, inclusive = inclusive )
                             
                         
                         tag_preds.append( row_pred )
@@ -3466,7 +3467,7 @@ class EditAdvancedORPredicates( ClientGUIScrolledPanels.EditPanel ):
                         
                     else:
                         
-                        self._current_predicates.append( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_OR_CONTAINER, value = row_preds ) )
+                        self._current_predicates.append( ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_OR_CONTAINER, value = row_preds ) )
                         
                     
                 

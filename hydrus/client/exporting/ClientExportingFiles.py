@@ -22,7 +22,7 @@ from hydrus.client import ClientThreading
 from hydrus.client.metadata import ClientContentUpdates
 from hydrus.client.metadata import ClientMetadataMigration
 from hydrus.client.metadata import ClientTags
-from hydrus.client.search import ClientSearch
+from hydrus.client.search import ClientSearchFileSearchContext
 
 def GenerateExportFilename( destination_directory, media, terms, file_index, do_not_use_filenames = None ):
     
@@ -323,7 +323,7 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
             
             default_location_context = CG.client_controller.new_options.GetDefaultLocalLocationContext()
             
-            file_search_context = ClientSearch.FileSearchContext( location_context = default_location_context )
+            file_search_context = ClientSearchFileSearchContext.FileSearchContext( location_context = default_location_context )
             
         
         if metadata_routers is None:

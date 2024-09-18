@@ -59,6 +59,7 @@ from hydrus.test import TestClientMetadataMigration
 from hydrus.test import TestClientMigration
 from hydrus.test import TestClientNetworking
 from hydrus.test import TestClientParsing
+from hydrus.test import TestClientSearch
 from hydrus.test import TestClientTags
 from hydrus.test import TestClientThreading
 from hydrus.test import TestDialogs
@@ -780,6 +781,7 @@ class Controller( object ):
             TestClientFileStorage,
             TestClientImportOptions,
             TestClientParsing,
+            TestClientSearch,
             TestClientTags,
             TestClientThreading,
             TestHydrusSerialisable,
@@ -821,6 +823,7 @@ class Controller( object ):
             TestClientFileStorage,
             TestClientImportOptions,
             TestClientParsing,
+            TestClientSearch,
             TestClientTags,
             TestClientThreading,
             TestHydrusData,
@@ -829,6 +832,10 @@ class Controller( object ):
             TestHydrusTime,
             TestHydrusSerialisable,
             TestHydrusSessions
+        ]
+        
+        module_lookup[ 'search' ] = [
+            TestClientSearch
         ]
         
         module_lookup[ 'tags_fast' ] = [

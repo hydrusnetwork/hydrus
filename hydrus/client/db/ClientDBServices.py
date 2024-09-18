@@ -12,7 +12,7 @@ from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientLocation
 from hydrus.client import ClientServices
 from hydrus.client.db import ClientDBModule
-from hydrus.client.search import ClientSearch
+from hydrus.client.search import ClientSearchFileSearchContext
 
 class FileSearchContextLeaf( object ):
     
@@ -29,7 +29,7 @@ class FileSearchContextLeaf( object ):
     
 class FileSearchContextBranch( object ):
     
-    def __init__( self, file_search_context: ClientSearch.FileSearchContext, file_service_ids: typing.Collection[ int ], tag_service_ids: typing.Collection[ int ], file_location_is_cross_referenced: bool ):
+    def __init__( self, file_search_context: ClientSearchFileSearchContext.FileSearchContext, file_service_ids: typing.Collection[ int ], tag_service_ids: typing.Collection[ int ], file_location_is_cross_referenced: bool ):
         
         self.file_search_context = file_search_context
         
@@ -43,7 +43,7 @@ class FileSearchContextBranch( object ):
         return self.file_location_is_cross_referenced
         
     
-    def GetFileSearchContext( self ) -> ClientSearch.FileSearchContext:
+    def GetFileSearchContext( self ) -> ClientSearchFileSearchContext.FileSearchContext:
         
         return self.file_search_context
         
@@ -205,7 +205,7 @@ class ClientDBMasterServices( ClientDBModule.ClientDBModule ):
         return service_type in HC.FILE_SERVICES_COVERED_BY_COMBINED_LOCAL_FILE
         
     
-    def GetFileSearchContextBranch( self, file_search_context: ClientSearch.FileSearchContext ) -> FileSearchContextBranch:
+    def GetFileSearchContextBranch( self, file_search_context: ClientSearchFileSearchContext.FileSearchContext ) -> FileSearchContextBranch:
         
         location_context = file_search_context.GetLocationContext()
         tag_context = file_search_context.GetTagContext()

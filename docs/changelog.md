@@ -7,6 +7,40 @@ title: Changelog
 !!! note
     This is the new changelog, only the most recent builds. For all versions, see the [old changelog](old_changelog.html).
 
+## [Version 590](https://github.com/hydrusnetwork/hydrus/releases/tag/v590)
+
+### misc
+
+* the 'check now' button in manage subscriptions is generally more intelligent and now offers questions around paused status: if _all_ the selected queries are DEAD, it now asks you if you want to resurrect them with a yes/no variant of the DEAD/ALIVE question (previously it just did it); if you are in _edit subscriptions_ and any of the selected subs are paused, it now asks you if you want to include them (and unpause) in the check now, and if not it reduces the queries examined for the DEAD/ALIVE question appropriately (previously it just did their queries, and did not unpause); in either _edit subscriptions_ or _edit subscription_, if any queries in the selection after any 'paused subs' or 'DEAD/ALIVE' filtering are paused, it asks you if you want to include (and unpause) them in the check now (previously it just did and unpaused them all)
+* if you shrink the search page's preview window down to 0 size (which it will suddenly snap to, and which is a silghtly different hide state to the one caused by double-left-clicking the splitter sash), the preview canvas will now recognise it is hidden and no longer load media as you click on thumbs. previously this thing was loading noisy videos in the background etc..
+* the `StringMatch` 'character set' match type now has 'hexadecimal characters' (`^[\da-fA-F]+$`) and 'base-64 characters' (`^[a-zA-Z\d+/]+={0,2}$`) in its dropdown choice
+* the 'gui pages' options panel now has 'when closing tabs, move focus (left/right)', so if you'd rather move left when middle-clicking tabs etc.., you can now set it, and if your style's default behaviour is whack and never moved to the right before despite you wanting it, now you can force it; it is now explicit either way. let me know if any crazy edge-case focus logic happens in this mode with nested page of pages or whatever
+* when you right-click a file, in the _share-&gt;copy hash_ menu, the md5, sha1, and sha512 hashes are now loaded from the database, usually in the milliseconds after the menu is opened, and shown in the menu labels for quick human reference. if your client does not have these hashes for the file, it says so
+* the 'share' thumbnail menu is now visible on non-local files. it is severely truncated, basically just shows copy hash/file_id stuff
+* wrote a 'Current Deleted Pending Petitioned' section for the Developer API to discuss how the states in the content storage system overlap and change in relation to various commands in the content update pipeline https://hydrusnetwork.github.io/hydrus/developer_api.html#CDPP It may be of interest to non-API-devs who are generally interested in what exactly the 'pending' state etc.. is
+* if the file import options in a hard drive import page currently imports to an empty location context (e.g. you deleted the local file service it wanted to import to), the import page now pauses and presents an appropriate error text. the URL importers already did this, so this is the hdd import joining them
+* this 'check we are good to do file work' test in the importer pages now in all cases pursues a 'default' file import options to the actual real one that will be used, so if your importer file import options are borked, this is now detected too and the importer will pause rather than fail everything in its file log
+* thanks to a user, fixed a typo bug in the new multi-column list work that was causing problems when looking at gallery logs that included mis-linked log entries. in general, the main 'turn this integer into something human' function will now handle errors better
+
+### default downloaders
+
+* _advanced/technical, tl;dr: x.com URLs save better now._ since a better fix will take more work, the 'x post' URL class is for now set to associate URLs. this fixes the association of x.com URLs when those are explicitly referred to as source URLs in a booru post. previously, some hydrus network engine magic related to how x URLs are converted to twitter URLs (and then fx/vxtwitter URLs) to get parsed by the twitter parser was causing some problems. a full 'render this URL as this URL' system will roll out in future to better handle this situation where two non-API URLs can mean the same thing. this will result in some twitter/x post URL duplication--we'll figure out a nice merge later!
+
+### duplicate auto-resolution tech
+
+* I have written the first skeleton of the `MetadataConditional` object. it has a rule based on a system predicate (like 'width &gt; 400px') and returns True/False when you give it a media object. this lego-brick will plug into a variety of different systems in future, including the duplicate auto-resolution system, with a unified UI
+* system predicates cannot yet do this arbitrarily, so it will be future work to fill out this code. to start with, I've just got system:filetype working to ultimately effect the first duplicate auto-resolution job of 'if pixel duplicates and one is jpeg, one png, then keep the jpeg'
+* add some unit tests to test this capability
+
+### boring search object code decoupling
+
+* refactored the main `Predicate` object and friends to the new `ClientSearchPredicate`
+* refactored the main `NumberTest` object and friends to the new `ClientNumberTest`
+* refactored the main `TagContext` object and friends to the new `ClientTagContext`
+* refactored the main `FileSearchContext` object and friends to the new `ClientSearchFileSearchContext`
+* moved some other `ClientSearch` stuff to other places and renamed the original file to `ClientSearchFavourites`; it now just contains the favourite searches manager
+* some misc cleanup around here. some enums had bad names, that sort of thing
+
 ## [Version 589](https://github.com/hydrusnetwork/hydrus/releases/tag/v589)
 
 ### misc
@@ -352,30 +386,3 @@ title: Changelog
 * decoupled how some service admin stuff works behind the scenes to make it easier to launch this stuff from different UI widgets
 * refactored `ToHumanInt` and the `ToPrettyOrdinalString` guys to a new `HydrusNumbers.py` file
 * fixed some bad Client API documentation for the params in `/get_files/search_files`
-
-## [Version 580](https://github.com/hydrusnetwork/hydrus/releases/tag/v580)
-
-### misc
-
-* I _may_, and a very hesitant _may_, have fixed the program hanging after minimising to system tray from the close button. thanks to the user who pinned down that it was the close button doing this rather than the other ways to minimise to system tray. if you have had trouble with minimising to the system tray, please try again when it is convenient and let me know how you get on. please also note which exact command, whether it was the file menu, system tray icon menu, minimise button, or close button, that you hit to trigger the minimise event that ultimately would not restore correctly
-* the taglist right-click menu now has a _maintenance-&gt;regenerate tag display_ command, which is basically the 'regenerate mappings storage cache' command in the database menu, but limited just to your selection. this _should_, with luck, fix incorrect autocomplete counts or sibling/parent presentation for any tags you see that are weird. I've wanted this for years, since the whole-cache regen is so large that it is essentially impossible to run on the PTR, but now we can debug individual tag presentation problems a lot easier!
-* fixed an issue where read-only import files would not delete from the temp dir after import, despite, if desired, successfully deleting from their original locations. it turns out the read-only property was being copied to the temp path for import, and the 'I'm done with the temp file, delete it' routine, unlike the normal file delete, wasn't checking for and undoing read-only status. note this was also screwing with the 'delete the hydrus temp dir on shutdown' routine, so if you do a lot of unusual/misc hard drive imports, feel free to shut your client down, check your temp folder (hit _help->about_ to find it), and delete anything called hydrusXXXXXXXX
-* the new 'eye' icon in the media viewer now has 'apply image ICC Profile colour adjustments', which will flip on/off the fairly newish checkbox added to _options->media playback_. it updates the image live!
-* added a shortcut for the 'flip apply image ICC Profile colour adjustments' to the 'media viewer' set! if you are big into this stuff and also do duplicate filtering, set it up and let me know how it goes
-* important but subtle file import options fix: when you set a file to import to a specific destination in file import options, or you say to archive all imports, this is supposed to work even when the file is 'already in db'. this was not working when 'already in db' was caused by a 'url/hash recognised' result in the downloader system. I have fixed this; it now works for 'already in db' for url/hash/file recognised states. thank you to the user who noticed this and did the debug legwork to figure out what was going on
-* import _file logs_ now have a menu item 'search for URLs', which does the same as the recent 'urls' media right-click menu command, opening a search page for any files that share these URLs
-* added a shortcut command 'reload the current qss stylesheet' to the 'main gui' shortcut set. moreover, the 'reload current ui session' entry in the debug menu, which was just above this before, is renamed to 'close and reload current ui session' because of common misclicks
-* the options panel uses less CPU on ok/cancel to set/reset style as needed. same deal with the old hack that makes the colour-picker work--it'll now be more efficient about setting/resetting style
-* fixed a stupid list/tuple type error when trying to edit the 'frame locations' in options->gui. this was from an accident during the selection/scroll rewrites last week
-* generally improved the reliability of the multi-column list against the above bug in its various forms
-* added a simple click-through login script to fix recent changes to the 8chan.moe TOS filter, which broke the respective watcher. all users get this and it should just work out of the box
-* thanks to a user, the default danbooru parsers are fixed to fetch md5 hash correctly
-* some misc tooltip and description fixes
-* improved some media result testing stuff
-
-### client api
-
-* the `/add_tags/add_tags` command has two new parameters, `override_previously_deleted_mappings`, and `create_new_deleted_mappings`, both True by default (which was also previous behaviour). turning either off allows you to, respectively, not force-add a tag mapping when it has been previously deleted (like how the gallery downloader works) and not force-delete (and thus make a 'delete' record) when deleting a tag mapping unless it already exists
-* updated the Client API help to talk about these
-* added some unit tests to test these
-* the client api is now version 65

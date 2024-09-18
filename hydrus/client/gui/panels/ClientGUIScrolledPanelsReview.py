@@ -61,7 +61,7 @@ from hydrus.client.networking import ClientNetworkingDomain
 from hydrus.client.networking import ClientNetworkingGUG
 from hydrus.client.networking import ClientNetworkingLogin
 from hydrus.client.networking import ClientNetworkingURLClass
-from hydrus.client.search import ClientSearch
+from hydrus.client.search import ClientSearchFileSearchContext
 
 class AboutPanel( ClientGUIScrolledPanels.ReviewPanel ):
     
@@ -1658,7 +1658,7 @@ class ReviewFileHistory( ClientGUIScrolledPanels.ReviewPanel ):
         
         panel_vbox = QP.VBoxLayout()
         
-        file_search_context = ClientSearch.FileSearchContext(
+        file_search_context = ClientSearchFileSearchContext.FileSearchContext(
             location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY )
         )
         
@@ -1878,7 +1878,7 @@ class ReviewFileMaintenance( ClientGUIScrolledPanels.ReviewPanel ):
         
         default_location_context = CG.client_controller.new_options.GetDefaultLocalLocationContext()
         
-        file_search_context = ClientSearch.FileSearchContext( location_context = default_location_context )
+        file_search_context = ClientSearchFileSearchContext.FileSearchContext( location_context = default_location_context )
         
         self._tag_autocomplete = ClientGUIACDropdown.AutoCompleteDropdownTagsRead( self._search_panel, page_key, file_search_context, allow_all_known_files = False, force_system_everything = True )
         
@@ -2167,7 +2167,7 @@ class ReviewFileMaintenance( ClientGUIScrolledPanels.ReviewPanel ):
         
         location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY )
         
-        file_search_context = ClientSearch.FileSearchContext( location_context = location_context )
+        file_search_context = ClientSearchFileSearchContext.FileSearchContext( location_context = location_context )
         
         def work_callable():
             
@@ -2194,7 +2194,7 @@ class ReviewFileMaintenance( ClientGUIScrolledPanels.ReviewPanel ):
         
         location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_UPDATE_SERVICE_KEY )
         
-        file_search_context = ClientSearch.FileSearchContext( location_context = location_context )
+        file_search_context = ClientSearchFileSearchContext.FileSearchContext( location_context = location_context )
         
         def work_callable():
             
@@ -2338,7 +2338,7 @@ class ReviewHowBonedAmI( ClientGUIScrolledPanels.ReviewPanel ):
         
         panel_vbox = QP.VBoxLayout()
         
-        file_search_context = ClientSearch.FileSearchContext(
+        file_search_context = ClientSearchFileSearchContext.FileSearchContext(
             location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY )
         )
         

@@ -132,7 +132,14 @@ def ResolutionToPrettyString( resolution ):
 
 def ToHumanInt( num ):
     
-    num = int( num )
+    try:
+        
+        num = int( num )
+        
+    except:
+        
+        return 'unknown'
+        
     
     # this got stomped on by mpv, which resets locale
     #text = locale.format_string( '%d', num, grouping = True )

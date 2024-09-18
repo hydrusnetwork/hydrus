@@ -11,7 +11,8 @@ from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIShortcuts
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.pages import ClientGUIManagementController
-from hydrus.client.search import ClientSearch
+from hydrus.client.search import ClientSearchFileSearchContext
+from hydrus.client.search import ClientSearchTagContext
 
 class DialogPageChooser( ClientGUIDialogs.Dialog ):
     
@@ -185,9 +186,9 @@ class DialogPageChooser( ClientGUIDialogs.Dialog ):
                     
                     location_context = ClientLocation.LocationContext.STATICCreateSimple( file_service_key )
                     
-                    tag_context = ClientSearch.TagContext( service_key = tag_service_key )
+                    tag_context = ClientSearchTagContext.TagContext( service_key = tag_service_key )
                     
-                    file_search_context = ClientSearch.FileSearchContext( location_context = location_context, tag_context = tag_context )
+                    file_search_context = ClientSearchFileSearchContext.FileSearchContext( location_context = location_context, tag_context = tag_context )
                     
                     self._result = ( 'page', ClientGUIManagementController.CreateManagementControllerQuery( page_name, file_search_context, search_enabled ) )
                     

@@ -7,7 +7,7 @@ from hydrus.core import HydrusConstants as HC
 from hydrus.client import ClientConstants as CC
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.widgets import ClientGUICommon
-from hydrus.client.search import ClientSearch
+from hydrus.client.search import ClientNumberTest
 
 class NumberTestWidget( QW.QWidget ):
     
@@ -18,19 +18,19 @@ class NumberTestWidget( QW.QWidget ):
         choice_tuples = []
         
         for possible_operator in [
-            ClientSearch.NUMBER_TEST_OPERATOR_LESS_THAN,
-            ClientSearch.NUMBER_TEST_OPERATOR_APPROXIMATE_ABSOLUTE,
-            ClientSearch.NUMBER_TEST_OPERATOR_APPROXIMATE_PERCENT,
-            ClientSearch.NUMBER_TEST_OPERATOR_EQUAL,
-            ClientSearch.NUMBER_TEST_OPERATOR_NOT_EQUAL,
-            ClientSearch.NUMBER_TEST_OPERATOR_GREATER_THAN
+            ClientNumberTest.NUMBER_TEST_OPERATOR_LESS_THAN,
+            ClientNumberTest.NUMBER_TEST_OPERATOR_APPROXIMATE_ABSOLUTE,
+            ClientNumberTest.NUMBER_TEST_OPERATOR_APPROXIMATE_PERCENT,
+            ClientNumberTest.NUMBER_TEST_OPERATOR_EQUAL,
+            ClientNumberTest.NUMBER_TEST_OPERATOR_NOT_EQUAL,
+            ClientNumberTest.NUMBER_TEST_OPERATOR_GREATER_THAN
         ]:
             
             if possible_operator in allowed_operators:
                 
-                text = ClientSearch.number_test_operator_to_str_lookup[ possible_operator ]
+                text = ClientNumberTest.number_test_operator_to_str_lookup[ possible_operator ]
                 
-                if possible_operator == ClientSearch.NUMBER_TEST_OPERATOR_APPROXIMATE_PERCENT:
+                if possible_operator == ClientNumberTest.NUMBER_TEST_OPERATOR_APPROXIMATE_PERCENT:
                     
                     text += '%'
                     
@@ -139,20 +139,20 @@ class NumberTestWidget( QW.QWidget ):
         
         operator = self._operator.GetValue()
         
-        self._absolute_plus_or_minus_panel.setVisible( operator == ClientSearch.NUMBER_TEST_OPERATOR_APPROXIMATE_ABSOLUTE )
-        self._percent_plus_or_minus_panel.setVisible( operator == ClientSearch.NUMBER_TEST_OPERATOR_APPROXIMATE_PERCENT )
+        self._absolute_plus_or_minus_panel.setVisible( operator == ClientNumberTest.NUMBER_TEST_OPERATOR_APPROXIMATE_ABSOLUTE )
+        self._percent_plus_or_minus_panel.setVisible( operator == ClientNumberTest.NUMBER_TEST_OPERATOR_APPROXIMATE_PERCENT )
         
     
-    def GetValue( self ) -> ClientSearch.NumberTest:
+    def GetValue( self ) -> ClientNumberTest.NumberTest:
         
         operator = self._operator.GetValue()
         value = self._GetSubValue()
         
-        if operator == ClientSearch.NUMBER_TEST_OPERATOR_APPROXIMATE_ABSOLUTE:
+        if operator == ClientNumberTest.NUMBER_TEST_OPERATOR_APPROXIMATE_ABSOLUTE:
             
             extra_value = self._GetAbsoluteValue()
             
-        elif operator == ClientSearch.NUMBER_TEST_OPERATOR_APPROXIMATE_PERCENT:
+        elif operator == ClientNumberTest.NUMBER_TEST_OPERATOR_APPROXIMATE_PERCENT:
             
             extra_value = self._percent_plus_or_minus.value() / 100
             
@@ -161,19 +161,19 @@ class NumberTestWidget( QW.QWidget ):
             extra_value = None
             
         
-        return ClientSearch.NumberTest( operator = operator, value = value, extra_value = extra_value )
+        return ClientNumberTest.NumberTest( operator = operator, value = value, extra_value = extra_value )
         
     
-    def SetValue( self, number_test: ClientSearch.NumberTest ):
+    def SetValue( self, number_test: ClientNumberTest.NumberTest ):
         
         self._operator.SetValue( number_test.operator )
         self._SetSubValue( number_test.value )
         
-        if number_test.operator == ClientSearch.NUMBER_TEST_OPERATOR_APPROXIMATE_ABSOLUTE:
+        if number_test.operator == ClientNumberTest.NUMBER_TEST_OPERATOR_APPROXIMATE_ABSOLUTE:
             
             self._SetAbsoluteValue( number_test.extra_value )
             
-        elif number_test.operator == ClientSearch.NUMBER_TEST_OPERATOR_APPROXIMATE_PERCENT:
+        elif number_test.operator == ClientNumberTest.NUMBER_TEST_OPERATOR_APPROXIMATE_PERCENT:
             
             self._percent_plus_or_minus.setValue( int( number_test.extra_value * 100 ) )
             

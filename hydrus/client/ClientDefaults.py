@@ -915,7 +915,9 @@ def SetDefaultDomainManagerData( domain_manager ):
 def SetDefaultFavouriteSearchManagerData( favourite_search_manager ):
     
     from hydrus.client.media import ClientMedia
-    from hydrus.client.search import ClientSearch
+    from hydrus.client.search import ClientSearchFileSearchContext
+    from hydrus.client.search import ClientSearchPredicate
+    from hydrus.client.search import ClientSearchTagContext
     
     rows = []
     
@@ -926,21 +928,21 @@ def SetDefaultFavouriteSearchManagerData( favourite_search_manager ):
     
     location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY )
     
-    tag_context = ClientSearch.TagContext()
+    tag_context = ClientSearchTagContext.TagContext()
     
     predicates = []
     
-    predicates.append( ClientSearch.Predicate( predicate_type = ClientSearch.PREDICATE_TYPE_SYSTEM_INBOX ) )
-    predicates.append( ClientSearch.Predicate( predicate_type = ClientSearch.PREDICATE_TYPE_SYSTEM_LIMIT, value = 256 ) )
+    predicates.append( ClientSearchPredicate.Predicate( predicate_type = ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_INBOX ) )
+    predicates.append( ClientSearchPredicate.Predicate( predicate_type = ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_LIMIT, value = 256 ) )
     
     filetypes = []
     filetypes.extend( HC.general_mimetypes_to_mime_groups[ HC.GENERAL_IMAGE ] )
     filetypes.extend( HC.general_mimetypes_to_mime_groups[ HC.GENERAL_ANIMATION ] )
     filetypes.extend( HC.general_mimetypes_to_mime_groups[ HC.GENERAL_VIDEO ] )
     
-    predicates.append( ClientSearch.Predicate( predicate_type = ClientSearch.PREDICATE_TYPE_SYSTEM_MIME, value = filetypes ) )
+    predicates.append( ClientSearchPredicate.Predicate( predicate_type = ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_MIME, value = filetypes ) )
     
-    file_search_context = ClientSearch.FileSearchContext( location_context = location_context, tag_context = tag_context, predicates = predicates )
+    file_search_context = ClientSearchFileSearchContext.FileSearchContext( location_context = location_context, tag_context = tag_context, predicates = predicates )
     
     synchronised = True
     media_sort = ClientMedia.MediaSort( sort_type = ( 'system', CC.SORT_FILES_BY_FILESIZE ), sort_order = CC.SORT_DESC )
@@ -955,11 +957,11 @@ def SetDefaultFavouriteSearchManagerData( favourite_search_manager ):
     
     location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY )
     
-    tag_context = ClientSearch.TagContext()
+    tag_context = ClientSearchTagContext.TagContext()
     
     predicates = []
     
-    file_search_context = ClientSearch.FileSearchContext( location_context = location_context, tag_context = tag_context, predicates = predicates )
+    file_search_context = ClientSearchFileSearchContext.FileSearchContext( location_context = location_context, tag_context = tag_context, predicates = predicates )
     
     synchronised = True
     media_sort = None

@@ -14,7 +14,8 @@ from hydrus.client.duplicates import ClientDuplicates
 from hydrus.client.importing import ClientImportFiles
 from hydrus.client.importing.options import FileImportOptions
 from hydrus.client.metadata import ClientContentUpdates
-from hydrus.client.search import ClientSearch
+from hydrus.client.search import ClientSearchFileSearchContext
+from hydrus.client.search import ClientSearchPredicate
 
 from hydrus.test import TestController
 
@@ -1074,13 +1075,13 @@ class TestClientDBDuplicates( unittest.TestCase ):
         # initial number pair combinations is (n(n-1))/2
         self._expected_num_potentials = int( n * ( n - 1 ) / 2 )
         
-        size_pred = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_SIZE, ( '=', 65535, HydrusNumbers.UnitToInt( 'B' ) ) )
-        png_pred = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_MIME, ( HC.IMAGE_PNG, ) )
+        size_pred = ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_SIZE, ( '=', 65535, HydrusNumbers.UnitToInt( 'B' ) ) )
+        png_pred = ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_MIME, ( HC.IMAGE_PNG, ) )
         
         location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY )
         
-        self._file_search_context_1 = ClientSearch.FileSearchContext( location_context = location_context, predicates = [ size_pred ] )
-        self._file_search_context_2 = ClientSearch.FileSearchContext( location_context = location_context, predicates = [ png_pred ] )
+        self._file_search_context_1 = ClientSearchFileSearchContext.FileSearchContext( location_context = location_context, predicates = [ size_pred ] )
+        self._file_search_context_2 = ClientSearchFileSearchContext.FileSearchContext( location_context = location_context, predicates = [ png_pred ] )
         
         self._import_and_find_dupes()
         

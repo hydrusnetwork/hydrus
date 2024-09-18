@@ -30,7 +30,10 @@ from hydrus.client.db import ClientDBTagSearch
 from hydrus.client.db import ClientDBURLMap
 from hydrus.client.media import ClientMedia
 from hydrus.client.metadata import ClientTags
-from hydrus.client.search import ClientSearch
+from hydrus.client.search import ClientNumberTest
+from hydrus.client.search import ClientSearchFileSearchContext
+from hydrus.client.search import ClientSearchPredicate
+from hydrus.client.search import ClientSearchTagContext
 
 def intersection_update_qhi( query_hash_ids: typing.Optional[ typing.Set[ int ] ], some_hash_ids: typing.Collection[ int ], force_create_new_set = False ) -> typing.Set[ int ]:
     
@@ -51,7 +54,7 @@ def intersection_update_qhi( query_hash_ids: typing.Optional[ typing.Set[ int ] 
         
     
 
-def GetFilesInfoPredicates( system_predicates: ClientSearch.FileSystemPredicates ):
+def GetFilesInfoPredicates( system_predicates: ClientSearchFileSearchContext.FileSystemPredicates ):
     
     simple_preds = system_predicates.GetSimpleInfo()
     
@@ -114,9 +117,9 @@ def GetFilesInfoPredicates( system_predicates: ClientSearch.FileSystemPredicates
         files_info_predicates.append( 'has_audio = {}'.format( int( has_audio ) ) )
         
     
-    if ClientSearch.PREDICATE_TYPE_SYSTEM_WIDTH in simple_preds:
+    if ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_WIDTH in simple_preds:
         
-        number_tests: typing.List[ ClientSearch.NumberTest ] = simple_preds[ ClientSearch.PREDICATE_TYPE_SYSTEM_WIDTH ]
+        number_tests: typing.List[ ClientNumberTest.NumberTest ] = simple_preds[ ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_WIDTH ]
         
         for number_test in number_tests:
             
@@ -124,9 +127,9 @@ def GetFilesInfoPredicates( system_predicates: ClientSearch.FileSystemPredicates
             
         
     
-    if ClientSearch.PREDICATE_TYPE_SYSTEM_HEIGHT in simple_preds:
+    if ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HEIGHT in simple_preds:
         
-        number_tests: typing.List[ ClientSearch.NumberTest ] = simple_preds[ ClientSearch.PREDICATE_TYPE_SYSTEM_HEIGHT ]
+        number_tests: typing.List[ ClientNumberTest.NumberTest ] = simple_preds[ ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HEIGHT ]
         
         for number_test in number_tests:
             
@@ -176,9 +179,9 @@ def GetFilesInfoPredicates( system_predicates: ClientSearch.FileSystemPredicates
         files_info_predicates.append( '( width * 1.0 ) / height < ' + str( float( ratio_width ) ) + ' / ' + str( ratio_height ) )
         
     
-    if ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_WORDS in simple_preds:
+    if ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_NUM_WORDS in simple_preds:
         
-        number_tests: typing.List[ ClientSearch.NumberTest ] = simple_preds[ ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_WORDS ]
+        number_tests: typing.List[ ClientNumberTest.NumberTest ] = simple_preds[ ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_NUM_WORDS ]
         
         for number_test in number_tests:
             
@@ -186,9 +189,9 @@ def GetFilesInfoPredicates( system_predicates: ClientSearch.FileSystemPredicates
             
         
     
-    if ClientSearch.PREDICATE_TYPE_SYSTEM_DURATION in simple_preds:
+    if ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_DURATION in simple_preds:
         
-        number_tests: typing.List[ ClientSearch.NumberTest ] = simple_preds[ ClientSearch.PREDICATE_TYPE_SYSTEM_DURATION ]
+        number_tests: typing.List[ ClientNumberTest.NumberTest ] = simple_preds[ ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_DURATION ]
         
         for number_test in number_tests:
             
@@ -196,9 +199,9 @@ def GetFilesInfoPredicates( system_predicates: ClientSearch.FileSystemPredicates
             
         
     
-    if ClientSearch.PREDICATE_TYPE_SYSTEM_FRAMERATE in simple_preds:
+    if ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_FRAMERATE in simple_preds:
         
-        number_tests: typing.List[ ClientSearch.NumberTest ] = simple_preds[ ClientSearch.PREDICATE_TYPE_SYSTEM_FRAMERATE ]
+        number_tests: typing.List[ ClientNumberTest.NumberTest ] = simple_preds[ ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_FRAMERATE ]
         
         for number_test in number_tests:
             
@@ -206,9 +209,9 @@ def GetFilesInfoPredicates( system_predicates: ClientSearch.FileSystemPredicates
             
         
     
-    if ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_FRAMES in simple_preds:
+    if ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_NUM_FRAMES in simple_preds:
         
-        number_tests: typing.List[ ClientSearch.NumberTest ] = simple_preds[ ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_FRAMES ]
+        number_tests: typing.List[ ClientNumberTest.NumberTest ] = simple_preds[ ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_NUM_FRAMES ]
         
         for number_test in number_tests:
             
@@ -240,7 +243,7 @@ class ClientDBFilesSearchTags( ClientDBModule.ClientDBModule ):
         super().__init__( 'client file search using tags', cursor )
         
     
-    def GetHashIdsAndNonZeroTagCounts( self, tag_display_type: int, location_context: ClientLocation.LocationContext, tag_context: ClientSearch.TagContext, hash_ids, namespace_wildcard = '*', job_status = None ):
+    def GetHashIdsAndNonZeroTagCounts( self, tag_display_type: int, location_context: ClientLocation.LocationContext, tag_context: ClientSearchTagContext.TagContext, hash_ids, namespace_wildcard = '*', job_status = None ):
         
         if namespace_wildcard == '*':
             
@@ -315,7 +318,7 @@ class ClientDBFilesSearchTags( ClientDBModule.ClientDBModule ):
             
         
     
-    def GetHashIdsFromNamespaceIdsSubtagIds( self, tag_display_type: int, file_service_key, tag_context: ClientSearch.TagContext, namespace_ids, subtag_ids, hash_ids = None, hash_ids_table_name = None, job_status = None ):
+    def GetHashIdsFromNamespaceIdsSubtagIds( self, tag_display_type: int, file_service_key, tag_context: ClientSearchTagContext.TagContext, namespace_ids, subtag_ids, hash_ids = None, hash_ids_table_name = None, job_status = None ):
         
         file_service_id = self.modules_services.GetServiceId( file_service_key )
         tag_service_id = self.modules_services.GetServiceId( tag_context.service_key )
@@ -325,7 +328,7 @@ class ClientDBFilesSearchTags( ClientDBModule.ClientDBModule ):
         return self.GetHashIdsFromTagIds( tag_display_type, file_service_key, tag_context, tag_ids, hash_ids = hash_ids, hash_ids_table_name = hash_ids_table_name, job_status = job_status )
         
     
-    def GetHashIdsFromNamespaceIdsSubtagIdsTables( self, tag_display_type: int, file_service_key, tag_context: ClientSearch.TagContext, namespace_ids_table_name, subtag_ids_table_name, hash_ids = None, hash_ids_table_name = None, job_status = None ):
+    def GetHashIdsFromNamespaceIdsSubtagIdsTables( self, tag_display_type: int, file_service_key, tag_context: ClientSearchTagContext.TagContext, namespace_ids_table_name, subtag_ids_table_name, hash_ids = None, hash_ids_table_name = None, job_status = None ):
         
         file_service_id = self.modules_services.GetServiceId( file_service_key )
         tag_service_id = self.modules_services.GetServiceId( tag_context.service_key )
@@ -335,7 +338,7 @@ class ClientDBFilesSearchTags( ClientDBModule.ClientDBModule ):
         return self.GetHashIdsFromTagIds( tag_display_type, file_service_key, tag_context, tag_ids, hash_ids = hash_ids, hash_ids_table_name = hash_ids_table_name, job_status = job_status )
         
     
-    def GetHashIdsFromSubtagIds( self, tag_display_type: int, file_service_key, tag_context: ClientSearch.TagContext, subtag_ids, hash_ids = None, hash_ids_table_name = None, job_status = None ):
+    def GetHashIdsFromSubtagIds( self, tag_display_type: int, file_service_key, tag_context: ClientSearchTagContext.TagContext, subtag_ids, hash_ids = None, hash_ids_table_name = None, job_status = None ):
         
         file_service_id = self.modules_services.GetServiceId( file_service_key )
         tag_service_id = self.modules_services.GetServiceId( tag_context.service_key )
@@ -345,7 +348,7 @@ class ClientDBFilesSearchTags( ClientDBModule.ClientDBModule ):
         return self.GetHashIdsFromTagIds( tag_display_type, file_service_key, tag_context, tag_ids, hash_ids = hash_ids, hash_ids_table_name = hash_ids_table_name, job_status = job_status )
         
     
-    def GetHashIdsFromSubtagIdsTable( self, tag_display_type: int, file_service_key, tag_context: ClientSearch.TagContext, subtag_ids_table_name, hash_ids = None, hash_ids_table_name = None, job_status = None ):
+    def GetHashIdsFromSubtagIdsTable( self, tag_display_type: int, file_service_key, tag_context: ClientSearchTagContext.TagContext, subtag_ids_table_name, hash_ids = None, hash_ids_table_name = None, job_status = None ):
         
         file_service_id = self.modules_services.GetServiceId( file_service_key )
         tag_service_id = self.modules_services.GetServiceId( tag_context.service_key )
@@ -355,7 +358,7 @@ class ClientDBFilesSearchTags( ClientDBModule.ClientDBModule ):
         return self.GetHashIdsFromTagIds( tag_display_type, file_service_key, tag_context, tag_ids, hash_ids = hash_ids, hash_ids_table_name = hash_ids_table_name, job_status = job_status )
         
     
-    def GetHashIdsFromTag( self, tag_display_type: int, location_context: ClientLocation.LocationContext, tag_context: ClientSearch.TagContext, tag, hash_ids = None, hash_ids_table_name = None, job_status = None ):
+    def GetHashIdsFromTag( self, tag_display_type: int, location_context: ClientLocation.LocationContext, tag_context: ClientSearchTagContext.TagContext, tag, hash_ids = None, hash_ids_table_name = None, job_status = None ):
         
         ( file_service_keys, file_location_is_cross_referenced ) = location_context.GetCoveringCurrentFileServiceKeys()
         
@@ -390,7 +393,7 @@ class ClientDBFilesSearchTags( ClientDBModule.ClientDBModule ):
             
             search_tag_service_key = service_ids_to_service_keys[ search_tag_service_id ]
             
-            search_tag_context = ClientSearch.TagContext( service_key = search_tag_service_key, include_current_tags = tag_context.include_current_tags, include_pending_tags = tag_context.include_pending_tags, display_service_key = search_tag_service_key )
+            search_tag_context = ClientSearchTagContext.TagContext( service_key = search_tag_service_key, include_current_tags = tag_context.include_current_tags, include_pending_tags = tag_context.include_pending_tags, display_service_key = search_tag_service_key )
             
             ideal_tag_id = self.modules_tag_search.modules_tag_siblings.GetIdealTagId( tag_display_type, search_tag_service_id, tag_id )
             
@@ -421,7 +424,7 @@ class ClientDBFilesSearchTags( ClientDBModule.ClientDBModule ):
         return results
         
     
-    def GetHashIdsFromTagIds( self, tag_display_type: int, file_service_key: bytes, tag_context: ClientSearch.TagContext, tag_ids: typing.Collection[ int ], hash_ids = None, hash_ids_table_name = None, job_status = None ):
+    def GetHashIdsFromTagIds( self, tag_display_type: int, file_service_key: bytes, tag_context: ClientSearchTagContext.TagContext, tag_ids: typing.Collection[ int ], hash_ids = None, hash_ids_table_name = None, job_status = None ):
         
         do_hash_table_join = False
         
@@ -496,7 +499,7 @@ class ClientDBFilesSearchTags( ClientDBModule.ClientDBModule ):
         return result_hash_ids
         
     
-    def GetHashIdsFromTagIdsTables( self, tag_display_type: int, file_service_key: bytes, tag_context: ClientSearch.TagContext, tag_ids: typing.Collection[ int ], hash_ids = None, hash_ids_table_name = None, job_status = None ):
+    def GetHashIdsFromTagIdsTables( self, tag_display_type: int, file_service_key: bytes, tag_context: ClientSearchTagContext.TagContext, tag_ids: typing.Collection[ int ], hash_ids = None, hash_ids_table_name = None, job_status = None ):
         
         do_hash_table_join = False
         
@@ -571,7 +574,7 @@ class ClientDBFilesSearchTags( ClientDBModule.ClientDBModule ):
         return result_hash_ids
         
     
-    def GetHashIdsFromWildcardComplexLocation( self, tag_display_type: int, location_context: ClientLocation.LocationContext, tag_context: ClientSearch.TagContext, wildcard, hash_ids = None, hash_ids_table_name = None, job_status = None ):
+    def GetHashIdsFromWildcardComplexLocation( self, tag_display_type: int, location_context: ClientLocation.LocationContext, tag_context: ClientSearchTagContext.TagContext, wildcard, hash_ids = None, hash_ids_table_name = None, job_status = None ):
         
         ( namespace_wildcard, subtag_wildcard ) = HydrusTags.SplitTag( wildcard )
         
@@ -637,7 +640,7 @@ class ClientDBFilesSearchTags( ClientDBModule.ClientDBModule ):
         return results
         
     
-    def GetHashIdsFromWildcardSimpleLocation( self, tag_display_type: int, file_service_key: bytes, tag_context: ClientSearch.TagContext, subtag_wildcard, namespace_ids_table_name = None, hash_ids = None, hash_ids_table_name = None, job_status = None ):
+    def GetHashIdsFromWildcardSimpleLocation( self, tag_display_type: int, file_service_key: bytes, tag_context: ClientSearchTagContext.TagContext, subtag_wildcard, namespace_ids_table_name = None, hash_ids = None, hash_ids_table_name = None, job_status = None ):
         
         with self._MakeTemporaryIntegerTable( [], 'subtag_id' ) as temp_subtag_ids_table_name:
             
@@ -657,7 +660,7 @@ class ClientDBFilesSearchTags( ClientDBModule.ClientDBModule ):
             
         
     
-    def GetHashIdsThatHaveTagAsNumComplexLocation( self, tag_display_type: int, location_context: ClientLocation.LocationContext, tag_context: ClientSearch.TagContext, namespace_wildcard, num, operator, hash_ids = None, hash_ids_table_name = None, job_status = None ):
+    def GetHashIdsThatHaveTagAsNumComplexLocation( self, tag_display_type: int, location_context: ClientLocation.LocationContext, tag_context: ClientSearchTagContext.TagContext, namespace_wildcard, num, operator, hash_ids = None, hash_ids_table_name = None, job_status = None ):
         
         if location_context.IsEmpty():
             
@@ -695,7 +698,7 @@ class ClientDBFilesSearchTags( ClientDBModule.ClientDBModule ):
         return results
         
     
-    def GetHashIdsThatHaveTagAsNumSimpleLocation( self, tag_display_type: int, file_service_key: bytes, tag_context: ClientSearch.TagContext, namespace_wildcard, num, operator, hash_ids = None, hash_ids_table_name = None, job_status = None ):
+    def GetHashIdsThatHaveTagAsNumSimpleLocation( self, tag_display_type: int, file_service_key: bytes, tag_context: ClientSearchTagContext.TagContext, namespace_wildcard, num, operator, hash_ids = None, hash_ids_table_name = None, job_status = None ):
         
         file_service_id = self.modules_services.GetServiceId( file_service_key )
         tag_service_id = self.modules_services.GetServiceId( tag_context.service_key )
@@ -730,7 +733,7 @@ class ClientDBFilesSearchTags( ClientDBModule.ClientDBModule ):
             
         
     
-    def GetHashIdsThatHaveTagsComplexLocation( self, tag_display_type: int, location_context: ClientLocation.LocationContext, tag_context: ClientSearch.TagContext, namespace_wildcard = '*', hash_ids_table_name = None, job_status = None ):
+    def GetHashIdsThatHaveTagsComplexLocation( self, tag_display_type: int, location_context: ClientLocation.LocationContext, tag_context: ClientSearchTagContext.TagContext, namespace_wildcard = '*', hash_ids_table_name = None, job_status = None ):
         
         if location_context.IsEmpty():
             
@@ -794,7 +797,7 @@ class ClientDBFilesSearchTags( ClientDBModule.ClientDBModule ):
         return results
         
     
-    def GetHashIdsThatHaveTagsSimpleLocation( self, tag_display_type: int, file_service_key: bytes, tag_context: ClientSearch.TagContext, namespace_ids_table_name = None, hash_ids_table_name = None, job_status = None ):
+    def GetHashIdsThatHaveTagsSimpleLocation( self, tag_display_type: int, file_service_key: bytes, tag_context: ClientSearchTagContext.TagContext, namespace_ids_table_name = None, hash_ids_table_name = None, job_status = None ):
         
         mapping_and_tag_table_names = self.modules_tag_search.GetMappingAndTagTables( tag_display_type, file_service_key, tag_context )
         
@@ -902,11 +905,11 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
         super().__init__( 'client file query', cursor )
         
     
-    def _DoNotePreds( self, system_predicates: ClientSearch.FileSystemPredicates, query_hash_ids: typing.Optional[ typing.Set[ int ] ], job_status: typing.Optional[ ClientThreading.JobStatus ] = None ) -> typing.Optional[ typing.Set[ int ] ]:
+    def _DoNotePreds( self, system_predicates: ClientSearchFileSearchContext.FileSystemPredicates, query_hash_ids: typing.Optional[ typing.Set[ int ] ], job_status: typing.Optional[ ClientThreading.JobStatus ] = None ) -> typing.Optional[ typing.Set[ int ] ]:
         
         simple_preds = system_predicates.GetSimpleInfo()
         
-        number_tests = simple_preds.get( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_NOTES, [] )
+        number_tests = simple_preds.get( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_NUM_NOTES, [] )
         
         if len( number_tests ) > 0:
             
@@ -959,9 +962,9 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
     
     def _DoOrPreds(
         self,
-        file_search_context: ClientSearch.FileSearchContext,
+        file_search_context: ClientSearchFileSearchContext.FileSearchContext,
         job_status: typing.Optional[ ClientThreading.JobStatus ],
-        or_predicates: typing.Collection[ ClientSearch.Predicate ],
+        or_predicates: typing.Collection[ ClientSearchPredicate.Predicate ],
         query_hash_ids: typing.Optional[ typing.Set[ int ] ]
     ) -> typing.Optional[ typing.Set[ int ] ]:
             
@@ -1007,7 +1010,7 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
             
         
     
-    def _DoSimpleRatingPreds( self, file_search_context: ClientSearch.FileSearchContext, query_hash_ids: typing.Optional[ typing.Set[ int ] ], job_status: typing.Optional[ ClientThreading.JobStatus ] = None ) -> typing.Optional[ typing.Set[ int ] ]:
+    def _DoSimpleRatingPreds( self, file_search_context: ClientSearchFileSearchContext.FileSearchContext, query_hash_ids: typing.Optional[ typing.Set[ int ] ], job_status: typing.Optional[ ClientThreading.JobStatus ] = None ) -> typing.Optional[ typing.Set[ int ] ]:
         
         cancelled_hook = None
         
@@ -1119,7 +1122,7 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
         return query_hash_ids
         
     
-    def _DoSpecificKnownURLPreds( self, file_search_context: ClientSearch.FileSearchContext, query_hash_ids: typing.Optional[ typing.Set[ int ] ], allowed_rule_types: typing.Collection[ str ] ) -> typing.Optional[ typing.Set[ int ] ]:
+    def _DoSpecificKnownURLPreds( self, file_search_context: ClientSearchFileSearchContext.FileSearchContext, query_hash_ids: typing.Optional[ typing.Set[ int ] ], allowed_rule_types: typing.Collection[ str ] ) -> typing.Optional[ typing.Set[ int ] ]:
         
         system_predicates = file_search_context.GetSystemPredicates()
         
@@ -1190,7 +1193,7 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
         return query_hash_ids
         
     
-    def _DoTimestampPreds( self, file_search_context: ClientSearch.FileSearchContext, query_hash_ids: typing.Optional[ typing.Set[ int ] ], have_cross_referenced_file_locations: bool, job_status: typing.Optional[ ClientThreading.JobStatus ] = None ) -> typing.Tuple[ typing.Optional[ typing.Set[ int ] ], bool ]:
+    def _DoTimestampPreds( self, file_search_context: ClientSearchFileSearchContext.FileSearchContext, query_hash_ids: typing.Optional[ typing.Set[ int ] ], have_cross_referenced_file_locations: bool, job_status: typing.Optional[ ClientThreading.JobStatus ] = None ) -> typing.Tuple[ typing.Optional[ typing.Set[ int ] ], bool ]:
         
         system_predicates = file_search_context.GetSystemPredicates()
         
@@ -1212,11 +1215,11 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
             # for now we'll check current domain
             # if domain is deleted, we search deletion time
             
-            if ClientSearch.PREDICATE_TYPE_SYSTEM_AGE in system_pred_type_to_timestamp_ranges_ms:
+            if ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_AGE in system_pred_type_to_timestamp_ranges_ms:
                 
                 import_timestamp_predicates = []
                 
-                timestamp_ranges_ms = system_pred_type_to_timestamp_ranges_ms[ ClientSearch.PREDICATE_TYPE_SYSTEM_AGE ]
+                timestamp_ranges_ms = system_pred_type_to_timestamp_ranges_ms[ ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_AGE ]
                 
                 if '>' in timestamp_ranges_ms:
                     
@@ -1251,9 +1254,9 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
                 
             
         
-        if ClientSearch.PREDICATE_TYPE_SYSTEM_MODIFIED_TIME in system_pred_type_to_timestamp_ranges_ms:
+        if ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_MODIFIED_TIME in system_pred_type_to_timestamp_ranges_ms:
             
-            timestamp_ranges_ms = system_pred_type_to_timestamp_ranges_ms[ ClientSearch.PREDICATE_TYPE_SYSTEM_MODIFIED_TIME ]
+            timestamp_ranges_ms = system_pred_type_to_timestamp_ranges_ms[ ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_MODIFIED_TIME ]
             
             if len( timestamp_ranges_ms ) > 0:
                 
@@ -1263,9 +1266,9 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
                 
             
         
-        if ClientSearch.PREDICATE_TYPE_SYSTEM_ARCHIVED_TIME in system_pred_type_to_timestamp_ranges_ms:
+        if ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_ARCHIVED_TIME in system_pred_type_to_timestamp_ranges_ms:
             
-            timestamp_ranges_ms = system_pred_type_to_timestamp_ranges_ms[ ClientSearch.PREDICATE_TYPE_SYSTEM_ARCHIVED_TIME ]
+            timestamp_ranges_ms = system_pred_type_to_timestamp_ranges_ms[ ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_ARCHIVED_TIME ]
             
             if len( timestamp_ranges_ms ) > 0:
                 
@@ -1275,9 +1278,9 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
                 
             
         
-        if ClientSearch.PREDICATE_TYPE_SYSTEM_LAST_VIEWED_TIME in system_pred_type_to_timestamp_ranges_ms:
+        if ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_LAST_VIEWED_TIME in system_pred_type_to_timestamp_ranges_ms:
             
-            timestamp_ranges_ms = system_pred_type_to_timestamp_ranges_ms[ ClientSearch.PREDICATE_TYPE_SYSTEM_LAST_VIEWED_TIME ]
+            timestamp_ranges_ms = system_pred_type_to_timestamp_ranges_ms[ ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_LAST_VIEWED_TIME ]
             
             min_last_viewed_timestamp_ms = timestamp_ranges_ms.get( '>', None )
             max_last_viewed_timestamp_ms = timestamp_ranges_ms.get( '<', None )
@@ -1292,7 +1295,7 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
     
     def GetHashIdsFromQuery(
         self,
-        file_search_context: ClientSearch.FileSearchContext,
+        file_search_context: ClientSearchFileSearchContext.FileSearchContext,
         job_status: typing.Optional[ ClientThreading.JobStatus ] = None,
         query_hash_ids: typing.Optional[ set ] = None,
         apply_implicit_limit: bool = True,
@@ -2208,7 +2211,7 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
         
         #
         
-        num_urls_tests = simple_preds.get( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_URLS, [] )
+        num_urls_tests = simple_preds.get( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_NUM_URLS, [] )
         
         if len( num_urls_tests ) > 0:
             
@@ -2244,7 +2247,7 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
             
             specific_number_tests = [ number_test for number_test in number_tests if not ( number_test.IsZero() or number_test.IsAnythingButZero() ) ]
             
-            megalambda = ClientSearch.NumberTest.STATICCreateMegaLambda( specific_number_tests )
+            megalambda = ClientNumberTest.NumberTest.STATICCreateMegaLambda( specific_number_tests )
             
             is_zero = True in ( number_test.IsZero() for number_test in number_tests )
             is_anything_but_zero = True in ( number_test.IsAnythingButZero() for number_test in number_tests )
@@ -2384,7 +2387,7 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
         return tables_and_columns
         
     
-    def PopulateSearchIntoTempTable( self, file_search_context: ClientSearch.FileSearchContext, temp_table_name: str ) -> typing.List[ int ]:
+    def PopulateSearchIntoTempTable( self, file_search_context: ClientSearchFileSearchContext.FileSearchContext, temp_table_name: str ) -> typing.List[ int ]:
         
         query_hash_ids = self.GetHashIdsFromQuery( file_search_context, apply_implicit_limit = False )
         

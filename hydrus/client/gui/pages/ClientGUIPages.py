@@ -36,7 +36,9 @@ from hydrus.client.gui.pages import ClientGUINewPageChooser
 from hydrus.client.gui.pages import ClientGUIResults
 from hydrus.client.gui.pages import ClientGUISession
 from hydrus.client.gui.pages import ClientGUISessionLegacy # to get serialisable data types loaded
-from hydrus.client.search import ClientSearch
+from hydrus.client.search import ClientSearchFileSearchContext
+from hydrus.client.search import ClientSearchPredicate
+from hydrus.client.search import ClientSearchTagContext
 
 def ConvertNumHashesToWeight( num_hashes: int ) -> int:
     
@@ -146,6 +148,8 @@ class Page( QW.QWidget ):
         
         self.SetSplitterPositions()
         
+        self._search_preview_split.splitterMoved.connect( self._PreviewSplitterMoved )
+        
     
     def _ConnectMediaPanelSignals( self ):
         
@@ -165,6 +169,19 @@ class Page( QW.QWidget ):
         hashlist_hashable = tuple( hashlist )
         
         return hash( hashlist_hashable )
+        
+    
+    def _PreviewSplitterMoved( self ):
+        
+        sizes = self._search_preview_split.sizes()
+        
+        if len( sizes ) > 0:
+            
+            # can't test the preview itself, it has funky minimum size gubbins. we are explicitly testing the splitter viewport or whatever
+            preview_split_size = sizes[-1]
+            
+            self._preview_canvas.SetSplitterHiddenStatus( preview_split_size == 0 )
+            
         
     
     def _SetCurrentPageContainer( self, page_container: ClientGUISession.GUISessionContainerPageSingle ):
@@ -1015,7 +1032,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         self._controller.ResetIdleTimer()
         self._controller.ResetPageChangeTimer()
         
-        if index == -1 or index > self.count() - 1:
+        if index < 0 or index > self.count() - 1:
             
             return False
             
@@ -1042,8 +1059,6 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         
         self.removeTab( index )
         
-        self._UpdatePreviousPageIndex()
-        
         self._controller.pub( 'refresh_page_name', self._page_key )
         
         if delete_page:
@@ -1054,6 +1069,26 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
             
             self._controller.pub( 'notify_closed_page', page )
             
+        
+        focus_goes_to = self._controller.new_options.GetInteger( 'close_page_focus_goes' )
+        
+        new_page_focus = None
+        
+        if focus_goes_to == CC.CLOSED_PAGE_FOCUS_GOES_LEFT:
+            
+            new_page_focus = index - 1
+            
+        elif focus_goes_to == CC.CLOSED_PAGE_FOCUS_GOES_RIGHT:
+            
+            new_page_focus = index
+            
+        
+        if new_page_focus is not None and index >= 0 or index <= self.count() - 1 and new_page_focus != self.currentIndex():
+            
+            self.setCurrentIndex( new_page_focus )
+            
+        
+        self._UpdatePreviousPageIndex()
         
         return True
         
@@ -1138,6 +1173,10 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         elif new_page_goes == CC.NEW_PAGE_GOES_FAR_RIGHT:
             
             insertion_index = self.count()
+            
+        else:
+            
+            insertion_index = 0
             
         
         return insertion_index
@@ -2981,7 +3020,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
             
             if len( initial_hashes ) > 0:
                 
-                initial_predicates = [ ClientSearch.Predicate( predicate_type = ClientSearch.PREDICATE_TYPE_SYSTEM_HASH, value = ( tuple( initial_hashes ), 'sha256' ) ) ]
+                initial_predicates = [ ClientSearchPredicate.Predicate( predicate_type = ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HASH, value = ( tuple( initial_hashes ), 'sha256' ) ) ]
                 
             else:
                 
@@ -3011,9 +3050,9 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
             location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
             
         
-        tag_context = ClientSearch.TagContext( service_key = tag_service_key )
+        tag_context = ClientSearchTagContext.TagContext( service_key = tag_service_key )
         
-        file_search_context = ClientSearch.FileSearchContext( location_context = location_context, tag_context = tag_context, predicates = initial_predicates )
+        file_search_context = ClientSearchFileSearchContext.FileSearchContext( location_context = location_context, tag_context = tag_context, predicates = initial_predicates )
         
         if len( initial_hashes ) > 0:
             

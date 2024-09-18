@@ -9,7 +9,8 @@ from hydrus.core import HydrusNumbers
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
-from hydrus.client.search import ClientSearch
+from hydrus.client.search import ClientNumberTest
+from hydrus.client.search import ClientSearchPredicate
 
 from hydrus.external import SystemPredicateParser
 
@@ -69,7 +70,7 @@ def date_pred_generator( pred_type, o, v ):
             
         
     
-    return ClientSearch.Predicate( pred_type, ( o, date_type, tuple( v ) ) )
+    return ClientSearchPredicate.Predicate( pred_type, ( o, date_type, tuple( v ) ) )
     
 
 def file_service_pred_generator( o, v, u ):
@@ -118,7 +119,7 @@ def file_service_pred_generator( o, v, u ):
         raise HydrusExceptions.BadRequestException( 'Could not find the service "{}"!'.format( service_name ) )
         
     
-    return ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_FILE_SERVICE, ( is_in, status, service_key ) )
+    return ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_FILE_SERVICE, ( is_in, status, service_key ) )
     
 
 def filetype_pred_generator( v ):
@@ -127,7 +128,7 @@ def filetype_pred_generator( v ):
     
     mimes = ( 1, )
     
-    return ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_MIME, mimes )
+    return ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_MIME, mimes )
     
 
 def num_file_relationships_pred_generator( o, v, u ):
@@ -141,7 +142,7 @@ def num_file_relationships_pred_generator( o, v, u ):
     
     dupe_type = u_dict[ u ]
     
-    return ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_FILE_RELATIONSHIPS_COUNT, ( o, v, dupe_type ) )
+    return ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_FILE_RELATIONSHIPS_COUNT, ( o, v, dupe_type ) )
     
 
 def rating_service_pred_generator( operator, value_and_service_name ):
@@ -166,7 +167,7 @@ def rating_service_pred_generator( operator, value_and_service_name ):
     
     predicate_value = ( operator, value, service_key )
     
-    return ClientSearch.Predicate( predicate_type = ClientSearch.PREDICATE_TYPE_SYSTEM_RATING, value = predicate_value )
+    return ClientSearchPredicate.Predicate( predicate_type = ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_RATING, value = predicate_value )
     
 
 def strip_quotes( s: str ) -> str:
@@ -198,7 +199,7 @@ def url_class_pred_generator( include, url_class_name ):
         raise ValueError( str( e ) )
         
     
-    return ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_KNOWN_URLS, ( include, 'url_class', url_class, description ) )
+    return ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_KNOWN_URLS, ( include, 'url_class', url_class, description ) )
     
 
 SystemPredicateParser.InitialiseFiletypes( HC.mime_enum_lookup )
@@ -206,71 +207,71 @@ SystemPredicateParser.InitialiseFiletypes( HC.string_enum_lookup )
 SystemPredicateParser.InitialiseFiletypes( { 'gif' : [ HC.IMAGE_GIF, HC.ANIMATION_GIF ] } )
 
 pred_generators = {
-    SystemPredicateParser.Predicate.EVERYTHING : lambda o, v, u: ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_EVERYTHING ),
-    SystemPredicateParser.Predicate.INBOX : lambda o, v, u: ClientSearch.SYSTEM_PREDICATE_INBOX.Duplicate(),
-    SystemPredicateParser.Predicate.ARCHIVE : lambda o, v, u: ClientSearch.SYSTEM_PREDICATE_ARCHIVE.Duplicate(),
-    SystemPredicateParser.Predicate.BEST_QUALITY_OF_GROUP : lambda o, v, u: ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_FILE_RELATIONSHIPS_KING, True ),
-    SystemPredicateParser.Predicate.NOT_BEST_QUALITY_OF_GROUP : lambda o, v, u: ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_FILE_RELATIONSHIPS_KING, False ),
-    SystemPredicateParser.Predicate.HAS_AUDIO : lambda o, v, u: ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_HAS_AUDIO, True ),
-    SystemPredicateParser.Predicate.NO_AUDIO : lambda o, v, u: ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_HAS_AUDIO, False ),
-    SystemPredicateParser.Predicate.HAS_TRANSPARENCY : lambda o, v, u: ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_HAS_TRANSPARENCY, True ),
-    SystemPredicateParser.Predicate.NO_TRANSPARENCY : lambda o, v, u: ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_HAS_TRANSPARENCY, False ),
-    SystemPredicateParser.Predicate.HAS_EXIF : lambda o, v, u: ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_HAS_EXIF, True ),
-    SystemPredicateParser.Predicate.NO_EXIF : lambda o, v, u: ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_HAS_EXIF, False ),
-    SystemPredicateParser.Predicate.HAS_HUMAN_READABLE_EMBEDDED_METADATA : lambda o, v, u: ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_HAS_HUMAN_READABLE_EMBEDDED_METADATA, True ),
-    SystemPredicateParser.Predicate.NO_HUMAN_READABLE_EMBEDDED_METADATA : lambda o, v, u: ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_HAS_HUMAN_READABLE_EMBEDDED_METADATA, False ),
-    SystemPredicateParser.Predicate.HAS_ICC_PROFILE : lambda o, v, u: ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_HAS_ICC_PROFILE, True ),
-    SystemPredicateParser.Predicate.NO_ICC_PROFILE : lambda o, v, u: ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_HAS_ICC_PROFILE, False ),
-    SystemPredicateParser.Predicate.HAS_FORCED_FILETYPE : lambda o, v, u: ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_HAS_FORCED_FILETYPE, True ),
-    SystemPredicateParser.Predicate.NO_FORCED_FILETYPE : lambda o, v, u: ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_HAS_FORCED_FILETYPE, False ),
-    SystemPredicateParser.Predicate.LIMIT : lambda o, v, u: ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_LIMIT, v ),
-    SystemPredicateParser.Predicate.FILETYPE : lambda o, v, u: ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_MIME, tuple( v ) ),
-    SystemPredicateParser.Predicate.HAS_DURATION : lambda o, v, u: ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_DURATION, ClientSearch.NumberTest.STATICCreateFromCharacters( '>', 0 ) ),
-    SystemPredicateParser.Predicate.NO_DURATION : lambda o, v, u: ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_DURATION, ClientSearch.NumberTest.STATICCreateFromCharacters( '=', 0 ) ),
-    SystemPredicateParser.Predicate.HAS_TAGS : lambda o, v, u: ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_TAGS, ( '*', '>', 0 ) ),
-    SystemPredicateParser.Predicate.UNTAGGED : lambda o, v, u: ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_TAGS, ( '*', '=', 0 ) ),
-    SystemPredicateParser.Predicate.NUM_OF_TAGS : lambda o, v, u: ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_TAGS, ( '*', o, v ) ),
-    SystemPredicateParser.Predicate.NUM_OF_TAGS_WITH_NAMESPACE : lambda o, v, u: ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_TAGS, v ),
-    SystemPredicateParser.Predicate.NUM_OF_URLS : lambda o, v, u: ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_URLS, ClientSearch.NumberTest.STATICCreateFromCharacters( o, v ) ),
-    SystemPredicateParser.Predicate.NUM_OF_WORDS : lambda o, v, u: ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_WORDS, ClientSearch.NumberTest.STATICCreateFromCharacters( o, v ) ),
-    SystemPredicateParser.Predicate.HEIGHT : lambda o, v, u: ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_HEIGHT, ClientSearch.NumberTest.STATICCreateFromCharacters( o, v ) ),
-    SystemPredicateParser.Predicate.WIDTH : lambda o, v, u: ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_WIDTH, ClientSearch.NumberTest.STATICCreateFromCharacters( o, v ) ),
-    SystemPredicateParser.Predicate.FILESIZE : lambda o, v, u: ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_SIZE, ( o, v, HydrusNumbers.UnitToInt( u ) ) ),
-    SystemPredicateParser.Predicate.SIMILAR_TO_FILES : lambda o, v, u: ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_SIMILAR_TO_FILES, convert_hex_hashlist_and_other_to_bytes_and_other( v ) ),
-    SystemPredicateParser.Predicate.SIMILAR_TO_DATA : lambda o, v, u: ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_SIMILAR_TO_DATA, convert_double_hex_hashlist_and_other_to_double_bytes_and_other( v ) ),
-    SystemPredicateParser.Predicate.HASH : lambda o, v, u: ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_HASH, convert_hex_hashlist_and_other_to_bytes_and_other( v ), inclusive = o == '=' ),
-    SystemPredicateParser.Predicate.DURATION : lambda o, v, u: ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_DURATION, ClientSearch.NumberTest.STATICCreateFromCharacters( o, v[0] * 1000 + v[1] ) ),
-    SystemPredicateParser.Predicate.FRAMERATE : lambda o, v, u: ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_FRAMERATE, ClientSearch.NumberTest.STATICCreateFromCharacters( o, v ) ),
-    SystemPredicateParser.Predicate.NUM_OF_FRAMES : lambda o, v, u: ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_FRAMES, ClientSearch.NumberTest.STATICCreateFromCharacters( o, v ) ),
-    SystemPredicateParser.Predicate.NUM_PIXELS : lambda o, v, u: ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_PIXELS, ( o, v, HydrusNumbers.PixelsToInt( u ) ) ),
-    SystemPredicateParser.Predicate.RATIO : lambda o, v, u: ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_RATIO, ( o, v[0], v[1] ) ),
-    SystemPredicateParser.Predicate.RATIO_SPECIAL : lambda o, v, u: ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_RATIO, ( o, v[0], v[1] ) ),
-    SystemPredicateParser.Predicate.TAG_AS_NUMBER : lambda o, v, u: ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_TAG_AS_NUMBER, ( o[0], o[1], v ) ),
-    SystemPredicateParser.Predicate.MEDIA_VIEWS : lambda o, v, u: ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_FILE_VIEWING_STATS, ( 'views', ( 'media', ), o, v ) ),
-    SystemPredicateParser.Predicate.PREVIEW_VIEWS : lambda o, v, u: ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_FILE_VIEWING_STATS, ( 'views', ( 'preview', ), o, v ) ),
-    SystemPredicateParser.Predicate.ALL_VIEWS : lambda o, v, u: ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_FILE_VIEWING_STATS, ( 'views', ( 'media', 'preview' ), o, v ) ),
-    SystemPredicateParser.Predicate.MEDIA_VIEWTIME : lambda o, v, u: ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_FILE_VIEWING_STATS, ( 'viewtime', ( 'media', ), o, convert_timetuple_to_seconds( v ) ) ),
-    SystemPredicateParser.Predicate.PREVIEW_VIEWTIME : lambda o, v, u: ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_FILE_VIEWING_STATS, ( 'viewtime', ( 'preview', ), o, convert_timetuple_to_seconds( v ) ) ),
-    SystemPredicateParser.Predicate.ALL_VIEWTIME : lambda o, v, u: ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_FILE_VIEWING_STATS, ( 'viewtime', ( 'media', 'preview' ), o, convert_timetuple_to_seconds( v ) ) ),
-    SystemPredicateParser.Predicate.URL_REGEX : lambda o, v, u: ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_KNOWN_URLS, ( True, 'regex', v, 'has url matching regex {}'.format( v ) ) ),
-    SystemPredicateParser.Predicate.NO_URL_REGEX : lambda o, v, u: ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_KNOWN_URLS, ( False, 'regex', v, 'does not have url matching regex {}'.format( v ) ) ),
-    SystemPredicateParser.Predicate.URL : lambda o, v, u: ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_KNOWN_URLS, ( True, 'exact_match', v, 'has url {}'.format( v ) ) ),
-    SystemPredicateParser.Predicate.NO_URL : lambda o, v, u: ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_KNOWN_URLS, ( False, 'exact_match', v, 'does not have url {}'.format( v ) ) ),
-    SystemPredicateParser.Predicate.DOMAIN : lambda o, v, u: ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_KNOWN_URLS, ( True, 'domain', v, 'has url with domain {}'.format( v ) ) ),
-    SystemPredicateParser.Predicate.NO_DOMAIN : lambda o, v, u: ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_KNOWN_URLS, ( False, 'domain', v, 'does not have url with domain {}'.format( v ) ) ),
+    SystemPredicateParser.Predicate.EVERYTHING : lambda o, v, u: ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_EVERYTHING ),
+    SystemPredicateParser.Predicate.INBOX : lambda o, v, u: ClientSearchPredicate.SYSTEM_PREDICATE_INBOX.Duplicate(),
+    SystemPredicateParser.Predicate.ARCHIVE : lambda o, v, u: ClientSearchPredicate.SYSTEM_PREDICATE_ARCHIVE.Duplicate(),
+    SystemPredicateParser.Predicate.BEST_QUALITY_OF_GROUP : lambda o, v, u: ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_FILE_RELATIONSHIPS_KING, True ),
+    SystemPredicateParser.Predicate.NOT_BEST_QUALITY_OF_GROUP : lambda o, v, u: ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_FILE_RELATIONSHIPS_KING, False ),
+    SystemPredicateParser.Predicate.HAS_AUDIO : lambda o, v, u: ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HAS_AUDIO, True ),
+    SystemPredicateParser.Predicate.NO_AUDIO : lambda o, v, u: ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HAS_AUDIO, False ),
+    SystemPredicateParser.Predicate.HAS_TRANSPARENCY : lambda o, v, u: ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HAS_TRANSPARENCY, True ),
+    SystemPredicateParser.Predicate.NO_TRANSPARENCY : lambda o, v, u: ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HAS_TRANSPARENCY, False ),
+    SystemPredicateParser.Predicate.HAS_EXIF : lambda o, v, u: ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HAS_EXIF, True ),
+    SystemPredicateParser.Predicate.NO_EXIF : lambda o, v, u: ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HAS_EXIF, False ),
+    SystemPredicateParser.Predicate.HAS_HUMAN_READABLE_EMBEDDED_METADATA : lambda o, v, u: ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HAS_HUMAN_READABLE_EMBEDDED_METADATA, True ),
+    SystemPredicateParser.Predicate.NO_HUMAN_READABLE_EMBEDDED_METADATA : lambda o, v, u: ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HAS_HUMAN_READABLE_EMBEDDED_METADATA, False ),
+    SystemPredicateParser.Predicate.HAS_ICC_PROFILE : lambda o, v, u: ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HAS_ICC_PROFILE, True ),
+    SystemPredicateParser.Predicate.NO_ICC_PROFILE : lambda o, v, u: ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HAS_ICC_PROFILE, False ),
+    SystemPredicateParser.Predicate.HAS_FORCED_FILETYPE : lambda o, v, u: ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HAS_FORCED_FILETYPE, True ),
+    SystemPredicateParser.Predicate.NO_FORCED_FILETYPE : lambda o, v, u: ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HAS_FORCED_FILETYPE, False ),
+    SystemPredicateParser.Predicate.LIMIT : lambda o, v, u: ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_LIMIT, v ),
+    SystemPredicateParser.Predicate.FILETYPE : lambda o, v, u: ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_MIME, tuple( v ) ),
+    SystemPredicateParser.Predicate.HAS_DURATION : lambda o, v, u: ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_DURATION, ClientNumberTest.NumberTest.STATICCreateFromCharacters( '>', 0 ) ),
+    SystemPredicateParser.Predicate.NO_DURATION : lambda o, v, u: ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_DURATION, ClientNumberTest.NumberTest.STATICCreateFromCharacters( '=', 0 ) ),
+    SystemPredicateParser.Predicate.HAS_TAGS : lambda o, v, u: ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_NUM_TAGS, ( '*', '>', 0 ) ),
+    SystemPredicateParser.Predicate.UNTAGGED : lambda o, v, u: ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_NUM_TAGS, ( '*', '=', 0 ) ),
+    SystemPredicateParser.Predicate.NUM_OF_TAGS : lambda o, v, u: ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_NUM_TAGS, ( '*', o, v ) ),
+    SystemPredicateParser.Predicate.NUM_OF_TAGS_WITH_NAMESPACE : lambda o, v, u: ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_NUM_TAGS, v ),
+    SystemPredicateParser.Predicate.NUM_OF_URLS : lambda o, v, u: ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_NUM_URLS, ClientNumberTest.NumberTest.STATICCreateFromCharacters( o, v ) ),
+    SystemPredicateParser.Predicate.NUM_OF_WORDS : lambda o, v, u: ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_NUM_WORDS, ClientNumberTest.NumberTest.STATICCreateFromCharacters( o, v ) ),
+    SystemPredicateParser.Predicate.HEIGHT : lambda o, v, u: ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HEIGHT, ClientNumberTest.NumberTest.STATICCreateFromCharacters( o, v ) ),
+    SystemPredicateParser.Predicate.WIDTH : lambda o, v, u: ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_WIDTH, ClientNumberTest.NumberTest.STATICCreateFromCharacters( o, v ) ),
+    SystemPredicateParser.Predicate.FILESIZE : lambda o, v, u: ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_SIZE, ( o, v, HydrusNumbers.UnitToInt( u ) ) ),
+    SystemPredicateParser.Predicate.SIMILAR_TO_FILES : lambda o, v, u: ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_SIMILAR_TO_FILES, convert_hex_hashlist_and_other_to_bytes_and_other( v ) ),
+    SystemPredicateParser.Predicate.SIMILAR_TO_DATA : lambda o, v, u: ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_SIMILAR_TO_DATA, convert_double_hex_hashlist_and_other_to_double_bytes_and_other( v ) ),
+    SystemPredicateParser.Predicate.HASH : lambda o, v, u: ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HASH, convert_hex_hashlist_and_other_to_bytes_and_other( v ), inclusive = o == '=' ),
+    SystemPredicateParser.Predicate.DURATION : lambda o, v, u: ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_DURATION, ClientNumberTest.NumberTest.STATICCreateFromCharacters( o, v[0] * 1000 + v[1] ) ),
+    SystemPredicateParser.Predicate.FRAMERATE : lambda o, v, u: ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_FRAMERATE, ClientNumberTest.NumberTest.STATICCreateFromCharacters( o, v ) ),
+    SystemPredicateParser.Predicate.NUM_OF_FRAMES : lambda o, v, u: ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_NUM_FRAMES, ClientNumberTest.NumberTest.STATICCreateFromCharacters( o, v ) ),
+    SystemPredicateParser.Predicate.NUM_PIXELS : lambda o, v, u: ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_NUM_PIXELS, ( o, v, HydrusNumbers.PixelsToInt( u ) ) ),
+    SystemPredicateParser.Predicate.RATIO : lambda o, v, u: ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_RATIO, ( o, v[0], v[1] ) ),
+    SystemPredicateParser.Predicate.RATIO_SPECIAL : lambda o, v, u: ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_RATIO, ( o, v[0], v[1] ) ),
+    SystemPredicateParser.Predicate.TAG_AS_NUMBER : lambda o, v, u: ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_TAG_AS_NUMBER, ( o[0], o[1], v ) ),
+    SystemPredicateParser.Predicate.MEDIA_VIEWS : lambda o, v, u: ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_FILE_VIEWING_STATS, ( 'views', ( 'media', ), o, v ) ),
+    SystemPredicateParser.Predicate.PREVIEW_VIEWS : lambda o, v, u: ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_FILE_VIEWING_STATS, ( 'views', ( 'preview', ), o, v ) ),
+    SystemPredicateParser.Predicate.ALL_VIEWS : lambda o, v, u: ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_FILE_VIEWING_STATS, ( 'views', ( 'media', 'preview' ), o, v ) ),
+    SystemPredicateParser.Predicate.MEDIA_VIEWTIME : lambda o, v, u: ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_FILE_VIEWING_STATS, ( 'viewtime', ( 'media', ), o, convert_timetuple_to_seconds( v ) ) ),
+    SystemPredicateParser.Predicate.PREVIEW_VIEWTIME : lambda o, v, u: ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_FILE_VIEWING_STATS, ( 'viewtime', ( 'preview', ), o, convert_timetuple_to_seconds( v ) ) ),
+    SystemPredicateParser.Predicate.ALL_VIEWTIME : lambda o, v, u: ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_FILE_VIEWING_STATS, ( 'viewtime', ( 'media', 'preview' ), o, convert_timetuple_to_seconds( v ) ) ),
+    SystemPredicateParser.Predicate.URL_REGEX : lambda o, v, u: ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_KNOWN_URLS, ( True, 'regex', v, 'has url matching regex {}'.format( v ) ) ),
+    SystemPredicateParser.Predicate.NO_URL_REGEX : lambda o, v, u: ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_KNOWN_URLS, ( False, 'regex', v, 'does not have url matching regex {}'.format( v ) ) ),
+    SystemPredicateParser.Predicate.URL : lambda o, v, u: ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_KNOWN_URLS, ( True, 'exact_match', v, 'has url {}'.format( v ) ) ),
+    SystemPredicateParser.Predicate.NO_URL : lambda o, v, u: ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_KNOWN_URLS, ( False, 'exact_match', v, 'does not have url {}'.format( v ) ) ),
+    SystemPredicateParser.Predicate.DOMAIN : lambda o, v, u: ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_KNOWN_URLS, ( True, 'domain', v, 'has url with domain {}'.format( v ) ) ),
+    SystemPredicateParser.Predicate.NO_DOMAIN : lambda o, v, u: ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_KNOWN_URLS, ( False, 'domain', v, 'does not have url with domain {}'.format( v ) ) ),
     SystemPredicateParser.Predicate.URL_CLASS : lambda o, v, u: url_class_pred_generator( True, v ),
     SystemPredicateParser.Predicate.NO_URL_CLASS : lambda o, v, u: url_class_pred_generator( False, v ),
-    SystemPredicateParser.Predicate.MOD_DATE : lambda o, v, u: date_pred_generator( ClientSearch.PREDICATE_TYPE_SYSTEM_MODIFIED_TIME, o, v ),
-    SystemPredicateParser.Predicate.ARCHIVED_DATE : lambda o, v, u: date_pred_generator( ClientSearch.PREDICATE_TYPE_SYSTEM_ARCHIVED_TIME, o, v ),
-    SystemPredicateParser.Predicate.LAST_VIEWED_TIME : lambda o, v, u: date_pred_generator( ClientSearch.PREDICATE_TYPE_SYSTEM_LAST_VIEWED_TIME, o, v ),
-    SystemPredicateParser.Predicate.TIME_IMPORTED : lambda o, v, u: date_pred_generator( ClientSearch.PREDICATE_TYPE_SYSTEM_AGE, o, v ),
+    SystemPredicateParser.Predicate.MOD_DATE : lambda o, v, u: date_pred_generator( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_MODIFIED_TIME, o, v ),
+    SystemPredicateParser.Predicate.ARCHIVED_DATE : lambda o, v, u: date_pred_generator( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_ARCHIVED_TIME, o, v ),
+    SystemPredicateParser.Predicate.LAST_VIEWED_TIME : lambda o, v, u: date_pred_generator( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_LAST_VIEWED_TIME, o, v ),
+    SystemPredicateParser.Predicate.TIME_IMPORTED : lambda o, v, u: date_pred_generator( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_AGE, o, v ),
     SystemPredicateParser.Predicate.FILE_SERVICE : file_service_pred_generator,
     SystemPredicateParser.Predicate.NUM_FILE_RELS : num_file_relationships_pred_generator,
-    SystemPredicateParser.Predicate.HAS_NOTES : lambda o, v, u: ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_NOTES, ClientSearch.NumberTest.STATICCreateFromCharacters( '>', 0 ) ),
-    SystemPredicateParser.Predicate.NO_NOTES : lambda o, v, u: ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_NOTES, ClientSearch.NumberTest.STATICCreateFromCharacters( '=', 0 ) ),
-    SystemPredicateParser.Predicate.NUM_NOTES : lambda o, v, u: ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_NOTES, ClientSearch.NumberTest.STATICCreateFromCharacters( o, v ) ),
-    SystemPredicateParser.Predicate.HAS_NOTE_NAME : lambda o, v, u: ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_HAS_NOTE_NAME, ( True, strip_quotes( v ) ) ),
-    SystemPredicateParser.Predicate.NO_NOTE_NAME : lambda o, v, u: ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_HAS_NOTE_NAME, ( False, strip_quotes( v ) ) ),
+    SystemPredicateParser.Predicate.HAS_NOTES : lambda o, v, u: ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_NUM_NOTES, ClientNumberTest.NumberTest.STATICCreateFromCharacters( '>', 0 ) ),
+    SystemPredicateParser.Predicate.NO_NOTES : lambda o, v, u: ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_NUM_NOTES, ClientNumberTest.NumberTest.STATICCreateFromCharacters( '=', 0 ) ),
+    SystemPredicateParser.Predicate.NUM_NOTES : lambda o, v, u: ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_NUM_NOTES, ClientNumberTest.NumberTest.STATICCreateFromCharacters( o, v ) ),
+    SystemPredicateParser.Predicate.HAS_NOTE_NAME : lambda o, v, u: ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HAS_NOTE_NAME, ( True, strip_quotes( v ) ) ),
+    SystemPredicateParser.Predicate.NO_NOTE_NAME : lambda o, v, u: ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HAS_NOTE_NAME, ( False, strip_quotes( v ) ) ),
     SystemPredicateParser.Predicate.HAS_RATING : lambda o, v, u: rating_service_pred_generator( '=', ( 'rated', v ) ),
     SystemPredicateParser.Predicate.NO_RATING : lambda o, v, u: rating_service_pred_generator( '=', ( 'not rated', v ) ),
     SystemPredicateParser.Predicate.RATING_SPECIFIC_NUMERICAL : lambda o, v, u: rating_service_pred_generator( o, v ),
@@ -278,7 +279,7 @@ pred_generators = {
     SystemPredicateParser.Predicate.RATING_SPECIFIC_INCDEC : lambda o, v, u: rating_service_pred_generator( o, v )
 }
 
-def ParseSystemPredicateStringsToPredicates( system_predicate_strings: typing.Collection[ str ], discard_failures = False ) -> typing.List[ ClientSearch.Predicate ]:
+def ParseSystemPredicateStringsToPredicates( system_predicate_strings: typing.Collection[ str ], discard_failures = False ) -> typing.List[ ClientSearchPredicate.Predicate ]:
     
     system_predicates = []
     

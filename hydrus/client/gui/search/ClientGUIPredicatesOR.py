@@ -11,7 +11,8 @@ from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import QtPorting as QP
-from hydrus.client.search import ClientSearch
+from hydrus.client.search import ClientSearchFileSearchContext
+from hydrus.client.search import ClientSearchPredicate
 
 # ultimately, rewrite acread to be two classes, acread and acreadthatsupportsor
 # and then this guy only imports the base class, and only the supportsor will know about this
@@ -20,13 +21,13 @@ from hydrus.client.search import ClientSearch
 
 class ORPredicateControl( QW.QWidget ):
     
-    def __init__( self, parent: QW.QWidget, predicate: ClientSearch.Predicate, empty_file_search_context: typing.Optional[ ClientSearch.FileSearchContext ] = None ):
+    def __init__( self, parent: QW.QWidget, predicate: ClientSearchPredicate.Predicate, empty_file_search_context: typing.Optional[ ClientSearchFileSearchContext.FileSearchContext ] = None ):
         
         super().__init__( parent )
         
         from hydrus.client.gui.search import ClientGUIACDropdown
         
-        if predicate.GetType() != ClientSearch.PREDICATE_TYPE_OR_CONTAINER:
+        if predicate.GetType() != ClientSearchPredicate.PREDICATE_TYPE_OR_CONTAINER:
             
             raise Exception( 'Launched an ORPredicateControl without an OR Pred!' )
             
@@ -39,7 +40,7 @@ class ORPredicateControl( QW.QWidget ):
             
             location_context = CG.client_controller.new_options.GetDefaultLocalLocationContext()
             
-            file_search_context = ClientSearch.FileSearchContext( location_context = location_context, predicates = predicates )
+            file_search_context = ClientSearchFileSearchContext.FileSearchContext( location_context = location_context, predicates = predicates )
             
         else:
             
@@ -88,7 +89,7 @@ class ORPredicateControl( QW.QWidget ):
             return or_sub_predicates
             
         
-        or_predicate = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_OR_CONTAINER, or_sub_predicates )
+        or_predicate = ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_OR_CONTAINER, or_sub_predicates )
         
         return [ or_predicate ]
         

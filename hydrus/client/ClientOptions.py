@@ -370,6 +370,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             'suggested_tags_width' : 300,
             'similar_files_duplicate_pairs_search_distance' : 0,
             'default_new_page_goes' : CC.NEW_PAGE_GOES_FAR_RIGHT,
+            'close_page_focus_goes' : CC.CLOSED_PAGE_FOCUS_GOES_RIGHT,
             'num_recent_petition_reasons' : 5,
             'max_page_name_chars' : 20,
             'page_file_count_display' : CC.PAGE_FILE_COUNT_DISPLAY_ALL,

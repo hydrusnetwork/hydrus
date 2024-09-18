@@ -291,9 +291,11 @@ class EditGallerySeedLogPanel( ClientGUIScrolledPanels.EditPanel ):
             
             gallery_seed_index = self._gallery_seed_log.GetGallerySeedIndex( gallery_seed )
             
+            pretty_gallery_seed_index = HydrusNumbers.ToHumanInt( gallery_seed_index )
+            
         except:
             
-            gallery_seed_index = '--'
+            pretty_gallery_seed_index = '--'
             
         
         url = gallery_seed.url
@@ -302,7 +304,6 @@ class EditGallerySeedLogPanel( ClientGUIScrolledPanels.EditPanel ):
         modified = gallery_seed.modified
         note = gallery_seed.note
         
-        pretty_gallery_seed_index = HydrusNumbers.ToHumanInt( gallery_seed_index )
         pretty_url = ClientNetworkingFunctions.ConvertURLToHumanString( url )
         pretty_status = CC.status_string_lookup[ status ] if status != CC.STATUS_UNKNOWN else ''
         pretty_added = ClientTime.TimestampToPrettyTimeDelta( added )
@@ -321,7 +322,7 @@ class EditGallerySeedLogPanel( ClientGUIScrolledPanels.EditPanel ):
             
         except:
             
-            gallery_seed_index = '--'
+            gallery_seed_index = -1
             
         
         url = gallery_seed.url

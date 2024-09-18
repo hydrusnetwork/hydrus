@@ -4,13 +4,10 @@ from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
 
 from hydrus.core import HydrusConstants as HC
-from hydrus.core import HydrusData
 
 from hydrus.client import ClientConstants as CC
-from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import QtPorting as QP
-from hydrus.client.gui.widgets import ClientGUICommon
-from hydrus.client.search import ClientSearch
+from hydrus.client.search import ClientSearchPredicate
 
 class OptionsPanel( QW.QWidget ):
     
@@ -107,7 +104,7 @@ class OptionsPanelMimesTree( OptionsPanel ):
     
     def SetValue( self, checked_mimes: typing.Collection[ int ] ):
         
-        checked_mimes = ClientSearch.ConvertSummaryFiletypesToSpecific( checked_mimes, only_searchable = False )
+        checked_mimes = ClientSearchPredicate.ConvertSummaryFiletypesToSpecific( checked_mimes, only_searchable = False )
         
         for ( mime, item ) in self._mimes_to_items.items():
             

@@ -8,7 +8,7 @@ from hydrus.core import HydrusDB
 from hydrus.client import ClientThreading
 from hydrus.client.db import ClientDBMaster
 from hydrus.client.db import ClientDBModule
-from hydrus.client.search import ClientSearch
+from hydrus.client.search import ClientNumberTest
 
 class ClientDBNotesMap( ClientDBModule.ClientDBModule ):
     
@@ -60,13 +60,13 @@ class ClientDBNotesMap( ClientDBModule.ClientDBModule ):
         return self._STS( self._ExecuteCancellable( 'SELECT hash_id FROM file_notes CROSS JOIN {} USING ( hash_id ) WHERE name_id = ?;'.format( hash_ids_table_name ), ( label_id, ), cancelled_hook ) )
         
     
-    def GetHashIdsFromNumNotes( self, number_tests: typing.List[ ClientSearch.NumberTest ], hash_ids: typing.Collection[ int ], hash_ids_table_name: str, job_status: typing.Optional[ ClientThreading.JobStatus ] = None ):
+    def GetHashIdsFromNumNotes( self, number_tests: typing.List[ ClientNumberTest.NumberTest ], hash_ids: typing.Collection[ int ], hash_ids_table_name: str, job_status: typing.Optional[ ClientThreading.JobStatus ] = None ):
         
         result_hash_ids = set( hash_ids )
         
         specific_number_tests = [ number_test for number_test in number_tests if not ( number_test.IsZero() or number_test.IsAnythingButZero() ) ]
         
-        megalambda = ClientSearch.NumberTest.STATICCreateMegaLambda( specific_number_tests )
+        megalambda = ClientNumberTest.NumberTest.STATICCreateMegaLambda( specific_number_tests )
         
         is_zero = True in ( number_test.IsZero() for number_test in number_tests )
         is_anything_but_zero = True in ( number_test.IsAnythingButZero() for number_test in number_tests )

@@ -45,7 +45,7 @@ from hydrus.client.metadata import ClientContentUpdates
 from hydrus.client.metadata import ClientRatings
 from hydrus.client.metadata import ClientTags
 from hydrus.client.metadata import ClientTagSorting
-from hydrus.client.search import ClientSearch
+from hydrus.client.search import ClientSearchFileSearchContext
 
 def AddAudioVolumeMenu( menu, canvas_type ):
     
@@ -1406,6 +1406,8 @@ class CanvasPanel( Canvas ):
         self._hidden_page_current_media = None
         self._hidden_page_paused_status = False
         
+        self._is_splitter_hidden = False
+        
         self._media_container.launchMediaViewer.connect( self.LaunchMediaViewer )
         
         CG.client_controller.sub( self, 'ProcessContentUpdatePackage', 'content_updates_gui' )
@@ -1428,6 +1430,7 @@ class CanvasPanel( Canvas ):
     def ClearMedia( self ):
         
         self._hidden_page_current_media = None
+        self._hidden_splitter_current_media = None
         
         Canvas.ClearMedia( self )
         
@@ -1615,7 +1618,7 @@ class CanvasPanel( Canvas ):
     
     def SetMedia( self, media ):
         
-        if HC.options[ 'hide_preview' ]:
+        if HC.options[ 'hide_preview' ] or self._hidden_page_paused_status or self._is_splitter_hidden:
             
             return
             
@@ -1623,6 +1626,25 @@ class CanvasPanel( Canvas ):
         Canvas.SetMedia( self, media )
         
     
+    def SetSplitterHiddenStatus( self, is_hidden ):
+        
+        if is_hidden and not self._is_splitter_hidden:
+            
+            # we are hiding
+            
+            self.ClearMedia()
+            
+        elif self._is_splitter_hidden and not is_hidden:
+            
+            # we are showing again. I could do a restore status thing like I have for pagehidden/shown in future, but for now this is a nice simple thing
+            
+            pass
+            
+        
+        self._is_splitter_hidden = is_hidden
+        
+    
+
 class CanvasWithDetails( Canvas ):
     
     def __init__( self, parent, location_context ):
@@ -2388,7 +2410,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
     
     showPairInPage = QC.Signal( list )
     
-    def __init__( self, parent, file_search_context_1: ClientSearch.FileSearchContext, file_search_context_2: ClientSearch.FileSearchContext, dupe_search_type, pixel_dupes_preference, max_hamming_distance ):
+    def __init__( self, parent, file_search_context_1: ClientSearchFileSearchContext.FileSearchContext, file_search_context_2: ClientSearchFileSearchContext.FileSearchContext, dupe_search_type, pixel_dupes_preference, max_hamming_distance ):
         
         location_context = file_search_context_1.GetLocationContext()
         

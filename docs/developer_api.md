@@ -305,6 +305,53 @@ If you want to know the services in a client, hit up [/get\_services](#get_servi
 
 Note: If you need to do some quick testing, you should be able to copy the `service_key` of any service by hitting the 'copy service key' button in _review services_.
 
+## Current Deleted Pending Petitioned { id="CDPP" }
+
+The content storage and update pipeline systems in hydrus consider content (e.g. 'on file service x, file y exists', 'on tag service x, file y has tag z', or 'on rating service x, file y has rating z') as existing within a blend of four states:
+
+* **Current** - The content exists on the service.
+* **Deleted** - The content has been removed from on the service.
+* **Pending** - The content is queued to be added to the service.
+* **Petitioned** - The content is queued to be removed from the service.
+
+Where content that has never touched the service has a default 'null status' of no state at all.
+
+Content may be in two categories at once--for instance, any Petitioned data is always also Current--but some states are mutually exclusive: Current data cannot also be Deleted.
+
+Let's examine this more carefully specifically. Current, Deleted, and Pending may exist on their own, and Deleted and Pending may exist simultaneously. Read this horizontally to vertically, such that 'Content that is Current may also be Petitioned' while 'Content that is Petitioned must also be Current':
+
+|                | Current | Deleted | Pending | Petitioned |
+|----------------|---------|---------|---------|------------|
+| **Current**    | -       | Never   | Never   | May        |
+| **Deleted**    | Never   | -       | May     | Never      |
+| **Pending**    | Never   | May     | -       | Never      |
+| **Petitioned** | Must    | Never   | Never   | -          |
+
+Local services have no concept of pending or petitioned, so they generally just have 'add x'/'delete x' verbs to convert content between current and deleted. Remote services like the PTR have a queue of pending changes waiting to be committed by the user to the server, so in these cases I will expose to you the full suite of 'pend x'/'petition x'/'rescind pend x'/'rescind petition x'. Although you might somewhere be able to 'pend'/'petition' content to a local service, these 'pending' changes will be committed instantly so they are synonymous with add/delete.
+
+* When an 'add' is committed, the data is removed from the deleted record and added to the current record.
+* When a 'delete' is committed, the data is removed from the current record and added to the deleted record.
+* When a 'pend' is committed, the data is removed from the deleted record and added to the current record. (It is also deleted from the pending record!)
+* When a 'petition' is committed, the data is removed from the current record and added to the deleted record. (It is also deleted from the petitioned record!)
+* When a 'rescind pend' is committed, the data is removed from the pending record.
+* When a 'rescind petition' is committed, the data is removed from the petitioned record.
+
+Let's look at where the verbs make sense. Again, horizontal, so 'Content that is Current can receive a Petition command':
+
+|                | Add/Pend                         | Delete/Petition                  | Rescind Pend | Rescind Petition |
+|----------------|----------------------------------|----------------------------------|--------------|------------------|
+| **No state**   | May                              | May                              | -            | -                |
+| **Current**    | -                                | May                              | -            | -                |
+| **Deleted**    | _May_                            | -                                | -            | -                |
+| **Pending**    | May overwrite an existing reason | -                                | May          | -                |
+| **Petitioned** | -                                | May overwrite an existing reason | -            | May              |
+
+In hydrus, anything in the content update pipeline that _doesn't_ make sense, here a '-', tends to result in an errorless no-op, so you might not care to do too much filtering on your end of things if you don't need to--don't worry about deleting something twice.
+
+Note that content that does not yet exist _can_ be pre-emptively petitioned/deleted. A couple of advanced cases enjoy this capability, for instance when you are syncing delete records from one client to another.
+
+Also, it is often the case that content that is recorded as deleted is more difficult to re-add/re-pend. You might need to be a janitor to re-pend something, or, for this API, set some `override_previously_deleted_mappings` parameter. This is by design and helps you to stop automatically re-adding something that the user spent slow human time deciding to delete.
+
 ## Access Management
 
 ### **GET `/api_version`** { id="api_version" }
@@ -1178,7 +1225,9 @@ Arguments (in JSON):
     *   3 - Rescind a pend from a tag repository.
     *   4 - Petition from a tag repository. (This is special)
     *   5 - Rescind a petition from a tag repository.
-
+    
+    Read about [Current Deleted Pending Petitioned](#CDPP) for more info on these states.
+    
     When you petition a tag from a repository, a 'reason' for the petition is typically needed. If you send a normal list of tags here, a default reason of "Petitioned from API" will be given. If you want to set your own reason, you can instead give a list of \[ tag, reason \] pairs.
 
 Some example requests:
@@ -1970,6 +2019,8 @@ The `tags` structure is similar to the [/add\_tags/add\_tags](#add_tags_add_tags
 
 !!! note
     Since JSON Object keys must be strings, these status numbers are strings, not ints.
+
+Read about [Current Deleted Pending Petitioned](#CDPP) for more info on these states.
 
 While the 'storage_tags' represent the actual tags stored on the database for a file, 'display_tags' reflect how tags appear in the UI, after siblings are collapsed and parents are added. If you want to edit a file's tags, refer to the storage tags. If you want to render to the user, use the display tags. The display tag calculation logic is very complicated; if the storage tags change, do not try to guess the new display tags yourself--just ask the API again. 
 

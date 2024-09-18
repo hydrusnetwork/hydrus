@@ -37,12 +37,17 @@ def compare_content_update_packages( ut: unittest.TestCase, content_update_packa
         
     
 
-def GetFakeMediaResult( hash: bytes ):
+def GetFakeMediaResult( hash: bytes, mime = None ):
     
     hash_id = random.randint( 0, 200 * ( 1024 ** 2 ) )
     
     size = random.randint( 8192, 20 * 1048576 )
-    mime = random.choice( [ HC.IMAGE_JPEG, HC.VIDEO_WEBM, HC.APPLICATION_PDF ] )
+    
+    if mime is None:
+        
+        mime = random.choice( [ HC.IMAGE_JPEG, HC.VIDEO_WEBM, HC.APPLICATION_PDF ] )
+        
+    
     width = random.randint( 200, 4096 )
     height = random.randint( 200, 4096 )
     duration = random.choice( [ 220, 16.66667, None ] )

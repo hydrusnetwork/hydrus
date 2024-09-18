@@ -303,7 +303,7 @@ class TestURLClasses( unittest.TestCase ):
         parameters = []
         
         parameters.append( ClientNetworkingURLClass.URLClassParameterFixedName( name = 's', value_string_match = ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FIXED, match_value = 'view', example_string = 'view' ) ) )
-        parameters.append( ClientNetworkingURLClass.URLClassParameterFixedName( name = 'id', value_string_match = ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FLEXIBLE, match_value = ClientStrings.NUMERIC, example_string = '123456' ) ) )
+        parameters.append( ClientNetworkingURLClass.URLClassParameterFixedName( name = 'id', value_string_match = ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FLEXIBLE, match_value = ClientStrings.FLEXIBLE_MATCH_NUMERIC, example_string = '123456' ) ) )
         
         send_referral_url = ClientNetworkingURLClass.SEND_REFERRAL_URL_ONLY_IF_PROVIDED
         referral_url_converter = None
@@ -394,7 +394,7 @@ class TestURLClasses( unittest.TestCase ):
         parameters = []
         
         parameters.append( ClientNetworkingURLClass.URLClassParameterFixedName( name = 's', value_string_match = ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FIXED, match_value = 'view', example_string = 'view' ) ) )
-        parameters.append( ClientNetworkingURLClass.URLClassParameterFixedName( name = 'id', value_string_match = ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FLEXIBLE, match_value = ClientStrings.NUMERIC, example_string = '123456' ) ) )
+        parameters.append( ClientNetworkingURLClass.URLClassParameterFixedName( name = 'id', value_string_match = ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FLEXIBLE, match_value = ClientStrings.FLEXIBLE_MATCH_NUMERIC, example_string = '123456' ) ) )
         
         send_referral_url = ClientNetworkingURLClass.SEND_REFERRAL_URL_ONLY_IF_PROVIDED
         referral_url_converter = None
@@ -412,9 +412,9 @@ class TestURLClasses( unittest.TestCase ):
         parameters = []
         
         parameters.append( ClientNetworkingURLClass.URLClassParameterFixedName( name = 's', value_string_match = ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FIXED, match_value = 'view', example_string = 'view' ) ) )
-        parameters.append( ClientNetworkingURLClass.URLClassParameterFixedName( name = 'id', value_string_match = ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FLEXIBLE, match_value = ClientStrings.NUMERIC, example_string = '123456' ) ) )
+        parameters.append( ClientNetworkingURLClass.URLClassParameterFixedName( name = 'id', value_string_match = ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FLEXIBLE, match_value = ClientStrings.FLEXIBLE_MATCH_NUMERIC, example_string = '123456' ) ) )
         
-        p = ClientNetworkingURLClass.URLClassParameterFixedName( name = 'pid', value_string_match = ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FLEXIBLE, match_value = ClientStrings.NUMERIC, example_string = '0' ) )
+        p = ClientNetworkingURLClass.URLClassParameterFixedName( name = 'pid', value_string_match = ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FLEXIBLE, match_value = ClientStrings.FLEXIBLE_MATCH_NUMERIC, example_string = '0' ) )
         
         p.SetDefaultValue( '0' )
         
@@ -470,7 +470,7 @@ class TestURLClasses( unittest.TestCase ):
         parameters = []
         
         parameters.append( ClientNetworkingURLClass.URLClassParameterFixedName( name = 's', value_string_match = ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FIXED, match_value = 'view', example_string = 'view' ) ) )
-        parameters.append( ClientNetworkingURLClass.URLClassParameterFixedName( name = 'id', value_string_match = ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FLEXIBLE, match_value = ClientStrings.NUMERIC, example_string = '123456' ) ) )
+        parameters.append( ClientNetworkingURLClass.URLClassParameterFixedName( name = 'id', value_string_match = ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FLEXIBLE, match_value = ClientStrings.FLEXIBLE_MATCH_NUMERIC, example_string = '123456' ) ) )
         
         p = ClientNetworkingURLClass.URLClassParameterFixedName( name = 'token', value_string_match = ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_ANY, example_string = 'abcd' ) )
         
@@ -533,7 +533,7 @@ class TestURLClasses( unittest.TestCase ):
         parameters = []
         
         parameters.append( ClientNetworkingURLClass.URLClassParameterFixedName( name = 's', value_string_match = ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FIXED, match_value = 'view', example_string = 'view' ) ) )
-        parameters.append( ClientNetworkingURLClass.URLClassParameterFixedName( name = 'id', value_string_match = ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FLEXIBLE, match_value = ClientStrings.NUMERIC, example_string = '123456' ) ) )
+        parameters.append( ClientNetworkingURLClass.URLClassParameterFixedName( name = 'id', value_string_match = ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FLEXIBLE, match_value = ClientStrings.FLEXIBLE_MATCH_NUMERIC, example_string = '123456' ) ) )
         
         p = ClientNetworkingURLClass.URLClassParameterFixedName( name = 'cache_reset', value_string_match = ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_ANY, example_string = 'abcd' ) )
         
@@ -599,7 +599,7 @@ class TestURLClasses( unittest.TestCase ):
         parameters = []
         
         parameters.append( ClientNetworkingURLClass.URLClassParameterFixedName( name = 's', value_string_match = ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FIXED, match_value = 'view', example_string = 'view' ) ) )
-        parameters.append( ClientNetworkingURLClass.URLClassParameterFixedName( name = 'id', value_string_match = ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FLEXIBLE, match_value = ClientStrings.NUMERIC, example_string = '123456' ) ) )
+        parameters.append( ClientNetworkingURLClass.URLClassParameterFixedName( name = 'id', value_string_match = ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FLEXIBLE, match_value = ClientStrings.FLEXIBLE_MATCH_NUMERIC, example_string = '123456' ) ) )
         
         send_referral_url = ClientNetworkingURLClass.SEND_REFERRAL_URL_ONLY_IF_PROVIDED
         referral_url_converter = None
@@ -655,7 +655,7 @@ class TestURLClasses( unittest.TestCase ):
         parameters = []
         
         parameters.append( ClientNetworkingURLClass.URLClassParameterFixedName( name = 's', value_string_match = ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FIXED, match_value = 'view', example_string = 'view' ) ) )
-        parameters.append( ClientNetworkingURLClass.URLClassParameterFixedName( name = 'id', value_string_match = ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FLEXIBLE, match_value = ClientStrings.NUMERIC, example_string = '123456' ) ) )
+        parameters.append( ClientNetworkingURLClass.URLClassParameterFixedName( name = 'id', value_string_match = ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FLEXIBLE, match_value = ClientStrings.FLEXIBLE_MATCH_NUMERIC, example_string = '123456' ) ) )
         
         referral_url_converter = None
         gallery_index_type = None
@@ -780,7 +780,7 @@ class TestURLClasses( unittest.TestCase ):
         parameters = []
         
         parameters.append( ClientNetworkingURLClass.URLClassParameterFixedName( name = 's', value_string_match = ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FIXED, match_value = 'view', example_string = 'view' ) ) )
-        parameters.append( ClientNetworkingURLClass.URLClassParameterFixedName( name = 'id', value_string_match = ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FLEXIBLE, match_value = ClientStrings.NUMERIC, example_string = '123456' ) ) )
+        parameters.append( ClientNetworkingURLClass.URLClassParameterFixedName( name = 'id', value_string_match = ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FLEXIBLE, match_value = ClientStrings.FLEXIBLE_MATCH_NUMERIC, example_string = '123456' ) ) )
         
         send_referral_url = ClientNetworkingURLClass.SEND_REFERRAL_URL_ONLY_IF_PROVIDED
         referral_url_converter = None
@@ -846,7 +846,7 @@ class TestURLClasses( unittest.TestCase ):
         parameters = []
         
         parameters.append( ClientNetworkingURLClass.URLClassParameterFixedName( name = 's', value_string_match = ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FIXED, match_value = 'view', example_string = 'view' ) ) )
-        parameters.append( ClientNetworkingURLClass.URLClassParameterFixedName( name = 'id', value_string_match = ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FLEXIBLE, match_value = ClientStrings.NUMERIC, example_string = '123456' ) ) )
+        parameters.append( ClientNetworkingURLClass.URLClassParameterFixedName( name = 'id', value_string_match = ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FLEXIBLE, match_value = ClientStrings.FLEXIBLE_MATCH_NUMERIC, example_string = '123456' ) ) )
         
         has_single_value_parameters = True
         single_value_parameters_string_match = ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_REGEX, match_value = '^token.*', example_string = 'token1' )

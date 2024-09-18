@@ -17,7 +17,8 @@ from hydrus.client.importing import ClientImportWatchers
 from hydrus.client.importing.options import FileImportOptions
 from hydrus.client.media import ClientMedia
 from hydrus.client.metadata import ClientMetadataMigration
-from hydrus.client.search import ClientSearch
+from hydrus.client.search import ClientSearchFileSearchContext
+from hydrus.client.search import ClientSearchPredicate
 
 MANAGEMENT_TYPE_DUMPER = 0
 MANAGEMENT_TYPE_IMPORT_MULTIPLE_GALLERY = 1
@@ -57,7 +58,7 @@ def CreateManagementControllerDuplicateFilter(
     
     if initial_predicates is None:
         
-        initial_predicates = [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_EVERYTHING ) ]
+        initial_predicates = [ ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_EVERYTHING ) ]
         
     
     if page_name is None:
@@ -67,7 +68,7 @@ def CreateManagementControllerDuplicateFilter(
     
     management_controller = CreateManagementController( page_name, MANAGEMENT_TYPE_DUPLICATE_FILTER )
     
-    file_search_context = ClientSearch.FileSearchContext( location_context = location_context, predicates = initial_predicates )
+    file_search_context = ClientSearchFileSearchContext.FileSearchContext( location_context = location_context, predicates = initial_predicates )
     
     synchronised = CG.client_controller.new_options.GetBoolean( 'default_search_synchronised' )
     
@@ -176,7 +177,7 @@ def CreateManagementControllerPetitions( petition_service_key ):
     return management_controller
     
 
-def CreateManagementControllerQuery( page_name, file_search_context: ClientSearch.FileSearchContext, search_enabled ):
+def CreateManagementControllerQuery( page_name, file_search_context: ClientSearchFileSearchContext.FileSearchContext, search_enabled ):
     
     location_context = file_search_context.GetLocationContext()
     
@@ -410,7 +411,7 @@ class ManagementController( HydrusSerialisable.SerialisableBase ):
                 
                 location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY )
                 
-                file_search_context = ClientSearch.FileSearchContext( location_context = location_context, predicates = [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_EVERYTHING ) ] )
+                file_search_context = ClientSearchFileSearchContext.FileSearchContext( location_context = location_context, predicates = [ ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_EVERYTHING ) ] )
                 
                 serialisable_serialisables[ 'file_search_context' ] = file_search_context.GetSerialisableTuple()
                 
@@ -523,7 +524,7 @@ class ManagementController( HydrusSerialisable.SerialisableBase ):
                 
                 default_location_context = CG.client_controller.new_options.GetDefaultLocalLocationContext()
                 
-                file_search_context = ClientSearch.FileSearchContext( location_context = default_location_context, predicates = [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_EVERYTHING ) ] )
+                file_search_context = ClientSearchFileSearchContext.FileSearchContext( location_context = default_location_context, predicates = [ ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_EVERYTHING ) ] )
                 
                 variables[ 'file_search_context_1' ] = file_search_context
                 variables[ 'file_search_context_2' ] = file_search_context.Duplicate()

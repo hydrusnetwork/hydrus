@@ -1708,7 +1708,14 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             for value in [ CC.NEW_PAGE_GOES_FAR_LEFT, CC.NEW_PAGE_GOES_LEFT_OF_CURRENT, CC.NEW_PAGE_GOES_RIGHT_OF_CURRENT, CC.NEW_PAGE_GOES_FAR_RIGHT ]:
                 
-                self._default_new_page_goes.addItem( CC.new_page_goes_string_lookup[ value], value )
+                self._default_new_page_goes.addItem( CC.new_page_goes_string_lookup[ value ], value )
+                
+            
+            self._close_page_focus_goes = ClientGUICommon.BetterChoice( self._pages_panel )
+            
+            for value in [ CC.CLOSED_PAGE_FOCUS_GOES_LEFT, CC.CLOSED_PAGE_FOCUS_GOES_RIGHT ]:
+                
+                self._close_page_focus_goes.addItem( CC.closed_page_focus_string_lookup[ value ], value )
                 
             
             self._notebook_tab_alignment = ClientGUICommon.BetterChoice( self._pages_panel )
@@ -1793,6 +1800,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._show_local_files_on_page_chooser.setChecked( self._new_options.GetBoolean( 'show_local_files_on_page_chooser' ) )
             
             self._default_new_page_goes.SetValue( self._new_options.GetInteger( 'default_new_page_goes' ) )
+            self._close_page_focus_goes.SetValue( self._new_options.GetInteger( 'close_page_focus_goes' ) )
             
             self._notebook_tab_alignment.SetValue( self._new_options.GetInteger( 'notebook_tab_alignment' ) )
             
@@ -1837,7 +1845,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             rows.append( ( 'In new page chooser, show "all my files" if appropriate: ', self._show_all_my_files_on_page_chooser ) )
             rows.append( ( 'In new page chooser, show "local files": ', self._show_local_files_on_page_chooser ) )
-            rows.append( ( 'By default, put new page tabs on: ', self._default_new_page_goes ) )
+            rows.append( ( 'Put new page tabs on: ', self._default_new_page_goes ) )
+            rows.append( ( 'When closing tabs, move focus: ', self._close_page_focus_goes ) )
             rows.append( ( 'Notebook tab alignment: ', self._notebook_tab_alignment ) )
             rows.append( ( 'Selection chases dropped page after drag and drop: ', self._page_drop_chase_normally ) )
             rows.append( ( '  With shift held down?: ', self._page_drop_chase_with_shift ) )
@@ -1915,6 +1924,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._new_options.SetBoolean( 'show_local_files_on_page_chooser', self._show_local_files_on_page_chooser.isChecked() )
             
             self._new_options.SetInteger( 'default_new_page_goes', self._default_new_page_goes.GetValue() )
+            self._new_options.SetInteger( 'close_page_focus_goes', self._close_page_focus_goes.GetValue() )
             
             self._new_options.SetInteger( 'max_page_name_chars', self._max_page_name_chars.value() )
             

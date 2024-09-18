@@ -31,7 +31,7 @@ from hydrus.client.importing.options import PresentationImportOptions
 from hydrus.client.metadata import ClientContentUpdates
 from hydrus.client.metadata import ClientTagSorting
 from hydrus.client.networking import ClientNetworkingFunctions
-from hydrus.client.search import ClientSearch
+from hydrus.client.search import ClientSearchPredicate
 
 def ClearFileSeeds( win: QW.QWidget, file_seed_cache: ClientImportFileSeeds.FileSeedCache, statuses_to_remove ):
     
@@ -683,9 +683,9 @@ class EditFileSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
             file_seed_datas = [ file_seed.file_seed_data for file_seed in selected_file_seeds ]
             urls = [ file_seed_data for file_seed_data in file_seed_datas if isinstance( file_seed_data, str ) and file_seed_data.startswith( 'http' ) ]
             
-            url_preds = [ ClientSearch.Predicate( predicate_type = ClientSearch.PREDICATE_TYPE_SYSTEM_KNOWN_URLS, value = ( True, 'exact_match', url, f'has url {url}' ) ) for url in urls ]
+            url_preds = [ ClientSearchPredicate.Predicate( predicate_type = ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_KNOWN_URLS, value = ( True, 'exact_match', url, f'has url {url}' ) ) for url in urls ]
             
-            predicates = [ ClientSearch.Predicate( predicate_type = ClientSearch.PREDICATE_TYPE_OR_CONTAINER, value = url_preds ) ]
+            predicates = [ ClientSearchPredicate.Predicate( predicate_type = ClientSearchPredicate.PREDICATE_TYPE_OR_CONTAINER, value = url_preds ) ]
             
             page_name = 'url search'
             activate_window = False

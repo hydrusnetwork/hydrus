@@ -84,7 +84,9 @@ from hydrus.client.networking import ClientNetworkingBandwidth
 from hydrus.client.networking import ClientNetworkingDomain
 from hydrus.client.networking import ClientNetworkingLogin
 from hydrus.client.networking import ClientNetworkingSessions
-from hydrus.client.search import ClientSearch
+from hydrus.client.search import ClientSearchFavouriteSearches
+from hydrus.client.search import ClientSearchFileSearchContext
+from hydrus.client.search import ClientSearchPredicate
 
 from hydrus.client.importing import ClientImportSubscriptionLegacy
 from hydrus.client.networking import ClientNetworkingSessionsLegacy
@@ -1400,7 +1402,7 @@ class DB( HydrusDB.HydrusDB ):
         
         self.modules_serialisable.SetJSONDump( login_manager )
         
-        favourite_search_manager = ClientSearch.FavouriteSearchManager()
+        favourite_search_manager = ClientSearchFavouriteSearches.FavouriteSearchManager()
         
         ClientDefaults.SetDefaultFavouriteSearchManagerData( favourite_search_manager )
         
@@ -1815,8 +1817,8 @@ class DB( HydrusDB.HydrusDB ):
     
     def _DuplicatesGetRandomPotentialDuplicateHashes(
         self,
-        file_search_context_1: ClientSearch.FileSearchContext,
-        file_search_context_2: ClientSearch.FileSearchContext,
+        file_search_context_1: ClientSearchFileSearchContext.FileSearchContext,
+        file_search_context_2: ClientSearchFileSearchContext.FileSearchContext,
         dupe_search_type: int,
         pixel_dupes_preference,
         max_hamming_distance
@@ -1950,7 +1952,7 @@ class DB( HydrusDB.HydrusDB ):
             
         
     
-    def _DuplicatesGetPotentialDuplicatePairsForFiltering( self, file_search_context_1: ClientSearch.FileSearchContext, file_search_context_2: ClientSearch.FileSearchContext, dupe_search_type: int, pixel_dupes_preference, max_hamming_distance, max_num_pairs: typing.Optional[ int ] = None ):
+    def _DuplicatesGetPotentialDuplicatePairsForFiltering( self, file_search_context_1: ClientSearchFileSearchContext.FileSearchContext, file_search_context_2: ClientSearchFileSearchContext.FileSearchContext, dupe_search_type: int, pixel_dupes_preference, max_hamming_distance, max_num_pairs: typing.Optional[ int ] = None ):
         
         if max_num_pairs is None:
             
@@ -2515,7 +2517,7 @@ class DB( HydrusDB.HydrusDB ):
         return file_info_managers
         
     
-    def _GetBonedStats( self, file_search_context: ClientSearch.FileSearchContext = None, job_status = None ):
+    def _GetBonedStats( self, file_search_context: ClientSearchFileSearchContext.FileSearchContext = None, job_status = None ):
         
         if job_status is None:
             
@@ -2524,7 +2526,7 @@ class DB( HydrusDB.HydrusDB ):
         
         if file_search_context is None:
             
-            file_search_context = ClientSearch.FileSearchContext(
+            file_search_context = ClientSearchFileSearchContext.FileSearchContext(
                 location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY )
             )
             
@@ -2811,7 +2813,7 @@ class DB( HydrusDB.HydrusDB ):
         return boned_stats
         
     
-    def _GetFileHistory( self, num_steps: int, file_search_context: ClientSearch.FileSearchContext = None, job_status = None ):
+    def _GetFileHistory( self, num_steps: int, file_search_context: ClientSearchFileSearchContext.FileSearchContext = None, job_status = None ):
         
         # TODO: clean this up. it is a mess cribbed from the boned work, and I'm piping similar nonsense down to the db tables
         # don't supply deleted timestamps for 'all files deleted' and all that gubbins, it is a mess
@@ -2823,7 +2825,7 @@ class DB( HydrusDB.HydrusDB ):
         
         if file_search_context is None:
             
-            file_search_context = ClientSearch.FileSearchContext(
+            file_search_context = ClientSearchFileSearchContext.FileSearchContext(
                 location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY )
             )
             
@@ -3260,7 +3262,7 @@ class DB( HydrusDB.HydrusDB ):
         return file_info_managers
         
     
-    def _GetFileSystemPredicates( self, file_search_context: ClientSearch.FileSearchContext, force_system_everything = False ):
+    def _GetFileSystemPredicates( self, file_search_context: ClientSearchFileSearchContext.FileSearchContext, force_system_everything = False ):
         
         location_context = file_search_context.GetLocationContext()
         
@@ -3269,21 +3271,21 @@ class DB( HydrusDB.HydrusDB ):
         
         predicates = []
         
-        system_everythings = [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_EVERYTHING ) ]
+        system_everythings = [ ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_EVERYTHING ) ]
         
         blank_pred_types = {
-            ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_TAGS,
-            ClientSearch.PREDICATE_TYPE_SYSTEM_LIMIT,
-            ClientSearch.PREDICATE_TYPE_SYSTEM_HASH,
-            ClientSearch.PREDICATE_TYPE_SYSTEM_FILE_SERVICE,
-            ClientSearch.PREDICATE_TYPE_SYSTEM_FILE_RELATIONSHIPS,
-            ClientSearch.PREDICATE_TYPE_SYSTEM_TAG_AS_NUMBER,
-            ClientSearch.PREDICATE_TYPE_SYSTEM_FILE_VIEWING_STATS
+            ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_NUM_TAGS,
+            ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_LIMIT,
+            ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HASH,
+            ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_FILE_SERVICE,
+            ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_FILE_RELATIONSHIPS,
+            ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_TAG_AS_NUMBER,
+            ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_FILE_VIEWING_STATS
         }
         
         if len( self.modules_services.GetServiceIds( HC.RATINGS_SERVICES ) ) > 0:
             
-            blank_pred_types.add( ClientSearch.PREDICATE_TYPE_SYSTEM_RATING )
+            blank_pred_types.add( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_RATING )
             
         
         if location_context.IsAllKnownFiles():
@@ -3296,7 +3298,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 if force_system_everything or self._controller.new_options.GetBoolean( 'always_show_system_everything' ):
                     
-                    predicates.append( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_EVERYTHING ) )
+                    predicates.append( ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_EVERYTHING ) )
                     
                 
             else:
@@ -3313,7 +3315,7 @@ class DB( HydrusDB.HydrusDB ):
                     
                     num_everything = service_info[ info_type ]
                     
-                    system_everythings.append( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_EVERYTHING, count = ClientSearch.PredicateCount.STATICCreateCurrentCount( num_everything ) ) )
+                    system_everythings.append( ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_EVERYTHING, count = ClientSearchPredicate.PredicateCount.STATICCreateCurrentCount( num_everything ) ) )
                     
                 
             
@@ -3348,7 +3350,7 @@ class DB( HydrusDB.HydrusDB ):
                     
                     num_everything = service_info[ HC.SERVICE_INFO_NUM_VIEWABLE_FILES ]
                     
-                    system_everythings.append( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_EVERYTHING, count = ClientSearch.PredicateCount.STATICCreateCurrentCount( num_everything ) ) )
+                    system_everythings.append( ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_EVERYTHING, count = ClientSearchPredicate.PredicateCount.STATICCreateCurrentCount( num_everything ) ) )
                     
                     if location_context.IncludesDeleted():
                         
@@ -3374,13 +3376,13 @@ class DB( HydrusDB.HydrusDB ):
                         num_not_local = 0
                         
                     
-                    file_repo_preds.append( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_LOCAL, count = ClientSearch.PredicateCount.STATICCreateCurrentCount( num_local ) ) )
-                    file_repo_preds.append( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_NOT_LOCAL, count = ClientSearch.PredicateCount.STATICCreateCurrentCount( num_not_local ) ) )
+                    file_repo_preds.append( ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_LOCAL, count = ClientSearchPredicate.PredicateCount.STATICCreateCurrentCount( num_local ) ) )
+                    file_repo_preds.append( ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_NOT_LOCAL, count = ClientSearchPredicate.PredicateCount.STATICCreateCurrentCount( num_not_local ) ) )
                     
                     num_archive = num_local - num_inbox
                     
-                    inbox_archive_preds.append( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_INBOX, count = ClientSearch.PredicateCount.STATICCreateCurrentCount( num_inbox ) ) )
-                    inbox_archive_preds.append( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_ARCHIVE, count = ClientSearch.PredicateCount.STATICCreateCurrentCount( num_archive ) ) )
+                    inbox_archive_preds.append( ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_INBOX, count = ClientSearchPredicate.PredicateCount.STATICCreateCurrentCount( num_inbox ) ) )
+                    inbox_archive_preds.append( ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_ARCHIVE, count = ClientSearchPredicate.PredicateCount.STATICCreateCurrentCount( num_archive ) ) )
                     
                 elif status == HC.CONTENT_STATUS_DELETED:
                     
@@ -3388,7 +3390,7 @@ class DB( HydrusDB.HydrusDB ):
                     
                     num_everything = service_info[ HC.SERVICE_INFO_NUM_DELETED_FILES ]
                     
-                    system_everythings.append( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_EVERYTHING, count = ClientSearch.PredicateCount.STATICCreateCurrentCount( num_everything ) ) )
+                    system_everythings.append( ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_EVERYTHING, count = ClientSearchPredicate.PredicateCount.STATICCreateCurrentCount( num_everything ) ) )
                     
                 
             
@@ -3399,7 +3401,7 @@ class DB( HydrusDB.HydrusDB ):
             
             if len( inbox_archive_preds ) > 0:
                 
-                inbox_archive_preds = ClientSearch.MergePredicates( inbox_archive_preds )
+                inbox_archive_preds = ClientSearchPredicate.MergePredicates( inbox_archive_preds )
                 
                 zero_counts = [ pred.GetCount().HasZeroCount() for pred in inbox_archive_preds ]
                 
@@ -3410,7 +3412,7 @@ class DB( HydrusDB.HydrusDB ):
                         # something is in here, but we are hiding, so let's inform system everything
                         useful_pred = list( ( pred for pred in inbox_archive_preds if pred.GetCount().HasNonZeroCount() ) )[0]
                         
-                        if useful_pred.GetType() == ClientSearch.PREDICATE_TYPE_SYSTEM_INBOX:
+                        if useful_pred.GetType() == ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_INBOX:
                             
                             system_everything_suffix = 'all in inbox'
                             
@@ -3427,22 +3429,22 @@ class DB( HydrusDB.HydrusDB ):
                 
             
             blank_pred_types.update( [
-                ClientSearch.PREDICATE_TYPE_SYSTEM_SIZE,
-                ClientSearch.PREDICATE_TYPE_SYSTEM_TIME,
-                ClientSearch.PREDICATE_TYPE_SYSTEM_DIMENSIONS,
-                ClientSearch.PREDICATE_TYPE_SYSTEM_DURATION,
-                ClientSearch.PREDICATE_TYPE_SYSTEM_FILE_PROPERTIES,
-                ClientSearch.PREDICATE_TYPE_SYSTEM_NOTES,
-                ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_WORDS,
-                ClientSearch.PREDICATE_TYPE_SYSTEM_URLS,
-                ClientSearch.PREDICATE_TYPE_SYSTEM_MIME,
-                ClientSearch.PREDICATE_TYPE_SYSTEM_SIMILAR_TO
+                ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_SIZE,
+                ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_TIME,
+                ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_DIMENSIONS,
+                ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_DURATION,
+                ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_FILE_PROPERTIES,
+                ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_NOTES,
+                ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_NUM_WORDS,
+                ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_URLS,
+                ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_MIME,
+                ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_SIMILAR_TO
                 ] )
             
         
         if len( system_everythings ) > 0:
             
-            system_everythings = ClientSearch.MergePredicates( system_everythings )
+            system_everythings = ClientSearchPredicate.MergePredicates( system_everythings )
             
             system_everything = list( system_everythings )[0]
             
@@ -3456,31 +3458,31 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
-        predicates.extend( [ ClientSearch.Predicate( predicate_type ) for predicate_type in blank_pred_types ] )
+        predicates.extend( [ ClientSearchPredicate.Predicate( predicate_type ) for predicate_type in blank_pred_types ] )
         
-        predicates = ClientSearch.MergePredicates( predicates )
+        predicates = ClientSearchPredicate.MergePredicates( predicates )
         
         def sys_preds_key( s ):
             
             t = s.GetType()
             
-            if t == ClientSearch.PREDICATE_TYPE_SYSTEM_EVERYTHING:
+            if t == ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_EVERYTHING:
                 
                 return ( 0, 0 )
                 
-            elif t == ClientSearch.PREDICATE_TYPE_SYSTEM_INBOX:
+            elif t == ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_INBOX:
                 
                 return ( 1, 0 )
                 
-            elif t == ClientSearch.PREDICATE_TYPE_SYSTEM_ARCHIVE:
+            elif t == ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_ARCHIVE:
                 
                 return ( 2, 0 )
                 
-            elif t == ClientSearch.PREDICATE_TYPE_SYSTEM_LOCAL:
+            elif t == ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_LOCAL:
                 
                 return ( 3, 0 )
                 
-            elif t == ClientSearch.PREDICATE_TYPE_SYSTEM_NOT_LOCAL:
+            elif t == ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_NOT_LOCAL:
                 
                 return ( 4, 0 )
                 
@@ -4293,7 +4295,7 @@ class DB( HydrusDB.HydrusDB ):
         
         if len( search_tags ) == 0:
             
-            return ( num_tags_searched, num_tags_to_search, num_skipped, [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, value = 'no search tags to work with!' ) ] )
+            return ( num_tags_searched, num_tags_to_search, num_skipped, [ ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_TAG, value = 'no search tags to work with!' ) ] )
             
         
         tag_display_type = ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL
@@ -4350,7 +4352,7 @@ class DB( HydrusDB.HydrusDB ):
             
             # all have count 0 or were filtered out by 0.0 weight
             
-            return ( num_tags_searched, num_tags_to_search, num_skipped, [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, value = 'no related tags found!' ) ] )
+            return ( num_tags_searched, num_tags_to_search, num_skipped, [ ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_TAG, value = 'no related tags found!' ) ] )
             
         
         #
@@ -4560,7 +4562,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 existing_count = predicate.GetCount()
                 
-                new_count = ClientSearch.PredicateCount( int( existing_count.min_current_count * weight ), 0, None, None )
+                new_count = ClientSearchPredicate.PredicateCount( int( existing_count.min_current_count * weight ), 0, None, None )
                 
                 predicate.SetCount( new_count )
                 
@@ -10764,6 +10766,38 @@ class DB( HydrusDB.HydrusDB ):
                 HydrusData.PrintException( e )
                 
                 message = 'Trying to check/regenerate your similar file search tree failed! Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
+                
+            
+        
+        if version == 589:
+            
+            try:
+                
+                domain_manager = self.modules_serialisable.GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
+                
+                domain_manager.Initialise()
+                
+                #
+                
+                domain_manager.OverwriteDefaultURLClasses( [
+                    'x post'
+                ] )
+                
+                #
+                
+                domain_manager.TryToLinkURLClassesAndParsers()
+                
+                #
+                
+                self.modules_serialisable.SetJSONDump( domain_manager )
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to update some downloader objects failed! Please let hydrus dev know!'
                 
                 self.pub_initial_message( message )
                 

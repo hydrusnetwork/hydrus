@@ -9,7 +9,7 @@ from hydrus.core import HydrusTags
 from hydrus.core import HydrusTime
 
 from hydrus.client import ClientGlobals as CG
-from hydrus.client.search import ClientSearch
+from hydrus.client.search import ClientSearchPredicate
 
 CLIENT_API_PERMISSION_ADD_URLS = 0
 CLIENT_API_PERMISSION_ADD_FILES = 1
@@ -228,6 +228,7 @@ class APIManager( HydrusSerialisable.SerialisableBase ):
             
         
     
+
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_CLIENT_API_MANAGER ] = APIManager
 
 class APIPermissions( HydrusSerialisable.SerialisableBaseNamed ):
@@ -372,7 +373,7 @@ class APIPermissions( HydrusSerialisable.SerialisableBaseNamed ):
             
         
     
-    def FilterTagPredicateResponse( self, predicates: typing.List[ ClientSearch.Predicate ] ):
+    def FilterTagPredicateResponse( self, predicates: typing.List[ ClientSearchPredicate.Predicate ] ):
         
         with self._lock:
             

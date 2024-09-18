@@ -697,7 +697,9 @@ class SimpleDownloaderImport( HydrusSerialisable.SerialisableBase ):
             
             try:
                 
-                ClientImportControl.CheckImporterCanDoFileWorkBecausePausifyingProblem( self._file_import_options )
+                real_file_import_options = FileImportOptions.GetRealFileImportOptions( self._file_import_options, FileImportOptions.IMPORT_TYPE_LOUD )
+                
+                ClientImportControl.CheckImporterCanDoFileWorkBecausePausifyingProblem( real_file_import_options )
                 
             except HydrusExceptions.VetoException:
                 
@@ -1399,7 +1401,9 @@ class URLsImport( HydrusSerialisable.SerialisableBase ):
             
             try:
                 
-                ClientImportControl.CheckImporterCanDoFileWorkBecausePausifyingProblem( self._file_import_options )
+                real_file_import_options = FileImportOptions.GetRealFileImportOptions( self._file_import_options, FileImportOptions.IMPORT_TYPE_LOUD )
+                
+                ClientImportControl.CheckImporterCanDoFileWorkBecausePausifyingProblem( real_file_import_options )
                 
             except HydrusExceptions.VetoException:
                 

@@ -10,6 +10,7 @@ from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusData
 from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusSerialisable
+from hydrus.core import HydrusText
 from hydrus.core.files.images import HydrusImageHandling
 
 from hydrus.client import ClientApplicationCommand as CAC
@@ -17,13 +18,14 @@ from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientLocation
 from hydrus.client import ClientPaths
+from hydrus.client.gui import ClientGUIAsync
 from hydrus.client.gui import ClientGUIMenus
 from hydrus.client.gui.media import ClientGUIMediaModalActions
 from hydrus.client.gui.media import ClientGUIMediaSimpleActions
 from hydrus.client.media import ClientMedia
 from hydrus.client.media import ClientMediaManagers
 from hydrus.client.networking import ClientNetworkingFunctions
-from hydrus.client.search import ClientSearch
+from hydrus.client.search import ClientSearchPredicate
 
 def AddDuplicatesMenu( win: QW.QWidget, menu: QW.QMenu, location_context: ClientLocation.LocationContext, focus_singleton: ClientMedia.Media, num_selected: int, collections_selected: bool ):
     
@@ -493,7 +495,7 @@ def AddKnownURLsViewCopyMenu( win, menu, focus_media, num_files_selected: int, s
             def call_generator( u ):
                 
                 location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY )
-                predicates = [ ClientSearch.Predicate( predicate_type = ClientSearch.PREDICATE_TYPE_SYSTEM_KNOWN_URLS, value = ( True, 'exact_match', u, f'has url {u}' ) ) ]
+                predicates = [ ClientSearchPredicate.Predicate( predicate_type = ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_KNOWN_URLS, value = ( True, 'exact_match', u, f'has url {u}' ) ) ]
                 
                 page_name = 'url search'
                 activate_window = False
@@ -511,9 +513,9 @@ def AddKnownURLsViewCopyMenu( win, menu, focus_media, num_files_selected: int, s
                 
                 location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY )
                 
-                url_preds = [ ClientSearch.Predicate( predicate_type = ClientSearch.PREDICATE_TYPE_SYSTEM_KNOWN_URLS, value = ( True, 'exact_match', url, f'has url {url}' ) ) for ( label, url ) in focus_labels_and_urls ]
+                url_preds = [ ClientSearchPredicate.Predicate( predicate_type = ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_KNOWN_URLS, value = ( True, 'exact_match', url, f'has url {url}' ) ) for ( label, url ) in focus_labels_and_urls ]
                 
-                predicates = [ ClientSearch.Predicate( predicate_type = ClientSearch.PREDICATE_TYPE_OR_CONTAINER, value = url_preds ) ]
+                predicates = [ ClientSearchPredicate.Predicate( predicate_type = ClientSearchPredicate.PREDICATE_TYPE_OR_CONTAINER, value = url_preds ) ]
                 
                 page_name = 'url search'
                 activate_window = False
@@ -853,6 +855,62 @@ def AddServiceKeysToMenu( menu, service_keys, submenu_name, description, bare_ca
     ClientGUIMenus.AppendMenuOrItem( menu, submenu_name, menu_tuples )
     
 
+def StartOtherHashesMenuFetch( win: QW.QWidget, media: ClientMedia.MediaSingleton, md5_menu_item: QW.QAction, sha1_menu_item: QW.QAction, sha512_menu_item: QW.QAction ):
+    
+    def work_callable():
+        
+        hash = media.GetHash()
+        
+        hashes_to_other_hashes = CG.client_controller.Read( 'file_hashes', ( hash, ), 'sha256', 'md5' )
+        
+        if hash in hashes_to_other_hashes:
+            
+            md5_hash = hashes_to_other_hashes[ hash ]
+            
+            md5_menu_item.setText( f'md5 ({md5_hash.hex()})' )
+            
+        else:
+            
+            md5_menu_item.setText( 'md5 (unknown)' )
+            
+        
+        hashes_to_other_hashes = CG.client_controller.Read( 'file_hashes', ( hash, ), 'sha256', 'sha1' )
+        
+        if hash in hashes_to_other_hashes:
+            
+            sha1_hash = hashes_to_other_hashes[ hash ]
+            
+            sha1_menu_item.setText( f'sha1 ({sha1_hash.hex()})' )
+            
+        else:
+            
+            sha1_menu_item.setText( 'sha1 (unknown)' )
+            
+        
+        hashes_to_other_hashes = CG.client_controller.Read( 'file_hashes', ( hash, ), 'sha256', 'sha512' )
+        
+        if hash in hashes_to_other_hashes:
+            
+            sha512_hash = hashes_to_other_hashes[ hash ]
+            
+            sha512_menu_item.setText( f'sha512 ({HydrusText.ElideText( sha512_hash.hex(), 64, elide_center = True )})' )
+            
+        else:
+            
+            sha512_menu_item.setText( 'md5 (unknown)' )
+            
+        
+    
+    def publish_callable( result ):
+        
+        pass
+        
+    
+    job = ClientGUIAsync.AsyncQtJob( win, work_callable, publish_callable )
+    
+    job.start()
+    
+
 def AddShareMenu( win: QW.QWidget, menu: QW.QMenu, focused_media: typing.Optional[ ClientMedia.Media ], selected_media: typing.Collection[ ClientMedia.Media ] ):
     
     if focused_media is not None:
@@ -872,26 +930,23 @@ def AddShareMenu( win: QW.QWidget, menu: QW.QMenu, focused_media: typing.Optiona
     
     local_selection_is_useful = len( local_selection ) > 0 and not ( len( local_selection ) == 1 and focused_media in local_selection )
     
-    if not focused_is_local and len( local_selection ) == 0:
-        
-        # nothing to share!
-        return
-        
-    
     share_menu = ClientGUIMenus.GenerateMenu( menu )
     
-    ClientGUIMenus.AppendMenuItem( share_menu, 'export files', 'Export the selected files to an external folder.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_EXPORT_FILES ) )
-    
-    ClientGUIMenus.AppendSeparator( share_menu )
-    
     if local_selection_is_useful:
         
-        ClientGUIMenus.AppendMenuItem( share_menu, 'copy files', 'Copy these files to your clipboard.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_COPY_FILES, simple_data = CAC.FILE_COMMAND_TARGET_SELECTED_FILES ) )
+        ClientGUIMenus.AppendMenuItem( share_menu, 'export files', 'Export the selected files to an external folder.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_EXPORT_FILES ) )
         
-    
-    if local_selection_is_useful:
+        ClientGUIMenus.AppendSeparator( share_menu )
         
-        ClientGUIMenus.AppendMenuItem( share_menu, 'copy paths', 'Copy these files\' paths to your clipboard, just as raw text.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_COPY_FILE_PATHS, simple_data = CAC.FILE_COMMAND_TARGET_SELECTED_FILES ) )
+        if local_selection_is_useful:
+            
+            ClientGUIMenus.AppendMenuItem( share_menu, 'copy files', 'Copy these files to your clipboard.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_COPY_FILES, simple_data = CAC.FILE_COMMAND_TARGET_SELECTED_FILES ) )
+            
+        
+        if local_selection_is_useful:
+            
+            ClientGUIMenus.AppendMenuItem( share_menu, 'copy paths', 'Copy these files\' paths to your clipboard, just as raw text.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_COPY_FILE_PATHS, simple_data = CAC.FILE_COMMAND_TARGET_SELECTED_FILES ) )
+            
         
     
     if selection_is_useful:
@@ -992,9 +1047,11 @@ def AddShareMenu( win: QW.QWidget, menu: QW.QMenu, focused_media: typing.Optiona
         copy_hash_menu = ClientGUIMenus.GenerateMenu( share_menu )
         
         ClientGUIMenus.AppendMenuItem( copy_hash_menu, 'sha256 ({})'.format( focused_media.GetHash().hex() ), 'Copy this file\'s SHA256 hash to your clipboard.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_COPY_FILE_HASHES, simple_data = ( CAC.FILE_COMMAND_TARGET_FOCUSED_FILE, 'sha256' ) ) )
-        ClientGUIMenus.AppendMenuItem( copy_hash_menu, 'md5', 'Copy this file\'s MD5 hash to your clipboard. Your client may not know this.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_COPY_FILE_HASHES, simple_data = ( CAC.FILE_COMMAND_TARGET_FOCUSED_FILE, 'md5' ) ) )
-        ClientGUIMenus.AppendMenuItem( copy_hash_menu, 'sha1', 'Copy this file\'s SHA1 hash to your clipboard. Your client may not know this.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_COPY_FILE_HASHES, simple_data = ( CAC.FILE_COMMAND_TARGET_FOCUSED_FILE, 'sha1' ) ) )
-        ClientGUIMenus.AppendMenuItem( copy_hash_menu, 'sha512', 'Copy this file\'s SHA512 hash to your clipboard. Your client may not know this.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_COPY_FILE_HASHES, simple_data = ( CAC.FILE_COMMAND_TARGET_FOCUSED_FILE, 'sha512' ) ) )
+        md5_menu_item = ClientGUIMenus.AppendMenuItem( copy_hash_menu, 'md5', 'Copy this file\'s MD5 hash to your clipboard. Your client may not know this.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_COPY_FILE_HASHES, simple_data = ( CAC.FILE_COMMAND_TARGET_FOCUSED_FILE, 'md5' ) ) )
+        sha1_menu_item = ClientGUIMenus.AppendMenuItem( copy_hash_menu, 'sha1', 'Copy this file\'s SHA1 hash to your clipboard. Your client may not know this.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_COPY_FILE_HASHES, simple_data = ( CAC.FILE_COMMAND_TARGET_FOCUSED_FILE, 'sha1' ) ) )
+        sha512_menu_item = ClientGUIMenus.AppendMenuItem( copy_hash_menu, 'sha512', 'Copy this file\'s SHA512 hash to your clipboard. Your client may not know this.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_COPY_FILE_HASHES, simple_data = ( CAC.FILE_COMMAND_TARGET_FOCUSED_FILE, 'sha512' ) ) )
+        
+        StartOtherHashesMenuFetch( share_menu, focused_media, md5_menu_item, sha1_menu_item, sha512_menu_item )
         
         file_info_manager = focused_media.GetMediaResult().GetFileInfoManager()
         
