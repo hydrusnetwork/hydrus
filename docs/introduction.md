@@ -1,5 +1,5 @@
 ---
-title: Introduction and Statement of Principles  
+title: Introduction  
 ---
 
 # introduction and statement of principles

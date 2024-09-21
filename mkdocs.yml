@@ -113,8 +113,8 @@ extra:
   social:
     - icon: fontawesome/brands/github
       link: https://github.com/hydrusnetwork/hydrus
-    - icon: fontawesome/brands/twitter
-      link: https://twitter.com/hydrusnetwork
+    - icon: fontawesome/brands/x-twitter
+      link: https://x.com/hydrusnetwork
     - icon: fontawesome/brands/tumblr
       link: https://hydrus.tumblr.com/
     - icon: fontawesome/solid/envelope
