@@ -20,7 +20,7 @@
       
       
       <link rel="icon" href="assets/favicon.svg">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.5.35">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.5.37">
     
     
       
@@ -28,7 +28,7 @@
       
     
     
-      <link rel="stylesheet" href="assets/stylesheets/main.35f28582.min.css">
+      <link rel="stylesheet" href="assets/stylesheets/main.8c3ca2c6.min.css">
       
         
         <link rel="stylesheet" href="assets/stylesheets/palette.06af60db.min.css">
@@ -2392,6 +2392,24 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#get_files_file_path" class="md-nav__link">
+    <span class="md-ellipsis">
+      GET /get_files/file_path
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#get_files_thumbnail" class="md-nav__link">
+    <span class="md-ellipsis">
+      GET /get_files/thumbnail_path
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#get_files_render" class="md-nav__link">
     <span class="md-ellipsis">
       GET /get_files/render
@@ -3614,6 +3632,24 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#get_files_file_path" class="md-nav__link">
+    <span class="md-ellipsis">
+      GET /get_files/file_path
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#get_files_thumbnail" class="md-nav__link">
+    <span class="md-ellipsis">
+      GET /get_files/thumbnail_path
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#get_files_render" class="md-nav__link">
     <span class="md-ellipsis">
       GET /get_files/render
@@ -4127,11 +4163,12 @@ Accept: application/json
 </code></pre></div>
 <p>If the client does not support CBOR, you'll get 406.</p>
 <h2 id="access_and_permissions">Access and permissions<a class="headerlink" href="#access_and_permissions" title="Permanent link">&para;</a></h2>
-<p>The client gives access to its API through different 'access keys', which are the typical 64-character hex used in many other places across hydrus. Each guarantees different permissions such as handling files or tags. Most of the time, a user will provide full access, but do not assume this. If the access header or parameter is not provided, you will get 401, and all insufficient permission problems will return 403 with appropriate error text.</p>
+<p>The client gives access to its API through different 'access keys', which are the typical random 64-character hex used in many other places across hydrus. Each guarantees different permissions such as handling files or tags. Most of the time, a user will provide full access, but do not assume this. If a access key header or parameter is not provided, you will get 401, and all insufficient permission problems will return 403 with appropriate error text.</p>
 <p>Access is required for every request. You can provide this as an http header, like so:</p>
 <div class="highlight"><pre><span></span><code>Hydrus-Client-API-Access-Key : 0150d9c4f6a6d2082534a997f4588dcf0c56dffe1d03ffbf98472236112236ae
 </code></pre></div>
-<p>Or you can include it in the normal parameters of any request (except <em>POST /add_files/add_file</em>, which uses the entire POST body for the file's bytes). For GET, this means including it into the URL parameters:</p>
+<p>Or you can include it in the normal parameters of any request (except <em>POST /add_files/add_file</em>, which uses the entire POST body for the file's bytes).</p>
+<p>For GET, this means including it into the URL parameters:</p>
 <div class="highlight"><pre><span></span><code>/get_files/thumbnail?file_id=452158&amp;Hydrus-Client-API-Access-Key=0150d9c4f6a6d2082534a997f4588dcf0c56dffe1d03ffbf98472236112236ae
 </code></pre></div>
 <p>For POST, this means in the JSON body parameters, like so:</p>
@@ -4459,8 +4496,9 @@ Accept: application/json
 <dd>
 <ul>
 <li><code>name</code>: (descriptive name of your access)</li>
+<li><code>permits_everything</code>: (selective, bool, whether to permit all tasks now and in future)</li>
 <li>
-<p><code>basic_permissions</code>: A JSON-encoded list of numerical permission identifiers you want to request.</p>
+<p><code>basic_permissions</code>: Selective. A JSON-encoded list of numerical permission identifiers you want to request.</p>
 <p>The permissions are currently:</p>
 <ul>
 <li>0 - Import and Edit URLs</li>
@@ -4476,12 +4514,17 @@ Accept: application/json
 <li>10 - Manage Popups</li>
 <li>11 - Edit File Times</li>
 <li>12 - Commit Pending</li>
+<li>13 - See Local Paths</li>
 </ul>
 </li>
 </ul>
-<div class="highlight"><span class="filename">Example request</span><pre><span></span><code>/request_new_permissions?name=my%20import%20script&amp;basic_permissions=[0,1]
-</code></pre></div>
 </dd>
+</dl>
+<div class="highlight"><span class="filename">Example request</span><pre><span></span><code>/request_new_permissions?name=migrator&amp;permit_everything=true
+</code></pre></div>
+<div class="highlight"><span class="filename">Example request (for permissions [0,1])</span><pre><span></span><code>/request_new_permissions?name=my%20import%20script&amp;basic_permissions=%5B0%2C1%5D
+</code></pre></div>
+<dl>
 <dt>Response:</dt>
 <dd>Some JSON with your access key, which is 64 characters of hex. This will not be valid until the user approves the request in the client ui.
 <div class="highlight"><span class="filename">Example response</span><pre><span></span><code><span class="p">{</span>
@@ -4489,6 +4532,7 @@ Accept: application/json
 <span class="p">}</span>
 </code></pre></div></dd>
 </dl>
+<p>The <code>permits_everything</code> overrules all the individual permissions and will encompass any new permissions added in future. It is a convenient catch-all for local-only services where you are running things yourself or the user otherwise implicitly trusts you.</p>
 <h3 id="session_key"><strong>GET <code>/session_key</code></strong><a class="headerlink" href="#session_key" title="Permanent link">&para;</a></h3>
 <p><em>Get a new session key.</em></p>
 <p>Restricted access: YES. No permissions required.</p>
@@ -4514,13 +4558,15 @@ Accept: application/json
 <p>Arguments: n/a</p>
 <dl>
 <dt>Response:</dt>
-<dd>401/403/419 and some error text if the provided access/session key is invalid, otherwise some JSON with basic permission info. 
+<dd>401/403/419 and some error text if the provided access/session key is invalid, otherwise some JSON with basic permission info. </dd>
+</dl>
 <div class="highlight"><span class="filename">Example response</span><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;name&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;autotagger&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;permits_everything&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span>
 <span class="w">  </span><span class="nt">&quot;basic_permissions&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mi">3</span><span class="p">],</span>
 <span class="w">  </span><span class="nt">&quot;human_description&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;API Permissions (autotagger): add tags to files, import files, search for files: Can search: only autotag this&quot;</span>
 <span class="p">}</span>
-</code></pre></div></dd>
-</dl>
+</code></pre></div>
 <h3 id="get_service"><strong>GET <code>/get_service</code></strong><a class="headerlink" href="#get_service" title="Permanent link">&para;</a></h3>
 <p><em>Ask the client about a specific service.</em></p>
 <dl>
@@ -6044,9 +6090,9 @@ Accept: application/json
 <li><code>hash</code>: (selective, a hexadecimal SHA256 hash for the file)</li>
 <li><code>download</code>: (optional, boolean, default <code>false</code>)</li>
 </ul>
-<p>Only use one of file_id or hash. As with metadata fetching, you may only use the hash argument if you have access to all files. If you are tag-restricted, you will have to use a file_id in the last search you ran.</p>
 </dd>
 </dl>
+<p>Only use one of <code>file_id</code> or <code>hash</code>. As with metadata fetching, you may only use the hash argument if you have access to all files. If you are tag-restricted, you will have to use a file_id in the last search you ran.</p>
 <p><div class="highlight"><span class="filename">Example request</span><pre><span></span><code>/get_files/file?file_id=452158
 </code></pre></div>
 <div class="highlight"><span class="filename">Example request</span><pre><span></span><code>/get_files/file?hash=7f30c113810985b69014957c93bc25e8eb4cf3355dae36d8b9d011d8b0cf623a&amp;download=true
@@ -6056,6 +6102,7 @@ Accept: application/json
 <dd>The file itself. You should get the correct mime type as the Content-Type header.</dd>
 </dl>
 <p>By default, this will set the <code>Content-Disposition</code> header to <code>inline</code>, which causes a web browser to show the file. If you set <code>download=true</code>, it will set it to <code>attachment</code>, which triggers the browser to automatically download it (or open the 'save as' dialog) instead.</p>
+<p>This stuff supports <code>Range</code> requests, so if you want to build a video player, go nuts.</p>
 <h3 id="get_files_thumbnail"><strong>GET <code>/get_files/thumbnail</code></strong><a class="headerlink" href="#get_files_thumbnail" title="Permanent link">&para;</a></h3>
 <p><em>Get a file's thumbnail.</em></p>
 <dl>
@@ -6070,9 +6117,9 @@ Accept: application/json
 <li><code>file_id</code>: (selective, numerical file id for the file)</li>
 <li><code>hash</code>: (selective, a hexadecimal SHA256 hash for the file)</li>
 </ul>
-<p>Only use one. As with metadata fetching, you may only use the hash argument if you have access to all files. If you are tag-restricted, you will have to use a file_id in the last search you ran.</p>
 </dd>
 </dl>
+<p>Only use one. As with metadata fetching, you may only use the hash argument if you have access to all files. If you are tag-restricted, you will have to use a file_id in the last search you ran.</p>
 <p><div class="highlight"><span class="filename">Example request</span><pre><span></span><code>/get_files/thumbnail?file_id=452158
 </code></pre></div>
 <div class="highlight"><span class="filename">Example request</span><pre><span></span><code>/get_files/thumbnail?hash=7f30c113810985b69014957c93bc25e8eb4cf3355dae36d8b9d011d8b0cf623a
@@ -6093,6 +6140,73 @@ Accept: application/json
 <p class="admonition-title">Size of Defaults</p>
 <p>If you get a 'default' filetype thumbnail like the pdf or hydrus one, you will be pulling the pngs straight from the hydrus/static folder. They will most likely be 200x200 pixels. </p>
 </div>
+<h3 id="get_files_file_path"><strong>GET <code>/get_files/file_path</code></strong><a class="headerlink" href="#get_files_file_path" title="Permanent link">&para;</a></h3>
+<p><em>Get a local file path.</em></p>
+<dl>
+<dt>Restricted access:</dt>
+<dd>YES. Search for Files permission and See Local Paths permission needed. Additional search permission limits may apply.</dd>
+</dl>
+<p>Required Headers: n/a</p>
+<dl>
+<dt>Arguments :</dt>
+<dd>
+<ul>
+<li><code>file_id</code>: (selective, numerical file id for the file)</li>
+<li><code>hash</code>: (selective, a hexadecimal SHA256 hash for the file)</li>
+</ul>
+</dd>
+</dl>
+<p>Only use one. As with metadata fetching, you may only use the hash argument if you have access to all files. If you are tag-restricted, you will have to use a file_id in the last search you ran.</p>
+<p><div class="highlight"><span class="filename">Example request</span><pre><span></span><code>/get_files/file_path?file_id=452158
+</code></pre></div>
+<div class="highlight"><span class="filename">Example request</span><pre><span></span><code>/get_files/file_path?hash=7f30c113810985b69014957c93bc25e8eb4cf3355dae36d8b9d011d8b0cf623a
+</code></pre></div></p>
+<dl>
+<dt>Response:</dt>
+<dd>The actual path to the file on the host system.</dd>
+</dl>
+<div class="highlight"><span class="filename">Example response</span><pre><span></span><code><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;path&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;D:\hydrus_files\f7f\7f30c113810985b69014957c93bc25e8eb4cf3355dae36d8b9d011d8b0cf623a.jpg&quot;</span>
+<span class="p">}</span>
+</code></pre></div>
+<p>This will give 404 if the file is not stored locally (which includes if it <em>should</em> exist but is actually missing from the file store).</p>
+<h3 id="get_files_thumbnail"><strong>GET <code>/get_files/thumbnail_path</code></strong><a class="headerlink" href="#get_files_thumbnail" title="Permanent link">&para;</a></h3>
+<p><em>Get a local thumbnail path.</em></p>
+<dl>
+<dt>Restricted access:</dt>
+<dd>YES. Search for Files permission and See Local Paths permission needed. Additional search permission limits may apply.</dd>
+</dl>
+<p>Required Headers: n/a</p>
+<dl>
+<dt>Arguments:</dt>
+<dd>
+<ul>
+<li><code>file_id</code>: (selective, numerical file id for the file)</li>
+<li><code>hash</code>: (selective, a hexadecimal SHA256 hash for the file)</li>
+<li><code>include_thumbnail_filetype</code>: (optional, boolean, defaults to <code>false</code>)</li>
+</ul>
+</dd>
+</dl>
+<p>Only use one of <code>file_id</code> or <code>hash</code>. As with metadata fetching, you may only use the hash argument if you have access to all files. If you are tag-restricted, you will have to use a file_id in the last search you ran.</p>
+<p><div class="highlight"><span class="filename">Example request</span><pre><span></span><code>/get_files/thumbnail?file_id=452158
+</code></pre></div>
+<div class="highlight"><span class="filename">Example request</span><pre><span></span><code>/get_files/thumbnail?hash=7f30c113810985b69014957c93bc25e8eb4cf3355dae36d8b9d011d8b0cf623a&amp;include_thumbnail_filetype=true
+</code></pre></div></p>
+<dl>
+<dt>Response:</dt>
+<dd>The actual path to the thumbnail on the host system.</dd>
+</dl>
+<div class="highlight"><span class="filename">Example response</span><pre><span></span><code><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;path&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;D:\hydrus_files\f7f\7f30c113810985b69014957c93bc25e8eb4cf3355dae36d8b9d011d8b0cf623a.thumbnail&quot;</span>
+<span class="p">}</span>
+</code></pre></div>
+<div class="highlight"><span class="filename">Example response with include_thumbnail_filetype=true</span><pre><span></span><code><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;path&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;C:\hydrus_thumbs\f85\85daaefdaa662761d7cb1b026d7b101e74301be08e50bf09a235794ec8656f79.thumbnail&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;filetype&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;image/png&quot;</span>
+<span class="p">}</span>
+</code></pre></div>
+<p>All thumbnails in hydrus have the .thumbnail file extension and in content are either jpeg (almost always) or png (to handle transparency).</p>
+<p>This will 400 if the given file type does not have a thumbnail in hydrus, and it will 404 if there should be a thumbnail but one does not exist and cannot be generated from the source file (which probably would mean that the source file was itself Not Found).</p>
 <h3 id="get_files_render"><strong>GET <code>/get_files/render</code></strong><a class="headerlink" href="#get_files_render" title="Permanent link">&para;</a></h3>
 <p><em>Get an image file as rendered by Hydrus.</em></p>
 <dl>
@@ -7521,7 +7635,7 @@ This request will also return any cookies for subdomains. The session system in 
     <span class="md-icon" title="Last update">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 13.1c-.1 0-.3.1-.4.2l-1 1 2.1 2.1 1-1c.2-.2.2-.6 0-.8l-1.3-1.3c-.1-.1-.2-.2-.4-.2m-1.9 1.8-6.1 6V23h2.1l6.1-6.1zM12.5 7v5.2l4 2.4-1 1L11 13V7zM11 21.9c-5.1-.5-9-4.8-9-9.9C2 6.5 6.5 2 12 2c5.3 0 9.6 4.1 10 9.3-.3-.1-.6-.2-1-.2s-.7.1-1 .2C19.6 7.2 16.2 4 12 4c-4.4 0-8 3.6-8 8 0 4.1 3.1 7.5 7.1 7.9l-.1.2z"/></svg>
     </span>
-    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">September 18, 2024</span>
+    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">September 25, 2024</span>
   </span>
 
     
@@ -7648,7 +7762,7 @@ This request will also return any cookies for subdomains. The session system in 
     <script id="__config" type="application/json">{"base": ".", "features": ["navigation.tracking", "navigation.sections", "navigation.tabs", "content.tabs.link", "navigation.top", "search.suggest", "content.code.annotate", "navigation.instant", "content.action.edit"], "search": "assets/javascripts/workers/search.6ce7567c.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
     
     
-      <script src="assets/javascripts/bundle.56dfad97.min.js"></script>
+      <script src="assets/javascripts/bundle.d6f25eb3.min.js"></script>
       
     
   </body>

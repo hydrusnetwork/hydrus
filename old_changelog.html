@@ -35,6 +35,37 @@
             <h1 id="changelog"><a href="#changelog">changelog</a></h1>
             <ul>
                 <li>
+                    <h2 id="version_591"><a href="#version_591">version 591</a></h2>
+                    <ul>
+                        <li><h3>misc</h3></li>
+                        <li>fixed a stupid oversight with last week's "move page focus left/right after closing tab" thing where it was firing even when the page closed was not the current tab!! it now correctly only moves your focus if you close the _current_ tab, not if you just middle click some other one</li>
+                        <li>fixed the _share-&gt;export files_ menu command not showing if you right-clicked on just one file</li>
+                        <li>cleaned some of the broader thumbnail menu code, separating the 'stuff to show if we have a focus' and 'stuff to show if we have a selection'; the various 'manage' commands now generally show even if there is no current 'focus' in the preview (which happens if you select with ctrl+click or ctrl+a and then right-click in whitespace)</li>
+                        <li>the 'migrate tags' dialog now allows you to filter the sibling or parent pairs by whether the child/worse or parent/ideal tag has actual mapping counts on an arbitrary tag service. some new unit tests ensure this capability</li>
+                        <li>fixed an error in the duplicate metadata merge system where if files were exchanging known URLs, and one of those URLs was not actually an URL (e.g. it was garbage data, or human-entered 'location' info), a secondary system that tried to merge correlated domain-based timestamps was throwing an exception</li>
+                        <li>to reduce comma-confusion, the template for 'show num files and import status' on page names is now "name - (num_files - import_status)"</li>
+                        <li>the option that governs whether page names have the file count after them (under _options-&gt;gui pages_) has a new choice--'show for all pages, but only if greater than zero'--which is now the default for new users</li>
+                        <li><h3>some boring code cleanup</h3></li>
+                        <li>broke up the over-coupled 'migrate tags' unit tests into separate content types and the new count-filtering stuff</li>
+                        <li>cleaned up the 'share' menu construction code--it was messy after some recent rewrites</li>
+                        <li>added some better error handling around some of the file/thumbnail path fetching/regen routines</li>
+                        <li><h3>client api</h3></li>
+                        <li>the client api gets a new permissions state this week: the permissions structure you edit for an access key can now be (and, as a convenient default, starts as) a simple 'permits everything' state. if the permissions are set to 'permit everything', then this overrules all the specific rules and tag search filter gubbins. nice and simple, and a permissions set this way will automatically inherit new permissions in the future. any api access keys that have all the permissions up to 'edit ratings' will be auto-updated to 'permits everything' and you will get an update saying this happened--check your permissions in _review services_ if you need finer control</li>
+                        <li>added a new permission, `13`, for 'see local paths'</li>
+                        <li>added `/get_files/file_path`, which fetches the local path of a file. it needs the new permission</li>
+                        <li>added `/get_files/thumbnail_path`, which fetches the local path of a thumbnail and optionally the filetype of the actual thumb (jpeg or png). it needs the new permission</li>
+                        <li>the `/request_new_permissions` command now accepts a `permits_everything` bool as a selective alternate to the `basic_permissions` list</li>
+                        <li>the `/verify_access_key` command now responds with the name of the access key and the new `permits_everything` value</li>
+                        <li>the API help is updated for the above</li>
+                        <li>new unit tests test all the above</li>
+                        <li>the Client API version is now 71</li>
+                        <li><h3>client api refactoring</h3></li>
+                        <li>the main `ClientLocalServerResources` file has been getting too huge (5,000 lines), so I've moved it and `ClientLocalServer` to their own `api` module and broken the Resources file up into core functions, the superclass, and the main verbs</li>
+                        <li>fixed permissions check for `/manage_popups/update_popup`, which was checking for pages permission rather than popup permission</li>
+                        <li>did a general linting pass of these easier-to-handle files; cleaned up some silly stuff</li>
+                    </ul>
+                </li>
+                <li>
                     <h2 id="version_590"><a href="#version_590">version 590</a></h2>
                     <ul>
                         <li><h3>misc</h3></li>
