@@ -373,7 +373,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             'close_page_focus_goes' : CC.CLOSED_PAGE_FOCUS_GOES_RIGHT,
             'num_recent_petition_reasons' : 5,
             'max_page_name_chars' : 20,
-            'page_file_count_display' : CC.PAGE_FILE_COUNT_DISPLAY_ALL,
+            'page_file_count_display' : CC.PAGE_FILE_COUNT_DISPLAY_ALL_BUT_ONLY_IF_GREATER_THAN_ZERO,
             'network_timeout' : 10,
             'connection_error_wait_time' : 15,
             'serverside_bandwidth_wait_time' : 60,

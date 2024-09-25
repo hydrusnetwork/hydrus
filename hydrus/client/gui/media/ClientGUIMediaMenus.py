@@ -357,12 +357,17 @@ def AddKnownURLsViewCopyMenu( win, menu, focus_media, num_files_selected: int, s
     
     # figure out which urls this focused file has
     
-    if focus_media.IsCollection():
-        
-        focus_media = focus_media.GetDisplayMedia()
-        
+    focus_urls = []
     
-    focus_urls = focus_media.GetLocationsManager().GetURLs()
+    if focus_media is not None:
+        
+        if focus_media.IsCollection():
+            
+            focus_media = focus_media.GetDisplayMedia()
+            
+        
+        focus_urls = focus_media.GetLocationsManager().GetURLs()
+        
     
     focus_matched_labels_and_urls = []
     focus_unmatched_urls = []
@@ -924,32 +929,31 @@ def AddShareMenu( win: QW.QWidget, menu: QW.QMenu, focused_media: typing.Optiona
     
     focused_is_local = focused_media is not None and focused_media.GetLocationsManager().IsLocal()
     
-    selection_is_useful = len( selected_media ) > 0 and not ( len( selected_media ) == 1 and focused_media in selected_media )
+    # i.e. we aren't just clicked one one guy
+    selection_verbs_are_appropriate = len( selected_media ) > 0 and not ( len( selected_media ) == 1 and focused_media in selected_media )
     
     local_selection = [ m for m in selected_media if m.GetLocationsManager().IsLocal() ]
     
-    local_selection_is_useful = len( local_selection ) > 0 and not ( len( local_selection ) == 1 and focused_media in local_selection )
+    # i.e. we aren't just clicked one one local guy
+    local_selection_verbs_are_appropriate = len( local_selection ) > 0 and not ( len( local_selection ) == 1 and focused_media in local_selection )
     
     share_menu = ClientGUIMenus.GenerateMenu( menu )
     
-    if local_selection_is_useful:
+    if len( local_selection ) > 0:
         
         ClientGUIMenus.AppendMenuItem( share_menu, 'export files', 'Export the selected files to an external folder.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_EXPORT_FILES ) )
         
         ClientGUIMenus.AppendSeparator( share_menu )
         
-        if local_selection_is_useful:
-            
-            ClientGUIMenus.AppendMenuItem( share_menu, 'copy files', 'Copy these files to your clipboard.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_COPY_FILES, simple_data = CAC.FILE_COMMAND_TARGET_SELECTED_FILES ) )
-            
+    
+    if local_selection_verbs_are_appropriate:
         
-        if local_selection_is_useful:
-            
-            ClientGUIMenus.AppendMenuItem( share_menu, 'copy paths', 'Copy these files\' paths to your clipboard, just as raw text.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_COPY_FILE_PATHS, simple_data = CAC.FILE_COMMAND_TARGET_SELECTED_FILES ) )
-            
+        ClientGUIMenus.AppendMenuItem( share_menu, 'copy files', 'Copy these files to your clipboard.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_COPY_FILES, simple_data = CAC.FILE_COMMAND_TARGET_SELECTED_FILES ) )
+        
+        ClientGUIMenus.AppendMenuItem( share_menu, 'copy paths', 'Copy these files\' paths to your clipboard, just as raw text.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_COPY_FILE_PATHS, simple_data = CAC.FILE_COMMAND_TARGET_SELECTED_FILES ) )
         
     
-    if selection_is_useful:
+    if selection_verbs_are_appropriate:
         
         ipfs_service_keys_to_num_filenames = collections.Counter()
         
@@ -974,22 +978,19 @@ def AddShareMenu( win: QW.QWidget, menu: QW.QMenu, focused_media: typing.Optiona
             ClientGUIMenus.AppendMenuItem( share_menu, f'copy {name} multihashes ({HydrusNumbers.ToHumanInt(ipfs_service_keys_to_num_filenames[ipfs_service_key])} hashes)', 'Copy the selected files\' multihashes to the clipboard.', win.ProcessApplicationCommand, application_command )
             
         
-    
-    if selection_is_useful:
+        copy_hashes_menu = ClientGUIMenus.GenerateMenu( share_menu )
         
-        copy_hash_menu = ClientGUIMenus.GenerateMenu( share_menu )
-        
-        ClientGUIMenus.AppendMenuItem( copy_hash_menu, 'sha256', 'Copy these files\' SHA256 hashes to your clipboard.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_COPY_FILE_HASHES, simple_data = ( CAC.FILE_COMMAND_TARGET_SELECTED_FILES, 'sha256' ) ) )
-        ClientGUIMenus.AppendMenuItem( copy_hash_menu, 'md5', 'Copy these files\' MD5 hashes to your clipboard. Your client may not know all of these.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_COPY_FILE_HASHES, simple_data = ( CAC.FILE_COMMAND_TARGET_SELECTED_FILES, 'md5' ) ) )
-        ClientGUIMenus.AppendMenuItem( copy_hash_menu, 'sha1', 'Copy these files\' SHA1 hashes to your clipboard. Your client may not know all of these.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_COPY_FILE_HASHES, simple_data = ( CAC.FILE_COMMAND_TARGET_SELECTED_FILES, 'sha1' ) ) )
-        ClientGUIMenus.AppendMenuItem( copy_hash_menu, 'sha512', 'Copy these files\' SHA512 hashes to your clipboard. Your client may not know all of these.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_COPY_FILE_HASHES, simple_data = ( CAC.FILE_COMMAND_TARGET_SELECTED_FILES, 'sha512' ) ) )
+        ClientGUIMenus.AppendMenuItem( copy_hashes_menu, 'sha256', 'Copy these files\' SHA256 hashes to your clipboard.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_COPY_FILE_HASHES, simple_data = ( CAC.FILE_COMMAND_TARGET_SELECTED_FILES, 'sha256' ) ) )
+        ClientGUIMenus.AppendMenuItem( copy_hashes_menu, 'md5', 'Copy these files\' MD5 hashes to your clipboard. Your client may not know all of these.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_COPY_FILE_HASHES, simple_data = ( CAC.FILE_COMMAND_TARGET_SELECTED_FILES, 'md5' ) ) )
+        ClientGUIMenus.AppendMenuItem( copy_hashes_menu, 'sha1', 'Copy these files\' SHA1 hashes to your clipboard. Your client may not know all of these.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_COPY_FILE_HASHES, simple_data = ( CAC.FILE_COMMAND_TARGET_SELECTED_FILES, 'sha1' ) ) )
+        ClientGUIMenus.AppendMenuItem( copy_hashes_menu, 'sha512', 'Copy these files\' SHA512 hashes to your clipboard. Your client may not know all of these.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_COPY_FILE_HASHES, simple_data = ( CAC.FILE_COMMAND_TARGET_SELECTED_FILES, 'sha512' ) ) )
         
         blurhashes = [ media.GetFileInfoManager().blurhash for media in selected_media ]
         blurhashes = [ b for b in blurhashes if b is not None ]
         
         if len( blurhashes ) > 0:
             
-            ClientGUIMenus.AppendMenuItem( copy_hash_menu, f'blurhash ({HydrusNumbers.ToHumanInt(len(blurhashes))} hashes)', 'Copy these files\' blurhashes.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_COPY_FILE_HASHES, simple_data = ( CAC.FILE_COMMAND_TARGET_SELECTED_FILES, 'blurhash' ) ) )
+            ClientGUIMenus.AppendMenuItem( copy_hashes_menu, f'blurhash ({HydrusNumbers.ToHumanInt(len(blurhashes))} hashes)', 'Copy these files\' blurhashes.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_COPY_FILE_HASHES, simple_data = ( CAC.FILE_COMMAND_TARGET_SELECTED_FILES, 'blurhash' ) ) )
             
         
         pixel_hashes = [ media.GetFileInfoManager().pixel_hash for media in selected_media ]
@@ -997,18 +998,12 @@ def AddShareMenu( win: QW.QWidget, menu: QW.QMenu, focused_media: typing.Optiona
         
         if len( pixel_hashes ):
             
-            ClientGUIMenus.AppendMenuItem( copy_hash_menu, f'pixel hashes ({HydrusNumbers.ToHumanInt(len(pixel_hashes))} hashes)', 'Copy these files\' pixel hashes.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_COPY_FILE_HASHES, simple_data = ( CAC.FILE_COMMAND_TARGET_SELECTED_FILES, 'pixel_hash' ) ) )
+            ClientGUIMenus.AppendMenuItem( copy_hashes_menu, f'pixel hashes ({HydrusNumbers.ToHumanInt(len(pixel_hashes))} hashes)', 'Copy these files\' pixel hashes.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_COPY_FILE_HASHES, simple_data = ( CAC.FILE_COMMAND_TARGET_SELECTED_FILES, 'pixel_hash' ) ) )
             
         
-        ClientGUIMenus.AppendMenu( share_menu, copy_hash_menu, 'copy hashes' )
-        
-    
-    if selection_is_useful:
+        ClientGUIMenus.AppendMenu( share_menu, copy_hashes_menu, 'copy hashes' )
         
         ClientGUIMenus.AppendMenuItem( share_menu, 'copy file ids', 'Copy these files\' internal file/hash_ids.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_COPY_FILE_ID, simple_data = CAC.FILE_COMMAND_TARGET_SELECTED_FILES ) )
-        
-    
-    if focused_media is not None and selection_is_useful:
         
         ClientGUIMenus.AppendSeparator( share_menu )
         
@@ -1016,9 +1011,6 @@ def AddShareMenu( win: QW.QWidget, menu: QW.QMenu, focused_media: typing.Optiona
     if focused_is_local:
         
         ClientGUIMenus.AppendMenuItem( share_menu, 'copy file', 'Copy this file to your clipboard.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_COPY_FILES, simple_data = CAC.FILE_COMMAND_TARGET_FOCUSED_FILE ) )
-        
-    
-    if focused_is_local:
         
         ClientGUIMenus.AppendMenuItem( share_menu, 'copy path', 'Copy this file\'s path to your clipboard, just as raw text.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_COPY_FILE_PATHS, simple_data = CAC.FILE_COMMAND_TARGET_FOCUSED_FILE ) )
         
@@ -1040,9 +1032,6 @@ def AddShareMenu( win: QW.QWidget, menu: QW.QMenu, focused_media: typing.Optiona
             
             ClientGUIMenus.AppendMenuItem( share_menu, f'copy {name} multihash ({multihash})', 'Copy the selected file\'s multihash to the clipboard.', win.ProcessApplicationCommand, application_command )
             
-        
-    
-    if focused_media is not None:
         
         copy_hash_menu = ClientGUIMenus.GenerateMenu( share_menu )
         
@@ -1066,9 +1055,6 @@ def AddShareMenu( win: QW.QWidget, menu: QW.QMenu, focused_media: typing.Optiona
             
         
         ClientGUIMenus.AppendMenu( share_menu, copy_hash_menu, 'copy hash' )
-        
-    
-    if focused_media is not None:
         
         hash_id_str = HydrusNumbers.ToHumanInt( focused_media.GetHashId() )
         

@@ -9,7 +9,7 @@ class HydrusRequest( Request ):
     
     def __init__( self, *args, **kwargs ):
         
-        Request.__init__( self, *args, **kwargs )
+        super().__init__( *args, **kwargs )
         
         self.start_time = HydrusTime.GetNowPrecise()
         self.parsed_request_args = HydrusNetworkVariableHandling.ParsedRequestArguments()

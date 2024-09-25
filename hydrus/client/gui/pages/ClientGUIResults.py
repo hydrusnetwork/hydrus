@@ -3824,312 +3824,314 @@ class MediaPanelThumbnails( MediaPanel ):
         num_inbox = self.GetNumInbox()
         num_archive = self.GetNumArchive()
         
+        any_selected = num_selected > 0
         multiple_selected = num_selected > 1
         
         menu = ClientGUIMenus.GenerateMenu( self.window() )
         
-        if self._HasFocusSingleton():
+        # variables
+        
+        collections_selected = True in ( media.IsCollection() for media in self._selected_media )
+        
+        services_manager = CG.client_controller.services_manager
+        
+        services = services_manager.GetServices()
+        
+        file_repositories = [ service for service in services if service.GetServiceType() == HC.FILE_REPOSITORY ]
+        
+        ipfs_services = [ service for service in services if service.GetServiceType() == HC.IPFS ]
+        
+        local_ratings_services = [ service for service in services if service.GetServiceType() in HC.RATINGS_SERVICES ]
+        
+        i_can_post_ratings = len( local_ratings_services ) > 0
+        
+        local_media_file_service_keys = { service.GetServiceKey() for service in services if service.GetServiceType() == HC.LOCAL_FILE_DOMAIN }
+        
+        file_repository_service_keys = { repository.GetServiceKey() for repository in file_repositories }
+        upload_permission_file_service_keys = { repository.GetServiceKey() for repository in file_repositories if repository.HasPermission( HC.CONTENT_TYPE_FILES, HC.PERMISSION_ACTION_CREATE ) }
+        petition_resolve_permission_file_service_keys = { repository.GetServiceKey() for repository in file_repositories if repository.HasPermission( HC.CONTENT_TYPE_FILES, HC.PERMISSION_ACTION_MODERATE ) }
+        petition_permission_file_service_keys = { repository.GetServiceKey() for repository in file_repositories if repository.HasPermission( HC.CONTENT_TYPE_FILES, HC.PERMISSION_ACTION_PETITION ) } - petition_resolve_permission_file_service_keys
+        user_manage_permission_file_service_keys = { repository.GetServiceKey() for repository in file_repositories if repository.HasPermission( HC.CONTENT_TYPE_ACCOUNTS, HC.PERMISSION_ACTION_MODERATE ) }
+        ipfs_service_keys = { service.GetServiceKey() for service in ipfs_services }
+        
+        if multiple_selected:
             
-            focus_singleton = self._GetFocusSingleton()
+            download_phrase = 'download all possible selected'
+            rescind_download_phrase = 'cancel downloads for all possible selected'
+            upload_phrase = 'upload all possible selected to'
+            rescind_upload_phrase = 'rescind pending selected uploads to'
+            petition_phrase = 'petition all possible selected for removal from'
+            rescind_petition_phrase = 'rescind selected petitions for'
+            remote_delete_phrase = 'delete all possible selected from'
+            modify_account_phrase = 'modify the accounts that uploaded selected to'
             
-            # variables
+            pin_phrase = 'pin all to'
+            rescind_pin_phrase = 'rescind pin to'
+            unpin_phrase = 'unpin all from'
+            rescind_unpin_phrase = 'rescind unpin from'
             
-            collections_selected = True in ( media.IsCollection() for media in self._selected_media )
+            archive_phrase = 'archive selected'
+            inbox_phrase = 're-inbox selected'
+            local_delete_phrase = 'delete selected'
+            delete_physically_phrase = 'delete selected physically now'
+            undelete_phrase = 'undelete selected'
+            clear_deletion_phrase = 'clear deletion record for selected'
             
-            services_manager = CG.client_controller.services_manager
+        else:
             
-            services = services_manager.GetServices()
+            download_phrase = 'download'
+            rescind_download_phrase = 'cancel download'
+            upload_phrase = 'upload to'
+            rescind_upload_phrase = 'rescind pending upload to'
+            petition_phrase = 'petition for removal from'
+            rescind_petition_phrase = 'rescind petition for'
+            remote_delete_phrase = 'delete from'
+            modify_account_phrase = 'modify the account that uploaded this to'
             
-            service_keys_to_names = { service.GetServiceKey() : service.GetName() for service in services }
+            pin_phrase = 'pin to'
+            rescind_pin_phrase = 'rescind pin to'
+            unpin_phrase = 'unpin from'
+            rescind_unpin_phrase = 'rescind unpin from'
             
-            file_repositories = [ service for service in services if service.GetServiceType() == HC.FILE_REPOSITORY ]
+            archive_phrase = 'archive'
+            inbox_phrase = 're-inbox'
+            local_delete_phrase = 'delete'
+            delete_physically_phrase = 'delete physically now'
+            undelete_phrase = 'undelete'
+            clear_deletion_phrase = 'clear deletion record'
             
-            ipfs_services = [ service for service in services if service.GetServiceType() == HC.IPFS ]
+        
+        # info about the files
+        
+        remote_service_keys = CG.client_controller.services_manager.GetRemoteFileServiceKeys()
+        
+        groups_of_current_remote_service_keys = [ locations_manager.GetCurrent().intersection( remote_service_keys ) for locations_manager in selected_locations_managers ]
+        groups_of_pending_remote_service_keys = [ locations_manager.GetPending().intersection( remote_service_keys ) for locations_manager in selected_locations_managers ]
+        groups_of_petitioned_remote_service_keys = [ locations_manager.GetPetitioned().intersection( remote_service_keys ) for locations_manager in selected_locations_managers ]
+        groups_of_deleted_remote_service_keys = [ locations_manager.GetDeleted().intersection( remote_service_keys ) for locations_manager in selected_locations_managers ]
+        
+        current_remote_service_keys = HydrusLists.MassUnion( groups_of_current_remote_service_keys )
+        pending_remote_service_keys = HydrusLists.MassUnion( groups_of_pending_remote_service_keys )
+        petitioned_remote_service_keys = HydrusLists.MassUnion( groups_of_petitioned_remote_service_keys )
+        deleted_remote_service_keys = HydrusLists.MassUnion( groups_of_deleted_remote_service_keys )
+        
+        common_current_remote_service_keys = HydrusLists.IntelligentMassIntersect( groups_of_current_remote_service_keys )
+        common_pending_remote_service_keys = HydrusLists.IntelligentMassIntersect( groups_of_pending_remote_service_keys )
+        common_petitioned_remote_service_keys = HydrusLists.IntelligentMassIntersect( groups_of_petitioned_remote_service_keys )
+        common_deleted_remote_service_keys = HydrusLists.IntelligentMassIntersect( groups_of_deleted_remote_service_keys )
+        
+        disparate_current_remote_service_keys = current_remote_service_keys - common_current_remote_service_keys
+        disparate_pending_remote_service_keys = pending_remote_service_keys - common_pending_remote_service_keys
+        disparate_petitioned_remote_service_keys = petitioned_remote_service_keys - common_petitioned_remote_service_keys
+        disparate_deleted_remote_service_keys = deleted_remote_service_keys - common_deleted_remote_service_keys
+        
+        pending_file_service_keys = pending_remote_service_keys.intersection( file_repository_service_keys )
+        petitioned_file_service_keys = petitioned_remote_service_keys.intersection( file_repository_service_keys )
+        
+        common_current_file_service_keys = common_current_remote_service_keys.intersection( file_repository_service_keys )
+        common_pending_file_service_keys = common_pending_remote_service_keys.intersection( file_repository_service_keys )
+        common_petitioned_file_service_keys = common_petitioned_remote_service_keys.intersection( file_repository_service_keys )
+        common_deleted_file_service_keys = common_deleted_remote_service_keys.intersection( file_repository_service_keys )
+        
+        disparate_current_file_service_keys = disparate_current_remote_service_keys.intersection( file_repository_service_keys )
+        disparate_pending_file_service_keys = disparate_pending_remote_service_keys.intersection( file_repository_service_keys )
+        disparate_petitioned_file_service_keys = disparate_petitioned_remote_service_keys.intersection( file_repository_service_keys )
+        disparate_deleted_file_service_keys = disparate_deleted_remote_service_keys.intersection( file_repository_service_keys )
+        
+        pending_ipfs_service_keys = pending_remote_service_keys.intersection( ipfs_service_keys )
+        petitioned_ipfs_service_keys = petitioned_remote_service_keys.intersection( ipfs_service_keys )
+        
+        common_current_ipfs_service_keys = common_current_remote_service_keys.intersection( ipfs_service_keys )
+        common_pending_ipfs_service_keys = common_pending_file_service_keys.intersection( ipfs_service_keys )
+        common_petitioned_ipfs_service_keys = common_petitioned_remote_service_keys.intersection( ipfs_service_keys )
+        
+        disparate_current_ipfs_service_keys = disparate_current_remote_service_keys.intersection( ipfs_service_keys )
+        disparate_pending_ipfs_service_keys = disparate_pending_remote_service_keys.intersection( ipfs_service_keys )
+        disparate_petitioned_ipfs_service_keys = disparate_petitioned_remote_service_keys.intersection( ipfs_service_keys )
+        
+        # valid commands for the files
+        
+        current_file_service_keys = set()
+        
+        uploadable_file_service_keys = set()
+        
+        downloadable_file_service_keys = set()
+        
+        petitionable_file_service_keys = set()
+        
+        deletable_file_service_keys = set()
+        
+        modifyable_file_service_keys = set()
+        
+        pinnable_ipfs_service_keys = set()
+        
+        unpinnable_ipfs_service_keys = set()
+        
+        remote_file_service_keys = ipfs_service_keys.union( file_repository_service_keys )
+        
+        for locations_manager in selected_locations_managers:
             
-            local_ratings_services = [ service for service in services if service.GetServiceType() in HC.RATINGS_SERVICES ]
+            current = locations_manager.GetCurrent()
+            deleted = locations_manager.GetDeleted()
+            pending = locations_manager.GetPending()
+            petitioned = locations_manager.GetPetitioned()
             
-            i_can_post_ratings = len( local_ratings_services ) > 0
+            # ALL
             
-            local_media_file_service_keys = { service.GetServiceKey() for service in services if service.GetServiceType() == HC.LOCAL_FILE_DOMAIN }
+            current_file_service_keys.update( current )
             
-            file_repository_service_keys = { repository.GetServiceKey() for repository in file_repositories }
-            upload_permission_file_service_keys = { repository.GetServiceKey() for repository in file_repositories if repository.HasPermission( HC.CONTENT_TYPE_FILES, HC.PERMISSION_ACTION_CREATE ) }
-            petition_resolve_permission_file_service_keys = { repository.GetServiceKey() for repository in file_repositories if repository.HasPermission( HC.CONTENT_TYPE_FILES, HC.PERMISSION_ACTION_MODERATE ) }
-            petition_permission_file_service_keys = { repository.GetServiceKey() for repository in file_repositories if repository.HasPermission( HC.CONTENT_TYPE_FILES, HC.PERMISSION_ACTION_PETITION ) } - petition_resolve_permission_file_service_keys
-            user_manage_permission_file_service_keys = { repository.GetServiceKey() for repository in file_repositories if repository.HasPermission( HC.CONTENT_TYPE_ACCOUNTS, HC.PERMISSION_ACTION_MODERATE ) }
-            ipfs_service_keys = { service.GetServiceKey() for service in ipfs_services }
+            # FILE REPOS
             
-            if multiple_selected:
+            # we can upload (set pending) to a repo_id when we have permission, a file is local, not current, not pending, and either ( not deleted or we_can_overrule )
+            
+            if locations_manager.IsLocal():
                 
-                download_phrase = 'download all possible selected'
-                rescind_download_phrase = 'cancel downloads for all possible selected'
-                upload_phrase = 'upload all possible selected to'
-                rescind_upload_phrase = 'rescind pending selected uploads to'
-                petition_phrase = 'petition all possible selected for removal from'
-                rescind_petition_phrase = 'rescind selected petitions for'
-                remote_delete_phrase = 'delete all possible selected from'
-                modify_account_phrase = 'modify the accounts that uploaded selected to'
+                cannot_upload_to = current.union( pending ).union( deleted.difference( petition_resolve_permission_file_service_keys ) )
                 
-                pin_phrase = 'pin all to'
-                rescind_pin_phrase = 'rescind pin to'
-                unpin_phrase = 'unpin all from'
-                rescind_unpin_phrase = 'rescind unpin from'
+                can_upload_to = upload_permission_file_service_keys.difference( cannot_upload_to )
                 
-                archive_phrase = 'archive selected'
-                inbox_phrase = 're-inbox selected'
-                local_delete_phrase = 'delete selected'
-                delete_physically_phrase = 'delete selected physically now'
-                undelete_phrase = 'undelete selected'
-                clear_deletion_phrase = 'clear deletion record for selected'
-                
-            else:
-                
-                download_phrase = 'download'
-                rescind_download_phrase = 'cancel download'
-                upload_phrase = 'upload to'
-                rescind_upload_phrase = 'rescind pending upload to'
-                petition_phrase = 'petition for removal from'
-                rescind_petition_phrase = 'rescind petition for'
-                remote_delete_phrase = 'delete from'
-                modify_account_phrase = 'modify the account that uploaded this to'
-                
-                pin_phrase = 'pin to'
-                rescind_pin_phrase = 'rescind pin to'
-                unpin_phrase = 'unpin from'
-                rescind_unpin_phrase = 'rescind unpin from'
-                
-                archive_phrase = 'archive'
-                inbox_phrase = 're-inbox'
-                local_delete_phrase = 'delete'
-                delete_physically_phrase = 'delete physically now'
-                undelete_phrase = 'undelete'
-                clear_deletion_phrase = 'clear deletion record'
-                
-            
-            # info about the files
-            
-            remote_service_keys = CG.client_controller.services_manager.GetRemoteFileServiceKeys()
-            
-            groups_of_current_remote_service_keys = [ locations_manager.GetCurrent().intersection( remote_service_keys ) for locations_manager in selected_locations_managers ]
-            groups_of_pending_remote_service_keys = [ locations_manager.GetPending().intersection( remote_service_keys ) for locations_manager in selected_locations_managers ]
-            groups_of_petitioned_remote_service_keys = [ locations_manager.GetPetitioned().intersection( remote_service_keys ) for locations_manager in selected_locations_managers ]
-            groups_of_deleted_remote_service_keys = [ locations_manager.GetDeleted().intersection( remote_service_keys ) for locations_manager in selected_locations_managers ]
-            
-            current_remote_service_keys = HydrusLists.MassUnion( groups_of_current_remote_service_keys )
-            pending_remote_service_keys = HydrusLists.MassUnion( groups_of_pending_remote_service_keys )
-            petitioned_remote_service_keys = HydrusLists.MassUnion( groups_of_petitioned_remote_service_keys )
-            deleted_remote_service_keys = HydrusLists.MassUnion( groups_of_deleted_remote_service_keys )
-            
-            common_current_remote_service_keys = HydrusLists.IntelligentMassIntersect( groups_of_current_remote_service_keys )
-            common_pending_remote_service_keys = HydrusLists.IntelligentMassIntersect( groups_of_pending_remote_service_keys )
-            common_petitioned_remote_service_keys = HydrusLists.IntelligentMassIntersect( groups_of_petitioned_remote_service_keys )
-            common_deleted_remote_service_keys = HydrusLists.IntelligentMassIntersect( groups_of_deleted_remote_service_keys )
-            
-            disparate_current_remote_service_keys = current_remote_service_keys - common_current_remote_service_keys
-            disparate_pending_remote_service_keys = pending_remote_service_keys - common_pending_remote_service_keys
-            disparate_petitioned_remote_service_keys = petitioned_remote_service_keys - common_petitioned_remote_service_keys
-            disparate_deleted_remote_service_keys = deleted_remote_service_keys - common_deleted_remote_service_keys
-            
-            pending_file_service_keys = pending_remote_service_keys.intersection( file_repository_service_keys )
-            petitioned_file_service_keys = petitioned_remote_service_keys.intersection( file_repository_service_keys )
-            
-            common_current_file_service_keys = common_current_remote_service_keys.intersection( file_repository_service_keys )
-            common_pending_file_service_keys = common_pending_remote_service_keys.intersection( file_repository_service_keys )
-            common_petitioned_file_service_keys = common_petitioned_remote_service_keys.intersection( file_repository_service_keys )
-            common_deleted_file_service_keys = common_deleted_remote_service_keys.intersection( file_repository_service_keys )
-            
-            disparate_current_file_service_keys = disparate_current_remote_service_keys.intersection( file_repository_service_keys )
-            disparate_pending_file_service_keys = disparate_pending_remote_service_keys.intersection( file_repository_service_keys )
-            disparate_petitioned_file_service_keys = disparate_petitioned_remote_service_keys.intersection( file_repository_service_keys )
-            disparate_deleted_file_service_keys = disparate_deleted_remote_service_keys.intersection( file_repository_service_keys )
-            
-            pending_ipfs_service_keys = pending_remote_service_keys.intersection( ipfs_service_keys )
-            petitioned_ipfs_service_keys = petitioned_remote_service_keys.intersection( ipfs_service_keys )
-            
-            common_current_ipfs_service_keys = common_current_remote_service_keys.intersection( ipfs_service_keys )
-            common_pending_ipfs_service_keys = common_pending_file_service_keys.intersection( ipfs_service_keys )
-            common_petitioned_ipfs_service_keys = common_petitioned_remote_service_keys.intersection( ipfs_service_keys )
-            
-            disparate_current_ipfs_service_keys = disparate_current_remote_service_keys.intersection( ipfs_service_keys )
-            disparate_pending_ipfs_service_keys = disparate_pending_remote_service_keys.intersection( ipfs_service_keys )
-            disparate_petitioned_ipfs_service_keys = disparate_petitioned_remote_service_keys.intersection( ipfs_service_keys )
-            
-            # valid commands for the files
-            
-            current_file_service_keys = set()
-            
-            uploadable_file_service_keys = set()
-            
-            downloadable_file_service_keys = set()
-            
-            petitionable_file_service_keys = set()
-            
-            deletable_file_service_keys = set()
-            
-            modifyable_file_service_keys = set()
-            
-            pinnable_ipfs_service_keys = set()
-            
-            unpinnable_ipfs_service_keys = set()
-            
-            remote_file_service_keys = ipfs_service_keys.union( file_repository_service_keys )
-            
-            for locations_manager in selected_locations_managers:
-                
-                current = locations_manager.GetCurrent()
-                deleted = locations_manager.GetDeleted()
-                pending = locations_manager.GetPending()
-                petitioned = locations_manager.GetPetitioned()
-                
-                # ALL
-                
-                current_file_service_keys.update( current )
-                
-                # FILE REPOS
-                
-                # we can upload (set pending) to a repo_id when we have permission, a file is local, not current, not pending, and either ( not deleted or we_can_overrule )
-                
-                if locations_manager.IsLocal():
-                    
-                    cannot_upload_to = current.union( pending ).union( deleted.difference( petition_resolve_permission_file_service_keys ) )
-                    
-                    can_upload_to = upload_permission_file_service_keys.difference( cannot_upload_to )
-                    
-                    uploadable_file_service_keys.update( can_upload_to )
-                    
-                
-                # we can download (set pending to local) when we have permission, a file is not local and not already downloading and current
-                
-                if not locations_manager.IsLocal() and not locations_manager.IsDownloading():
-                    
-                    downloadable_file_service_keys.update( remote_file_service_keys.intersection( current ) )
-                    
-                
-                # we can petition when we have permission and a file is current and it is not already petitioned
-                
-                petitionable_file_service_keys.update( ( petition_permission_file_service_keys & current ) - petitioned )
-                
-                # we can delete remote when we have permission and a file is current and it is not already petitioned
-                
-                deletable_file_service_keys.update( ( petition_resolve_permission_file_service_keys & current ) - petitioned )
-                
-                # we can modify users when we have permission and the file is current or deleted
-                
-                modifyable_file_service_keys.update( user_manage_permission_file_service_keys & ( current | deleted ) )
-                
-                # IPFS
-                
-                # we can pin if a file is local, not current, not pending
-                
-                if locations_manager.IsLocal():
-                    
-                    pinnable_ipfs_service_keys.update( ipfs_service_keys - current - pending )
-                    
-                
-                # we can unpin a file if it is current and not petitioned
-                
-                unpinnable_ipfs_service_keys.update( ( ipfs_service_keys & current ) - petitioned )
+                uploadable_file_service_keys.update( can_upload_to )
                 
             
-            # do the actual menu
+            # we can download (set pending to local) when we have permission, a file is not local and not already downloading and current
             
-            selection_info_menu = ClientGUIMenus.GenerateMenu( menu )
+            if not locations_manager.IsLocal() and not locations_manager.IsDownloading():
+                
+                downloadable_file_service_keys.update( remote_file_service_keys.intersection( current ) )
+                
             
-            selected_files_string = ClientMedia.GetMediasFiletypeSummaryString( self._selected_media )
+            # we can petition when we have permission and a file is current and it is not already petitioned
             
-            selection_info_menu_label = f'{selected_files_string}, {self._GetPrettyTotalSize( only_selected = True )}'
+            petitionable_file_service_keys.update( ( petition_permission_file_service_keys & current ) - petitioned )
             
-            if multiple_selected:
+            # we can delete remote when we have permission and a file is current and it is not already petitioned
+            
+            deletable_file_service_keys.update( ( petition_resolve_permission_file_service_keys & current ) - petitioned )
+            
+            # we can modify users when we have permission and the file is current or deleted
+            
+            modifyable_file_service_keys.update( user_manage_permission_file_service_keys & ( current | deleted ) )
+            
+            # IPFS
+            
+            # we can pin if a file is local, not current, not pending
+            
+            if locations_manager.IsLocal():
                 
-                pretty_total_duration = self._GetPrettyTotalDuration( only_selected = True )
+                pinnable_ipfs_service_keys.update( ipfs_service_keys - current - pending )
                 
-                if pretty_total_duration != '':
-                    
-                    selection_info_menu_label += ', {}'.format( pretty_total_duration )
-                    
+            
+            # we can unpin a file if it is current and not petitioned
+            
+            unpinnable_ipfs_service_keys.update( ( ipfs_service_keys & current ) - petitioned )
+            
+        
+        # do the actual menu
+        
+        selection_info_menu = ClientGUIMenus.GenerateMenu( menu )
+        
+        selected_files_string = ClientMedia.GetMediasFiletypeSummaryString( self._selected_media )
+        
+        selection_info_menu_label = f'{selected_files_string}, {self._GetPrettyTotalSize( only_selected = True )}'
+        
+        if multiple_selected:
+            
+            pretty_total_duration = self._GetPrettyTotalDuration( only_selected = True )
+            
+            if pretty_total_duration != '':
                 
-            else:
+                selection_info_menu_label += ', {}'.format( pretty_total_duration )
                 
-                # TODO: move away from this hell function GetPrettyInfoLines and set the timestamp tooltips to the be the full ISO time
+            
+        else:
+            
+            # TODO: move away from this hell function GetPrettyInfoLines and set the timestamp tooltips to the be the full ISO time
+            
+            if self._HasFocusSingleton():
+                
+                focus_singleton = self._GetFocusSingleton()
                 
                 pretty_info_lines = list( focus_singleton.GetPrettyInfoLines() )
                 
                 ClientGUIMediaMenus.AddPrettyInfoLines( selection_info_menu, pretty_info_lines )
                 
             
-            ClientGUIMenus.AppendSeparator( selection_info_menu )
+        
+        ClientGUIMenus.AppendSeparator( selection_info_menu )
+        
+        ClientGUIMediaMenus.AddFileViewingStatsMenu( selection_info_menu, self._selected_media )
+        
+        if len( disparate_current_file_service_keys ) > 0:
             
-            ClientGUIMediaMenus.AddFileViewingStatsMenu( selection_info_menu, self._selected_media )
+            ClientGUIMediaMenus.AddServiceKeyLabelsToMenu( selection_info_menu, disparate_current_file_service_keys, 'some uploaded to' )
             
-            if len( disparate_current_file_service_keys ) > 0:
-                
-                ClientGUIMediaMenus.AddServiceKeyLabelsToMenu( selection_info_menu, disparate_current_file_service_keys, 'some uploaded to' )
-                
+        
+        if multiple_selected and len( common_current_file_service_keys ) > 0:
             
-            if multiple_selected and len( common_current_file_service_keys ) > 0:
-                
-                ClientGUIMediaMenus.AddServiceKeyLabelsToMenu( selection_info_menu, common_current_file_service_keys, 'selected uploaded to' )
-                
+            ClientGUIMediaMenus.AddServiceKeyLabelsToMenu( selection_info_menu, common_current_file_service_keys, 'selected uploaded to' )
             
-            if len( disparate_pending_file_service_keys ) > 0:
-                
-                ClientGUIMediaMenus.AddServiceKeyLabelsToMenu( selection_info_menu, disparate_pending_file_service_keys, 'some pending to' )
-                
+        
+        if len( disparate_pending_file_service_keys ) > 0:
             
-            if len( common_pending_file_service_keys ) > 0:
-                
-                ClientGUIMediaMenus.AddServiceKeyLabelsToMenu( selection_info_menu, common_pending_file_service_keys, 'pending to' )
-                
+            ClientGUIMediaMenus.AddServiceKeyLabelsToMenu( selection_info_menu, disparate_pending_file_service_keys, 'some pending to' )
             
-            if len( disparate_petitioned_file_service_keys ) > 0:
-                
-                ClientGUIMediaMenus.AddServiceKeyLabelsToMenu( selection_info_menu, disparate_petitioned_file_service_keys, 'some petitioned for removal from' )
-                
+        
+        if len( common_pending_file_service_keys ) > 0:
             
-            if len( common_petitioned_file_service_keys ) > 0:
-                
-                ClientGUIMediaMenus.AddServiceKeyLabelsToMenu( selection_info_menu, common_petitioned_file_service_keys, 'petitioned for removal from' )
-                
+            ClientGUIMediaMenus.AddServiceKeyLabelsToMenu( selection_info_menu, common_pending_file_service_keys, 'pending to' )
             
-            if len( disparate_deleted_file_service_keys ) > 0:
-                
-                ClientGUIMediaMenus.AddServiceKeyLabelsToMenu( selection_info_menu, disparate_deleted_file_service_keys, 'some deleted from' )
-                
+        
+        if len( disparate_petitioned_file_service_keys ) > 0:
             
-            if len( common_deleted_file_service_keys ) > 0:
-                
-                ClientGUIMediaMenus.AddServiceKeyLabelsToMenu( selection_info_menu, common_deleted_file_service_keys, 'deleted from' )
-                
+            ClientGUIMediaMenus.AddServiceKeyLabelsToMenu( selection_info_menu, disparate_petitioned_file_service_keys, 'some petitioned for removal from' )
             
-            if len( disparate_current_ipfs_service_keys ) > 0:
-                
-                ClientGUIMediaMenus.AddServiceKeyLabelsToMenu( selection_info_menu, disparate_current_ipfs_service_keys, 'some pinned to' )
-                
+        
+        if len( common_petitioned_file_service_keys ) > 0:
             
-            if multiple_selected and len( common_current_ipfs_service_keys ) > 0:
-                
-                ClientGUIMediaMenus.AddServiceKeyLabelsToMenu( selection_info_menu, common_current_ipfs_service_keys, 'selected pinned to' )
-                
+            ClientGUIMediaMenus.AddServiceKeyLabelsToMenu( selection_info_menu, common_petitioned_file_service_keys, 'petitioned for removal from' )
             
-            if len( disparate_pending_ipfs_service_keys ) > 0:
-                
-                ClientGUIMediaMenus.AddServiceKeyLabelsToMenu( selection_info_menu, disparate_pending_ipfs_service_keys, 'some to be pinned to' )
-                
+        
+        if len( disparate_deleted_file_service_keys ) > 0:
             
-            if len( common_pending_ipfs_service_keys ) > 0:
-                
-                ClientGUIMediaMenus.AddServiceKeyLabelsToMenu( selection_info_menu, common_pending_ipfs_service_keys, 'to be pinned to' )
-                
+            ClientGUIMediaMenus.AddServiceKeyLabelsToMenu( selection_info_menu, disparate_deleted_file_service_keys, 'some deleted from' )
             
-            if len( disparate_petitioned_ipfs_service_keys ) > 0:
-                
-                ClientGUIMediaMenus.AddServiceKeyLabelsToMenu( selection_info_menu, disparate_petitioned_ipfs_service_keys, 'some to be unpinned from' )
-                
+        
+        if len( common_deleted_file_service_keys ) > 0:
             
-            if len( common_petitioned_ipfs_service_keys ) > 0:
-                
-                ClientGUIMediaMenus.AddServiceKeyLabelsToMenu( selection_info_menu, common_petitioned_ipfs_service_keys, unpin_phrase )
-                
+            ClientGUIMediaMenus.AddServiceKeyLabelsToMenu( selection_info_menu, common_deleted_file_service_keys, 'deleted from' )
+            
+        
+        if len( disparate_current_ipfs_service_keys ) > 0:
+            
+            ClientGUIMediaMenus.AddServiceKeyLabelsToMenu( selection_info_menu, disparate_current_ipfs_service_keys, 'some pinned to' )
+            
+        
+        if multiple_selected and len( common_current_ipfs_service_keys ) > 0:
+            
+            ClientGUIMediaMenus.AddServiceKeyLabelsToMenu( selection_info_menu, common_current_ipfs_service_keys, 'selected pinned to' )
+            
+        
+        if len( disparate_pending_ipfs_service_keys ) > 0:
+            
+            ClientGUIMediaMenus.AddServiceKeyLabelsToMenu( selection_info_menu, disparate_pending_ipfs_service_keys, 'some to be pinned to' )
+            
+        
+        if len( common_pending_ipfs_service_keys ) > 0:
+            
+            ClientGUIMediaMenus.AddServiceKeyLabelsToMenu( selection_info_menu, common_pending_ipfs_service_keys, 'to be pinned to' )
+            
+        
+        if len( disparate_petitioned_ipfs_service_keys ) > 0:
+            
+            ClientGUIMediaMenus.AddServiceKeyLabelsToMenu( selection_info_menu, disparate_petitioned_ipfs_service_keys, 'some to be unpinned from' )
+            
+        
+        if len( common_petitioned_ipfs_service_keys ) > 0:
+            
+            ClientGUIMediaMenus.AddServiceKeyLabelsToMenu( selection_info_menu, common_petitioned_ipfs_service_keys, unpin_phrase )
+            
+        
+        if any_selected:
             
             if len( selection_info_menu.actions() ) == 0:
                 
@@ -4142,8 +4144,8 @@ class MediaPanelThumbnails( MediaPanel ):
                 ClientGUIMenus.AppendMenu( menu, selection_info_menu, selection_info_menu_label )
                 
             
-        
-        ClientGUIMenus.AppendSeparator( menu )
+            ClientGUIMenus.AppendSeparator( menu )
+            
         
         ClientGUIMenus.AppendMenuItem( menu, 'refresh', 'Refresh the current search.', self.refreshQuery.emit )
         
@@ -4171,9 +4173,7 @@ class MediaPanelThumbnails( MediaPanel ):
                     
                     earliest_index = self._sorted_media.index( ordered_selected_media[0] )
                     
-                    num_selected = len( self._selected_media )
-                    
-                    selection_is_contiguous = num_selected > 0 and self._sorted_media.index( ordered_selected_media[-1] ) - earliest_index == num_selected - 1
+                    selection_is_contiguous = any_selected and self._sorted_media.index( ordered_selected_media[-1] ) - earliest_index == num_selected - 1
                     
                     AddMoveMenu( self, menu, self._selected_media, self._sorted_media, self._focused_media, selection_is_contiguous, earliest_index )
                     
@@ -4191,59 +4191,55 @@ class MediaPanelThumbnails( MediaPanel ):
                 
             
         
-        if self._HasFocusSingleton():
+        if selection_has_inbox:
             
-            focus_singleton = self._GetFocusSingleton()
+            ClientGUIMenus.AppendMenuItem( menu, archive_phrase, 'Archive the selected files.', self._Archive )
             
-            if selection_has_inbox:
-                
-                ClientGUIMenus.AppendMenuItem( menu, archive_phrase, 'Archive the selected files.', self._Archive )
-                
+        
+        if selection_has_archive:
             
-            if selection_has_archive:
-                
-                ClientGUIMenus.AppendMenuItem( menu, inbox_phrase, 'Put the selected files back in the inbox.', self._Inbox )
-                
+            ClientGUIMenus.AppendMenuItem( menu, inbox_phrase, 'Put the selected files back in the inbox.', self._Inbox )
             
-            ClientGUIMenus.AppendSeparator( menu )
+        
+        ClientGUIMenus.AppendSeparator( menu )
+        
+        user_command_deletable_file_service_keys = local_media_file_service_keys.union( [ CC.LOCAL_UPDATE_SERVICE_KEY ] )
+        
+        local_file_service_keys_we_are_in = sorted( current_file_service_keys.intersection( user_command_deletable_file_service_keys ), key = CG.client_controller.services_manager.GetName )
+        
+        if len( local_file_service_keys_we_are_in ) > 0:
             
-            user_command_deletable_file_service_keys = local_media_file_service_keys.union( [ CC.LOCAL_UPDATE_SERVICE_KEY ] )
+            delete_menu = ClientGUIMenus.GenerateMenu( menu )
             
-            local_file_service_keys_we_are_in = sorted( current_file_service_keys.intersection( user_command_deletable_file_service_keys ), key = CG.client_controller.services_manager.GetName )
-            
-            if len( local_file_service_keys_we_are_in ) > 0:
+            for file_service_key in local_file_service_keys_we_are_in:
                 
-                delete_menu = ClientGUIMenus.GenerateMenu( menu )
+                service_name = CG.client_controller.services_manager.GetName( file_service_key )
                 
-                for file_service_key in local_file_service_keys_we_are_in:
-                    
-                    service_name = CG.client_controller.services_manager.GetName( file_service_key )
-                    
-                    ClientGUIMenus.AppendMenuItem( delete_menu, f'from {service_name}', f'Delete the selected files from {service_name}.', self._Delete, file_service_key )
-                    
-                
-                ClientGUIMenus.AppendMenu( menu, delete_menu, local_delete_phrase )
+                ClientGUIMenus.AppendMenuItem( delete_menu, f'from {service_name}', f'Delete the selected files from {service_name}.', self._Delete, file_service_key )
                 
             
-            if selection_has_trash:
+            ClientGUIMenus.AppendMenu( menu, delete_menu, local_delete_phrase )
+            
+        
+        if selection_has_trash:
+            
+            if selection_has_local_file_domain:
                 
-                if selection_has_local_file_domain:
-                    
-                    ClientGUIMenus.AppendMenuItem( menu, 'delete trash physically now', 'Completely delete the selected trashed files, forcing an immediate physical delete from your hard drive.', self._Delete, CC.COMBINED_LOCAL_FILE_SERVICE_KEY, only_those_in_file_service_key = CC.TRASH_SERVICE_KEY )
-                    
-                
-                ClientGUIMenus.AppendMenuItem( menu, delete_physically_phrase, 'Completely delete the selected files, forcing an immediate physical delete from your hard drive.', self._Delete, CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
-                ClientGUIMenus.AppendMenuItem( menu, undelete_phrase, 'Restore the selected files back to \'my files\'.', self._Undelete )
+                ClientGUIMenus.AppendMenuItem( menu, 'delete trash physically now', 'Completely delete the selected trashed files, forcing an immediate physical delete from your hard drive.', self._Delete, CC.COMBINED_LOCAL_FILE_SERVICE_KEY, only_those_in_file_service_key = CC.TRASH_SERVICE_KEY )
                 
             
-            if selection_has_deletion_record:
-                
-                ClientGUIMenus.AppendMenuItem( menu, clear_deletion_phrase, 'Clear the deletion record for these files, allowing them to reimport even if previously deleted files are set to be discarded.', self._ClearDeleteRecord )
-                
+            ClientGUIMenus.AppendMenuItem( menu, delete_physically_phrase, 'Completely delete the selected files, forcing an immediate physical delete from your hard drive.', self._Delete, CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
+            ClientGUIMenus.AppendMenuItem( menu, undelete_phrase, 'Restore the selected files back to \'my files\'.', self._Undelete )
             
-            #
+        
+        if selection_has_deletion_record:
             
-            ClientGUIMenus.AppendSeparator( menu )
+            ClientGUIMenus.AppendMenuItem( menu, clear_deletion_phrase, 'Clear the deletion record for these files, allowing them to reimport even if previously deleted files are set to be discarded.', self._ClearDeleteRecord )
+            
+        
+        ClientGUIMenus.AppendSeparator( menu )
+        
+        if any_selected:
             
             manage_menu = ClientGUIMenus.GenerateMenu( menu )
             
@@ -4254,7 +4250,14 @@ class MediaPanelThumbnails( MediaPanel ):
                 ClientGUIMenus.AppendMenuItem( manage_menu, 'ratings', 'Manage ratings for the selected files.', self._ManageRatings )
                 
             
-            num_notes = focus_singleton.GetNotesManager().GetNumNotes()
+            num_notes = 0
+            
+            if self._HasFocusSingleton():
+                
+                focus_singleton = self._GetFocusSingleton()
+                
+                num_notes = focus_singleton.GetNotesManager().GetNumNotes()
+                
             
             notes_str = 'notes'
             
@@ -4268,7 +4271,12 @@ class MediaPanelThumbnails( MediaPanel ):
             ClientGUIMenus.AppendMenuItem( manage_menu, 'times', 'Edit the timestamps for your files.', self._ManageTimestamps )
             ClientGUIMenus.AppendMenuItem( manage_menu, 'force filetype', 'Force your files to appear as a different filetype.', ClientGUIMediaModalActions.SetFilesForcedFiletypes, self, self._selected_media )
             
-            ClientGUIMediaMenus.AddDuplicatesMenu( self, manage_menu, self._location_context, focus_singleton, num_selected, collections_selected )
+            if self._HasFocusSingleton():
+                
+                focus_singleton = self._GetFocusSingleton()
+                
+                ClientGUIMediaMenus.AddDuplicatesMenu( self, manage_menu, self._location_context, focus_singleton, num_selected, collections_selected )
+                
             
             regen_menu = ClientGUIMenus.GenerateMenu( manage_menu )
             

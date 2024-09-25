@@ -134,6 +134,34 @@ class MigrateTagsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         self._migration_source_right_tag_pair_filter = ClientGUITags.TagFilterButton( self._migration_panel, message, tag_filter, label_prefix = 'right: ' )
         
+        #
+        
+        self._pair_have_count_panel = QW.QWidget( self._migration_panel )
+        
+        self._migration_source_child_must_have_count = QW.QCheckBox( self._pair_have_count_panel )
+        self._migration_source_worse_must_have_count = QW.QCheckBox( self._pair_have_count_panel )
+        self._migration_source_parent_must_have_count = QW.QCheckBox( self._pair_have_count_panel )
+        self._migration_source_ideal_must_have_count = QW.QCheckBox( self._pair_have_count_panel )
+        
+        self._migration_source_child_must_have_count.setText( 'only if child (left) side has count' )
+        self._migration_source_worse_must_have_count.setText( 'only if worse (left) side has count' )
+        self._migration_source_parent_must_have_count.setText( 'only if parent (right) side has count' )
+        self._migration_source_ideal_must_have_count.setText( 'only if ideal (where right side terminates) has count' )
+        
+        self._migration_source_child_must_have_count.setToolTip( ClientGUIFunctions.WrapToolTip( 'Only include this pair if the child (left) side has an actual real mappings count in the service.' ) )
+        self._migration_source_worse_must_have_count.setToolTip( ClientGUIFunctions.WrapToolTip( 'Only include this pair if the worse (left) side has an actual real mappings count in the service.' ) )
+        self._migration_source_parent_must_have_count.setToolTip( ClientGUIFunctions.WrapToolTip( 'Only include this pair if the parent (right) side has an actual real mappings count in the service.' ) )
+        self._migration_source_ideal_must_have_count.setToolTip( ClientGUIFunctions.WrapToolTip( 'Only include this pair if the ideal (where the chain of the right side terminates) has an actual real mappings count in the service.' ) )
+        
+        self._migration_source_have_count_service = ClientGUICommon.BetterChoice( self._pair_have_count_panel )
+        
+        for service in CG.client_controller.services_manager.GetServices( HC.REAL_TAG_SERVICES ):
+            
+            self._migration_source_have_count_service.addItem( service.GetName(), service.GetServiceKey() )
+            
+        
+        #
+        
         self._migration_destination = ClientGUICommon.BetterChoice( self._migration_panel )
         
         self._migration_destination_archive_path_button = ClientGUICommon.BetterButton( self._migration_panel, 'no path set', self._SetDestinationArchivePath )
@@ -161,10 +189,21 @@ class MigrateTagsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         QP.AddToLayout( file_left_vbox, self._migration_source_location_context_button, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( file_left_vbox, self._migration_source_left_tag_pair_filter, CC.FLAGS_EXPAND_BOTH_WAYS )
         
+        have_count_vbox = QP.VBoxLayout()
+        
+        QP.AddToLayout( have_count_vbox, self._migration_source_child_must_have_count, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( have_count_vbox, self._migration_source_worse_must_have_count, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( have_count_vbox, self._migration_source_parent_must_have_count, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( have_count_vbox, self._migration_source_ideal_must_have_count, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( have_count_vbox, ClientGUICommon.WrapInText( self._migration_source_have_count_service, self._pair_have_count_panel, 'in service: ' ), CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        self._pair_have_count_panel.setLayout( have_count_vbox )
+        
         tag_right_vbox = QP.VBoxLayout()
         
         QP.AddToLayout( tag_right_vbox, self._migration_source_tag_filter, CC.FLAGS_EXPAND_BOTH_WAYS )
         QP.AddToLayout( tag_right_vbox, self._migration_source_right_tag_pair_filter, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( tag_right_vbox, self._pair_have_count_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         dest_hash_type_hbox = QP.HBoxLayout()
         
@@ -212,13 +251,13 @@ class MigrateTagsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         #
         
-        message = 'The content from the SOURCE that the FILTER ALLOWS is applied using the ACTION to the DESTINATION.'
+        message = 'The CONTENT TYPE from the SOURCE that the FILTER ALLOWS is applied using the ACTION to the DESTINATION.'
         message += '\n' * 2
         message += 'To delete content en masse from one location, select what you want to delete with the filter and set the source and destination the same.'
         message += '\n' * 2
-        message += 'These migrations can be powerful, so be very careful that you understand what you are doing and choose what you want. Large jobs may have a significant initial setup time, during which case the client may hang briefly, but once they start they are pausable or cancellable. If you do want to perform a large action, it is a good idea to back up your database first, just in case you get a result you did not intend.'
+        message += 'These migrations can be powerful, so be very careful that you understand what you are doing and choose what you want. Large jobs may have a significant initial setup time, during which the client may hang briefly, but once they start they are pausable or cancellable. If you do want to perform a large action, it is a good idea to back up your database first, just in case you get a result you did not intend.'
         message += '\n' * 2
-        message += 'You may need to restart your client to see their effect.' 
+        message += 'You may need to restart your client to see the full effect.' 
         
         st = ClientGUICommon.BetterStaticText( self, message )
         st.setWordWrap( True )
@@ -243,6 +282,11 @@ class MigrateTagsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         self._migration_destination.activated.connect( self._UpdateMigrationControlsNewDestination )
         self._migration_source_content_status_filter.activated.connect( self._UpdateMigrationControlsActions )
         self._migration_source_file_filtering_type.activated.connect( self._UpdateMigrationControlsFileFilter )
+        
+        self._migration_source_worse_must_have_count.clicked.connect( self._UpdateMigrationControlsPairCount )
+        self._migration_source_child_must_have_count.clicked.connect( self._UpdateMigrationControlsPairCount )
+        self._migration_source_ideal_must_have_count.clicked.connect( self._UpdateMigrationControlsPairCount )
+        self._migration_source_parent_must_have_count.clicked.connect( self._UpdateMigrationControlsPairCount )
         
     
     def _MigrationGo( self ):
@@ -377,6 +421,19 @@ class MigrateTagsPanel( ClientGUIScrolledPanels.ReviewPanel ):
                 extra_info = ' for "{}" on the left and "{}" on the right'.format( left_s, right_s )
                 
             
+            if content_type == HC.CONTENT_TYPE_TAG_SIBLINGS:
+                
+                left_side_needs_count = self._migration_source_worse_must_have_count.isChecked()
+                right_side_needs_count = self._migration_source_ideal_must_have_count.isChecked()
+                
+            else:
+                
+                left_side_needs_count = self._migration_source_child_must_have_count.isChecked()
+                right_side_needs_count = self._migration_source_parent_must_have_count.isChecked()
+                
+            
+            needs_count_service_key = self._migration_source_have_count_service.GetValue()
+            
             if source_service_key == self.HTPA_SERVICE_KEY:
                 
                 if self._source_archive_path is None:
@@ -386,11 +443,11 @@ class MigrateTagsPanel( ClientGUIScrolledPanels.ReviewPanel ):
                     return
                     
                 
-                source = ClientMigration.MigrationSourceHTPA( CG.client_controller, self._source_archive_path, left_tag_pair_filter, right_tag_pair_filter )
+                source = ClientMigration.MigrationSourceHTPA( CG.client_controller, self._source_archive_path, content_type, left_tag_pair_filter, right_tag_pair_filter, left_side_needs_count, right_side_needs_count, needs_count_service_key )
                 
             else:
                 
-                source = ClientMigration.MigrationSourceTagServicePairs( CG.client_controller, source_service_key, content_type, left_tag_pair_filter, right_tag_pair_filter, content_statuses )
+                source = ClientMigration.MigrationSourceTagServicePairs( CG.client_controller, source_service_key, content_type, left_tag_pair_filter, right_tag_pair_filter, content_statuses, left_side_needs_count, right_side_needs_count, needs_count_service_key )
                 
             
         
@@ -744,6 +801,8 @@ class MigrateTagsPanel( ClientGUIScrolledPanels.ReviewPanel ):
             
             self._migration_source_content_status_filter.setEnabled( True )
             
+            self._migration_source_have_count_service.SetValue( source )
+            
         
         self._UpdateMigrationControlsActions()
         
@@ -783,6 +842,7 @@ class MigrateTagsPanel( ClientGUIScrolledPanels.ReviewPanel ):
             self._migration_source_tag_filter.show()
             self._migration_source_left_tag_pair_filter.hide()
             self._migration_source_right_tag_pair_filter.hide()
+            self._pair_have_count_panel.hide()
             
             self._UpdateMigrationControlsFileFilter()
             
@@ -796,6 +856,16 @@ class MigrateTagsPanel( ClientGUIScrolledPanels.ReviewPanel ):
             self._migration_source_tag_filter.hide()
             self._migration_source_left_tag_pair_filter.show()
             self._migration_source_right_tag_pair_filter.show()
+            self._pair_have_count_panel.show()
+            
+            we_siblings = content_type == HC.CONTENT_TYPE_TAG_SIBLINGS
+            
+            self._migration_source_child_must_have_count.setVisible( not we_siblings )
+            self._migration_source_parent_must_have_count.setVisible( not we_siblings )
+            
+            self._migration_source_worse_must_have_count.setVisible( we_siblings )
+            self._migration_source_ideal_must_have_count.setVisible( we_siblings )
+            
             
         
         self._migration_source.SetValue( self._service_key )
@@ -803,5 +873,22 @@ class MigrateTagsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         self._UpdateMigrationControlsNewSource()
         self._UpdateMigrationControlsNewDestination()
+        self._UpdateMigrationControlsPairCount()
+        
+    
+    def _UpdateMigrationControlsPairCount( self ):
+        
+        content_type = self._migration_content_type.GetValue()
+        
+        if content_type == HC.CONTENT_TYPE_TAG_SIBLINGS:
+            
+            enable_it = self._migration_source_worse_must_have_count.isChecked() or self._migration_source_ideal_must_have_count.isChecked()
+            
+        else:
+            
+            enable_it = self._migration_source_child_must_have_count.isChecked() or self._migration_source_parent_must_have_count.isChecked()
+            
+        
+        self._migration_source_have_count_service.setEnabled( enable_it )
         
     

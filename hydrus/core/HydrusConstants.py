@@ -105,8 +105,8 @@ options = {}
 # Misc
 
 NETWORK_VERSION = 20
-SOFTWARE_VERSION = 590
-CLIENT_API_VERSION = 70
+SOFTWARE_VERSION = 591
+CLIENT_API_VERSION = 71
 
 SERVER_THUMBNAIL_DIMENSIONS = ( 200, 200 )
 
@@ -1203,7 +1203,7 @@ mime_string_lookup = {
     GENERAL_AUDIO : 'audio',
     GENERAL_IMAGE : 'image',
     GENERAL_VIDEO : 'video',
-    GENERAL_ANIMATION : 'animation',
+    GENERAL_ANIMATION : 'animation'
 }
 
 string_enum_lookup = { s : enum for ( enum, s ) in mime_string_lookup.items() }
@@ -1290,7 +1290,7 @@ mime_mimetype_string_lookup = {
     GENERAL_AUDIO : 'audio',
     GENERAL_IMAGE : 'image',
     GENERAL_VIDEO : 'video',
-    GENERAL_ANIMATION : 'animation',
+    GENERAL_ANIMATION : 'animation'
 }
 
 mime_mimetype_string_lookup[ UNDETERMINED_WM ] = '{} or {}'.format( mime_mimetype_string_lookup[ AUDIO_WMA ], mime_mimetype_string_lookup[ VIDEO_WMV ] )

@@ -876,6 +876,7 @@ class Page( QW.QWidget ):
         self._management_panel.REPEATINGPageUpdate()
         
     
+
 directions_for_notebook_tabs = {}
 
 directions_for_notebook_tabs[ CC.DIRECTION_UP ] = QW.QTabWidget.North
@@ -1051,6 +1052,8 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
                 
             
         
+        we_are_closing_the_current_focus = index == self.currentIndex()
+        
         page.CleanBeforeClose()
         
         page_key = page.GetPageKey()
@@ -1070,22 +1073,25 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
             self._controller.pub( 'notify_closed_page', page )
             
         
-        focus_goes_to = self._controller.new_options.GetInteger( 'close_page_focus_goes' )
-        
-        new_page_focus = None
-        
-        if focus_goes_to == CC.CLOSED_PAGE_FOCUS_GOES_LEFT:
+        if we_are_closing_the_current_focus:
             
-            new_page_focus = index - 1
+            focus_goes_to = self._controller.new_options.GetInteger( 'close_page_focus_goes' )
             
-        elif focus_goes_to == CC.CLOSED_PAGE_FOCUS_GOES_RIGHT:
+            new_page_focus = None
             
-            new_page_focus = index
+            if focus_goes_to == CC.CLOSED_PAGE_FOCUS_GOES_LEFT:
+                
+                new_page_focus = index - 1
+                
+            elif focus_goes_to == CC.CLOSED_PAGE_FOCUS_GOES_RIGHT:
+                
+                new_page_focus = index
+                
             
-        
-        if new_page_focus is not None and index >= 0 or index <= self.count() - 1 and new_page_focus != self.currentIndex():
-            
-            self.setCurrentIndex( new_page_focus )
+            if new_page_focus is not None and index >= 0 or index <= self.count() - 1 and new_page_focus != self.currentIndex():
+                
+                self.setCurrentIndex( new_page_focus )
+                
             
         
         self._UpdatePreviousPageIndex()
@@ -1359,7 +1365,11 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         
         ( num_files, ( num_value, num_range ) ) = page.GetNumFileSummary()
         
-        if page_file_count_display == CC.PAGE_FILE_COUNT_DISPLAY_ALL or ( page_file_count_display == CC.PAGE_FILE_COUNT_DISPLAY_ONLY_IMPORTERS and page.IsImporter() ):
+        a = page_file_count_display == CC.PAGE_FILE_COUNT_DISPLAY_ALL
+        b = page_file_count_display == CC.PAGE_FILE_COUNT_DISPLAY_ONLY_IMPORTERS and page.IsImporter()
+        c = page_file_count_display == CC.PAGE_FILE_COUNT_DISPLAY_ALL_BUT_ONLY_IF_GREATER_THAN_ZERO and num_files > 0
+        
+        if a or b or c:
             
             num_string += HydrusNumbers.ToHumanInt( num_files )
             
@@ -1370,7 +1380,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
                 
                 if len( num_string ) > 0:
                     
-                    num_string += ', '
+                    num_string += ' - '
                     
                 
                 num_string += HydrusNumbers.ValueRangeToPrettyString( num_value, num_range )
@@ -1379,7 +1389,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         
         if len( num_string ) > 0:
             
-            page_name += ' (' + num_string + ')'
+            page_name += f' ({num_string})'
             
         
         safe_page_name = ClientGUIFunctions.EscapeMnemonics( page_name )

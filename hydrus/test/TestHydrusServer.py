@@ -23,7 +23,6 @@ from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientServices
 from hydrus.client.media import ClientMediaManagers
 from hydrus.client.media import ClientMediaResult
-from hydrus.client.networking import ClientLocalServer
 
 from hydrus.server import ServerFiles
 from hydrus.server.networking import ServerServer

@@ -33,9 +33,9 @@ from hydrus.client.media import ClientMediaManagers
 from hydrus.client.media import ClientMediaResult
 from hydrus.client.metadata import ClientContentUpdates
 from hydrus.client.metadata import ClientTags
-from hydrus.client.networking import ClientLocalServer
-from hydrus.client.networking import ClientLocalServerResources
 from hydrus.client.networking import ClientNetworkingContexts
+from hydrus.client.networking.api import ClientLocalServer
+from hydrus.client.networking.api import ClientLocalServerCore
 from hydrus.client.search import ClientSearchFileSearchContext
 from hydrus.client.search import ClientSearchPredicate
 from hydrus.client.search import ClientSearchTagContext
@@ -318,16 +318,23 @@ class TestClientAPI( unittest.TestCase ):
         
         # /request_new_permissions
         
-        def format_request_new_permissions_query( name, basic_permissions ):
+        def format_request_new_permissions_query( name, permits_everything, basic_permissions ):
             
-            return '/request_new_permissions?name={}&basic_permissions={}'.format( urllib.parse.quote( name ), urllib.parse.quote( json.dumps( basic_permissions ) ) )
+            if permits_everything:
+                
+                return f'/request_new_permissions?name={urllib.parse.quote( name )}&permits_everything=true'
+                
+            else:
+                
+                return f'/request_new_permissions?name={urllib.parse.quote( name )}&basic_permissions={urllib.parse.quote( json.dumps( basic_permissions ) )}'
+                
             
         
         # fail as dialog not open
         
         ClientAPI.api_request_dialog_open = False
         
-        connection.request( 'GET', format_request_new_permissions_query( 'test', [ ClientAPI.CLIENT_API_PERMISSION_ADD_FILES ] ) )
+        connection.request( 'GET', format_request_new_permissions_query( 'test', False, [ ClientAPI.CLIENT_API_PERMISSION_ADD_FILES ] ) )
         
         response = connection.getresponse()
         
@@ -343,22 +350,22 @@ class TestClientAPI( unittest.TestCase ):
         
         permissions_to_set_up = []
         
-        permissions_to_set_up.append( ( 'everything', list( ClientAPI.ALLOWED_PERMISSIONS ) ) )
-        permissions_to_set_up.append( ( 'add_files', [ ClientAPI.CLIENT_API_PERMISSION_ADD_FILES ] ) )
-        permissions_to_set_up.append( ( 'add_tags', [ ClientAPI.CLIENT_API_PERMISSION_ADD_TAGS ] ) )
-        permissions_to_set_up.append( ( 'add_urls', [ ClientAPI.CLIENT_API_PERMISSION_ADD_URLS ] ) )
-        permissions_to_set_up.append( ( 'manage_pages', [ ClientAPI.CLIENT_API_PERMISSION_MANAGE_PAGES ] ) )
-        permissions_to_set_up.append( ( 'manage_headers', [ ClientAPI.CLIENT_API_PERMISSION_MANAGE_HEADERS ] ) )
-        permissions_to_set_up.append( ( 'search_all_files', [ ClientAPI.CLIENT_API_PERMISSION_SEARCH_FILES ] ) )
-        permissions_to_set_up.append( ( 'search_green_files', [ ClientAPI.CLIENT_API_PERMISSION_SEARCH_FILES ] ) )
+        permissions_to_set_up.append( ( 'everything', True, [] ) )
+        permissions_to_set_up.append( ( 'add_files', False, [ ClientAPI.CLIENT_API_PERMISSION_ADD_FILES ] ) )
+        permissions_to_set_up.append( ( 'add_tags', False, [ ClientAPI.CLIENT_API_PERMISSION_ADD_TAGS ] ) )
+        permissions_to_set_up.append( ( 'add_urls', False, [ ClientAPI.CLIENT_API_PERMISSION_ADD_URLS ] ) )
+        permissions_to_set_up.append( ( 'manage_pages', False, [ ClientAPI.CLIENT_API_PERMISSION_MANAGE_PAGES ] ) )
+        permissions_to_set_up.append( ( 'manage_headers', False, [ ClientAPI.CLIENT_API_PERMISSION_MANAGE_HEADERS ] ) )
+        permissions_to_set_up.append( ( 'search_all_files', False, [ ClientAPI.CLIENT_API_PERMISSION_SEARCH_FILES ] ) )
+        permissions_to_set_up.append( ( 'search_green_files', False, [ ClientAPI.CLIENT_API_PERMISSION_SEARCH_FILES ] ) )
         
         set_up_permissions = {}
         
-        for ( name, basic_permissions ) in permissions_to_set_up:
+        for ( name, permits_everything, basic_permissions ) in permissions_to_set_up:
             
             ClientAPI.api_request_dialog_open = True
             
-            connection.request( 'GET', format_request_new_permissions_query( name, basic_permissions ) )
+            connection.request( 'GET', format_request_new_permissions_query( name, permits_everything, basic_permissions ) )
             
             response = connection.getresponse()
             
@@ -391,6 +398,15 @@ class TestClientAPI( unittest.TestCase ):
                 search_tag_filter.SetRule( 'green', HC.FILTER_WHITELIST )
                 
                 api_permissions.SetSearchTagFilter( search_tag_filter )
+                
+            
+            if 'everything' in name:
+                
+                self.assertTrue( api_permissions.PermitsEverything() )
+                
+            else:
+                
+                self.assertFalse( api_permissions.PermitsEverything() )
                 
             
             self.assertEqual( bytes.fromhex( access_key_hex ), api_permissions.GetAccessKey() )
@@ -461,7 +477,18 @@ class TestClientAPI( unittest.TestCase ):
                 
                 body_dict = json.loads( text )
                 
-                self.assertEqual( set( body_dict[ 'basic_permissions' ] ), set( api_permissions.GetBasicPermissions() ) )
+                self.assertEqual( body_dict[ 'name' ], api_permissions.GetName() )
+                self.assertEqual( body_dict[ 'permits_everything' ], api_permissions.PermitsEverything() )
+                
+                if api_permissions.PermitsEverything():
+                    
+                    self.assertEqual( set( body_dict[ 'basic_permissions' ] ), set( ClientAPI.ALLOWED_PERMISSIONS ) )
+                    
+                else:
+                    
+                    self.assertEqual( set( body_dict[ 'basic_permissions' ] ), set( api_permissions.GetBasicPermissions() ) )
+                    
+                
                 self.assertEqual( body_dict[ 'human_description' ], api_permissions.ToHumanString() )
                 
             
@@ -4448,7 +4475,7 @@ class TestClientAPI( unittest.TestCase ):
         test_tags_1 = [ 'skirt', 'system:width<400' ]
         
         test_tag_context_1 = ClientSearchTagContext.TagContext( test_tag_service_key_1 )
-        test_predicates_1 = ClientLocalServerResources.ConvertTagListToPredicates( None, test_tags_1, do_permission_check = False )
+        test_predicates_1 = ClientLocalServerCore.ConvertTagListToPredicates( None, test_tags_1, do_permission_check = False )
         
         test_file_search_context_1 = ClientSearchFileSearchContext.FileSearchContext( location_context = default_location_context, tag_context = test_tag_context_1, predicates = test_predicates_1 )
         
@@ -4456,7 +4483,7 @@ class TestClientAPI( unittest.TestCase ):
         test_tags_2 = [ 'system:untagged' ]
         
         test_tag_context_2 = ClientSearchTagContext.TagContext( test_tag_service_key_2 )
-        test_predicates_2 = ClientLocalServerResources.ConvertTagListToPredicates( None, test_tags_2, do_permission_check = False )
+        test_predicates_2 = ClientLocalServerCore.ConvertTagListToPredicates( None, test_tags_2, do_permission_check = False )
         
         test_file_search_context_2 = ClientSearchFileSearchContext.FileSearchContext( location_context = default_location_context, tag_context = test_tag_context_2, predicates = test_predicates_2 )
         
@@ -5659,7 +5686,7 @@ class TestClientAPI( unittest.TestCase ):
         pretend_request.parsed_request_args = {}
         pretend_request.client_api_permissions = set_up_permissions[ 'everything' ]
         
-        predicates = ClientLocalServerResources.ParseClientAPISearchPredicates( pretend_request )
+        predicates = ClientLocalServerCore.ParseClientAPISearchPredicates( pretend_request )
         
         self.assertEqual( predicates, [] )
         
@@ -5672,7 +5699,7 @@ class TestClientAPI( unittest.TestCase ):
         
         with self.assertRaises( HydrusExceptions.InsufficientCredentialsException ):
             
-            ClientLocalServerResources.ParseClientAPISearchPredicates( pretend_request )
+            ClientLocalServerCore.ParseClientAPISearchPredicates( pretend_request )
             
         
         #
@@ -5684,7 +5711,7 @@ class TestClientAPI( unittest.TestCase ):
         
         with self.assertRaises( HydrusExceptions.InsufficientCredentialsException ):
             
-            ClientLocalServerResources.ParseClientAPISearchPredicates( pretend_request )
+            ClientLocalServerCore.ParseClientAPISearchPredicates( pretend_request )
             
         
         #
@@ -5696,7 +5723,7 @@ class TestClientAPI( unittest.TestCase ):
         
         with self.assertRaises( HydrusExceptions.InsufficientCredentialsException ):
             
-            ClientLocalServerResources.ParseClientAPISearchPredicates( pretend_request )
+            ClientLocalServerCore.ParseClientAPISearchPredicates( pretend_request )
             
         
         #
@@ -5706,7 +5733,7 @@ class TestClientAPI( unittest.TestCase ):
         pretend_request.parsed_request_args = { 'tags' : [ 'green', '-kino' ] }
         pretend_request.client_api_permissions = set_up_permissions[ 'search_green_files' ]
         
-        predicates = ClientLocalServerResources.ParseClientAPISearchPredicates( pretend_request )
+        predicates = ClientLocalServerCore.ParseClientAPISearchPredicates( pretend_request )
         
         expected_predicates = []
         
@@ -5722,7 +5749,7 @@ class TestClientAPI( unittest.TestCase ):
         pretend_request.parsed_request_args = { 'tags' : [ 'green', 'system:archive' ] }
         pretend_request.client_api_permissions = set_up_permissions[ 'search_green_files' ]
         
-        predicates = ClientLocalServerResources.ParseClientAPISearchPredicates( pretend_request )
+        predicates = ClientLocalServerCore.ParseClientAPISearchPredicates( pretend_request )
         
         expected_predicates = []
         
@@ -5738,7 +5765,7 @@ class TestClientAPI( unittest.TestCase ):
         pretend_request.parsed_request_args = { 'tags' : [ 'green', [ 'red', 'blue' ], 'system:archive' ] }
         pretend_request.client_api_permissions = set_up_permissions[ 'search_green_files' ]
         
-        predicates = ClientLocalServerResources.ParseClientAPISearchPredicates( pretend_request )
+        predicates = ClientLocalServerCore.ParseClientAPISearchPredicates( pretend_request )
         
         expected_predicates = []
         
@@ -5770,7 +5797,7 @@ class TestClientAPI( unittest.TestCase ):
         
         with self.assertRaises( HydrusExceptions.BadRequestException ):
             
-            ClientLocalServerResources.ParseClientAPISearchPredicates( pretend_request )
+            ClientLocalServerCore.ParseClientAPISearchPredicates( pretend_request )
             
         
         # bad negated
@@ -5782,7 +5809,7 @@ class TestClientAPI( unittest.TestCase ):
         
         with self.assertRaises( HydrusExceptions.BadRequestException ):
             
-            ClientLocalServerResources.ParseClientAPISearchPredicates( pretend_request )
+            ClientLocalServerCore.ParseClientAPISearchPredicates( pretend_request )
             
         
         # bad system pred
@@ -5794,7 +5821,7 @@ class TestClientAPI( unittest.TestCase ):
         
         with self.assertRaises( HydrusExceptions.BadRequestException ):
             
-            ClientLocalServerResources.ParseClientAPISearchPredicates( pretend_request )
+            ClientLocalServerCore.ParseClientAPISearchPredicates( pretend_request )
             
         
     
@@ -6688,7 +6715,7 @@ class TestClientAPI( unittest.TestCase ):
         
         times_manager = ClientMediaManagers.TimesManager()
         
-        locations_manager = ClientMediaManagers.LocationsManager( set(), set(), set(), set(), times_manager )
+        locations_manager = ClientMediaManagers.LocationsManager( { CC.COMBINED_LOCAL_FILE_SERVICE_KEY, CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY, CC.LOCAL_FILE_SERVICE_KEY }, set(), set(), set(), times_manager )
         ratings_manager = ClientMediaManagers.RatingsManager( {} )
         notes_manager = ClientMediaManagers.NotesManager( {} )
         file_viewing_stats_manager = ClientMediaManagers.FileViewingStatsManager.STATICGenerateEmptyManager( times_manager )
@@ -6947,6 +6974,42 @@ class TestClientAPI( unittest.TestCase ):
         self.assertEqual( response.status, 200 )
         
         self.assertEqual( hashlib.sha256( data ).digest(), thumb_hash )
+        
+        # file path
+        
+        path = '/get_files/file_path?hash={}'.format( hash_hex )
+        
+        connection.request( 'GET', path, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        text = str( data, 'utf-8' )
+        
+        d = json.loads( text )
+        
+        self.assertEqual( response.status, 200 )
+        
+        self.assertEqual( d[ 'path' ], os.path.join( HG.test_controller.db_dir, 'client_files', f'f{hash_hex[:2]}', f'{hash_hex}.png' ) )
+        
+        # thumbnail path
+        
+        path = '/get_files/thumbnail_path?hash={}'.format( hash_hex )
+        
+        connection.request( 'GET', path, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        text = str( data, 'utf-8' )
+        
+        d = json.loads( text )
+        
+        self.assertEqual( response.status, 200 )
+        
+        self.assertEqual( d[ 'path' ], os.path.join( HG.test_controller.db_dir, 'client_files', f't{hash_hex[:2]}', f'{hash_hex}.thumbnail' ) )
         
         # with "sha256:"" on the front
         

@@ -793,7 +793,21 @@ def get_updated_domain_modified_timestamp_datas( destination_media: ClientMedia.
     
     from hydrus.client.networking import ClientNetworkingFunctions
     
-    domains = { ClientNetworkingFunctions.ConvertURLIntoDomain( url ) for url in urls }
+    domains = set()
+    
+    for url in urls:
+        
+        try:
+            
+            domain = ClientNetworkingFunctions.ConvertURLIntoDomain( url )
+            
+            domains.add( domain )
+            
+        except:
+            
+            continue # not an url in the strict sense, let's skip since this method really wants to be dealing with nice URLs
+            
+        
     
     timestamp_datas = []
     source_timestamp_manager = source_media.GetLocationsManager().GetTimesManager()

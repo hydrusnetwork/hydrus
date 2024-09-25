@@ -66,7 +66,7 @@ class CaptureAPIAccessPermissionsRequestPanel( ClientGUIScrolledPanels.ReviewPan
     
 class EditAPIPermissionsPanel( ClientGUIScrolledPanels.EditPanel ):
     
-    def __init__( self, parent, api_permissions ):
+    def __init__( self, parent, api_permissions: ClientAPI.APIPermissions ):
         
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
         
@@ -83,6 +83,8 @@ class EditAPIPermissionsPanel( ClientGUIScrolledPanels.EditPanel ):
         self._name = QW.QLineEdit( self )
         
         self._permissions_panel = ClientGUICommon.StaticBox( self, 'permissions' )
+        
+        self._permits_everything = QW.QCheckBox( self._permissions_panel )
         
         self._basic_permissions = ClientGUICommon.BetterCheckBoxList( self._permissions_panel )
         
@@ -113,6 +115,8 @@ class EditAPIPermissionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._name.setText( name )
         
+        self._permits_everything.setChecked( api_permissions.PermitsEverything() )
+        
         basic_permissions = api_permissions.GetBasicPermissions()
         
         self._basic_permissions.SetValue( basic_permissions )
@@ -126,6 +130,7 @@ class EditAPIPermissionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         gridbox = ClientGUICommon.WrapInGrid( self, rows )
         
+        self._permissions_panel.Add( ClientGUICommon.WrapInText( self._permits_everything, self._permissions_panel, 'permits everything: ' ), CC.FLAGS_EXPAND_PERPENDICULAR )
         self._permissions_panel.Add( self._basic_permissions, CC.FLAGS_EXPAND_BOTH_WAYS )
         self._permissions_panel.Add( self._check_all_permissions_button, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._permissions_panel.Add( ClientGUICommon.WrapInText( self._search_tag_filter, self._permissions_panel, 'tag search permissions: ' ), CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -141,6 +146,7 @@ class EditAPIPermissionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._UpdateEnabled()
         
+        self._permits_everything.clicked.connect( self._UpdateEnabled )
         self._basic_permissions.checkBoxListChanged.connect( self._UpdateEnabled )
         
     
@@ -154,17 +160,30 @@ class EditAPIPermissionsPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _UpdateEnabled( self ):
         
-        can_search = ClientAPI.CLIENT_API_PERMISSION_SEARCH_FILES in self._basic_permissions.GetValue()
-        
-        self._search_tag_filter.setEnabled( can_search )
-        
-        self._check_all_permissions_button.setEnabled( False )
-        
-        for i in range( self._basic_permissions.count() ):
+        if self._permits_everything.isChecked():
             
-            if not self._basic_permissions.IsChecked( i ):
+            self._basic_permissions.setEnabled( False )
+            self._check_all_permissions_button.setEnabled( False )
+            self._search_tag_filter.setEnabled( False )
+            
+        else:
+            
+            self._basic_permissions.setEnabled( True )
+            self._check_all_permissions_button.setEnabled( True )
+            self._search_tag_filter.setEnabled( True )
+            
+            can_search = ClientAPI.CLIENT_API_PERMISSION_SEARCH_FILES in self._basic_permissions.GetValue()
+            
+            self._search_tag_filter.setEnabled( can_search )
+            
+            self._check_all_permissions_button.setEnabled( False )
+            
+            for i in range( self._basic_permissions.count() ):
                 
-                self._check_all_permissions_button.setEnabled( True )
+                if not self._basic_permissions.IsChecked( i ):
+                    
+                    self._check_all_permissions_button.setEnabled( True )
+                    
                 
             
         
@@ -174,10 +193,11 @@ class EditAPIPermissionsPanel( ClientGUIScrolledPanels.EditPanel ):
         name = self._name.text()
         access_key = bytes.fromhex( self._access_key.text() )
         
+        permits_everything = self._permits_everything.isChecked()
         basic_permissions = self._basic_permissions.GetValue()
         search_tag_filter = self._search_tag_filter.GetValue()
         
-        api_permissions = ClientAPI.APIPermissions( name = name, access_key = access_key, basic_permissions = basic_permissions, search_tag_filter = search_tag_filter )
+        api_permissions = ClientAPI.APIPermissions( name = name, access_key = access_key, permits_everything = permits_everything, basic_permissions = basic_permissions, search_tag_filter = search_tag_filter )
         
         return api_permissions
         

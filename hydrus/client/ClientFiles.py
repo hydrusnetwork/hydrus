@@ -1800,6 +1800,11 @@ class ClientFilesManager( object ):
     
     def RegenerateThumbnail( self, media ):
         
+        if not media.GetLocationsManager().IsLocal():
+            
+            raise HydrusExceptions.FileMissingException( 'I was called to regenerate a thumbnail from source, but the source file does not think it is in the local file store!' )
+            
+        
         hash = media.GetHash()
         mime = media.GetMime()
         

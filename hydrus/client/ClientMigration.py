@@ -614,15 +614,19 @@ class MigrationSourceHTA( MigrationSource ):
     
 class MigrationSourceHTPA( MigrationSource ):
     
-    def __init__( self, controller, path, left_tag_filter, right_tag_filter ):
+    def __init__( self, controller, path, content_type, left_tag_filter, right_tag_filter, left_side_needs_count, right_side_needs_count, needs_count_service_key ):
         
         name = os.path.basename( path )
         
         super().__init__( controller, name )
         
         self._path = path
+        self._content_type = content_type
         self._left_tag_filter = left_tag_filter
         self._right_tag_filter = right_tag_filter
+        self._left_side_needs_count = left_side_needs_count
+        self._right_side_needs_count = right_side_needs_count
+        self._needs_count_service_key = needs_count_service_key
         
         self._htpa = None
         self._iterator = None
@@ -652,6 +656,11 @@ class MigrationSourceHTPA( MigrationSource ):
         if not ( self._left_tag_filter.AllowsEverything() and self._right_tag_filter.AllowsEverything() ):
             
             data = [ ( left_tag, right_tag ) for ( left_tag, right_tag ) in data if self._left_tag_filter.TagOK( left_tag ) and self._right_tag_filter.TagOK( right_tag ) ]
+            
+        
+        if self._left_side_needs_count or self._right_side_needs_count:
+            
+            data = self._controller.Read( 'migration_filter_pairs_by_count', data, self._content_type, self._left_side_needs_count, self._right_side_needs_count, self._needs_count_service_key )
             
         
         return data
@@ -739,7 +748,7 @@ class MigrationSourceTagServiceMappings( MigrationSource ):
     
 class MigrationSourceTagServicePairs( MigrationSource ):
     
-    def __init__( self, controller, tag_service_key, content_type, left_tag_filter, right_tag_filter, content_statuses ):
+    def __init__( self, controller, tag_service_key, content_type, left_tag_filter, right_tag_filter, content_statuses, left_side_needs_count, right_side_needs_count, needs_count_service_key ):
         
         name = controller.services_manager.GetName( tag_service_key )
         
@@ -750,6 +759,9 @@ class MigrationSourceTagServicePairs( MigrationSource ):
         self._left_tag_filter = left_tag_filter
         self._right_tag_filter = right_tag_filter
         self._content_statuses = content_statuses
+        self._left_side_needs_count = left_side_needs_count
+        self._right_side_needs_count = right_side_needs_count
+        self._needs_count_service_key = needs_count_service_key
         
         self._database_temp_job_name = 'migrate_{}'.format( os.urandom( 16 ).hex() )
         
@@ -766,6 +778,11 @@ class MigrationSourceTagServicePairs( MigrationSource ):
         if len( data ) == 0:
             
             self._work_to_do = False
+            
+        
+        if self._left_side_needs_count or self._right_side_needs_count:
+            
+            data = self._controller.Read( 'migration_filter_pairs_by_count', data, self._content_type, self._left_side_needs_count, self._right_side_needs_count, self._needs_count_service_key )
             
         
         return data

@@ -1943,7 +1943,7 @@ class Controller( ClientControllerInterface.ClientControllerInterface, HydrusCon
                             context_factory = twisted.internet.ssl.DefaultOpenSSLContextFactory( ssl_key_path, ssl_cert_path, sslmethod )
                             
                         
-                        from hydrus.client.networking import ClientLocalServer
+                        from hydrus.client.networking.api import ClientLocalServer
                         
                         if service_type == HC.CLIENT_API_SERVICE:
                             

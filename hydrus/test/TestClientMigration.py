@@ -90,6 +90,26 @@ pair_types_to_pools = {}
 pair_types_to_pools[ HC.CONTENT_TYPE_TAG_PARENTS ] = ( current_parents_pool, pending_parents_pool, to_be_pended_parents_pool, deleted_parents_pool )
 pair_types_to_pools[ HC.CONTENT_TYPE_TAG_SIBLINGS ] = ( current_siblings_pool, pending_siblings_pool, to_be_pended_siblings_pool, deleted_siblings_pool )
 
+count_filter_pairs = {}
+
+count_filter_pairs[ HC.CONTENT_TYPE_TAG_SIBLINGS ] = [
+    ( 'has_count_a_ideal_no', 'no_count_b' ),
+    ( 'no_count_c_ideal_yes', 'has_count_d' ),
+    ( 'no_count_e_ideal_yes', 'has_count_f' ),
+    ( 'has_count_g_ideal_yes', 'has_count_h' ),
+    ( 'has_count_aa_ideal_yes', 'no_count_bb_ideal_yes' ),
+    ( 'no_count_bb_ideal_yes', 'has_count_cc' ),
+    ( 'has_count_dd_ideal_no', 'has_count_ee_ideal_no' ),
+    ( 'has_count_ee_ideal_no', 'no_count_ff' ),
+]
+
+count_filter_pairs[ HC.CONTENT_TYPE_TAG_PARENTS ] = [
+    ( 'has_count_a', 'no_count_b' ),
+    ( 'no_count_c', 'has_count_d' ),
+    ( 'no_count_e', 'has_count_f' ),
+    ( 'has_count_g', 'has_count_h' )
+]
+
 class TestMigration( unittest.TestCase ):
     
     @classmethod
@@ -827,9 +847,13 @@ class TestMigration( unittest.TestCase ):
         test_filters.append( ( free_filter, namespace_filter ) )
         test_filters.append( ( namespace_filter, namespace_filter ) )
         
+        left_side_needs_count = False
+        right_side_needs_count = False
+        needs_count_service_key = CC.DEFAULT_LOCAL_TAG_SERVICE_KEY
+        
         for ( left_tag_filter, right_tag_filter ) in test_filters:
             
-            source = ClientMigration.MigrationSourceHTPA( self, htpa_path, left_tag_filter, right_tag_filter )
+            source = ClientMigration.MigrationSourceHTPA( self, htpa_path, content_type, left_tag_filter, right_tag_filter, left_side_needs_count, right_side_needs_count, needs_count_service_key )
             
             expected_data = [ ( left_tag, right_tag ) for ( left_tag, right_tag ) in current if left_tag_filter.TagOK( left_tag ) and right_tag_filter.TagOK( right_tag ) ]
             
@@ -916,11 +940,15 @@ class TestMigration( unittest.TestCase ):
         test_filters.append( ( free_filter, namespace_filter ) )
         test_filters.append( ( namespace_filter, namespace_filter ) )
         
+        left_side_needs_count = False
+        right_side_needs_count = False
+        needs_count_service_key = CC.DEFAULT_LOCAL_TAG_SERVICE_KEY
+        
         for ( left_tag_filter, right_tag_filter ) in test_filters:
             
             for ( service_key, content_lists, content_statuses ) in content_source_tests:
                 
-                source = ClientMigration.MigrationSourceTagServicePairs( self, service_key, content_type, left_tag_filter, right_tag_filter, content_statuses )
+                source = ClientMigration.MigrationSourceTagServicePairs( self, service_key, content_type, left_tag_filter, right_tag_filter, content_statuses, left_side_needs_count, right_side_needs_count, needs_count_service_key )
                 
                 expected_data = set()
                 
@@ -1002,9 +1030,180 @@ class TestMigration( unittest.TestCase ):
             
         
     
-    def test_migration( self ):
+    def _add_count_filter_pairs_to_services( self, content_type ):
+        
+        content_updates = []
+        
+        for pair in count_filter_pairs[ content_type ]:
+            
+            content_updates.append( ClientContentUpdates.ContentUpdate( content_type, HC.CONTENT_UPDATE_ADD, pair ) )
+            
+        
+        content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( CC.DEFAULT_LOCAL_TAG_SERVICE_KEY, content_updates )
+        
+        self.WriteSynchronous( 'content_updates', content_update_package )
+        
+    
+    def _add_count_filter_mappings_to_services( self, content_type ):
+        
+        content_updates = []
+        
+        for ( a, b ) in count_filter_pairs[ content_type ]:
+            
+            for tag in ( a, b ):
+                
+                if 'has_count' in tag:
+                    
+                    content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( tag, ( os.urandom( 32 ), ) ) ) )
+                    
+                
+            
+        
+        content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( CC.DEFAULT_LOCAL_TAG_SERVICE_KEY, content_updates )
+        
+        self.WriteSynchronous( 'content_updates', content_update_package )
+        
+    
+    def _test_pairs_htpa_to_list_count_filter( self, content_type ):
+        
+        def run_test( source, expected_data ):
+            
+            destination = ClientMigration.MigrationDestinationListPairs( self )
+            
+            job = ClientMigration.MigrationJob( self, 'test', source, destination )
+            
+            job.Run()
+            
+            self.assertEqual( set( destination.GetDataReceived() ), set( expected_data ) )
+            
+        
+        htpa_path = os.path.join( TestController.DB_DIR, 'htpa.db' )
+        
+        htpa = HydrusTagArchive.HydrusTagPairArchive( htpa_path )
+        
+        if content_type == HC.CONTENT_TYPE_TAG_PARENTS:
+            
+            htpa.SetPairType( HydrusTagArchive.TAG_PAIR_TYPE_PARENTS )
+            
+        elif content_type == HC.CONTENT_TYPE_TAG_SIBLINGS:
+            
+            htpa.SetPairType( HydrusTagArchive.TAG_PAIR_TYPE_SIBLINGS )
+            
+        
+        htpa.BeginBigJob()
+        
+        htpa.AddPairs( count_filter_pairs[ content_type ] )
+        
+        htpa.CommitBigJob()
+        
+        htpa.Optimise()
+        
+        htpa.Close()
+        
+        del htpa
+        
+        #
+        
+        repo_service_key = list( self._test_tag_repo_service_keys.values() )[0]
+        
+        # test
+        
+        left_tag_filter = HydrusTags.TagFilter()
+        right_tag_filter = HydrusTags.TagFilter()
+        
+        for left_side_needs_count in ( False, True ):
+            
+            for right_side_needs_count in ( False, True ):
+                
+                for needs_count_service_key in ( repo_service_key, CC.DEFAULT_LOCAL_TAG_SERVICE_KEY ):
+                    
+                    source = ClientMigration.MigrationSourceHTPA( self, htpa_path, content_type, left_tag_filter, right_tag_filter, left_side_needs_count, right_side_needs_count, needs_count_service_key )
+                    
+                    if needs_count_service_key == repo_service_key:
+                        
+                        expected_data = [ ( a, b ) for ( a, b ) in count_filter_pairs[ content_type ] if not left_side_needs_count and not right_side_needs_count ]
+                        
+                    else:
+                        
+                        if content_type == HC.CONTENT_TYPE_TAG_SIBLINGS:
+                            
+                            expected_data = [ ( a, b ) for ( a, b ) in count_filter_pairs[ content_type ] if ( not left_side_needs_count or 'has_count' in a ) and ( not right_side_needs_count or 'ideal_yes' in a ) ]
+                            
+                        else:
+                            
+                            expected_data = [ ( a, b ) for ( a, b ) in count_filter_pairs[ content_type ] if ( not left_side_needs_count or 'has_count' in a ) and ( not right_side_needs_count or 'has_count' in b ) ]
+                            
+                        
+                    
+                    run_test( source, expected_data )
+                    
+                
+            
+        
+        #
+        
+        os.remove( htpa_path )
+        
+    
+    def _test_pairs_service_to_list_count_filter( self, content_type ):
+        
+        def run_test( source, expected_data ):
+            
+            destination = ClientMigration.MigrationDestinationListPairs( self )
+            
+            job = ClientMigration.MigrationJob( self, 'test', source, destination )
+            
+            job.Run()
+            
+            self.assertEqual( set( destination.GetDataReceived() ), set( expected_data ) )
+            
+        
+        # test filters and content statuses
+        
+        repo_service_key = list( self._test_tag_repo_service_keys.values() )[0]
+        
+        # test
+        
+        content_statuses = ( HC.CONTENT_STATUS_CURRENT, )
+        
+        left_tag_filter = HydrusTags.TagFilter()
+        right_tag_filter = HydrusTags.TagFilter()
+        
+        for left_side_needs_count in ( False, True ):
+            
+            for right_side_needs_count in ( False, True ):
+                
+                for needs_count_service_key in ( repo_service_key, CC.DEFAULT_LOCAL_TAG_SERVICE_KEY ):
+                    
+                    source = ClientMigration.MigrationSourceTagServicePairs( self, CC.DEFAULT_LOCAL_TAG_SERVICE_KEY, content_type, left_tag_filter, right_tag_filter, content_statuses, left_side_needs_count, right_side_needs_count, needs_count_service_key )
+                    
+                    if needs_count_service_key == repo_service_key:
+                        
+                        expected_data = [ ( a, b ) for ( a, b ) in count_filter_pairs[ content_type ] if not left_side_needs_count and not right_side_needs_count ]
+                        
+                    else:
+                        
+                        if content_type == HC.CONTENT_TYPE_TAG_SIBLINGS:
+                            
+                            expected_data = [ ( a, b ) for ( a, b ) in count_filter_pairs[ content_type ] if ( not left_side_needs_count or 'has_count' in a ) and ( not right_side_needs_count or 'ideal_yes' in a ) ]
+                            
+                        else:
+                            
+                            expected_data = [ ( a, b ) for ( a, b ) in count_filter_pairs[ content_type ] if ( not left_side_needs_count or 'has_count' in a ) and ( not right_side_needs_count or 'has_count' in b ) ]
+                            
+                        
+                    
+                    run_test( source, expected_data )
+                    
+                
+            
+        
+    
+    def test_migration_mappings( self ):
         
         # mappings
+        
+        self._clear_db()
         
         self._set_up_services()
         self._do_fake_imports()
@@ -1016,14 +1215,56 @@ class TestMigration( unittest.TestCase ):
         self._test_mappings_service_to_list()
         self._test_mappings_list_to_service()
         
-        for content_type in ( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_TYPE_TAG_SIBLINGS ):
-            
-            self._add_pairs_to_services( content_type )
-            self._test_pairs_list_to_list( content_type )
-            self._test_pairs_htpa_to_list( content_type )
-            self._test_pairs_list_to_htpa( content_type )
-            self._test_pairs_service_to_list( content_type )
-            self._test_pairs_list_to_service( content_type )
-            
+    
+    def test_migration_parents( self ):
+        
+        self._clear_db()
+        
+        self._set_up_services()
+        
+        self._add_pairs_to_services( HC.CONTENT_TYPE_TAG_PARENTS )
+        self._test_pairs_list_to_list( HC.CONTENT_TYPE_TAG_PARENTS )
+        self._test_pairs_htpa_to_list( HC.CONTENT_TYPE_TAG_PARENTS )
+        self._test_pairs_list_to_htpa( HC.CONTENT_TYPE_TAG_PARENTS )
+        self._test_pairs_service_to_list( HC.CONTENT_TYPE_TAG_PARENTS )
+        self._test_pairs_list_to_service( HC.CONTENT_TYPE_TAG_PARENTS )
+        
+    
+    def test_migration_parents_count_filter( self ):
+        
+        self._clear_db()
+        
+        self._set_up_services()
+        
+        self._add_count_filter_pairs_to_services( HC.CONTENT_TYPE_TAG_PARENTS )
+        self._add_count_filter_mappings_to_services( HC.CONTENT_TYPE_TAG_PARENTS )
+        self._test_pairs_htpa_to_list_count_filter( HC.CONTENT_TYPE_TAG_PARENTS )
+        self._test_pairs_service_to_list_count_filter( HC.CONTENT_TYPE_TAG_PARENTS )
+        
+    
+    def test_migration_siblings( self ):
+        
+        self._clear_db()
+        
+        self._set_up_services()
+        
+        self._add_pairs_to_services( HC.CONTENT_TYPE_TAG_SIBLINGS )
+        self._test_pairs_list_to_list( HC.CONTENT_TYPE_TAG_SIBLINGS )
+        self._test_pairs_htpa_to_list( HC.CONTENT_TYPE_TAG_SIBLINGS )
+        self._test_pairs_list_to_htpa( HC.CONTENT_TYPE_TAG_SIBLINGS )
+        self._test_pairs_service_to_list( HC.CONTENT_TYPE_TAG_SIBLINGS )
+        self._test_pairs_list_to_service( HC.CONTENT_TYPE_TAG_SIBLINGS )
+        
+    
+    def test_migration_siblings_filter( self ):
+        
+        self._clear_db()
+        
+        self._set_up_services()
+        
+        self._add_count_filter_pairs_to_services( HC.CONTENT_TYPE_TAG_SIBLINGS )
+        self._add_count_filter_mappings_to_services( HC.CONTENT_TYPE_TAG_SIBLINGS )
+        self._test_pairs_htpa_to_list_count_filter( HC.CONTENT_TYPE_TAG_SIBLINGS )
+        self._test_pairs_service_to_list_count_filter( HC.CONTENT_TYPE_TAG_SIBLINGS )
         
     

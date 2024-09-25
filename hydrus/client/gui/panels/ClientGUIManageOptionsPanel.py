@@ -1755,9 +1755,9 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._page_file_count_display = ClientGUICommon.BetterChoice( self._page_names_panel )
             
-            for display_type in ( CC.PAGE_FILE_COUNT_DISPLAY_ALL, CC.PAGE_FILE_COUNT_DISPLAY_ONLY_IMPORTERS, CC.PAGE_FILE_COUNT_DISPLAY_NONE ):
+            for display_type in ( CC.PAGE_FILE_COUNT_DISPLAY_ALL, CC.PAGE_FILE_COUNT_DISPLAY_ONLY_IMPORTERS, CC.PAGE_FILE_COUNT_DISPLAY_NONE, CC.PAGE_FILE_COUNT_DISPLAY_ALL_BUT_ONLY_IF_GREATER_THAN_ZERO ):
                 
-                self._page_file_count_display.addItem( CC.page_file_count_display_string_lookup[ display_type], display_type )
+                self._page_file_count_display.addItem( CC.page_file_count_display_string_lookup[ display_type ], display_type )
                 
             
             self._import_page_progress_display = QW.QCheckBox( self._page_names_panel )
@@ -1846,7 +1846,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows.append( ( 'In new page chooser, show "all my files" if appropriate: ', self._show_all_my_files_on_page_chooser ) )
             rows.append( ( 'In new page chooser, show "local files": ', self._show_local_files_on_page_chooser ) )
             rows.append( ( 'Put new page tabs on: ', self._default_new_page_goes ) )
-            rows.append( ( 'When closing tabs, move focus: ', self._close_page_focus_goes ) )
+            rows.append( ( 'When closing the current tab, move focus: ', self._close_page_focus_goes ) )
             rows.append( ( 'Notebook tab alignment: ', self._notebook_tab_alignment ) )
             rows.append( ( 'Selection chases dropped page after drag and drop: ', self._page_drop_chase_normally ) )
             rows.append( ( '  With shift held down?: ', self._page_drop_chase_with_shift ) )

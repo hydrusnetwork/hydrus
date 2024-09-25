@@ -24,6 +24,7 @@ CLIENT_API_PERMISSION_EDIT_RATINGS = 9
 CLIENT_API_PERMISSION_MANAGE_POPUPS = 10
 CLIENT_API_PERMISSION_EDIT_TIMES = 11
 CLIENT_API_PERMISSION_COMMIT_PENDING = 12
+CLIENT_API_PERMISSION_SEE_LOCAL_PATHS = 13
 
 ALLOWED_PERMISSIONS = (
     CLIENT_API_PERMISSION_ADD_FILES,
@@ -38,7 +39,8 @@ ALLOWED_PERMISSIONS = (
     CLIENT_API_PERMISSION_EDIT_RATINGS,
     CLIENT_API_PERMISSION_MANAGE_POPUPS,
     CLIENT_API_PERMISSION_EDIT_TIMES,
-    CLIENT_API_PERMISSION_COMMIT_PENDING
+    CLIENT_API_PERMISSION_COMMIT_PENDING,
+    CLIENT_API_PERMISSION_SEE_LOCAL_PATHS
 )
 
 basic_permission_to_str_lookup = {}
@@ -56,6 +58,7 @@ basic_permission_to_str_lookup[ CLIENT_API_PERMISSION_EDIT_RATINGS ] = 'edit fil
 basic_permission_to_str_lookup[ CLIENT_API_PERMISSION_MANAGE_POPUPS ] = 'manage popups'
 basic_permission_to_str_lookup[ CLIENT_API_PERMISSION_EDIT_TIMES ] = 'edit file times'
 basic_permission_to_str_lookup[ CLIENT_API_PERMISSION_COMMIT_PENDING ] = 'commit pending'
+basic_permission_to_str_lookup[ CLIENT_API_PERMISSION_SEE_LOCAL_PATHS ] = 'see local file paths'
 
 SEARCH_RESULTS_CACHE_TIMEOUT = 4 * 3600
 
@@ -235,9 +238,9 @@ class APIPermissions( HydrusSerialisable.SerialisableBaseNamed ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_CLIENT_API_PERMISSIONS
     SERIALISABLE_NAME = 'Client API Permissions'
-    SERIALISABLE_VERSION = 1
+    SERIALISABLE_VERSION = 2
     
-    def __init__( self, name = 'new api permissions', access_key = None, basic_permissions = None, search_tag_filter = None ):
+    def __init__( self, name = 'new api permissions', access_key = None, permits_everything = True, basic_permissions = None, search_tag_filter = None ):
         
         if access_key is None:
             
@@ -258,6 +261,7 @@ class APIPermissions( HydrusSerialisable.SerialisableBaseNamed ):
         
         self._access_key = access_key
         
+        self._permits_everything = permits_everything
         self._basic_permissions = set( basic_permissions )
         self._search_tag_filter = search_tag_filter
         
@@ -274,17 +278,17 @@ class APIPermissions( HydrusSerialisable.SerialisableBaseNamed ):
         serialisable_basic_permissions = list( self._basic_permissions )
         serialisable_search_tag_filter = self._search_tag_filter.GetSerialisableTuple()
         
-        return ( serialisable_access_key, serialisable_basic_permissions, serialisable_search_tag_filter )
+        return ( serialisable_access_key, self._permits_everything, serialisable_basic_permissions, serialisable_search_tag_filter )
         
     
     def _HasPermission( self, permission ):
         
-        return permission in self._basic_permissions
+        return self._permits_everything or permission in self._basic_permissions
         
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
-        ( serialisable_access_key, serialisable_basic_permissions, serialisable_search_tag_filter ) = serialisable_info
+        ( serialisable_access_key, self._permits_everything, serialisable_basic_permissions, serialisable_search_tag_filter ) = serialisable_info
         
         self._access_key = bytes.fromhex( serialisable_access_key )
         
@@ -292,9 +296,42 @@ class APIPermissions( HydrusSerialisable.SerialisableBaseNamed ):
         self._search_tag_filter = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_search_tag_filter )
         
     
+    def _UpdateSerialisableInfo( self, version, old_serialisable_info ):
+        
+        if version == 1:
+            
+            ( serialisable_access_key, serialisable_basic_permissions, serialisable_search_tag_filter ) = old_serialisable_info
+            
+            basic_permissions = set( serialisable_basic_permissions )
+            
+            # note this isn't everything as of 2024-09, but everything until recently. we want to capture more people for the whole convenience point of doing this
+            permits_everything = basic_permissions.issubset( {
+                CLIENT_API_PERMISSION_ADD_FILES,
+                CLIENT_API_PERMISSION_ADD_TAGS,
+                CLIENT_API_PERMISSION_ADD_URLS,
+                CLIENT_API_PERMISSION_SEARCH_FILES,
+                CLIENT_API_PERMISSION_MANAGE_PAGES,
+                CLIENT_API_PERMISSION_MANAGE_HEADERS,
+                CLIENT_API_PERMISSION_MANAGE_DATABASE,
+                CLIENT_API_PERMISSION_ADD_NOTES,
+                CLIENT_API_PERMISSION_MANAGE_FILE_RELATIONSHIPS,
+                CLIENT_API_PERMISSION_EDIT_RATINGS 
+            } )
+            
+            new_serialisable_info = ( serialisable_access_key, permits_everything, serialisable_basic_permissions, serialisable_search_tag_filter )
+            
+            return ( 2, new_serialisable_info )
+            
+        
+    
     def CheckAtLeastOnePermission( self, permissions ):
         
         with self._lock:
+            
+            if self._permits_everything:
+                
+                return
+                
             
             if True not in ( self._HasPermission( permission ) for permission in permissions ):
                 
@@ -307,7 +344,7 @@ class APIPermissions( HydrusSerialisable.SerialisableBaseNamed ):
         
         with self._lock:
             
-            if self._search_tag_filter.AllowsEverything():
+            if self._permits_everything or self._search_tag_filter.AllowsEverything():
                 
                 return
                 
@@ -330,6 +367,11 @@ class APIPermissions( HydrusSerialisable.SerialisableBaseNamed ):
         
         with self._lock:
             
+            if self._permits_everything:
+                
+                return
+                
+            
             if not ( self._HasPermission( CLIENT_API_PERMISSION_SEARCH_FILES ) and self._search_tag_filter.AllowsEverything() ):
                 
                 raise HydrusExceptions.InsufficientCredentialsException( 'You do not have permission to see all files, so you cannot do this.' )
@@ -349,7 +391,7 @@ class APIPermissions( HydrusSerialisable.SerialisableBaseNamed ):
         
         with self._lock:
             
-            if self._search_tag_filter.AllowsEverything():
+            if self._permits_everything or self._search_tag_filter.AllowsEverything():
                 
                 return
                 
@@ -377,7 +419,7 @@ class APIPermissions( HydrusSerialisable.SerialisableBaseNamed ):
         
         with self._lock:
             
-            if self._search_tag_filter.AllowsEverything():
+            if self._permits_everything or self._search_tag_filter.AllowsEverything():
                 
                 return predicates
                 
@@ -406,6 +448,11 @@ class APIPermissions( HydrusSerialisable.SerialisableBaseNamed ):
         
         with self._lock:
             
+            if self._permits_everything:
+                
+                return ''
+                
+            
             p_strings = []
             
             if self._HasPermission( CLIENT_API_PERMISSION_SEARCH_FILES ):
@@ -428,6 +475,11 @@ class APIPermissions( HydrusSerialisable.SerialisableBaseNamed ):
     def GetBasicPermissionsString( self ):
         
         with self._lock:
+            
+            if self._permits_everything:
+                
+                return 'can do anything'
+                
             
             sorted_perms = sorted( ( basic_permission_to_str_lookup[ p ] for p in self._basic_permissions ) )
             
@@ -459,6 +511,14 @@ class APIPermissions( HydrusSerialisable.SerialisableBaseNamed ):
                 
                 self._last_search_results = None
                 
+            
+        
+    
+    def PermitsEverything( self ):
+        
+        with self._lock:
+            
+            return self._permits_everything
             
         
     

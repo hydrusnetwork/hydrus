@@ -306,11 +306,13 @@ network_context_type_description_lookup = {
 PAGE_FILE_COUNT_DISPLAY_ALL = 0
 PAGE_FILE_COUNT_DISPLAY_NONE = 1
 PAGE_FILE_COUNT_DISPLAY_ONLY_IMPORTERS = 2
+PAGE_FILE_COUNT_DISPLAY_ALL_BUT_ONLY_IF_GREATER_THAN_ZERO = 3
 
 page_file_count_display_string_lookup = {
     PAGE_FILE_COUNT_DISPLAY_ALL : 'for all pages',
     PAGE_FILE_COUNT_DISPLAY_ONLY_IMPORTERS : 'for import pages',
-    PAGE_FILE_COUNT_DISPLAY_NONE : 'for no pages'
+    PAGE_FILE_COUNT_DISPLAY_NONE : 'for no pages',
+    PAGE_FILE_COUNT_DISPLAY_ALL_BUT_ONLY_IF_GREATER_THAN_ZERO : 'for all pages, but only if greater than zero'
 }
 
 PAGE_STATE_NORMAL = 0

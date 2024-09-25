@@ -5343,6 +5343,60 @@ class DB( HydrusDB.HydrusDB ):
         self._Execute( 'DROP TABLE {};'.format( database_temp_job_name ) )
         
     
+    def _MigrationFilterPairsByCount( self, pairs, content_type, left_side_needs_count, right_side_needs_count, needs_count_service_key ):
+        
+        def tag_has_count( tag_id ):
+            
+            results = self.modules_mappings_counts.GetCountsForTag( ClientTags.TAG_DISPLAY_STORAGE, self.modules_services.combined_file_service_id, tag_service_id, tag_id )
+            
+            if len( results ) == 0:
+                
+                return False
+                
+            
+            ( gumpf_id, current_count, pending_count ) = results[0]
+            
+            return current_count + pending_count > 0
+            
+        
+        tag_service_id = self.modules_services.GetServiceId( needs_count_service_key )
+        
+        good_pairs = []
+        
+        for ( a, b ) in pairs:
+            
+            if left_side_needs_count:
+                
+                a_id = self.modules_tags_local_cache.GetTagId( a )
+                
+                if not tag_has_count( a_id ):
+                    
+                    continue
+                    
+                
+            
+            if right_side_needs_count:
+                
+                b_id = self.modules_tags_local_cache.GetTagId( b )
+                
+                if content_type == HC.CONTENT_TYPE_TAG_SIBLINGS:
+                    
+                    # siblings tests the ideal, not the 'right' alone
+                    b_id = self.modules_tag_siblings.GetIdealTagId( ClientTags.TAG_DISPLAY_DISPLAY_IDEAL, tag_service_id, b_id )
+                    
+                
+                if not tag_has_count( b_id ):
+                    
+                    continue
+                    
+                
+            
+            good_pairs.append( ( a, b ) )
+            
+        
+        return good_pairs
+        
+    
     def _MigrationGetMappings( self, database_temp_job_name, location_context: ClientLocation.LocationContext, tag_service_key, hash_type, tag_filter, content_statuses ):
         
         time_started_precise = HydrusTime.GetNowPrecise()
@@ -6891,6 +6945,7 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'media_result': result = self._GetMediaResultFromHash( *args, **kwargs )
         elif action == 'media_results': result = self._GetMediaResultsFromHashes( *args, **kwargs )
         elif action == 'media_results_from_ids': result = self._GetMediaResults( *args, **kwargs )
+        elif action == 'migration_filter_pairs_by_count': result = self._MigrationFilterPairsByCount( *args, **kwargs )
         elif action == 'migration_get_mappings': result = self._MigrationGetMappings( *args, **kwargs )
         elif action == 'migration_get_pairs': result = self._MigrationGetPairs( *args, **kwargs )
         elif action == 'missing_repository_update_hashes': result = self.modules_repositories.GetRepositoryUpdateHashesIDoNotHave( *args, **kwargs )
@@ -10798,6 +10853,40 @@ class DB( HydrusDB.HydrusDB ):
                 HydrusData.PrintException( e )
                 
                 message = 'Trying to update some downloader objects failed! Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
+                
+            
+        
+        if version == 590:
+            
+            try:
+                
+                client_api_manager = self.modules_serialisable.GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_CLIENT_API_MANAGER )
+                
+                all_permissions = client_api_manager.GetAllPermissions()
+                
+                for permissions in all_permissions:
+                    
+                    if permissions.PermitsEverything():
+                        
+                        message = 'Hey, for convenience, at least one of your Client API access permissions was upgraded to "permits everything". This is a simpler state that will auto-inherit new permissions as they are added in future. If you need finer control, please check the settings in "services->review services".'
+                        
+                        self.pub_initial_message( message )
+                        
+                        break
+                        
+                    
+                
+                #
+                
+                self.modules_serialisable.SetJSONDump( client_api_manager )
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to check some API stuff failed! Please let hydrus dev know!'
                 
                 self.pub_initial_message( message )
                 

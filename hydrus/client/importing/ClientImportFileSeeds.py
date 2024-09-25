@@ -1987,7 +1987,7 @@ class FileSeedCacheStatus( HydrusSerialisable.SerialisableBase ):
                 
                 if num_ignored > 0:
                     
-                    simple_status_strings.append( '{}Ig'.format( HydrusNumbers.ToHumanInt( num_ignored ) ) )
+                    simple_status_strings.append( '{}Ign'.format( HydrusNumbers.ToHumanInt( num_ignored ) ) )
                     
                 
                 show_deleted_on_file_seed_short_summary = CG.client_controller.new_options.GetBoolean( 'show_deleted_on_file_seed_short_summary' )

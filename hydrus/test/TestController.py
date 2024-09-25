@@ -886,10 +886,7 @@ class Controller( object ):
         ]
         
         module_lookup[ 'metadata_migration' ] = [
-            TestClientMetadataMigration
-        ]
-        
-        module_lookup[ 'migration' ] = [
+            TestClientMetadataMigration,
             TestClientMigration
         ]
         

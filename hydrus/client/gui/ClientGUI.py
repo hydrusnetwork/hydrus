@@ -5941,7 +5941,7 @@ QMenuBar::item { padding: 2px 8px; margin: 0px; }'''
             
             #
             
-            api_permissions = ClientAPI.APIPermissions( name = 'hydrus test access', basic_permissions = list( ClientAPI.ALLOWED_PERMISSIONS ), search_tag_filter = HydrusTags.TagFilter() )
+            api_permissions = ClientAPI.APIPermissions( name = 'hydrus test access', permits_everything = True )
             
             access_key = api_permissions.GetAccessKey()
             

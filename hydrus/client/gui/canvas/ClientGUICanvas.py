@@ -1472,8 +1472,6 @@ class CanvasPanel( Canvas ):
         
         new_options = CG.client_controller.new_options
         
-        advanced_mode = new_options.GetBoolean( 'advanced_mode' )
-        
         if self._current_media is not None:
             
             services = CG.client_controller.services_manager.GetServices()

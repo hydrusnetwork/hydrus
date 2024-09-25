@@ -86,7 +86,7 @@ If the client does not support CBOR, you'll get 406.
 
 ## Access and permissions
 
-The client gives access to its API through different 'access keys', which are the typical 64-character hex used in many other places across hydrus. Each guarantees different permissions such as handling files or tags. Most of the time, a user will provide full access, but do not assume this. If the access header or parameter is not provided, you will get 401, and all insufficient permission problems will return 403 with appropriate error text.
+The client gives access to its API through different 'access keys', which are the typical random 64-character hex used in many other places across hydrus. Each guarantees different permissions such as handling files or tags. Most of the time, a user will provide full access, but do not assume this. If a access key header or parameter is not provided, you will get 401, and all insufficient permission problems will return 403 with appropriate error text.
 
 Access is required for every request. You can provide this as an http header, like so:
 
@@ -94,7 +94,9 @@ Access is required for every request. You can provide this as an http header, li
 Hydrus-Client-API-Access-Key : 0150d9c4f6a6d2082534a997f4588dcf0c56dffe1d03ffbf98472236112236ae
 ```    
 
-Or you can include it in the normal parameters of any request (except _POST /add\_files/add\_file_, which uses the entire POST body for the file's bytes). For GET, this means including it into the URL parameters:
+Or you can include it in the normal parameters of any request (except _POST /add\_files/add\_file_, which uses the entire POST body for the file's bytes).
+
+For GET, this means including it into the URL parameters:
 
 ```
 /get_files/thumbnail?file_id=452158&Hydrus-Client-API-Access-Key=0150d9c4f6a6d2082534a997f4588dcf0c56dffe1d03ffbf98472236112236ae
@@ -389,7 +391,8 @@ Required Headers: n/a
 Arguments:
     
 :   *   `name`: (descriptive name of your access)
-    *   `basic_permissions`: A JSON-encoded list of numerical permission identifiers you want to request.
+    *   `permits_everything`: (selective, bool, whether to permit all tasks now and in future)
+    *   `basic_permissions`: Selective. A JSON-encoded list of numerical permission identifiers you want to request.
         
         The permissions are currently:
 
@@ -406,11 +409,17 @@ Arguments:
         *   10 - Manage Popups
         *   11 - Edit File Times
         *   12 - Commit Pending
-    
-    ``` title="Example request"
-    /request_new_permissions?name=my%20import%20script&basic_permissions=[0,1]
-    ```
-    
+        *   13 - See Local Paths
+
+
+``` title="Example request"
+/request_new_permissions?name=migrator&permit_everything=true
+```
+
+``` title="Example request (for permissions [0,1])"
+/request_new_permissions?name=my%20import%20script&basic_permissions=%5B0%2C1%5D
+```
+
 Response: 
 :   Some JSON with your access key, which is 64 characters of hex. This will not be valid until the user approves the request in the client ui.
 ```json title="Example response"
@@ -418,6 +427,8 @@ Response:
     "access_key" : "73c9ab12751dcf3368f028d3abbe1d8e2a3a48d0de25e64f3a8f00f3a1424c57"
 }
 ```     
+
+The `permits_everything` overrules all the individual permissions and will encompass any new permissions added in future. It is a convenient catch-all for local-only services where you are running things yourself or the user otherwise implicitly trusts you.
 
 ### **GET `/session_key`** { id="session_key" }
 
@@ -455,13 +466,15 @@ Arguments: n/a
     
 Response: 
 :   401/403/419 and some error text if the provided access/session key is invalid, otherwise some JSON with basic permission info. 
+
 ```json title="Example response"
 {
+  "name" : "autotagger",
+  "permits_everything" : false,
   "basic_permissions" : [0, 1, 3],
   "human_description" : "API Permissions (autotagger): add tags to files, import files, search for files: Can search: only autotag this"
 }
 ```
-        
 
 ### **GET `/get_service`** { id="get_service" }
 
@@ -2089,7 +2102,6 @@ If you add `detailed_url_information=true`, a new entry, `detailed_known_urls`, 
 }
 ```
 
-
 ### **GET `/get_files/file`** { id="get_files_file" }
 
 _Get a file._
@@ -2105,7 +2117,7 @@ Arguments :
     *   `hash`: (selective, a hexadecimal SHA256 hash for the file)
     *   `download`: (optional, boolean, default `false`)
 
-    Only use one of file_id or hash. As with metadata fetching, you may only use the hash argument if you have access to all files. If you are tag-restricted, you will have to use a file_id in the last search you ran.
+Only use one of `file_id` or `hash`. As with metadata fetching, you may only use the hash argument if you have access to all files. If you are tag-restricted, you will have to use a file_id in the last search you ran.
 
 ``` title="Example request"
 /get_files/file?file_id=452158
@@ -2118,6 +2130,8 @@ Response:
 :   The file itself. You should get the correct mime type as the Content-Type header.
 
 By default, this will set the `Content-Disposition` header to `inline`, which causes a web browser to show the file. If you set `download=true`, it will set it to `attachment`, which triggers the browser to automatically download it (or open the 'save as' dialog) instead.
+
+This stuff supports `Range` requests, so if you want to build a video player, go nuts.
 
 ### **GET `/get_files/thumbnail`** { id="get_files_thumbnail" }
 
@@ -2133,7 +2147,7 @@ Arguments:
     *   `file_id`: (selective, numerical file id for the file)
     *   `hash`: (selective, a hexadecimal SHA256 hash for the file)
 
-    Only use one. As with metadata fetching, you may only use the hash argument if you have access to all files. If you are tag-restricted, you will have to use a file_id in the last search you ran.
+Only use one. As with metadata fetching, you may only use the hash argument if you have access to all files. If you are tag-restricted, you will have to use a file_id in the last search you ran.
 
 ``` title="Example request"
 /get_files/thumbnail?file_id=452158
@@ -2154,6 +2168,84 @@ Response:
 
 !!! note "Size of Defaults"
     If you get a 'default' filetype thumbnail like the pdf or hydrus one, you will be pulling the pngs straight from the hydrus/static folder. They will most likely be 200x200 pixels. 
+
+### **GET `/get_files/file_path`** { id="get_files_file_path" }
+
+_Get a local file path._
+
+Restricted access: 
+:   YES. Search for Files permission and See Local Paths permission needed. Additional search permission limits may apply.
+
+Required Headers: n/a
+
+Arguments :
+:   
+    *   `file_id`: (selective, numerical file id for the file)
+    *   `hash`: (selective, a hexadecimal SHA256 hash for the file)
+
+Only use one. As with metadata fetching, you may only use the hash argument if you have access to all files. If you are tag-restricted, you will have to use a file_id in the last search you ran.
+
+``` title="Example request"
+/get_files/file_path?file_id=452158
+```
+``` title="Example request"
+/get_files/file_path?hash=7f30c113810985b69014957c93bc25e8eb4cf3355dae36d8b9d011d8b0cf623a
+```
+
+Response:
+:   The actual path to the file on the host system.
+
+``` json title="Example response"
+{
+	"path" : "D:\hydrus_files\f7f\7f30c113810985b69014957c93bc25e8eb4cf3355dae36d8b9d011d8b0cf623a.jpg"
+}
+```
+
+This will give 404 if the file is not stored locally (which includes if it _should_ exist but is actually missing from the file store).
+
+### **GET `/get_files/thumbnail_path`** { id="get_files_thumbnail" }
+
+_Get a local thumbnail path._
+
+Restricted access: 
+:   YES. Search for Files permission and See Local Paths permission needed. Additional search permission limits may apply.
+
+Required Headers: n/a
+
+Arguments:
+:   
+    *   `file_id`: (selective, numerical file id for the file)
+    *   `hash`: (selective, a hexadecimal SHA256 hash for the file)
+    *   `include_thumbnail_filetype`: (optional, boolean, defaults to `false`)
+
+Only use one of `file_id` or `hash`. As with metadata fetching, you may only use the hash argument if you have access to all files. If you are tag-restricted, you will have to use a file_id in the last search you ran.
+
+``` title="Example request"
+/get_files/thumbnail?file_id=452158
+```
+``` title="Example request"
+/get_files/thumbnail?hash=7f30c113810985b69014957c93bc25e8eb4cf3355dae36d8b9d011d8b0cf623a&include_thumbnail_filetype=true
+```
+
+Response:
+:   The actual path to the thumbnail on the host system.
+
+``` json title="Example response"
+{
+	"path" : "D:\hydrus_files\f7f\7f30c113810985b69014957c93bc25e8eb4cf3355dae36d8b9d011d8b0cf623a.thumbnail"
+}
+```
+
+``` json title="Example response with include_thumbnail_filetype=true"
+{
+	"path" : "C:\hydrus_thumbs\f85\85daaefdaa662761d7cb1b026d7b101e74301be08e50bf09a235794ec8656f79.thumbnail",
+	"filetype" : "image/png"
+}
+```
+
+All thumbnails in hydrus have the .thumbnail file extension and in content are either jpeg (almost always) or png (to handle transparency).
+
+This will 400 if the given file type does not have a thumbnail in hydrus, and it will 404 if there should be a thumbnail but one does not exist and cannot be generated from the source file (which probably would mean that the source file was itself Not Found).
 
 ### **GET `/get_files/render`** { id="get_files_render" }
 

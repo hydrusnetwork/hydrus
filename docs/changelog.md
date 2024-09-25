@@ -7,6 +7,42 @@ title: Changelog
 !!! note
     This is the new changelog, only the most recent builds. For all versions, see the [old changelog](old_changelog.html).
 
+## [Version 591](https://github.com/hydrusnetwork/hydrus/releases/tag/v591)
+
+### misc
+
+* fixed a stupid oversight with last week's "move page focus left/right after closing tab" thing where it was firing even when the page closed was not the current tab!! it now correctly only moves your focus if you close the _current_ tab, not if you just middle click some other one
+* fixed the _share-&gt;export files_ menu command not showing if you right-clicked on just one file
+* cleaned some of the broader thumbnail menu code, separating the 'stuff to show if we have a focus' and 'stuff to show if we have a selection'; the various 'manage' commands now generally show even if there is no current 'focus' in the preview (which happens if you select with ctrl+click or ctrl+a and then right-click in whitespace)
+* the 'migrate tags' dialog now allows you to filter the sibling or parent pairs by whether the child/worse or parent/ideal tag has actual mapping counts on an arbitrary tag service. some new unit tests ensure this capability
+* fixed an error in the duplicate metadata merge system where if files were exchanging known URLs, and one of those URLs was not actually an URL (e.g. it was garbage data, or human-entered 'location' info), a secondary system that tried to merge correlated domain-based timestamps was throwing an exception
+* to reduce comma-confusion, the template for 'show num files and import status' on page names is now "name - (num_files - import_status)"
+* the option that governs whether page names have the file count after them (under _options-&gt;gui pages_) has a new choice--'show for all pages, but only if greater than zero'--which is now the default for new users
+
+### some boring code cleanup
+
+* broke up the over-coupled 'migrate tags' unit tests into separate content types and the new count-filtering stuff
+* cleaned up the 'share' menu construction code--it was messy after some recent rewrites
+* added some better error handling around some of the file/thumbnail path fetching/regen routines
+
+### client api
+
+* the client api gets a new permissions state this week: the permissions structure you edit for an access key can now be (and, as a convenient default, starts as) a simple 'permits everything' state. if the permissions are set to 'permit everything', then this overrules all the specific rules and tag search filter gubbins. nice and simple, and a permissions set this way will automatically inherit new permissions in the future. any api access keys that have all the permissions up to 'edit ratings' will be auto-updated to 'permits everything' and you will get an update saying this happened--check your permissions in _review services_ if you need finer control
+* added a new permission, `13`, for 'see local paths'
+* added `/get_files/file_path`, which fetches the local path of a file. it needs the new permission
+* added `/get_files/thumbnail_path`, which fetches the local path of a thumbnail and optionally the filetype of the actual thumb (jpeg or png). it needs the new permission
+* the `/request_new_permissions` command now accepts a `permits_everything` bool as a selective alternate to the `basic_permissions` list
+* the `/verify_access_key` command now responds with the name of the access key and the new `permits_everything` value
+* the API help is updated for the above
+* new unit tests test all the above
+* the Client API version is now 71
+
+### client api refactoring
+
+* the main `ClientLocalServerResources` file has been getting too huge (5,000 lines), so I've moved it and `ClientLocalServer` to their own `api` module and broken the Resources file up into core functions, the superclass, and the main verbs
+* fixed permissions check for `/manage_popups/update_popup`, which was checking for pages permission rather than popup permission
+* did a general linting pass of these easier-to-handle files; cleaned up some silly stuff
+
 ## [Version 590](https://github.com/hydrusnetwork/hydrus/releases/tag/v590)
 
 ### misc
@@ -338,51 +374,3 @@ title: Changelog
 * when you enter a wildcard into a Read tag autocomplete, it no longer always delivers the 'always autocompleting' version. so, if you enter `sa*s`, it will suggest `sa*s (wildcard search)` and perhaps `sa*s (any namespace)`, but it will no longer suggest the `sa*s*` variants until you, obviously, actually type that trailing asterisk yourself. I intermittently had no idea what the hell I was doing when I originally developed this stuff
 * the 'unnamespaced input gives `(any namespace)` wildcard results' tag display option is now correctly negatively enforced when entering unnamespaced wildcards. previously it was always adding them, and sometimes inserting them at the top of the list. the `(any namespace)` variant is now always below the unnamespaced when both are present
 * fixed up a bunch of jank unit tests that were testing this badly
-
-## [Version 581](https://github.com/hydrusnetwork/hydrus/releases/tag/v581)
-
-### misc
-
-* thanks to a user, we have a much improved shimmie parser, for both file and gallery urls, that fetches md5 better, improves gallery navigation, stops grabbing bad urls and related tags by accident, and can handle namespaces for those shimmies that use them. for our purposes, this improves r34h and r34@paheal downloaders by default
-* thanks to a user, we have a new 'Dark Blue 1.1' styesheet with some improvements. the recommendation is: check the different scrollbar styling to see if you prefer the old version
-* timedelta widgets now enforce their minimum time on focus-out rather than value change. if it wants at least 20 minutes, you can now type in '5...' in the minutes column without it going nuts. let me know if you discover a way to out-fox the focus-out detection!
-* added a checkbox to file import options to govern whether 'import destinations' and 'archive all imports' apply to 'already in db' files. this turns on/off the logic that I made more reliable last week. default is that they do
-* added 'do sleep check' to _options-&gt;system_ to try some things out on systems that often false-positive this check
-* the 'review current network jobs' multi-column list has a new right-click menu to show a bit more debug info about each job: each of its network contexts, how the bandwidth is on each context, if the domain is ok, if it is waiting on a connection error, if it is waiting on serverside bandwidth, if it obey bandwidth, and if its tokens are ok. if you have been working with me on gallery jobs that just sit on 'starting soon', please check it out and let me know what you see. also, 'review current network jobs' is duplicated to the help-&gt;debug menu. I forgot where it was, so let's have it in both places
-* on the filename-import tagging panel, the filename and directory checkbox-and-text-edit widgets no longer emit a (sometimes laggy) update signal when typing when the checkbox is unchecked
-
-### janitor stuff
-
-* if you are a repository janitor, right-clicking on any tag shows a new 'admin' menu
-* if you have 'change options' permission, you will see 'block x'/'re-allow x' to let you quickly see if tags are blocked and then edit the repository tag filter respectively
-* if you have 'mappings petition resolution' permission, you can 'purge' the selected tags, which will deleted them from the service entirely. this launches a review window that previews the job and allows adding of more tags using the standard autocomplete interface. when 'fired off', it launches a tag migration job to queue up the full petition/delete upload
-* this new 'purge' window is also available from the normal 'administrate services' menu in the main gui
-* also under the 'administrate services' is a new 'purge tag filter' command, which applies the existing repository tag filter to its own mappings store, retroactively syncing you to it
-
-### tag filters and migration
-
-* I wrote a database routine that quickly converts a hydrus tag filter into the list of tags within a file and tag search context. this tech will have a variety of uses in the genre of 'hey please delete/fetch/check all these tags'
-* to start with, it is now plugged into the tag migration system, so when you set up, say, an 'all known files' tag migration that only looks for a namespace or a bunch of single tags, the 'setup' phase is now massively, massively faster (previously, with something like the PTR, this would be scanning through tens of millions of files for minutes; now it just targets the 50k or whatever using existing tag search tech usually within less than a second)
-* cleaned (KISSed) and reworked the tag filter logic a bit--it can now, underlyingly, handle 'no namespaced tags, except for creator:anything, but still allowing creator:blah'
-* optimised how tag filters do 'apply unnamespaced rules to namespaced tags' (which happens in some blacklists that want to be expansive)
-* improved how the tag filter describes itself in many cases. it should make more grammatical sense and repeat itself less now (e.g. no more 'all tags and namespaced tags and unnamespaced tags' rubbish)
-* improved how some tag filter rules are handled across the program, including fixing some edge-case false-positive namespace-rule detection
-* deleted some ancient and no longer used tag filtering code
-
-### boring multi-column list stuff
-
-* did more 'select, sort, and scroll' code cleanup in my multi-column lists, specifically: manage import folders; manage export folders; the string-to-string dict list; edit ngug; edit downloader display (both gugs and url classes, and with a one-shot show/hide choice on a multi-selection rather than asking for each in turn); the special 'duplicate' command of edit shortcut set; and the string converter conversions list (including better select logic on move up/down)
-* in keeping with the new general policy of 'when you edit a multi-column list, you just edit one row', the various 'edit' buttons under these lists across the program are now generally only enabled when you have one row selected
-* the new 'select, sort, and scroll to new item when a human adds it' tech now _deselects_ the previous selection. let me know if this screws up anywhere (maybe in a hacky multi-add somewhere it'll only select the last added?)
-* the aggravating 'clear the focus of the list on most changes bro' jank seems to be fixed--it was a dumb legacy thing
-* whenever the multi-column list does its new 'scroll-to' action, it now takes focus to better highlight where we are (rather than stay, for instance, leaving focus on the 'add' button you just clicked)
-
-### other boring stuff
-
-* worked a little more on a routine that collapses an arbitrary list of strings to a human-presentable summary and replaced the hardcoded hacky version that presents the 'paste queries' result in the 'edit subscription' panel with it
-* wrote a similar new routine to collapse an arbitrary list of strings to a single-line summary, appropriate for menu labels and such
-* fixed a layout issue in the 'manage downloader display' dialog that caused the 'edit' button on the 'media viewer urls' side to not show, lmaooooooo
-* ephemeral 'watcher' and 'gallery' network contexts now describe themselves with a nicer string
-* decoupled how some service admin stuff works behind the scenes to make it easier to launch this stuff from different UI widgets
-* refactored `ToHumanInt` and the `ToPrettyOrdinalString` guys to a new `HydrusNumbers.py` file
-* fixed some bad Client API documentation for the params in `/get_files/search_files`
