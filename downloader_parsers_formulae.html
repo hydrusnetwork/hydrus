@@ -20,7 +20,7 @@
       
       
       <link rel="icon" href="assets/favicon.svg">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.5.37">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.5.39">
     
     
       
@@ -1568,9 +1568,18 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#compound_formula" class="md-nav__link">
+  <a href="#nested_formula" class="md-nav__link">
     <span class="md-ellipsis">
-      compound
+      nested
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#zipper_formula" class="md-nav__link">
+    <span class="md-ellipsis">
+      zipper
     </span>
   </a>
   
@@ -2199,9 +2208,18 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#compound_formula" class="md-nav__link">
+  <a href="#nested_formula" class="md-nav__link">
     <span class="md-ellipsis">
-      compound
+      nested
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#zipper_formula" class="md-nav__link">
+    <span class="md-ellipsis">
+      zipper
     </span>
   </a>
   
@@ -2241,8 +2259,8 @@
 
 <h1 id="formulae">Parser Formulae<a class="headerlink" href="#formulae" title="Permanent link">&para;</a></h1>
 <p>Formulae are tools used by higher-level components of the parsing system. They take some data (typically some HTML or JSON) and return 0 to n strings. For our purposes, these strings will usually be tags, URLs, and timestamps. You will usually see them summarised with this panel:</p>
-<p><img alt="" src="images/edit_formula_panel.png" /></p>
-<p>The different types are currently <a href="#html_formula">html</a>, <a href="#json_formula">json</a>, <a href="#compound_formula">compound</a>, and <a href="#context_variable_formula">context variable</a>.</p>
+<p><a href="images/edit_formula_panel.png"><img alt="" src="images/edit_formula_panel.png" /></a></p>
+<p>The different types are currently <a href="#html_formula">html</a>, <a href="#json_formula">json</a>, <a href="#nested_formula">nested</a>, <a href="#zipper_formula">zipper</a>, and <a href="#context_variable_formula">context variable</a>.</p>
 <h2 id="html_formula">html<a class="headerlink" href="#html_formula" title="Permanent link">&para;</a></h2>
 <p>This takes a full HTML document or a sample of HTML--and any regular sort of XML <em>should</em> also work. It starts at the root node and searches for lower nodes using one or more ordered rules based on tag name and attributes, and then returns string data from those final nodes.</p>
 <p>For instance, if you have this:</p>
@@ -2273,11 +2291,11 @@
 <p>You might be tempted to just go straight for any <code class="highlight"><span class="p">&lt;</span><span class="nt">span</span><span class="p">&gt;</span></code> with <code>class="artisttag"</code>, but many sites use the same class to render a sidebar of favourite/popular tags or some other sponsored content, so it is generally best to try to narrow down to a larger <code class="highlight"><span class="p">&lt;</span><span class="nt">div</span><span class="p">&gt;</span></code> container so you don't get anything you don't mean.</p>
 <h3 id="the_ui">the ui<a class="headerlink" href="#the_ui" title="Permanent link">&para;</a></h3>
 <p>Clicking 'edit formula' on an HTML formula gives you this:</p>
-<p><img alt="" src="images/edit_html_formula_panel.png" /></p>
+<p><a href="images/edit_html_formula_panel.png"><img alt="" src="images/edit_html_formula_panel.png" /></a></p>
 <p>You edit on the left and test on the right.</p>
 <h3 id="finding_the_right_html_tags">finding the right html tags<a class="headerlink" href="#finding_the_right_html_tags" title="Permanent link">&para;</a></h3>
 <p>When you add or edit one of the specific tag search rules, you get this:</p>
-<p><img alt="" src="images/edit_html_tag_rule_panel.png" /></p>
+<p><a href="images/edit_html_tag_rule_panel.png"><img alt="" src="images/edit_html_tag_rule_panel.png" /></a></p>
 <p>You can set multiple key/value attribute search conditions, but you'll typically be searching for 'class' or 'id' here, if anything.</p>
 <p>Note that you can set it to fetch only the xth instance of a found tag, which can be useful in situations like this:</p>
 <div class="highlight"><pre><span></span><code><span class="p">&lt;</span><span class="nt">span</span> <span class="na">class</span><span class="o">=</span><span class="s">&quot;generaltag&quot;</span><span class="p">&gt;</span>
@@ -2295,7 +2313,7 @@
 <span class="p">&lt;/</span><span class="nt">span</span><span class="p">&gt;</span>
 </code></pre></div>
 <p>There isn't a great way to find the <code class="highlight"><span class="p">&lt;</span><span class="nt">span</span><span class="p">&gt;</span></code> or the <code class="highlight"><span class="p">&lt;</span><span class="nt">a</span><span class="p">&gt;</span></code> when looking from above here, as they are lacking a class or id, but you can find the <code class="highlight"><span class="p">&lt;</span><span class="nt">img</span><span class="p">&gt;</span></code> ok, so if you find those and then add a rule where instead of searching descendants, you are 'walking back up ancestors' like this:</p>
-<p><img alt="" src="images/edit_html_formula_panel_descendants_ancestors.png" /></p>
+<p><a href="images/edit_html_formula_panel_descendants_ancestors.png"><img alt="" src="images/edit_html_formula_panel_descendants_ancestors.png" /></a></p>
 <p>You can solve some tricky problems this way!</p>
 <p>You can also set a String Match, which is the same panel as you say in with URL Classes. It tests its best guess at the tag's 'string' value, so you can find a tag with 'Original Image' as its text or that with a regex starts with 'Posted on: '. Have a play with it and you'll figure it out.</p>
 <h3 id="content_to_fetch">content to fetch<a class="headerlink" href="#content_to_fetch" title="Permanent link">&para;</a></h3>
@@ -2310,29 +2328,49 @@
 <p>The testing panel on the right is important and worth using. Copy the html from the source you want to parse and then hit the paste buttons to set that as the data to test with.</p>
 <h2 id="json_formula">json<a class="headerlink" href="#json_formula" title="Permanent link">&para;</a></h2>
 <p>This takes some JSON and does a similar style of search:</p>
-<p><img alt="" src="images/edit_json_formula_panel.png" /></p>
+<p><a href="images/edit_json_formula_panel.png"><img alt="" src="images/edit_json_formula_panel.png" /></a></p>
 <p>It is a bit simpler than HTML--if the current node is a list (called an 'Array' in JSON), you can fetch every item or the xth item, and if it is a dictionary (called an 'Object' in JSON), you can fetch a particular entry by name. Since you can't jump down several layers with attribute lookups or tag names like with HTML, you have to go down every layer one at a time. In any case, if you have something like this:</p>
 <p><a href="images/json_thread_example.png"><img alt="" src="images/json_thread_example.png" /></a></p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
-<p>It is a great idea to check the html or json you are trying to parse with your browser. Some web browsers have excellent developer tools that let you walk through the nodes of the document you are trying to parse in a prettier way than I would ever have time to put together. This image is one of the views Firefox provides if you simply enter a JSON URL.</p>
+<p>It is a great idea to check the html or json you are trying to parse with your browser. Most web browsers have excellent developer tools that let you walk through the nodes of the document you are trying to parse in a prettier way than I would ever have time to put together. This image is one of the views Firefox provides if you simply enter a JSON URL.</p>
 </div>
 <p>Searching for "posts"-&gt;1<sup>st</sup> list item-&gt;"sub" on this data will give you "Nobody like kino here.".</p>
 <p>Searching for "posts"-&gt;all list items-&gt;"tim" will give you the three SHA256 file hashes (since the third post has no file attached and so no 'tim' entry, the parser skips over it without complaint).</p>
 <p>Searching for "posts"-&gt;1<sup>st</sup> list item-&gt;"com" will give you the OP's comment, <span class="dealwithit">~AS RAW UNPARSED HTML~</span>.</p>
 <p>The default is to fetch the final nodes' 'data content', which means coercing simple variables into strings. If the current node is a list or dict, no string is returned.</p>
 <p>But if you like, you can return the json beneath the current node (which, like HTML, includes the current node). This again will come in useful later.</p>
-<h2 id="compound_formula">compound<a class="headerlink" href="#compound_formula" title="Permanent link">&para;</a></h2>
-<p>If you want to create a string from multiple parsed strings--for instance by appending the 'tim' and the 'ext' in our json example together--you can use a Compound formula. This fetches multiple lists of strings and tries to place them into a single string using <code>\1</code> regex substitution syntax:</p>
-<p><img alt="" src="images/edit_compound_formula_panel.png" /></p>
+<h2 id="nested_formula">nested<a class="headerlink" href="#nested_formula" title="Permanent link">&para;</a></h2>
+<p>If you want to parse some JSON that is tucked inside an HTML attribute, or <em>vice versa</em>, use a nested formula. This parses the text using one formula type and then passes the result(s) to another.</p>
+<p><a href="images/edit_nested_formula_panel.png"><img alt="" src="images/edit_nested_formula_panel.png" /></a></p>
+<p>The especially neat thing about this is the encoded characters like <code>&amp;gt;</code> or escaped JSON characters are all handled natively for you. Before we had this, we had to hack our way around with crazy regex.</p>
+<h2 id="zipper_formula">zipper<a class="headerlink" href="#zipper_formula" title="Permanent link">&para;</a></h2>
+<p>If you want to combine strings from the results of different parsers--for instance by joining the 'tim' and the 'ext' in our json example--you can use a Zipper formula. This fetches multiple lists of strings and zips their result rows together using <code>\1</code> regex substitution syntax:</p>
+<p><a href="images/edit_zipper_formula_panel.png"><img alt="" src="images/edit_zipper_formula_panel.png" /></a></p>
 <p>This is a complicated example taken from one of my thread parsers. I have to take a modified version of the original thread URL (the first rule, so <code>\1</code>) and then append the filename (<code>\2</code>) and its extension (<code>\3</code>) on the end to get the final file URL of a post. You can mix in more characters in the substitution phrase, like <code>\1.jpg</code> or even have multiple instances (<code>https://\2.muhsite.com/\2/\1</code>), if that is appropriate.</p>
-<p>This is where the magic happens, sometimes, so keep it in mind if you need to do something cleverer than the data you have seems to provide.</p>
+<p>If your sub-formulae produce multiple results, the Zipper will produce that many also, iterating the sub-lists together.</p>
+<div class="highlight"><span class="filename">Example</span><pre><span></span><code>If parser 1 gives:
+  a
+  b
+  c
+
+And parser 2 gives:
+  1
+  2
+  3
+
+Using a substitution phrase of &quot;\1-\2&quot; will give:
+  a-1
+  b-2
+  c-3
+</code></pre></div>
+<p>If one of the sub-formulae produces fewer results than the others, its final value will be used to fill in the gaps. In this way, you might somewhere parse one prefix and seven suffixes, where joining them will use the same prefix seven times.</p>
 <h2 id="context_variable_formula">context variable<a class="headerlink" href="#context_variable_formula" title="Permanent link">&para;</a></h2>
 <p>This is a basic hacky answer to a particular problem. It is a simple key:value dictionary that at the moment only stores one variable, 'url', which contains the original URL used to fetch the data being parsed.</p>
 <p>If a different URL Class links to this parser via an API URL, this 'url' variable will always be the API URL (i.e. it literally is the URL used to fetch the data), not any thread/whatever URL the user entered.</p>
-<p><img alt="" src="images/edit_context_variable_formula_panel.png" /></p>
+<p><a href="images/edit_context_variable_formula_panel.png"><img alt="" src="images/edit_context_variable_formula_panel.png" /></a></p>
 <p>Hit the 'edit example parsing context' to change the URL used for testing.</p>
-<p>I have used this several times to stitch together file URLs when I am pulling data from APIs, like in the compound formula example above. In this case, the starting URL is <code>https://a.4cdn.org/tg/thread/57806016.json</code>, from which I extract the board name, "tg", using the string converter, and then add in 4chan's CDN domain to make the appropriate base file URL (<code>https:/i.4cdn.org/tg/</code>) for the given thread. I only have to jump through this hoop in 4chan's case because they explicitly store file URLs by board name. 8chan on the other hand, for instance, has a static <code>https://media.8ch.net/file_store/</code> for all files, so it is a little easier (I think I just do a single 'prepend' string transformation somewhere).</p>
+<p>I have used this several times to stitch together file URLs when I am pulling data from APIs, like in the zipper formula example above. In this case, the starting URL is <code>https://a.4cdn.org/tg/thread/57806016.json</code>, from which I extract the board name, "tg", using the string converter, and then add in 4chan's CDN domain to make the appropriate base file URL (<code>https:/i.4cdn.org/tg/</code>) for the given thread. I only have to jump through this hoop in 4chan's case because they explicitly store file URLs by board name. 8chan on the other hand, for instance, has a static <code>https://media.8ch.net/file_store/</code> for all files, so it is a little easier (I think I just do a single 'prepend' string transformation somewhere).</p>
 <p>If you want to make some parsers, you will have to get familiar with how different sites store and present their data!</p>
 
 
@@ -2354,7 +2392,7 @@
     <span class="md-icon" title="Last update">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 13.1c-.1 0-.3.1-.4.2l-1 1 2.1 2.1 1-1c.2-.2.2-.6 0-.8l-1.3-1.3c-.1-.1-.2-.2-.4-.2m-1.9 1.8-6.1 6V23h2.1l6.1-6.1zM12.5 7v5.2l4 2.4-1 1L11 13V7zM11 21.9c-5.1-.5-9-4.8-9-9.9C2 6.5 6.5 2 12 2c5.3 0 9.6 4.1 10 9.3-.3-.1-.6-.2-1-.2s-.7.1-1 .2C19.6 7.2 16.2 4 12 4c-4.4 0-8 3.6-8 8 0 4.1 3.1 7.5 7.1 7.9l-.1.2z"/></svg>
     </span>
-    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">December 23, 2021</span>
+    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">October 2, 2024</span>
   </span>
 
     
@@ -2479,7 +2517,7 @@
     <script id="__config" type="application/json">{"base": ".", "features": ["navigation.tracking", "navigation.sections", "navigation.tabs", "content.tabs.link", "navigation.top", "search.suggest", "content.code.annotate", "navigation.instant", "content.action.edit"], "search": "assets/javascripts/workers/search.6ce7567c.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
     
     
-      <script src="assets/javascripts/bundle.d6f25eb3.min.js"></script>
+      <script src="assets/javascripts/bundle.525ec568.min.js"></script>
       
     
   </body>
