@@ -44,7 +44,7 @@ class MigrateTagsPanel( ClientGUIScrolledPanels.ReviewPanel ):
     
     def __init__( self, parent, service_key, hashes = None ):
         
-        ClientGUIScrolledPanels.ReviewPanel.__init__( self, parent )
+        super().__init__( parent )
         
         self._service_key = service_key
         self._hashes = hashes
@@ -142,16 +142,22 @@ class MigrateTagsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         self._migration_source_worse_must_have_count = QW.QCheckBox( self._pair_have_count_panel )
         self._migration_source_parent_must_have_count = QW.QCheckBox( self._pair_have_count_panel )
         self._migration_source_ideal_must_have_count = QW.QCheckBox( self._pair_have_count_panel )
+        self._migration_source_child_or_parent_must_have_count = QW.QCheckBox( self._pair_have_count_panel )
+        self._migration_source_worse_or_ideal_must_have_count = QW.QCheckBox( self._pair_have_count_panel )
         
         self._migration_source_child_must_have_count.setText( 'only if child (left) side has count' )
         self._migration_source_worse_must_have_count.setText( 'only if worse (left) side has count' )
         self._migration_source_parent_must_have_count.setText( 'only if parent (right) side has count' )
-        self._migration_source_ideal_must_have_count.setText( 'only if ideal (where right side terminates) has count' )
+        self._migration_source_ideal_must_have_count.setText( 'only if ideal (where right side\'s chain terminates) has count' )
+        self._migration_source_child_or_parent_must_have_count.setText( 'only if the child or parent has count' )
+        self._migration_source_worse_or_ideal_must_have_count.setText( 'only if the worse or ideal has count' )
         
         self._migration_source_child_must_have_count.setToolTip( ClientGUIFunctions.WrapToolTip( 'Only include this pair if the child (left) side has an actual real mappings count in the service.' ) )
         self._migration_source_worse_must_have_count.setToolTip( ClientGUIFunctions.WrapToolTip( 'Only include this pair if the worse (left) side has an actual real mappings count in the service.' ) )
         self._migration_source_parent_must_have_count.setToolTip( ClientGUIFunctions.WrapToolTip( 'Only include this pair if the parent (right) side has an actual real mappings count in the service.' ) )
         self._migration_source_ideal_must_have_count.setToolTip( ClientGUIFunctions.WrapToolTip( 'Only include this pair if the ideal (where the chain of the right side terminates) has an actual real mappings count in the service.' ) )
+        self._migration_source_child_or_parent_must_have_count.setToolTip( ClientGUIFunctions.WrapToolTip( 'Only include this pair if the child (left) or parent (right) side has an actual real mappings count in the service.' ) )
+        self._migration_source_worse_or_ideal_must_have_count.setToolTip( ClientGUIFunctions.WrapToolTip( 'Only include this pair if the worse (left) or ideal (where the chain of the right side terminates) side has an actual real mappings count in the service.' ) )
         
         self._migration_source_have_count_service = ClientGUICommon.BetterChoice( self._pair_have_count_panel )
         
@@ -195,6 +201,8 @@ class MigrateTagsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         QP.AddToLayout( have_count_vbox, self._migration_source_worse_must_have_count, CC.FLAGS_EXPAND_BOTH_WAYS )
         QP.AddToLayout( have_count_vbox, self._migration_source_parent_must_have_count, CC.FLAGS_EXPAND_BOTH_WAYS )
         QP.AddToLayout( have_count_vbox, self._migration_source_ideal_must_have_count, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( have_count_vbox, self._migration_source_child_or_parent_must_have_count, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( have_count_vbox, self._migration_source_worse_or_ideal_must_have_count, CC.FLAGS_EXPAND_BOTH_WAYS )
         QP.AddToLayout( have_count_vbox, ClientGUICommon.WrapInText( self._migration_source_have_count_service, self._pair_have_count_panel, 'in service: ' ), CC.FLAGS_EXPAND_BOTH_WAYS )
         
         self._pair_have_count_panel.setLayout( have_count_vbox )
@@ -287,11 +295,13 @@ class MigrateTagsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         self._migration_source_child_must_have_count.clicked.connect( self._UpdateMigrationControlsPairCount )
         self._migration_source_ideal_must_have_count.clicked.connect( self._UpdateMigrationControlsPairCount )
         self._migration_source_parent_must_have_count.clicked.connect( self._UpdateMigrationControlsPairCount )
+        self._migration_source_child_or_parent_must_have_count.clicked.connect( self._UpdateMigrationControlsPairCount )
+        self._migration_source_worse_or_ideal_must_have_count.clicked.connect( self._UpdateMigrationControlsPairCount )
         
     
     def _MigrationGo( self ):
         
-        extra_info = ''
+        extra_filter_info_strings = []
         
         source_content_statuses_strings = {
             ( HC.CONTENT_STATUS_CURRENT, ) : 'current',
@@ -347,7 +357,7 @@ class MigrateTagsPanel( ClientGUIScrolledPanels.ReviewPanel ):
                 location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_FILE_SERVICE_KEY )
                 hashes = self._hashes
                 
-                extra_info = ' for {} files'.format( HydrusNumbers.ToHumanInt( len( hashes ) ) )
+                extra_filter_info_strings.append( 'for {} files'.format( HydrusNumbers.ToHumanInt( len( hashes ) ) ) )
                 
             else:
                 
@@ -356,17 +366,17 @@ class MigrateTagsPanel( ClientGUIScrolledPanels.ReviewPanel ):
                 
                 if location_context.IsAllKnownFiles():
                     
-                    extra_info = ' for all known files'
+                    extra_filter_info_strings.append( 'for all known files' )
                     
                 else:
                     
-                    extra_info = ' for files in "{}"'.format( location_context.ToString( CG.client_controller.services_manager.GetName ) )
+                    extra_filter_info_strings.append( 'for files in "{}"'.format( location_context.ToString( CG.client_controller.services_manager.GetName ) ) )
                     
                 
             
             tag_filter = self._migration_source_tag_filter.GetValue()
             
-            extra_info += ' and for tags "{}"'.format( HydrusText.ElideText( tag_filter.ToPermittedString(), 96 ) )
+            extra_filter_info_strings.append( 'for tags "{}"'.format( HydrusText.ElideText( tag_filter.ToPermittedString(), 96 ) ) )
             
             if source_service_key == self.HTA_SERVICE_KEY:
                 
@@ -414,25 +424,72 @@ class MigrateTagsPanel( ClientGUIScrolledPanels.ReviewPanel ):
             
             if left_s == right_s:
                 
-                extra_info = ' for "{}" on both sides'.format( left_s )
+                extra_filter_info_strings.append( f'for "{left_s}" on both sides' )
                 
             else:
                 
-                extra_info = ' for "{}" on the left and "{}" on the right'.format( left_s, right_s )
-                
-            
-            if content_type == HC.CONTENT_TYPE_TAG_SIBLINGS:
-                
-                left_side_needs_count = self._migration_source_worse_must_have_count.isChecked()
-                right_side_needs_count = self._migration_source_ideal_must_have_count.isChecked()
-                
-            else:
-                
-                left_side_needs_count = self._migration_source_child_must_have_count.isChecked()
-                right_side_needs_count = self._migration_source_parent_must_have_count.isChecked()
+                extra_filter_info_strings.append( f'for "{left_s}" on the left' )
+                extra_filter_info_strings.append( f'for "{right_s}" on the right' )
                 
             
             needs_count_service_key = self._migration_source_have_count_service.GetValue()
+            
+            needs_count_service_name = CG.client_controller.services_manager.GetName( needs_count_service_key )
+            
+            if content_type == HC.CONTENT_TYPE_TAG_SIBLINGS:
+                
+                either_side_needs_count = self._migration_source_worse_or_ideal_must_have_count.isChecked()
+                
+                if either_side_needs_count:
+                    
+                    left_side_needs_count = False
+                    right_side_needs_count = False
+                    
+                    extra_filter_info_strings.append( f'where the worse or ideal tag of each pair has count on "{needs_count_service_name}"' )
+                    
+                else:
+                    
+                    left_side_needs_count = self._migration_source_worse_must_have_count.isChecked()
+                    right_side_needs_count = self._migration_source_ideal_must_have_count.isChecked()
+                    
+                    if left_side_needs_count:
+                        
+                        extra_filter_info_strings.append( f'where the worse tag of each pair has count on "{needs_count_service_name}"' )
+                        
+                    
+                    if right_side_needs_count:
+                        
+                        extra_filter_info_strings.append( f'where the ideal tag of each pair\'s chain has count on "{needs_count_service_name}"' )
+                        
+                    
+                
+            else:
+                
+                either_side_needs_count = self._migration_source_child_or_parent_must_have_count.isChecked()
+                
+                if either_side_needs_count:
+                    
+                    left_side_needs_count = False
+                    right_side_needs_count = False
+                    
+                    extra_filter_info_strings.append( f'where the child or parent tag of each pair has count on "{needs_count_service_name}"' )
+                    
+                else:
+                    
+                    left_side_needs_count = self._migration_source_child_must_have_count.isChecked()
+                    right_side_needs_count = self._migration_source_parent_must_have_count.isChecked()
+                    
+                    if left_side_needs_count:
+                        
+                        extra_filter_info_strings.append( f'where the child tag of each pair has count on "{needs_count_service_name}"' )
+                        
+                    
+                    if right_side_needs_count:
+                        
+                        extra_filter_info_strings.append( f'where the parent tag of each pair has count on "{needs_count_service_name}"' )
+                        
+                    
+                
             
             if source_service_key == self.HTPA_SERVICE_KEY:
                 
@@ -443,15 +500,24 @@ class MigrateTagsPanel( ClientGUIScrolledPanels.ReviewPanel ):
                     return
                     
                 
-                source = ClientMigration.MigrationSourceHTPA( CG.client_controller, self._source_archive_path, content_type, left_tag_pair_filter, right_tag_pair_filter, left_side_needs_count, right_side_needs_count, needs_count_service_key )
+                source = ClientMigration.MigrationSourceHTPA( CG.client_controller, self._source_archive_path, content_type, left_tag_pair_filter, right_tag_pair_filter, left_side_needs_count, right_side_needs_count, either_side_needs_count, needs_count_service_key )
                 
             else:
                 
-                source = ClientMigration.MigrationSourceTagServicePairs( CG.client_controller, source_service_key, content_type, left_tag_pair_filter, right_tag_pair_filter, content_statuses, left_side_needs_count, right_side_needs_count, needs_count_service_key )
+                source = ClientMigration.MigrationSourceTagServicePairs( CG.client_controller, source_service_key, content_type, left_tag_pair_filter, right_tag_pair_filter, content_statuses, left_side_needs_count, right_side_needs_count, either_side_needs_count, needs_count_service_key )
                 
             
         
-        title = 'taking {} {}{} from "{}" and {} "{}"'.format( source_content_statuses_strings[ content_statuses ], HC.content_type_string_lookup[ content_type ], extra_info, source.GetName(), destination_action_strings[ content_action ], destination.GetName() )
+        if len( extra_filter_info_strings ) > 0:
+            
+            extra_info = ' ' + ' and '.join( extra_filter_info_strings )
+            
+        else:
+            
+            extra_info = ''
+            
+        
+        title = f'taking {source_content_statuses_strings[ content_statuses ]} {HC.content_type_string_lookup[ content_type ]}{extra_info} from "{source.GetName()}" and {destination_action_strings[ content_action ]} "{destination.GetName()}"'
         
         message = 'Migrations can make huge changes. They can be cancelled early, but any work they do cannot always be undone. Please check that this summary looks correct:'
         message += '\n' * 2
@@ -862,10 +928,11 @@ class MigrateTagsPanel( ClientGUIScrolledPanels.ReviewPanel ):
             
             self._migration_source_child_must_have_count.setVisible( not we_siblings )
             self._migration_source_parent_must_have_count.setVisible( not we_siblings )
+            self._migration_source_child_or_parent_must_have_count.setVisible( not we_siblings )
             
             self._migration_source_worse_must_have_count.setVisible( we_siblings )
             self._migration_source_ideal_must_have_count.setVisible( we_siblings )
-            
+            self._migration_source_worse_or_ideal_must_have_count.setVisible( we_siblings )
             
         
         self._migration_source.SetValue( self._service_key )
@@ -882,13 +949,37 @@ class MigrateTagsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         if content_type == HC.CONTENT_TYPE_TAG_SIBLINGS:
             
-            enable_it = self._migration_source_worse_must_have_count.isChecked() or self._migration_source_ideal_must_have_count.isChecked()
+            enable_individual = not self._migration_source_worse_or_ideal_must_have_count.isChecked()
+            
+            self._migration_source_worse_must_have_count.setEnabled( enable_individual )
+            self._migration_source_ideal_must_have_count.setEnabled( enable_individual )
+            
+            if not enable_individual:
+                
+                enable_service = True
+                
+            else:
+                
+                enable_service = self._migration_source_worse_must_have_count.isChecked() or self._migration_source_ideal_must_have_count.isChecked()
+                
             
         else:
             
-            enable_it = self._migration_source_child_must_have_count.isChecked() or self._migration_source_parent_must_have_count.isChecked()
+            enable_individual = not self._migration_source_child_or_parent_must_have_count.isChecked()
+            
+            self._migration_source_child_must_have_count.setEnabled( enable_individual )
+            self._migration_source_parent_must_have_count.setEnabled( enable_individual )
+            
+            if not enable_individual:
+                
+                enable_service = True
+                
+            else:
+                
+                enable_service = self._migration_source_child_must_have_count.isChecked() or self._migration_source_parent_must_have_count.isChecked()
+                
             
         
-        self._migration_source_have_count_service.setEnabled( enable_it )
+        self._migration_source_have_count_service.setEnabled( enable_service )
         
     

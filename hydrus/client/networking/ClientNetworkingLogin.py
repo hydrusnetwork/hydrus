@@ -873,7 +873,7 @@ class LoginCredentialDefinition( HydrusSerialisable.SerialisableBaseNamed ):
             string_match = ClientStrings.StringMatch()
             
         
-        HydrusSerialisable.SerialisableBaseNamed.__init__( self, name )
+        super().__init__( name )
         
         self._credential_type = credential_type
         self._string_match = string_match
@@ -977,7 +977,7 @@ class LoginProcessDomain( LoginProcess ):
     
     def __init__( self, engine, network_context, login_script, credentials ):
         
-        LoginProcess.__init__( self, engine, network_context, login_script )
+        super().__init__( engine, network_context, login_script )
         
         self.credentials = credentials
         
@@ -1114,7 +1114,7 @@ class LoginScriptDomain( HydrusSerialisable.SerialisableBaseNamed ):
             example_domains_info = []
             
         
-        HydrusSerialisable.SerialisableBaseNamed.__init__( self, name )
+        super().__init__( name )
         
         self._login_script_key = HydrusData.GenerateKey()
         self._required_cookies_info = required_cookies_info # string match : string match
@@ -1537,7 +1537,7 @@ class LoginStep( HydrusSerialisable.SerialisableBaseNamed ):
     
     def __init__( self, name = 'hit home page to establish session', scheme = 'https', method = 'GET', subdomain = None, path = '/' ):
         
-        HydrusSerialisable.SerialisableBaseNamed.__init__( self, name )
+        super().__init__( name )
         
         self._scheme = scheme
         self._method = method

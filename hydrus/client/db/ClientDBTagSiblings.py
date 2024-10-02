@@ -1020,6 +1020,11 @@ class ClientDBTagSiblings( ClientDBModule.ClientDBModule ):
     
     def RegenChains( self, tag_service_ids, tag_ids ):
         
+        if self._service_ids_to_applicable_service_ids is None:
+            
+            self._GenerateApplicationDicts()
+            
+        
         # as this guy can change ideals, the related parent chains need to be regenned afterwards too
         
         if len( tag_ids ) == 0:

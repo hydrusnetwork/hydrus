@@ -420,7 +420,7 @@ class PanelPredicateSystemRating( PanelPredicateSystemMultiple ):
     
     def __init__( self, parent, predicates ):
         
-        PanelPredicateSystemMultiple.__init__( self, parent )
+        super().__init__( parent )
         
         #
         

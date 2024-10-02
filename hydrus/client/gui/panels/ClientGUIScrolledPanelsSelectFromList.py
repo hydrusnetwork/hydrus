@@ -13,7 +13,7 @@ class EditSelectFromListPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def __init__( self, parent: QW.QWidget, choice_tuples: list, value_to_select = None, sort_tuples = True ):
         
-        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        super().__init__( parent )
         
         self._list = ClientGUIListBoxes.BetterQListWidget( self )
         self._list.itemDoubleClicked.connect( self.EventSelect )
@@ -111,7 +111,7 @@ class EditSelectFromListButtonsPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def __init__( self, parent: QW.QWidget, choices, message = '' ):
         
-        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        super().__init__( parent )
         
         self._data = None
         
@@ -164,7 +164,7 @@ class EditSelectMultiple( ClientGUIScrolledPanels.EditPanel ):
     
     def __init__( self, parent: QW.QWidget, choice_tuples: list ):
         
-        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        super().__init__( parent )
         
         self._checkboxes = ClientGUICommon.BetterCheckBoxList( self )
         

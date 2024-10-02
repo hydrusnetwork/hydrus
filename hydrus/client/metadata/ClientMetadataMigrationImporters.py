@@ -776,6 +776,8 @@ class SingleFileMetadataImporterTXT( SingleFileMetadataImporterSidecar, HydrusSe
             raise Exception( f'Could not import from {path} (from file path {actual_file_path}: {e}' )
             
         
+        raw_text = HydrusText.CleanseImportText( raw_text )
+        
         rows = HydrusText.DeserialiseNewlinedTexts( raw_text )
         
         if self._separator != '\n':

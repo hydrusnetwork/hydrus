@@ -40,7 +40,7 @@ class NetworkSessionManagerSessionContainer( HydrusSerialisable.SerialisableBase
             network_context = ClientNetworkingContexts.GLOBAL_NETWORK_CONTEXT
             
         
-        HydrusSerialisable.SerialisableBaseNamed.__init__( self, name )
+        super().__init__( name )
         
         self.network_context = network_context
         self.session = session

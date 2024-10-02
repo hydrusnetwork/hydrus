@@ -20,6 +20,7 @@ from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusProcess
 from hydrus.core import HydrusPSUtil
 from hydrus.core import HydrusSerialisable
+from hydrus.core import HydrusText
 from hydrus.core import HydrusThreading
 from hydrus.core import HydrusTime
 from hydrus.core.networking import HydrusNetworking
@@ -915,6 +916,8 @@ class Controller( ClientControllerInterface.ClientControllerInterface, HydrusCon
             
             raise HydrusExceptions.DataMissing( 'No text on the clipboard!' )
             
+        
+        clipboard_text = HydrusText.CleanseImportText( clipboard_text )
         
         return clipboard_text
         

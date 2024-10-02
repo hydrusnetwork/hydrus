@@ -39,7 +39,7 @@ from hydrus.client.gui.lists import ClientGUIListBoxes
 from hydrus.client.gui.lists import ClientGUIListConstants as CGLC
 from hydrus.client.gui.lists import ClientGUIListCtrl
 from hydrus.client.gui.metadata import ClientGUITime
-from hydrus.client.gui.pages import ClientGUIResultsSortCollect
+from hydrus.client.gui.pages import ClientGUIMediaResultsPanelSortCollect
 from hydrus.client.gui.panels import ClientGUIScrolledPanels
 from hydrus.client.gui.panels import ClientGUIScrolledPanelsEdit
 from hydrus.client.gui.search import ClientGUIACDropdown
@@ -56,7 +56,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
     
     def __init__( self, parent ):
         
-        ClientGUIScrolledPanels.ManagePanel.__init__( self, parent )
+        super().__init__( parent )
         
         self._original_options = dict( HC.options )
         
@@ -3534,7 +3534,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             default_sort = self._new_options.GetDefaultSort()
             
-            self._default_media_sort = ClientGUIResultsSortCollect.MediaSortControl( self._file_sort_panel, media_sort = default_sort )
+            self._default_media_sort = ClientGUIMediaResultsPanelSortCollect.MediaSortControl( self._file_sort_panel, media_sort = default_sort )
             
             if self._default_media_sort.GetSort() != default_sort:
                 
@@ -3545,7 +3545,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             fallback_sort = self._new_options.GetFallbackSort()
             
-            self._fallback_media_sort = ClientGUIResultsSortCollect.MediaSortControl( self._file_sort_panel, media_sort = fallback_sort )
+            self._fallback_media_sort = ClientGUIMediaResultsPanelSortCollect.MediaSortControl( self._file_sort_panel, media_sort = fallback_sort )
             
             if self._fallback_media_sort.GetSort() != fallback_sort:
                 
@@ -3556,7 +3556,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._save_page_sort_on_change = QW.QCheckBox( self._file_sort_panel )
             
-            self._default_media_collect = ClientGUIResultsSortCollect.MediaCollectControl( self._file_sort_panel )
+            self._default_media_collect = ClientGUIMediaResultsPanelSortCollect.MediaCollectControl( self._file_sort_panel )
             
             namespace_sorting_box = ClientGUICommon.StaticBox( self._file_sort_panel, 'namespace file sorting' )
             

@@ -26,12 +26,12 @@ Twisted>=20.3.0
 
 opencv-python-headless==4.8.1.78
 mpv==1.0.6
-requests==2.31.0
 
 QtPy==2.4.1
 PyQt6==6.6.0
 PyQt6-Qt6==6.6.0
 
+requests==2.31.0
 setuptools==69.1.1
 
 pyobjc-core>=10.1

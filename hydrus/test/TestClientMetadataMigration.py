@@ -138,8 +138,6 @@ class TestSingleFileMetadataRouter( unittest.TestCase ):
         
         string_processor.SetProcessingSteps( processing_steps )
         
-        exporter = ClientMetadataMigrationExporters.SingleFileMetadataExporterTXT()
-        
         router = ClientMetadataMigration.SingleFileMetadataRouter( importers = [ importer_1, importer_2 ], string_processor = string_processor, exporter = ClientMetadataMigrationExporters.SingleFileMetadataExporterTXT() )
         
         router.Work( media_result, actual_file_path )

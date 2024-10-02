@@ -86,7 +86,7 @@ class MessagingServiceProtocol( HydrusAMP ):
     
     def __init__( self ):
         
-        amp.AMP.__init__( self )
+        super().__init__()
         
         self._identifier = None
         self._name = None

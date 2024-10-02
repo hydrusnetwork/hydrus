@@ -15,6 +15,7 @@ class FatHTTPChannel( HTTPChannel ):
     MAX_LENGTH = 2 * 1048576
     totalHeadersSize = 2 * 1048576 # :^)
     
+
 class HydrusService( Site ):
     
     def __init__( self, service ):
@@ -34,7 +35,7 @@ class HydrusService( Site ):
         
         root = self._InitRoot()
         
-        Site.__init__( self, root )
+        super().__init__( root )
         
         self.protocol = self._ProtocolFactory
         

@@ -133,15 +133,17 @@ elif [ "$install_type" = "a" ]; then
     fi
 
     echo "--------"
-    echo "Pillow - Images"
+    echo "OpenCV - Images"
     echo
     echo "Most people want \"n\"."
-    echo "If you are Python 3.7 or earlier, choose \"o\""
-    echo "Do you want (o)ld pillow or (n)ew pillow? "
-    read -r pillow
-    if [ "$pillow" = "o" ]; then
+    echo "Python >=3.11 might need \"t\"."
+    echo "Do you want (n)ew OpenCV or (t)est OpenCV? "
+    read -r opencv
+    if [ "$opencv" = "o" ]; then
         :
-    elif [ "$pillow" = "n" ]; then
+    elif [ "$opencv" = "n" ]; then
+        :
+    elif [ "$opencv" = "t" ]; then
         :
     else
         echo "Sorry, did not understand that input!"
@@ -149,18 +151,18 @@ elif [ "$install_type" = "a" ]; then
         exit 1
     fi
 
+    future=n
+
+    # comment this guy out if no special stuff going on
     echo "--------"
-    echo "OpenCV - Images"
+    echo "Future Libraries"
     echo
-    echo "Most people want \"n\"."
-    echo "If it doesn't work, fall back to \"o\". Python >=3.11 might need \"t\"."
-    echo "Do you want (o)ld OpenCV, (n)ew OpenCV, or (t)est OpenCV? "
-    read -r opencv
-    if [ "$opencv" = "o" ]; then
+    echo "There is a test of new requests and setuptools. Want to try it?"
+    echo "(y)es/(n)o? "
+    read -r future
+    if [ "$future" = "y" ]; then
         :
-    elif [ "$opencv" = "n" ]; then
-        :
-    elif [ "$opencv" = "t" ]; then
+    elif [ "$future" = "n" ]; then
         :
     else
         echo "Sorry, did not understand that input!"
@@ -234,12 +236,6 @@ elif [ "$install_type" = "a" ]; then
         python -m pip install -r static/requirements/advanced/requirements_mpv_test.txt
     fi
 
-    if [ "$pillow" = "o" ]; then
-        python -m pip install -r static/requirements/advanced/requirements_pillow_old.txt
-    elif [ "$pillow" = "n" ]; then
-        python -m pip install -r static/requirements/advanced/requirements_pillow_new.txt
-    fi
-
     if [ "$opencv" = "o" ]; then
         python -m pip install -r static/requirements/advanced/requirements_opencv_old.txt
     elif [ "$opencv" = "n" ]; then
@@ -247,6 +243,13 @@ elif [ "$install_type" = "a" ]; then
     elif [ "$opencv" = "t" ]; then
         python -m pip install -r static/requirements/advanced/requirements_opencv_test.txt
     fi
+
+    if [ "$future" = "n" ]; then
+        python -m pip install -r static/requirements/advanced/requirements_other_normal.txt
+    elif [ "$future" = "y" ]; then
+        python -m pip install -r static/requirements/advanced/requirements_other_future.txt
+    fi
+
 fi
 
 deactivate

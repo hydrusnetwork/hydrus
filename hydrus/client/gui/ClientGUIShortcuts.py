@@ -1206,7 +1206,7 @@ class ShortcutSet( HydrusSerialisable.SerialisableBaseNamed ):
     
     def __init__( self, name ):
         
-        HydrusSerialisable.SerialisableBaseNamed.__init__( self, name )
+        super().__init__( name )
         
         self._shortcuts_to_commands = {}
         
@@ -1692,7 +1692,7 @@ class ShortcutsDeactivationCatcher( QC.QObject ):
     
     def __init__( self, shortcuts_handler: ShortcutsHandler, widget: QW.QWidget ):
         
-        QC.QObject.__init__( self, shortcuts_handler )
+        super().__init__( shortcuts_handler )
         
         self._shortcuts_handler = shortcuts_handler
         

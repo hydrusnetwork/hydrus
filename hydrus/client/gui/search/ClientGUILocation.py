@@ -19,7 +19,7 @@ class EditMultipleLocationContextPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def __init__( self, parent: QW.QWidget, location_context: ClientLocation.LocationContext, all_known_files_allowed: bool, only_importable_domains_allowed: bool, only_local_file_domains_allowed: bool ):
         
-        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        super().__init__( parent )
         
         self._original_location_context = location_context
         self._all_known_files_allowed = all_known_files_allowed
@@ -138,7 +138,7 @@ class LocationSearchContextButton( ClientGUICommon.BetterButton ):
         self._location_context = ClientLocation.LocationContext()
         self._is_paired_with_tag_domain = is_paired_with_tag_domain
         
-        ClientGUICommon.BetterButton.__init__( self, parent, 'initialising', self._EditLocation )
+        super().__init__( parent, 'initialising', self._EditLocation )
         
         self._all_known_files_allowed = True
         self._all_known_files_allowed_only_in_advanced_mode = False

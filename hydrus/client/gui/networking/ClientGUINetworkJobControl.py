@@ -26,7 +26,7 @@ class NetworkJobControl( QW.QFrame ):
     
     def __init__( self, parent ):
         
-        QW.QFrame.__init__( self, parent )
+        super().__init__( parent )
         
         self.setFrameStyle( QW.QFrame.Box | QW.QFrame.Raised )
         

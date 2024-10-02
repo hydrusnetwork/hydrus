@@ -474,7 +474,7 @@ class SubscriptionLegacy( HydrusSerialisable.SerialisableBaseNamed ):
     
     def __init__( self, name, gug_key_and_name = None ):
         
-        HydrusSerialisable.SerialisableBaseNamed.__init__( self, name )
+        super().__init__( name )
         
         if gug_key_and_name is None:
             

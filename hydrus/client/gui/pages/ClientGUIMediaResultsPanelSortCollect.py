@@ -46,7 +46,7 @@ class CollectComboCtrl( QW.QComboBox ):
         
         # TODO: Rewrite this garbage! A custom paintEvent, r u serious???
         
-        QW.QComboBox.__init__( self, parent )
+        super().__init__( parent )
         
         self.view().pressed.connect( self._HandleItemPressed )
         

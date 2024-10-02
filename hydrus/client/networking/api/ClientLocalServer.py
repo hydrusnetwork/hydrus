@@ -30,7 +30,7 @@ class HydrusClientService( HydrusServer.HydrusService ):
             self._client_requests_domain = HydrusServer.LOCAL_DOMAIN
             
         
-        HydrusServer.HydrusService.__init__( self, service )
+        super().__init__( service )
         
     
 
@@ -99,6 +99,7 @@ class HydrusServiceClientAPI( HydrusClientService ):
         get_files.putChild( b'file_hashes', ClientLocalServerResourcesGetFiles.HydrusResourceClientAPIRestrictedGetFilesFileHashes( self._service, self._client_requests_domain ) )
         get_files.putChild( b'file', ClientLocalServerResourcesGetFiles.HydrusResourceClientAPIRestrictedGetFilesGetFile( self._service, self._client_requests_domain ) )
         get_files.putChild( b'file_path', ClientLocalServerResourcesGetFiles.HydrusResourceClientAPIRestrictedGetFilesGetFilePath( self._service, self._client_requests_domain) )
+        get_files.putChild( b'local_file_storage_locations', ClientLocalServerResourcesGetFiles.HydrusResourceClientAPIRestrictedGetFilesGetLocalFileStorageLocations( self._service, self._client_requests_domain ) )
         get_files.putChild( b'thumbnail', ClientLocalServerResourcesGetFiles.HydrusResourceClientAPIRestrictedGetFilesGetThumbnail( self._service, self._client_requests_domain ) )
         get_files.putChild( b'thumbnail_path', ClientLocalServerResourcesGetFiles.HydrusResourceClientAPIRestrictedGetFilesGetThumbnailPath( self._service, self._client_requests_domain) )
         get_files.putChild( b'render', ClientLocalServerResourcesGetFiles.HydrusResourceClientAPIRestrictedGetFilesGetRenderedFile( self._service, self._client_requests_domain) )

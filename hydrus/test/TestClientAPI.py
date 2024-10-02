@@ -7072,6 +7072,31 @@ class TestClientAPI( unittest.TestCase ):
         os.unlink( file_path )
         os.unlink( thumb_path )
         
+        # local paths
+        
+        path = '/get_files/local_file_storage_locations'
+        
+        connection.request( 'GET', path, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        text = str( data, 'utf-8' )
+        
+        d = json.loads( text )
+        
+        self.assertEqual( response.status, 200 )
+        
+        locations = d[ 'locations' ]
+        
+        self.assertEqual( len( locations ), 1 )
+        
+        self.assertEqual( locations[0][ 'ideal_weight' ], 1 )
+        self.assertEqual( locations[0][ 'max_num_bytes' ], None )
+        self.assertEqual( locations[0][ 'path' ], os.path.join( HG.test_controller.db_dir, 'client_files' ) )
+        self.assertEqual( set( locations[0][ 'prefixes' ] ), { f'f{p}' for p in HydrusData.IterateHexPrefixes() }.union( { f't{p}' for p in HydrusData.IterateHexPrefixes() } ) )
+        
     
     def _test_permission_failures( self, connection, set_up_permissions ):
         

@@ -6,9 +6,9 @@ title: Parser Formulae
 
 Formulae are tools used by higher-level components of the parsing system. They take some data (typically some HTML or JSON) and return 0 to n strings. For our purposes, these strings will usually be tags, URLs, and timestamps. You will usually see them summarised with this panel:
 
-![](images/edit_formula_panel.png)
+[![](images/edit_formula_panel.png)](images/edit_formula_panel.png)
 
-The different types are currently [html](#html_formula), [json](#json_formula), [compound](#compound_formula), and [context variable](#context_variable_formula).
+The different types are currently [html](#html_formula), [json](#json_formula), [nested](#nested_formula), [zipper](#zipper_formula), and [context variable](#context_variable_formula).
 
 ## html { id="html_formula" }
 
@@ -50,7 +50,7 @@ You might be tempted to just go straight for any `#!html <span>` with `class="ar
 
 Clicking 'edit formula' on an HTML formula gives you this:
 
-![](images/edit_html_formula_panel.png)
+[![](images/edit_html_formula_panel.png)](images/edit_html_formula_panel.png)
 
 You edit on the left and test on the right.
 
@@ -58,7 +58,7 @@ You edit on the left and test on the right.
 
 When you add or edit one of the specific tag search rules, you get this:
 
-![](images/edit_html_tag_rule_panel.png)
+[![](images/edit_html_tag_rule_panel.png)](images/edit_html_tag_rule_panel.png)
 
 You can set multiple key/value attribute search conditions, but you'll typically be searching for 'class' or 'id' here, if anything.
 
@@ -86,7 +86,7 @@ Most of the time, you'll be searching descendants (i.e. walking down the tree), 
 
 There isn't a great way to find the `#!html <span>` or the `#!html <a>` when looking from above here, as they are lacking a class or id, but you can find the `#!html <img>` ok, so if you find those and then add a rule where instead of searching descendants, you are 'walking back up ancestors' like this:
 
-![](images/edit_html_formula_panel_descendants_ancestors.png)
+[![](images/edit_html_formula_panel_descendants_ancestors.png)](images/edit_html_formula_panel_descendants_ancestors.png)
 
 You can solve some tricky problems this way!
 
@@ -116,14 +116,14 @@ The testing panel on the right is important and worth using. Copy the html from 
 
 This takes some JSON and does a similar style of search:
 
-![](images/edit_json_formula_panel.png)
+[![](images/edit_json_formula_panel.png)](images/edit_json_formula_panel.png)
 
 It is a bit simpler than HTML--if the current node is a list (called an 'Array' in JSON), you can fetch every item or the xth item, and if it is a dictionary (called an 'Object' in JSON), you can fetch a particular entry by name. Since you can't jump down several layers with attribute lookups or tag names like with HTML, you have to go down every layer one at a time. In any case, if you have something like this:
 
 [![](images/json_thread_example.png)](images/json_thread_example.png)
 
 !!! note
-    It is a great idea to check the html or json you are trying to parse with your browser. Some web browsers have excellent developer tools that let you walk through the nodes of the document you are trying to parse in a prettier way than I would ever have time to put together. This image is one of the views Firefox provides if you simply enter a JSON URL.
+    It is a great idea to check the html or json you are trying to parse with your browser. Most web browsers have excellent developer tools that let you walk through the nodes of the document you are trying to parse in a prettier way than I would ever have time to put together. This image is one of the views Firefox provides if you simply enter a JSON URL.
 
 Searching for "posts"->1st list item->"sub" on this data will give you "Nobody like kino here.".
 
@@ -135,15 +135,42 @@ The default is to fetch the final nodes' 'data content', which means coercing si
 
 But if you like, you can return the json beneath the current node (which, like HTML, includes the current node). This again will come in useful later.
 
-## compound { id="compound_formula" }
+## nested { id="nested_formula" }
 
-If you want to create a string from multiple parsed strings--for instance by appending the 'tim' and the 'ext' in our json example together--you can use a Compound formula. This fetches multiple lists of strings and tries to place them into a single string using `\1` regex substitution syntax:
+If you want to parse some JSON that is tucked inside an HTML attribute, or _vice versa_, use a nested formula. This parses the text using one formula type and then passes the result(s) to another.
 
-![](images/edit_compound_formula_panel.png)
+[![](images/edit_nested_formula_panel.png)](images/edit_nested_formula_panel.png)
+
+The especially neat thing about this is the encoded characters like `&gt;` or escaped JSON characters are all handled natively for you. Before we had this, we had to hack our way around with crazy regex.
+
+## zipper { id="zipper_formula" }
+
+If you want to combine strings from the results of different parsers--for instance by joining the 'tim' and the 'ext' in our json example--you can use a Zipper formula. This fetches multiple lists of strings and zips their result rows together using `\1` regex substitution syntax:
+
+[![](images/edit_zipper_formula_panel.png)](images/edit_zipper_formula_panel.png)
 
 This is a complicated example taken from one of my thread parsers. I have to take a modified version of the original thread URL (the first rule, so `\1`) and then append the filename (`\2`) and its extension (`\3`) on the end to get the final file URL of a post. You can mix in more characters in the substitution phrase, like `\1.jpg` or even have multiple instances (`https://\2.muhsite.com/\2/\1`), if that is appropriate.
 
-This is where the magic happens, sometimes, so keep it in mind if you need to do something cleverer than the data you have seems to provide.
+If your sub-formulae produce multiple results, the Zipper will produce that many also, iterating the sub-lists together.
+
+```title="Example"
+If parser 1 gives:
+  a
+  b
+  c
+
+And parser 2 gives:
+  1
+  2
+  3
+
+Using a substitution phrase of "\1-\2" will give:
+  a-1
+  b-2
+  c-3
+```
+
+If one of the sub-formulae produces fewer results than the others, its final value will be used to fill in the gaps. In this way, you might somewhere parse one prefix and seven suffixes, where joining them will use the same prefix seven times.
 
 ## context variable { id="context_variable_formula" }
 
@@ -151,10 +178,10 @@ This is a basic hacky answer to a particular problem. It is a simple key:value d
 
 If a different URL Class links to this parser via an API URL, this 'url' variable will always be the API URL (i.e. it literally is the URL used to fetch the data), not any thread/whatever URL the user entered.
 
-![](images/edit_context_variable_formula_panel.png)
+[![](images/edit_context_variable_formula_panel.png)](images/edit_context_variable_formula_panel.png)
 
 Hit the 'edit example parsing context' to change the URL used for testing.
 
-I have used this several times to stitch together file URLs when I am pulling data from APIs, like in the compound formula example above. In this case, the starting URL is `https://a.4cdn.org/tg/thread/57806016.json`, from which I extract the board name, "tg", using the string converter, and then add in 4chan's CDN domain to make the appropriate base file URL (`https:/i.4cdn.org/tg/`) for the given thread. I only have to jump through this hoop in 4chan's case because they explicitly store file URLs by board name. 8chan on the other hand, for instance, has a static `https://media.8ch.net/file_store/` for all files, so it is a little easier (I think I just do a single 'prepend' string transformation somewhere).
+I have used this several times to stitch together file URLs when I am pulling data from APIs, like in the zipper formula example above. In this case, the starting URL is `https://a.4cdn.org/tg/thread/57806016.json`, from which I extract the board name, "tg", using the string converter, and then add in 4chan's CDN domain to make the appropriate base file URL (`https:/i.4cdn.org/tg/`) for the given thread. I only have to jump through this hoop in 4chan's case because they explicitly store file URLs by board name. 8chan on the other hand, for instance, has a static `https://media.8ch.net/file_store/` for all files, so it is a little easier (I think I just do a single 'prepend' string transformation somewhere).
 
 If you want to make some parsers, you will have to get familiar with how different sites store and present their data!

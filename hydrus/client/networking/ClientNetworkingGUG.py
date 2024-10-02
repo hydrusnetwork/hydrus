@@ -44,7 +44,7 @@ class GalleryURLGenerator( HydrusSerialisable.SerialisableBaseNamed ):
             example_search_text = 'blue_eyes blonde_hair'
             
         
-        HydrusSerialisable.SerialisableBaseNamed.__init__( self, name )
+        super().__init__( name )
         
         self._gallery_url_generator_key = gug_key
         self._url_template = url_template
@@ -244,7 +244,7 @@ class NestedGalleryURLGenerator( HydrusSerialisable.SerialisableBaseNamed ):
             gug_keys_and_names = []
             
         
-        HydrusSerialisable.SerialisableBaseNamed.__init__( self, name )
+        super().__init__( name )
         
         self._gallery_url_generator_key = gug_key
         self._initial_search_text = initial_search_text

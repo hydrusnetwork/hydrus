@@ -321,7 +321,7 @@ class URLClass( HydrusSerialisable.SerialisableBaseNamed ):
         path_components = HydrusSerialisable.SerialisableList( path_components )
         parameters = HydrusSerialisable.SerialisableList( parameters )
         
-        HydrusSerialisable.SerialisableBaseNamed.__init__( self, name )
+        super().__init__( name )
         
         self._url_class_key = url_class_key
         self._url_type = url_type

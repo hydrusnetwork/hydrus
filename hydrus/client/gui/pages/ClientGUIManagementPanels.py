@@ -47,8 +47,10 @@ from hydrus.client.gui.lists import ClientGUIListCtrl
 from hydrus.client.gui.networking import ClientGUIHydrusNetwork
 from hydrus.client.gui.networking import ClientGUINetworkJobControl
 from hydrus.client.gui.pages import ClientGUIManagementController
-from hydrus.client.gui.pages import ClientGUIResults
-from hydrus.client.gui.pages import ClientGUIResultsSortCollect
+from hydrus.client.gui.pages import ClientGUIMediaResultsPanel
+from hydrus.client.gui.pages import ClientGUIMediaResultsPanelLoading
+from hydrus.client.gui.pages import ClientGUIMediaResultsPanelThumbnails
+from hydrus.client.gui.pages import ClientGUIMediaResultsPanelSortCollect
 from hydrus.client.gui.panels import ClientGUIScrolledPanels
 from hydrus.client.gui.panels import ClientGUIScrolledPanelsEdit
 from hydrus.client.gui.parsing import ClientGUIParsingFormulae
@@ -130,7 +132,7 @@ class ListBoxTagsMediaManagementPanel( ClientGUIListBoxes.ListBoxTagsMedia ):
     
     def __init__( self, parent, management_controller: ClientGUIManagementController.ManagementController, page_key, tag_display_type = ClientTags.TAG_DISPLAY_SELECTION_LIST, tag_autocomplete: typing.Optional[ ClientGUIACDropdown.AutoCompleteDropdownTagsRead ] = None ):
         
-        ClientGUIListBoxes.ListBoxTagsMedia.__init__( self, parent, tag_display_type, CC.TAG_PRESENTATION_SEARCH_PAGE, include_counts = True )
+        super().__init__( parent, tag_display_type, CC.TAG_PRESENTATION_SEARCH_PAGE, include_counts = True )
         
         self._management_controller = management_controller
         self._minimum_height_num_chars = 15
@@ -239,7 +241,7 @@ class ManagementPanel( QW.QScrollArea ):
     
     def __init__( self, parent, page, controller, management_controller: ClientGUIManagementController.ManagementController ):
         
-        QW.QScrollArea.__init__( self, parent )
+        super().__init__( parent )
         
         self.setFrameShape( QW.QFrame.NoFrame )
         self.setWidget( QW.QWidget( self ) )
@@ -261,7 +263,7 @@ class ManagementPanel( QW.QScrollArea ):
         
         self._current_selection_tags_list = None
         
-        self._media_sort_widget = ClientGUIResultsSortCollect.MediaSortControl( self, media_sort = self._management_controller.GetVariable( 'media_sort' ) )
+        self._media_sort_widget = ClientGUIMediaResultsPanelSortCollect.MediaSortControl( self, media_sort = self._management_controller.GetVariable( 'media_sort' ) )
         
         if self._management_controller.HasVariable( 'media_collect' ):
             
@@ -272,7 +274,7 @@ class ManagementPanel( QW.QScrollArea ):
             media_collect = ClientMedia.MediaCollect()
             
         
-        self._media_collect_widget = ClientGUIResultsSortCollect.MediaCollectControl( self, media_collect = media_collect )
+        self._media_collect_widget = ClientGUIMediaResultsPanelSortCollect.MediaCollectControl( self, media_collect = media_collect )
         
         self._media_collect_widget.ListenForNewOptions()
         
@@ -324,11 +326,11 @@ class ManagementPanel( QW.QScrollArea ):
         self._management_controller.SetVariable( 'media_sort', media_sort )
         
     
-    def ConnectMediaPanelSignals( self, media_panel: ClientGUIResults.MediaPanel ):
+    def ConnectMediaResultsPanelSignals( self, media_panel: ClientGUIMediaResultsPanel.MediaResultsPanel ):
         
         if self._current_selection_tags_list is not None:
             
-            media_panel.selectedMediaTagPresentationChanged.connect( self._current_selection_tags_list.SetTagsByMediaFromMediaPanel )
+            media_panel.selectedMediaTagPresentationChanged.connect( self._current_selection_tags_list.SetTagsByMediaFromMediaResultsPanel )
             media_panel.selectedMediaTagPresentationIncremented.connect( self._current_selection_tags_list.IncrementTagsByMedia )
             self._media_collect_widget.collectChanged.connect( media_panel.Collect )
             self._media_sort_widget.sortChanged.connect( media_panel.Sort )
@@ -352,9 +354,9 @@ class ManagementPanel( QW.QScrollArea ):
         pass
         
     
-    def GetDefaultEmptyMediaPanel( self, win: QW.QWidget ) -> ClientGUIResults.MediaPanel:
+    def GetDefaultEmptyMediaResultsPanel( self, win: QW.QWidget ) -> ClientGUIMediaResultsPanel.MediaResultsPanel:
         
-        panel = ClientGUIResults.MediaPanelThumbnails( win, self._page_key, self._management_controller, [] )
+        panel = ClientGUIMediaResultsPanelThumbnails.MediaResultsPanelThumbnails( win, self._page_key, self._management_controller, [] )
         
         status = self._GetDefaultEmptyPageStatusOverride()
         
@@ -441,7 +443,7 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
     
     def __init__( self, parent, page, controller, management_controller: ClientGUIManagementController.ManagementController ):
         
-        ManagementPanel.__init__( self, parent, page, controller, management_controller )
+        super().__init__( parent, page, controller, management_controller )
         
         self._duplicates_manager = ClientDuplicates.DuplicatesManager.instance()
         
@@ -859,7 +861,7 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
     
     def _SetCurrentMediaAs( self, duplicate_type ):
         
-        media_panel = self._page.GetMediaPanel()
+        media_panel = self._page.GetMediaResultsPanel()
         
         change_made = media_panel.SetDuplicateStatusForAll( duplicate_type )
         
@@ -889,7 +891,7 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         
         media_results = [ m.GetMediaResult() for m in media ]
         
-        self._page.GetMediaPanel().AddMediaResults( self._page_key, media_results )
+        self._page.GetMediaResultsPanel().AddMediaResults( self._page_key, media_results )
         
     
     def _ShowPotentialDupes( self, hashes ):
@@ -909,11 +911,11 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
             media_results = []
             
         
-        panel = ClientGUIResults.MediaPanelThumbnails( self._page, self._page_key, self._management_controller, media_results )
+        panel = ClientGUIMediaResultsPanelThumbnails.MediaResultsPanelThumbnails( self._page, self._page_key, self._management_controller, media_results )
         
         panel.SetEmptyPageStatusOverride( 'no dupes found' )
         
-        self._page.SwapMediaPanel( panel )
+        self._page.SwapMediaResultsPanel( panel )
         
         self._page_state = CC.PAGE_STATE_NORMAL
         
@@ -1140,7 +1142,7 @@ class ManagementPanelImporter( ManagementPanel ):
     
     def __init__( self, parent, page, controller, management_controller: ClientGUIManagementController.ManagementController ):
         
-        ManagementPanel.__init__( self, parent, page, controller, management_controller )
+        super().__init__( parent, page, controller, management_controller )
         
     
     def _UpdateImportStatus( self ):
@@ -1169,7 +1171,7 @@ class ManagementPanelImporterHDD( ManagementPanelImporter ):
     
     def __init__( self, parent, page, controller, management_controller: ClientGUIManagementController.ManagementController ):
         
-        ManagementPanelImporter.__init__( self, parent, page, controller, management_controller )
+        super().__init__( parent, page, controller, management_controller )
         
         self._import_queue_panel = ClientGUICommon.StaticBox( self, 'imports' )
         
@@ -1266,7 +1268,7 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
     
     def __init__( self, parent, page, controller, management_controller: ClientGUIManagementController.ManagementController ):
         
-        ManagementPanelImporter.__init__( self, parent, page, controller, management_controller )
+        super().__init__( parent, page, controller, management_controller )
         
         self._last_time_imports_changed = 0
         self._next_update_time = 0
@@ -1478,11 +1480,11 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
         
         self._SetLocationContext( location_context )
         
-        panel = ClientGUIResults.MediaPanelThumbnails( self._page, self._page_key, self._management_controller, media_results )
+        panel = ClientGUIMediaResultsPanelThumbnails.MediaResultsPanelThumbnails( self._page, self._page_key, self._management_controller, media_results )
         
         panel.SetEmptyPageStatusOverride( 'no highlighted query' )
         
-        self._page.SwapMediaPanel( panel )
+        self._page.SwapMediaResultsPanel( panel )
         
         self._gallery_importers_listctrl.UpdateDatas()
         
@@ -1733,9 +1735,9 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
             
             if num_to_do > 0:
                 
-                panel = ClientGUIResults.MediaPanelLoading( self._page, self._page_key, self._management_controller )
+                panel = ClientGUIMediaResultsPanelLoading.MediaResultsPanelLoading( self._page, self._page_key, self._management_controller )
                 
-                self._page.SwapMediaPanel( panel )
+                self._page.SwapMediaResultsPanel( panel )
                 
             
             def work_callable():
@@ -1796,11 +1798,11 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
                     
                     self._SetLocationContext( location_context )
                     
-                    panel = ClientGUIResults.MediaPanelThumbnails( self._page, self._page_key, self._management_controller, media_results )
+                    panel = ClientGUIMediaResultsPanelThumbnails.MediaResultsPanelThumbnails( self._page, self._page_key, self._management_controller, media_results )
                     
                     panel.SetEmptyPageStatusOverride( 'no files for this query and its publishing settings' )
                     
-                    self._page.SwapMediaPanel( panel )
+                    self._page.SwapMediaResultsPanel( panel )
                     
                     self._highlighted_gallery_import_panel.SetGalleryImport( self._highlighted_gallery_import )
                     
@@ -2074,9 +2076,9 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
             
             self._SetLocationContext( location_context )
             
-            panel = ClientGUIResults.MediaPanelThumbnails( self._page, self._page_key, self._management_controller, media_results )
+            panel = ClientGUIMediaResultsPanelThumbnails.MediaResultsPanelThumbnails( self._page, self._page_key, self._management_controller, media_results )
             
-            self._page.SwapMediaPanel( panel )
+            self._page.SwapMediaResultsPanel( panel )
             
         else:
             
@@ -2354,7 +2356,7 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
     
     def __init__( self, parent, page, controller, management_controller: ClientGUIManagementController.ManagementController ):
         
-        ManagementPanelImporter.__init__( self, parent, page, controller, management_controller )
+        super().__init__( parent, page, controller, management_controller )
         
         self._last_time_watchers_changed = 0
         self._next_update_time = 0
@@ -2593,11 +2595,11 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
         
         self._SetLocationContext( location_context )
         
-        panel = ClientGUIResults.MediaPanelThumbnails( self._page, self._page_key, self._management_controller, media_results )
+        panel = ClientGUIMediaResultsPanelThumbnails.MediaResultsPanelThumbnails( self._page, self._page_key, self._management_controller, media_results )
         
         panel.SetEmptyPageStatusOverride( 'no highlighted watcher' )
         
-        self._page.SwapMediaPanel( panel )
+        self._page.SwapMediaResultsPanel( panel )
         
         self._watchers_listctrl.UpdateDatas()
         
@@ -2871,9 +2873,9 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
             
             if num_to_do > 0:
                 
-                panel = ClientGUIResults.MediaPanelLoading( self._page, self._page_key, self._management_controller )
+                panel = ClientGUIMediaResultsPanelLoading.MediaResultsPanelLoading( self._page, self._page_key, self._management_controller )
                 
-                self._page.SwapMediaPanel( panel )
+                self._page.SwapMediaResultsPanel( panel )
                 
             
             def work_callable():
@@ -2934,11 +2936,11 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
                     
                     self._SetLocationContext( location_context )
                     
-                    panel = ClientGUIResults.MediaPanelThumbnails( self._page, self._page_key, self._management_controller, media_results )
+                    panel = ClientGUIMediaResultsPanelThumbnails.MediaResultsPanelThumbnails( self._page, self._page_key, self._management_controller, media_results )
                     
                     panel.SetEmptyPageStatusOverride( 'no files for this watcher and its publishing settings' )
                     
-                    self._page.SwapMediaPanel( panel )
+                    self._page.SwapMediaResultsPanel( panel )
                     
                     self._highlighted_watcher_panel.SetWatcher( self._highlighted_watcher )
                     
@@ -3205,9 +3207,9 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
             
             self._SetLocationContext( location_context )
             
-            panel = ClientGUIResults.MediaPanelThumbnails( self._page, self._page_key, self._management_controller, media_results )
+            panel = ClientGUIMediaResultsPanelThumbnails.MediaResultsPanelThumbnails( self._page, self._page_key, self._management_controller, media_results )
             
-            self._page.SwapMediaPanel( panel )
+            self._page.SwapMediaResultsPanel( panel )
             
         else:
             
@@ -3512,7 +3514,7 @@ class ManagementPanelImporterSimpleDownloader( ManagementPanelImporter ):
     
     def __init__( self, parent, page, controller, management_controller: ClientGUIManagementController.ManagementController ):
         
-        ManagementPanelImporter.__init__( self, parent, page, controller, management_controller )
+        super().__init__( parent, page, controller, management_controller )
         
         self._simple_downloader_import: ClientImportSimpleURLs.SimpleDownloaderImport = self._management_controller.GetVariable( 'simple_downloader_import' )
         
@@ -3976,7 +3978,7 @@ class ManagementPanelImporterURLs( ManagementPanelImporter ):
     
     def __init__( self, parent, page, controller, management_controller: ClientGUIManagementController.ManagementController ):
         
-        ManagementPanelImporter.__init__( self, parent, page, controller, management_controller )
+        super().__init__( parent, page, controller, management_controller )
         
         #
         
@@ -4207,7 +4209,7 @@ class ManagementPanelPetitions( ManagementPanel ):
         
         self._petition_service_key = management_controller.GetVariable( 'petition_service_key' )
         
-        ManagementPanel.__init__( self, parent, page, controller, management_controller )
+        super().__init__( parent, page, controller, management_controller )
         
         self._service = self._controller.services_manager.GetService( self._petition_service_key )
         self._can_ban = self._service.HasPermission( HC.CONTENT_TYPE_ACCOUNTS, HC.PERMISSION_ACTION_MODERATE )
@@ -5104,13 +5106,13 @@ class ManagementPanelPetitions( ManagementPanel ):
             media_results = self._controller.Read( 'media_results', hashes )
             
         
-        panel = ClientGUIResults.MediaPanelThumbnails( self._page, self._page_key, self._management_controller, media_results )
+        panel = ClientGUIMediaResultsPanelThumbnails.MediaResultsPanelThumbnails( self._page, self._page_key, self._management_controller, media_results )
         
         panel.Collect( self._media_collect_widget.GetValue() )
         
         panel.Sort( self._media_sort_widget.GetSort() )
         
-        self._page.SwapMediaPanel( panel )
+        self._page.SwapMediaResultsPanel( panel )
         
     
     def _SortBy( self, sort_type ):
@@ -5721,7 +5723,7 @@ class ManagementPanelQuery( ManagementPanel ):
     
     def __init__( self, parent, page, controller, management_controller: ClientGUIManagementController.ManagementController ):
         
-        ManagementPanel.__init__( self, parent, page, controller, management_controller )
+        super().__init__( parent, page, controller, management_controller )
         
         file_search_context = self._management_controller.GetVariable( 'file_search_context' )
         
@@ -5780,11 +5782,11 @@ class ManagementPanelQuery( ManagementPanel ):
             
             self._SetLocationContext( location_context )
             
-            panel = ClientGUIResults.MediaPanelThumbnails( self._page, self._page_key, self._management_controller, [] )
+            panel = ClientGUIMediaResultsPanelThumbnails.MediaResultsPanelThumbnails( self._page, self._page_key, self._management_controller, [] )
             
             panel.SetEmptyPageStatusOverride( 'search cancelled!' )
             
-            self._page.SwapMediaPanel( panel )
+            self._page.SwapMediaResultsPanel( panel )
             
             self._page_state = CC.PAGE_STATE_SEARCHING_CANCELLED
             
@@ -5859,18 +5861,18 @@ class ManagementPanelQuery( ManagementPanel ):
                 
                 self._controller.CallToThread( self.THREADDoQuery, self._controller, self._page_key, self._query_job_status, file_search_context, sort_by )
                 
-                panel = ClientGUIResults.MediaPanelLoading( self._page, self._page_key, self._management_controller )
+                panel = ClientGUIMediaResultsPanelLoading.MediaResultsPanelLoading( self._page, self._page_key, self._management_controller )
                 
                 self._page_state = CC.PAGE_STATE_SEARCHING
                 
             else:
                 
-                panel = ClientGUIResults.MediaPanelThumbnails( self._page, self._page_key, self._management_controller, [] )
+                panel = ClientGUIMediaResultsPanelThumbnails.MediaResultsPanelThumbnails( self._page, self._page_key, self._management_controller, [] )
                 
                 panel.SetEmptyPageStatusOverride( 'no search' )
                 
             
-            self._page.SwapMediaPanel( panel )
+            self._page.SwapMediaResultsPanel( panel )
             
         else:
             
@@ -5899,9 +5901,9 @@ class ManagementPanelQuery( ManagementPanel ):
             
         
     
-    def ConnectMediaPanelSignals( self, media_panel: ClientGUIResults.MediaPanel ):
+    def ConnectMediaResultsPanelSignals( self, media_panel: ClientGUIMediaResultsPanel.MediaResultsPanel ):
         
-        ManagementPanel.ConnectMediaPanelSignals( self, media_panel )
+        ManagementPanel.ConnectMediaResultsPanelSignals( self, media_panel )
         
         media_panel.newMediaAdded.connect( self.PauseSearching )
         
@@ -6028,7 +6030,7 @@ class ManagementPanelQuery( ManagementPanel ):
             
             location_context = self._management_controller.GetLocationContext()
             
-            panel = ClientGUIResults.MediaPanelThumbnails( self._page, self._page_key, self._management_controller, media_results )
+            panel = ClientGUIMediaResultsPanelThumbnails.MediaResultsPanelThumbnails( self._page, self._page_key, self._management_controller, media_results )
             
             panel.SetEmptyPageStatusOverride( 'no files found for this search' )
             
@@ -6036,7 +6038,7 @@ class ManagementPanelQuery( ManagementPanel ):
             
             panel.Sort( self._media_sort_widget.GetSort() )
             
-            self._page.SwapMediaPanel( panel )
+            self._page.SwapMediaResultsPanel( panel )
             
             self._page_state = CC.PAGE_STATE_NORMAL
             

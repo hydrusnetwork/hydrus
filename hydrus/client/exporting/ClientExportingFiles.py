@@ -312,7 +312,7 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
         show_working_popup = True
     ):
         
-        HydrusSerialisable.SerialisableBaseNamed.__init__( self, name )
+        super().__init__( name )
         
         if export_type == HC.EXPORT_FOLDER_TYPE_SYNCHRONISE:
             

@@ -2077,7 +2077,7 @@ class NetworkJobDownloader( NetworkJob ):
         
         self._downloader_page_key = downloader_page_key
         
-        NetworkJob.__init__( self, method, url, body = body, referral_url = referral_url, temp_path = temp_path )
+        super().__init__( method, url, body = body, referral_url = referral_url, temp_path = temp_path )
         
     
     def _GenerateNetworkContexts( self ):
@@ -2097,7 +2097,7 @@ class NetworkJobSubscription( NetworkJob ):
         
         self._subscription_key = subscription_key
         
-        NetworkJob.__init__( self, method, url, body = body, referral_url = referral_url, temp_path = temp_path )
+        super().__init__( method, url, body = body, referral_url = referral_url, temp_path = temp_path )
         
     
     def _GenerateNetworkContexts( self ):
@@ -2162,7 +2162,7 @@ class NetworkJobHydrus( NetworkJob ):
         
         self._service_key = service_key
         
-        NetworkJob.__init__( self, method, url, body = body, referral_url = referral_url, temp_path = temp_path, file_body_path = file_body_path )
+        super().__init__( method, url, body = body, referral_url = referral_url, temp_path = temp_path, file_body_path = file_body_path )
         
     
     def _GenerateNetworkContexts( self ):
@@ -2247,7 +2247,7 @@ class NetworkJobIPFS( NetworkJob ):
         
         method = 'POST'
         
-        NetworkJob.__init__( self, method, url, body = body, referral_url = referral_url, temp_path = temp_path )
+        super().__init__( method, url, body = body, referral_url = referral_url, temp_path = temp_path )
         
         self.OnlyTryConnectionOnce()
         self.OverrideBandwidth()
@@ -2268,7 +2268,7 @@ class NetworkJobWatcherPage( NetworkJob ):
         
         self._watcher_key = watcher_key
         
-        NetworkJob.__init__( self, method, url, body = body, referral_url = referral_url, temp_path = temp_path )
+        super().__init__( method, url, body = body, referral_url = referral_url, temp_path = temp_path )
         
     
     def _GenerateNetworkContexts( self ):

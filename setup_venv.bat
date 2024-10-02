@@ -112,8 +112,8 @@ ECHO Most people want "6".
 ECHO If you are on Windows ^<=8.1, choose "5". If you want a specific version, choose "a".
 SET /P qt="Do you want Qt(5), Qt(6), or (a)dvanced? "
 
-IF "%qt%" == "5" goto :question_mpv
-IF "%qt%" == "6" goto :question_mpv
+IF "%qt%" == "5" goto :question_qt_done
+IF "%qt%" == "6" goto :question_qt_done
 IF "%qt%" == "a" goto :question_qt_advanced
 goto :parse_fail
 
@@ -123,9 +123,9 @@ ECHO:
 ECHO If you have multi-monitor menu position bugs with the normal Qt6, try "o" on Python 3.9 or "m" on Python 3.10.
 SET /P qt="Do you want Qt6 (o)lder, Qt6 (m)iddle, Qt6 (t)est, or (w)rite your own? "
 
-IF "%qt%" == "o" goto :question_mpv
-IF "%qt%" == "m" goto :question_mpv
-IF "%qt%" == "t" goto :question_mpv
+IF "%qt%" == "o" goto :question_qt_advanced_done
+IF "%qt%" == "m" goto :question_qt_advanced_done
+IF "%qt%" == "t" goto :question_qt_advanced_done
 IF "%qt%" == "w" goto :question_qt_custom
 goto :parse_fail
 
@@ -139,7 +139,9 @@ ECHO - For Python 3.12, your earliest available version is 6.6.0
 SET /P qt_custom_pyside6="Version: "
 SET /P qt_custom_qtpy="Enter the exact qtpy version you want (probably '2.4.1'; if older try '2.3.1'): "
 
-goto :question_mpv
+:question_qt_custom_done
+:question_qt_advanced_done
+:question_qt_done
 
 :question_mpv
 
@@ -151,37 +153,44 @@ ECHO Most people want "n".
 ECHO If it doesn't work, fall back to "o".
 SET /P mpv="Do you want (o)ld mpv, (n)ew mpv, or (t)est mpv? "
 
-IF "%mpv%" == "o" goto :question_pillow
-IF "%mpv%" == "n" goto :question_pillow
-IF "%mpv%" == "t" goto :question_pillow
+IF "%mpv%" == "o" goto :question_mpv_done
+IF "%mpv%" == "n" goto :question_mpv_done
+IF "%mpv%" == "t" goto :question_mpv_done
 goto :parse_fail
 
-:question_pillow
-
-ECHO --------
-ECHO Pillow - Images
-ECHO:
-ECHO Most people want "n".
-ECHO If you are Python 3.7 or earlier, choose "o".
-SET /P pillow="Do you want (o)ld pillow or (n)ew pillow? "
-
-IF "%pillow%" == "o" goto :question_opencv
-IF "%pillow%" == "n" goto :question_opencv
-goto :parse_fail
-
+:question_mpv_done
 :question_opencv
 
 ECHO --------
 ECHO OpenCV - Images
 ECHO:
 ECHO Most people want "n".
-ECHO If it doesn't work, fall back to "o". Python ^>=3.11 might need "t".
-SET /P opencv="Do you want (o)ld OpenCV, (n)ew OpenCV, or (t)est OpenCV? "
+ECHO Python ^>=3.11 might need "t".
+SET /P opencv="Do you want (n)ew OpenCV or (t)est OpenCV? "
 
-IF "%opencv%" == "o" goto :create
-IF "%opencv%" == "n" goto :create
-IF "%opencv%" == "t" goto :create
+IF "%opencv%" == "o" goto :question_opencv_done
+IF "%opencv%" == "n" goto :question_opencv_done
+IF "%opencv%" == "t" goto :question_opencv_done
 goto :parse_fail
+
+:question_opencv_done
+
+:question_future
+
+set future=n
+
+REM comment this guy out if no special stuff going on
+ECHO --------
+ECHO Future Libraries
+ECHO:
+ECHO There is a future test of requests and setuptools. Want to try it?
+SET /P future="(y)es/(n)o? "
+
+IF "%future%" == "y" goto :question_future_done
+IF "%future%" == "n" goto :question_future_done
+goto :parse_fail
+
+:question_future_done
 
 :create
 
@@ -221,9 +230,9 @@ IF "%install_type%" == "d" (
     python -m pip install pyside2
     python -m pip install PyQtChart PyQt5
     python -m pip install PyQt6-Charts PyQt6
-    python -m pip install -r static\requirements\advanced\requirements_pillow_new.txt
     python -m pip install -r static\requirements\advanced\requirements_mpv_test.txt
     python -m pip install -r static\requirements\advanced\requirements_opencv_test.txt
+    python -m pip install -r static\requirements\advanced\requirements_other_future.txt
     python -m pip install -r static\requirements\hydev\requirements_windows_build.txt
 
 )
@@ -266,9 +275,6 @@ IF "%install_type%" == "a" (
     IF "%qt%" == "m" python -m pip install -r static\requirements\advanced\requirements_qt6_middle.txt
     IF "%qt%" == "t" python -m pip install -r static\requirements\advanced\requirements_qt6_test.txt
 
-    IF "%pillow%" == "o" python -m pip install -r static\requirements\advanced\requirements_pillow_old.txt
-    IF "%pillow%" == "n" python -m pip install -r static\requirements\advanced\requirements_pillow_new.txt
-
     IF "%mpv%" == "o" python -m pip install -r static\requirements\advanced\requirements_mpv_old.txt
     IF "%mpv%" == "n" python -m pip install -r static\requirements\advanced\requirements_mpv_new.txt
     IF "%mpv%" == "t" python -m pip install -r static\requirements\advanced\requirements_mpv_test.txt
@@ -276,6 +282,10 @@ IF "%install_type%" == "a" (
     IF "%opencv%" == "o" python -m pip install -r static\requirements\advanced\requirements_opencv_old.txt
     IF "%opencv%" == "n" python -m pip install -r static\requirements\advanced\requirements_opencv_new.txt
     IF "%opencv%" == "t" python -m pip install -r static\requirements\advanced\requirements_opencv_test.txt
+
+    IF "%future%" == "n" python -m pip install -r static\requirements\advanced\requirements_other_normal.txt
+    IF "%future%" == "y" python -m pip install -r static\requirements\advanced\requirements_other_future.txt
+
 
 )
 

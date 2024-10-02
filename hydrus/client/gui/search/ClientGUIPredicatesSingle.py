@@ -99,7 +99,7 @@ class TimeDateOperator( ClientGUICommon.BetterRadioBox ):
             ( '+/- a month of', HC.UNICODE_APPROX_EQUAL )
         ]
         
-        ClientGUICommon.BetterRadioBox.__init__( self, parent, choice_tuples, vertical = True )
+        super().__init__( parent, choice_tuples, vertical = True )
         
     
 
@@ -113,7 +113,7 @@ class TimeDeltaOperator( ClientGUICommon.BetterRadioBox ):
             ( '+/- 15% of', HC.UNICODE_APPROX_EQUAL )
         ]
         
-        ClientGUICommon.BetterRadioBox.__init__( self, parent, choice_tuples, vertical = True )
+        super().__init__( parent, choice_tuples, vertical = True )
         
     
 
@@ -123,7 +123,7 @@ class InvertiblePredicateButton( ClientGUICommon.BetterButton ):
         
         self._predicate = predicate
         
-        ClientGUICommon.BetterButton.__init__( self, parent, 'predicate', self._ButtonHit )
+        super().__init__( parent, 'predicate', self._ButtonHit )
         
         self._UpdateLabel()
         
@@ -359,7 +359,7 @@ class PanelPredicateSystemDate( PanelPredicateSystemSingle ):
     
     def __init__( self, parent, predicate ):
         
-        PanelPredicateSystemSingle.__init__( self, parent )
+        super().__init__( parent )
         
         self._sign = TimeDateOperator( self )
         
@@ -524,7 +524,7 @@ class PanelPredicateSystemAgeDelta( PanelPredicateSystemSingle ):
     
     def __init__( self, parent, predicate ):
         
-        PanelPredicateSystemSingle.__init__( self, parent )
+        super().__init__( parent )
         
         self._sign = TimeDeltaOperator( self )
         
@@ -586,7 +586,7 @@ class PanelPredicateSystemLastViewedDelta( PanelPredicateSystemSingle ):
     
     def __init__( self, parent, predicate ):
         
-        PanelPredicateSystemSingle.__init__( self, parent )
+        super().__init__( parent )
         
         self._sign = TimeDeltaOperator( self )
         
@@ -645,7 +645,7 @@ class PanelPredicateSystemArchivedDelta( PanelPredicateSystemSingle ):
     
     def __init__( self, parent, predicate ):
         
-        PanelPredicateSystemSingle.__init__( self, parent )
+        super().__init__( parent )
         
         self._sign = TimeDeltaOperator( self )
         
@@ -704,7 +704,7 @@ class PanelPredicateSystemModifiedDelta( PanelPredicateSystemSingle ):
     
     def __init__( self, parent, predicate ):
         
-        PanelPredicateSystemSingle.__init__( self, parent )
+        super().__init__( parent )
         
         self._sign = TimeDeltaOperator( self )
         
@@ -762,7 +762,7 @@ class PanelPredicateSystemDuplicateRelationships( PanelPredicateSystemSingle ):
     
     def __init__( self, parent, predicate ):
         
-        PanelPredicateSystemSingle.__init__( self, parent )
+        super().__init__( parent )
         
         choices = [ '<', HC.UNICODE_APPROX_EQUAL, '=', '>' ]
         
@@ -820,7 +820,7 @@ class PanelPredicateSystemDuration( PanelPredicateSystemSingle ):
     
     def __init__( self, parent, predicate ):
         
-        PanelPredicateSystemSingle.__init__( self, parent )
+        super().__init__( parent )
         
         allowed_operators = [
             ClientNumberTest.NUMBER_TEST_OPERATOR_LESS_THAN,
@@ -874,7 +874,7 @@ class PanelPredicateSystemFileService( PanelPredicateSystemSingle ):
     
     def __init__( self, parent, predicate ):
         
-        PanelPredicateSystemSingle.__init__( self, parent )
+        super().__init__( parent )
         
         self._sign = ClientGUICommon.BetterRadioBox( self, [ ( 'is', True ), ( 'is not', False ) ], vertical = True )
         
@@ -939,7 +939,7 @@ class PanelPredicateSystemFileViewingStatsViews( PanelPredicateSystemSingle ):
     
     def __init__( self, parent, predicate ):
         
-        PanelPredicateSystemSingle.__init__( self, parent )
+        super().__init__( parent )
         
         self._viewing_locations = ClientGUICommon.BetterCheckBoxList( self )
         
@@ -1015,7 +1015,7 @@ class PanelPredicateSystemFileViewingStatsViewtime( PanelPredicateSystemSingle )
     
     def __init__( self, parent, predicate ):
         
-        PanelPredicateSystemSingle.__init__( self, parent )
+        super().__init__( parent )
         
         self._viewing_locations = ClientGUICommon.BetterCheckBoxList( self )
         
@@ -1091,7 +1091,7 @@ class PanelPredicateSystemFramerate( PanelPredicateSystemSingle ):
     
     def __init__( self, parent, predicate ):
         
-        PanelPredicateSystemSingle.__init__( self, parent )
+        super().__init__( parent )
         
         allowed_operators = [
             ClientNumberTest.NUMBER_TEST_OPERATOR_LESS_THAN,
@@ -1144,7 +1144,7 @@ class PanelPredicateSystemHash( PanelPredicateSystemSingle ):
     
     def __init__( self, parent, predicate ):
         
-        PanelPredicateSystemSingle.__init__( self, parent )
+        super().__init__( parent )
         
         self._sign = ClientGUICommon.BetterRadioBox( self, [ ( 'is', True ), ( 'is not', False ) ], vertical = True )
         
@@ -1217,7 +1217,7 @@ class PanelPredicateSystemHasNoteName( PanelPredicateSystemSingle ):
     
     def __init__( self, parent, predicate ):
         
-        PanelPredicateSystemSingle.__init__( self, parent )
+        super().__init__( parent )
         
         self._operator = ClientGUICommon.BetterChoice( self )
         
@@ -1276,7 +1276,7 @@ class PanelPredicateSystemHeight( PanelPredicateSystemSingle ):
     
     def __init__( self, parent, predicate ):
         
-        PanelPredicateSystemSingle.__init__( self, parent )
+        super().__init__( parent )
         
         allowed_operators = [
             ClientNumberTest.NUMBER_TEST_OPERATOR_LESS_THAN,
@@ -1331,7 +1331,7 @@ class PanelPredicateSystemKnownURLsExactURL( PanelPredicateSystemSingle ):
     
     def __init__( self, parent, predicate ):
         
-        PanelPredicateSystemSingle.__init__( self, parent )
+        super().__init__( parent )
         
         self._operator = ClientGUICommon.BetterChoice( self )
         
@@ -1403,7 +1403,7 @@ class PanelPredicateSystemKnownURLsDomain( PanelPredicateSystemSingle ):
     
     def __init__( self, parent, predicate ):
         
-        PanelPredicateSystemSingle.__init__( self, parent )
+        super().__init__( parent )
         
         self._operator = ClientGUICommon.BetterChoice( self )
         
@@ -1477,7 +1477,7 @@ class PanelPredicateSystemKnownURLsRegex( PanelPredicateSystemSingle ):
     
     def __init__( self, parent, predicate ):
         
-        PanelPredicateSystemSingle.__init__( self, parent )
+        super().__init__( parent )
         
         self._operator = ClientGUICommon.BetterChoice( self )
         
@@ -1563,7 +1563,7 @@ class PanelPredicateSystemKnownURLsURLClass( PanelPredicateSystemSingle ):
     
     def __init__( self, parent, predicate ):
         
-        PanelPredicateSystemSingle.__init__( self, parent )
+        super().__init__( parent )
         
         self._operator = ClientGUICommon.BetterChoice( self )
         
@@ -1640,7 +1640,7 @@ class PanelPredicateSystemLimit( PanelPredicateSystemSingle ):
     
     def __init__( self, parent, predicate ):
         
-        PanelPredicateSystemSingle.__init__( self, parent )
+        super().__init__( parent )
         
         self._limit = ClientGUICommon.BetterSpinBox( self, min = 1, max=1000000, width = 60 )
         
@@ -1684,7 +1684,7 @@ class PanelPredicateSystemMime( PanelPredicateSystemSingle ):
     
     def __init__( self, parent, predicate ):
         
-        PanelPredicateSystemSingle.__init__( self, parent )
+        super().__init__( parent )
         
         self._mimes = ClientGUIOptionsPanels.OptionsPanelMimesTree( self, HC.SEARCHABLE_MIMES )
         
@@ -1735,7 +1735,7 @@ class PanelPredicateSystemNumPixels( PanelPredicateSystemSingle ):
     
     def __init__( self, parent, predicate ):
         
-        PanelPredicateSystemSingle.__init__( self, parent )
+        super().__init__( parent )
         
         choices = [ '<', HC.UNICODE_APPROX_EQUAL, '=', HC.UNICODE_NOT_EQUAL, '>' ]
         
@@ -1795,7 +1795,7 @@ class PanelPredicateSystemNumFrames( PanelPredicateSystemSingle ):
     
     def __init__( self, parent, predicate ):
         
-        PanelPredicateSystemSingle.__init__( self, parent )
+        super().__init__( parent )
         
         allowed_operators = [
             ClientNumberTest.NUMBER_TEST_OPERATOR_LESS_THAN,
@@ -1850,7 +1850,7 @@ class PanelPredicateSystemNumTags( PanelPredicateSystemSingle ):
     
     def __init__( self, parent, predicate ):
         
-        PanelPredicateSystemSingle.__init__( self, parent )
+        super().__init__( parent )
         
         self._namespace = QW.QLineEdit( self )
         self._namespace.setPlaceholderText( 'Leave empty for unnamespaced, \'*\' for all namespaces' )
@@ -1939,7 +1939,7 @@ class PanelPredicateSystemNumNotes( PanelPredicateSystemSingle ):
     
     def __init__( self, parent, predicate ):
         
-        PanelPredicateSystemSingle.__init__( self, parent )
+        super().__init__( parent )
         
         allowed_operators = [
             ClientNumberTest.NUMBER_TEST_OPERATOR_LESS_THAN,
@@ -1993,7 +1993,7 @@ class PanelPredicateSystemNumURLs( PanelPredicateSystemSingle ):
     
     def __init__( self, parent, predicate ):
         
-        PanelPredicateSystemSingle.__init__( self, parent )
+        super().__init__( parent )
         
         allowed_operators = [
             ClientNumberTest.NUMBER_TEST_OPERATOR_LESS_THAN,
@@ -2047,7 +2047,7 @@ class PanelPredicateSystemNumWords( PanelPredicateSystemSingle ):
     
     def __init__( self, parent, predicate ):
         
-        PanelPredicateSystemSingle.__init__( self, parent )
+        super().__init__( parent )
         
         allowed_operators = [
             ClientNumberTest.NUMBER_TEST_OPERATOR_LESS_THAN,
@@ -2103,7 +2103,7 @@ class PanelPredicateSystemRatio( PanelPredicateSystemSingle ):
     
     def __init__( self, parent, predicate ):
         
-        PanelPredicateSystemSingle.__init__( self, parent )
+        super().__init__( parent )
         
         choices = ['=','wider than','taller than',HC.UNICODE_APPROX_EQUAL,HC.UNICODE_NOT_EQUAL]
         
@@ -2163,7 +2163,7 @@ class PanelPredicateSystemSimilarToData( PanelPredicateSystemSingle ):
     
     def __init__( self, parent, predicate ):
         
-        PanelPredicateSystemSingle.__init__( self, parent )
+        super().__init__( parent )
         
         self._clear_button = ClientGUICommon.BetterButton( self, 'clear', self._Clear )
         
@@ -2369,7 +2369,7 @@ class PanelPredicateSystemSimilarToFiles( PanelPredicateSystemSingle ):
     
     def __init__( self, parent, predicate ):
         
-        PanelPredicateSystemSingle.__init__( self, parent )
+        super().__init__( parent )
         
         self._hashes = QW.QPlainTextEdit( self )
         
@@ -2446,7 +2446,7 @@ class PanelPredicateSystemSize( PanelPredicateSystemSingle ):
     
     def __init__( self, parent, predicate ):
         
-        PanelPredicateSystemSingle.__init__( self, parent )
+        super().__init__( parent )
         
         choices = ['<',HC.UNICODE_APPROX_EQUAL,'=',HC.UNICODE_NOT_EQUAL,'>']
         
@@ -2501,7 +2501,7 @@ class PanelPredicateSystemTagAsNumber( PanelPredicateSystemSingle ):
     
     def __init__( self, parent, predicate ):
         
-        PanelPredicateSystemSingle.__init__( self, parent )
+        super().__init__( parent )
         
         self._namespace = QW.QLineEdit( self )
         
@@ -2558,7 +2558,7 @@ class PanelPredicateSystemWidth( PanelPredicateSystemSingle ):
     
     def __init__( self, parent, predicate ):
         
-        PanelPredicateSystemSingle.__init__( self, parent )
+        super().__init__( parent )
         
         allowed_operators = [
             ClientNumberTest.NUMBER_TEST_OPERATOR_LESS_THAN,

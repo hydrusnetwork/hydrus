@@ -12,7 +12,7 @@ class GUISessionLegacy( HydrusSerialisable.SerialisableBaseNamed ):
     
     def __init__( self, name ):
         
-        HydrusSerialisable.SerialisableBaseNamed.__init__( self, name )
+        super().__init__( name )
         
         self._page_tuples = []
         

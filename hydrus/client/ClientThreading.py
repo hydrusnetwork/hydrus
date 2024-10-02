@@ -614,7 +614,7 @@ class QtAwareJob( HydrusThreading.SingleJob ):
     
     def __init__( self, controller, scheduler, window, initial_delay, work_callable ):
         
-        HydrusThreading.SingleJob.__init__( self, controller, scheduler, initial_delay, work_callable )
+        super().__init__( controller, scheduler, initial_delay, work_callable )
         
         self._window = window
         
@@ -662,7 +662,7 @@ class QtAwareRepeatingJob( HydrusThreading.RepeatingJob ):
     
     def __init__( self, controller, scheduler, window, initial_delay, period, work_callable ):
         
-        HydrusThreading.RepeatingJob.__init__( self, controller, scheduler, initial_delay, period, work_callable )
+        super().__init__( controller, scheduler, initial_delay, period, work_callable )
         
         self._window = window
         

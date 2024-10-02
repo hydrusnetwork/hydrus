@@ -36,7 +36,7 @@ class PairComparatorOneFile( PairComparator ):
         This guy holds one test and is told to test either the better or worse candidate. Multiple of these stacked up make for 'the better file is a jpeg over one megabyte, the worse file is a jpeg under 100KB'.
         """
         
-        PairComparator.__init__( self )
+        super().__init__()
         
         # this guy tests the better or the worse for a single property
         # user could set up multiple on either side of the equation
@@ -79,7 +79,7 @@ class PairComparatorRelative( PairComparator ):
         This guy compares the pair directly. It can say 'yes the better candidate is 4x bigger than the worse'. 
         """
         
-        PairComparator.__init__( self )
+        super().__init__()
         
         # this work does not need to be done yet!
         
@@ -166,7 +166,7 @@ class DuplicatesAutoResolutionRule( HydrusSerialisable.SerialisableBaseNamed ):
         This guy holds everything to make a single auto-resolution job work. It knows the search it wants to do, and, when given pairs from that search, will confirm whether one file passes its auto-resolution threshold and should be auto-considered better.
         """
         
-        HydrusSerialisable.SerialisableBaseNamed.__init__( self, name )
+        super().__init__( name )
         
         # the id here will be for the database to match up rules to cached pair statuses. slightly wewmode, but we'll see
         self._id = -1

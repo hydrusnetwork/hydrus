@@ -54,7 +54,7 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
     
     def __init__( self, parent, auto_account_creation_service_key = None ):
         
-        ClientGUIScrolledPanels.ManagePanel.__init__( self, parent )
+        super().__init__( parent )
         
         model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_MANAGE_SERVICES.ID, self._ConvertServiceToListCtrlTuples )
         
@@ -328,7 +328,7 @@ class EditClientServicePanel( ClientGUIScrolledPanels.EditPanel ):
     
     def __init__( self, parent, service, auto_account_creation_service_key = None ):
         
-        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        super().__init__( parent )
         
         duplicate_service = service.Duplicate()
         
@@ -430,7 +430,7 @@ class EditServiceSubPanel( ClientGUICommon.StaticBox ):
     
     def __init__( self, parent, name ):
         
-        ClientGUICommon.StaticBox.__init__( self, parent, 'name' )
+        super().__init__( parent, 'name' )
         
         self._name = QW.QLineEdit( self )
         
@@ -463,7 +463,7 @@ class EditServiceRemoteSubPanel( ClientGUICommon.StaticBox ):
     
     def __init__( self, parent, service_type, dictionary ):
         
-        ClientGUICommon.StaticBox.__init__( self, parent, 'network connection' )
+        super().__init__( parent, 'network connection' )
         
         self._service_type = service_type
         
@@ -646,7 +646,7 @@ class EditServiceRestrictedSubPanel( ClientGUICommon.StaticBox ):
     
     def __init__( self, parent, service_key, remote_panel: EditServiceRemoteSubPanel, service_type, dictionary, auto_account_creation_service_key = None ):
         
-        ClientGUICommon.StaticBox.__init__( self, parent, 'hydrus network' )
+        super().__init__( parent, 'hydrus network' )
         
         self._service_key = service_key
         self._remote_panel = remote_panel
@@ -1112,7 +1112,7 @@ class EditServiceClientServerSubPanel( ClientGUICommon.StaticBox ):
     
     def __init__( self, parent, service_type, dictionary ):
         
-        ClientGUICommon.StaticBox.__init__( self, parent, 'client api' )
+        super().__init__( parent, 'client api' )
         
         self._client_server_options_panel = ClientGUICommon.StaticBox( self, 'options' )
         
@@ -1278,7 +1278,7 @@ class EditServiceTagSubPanel( ClientGUICommon.StaticBox ):
     
     def __init__( self, parent, dictionary ):
         
-        ClientGUICommon.StaticBox.__init__( self, parent, 'tags' )
+        super().__init__( parent, 'tags' )
         
         self._st = ClientGUICommon.BetterStaticText( self )
         
@@ -1301,7 +1301,7 @@ class EditServiceRatingsSubPanel( ClientGUICommon.StaticBox ):
     
     def __init__( self, parent, service_type, dictionary ):
         
-        ClientGUICommon.StaticBox.__init__( self, parent, 'rating colours' )
+        super().__init__( parent, 'rating colours' )
         
         self._colour_ctrls = {}
         
@@ -1406,7 +1406,7 @@ class EditServiceStarRatingsSubPanel( ClientGUICommon.StaticBox ):
     
     def __init__( self, parent, dictionary ):
         
-        ClientGUICommon.StaticBox.__init__( self, parent, 'rating shape' )
+        super().__init__( parent, 'rating shape' )
         
         self._shape = ClientGUICommon.BetterChoice( self )
         
@@ -1444,7 +1444,7 @@ class EditServiceRatingsNumericalSubPanel( ClientGUICommon.StaticBox ):
     
     def __init__( self, parent, dictionary ):
         
-        ClientGUICommon.StaticBox.__init__( self, parent, 'numerical ratings' )
+        super().__init__( parent, 'numerical ratings' )
         
         self._num_stars = ClientGUICommon.BetterSpinBox( self, min=1, max=20 )
         self._allow_zero = QW.QCheckBox( self )
@@ -1489,7 +1489,7 @@ class EditServiceIPFSSubPanel( ClientGUICommon.StaticBox ):
     
     def __init__( self, parent, dictionary ):
         
-        ClientGUICommon.StaticBox.__init__( self, parent, 'ipfs' )
+        super().__init__( parent, 'ipfs' )
         
         interaction_panel = ClientGUIPanels.IPFSDaemonStatusAndInteractionPanel( self, self.parentWidget().GetValue )
         
@@ -1835,7 +1835,7 @@ class ReviewServiceSubPanel( ClientGUICommon.StaticBox ):
     
     def __init__( self, parent, service ):
         
-        ClientGUICommon.StaticBox.__init__( self, parent, 'name and type' )
+        super().__init__( parent, 'name and type' )
         
         self._service = service
         
@@ -1883,7 +1883,7 @@ class ReviewServiceClientAPISubPanel( ClientGUICommon.StaticBox ):
     
     def __init__( self, parent, service ):
         
-        ClientGUICommon.StaticBox.__init__( self, parent, 'client api' )
+        super().__init__( parent, 'client api' )
         
         self._service = service
         
@@ -2169,7 +2169,7 @@ class ReviewServiceCombinedLocalFilesSubPanel( ClientGUICommon.StaticBox ):
     
     def __init__( self, parent, service ):
         
-        ClientGUICommon.StaticBox.__init__( self, parent, 'combined local files' )
+        super().__init__( parent, 'combined local files' )
         
         self._service = service
         
@@ -2269,7 +2269,7 @@ class ReviewServiceFileSubPanel( ClientGUICommon.StaticBox ):
     
     def __init__( self, parent, service ):
         
-        ClientGUICommon.StaticBox.__init__( self, parent, 'files' )
+        super().__init__( parent, 'files' )
         
         self._service = service
         
@@ -2341,7 +2341,7 @@ class ReviewServiceRemoteSubPanel( ClientGUICommon.StaticBox ):
     
     def __init__( self, parent, service ):
         
-        ClientGUICommon.StaticBox.__init__( self, parent, 'this client\'s network use' )
+        super().__init__( parent, 'this client\'s network use' )
         
         self._service = service
         
@@ -2447,7 +2447,7 @@ class ReviewServiceRestrictedSubPanel( ClientGUICommon.StaticBox ):
     
     def __init__( self, parent, service ):
         
-        ClientGUICommon.StaticBox.__init__( self, parent, 'hydrus service account - shared by all clients using the same access key' )
+        super().__init__( parent, 'hydrus service account - shared by all clients using the same access key' )
         
         self._service = service
         
@@ -3457,7 +3457,7 @@ class ReviewServiceIPFSSubPanel( ClientGUICommon.StaticBox ):
     
     def __init__( self, parent, service ):
         
-        ClientGUICommon.StaticBox.__init__( self, parent, 'ipfs' )
+        super().__init__( parent, 'ipfs' )
         
         self._service = service
         
@@ -3685,7 +3685,7 @@ class ReviewServiceRatingSubPanel( ClientGUICommon.StaticBox ):
     
     def __init__( self, parent, service ):
         
-        ClientGUICommon.StaticBox.__init__( self, parent, 'ratings' )
+        super().__init__( parent, 'ratings' )
         
         self._service = service
         
@@ -3775,7 +3775,7 @@ class ReviewServiceTagSubPanel( ClientGUICommon.StaticBox ):
     
     def __init__( self, parent, service ):
         
-        ClientGUICommon.StaticBox.__init__( self, parent, 'tags' )
+        super().__init__( parent, 'tags' )
         
         self._service = service
         
@@ -3858,7 +3858,7 @@ class ReviewServiceTrashSubPanel( ClientGUICommon.StaticBox ):
     
     def __init__( self, parent, service ):
         
-        ClientGUICommon.StaticBox.__init__( self, parent, 'trash' )
+        super().__init__( parent, 'trash' )
         
         self._service = service
         
@@ -3984,7 +3984,7 @@ class ReviewServicesPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         self._controller = controller
         
-        ClientGUIScrolledPanels.ReviewPanel.__init__( self, parent )
+        super().__init__( parent )
         
         self._notebook = ClientGUICommon.BetterNotebook( self )
         
@@ -4051,7 +4051,7 @@ class ReviewServicesPanel( ClientGUIScrolledPanels.ReviewPanel ):
             elif service_type == HC.FILE_REPOSITORY: service_type_name = 'file repositories'
             elif service_type == HC.MESSAGE_DEPOT: service_type_name = 'message depots'
             elif service_type == HC.SERVER_ADMIN: service_type_name = 'administrative servers'
-            elif service_type in HC.LOCAL_FILE_SERVICES: service_type_name = 'files'
+            elif service_type in HC.LOCAL_FILE_SERVICES: service_type_name = 'locations'
             elif service_type == HC.LOCAL_TAG: service_type_name = 'tags'
             elif service_type == HC.LOCAL_RATING_LIKE: service_type_name = 'like/dislike ratings'
             elif service_type == HC.LOCAL_RATING_NUMERICAL: service_type_name = 'numerical ratings'

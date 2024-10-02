@@ -61,7 +61,7 @@ class EditDefaultImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         url_class_keys_to_note_import_options
     ):
         
-        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        super().__init__( parent )
         
         self._url_classes = url_classes
         self._parsers = parsers
@@ -509,7 +509,7 @@ class EditDeleteFilesPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def __init__( self, parent: QW.QWidget, media, default_reason, suggested_file_service_key = None ):
         
-        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        super().__init__( parent )
         
         self._default_reason = default_reason
         
@@ -1164,7 +1164,7 @@ class EditDuplicateContentMergeOptionsPanel( ClientGUIScrolledPanels.EditPanel )
     
     def __init__( self, parent: QW.QWidget, duplicate_action, duplicate_content_merge_options: ClientDuplicates.DuplicateContentMergeOptions, for_custom_action = False ):
         
-        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        super().__init__( parent )
         
         self._duplicate_action = duplicate_action
         
@@ -1735,7 +1735,7 @@ class EditFilesForcedFiletypePanel( ClientGUIScrolledPanels.EditPanel ):
     
     def __init__( self, parent: QW.QWidget, original_mimes_count: typing.Dict[ int, int ], forced_mimes_count: typing.Dict[ int, int ] ):
         
-        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        super().__init__( parent )
         
         total_file_count = sum( original_mimes_count.values() )
         total_forced_mimes_count = sum( forced_mimes_count.values() )
@@ -2232,7 +2232,7 @@ class EditFrameLocationPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def __init__( self, parent: QW.QWidget, info ):
         
-        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        super().__init__( parent )
         
         self._original_info = info
         
@@ -2328,7 +2328,7 @@ class EditMediaViewOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def __init__( self, parent: QW.QWidget, info ):
         
-        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        super().__init__( parent )
         
         self._original_info = info
         
@@ -2622,7 +2622,7 @@ class EditRegexFavourites( ClientGUIScrolledPanels.EditPanel ):
     
     def __init__( self, parent: QW.QWidget, regex_favourites ):
         
-        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        super().__init__( parent )
         
         regex_listctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         

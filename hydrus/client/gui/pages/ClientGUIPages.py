@@ -33,7 +33,8 @@ from hydrus.client.gui.canvas import ClientGUICanvas
 from hydrus.client.gui.pages import ClientGUIManagementController
 from hydrus.client.gui.pages import ClientGUIManagementPanels
 from hydrus.client.gui.pages import ClientGUINewPageChooser
-from hydrus.client.gui.pages import ClientGUIResults
+from hydrus.client.gui.pages import ClientGUIMediaResultsPanel
+from hydrus.client.gui.pages import ClientGUIMediaResultsPanelThumbnails
 from hydrus.client.gui.pages import ClientGUISession
 from hydrus.client.gui.pages import ClientGUISessionLegacy # to get serialisable data types loaded
 from hydrus.client.search import ClientSearchFileSearchContext
@@ -100,7 +101,7 @@ class Page( QW.QWidget ):
         self._management_panel.locationChanged.connect( self._preview_canvas.SetLocationContext )
         
         # this is the only place we _do_ want to set the split as the parent of the thumbnail panel. doing it on init avoids init flicker
-        self._media_panel = self._management_panel.GetDefaultEmptyMediaPanel( self._management_media_split )
+        self._media_panel = self._management_panel.GetDefaultEmptyMediaResultsPanel( self._management_media_split )
         
         self._management_media_split.addWidget( self._search_preview_split )
         self._management_media_split.addWidget( self._media_panel )
@@ -144,14 +145,14 @@ class Page( QW.QWidget ):
         self._current_session_page_container_hashes_hash = self._GetCurrentSessionPageHashesHash()
         self._current_session_page_container_timestamp = 0
         
-        self._ConnectMediaPanelSignals()
+        self._ConnectMediaResultsPanelSignals()
         
         self.SetSplitterPositions()
         
         self._search_preview_split.splitterMoved.connect( self._PreviewSplitterMoved )
         
     
-    def _ConnectMediaPanelSignals( self ):
+    def _ConnectMediaResultsPanelSignals( self ):
         
         self._media_panel.refreshQuery.connect( self.RefreshQuery )
         self._media_panel.focusMediaChanged.connect( self._preview_canvas.SetMedia )
@@ -159,7 +160,7 @@ class Page( QW.QWidget ):
         self._media_panel.focusMediaPaused.connect( self._preview_canvas.PauseMedia )
         self._media_panel.statusTextChanged.connect( self._SetPrettyStatus )
         
-        self._management_panel.ConnectMediaPanelSignals( self._media_panel )
+        self._management_panel.ConnectMediaResultsPanelSignals( self._media_panel )
         
     
     def _GetCurrentSessionPageHashesHash( self ):
@@ -198,7 +199,7 @@ class Page( QW.QWidget ):
         self._controller.gui.SetStatusBarDirty()
         
     
-    def _SwapMediaPanel( self, new_panel: ClientGUIResults.MediaPanel ):
+    def _SwapMediaResultsPanel( self, new_panel: ClientGUIMediaResultsPanel.MediaResultsPanel ):
         """
         Yo, it is important that the new_panel here starts with a parent _other_ than the splitter! The page itself is usually fine.
         If we give it the splitter as parent, you can get a frame of unusual layout flicker, usually a page-wide autocomplete input. Re-parent it here and we are fine.
@@ -258,7 +259,7 @@ class Page( QW.QWidget ):
         
         self._management_media_split.setSizes( previous_sizes )
         
-        self._ConnectMediaPanelSignals()
+        self._ConnectMediaResultsPanelSignals()
         
         self._controller.pub( 'refresh_page_name', self._page_key )
         
@@ -396,7 +397,7 @@ class Page( QW.QWidget ):
         return self._media_panel.GetSortedMedia()
         
     
-    def GetMediaPanel( self ):
+    def GetMediaResultsPanel( self ):
         
         return self._media_panel
         
@@ -802,9 +803,9 @@ class Page( QW.QWidget ):
             
             self._SetPrettyStatus( '' )
             
-            media_panel = ClientGUIResults.MediaPanelThumbnails( self, self._page_key, self._management_controller, media_results )
+            media_panel = ClientGUIMediaResultsPanelThumbnails.MediaResultsPanelThumbnails( self, self._page_key, self._management_controller, media_results )
             
-            self._SwapMediaPanel( media_panel )
+            self._SwapMediaResultsPanel( media_panel )
             
             if len( self._pre_initialisation_media_results ) > 0:
                 
@@ -845,9 +846,9 @@ class Page( QW.QWidget ):
             
         
     
-    def SwapMediaPanel( self, new_panel ):
+    def SwapMediaResultsPanel( self, new_panel ):
         
-        self._SwapMediaPanel( new_panel )
+        self._SwapMediaResultsPanel( new_panel )
         
     
     def TestAbleToClose( self ):
@@ -890,7 +891,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
     
     def __init__( self, parent, controller, name ):
         
-        QP.TabWidgetWithDnD.__init__( self, parent )
+        super().__init__( parent )
         
         self._parent_notebook = parent
         
@@ -2803,7 +2804,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         
         if not ctrl_down:
             
-            source_page.GetMediaPanel().RemoveMedia( source_page.GetPageKey(), hashes )
+            source_page.GetMediaResultsPanel().RemoveMedia( source_page.GetPageKey(), hashes )
             
         
     
@@ -3090,7 +3091,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
             
             media_sort = page.GetSort()
             
-            page.GetMediaPanel().Sort( media_sort )
+            page.GetMediaResultsPanel().Sort( media_sort )
             
         
         return page

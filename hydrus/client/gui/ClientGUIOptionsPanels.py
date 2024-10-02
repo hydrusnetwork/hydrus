@@ -26,7 +26,7 @@ class OptionsPanelMimesTree( OptionsPanel ):
     
     def __init__( self, parent, selectable_mimes ):
         
-        OptionsPanel.__init__( self, parent )
+        super().__init__( parent )
         
         self._selectable_mimes = set( selectable_mimes )
         

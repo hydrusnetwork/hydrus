@@ -22,7 +22,7 @@ class BandwidthRulesCtrl( ClientGUICommon.StaticBox ):
     
     def __init__( self, parent, bandwidth_rules ):
         
-        ClientGUICommon.StaticBox.__init__( self, parent, 'bandwidth rules' )
+        super().__init__( parent, 'bandwidth rules' )
         
         listctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
@@ -185,7 +185,7 @@ class BandwidthRulesCtrl( ClientGUICommon.StaticBox ):
         
         def __init__( self, parent, rule ):
             
-            ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+            super().__init__( parent )
             
             self._bandwidth_type = ClientGUICommon.BetterChoice( self )
             

@@ -11,7 +11,7 @@ class IPFSDaemonStatusAndInteractionPanel( ClientGUICommon.StaticBox ):
     
     def __init__( self, parent, service_callable ):
         
-        ClientGUICommon.StaticBox.__init__( self, parent, 'ipfs daemon' )
+        super().__init__( parent, 'ipfs daemon' )
         
         self._is_running = False
         self._nocopy_enabled = False

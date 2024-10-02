@@ -429,7 +429,7 @@ class HydrusResource( Resource ):
     
     def __init__( self, service, domain ):
         
-        Resource.__init__( self )
+        super().__init__()
         
         self._service = service
         self._service_key = self._service.GetServiceKey()

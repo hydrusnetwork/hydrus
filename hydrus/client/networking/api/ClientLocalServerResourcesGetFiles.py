@@ -2,6 +2,7 @@ import os
 import time
 
 from hydrus.core import HydrusConstants as HC
+from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusTags
 from hydrus.core import HydrusTime
@@ -808,7 +809,42 @@ class HydrusResourceClientAPIRestrictedGetFilesGetLocalPath( HydrusResourceClien
         
     
 
-class HydrusResourceClientAPIRestrictedGetFilesGetFilePath( HydrusResourceClientAPIRestrictedGetFilesSearchFiles ):
+class HydrusResourceClientAPIRestrictedGetFilesGetLocalFileStorageLocations( HydrusResourceClientAPIRestrictedGetFilesGetLocalPath ):
+    
+    def _threadDoGETJob( self, request: HydrusServerRequest.HydrusRequest ):
+        
+        all_subfolders = CG.client_controller.client_files_manager.GetAllSubfolders()
+        
+        base_locations_to_subfolders = HydrusData.BuildKeyToListDict( [ ( subfolder.base_location, subfolder ) for subfolder in all_subfolders ] )
+        
+        locations_list = []
+        
+        for ( base_location, subfolders ) in sorted( base_locations_to_subfolders.items(), key = lambda b_l_s: b_l_s[0].path ):
+            
+            locations_structure = {
+                "path" : base_location.path,
+                "ideal_weight" : base_location.ideal_weight,
+                "max_num_bytes" : base_location.max_num_bytes,
+                "prefixes" : sorted( [ subfolder.prefix for subfolder in subfolders ] )
+            }
+            
+            locations_list.append( locations_structure )
+            
+        
+        body_dict = {
+            'locations' : locations_list
+        }
+        
+        mime = request.preferred_mime
+        body = ClientLocalServerCore.Dumps( body_dict, mime )
+        
+        response_context = HydrusServerResources.ResponseContext( 200, mime = mime, body = body )
+        
+        return response_context
+        
+    
+
+class HydrusResourceClientAPIRestrictedGetFilesGetFilePath( HydrusResourceClientAPIRestrictedGetFilesGetLocalPath ):
     
     def _threadDoGETJob( self, request: HydrusServerRequest.HydrusRequest ):
         
@@ -849,7 +885,7 @@ class HydrusResourceClientAPIRestrictedGetFilesGetFilePath( HydrusResourceClient
         
     
 
-class HydrusResourceClientAPIRestrictedGetFilesGetThumbnailPath( HydrusResourceClientAPIRestrictedGetFilesSearchFiles ):
+class HydrusResourceClientAPIRestrictedGetFilesGetThumbnailPath( HydrusResourceClientAPIRestrictedGetFilesGetLocalPath ):
     
     def _threadDoGETJob( self, request: HydrusServerRequest.HydrusRequest ):
         

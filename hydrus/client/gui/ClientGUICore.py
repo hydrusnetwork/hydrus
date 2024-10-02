@@ -13,7 +13,7 @@ class GUICore( QC.QObject ):
     
     def __init__( self ):
         
-        QC.QObject.__init__( self )
+        super().__init__()
         
         self._menu_open = False
         

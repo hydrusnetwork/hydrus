@@ -1689,6 +1689,14 @@ class ClientFilesManager( object ):
         return self._missing_subfolders
         
     
+    def GetAllSubfolders( self ) -> typing.Collection[ ClientFilesPhysical.FilesStorageSubfolder ]:
+        
+        with self._master_locations_rwlock.read:
+            
+            return self._GetAllSubfolders()
+            
+        
+    
     def GetThumbnailPath( self, media ):
         
         hash = media.GetHash()

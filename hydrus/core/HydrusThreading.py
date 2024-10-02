@@ -191,7 +191,7 @@ class DAEMON( threading.Thread ):
     
     def __init__( self, controller, name ):
         
-        threading.Thread.__init__( self, name = name )
+        super().__init__( name = name )
         
         self._controller = controller
         self._name = name
@@ -241,7 +241,7 @@ class DAEMONWorker( DAEMON ):
             topics = []
             
         
-        DAEMON.__init__( self, controller, name )
+        super().__init__( controller, name )
         
         self._callable = callable
         self._topics = topics
@@ -377,7 +377,7 @@ class THREADCallToThread( DAEMON ):
     
     def __init__( self, controller, name ):
         
-        DAEMON.__init__( self, controller, name )
+        super().__init__( controller, name )
         
         self._callable = None
         
@@ -484,7 +484,7 @@ class JobScheduler( threading.Thread ):
     
     def __init__( self, controller ):
         
-        threading.Thread.__init__( self, name = 'Job Scheduler' )
+        super().__init__( name = 'Job Scheduler' )
         
         self._controller = controller
         
@@ -748,7 +748,7 @@ class SchedulableJob( HydrusThreadingInterface.SchedulableJobInterface ):
     
     def __init__( self, controller, scheduler: JobScheduler, initial_delay, work_callable ):
         
-        HydrusThreadingInterface.SchedulableJobInterface.__init__( self )
+        super().__init__()
         
         self._controller = controller
         self._scheduler = scheduler
@@ -973,7 +973,7 @@ class SingleJob( SchedulableJob ):
     
     def __init__( self, controller, scheduler: JobScheduler, initial_delay, work_callable ):
         
-        SchedulableJob.__init__( self, controller, scheduler, initial_delay, work_callable )
+        super().__init__( controller, scheduler, initial_delay, work_callable )
         
         self._work_complete = threading.Event()
         
@@ -997,7 +997,7 @@ class RepeatingJob( SchedulableJob ):
     
     def __init__( self, controller, scheduler: JobScheduler, initial_delay, period, work_callable ):
         
-        SchedulableJob.__init__( self, controller, scheduler, initial_delay, work_callable )
+        super().__init__( controller, scheduler, initial_delay, work_callable )
         
         self._period = period
         

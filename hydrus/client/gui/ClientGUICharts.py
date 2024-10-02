@@ -12,7 +12,7 @@ try:
         
         def __init__( self, parent, monthly_usage ):
             
-            QCh.QtCharts.QChartView.__init__( self, parent )
+            super().__init__( parent )
             
             divisor = 1.0
             unit = 'B'
@@ -74,7 +74,7 @@ try:
         
         def __init__( self, parent, file_history: dict, show_deleted: bool ):
             
-            QCh.QtCharts.QChartView.__init__( self, parent )
+            super().__init__( parent )
             
             self._file_history = file_history
             self._show_deleted = show_deleted

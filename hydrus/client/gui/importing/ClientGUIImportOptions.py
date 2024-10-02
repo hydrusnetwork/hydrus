@@ -41,7 +41,7 @@ class EditFileImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def __init__( self, parent: QW.QWidget, file_import_options: FileImportOptions.FileImportOptions, show_downloader_options: bool, allow_default_selection: bool ):
         
-        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        super().__init__( parent )
         
         help_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().help, self._ShowHelp )
         
@@ -564,7 +564,7 @@ class EditNoteImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def __init__( self, parent: QW.QWidget, note_import_options: NoteImportOptions.NoteImportOptions, allow_default_selection: bool, simple_mode = False ):
         
-        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        super().__init__( parent )
         
         self._allow_default_selection = allow_default_selection
         self._simple_mode = simple_mode
@@ -887,7 +887,7 @@ class EditPresentationImportOptions( ClientGUIScrolledPanels.EditPanel ):
     
     def __init__( self, parent: QW.QWidget, presentation_import_options: PresentationImportOptions.PresentationImportOptions ):
         
-        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        super().__init__( parent )
         
         #
         
@@ -1039,7 +1039,7 @@ class EditServiceTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def __init__( self, parent: QW.QWidget, service_key: bytes, service_tag_import_options: TagImportOptions.ServiceTagImportOptions, show_downloader_options: bool = True ):
         
-        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        super().__init__( parent )
         
         self._service_key = service_key
         self._show_downloader_options = show_downloader_options
@@ -1253,7 +1253,7 @@ class EditTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def __init__( self, parent: QW.QWidget, tag_import_options: TagImportOptions.TagImportOptions, show_downloader_options: bool, allow_default_selection: bool ):
         
-        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        super().__init__( parent )
         
         self._show_downloader_options = show_downloader_options
         
@@ -1608,7 +1608,7 @@ class EditImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def __init__( self, parent: QW.QWidget, show_downloader_options: bool, allow_default_selection: bool ):
         
-        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        super().__init__( parent )
         
         self._show_downloader_options = show_downloader_options
         self._allow_default_selection = allow_default_selection
@@ -1803,7 +1803,7 @@ class ImportOptionsButton( ClientGUICommon.ButtonWithMenuArrow ):
         
         action.triggered.connect( self._EditOptions )
         
-        ClientGUICommon.ButtonWithMenuArrow.__init__( self, parent, action )
+        super().__init__( parent, action )
         
         self._show_downloader_options = show_downloader_options
         self._allow_default_selection = allow_default_selection

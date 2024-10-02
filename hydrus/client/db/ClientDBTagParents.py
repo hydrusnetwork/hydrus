@@ -888,6 +888,11 @@ class ClientDBTagParents( ClientDBModule.ClientDBModule ):
     
     def RegenChains( self, tag_service_ids, tag_ids ):
         
+        if self._service_ids_to_applicable_service_ids is None:
+            
+            self.GenerateApplicationDicts()
+            
+        
         if len( tag_ids ) == 0:
             
             return

@@ -254,7 +254,7 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         
         subscription = subscription.Duplicate()
         
-        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        super().__init__( parent )
         
         self._original_subscription = subscription
         self._names_to_edited_query_log_containers = dict( names_to_edited_query_log_containers )
@@ -1290,7 +1290,7 @@ class EditSubscriptionQueryPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def __init__( self, parent: QW.QWidget, query_header: ClientImportSubscriptionQuery.SubscriptionQueryHeader, query_log_container: ClientImportSubscriptionQuery.SubscriptionQueryLogContainer ):
         
-        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        super().__init__( parent )
         
         self._original_query_header = query_header
         self._original_query_log_container = query_log_container
@@ -1427,7 +1427,7 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         subscriptions = [ subscription.Duplicate() for subscription in subscriptions ]
         
-        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        super().__init__( parent )
         
         self._existing_query_log_container_names = set()
         

@@ -529,7 +529,7 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
             action_locations = {}
             
         
-        HydrusSerialisable.SerialisableBaseNamed.__init__( self, name )
+        super().__init__( name )
         
         self._path = path
         self._file_import_options = file_import_options

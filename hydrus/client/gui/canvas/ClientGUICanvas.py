@@ -201,7 +201,7 @@ class CanvasLayout( QW.QLayout ):
     
     def __init__( self ):
         
-        QW.QLayout.__init__( self )
+        super().__init__()
         
         self._current_drag_delta = QC.QPoint( 0, 0 )
         
@@ -1365,7 +1365,7 @@ class MediaContainerDragClickReportingFilter( QC.QObject ):
     
     def __init__( self, parent: Canvas ):
         
-        QC.QObject.__init__( self, parent )
+        super().__init__( parent )
         
         self._canvas = parent
         
@@ -1399,7 +1399,7 @@ class CanvasPanel( Canvas ):
     
     def __init__( self, parent, page_key, location_context: ClientLocation.LocationContext ):
         
-        Canvas.__init__( self, parent, location_context )
+        super().__init__( parent, location_context )
         
         self._page_key = page_key
         
@@ -1647,7 +1647,7 @@ class CanvasWithDetails( Canvas ):
     
     def __init__( self, parent, location_context ):
         
-        Canvas.__init__( self, parent, location_context )
+        super().__init__( parent, location_context )
         
         CG.client_controller.sub( self, 'RedrawDetails', 'refresh_all_tag_presentation_gui' )
         
@@ -2107,7 +2107,7 @@ class CanvasWithHovers( CanvasWithDetails ):
     
     def __init__( self, parent, location_context ):
         
-        CanvasWithDetails.__init__( self, parent, location_context )
+        super().__init__( parent, location_context )
         
         self._hovers = []
         
@@ -2244,7 +2244,7 @@ class CanvasWithHovers( CanvasWithDetails ):
         
         self.setCursor( QG.QCursor( QC.Qt.ArrowCursor ) )
         
-        CanvasWithDetails.CleanBeforeDestroy( self )
+        super().CleanBeforeDestroy()
         
     
     def CloseFromHover( self, canvas_key ):
@@ -2356,7 +2356,7 @@ class CanvasWithHovers( CanvasWithDetails ):
                 
             
         
-        CanvasWithDetails.mouseMoveEvent( self, event )
+        super().mouseMoveEvent( event )
         
     
     def ProcessApplicationCommand( self, command: CAC.ApplicationCommand ):
@@ -2387,7 +2387,7 @@ class CanvasWithHovers( CanvasWithDetails ):
         
         if not command_processed:
             
-            command_processed = CanvasWithDetails.ProcessApplicationCommand( self, command )
+            command_processed = super().ProcessApplicationCommand( command )
             
         
         return command_processed
@@ -2412,7 +2412,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
         
         location_context = file_search_context_1.GetLocationContext()
         
-        CanvasWithHovers.__init__( self, parent, location_context )
+        super().__init__( parent, location_context )
         
         self._duplicates_right_hover = ClientGUICanvasHoverFrames.CanvasHoverFrameRightDuplicates( self, self, self._canvas_key )
         
@@ -2563,7 +2563,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
             default_reason = 'Deleted manually in Duplicate Filter, along with its potential duplicate.'
             
         
-        content_update_packages = CanvasWithHovers._Delete( self, media = media, default_reason = default_reason, file_service_key = file_service_key, just_get_content_update_packages = True )
+        content_update_packages = super()._Delete( media = media, default_reason = default_reason, file_service_key = file_service_key, just_get_content_update_packages = True )
         
         deleted = isinstance( content_update_packages, list ) and len( content_update_packages ) > 0
         
@@ -2691,7 +2691,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
             
         else:
             
-            CanvasWithHovers._DrawBackgroundDetails( self, painter )
+            super()._DrawBackgroundDetails( painter )
             
         
     
@@ -3235,7 +3235,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
         
         ClientDuplicates.hashes_to_jpeg_quality = {} # clear the cache
         
-        CanvasWithHovers.CleanBeforeDestroy( self )
+        super().CleanBeforeDestroy()
         
     
     def Delete( self, canvas_key ):
@@ -3325,7 +3325,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
         
         if not command_processed:
             
-            command_processed = CanvasWithHovers.ProcessApplicationCommand( self, command )
+            command_processed = super().ProcessApplicationCommand( command )
             
         
         return command_processed
@@ -3361,7 +3361,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
     
     def SetMedia( self, media ):
         
-        CanvasWithHovers.SetMedia( self, media )
+        super().SetMedia( media )
         
         if media is not None:
             
@@ -3423,7 +3423,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
                 
             
         
-        return CanvasWithHovers.TryToDoPreClose( self )
+        return super().TryToDoPreClose()
         
     
     def Undelete( self, canvas_key ):
@@ -3495,7 +3495,7 @@ class CanvasMediaList( ClientMedia.ListeningMediaList, CanvasWithHovers ):
             self.exitFocusMedia.emit( self._current_media )
             
         
-        return CanvasWithHovers.TryToDoPreClose( self )
+        return super().TryToDoPreClose()
         
     
     def _GenerateHoverTopFrame( self ):
@@ -3796,7 +3796,7 @@ class CanvasMediaListFilterArchiveDelete( CanvasMediaList ):
     
     def __init__( self, parent, page_key, location_context: ClientLocation.LocationContext, media_results ):
         
-        CanvasMediaList.__init__( self, parent, page_key, location_context, media_results )
+        super().__init__( parent, page_key, location_context, media_results )
         
         self._my_shortcuts_handler.AddShortcuts( 'archive_delete_filter' )
         
@@ -4103,7 +4103,7 @@ class CanvasMediaListNavigable( CanvasMediaList ):
     
     def __init__( self, parent, page_key, location_context: ClientLocation.LocationContext, media_results ):
         
-        CanvasMediaList.__init__( self, parent, page_key, location_context, media_results )
+        super().__init__( parent, page_key, location_context, media_results )
         
         self._my_shortcuts_handler.AddShortcuts( 'media_viewer_browser' )
         
@@ -4248,7 +4248,7 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
     
     def __init__( self, parent, page_key, location_context: ClientLocation.LocationContext, media_results, first_hash ):
         
-        CanvasMediaListNavigable.__init__( self, parent, page_key, location_context, media_results )
+        super().__init__( parent, page_key, location_context, media_results )
         
         self._slideshow_is_running = False
         self._last_slideshow_switch_time = 0
@@ -4531,7 +4531,7 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
         
         if not command_processed:
             
-            command_processed = CanvasMediaListNavigable.ProcessApplicationCommand( self, command )
+            command_processed = super().ProcessApplicationCommand( command )
             
         
         return command_processed
@@ -4721,11 +4721,11 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
             
             if len( local_duplicable_to_file_service_keys ) > 0 or len( local_moveable_from_and_to_file_service_keys ) > 0:
                 
-                files_menu = ClientGUIMenus.GenerateMenu( menu )
+                locations_menu = ClientGUIMenus.GenerateMenu( menu )
                 
-                ClientGUIMediaMenus.AddLocalFilesMoveAddToMenu( self, files_menu, local_duplicable_to_file_service_keys, local_moveable_from_and_to_file_service_keys, multiple_selected, self.ProcessApplicationCommand )
+                ClientGUIMediaMenus.AddLocalFilesMoveAddToMenu( self, locations_menu, local_duplicable_to_file_service_keys, local_moveable_from_and_to_file_service_keys, multiple_selected, self.ProcessApplicationCommand )
                 
-                ClientGUIMenus.AppendMenu( menu, files_menu, 'files' )
+                ClientGUIMenus.AppendMenu( menu, locations_menu, 'locations' )
                 
             
             ClientGUIMediaMenus.AddKnownURLsViewCopyMenu( self, menu, self._current_media, 1 )
@@ -4740,7 +4740,7 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
     
     def TIMERUIUpdate( self ):
         
-        CanvasMediaListNavigable.TIMERUIUpdate( self )
+        super().TIMERUIUpdate()
         
         if self._slideshow_is_running:
             

@@ -72,7 +72,7 @@ class ListBoxTagsSuggestionsFavourites( ClientGUIListBoxes.ListBoxTagsStrings ):
     
     def __init__( self, parent, service_key, activate_callable, sort_tags = True ):
         
-        ClientGUIListBoxes.ListBoxTagsStrings.__init__( self, parent, service_key = service_key, sort_tags = sort_tags, tag_display_type = ClientTags.TAG_DISPLAY_STORAGE )
+        super().__init__( parent, service_key = service_key, sort_tags = sort_tags, tag_display_type = ClientTags.TAG_DISPLAY_STORAGE )
         
         self._activate_callable = activate_callable
         
@@ -123,7 +123,7 @@ class ListBoxTagsSuggestionsRelated( ClientGUIListBoxes.ListBoxTagsPredicates ):
     
     def __init__( self, parent, service_key, activate_callable ):
         
-        ClientGUIListBoxes.ListBoxTagsPredicates.__init__( self, parent, tag_display_type = ClientTags.TAG_DISPLAY_STORAGE )
+        super().__init__( parent, tag_display_type = ClientTags.TAG_DISPLAY_STORAGE )
         
         self._activate_callable = activate_callable
         

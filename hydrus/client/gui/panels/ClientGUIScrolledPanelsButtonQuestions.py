@@ -10,7 +10,7 @@ class QuestionYesNoPanel( ClientGUIScrolledPanels.ResizingScrolledPanel ):
     
     def __init__( self, parent, message, yes_label = 'yes', no_label = 'no' ):
         
-        ClientGUIScrolledPanels.ResizingScrolledPanel.__init__( self, parent )
+        super().__init__( parent )
         
         self._yes = ClientGUICommon.BetterButton( self, yes_label, self.parentWidget().done, QW.QDialog.Accepted )
         self._yes.setObjectName( 'HydrusAccept' )
@@ -43,7 +43,7 @@ class QuestionYesYesNoPanel( ClientGUIScrolledPanels.ResizingScrolledPanel ):
     
     def __init__( self, parent, message, yes_tuples = None, no_label = 'no' ):
         
-        ClientGUIScrolledPanels.ResizingScrolledPanel.__init__( self, parent )
+        super().__init__( parent )
         
         if yes_tuples is None:
             

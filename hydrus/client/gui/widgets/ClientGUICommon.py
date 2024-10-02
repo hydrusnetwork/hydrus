@@ -330,7 +330,7 @@ class BetterCheckBoxList( QW.QListWidget ):
     
     def __init__( self, parent: QW.QWidget ):
         
-        QW.QListWidget.__init__( self, parent )
+        super().__init__( parent )
         
         self.itemClicked.connect( self._ItemCheckStateChanged )
         
@@ -442,7 +442,7 @@ class BetterChoice( QW.QComboBox ):
     
     def __init__( self, *args, **kwargs ):
         
-        QW.QComboBox.__init__( self, *args, **kwargs )
+        super().__init__( *args, **kwargs )
         
         self.setMaxVisibleItems( 32 )
         
@@ -554,7 +554,7 @@ class BetterSpinBox( QW.QSpinBox ):
     
     def __init__( self, parent: QW.QWidget, initial = None, min = None, max = None, width = None ):
         
-        QW.QSpinBox.__init__( self, parent )
+        super().__init__( parent )
         
         if min is not None:
             
@@ -581,7 +581,7 @@ class ButtonWithMenuArrow( QW.QToolButton ):
     
     def __init__( self, parent: QW.QWidget, action: QW.QAction ):
         
-        QW.QToolButton.__init__( self, parent )
+        super().__init__( parent )
         
         self.setPopupMode( QW.QToolButton.MenuButtonPopup )
         
@@ -639,7 +639,7 @@ class BetterRadioBox( QW.QFrame ):
     
     def __init__( self, parent, choice_tuples, vertical = False ):
         
-        QW.QFrame.__init__( self, parent )
+        super().__init__( parent )
         
         self.setFrameStyle( QW.QFrame.Box | QW.QFrame.Raised )
         
@@ -750,7 +750,7 @@ class BetterStaticText( QP.EllipsizedLabel ):
         
         ellipsize_end = 'ellipsize_end' in kwargs and kwargs[ 'ellipsize_end' ]
 
-        QP.EllipsizedLabel.__init__( self, parent, ellipsize_end = ellipsize_end )
+        super().__init__( parent, ellipsize_end = ellipsize_end )
         
         # otherwise by default html in 'this is a <hr> parsing step' stuff renders fully lmaoooo
         self.setTextFormat( QC.Qt.PlainText )
@@ -800,7 +800,7 @@ class BetterHyperLink( BetterStaticText ):
     
     def __init__( self, parent, label, url ):
         
-        BetterStaticText.__init__( self, parent, label )
+        super().__init__( parent, label )
         
         self._url = url
         
@@ -844,7 +844,7 @@ class BufferedWindow( QW.QWidget ):
     
     def __init__( self, *args, **kwargs ):
         
-        QW.QWidget.__init__( self, *args )
+        super().__init__( *args )
         
         if 'size' in kwargs:
             
@@ -875,7 +875,7 @@ class BufferedWindowIcon( BufferedWindow ):
         
         device_independant_size = pixmap.size() / pixmap.devicePixelRatio()
         
-        BufferedWindow.__init__( self, parent, size = device_independant_size )
+        super().__init__( parent, size = device_independant_size )
         
         self._pixmap = pixmap
         self._click_callable = click_callable
@@ -945,7 +945,7 @@ class CheckboxManagerBoolean( CheckboxManager ):
     
     def __init__( self, obj, name ):
         
-        CheckboxManager.__init__( self )
+        super().__init__()
         
         self._obj = obj
         self._name = name
@@ -977,7 +977,7 @@ class CheckboxManagerCalls( CheckboxManager ):
     
     def __init__( self, invert_call, value_call ):
         
-        CheckboxManager.__init__( self )
+        super().__init__()
         
         self._invert_call = invert_call
         self._value_call = value_call
@@ -997,7 +997,7 @@ class CheckboxManagerOptions( CheckboxManager ):
     
     def __init__( self, boolean_name ):
         
-        CheckboxManager.__init__( self )
+        super().__init__()
         
         self._boolean_name = boolean_name
         
@@ -1029,7 +1029,7 @@ class ExportPatternButton( BetterButton ):
     
     def __init__( self, parent ):
         
-        BetterButton.__init__( self, parent, 'pattern shortcuts', self._Hit )
+        super().__init__( parent, 'pattern shortcuts', self._Hit )
         
     
     def _Hit( self ):
@@ -1062,7 +1062,7 @@ class Gauge( QW.QProgressBar ):
     
     def __init__( self, *args, **kwargs ):
         
-        QW.QProgressBar.__init__( self, *args, **kwargs )
+        super().__init__( *args, **kwargs )
         
         self._actual_value = None
         self._actual_range = None
@@ -1519,7 +1519,7 @@ class OnOffButton( QW.QPushButton ):
         if start_on: label = on_label
         else: label = off_label
         
-        QW.QPushButton.__init__( self, parent )
+        super().__init__( parent )
         QW.QPushButton.setText( self, label )
         
         self.setObjectName( 'HydrusOnOffButton' )
@@ -1580,7 +1580,7 @@ class StaticBox( QW.QFrame ):
     
     def __init__( self, parent, title ):
         
-        QW.QFrame.__init__( self, parent )
+        super().__init__( parent )
         
         self.setFrameStyle( QW.QFrame.Box | QW.QFrame.Raised )
         self._spacer = QW.QSpacerItem( 0, 0, QW.QSizePolicy.Minimum, QW.QSizePolicy.MinimumExpanding )
@@ -1623,7 +1623,7 @@ class TextCatchEnterEventFilter( QC.QObject ):
     
     def __init__( self, parent, callable, *args, **kwargs ):
         
-        QC.QObject.__init__( self, parent )
+        super().__init__( parent )
         
         self._callable = HydrusData.Call( callable, *args, **kwargs )
         

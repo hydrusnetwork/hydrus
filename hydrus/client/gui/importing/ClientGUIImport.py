@@ -51,7 +51,7 @@ class CheckerOptionsButton( ClientGUICommon.BetterButton ):
     
     def __init__( self, parent, checker_options: ClientImportOptions.CheckerOptions ):
         
-        ClientGUICommon.BetterButton.__init__( self, parent, 'checker options', self._EditOptions )
+        super().__init__( parent, 'checker options', self._EditOptions )
         
         self._checker_options = checker_options
         
@@ -836,7 +836,7 @@ class EditLocalImportFilenameTaggingPanel( ClientGUIScrolledPanels.EditPanel ):
         # but only if the UI can stay helpful. maybe we shouldn't replace the easy UI, but we can replace the guts behind the scenes with metadata routers
         # however, changing service while maintaining focus and list selection would be great
         
-        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        super().__init__( parent )
         
         self._paths = paths
         
@@ -1215,7 +1215,7 @@ class EditFilenameTaggingOptionPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def __init__( self, parent, service_key, filename_tagging_options ):
         
-        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        super().__init__( parent )
         
         self._service_key = service_key
         
@@ -1307,7 +1307,7 @@ class GalleryImportPanel( ClientGUICommon.StaticBox ):
     
     def __init__( self, parent, page_key, name = 'gallery query' ):
         
-        ClientGUICommon.StaticBox.__init__( self, parent, name )
+        super().__init__( parent, name )
         
         self._page_key = page_key
         
@@ -1579,7 +1579,7 @@ class GUGKeyAndNameSelector( ClientGUICommon.BetterButton ):
     
     def __init__( self, parent, gug_key_and_name, update_callable = None ):
         
-        ClientGUICommon.BetterButton.__init__( self, parent, 'gallery selector', self._Edit )
+        super().__init__( parent, 'gallery selector', self._Edit )
         
         gug = CG.client_controller.network_engine.domain_manager.GetGUG( gug_key_and_name )
         
@@ -1733,7 +1733,7 @@ class WatcherReviewPanel( ClientGUICommon.StaticBox ):
     
     def __init__( self, parent, page_key, name = 'watcher' ):
         
-        ClientGUICommon.StaticBox.__init__( self, parent, name )
+        super().__init__( parent, name )
         
         self._page_key = page_key
         self._watcher = None

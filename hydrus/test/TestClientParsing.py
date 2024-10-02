@@ -14,7 +14,7 @@ class DummyFormula( ClientParsing.ParseFormula ):
     
     def __init__( self, result: typing.List[ str ] ):
         
-        ClientParsing.ParseFormula.__init__( self )
+        super().__init__()
         
         self._result = result
         
@@ -45,7 +45,7 @@ class DummyFormula( ClientParsing.ParseFormula ):
         
     
 
-class TestParseFormulaCompound( unittest.TestCase ):
+class TestParseFormulaZipper( unittest.TestCase ):
     
     def test_complex_unicode( self ):
         
@@ -57,11 +57,80 @@ class TestParseFormulaCompound( unittest.TestCase ):
             DummyFormula( [ b ] )
         ]
         
-        pfc = ClientParsing.ParseFormulaCompound( formulae = formulae, sub_phrase = '\\1 \\2' )
+        pfc = ClientParsing.ParseFormulaZipper( formulae = formulae, sub_phrase = '\\1 \\2' )
         
         result = pfc.Parse( {}, 'gumpf', False )
         
         self.assertEqual( result, [ '{} {}'.format( a, b ) ])
+        
+    
+
+class TestParseFormulaNested( unittest.TestCase ):
+    
+    def test_complex_unicode( self ):
+        
+        import html
+        import json
+        
+        payload = { 'test' : [1,'"yo"',3] }
+        
+        json_payload = json.dumps( payload )
+        
+        parsing_text = f'<div><muh_tag buried-json-data="{html.escape( json_payload )}">hello!</muh_tag></div>'
+        
+        main_formula = ClientParsing.ParseFormulaHTML(
+            tag_rules = [ ClientParsing.ParseRuleHTML( rule_type = ClientParsing.HTML_RULE_TYPE_DESCENDING, tag_name = 'muh_tag' ) ],
+            content_to_fetch = ClientParsing.HTML_CONTENT_ATTRIBUTE,
+            attribute_to_fetch = 'buried-json-data'
+        )
+        
+        sub_formula = ClientParsing.ParseFormulaJSON(
+            parse_rules = [
+                ( ClientParsing.JSON_PARSE_RULE_TYPE_DICT_KEY, ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FIXED, match_value = 'test', example_string = 'test' ) ),
+                ( ClientParsing.JSON_PARSE_RULE_TYPE_INDEXED_ITEM, 1 )
+            ],
+            content_to_fetch = ClientParsing.JSON_CONTENT_STRING
+        )
+        
+        pfn = ClientParsing.ParseFormulaNested( main_formula, sub_formula )
+        
+        result = pfn.Parse( {}, parsing_text, True )
+        
+        self.assertEqual( result, [ '"yo"' ] )
+        
+        #
+        
+        payload = '<div><muh_tag quantity="&gt;implying">hello</muh_tag></div>'
+        
+        data = {
+            'test' : [
+                'hello',
+                payload,
+                'some_other_thing'
+            ]
+        }
+        
+        parsing_text = json.dumps( data )
+        
+        main_formula = ClientParsing.ParseFormulaJSON(
+            parse_rules = [
+                ( ClientParsing.JSON_PARSE_RULE_TYPE_DICT_KEY, ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FIXED, match_value = 'test', example_string = 'test' ) ),
+                ( ClientParsing.JSON_PARSE_RULE_TYPE_INDEXED_ITEM, 1 )
+            ],
+            content_to_fetch = ClientParsing.JSON_CONTENT_STRING
+        )
+        
+        sub_formula = ClientParsing.ParseFormulaHTML(
+            tag_rules = [ ClientParsing.ParseRuleHTML( rule_type = ClientParsing.HTML_RULE_TYPE_DESCENDING, tag_name = 'muh_tag' ) ],
+            content_to_fetch = ClientParsing.HTML_CONTENT_ATTRIBUTE,
+            attribute_to_fetch = 'quantity'
+        )
+        
+        pfn = ClientParsing.ParseFormulaNested( main_formula, sub_formula )
+        
+        result = pfn.Parse( {}, parsing_text, True )
+        
+        self.assertEqual( result, [ '>implying' ] )
         
     
 
@@ -326,6 +395,7 @@ class TestStringConverter( unittest.TestCase ):
         self.assertEqual( string_converter.Convert( '0123456789' ), 'z xddddddcba' )
         
     
+
 class TestStringJoiner( unittest.TestCase ):
     
     def test_basics( self ):

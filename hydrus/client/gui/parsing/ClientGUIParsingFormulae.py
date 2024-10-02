@@ -28,7 +28,7 @@ class EditSpecificFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def __init__( self, parent: QW.QWidget, collapse_newlines: bool ):
         
-        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        super().__init__( parent )
         
         self._collapse_newlines = collapse_newlines
         
@@ -39,19 +39,19 @@ class EditSpecificFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
         
     
 
-class EditCompoundFormulaPanel( EditSpecificFormulaPanel ):
+class EditZipperFormulaPanel( EditSpecificFormulaPanel ):
     
-    def __init__( self, parent: QW.QWidget, collapse_newlines: bool, formula: ClientParsing.ParseFormulaCompound, test_data: ClientParsing.ParsingTestData ):
+    def __init__( self, parent: QW.QWidget, collapse_newlines: bool, formula: ClientParsing.ParseFormulaZipper, test_data: ClientParsing.ParsingTestData ):
         
-        EditSpecificFormulaPanel.__init__( self, parent, collapse_newlines )
+        super().__init__( parent, collapse_newlines )
         
         #
         
         menu_items = []
         
-        page_func = HydrusData.Call( ClientGUIDialogsQuick.OpenDocumentation, self, HC.DOCUMENTATION_DOWNLOADER_PARSERS_FORMULAE_COMPOUND_FORMULA )
+        page_func = HydrusData.Call( ClientGUIDialogsQuick.OpenDocumentation, self, HC.DOCUMENTATION_DOWNLOADER_PARSERS_FORMULAE_ZIPPER_FORMULA )
         
-        menu_items.append( ( 'normal', 'open the compound formula help', 'Open the help page for compound formulae in your web browser.', page_func ) )
+        menu_items.append( ( 'normal', 'open the zipper formula help', 'Open the help page for zipper formulae in your web browser.', page_func ) )
         
         help_button = ClientGUIMenuButton.MenuBitmapButton( self, CC.global_pixmaps().help, menu_items )
         
@@ -90,7 +90,7 @@ class EditCompoundFormulaPanel( EditSpecificFormulaPanel ):
         sub_phrase = formula.GetSubstitutionPhrase()
         string_processor = formula.GetStringProcessor()
         
-        self._string_processor_button = ClientGUIStringControls.StringProcessorButton( edit_panel, string_processor, self._test_panel.GetTestDataForStringProcessor )
+        self._string_processor_button = ClientGUIStringControls.StringProcessorWidget( edit_panel, string_processor, self._test_panel.GetTestDataForStringProcessor )
         
         #
         
@@ -199,7 +199,7 @@ class EditCompoundFormulaPanel( EditSpecificFormulaPanel ):
             
             if self._formulae.count() == 1:
                 
-                ClientGUIDialogsMessage.ShowWarning( self, 'A compound formula needs at least one sub-formula!' )
+                ClientGUIDialogsMessage.ShowWarning( self, 'A zipper formula needs at least one sub-formula!' )
                 
             else:
                 
@@ -243,7 +243,7 @@ class EditCompoundFormulaPanel( EditSpecificFormulaPanel ):
         
         string_processor = self._string_processor_button.GetValue()
         
-        formula = ClientParsing.ParseFormulaCompound( formulae, sub_phrase, string_processor )
+        formula = ClientParsing.ParseFormulaZipper( formulae, sub_phrase, string_processor )
         
         return formula
         
@@ -288,7 +288,7 @@ class EditContextVariableFormulaPanel( EditSpecificFormulaPanel ):
     
     def __init__( self, parent: QW.QWidget, collapse_newlines: bool, formula: ClientParsing.ParseFormulaContextVariable, test_data: ClientParsing.ParsingTestData ):
         
-        EditSpecificFormulaPanel.__init__( self, parent, collapse_newlines )
+        super().__init__( parent, collapse_newlines )
         
         #
         
@@ -319,7 +319,7 @@ class EditContextVariableFormulaPanel( EditSpecificFormulaPanel ):
         variable_name = formula.GetVariableName()
         string_processor = formula.GetStringProcessor()
         
-        self._string_processor_button = ClientGUIStringControls.StringProcessorButton( edit_panel, string_processor, self._test_panel.GetTestDataForStringProcessor )
+        self._string_processor_button = ClientGUIStringControls.StringProcessorWidget( edit_panel, string_processor, self._test_panel.GetTestDataForStringProcessor )
         
         #
         
@@ -381,7 +381,7 @@ class EditFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def __init__( self, parent: QW.QWidget, formula: ClientParsing.ParseFormula, test_data_callable: typing.Callable[ [], ClientParsing.ParsingTestData ] ):
         
-        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        super().__init__( parent )
         
         self._current_formula = formula
         self._test_data_callable = test_data_callable
@@ -441,46 +441,35 @@ class EditFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
             new_json = ClientParsing.ParseFormulaJSON()
             
         
-        new_compound = ClientParsing.ParseFormulaCompound()
+        new_zipper = ClientParsing.ParseFormulaZipper()
         new_context_variable = ClientParsing.ParseFormulaContextVariable()
-        
-        if isinstance( self._current_formula, ClientParsing.ParseFormulaHTML ):
-            
-            order = ( 'json', 'compound', 'context_variable' )
-            
-        elif isinstance( self._current_formula, ClientParsing.ParseFormulaJSON ):
-            
-            order = ( 'html', 'compound', 'context_variable' )
-            
-        elif isinstance( self._current_formula, ClientParsing.ParseFormulaCompound ):
-            
-            order = ( 'html', 'json', 'context_variable' )
-            
-        elif isinstance( self._current_formula, ClientParsing.ParseFormulaContextVariable ):
-            
-            order = ( 'html', 'json', 'compound', 'context_variable' )
-            
+        new_nested = ClientParsing.ParseFormulaNested()
         
         choice_tuples = []
         
-        for formula_type in order:
+        if not isinstance( self._current_formula, ClientParsing.ParseFormulaHTML ):
             
-            if formula_type == 'html':
-                
-                choice_tuples.append( ( 'change to a new HTML formula', new_html ) )
-                
-            elif formula_type == 'json':
-                
-                choice_tuples.append( ( 'change to a new JSON formula', new_json ) )
-                
-            elif formula_type == 'compound':
-                
-                choice_tuples.append( ( 'change to a new COMPOUND formula', new_compound ) )
-                
-            elif formula_type == 'context_variable':
-                
-                choice_tuples.append( ( 'change to a new CONTEXT VARIABLE formula', new_context_variable ) )
-                
+            choice_tuples.append( ( 'change to a new HTML formula', new_html ) )
+            
+        
+        if not isinstance( self._current_formula, ClientParsing.ParseFormulaJSON ):
+            
+            choice_tuples.append( ( 'change to a new JSON formula', new_json ) )
+            
+        
+        if not isinstance( self._current_formula, ClientParsing.ParseFormulaNested ):
+            
+            choice_tuples.append( ( 'change to a new NESTED formula', new_nested ) )
+            
+        
+        if not isinstance( self._current_formula, ClientParsing.ParseFormulaZipper ):
+            
+            choice_tuples.append( ( 'change to a new ZIPPER formula', new_zipper ) )
+            
+        
+        if not isinstance( self._current_formula, ClientParsing.ParseFormulaContextVariable ):
+            
+            choice_tuples.append( ( 'change to a new CONTEXT VARIABLE formula', new_context_variable ) )
             
         
         try:
@@ -505,9 +494,13 @@ class EditFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
             
             panel_class = EditJSONFormulaPanel
             
-        elif isinstance( self._current_formula, ClientParsing.ParseFormulaCompound ):
+        elif isinstance( self._current_formula, ClientParsing.ParseFormulaNested ):
             
-            panel_class = EditCompoundFormulaPanel
+            panel_class = EditNestedFormulaPanel
+            
+        elif isinstance( self._current_formula, ClientParsing.ParseFormulaZipper ):
+            
+            panel_class = EditZipperFormulaPanel
             
         elif isinstance( self._current_formula, ClientParsing.ParseFormulaContextVariable ):
             
@@ -570,7 +563,7 @@ class EditHTMLTagRulePanel( ClientGUIScrolledPanels.EditPanel ):
     
     def __init__( self, parent, tag_rule ):
         
-        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        super().__init__( parent )
         
         ( rule_type, tag_name, tag_attributes, tag_index, tag_depth, should_test_tag_string, tag_string_string_match ) = tag_rule.ToTuple()
         
@@ -763,7 +756,7 @@ class EditHTMLFormulaPanel( EditSpecificFormulaPanel ):
     
     def __init__( self, parent: QW.QWidget, collapse_newlines: bool, formula: ClientParsing.ParseFormulaHTML, test_data: ClientParsing.ParsingTestData ):
         
-        EditSpecificFormulaPanel.__init__( self, parent, collapse_newlines )
+        super().__init__( parent, collapse_newlines )
         
         #
         
@@ -819,7 +812,7 @@ class EditHTMLFormulaPanel( EditSpecificFormulaPanel ):
         attribute_to_fetch = formula.GetAttributeToFetch()
         string_processor = formula.GetStringProcessor()
         
-        self._string_processor_button = ClientGUIStringControls.StringProcessorButton( edit_panel, string_processor, self._test_panel.GetTestDataForStringProcessor )
+        self._string_processor_button = ClientGUIStringControls.StringProcessorWidget( edit_panel, string_processor, self._test_panel.GetTestDataForStringProcessor )
         
         #
         
@@ -1038,13 +1031,14 @@ class EditJSONParsingRulePanel( ClientGUIScrolledPanels.EditPanel ):
     
     def __init__( self, parent: QW.QWidget, rule: ClientParsing.ParseRuleHTML ):
         
-        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        super().__init__( parent )
         
         self._parse_rule_type = ClientGUICommon.BetterChoice( self )
         
         self._parse_rule_type.addItem( 'dictionary entry', ClientParsing.JSON_PARSE_RULE_TYPE_DICT_KEY )
         self._parse_rule_type.addItem( 'all dictionary/list items', ClientParsing.JSON_PARSE_RULE_TYPE_ALL_ITEMS )
         self._parse_rule_type.addItem( 'indexed item', ClientParsing.JSON_PARSE_RULE_TYPE_INDEXED_ITEM )
+        self._parse_rule_type.addItem( 'de-minify json', ClientParsing.JSON_PARSE_RULE_TYPE_DEMINIFY_JSON )
         
         string_match = ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FIXED, match_value = 'posts', example_string = 'posts' )
         
@@ -1066,6 +1060,10 @@ class EditJSONParsingRulePanel( ClientGUIScrolledPanels.EditPanel ):
         elif parse_rule_type == ClientParsing.JSON_PARSE_RULE_TYPE_DICT_KEY:
             
             self._string_match.SetValue( parse_rule )
+            
+        elif parse_rule_type == ClientParsing.JSON_PARSE_RULE_TYPE_DEMINIFY_JSON:
+            
+            self._index.setValue( parse_rule )
             
         
         self._UpdateHideShow()
@@ -1106,6 +1104,10 @@ class EditJSONParsingRulePanel( ClientGUIScrolledPanels.EditPanel ):
             
             self._index.setEnabled( True )
             
+        elif parse_rule_type == ClientParsing.JSON_PARSE_RULE_TYPE_DEMINIFY_JSON:
+            
+            self._index.setEnabled( True )
+            
         
     
     def GetValue( self ):
@@ -1124,6 +1126,10 @@ class EditJSONParsingRulePanel( ClientGUIScrolledPanels.EditPanel ):
             
             parse_rule = None
             
+        elif parse_rule_type == ClientParsing.JSON_PARSE_RULE_TYPE_DEMINIFY_JSON:
+            
+            parse_rule = self._index.value()
+            
         
         return ( parse_rule_type, parse_rule )
         
@@ -1132,7 +1138,7 @@ class EditJSONFormulaPanel( EditSpecificFormulaPanel ):
     
     def __init__( self, parent: QW.QWidget, collapse_newlines: bool, formula: ClientParsing.ParseFormulaJSON, test_data: ClientParsing.ParsingTestData ):
         
-        EditSpecificFormulaPanel.__init__( self, parent, collapse_newlines )
+        super().__init__( parent, collapse_newlines )
         
         #
         
@@ -1182,7 +1188,7 @@ class EditJSONFormulaPanel( EditSpecificFormulaPanel ):
         content_to_fetch = formula.GetContentToFetch()
         string_processor = formula.GetStringProcessor()
         
-        self._string_processor_button = ClientGUIStringControls.StringProcessorButton( edit_panel, string_processor, self._test_panel.GetTestDataForStringProcessor )
+        self._string_processor_button = ClientGUIStringControls.StringProcessorWidget( edit_panel, string_processor, self._test_panel.GetTestDataForStringProcessor )
         
         #
         
@@ -1372,3 +1378,137 @@ class EditJSONFormulaPanel( EditSpecificFormulaPanel ):
             self._parse_rules.insertItem( selection - 1, item )
             
         
+    
+
+class EditNestedFormulaPanel( EditSpecificFormulaPanel ):
+    
+    def __init__( self, parent: QW.QWidget, collapse_newlines: bool, formula: ClientParsing.ParseFormulaNested, test_data: ClientParsing.ParsingTestData ):
+        
+        super().__init__( parent, collapse_newlines )
+        
+        #
+        
+        menu_items = []
+        
+        page_func = HydrusData.Call( ClientGUIDialogsQuick.OpenDocumentation, self, HC.DOCUMENTATION_DOWNLOADER_PARSERS_FORMULAE_NESTED_FORMULA )
+        
+        menu_items.append( ( 'normal', 'open the nested formula help', 'Open the help page for nested formulae in your web browser.', page_func ) )
+        
+        help_button = ClientGUIMenuButton.MenuBitmapButton( self, CC.global_pixmaps().help, menu_items )
+        
+        help_hbox = ClientGUICommon.WrapInText( help_button, self, 'help for this panel -->', object_name = 'HydrusIndeterminate' )
+        
+        #
+        
+        test_panel = ClientGUICommon.StaticBox( self, 'test' )
+        
+        self._test_panel = ClientGUIParsingTest.TestPanelFormula( test_panel, self.GetValue, test_data = test_data )
+        
+        self._test_panel.SetCollapseNewlines( self._collapse_newlines )
+        
+        #
+        
+        main_formula = formula.GetMainFormula()
+        sub_formula = formula.GetSubFormula()
+        
+        edit_panel = ClientGUICommon.StaticBox( self, 'edit' )
+        
+        main_panel = ClientGUICommon.StaticBox( edit_panel, 'first formula' )
+        
+        self._main_formula_panel = EditFormulaPanel( main_panel, main_formula, test_data_callable = self._test_panel.GetTestData )
+        
+        sub_panel = ClientGUICommon.StaticBox( edit_panel, 'second formula' )
+        
+        self._sub_formula_panel = EditFormulaPanel( sub_panel, sub_formula, test_data_callable = self._GetSubTestData )
+        
+        string_processor = formula.GetStringProcessor()
+        
+        self._string_processor_button = ClientGUIStringControls.StringProcessorWidget( edit_panel, string_processor, self._test_panel.GetTestDataForStringProcessor )
+        
+        #
+        
+        main_panel.Add( self._main_formula_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        sub_panel.Add( self._sub_formula_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        label = 'Whatever is parsed by the first formula is sent to the second. Use this if you have JSON embedded in HTML or vice versa. Even if the thing you want to parse is very simple, it can be worth doing it this proper way to ensure html entities etc.. are decoded properly and naturally!'
+        
+        st = ClientGUICommon.BetterStaticText( edit_panel, label )
+        
+        st.setWordWrap( True )
+        
+        edit_panel.Add( st, CC.FLAGS_EXPAND_PERPENDICULAR )
+        edit_panel.Add( main_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        edit_panel.Add( sub_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        if collapse_newlines:
+            
+            label = 'Newlines are removed from parsed strings right after parsing, before string processing.'
+            
+        else:
+            
+            label = 'Newlines are not collapsed here (probably a note parser)'
+            
+        
+        edit_panel.Add( ClientGUICommon.BetterStaticText( edit_panel, label, ellipsize_end = True ), CC.FLAGS_EXPAND_PERPENDICULAR )
+        edit_panel.Add( self._string_processor_button, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        #
+        
+        test_panel.Add( self._test_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        #
+        
+        hbox = QP.HBoxLayout()
+        
+        QP.AddToLayout( hbox, edit_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( hbox, test_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        vbox = QP.VBoxLayout()
+        
+        QP.AddToLayout( vbox, help_hbox, CC.FLAGS_ON_RIGHT )
+        QP.AddToLayout( vbox, hbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        
+        self.widget().setLayout( vbox )
+        
+    
+    def _GetSubTestData( self ) -> ClientParsing.ParsingTestData:
+        
+        test_data = self._test_panel.GetTestData()
+        
+        example_parsing_context = test_data.parsing_context
+        
+        main_formula = self._main_formula_panel.GetValue()
+        
+        main_texts = [ '' ]
+        
+        try:
+            
+            for text in test_data.texts:
+                
+                main_texts = main_formula.Parse( example_parsing_context, text, self._collapse_newlines )
+                
+                if len( main_texts ) > 0:
+                    
+                    break
+                    
+                
+            
+        except:
+            
+            main_texts = [ '' ]
+            
+        
+        return ClientParsing.ParsingTestData( example_parsing_context, main_texts )
+        
+    
+    def GetValue( self ):
+        
+        main_formula = self._main_formula_panel.GetValue()
+        sub_formula = self._sub_formula_panel.GetValue()
+        string_processor = self._string_processor_button.GetValue()
+        
+        formula = ClientParsing.ParseFormulaNested( main_formula = main_formula, sub_formula = sub_formula, string_processor = string_processor )
+        
+        return formula
+        
+    

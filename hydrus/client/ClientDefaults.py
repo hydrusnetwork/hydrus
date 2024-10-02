@@ -952,25 +952,6 @@ def SetDefaultFavouriteSearchManagerData( favourite_search_manager ):
     
     #
     
-    foldername = None
-    name = 'empty page'
-    
-    location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY )
-    
-    tag_context = ClientSearchTagContext.TagContext()
-    
-    predicates = []
-    
-    file_search_context = ClientSearchFileSearchContext.FileSearchContext( location_context = location_context, tag_context = tag_context, predicates = predicates )
-    
-    synchronised = True
-    media_sort = None
-    media_collect = None
-    
-    rows.append( ( foldername, name, file_search_context, synchronised, media_sort, media_collect ) )
-    
-    #
-    
     favourite_search_manager.SetFavouriteSearchRows( rows )
     
 

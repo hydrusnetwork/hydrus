@@ -169,7 +169,7 @@ class Controller( HydrusController.HydrusController ):
     
     def __init__( self, db_dir ):
         
-        HydrusController.HydrusController.__init__( self, db_dir )
+        super().__init__( db_dir )
         
         self._name = 'server'
         

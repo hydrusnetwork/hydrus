@@ -1,16 +1,20 @@
-import os
 import typing
 
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
 
+from hydrus.core import HydrusData
+from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusText
 
 from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientParsing
 from hydrus.client import ClientStrings
 from hydrus.client.gui import ClientGUIDialogs
 from hydrus.client.gui import ClientGUIDialogsMessage
+from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIStringPanels
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
@@ -135,11 +139,12 @@ class StringMatchButton( ClientGUICommon.BetterButton ):
         self._UpdateLabel()
         
     
+
 class StringProcessorButton( ClientGUICommon.BetterButton ):
     
     valueChanged = QC.Signal()
     
-    def __init__( self, parent, string_processor: ClientStrings.StringProcessor, test_data_callable: typing.Callable[ [], ClientParsing.ParsingTestData ] ):
+    def __init__( self, parent: QW.QWidget, string_processor: ClientStrings.StringProcessor, test_data_callable: typing.Callable[ [], ClientParsing.ParsingTestData ] ):
         
         super().__init__( parent, 'edit string processor', self._Edit )
         
@@ -199,7 +204,98 @@ class StringProcessorButton( ClientGUICommon.BetterButton ):
         
         self._UpdateLabel()
         
+        self.valueChanged.emit()
+        
     
+
+class StringProcessorWidget( QW.QWidget ):
+    
+    valueChanged = QC.Signal()
+    
+    def __init__( self, parent: QW.QWidget, string_processor: ClientStrings.StringProcessor, test_data_callable: typing.Callable[ [], ClientParsing.ParsingTestData ] ):
+        
+        super().__init__( parent )
+        
+        self._edit_button = StringProcessorButton( self, string_processor, test_data_callable )
+        
+        self._copy_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().copy, self._Copy )
+        self._copy_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'Copy String Processor to the clipboard.' ) )
+        
+        self._paste_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().paste, self._Paste )
+        self._paste_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'Paste a String Processor from the clipboard.' ) )
+        
+        #
+        
+        hbox = QP.HBoxLayout()
+        
+        QP.AddToLayout( hbox, self._edit_button, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( hbox, self._copy_button, CC.FLAGS_CENTER )
+        QP.AddToLayout( hbox, self._paste_button, CC.FLAGS_CENTER )
+        
+        self.setLayout( hbox )
+        
+        self._edit_button.valueChanged.connect( self.valueChanged )
+        
+    
+    def _Copy( self ):
+        
+        string_processor = self.GetValue()
+        
+        text = string_processor.DumpToString()
+        
+        CG.client_controller.pub( 'clipboard', 'text', text )
+        
+    
+    def _ImportObject( self, obj ):
+        
+        if isinstance( obj, ClientStrings.StringProcessor ):
+            
+            self.SetValue( obj )
+            
+        else:
+            
+            raise Exception( f'The imported object was wrong for this control! It appeared to be a {HydrusData.GetTypeName( obj )}.' )
+            
+        
+    
+    def _Paste( self ):
+        
+        try:
+            
+            raw_text = CG.client_controller.GetClipboardText()
+            
+        except HydrusExceptions.DataMissing as e:
+            
+            HydrusData.PrintException( e )
+            
+            ClientGUIDialogsMessage.ShowCritical( self, 'Problem pasting!', str(e) )
+            
+            return
+            
+        
+        try:
+            
+            obj = HydrusSerialisable.CreateFromString( raw_text )
+            
+            self._ImportObject( obj )
+            
+        except Exception as e:
+            
+            ClientGUIDialogsQuick.PresentClipboardParseError( self, raw_text, 'JSON-serialised Hydrus Object(s)', e )
+            
+        
+    
+    def GetValue( self ) -> ClientStrings.StringProcessor:
+        
+        return self._edit_button.GetValue()
+        
+    
+    def SetValue( self, string_processor: ClientStrings.StringProcessor ):
+        
+        self._edit_button.SetValue( string_processor )
+        
+    
+
 class StringMatchToStringMatchDictControl( QW.QWidget ):
     
     def __init__( self, parent, initial_dict: typing.Dict[ ClientStrings.StringMatch, ClientStrings.StringMatch ], min_height = 10, key_name = 'key' ):

@@ -24,7 +24,7 @@ class ClientSystemTrayIcon( QW.QSystemTrayIcon ):
     
     def __init__( self, parent: QW.QWidget ):
         
-        QW.QSystemTrayIcon.__init__( self, parent )
+        super().__init__( parent )
         
         self._ui_is_currently_shown = True
         self._ui_is_currently_minimised = False

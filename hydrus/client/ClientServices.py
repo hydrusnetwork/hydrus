@@ -793,7 +793,7 @@ class ServiceRemote( Service ):
     
     def __init__( self, service_key, service_type, name, dictionary = None ):
         
-        Service.__init__( self, service_key, service_type, name, dictionary = dictionary )
+        super().__init__( service_key, service_type, name, dictionary = dictionary )
         
         self.network_context = ClientNetworkingContexts.NetworkContext( CC.NETWORK_CONTEXT_HYDRUS, self._service_key )
         
@@ -1537,7 +1537,7 @@ class ServiceRepository( ServiceRestricted ):
     
     def __init__( self, service_key, service_type, name, dictionary = None ):
         
-        ServiceRestricted.__init__( self, service_key, service_type, name, dictionary = dictionary )
+        super().__init__( service_key, service_type, name, dictionary = dictionary )
         
         self._sync_remote_lock = threading.Lock()
         self._sync_processing_lock = threading.Lock()

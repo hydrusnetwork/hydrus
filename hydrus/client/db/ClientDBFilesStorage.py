@@ -116,7 +116,7 @@ class DBLocationContextLeaf( DBLocationContext ):
     
     def __init__( self, location_context: ClientLocation.LocationContext, files_table_name: str ):
         
-        DBLocationContext.__init__( self, location_context )
+        super().__init__( location_context )
         
         self._files_table_name = files_table_name
         

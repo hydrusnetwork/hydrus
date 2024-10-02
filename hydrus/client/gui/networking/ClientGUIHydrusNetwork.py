@@ -32,7 +32,7 @@ class EditAccountTypePanel( ClientGUIScrolledPanels.EditPanel ):
     
     def __init__( self, parent: QW.QWidget, service_type: int, account_type: HydrusNetwork.AccountType ):
         
-        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        super().__init__( parent )
         
         self._account_type_key = account_type.GetAccountTypeKey()
         title = account_type.GetTitle()
@@ -215,7 +215,7 @@ class EditAccountTypesPanel( ClientGUIScrolledPanels.EditPanel ):
         self._service_type = service_type
         self._original_account_types = account_types
         
-        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        super().__init__( parent )
         
         self._deletee_account_type_keys_to_new_account_type_keys = {}
         
@@ -412,7 +412,7 @@ class ListAccountsPanel( ClientGUIScrolledPanels.ReviewPanel ):
     
     def __init__( self, parent: QW.QWidget, service_key: bytes, accounts: typing.Collection[ HydrusNetwork.Account ] ):
         
-        ClientGUIScrolledPanels.ReviewPanel.__init__( self, parent )
+        super().__init__( parent )
         
         self._service_key = service_key
         self._service = CG.client_controller.services_manager.GetService( self._service_key )
@@ -874,7 +874,7 @@ class ModifyAccountsPanel( ClientGUIScrolledPanels.ReviewPanel ):
     
     def __init__( self, parent: QW.QWidget, service_key: bytes, subject_identifiers: typing.Collection[ HydrusNetwork.AccountIdentifier ]  ):
         
-        ClientGUIScrolledPanels.ReviewPanel.__init__( self, parent )
+        super().__init__( parent )
         
         self._service_key = service_key
         self._service = CG.client_controller.services_manager.GetService( service_key )

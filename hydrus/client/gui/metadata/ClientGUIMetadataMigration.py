@@ -33,7 +33,7 @@ class EditSingleFileMetadataRouterPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def __init__( self, parent: QW.QWidget, router: ClientMetadataMigration.SingleFileMetadataRouter, allowed_importer_classes: list, allowed_exporter_classes: list, test_context_factory: ClientGUIMetadataMigrationTest.MigrationTestContextFactory ):
         
-        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        super().__init__( parent )
         
         self._original_router = router
         self._allowed_importer_classes = allowed_importer_classes
@@ -69,7 +69,7 @@ class EditSingleFileMetadataRouterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._processing_panel = ClientGUICommon.StaticBox( self, 'processing' )
         
-        self._string_processor_button = ClientGUIStringControls.StringProcessorButton( self._processing_panel, string_processor, self._GetExampleStringProcessorTestData )
+        self._string_processor_button = ClientGUIStringControls.StringProcessorWidget( self._processing_panel, string_processor, self._GetExampleStringProcessorTestData )
         
         st = ClientGUICommon.BetterStaticText( self._processing_panel, 'You can alter all the texts before export here.' )
         
@@ -240,7 +240,7 @@ class SingleFileMetadataRoutersControl( ClientGUIListBoxes.AddEditDeleteListBox 
     
     def __init__( self, parent: QW.QWidget, routers: typing.Collection[ ClientMetadataMigration.SingleFileMetadataRouter ], allowed_importer_classes: list, allowed_exporter_classes: list, test_context_factory: ClientGUIMetadataMigrationTest.MigrationTestContextFactory ):
         
-        ClientGUIListBoxes.AddEditDeleteListBox.__init__( self, parent, 5, convert_router_to_pretty_string, self._AddRouter, self._EditRouter )
+        super().__init__( parent, 5, convert_router_to_pretty_string, self._AddRouter, self._EditRouter )
         
         self._allowed_importer_classes = allowed_importer_classes
         self._allowed_exporter_classes = allowed_exporter_classes
@@ -333,7 +333,7 @@ class SingleFileMetadataRoutersButton( QW.QPushButton ):
     
     def __init__( self, parent: QW.QWidget, routers: typing.Collection[ ClientMetadataMigration.SingleFileMetadataRouter ], allowed_importer_classes: list, allowed_exporter_classes: list, test_context_factory: ClientGUIMetadataMigrationTest.MigrationTestContextFactory ):
         
-        QW.QPushButton.__init__( self, parent )
+        super().__init__( parent )
         
         self._routers = routers
         self._allowed_importer_classes = allowed_importer_classes

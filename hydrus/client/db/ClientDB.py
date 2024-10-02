@@ -247,7 +247,7 @@ class DB( HydrusDB.HydrusDB ):
         self._regen_tags_managers_hash_ids = set()
         self._regen_tags_managers_tag_ids = set()
         
-        HydrusDB.HydrusDB.__init__( self, controller, db_dir, db_name )
+        super().__init__( controller, db_dir, db_name )
         
     
     def _AddFiles( self, service_id, rows ):
@@ -5343,7 +5343,7 @@ class DB( HydrusDB.HydrusDB ):
         self._Execute( 'DROP TABLE {};'.format( database_temp_job_name ) )
         
     
-    def _MigrationFilterPairsByCount( self, pairs, content_type, left_side_needs_count, right_side_needs_count, needs_count_service_key ):
+    def _MigrationFilterPairsByCount( self, pairs, content_type, left_side_needs_count, right_side_needs_count, either_side_needs_count, needs_count_service_key ):
         
         def tag_has_count( tag_id ):
             
@@ -5365,17 +5365,29 @@ class DB( HydrusDB.HydrusDB ):
         
         for ( a, b ) in pairs:
             
-            if left_side_needs_count:
+            left_side_needs_count_for_this_pair = left_side_needs_count
+            right_side_needs_count_for_this_pair = right_side_needs_count
+            
+            if left_side_needs_count_for_this_pair or either_side_needs_count:
                 
                 a_id = self.modules_tags_local_cache.GetTagId( a )
                 
-                if not tag_has_count( a_id ):
+                has_count = tag_has_count( a_id )
+                
+                if not has_count:
                     
-                    continue
+                    if left_side_needs_count_for_this_pair:
+                        
+                        continue
+                        
+                    elif either_side_needs_count:
+                        
+                        right_side_needs_count_for_this_pair = True
+                        
                     
                 
             
-            if right_side_needs_count:
+            if right_side_needs_count_for_this_pair:
                 
                 b_id = self.modules_tags_local_cache.GetTagId( b )
                 
@@ -5385,7 +5397,9 @@ class DB( HydrusDB.HydrusDB ):
                     b_id = self.modules_tag_siblings.GetIdealTagId( ClientTags.TAG_DISPLAY_DISPLAY_IDEAL, tag_service_id, b_id )
                     
                 
-                if not tag_has_count( b_id ):
+                has_count = tag_has_count( b_id )
+                
+                if right_side_needs_count_for_this_pair and not has_count:
                     
                     continue
                     
@@ -10887,6 +10901,38 @@ class DB( HydrusDB.HydrusDB ):
                 HydrusData.PrintException( e )
                 
                 message = 'Trying to check some API stuff failed! Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
+                
+            
+        
+        if version == 591:
+            
+            try:
+                
+                domain_manager = self.modules_serialisable.GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
+                
+                domain_manager.Initialise()
+                
+                #
+                
+                domain_manager.OverwriteDefaultParsers( [
+                    'derpibooru.org file page parser'
+                ] )
+                
+                #
+                
+                domain_manager.TryToLinkURLClassesAndParsers()
+                
+                #
+                
+                self.modules_serialisable.SetJSONDump( domain_manager )
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to update some downloader objects failed! Please let hydrus dev know!'
                 
                 self.pub_initial_message( message )
                 

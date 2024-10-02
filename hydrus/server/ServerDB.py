@@ -155,7 +155,7 @@ class DB( HydrusDB.HydrusDB ):
         self._account_type_ids_to_account_types = {}
         self._service_ids_to_account_type_keys_to_account_type_ids = collections.defaultdict( dict )
         
-        HydrusDB.HydrusDB.__init__( self, controller, db_dir, db_name )
+        super().__init__( controller, db_dir, db_name )
         
     
     def _AddAccountType( self, service_id, account_type: HydrusNetwork.AccountType ):

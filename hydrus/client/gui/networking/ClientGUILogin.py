@@ -41,7 +41,7 @@ class EditLoginCredentialsPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def __init__( self, parent, credential_definitions, credentials ):
         
-        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        super().__init__( parent )
         
         #
         
@@ -202,7 +202,7 @@ class EditLoginCredentialDefinitionPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def __init__( self, parent, credential_definition ):
         
-        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        super().__init__( parent )
         
         #
         
@@ -252,7 +252,7 @@ class EditLoginsPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def __init__( self, parent, engine, login_scripts, domains_to_login_info ):
         
-        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        super().__init__( parent )
         
         self._engine = engine
         self._login_scripts = login_scripts
@@ -1187,7 +1187,7 @@ class ReviewTestResultPanel( ClientGUIScrolledPanels.ReviewPanel ):
     
     def __init__( self, parent, test_result ):
         
-        ClientGUIScrolledPanels.ReviewPanel.__init__( self, parent )
+        super().__init__( parent )
         
         ( name, url, body, self._downloaded_data, new_temp_strings, new_cookie_strings, result ) = test_result
         
@@ -1277,7 +1277,7 @@ class EditLoginScriptPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def __init__( self, parent, login_script ):
         
-        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        super().__init__( parent )
         
         self._original_login_script = login_script
         
@@ -1901,7 +1901,7 @@ class EditLoginScriptsPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def __init__( self, parent, login_scripts ):
         
-        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        super().__init__( parent )
         
         login_scripts_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
@@ -2025,7 +2025,7 @@ class EditLoginStepPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def __init__( self, parent, login_step ):
         
-        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        super().__init__( parent )
         
         #
         

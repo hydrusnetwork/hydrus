@@ -600,7 +600,7 @@ class DialogManageUPnP( ClientGUIDialogs.Dialog ):
         
         title = 'manage local upnp'
         
-        ClientGUIDialogs.Dialog.__init__( self, parent, title )
+        super().__init__( parent, title )
         
         self._status_st = ClientGUICommon.BetterStaticText( self )
         

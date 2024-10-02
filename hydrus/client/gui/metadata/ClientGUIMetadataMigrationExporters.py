@@ -56,7 +56,7 @@ class EditSingleFileMetadataExporterPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def __init__( self, parent: QW.QWidget, exporter: ClientMetadataMigrationExporters.SingleFileMetadataExporter, allowed_exporter_classes: list ):
         
-        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        super().__init__( parent )
         
         self._original_exporter = exporter
         self._allowed_exporter_classes = allowed_exporter_classes
@@ -450,7 +450,7 @@ class SingleFileMetadataExporterButton( QW.QPushButton ):
     
     def __init__( self, parent: QW.QWidget, exporter: ClientMetadataMigrationExporters.SingleFileMetadataExporter, allowed_exporter_classes: list ):
         
-        QW.QPushButton.__init__( self, parent )
+        super().__init__( parent )
         
         self._exporter = exporter
         self._allowed_exporter_classes = allowed_exporter_classes

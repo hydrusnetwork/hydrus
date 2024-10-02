@@ -35,6 +35,45 @@
             <h1 id="changelog"><a href="#changelog">changelog</a></h1>
             <ul>
                 <li>
+                    <h2 id="version_592"><a href="#version_592">version 592</a></h2>
+                    <ul>
+                        <li><h3>misc</h3></li>
+                        <li>the 'read' autocomplete dropdown has a new one-click 'clear search' button, just beside the favourites 'star' menu button. the 'empty page' favourite is removed from new users' defaults</li>
+                        <li>in an alteration to the recent Autocomplete key processing, Ctrl+c/Ctrl+Insert _will_ now propagate to the results list if you currently have none of the text input selected (i.e. if it would have been a no-op on the text input, we assume you wanted whatever is selected in the list)</li>
+                        <li>in the normal thumbnail/viewer menu and _review services_, the 'files' entry is renamed to 'locations'. this continues work in the left hand button of the autocomplete dropdown where you set the 'location', which can be all sorts of complicated things these days, rather than just 'file service key selector'. I don't think I'll rename 'my files' or anything, but I will try to emphasise this 'locations' idea more when I am talking about local file domains etc.. in other places going forward; what I often think of as 'oh yeah the files bit' isn't actually referring to the files themselves, but where they are located, so let's be precise</li>
+                        <li>last week's tag pair filtering in _tags-&gt;migrate tags_ now has 'if either the left or right of the pair have count', and when you hit 'Go' with any of the new count filter checkboxes hit, the preview summary on the yes/no confirmation dialog talks about it</li>
+                        <li>any time a watcher subject is parsed, if the text contains non-decoded html entities (like `&gt;`), they are now auto-converted to normal chars. these strings are often ripped from odd places and are only used for user display, so this just makes that simpler</li>
+                        <li>if you are set to remove trashed files from view, this now works when the files are in multpile local file domains, and you choose 'delete from all local file services', and you are looking at 'all my files' or a subset of your local file domains</li>
+                        <li>we now log any time (when the client is non-idle) that a database job's work inside the transaction wrapper takes more than 15 seconds to complete</li>
+                        <li>fixed an issue caused by the sibling or parents system doing some regen work at an unlucky time</li>
+                        <li><h3>default downloaders</h3></li>
+                        <li>thanks to user help, the derpibooru post parser now additionally grabs the raw markdown of a description as a second note. this catches links and images better than the html string parse. if you strictly only want one of these notes, please feel free to dive into _network-&gt;downloaders-&gt;defailt import options_ for your derpi downloader and try to navigate the 'note import options' hell I designed and let me know how it could be more user friendly</li>
+                        <li><h3>parsing system</h3></li>
+                        <li>added a new NESTED formula type. this guy holds two formulae of any type internally, parsing the document with the first and passing those results on to the second. it is designed to solve the problem of 'how do I parse this JSON tucked inside HTML' and _vice versa_. various encoding stuff all seems to be handled, no extra work needed</li>
+                        <li>added Nested formula stuff to the 'how to make a downloader' help</li>
+                        <li>made all the screenshot in the parsing formula help clickable</li>
+                        <li>renamed the COMPOUND formula to ZIPPER formula</li>
+                        <li>all the 'String Processor' buttons across the program now have copy and paste buttons, so it is now easy to duplicate some rules you set up</li>
+                        <li>in the parsing system, sidecar importer, and clipboard watcher, all strings are now cleansed of errant 'surrogate' characters caused by the source incorrectly providing utf-16 garbage in a utf-8 stream. fingers crossed, the cleansing here will actually _fix_ problem characters by converting them to utf-8, but we'll see</li>
+                        <li>thanks to a user, the JSON parsing system has a new 'de-minify json' parsing rule, which decompresses a particular sort of minified JSON that expresses multiply-referenced values using list positions. as it happened that I added NESTED formulae this week, I wonder if we will migrate this capability to the string processing system, but let's give it time to breathe</li>
+                        <li><h3>client api</h3></li>
+                        <li>fixed the permission check on the new 'get file/thumbnail local path' commands--due to me copy/pasting stupidly, they were still just checking 'search files' perm</li>
+                        <li>added `/get_files/local_file_storage_locations`, which spits out the stuff in _database-&gt;move media files_ and lets you do local file access _en masse_</li>
+                        <li>added help and a unit test for this new command</li>
+                        <li>the client api version is now 72</li>
+                        <li><h3>some security/library updates</h3></li>
+                        <li>the 'old' OpenCV version in the `(a)dvanced` setup, which pointed to version 4.5.3.56, which had the webp vulnerability, is no longer an option. I believe this means that the program will no longer run on python 3.7. I understad Win 7 can run python 3.8 at the latest, so we are nearing the end of the line on that front</li>
+                        <li>the old/new Pillow choice in `(a)dvanced` setup, which offered support for python 3.7, is removed</li>
+                        <li>I have added a new question to the `(a)dvanced` venv setup to handle misc 'future' tests better, and I added a new future test for two security patches for `setuptools` and `requests`: </li>
+                        <li>A) `setuptools` is updated to 70.3.0 (from 69.1.1) to resolve a security issue related to downloading packages from bad places (don't think this would ever affect us, but we'll be good)</li>
+                        <li>B) `requests` is updated to 2.32.3 (from 2.31.0) to resolve a security issue with verify=False (the specific problem doesn't matter for us, but we'll be good)</li>
+                        <li>if you run from source and want to help me test, you might like to rebuild your venv this week and choose the new future choice. these version increments do not appear to be a big deal, so assuming no problems I will roll these new libraries into a 'future' test build next week, and then into the normal builds a week after</li>
+                        <li><h3>boring code cleanup</h3></li>
+                        <li>did a bunch more `super()` refactoring. I think all `__init__` is now converted across the program, and I cleared all the normal calls in the canvas and media results panel code too</li>
+                        <li>refactored `ClientGUIResults` into four files for the core class, the loading, the thumbnails, and some menu gubbins. also unified the mish-mash of `Results` and `MediaPanel` nomenclature to `MediaResultsPanel`</li>
+                    </ul>
+                </li>
+                <li>
                     <h2 id="version_591"><a href="#version_591">version 591</a></h2>
                     <ul>
                         <li><h3>misc</h3></li>

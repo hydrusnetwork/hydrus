@@ -2247,6 +2247,87 @@ All thumbnails in hydrus have the .thumbnail file extension and in content are e
 
 This will 400 if the given file type does not have a thumbnail in hydrus, and it will 404 if there should be a thumbnail but one does not exist and cannot be generated from the source file (which probably would mean that the source file was itself Not Found).
 
+### **GET `/get_files/local_file_storage_locations`** { id="get_local_file_storage_locations" }
+
+_Get the local file storage locations, as you see under **database->migrate files**._
+
+Restricted access: 
+:   YES. Search for Files permission and See Local Paths permission needed.
+
+Required Headers: n/a   
+
+Arguments: n/a
+
+Response:
+:   A list of the different file storage locations and what they store.
+
+``` json title="Example response"
+{
+    "locations" : [
+        {
+            "path" : "C:\my_thumbs",
+            "ideal_weight" : 1,
+            "max_num_bytes": None,
+            "prefixes" : [
+                "t00", "t01", "t02", "t03", "t04", "t05", "t06", "t07", "t08", "t09", "t0a", "t0b", "t0c", "t0d", "t0e", "t0f",
+                "t10", "t11", "t12", "t13", "t14", "t15", "t16", "t17", "t18", "t19", "t1a", "t1b", "t1c", "t1d", "t1e", "t1f",
+                "t20", "t21", "t22", "t23", "t24", "t25", "t26", "t27", "t28", "t29", "t2a", "t2b", "t2c", "t2d", "t2e", "t2f",
+                "t30", "t31", "t32", "t33", "t34", "t35", "t36", "t37", "t38", "t39", "t3a", "t3b", "t3c", "t3d", "t3e", "t3f",
+                "t40", "t41", "t42", "t43", "t44", "t45", "t46", "t47", "t48", "t49", "t4a", "t4b", "t4c", "t4d", "t4e", "t4f",
+                "t50", "t51", "t52", "t53", "t54", "t55", "t56", "t57", "t58", "t59", "t5a", "t5b", "t5c", "t5d", "t5e", "t5f",
+                "t60", "t61", "t62", "t63", "t64", "t65", "t66", "t67", "t68", "t69", "t6a", "t6b", "t6c", "t6d", "t6e", "t6f",
+                "t70", "t71", "t72", "t73", "t74", "t75", "t76", "t77", "t78", "t79", "t7a", "t7b", "t7c", "t7d", "t7e", "t7f",
+                "t80", "t81", "t82", "t83", "t84", "t85", "t86", "t87", "t88", "t89", "t8a", "t8b", "t8c", "t8d", "t8e", "t8f",
+                "t90", "t91", "t92", "t93", "t94", "t95", "t96", "t97", "t98", "t99", "t9a", "t9b", "t9c", "t9d", "t9e", "t9f",
+                "ta0", "ta1", "ta2", "ta3", "ta4", "ta5", "ta6", "ta7", "ta8", "ta9", "taa", "tab", "tac", "tad", "tae", "taf",
+                "tb0", "tb1", "tb2", "tb3", "tb4", "tb5", "tb6", "tb7", "tb8", "tb9", "tba", "tbb", "tbc", "tbd", "tbe", "tbf",
+                "tc0", "tc1", "tc2", "tc3", "tc4", "tc5", "tc6", "tc7", "tc8", "tc9", "tca", "tcb", "tcc", "tcd", "tce", "tcf",
+                "td0", "td1", "td2", "td3", "td4", "td5", "td6", "td7", "td8", "td9", "tda", "tdb", "tdc", "tdd", "tde", "tdf",
+                "te0", "te1", "te2", "te3", "te4", "te5", "te6", "te7", "te8", "te9", "tea", "teb", "tec", "ted", "tee", "tef",
+                "tf0", "tf1", "tf2", "tf3", "tf4", "tf5", "tf6", "tf7", "tf8", "tf9", "tfa", "tfb", "tfc", "tfd", "tfe", "tff"
+            ]
+        },
+        {
+            "path" : "D:\hydrus_files_1",
+            "ideal_weight" : 5,
+            "max_num_bytes": None,
+            "prefixes" : [
+                "f00", "f02", "f04", "f05", "f08", "f0c", "f11", "f12", "f13", "f15", "f17", "f18", "f1a", "f1b", "f20", "f23",
+                "f25", "f26", "f27", "f2b", "f2e", "f2f", "f31", "f35", "f36", "f37", "f38", "f3a", "f40", "f42", "f43", "f44",
+                "f49", "f4b", "f4d", "f4e", "f50", "f51", "f55", "f59", "f60", "f63", "f64", "f65", "f66", "f68", "f69", "f6e",
+                "f71", "f73", "f78", "f79", "f7a", "f7d", "f7f", "f82", "f83", "f84", "f86", "f87", "f88", "f89", "f8f", "f90",
+                "f91", "f96", "f9e", "fa1", "fa4", "fa5", "fa7", "faa", "fad", "faf", "fb1", "fb9", "fba", "fbb", "fbf", "fc1",
+                "fc4", "fc7", "fc8", "fcf", "fd2", "fd6", "fd7", "fd8", "fd9", "fdf", "fe2", "fe8", "fe9", "fea", "feb", "fec",
+                "ff4", "ff7", "ffd", "ffe"
+            ]
+        },
+        {
+            "path" : "E:\hydrus\hydrus_files_2",
+            "ideal_weight" : 2,
+            "max_num_bytes": 805306368000,
+            "prefixes" : [
+                "f01", "f03", "f06", "f07", "f09", "f0a", "f0b", "f0d", "f0e", "f0f", "f10", "f14", "f16", "f19", "f1c", "f1d",
+                "f1e", "f1f", "f21", "f22", "f24", "f28", "f29", "f2a", "f2c", "f2d", "f30", "f32", "f33", "f34", "f39", "f3b",
+                "f3c", "f3d", "f3e", "f3f", "f41", "f45", "f46", "f47", "f48", "f4a", "f4c", "f4f", "f52", "f53", "f54", "f56",
+                "f57", "f58", "f5a", "f5b", "f5c", "f5d", "f5e", "f5f", "f61", "f62", "f67", "f6a", "f6b", "f6c", "f6d", "f6f",
+                "f70", "f72", "f74", "f75", "f76", "f77", "f7b", "f7c", "f7e", "f80", "f81", "f85", "f8a", "f8b", "f8c", "f8d",
+                "f8e", "f92", "f93", "f94", "f95", "f97", "f98", "f99", "f9a", "f9b", "f9c", "f9d", "f9f", "fa0", "fa2", "fa3",
+                "fa6", "fa8", "fa9", "fab", "fac", "fae", "fb0", "fb2", "fb3", "fb4", "fb5", "fb6", "fb7", "fb8", "fbc", "fbd",
+                "fbe", "fc0", "fc2", "fc3", "fc5", "fc6", "fc9", "fca", "fcb", "fcc", "fcd", "fce", "fd0", "fd1", "fd3", "fd4",
+                "fd5", "fda", "fdb", "fdc", "fdd", "fde", "fe0", "fe1", "fe3", "fe4", "fe5", "fe6", "fe7", "fed", "fee", "fef",
+                "ff0", "ff1", "ff2", "ff3", "ff5", "ff6", "ff8", "ff9", "ffa", "ffb", "ffc", "fff"
+            ]
+        }
+    ]
+}
+```
+
+Note that `ideal_weight` and `max_num_bytes` are provided for courtesy and mean nothing fixed. Each storage location might store anything, thumbnails or files or nothing, regardless of the ideal situation. Whenever a folder is non-ideal, the 'move media files' dialog shows "files need to be moved now", but it will still keep doing its thing.
+
+For now, a prefix only occurs in one location, so there will always be 512 total prefixes in this response, all unique. **However, please note that this will not always be true!** In a future expansion, the client will be, on user command, slowly migrating files from one place to another in the background, and during that time there will be multiple valid locations for a file to actually be. When this happens, you will have to hit all the possible locations and test.
+
+Also, it won't be long before the client supports moving to _some_ form of three- and four-character prefix. I am still thinking how this will happen other than it will be an atomic change--no slow migration where we try to support both at once--but it will certainly complicate something in here (e.g. while the prefix may be 'f012', maybe the subfolder will be '\f01\2'), so we'll see.
+
 ### **GET `/get_files/render`** { id="get_files_render" }
 
 _Get an image file as rendered by Hydrus._

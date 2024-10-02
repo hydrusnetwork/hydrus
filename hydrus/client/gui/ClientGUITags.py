@@ -2611,7 +2611,6 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
         def __init__( self, parent, location_context: ClientLocation.LocationContext, tag_service_key, tag_presentation_location: int, media: typing.List[ ClientMedia.MediaSingleton ], immediate_commit, canvas_key = None ):
             
             super().__init__( parent )
-            CAC.ApplicationCommandProcessorMixin.__init__( self )
             
             self._location_context = location_context
             self._tag_service_key = tag_service_key
@@ -3462,7 +3461,7 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
     
     def __init__( self, parent, tags = None ):
         
-        ClientGUIScrolledPanels.ManagePanel.__init__( self, parent )
+        super().__init__( parent )
         
         self._tag_services = ClientGUICommon.BetterNotebook( self )
         
@@ -4231,7 +4230,7 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
     
     def __init__( self, parent, tags = None ):
         
-        ClientGUIScrolledPanels.ManagePanel.__init__( self, parent )
+        super().__init__( parent )
         
         self._tag_services = ClientGUICommon.BetterNotebook( self )
         
@@ -5034,7 +5033,7 @@ class ReviewTagDisplayMaintenancePanel( ClientGUIScrolledPanels.ReviewPanel ):
     
     def __init__( self, parent ):
         
-        ClientGUIScrolledPanels.ReviewPanel.__init__( self, parent )
+        super().__init__( parent )
         
         self._tag_services_notebook = ClientGUICommon.BetterNotebook( self )
         
@@ -5332,7 +5331,7 @@ class TagFilterButton( ClientGUICommon.BetterButton ):
     
     def __init__( self, parent, message, tag_filter, only_show_blacklist = False, label_prefix = None ):
         
-        ClientGUICommon.BetterButton.__init__( self, parent, 'tag filter', self._EditTagFilter )
+        super().__init__( parent, 'tag filter', self._EditTagFilter )
         
         self._message = message
         self._tag_filter = tag_filter
@@ -5777,7 +5776,7 @@ class TagSummaryGeneratorButton( ClientGUICommon.BetterButton ):
         
         label = tag_summary_generator.GenerateExampleSummary()
         
-        ClientGUICommon.BetterButton.__init__( self, parent, label, self._Edit )
+        super().__init__( parent, label, self._Edit )
         
         self._tag_summary_generator = tag_summary_generator
         

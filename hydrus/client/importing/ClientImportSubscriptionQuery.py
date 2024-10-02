@@ -32,7 +32,7 @@ class SubscriptionQueryLogContainer( HydrusSerialisable.SerialisableBaseNamed ):
     
     def __init__( self, name ):
         
-        HydrusSerialisable.SerialisableBaseNamed.__init__( self, name )
+        super().__init__( name )
         
         self._gallery_seed_log = ClientImportGallerySeeds.GallerySeedLog()
         self._file_seed_cache = ClientImportFileSeeds.FileSeedCache()

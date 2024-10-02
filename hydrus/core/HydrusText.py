@@ -28,7 +28,35 @@ re_leading_double_colon = re.compile( '^::(?!:)' )
 re_leading_colons = re.compile( '^:+' )
 re_leading_byte_order_mark = re.compile( '^' + HC.UNICODE_BYTE_ORDER_MARK ) # unicode .txt files prepend with this, wew
 
+re_has_surrogate_garbage = re.compile( r'[\ud800-\udfff]' )
+
 HYDRUS_NOTE_NEWLINE = '\n'
+
+def CleanseImportText( text: str ):
+    
+    # the website has placed utf-16 characters here due to a failure to encode some emoji properly
+    # we try to fix it
+    if re_has_surrogate_garbage.search( text ) is not None:
+        
+        try:
+            
+            return text.encode( 'utf-16', 'surrogatepass' ).decode( 'utf-16' )
+            
+        except:
+            
+            import HydrusData
+            
+            HydrusData.Print( f'Could not cleanse surrogates from this: {text}' )
+            
+        
+    
+    return text
+    
+
+def CleanseImportTexts( texts: typing.Collection[ str ] ):
+    
+    return [ CleanseImportText( text ) for text in texts ]
+    
 
 def CleanNoteText( t: str ):
     

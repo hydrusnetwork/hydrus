@@ -34,7 +34,7 @@ class EditImportFoldersPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def __init__( self, parent, import_folders ):
         
-        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        super().__init__( parent )
         
         import_folders_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
@@ -175,7 +175,7 @@ class EditImportFolderPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def __init__( self, parent, import_folder: ClientImportLocal.ImportFolder ):
         
-        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        super().__init__( parent )
         
         self._import_folder = import_folder
         

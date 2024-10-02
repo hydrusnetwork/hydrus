@@ -234,7 +234,7 @@ class FrameSplash( QW.QWidget ):
         
         self._controller = controller
         
-        QW.QWidget.__init__( self, None )
+        super().__init__( None )
         
         self.setWindowFlag( QC.Qt.CustomizeWindowHint )
         self.setWindowFlag( QC.Qt.WindowContextHelpButtonHint, on = False )

@@ -298,7 +298,7 @@ class EditParseNodeContentLinkPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def __init__( self, parent, node, referral_url = None, example_data = None ):
         
-        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        super().__init__( parent )
         
         if referral_url is None:
             
@@ -550,7 +550,7 @@ class EditParsingScriptFileLookupPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def __init__( self, parent, script ):
         
-        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        super().__init__( parent )
         
         ( name, url, query_type, file_identifier_type, file_identifier_string_converter, file_identifier_arg_name, static_args, children ) = script.ToTuple()
         
@@ -870,7 +870,7 @@ class ManageParsingScriptsPanel( ClientGUIScrolledPanels.ManagePanel ):
     
     def __init__( self, parent ):
         
-        ClientGUIScrolledPanels.ManagePanel.__init__( self, parent )
+        super().__init__( parent )
         
         model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_PARSING_SCRIPTS.ID, self._ConvertScriptToTuples )
         

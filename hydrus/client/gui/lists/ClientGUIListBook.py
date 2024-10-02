@@ -11,7 +11,7 @@ class ListBook( QW.QWidget ):
     
     def __init__( self, *args, **kwargs ):
         
-        QW.QWidget.__init__( self, *args, **kwargs )
+        super().__init__( *args, **kwargs )
         
         self._keys_to_active_pages = {}
         

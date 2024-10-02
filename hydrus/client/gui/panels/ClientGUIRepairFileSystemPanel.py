@@ -19,7 +19,7 @@ class RepairFileSystemPanel( ClientGUIScrolledPanels.ManagePanel ):
     
     def __init__( self, parent, missing_subfolders: typing.Collection[ ClientFilesPhysical.FilesStorageSubfolder ] ):
         
-        ClientGUIScrolledPanels.ManagePanel.__init__( self, parent )
+        super().__init__( parent )
         
         # TODO: This needs another pass as we move to multiple locations and other tech
         # if someone has f10 and we are expecting 16 lots of f10x, or vice versa, (e.g. on an out of sync db recovery, not uncommon) we'll need to handle that

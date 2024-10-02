@@ -25,7 +25,7 @@ class EditServersideService( ClientGUIScrolledPanels.EditPanel ):
     
     def __init__( self, parent: QW.QWidget, serverside_service: HydrusNetwork.ServerService ):
         
-        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        super().__init__( parent )
         
         duplicate_serverside_service = serverside_service.Duplicate()
         
@@ -86,7 +86,7 @@ class EditServersideService( ClientGUIScrolledPanels.EditPanel ):
         
         def __init__( self, parent: QW.QWidget, name: str, port: int, dictionary ):
             
-            ClientGUICommon.StaticBox.__init__( self, parent, 'basic information' )
+            super().__init__( parent, 'basic information' )
             
             self._name = QW.QLineEdit( self )
             self._port = ClientGUICommon.BetterSpinBox( self, min=1, max=65535 )
@@ -171,7 +171,7 @@ class EditServersideService( ClientGUIScrolledPanels.EditPanel ):
         
         def __init__( self, parent: QW.QWidget, dictionary ):
             
-            ClientGUICommon.StaticBox.__init__( self, parent, 'file repository' )
+            super().__init__( parent, 'file repository' )
             
             self._log_uploader_ips = QW.QCheckBox( self )
             self._max_storage = ClientGUIBytes.NoneableBytesControl( self, 5 * ( 1024 ** 3 ) )
@@ -214,7 +214,7 @@ class EditServersideService( ClientGUIScrolledPanels.EditPanel ):
         
         def __init__( self, parent: QW.QWidget, dictionary ):
             
-            ClientGUICommon.StaticBox.__init__( self, parent, 'server-wide bandwidth' )
+            super().__init__( parent, 'server-wide bandwidth' )
             
             self._bandwidth_tracker_st = ClientGUICommon.BetterStaticText( self )
             
@@ -254,7 +254,7 @@ class ManageServerServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         self._clientside_admin_service = CG.client_controller.services_manager.GetService( service_key )
         
-        ClientGUIScrolledPanels.ManagePanel.__init__( self, parent )
+        super().__init__( parent )
         
         self._deletee_service_keys = []
         

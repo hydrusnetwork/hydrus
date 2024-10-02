@@ -606,7 +606,7 @@ class DBCursorTransactionWrapper( DBBase ):
     
     def __init__( self, c: sqlite3.Cursor, transaction_commit_period: int ):
         
-        DBBase.__init__( self )
+        super().__init__()
         
         self._SetCursor( c )
         

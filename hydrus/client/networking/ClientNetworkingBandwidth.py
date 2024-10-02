@@ -31,7 +31,7 @@ class NetworkBandwidthManagerTrackerContainer( HydrusSerialisable.SerialisableBa
             bandwidth_tracker = HydrusNetworking.BandwidthTracker()
             
         
-        HydrusSerialisable.SerialisableBaseNamed.__init__( self, name )
+        super().__init__( name )
         
         self.network_context = network_context
         self.bandwidth_tracker = bandwidth_tracker

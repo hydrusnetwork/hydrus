@@ -431,6 +431,7 @@ class TestPanel( QW.QWidget ):
         
         
     
+
 class TestPanelFormula( TestPanel ):
     
     def GetTestDataForStringProcessor( self ):
@@ -459,7 +460,7 @@ class TestPanelPageParser( TestPanel ):
         
         self._pre_parsing_converter_callable = pre_parsing_converter_callable
         
-        TestPanel.__init__( self, parent, object_callable, test_data = test_data )
+        super().__init__( parent, object_callable, test_data = test_data )
         
         post_conversion_panel = QW.QWidget( self._data_preview_notebook )
         
@@ -587,7 +588,7 @@ class TestPanelPageParserSubsidiary( TestPanelPageParser ):
     
     def __init__( self, parent, object_callable, pre_parsing_converter_callable, formula_callable, test_data = None ):
         
-        TestPanelPageParser.__init__( self, parent, object_callable, pre_parsing_converter_callable, test_data = test_data )
+        super().__init__( parent, object_callable, pre_parsing_converter_callable, test_data = test_data )
         
         self._formula_callable = formula_callable
         

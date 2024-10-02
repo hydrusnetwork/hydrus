@@ -32,7 +32,7 @@ class MigrationTestContextFactorySidecar( MigrationTestContextFactory ):
     
     def __init__( self, example_file_paths: typing.Collection[ str ] ):
         
-        MigrationTestContextFactory.__init__( self )
+        super().__init__()
         
         self._example_file_paths = example_file_paths
         
@@ -62,7 +62,7 @@ class MigrationTestContextFactoryMedia( MigrationTestContextFactory ):
     
     def __init__( self, example_media_results: typing.Collection[ ClientMediaResult.MediaResult ] ):
         
-        MigrationTestContextFactory.__init__( self )
+        super().__init__()
         
         self._example_media_results = example_media_results
         

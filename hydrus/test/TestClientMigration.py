@@ -849,11 +849,12 @@ class TestMigration( unittest.TestCase ):
         
         left_side_needs_count = False
         right_side_needs_count = False
+        either_side_needs_count = False
         needs_count_service_key = CC.DEFAULT_LOCAL_TAG_SERVICE_KEY
         
         for ( left_tag_filter, right_tag_filter ) in test_filters:
             
-            source = ClientMigration.MigrationSourceHTPA( self, htpa_path, content_type, left_tag_filter, right_tag_filter, left_side_needs_count, right_side_needs_count, needs_count_service_key )
+            source = ClientMigration.MigrationSourceHTPA( self, htpa_path, content_type, left_tag_filter, right_tag_filter, left_side_needs_count, right_side_needs_count, either_side_needs_count, needs_count_service_key )
             
             expected_data = [ ( left_tag, right_tag ) for ( left_tag, right_tag ) in current if left_tag_filter.TagOK( left_tag ) and right_tag_filter.TagOK( right_tag ) ]
             
@@ -942,13 +943,14 @@ class TestMigration( unittest.TestCase ):
         
         left_side_needs_count = False
         right_side_needs_count = False
+        either_side_needs_count = False
         needs_count_service_key = CC.DEFAULT_LOCAL_TAG_SERVICE_KEY
         
         for ( left_tag_filter, right_tag_filter ) in test_filters:
             
             for ( service_key, content_lists, content_statuses ) in content_source_tests:
                 
-                source = ClientMigration.MigrationSourceTagServicePairs( self, service_key, content_type, left_tag_filter, right_tag_filter, content_statuses, left_side_needs_count, right_side_needs_count, needs_count_service_key )
+                source = ClientMigration.MigrationSourceTagServicePairs( self, service_key, content_type, left_tag_filter, right_tag_filter, content_statuses, left_side_needs_count, right_side_needs_count, either_side_needs_count, needs_count_service_key )
                 
                 expected_data = set()
                 
@@ -1111,13 +1113,15 @@ class TestMigration( unittest.TestCase ):
         left_tag_filter = HydrusTags.TagFilter()
         right_tag_filter = HydrusTags.TagFilter()
         
+        either_side_needs_count = False
+        
         for left_side_needs_count in ( False, True ):
             
             for right_side_needs_count in ( False, True ):
                 
                 for needs_count_service_key in ( repo_service_key, CC.DEFAULT_LOCAL_TAG_SERVICE_KEY ):
                     
-                    source = ClientMigration.MigrationSourceHTPA( self, htpa_path, content_type, left_tag_filter, right_tag_filter, left_side_needs_count, right_side_needs_count, needs_count_service_key )
+                    source = ClientMigration.MigrationSourceHTPA( self, htpa_path, content_type, left_tag_filter, right_tag_filter, left_side_needs_count, right_side_needs_count, either_side_needs_count, needs_count_service_key )
                     
                     if needs_count_service_key == repo_service_key:
                         
@@ -1137,6 +1141,35 @@ class TestMigration( unittest.TestCase ):
                     
                     run_test( source, expected_data )
                     
+                
+            
+        
+        left_side_needs_count = False
+        right_side_needs_count = False
+        
+        for either_side_needs_count in ( False, True ):
+            
+            for needs_count_service_key in ( repo_service_key, CC.DEFAULT_LOCAL_TAG_SERVICE_KEY ):
+                
+                source = ClientMigration.MigrationSourceHTPA( self, htpa_path, content_type, left_tag_filter, right_tag_filter, left_side_needs_count, right_side_needs_count, either_side_needs_count, needs_count_service_key )
+                
+                if needs_count_service_key == repo_service_key:
+                    
+                    expected_data = [ ( a, b ) for ( a, b ) in count_filter_pairs[ content_type ] if not either_side_needs_count ]
+                    
+                else:
+                    
+                    if content_type == HC.CONTENT_TYPE_TAG_SIBLINGS:
+                        
+                        expected_data = [ ( a, b ) for ( a, b ) in count_filter_pairs[ content_type ] if not either_side_needs_count or 'has_count' in a or 'ideal_yes' in a ]
+                        
+                    else:
+                        
+                        expected_data = [ ( a, b ) for ( a, b ) in count_filter_pairs[ content_type ] if not either_side_needs_count or 'has_count' in a or 'has_count' in b ]
+                        
+                    
+                
+                run_test( source, expected_data )
                 
             
         
@@ -1169,13 +1202,15 @@ class TestMigration( unittest.TestCase ):
         left_tag_filter = HydrusTags.TagFilter()
         right_tag_filter = HydrusTags.TagFilter()
         
+        either_side_needs_count = False
+        
         for left_side_needs_count in ( False, True ):
             
             for right_side_needs_count in ( False, True ):
                 
                 for needs_count_service_key in ( repo_service_key, CC.DEFAULT_LOCAL_TAG_SERVICE_KEY ):
                     
-                    source = ClientMigration.MigrationSourceTagServicePairs( self, CC.DEFAULT_LOCAL_TAG_SERVICE_KEY, content_type, left_tag_filter, right_tag_filter, content_statuses, left_side_needs_count, right_side_needs_count, needs_count_service_key )
+                    source = ClientMigration.MigrationSourceTagServicePairs( self, CC.DEFAULT_LOCAL_TAG_SERVICE_KEY, content_type, left_tag_filter, right_tag_filter, content_statuses, left_side_needs_count, right_side_needs_count, either_side_needs_count, needs_count_service_key )
                     
                     if needs_count_service_key == repo_service_key:
                         
@@ -1195,6 +1230,35 @@ class TestMigration( unittest.TestCase ):
                     
                     run_test( source, expected_data )
                     
+                
+            
+        
+        left_side_needs_count = False
+        right_side_needs_count = False
+        
+        for either_side_needs_count in ( False, True ):
+            
+            for needs_count_service_key in ( repo_service_key, CC.DEFAULT_LOCAL_TAG_SERVICE_KEY ):
+                
+                source = ClientMigration.MigrationSourceTagServicePairs( self, CC.DEFAULT_LOCAL_TAG_SERVICE_KEY, content_type, left_tag_filter, right_tag_filter, content_statuses, left_side_needs_count, right_side_needs_count, either_side_needs_count, needs_count_service_key )
+                
+                if needs_count_service_key == repo_service_key:
+                    
+                    expected_data = [ ( a, b ) for ( a, b ) in count_filter_pairs[ content_type ] if not either_side_needs_count ]
+                    
+                else:
+                    
+                    if content_type == HC.CONTENT_TYPE_TAG_SIBLINGS:
+                        
+                        expected_data = [ ( a, b ) for ( a, b ) in count_filter_pairs[ content_type ] if not either_side_needs_count or 'has_count' in a or 'ideal_yes' in a ]
+                        
+                    else:
+                        
+                        expected_data = [ ( a, b ) for ( a, b ) in count_filter_pairs[ content_type ] if not either_side_needs_count or 'has_count' in a or 'has_count' in b ]
+                        
+                    
+                
+                run_test( source, expected_data )
                 
             
         

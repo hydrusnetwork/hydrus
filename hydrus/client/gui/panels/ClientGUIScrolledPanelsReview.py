@@ -67,7 +67,7 @@ class AboutPanel( ClientGUIScrolledPanels.ReviewPanel ):
     
     def __init__( self, parent, name, version, description_versions, description_availability, license_text, developers, site ):
         
-        ClientGUIScrolledPanels.ReviewPanel.__init__( self, parent )
+        super().__init__( parent )
         
         icon_label = ClientGUICommon.BetterStaticText( self )
         icon_label.setPixmap( CG.client_controller.frame_icon_pixmap )
@@ -134,7 +134,7 @@ class MoveMediaFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         self._new_options = self._controller.new_options
         
-        ClientGUIScrolledPanels.ReviewPanel.__init__( self, parent )
+        super().__init__( parent )
         
         self._client_files_subfolders = CG.client_controller.Read( 'client_files_subfolders' )
         
@@ -950,7 +950,7 @@ class ReviewDownloaderImport( ClientGUIScrolledPanels.ReviewPanel ):
     
     def __init__( self, parent, network_engine ):
         
-        ClientGUIScrolledPanels.ReviewPanel.__init__( self, parent )
+        super().__init__( parent )
         
         self._network_engine = network_engine
         
@@ -1479,7 +1479,7 @@ class ReviewFileEmbeddedMetadata( ClientGUIScrolledPanels.ReviewPanel ):
     
     def __init__( self, parent, mime: int, exif_dict: typing.Optional[ dict ], file_text: typing.Optional[ str ], extra_rows: typing.List[ typing.Tuple[ str, str ] ] ):
         
-        ClientGUIScrolledPanels.ReviewPanel.__init__( self, parent )
+        super().__init__( parent )
         
         #
         
@@ -1646,7 +1646,7 @@ class ReviewFileHistory( ClientGUIScrolledPanels.ReviewPanel ):
     
     def __init__( self, parent ):
         
-        ClientGUIScrolledPanels.ReviewPanel.__init__( self, parent )
+        super().__init__( parent )
         
         self._job_status = ClientThreading.JobStatus()
         
@@ -1829,7 +1829,7 @@ class ReviewFileMaintenance( ClientGUIScrolledPanels.ReviewPanel ):
     
     def __init__( self, parent, stats ):
         
-        ClientGUIScrolledPanels.ReviewPanel.__init__( self, parent )
+        super().__init__( parent )
         
         self._hash_ids = None
         self._job_types_to_due_counts = {}
@@ -2261,7 +2261,7 @@ class ReviewHowBonedAmI( ClientGUIScrolledPanels.ReviewPanel ):
     
     def __init__( self, parent ):
         
-        ClientGUIScrolledPanels.ReviewPanel.__init__( self, parent )
+        super().__init__( parent )
         
         self._update_job = None
         self._job_status = ClientThreading.JobStatus()
@@ -2803,7 +2803,7 @@ class ReviewLocalFileImports( ClientGUIScrolledPanels.ReviewPanel ):
             paths = []
             
         
-        ClientGUIScrolledPanels.ReviewPanel.__init__( self, parent )
+        super().__init__( parent )
         
         self.widget().installEventFilter( ClientGUIDragDrop.FileDropTarget( self.widget(), filenames_callable = self._AddPathsToList ) )
         
@@ -3528,7 +3528,7 @@ class ReviewDeferredDeleteTableData( ClientGUIScrolledPanels.ReviewPanel ):
     
     def __init__( self, parent, controller ):
         
-        ClientGUIScrolledPanels.ReviewPanel.__init__( self, parent )
+        super().__init__( parent )
         
         self._controller = controller
         
@@ -3690,7 +3690,7 @@ class ReviewThreads( ClientGUIScrolledPanels.ReviewPanel ):
     
     def __init__( self, parent, controller ):
         
-        ClientGUIScrolledPanels.ReviewPanel.__init__( self, parent )
+        super().__init__( parent )
         
         self._notebook = ClientGUICommon.BetterNotebook( self )
         
@@ -3716,7 +3716,7 @@ class ReviewVacuumData( ClientGUIScrolledPanels.ReviewPanel ):
     
     def __init__( self, parent, controller, vacuum_data ):
         
-        ClientGUIScrolledPanels.ReviewPanel.__init__( self, parent )
+        super().__init__( parent )
         
         self._controller = controller
         self._vacuum_data = vacuum_data

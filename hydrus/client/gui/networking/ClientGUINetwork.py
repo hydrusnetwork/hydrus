@@ -39,7 +39,7 @@ class EditBandwidthRulesPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def __init__( self, parent: QW.QWidget, bandwidth_rules: HydrusNetworking.BandwidthRules, summary ):
         
-        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        super().__init__( parent )
         
         self._bandwidth_rules_ctrl = ClientGUIBandwidth.BandwidthRulesCtrl( self, bandwidth_rules )
         
@@ -70,7 +70,7 @@ class EditCookiePanel( ClientGUIScrolledPanels.EditPanel ):
     
     def __init__( self, parent: QW.QWidget, name: str, value: str, domain: str, path: str, expires: HC.noneable_int ):
         
-        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        super().__init__( parent )
         
         self._name = QW.QLineEdit( self )
         self._value = QW.QLineEdit( self )
@@ -161,7 +161,7 @@ class EditNetworkContextPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def __init__( self, parent: QW.QWidget, network_context: ClientNetworkingContexts.NetworkContext, limited_types = None, allow_default = True ):
         
-        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        super().__init__( parent )
         
         if limited_types is None:
             
@@ -312,7 +312,7 @@ class EditNetworkContextCustomHeadersPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def __init__( self, parent: QW.QWidget, network_contexts_to_custom_header_dicts ):
         
-        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        super().__init__( parent )
         
         self._list_ctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
@@ -458,7 +458,7 @@ class EditNetworkContextCustomHeadersPanel( ClientGUIScrolledPanels.EditPanel ):
         
         def __init__( self, parent: QW.QWidget, network_context: ClientNetworkingContexts.NetworkContext, key: str, value: str, approved: int, reason: str ):
             
-            ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+            super().__init__( parent )
             
             self._network_context = NetworkContextButton( self, network_context, limited_types = ( CC.NETWORK_CONTEXT_GLOBAL, CC.NETWORK_CONTEXT_DOMAIN ), allow_default = False )
             
@@ -516,7 +516,7 @@ class NetworkContextButton( ClientGUICommon.BetterButton ):
     
     def __init__( self, parent, network_context, limited_types = None, allow_default = True ):
         
-        ClientGUICommon.BetterButton.__init__( self, parent, network_context.ToString(), self._Edit )
+        super().__init__( parent, network_context.ToString(), self._Edit )
         
         self._network_context = network_context
         self._limited_types = limited_types
@@ -563,7 +563,7 @@ class ReviewAllBandwidthPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         self._controller = controller
         
-        ClientGUIScrolledPanels.ReviewPanel.__init__( self, parent )
+        super().__init__( parent )
         
         self._history_time_delta_threshold = ClientGUITime.TimeDeltaButton( self, days = True, hours = True, minutes = True, seconds = True )
         self._history_time_delta_threshold.timeDeltaChanged.connect( self.EventTimeDeltaChanged )
@@ -844,7 +844,7 @@ class ReviewNetworkContextBandwidthPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         self._controller = controller
         
-        ClientGUIScrolledPanels.ReviewPanel.__init__( self, parent )
+        super().__init__( parent )
         
         self._network_context = network_context
         
@@ -1102,7 +1102,7 @@ class ReviewNetworkJobs( ClientGUIScrolledPanels.ReviewPanel ):
         
         self._controller = controller
         
-        ClientGUIScrolledPanels.ReviewPanel.__init__( self, parent )
+        super().__init__( parent )
         
         self._list_ctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
@@ -1218,7 +1218,7 @@ class ReviewNetworkSessionsPanel( ClientGUIScrolledPanels.ReviewPanel ):
     
     def __init__( self, parent, session_manager ):
         
-        ClientGUIScrolledPanels.ReviewPanel.__init__( self, parent )
+        super().__init__( parent )
         
         self._session_manager = session_manager
         
@@ -1443,7 +1443,7 @@ class ReviewNetworkSessionPanel( ClientGUIScrolledPanels.ReviewPanel ):
     
     def __init__( self, parent, session_manager, network_context ):
         
-        ClientGUIScrolledPanels.ReviewPanel.__init__( self, parent )
+        super().__init__( parent )
         
         self._session_manager = session_manager
         self._network_context = network_context

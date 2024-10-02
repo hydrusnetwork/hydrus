@@ -33,7 +33,7 @@ from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.lists import ClientGUIListBoxes
 from hydrus.client.gui.lists import ClientGUIListBoxesData
-from hydrus.client.gui.pages import ClientGUIResultsSortCollect
+from hydrus.client.gui.pages import ClientGUIMediaResultsPanelSortCollect
 from hydrus.client.gui.panels import ClientGUIScrolledPanels
 from hydrus.client.gui.search import ClientGUILocation
 from hydrus.client.gui.search import ClientGUISearch
@@ -604,7 +604,7 @@ class ListBoxTagsPredicatesAC( ClientGUIListBoxes.ListBoxTagsPredicates ):
     
     def __init__( self, parent, callable, float_mode, service_key, **kwargs ):
         
-        ClientGUIListBoxes.ListBoxTagsPredicates.__init__( self, parent, **kwargs )
+        super().__init__( parent, **kwargs )
         
         self._callable = callable
         self._float_mode = float_mode
@@ -760,7 +760,7 @@ class ListBoxTagsStringsAC( ClientGUIListBoxes.ListBoxTagsStrings ):
     
     def __init__( self, parent, callable, service_key, float_mode, **kwargs ):
         
-        ClientGUIListBoxes.ListBoxTagsStrings.__init__( self, parent, service_key = service_key, sort_tags = False, **kwargs )
+        super().__init__( parent, service_key = service_key, sort_tags = False, **kwargs )
         
         self._callable = callable
         self._float_mode = float_mode
@@ -1234,10 +1234,15 @@ class AutoCompleteDropdown( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
                     send_input_to_current_list = False
                     
                     ctrl = event.modifiers() & QC.Qt.ControlModifier
+                    
                     # previous/next hardcoded shortcuts, should obviously be migrated to a user-customised shortcut set in future!
                     crazy_n_p_hardcodes = ctrl and key in ( ord( 'P' ), ord( 'p' ), ord( 'N' ), ord( 'n' ) )
                     
-                    if key in ( QC.Qt.Key_Up, QC.Qt.Key_Down, QC.Qt.Key_PageDown, QC.Qt.Key_PageUp, QC.Qt.Key_Home, QC.Qt.Key_End ) or crazy_n_p_hardcodes:
+                    we_copying = ctrl and key in( ord( 'C' ), ord( 'c' ), QC.Qt.Key_Insert )
+                    
+                    we_copying_the_list = we_copying and self._text_ctrl.selectedText() == ''
+                    
+                    if key in ( QC.Qt.Key_Up, QC.Qt.Key_Down, QC.Qt.Key_PageDown, QC.Qt.Key_PageUp, QC.Qt.Key_Home, QC.Qt.Key_End ) or crazy_n_p_hardcodes or we_copying_the_list:
                         
                         send_input_to_current_list = True
                         
@@ -1585,7 +1590,7 @@ class ChildrenTab( ListBoxTagsPredicatesAC ):
         self._tags_to_child_predicates_cache = dict()
         self._children_need_updating = True
         
-        ListBoxTagsPredicatesAC.__init__( self, parent, broadcast_call, float_mode, tag_service_key, tag_display_type = tag_display_type, height_num_chars = height_num_chars )
+        super().__init__( parent, broadcast_call, float_mode, tag_service_key, tag_display_type = tag_display_type, height_num_chars = height_num_chars )
         
     
     def NotifyNeedsUpdating( self ):
@@ -1744,7 +1749,7 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
         self._current_context_tags = {}
         self._tag_service_key = tag_service_key
         
-        AutoCompleteDropdown.__init__( self, parent )
+        super().__init__( parent )
         
         self._location_context_button = ClientGUILocation.LocationSearchContextButton( self._dropdown_window, location_context, is_paired_with_tag_domain = True )
         self._location_context_button.setMinimumWidth( 20 )
@@ -2034,7 +2039,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
     searchChanged = QC.Signal( ClientSearchFileSearchContext.FileSearchContext )
     searchCancelled = QC.Signal()
     
-    def __init__( self, parent: QW.QWidget, page_key, file_search_context: ClientSearchFileSearchContext.FileSearchContext, media_sort_widget: typing.Optional[ ClientGUIResultsSortCollect.MediaSortControl ] = None, media_collect_widget: typing.Optional[ ClientGUIResultsSortCollect.MediaCollectControl ] = None, media_callable = None, synchronised = True, include_unusual_predicate_types = True, allow_all_known_files = True, only_allow_local_file_domains = False, force_system_everything = False, hide_favourites_edit_actions = False, fixed_results_list_height = None ):
+    def __init__( self, parent: QW.QWidget, page_key, file_search_context: ClientSearchFileSearchContext.FileSearchContext, media_sort_widget: typing.Optional[ ClientGUIMediaResultsPanelSortCollect.MediaSortControl ] = None, media_collect_widget: typing.Optional[ ClientGUIMediaResultsPanelSortCollect.MediaCollectControl ] = None, media_callable = None, synchronised = True, include_unusual_predicate_types = True, allow_all_known_files = True, only_allow_local_file_domains = False, force_system_everything = False, hide_favourites_edit_actions = False, fixed_results_list_height = None ):
         
         self._page_key = page_key
         
@@ -2061,7 +2066,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
         
         self._file_search_context = file_search_context
         
-        AutoCompleteDropdownTags.__init__( self, parent, location_context, tag_context.service_key )
+        super().__init__( parent, location_context, tag_context.service_key )
         
         self._location_context_button.SetOnlyLocalFileDomainsAllowed( only_allow_local_file_domains )
         self._location_context_button.SetAllKnownFilesAllowed( allow_all_known_files, True )
@@ -2071,6 +2076,9 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
         self._paste_button = ClientGUICommon.BetterBitmapButton( self._text_input_panel, CC.global_pixmaps().paste, self._Paste )
         self._paste_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'You can paste a newline-separated list of regular tags and/or system predicates.' ) )
         
+        self._empty_search_button = ClientGUICommon.BetterBitmapButton( self._text_input_panel, CC.global_pixmaps().clear_highlight, self._ClearSearch )
+        self._empty_search_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'Clear the search back to an empty page.' ) )
+        
         self._favourite_searches_button = ClientGUICommon.BetterBitmapButton( self._text_input_panel, CC.global_pixmaps().star, self._FavouriteSearchesMenu )
         self._favourite_searches_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'Load or save a favourite search.' ) )
         
@@ -2078,9 +2086,10 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
         
         self._cancel_search_button.hide()
         
+        QP.AddToLayout( self._text_input_hbox, self._cancel_search_button, CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( self._text_input_hbox, self._paste_button, CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( self._text_input_hbox, self._favourite_searches_button, CC.FLAGS_CENTER_PERPENDICULAR )
-        QP.AddToLayout( self._text_input_hbox, self._cancel_search_button, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( self._text_input_hbox, self._empty_search_button, CC.FLAGS_CENTER_PERPENDICULAR )
         
         #
         
@@ -2254,6 +2263,44 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
         self._UpdateORButtons()
         
         self._ClearInput()
+        
+    
+    def _ClearSearch( self ):
+        
+        location_context = CG.client_controller.new_options.GetDefaultLocalLocationContext()
+        
+        tag_context = ClientSearchTagContext.TagContext()
+        
+        predicates = []
+        
+        file_search_context = ClientSearchFileSearchContext.FileSearchContext( location_context = location_context, tag_context = tag_context, predicates = predicates )
+        
+        synchronised = True
+        media_sort = None
+        media_collect = None
+        
+        self.blockSignals( True )
+        
+        self.SetFileSearchContext( file_search_context )
+        
+        if media_sort is not None and self._media_sort_widget is not None:
+            
+            self._media_sort_widget.SetSort( media_sort )
+            
+        
+        if media_collect is not None and self._media_collect_widget is not None:
+            
+            self._media_collect_widget.SetCollect( media_collect )
+            
+        
+        self._search_pause_play.SetOnOff( synchronised )
+        
+        self.blockSignals( False )
+        
+        self.locationChanged.emit( self._location_context_button.GetValue() )
+        self.tagServiceChanged.emit( self._tag_service_key )
+        
+        self._SignalNewSearchState()
         
     
     def _CreateNewOR( self ):
@@ -2832,7 +2879,7 @@ class ListBoxTagsActiveSearchPredicates( ClientGUIListBoxes.ListBoxTagsPredicate
     
     def __init__( self, parent: AutoCompleteDropdownTagsRead, page_key, file_search_context: ClientSearchFileSearchContext.FileSearchContext ):
         
-        ClientGUIListBoxes.ListBoxTagsPredicates.__init__( self, parent, height_num_chars = 6 )
+        super().__init__( parent, height_num_chars = 6 )
         
         self._my_ac_parent = parent
         
@@ -3116,7 +3163,7 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
         
         ( location_context, tag_service_key ) = tag_autocomplete_options.GetWriteAutocompleteSearchDomain( location_context )
         
-        AutoCompleteDropdownTags.__init__( self, parent, location_context, tag_service_key )
+        super().__init__( parent, location_context, tag_service_key )
         
         self._location_context_button.SetAllKnownFilesAllowed( True, False )
         
@@ -3305,7 +3352,7 @@ class EditAdvancedORPredicates( ClientGUIScrolledPanels.EditPanel ):
     
     def __init__( self, parent, initial_string = None ):
         
-        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        super().__init__( parent )
         
         self._input_text = QW.QLineEdit( self )
         

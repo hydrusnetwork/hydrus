@@ -983,7 +983,7 @@ class ApplicationCommandWidget( ClientGUIScrolledPanels.EditPanel ):
     
     def __init__( self, parent: QW.QWidget, command: CAC.ApplicationCommand, shortcuts_name: str ):
         
-        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        super().__init__( parent )
         
         #
         

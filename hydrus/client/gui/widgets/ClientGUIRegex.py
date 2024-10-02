@@ -19,7 +19,7 @@ class RegexButton( ClientGUICommon.BetterButton ):
     
     def __init__( self, parent, show_group_menu = False ):
         
-        ClientGUICommon.BetterButton.__init__( self, parent, '.*', self._ShowMenu )
+        super().__init__( parent, '.*', self._ShowMenu )
         
         self._show_group_menu = show_group_menu
         

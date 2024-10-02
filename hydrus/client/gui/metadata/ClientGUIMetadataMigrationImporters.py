@@ -59,7 +59,7 @@ class EditSingleFileMetadataImporterPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def __init__( self, parent: QW.QWidget, importer: ClientMetadataMigrationImporters.SingleFileMetadataImporter, allowed_importer_classes: list ):
         
-        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        super().__init__( parent )
         
         self._original_importer = importer
         self._allowed_importer_classes = allowed_importer_classes
@@ -134,7 +134,7 @@ class EditSingleFileMetadataImporterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._string_processor_panel = QW.QWidget( self )
         
-        self._string_processor_button = ClientGUIStringControls.StringProcessorButton( self, string_processor, self._GetExampleTestData )
+        self._string_processor_button = ClientGUIStringControls.StringProcessorWidget( self, string_processor, self._GetExampleTestData )
         tt = 'You can alter the texts that come in through this source here.'
         self._string_processor_button.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
         
@@ -430,7 +430,7 @@ class SingleFileMetadataImportersControl( ClientGUIListBoxes.AddEditDeleteListBo
     
     def __init__( self, parent: QW.QWidget, importers: typing.Collection[ ClientMetadataMigrationImporters.SingleFileMetadataImporter ], allowed_importer_classes: list ):
         
-        ClientGUIListBoxes.AddEditDeleteListBox.__init__( self, parent, 5, convert_importer_to_pretty_string, self._AddImporter, self._EditImporter )
+        super().__init__( parent, 5, convert_importer_to_pretty_string, self._AddImporter, self._EditImporter )
         
         self._allowed_importer_classes = allowed_importer_classes
         

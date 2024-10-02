@@ -40,7 +40,7 @@ class RatingIncDecCanvas( ClientGUIRatings.RatingIncDec ):
 
     def __init__( self, parent, service_key, canvas_key ):
         
-        ClientGUIRatings.RatingIncDec.__init__( self, parent, service_key )
+        super().__init__( parent, service_key )
         
         self._canvas_key = canvas_key
         self._current_media = None
@@ -138,7 +138,7 @@ class RatingLikeCanvas( ClientGUIRatings.RatingLike ):
     
     def __init__( self, parent, service_key, canvas_key ):
         
-        ClientGUIRatings.RatingLike.__init__( self, parent, service_key )
+        super().__init__( parent, service_key )
         
         self._canvas_key = canvas_key
         self._current_media = None
@@ -253,7 +253,7 @@ class RatingNumericalCanvas( ClientGUIRatings.RatingNumerical ):
 
     def __init__( self, parent, service_key, canvas_key ):
         
-        ClientGUIRatings.RatingNumerical.__init__( self, parent, service_key )
+        super().__init__( parent, service_key )
         
         self._canvas_key = canvas_key
         self._current_media = None
@@ -377,7 +377,7 @@ class CanvasHoverFrame( QW.QFrame ):
         # this took some hacks, and there is still a bunch of focus and TLW checking code going on here that needs to be cleaned up
         # note I tried to have them just lower rather than hide and it looked really stupid, so that thought is dead for the current moment. atm I just want to do the same thing as before with no graphics errors
         
-        QW.QFrame.__init__( self, parent )
+        super().__init__( parent )
         
         self.setFrameStyle( QW.QFrame.Panel | QW.QFrame.Raised )
         self.setLineWidth( 2 )

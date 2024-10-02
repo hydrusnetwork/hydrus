@@ -20,7 +20,7 @@ class CaptureAPIAccessPermissionsRequestPanel( ClientGUIScrolledPanels.ReviewPan
     
     def __init__( self, parent ):
         
-        ClientGUIScrolledPanels.ReviewPanel.__init__( self, parent )
+        super().__init__( parent )
         
         self._time_started = HydrusTime.GetNow()
         
@@ -68,7 +68,7 @@ class EditAPIPermissionsPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def __init__( self, parent, api_permissions: ClientAPI.APIPermissions ):
         
-        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        super().__init__( parent )
         
         self._original_api_permissions = api_permissions
         

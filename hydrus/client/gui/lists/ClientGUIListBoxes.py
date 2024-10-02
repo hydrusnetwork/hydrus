@@ -1078,7 +1078,7 @@ class ListBox( QW.QScrollArea ):
     
     def __init__( self, parent: QW.QWidget, terms_may_have_sibling_or_parent_info: bool, height_num_chars = 10, has_async_text_info = False ):
         
-        QW.QScrollArea.__init__( self, parent )
+        super().__init__( parent )
         self.setFrameStyle( QW.QFrame.Panel | QW.QFrame.Sunken )
         self.setHorizontalScrollBarPolicy( QC.Qt.ScrollBarAlwaysOff )
         self.setVerticalScrollBarPolicy( QC.Qt.ScrollBarAsNeeded )
@@ -2495,7 +2495,7 @@ class ListBoxTags( ListBox ):
         
         terms_may_have_sibling_or_parent_info = self._tag_display_type == ClientTags.TAG_DISPLAY_STORAGE
         
-        ListBox.__init__( self, parent, terms_may_have_sibling_or_parent_info, *args, **kwargs )
+        super().__init__( parent, terms_may_have_sibling_or_parent_info, *args, **kwargs )
         
         self.setObjectName( 'HydrusTagList' )
         
@@ -3674,7 +3674,7 @@ class ListBoxTagsPredicates( ListBoxTags ):
     
     def __init__( self, *args, tag_display_type = ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, **kwargs ):
         
-        ListBoxTags.__init__( self, *args, tag_display_type = tag_display_type, **kwargs )
+        super().__init__( *args, tag_display_type = tag_display_type, **kwargs )
         
     
     def _GenerateTermFromPredicate( self, predicate: ClientSearchPredicate.Predicate ) -> ClientGUIListBoxesData.ListBoxItemPredicate:
@@ -3731,7 +3731,7 @@ class ListBoxTagsColourOptions( ListBoxTags ):
     
     def __init__( self, parent, initial_namespace_colours ):
         
-        ListBoxTags.__init__( self, parent )
+        super().__init__( parent )
         
         terms = []
         
@@ -3838,7 +3838,7 @@ class ListBoxTagsFilter( ListBoxTags ):
     
     def __init__( self, parent, read_only = False ):
         
-        ListBoxTags.__init__( self, parent )
+        super().__init__( parent )
         
         self._read_only = read_only
         
@@ -3941,7 +3941,7 @@ class ListBoxTagsDisplayCapable( ListBoxTags ):
         
         has_async_text_info = tag_display_type == ClientTags.TAG_DISPLAY_STORAGE
         
-        ListBoxTags.__init__( self, parent, has_async_text_info = has_async_text_info, tag_display_type = tag_display_type, **kwargs )
+        super().__init__( parent, has_async_text_info = has_async_text_info, tag_display_type = tag_display_type, **kwargs )
         
         self.listBoxChanged.connect( self._NotifyListBoxChanged )
         
@@ -4065,7 +4065,7 @@ class ListBoxTagsStrings( ListBoxTagsDisplayCapable ):
         
         self._sort_tags = sort_tags
         
-        ListBoxTagsDisplayCapable.__init__( self, parent, service_key = service_key, **kwargs )
+        super().__init__( parent, service_key = service_key, **kwargs )
         
         self.listBoxChanged.connect( self._NotifyListBoxChanged )
         
@@ -4244,7 +4244,7 @@ class ListBoxTagsMedia( ListBoxTagsDisplayCapable ):
             service_key = CC.COMBINED_TAG_SERVICE_KEY
             
         
-        ListBoxTagsDisplayCapable.__init__( self, parent, service_key = service_key, tag_display_type = tag_display_type, height_num_chars = 24 )
+        super().__init__( parent, service_key = service_key, tag_display_type = tag_display_type, height_num_chars = 24 )
         
         self._tag_presentation_location = tag_presentation_location
         
@@ -4552,16 +4552,16 @@ class ListBoxTagsMedia( ListBoxTagsDisplayCapable ):
         self._DataHasChanged()
         
     
-    def SetTagsByMediaFromMediaPanel( self, media, tags_changed ):
+    def SetTagsByMediaFromMediaResultsPanel( self, media, tags_changed ):
         
         flat_media = ClientMedia.FlattenMedia( media )
         
         media_results = [ m.GetMediaResult() for m in flat_media ]
         
-        self.SetTagsByMediaResultsFromMediaPanel( media_results, tags_changed )
+        self.SetTagsByMediaResultsFromMediaResultsPanel( media_results, tags_changed )
         
     
-    def SetTagsByMediaResultsFromMediaPanel( self, media_results, tags_changed ):
+    def SetTagsByMediaResultsFromMediaResultsPanel( self, media_results, tags_changed ):
         
         if not isinstance( media_results, set ):
             
@@ -4667,7 +4667,7 @@ class StaticBoxSorterForListBoxTags( ClientGUICommon.StaticBox ):
     
     def __init__( self, parent, title, tag_presentation_location: int, show_siblings_sort = False ):
         
-        ClientGUICommon.StaticBox.__init__( self, parent, title )
+        super().__init__( parent, title )
         
         self._original_title = title
         
@@ -4735,7 +4735,7 @@ class ListBoxTagsMediaHoverFrame( ListBoxTagsMedia ):
     
     def __init__( self, parent, canvas_key, location_context: ClientLocation.LocationContext ):
         
-        ListBoxTagsMedia.__init__( self, parent, ClientTags.TAG_DISPLAY_SINGLE_MEDIA, CC.TAG_PRESENTATION_MEDIA_VIEWER, include_counts = False )
+        super().__init__( parent, ClientTags.TAG_DISPLAY_SINGLE_MEDIA, CC.TAG_PRESENTATION_MEDIA_VIEWER, include_counts = False )
         
         self._canvas_key = canvas_key
         self._location_context = location_context
@@ -4758,7 +4758,7 @@ class ListBoxTagsMediaTagsDialog( ListBoxTagsMedia ):
     
     def __init__( self, parent, tag_presentation_location, enter_func, delete_func ):
         
-        ListBoxTagsMedia.__init__( self, parent, ClientTags.TAG_DISPLAY_STORAGE, tag_presentation_location, include_counts = True )
+        super().__init__( parent, ClientTags.TAG_DISPLAY_STORAGE, tag_presentation_location, include_counts = True )
         
         self._enter_func = enter_func
         self._delete_func = delete_func

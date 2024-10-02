@@ -160,7 +160,7 @@ class MPVHellBasket( QC.QObject ):
     
     def __init__( self ):
         
-        QC.QObject.__init__( self )
+        super().__init__()
         
         MPVHellBasket.my_instance = self
         

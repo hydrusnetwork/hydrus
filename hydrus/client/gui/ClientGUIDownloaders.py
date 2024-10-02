@@ -1102,7 +1102,7 @@ class EditURLClassParameterFixedNamePanel( ClientGUIScrolledPanels.EditPanel ):
         self._default_value = ClientGUICommon.NoneableTextCtrl( self, '' )
         self._default_value.setToolTip( ClientGUIFunctions.WrapToolTip( 'What actual value will be embedded into the URL sent to the server.' ) )
         
-        self._default_value_string_processor = ClientGUIStringControls.StringProcessorButton( self, parameter.GetDefaultValueStringProcessor(), self._GetTestData )
+        self._default_value_string_processor = ClientGUIStringControls.StringProcessorWidget( self, parameter.GetDefaultValueStringProcessor(), self._GetTestData )
         tt = 'WARNING WARNING: Extremely Big Brain'
         tt += '/n' * 2
         tt += 'You can apply the parsing system\'s normal String Processor steps to your fixed default value here. For instance, you could append/replace the default value with random hex or today\'s date. This is obviously super advanced, so be careful.'

@@ -1324,7 +1324,7 @@ class MediaContainerLayout( QW.QLayout ):
     
     def __init__( self, static_image ):
         
-        QW.QLayout.__init__( self )
+        super().__init__()
         
         self._static_image = static_image
         

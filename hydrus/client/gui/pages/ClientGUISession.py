@@ -15,7 +15,7 @@ class GUISessionContainer( HydrusSerialisable.SerialisableBaseNamed ):
     
     def __init__( self, name, top_notebook_container = None, hashes_to_page_data = None, skipped_unchanged_page_hashes = None ):
         
-        HydrusSerialisable.SerialisableBaseNamed.__init__( self, name )
+        super().__init__( name )
         
         if top_notebook_container is None:
             
@@ -129,7 +129,7 @@ class GUISessionContainerPageNotebook( GUISessionContainerPage ):
     
     def __init__( self, name, page_containers = None ):
         
-        GUISessionContainerPage.__init__( self, name )
+        super().__init__( name )
         
         if page_containers is None:
             
@@ -173,7 +173,7 @@ class GUISessionContainerPageSingle( GUISessionContainerPage ):
     
     def __init__( self, name, page_data_hash = None ):
         
-        GUISessionContainerPage.__init__( self, name )
+        super().__init__( name )
         
         if page_data_hash is None:
             

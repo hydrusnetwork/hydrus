@@ -18,7 +18,7 @@ class ShowKeys( ClientGUITopLevelWindows.Frame ):
         
         tlw = CG.client_controller.GetMainTLW()
         
-        ClientGUITopLevelWindows.Frame.__init__( self, tlw, CG.client_controller.PrepStringForDisplay( title ) )
+        super().__init__( tlw, CG.client_controller.PrepStringForDisplay( title ) )
         
         self._key_type = key_type
         self._keys = keys

@@ -47,7 +47,7 @@ class EditExportFoldersPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def __init__( self, parent, export_folders ):
         
-        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        super().__init__( parent )
         
         self._export_folders_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
@@ -235,7 +235,7 @@ class EditExportFolderPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def __init__( self, parent, export_folder: ClientExportingFiles.ExportFolder ):
         
-        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        super().__init__( parent )
         
         self._export_folder = export_folder
         
@@ -565,7 +565,7 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
     
     def __init__( self, parent, flat_media, do_export_and_then_quit = False ):
         
-        ClientGUIScrolledPanels.ReviewPanel.__init__( self, parent )
+        super().__init__( parent )
         
         tag_presentation_location = CC.TAG_PRESENTATION_SEARCH_PAGE
         

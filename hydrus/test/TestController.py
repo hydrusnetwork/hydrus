@@ -147,7 +147,7 @@ class TestFrame( QW.QWidget ):
     
     def __init__( self ):
         
-        QW.QWidget.__init__( self, None )
+        super().__init__( None )
         
     
     def SetPanel( self, panel ):

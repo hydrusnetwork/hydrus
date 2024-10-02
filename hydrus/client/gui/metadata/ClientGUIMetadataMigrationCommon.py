@@ -11,7 +11,7 @@ class EditSidecarDetailsPanel( ClientGUICommon.StaticBox ):
     
     def __init__( self, parent: QW.QWidget ):
         
-        ClientGUICommon.StaticBox.__init__( self, parent, 'sidecar filename' )
+        super().__init__( parent, 'sidecar filename' )
         
         self._sidecar_ext = 'txt'
         
@@ -137,7 +137,7 @@ class EditSidecarTXTSeparator( ClientGUICommon.StaticBox ):
     
     def __init__( self, parent: QW.QWidget ):
         
-        ClientGUICommon.StaticBox.__init__( self, parent, 'sidecar txt separator' )
+        super().__init__( parent, 'sidecar txt separator' )
         
         self._choice = ClientGUICommon.BetterChoice( self )
         

@@ -105,8 +105,8 @@ options = {}
 # Misc
 
 NETWORK_VERSION = 20
-SOFTWARE_VERSION = 591
-CLIENT_API_VERSION = 71
+SOFTWARE_VERSION = 592
+CLIENT_API_VERSION = 72
 
 SERVER_THUMBNAIL_DIMENSIONS = ( 200, 200 )
 
@@ -1467,10 +1467,11 @@ DOCUMENTATION_DUPLICATES = 'duplicates.html'
 DOCUMENTATION_DOWNLOADER_SHARING = 'downloader_sharing.html'
 DOCUMENTATION_DOWNLOADER_PARSERS_PAGE_PARSERS_PAGE_PARSERS = 'downloader_parsers_page_parsers.html#page_parsers'
 DOCUMENTATION_DOWNLOADER_PARSERS_CONTENT_PARSERS_CONTENT_PARSERS = 'downloader_parsers_content_parsers.html#content_parsers'
-DOCUMENTATION_DOWNLOADER_PARSERS_FORMULAE_COMPOUND_FORMULA = 'downloader_parsers_formulae.html#compound_formula'
+DOCUMENTATION_DOWNLOADER_PARSERS_FORMULAE_ZIPPER_FORMULA = 'downloader_parsers_formulae.html#zipper_formula'
 DOCUMENTATION_DOWNLOADER_PARSERS_FORMULAE_CONTEXT_VARIABLE_FORMULA = 'downloader_parsers_formulae.html#context_variable_formula'
 DOCUMENTATION_DOWNLOADER_PARSERS_FORMULAE_HTML_FORMULA = 'downloader_parsers_formulae.html#html_formula'
 DOCUMENTATION_DOWNLOADER_PARSERS_FORMULAE_JSON_FORMULA = 'downloader_parsers_formulae.html#json_formula'
+DOCUMENTATION_DOWNLOADER_PARSERS_FORMULAE_NESTED_FORMULA = 'downloader_parsers_formulae.html#nested_formula'
 DOCUMENTATION_SIDECARS = 'advanced_sidecars.html'
 DOCUMENTATION_ABOUT_DOCS = "about_docs.html"
 

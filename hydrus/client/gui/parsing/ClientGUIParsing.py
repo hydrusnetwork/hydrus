@@ -46,7 +46,7 @@ class DownloaderExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
     
     def __init__( self, parent, network_engine ):
         
-        ClientGUIScrolledPanels.ReviewPanel.__init__( self, parent )
+        super().__init__( parent )
         
         self._network_engine = network_engine
         
@@ -490,7 +490,7 @@ class EditContentParserPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._original_content_parser = content_parser
         
-        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        super().__init__( parent )
         
         #
         
@@ -1023,7 +1023,7 @@ class EditContentParsersPanel( ClientGUICommon.StaticBox ):
     
     def __init__( self, parent: QW.QWidget, test_data_callable: typing.Callable[ [], ClientParsing.ParsingTestData ], permitted_content_types ):
         
-        ClientGUICommon.StaticBox.__init__( self, parent, 'content parsers' )
+        super().__init__( parent, 'content parsers' )
         
         self._test_data_callable = test_data_callable
         self._permitted_content_types = permitted_content_types
@@ -1168,7 +1168,7 @@ class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._original_parser = parser
         
-        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        super().__init__( parent )
         
         if test_data is None:
             
@@ -1649,7 +1649,7 @@ class EditParsersPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def __init__( self, parent, parsers ):
         
-        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        super().__init__( parent )
         
         parsers_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         

@@ -44,7 +44,7 @@ class HBoxLayout( QW.QHBoxLayout ):
     
     def __init__( self, margin = 2, spacing = 2 ):
         
-        QW.QHBoxLayout.__init__( self )
+        super().__init__()
         
         self.setMargin( margin )
         self.setSpacing( spacing )
@@ -60,7 +60,7 @@ class VBoxLayout( QW.QVBoxLayout ):
     
     def __init__( self, margin = 2, spacing = 2 ):
         
-        QW.QVBoxLayout.__init__( self )
+        super().__init__()
         
         self.setMargin( margin )
         self.setSpacing( spacing )
@@ -326,7 +326,7 @@ class TabBar( QW.QTabBar ):
     
     def __init__( self, parent = None ):
         
-        QW.QTabBar.__init__( self, parent )
+        super().__init__( parent )
         
         if HC.PLATFORM_MACOS:
             
@@ -542,7 +542,7 @@ class TabWidgetWithDnD( QW.QTabWidget ):
     
     def __init__( self, parent = None ):
         
-        QW.QTabWidget.__init__( self, parent )
+        super().__init__( parent )
         
         self.setTabBar( TabBar( self ) )
         
@@ -992,7 +992,7 @@ class GridLayout( QW.QGridLayout ):
     
     def __init__( self, cols = 1, spacing = 2 ):
         
-        QW.QGridLayout.__init__( self )
+        super().__init__()
         
         self._col_count = cols
         self.setMargin( 2 )
@@ -1282,7 +1282,7 @@ class CallAfterEvent( QC.QEvent ):
     
     def __init__( self, fn, *args, **kwargs ):
         
-        QC.QEvent.__init__( self, CallAfterEventType )
+        super().__init__( CallAfterEventType )
         
         self._fn = fn
         self._args = args
@@ -1301,7 +1301,7 @@ class CallAfterEventCatcher( QC.QObject ):
     
     def __init__( self, parent ):
         
-        QC.QObject.__init__( self, parent )
+        super().__init__( parent )
         
         self.installEventFilter( self )
         
@@ -1504,7 +1504,7 @@ class StatusBar( QW.QStatusBar ):
     
     def __init__( self, status_widths ):
         
-        QW.QStatusBar.__init__( self )
+        super().__init__()
         
         self._labels = []
         
@@ -1575,7 +1575,7 @@ class EllipsizedLabel( QW.QLabel ):
     
     def __init__( self, parent = None, ellipsize_end = False ):
         
-        QW.QLabel.__init__( self, parent )
+        super().__init__( parent )
         
         self._ellipsize_end = ellipsize_end
         
@@ -1720,7 +1720,7 @@ class Dialog( QW.QDialog ):
             del kwargs['title']
             
         
-        QW.QDialog.__init__( self, parent, **kwargs )
+        super().__init__( parent, **kwargs )
         
         self.setWindowFlag( QC.Qt.WindowContextHelpButtonHint, on = False )
         
@@ -1770,7 +1770,7 @@ class PasswordEntryDialog( Dialog ):
     
     def __init__( self, parent, message, caption ):
         
-        Dialog.__init__( self, parent )
+        super().__init__( parent )
         
         self.setWindowTitle( caption )
         
@@ -1809,7 +1809,7 @@ class DirDialog( QW.QFileDialog ):
     
     def __init__( self, parent = None, message = None ):
         
-        QW.QFileDialog.__init__( self, parent )
+        super().__init__( parent )
         
         if message is not None: self.setWindowTitle( message )
         
@@ -1856,7 +1856,7 @@ class FileDialog( QW.QFileDialog ):
     
     def __init__( self, parent = None, message = None, acceptMode = QW.QFileDialog.AcceptOpen, fileMode = QW.QFileDialog.ExistingFile, default_filename = None, default_directory = None, wildcard = None, defaultSuffix = None ):
         
-        QW.QFileDialog.__init__( self, parent )
+        super().__init__( parent )
         
         if message is not None:
             
@@ -1930,7 +1930,7 @@ class TreeWidgetWithInheritedCheckState( QW.QTreeWidget ):
     
     def __init__( self, *args, **kwargs ):
         
-        QW.QTreeWidget.__init__( self, *args, **kwargs )
+        super().__init__( *args, **kwargs )
         
         self.itemChanged.connect( self._HandleItemCheckStateUpdate )
         
@@ -2013,7 +2013,7 @@ class WidgetEventFilter ( QC.QObject ):
 
         self._parent_widget = parent_widget
         
-        QC.QObject.__init__( self, parent_widget )
+        super().__init__( parent_widget )
         
         parent_widget.installEventFilter( self )
         

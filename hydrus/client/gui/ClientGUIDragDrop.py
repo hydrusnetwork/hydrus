@@ -21,7 +21,7 @@ class QMimeDataHydrusFiles( QC.QMimeData ):
     
     def __init__( self ):
         
-        QC.QMimeData.__init__( self )
+        super().__init__()
         
         self._hydrus_files = None
         
@@ -189,7 +189,7 @@ class FileDropTarget( QC.QObject ):
     
     def __init__( self, parent, filenames_callable = None, url_callable = None, media_callable = None ):
         
-        QC.QObject.__init__( self, parent )
+        super().__init__( parent )
         
         self._parent = parent
         
@@ -300,6 +300,8 @@ class FileDropTarget( QC.QObject ):
             else:
                 
                 text = mime_data.text()
+                
+                text = HydrusText.CleanseImportText( text )
                 
                 text_lines = HydrusText.DeserialiseNewlinedTexts( text )
                 

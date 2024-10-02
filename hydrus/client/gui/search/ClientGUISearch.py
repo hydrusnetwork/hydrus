@@ -194,7 +194,7 @@ class EditPredicatesPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def __init__( self, parent, predicates: typing.Collection[ ClientSearchPredicate.Predicate ], empty_file_search_context: typing.Optional[ ClientSearchFileSearchContext.FileSearchContext ] = None ):
         
-        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        super().__init__( parent )
         
         predicates = list( predicates )
         
@@ -471,7 +471,7 @@ class FleshOutPredicatePanel( ClientGUIScrolledPanels.EditPanel ):
     
     def __init__( self, parent, predicate: ClientSearchPredicate.Predicate ):
         
-        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        super().__init__( parent )
         
         predicate_type = predicate.GetType()
         
@@ -1012,7 +1012,7 @@ class TagContextButton( ClientGUICommon.BetterButton ):
         
         self._use_short_label = use_short_label
         
-        ClientGUICommon.BetterButton.__init__( self, parent, 'initialising', self._Edit )
+        super().__init__( parent, 'initialising', self._Edit )
         
         self.SetValue( tag_context )
         

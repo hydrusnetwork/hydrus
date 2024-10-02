@@ -483,7 +483,7 @@ class PredicateResultsCacheInit( PredicateResultsCache ):
     
     def __init__( self ):
         
-        PredicateResultsCache.__init__( self, [] )
+        super().__init__( [] )
         
     
 class PredicateResultsCacheSystem( PredicateResultsCache ):
@@ -499,7 +499,7 @@ class PredicateResultsCacheTag( PredicateResultsCache ):
     
     def __init__( self, predicates: typing.Iterable[ ClientSearchPredicate.Predicate ], strict_search_text: str, exact_match: bool ):
         
-        PredicateResultsCache.__init__( self, predicates )
+        super().__init__( predicates )
         
         self._strict_search_text = strict_search_text
         

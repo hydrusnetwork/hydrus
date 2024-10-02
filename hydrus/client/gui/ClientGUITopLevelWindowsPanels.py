@@ -17,7 +17,7 @@ class DialogThatTakesScrollablePanel( ClientGUITopLevelWindows.DialogThatResizes
         self._panel = None
         self._hide_buttons = hide_buttons
         
-        ClientGUITopLevelWindows.DialogThatResizes.__init__( self, parent, title, frame_key, do_not_activate = do_not_activate )
+        super().__init__( parent, title, frame_key, do_not_activate = do_not_activate )
         
         self._InitialiseButtons()
         
@@ -159,7 +159,7 @@ class DialogEdit( DialogApplyCancel ):
     
     def __init__( self, parent, title, frame_key = 'regular_dialog', hide_buttons = False ):
         
-        DialogApplyCancel.__init__( self, parent, title, frame_key = frame_key, hide_buttons = hide_buttons )
+        super().__init__( parent, title, frame_key = frame_key, hide_buttons = hide_buttons )
         
     
 
@@ -190,7 +190,7 @@ class DialogCustomButtonQuestion( DialogThatTakesScrollablePanel ):
     
     def __init__( self, parent, title, frame_key = 'regular_center_dialog' ):
         
-        DialogThatTakesScrollablePanel.__init__( self, parent, title, frame_key = frame_key )
+        super().__init__( parent, title, frame_key = frame_key )
         
     
     def _GetButtonBox( self ):
@@ -210,7 +210,7 @@ class FrameThatTakesScrollablePanel( ClientGUITopLevelWindows.FrameThatResizes )
         
         self._panel = None
         
-        ClientGUITopLevelWindows.FrameThatResizes.__init__( self, parent, title, frame_key )
+        super().__init__( parent, title, frame_key )
         
         self._ok = QW.QPushButton( 'close', self )
         self._ok.clicked.connect( self.close )

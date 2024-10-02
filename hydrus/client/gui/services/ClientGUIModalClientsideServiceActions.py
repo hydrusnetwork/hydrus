@@ -27,7 +27,7 @@ class ReviewPurgeTagsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         self._service_key = service_key
         
-        ClientGUIScrolledPanels.ReviewPanel.__init__( self, parent )
+        super().__init__( parent )
         
         # what about a listboxtags that has an auto-async thing to produce a count suffix, mate? surely this is doable in some way
         self._tags_to_remove = ClientGUIListBoxes.ListBoxTagsStringsAddRemove( self, service_key = service_key )

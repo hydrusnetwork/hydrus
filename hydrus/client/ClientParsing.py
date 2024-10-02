@@ -1,8 +1,8 @@
 import base64
 import bs4
 import collections
+import html
 import json
-import os
 import re
 import time
 import urllib.parse
@@ -759,6 +759,12 @@ def RenderJSONParseRule( rule ):
         
         s = 'get the entries that match "' + parse_rule.ToString() + '"'
         
+    elif parse_rule_type == JSON_PARSE_RULE_TYPE_DEMINIFY_JSON:
+        
+        index = parse_rule
+        
+        s = 'de-minify json at the ' + HydrusNumbers.IndexToPrettyOrdinalString( index ) + ' item'
+        
     
     return s
     
@@ -823,6 +829,8 @@ class ParseFormula( HydrusSerialisable.SerialisableBase ):
         
         raw_texts = self._ParseRawTexts( parsing_context, parsing_text, collapse_newlines )
         
+        raw_texts = HydrusText.CleanseImportTexts( raw_texts )
+        
         if collapse_newlines:
             
             # maybe should use HydrusText.DeserialiseNewlinedTexts, but that might change/break some existing parsers with the strip() trim
@@ -875,10 +883,10 @@ class ParseFormula( HydrusSerialisable.SerialisableBase ):
         
     
 
-class ParseFormulaCompound( ParseFormula ):
+class ParseFormulaZipper( ParseFormula ):
     
-    SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_PARSE_FORMULA_COMPOUND
-    SERIALISABLE_NAME = 'Compound Parsing Formula'
+    SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_PARSE_FORMULA_ZIPPER
+    SERIALISABLE_NAME = 'Zipper Parsing Formula'
     SERIALISABLE_VERSION = 2
     
     def __init__( self, formulae = None, sub_phrase = None, string_processor = None ):
@@ -1009,7 +1017,7 @@ class ParseFormulaCompound( ParseFormula ):
     
     def ToPrettyString( self ):
         
-        return 'COMPOUND with ' + HydrusNumbers.ToHumanInt( len( self._formulae ) ) + ' formulae.'
+        return 'ZIPPER with ' + HydrusNumbers.ToHumanInt( len( self._formulae ) ) + ' formulae.'
         
     
     def ToPrettyMultilineString( self ):
@@ -1025,12 +1033,13 @@ class ParseFormulaCompound( ParseFormula ):
         
         separator = '\n' * 2
         
-        text = '--COMPOUND--' + '\n' * 2 + separator.join( s )
+        text = '--ZIPPER--' + '\n' * 2 + separator.join( s )
         
         return text
         
     
-HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_PARSE_FORMULA_COMPOUND ] = ParseFormulaCompound
+
+HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_PARSE_FORMULA_ZIPPER ] = ParseFormulaZipper
 
 class ParseFormulaContextVariable( ParseFormula ):
     
@@ -1748,6 +1757,7 @@ JSON_CONTENT_DICT_KEYS = 2
 JSON_PARSE_RULE_TYPE_DICT_KEY = 0
 JSON_PARSE_RULE_TYPE_ALL_ITEMS = 1
 JSON_PARSE_RULE_TYPE_INDEXED_ITEM = 2
+JSON_PARSE_RULE_TYPE_DEMINIFY_JSON = 3
 
 class ParseFormulaJSON( ParseFormula ):
     
@@ -1873,6 +1883,56 @@ class ParseFormulaJSON( ParseFormula ):
                             
                             next_roots.append( value )
                             
+                        
+                    
+                elif parse_rule_type == JSON_PARSE_RULE_TYPE_DEMINIFY_JSON:
+                    
+                    if not isinstance( root, list ):
+                        
+                        continue
+                        
+                    
+                    index = parse_rule
+                    
+                    def _deminify( item ):
+                        """
+                        Example:
+                            >>> root = [["test", 1], {"key": 2, "value": 3}, 123, "asd"]
+                            >>> _deminify(root[0])
+                            ["test", {"key": 123, "value": "asd"}]
+                        """
+                        
+                        if isinstance( item, list ):
+                            
+                            return [ _deminify( i ) for i in item ]
+                            
+                        elif isinstance( item, dict ):
+                            
+                            return { k: _deminify( v ) for k, v in item.items() }
+                            
+                        elif isinstance( item, int ):
+                            
+                            # Don't convert topmost integer
+                            if isinstance( root[ item ], int ):
+                                
+                                return root[ item ]
+                                
+                            
+                            return _deminify( root[ item ] )
+                            
+                        else:
+                            
+                            return item
+                            
+                        
+                    
+                    try:
+                        
+                        next_roots.append( _deminify( root[ index ] ) )
+                        
+                    except IndexError:
+                        
+                        continue
                         
                     
                 
@@ -2066,7 +2126,91 @@ class ParseFormulaJSON( ParseFormula ):
         return pretty_multiline_string
         
     
+
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_PARSE_FORMULA_JSON ] = ParseFormulaJSON
+
+class ParseFormulaNested( ParseFormula ):
+    
+    SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_PARSE_FORMULA_NESTED
+    SERIALISABLE_NAME = 'Nested Parsing Formula'
+    SERIALISABLE_VERSION = 1
+    
+    def __init__( self, main_formula = None, sub_formula = None, string_processor = None ):
+        
+        super().__init__( string_processor )
+        
+        if main_formula is None:
+            
+            main_formula = ParseFormulaHTML()
+            
+        
+        if sub_formula is None:
+            
+            sub_formula = ParseFormulaJSON()
+            
+        
+        self._main_formula = main_formula
+        self._sub_formula = sub_formula
+        
+    
+    def _GetSerialisableInfo( self ):
+        
+        serialisable_main_formula = self._main_formula.GetSerialisableTuple()
+        serialisable_sub_formula = self._sub_formula.GetSerialisableTuple()
+        serialisable_string_processor = self._string_processor.GetSerialisableTuple()
+        
+        return ( serialisable_main_formula, serialisable_sub_formula, serialisable_string_processor )
+        
+    
+    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
+        
+        ( serialisable_main_formula, serialisable_sub_formula, serialisable_string_processor ) = serialisable_info
+        
+        self._main_formula = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_main_formula )
+        self._sub_formula = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_sub_formula )
+        self._string_processor = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_string_processor )
+        
+    
+    def _ParseRawTexts( self, parsing_context, parsing_text: str, collapse_newlines: bool ):
+        
+        all_sub_parsed_texts = []
+        
+        main_parsed_texts = self._main_formula.Parse( parsing_context, parsing_text, collapse_newlines )
+        
+        for main_parsed_text in main_parsed_texts:
+            
+            sub_parsed_texts = self._sub_formula.Parse( parsing_context, main_parsed_text, collapse_newlines )
+            
+            all_sub_parsed_texts.extend( sub_parsed_texts )
+            
+        
+        return all_sub_parsed_texts
+        
+    
+    def GetMainFormula( self ):
+        
+        return self._main_formula
+        
+    
+    def GetSubFormula( self ):
+        
+        return self._sub_formula
+        
+    
+    def ToPrettyString( self ):
+        
+        return f'NESTED formulae, taking from "{self._main_formula.ToPrettyString()}" and sending to "{self._sub_formula.ToPrettyString()}".'
+        
+    
+    def ToPrettyMultilineString( self ):
+        
+        text = '--NESTED--' + '\n' * 2 + self._main_formula.ToPrettyMultilineString() + '\n->\n' + self._sub_formula.ToPrettyMultilineString()
+        
+        return text
+        
+    
+
+HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_PARSE_FORMULA_NESTED ] = ParseFormulaNested
 
 class SimpleDownloaderParsingFormula( HydrusSerialisable.SerialisableBaseNamed ):
     
@@ -2436,6 +2580,19 @@ class ContentParser( HydrusSerialisable.SerialisableBase ):
                     
                 
                 parsed_texts = clean_urls
+                
+            
+        
+        if self._content_type == HC.CONTENT_TYPE_TITLE:
+            
+            try:
+                
+                # handling &amp; gubbins that come through JSON, although the better answer is to convert to an html parser
+                parsed_texts = [ html.unescape( parsed_text ) for parsed_text in parsed_texts ]
+                
+            except:
+                
+                HydrusData.Print( f'Could not unescape parsed title text: {parsing_context}' )
                 
             
         

@@ -60,7 +60,7 @@ class PopupMessage( PopupWindow ):
     
     def __init__( self, parent, job_status: ClientThreading.JobStatus ):
         
-        PopupWindow.__init__( self, parent )
+        super().__init__( parent )
         
         self._job_status = job_status
         

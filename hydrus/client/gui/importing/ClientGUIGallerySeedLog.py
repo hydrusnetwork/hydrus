@@ -246,7 +246,7 @@ class EditGallerySeedLogPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def __init__( self, parent, controller, read_only: bool, can_generate_more_pages: bool, gallery_type_string: str, gallery_seed_log: ClientImportGallerySeeds.GallerySeedLog ):
         
-        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        super().__init__( parent )
         
         self._controller = controller
         self._read_only = read_only
@@ -592,7 +592,7 @@ class GallerySeedLogButton( ClientGUICommon.ButtonWithMenuArrow ):
         
         action.triggered.connect( self._ShowGallerySeedLogFrame )
         
-        ClientGUICommon.ButtonWithMenuArrow.__init__( self, parent, action )
+        super().__init__( parent, action )
         
     
     def _PopulateMenu( self, menu ):
@@ -656,7 +656,7 @@ class GallerySeedLogStatusControl( QW.QFrame ):
     
     def __init__( self, parent, controller, read_only: bool, can_generate_more_pages: bool, gallery_type_string: str, page_key = None ):
         
-        QW.QFrame.__init__( self, parent )
+        super().__init__( parent )
         self.setFrameStyle( QW.QFrame.Box | QW.QFrame.Raised )
         
         self._controller = controller

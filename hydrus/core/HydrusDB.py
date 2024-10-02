@@ -135,7 +135,7 @@ class HydrusDB( HydrusDBBase.DBBase ):
     
     def __init__( self, controller: HydrusControllerInterface.HydrusControllerInterface, db_dir, db_name ):
         
-        HydrusDBBase.DBBase.__init__( self )
+        super().__init__()
         
         self._controller = controller
         self._db_dir = db_dir
@@ -590,7 +590,7 @@ class HydrusDB( HydrusDBBase.DBBase ):
         raise NotImplementedError()
         
     
-    def _ProcessJob( self, job ):
+    def _ProcessJob( self, job: HydrusDBBase.JobDatabase ):
         
         job_type = job.GetType()
         
@@ -611,6 +611,10 @@ class HydrusDB( HydrusDBBase.DBBase ):
             
             self.publish_status_update()
             
+            time_job_started = HydrusTime.GetNowPrecise()
+            
+            result = None
+            
             if job_type in ( 'read', 'read_write' ):
                 
                 result = self._Read( action, *args, **kwargs )
@@ -618,6 +622,15 @@ class HydrusDB( HydrusDBBase.DBBase ):
             elif job_type in ( 'write' ):
                 
                 result = self._Write( action, *args, **kwargs )
+                
+            
+            time_job_finished = HydrusTime.GetNowPrecise()
+            
+            time_job_took = time_job_finished - time_job_started
+            
+            if time_job_took > 15 and not self._controller.CurrentlyIdle():
+                
+                HydrusData.Print( f'The database job "{job.ToString()}" took {HydrusTime.TimeDeltaToPrettyTimeDelta( time_job_took )}.' )
                 
             
             if job.IsSynchronous():

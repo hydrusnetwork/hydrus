@@ -10,7 +10,7 @@ class HydrusDBModule( HydrusDBBase.DBBase ):
     
     def __init__( self, name, cursor: sqlite3.Cursor ):
         
-        HydrusDBBase.DBBase.__init__( self )
+        super().__init__()
         
         self.name = name
         

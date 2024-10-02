@@ -16,7 +16,7 @@ from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.lists import ClientGUIListConstants as CGLC
 from hydrus.client.gui.lists import ClientGUIListCtrl
-from hydrus.client.gui.pages import ClientGUIResultsSortCollect
+from hydrus.client.gui.pages import ClientGUIMediaResultsPanelSortCollect
 from hydrus.client.gui.panels import ClientGUIScrolledPanels
 from hydrus.client.gui.widgets import ClientGUICommon
 from hydrus.client.search import ClientSearchFileSearchContext
@@ -25,7 +25,7 @@ class EditFavouriteSearchPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def __init__( self, parent, existing_folders_to_names, foldername, name, file_search_context, synchronised, media_sort, media_collect ):
         
-        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        super().__init__( parent )
         
         self._existing_folders_to_names = existing_folders_to_names
         self._original_folder_and_name = ( foldername, name )
@@ -33,8 +33,8 @@ class EditFavouriteSearchPanel( ClientGUIScrolledPanels.EditPanel ):
         self._foldername = QW.QLineEdit( self )
         self._name = QW.QLineEdit( self )
         
-        self._media_sort = ClientGUIResultsSortCollect.MediaSortControl( self, media_sort = media_sort )
-        self._media_collect = ClientGUIResultsSortCollect.MediaCollectControl( self )
+        self._media_sort = ClientGUIMediaResultsPanelSortCollect.MediaSortControl( self, media_sort = media_sort )
+        self._media_collect = ClientGUIMediaResultsPanelSortCollect.MediaCollectControl( self )
         
         page_key = HydrusData.GenerateKey()
         
@@ -173,7 +173,7 @@ class EditFavouriteSearchesPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def __init__( self, parent, favourite_searches_rows, initial_search_row_to_edit = None ):
         
-        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        super().__init__( parent )
         
         self._favourite_searches_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         

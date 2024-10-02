@@ -55,7 +55,7 @@ class AudioMuteButton( ClientGUICommon.BetterBitmapButton ):
         
         pixmap = self._GetCorrectPixmap()
         
-        ClientGUICommon.BetterBitmapButton.__init__( self, parent, pixmap, FlipMute, self._volume_type )
+        super().__init__( parent, pixmap, FlipMute, self._volume_type )
         
         CG.client_controller.sub( self, 'UpdateMute', 'new_audio_mute' )
         
@@ -138,7 +138,7 @@ class VolumeControl( QW.QWidget ):
         
         def __init__( self, parent, canvas_type, direction = 'down' ):
             
-            QW.QFrame.__init__( self, parent )
+            super().__init__( parent )
             
             self._canvas_type = canvas_type
             
@@ -278,7 +278,7 @@ class VolumeSlider( QW.QSlider ):
     
     def __init__( self, parent, volume_type ):
         
-        QW.QSlider.__init__( self, parent )
+        super().__init__( parent )
         
         self._volume_type = volume_type
         

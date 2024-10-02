@@ -61,7 +61,7 @@ class QuestionCommitInterstitialFilteringPanel( ClientGUIScrolledPanels.Resizing
     
     def __init__( self, parent, label ):
         
-        ClientGUIScrolledPanels.ResizingScrolledPanel.__init__( self, parent )
+        super().__init__( parent )
         
         self._commit = ClientGUICommon.BetterButton( self, 'commit and continue', self.parentWidget().done, QW.QDialog.Accepted )
         self._commit.setObjectName( 'HydrusAccept' )
@@ -94,7 +94,7 @@ class QuestionArchiveDeleteFinishFilteringPanel( ClientGUIScrolledPanels.Resizin
     
     def __init__( self, parent, kept_label: typing.Optional[ str ], deletion_options ):
         
-        ClientGUIScrolledPanels.ResizingScrolledPanel.__init__( self, parent )
+        super().__init__( parent )
         
         self._location_context = ClientLocation.LocationContext() # empty
         
@@ -256,7 +256,7 @@ class QuestionFinishFilteringPanel( ClientGUIScrolledPanels.ResizingScrolledPane
     
     def __init__( self, parent, label ):
         
-        ClientGUIScrolledPanels.ResizingScrolledPanel.__init__( self, parent )
+        super().__init__( parent )
         
         self._commit = ClientGUICommon.BetterButton( self, 'commit', self.parentWidget().done, QW.QDialog.Accepted )
         self._commit.setObjectName( 'HydrusAccept' )

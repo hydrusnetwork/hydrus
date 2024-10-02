@@ -18,7 +18,7 @@ class DialogPageChooser( ClientGUIDialogs.Dialog ):
     
     def __init__( self, parent, controller ):
         
-        ClientGUIDialogs.Dialog.__init__( self, parent, 'new page', position = 'center' )
+        super().__init__( parent, 'new page', position = 'center' )
         
         self._controller = controller
         

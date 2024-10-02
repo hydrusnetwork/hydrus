@@ -423,7 +423,7 @@ class NewDialog( QP.Dialog ):
     
     def __init__( self, parent, title, do_not_activate = False ):
         
-        QP.Dialog.__init__( self, parent )
+        super().__init__( parent )
         
         if do_not_activate:
             
@@ -627,7 +627,7 @@ class DialogThatResizes( NewDialog ):
         
         self._frame_key = frame_key
         
-        NewDialog.__init__( self, parent, title, do_not_activate = do_not_activate )
+        super().__init__( parent, title, do_not_activate = do_not_activate )
         
     
     def _SaveOKPosition( self ):
@@ -671,7 +671,7 @@ class MainFrame( QW.QMainWindow ):
     
     def __init__( self, parent, title ):
         
-        QW.QMainWindow.__init__( self, parent )
+        super().__init__( parent )
         
         self.setWindowTitle( title )
         
@@ -700,7 +700,7 @@ class FrameThatResizes( Frame ):
         
         self._frame_key = frame_key
         
-        Frame.__init__( self, parent, title )
+        super().__init__( parent, title )
         
         self._widget_event_filter.EVT_SIZE( self.EventSizeAndPositionChanged )
         self._widget_event_filter.EVT_MOVE_END( self.EventSizeAndPositionChanged )
@@ -731,7 +731,7 @@ class MainFrameThatResizes( MainFrame ):
         
         self._frame_key = frame_key
 
-        MainFrame.__init__( self, parent, title )
+        super().__init__( parent, title )
 
         self._widget_event_filter.EVT_SIZE( self.EventSizeAndPositionChanged )
         self._widget_event_filter.EVT_MOVE_END( self.EventSizeAndPositionChanged )

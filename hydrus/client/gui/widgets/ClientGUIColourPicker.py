@@ -119,7 +119,7 @@ class ColourPickerButton( QW.QPushButton ):
     
     def __init__( self, parent = None ):
         
-        QW.QPushButton.__init__( self, parent )
+        super().__init__( parent )
         
         self._colour = QG.QColor( 0, 0, 0, 0 )
         
