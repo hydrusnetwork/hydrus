@@ -67,7 +67,7 @@ class AboutPanel( ClientGUIScrolledPanels.ReviewPanel ):
     
     def __init__( self, parent, name, version, description_versions, description_availability, license_text, developers, site ):
         
-        super().__init__( parent )
+        ClientGUIScrolledPanels.ReviewPanel.__init__( self, parent )
         
         icon_label = ClientGUICommon.BetterStaticText( self )
         icon_label.setPixmap( CG.client_controller.frame_icon_pixmap )
@@ -134,7 +134,7 @@ class MoveMediaFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         self._new_options = self._controller.new_options
         
-        super().__init__( parent )
+        ClientGUIScrolledPanels.ReviewPanel.__init__( self, parent )
         
         self._client_files_subfolders = CG.client_controller.Read( 'client_files_subfolders' )
         
@@ -950,7 +950,7 @@ class ReviewDownloaderImport( ClientGUIScrolledPanels.ReviewPanel ):
     
     def __init__( self, parent, network_engine ):
         
-        super().__init__( parent )
+        ClientGUIScrolledPanels.ReviewPanel.__init__( self, parent )
         
         self._network_engine = network_engine
         
@@ -1479,7 +1479,7 @@ class ReviewFileEmbeddedMetadata( ClientGUIScrolledPanels.ReviewPanel ):
     
     def __init__( self, parent, mime: int, exif_dict: typing.Optional[ dict ], file_text: typing.Optional[ str ], extra_rows: typing.List[ typing.Tuple[ str, str ] ] ):
         
-        super().__init__( parent )
+        ClientGUIScrolledPanels.ReviewPanel.__init__( self, parent )
         
         #
         
@@ -1646,7 +1646,7 @@ class ReviewFileHistory( ClientGUIScrolledPanels.ReviewPanel ):
     
     def __init__( self, parent ):
         
-        super().__init__( parent )
+        ClientGUIScrolledPanels.ReviewPanel.__init__( self, parent )
         
         self._job_status = ClientThreading.JobStatus()
         
@@ -1829,7 +1829,7 @@ class ReviewFileMaintenance( ClientGUIScrolledPanels.ReviewPanel ):
     
     def __init__( self, parent, stats ):
         
-        super().__init__( parent )
+        ClientGUIScrolledPanels.ReviewPanel.__init__( self, parent )
         
         self._hash_ids = None
         self._job_types_to_due_counts = {}
@@ -2261,7 +2261,7 @@ class ReviewHowBonedAmI( ClientGUIScrolledPanels.ReviewPanel ):
     
     def __init__( self, parent ):
         
-        super().__init__( parent )
+        ClientGUIScrolledPanels.ReviewPanel.__init__( self, parent )
         
         self._update_job = None
         self._job_status = ClientThreading.JobStatus()
@@ -2484,6 +2484,16 @@ class ReviewHowBonedAmI( ClientGUIScrolledPanels.ReviewPanel ):
         num_archive = boned_stats[ 'num_archive' ]
         size_inbox = boned_stats[ 'size_inbox' ]
         size_archive = boned_stats[ 'size_archive' ]
+        png_count = boned_stats['png_count']
+        png_size = boned_stats['png_size']
+        jpg_count = boned_stats['jpg_count']
+        jpg_size = boned_stats['jpg_size']
+        jpeg_count = boned_stats['jpeg_count']
+        jpeg_size = boned_stats['jpeg_size']
+        webm_count = boned_stats['webm_count']
+        webm_size = boned_stats['webm_size']
+        gif_count = boned_stats['gif_count']
+        gif_size = boned_stats['gif_size']
         
         num_total = num_archive + num_inbox
         size_total = size_archive + size_inbox
@@ -2627,6 +2637,68 @@ class ReviewHowBonedAmI( ClientGUIScrolledPanels.ReviewPanel ):
                 QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( self._files_content_panel, label = HydrusData.ToHumanBytes( size_archive ) ), CC.FLAGS_ON_RIGHT )
                 QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( self._files_content_panel, label = ClientData.ConvertZoomToPercentage( archive_size_percent ) ), CC.FLAGS_ON_RIGHT )
                 QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( self._files_content_panel, label = HydrusData.ToHumanBytes( archive_average_filesize ) ), CC.FLAGS_ON_RIGHT )
+                
+                
+                
+                ############## I added everything between this
+                
+                # This creates the blank space between the listings
+                iii = 0
+                while iii < 3: 
+                    QP.AddToLayout(text_table_layout, ClientGUICommon.BetterStaticText(self._files_content_panel, label=''),
+                                   CC.FLAGS_ON_LEFT)
+                    QP.AddToLayout(text_table_layout, QW.QWidget(self._files_content_panel), CC.FLAGS_ON_LEFT)
+                    QP.AddToLayout(text_table_layout, QW.QWidget(self._files_content_panel), CC.FLAGS_ON_LEFT)
+                    QP.AddToLayout(text_table_layout, QW.QWidget(self._files_content_panel), CC.FLAGS_ON_LEFT)
+                    QP.AddToLayout(text_table_layout, QW.QWidget(self._files_content_panel), CC.FLAGS_ON_LEFT)
+                    QP.AddToLayout(text_table_layout, QW.QWidget(self._files_content_panel), CC.FLAGS_ON_LEFT)
+                    iii += 1
+                
+                
+                # This prints the first row
+                QP.AddToLayout( text_table_layout, QW.QWidget( self._files_content_panel ), CC.FLAGS_ON_LEFT )
+                QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( self._files_content_panel, label = 'Count' ), CC.FLAGS_ON_RIGHT )
+                QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( self._files_content_panel, label = 'Size' ), CC.FLAGS_ON_RIGHT )
+                QP.AddToLayout(text_table_layout, QW.QWidget(self._files_content_panel), CC.FLAGS_ON_LEFT)
+                QP.AddToLayout(text_table_layout, QW.QWidget(self._files_content_panel), CC.FLAGS_ON_LEFT)
+                QP.AddToLayout(text_table_layout, QW.QWidget(self._files_content_panel), CC.FLAGS_ON_LEFT)
+                
+                # The following print the count for each file type on their each row
+                QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( self._files_content_panel, label = '*.png' ), CC.FLAGS_ON_LEFT )
+                QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( self._files_content_panel, label = HydrusNumbers.ToHumanInt( png_count ) ), CC.FLAGS_ON_RIGHT )
+                QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( self._files_content_panel, label = HydrusData.ToHumanBytes( png_size ) ), CC.FLAGS_ON_RIGHT )
+                QP.AddToLayout(text_table_layout, QW.QWidget(self._files_content_panel), CC.FLAGS_ON_LEFT)
+                QP.AddToLayout(text_table_layout, QW.QWidget(self._files_content_panel), CC.FLAGS_ON_LEFT)
+                QP.AddToLayout(text_table_layout, QW.QWidget(self._files_content_panel), CC.FLAGS_ON_LEFT)
+                
+                QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( self._files_content_panel, label = '*.jpg' ), CC.FLAGS_ON_LEFT )
+                QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( self._files_content_panel, label = HydrusNumbers.ToHumanInt( jpg_count ) ), CC.FLAGS_ON_RIGHT )
+                QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( self._files_content_panel, label = HydrusData.ToHumanBytes( jpg_size ) ), CC.FLAGS_ON_RIGHT )
+                QP.AddToLayout(text_table_layout, QW.QWidget(self._files_content_panel), CC.FLAGS_ON_LEFT)
+                QP.AddToLayout(text_table_layout, QW.QWidget(self._files_content_panel), CC.FLAGS_ON_LEFT)
+                QP.AddToLayout(text_table_layout, QW.QWidget(self._files_content_panel), CC.FLAGS_ON_LEFT)
+                
+                QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( self._files_content_panel, label = '*.jpeg' ), CC.FLAGS_ON_LEFT )
+                QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( self._files_content_panel, label = HydrusNumbers.ToHumanInt( jpeg_count ) ), CC.FLAGS_ON_RIGHT )
+                QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( self._files_content_panel, label = HydrusData.ToHumanBytes( jpeg_size ) ), CC.FLAGS_ON_RIGHT )
+                QP.AddToLayout(text_table_layout, QW.QWidget(self._files_content_panel), CC.FLAGS_ON_LEFT)
+                QP.AddToLayout(text_table_layout, QW.QWidget(self._files_content_panel), CC.FLAGS_ON_LEFT)
+                QP.AddToLayout(text_table_layout, QW.QWidget(self._files_content_panel), CC.FLAGS_ON_LEFT)
+                
+                QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( self._files_content_panel, label = '*.webm' ), CC.FLAGS_ON_LEFT )
+                QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( self._files_content_panel, label = HydrusNumbers.ToHumanInt( webm_count ) ), CC.FLAGS_ON_RIGHT )
+                QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( self._files_content_panel, label = HydrusData.ToHumanBytes( webm_size ) ), CC.FLAGS_ON_RIGHT )
+                QP.AddToLayout(text_table_layout, QW.QWidget(self._files_content_panel), CC.FLAGS_ON_LEFT)
+                QP.AddToLayout(text_table_layout, QW.QWidget(self._files_content_panel), CC.FLAGS_ON_LEFT)
+                QP.AddToLayout(text_table_layout, QW.QWidget(self._files_content_panel), CC.FLAGS_ON_LEFT)
+                
+                QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( self._files_content_panel, label = '*.gif' ), CC.FLAGS_ON_LEFT )
+                QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( self._files_content_panel, label = HydrusNumbers.ToHumanInt( gif_count ) ), CC.FLAGS_ON_RIGHT )
+                QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( self._files_content_panel, label = HydrusData.ToHumanBytes( gif_size ) ), CC.FLAGS_ON_RIGHT )
+                QP.AddToLayout(text_table_layout, QW.QWidget(self._files_content_panel), CC.FLAGS_ON_LEFT)
+                QP.AddToLayout(text_table_layout, QW.QWidget(self._files_content_panel), CC.FLAGS_ON_LEFT)
+                QP.AddToLayout(text_table_layout, QW.QWidget(self._files_content_panel), CC.FLAGS_ON_LEFT)
+                ############## and this
                 
             else:
                 
@@ -2803,7 +2875,7 @@ class ReviewLocalFileImports( ClientGUIScrolledPanels.ReviewPanel ):
             paths = []
             
         
-        super().__init__( parent )
+        ClientGUIScrolledPanels.ReviewPanel.__init__( self, parent )
         
         self.widget().installEventFilter( ClientGUIDragDrop.FileDropTarget( self.widget(), filenames_callable = self._AddPathsToList ) )
         
@@ -3528,7 +3600,7 @@ class ReviewDeferredDeleteTableData( ClientGUIScrolledPanels.ReviewPanel ):
     
     def __init__( self, parent, controller ):
         
-        super().__init__( parent )
+        ClientGUIScrolledPanels.ReviewPanel.__init__( self, parent )
         
         self._controller = controller
         
@@ -3690,7 +3762,7 @@ class ReviewThreads( ClientGUIScrolledPanels.ReviewPanel ):
     
     def __init__( self, parent, controller ):
         
-        super().__init__( parent )
+        ClientGUIScrolledPanels.ReviewPanel.__init__( self, parent )
         
         self._notebook = ClientGUICommon.BetterNotebook( self )
         
@@ -3716,7 +3788,7 @@ class ReviewVacuumData( ClientGUIScrolledPanels.ReviewPanel ):
     
     def __init__( self, parent, controller, vacuum_data ):
         
-        super().__init__( parent )
+        ClientGUIScrolledPanels.ReviewPanel.__init__( self, parent )
         
         self._controller = controller
         self._vacuum_data = vacuum_data
