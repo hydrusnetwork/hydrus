@@ -190,12 +190,14 @@ media_viewer_action_string_lookup = {
 unsupported_media_actions = [ MEDIA_VIEWER_ACTION_SHOW_OPEN_EXTERNALLY_BUTTON, MEDIA_VIEWER_ACTION_DO_NOT_SHOW_ON_ACTIVATION_OPEN_EXTERNALLY, MEDIA_VIEWER_ACTION_DO_NOT_SHOW ]
 static_media_actions = [ MEDIA_VIEWER_ACTION_SHOW_WITH_NATIVE ] + unsupported_media_actions
 webp_media_actions = [ MEDIA_VIEWER_ACTION_SHOW_WITH_NATIVE ] + unsupported_media_actions
+ugoira_media_actions = [ MEDIA_VIEWER_ACTION_SHOW_WITH_NATIVE ] + unsupported_media_actions
 animated_media_actions = [ MEDIA_VIEWER_ACTION_SHOW_WITH_MPV, MEDIA_VIEWER_ACTION_SHOW_WITH_QMEDIAPLAYER ] + static_media_actions
 audio_media_actions = [ MEDIA_VIEWER_ACTION_SHOW_WITH_MPV, MEDIA_VIEWER_ACTION_SHOW_WITH_QMEDIAPLAYER ] + unsupported_media_actions
 
 # actions, can_start_paused, can_start_with_embed
 static_full_support = ( static_media_actions, False, True )
 webp_support = ( webp_media_actions, True, True )
+ugoira_support = (ugoira_media_actions, True, True)
 animated_full_support = ( animated_media_actions, True, True )
 audio_full_support = ( audio_media_actions, True, True )
 no_support = ( unsupported_media_actions, False, False )
@@ -215,6 +217,10 @@ for mime in HC.SEARCHABLE_MIMES:
     if mime == HC.ANIMATION_WEBP:
         
         media_viewer_capabilities[ mime ] = webp_support
+        
+    if mime == HC.ANIMATION_UGOIRA:
+        
+        media_viewer_capabilities[ mime ] = ugoira_support
         
     elif mime in HC.VIEWABLE_ANIMATIONS:
         
@@ -240,7 +246,6 @@ for mime in HC.SEARCHABLE_MIMES:
         
         media_viewer_capabilities[ mime ] = no_support
         
-    
 
 media_viewer_capabilities[ HC.APPLICATION_HYDRUS_UPDATE_CONTENT ] = no_support
 media_viewer_capabilities[ HC.APPLICATION_HYDRUS_UPDATE_DEFINITIONS ] = no_support

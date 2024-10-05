@@ -13,6 +13,7 @@ from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core.files import HydrusAnimationHandling
+from hydrus.core.files import HydrusUgoiraHandling
 from hydrus.core.files import HydrusVideoHandling
 from hydrus.core.files.images import HydrusImageColours
 from hydrus.core.files.images import HydrusImageHandling
@@ -22,6 +23,7 @@ from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientImageHandling
 from hydrus.client import ClientVideoHandling
 from hydrus.client.caches import ClientCachesBase
+
 
 def FrameIndexOutOfRange( index, range_start, range_end ):
     
@@ -580,6 +582,10 @@ class RasterContainerVideo( RasterContainer ):
         duration = self._media.GetDurationMS()
         num_frames_in_video = self._media.GetNumFrames()
         
+        if duration is None and self._media.GetMime() == HC.ANIMATION_UGOIRA:
+            
+            duration = num_frames_in_video * HC.UGOIRA_DEFAULT_FRAME_DURATION_MS
+        
         if duration is None or duration == 0:
             
             message = 'The file with hash ' + media.GetHash().hex() + ', had an invalid duration.'
@@ -652,7 +658,7 @@ class RasterContainerVideo( RasterContainer ):
         
         with self._lock:
             
-            return self._media.GetMime() == HC.ANIMATION_GIF
+            return self._media.GetMime() == HC.ANIMATION_GIF or self._media.GetMime() == HC.ANIMATION_UGOIRA
             
         
     
@@ -670,7 +676,7 @@ class RasterContainerVideo( RasterContainer ):
     
     def GetDurationMS( self, index ):
         
-        if self._media.GetMime() == HC.ANIMATION_GIF:
+        if self._media.GetMime() == HC.ANIMATION_GIF or self._media.GetMime() == HC.ANIMATION_UGOIRA:
             
             if 0 <= index <= len( self._durations ) - 1:
                 
@@ -802,7 +808,7 @@ class RasterContainerVideo( RasterContainer ):
     
     def GetFrameIndex( self, timestamp_ms ):
         
-        if self._media.GetMime() == HC.ANIMATION_GIF:
+        if self._media.GetMime() == HC.ANIMATION_GIF or self._media.GetMime() == HC.ANIMATION_UGOIRA:
             
             so_far = 0
             
@@ -835,7 +841,7 @@ class RasterContainerVideo( RasterContainer ):
     
     def GetTimestampMS( self, frame_index ):
         
-        if self._media.GetMime() == HC.ANIMATION_GIF:
+        if self._media.GetMime() == HC.ANIMATION_GIF or self._media.GetMime() == HC.ANIMATION_UGOIRA:
             
             return sum( self._durations[ : frame_index ] )
             
@@ -847,7 +853,7 @@ class RasterContainerVideo( RasterContainer ):
     
     def GetTotalDuration( self ):
         
-        if self._media.GetMime() == HC.ANIMATION_GIF:
+        if self._media.GetMime() == HC.ANIMATION_GIF or self._media.GetMime() == HC.ANIMATION_UGOIRA:
             
             return sum( self._durations )
             
@@ -896,6 +902,12 @@ class RasterContainerVideo( RasterContainer ):
             self._durations = [] # we only support constant framerate for apng, I think the spec support variable though if PIL ever supports that
             self._times_to_play_animation = HydrusAnimationHandling.GetTimesToPlayAPNG( self._path )
             
+        if self._media.GetMime() == HC.ANIMATION_UGOIRA:
+            
+            self._durations = HydrusUgoiraHandling.GetFrameDurationsUgoira( self._path )
+            
+            self._times_to_play_animation = 1
+            
         else:
             
             try:
@@ -913,6 +925,10 @@ class RasterContainerVideo( RasterContainer ):
         if self._media.GetMime() in ( HC.ANIMATION_GIF, HC.ANIMATION_WEBP ):
             
             self._renderer = ClientVideoHandling.AnimationRendererPIL( self._path, num_frames_in_video, self._target_resolution )
+            
+        elif self._media.GetMime() == HC.ANIMATION_UGOIRA:
+            
+            self._renderer = HydrusUgoiraHandling.UgoiraRenderer( self._path, num_frames_in_video, self._target_resolution )
             
         else:
             

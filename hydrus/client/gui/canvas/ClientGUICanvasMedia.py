@@ -274,7 +274,7 @@ def ShouldHaveAnimationBar( media, show_action ):
         return False
         
     
-    if not media.HasDuration():
+    if not media.HasDuration() and media.GetMime() is not HC.ANIMATION_UGOIRA:
         
         return False
         
@@ -1240,7 +1240,6 @@ class AnimationBar( QW.QWidget ):
     def SetMediaAndWindow( self, media, media_window ):
         
         self._media_window = media_window
-        self._duration_ms = max( media.GetDurationMS(), 1 )
         
         num_frames = media.GetNumFrames()
         
@@ -1251,6 +1250,14 @@ class AnimationBar( QW.QWidget ):
         else:
             
             self._num_frames = max( num_frames, 1 )
+        
+        duration = media.GetDurationMS()
+        
+        if duration is None and media.GetMime() == HC.ANIMATION_UGOIRA:
+            
+             duration = num_frames * HC.UGOIRA_DEFAULT_FRAME_DURATION_MS
+        
+        self._duration_ms = max( duration, 1 )
             
         
         self._currently_in_a_drag = False
