@@ -13,7 +13,6 @@ from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core.files import HydrusAnimationHandling
-from hydrus.core.files import HydrusUgoiraHandling
 from hydrus.core.files import HydrusVideoHandling
 from hydrus.core.files.images import HydrusImageColours
 from hydrus.core.files.images import HydrusImageHandling
@@ -23,7 +22,8 @@ from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientImageHandling
 from hydrus.client import ClientVideoHandling
 from hydrus.client.caches import ClientCachesBase
-
+from hydrus.client.media import ClientMedia
+from hydrus.client import ClientUgoiraHandling
 
 def FrameIndexOutOfRange( index, range_start, range_end ):
     
@@ -506,7 +506,7 @@ class ImageTile( ClientCachesBase.CacheableObject ):
     
 class RasterContainer( object ):
     
-    def __init__( self, media, target_resolution = None ):
+    def __init__( self, media: ClientMedia.MediaSingleton, target_resolution = None ):
         
         if target_resolution is None: target_resolution = media.GetResolution()
         
@@ -551,7 +551,7 @@ class RasterContainer( object ):
     
 class RasterContainerVideo( RasterContainer ):
     
-    def __init__( self, media, target_resolution = None, init_position = 0 ):
+    def __init__( self, media: ClientMedia.MediaSingleton, target_resolution = None, init_position = 0, duration = None, num_frames_in_video = None ):
         
         super().__init__( media, target_resolution )
         
@@ -579,12 +579,12 @@ class RasterContainerVideo( RasterContainer ):
         
         video_buffer_size = new_options.GetInteger( 'video_buffer_size' )
         
-        duration = self._media.GetDurationMS()
-        num_frames_in_video = self._media.GetNumFrames()
+        #duration = self._media.GetDurationMS()
+        #num_frames_in_video = self._media.GetNumFrames()
         
-        if duration is None and self._media.GetMime() == HC.ANIMATION_UGOIRA:
+        #if duration is None and self._media.GetMime() == HC.ANIMATION_UGOIRA:
             
-            duration = num_frames_in_video * HC.UGOIRA_DEFAULT_FRAME_DURATION_MS
+        #    duration = ClientUgoiraHandling.GetDurationUgoira(media)
         
         if duration is None or duration == 0:
             
@@ -904,7 +904,7 @@ class RasterContainerVideo( RasterContainer ):
             
         if self._media.GetMime() == HC.ANIMATION_UGOIRA:
             
-            self._durations = HydrusUgoiraHandling.GetFrameDurationsUgoira( self._path )
+            self._durations = ClientUgoiraHandling.GetFrameDurationsUgoira( self._path, self._media )
             
             self._times_to_play_animation = 1
             
@@ -928,7 +928,7 @@ class RasterContainerVideo( RasterContainer ):
             
         elif self._media.GetMime() == HC.ANIMATION_UGOIRA:
             
-            self._renderer = HydrusUgoiraHandling.UgoiraRenderer( self._path, num_frames_in_video, self._target_resolution )
+            self._renderer = ClientUgoiraHandling.UgoiraRenderer( self._path, num_frames_in_video, self._target_resolution )
             
         else:
             

@@ -30,6 +30,7 @@ from hydrus.client import ClientApplicationCommand as CAC
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientRendering
+from hydrus.client import ClientUgoiraHandling
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIShortcuts
 from hydrus.client.gui import QtInit
@@ -411,7 +412,7 @@ class Animation( QW.QWidget ):
                         
                         self._video_container.Stop()
                         
-                        self._video_container = ClientRendering.RasterContainerVideo( self._media, ( target_width, target_height ), init_position = self._current_frame_index )
+                        self._video_container = ClientRendering.RasterContainerVideo( self._media, ( target_width, target_height ), init_position = self._current_frame_index, duration = self._duration, num_frames_in_video = self._num_frames )
                         
                     
                 elif we_just_zoomed_out:
@@ -420,7 +421,7 @@ class Animation( QW.QWidget ):
                         
                         self._video_container.Stop()
                         
-                        self._video_container = ClientRendering.RasterContainerVideo( self._media, ( my_raw_width, my_raw_height ), init_position = self._current_frame_index )
+                        self._video_container = ClientRendering.RasterContainerVideo( self._media, ( my_raw_width, my_raw_height ), init_position = self._current_frame_index, duration = self._duration, num_frames_in_video = self._num_frames )
                         
                     
                 
@@ -436,7 +437,7 @@ class Animation( QW.QWidget ):
         
         if self._video_container is None:
             
-            self._video_container = ClientRendering.RasterContainerVideo( self._media, ( my_raw_width, my_raw_height ), init_position = self._current_frame_index )
+            self._video_container = ClientRendering.RasterContainerVideo( self._media, ( my_raw_width, my_raw_height ), init_position = self._current_frame_index, duration = self._duration, num_frames_in_video = self._num_frames )
             
         
         if not self._video_container.HasFrame( self._current_frame_index ):
@@ -788,11 +789,25 @@ class Animation( QW.QWidget ):
             
             self._num_frames = self._media.GetNumFrames()
             
+            self._duration = self._media.GetDurationMS()
+            
+            if self._duration is None and self._media.GetMime() == HC.ANIMATION_UGOIRA:
+            
+                self._duration = ClientUgoiraHandling.GetDurationUgoira(media)
+            
             CG.client_controller.gui.RegisterAnimationUpdateWindow( self )
             
             self.update()
             
         
+        
+    def GetDuration( self ):
+        
+        return self._duration
+    
+    def GetNumFrames( self ):
+        
+        return self._num_frames
     
     def TIMERAnimationUpdate( self ):
         
@@ -1239,7 +1254,7 @@ class AnimationBar( QW.QWidget ):
         self.update()
         
     
-    def SetMediaAndWindow( self, media, media_window ):
+    def SetMediaAndWindow( self, media, media_window, ):
         
         self._media_window = media_window
         
@@ -1255,9 +1270,13 @@ class AnimationBar( QW.QWidget ):
         
         duration = media.GetDurationMS()
         
-        if duration is None and media.GetMime() == HC.ANIMATION_UGOIRA:
+        print(duration)
+        
+        #if duration is None and media.GetMime() == HC.ANIMATION_UGOIRA:
+        
+        if duration is None and isinstance(media_window, Animation):
             
-             duration = num_frames * HC.UGOIRA_DEFAULT_FRAME_DURATION_MS
+             duration = media_window.GetDuration()
         
         self._duration_ms = max( duration, 1 )
             
