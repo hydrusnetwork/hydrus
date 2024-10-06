@@ -337,6 +337,8 @@ class Animation( QW.QWidget ):
         
         self._num_frames = 1
         
+        self._frame_durations = None
+        
         self._stop_for_slideshow = False
         
         self._current_frame_index = 0
@@ -412,7 +414,7 @@ class Animation( QW.QWidget ):
                         
                         self._video_container.Stop()
                         
-                        self._video_container = ClientRendering.RasterContainerVideo( self._media, ( target_width, target_height ), init_position = self._current_frame_index, duration = self._duration, num_frames_in_video = self._num_frames )
+                        self._video_container = ClientRendering.RasterContainerVideo( self._media, ( target_width, target_height ), init_position = self._current_frame_index, frame_durations = self._frame_durations )
                         
                     
                 elif we_just_zoomed_out:
@@ -421,7 +423,7 @@ class Animation( QW.QWidget ):
                         
                         self._video_container.Stop()
                         
-                        self._video_container = ClientRendering.RasterContainerVideo( self._media, ( my_raw_width, my_raw_height ), init_position = self._current_frame_index, duration = self._duration, num_frames_in_video = self._num_frames )
+                        self._video_container = ClientRendering.RasterContainerVideo( self._media, ( my_raw_width, my_raw_height ), init_position = self._current_frame_index, frame_durations = self._frame_durations )
                         
                     
                 
@@ -437,7 +439,7 @@ class Animation( QW.QWidget ):
         
         if self._video_container is None:
             
-            self._video_container = ClientRendering.RasterContainerVideo( self._media, ( my_raw_width, my_raw_height ), init_position = self._current_frame_index, duration = self._duration, num_frames_in_video = self._num_frames )
+            self._video_container = ClientRendering.RasterContainerVideo( self._media, ( my_raw_width, my_raw_height ), init_position = self._current_frame_index, frame_durations = self._frame_durations )
             
         
         if not self._video_container.HasFrame( self._current_frame_index ):
@@ -779,6 +781,8 @@ class Animation( QW.QWidget ):
         
         self._video_container = None
         
+        self._frame_durations = None
+        
         if self._media is None:
             
             self._num_frames = 1
@@ -791,9 +795,13 @@ class Animation( QW.QWidget ):
             
             self._duration = self._media.GetDurationMS()
             
-            if self._duration is None and self._media.GetMime() == HC.ANIMATION_UGOIRA:
+            if self._media.GetMime() == HC.ANIMATION_UGOIRA:
             
-                self._duration = ClientUgoiraHandling.GetDurationUgoira(media)
+                self._frame_durations = ClientUgoiraHandling.GetFrameDurationsUgoira( media )
+            
+            if self._duration is None and self._frame_durations is not None:
+            
+                self._duration = sum( self._frame_durations )
             
             CG.client_controller.gui.RegisterAnimationUpdateWindow( self )
             
@@ -1269,10 +1277,6 @@ class AnimationBar( QW.QWidget ):
             self._num_frames = max( num_frames, 1 )
         
         duration = media.GetDurationMS()
-        
-        print(duration)
-        
-        #if duration is None and media.GetMime() == HC.ANIMATION_UGOIRA:
         
         if duration is None and isinstance(media_window, Animation):
             

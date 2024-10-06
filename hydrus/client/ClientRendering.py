@@ -551,7 +551,7 @@ class RasterContainer( object ):
     
 class RasterContainerVideo( RasterContainer ):
     
-    def __init__( self, media: ClientMedia.MediaSingleton, target_resolution = None, init_position = 0, duration = None, num_frames_in_video = None ):
+    def __init__( self, media: ClientMedia.MediaSingleton, target_resolution = None, init_position = 0, frame_durations = None ):
         
         super().__init__( media, target_resolution )
         
@@ -579,12 +579,17 @@ class RasterContainerVideo( RasterContainer ):
         
         video_buffer_size = new_options.GetInteger( 'video_buffer_size' )
         
-        #duration = self._media.GetDurationMS()
-        #num_frames_in_video = self._media.GetNumFrames()
+        duration = self._media.GetDurationMS()
+        num_frames_in_video = self._media.GetNumFrames()
         
-        #if duration is None and self._media.GetMime() == HC.ANIMATION_UGOIRA:
+        if frame_durations is not None:
             
-        #    duration = ClientUgoiraHandling.GetDurationUgoira(media)
+            self._durations = frame_durations
+            
+            if duration is None:
+                
+                duration = sum( frame_durations )
+            
         
         if duration is None or duration == 0:
             
@@ -902,10 +907,8 @@ class RasterContainerVideo( RasterContainer ):
             self._durations = [] # we only support constant framerate for apng, I think the spec support variable though if PIL ever supports that
             self._times_to_play_animation = HydrusAnimationHandling.GetTimesToPlayAPNG( self._path )
             
-        if self._media.GetMime() == HC.ANIMATION_UGOIRA:
-            
-            self._durations = ClientUgoiraHandling.GetFrameDurationsUgoira( self._path, self._media )
-            
+        elif self._media.GetMime() == HC.ANIMATION_UGOIRA:
+                        
             self._times_to_play_animation = 1
             
         else:

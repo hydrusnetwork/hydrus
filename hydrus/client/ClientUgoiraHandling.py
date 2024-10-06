@@ -2,18 +2,20 @@ from hydrus.core.files import HydrusUgoiraHandling
 from hydrus.core.files.images import HydrusImageHandling
 from hydrus.core.files import HydrusArchiveHandling
 from hydrus.client.media import ClientMedia
+from hydrus.client import ClientGlobals as CG
+from hydrus.client import ClientFiles
 
-from PIL import Image as PILImage
 import json
 import typing
-from functools import lru_cache
 
 UGOIRA_DEFAULT_FRAME_DURATION_MS = 125
 
-def GetFrameDurationsUgoira( path: str, media: ClientMedia.MediaSingleton ): 
+def GetFrameDurationsUgoira( media: ClientMedia.MediaSingleton ): 
     
-    print('GetFrameDurationsUgoira')
-    
+    client_files_manager: ClientFiles.ClientFilesManager = CG.client_controller.client_files_manager
+        
+    path = client_files_manager.GetFilePath( media.GetHash(), media.GetMime() )
+        
     try:
         
         frameData = HydrusUgoiraHandling.GetUgoiraFrameDataJSON( path )
@@ -39,40 +41,9 @@ def GetFrameDurationsUgoira( path: str, media: ClientMedia.MediaSingleton ):
         num_frames = media.GetNumFrames()
         
         return [UGOIRA_DEFAULT_FRAME_DURATION_MS] * num_frames
-
-def GetDurationUgoira(media: ClientMedia.MediaSingleton):
-    
-    print('GetDurationUgoira')
-    
-    dbDuration = media.GetDurationMS()
-    
-    if dbDuration is not None:
         
-        return dbDuration
     
-    else:
-        
-        try:
-            
-            durations = GetFrameTimesFromNote(media)
-            
-            if durations is not None:
-                
-                return sum( durations )
-            
-        except:
-            
-            pass
-        
-        num_frames = media.GetNumFrames()
-        
-        return num_frames * UGOIRA_DEFAULT_FRAME_DURATION_MS
-    
-#@lru_cache(maxsize=32)
 def GetFrameTimesFromNote(media: ClientMedia.MediaSingleton):
-    
-    print('GetFrameTimesFromNote')
-    #print(media.GetHash())
     
     if not media.HasNotes():
         
