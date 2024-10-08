@@ -1,10 +1,10 @@
 import zipfile
 import json
 import typing
+import functools
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusExceptions
-from hydrus.core import HydrusTemp
 from hydrus.core.files import HydrusArchiveHandling
 from hydrus.core.files.images import HydrusImageHandling
 
@@ -34,10 +34,8 @@ def GetUgoiraProperties( path_to_zip ):
     # try to get properties from json file first:
     try:
         
-        properties = GetUgoiraPropertiesFromJSON( path_to_zip )
-        
-        return properties
-    
+        return GetUgoiraPropertiesFromJSON( path_to_zip )
+            
     except:
         
         pass
@@ -71,7 +69,7 @@ def ZipLooksLikeUgoira( path_to_zip ):
         
         frames = GetUgoiraFrameDataJSON( path_to_zip )
                 
-        if len( frames ) > 0 and all(('delay' in frame and 'file' in frame) for frame in frames):
+        if frames is not None and len( frames ) > 0 and all(('delay' in frame and 'file' in frame) for frame in frames):
             
             return True
             
@@ -174,7 +172,7 @@ def ZipLooksLikeUgoira( path_to_zip ):
 
 ### Handling ugoira files with frame data json:
 
-def GetUgoiraJSON( path ):
+def GetUgoiraJSON( path: str ):
 
     jsonFile = HydrusArchiveHandling.GetZipAsPath( path, 'animation.json' )
 
@@ -192,19 +190,28 @@ def GetUgoiraJSON( path ):
 UgoiraFrame = typing.TypedDict('UgoiraFrame', {'file': str, 'delay': int})
 
 # list of {file: "000000.jpg", "delay": 100} where delay is in ms
-def GetUgoiraFrameDataJSON( path ) -> typing.List[UgoiraFrame]:
+@functools.lru_cache( maxsize = 8 )
+def GetUgoiraFrameDataJSON( path: str ) -> typing.Optional[typing.List[UgoiraFrame]]:
 
-    ugoiraJson = GetUgoiraJSON( path )
-    
-    
-    # JSON from gallery-dl is just the array
-    if isinstance(ugoiraJson, list):
+    print('GetUgoiraFrameDataJSON')
+    print(path)
+
+    try:
         
-        return ugoiraJson
-    
-    else:
+        ugoiraJson = GetUgoiraJSON( path )
         
-        return ugoiraJson['frames']
+        # JSON from gallery-dl is just the array
+        if isinstance(ugoiraJson, list):
+            
+            return ugoiraJson
+        
+        else:
+            
+            return ugoiraJson['frames']
+        
+    except:
+        
+        return None
     
 
 
@@ -212,7 +219,12 @@ def GetUgoiraFrameDataJSON( path ) -> typing.List[UgoiraFrame]:
 def GetUgoiraPropertiesFromJSON( path ):
 
     frameData = GetUgoiraFrameDataJSON( path )
-
+    
+    if frameData is None:
+        
+        raise HydrusExceptions.LimitedSupportFileException( 'Zip file has no animation.json or it cannot be parsed' )
+        
+    
     durations = [data['delay'] for data in frameData]
 
     duration = sum( durations )
@@ -231,12 +243,16 @@ def GetFramePathsUgoira( path ):
     try:
         
         frameData = GetUgoiraFrameDataJSON( path )
-
-        return [data['file'] for data in frameData]
+        
+        if frameData is not None:
+            
+            return [data['file'] for data in frameData]
     
     except:
         
-        return GetFramePathsFromUgoiraZip( path )
+        pass
+        
+    return GetFramePathsFromUgoiraZip( path )
     
 
 

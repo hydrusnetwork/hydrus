@@ -20,27 +20,31 @@ def GetFrameDurationsUgoira( media: ClientMedia.MediaSingleton ):
         
         frameData = HydrusUgoiraHandling.GetUgoiraFrameDataJSON( path )
 
-        durations = [data['delay'] for data in frameData]
-
-        return durations
+        if frameData is not None:
+            
+            durations = [data['delay'] for data in frameData]
+            
+            return durations
     
     except:
         
-        try:
-            
-            durations = GetFrameTimesFromNote(media)
-            
-            if durations is not None:
-                
-                return durations
-            
-        except:
-            
-            pass
+        pass
         
-        num_frames = media.GetNumFrames()
+    try:
         
-        return [UGOIRA_DEFAULT_FRAME_DURATION_MS] * num_frames
+        durations = GetFrameTimesFromNote(media)
+        
+        if durations is not None:
+            
+            return durations
+        
+    except:
+        
+        pass
+    
+    num_frames = media.GetNumFrames()
+    
+    return [UGOIRA_DEFAULT_FRAME_DURATION_MS] * num_frames
         
     
 def GetFrameTimesFromNote(media: ClientMedia.MediaSingleton):
