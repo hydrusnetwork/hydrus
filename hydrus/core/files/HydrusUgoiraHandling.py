@@ -186,16 +186,14 @@ def GetUgoiraJSON( path: str ):
     
 
 
-
+# {file: "000000.jpg", "delay": 100} where delay is in ms
 UgoiraFrame = typing.TypedDict('UgoiraFrame', {'file': str, 'delay': int})
 
-# list of {file: "000000.jpg", "delay": 100} where delay is in ms
+# this function is called multiple times for a single ugoira file 
+# and involves opening and parsing JSON so let's cache it
 @functools.lru_cache( maxsize = 8 )
 def GetUgoiraFrameDataJSON( path: str ) -> typing.Optional[typing.List[UgoiraFrame]]:
-
-    print('GetUgoiraFrameDataJSON')
-    print(path)
-
+    
     try:
         
         ugoiraJson = GetUgoiraJSON( path )
