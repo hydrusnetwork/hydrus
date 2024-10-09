@@ -20,3 +20,8 @@
     5px 5px 0 #6600ff,
     6px 6px 0 #8b00ff; 
 }
+
+/* temporary fix for the transparent euler diagrams in dark theme */
+.light-image {
+  background-color: #fff;
+}

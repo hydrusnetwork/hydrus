@@ -37,7 +37,7 @@ If you would like to try hydrus, I _**strongly**_ recommend you check out the **
 * [issue tracker](https://github.com/hydrusnetwork/hydrus/issues)
 * [8chan.moe /t/ (Hydrus Network General)](https://8chan.moe/t/catalog.html)
 * [tumblr](https://hydrus.tumblr.com)
-* [twitter](https://twitter.com/hydrusnetwork)
+* [x](https://x.com/hydrusnetwork)
 * [discord](https://discord.gg/wPHPCUZ)
 * [patreon](https://www.patreon.com/hydrus_dev)
 * [user-run repository and wiki (including download presets for several non-default boorus)](https://github.com/CuddleBear92/Hydrus-Presets-and-Scripts)
