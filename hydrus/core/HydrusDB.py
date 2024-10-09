@@ -611,6 +611,7 @@ class HydrusDB( HydrusDBBase.DBBase ):
             
             self.publish_status_update()
             
+            idle_at_job_start = self._controller.CurrentlyIdle()
             time_job_started = HydrusTime.GetNowPrecise()
             
             result = None
@@ -624,13 +625,18 @@ class HydrusDB( HydrusDBBase.DBBase ):
                 result = self._Write( action, *args, **kwargs )
                 
             
-            time_job_finished = HydrusTime.GetNowPrecise()
+            idle_at_job_end = self._controller.CurrentlyIdle()
             
-            time_job_took = time_job_finished - time_job_started
-            
-            if time_job_took > 15 and not self._controller.CurrentlyIdle():
+            if not idle_at_job_start or not idle_at_job_end:
                 
-                HydrusData.Print( f'The database job "{job.ToString()}" took {HydrusTime.TimeDeltaToPrettyTimeDelta( time_job_took )}.' )
+                time_job_finished = HydrusTime.GetNowPrecise()
+                
+                time_job_took = time_job_finished - time_job_started
+                
+                if time_job_took > 15:
+                    
+                    HydrusData.Print( f'The database job "{job.ToString()}" took {HydrusTime.TimeDeltaToPrettyTimeDelta( time_job_took )}.' )
+                    
                 
             
             if job.IsSynchronous():

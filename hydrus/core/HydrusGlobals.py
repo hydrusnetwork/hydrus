@@ -1,12 +1,14 @@
 import threading
 import typing
 
-from hydrus.core.interfaces import HydrusControllerInterface
+if typing.TYPE_CHECKING:
+    
+    from hydrus.core import HydrusController
+    
 
-controller: typing.Optional[ HydrusControllerInterface.HydrusControllerInterface ] = None
-client_controller: typing.Optional[ HydrusControllerInterface.HydrusControllerInterface ] = None
-server_controller: typing.Optional[ HydrusControllerInterface.HydrusControllerInterface ] = None
-test_controller: typing.Optional[ HydrusControllerInterface.HydrusControllerInterface ] = None
+controller: typing.Optional[ "HydrusController.HydrusController" ] = None
+
+# TODO: move the client, server, and any test-specific garbage to the new module Globals mate, and/or the controller objects themselves
 
 started_shutdown = False
 view_shutdown = False

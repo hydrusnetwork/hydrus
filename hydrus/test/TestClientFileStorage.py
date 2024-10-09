@@ -11,6 +11,8 @@ from hydrus.core import HydrusGlobals as HG
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientFilesPhysical
 
+from hydrus.test import TestGlobals as TG
+
 def get_good_prefixes():
     
     good_prefixes = [ f'f{prefix}' for prefix in HydrusData.IterateHexPrefixes() ]
@@ -23,7 +25,7 @@ class TestClientFileStorage( unittest.TestCase ):
     
     def test_base_locations( self ):
         
-        path = os.path.join( HG.test_controller.db_dir, 'client_files' )
+        path = os.path.join( TG.test_controller.db_dir, 'client_files' )
         
         base_location = ClientFilesPhysical.FilesStorageBaseLocation( path, 1 )
         
@@ -104,7 +106,7 @@ class TestClientFileStorage( unittest.TestCase ):
     
     def test_subfolders( self ):
         
-        muh_test_base_location = ClientFilesPhysical.FilesStorageBaseLocation( os.path.join( HG.test_controller.db_dir, 'client_files' ), 1 )
+        muh_test_base_location = ClientFilesPhysical.FilesStorageBaseLocation( os.path.join( TG.test_controller.db_dir, 'client_files' ), 1 )
         
         subfolder = ClientFilesPhysical.FilesStorageSubfolder( 'ta', muh_test_base_location )
         

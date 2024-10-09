@@ -575,7 +575,7 @@ class MediaList( object ):
         self._media_sort = MediaSort( ( 'system', CC.SORT_FILES_BY_FILESIZE ), CC.SORT_ASC )
         self._media_collect = MediaCollect()
         
-        self._sorted_media = SortedList( [ self._GenerateMediaSingleton( media_result ) for media_result in media_results ] )
+        self._sorted_media = HydrusData.FastIndexUniqueList( [ self._GenerateMediaSingleton( media_result ) for media_result in media_results ] )
         self._selected_media = set()
         
         self._singleton_media = set( self._sorted_media )
@@ -837,7 +837,7 @@ class MediaList( object ):
             
         
         self._singleton_media.update( addable_media )
-        self._sorted_media.append_items( addable_media )
+        self._sorted_media.extend( addable_media )
         
         return new_media
         
@@ -869,7 +869,7 @@ class MediaList( object ):
         self._collected_media = set()
         
         self._selected_media = set()
-        self._sorted_media = SortedList()
+        self._sorted_media = HydrusData.FastIndexUniqueList()
         
         self._RecalcAfterMediaRemove()
         
@@ -921,7 +921,7 @@ class MediaList( object ):
             self._collected_media = set()
             
         
-        self._sorted_media = SortedList( list( self._singleton_media ) + list( self._collected_media ) )
+        self._sorted_media = HydrusData.FastIndexUniqueList( list( self._singleton_media ) + list( self._collected_media ) )
         
         self._RecalcHashes()
         
@@ -2916,7 +2916,7 @@ class MediaSort( HydrusSerialisable.SerialisableBase ):
         return sort_string
         
     
-    def Sort( self, location_context: ClientLocation.LocationContext, media_results_list: "SortedList" ):
+    def Sort( self, location_context: ClientLocation.LocationContext, media_results_list: HydrusData.FastIndexUniqueList ):
         
         ( sort_metadata, sort_data ) = self.sort_type
         
@@ -2928,7 +2928,7 @@ class MediaSort( HydrusSerialisable.SerialisableBase ):
             
             ( sort_key, reverse ) = self.GetSortKeyAndReverse( location_context )
             
-            media_results_list.sort( sort_key = sort_key, reverse = reverse )
+            media_results_list.sort( key = sort_key, reverse = reverse )
             
         
     
@@ -2975,211 +2975,3 @@ class MediaSort( HydrusSerialisable.SerialisableBase ):
     
 
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_MEDIA_SORT ] = MediaSort
-
-class SortedList( object ):
-    
-    def __init__( self, initial_items = None ):
-        
-        if initial_items is None:
-            
-            initial_items = []
-            
-        
-        self._sort_key = None
-        self._sort_reverse = False
-        
-        self._sorted_list = list( initial_items )
-        
-        self._items_to_indices = {}
-        self._indices_dirty = True
-        
-    
-    def __contains__( self, item ):
-        
-        if self._indices_dirty:
-            
-            self._RecalcIndices()
-            
-        
-        return self._items_to_indices.__contains__( item )
-        
-    
-    def __getitem__( self, value ):
-        
-        return self._sorted_list.__getitem__( value )
-        
-    
-    def __iter__( self ):
-        
-        return iter( self._sorted_list )
-        
-    
-    def __len__( self ):
-        
-        return len( self._sorted_list )
-        
-    
-    def _DirtyIndices( self ):
-        
-        self._indices_dirty = True
-        
-        self._items_to_indices = {}
-        
-    
-    def _RecalcIndices( self ):
-        
-        self._items_to_indices = { item : index for ( index, item ) in enumerate( self._sorted_list ) }
-        
-        self._indices_dirty = False
-        
-    
-    def append_items( self, items ):
-        
-        if self._indices_dirty is None:
-            
-            self._RecalcIndices()
-            
-        
-        for ( i, item ) in enumerate( items, start = len( self._sorted_list ) ):
-            
-            self._items_to_indices[ item ] = i
-            
-        
-        self._sorted_list.extend( items )
-        
-    
-    def index( self, item ):
-        """
-        This is fast!
-        """
-        
-        if self._indices_dirty:
-            
-            self._RecalcIndices()
-            
-        
-        try:
-            
-            result = self._items_to_indices[ item ]
-            
-        except KeyError:
-            
-            raise HydrusExceptions.DataMissing()
-            
-        
-        return result
-        
-    
-    def insert_items( self, items, insertion_index = None ):
-        
-        if insertion_index is None:
-            
-            self.append_items( items )
-            
-            self.sort()
-            
-        else:
-            
-            # don't forget we can insert elements in the final slot for an append, where index >= len( muh_list ) 
-            
-            for ( i, item ) in enumerate( items ):
-                
-                self._sorted_list.insert( insertion_index + i, item )
-                
-            
-            self._DirtyIndices()
-            
-        
-    
-    def move_items( self, new_items: typing.List, insertion_index: int ):
-        
-        items_to_move = []
-        items_before_insertion_index = 0
-        
-        if insertion_index < 0:
-            
-            insertion_index = max( 0, len( self._sorted_list ) + ( insertion_index + 1 ) )
-            
-        
-        for new_item in new_items:
-            
-            try:
-                
-                index = self.index( new_item )
-                
-            except HydrusExceptions.DataMissing:
-                
-                continue
-                
-            
-            items_to_move.append( new_item )
-            
-            if index < insertion_index:
-                
-                items_before_insertion_index += 1
-                
-            
-        
-        if items_before_insertion_index > 0: # i.e. we are moving to the right
-            
-            items_before_insertion_index -= 1
-            
-        
-        adjusted_insertion_index = insertion_index# - items_before_insertion_index
-        
-        if len( items_to_move ) == 0:
-            
-            return
-            
-        
-        self.remove_items( items_to_move )
-        
-        self.insert_items( items_to_move, insertion_index = adjusted_insertion_index )
-        
-    
-    def remove_items( self, items ):
-        
-        deletee_indices = [ self.index( item ) for item in items ]
-        
-        deletee_indices.sort( reverse = True )
-        
-        for index in deletee_indices:
-            
-            del self._sorted_list[ index ]
-            
-        
-        self._DirtyIndices()
-        
-    
-    def random_sort( self ):
-        
-        def sort_key( x ):
-            
-            return random.random()
-            
-        
-        self._sort_key = sort_key
-        
-        random.shuffle( self._sorted_list )
-        
-        self._DirtyIndices()
-        
-    
-    def sort( self, sort_key = None, reverse = False ):
-        
-        if sort_key is None:
-            
-            sort_key = self._sort_key
-            reverse = self._sort_reverse
-            
-        else:
-            
-            self._sort_key = sort_key
-            self._sort_reverse = reverse
-            
-        
-        self._sorted_list.sort( key = sort_key, reverse = reverse )
-        
-        self._DirtyIndices()
-        
-    

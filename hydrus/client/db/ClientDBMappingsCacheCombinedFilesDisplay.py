@@ -4,7 +4,6 @@ import sqlite3
 import typing
 
 from hydrus.core import HydrusConstants as HC
-from hydrus.core import HydrusData
 from hydrus.core import HydrusNumbers
 
 from hydrus.client.db import ClientDBFilesStorage

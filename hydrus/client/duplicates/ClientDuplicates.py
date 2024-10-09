@@ -1,4 +1,3 @@
-import collections
 import threading
 import time
 import typing

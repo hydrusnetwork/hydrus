@@ -1,6 +1,5 @@
 import collections
 import json
-import os
 import threading
 import time
 
@@ -14,10 +13,8 @@ from hydrus.core.files import HydrusFileHandling
 from hydrus.core.files.images import HydrusBlurhash
 from hydrus.core.files.images import HydrusImageHandling
 
-from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientFiles
 from hydrus.client import ClientGlobals as CG
-from hydrus.client import ClientImageHandling
 from hydrus.client import ClientParsing
 from hydrus.client import ClientRendering
 from hydrus.client import ClientThreading

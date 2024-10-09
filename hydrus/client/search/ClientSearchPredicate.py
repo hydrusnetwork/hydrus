@@ -940,15 +940,32 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
         return self._matchable_search_texts
         
     
-    def GetParentPredicates( self ):
+    def GetORPredicates( self ) -> typing.List[ "Predicate" ]:
+        
+        if self._predicate_type == PREDICATE_TYPE_OR_CONTAINER:
+            
+            return self._value
+            
+        else:
+            
+            return []
+            
+        
+    
+    def GetParentPredicates( self ) -> typing.Set[ "Predicate" ]:
         
         return self._parent_predicates
         
     
-    def GetTextsAndNamespaces( self, render_for_user: bool, or_under_construction: bool = False ):
+    def GetTextsAndNamespaces( self, render_for_user: bool, or_under_construction: bool = False, prefix = '' ):
         
         if self._predicate_type == PREDICATE_TYPE_OR_CONTAINER:
             
+            or_connector_namespace = CG.client_controller.new_options.GetNoneableString( 'or_connector_custom_namespace_colour' )
+            
+            texts_and_namespaces = [ ( prefix + 'OR:', 'or', or_connector_namespace ) ]
+            
+            '''
             or_connector = CG.client_controller.new_options.GetString( 'or_connector' )
             or_connector_namespace = CG.client_controller.new_options.GetNoneableString( 'or_connector_custom_namespace_colour' )
             
@@ -965,10 +982,10 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                 
                 texts_and_namespaces = texts_and_namespaces[ : -1 ]
                 
-            
+            '''
         else:
             
-            texts_and_namespaces = [ ( self.ToString( render_for_user = render_for_user ), 'namespace', self.GetNamespace() ) ]
+            texts_and_namespaces = [ ( prefix + self.ToString( render_for_user = render_for_user ), 'namespace', self.GetNamespace() ) ]
             
         
         return texts_and_namespaces
@@ -994,6 +1011,12 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
     def GetValue( self ):
         
         return self._value
+        
+    
+    def HasBadSiblings( self ):
+        
+        # not sure this is totally good, but this is a hack method
+        return self._siblings is not None and self._ideal_sibling is None
         
     
     def HasIdealSibling( self ):
@@ -2012,7 +2035,7 @@ def MergePredicates( predicates: typing.Collection[ Predicate ] ):
     return list( master_predicate_dict.values() )
     
 
-def SortPredicates( predicates: typing.Collection[ Predicate ] ):
+def SortPredicates( predicates: typing.List[ Predicate ] ):
     
     key = lambda p: ( - p.GetCount().GetMinCount(), p.ToString() )
     

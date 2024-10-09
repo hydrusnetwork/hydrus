@@ -14,6 +14,7 @@ from hydrus.core.networking import HydrusNetworking
 from hydrus.server import ServerDB
 
 from hydrus.test import TestController
+from hydrus.test import TestGlobals as TG
 
 class TestServerDB( unittest.TestCase ):
     
@@ -23,7 +24,7 @@ class TestServerDB( unittest.TestCase ):
     @classmethod
     def setUpClass( cls ):
         
-        cls._db = ServerDB.DB( HG.test_controller, TestController.DB_DIR, 'server' )
+        cls._db = ServerDB.DB( TG.test_controller, TestController.DB_DIR, 'server' )
         
     
     @classmethod

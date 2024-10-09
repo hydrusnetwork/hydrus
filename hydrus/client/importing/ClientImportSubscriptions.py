@@ -706,7 +706,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                 
                 if not query_header.FileBandwidthOK( CG.client_controller.network_engine.bandwidth_manager, self._name ) and not self._have_made_an_initial_sync_bandwidth_notification:
                     
-                    HydrusData.ShowText( 'FYI: The query "{}" for subscription "{}" performed its initial sync ok, but it is short on bandwidth right now, so no files will be downloaded yet. The subscription will catch up in future as bandwidth becomes available. You can review the estimated time until bandwidth is available under the manage subscriptions dialog. If more queries are performing initial syncs in this run, they may be the same.'.format( query_name, self._name ) )
+                    HydrusData.ShowText( 'FYI: The query "{}" for subscription "{}" performed its initial sync ok, but its downloader is short on bandwidth right now, so no files will be downloaded yet. The subscription will catch up in future as bandwidth becomes available. You can review the estimated time until bandwidth is available under the manage subscriptions dialog. If more queries are performing initial syncs in this run, they may be the same.'.format( query_name, self._name ) )
                     
                     self._have_made_an_initial_sync_bandwidth_notification = True
                     

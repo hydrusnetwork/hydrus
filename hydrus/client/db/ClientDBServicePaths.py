@@ -1,11 +1,8 @@
-import re
 import sqlite3
 import typing
 
-from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
-from hydrus.core import HydrusTime
 
 from hydrus.client.db import ClientDBDefinitionsCache
 from hydrus.client.db import ClientDBMaster

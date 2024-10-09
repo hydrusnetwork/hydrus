@@ -130,8 +130,8 @@ class TemporaryIntegerTableNameCache( object ):
         
         TemporaryIntegerTableNameCache.my_instance = self
         
-        self._column_names_to_table_names = collections.defaultdict( collections.deque )
-        self._column_names_counter = collections.Counter()
+        self._column_name_tuples_to_table_names = collections.defaultdict( collections.deque )
+        self._column_name_tuples_counter = collections.Counter()
         
     
     @staticmethod
@@ -149,13 +149,18 @@ class TemporaryIntegerTableNameCache( object ):
     
     def Clear( self ):
         
-        self._column_names_to_table_names = collections.defaultdict( collections.deque )
-        self._column_names_counter = collections.Counter()
+        self._column_name_tuples_to_table_names = collections.defaultdict( collections.deque )
+        self._column_name_tuples_counter = collections.Counter()
         
     
-    def GetName( self, column_name ):
+    def GetName( self, column_names: typing.Tuple[ str ] ):
         
-        table_names = self._column_names_to_table_names[ column_name ]
+        if isinstance( column_names, str ):
+            
+            column_names = ( column_names, )
+            
+        
+        table_names = self._column_name_tuples_to_table_names[ column_names ]
         
         initialised = True
         
@@ -163,13 +168,13 @@ class TemporaryIntegerTableNameCache( object ):
             
             initialised = False
             
-            i = self._column_names_counter[ column_name ]
+            i = self._column_name_tuples_counter[ column_names ]
             
-            table_name = 'mem.temp_int_{}_{}'.format( column_name, i )
+            table_name = f'mem.temp_{len(column_names)}_int_{"_".join(column_names)}_{i}'
             
             table_names.append( table_name )
             
-            self._column_names_counter[ column_name ] += 1
+            self._column_name_tuples_counter[ column_names ] += 1
             
         
         table_name = table_names.pop()
@@ -177,36 +182,81 @@ class TemporaryIntegerTableNameCache( object ):
         return ( initialised, table_name )
         
     
-    def ReleaseName( self, column_name, table_name ):
+    def ReleaseName( self, column_names: typing.Tuple[ str ], table_name: str ):
         
-        self._column_names_to_table_names[ column_name ].append( table_name )
+        if isinstance( column_names, str ):
+            
+            column_names = ( column_names, )
+            
+        
+        self._column_name_tuples_to_table_names[ column_names ].append( table_name )
         
     
 
 class TemporaryIntegerTable( object ):
     
-    def __init__( self, cursor: sqlite3.Cursor, integer_iterable, column_name ):
+    def __init__( self, cursor: sqlite3.Cursor, integers_iterable, column_names ):
         
-        if not isinstance( integer_iterable, set ):
+        if not isinstance( integers_iterable, set ):
             
-            integer_iterable = set( integer_iterable )
+            integers_iterable = set( integers_iterable )
+            
+        
+        if isinstance( column_names, str ):
+            
+            column_names = ( column_names, )
             
         
         self._cursor = cursor
-        self._integer_iterable = integer_iterable
-        self._column_name = column_name
+        self._integers_iterable = integers_iterable
+        self._column_names = column_names
         
-        ( self._initialised, self._table_name ) = TemporaryIntegerTableNameCache.instance().GetName( self._column_name )
+        ( self._initialised, self._table_name ) = TemporaryIntegerTableNameCache.instance().GetName( self._column_names )
         
     
     def __enter__( self ):
         
-        if not self._initialised:
+        if len( self._column_names ) == 1:
             
-            self._cursor.execute( 'CREATE TABLE IF NOT EXISTS {} ( {} INTEGER PRIMARY KEY );'.format( self._table_name, self._column_name ) )
+            ( column_name, ) = self._column_names
             
-        
-        self._cursor.executemany( 'INSERT INTO {} ( {} ) VALUES ( ? );'.format( self._table_name, self._column_name ), ( ( i, ) for i in self._integer_iterable ) )
+            if not self._initialised:
+                
+                self._cursor.execute( 'CREATE TABLE IF NOT EXISTS {} ( {} INTEGER PRIMARY KEY );'.format( self._table_name, column_name ) )
+                
+            
+            self._cursor.executemany( 'INSERT INTO {} ( {} ) VALUES ( ? );'.format( self._table_name, column_name ), ( ( i, ) for i in self._integers_iterable ) )
+            
+        else:
+            
+            if not self._initialised:
+                
+                column_defs = ', '.join( ( f'{column_name} INTEGER' for column_name in self._column_names ) )
+                
+                self._cursor.execute( f'CREATE TABLE IF NOT EXISTS {self._table_name} ( {column_defs} );' )
+                
+                if '.' in self._table_name:
+                    
+                    table_name_simple = self._table_name.split( '.' )[1]
+                    
+                else:
+                    
+                    table_name_simple = self._table_name
+                    
+                
+                for column_name in self._column_names:
+                    
+                    index_name = f'{self._table_name}_{column_name}_index'
+                    
+                    self._cursor.execute( f'CREATE INDEX IF NOT EXISTS {index_name} ON {table_name_simple} ({column_name});' )
+                    
+                
+            
+            column_tup = ', '.join( self._column_names )
+            qmark_tup = ', '.join( ( '?' for i in self._column_names ) )
+            
+            self._cursor.executemany( f'INSERT INTO {self._table_name} ( {column_tup} ) VALUES ( {qmark_tup} );', self._integers_iterable )
+            
         
         return self._table_name
         
@@ -215,7 +265,7 @@ class TemporaryIntegerTable( object ):
         
         self._cursor.execute( 'DELETE FROM {};'.format( self._table_name ) )
         
-        TemporaryIntegerTableNameCache.instance().ReleaseName( self._column_name, self._table_name )
+        TemporaryIntegerTableNameCache.instance().ReleaseName( self._column_names, self._table_name )
         
         return False
         
@@ -349,7 +399,7 @@ class DBBase( object ):
         
         i = 0
         
-        while self._ActuaIndexExists( index_name ):
+        while self._ActualIndexExists( index_name ):
             
             index_name = f'{ideal_index_name}_{i}'
             
@@ -464,7 +514,7 @@ class DBBase( object ):
         return sum_value
         
     
-    def _ActuaIndexExists( self, index_name ):
+    def _ActualIndexExists( self, index_name ):
         
         if '.' in index_name:
             
@@ -538,9 +588,9 @@ class DBBase( object ):
         return False
         
     
-    def _MakeTemporaryIntegerTable( self, integer_iterable, column_name ):
+    def _MakeTemporaryIntegerTable( self, integers_iterable, column_names ):
         
-        return TemporaryIntegerTable( self._c, integer_iterable, column_name )
+        return TemporaryIntegerTable( self._c, integers_iterable, column_names )
         
     
     def _SetCursor( self, c: sqlite3.Cursor ):

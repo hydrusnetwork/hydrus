@@ -52,7 +52,7 @@ def AppendLoadingPredicate( predicates, label ):
     predicates.append( ClientSearchPredicate.Predicate( predicate_type = ClientSearchPredicate.PREDICATE_TYPE_LABEL, value = label + HC.UNICODE_ELLIPSIS ) )
     
 
-def InsertOtherPredicatesForRead( predicates: list, parsed_autocomplete_text: ClientSearchAutocomplete.ParsedAutocompleteText, include_unusual_predicate_types: bool, under_construction_or_predicate: typing.Optional[ ClientSearchPredicate.Predicate ] ):
+def InsertOtherPredicatesForRead( predicates: typing.MutableSequence[ ClientSearchPredicate.Predicate ], parsed_autocomplete_text: ClientSearchAutocomplete.ParsedAutocompleteText, include_unusual_predicate_types: bool, under_construction_or_predicate: typing.Optional[ ClientSearchPredicate.Predicate ] ):
     
     if include_unusual_predicate_types:
         
@@ -73,7 +73,8 @@ def InsertOtherPredicatesForRead( predicates: list, parsed_autocomplete_text: Cl
         PutAtTopOfMatches( predicates, under_construction_or_predicate )
         
     
-def InsertTagPredicates( predicates: typing.List[ ClientSearchPredicate.Predicate ], tag_service_key: bytes, parsed_autocomplete_text: ClientSearchAutocomplete.ParsedAutocompleteText, allow_auto_wildcard_conversion: bool, insert_if_does_not_exist: bool = True ):
+
+def InsertTagPredicates( predicates: typing.MutableSequence[ ClientSearchPredicate.Predicate ], tag_service_key: bytes, parsed_autocomplete_text: ClientSearchAutocomplete.ParsedAutocompleteText, allow_auto_wildcard_conversion: bool, insert_if_does_not_exist: bool = True ):
     
     if parsed_autocomplete_text.IsTagSearch( allow_auto_wildcard_conversion ):
         
@@ -85,7 +86,22 @@ def InsertTagPredicates( predicates: typing.List[ ClientSearchPredicate.Predicat
             
             tag_predicate = predicates[ predicates.index( tag_predicate ) ]
             
+            # this is write only, of course
             ideal_predicate = tag_predicate.GetIdealPredicate()
+            
+        else:
+            
+            entered_text_as_tag = tag_predicate.GetValue()
+            
+            for predicate in predicates:
+                
+                if predicate.HasBadSiblings() and entered_text_as_tag in predicate.GetMatchableSearchTexts():
+                    
+                    tag_predicate = predicate
+                    
+                    break
+                    
+                
             
         
         # this elevates other tags that have our entered tag as a sibling somewhere to the top but tbh it wasn't helpful
@@ -410,6 +426,8 @@ def ReadFetch(
             matches = predicates
             
         
+        matches = HydrusData.FastIndexUniqueList( matches )
+        
         matches = ClientSearchPredicate.SortPredicates( matches )
         
         if not parsed_autocomplete_text.inclusive:
@@ -423,6 +441,8 @@ def ReadFetch(
     
     allow_auto_wildcard_conversion = True
     
+    matches = HydrusData.FastIndexUniqueList( matches )
+    
     InsertTagPredicates( matches, tag_service_key, parsed_autocomplete_text, allow_auto_wildcard_conversion, insert_if_does_not_exist = False )
     
     InsertOtherPredicatesForRead( matches, parsed_autocomplete_text, include_unusual_predicate_types, under_construction_or_predicate )
@@ -434,7 +454,8 @@ def ReadFetch(
     
     CG.client_controller.CallAfterQtSafe( win, 'read a/c full results', results_callable, job_status, parsed_autocomplete_text, results_cache, matches )
     
-def PutAtTopOfMatches( matches: list, predicate: ClientSearchPredicate.Predicate, insert_if_does_not_exist: bool = True ):
+
+def PutAtTopOfMatches( matches: typing.MutableSequence[ ClientSearchPredicate.Predicate ], predicate: ClientSearchPredicate.Predicate, insert_if_does_not_exist: bool = True ):
     
     # we have to be careful here to preserve autocomplete counts!
     # if it already exists, we move it up, do not replace with the test pred param
@@ -592,6 +613,8 @@ def WriteFetch(
         
     
     matches = ClientSearchPredicate.SortPredicates( matches )
+    
+    matches = HydrusData.FastIndexUniqueList( matches )
     
     allow_auto_wildcard_conversion = False
     

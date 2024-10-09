@@ -1,18 +1,14 @@
-import os
 import sqlite3
 import sys
 import time
 import traceback
 import yaml
 
-from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
-from hydrus.core import HydrusGlobals as HG
 
 from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientThreading
-from hydrus.client.metadata import ClientContentUpdates
 
 def AddPaddingToDimensions( dimensions, padding ):
     

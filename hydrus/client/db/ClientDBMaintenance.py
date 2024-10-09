@@ -1,5 +1,4 @@
 import os
-import random
 import sqlite3
 import time
 import typing
@@ -8,7 +7,6 @@ from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusDBBase
 from hydrus.core import HydrusDBModule
-from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusTime
 
@@ -18,7 +16,7 @@ from hydrus.client.db import ClientDBModule
 
 class ClientDBMaintenance( ClientDBModule.ClientDBModule ):
     
-    def __init__( self, cursor: sqlite3.Cursor, db_dir: str, db_filenames: typing.Collection[ str ], cursor_transaction_wrapper: HydrusDBBase.DBCursorTransactionWrapper, modules: typing.List[ HydrusDBModule.HydrusDBModule ] ):
+    def __init__( self, cursor: sqlite3.Cursor, db_dir: str, db_filenames: typing.Dict[ str, str ], cursor_transaction_wrapper: HydrusDBBase.DBCursorTransactionWrapper, modules: typing.List[ HydrusDBModule.HydrusDBModule ] ):
         
         super().__init__( 'client db maintenance', cursor )
         

@@ -18,16 +18,13 @@ from hydrus.core import HydrusTime
 from hydrus.core.networking import HydrusNetwork
 from hydrus.core.networking import HydrusNetworking
 
-from hydrus.client import ClientConstants as CC
-from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientServices
-from hydrus.client.media import ClientMediaManagers
-from hydrus.client.media import ClientMediaResult
 
 from hydrus.server import ServerFiles
 from hydrus.server.networking import ServerServer
 
 from hydrus.test import TestController
+from hydrus.test import TestGlobals as TG
 
 
 with open( os.path.join( HC.STATIC_DIR, 'hydrus.png' ), 'rb' ) as f_g:
@@ -57,7 +54,7 @@ class TestServer( unittest.TestCase ):
         cls._clientside_tag_service.SetCredentials( HydrusNetwork.Credentials( '127.0.0.1', HC.DEFAULT_SERVICE_PORT, cls._access_key ) )
         cls._clientside_admin_service.SetCredentials( HydrusNetwork.Credentials( '127.0.0.1', HC.DEFAULT_SERVER_ADMIN_PORT, cls._access_key ) )
         
-        services_manager = HG.test_controller.services_manager
+        services_manager = TG.test_controller.services_manager
         
         services_manager._keys_to_services[ cls._clientside_file_service.GetServiceKey() ] = cls._clientside_file_service
         services_manager._keys_to_services[ cls._clientside_tag_service.GetServiceKey() ] = cls._clientside_tag_service
@@ -174,11 +171,11 @@ class TestServer( unittest.TestCase ):
         
         path = os.path.join( HC.STATIC_DIR, 'hydrus.png' )
         
-        HG.test_controller.ClearWrites( 'file' )
+        TG.test_controller.ClearWrites( 'file' )
         
         service.Request( HC.POST, 'file', file_body_path = path )
         
-        written = HG.test_controller.GetWrite( 'file' )
+        written = TG.test_controller.GetWrite( 'file' )
         
         [ ( args, kwargs ) ] = written
         
@@ -197,7 +194,7 @@ class TestServer( unittest.TestCase ):
         
         ( ip, timestamp ) = ( '94.45.87.123', HydrusTime.GetNow() - 100000 )
         
-        HG.test_controller.SetRead( 'ip', ( ip, timestamp ) )
+        TG.test_controller.SetRead( 'ip', ( ip, timestamp ) )
         
         response = service.Request( HC.GET, 'ip', { 'hash' : self._file_hash } )
         
@@ -208,7 +205,7 @@ class TestServer( unittest.TestCase ):
         
         test_hash = HydrusData.GenerateKey()
         
-        HG.test_controller.SetRead( 'account_key_from_content', self._account.GetAccountKey() )
+        TG.test_controller.SetRead( 'account_key_from_content', self._account.GetAccountKey() )
         
         content = HydrusNetwork.Content( content_type = HC.CONTENT_TYPE_FILES, content_data = ( test_hash, ) )
         
@@ -243,7 +240,7 @@ class TestServer( unittest.TestCase ):
         
         num_petitions = [ [ HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_STATUS_PETITIONED, 23 ], [ HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_STATUS_PENDING, 0 ] ]
         
-        HG.test_controller.SetRead( 'num_petitions', num_petitions )
+        TG.test_controller.SetRead( 'num_petitions', num_petitions )
         
         response = service.Request( HC.GET, 'num_petitions' )
         
@@ -264,13 +261,13 @@ class TestServer( unittest.TestCase ):
         
         petition = HydrusNetwork.Petition( petitioner_account = petitioner_account, petition_header = petition_header, actions_and_contents = actions_and_contents )
         
-        HG.test_controller.SetRead( 'petition', petition )
+        TG.test_controller.SetRead( 'petition', petition )
         
         response = service.Request( HC.GET, 'petition', { 'content_type' : HC.CONTENT_TYPE_FILES, 'status' : HC.CONTENT_UPDATE_PETITION } )
         
         self.assertEqual( response[ 'petition' ].GetSerialisableTuple(), petition.GetSerialisableTuple() )
         
-        HG.test_controller.SetRead( 'petition', petition )
+        TG.test_controller.SetRead( 'petition', petition )
         
         response = service.Request( HC.GET, 'petition', { 'content_type' : HC.CONTENT_TYPE_FILES, 'status' : HC.CONTENT_UPDATE_PETITION, 'account_key' : petitioner_account.GetAccountKey(), reason : reason } )
         
@@ -353,11 +350,11 @@ class TestServer( unittest.TestCase ):
         '''
         update = HydrusData.ClientToServerContentUpdatePackage( {}, hash_ids_to_hashes )
         
-        HG.test_controller.ClearWrites( 'update' )
+        TG.test_controller.ClearWrites( 'update' )
         
         service.Request( HC.POST, 'content_update_package', { 'update' : update } )
         
-        written = HG.test_controller.GetWrite( 'update' )
+        written = TG.test_controller.GetWrite( 'update' )
         
         [ ( args, kwargs ) ] = written
         
@@ -372,7 +369,7 @@ class TestServer( unittest.TestCase ):
         
         registration_key = HydrusData.GenerateKey()
         
-        HG.test_controller.SetRead( 'access_key', self._access_key )
+        TG.test_controller.SetRead( 'access_key', self._access_key )
         
         response = service.Request( HC.GET, 'access_key', { 'registration_key' : registration_key } )
         
@@ -384,10 +381,10 @@ class TestServer( unittest.TestCase ):
         
         account = self._account
         
-        HG.test_controller.SetRead( 'service', service )
+        TG.test_controller.SetRead( 'service', service )
         
-        HG.test_controller.SetRead( 'account_key_from_access_key', HydrusData.GenerateKey() )
-        HG.test_controller.SetRead( 'account', self._account )
+        TG.test_controller.SetRead( 'account_key_from_access_key', HydrusData.GenerateKey() )
+        TG.test_controller.SetRead( 'account', self._account )
         
         # account
         
@@ -397,7 +394,7 @@ class TestServer( unittest.TestCase ):
         
         # account from access key
         
-        HG.test_controller.SetRead( 'account', self._account )
+        TG.test_controller.SetRead( 'account', self._account )
         
         response = service.Request( HC.GET, 'other_account', { 'subject_account_key' : self._account.GetAccountKey() } )
         
@@ -407,7 +404,7 @@ class TestServer( unittest.TestCase ):
         
         account_info = { 'message' : 'hello' }
         
-        HG.test_controller.SetRead( 'account_info', account_info )
+        TG.test_controller.SetRead( 'account_info', account_info )
         
         response = service.Request( HC.GET, 'account_info', { 'subject_account_key' : HydrusData.GenerateKey() } )
         
@@ -417,9 +414,9 @@ class TestServer( unittest.TestCase ):
         
         account_types = [ HydrusNetwork.AccountType.GenerateAdminAccountType( service.GetServiceType() ) ]
         
-        HG.test_controller.SetRead( 'account_types', account_types )
+        TG.test_controller.SetRead( 'account_types', account_types )
         
-        HG.test_controller.ClearWrites( 'account_types' )
+        TG.test_controller.ClearWrites( 'account_types' )
         
         response = service.Request( HC.GET, 'account_types' )
         
@@ -431,7 +428,7 @@ class TestServer( unittest.TestCase ):
         
         service.Request( HC.POST, 'account_types', { 'account_types' : account_types, 'deletee_account_type_keys_to_new_account_type_keys' : {} } )
         
-        written = HG.test_controller.GetWrite( 'account_types' )
+        written = TG.test_controller.GetWrite( 'account_types' )
         
         [ ( args, kwargs ) ] = written
         
@@ -444,7 +441,7 @@ class TestServer( unittest.TestCase ):
         
         registration_key = HydrusData.GenerateKey()
         
-        HG.test_controller.SetRead( 'registration_keys', [ registration_key ] )
+        TG.test_controller.SetRead( 'registration_keys', [ registration_key ] )
         
         response = service.Request( HC.GET, 'registration_keys', { 'num' : 1, 'account_type_key' : os.urandom( 32 ), 'expires' : HydrusTime.GetNow() + 1200 } )
         
@@ -457,7 +454,7 @@ class TestServer( unittest.TestCase ):
         
         access_key = HydrusData.GenerateKey()
         
-        HG.test_controller.SetRead( 'access_key', access_key )
+        TG.test_controller.SetRead( 'access_key', access_key )
         
         response = service.Request( HC.GET, 'access_key', { 'registration_key' : b'init' } )
         
@@ -498,7 +495,7 @@ class TestServer( unittest.TestCase ):
         test_tag = 'character:samus aran'
         test_hash = HydrusData.GenerateKey()
         
-        HG.test_controller.SetRead( 'account_key_from_content', self._account.GetAccountKey() )
+        TG.test_controller.SetRead( 'account_key_from_content', self._account.GetAccountKey() )
         
         content = HydrusNetwork.Content( content_type = HC.CONTENT_TYPE_MAPPING, content_data = ( test_tag, test_hash ) )
         

@@ -4554,11 +4554,11 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._sibling_connector_custom_namespace_colour.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
             
             self._or_connector = QW.QLineEdit( render_panel )
-            tt = 'When an OR predicate is rendered, it splits the components by this text.'
+            tt = 'When an OR predicate is rendered on one line, it splits the components by this text.'
             self._or_connector.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
             
             self._or_connector_custom_namespace_colour = QW.QLineEdit( render_panel )
-            tt = 'The OR connector can use a particular namespace\'s colour.'
+            tt = 'The "OR:" row can use a particular namespace\'s colour.'
             self._or_connector_custom_namespace_colour.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
             
             self._replace_tag_underscores_with_spaces = QW.QCheckBox( render_panel )
@@ -4629,8 +4629,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows.append( ( 'Sibling connecting string: ', self._sibling_connector ) )
             rows.append( ( 'Fade the colour of the sibling connector string on Qt6: ', self._fade_sibling_connector ) )
             rows.append( ( 'Namespace for the colour of the sibling connecting string: ', self._sibling_connector_custom_namespace_colour ) )
-            rows.append( ( 'OR connecting string: ', self._or_connector ) )
-            rows.append( ( 'Namespace for the colour of the OR connecting string: ', self._or_connector_custom_namespace_colour ) )
+            rows.append( ( 'OR connecting string (on one line): ', self._or_connector ) )
+            rows.append( ( 'Namespace for the OR top row: ', self._or_connector_custom_namespace_colour ) )
             rows.append( ( 'EXPERIMENTAL: Replace all underscores with spaces: ', self._replace_tag_underscores_with_spaces ) )
             rows.append( ( 'EXPERIMENTAL: Replace all emojis with □: ', self._replace_tag_emojis_with_boxes ) )
             

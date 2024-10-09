@@ -23,6 +23,8 @@ from hydrus.client.media import ClientMediaResultCache
 from hydrus.client.metadata import ClientContentUpdates
 from hydrus.client.metadata import ClientTags
 
+from hydrus.test import TestGlobals as TG
+
 current_tag_pool = [ 'blonde hair', 'blue eyes', 'bodysuit', 'character:samus aran', 'series:metroid', 'studio:nintendo' ]
 pending_tag_pool = [ 'favourites', 'kino', 'brown shirt', 'huge knees' ]
 deleted_tag_pool = [ 'trash', 'ugly', 'character:smaus aran', 'red hair' ]
@@ -118,7 +120,7 @@ class TestMigration( unittest.TestCase ):
         cls._delete_db()
         
         # class variable
-        cls._db = ClientDB.DB( HG.test_controller, TestController.DB_DIR, 'client' )
+        cls._db = ClientDB.DB( TG.test_controller, TestController.DB_DIR, 'client' )
         
     
     @classmethod
@@ -146,7 +148,7 @@ class TestMigration( unittest.TestCase ):
     @classmethod
     def setUpClass( cls ):
         
-        cls._db = ClientDB.DB( HG.test_controller, TestController.DB_DIR, 'client' )
+        cls._db = ClientDB.DB( TG.test_controller, TestController.DB_DIR, 'client' )
         
     
     @classmethod

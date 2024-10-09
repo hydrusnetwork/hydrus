@@ -159,6 +159,20 @@ def ImportSources( file_seed_cache, sources ):
     file_seed_cache.AddFileSeeds( file_seeds )
     
 
+def RenormaliseFileSeedCache( win: QW.QWidget, file_seed_cache: ClientImportFileSeeds.FileSeedCache ):
+    
+    message = 'Are you sure you want to renormalise all the URLs in here (and discard any subsequent duplicates)? This typically only makes sense if you have changed the URL Class rules after this list was created (e.g. to remove an ephemeral token parameter) and you now need to collapse the existing list to catch future duplicates better.'
+    message += '\n' * 2
+    message += 'If you do not know exactly what this does, click no.'
+    
+    result = ClientGUIDialogsQuick.GetYesNo( win, message )
+    
+    if result == QW.QDialog.Accepted:
+        
+        file_seed_cache.RenormaliseURLs()
+        
+    
+
 def RetryErrors( win: QW.QWidget, file_seed_cache: ClientImportFileSeeds.FileSeedCache ):
     
     message = 'Are you sure you want to retry all the files that encountered errors?'
@@ -321,6 +335,15 @@ def PopulateFileSeedCacheMenu( win: QW.QWidget, menu: QW.QMenu, file_seed_cache:
     ClientGUIMenus.AppendMenuItem( submenu, 'from png', 'Import new urls or paths to this list from a png file.', ImportFromPNG, win, file_seed_cache )
     
     ClientGUIMenus.AppendMenu( menu, submenu, 'import new sources' )
+    
+    if len( file_seed_cache ) > 0 and file_seed_cache.IsURLFileSeeds():
+        
+        submenu = ClientGUIMenus.GenerateMenu( menu )
+        
+        ClientGUIMenus.AppendMenuItem( submenu, 're-normalise all URLs', 'Normalise all the import objects\' URLs and discard duplicates.', RenormaliseFileSeedCache, win, file_seed_cache )
+        
+        ClientGUIMenus.AppendMenu( menu, submenu, 'advanced' )
+        
     
 
 class EditFileSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):

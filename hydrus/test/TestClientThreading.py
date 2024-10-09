@@ -5,6 +5,8 @@ from hydrus.core import HydrusGlobals as HG
 
 from hydrus.client import ClientThreading
 
+from hydrus.test import TestGlobals as TG
+
 READ_JOB_DURATION = 0.1
 WRITE_JOB_DURATION = 0.2
 
@@ -67,8 +69,8 @@ class TestFileRWLock( unittest.TestCase ):
         
         result_list = []
         
-        HG.test_controller.CallLater( 0.0, do_read_job, rwlock, result_list, '1' )
-        HG.test_controller.CallLater( 0.05, do_read_job, rwlock, result_list, '2' )
+        TG.test_controller.CallLater( 0.0, do_read_job, rwlock, result_list, '1' )
+        TG.test_controller.CallLater( 0.05, do_read_job, rwlock, result_list, '2' )
         
         time.sleep( READ_JOB_DURATION * 2 + 0.2 )
         
@@ -87,7 +89,7 @@ class TestFileRWLock( unittest.TestCase ):
         
         for i in range( 10 ):
             
-            HG.test_controller.CallLater( 0.0, do_read_job, rwlock, result_list, str( i ) )
+            TG.test_controller.CallLater( 0.0, do_read_job, rwlock, result_list, str( i ) )
             
         
         time.sleep( READ_JOB_DURATION * 10 + 0.2 )
@@ -110,8 +112,8 @@ class TestFileRWLock( unittest.TestCase ):
         
         result_list = []
         
-        HG.test_controller.CallLater( 0.0, do_write_job, rwlock, result_list, '1' )
-        HG.test_controller.CallLater( 0.05, do_write_job, rwlock, result_list, '2' )
+        TG.test_controller.CallLater( 0.0, do_write_job, rwlock, result_list, '1' )
+        TG.test_controller.CallLater( 0.05, do_write_job, rwlock, result_list, '2' )
         
         time.sleep( WRITE_JOB_DURATION * 2 + 0.2 )
         
@@ -128,7 +130,7 @@ class TestFileRWLock( unittest.TestCase ):
         
         for i in range( 10 ):
             
-            HG.test_controller.CallLater( 0.0, do_write_job, rwlock, result_list, str( i ) )
+            TG.test_controller.CallLater( 0.0, do_write_job, rwlock, result_list, str( i ) )
             
         
         time.sleep( WRITE_JOB_DURATION * 10 + 0.2 )
@@ -160,14 +162,14 @@ class TestFileRWLock( unittest.TestCase ):
         
         for i in range( 10 ):
             
-            HG.test_controller.CallLater( 0.02 * i, do_read_job, rwlock, result_list, str( i ) )
+            TG.test_controller.CallLater( 0.02 * i, do_read_job, rwlock, result_list, str( i ) )
             
             all_expected_results.update( [ 'begin read {}'.format( i ), 'end read {}'.format( i ) ] )
             
         
         for i in range( 5 ):
             
-            HG.test_controller.CallLater( 0.05 * i, do_write_job, rwlock, result_list, str( i ) )
+            TG.test_controller.CallLater( 0.05 * i, do_write_job, rwlock, result_list, str( i ) )
             
             all_expected_results.update( [ 'begin write {}'.format( i ), 'end write {}'.format( i ) ] )
             

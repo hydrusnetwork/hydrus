@@ -22,6 +22,7 @@ from hydrus.client.search import ClientSearchPredicate
 from hydrus.client.search import ClientSearchTagContext
 
 from hydrus.test import TestController
+from hydrus.test import TestGlobals as TG
 
 IRL_PARENT_PAIRS = {
     ( 'series:diablo', 'studio:blizzard entertainment' ),
@@ -535,9 +536,9 @@ class TestClientDBTags( unittest.TestCase ):
     def _create_db( cls ):
         
         # class variable
-        cls._db = ClientDB.DB( HG.test_controller, TestController.DB_DIR, 'client' )
+        cls._db = ClientDB.DB( TG.test_controller, TestController.DB_DIR, 'client' )
         
-        HG.test_controller.SetRead( 'hash_status', ClientImportFiles.FileImportStatus.STATICGetUnknownStatus() )
+        TG.test_controller.SetRead( 'hash_status', ClientImportFiles.FileImportStatus.STATICGetUnknownStatus() )
         
     
     @classmethod
@@ -565,7 +566,7 @@ class TestClientDBTags( unittest.TestCase ):
     @classmethod
     def setUpClass( cls ):
         
-        cls._db = ClientDB.DB( HG.test_controller, TestController.DB_DIR, 'client' )
+        cls._db = ClientDB.DB( TG.test_controller, TestController.DB_DIR, 'client' )
         
     
     @classmethod
@@ -783,7 +784,7 @@ class TestClientDBTags( unittest.TestCase ):
             
             for filename in filenames:
                 
-                HG.test_controller.SetRead( 'hash_status', ClientImportFiles.FileImportStatus.STATICGetUnknownStatus() )
+                TG.test_controller.SetRead( 'hash_status', ClientImportFiles.FileImportStatus.STATICGetUnknownStatus() )
                 
                 path = os.path.join( HC.STATIC_DIR, 'testing', filename )
                 
@@ -1081,7 +1082,7 @@ class TestClientDBTags( unittest.TestCase ):
         
         # import a file
         
-        HG.test_controller.SetRead( 'hash_status', ClientImportFiles.FileImportStatus.STATICGetUnknownStatus() )
+        TG.test_controller.SetRead( 'hash_status', ClientImportFiles.FileImportStatus.STATICGetUnknownStatus() )
         
         path = os.path.join( HC.STATIC_DIR, 'testing', 'muh_jpg.jpg' )
         
@@ -1182,7 +1183,7 @@ class TestClientDBTags( unittest.TestCase ):
         
         # import a file
         
-        HG.test_controller.SetRead( 'hash_status', ClientImportFiles.FileImportStatus.STATICGetUnknownStatus() )
+        TG.test_controller.SetRead( 'hash_status', ClientImportFiles.FileImportStatus.STATICGetUnknownStatus() )
         
         path = os.path.join( HC.STATIC_DIR, 'testing', 'muh_jpg.jpg' )
         
@@ -1284,7 +1285,7 @@ class TestClientDBTags( unittest.TestCase ):
         
         # import a file
         
-        HG.test_controller.SetRead( 'hash_status', ClientImportFiles.FileImportStatus.STATICGetUnknownStatus() )
+        TG.test_controller.SetRead( 'hash_status', ClientImportFiles.FileImportStatus.STATICGetUnknownStatus() )
         
         path = os.path.join( HC.STATIC_DIR, 'testing', 'muh_jpg.jpg' )
         
@@ -1388,7 +1389,7 @@ class TestClientDBTags( unittest.TestCase ):
         
         # import a file
         
-        HG.test_controller.SetRead( 'hash_status', ClientImportFiles.FileImportStatus.STATICGetUnknownStatus() )
+        TG.test_controller.SetRead( 'hash_status', ClientImportFiles.FileImportStatus.STATICGetUnknownStatus() )
         
         path = os.path.join( HC.STATIC_DIR, 'testing', 'muh_jpg.jpg' )
         
@@ -1491,7 +1492,7 @@ class TestClientDBTags( unittest.TestCase ):
         
         # import a file
         
-        HG.test_controller.SetRead( 'hash_status', ClientImportFiles.FileImportStatus.STATICGetUnknownStatus() )
+        TG.test_controller.SetRead( 'hash_status', ClientImportFiles.FileImportStatus.STATICGetUnknownStatus() )
         
         path = os.path.join( HC.STATIC_DIR, 'testing', 'muh_jpg.jpg' )
         
@@ -2621,7 +2622,7 @@ class TestClientDBTags( unittest.TestCase ):
                 
                 for filename in ( 'muh_jpg.jpg', 'muh_png.png', 'muh_apng.png' ):
                     
-                    HG.test_controller.SetRead( 'hash_status', ClientImportFiles.FileImportStatus.STATICGetUnknownStatus() )
+                    TG.test_controller.SetRead( 'hash_status', ClientImportFiles.FileImportStatus.STATICGetUnknownStatus() )
                     
                     path = os.path.join( HC.STATIC_DIR, 'testing', filename )
                     
@@ -3056,7 +3057,7 @@ class TestTagParents( unittest.TestCase ):
         tag_parents[ cls._second_key ] = second_dict
         tag_parents[ cls._third_key ] = third_dict
         
-        HG.test_controller.SetRead( 'tag_parents', tag_parents )
+        TG.test_controller.SetRead( 'tag_parents', tag_parents )
         
         cls._tag_parents_manager = ClientManagers.TagParentsManager( CG.client_controller )
         

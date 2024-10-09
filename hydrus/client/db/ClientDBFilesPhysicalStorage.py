@@ -3,7 +3,6 @@ import sqlite3
 import typing
 
 from hydrus.core import HydrusData
-from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusPaths
 
 from hydrus.client import ClientFilesPhysical

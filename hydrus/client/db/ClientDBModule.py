@@ -3,7 +3,6 @@ import typing
 
 from hydrus.core import HydrusData
 from hydrus.core import HydrusDBModule
-from hydrus.core import HydrusGlobals as HG
 
 from hydrus.client import ClientGlobals as CG
 

@@ -1,4 +1,3 @@
-import collections
 import sqlite3
 import time
 import typing

@@ -4394,7 +4394,7 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
             default_location_context = CG.client_controller.new_options.GetDefaultLocalLocationContext()
             
             self._old_input = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( self, self.EnterOlds, default_location_context, service_key, show_paste_button = True )
-            self._new_input = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( self, self.SetNew, default_location_context, service_key )
+            self._new_input = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( self, self.SetNew, default_location_context, service_key, show_paste_button = True )
             
             self._old_siblings.tagsChanged.connect( self._old_input.SetContextTags )
             
@@ -4460,6 +4460,7 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
             self._sibling_action_context.RegisterQtUpdateCall( self, self._listctrl_async_updater.update )
             
             self._old_input.tagsPasted.connect( self.EnterOldsOnlyAdd )
+            self._new_input.tagsPasted.connect( self.SetNew )
             
             self._STARTInitialisation( tags, self._service_key )
             

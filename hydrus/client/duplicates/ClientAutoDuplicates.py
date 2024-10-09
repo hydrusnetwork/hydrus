@@ -3,7 +3,6 @@ import threading
 
 from hydrus.core import HydrusSerialisable
 
-from hydrus.client import ClientConstants as CC
 from hydrus.client.duplicates import ClientDuplicates
 from hydrus.client.metadata import ClientMetadataConditional
 
@@ -191,6 +190,16 @@ class DuplicatesAutoResolutionRule( HydrusSerialisable.SerialisableBaseNamed ):
     # get/set
     # 'here's a pair of media results, pass/fail?'
     
+    def GetId( self ) -> int:
+        
+        return self._id
+        
+    
+    def SetId( self, id: int ):
+        
+        self._id = id
+        
+    
 
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_AUTO_DUPLICATES_RULE ] = DuplicatesAutoResolutionRule
 
@@ -221,5 +230,10 @@ class DuplicatesAutoResolutionManager( object ):
             
         
         return DuplicatesAutoResolutionManager.my_instance
+        
+    
+    def Wake( self ):
+        
+        pass
         
     

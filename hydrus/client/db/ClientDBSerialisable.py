@@ -4,15 +4,12 @@ import sqlite3
 import time
 import typing
 
-from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusDBBase
 from hydrus.core import HydrusExceptions
-from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTime
 
-from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
 from hydrus.client.db import ClientDBModule
 from hydrus.client.db import ClientDBServices

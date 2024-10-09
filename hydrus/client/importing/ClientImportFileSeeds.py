@@ -2507,7 +2507,7 @@ class FileSeedCache( HydrusSerialisable.SerialisableBase ):
     
     def _SetStatusesToFileSeedsDirty( self ):
         
-        # this is never actually called, which is neat! I think we are 'perfect' on this thing maintaining itself after inital generation
+        # this is never actually called in normal usage, which is neat! I think we are 'perfect' on this thing maintaining itself after inital generation
         
         self._statuses_to_file_seeds_dirty = True
         
@@ -3259,6 +3259,46 @@ class FileSeedCache( HydrusSerialisable.SerialisableBase ):
             
         
         self.RemoveFileSeeds( file_seeds_to_delete )
+        
+    
+    def RenormaliseURLs( self ):
+        
+        with self._lock:
+            
+            # first make a fake pool of what we'll end up with and figure out what to discard, given that
+            
+            file_seeds_to_remove = []
+            
+            new_file_seeds_fast = set()
+            
+            for file_seed in self._file_seeds:
+                
+                file_seed_copy = file_seed.Duplicate()
+                
+                file_seed_copy.Normalise()
+                
+                if file_seed_copy not in new_file_seeds_fast:
+                    
+                    new_file_seeds_fast.add( file_seed_copy )
+                    
+                else:
+                    
+                    file_seeds_to_remove.append( file_seed )
+                    
+                
+            
+        
+        self.RemoveFileSeeds( file_seeds_to_remove )
+        
+        with self._lock:
+            
+            for file_seed in self._file_seeds:
+                
+                file_seed.Normalise()
+                
+            
+        
+        self._NotifyFileSeedsUpdated( self._file_seeds )
         
     
     def RetryFailed( self ):

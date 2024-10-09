@@ -11,6 +11,7 @@ from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.lists import ClientGUIListBoxes
 
 from hydrus.test import TestController
+from hydrus.test import TestGlobals as TG
 
 def DoClick( click, panel, do_delayed_ok_afterwards = False ):
     
@@ -18,7 +19,7 @@ def DoClick( click, panel, do_delayed_ok_afterwards = False ):
     
     if do_delayed_ok_afterwards:
         
-        HG.test_controller.CallLaterQtSafe( panel, 1, 'test click', PressKeyOnFocusedWindow, QC.Qt.Key_Return )
+        TG.test_controller.CallLaterQtSafe( panel, 1, 'test click', PressKeyOnFocusedWindow, QC.Qt.Key_Return )
         
     
     QW.QApplication.processEvents()
@@ -200,6 +201,6 @@ class TestListBoxes( unittest.TestCase ):
                 
             
         
-        HG.test_controller.CallBlockingToQt( HG.test_controller.win, qt_code )
+        TG.test_controller.CallBlockingToQt( TG.test_controller.win, qt_code )
         
     

@@ -1,10 +1,8 @@
-import os
 import threading
 import time
 
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
-from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusThreading
 from hydrus.core import HydrusTime
 

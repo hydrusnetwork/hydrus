@@ -7,6 +7,41 @@ title: Changelog
 !!! note
     This is the new changelog, only the most recent builds. For all versions, see the [old changelog](old_changelog.html).
 
+## [Version 593](https://github.com/hydrusnetwork/hydrus/releases/tag/v593)
+
+### misc
+
+* in a normal search page tag autocomplete input, search results will recognise exact-text-matches of their worse siblings for 'put at the top of the list' purposes. so, if you type 'lotr', and it was siblinged to 'series:lord of the rings', then 'series:lord of the rings' is now promoted to the top of the list, regardless of count, as if you had typed in that full ideal tag
+* OR predicates are now multi-line. the top line is OR:, and then each sub-tag is now listed indented below. if you construct an OR pred using shift+enter in the tag autocomplete, this new OR does start to eat up some space, but if you are making crazy 17-part OR preds, maybe you'll want to use the OR button dialog input anyway
+* when you right-click an OR predicate, the 'copy' menu now recognises this as '3 selected tags' etc.. and will copy all the involved tags and handle subtags correctly
+* the 'remove/reset for all selected' file relationship menu is no longer hidden behind advanced mode. it being buried five layers deep is enough
+* to save a button press, the manage tag siblings dialog now has a paste button for the right-side tag autocomplete input. if you paste multiple lines of content, it just takes the first
+* updated the file maintenance job descriptions for the 'try to redownload' jobs to talk about how to deal with URL downloads that 404 or produce a duplicate and brushed up a bit of that language in general
+* the new 'if a db job took more than 15 seconds, log it' thing now tests if the program was non-idle at the start or end of the db job, rather than just the end. this will catch some 'it took so long that some "wake up" stuff had time to kick in' instances
+* fixed a typo where if the 'other' hashes were unknown, the 'sha512 (unknown)' label was saying 'md5 (unknown)'
+* file import logs get a new 'advanced' menu option, tucked away a little, to 'renormalise' their contents. this is a maintenance job to clear out duplicate chaff on an existing list after the respective URL Class rules have changed to remove something in normalisation (e.g. setting a parameter to be ephemeral). I added a unit test for this also, but let me know how it works in the wild
+
+### default downloaders
+
+* fixed the source time parsing for the gelbooru 0.2.0 (rule34.xxx and others) and gelbooru 0.2.5 (gelbooru proper) page parsers
+
+### client api
+
+* fixed the 'permits everything' API Permissions update from a couple weeks ago. it was supposed to set 'permits everything' when the existing permissions structure was 'mostly full', but the logic was bad and it was setting it when the permissions were sparse. if you were hit by this and did not un-set the 'permits everything' yourself in _review services_, you will get a yes/no prompt on update asking if you want to re-run the fixed update. if the update only missed out setting "permits everything" where it should have, you'll just get a popup saying it did them. sorry for missing this, my too-brief dev machine test happened to be exactly on the case of a coin flip landing three times on its edge--I've improved my API permission tests for future
+
+### duplicate auto-resolution progress
+
+* I got started on the db module that will handle duplicates auto-resolution. this started out feeling daunting, and I wasn't totally sure how I'd do some things, but I gave it a couple iterations and managed to figure out a simple design I am very happy with. I think it is about 25-33% complete (while object design is ~50-75% and UI is 0%), so there is a decent bit to go here, but the way is coming into focus
+
+### boring code cleanup
+
+* updated my `SortedList`, which does some fast index lookup stuff, to handle more situations, optimised some remove actions, made it more compatible as a list drop-in replacement, moved it to `HydrusData`, and renamed it to `FastIndexUniqueList`
+* the autocomplete results system uses the new `FastIndexUniqueList` a bit for some cached matches and results reordering stuff
+* expanded my `TemporerIntegerTable` system, which I use to do some beardy 'executemany' SELECT statements, to support an arbitrary number of integer columns. the duplicate auto-resolution system is going to be doing mass potential pair set intersections, and this makes it simple
+* thanks to a user, the core `Globals` files get some linter magic that lets an IDE do good type checking on the core controller classes without running into circular import issues. this reduced project-wide PyCharm linter warnings from like 4,500 to 2,200 wew
+* I pulled the `ServerController` and `TestController` gubbins out of `HydrusGlobals` into their own 'Globals' files in their respective modules to ensure other module-crawlers (e.g. perhaps PyInstaller) do not get confused about what they are importing here, and to generally clean this up a bit
+* improved a daemon unit test that would sometimes fail because it was not waiting long enough for the daemon to finish. I cut some other fat and it is now four or five seconds faster too
+
 ## [Version 592](https://github.com/hydrusnetwork/hydrus/releases/tag/v592)
 
 ### misc
@@ -360,28 +395,3 @@ title: Changelog
 * the way the initial focus is set on system predicate flesh-out panels (when you double-click on like 'system:dimensions' and get a bunch of sub-panels) is more sane. should be, fairly reliably, on the first editable panel's ok button. I want it to be on an editable widget in the panel in future, I think, but I need to do some behind the scenes stuff to make this work in a nicer way
 * pulled some stuff out of `HydrusData`, mostly to `HydrusNumbers`, `HydrusLists`, and the new `HydrusProcess`, mostly for decoupling purposes
 * renamed some `ConvertXToY` stuff to just `XToY`
-
-## [Version 583](https://github.com/hydrusnetwork/hydrus/releases/tag/v583)
-
-### new
-
-* added a 'command palette' options page. the ability to show menubar and media actions is now set here with a couple of checkboxes (previously these were hidden behind advanced mode)
-* you can also now search for 'page of pages' with the command palette. this is turned on in the same new options page
-* the new sidecar test panel now only shows its notebook tabs if there is more than one source. the tab labels, when shown, are now '1st' ... '2nd' ordinal strings respective to the source list on the left
-* added some explanation text, a button to the help docs, and a bit of better layout to the sidecars UI
-* the file import report mode now writes the 'nice human description' for the file import to the log. this will expose the source URL or local file path for better context than just the random temp path
-* in the 'manage times' dialog, you can now set the same timestamp (including cascading timestamps) to multiple domains or file services at once. the logic is a little delicate where some files are in one domain in your selection and others are only in another, but I think I got it working ok. if you have a complicated setup, let me know how you get on!
-* the 'Dark Blue' stylesheets and the new 'Purple' stylesheet have updated custom colours
-
-### fixes
-
-* fixed a typo in the 'fetch a mappings petition' server code
-* when the client is called to render an image that was just this moment removed from the file store, the image renderer should now give you a nicer error image with an appropriate messare rather than throwing an error popup
-* hydrus no longer applies EXIF Orientation (rotation) to PNG files, which it recently started doing automatically when we started scanning PNGs for EXIF. EXIF is not well-defined and supported for PNG, and if an Orientation row exists, it is likely a false positive mistake of some encoder. hydrus will show this data but it will not apply it, and the metadata review UI now also notes this
-* fixed the 'has exif?' file maintenance job, which I think was false-negativing!
-
-### code and help
-
-* the `psutil` library is now technically optional. it is still needed for a bunch of normal operations like 'is the client currently running?' and 'how much free space is there on this drive?', but if it is missing the client will now boot and try to muddle through anyway
-* did more multi-column list 'select, sort, and scroll' tech for: the url class parameters list; the url class links list; the external launch paths list; the tag suggestion related tags namespace lists; import folder filename tagging options; manage custom network context headers; the string to string match widget list; the string match to string match widget list; the edit subscription queries list; and more of the edit subscriptions subscription list, including the merge and separate actions
-* updated the QuickSync help a little, clarifying it is only useful for _new, empty_ clients
