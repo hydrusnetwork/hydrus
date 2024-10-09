@@ -171,7 +171,11 @@ class FastIndexUniqueList( collections.abc.MutableSequence ):
         
         item = self._list[ index ]
         del self._list[ index ]
-        del self._items_to_indices[ item ]
+        
+        if item in self._items_to_indices:
+            
+            del self._items_to_indices[ item ]
+            
         
         if index not in ( -1, len( self._list ) - 1 ):
             
@@ -217,7 +221,11 @@ class FastIndexUniqueList( collections.abc.MutableSequence ):
     def __setitem__( self, index, value ):
         
         old_item = self._list[ index ]
-        del self._items_to_indices[ old_item ]
+        
+        if old_item in self._items_to_indices:
+            
+            del self._items_to_indices[ old_item ]
+            
         
         self._list[ index ] = value
         self._items_to_indices[ value ] = index
