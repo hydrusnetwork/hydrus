@@ -154,21 +154,21 @@ elif [ "$install_type" = "a" ]; then
     future=n
 
     # comment this guy out if no special stuff going on
-    echo "--------"
-    echo "Future Libraries"
-    echo
-    echo "There is a test of new requests and setuptools. Want to try it?"
-    echo "(y)es/(n)o? "
-    read -r future
-    if [ "$future" = "y" ]; then
-        :
-    elif [ "$future" = "n" ]; then
-        :
-    else
-        echo "Sorry, did not understand that input!"
-        popd || exit 1
-        exit 1
-    fi
+    # echo "--------"
+    # echo "Future Libraries"
+    # echo
+    # echo "There is a test of new requests and setuptools. Want to try it?"
+    # echo "(y)es/(n)o? "
+    # read -r future
+    # if [ "$future" = "y" ]; then
+    #     :
+    # elif [ "$future" = "n" ]; then
+    #     :
+    # else
+    #     echo "Sorry, did not understand that input!"
+    #     popd || exit 1
+    #     exit 1
+    # fi
 else
     echo "Sorry, did not understand that input!"
     popd || exit 1
