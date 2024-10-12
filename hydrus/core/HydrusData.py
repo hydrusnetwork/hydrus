@@ -169,15 +169,23 @@ class FastIndexUniqueList( collections.abc.MutableSequence ):
     
     def __delitem__( self, index ):
         
-        item = self._list[ index ]
-        del self._list[ index ]
+        # only clean state is when we take what is the last item _at this point in time_
+        # previously this test was after the delete and it messed everything up hey
+        removing_last_item_in_list = index in ( -1, len( self._list ) - 1 )
         
-        if item in self._items_to_indices:
+        if removing_last_item_in_list:
             
-            del self._items_to_indices[ item ]
+            item = self._list[ index ]
+            del self._list[ index ]
             
-        
-        if index not in ( -1, len( self._list ) - 1 ):
+            if item in self._items_to_indices:
+                
+                del self._items_to_indices[ item ]
+                
+            
+        else:
+            
+            del self._list[ index ]
             
             self._DirtyIndices()
             
@@ -272,7 +280,7 @@ class FastIndexUniqueList( collections.abc.MutableSequence ):
         self._list.extend( items )
         
     
-    def index( self, item ):
+    def index( self, item, **kwargs ):
         """
         This is fast!
         """
