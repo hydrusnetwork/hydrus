@@ -32,6 +32,7 @@ PyQt6==6.6.0
 PyQt6-Qt6==6.6.0
 
 requests==2.32.3
+setuptools==70.3.0
 
 pyobjc-core>=10.1
 pyobjc-framework-Cocoa>=10.1
