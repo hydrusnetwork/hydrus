@@ -11,6 +11,8 @@ from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.panels import ClientGUIScrolledPanelsEdit
 
+from hydrus.test import TestGlobals as TG
+
 def HitButton( button ):
     
     button.click()
@@ -69,11 +71,11 @@ class TestDBDialogs( unittest.TestCase ):
                 
                 dlg.SetPanel( panel )
                 
-                HG.test_controller.CallLaterQtSafe( dlg, 2, 'test job', panel.Add )
+                TG.test_controller.CallLaterQtSafe( dlg, 2, 'test job', panel.Add )
                 
-                HG.test_controller.CallLaterQtSafe( dlg, 4, 'test job', OKChildDialog, panel )
+                TG.test_controller.CallLaterQtSafe( dlg, 4, 'test job', OKChildDialog, panel )
                 
-                HG.test_controller.CallLaterQtSafe( dlg, 6, 'test job', HitCancelButton, dlg )
+                TG.test_controller.CallLaterQtSafe( dlg, 6, 'test job', HitCancelButton, dlg )
                 
                 result = dlg.exec()
                 
@@ -81,7 +83,7 @@ class TestDBDialogs( unittest.TestCase ):
                 
             
         
-        HG.test_controller.CallBlockingToQt( HG.test_controller.win, qt_code )
+        TG.test_controller.CallBlockingToQt( TG.test_controller.win, qt_code )
         
     
 class TestNonDBDialogs( unittest.TestCase ):
@@ -92,7 +94,7 @@ class TestNonDBDialogs( unittest.TestCase ):
             
             with ClientGUIDialogs.DialogChooseNewServiceMethod( None ) as dlg:
                 
-                HG.test_controller.CallLaterQtSafe( dlg, 1, 'test job', HitButton, dlg._register )
+                TG.test_controller.CallLaterQtSafe( dlg, 1, 'test job', HitButton, dlg._register )
                 
                 result = dlg.exec()
                 
@@ -105,7 +107,7 @@ class TestNonDBDialogs( unittest.TestCase ):
             
             with ClientGUIDialogs.DialogChooseNewServiceMethod( None ) as dlg:
                 
-                HG.test_controller.CallLaterQtSafe( dlg, 1, 'test job', HitButton, dlg._setup )
+                TG.test_controller.CallLaterQtSafe( dlg, 1, 'test job', HitButton, dlg._setup )
                 
                 result = dlg.exec()
                 
@@ -118,7 +120,7 @@ class TestNonDBDialogs( unittest.TestCase ):
             
             with ClientGUIDialogs.DialogChooseNewServiceMethod( None ) as dlg:
                 
-                HG.test_controller.CallLaterQtSafe( dlg, 1, 'test job', HitCancelButton, dlg )
+                TG.test_controller.CallLaterQtSafe( dlg, 1, 'test job', HitCancelButton, dlg )
                 
                 result = dlg.exec()
                 
@@ -126,6 +128,6 @@ class TestNonDBDialogs( unittest.TestCase ):
                 
             
         
-        HG.test_controller.CallBlockingToQt( HG.test_controller.win, qt_code )
+        TG.test_controller.CallBlockingToQt( TG.test_controller.win, qt_code )
         
     

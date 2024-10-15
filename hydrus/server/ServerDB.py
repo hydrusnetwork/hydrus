@@ -22,6 +22,7 @@ from hydrus.core import HydrusTime
 from hydrus.core.networking import HydrusNetwork
 
 from hydrus.server import ServerFiles
+from hydrus.server import ServerGlobals as SG
 
 ALLOWABLE_SERVICE_INFO_TYPES = collections.defaultdict( list )
 
@@ -344,7 +345,7 @@ class DB( HydrusDB.HydrusDB ):
                         HydrusData.Print( 'Analyzed ' + name + ' in ' + HydrusTime.TimeDeltaToPrettyTimeDelta( time_took ) )
                         
                     
-                    if HG.server_controller.ShouldStopThisWork( maintenance_mode, stop_time = stop_time ):
+                    if SG.server_controller.ShouldStopThisWork( maintenance_mode, stop_time = stop_time ):
                         
                         break
                         
@@ -1420,7 +1421,7 @@ class DB( HydrusDB.HydrusDB ):
         
         self._Execute( 'UPDATE accounts SET account_type_id = ? WHERE account_id = ?;', ( new_account_type_id, subject_account_id ) )
         
-        HG.server_controller.pub( 'update_session_accounts', service_key, ( subject_account_key, ) )
+        SG.server_controller.pub( 'update_session_accounts', service_key, ( subject_account_key, ) )
         
         HydrusData.Print(
             'Account {} changed the account type of {} from "{}" to "{}".'.format(
@@ -1458,7 +1459,7 @@ class DB( HydrusDB.HydrusDB ):
             self._DeleteRepositoryPetitions( service_id, ( subject_account_id, ) )
             
         
-        HG.server_controller.pub( 'update_session_accounts', service_key, ( subject_account_key, ) )
+        SG.server_controller.pub( 'update_session_accounts', service_key, ( subject_account_key, ) )
         
         HydrusData.Print(
             'Account {} banned {} with reason "{}" until "{}".'.format(
@@ -1496,7 +1497,7 @@ class DB( HydrusDB.HydrusDB ):
             we_deleted_everything = self._RepositoryDeleteAllCurrentContent( service_id, admin_account_id, subject_account_id )
             
         
-        HG.server_controller.pub( 'update_session_accounts', service_key, ( subject_account_key, ) )
+        SG.server_controller.pub( 'update_session_accounts', service_key, ( subject_account_key, ) )
         
         HydrusData.Print(
             'Account {} deleted all content by {}.'.format(
@@ -1523,7 +1524,7 @@ class DB( HydrusDB.HydrusDB ):
         
         self._Execute( 'UPDATE accounts SET expires = ? WHERE account_id = ?;', ( new_expires, subject_account_id ) )
         
-        HG.server_controller.pub( 'update_session_accounts', service_key, ( subject_account_key, ) )
+        SG.server_controller.pub( 'update_session_accounts', service_key, ( subject_account_key, ) )
         
         HydrusData.Print(
             'Account {} changed the expiration of {} from "{}" to "{}".'.format(
@@ -1554,7 +1555,7 @@ class DB( HydrusDB.HydrusDB ):
         
         self._SaveAccounts( service_id, ( subject_account, ) )
         
-        HG.server_controller.pub( 'update_session_accounts', service_key, ( subject_account_key, ) )
+        SG.server_controller.pub( 'update_session_accounts', service_key, ( subject_account_key, ) )
         
         if message == '':
             
@@ -1590,7 +1591,7 @@ class DB( HydrusDB.HydrusDB ):
         
         self._SaveAccounts( service_id, ( subject_account, ) )
         
-        HG.server_controller.pub( 'update_session_accounts', service_key, ( subject_account_key, ) )
+        SG.server_controller.pub( 'update_session_accounts', service_key, ( subject_account_key, ) )
         
         HydrusData.Print(
             'Account {} unbanned {}.'.format(

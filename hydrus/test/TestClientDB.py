@@ -32,6 +32,7 @@ from hydrus.client.search import ClientSearchPredicate
 from hydrus.client.search import ClientSearchTagContext
 
 from hydrus.test import TestController
+from hydrus.test import TestGlobals as TG
 
 class TestClientDB( unittest.TestCase ):
     
@@ -41,9 +42,9 @@ class TestClientDB( unittest.TestCase ):
         cls._delete_db()
         
         # class variable
-        cls._db = ClientDB.DB( HG.test_controller, TestController.DB_DIR, 'client' )
+        cls._db = ClientDB.DB( TG.test_controller, TestController.DB_DIR, 'client' )
         
-        HG.test_controller.SetTestDB( cls._db )
+        TG.test_controller.SetTestDB( cls._db )
         
     
     @classmethod
@@ -67,15 +68,15 @@ class TestClientDB( unittest.TestCase ):
         
         del cls._db
         
-        HG.test_controller.ClearTestDB()
+        TG.test_controller.ClearTestDB()
         
     
     @classmethod
     def setUpClass( cls ):
         
-        cls._db = ClientDB.DB( HG.test_controller, TestController.DB_DIR, 'client' )
+        cls._db = ClientDB.DB( TG.test_controller, TestController.DB_DIR, 'client' )
         
-        HG.test_controller.SetTestDB( cls._db )
+        TG.test_controller.SetTestDB( cls._db )
         
     
     @classmethod
@@ -1131,7 +1132,7 @@ class TestClientDB( unittest.TestCase ):
         
         #
         
-        management_controller = ClientGUIManagementController.CreateManagementControllerPetitions( HG.test_controller.example_tag_repo_service_key )
+        management_controller = ClientGUIManagementController.CreateManagementControllerPetitions( TG.test_controller.example_tag_repo_service_key )
         
         page_name = management_controller.GetPageName()
         
@@ -1292,7 +1293,7 @@ class TestClientDB( unittest.TestCase ):
         
         for ( filename, hex_hash, size, mime, width, height, durations, possible_num_frames, has_audio, num_words ) in test_files:
             
-            HG.test_controller.SetRead( 'hash_status', ClientImportFiles.FileImportStatus.STATICGetUnknownStatus() )
+            TG.test_controller.SetRead( 'hash_status', ClientImportFiles.FileImportStatus.STATICGetUnknownStatus() )
             
             path = os.path.join( HC.STATIC_DIR, 'testing', filename )
             
@@ -1635,7 +1636,7 @@ class TestClientDB( unittest.TestCase ):
         
         for filename in test_files:
             
-            HG.test_controller.SetRead( 'hash_status', ClientImportFiles.FileImportStatus.STATICGetUnknownStatus() )
+            TG.test_controller.SetRead( 'hash_status', ClientImportFiles.FileImportStatus.STATICGetUnknownStatus() )
             
             path = os.path.join( HC.STATIC_DIR, 'testing', filename )
             
@@ -1873,7 +1874,7 @@ class TestClientDB( unittest.TestCase ):
         
         for ( hash, filename ) in test_files.items():
             
-            HG.test_controller.SetRead( 'hash_status', ClientImportFiles.FileImportStatus.STATICGetUnknownStatus() )
+            TG.test_controller.SetRead( 'hash_status', ClientImportFiles.FileImportStatus.STATICGetUnknownStatus() )
             
             path = os.path.join( HC.STATIC_DIR, 'testing', filename )
             

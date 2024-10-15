@@ -10938,6 +10938,180 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
+        if version == 592:
+            
+            try:
+                
+                #                                            ▓▓          
+                #       ░                                   ████         
+                #     ▒███▓                               ▓█████░        
+                #     ▓█████▒                            ███████░        
+                #     ▒███████         ▒▒▓▓▓▓▓▓▒       ▓████████         
+                #      ████████▓  ▒▓███████████████▓▓██████████░         
+                #      ░████████████████▓▓▓███████████████████           
+                #        █████████▓▓▓▓▓▒▒▒▒▓▓▒▒▒▓████▓▓▓███▓░            
+                #          ▓█████▓▒░▒▓▓▓▒▓▓██▒▒▓▓▓▓▓▒▓█▓▓█▓              
+                #          ▓█▓▓▓▓▓▓▒▒███▒▓███▓▒███▒░▒▓█▓████▒            
+                #         ▓██▓░▒▓███▓█▓█████████▓█▓▒████▓████            
+                #        ▒███▓▓▒▓██████▓██▓██▓█████▓▓██▓█▓▓██▓           
+                #        ██████▓▓█▓▓▓▓▓▓▓▓██▓█▓█▓██▒ █████▓▓▓█▒          
+                #       ▓█████▓ ▓▓▓▓█▓███▓██████▓██▓ ▓█▓▓▓▓▓███          
+                #       ████▓█▒ ██▓▓▓█████████▓████▓ ▒████▓▓███▒         
+                #      ▒█▓█▓██░ ███▓▓██████████████▓  █████████▓         
+                #      ▓██████  ██▓▓▓██████████████▓░ ▓█████▓███         
+                #      ███████ ░█▓▓█▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓   ▓█████████░        
+                #      ███████ ░▓▓▒▒░▒░       ░░ ░    ▓█████████▓        
+                #      ██████▓  ░▒▒▒▓▒░ ░ ░░ ░▒▓█▓███▓▓██████████        
+                #     ░██████▓░▓█▓▓▓█▓▒▒▒▒▒▒▓▓▓▓░  ▓▓▓▓▓▓▓▓▓▓██▓█▒       
+                #     ▓██▓▓▓▓▓▓▓░   ▒▓▓▓▓▓▓▓▓▓▓▓   ▒▒▒▒███████▒ ▒█       
+                #     ▓██▓▓▓▓▓▒▓▒▒ ░▓▒▒▒▒▒▒▒▒▒▒▓▓▓▓▓▒░▒███████ ░██       
+                #     ████████░▒▓▓▓▓▒▒░░░▒▒▒▒▒▒▒▒▓▓▒▒░▓███████▓███▒      
+                #     ████████▒░▒▓▓▒▒▒░░░░ ░░░░░ ░░▒░ ▓███████████▓      
+                #     ████████▓░░▒▒░░░░       ░░░░░░░ ▓██▓███▓█████      
+                #    ▓████████▓▓ ░░░░░ ▒▓▒▒▒▒▓░░░░░░  ███▓███▓█████▓     
+                #    ▓█████▓████▓   ░░░▒▓▓▓▓▓▓░░░░░  ░██▓▒█▓█▓█████▓     
+                #    ██████▓▓▓███▓    ░  ▒▒▒░  ░    ▒██▓▒▒▓▓▓▓██████     
+                #    ███▓▓█▒▓▓█████▓              ▒▓██▓▓▒▓▓▓▓▓██████▓    
+                #   ▒███▓▓▓▓▒▓▓██████▓▒        ▒▓████▓▓▒▒▓▓▓▒███████▓    
+                #   ████▓▓▓▓▒▓▓██████████▓▒▒▓▓▓▓▓████▓▒▒▓▓▒▒▓███▓████░   
+                #   █████▓▓▓▓▓▒███████████▓█▓▓▓▓▓█▓█▓▒▒▓▒▒▓█████▒████▓   
+                #  ░████▓▒▓▒▒▒▒▓██████▓▒▓▓▓▓▓▓▓▒▓▒▒▓▒▒▒▒▓███████▒▓████   
+                
+                def correct_permits_everything_test( p: ClientAPI.APIPermissions ):
+                    
+                    # I messed this up the first time around
+                    
+                    basic_permissions = p.GetBasicPermissions()
+                    
+                    permits_everything = {
+                        ClientAPI.CLIENT_API_PERMISSION_ADD_FILES,
+                        ClientAPI.CLIENT_API_PERMISSION_ADD_TAGS,
+                        ClientAPI.CLIENT_API_PERMISSION_ADD_URLS,
+                        ClientAPI.CLIENT_API_PERMISSION_SEARCH_FILES,
+                        ClientAPI.CLIENT_API_PERMISSION_MANAGE_PAGES,
+                        ClientAPI.CLIENT_API_PERMISSION_MANAGE_HEADERS,
+                        ClientAPI.CLIENT_API_PERMISSION_MANAGE_DATABASE,
+                        ClientAPI.CLIENT_API_PERMISSION_ADD_NOTES,
+                        ClientAPI.CLIENT_API_PERMISSION_MANAGE_FILE_RELATIONSHIPS,
+                        ClientAPI.CLIENT_API_PERMISSION_EDIT_RATINGS 
+                    }.issubset( basic_permissions )
+                    
+                    return permits_everything
+                    
+                
+                def ask_what_to_do_permissions_stuff_593():
+                    
+                    message = 'Hey, a couple weeks ago I messed up the Client API permissions "permits everything" update. Permission sets that did not permit much were set to "permits everything", and those that permitted almost everything were not.'
+                    message += '\n' * 2
+                    message += 'Would you like me to fix this now by re-running the update as it was originally intended, or have you already recently checked everything in "review services" and know you are happy with the current settings?'
+                    
+                    from hydrus.client.gui import ClientGUIDialogsQuick
+                    
+                    result = ClientGUIDialogsQuick.GetYesNo( None, message, title = 'Re-do permissions update?', yes_label = 'yes, re-run the update', no_label = 'no, I checked everything in "review services" already' )
+                    
+                    return result == QW.QDialog.Accepted
+                    
+                
+                client_api_manager = self.modules_serialisable.GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_CLIENT_API_MANAGER )
+                
+                all_permissions = client_api_manager.GetAllPermissions()
+                
+                underpermitted_yet_set_to_permits_everything = []
+                goodpermitted_but_not_set_to_permits_everything = []
+                
+                for permissions in all_permissions:
+                    
+                    if permissions.PermitsEverything() and not correct_permits_everything_test( permissions ):
+                        
+                        # this was unintentionally set a couple weeks ago due to test inversion
+                        
+                        underpermitted_yet_set_to_permits_everything.append( permissions )
+                        
+                    elif not permissions.PermitsEverything() and correct_permits_everything_test( permissions ):
+                        
+                        # this was missed a couple weeks ago due to test inversion
+                        
+                        goodpermitted_but_not_set_to_permits_everything.append( permissions )
+                        
+                    
+                
+                if len( underpermitted_yet_set_to_permits_everything ) > 0:
+                    
+                    do_permissions_stuff = self._controller.CallBlockingToQt( None, ask_what_to_do_permissions_stuff_593 )
+                    
+                    if do_permissions_stuff:
+                        
+                        for permissions in underpermitted_yet_set_to_permits_everything:
+                            
+                            permissions.SetPermitsEverything( False )
+                            
+                        
+                        for permissions in goodpermitted_but_not_set_to_permits_everything:
+                            
+                            permissions.SetPermitsEverything( True )
+                            
+                        
+                    
+                    message = 'Ok, I fixed the permissions to how I originally intended it to work. Sorry for the trouble, and please double-check the settings in "services->review services->client api" to make sure it all looks good now.'
+                    
+                    self.pub_initial_message( message )
+                    
+                elif len( goodpermitted_but_not_set_to_permits_everything ) > 0:
+                    
+                    for permissions in goodpermitted_but_not_set_to_permits_everything:
+                        
+                        permissions.SetPermitsEverything( True )
+                        
+                    
+                    message = 'Hey, for convenience, at least one of your Client API access permissions was upgraded to "permits everything". This is a simpler state that will auto-inherit new permissions as they are added in future. You may have had others update a couple of versions ago--today I am just adding more. If you need finer control, please check the settings in "services->review services".'
+                    
+                    self.pub_initial_message( message )
+                    
+                
+                #
+                
+                self.modules_serialisable.SetJSONDump( client_api_manager )
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to check some API stuff failed! Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
+                
+            
+            try:
+                
+                domain_manager = self.modules_serialisable.GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
+                
+                domain_manager.Initialise()
+                
+                #
+                
+                domain_manager.OverwriteDefaultParsers( [
+                    'gelbooru 0.2.0 file page parser',
+                    'gelbooru 0.2.5 file page parser'
+                ] )
+                
+                #
+                
+                domain_manager.TryToLinkURLClassesAndParsers()
+                
+                #
+                
+                self.modules_serialisable.SetJSONDump( domain_manager )
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to update some downloader objects failed! Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
+                
+            
+        
         self._controller.frame_splash_status.SetTitleText( 'updated db to v{}'.format( HydrusNumbers.ToHumanInt( version + 1 ) ) )
         
         self._Execute( 'UPDATE version SET version = ?;', ( version + 1, ) )

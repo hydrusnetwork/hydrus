@@ -488,6 +488,16 @@ class ClientDBFilesDuplicates( ClientDBModule.ClientDBModule ):
         return good_media_id_pairs
         
     
+    def FilterExistingPotentialDuplicatePairs( self, potential_pair_ids_table_name: str ):
+        """
+        Which of these actually exist in storage?
+        """
+        
+        existing_pairs = self._STS( self._Execute( f'SELECT smaller_media_id, larger_media_id FROM {potential_pair_ids_table_name} CROSS JOIN potential_duplicate_pairs ON ( {potential_pair_ids_table_name}.smaller_media_id = potential_duplicate_pairs.smaller_media_id AND {potential_pair_ids_table_name}.larger_media_id = potential_duplicate_pairs.larger_media_id );' ) )
+        
+        return existing_pairs
+        
+    
     def GetAlternatesGroupId( self, media_id, do_not_create = False ):
         
         result = self._Execute( 'SELECT alternates_group_id FROM alternate_file_group_members WHERE media_id = ?;', ( media_id, ) ).fetchone()
@@ -1208,11 +1218,6 @@ class ClientDBFilesDuplicates( ClientDBModule.ClientDBModule ):
     def GetTablesAndColumnsThatUseDefinitions( self, content_type: int ) -> typing.List[ typing.Tuple[ str, str ] ]:
         
         tables_and_columns = []
-        
-        if content_type == HC.CONTENT_TYPE_HASH:
-            
-            tables_and_columns.append( ( 'file_maintenance_jobs', 'hash_id' ) )
-            
         
         return tables_and_columns
         

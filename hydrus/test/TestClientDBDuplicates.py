@@ -18,6 +18,7 @@ from hydrus.client.search import ClientSearchFileSearchContext
 from hydrus.client.search import ClientSearchPredicate
 
 from hydrus.test import TestController
+from hydrus.test import TestGlobals as TG
 
 class TestClientDBDuplicates( unittest.TestCase ):
     
@@ -27,7 +28,7 @@ class TestClientDBDuplicates( unittest.TestCase ):
         cls._delete_db()
         
         # class variable
-        cls._db = ClientDB.DB( HG.test_controller, TestController.DB_DIR, 'client' )
+        cls._db = ClientDB.DB( TG.test_controller, TestController.DB_DIR, 'client' )
         
     
     @classmethod
@@ -55,9 +56,9 @@ class TestClientDBDuplicates( unittest.TestCase ):
     @classmethod
     def setUpClass( cls ):
         
-        cls._db = ClientDB.DB( HG.test_controller, TestController.DB_DIR, 'client' )
+        cls._db = ClientDB.DB( TG.test_controller, TestController.DB_DIR, 'client' )
         
-        HG.test_controller.SetRead( 'hash_status', ClientImportFiles.FileImportStatus.STATICGetUnknownStatus() )
+        TG.test_controller.SetRead( 'hash_status', ClientImportFiles.FileImportStatus.STATICGetUnknownStatus() )
         
     
     @classmethod

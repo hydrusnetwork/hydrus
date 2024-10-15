@@ -3040,7 +3040,7 @@ class ServerServiceRepository( ServerServiceRestricted ):
                 
                 update_started = HydrusTime.GetNowFloat()
                 
-                HG.server_controller.WriteSynchronous( 'nullify_history', service_key, nullification_begin, nullification_end )
+                HG.controller.WriteSynchronous( 'nullify_history', service_key, nullification_begin, nullification_end )
                 
                 update_took = HydrusTime.GetNowFloat() - update_started
                 
@@ -3088,7 +3088,7 @@ class ServerServiceRepository( ServerServiceRestricted ):
             self._SetDirty()
             
         
-        HG.server_controller.pub( 'notify_new_nullification' )
+        HG.controller.pub( 'notify_new_nullification' )
         
     
     def SetUpdatePeriod( self, update_period: int ):
@@ -3102,7 +3102,7 @@ class ServerServiceRepository( ServerServiceRestricted ):
             self._SetDirty()
             
         
-        HG.server_controller.pub( 'notify_new_repo_sync' )
+        HG.controller.pub( 'notify_new_repo_sync' )
         
     
     def Sync( self ):
@@ -3138,7 +3138,7 @@ class ServerServiceRepository( ServerServiceRestricted ):
                     
                     end = begin + update_period
                     
-                    update_hashes = HG.server_controller.WriteSynchronous( 'create_update', service_key, begin, end )
+                    update_hashes = HG.controller.WriteSynchronous( 'create_update', service_key, begin, end )
                     
                     update_created = True
                     
@@ -3158,7 +3158,7 @@ class ServerServiceRepository( ServerServiceRestricted ):
                 
                 if update_created:
                     
-                    HG.server_controller.pub( 'notify_update_created' )
+                    HG.controller.pub( 'notify_update_created' )
                     
                 
             

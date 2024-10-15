@@ -3,7 +3,7 @@ import os
 import threading
 import tempfile
 import time
-import traceback
+import typing
 import unittest
 
 from qtpy import QtCore as QC
@@ -14,6 +14,7 @@ from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusLists
 from hydrus.core import HydrusPaths
 from hydrus.core import HydrusPubSub
 from hydrus.core import HydrusSessions
@@ -35,13 +36,14 @@ from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui import ClientGUISplash
 from hydrus.client.gui.lists import ClientGUIListManager
 from hydrus.client.importing import ClientImportFiles
-from hydrus.client.metadata import ClientContentUpdates
 from hydrus.client.metadata import ClientTagsHandling
 from hydrus.client.networking import ClientNetworking
 from hydrus.client.networking import ClientNetworkingBandwidth
 from hydrus.client.networking import ClientNetworkingDomain
 from hydrus.client.networking import ClientNetworkingLogin
 from hydrus.client.networking import ClientNetworkingSessions
+
+from hydrus.server import ServerGlobals as SG
 
 from hydrus.test import TestClientAPI
 from hydrus.test import TestClientConstants
@@ -52,6 +54,7 @@ from hydrus.test import TestClientDBDuplicates
 from hydrus.test import TestClientDBTags
 from hydrus.test import TestClientFileStorage
 from hydrus.test import TestClientImageHandling
+from hydrus.test import TestClientImportObjects
 from hydrus.test import TestClientImportOptions
 from hydrus.test import TestClientImportSubscriptions
 from hydrus.test import TestClientListBoxes
@@ -63,6 +66,7 @@ from hydrus.test import TestClientSearch
 from hydrus.test import TestClientTags
 from hydrus.test import TestClientThreading
 from hydrus.test import TestDialogs
+from hydrus.test import TestGlobals as TG
 from hydrus.test import TestHydrusData
 from hydrus.test import TestHydrusNATPunch
 from hydrus.test import TestHydrusNetworking
@@ -91,7 +95,7 @@ class MockController( object ):
     
     def CallToThread( self, callable, *args, **kwargs ):
         
-        return HG.test_controller.CallToThread( callable, *args, **kwargs )
+        return TG.test_controller.CallToThread( callable, *args, **kwargs )
         
     
     def JustWokeFromSleep( self ):
@@ -109,6 +113,7 @@ class MockController( object ):
         pass
         
     
+
 class MockServicesManager( object ):
     
     def __init__( self, services ):
@@ -193,10 +198,9 @@ class Controller( object ):
         HydrusPaths.MakeSureDirectoryExists( client_files_default )
         
         HG.controller = self
-        HG.server_controller = self
-        HG.test_controller = self
-        
         CG.client_controller = self
+        SG.server_controller = self
+        TG.test_controller = self
         
         self.db = self
         self.gui = self
@@ -518,6 +522,11 @@ class Controller( object ):
             
         
     
+    def CurrentlyIdle( self ):
+        
+        return False
+        
+    
     def DBCurrentlyDoingJob( self ):
         
         return False
@@ -771,39 +780,6 @@ class Controller( object ):
         
         module_lookup = collections.defaultdict( list )
         
-        module_lookup[ 'all' ] = [
-            TestDialogs,
-            TestClientListBoxes,
-            TestClientAPI,
-            TestClientDaemons,
-            TestClientConstants,
-            TestClientData,
-            TestClientFileStorage,
-            TestClientImportOptions,
-            TestClientParsing,
-            TestClientSearch,
-            TestClientTags,
-            TestClientThreading,
-            TestHydrusSerialisable,
-            TestHydrusSessions,
-            TestClientDB,
-            TestServerDB,
-            TestClientDBDuplicates,
-            TestClientDBTags,
-            TestHydrusData,
-            TestHydrusPaths,
-            TestHydrusTime,
-            TestHydrusNATPunch,
-            TestClientNetworking,
-            TestHydrusNetworking,
-            TestClientImportSubscriptions,
-            TestClientImageHandling,
-            TestClientMetadataMigration,
-            TestClientMigration,
-            TestHydrusTags,
-            TestHydrusServer
-        ]
-        
         module_lookup[ 'gui' ] = [
             TestDialogs,
             TestClientListBoxes
@@ -821,6 +797,7 @@ class Controller( object ):
             TestClientConstants,
             TestClientData,
             TestClientFileStorage,
+            TestClientImportObjects,
             TestClientImportOptions,
             TestClientParsing,
             TestClientSearch,
@@ -894,6 +871,8 @@ class Controller( object ):
             TestHydrusServer
         ]
         
+        module_lookup[ 'all' ] = sorted( HydrusLists.MassUnion( module_lookup.values() ), key = lambda d: d.__name__ )
+        
         if run_all:
             
             modules = module_lookup[ 'all' ]
@@ -938,7 +917,7 @@ class Controller( object ):
         self._param_read_responses[ ( name, args ) ] = value
         
     
-    def SetRead( self, name, value ):
+    def SetRead( self, name: str, value ):
         
         self._name_read_responses[ name ] = value
         

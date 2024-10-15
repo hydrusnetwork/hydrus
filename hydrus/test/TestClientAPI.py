@@ -41,6 +41,7 @@ from hydrus.client.search import ClientSearchPredicate
 from hydrus.client.search import ClientSearchTagContext
 
 from hydrus.test import HelperFunctions as HF
+from hydrus.test import TestGlobals as TG
 
 CBOR_AVAILABLE = False
 try:
@@ -67,7 +68,7 @@ def GetExampleServicesDict():
             'type' : 5,
             'type_pretty' : 'local tag service'
         },
-        HG.test_controller.example_tag_repo_service_key.hex() : {
+        TG.test_controller.example_tag_repo_service_key.hex() : {
             'name' : 'example tag repo',
             'type' : 0,
             'type_pretty' : 'hydrus tag repository'
@@ -82,12 +83,12 @@ def GetExampleServicesDict():
             'type' : 20,
             'type_pretty' : 'local update file domain'
         },
-        HG.test_controller.example_file_repo_service_key_1.hex() : {
+        TG.test_controller.example_file_repo_service_key_1.hex() : {
             'name' : 'example file repo 1',
             'type' : 1,
             'type_pretty' : 'hydrus file repository'
         },
-        HG.test_controller.example_file_repo_service_key_2.hex() : {
+        TG.test_controller.example_file_repo_service_key_2.hex() : {
             'name' : 'example file repo 2',
             'type' : 1,
             'type_pretty' : 'hydrus file repository'
@@ -112,13 +113,13 @@ def GetExampleServicesDict():
             'type' : 10,
             'type_pretty' : 'virtual combined tag service'
         },
-        HG.test_controller.example_like_rating_service_key.hex() : {
+        TG.test_controller.example_like_rating_service_key.hex() : {
             'name' : 'example local rating like service',
             'type' : 7,
             'type_pretty' : 'local like/dislike rating service',
             'star_shape' : 'circle'
         },
-        HG.test_controller.example_numerical_rating_service_key.hex() : {
+        TG.test_controller.example_numerical_rating_service_key.hex() : {
             'name' : 'example local rating numerical service',
             'type' : 6,
             'type_pretty' : 'local numerical rating service',
@@ -126,7 +127,7 @@ def GetExampleServicesDict():
             'max_stars' : 5,
             'star_shape' : 'circle'
         },
-        HG.test_controller.example_incdec_rating_service_key.hex() : {
+        TG.test_controller.example_incdec_rating_service_key.hex() : {
             'name' : 'example local rating inc/dec service',
             'type' : 22,
             'type_pretty' : 'local inc/dec rating service'
@@ -413,7 +414,7 @@ class TestClientAPI( unittest.TestCase ):
             
             set_up_permissions[ name ] = api_permissions
             
-            HG.test_controller.client_api_manager.AddAccess( api_permissions )
+            TG.test_controller.client_api_manager.AddAccess( api_permissions )
             
         
         # /verify_access_key
@@ -562,7 +563,7 @@ class TestClientAPI( unittest.TestCase ):
         hash = os.urandom( 32 )
         hash_hex = hash.hex()
         
-        HG.test_controller.ClearWrites( 'content_updates' )
+        TG.test_controller.ClearWrites( 'content_updates' )
         
         path = '/add_tags/add_tags'
         
@@ -615,7 +616,7 @@ class TestClientAPI( unittest.TestCase ):
         hash = os.urandom( 32 )
         hash_hex = hash.hex()
         
-        HG.test_controller.ClearWrites( 'content_updates' )
+        TG.test_controller.ClearWrites( 'content_updates' )
         
         path = '/add_tags/add_tags'
         
@@ -633,7 +634,7 @@ class TestClientAPI( unittest.TestCase ):
         
         #
         
-        HG.test_controller.ClearWrites( 'content_updates' )
+        TG.test_controller.ClearWrites( 'content_updates' )
         
         body_dict = { 'Hydrus-Client-API-Session-Key' : session_key_hex, 'hash' : hash_hex, 'service_keys_to_tags' : { CC.DEFAULT_LOCAL_TAG_SERVICE_KEY.hex() : [ 'test', 'test2' ] } }
         
@@ -647,13 +648,13 @@ class TestClientAPI( unittest.TestCase ):
         
         self.assertEqual( response.status, 200 )
         
-        [ ( ( content_update_package, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+        [ ( ( content_update_package, ), kwargs ) ] = TG.test_controller.GetWrite( 'content_updates' )
         
         self.assertTrue( content_update_package.HasContentForServiceKey( CC.DEFAULT_LOCAL_TAG_SERVICE_KEY ) )
         
         #
         
-        HG.test_controller.ClearWrites( 'content_updates' )
+        TG.test_controller.ClearWrites( 'content_updates' )
         
         body_dict = { 'Hydrus-Client-API-Session-Key' : session_key_hex, 'hash' : hash_hex, 'service_keys_to_tags' : { CC.DEFAULT_LOCAL_TAG_SERVICE_KEY.hex() : [ 'test', 'test2' ] } }
         
@@ -667,13 +668,13 @@ class TestClientAPI( unittest.TestCase ):
         
         self.assertEqual( response.status, 200 )
         
-        [ ( ( content_update_package, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+        [ ( ( content_update_package, ), kwargs ) ] = TG.test_controller.GetWrite( 'content_updates' )
         
         self.assertTrue( content_update_package.HasContentForServiceKey( CC.DEFAULT_LOCAL_TAG_SERVICE_KEY ) )
         
         #
         
-        HG.test_controller.ClearWrites( 'content_updates' )
+        TG.test_controller.ClearWrites( 'content_updates' )
         
         body_dict = { 'Hydrus-Client-API-Session-Key' : session_key_hex, 'hash' : hash_hex, 'service_keys_to_actions_to_tags' : { CC.DEFAULT_LOCAL_TAG_SERVICE_KEY.hex() : { str( HC.CONTENT_UPDATE_ADD ) : [ 'test', 'test2' ] } } }
         
@@ -687,7 +688,7 @@ class TestClientAPI( unittest.TestCase ):
         
         self.assertEqual( response.status, 200 )
         
-        [ ( ( content_update_package, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+        [ ( ( content_update_package, ), kwargs ) ] = TG.test_controller.GetWrite( 'content_updates' )
         
         self.assertTrue( content_update_package.HasContentForServiceKey( CC.DEFAULT_LOCAL_TAG_SERVICE_KEY ) )
         
@@ -763,7 +764,7 @@ class TestClientAPI( unittest.TestCase ):
             'tag_repositories' : [
                 {
                     'name' : 'example tag repo',
-                    'service_key' : HG.test_controller.example_tag_repo_service_key.hex(),
+                    'service_key' : TG.test_controller.example_tag_repo_service_key.hex(),
                     'type': 0,
                     'type_pretty': 'hydrus tag repository'
                 }
@@ -787,12 +788,12 @@ class TestClientAPI( unittest.TestCase ):
             'file_repositories' : [
                 {
                     'name': 'example file repo 1',
-                    'service_key': HG.test_controller.example_file_repo_service_key_1.hex(),
+                    'service_key': TG.test_controller.example_file_repo_service_key_1.hex(),
                     'type': 1,
                     'type_pretty': 'hydrus file repository'},
                 {
                     'name': 'example file repo 2',
-                    'service_key': HG.test_controller.example_file_repo_service_key_2.hex(),
+                    'service_key': TG.test_controller.example_file_repo_service_key_2.hex(),
                     'type': 1,
                     'type_pretty': 'hydrus file repository'
                 }
@@ -949,7 +950,7 @@ class TestClientAPI( unittest.TestCase ):
         
         f.hash = hash
         
-        HG.test_controller.SetRead( 'hash_status', f )
+        TG.test_controller.SetRead( 'hash_status', f )
         
         headers = { 'Hydrus-Client-API-Access-Key' : access_key_hex, 'Content-Type' : HC.mime_mimetype_string_lookup[ HC.APPLICATION_OCTET_STREAM ] }
         
@@ -983,7 +984,7 @@ class TestClientAPI( unittest.TestCase ):
         f.hash = hash
         f.note = 'test note'
         
-        HG.test_controller.SetRead( 'hash_status', f )
+        TG.test_controller.SetRead( 'hash_status', f )
         
         hydrus_png_path = os.path.join( HC.STATIC_DIR, 'hydrus.png' )
         
@@ -1023,7 +1024,7 @@ class TestClientAPI( unittest.TestCase ):
         f.hash = hash
         f.note = 'test note'
         
-        HG.test_controller.SetRead( 'hash_status', f )
+        TG.test_controller.SetRead( 'hash_status', f )
         
         headers = { 'Hydrus-Client-API-Access-Key' : access_key_hex, 'Content-Type' : HC.mime_mimetype_string_lookup[ HC.APPLICATION_JSON ] }
         
@@ -1060,13 +1061,13 @@ class TestClientAPI( unittest.TestCase ):
         f.hash = hash
         f.note = 'test note'
         
-        HG.test_controller.SetRead( 'hash_status', f )
+        TG.test_controller.SetRead( 'hash_status', f )
         
         headers = { 'Hydrus-Client-API-Access-Key' : access_key_hex, 'Content-Type' : HC.mime_mimetype_string_lookup[ HC.APPLICATION_JSON ] }
         
         path = '/add_files/add_file'
         
-        temp_hydrus_png_path = os.path.join( HG.test_controller.db_dir, 'hydrus_png_client_api_import_test.wew' )
+        temp_hydrus_png_path = os.path.join( TG.test_controller.db_dir, 'hydrus_png_client_api_import_test.wew' )
         
         HydrusPaths.MirrorFile( hydrus_png_path, temp_hydrus_png_path )
         
@@ -1109,7 +1110,7 @@ class TestClientAPI( unittest.TestCase ):
         
         # missing file
         
-        HG.test_controller.ClearWrites( 'content_updates' )
+        TG.test_controller.ClearWrites( 'content_updates' )
         
         path = '/add_files/migrate_files'
         
@@ -1142,9 +1143,9 @@ class TestClientAPI( unittest.TestCase ):
                 CC.LOCAL_FILE_SERVICE_KEY : 100
             }
             
-            HG.test_controller.ClearWrites( 'content_updates' )
+            TG.test_controller.ClearWrites( 'content_updates' )
             
-            HG.test_controller.SetRead( 'media_results', [ media_result ] )
+            TG.test_controller.SetRead( 'media_results', [ media_result ] )
             
             #
             
@@ -1162,7 +1163,7 @@ class TestClientAPI( unittest.TestCase ):
             
             self.assertEqual( response.status, 200 )
             
-            results = HG.test_controller.GetWrite( 'content_updates' )
+            results = TG.test_controller.GetWrite( 'content_updates' )
             
             self.assertEqual( results, [] )
             
@@ -1186,9 +1187,9 @@ class TestClientAPI( unittest.TestCase ):
                 some_file_service_key : 100
             }
             
-            HG.test_controller.ClearWrites( 'content_updates' )
+            TG.test_controller.ClearWrites( 'content_updates' )
             
-            HG.test_controller.SetRead( 'media_results', [ media_result ] )
+            TG.test_controller.SetRead( 'media_results', [ media_result ] )
             
             #
             
@@ -1206,7 +1207,7 @@ class TestClientAPI( unittest.TestCase ):
             
             self.assertEqual( response.status, 200 )
             
-            [ ( ( content_update_package, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+            [ ( ( content_update_package, ), kwargs ) ] = TG.test_controller.GetWrite( 'content_updates' )
             
             expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( CC.LOCAL_FILE_SERVICE_KEY, [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ADD, ( media_result.GetFileInfoManager(), magic_now ) ) ] )
             
@@ -1233,7 +1234,7 @@ class TestClientAPI( unittest.TestCase ):
         
         #
         
-        HG.test_controller.ClearWrites( 'content_updates' )
+        TG.test_controller.ClearWrites( 'content_updates' )
         
         path = '/add_files/delete_files'
         
@@ -1249,7 +1250,7 @@ class TestClientAPI( unittest.TestCase ):
         
         self.assertEqual( response.status, 200 )
         
-        [ ( ( content_update_package, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+        [ ( ( content_update_package, ), kwargs ) ] = TG.test_controller.GetWrite( 'content_updates' )
         
         expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY, [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, { hash }, reason = 'Deleted via Client API.' ) ] )
         
@@ -1257,9 +1258,9 @@ class TestClientAPI( unittest.TestCase ):
         
         # with file_id
         
-        HG.test_controller.ClearWrites( 'content_updates' )
+        TG.test_controller.ClearWrites( 'content_updates' )
         
-        HG.test_controller.SetRead( 'hash_ids_to_hashes', { file_id : hash } )
+        TG.test_controller.SetRead( 'hash_ids_to_hashes', { file_id : hash } )
         
         path = '/add_files/delete_files'
         
@@ -1275,17 +1276,17 @@ class TestClientAPI( unittest.TestCase ):
         
         self.assertEqual( response.status, 200 )
         
-        [ ( ( content_update_package, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+        [ ( ( content_update_package, ), kwargs ) ] = TG.test_controller.GetWrite( 'content_updates' )
         
         expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY, [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, { hash }, reason = 'Deleted via Client API.' ) ] )
         
         HF.compare_content_update_packages( self, content_update_package, expected_content_update_package )
         
-        HG.test_controller.ClearReads( 'hash_ids_to_hashes' )
+        TG.test_controller.ClearReads( 'hash_ids_to_hashes' )
         
         # with hashes
         
-        HG.test_controller.ClearWrites( 'content_updates' )
+        TG.test_controller.ClearWrites( 'content_updates' )
         
         path = '/add_files/delete_files'
         
@@ -1301,7 +1302,7 @@ class TestClientAPI( unittest.TestCase ):
         
         self.assertEqual( response.status, 200 )
         
-        [ ( ( content_update_package, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+        [ ( ( content_update_package, ), kwargs ) ] = TG.test_controller.GetWrite( 'content_updates' )
         
         expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY, [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, hashes, reason = 'Deleted via Client API.' ) ] )
         
@@ -1309,9 +1310,9 @@ class TestClientAPI( unittest.TestCase ):
         
         # with file_ids
         
-        HG.test_controller.ClearWrites( 'content_updates' )
+        TG.test_controller.ClearWrites( 'content_updates' )
         
-        HG.test_controller.SetRead( 'hash_ids_to_hashes', file_ids_to_hashes )
+        TG.test_controller.SetRead( 'hash_ids_to_hashes', file_ids_to_hashes )
         
         path = '/add_files/delete_files'
         
@@ -1327,17 +1328,17 @@ class TestClientAPI( unittest.TestCase ):
         
         self.assertEqual( response.status, 200 )
         
-        [ ( ( content_update_package, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+        [ ( ( content_update_package, ), kwargs ) ] = TG.test_controller.GetWrite( 'content_updates' )
         
         expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY, [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, hashes, reason = 'Deleted via Client API.' ) ] )
         
         HF.compare_content_update_packages( self, content_update_package, expected_content_update_package )
         
-        HG.test_controller.ClearReads( 'hash_ids_to_hashes' )
+        TG.test_controller.ClearReads( 'hash_ids_to_hashes' )
         
         # now with a reason
         
-        HG.test_controller.ClearWrites( 'content_updates' )
+        TG.test_controller.ClearWrites( 'content_updates' )
         
         path = '/add_files/delete_files'
         
@@ -1355,7 +1356,7 @@ class TestClientAPI( unittest.TestCase ):
         
         self.assertEqual( response.status, 200 )
         
-        [ ( ( content_update_package, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+        [ ( ( content_update_package, ), kwargs ) ] = TG.test_controller.GetWrite( 'content_updates' )
         
         expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY, [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, hashes, reason = reason ) ] )
         
@@ -1363,7 +1364,7 @@ class TestClientAPI( unittest.TestCase ):
         
         # now test it not working
         
-        HG.test_controller.ClearWrites( 'content_updates' )
+        TG.test_controller.ClearWrites( 'content_updates' )
         
         path = '/add_files/delete_files'
         
@@ -1393,11 +1394,11 @@ class TestClientAPI( unittest.TestCase ):
         
         media_result.GetLocationsManager().inbox = False
         
-        HG.test_controller.new_options.SetBoolean( 'delete_lock_for_archived_files', True )
+        TG.test_controller.new_options.SetBoolean( 'delete_lock_for_archived_files', True )
         
-        HG.test_controller.ClearWrites( 'content_updates' )
+        TG.test_controller.ClearWrites( 'content_updates' )
         
-        HG.test_controller.SetRead( 'media_results', [ media_result ] )
+        TG.test_controller.SetRead( 'media_results', [ media_result ] )
         
         path = '/add_files/delete_files'
         
@@ -1419,15 +1420,15 @@ class TestClientAPI( unittest.TestCase ):
         
         CG.client_controller.new_options.SetBoolean( 'delete_lock_for_archived_files', False )
         
-        HG.test_controller.ClearReads( 'media_results' )
+        TG.test_controller.ClearReads( 'media_results' )
         
         #
         
         media_result = HF.GetFakeMediaResult( hash )
         
-        HG.test_controller.SetRead( 'media_results', [ media_result ] )
+        TG.test_controller.SetRead( 'media_results', [ media_result ] )
         
-        HG.test_controller.ClearWrites( 'content_updates' )
+        TG.test_controller.ClearWrites( 'content_updates' )
         
         path = '/add_files/undelete_files'
         
@@ -1443,7 +1444,7 @@ class TestClientAPI( unittest.TestCase ):
         
         self.assertEqual( response.status, 200 )
         
-        [ ( ( content_update_package, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+        [ ( ( content_update_package, ), kwargs ) ] = TG.test_controller.GetWrite( 'content_updates' )
         
         expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY, [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_UNDELETE, { hash } ) ] )
         
@@ -1453,9 +1454,9 @@ class TestClientAPI( unittest.TestCase ):
         
         media_results = [ HF.GetFakeMediaResult( h ) for h in hashes ]
         
-        HG.test_controller.SetRead( 'media_results', media_results )
+        TG.test_controller.SetRead( 'media_results', media_results )
         
-        HG.test_controller.ClearWrites( 'content_updates' )
+        TG.test_controller.ClearWrites( 'content_updates' )
         
         path = '/add_files/undelete_files'
         
@@ -1471,7 +1472,7 @@ class TestClientAPI( unittest.TestCase ):
         
         self.assertEqual( response.status, 200 )
         
-        [ ( ( content_update_package, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+        [ ( ( content_update_package, ), kwargs ) ] = TG.test_controller.GetWrite( 'content_updates' )
         
         expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY, [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_UNDELETE, hashes ) ] )
         
@@ -1479,7 +1480,7 @@ class TestClientAPI( unittest.TestCase ):
         
         #
         
-        HG.test_controller.ClearWrites( 'content_updates' )
+        TG.test_controller.ClearWrites( 'content_updates' )
         
         path = '/add_files/undelete_files'
         
@@ -1528,9 +1529,9 @@ class TestClientAPI( unittest.TestCase ):
         
         media_result._locations_manager = locations_manager
         
-        HG.test_controller.SetRead( 'media_results', [ media_result ] )
+        TG.test_controller.SetRead( 'media_results', [ media_result ] )
         
-        HG.test_controller.ClearWrites( 'content_updates' )
+        TG.test_controller.ClearWrites( 'content_updates' )
         
         path = '/add_files/clear_file_deletion_record'
         
@@ -1546,7 +1547,7 @@ class TestClientAPI( unittest.TestCase ):
         
         self.assertEqual( response.status, 200 )
         
-        [ ( ( content_update_package, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+        [ ( ( content_update_package, ), kwargs ) ] = TG.test_controller.GetWrite( 'content_updates' )
         
         expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_CLEAR_DELETE_RECORD, { hash } ) ] )
         
@@ -1554,7 +1555,7 @@ class TestClientAPI( unittest.TestCase ):
         
         #
         
-        HG.test_controller.ClearWrites( 'content_updates' )
+        TG.test_controller.ClearWrites( 'content_updates' )
         
         path = '/add_files/archive_files'
         
@@ -1570,7 +1571,7 @@ class TestClientAPI( unittest.TestCase ):
         
         self.assertEqual( response.status, 200 )
         
-        [ ( ( content_update_package, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+        [ ( ( content_update_package, ), kwargs ) ] = TG.test_controller.GetWrite( 'content_updates' )
         
         expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, { hash } ) ] )
         
@@ -1578,7 +1579,7 @@ class TestClientAPI( unittest.TestCase ):
         
         #
         
-        HG.test_controller.ClearWrites( 'content_updates' )
+        TG.test_controller.ClearWrites( 'content_updates' )
         
         path = '/add_files/archive_files'
         
@@ -1594,7 +1595,7 @@ class TestClientAPI( unittest.TestCase ):
         
         self.assertEqual( response.status, 200 )
         
-        [ ( ( content_update_package, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+        [ ( ( content_update_package, ), kwargs ) ] = TG.test_controller.GetWrite( 'content_updates' )
         
         expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, hashes ) ] )
         
@@ -1602,7 +1603,7 @@ class TestClientAPI( unittest.TestCase ):
         
         #
         
-        HG.test_controller.ClearWrites( 'content_updates' )
+        TG.test_controller.ClearWrites( 'content_updates' )
         
         path = '/add_files/unarchive_files'
         
@@ -1618,7 +1619,7 @@ class TestClientAPI( unittest.TestCase ):
         
         self.assertEqual( response.status, 200 )
         
-        [ ( ( content_update_package, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+        [ ( ( content_update_package, ), kwargs ) ] = TG.test_controller.GetWrite( 'content_updates' )
         
         expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_INBOX, { hash } ) ] )
         
@@ -1626,7 +1627,7 @@ class TestClientAPI( unittest.TestCase ):
         
         #
         
-        HG.test_controller.ClearWrites( 'content_updates' )
+        TG.test_controller.ClearWrites( 'content_updates' )
         
         path = '/add_files/unarchive_files'
         
@@ -1642,7 +1643,7 @@ class TestClientAPI( unittest.TestCase ):
         
         self.assertEqual( response.status, 200 )
         
-        [ ( ( content_update_package, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+        [ ( ( content_update_package, ), kwargs ) ] = TG.test_controller.GetWrite( 'content_updates' )
         
         expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_INBOX, hashes ) ] )
         
@@ -1664,7 +1665,7 @@ class TestClientAPI( unittest.TestCase ):
         
         # set notes
         
-        HG.test_controller.ClearWrites( 'content_updates' )
+        TG.test_controller.ClearWrites( 'content_updates' )
         
         path = '/add_notes/set_notes'
         
@@ -1692,13 +1693,13 @@ class TestClientAPI( unittest.TestCase ):
         
         expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( CC.LOCAL_NOTES_SERVICE_KEY, [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_NOTES, HC.CONTENT_UPDATE_SET, ( hash, name, note ) ) for ( name, note ) in new_notes_dict.items() ] )
         
-        [ ( ( content_update_package, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+        [ ( ( content_update_package, ), kwargs ) ] = TG.test_controller.GetWrite( 'content_updates' )
         
         HF.compare_content_update_packages( self, content_update_package, expected_content_update_package )
         
         # delete notes
         
-        HG.test_controller.ClearWrites( 'content_updates' )
+        TG.test_controller.ClearWrites( 'content_updates' )
         
         path = '/add_notes/delete_notes'
         
@@ -1720,7 +1721,7 @@ class TestClientAPI( unittest.TestCase ):
         
         expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( CC.LOCAL_NOTES_SERVICE_KEY, [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_NOTES, HC.CONTENT_UPDATE_DELETE, ( hash, name ) ) for name in delete_note_names ] )
         
-        [ ( ( content_update_package, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+        [ ( ( content_update_package, ), kwargs ) ] = TG.test_controller.GetWrite( 'content_updates' )
         
         HF.compare_content_update_packages( self, content_update_package, expected_content_update_package )
         
@@ -1758,9 +1759,9 @@ class TestClientAPI( unittest.TestCase ):
         
         # extend
         
-        HG.test_controller.SetRead( 'media_result', media_result )
+        TG.test_controller.SetRead( 'media_result', media_result )
         
-        HG.test_controller.ClearWrites( 'content_updates' )
+        TG.test_controller.ClearWrites( 'content_updates' )
         
         path = '/add_notes/set_notes'
         
@@ -1788,15 +1789,15 @@ class TestClientAPI( unittest.TestCase ):
         
         expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( CC.LOCAL_NOTES_SERVICE_KEY, [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_NOTES, HC.CONTENT_UPDATE_SET, ( hash, 'abc', '1234' ) ) ] )
         
-        [ ( ( content_update_package, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+        [ ( ( content_update_package, ), kwargs ) ] = TG.test_controller.GetWrite( 'content_updates' )
         
         HF.compare_content_update_packages( self, content_update_package, expected_content_update_package )
         
         # no extend (rename)
         
-        HG.test_controller.SetRead( 'media_result', media_result )
+        TG.test_controller.SetRead( 'media_result', media_result )
         
-        HG.test_controller.ClearWrites( 'content_updates' )
+        TG.test_controller.ClearWrites( 'content_updates' )
         
         path = '/add_notes/set_notes'
         
@@ -1824,15 +1825,15 @@ class TestClientAPI( unittest.TestCase ):
         
         expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( CC.LOCAL_NOTES_SERVICE_KEY, [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_NOTES, HC.CONTENT_UPDATE_SET, ( hash, 'abc (1)', '1234' ) ) ] )
         
-        [ ( ( content_update_package, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+        [ ( ( content_update_package, ), kwargs ) ] = TG.test_controller.GetWrite( 'content_updates' )
         
         HF.compare_content_update_packages( self, content_update_package, expected_content_update_package )
         
         # ignore
         
-        HG.test_controller.SetRead( 'media_result', media_result )
+        TG.test_controller.SetRead( 'media_result', media_result )
         
-        HG.test_controller.ClearWrites( 'content_updates' )
+        TG.test_controller.ClearWrites( 'content_updates' )
         
         path = '/add_notes/set_notes'
         
@@ -1856,15 +1857,15 @@ class TestClientAPI( unittest.TestCase ):
         
         self.assertEqual( d[ 'notes' ], {} )
         
-        stuff = HG.test_controller.GetWrite( 'content_updates' )
+        stuff = TG.test_controller.GetWrite( 'content_updates' )
         
         self.assertEqual( stuff, [] )
         
         # append
         
-        HG.test_controller.SetRead( 'media_result', media_result )
+        TG.test_controller.SetRead( 'media_result', media_result )
         
-        HG.test_controller.ClearWrites( 'content_updates' )
+        TG.test_controller.ClearWrites( 'content_updates' )
         
         path = '/add_notes/set_notes'
         
@@ -1892,15 +1893,15 @@ class TestClientAPI( unittest.TestCase ):
         
         expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( CC.LOCAL_NOTES_SERVICE_KEY, [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_NOTES, HC.CONTENT_UPDATE_SET, ( hash, 'abc', '123\n\n789' ) ) ] )
         
-        [ ( ( content_update_package, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+        [ ( ( content_update_package, ), kwargs ) ] = TG.test_controller.GetWrite( 'content_updates' )
         
         HF.compare_content_update_packages( self, content_update_package, expected_content_update_package )
         
         # replace
         
-        HG.test_controller.SetRead( 'media_result', media_result )
+        TG.test_controller.SetRead( 'media_result', media_result )
         
-        HG.test_controller.ClearWrites( 'content_updates' )
+        TG.test_controller.ClearWrites( 'content_updates' )
         
         path = '/add_notes/set_notes'
         
@@ -1928,7 +1929,7 @@ class TestClientAPI( unittest.TestCase ):
         
         expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( CC.LOCAL_NOTES_SERVICE_KEY, [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_NOTES, HC.CONTENT_UPDATE_SET, ( hash, 'abc', '789' ) ) ] )
         
-        [ ( ( content_update_package, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+        [ ( ( content_update_package, ), kwargs ) ] = TG.test_controller.GetWrite( 'content_updates' )
         
         HF.compare_content_update_packages( self, content_update_package, expected_content_update_package )
         
@@ -1948,11 +1949,11 @@ class TestClientAPI( unittest.TestCase ):
         
         # set like like
         
-        HG.test_controller.ClearWrites( 'content_updates' )
+        TG.test_controller.ClearWrites( 'content_updates' )
         
         path = '/edit_ratings/set_rating'
         
-        body_dict = { 'hash' : hash_hex, 'rating_service_key' : HG.test_controller.example_like_rating_service_key.hex(), 'rating' : True }
+        body_dict = { 'hash' : hash_hex, 'rating_service_key' : TG.test_controller.example_like_rating_service_key.hex(), 'rating' : True }
         
         body = json.dumps( body_dict )
         
@@ -1966,19 +1967,19 @@ class TestClientAPI( unittest.TestCase ):
         
         content_update_package = ClientContentUpdates.ContentUpdatePackage()
         
-        expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( HG.test_controller.example_like_rating_service_key, [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( 1.0, { hash } ) ) ] )
+        expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( TG.test_controller.example_like_rating_service_key, [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( 1.0, { hash } ) ) ] )
         
-        [ ( ( content_update_package, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+        [ ( ( content_update_package, ), kwargs ) ] = TG.test_controller.GetWrite( 'content_updates' )
         
         HF.compare_content_update_packages( self, content_update_package, expected_content_update_package )
         
         # set like dislike
         
-        HG.test_controller.ClearWrites( 'content_updates' )
+        TG.test_controller.ClearWrites( 'content_updates' )
         
         path = '/edit_ratings/set_rating'
         
-        body_dict = { 'hash' : hash_hex, 'rating_service_key' : HG.test_controller.example_like_rating_service_key.hex(), 'rating' : False }
+        body_dict = { 'hash' : hash_hex, 'rating_service_key' : TG.test_controller.example_like_rating_service_key.hex(), 'rating' : False }
         
         body = json.dumps( body_dict )
         
@@ -1992,19 +1993,19 @@ class TestClientAPI( unittest.TestCase ):
         
         content_update_package = ClientContentUpdates.ContentUpdatePackage()
         
-        expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( HG.test_controller.example_like_rating_service_key, [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( 0.0, { hash } ) ) ] )
+        expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( TG.test_controller.example_like_rating_service_key, [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( 0.0, { hash } ) ) ] )
         
-        [ ( ( content_update_package, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+        [ ( ( content_update_package, ), kwargs ) ] = TG.test_controller.GetWrite( 'content_updates' )
         
         HF.compare_content_update_packages( self, content_update_package, expected_content_update_package )
         
         # set like None
         
-        HG.test_controller.ClearWrites( 'content_updates' )
+        TG.test_controller.ClearWrites( 'content_updates' )
         
         path = '/edit_ratings/set_rating'
         
-        body_dict = { 'hash' : hash_hex, 'rating_service_key' : HG.test_controller.example_like_rating_service_key.hex(), 'rating' : None }
+        body_dict = { 'hash' : hash_hex, 'rating_service_key' : TG.test_controller.example_like_rating_service_key.hex(), 'rating' : None }
         
         body = json.dumps( body_dict )
         
@@ -2018,19 +2019,19 @@ class TestClientAPI( unittest.TestCase ):
         
         content_update_package = ClientContentUpdates.ContentUpdatePackage()
         
-        expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( HG.test_controller.example_like_rating_service_key, [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( None, { hash } ) ) ] )
+        expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( TG.test_controller.example_like_rating_service_key, [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( None, { hash } ) ) ] )
         
-        [ ( ( content_update_package, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+        [ ( ( content_update_package, ), kwargs ) ] = TG.test_controller.GetWrite( 'content_updates' )
         
         HF.compare_content_update_packages( self, content_update_package, expected_content_update_package )
         
         # set numerical 0
         
-        HG.test_controller.ClearWrites( 'content_updates' )
+        TG.test_controller.ClearWrites( 'content_updates' )
         
         path = '/edit_ratings/set_rating'
         
-        body_dict = { 'hash' : hash_hex, 'rating_service_key' : HG.test_controller.example_numerical_rating_service_key.hex(), 'rating' : 0 }
+        body_dict = { 'hash' : hash_hex, 'rating_service_key' : TG.test_controller.example_numerical_rating_service_key.hex(), 'rating' : 0 }
         
         body = json.dumps( body_dict )
         
@@ -2044,19 +2045,19 @@ class TestClientAPI( unittest.TestCase ):
         
         content_update_package = ClientContentUpdates.ContentUpdatePackage()
         
-        expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( HG.test_controller.example_numerical_rating_service_key, [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( 0.0, { hash } ) ) ] )
+        expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( TG.test_controller.example_numerical_rating_service_key, [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( 0.0, { hash } ) ) ] )
         
-        [ ( ( content_update_package, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+        [ ( ( content_update_package, ), kwargs ) ] = TG.test_controller.GetWrite( 'content_updates' )
         
         HF.compare_content_update_packages( self, content_update_package, expected_content_update_package )
         
         # set numerical 2 (0.4)
         
-        HG.test_controller.ClearWrites( 'content_updates' )
+        TG.test_controller.ClearWrites( 'content_updates' )
         
         path = '/edit_ratings/set_rating'
         
-        body_dict = { 'hash' : hash_hex, 'rating_service_key' : HG.test_controller.example_numerical_rating_service_key.hex(), 'rating' : 2 }
+        body_dict = { 'hash' : hash_hex, 'rating_service_key' : TG.test_controller.example_numerical_rating_service_key.hex(), 'rating' : 2 }
         
         body = json.dumps( body_dict )
         
@@ -2070,19 +2071,19 @@ class TestClientAPI( unittest.TestCase ):
         
         content_update_package = ClientContentUpdates.ContentUpdatePackage()
         
-        expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( HG.test_controller.example_numerical_rating_service_key, [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( 0.4, { hash } ) ) ] )
+        expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( TG.test_controller.example_numerical_rating_service_key, [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( 0.4, { hash } ) ) ] )
         
-        [ ( ( content_update_package, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+        [ ( ( content_update_package, ), kwargs ) ] = TG.test_controller.GetWrite( 'content_updates' )
         
         HF.compare_content_update_packages( self, content_update_package, expected_content_update_package )
         
         # set numerical 5 (1.0)
         
-        HG.test_controller.ClearWrites( 'content_updates' )
+        TG.test_controller.ClearWrites( 'content_updates' )
         
         path = '/edit_ratings/set_rating'
         
-        body_dict = { 'hash' : hash_hex, 'rating_service_key' : HG.test_controller.example_numerical_rating_service_key.hex(), 'rating' : 5 }
+        body_dict = { 'hash' : hash_hex, 'rating_service_key' : TG.test_controller.example_numerical_rating_service_key.hex(), 'rating' : 5 }
         
         body = json.dumps( body_dict )
         
@@ -2096,19 +2097,19 @@ class TestClientAPI( unittest.TestCase ):
         
         content_update_package = ClientContentUpdates.ContentUpdatePackage()
         
-        expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( HG.test_controller.example_numerical_rating_service_key, [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( 1.0, { hash } ) ) ] )
+        expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( TG.test_controller.example_numerical_rating_service_key, [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( 1.0, { hash } ) ) ] )
         
-        [ ( ( content_update_package, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+        [ ( ( content_update_package, ), kwargs ) ] = TG.test_controller.GetWrite( 'content_updates' )
         
         HF.compare_content_update_packages( self, content_update_package, expected_content_update_package )
         
         # set numerical None
         
-        HG.test_controller.ClearWrites( 'content_updates' )
+        TG.test_controller.ClearWrites( 'content_updates' )
         
         path = '/edit_ratings/set_rating'
         
-        body_dict = { 'hash' : hash_hex, 'rating_service_key' : HG.test_controller.example_numerical_rating_service_key.hex(), 'rating' : None }
+        body_dict = { 'hash' : hash_hex, 'rating_service_key' : TG.test_controller.example_numerical_rating_service_key.hex(), 'rating' : None }
         
         body = json.dumps( body_dict )
         
@@ -2122,19 +2123,19 @@ class TestClientAPI( unittest.TestCase ):
         
         content_update_package = ClientContentUpdates.ContentUpdatePackage()
         
-        expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( HG.test_controller.example_numerical_rating_service_key, [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( None, { hash } ) ) ] )
+        expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( TG.test_controller.example_numerical_rating_service_key, [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( None, { hash } ) ) ] )
         
-        [ ( ( content_update_package, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+        [ ( ( content_update_package, ), kwargs ) ] = TG.test_controller.GetWrite( 'content_updates' )
         
         HF.compare_content_update_packages( self, content_update_package, expected_content_update_package )
         
         # set incdec 0
         
-        HG.test_controller.ClearWrites( 'content_updates' )
+        TG.test_controller.ClearWrites( 'content_updates' )
         
         path = '/edit_ratings/set_rating'
         
-        body_dict = { 'hash' : hash_hex, 'rating_service_key' : HG.test_controller.example_incdec_rating_service_key.hex(), 'rating' : 0 }
+        body_dict = { 'hash' : hash_hex, 'rating_service_key' : TG.test_controller.example_incdec_rating_service_key.hex(), 'rating' : 0 }
         
         body = json.dumps( body_dict )
         
@@ -2148,19 +2149,19 @@ class TestClientAPI( unittest.TestCase ):
         
         content_update_package = ClientContentUpdates.ContentUpdatePackage()
         
-        expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( HG.test_controller.example_incdec_rating_service_key, [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( 0, { hash } ) ) ] )
+        expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( TG.test_controller.example_incdec_rating_service_key, [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( 0, { hash } ) ) ] )
         
-        [ ( ( content_update_package, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+        [ ( ( content_update_package, ), kwargs ) ] = TG.test_controller.GetWrite( 'content_updates' )
         
         HF.compare_content_update_packages( self, content_update_package, expected_content_update_package )
         
         # set incdec 5
         
-        HG.test_controller.ClearWrites( 'content_updates' )
+        TG.test_controller.ClearWrites( 'content_updates' )
         
         path = '/edit_ratings/set_rating'
         
-        body_dict = { 'hash' : hash_hex, 'rating_service_key' : HG.test_controller.example_incdec_rating_service_key.hex(), 'rating' : 5 }
+        body_dict = { 'hash' : hash_hex, 'rating_service_key' : TG.test_controller.example_incdec_rating_service_key.hex(), 'rating' : 5 }
         
         body = json.dumps( body_dict )
         
@@ -2174,19 +2175,19 @@ class TestClientAPI( unittest.TestCase ):
         
         content_update_package = ClientContentUpdates.ContentUpdatePackage()
         
-        expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( HG.test_controller.example_incdec_rating_service_key, [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( 5, { hash } ) ) ] )
+        expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( TG.test_controller.example_incdec_rating_service_key, [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( 5, { hash } ) ) ] )
         
-        [ ( ( content_update_package, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+        [ ( ( content_update_package, ), kwargs ) ] = TG.test_controller.GetWrite( 'content_updates' )
         
         HF.compare_content_update_packages( self, content_update_package, expected_content_update_package )
         
         # set incdec -3
         
-        HG.test_controller.ClearWrites( 'content_updates' )
+        TG.test_controller.ClearWrites( 'content_updates' )
         
         path = '/edit_ratings/set_rating'
         
-        body_dict = { 'hash' : hash_hex, 'rating_service_key' : HG.test_controller.example_incdec_rating_service_key.hex(), 'rating' : -3 }
+        body_dict = { 'hash' : hash_hex, 'rating_service_key' : TG.test_controller.example_incdec_rating_service_key.hex(), 'rating' : -3 }
         
         body = json.dumps( body_dict )
         
@@ -2200,9 +2201,9 @@ class TestClientAPI( unittest.TestCase ):
         
         content_update_package = ClientContentUpdates.ContentUpdatePackage()
         
-        expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( HG.test_controller.example_incdec_rating_service_key, [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( 0, { hash } ) ) ] )
+        expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( TG.test_controller.example_incdec_rating_service_key, [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( 0, { hash } ) ) ] )
         
-        [ ( ( content_update_package, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+        [ ( ( content_update_package, ), kwargs ) ] = TG.test_controller.GetWrite( 'content_updates' )
         
         HF.compare_content_update_packages( self, content_update_package, expected_content_update_package )
         
@@ -2413,9 +2414,9 @@ class TestClientAPI( unittest.TestCase ):
         
         for ( request_args, media_result, action, result_timestamp_data ) in jobs:
             
-            HG.test_controller.SetRead( 'media_results', [ media_result ] )
+            TG.test_controller.SetRead( 'media_results', [ media_result ] )
             
-            HG.test_controller.ClearWrites( 'content_updates' )
+            TG.test_controller.ClearWrites( 'content_updates' )
             
             path = '/edit_times/set_time'
             
@@ -2436,7 +2437,7 @@ class TestClientAPI( unittest.TestCase ):
             
             expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TIMESTAMP, action, ( [ media_result.GetHash() ], result_timestamp_data ) ) ] )
             
-            [ ( ( content_update_package, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+            [ ( ( content_update_package, ), kwargs ) ] = TG.test_controller.GetWrite( 'content_updates' )
             
             HF.compare_content_update_packages( self, content_update_package, expected_content_update_package )
             
@@ -2579,7 +2580,7 @@ class TestClientAPI( unittest.TestCase ):
         
         for ( request_args, expected_status ) in problem_jobs:
             
-            HG.test_controller.ClearWrites( 'content_updates' )
+            TG.test_controller.ClearWrites( 'content_updates' )
             
             path = '/edit_times/set_time'
             
@@ -2688,7 +2689,7 @@ class TestClientAPI( unittest.TestCase ):
         
         # add tags to local
         
-        HG.test_controller.ClearWrites( 'content_updates' )
+        TG.test_controller.ClearWrites( 'content_updates' )
         
         path = '/add_tags/add_tags'
         
@@ -2706,13 +2707,13 @@ class TestClientAPI( unittest.TestCase ):
         
         expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( CC.DEFAULT_LOCAL_TAG_SERVICE_KEY, [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( 'test', { hash } ) ), ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( 'test2', { hash } ) ) ] )
         
-        [ ( ( content_update_package, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+        [ ( ( content_update_package, ), kwargs ) ] = TG.test_controller.GetWrite( 'content_updates' )
         
         HF.compare_content_update_packages( self, content_update_package, expected_content_update_package )
         
         # add tags to local complex
         
-        HG.test_controller.ClearWrites( 'content_updates' )
+        TG.test_controller.ClearWrites( 'content_updates' )
         
         path = '/add_tags/add_tags'
         
@@ -2735,17 +2736,17 @@ class TestClientAPI( unittest.TestCase ):
             ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_DELETE, ( 'test_delete2', { hash } ) )
         ] )
         
-        [ ( ( content_update_package, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+        [ ( ( content_update_package, ), kwargs ) ] = TG.test_controller.GetWrite( 'content_updates' )
         
         HF.compare_content_update_packages( self, content_update_package, expected_content_update_package )
         
         # pend tags to repo
         
-        HG.test_controller.ClearWrites( 'content_updates' )
+        TG.test_controller.ClearWrites( 'content_updates' )
         
         path = '/add_tags/add_tags'
         
-        body_dict = { 'hash' : hash_hex, 'service_keys_to_tags' : { HG.test_controller.example_tag_repo_service_key.hex() : [ 'test', 'test2' ] } }
+        body_dict = { 'hash' : hash_hex, 'service_keys_to_tags' : { TG.test_controller.example_tag_repo_service_key.hex() : [ 'test', 'test2' ] } }
         
         body = json.dumps( body_dict )
         
@@ -2757,19 +2758,19 @@ class TestClientAPI( unittest.TestCase ):
         
         self.assertEqual( response.status, 200 )
         
-        expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( HG.test_controller.example_tag_repo_service_key, [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_PEND, ( 'test', { hash } ) ), ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_PEND, ( 'test2', { hash } ) ) ] )
+        expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( TG.test_controller.example_tag_repo_service_key, [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_PEND, ( 'test', { hash } ) ), ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_PEND, ( 'test2', { hash } ) ) ] )
         
-        [ ( ( content_update_package, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+        [ ( ( content_update_package, ), kwargs ) ] = TG.test_controller.GetWrite( 'content_updates' )
         
         HF.compare_content_update_packages( self, content_update_package, expected_content_update_package )
         
         # pend tags to repo complex
         
-        HG.test_controller.ClearWrites( 'content_updates' )
+        TG.test_controller.ClearWrites( 'content_updates' )
         
         path = '/add_tags/add_tags'
         
-        body_dict = { 'hash' : hash_hex, 'service_keys_to_actions_to_tags' : { HG.test_controller.example_tag_repo_service_key.hex() : { str( HC.CONTENT_UPDATE_PEND ) : [ 'test_add', 'test_add2' ], str( HC.CONTENT_UPDATE_PETITION ) : [ [ 'test_delete', 'muh reason' ], 'test_delete2' ] } } }
+        body_dict = { 'hash' : hash_hex, 'service_keys_to_actions_to_tags' : { TG.test_controller.example_tag_repo_service_key.hex() : { str( HC.CONTENT_UPDATE_PEND ) : [ 'test_add', 'test_add2' ], str( HC.CONTENT_UPDATE_PETITION ) : [ [ 'test_delete', 'muh reason' ], 'test_delete2' ] } } }
         
         body = json.dumps( body_dict )
         
@@ -2781,20 +2782,20 @@ class TestClientAPI( unittest.TestCase ):
         
         self.assertEqual( response.status, 200 )
         
-        expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( HG.test_controller.example_tag_repo_service_key, [
+        expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( TG.test_controller.example_tag_repo_service_key, [
             ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_PEND, ( 'test_add', { hash } ) ),
             ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_PEND, ( 'test_add2', { hash } ) ),
             ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_PETITION, ( 'test_delete', { hash } ), reason = 'muh reason' ),
             ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_PETITION, ( 'test_delete2', { hash } ), reason = 'Petitioned from API' )
         ] )
         
-        [ ( ( content_update_package, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+        [ ( ( content_update_package, ), kwargs ) ] = TG.test_controller.GetWrite( 'content_updates' )
         
         HF.compare_content_update_packages( self, content_update_package, expected_content_update_package )
         
         # add to multiple files
         
-        HG.test_controller.ClearWrites( 'content_updates' )
+        TG.test_controller.ClearWrites( 'content_updates' )
         
         path = '/add_tags/add_tags'
         
@@ -2812,13 +2813,13 @@ class TestClientAPI( unittest.TestCase ):
         
         expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( CC.DEFAULT_LOCAL_TAG_SERVICE_KEY, [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( 'test', { hash, hash2 } ) ), ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( 'test2', { hash, hash2 } ) ) ] )
         
-        [ ( ( content_update_package, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+        [ ( ( content_update_package, ), kwargs ) ] = TG.test_controller.GetWrite( 'content_updates' )
         
         HF.compare_content_update_packages( self, content_update_package, expected_content_update_package )
         
         # now testing these two new deletion override parameters
         
-        HG.test_controller.ClearWrites( 'content_updates' )
+        TG.test_controller.ClearWrites( 'content_updates' )
         
         path = '/add_tags/add_tags'
         
@@ -2840,7 +2841,7 @@ class TestClientAPI( unittest.TestCase ):
         
         media_results[1].GetTagsManager().GetDeleted( CC.DEFAULT_LOCAL_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_STORAGE ).add( 'test_add' ) # cannot add when there is a deletion record
         
-        HG.test_controller.SetRead( 'media_results', media_results )
+        TG.test_controller.SetRead( 'media_results', media_results )
         
         body = json.dumps( body_dict )
         
@@ -2857,7 +2858,7 @@ class TestClientAPI( unittest.TestCase ):
             ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_DELETE, ( 'test_delete', { hash, hash2 } ) )
         ] )
         
-        [ ( ( content_update_package, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+        [ ( ( content_update_package, ), kwargs ) ] = TG.test_controller.GetWrite( 'content_updates' )
         
         HF.compare_content_update_packages( self, content_update_package, expected_content_update_package )
         
@@ -2878,7 +2879,7 @@ class TestClientAPI( unittest.TestCase ):
         
         media_results[0].GetTagsManager().GetCurrent( CC.DEFAULT_LOCAL_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_STORAGE ).add( 'test_delete' ) # can only delete when it already exists
         
-        HG.test_controller.SetRead( 'media_results', media_results )
+        TG.test_controller.SetRead( 'media_results', media_results )
         
         body = json.dumps( body_dict )
         
@@ -2895,7 +2896,7 @@ class TestClientAPI( unittest.TestCase ):
             ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_DELETE, ( 'test_delete', { hash } ) )
         ] )
         
-        [ ( ( content_update_package, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+        [ ( ( content_update_package, ), kwargs ) ] = TG.test_controller.GetWrite( 'content_updates' )
         
         HF.compare_content_update_packages( self, content_update_package, expected_content_update_package )
         
@@ -2916,7 +2917,7 @@ class TestClientAPI( unittest.TestCase ):
                 set(),
                 set()
             ],
-            HG.test_controller.example_tag_repo_service_key : [
+            TG.test_controller.example_tag_repo_service_key : [
                 { 'blue eyes' },
                 'blue eyes',
                 set(),
@@ -2941,7 +2942,7 @@ class TestClientAPI( unittest.TestCase ):
                     "studio:nintendo"
                 }
             ],
-            HG.test_controller.example_tag_repo_service_key : [
+            TG.test_controller.example_tag_repo_service_key : [
                 { 'samus aran' },
                 'samus aran',
                 {
@@ -2952,7 +2953,7 @@ class TestClientAPI( unittest.TestCase ):
             ]
         }
         
-        HG.test_controller.SetRead( 'tag_siblings_and_parents_lookup', db_data )
+        TG.test_controller.SetRead( 'tag_siblings_and_parents_lookup', db_data )
         
         #
         
@@ -3034,7 +3035,7 @@ class TestClientAPI( unittest.TestCase ):
             ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_TAG, 'green car', count = ClientSearchPredicate.PredicateCount( 5, 0, None, None ) )
         ]
         
-        HG.test_controller.SetRead( 'autocomplete_predicates', predicates )
+        TG.test_controller.SetRead( 'autocomplete_predicates', predicates )
         
         #
         
@@ -3105,7 +3106,7 @@ class TestClientAPI( unittest.TestCase ):
         
         self.assertEqual( expected_result, d )
         
-        ( args, kwargs ) = HG.test_controller.GetRead( 'autocomplete_predicates' )[-1]
+        ( args, kwargs ) = TG.test_controller.GetRead( 'autocomplete_predicates' )[-1]
         
         self.assertEqual( args[0], ClientTags.TAG_DISPLAY_STORAGE )
         
@@ -3143,7 +3144,7 @@ class TestClientAPI( unittest.TestCase ):
         
         self.assertEqual( expected_result, d )
         
-        ( args, kwargs ) = HG.test_controller.GetRead( 'autocomplete_predicates' )[-1]
+        ( args, kwargs ) = TG.test_controller.GetRead( 'autocomplete_predicates' )[-1]
         
         self.assertEqual( args[0], ClientTags.TAG_DISPLAY_STORAGE )
         
@@ -3181,7 +3182,7 @@ class TestClientAPI( unittest.TestCase ):
         
         self.assertEqual( expected_result, d )
         
-        ( args, kwargs ) = HG.test_controller.GetRead( 'autocomplete_predicates' )[-1]
+        ( args, kwargs ) = TG.test_controller.GetRead( 'autocomplete_predicates' )[-1]
         
         self.assertEqual( args[0], ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL )
         
@@ -3226,7 +3227,7 @@ class TestClientAPI( unittest.TestCase ):
         
         url = 'https://muhsite.wew/help_compute'
         
-        HG.test_controller.SetRead( 'url_statuses', [] )
+        TG.test_controller.SetRead( 'url_statuses', [] )
         
         path = '/add_urls/get_url_files?url={}'.format( urllib.parse.quote( url, safe = '' ) )
         
@@ -3261,7 +3262,7 @@ class TestClientAPI( unittest.TestCase ):
         url_file_statuses = [ ClientImportFiles.FileImportStatus( CC.STATUS_SUCCESSFUL_BUT_REDUNDANT, hash, note = 'muh import phrase' ) ]
         json_url_file_statuses = [ { 'status' : CC.STATUS_SUCCESSFUL_BUT_REDUNDANT, 'hash' : hash.hex(), 'note' : 'muh import phrase' } ]
         
-        HG.test_controller.SetRead( 'url_statuses', url_file_statuses )
+        TG.test_controller.SetRead( 'url_statuses', url_file_statuses )
         
         path = '/add_urls/get_url_files?url={}'.format( urllib.parse.quote( url, safe = '' ) )
         
@@ -3396,7 +3397,7 @@ class TestClientAPI( unittest.TestCase ):
         
         # add url
         
-        HG.test_controller.ClearWrites( 'import_url_test' )
+        TG.test_controller.ClearWrites( 'import_url_test' )
         
         headers = { 'Hydrus-Client-API-Access-Key' : access_key_hex, 'Content-Type' : HC.mime_mimetype_string_lookup[ HC.APPLICATION_JSON ] }
         
@@ -3421,11 +3422,11 @@ class TestClientAPI( unittest.TestCase ):
         self.assertEqual( response_json[ 'human_result_text' ], '"https://8ch.net/tv/res/1846574.html" URL added successfully.' )
         self.assertEqual( response_json[ 'normalised_url' ], 'https://8ch.net/tv/res/1846574.html' )
         
-        self.assertEqual( HG.test_controller.GetWrite( 'import_url_test' ), [ ( ( url, set(), ClientTags.ServiceKeysToTags(), None, None, False, None ), {} ) ] )
+        self.assertEqual( TG.test_controller.GetWrite( 'import_url_test' ), [ ( ( url, set(), ClientTags.ServiceKeysToTags(), None, None, False, None ), {} ) ] )
         
         # with import destination
         
-        HG.test_controller.ClearWrites( 'import_url_test' )
+        TG.test_controller.ClearWrites( 'import_url_test' )
         
         headers = { 'Hydrus-Client-API-Access-Key' : access_key_hex, 'Content-Type' : HC.mime_mimetype_string_lookup[ HC.APPLICATION_JSON ] }
         
@@ -3450,11 +3451,11 @@ class TestClientAPI( unittest.TestCase ):
         self.assertEqual( response_json[ 'human_result_text' ], '"https://8ch.net/tv/res/1846574.html" URL added successfully.' )
         self.assertEqual( response_json[ 'normalised_url' ], 'https://8ch.net/tv/res/1846574.html' )
         
-        self.assertEqual( HG.test_controller.GetWrite( 'import_url_test' ), [ ( ( url, set(), ClientTags.ServiceKeysToTags(), None, None, False, ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY ) ), {} ) ] )
+        self.assertEqual( TG.test_controller.GetWrite( 'import_url_test' ), [ ( ( url, set(), ClientTags.ServiceKeysToTags(), None, None, False, ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY ) ), {} ) ] )
         
         # with name
         
-        HG.test_controller.ClearWrites( 'import_url_test' )
+        TG.test_controller.ClearWrites( 'import_url_test' )
         
         request_dict = { 'url' : url, 'destination_page_name' : 'muh /tv/' }
         
@@ -3475,11 +3476,11 @@ class TestClientAPI( unittest.TestCase ):
         self.assertEqual( response_json[ 'human_result_text' ], '"https://8ch.net/tv/res/1846574.html" URL added successfully.' )
         self.assertEqual( response_json[ 'normalised_url' ], 'https://8ch.net/tv/res/1846574.html' )
         
-        self.assertEqual( HG.test_controller.GetWrite( 'import_url_test' ), [ ( ( url, set(), ClientTags.ServiceKeysToTags(), 'muh /tv/', None, False, None ), {} ) ] )
+        self.assertEqual( TG.test_controller.GetWrite( 'import_url_test' ), [ ( ( url, set(), ClientTags.ServiceKeysToTags(), 'muh /tv/', None, False, None ), {} ) ] )
         
         # with page_key
         
-        HG.test_controller.ClearWrites( 'import_url_test' )
+        TG.test_controller.ClearWrites( 'import_url_test' )
         
         page_key = os.urandom( 32 )
         page_key_hex = page_key.hex()
@@ -3503,11 +3504,11 @@ class TestClientAPI( unittest.TestCase ):
         self.assertEqual( response_json[ 'human_result_text' ], '"https://8ch.net/tv/res/1846574.html" URL added successfully.' )
         self.assertEqual( response_json[ 'normalised_url' ], 'https://8ch.net/tv/res/1846574.html' )
         
-        self.assertEqual( HG.test_controller.GetWrite( 'import_url_test' ), [ ( ( url, set(), ClientTags.ServiceKeysToTags(), None, page_key, False, None ), {} ) ] )
+        self.assertEqual( TG.test_controller.GetWrite( 'import_url_test' ), [ ( ( url, set(), ClientTags.ServiceKeysToTags(), None, page_key, False, None ), {} ) ] )
         
         # add tags and name, and show destination page
         
-        HG.test_controller.ClearWrites( 'import_url_test' )
+        TG.test_controller.ClearWrites( 'import_url_test' )
         
         request_dict = { 'url' : url, 'destination_page_name' : 'muh /tv/', 'show_destination_page' : True, 'filterable_tags' : [ 'filename:yo' ], 'service_keys_to_additional_tags' : { CC.DEFAULT_LOCAL_TAG_SERVICE_KEY.hex() : [ '/tv/ thread' ] } }
         
@@ -3531,11 +3532,11 @@ class TestClientAPI( unittest.TestCase ):
         filterable_tags = [ 'filename:yo' ]
         additional_service_keys_to_tags = ClientTags.ServiceKeysToTags( { CC.DEFAULT_LOCAL_TAG_SERVICE_KEY : set( [ '/tv/ thread' ] ) } )
         
-        self.assertEqual( HG.test_controller.GetWrite( 'import_url_test' ), [ ( ( url, set( filterable_tags ), additional_service_keys_to_tags, 'muh /tv/', None, True, None ), {} ) ] )
+        self.assertEqual( TG.test_controller.GetWrite( 'import_url_test' ), [ ( ( url, set( filterable_tags ), additional_service_keys_to_tags, 'muh /tv/', None, True, None ), {} ) ] )
         
         # add tags with service key and name, and show destination page
         
-        HG.test_controller.ClearWrites( 'import_url_test' )
+        TG.test_controller.ClearWrites( 'import_url_test' )
         
         request_dict = { 'url' : url, 'destination_page_name' : 'muh /tv/', 'show_destination_page' : True, 'filterable_tags' : [ 'filename:yo' ], 'service_keys_to_additional_tags' : { CC.DEFAULT_LOCAL_TAG_SERVICE_KEY.hex() : [ '/tv/ thread' ] } }
         
@@ -3559,7 +3560,7 @@ class TestClientAPI( unittest.TestCase ):
         filterable_tags = [ 'filename:yo' ]
         additional_service_keys_to_tags = ClientTags.ServiceKeysToTags( { CC.DEFAULT_LOCAL_TAG_SERVICE_KEY : set( [ '/tv/ thread' ] ) } )
         
-        self.assertEqual( HG.test_controller.GetWrite( 'import_url_test' ), [ ( ( url, set( filterable_tags ), additional_service_keys_to_tags, 'muh /tv/', None, True, None ), {} ) ] )
+        self.assertEqual( TG.test_controller.GetWrite( 'import_url_test' ), [ ( ( url, set( filterable_tags ), additional_service_keys_to_tags, 'muh /tv/', None, True, None ), {} ) ] )
         
     
     def _test_associate_urls( self, connection, set_up_permissions ):
@@ -3572,7 +3573,7 @@ class TestClientAPI( unittest.TestCase ):
         
         # associate url
         
-        HG.test_controller.ClearWrites( 'content_updates' )
+        TG.test_controller.ClearWrites( 'content_updates' )
         
         hash = bytes.fromhex( '3b820114f658d768550e4e3d4f1dced3ff8db77443472b5ad93700647ad2d3ba' )
         url = 'https://rule34.xxx/index.php?id=2588418&page=post&s=view'
@@ -3591,13 +3592,13 @@ class TestClientAPI( unittest.TestCase ):
         
         expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_URLS, HC.CONTENT_UPDATE_ADD, ( [ url ], { hash } ) ) ] )
         
-        [ ( ( content_update_package, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+        [ ( ( content_update_package, ), kwargs ) ] = TG.test_controller.GetWrite( 'content_updates' )
         
         HF.compare_content_update_packages( self, content_update_package, expected_content_update_package )
         
         #
         
-        HG.test_controller.ClearWrites( 'content_updates' )
+        TG.test_controller.ClearWrites( 'content_updates' )
         
         hash = bytes.fromhex( '3b820114f658d768550e4e3d4f1dced3ff8db77443472b5ad93700647ad2d3ba' )
         url = 'https://rule34.xxx/index.php?id=2588418&page=post&s=view'
@@ -3618,13 +3619,13 @@ class TestClientAPI( unittest.TestCase ):
         
         expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_URLS, HC.CONTENT_UPDATE_ADD, ( [ url ], { hash } ) ) ] )
         
-        [ ( ( content_update_package, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+        [ ( ( content_update_package, ), kwargs ) ] = TG.test_controller.GetWrite( 'content_updates' )
         
         HF.compare_content_update_packages( self, content_update_package, expected_content_update_package )
         
         #
         
-        HG.test_controller.ClearWrites( 'content_updates' )
+        TG.test_controller.ClearWrites( 'content_updates' )
         
         hash = bytes.fromhex( '3b820114f658d768550e4e3d4f1dced3ff8db77443472b5ad93700647ad2d3ba' )
         url = 'http://rule34.xxx/index.php?id=2588418&page=post&s=view'
@@ -3643,13 +3644,13 @@ class TestClientAPI( unittest.TestCase ):
         
         expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_URLS, HC.CONTENT_UPDATE_DELETE, ( [ url ], { hash } ) ) ] )
         
-        [ ( ( content_update_package, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+        [ ( ( content_update_package, ), kwargs ) ] = TG.test_controller.GetWrite( 'content_updates' )
         
         HF.compare_content_update_packages( self, content_update_package, expected_content_update_package )
         
         #
         
-        HG.test_controller.ClearWrites( 'content_updates' )
+        TG.test_controller.ClearWrites( 'content_updates' )
         
         hash = bytes.fromhex( '3b820114f658d768550e4e3d4f1dced3ff8db77443472b5ad93700647ad2d3ba' )
         url = 'http://rule34.xxx/index.php?id=2588418&page=post&s=view'
@@ -3668,13 +3669,13 @@ class TestClientAPI( unittest.TestCase ):
         
         expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_URLS, HC.CONTENT_UPDATE_DELETE, ( [ url ], { hash } ) ) ] )
         
-        [ ( ( content_update_package, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+        [ ( ( content_update_package, ), kwargs ) ] = TG.test_controller.GetWrite( 'content_updates' )
         
         HF.compare_content_update_packages( self, content_update_package, expected_content_update_package )
         
         # normalisation - True
         
-        HG.test_controller.ClearWrites( 'content_updates' )
+        TG.test_controller.ClearWrites( 'content_updates' )
         
         hash = bytes.fromhex( '3b820114f658d768550e4e3d4f1dced3ff8db77443472b5ad93700647ad2d3ba' )
         unnormalised_url = 'https://rule34.xxx/index.php?page=post&id=2588418&s=view'
@@ -3694,13 +3695,13 @@ class TestClientAPI( unittest.TestCase ):
         
         expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_URLS, HC.CONTENT_UPDATE_ADD, ( [ normalised_url ], { hash } ) ) ] )
         
-        [ ( ( content_update_package, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+        [ ( ( content_update_package, ), kwargs ) ] = TG.test_controller.GetWrite( 'content_updates' )
         
         HF.compare_content_update_packages( self, content_update_package, expected_content_update_package )
         
         # normalisation - False
         
-        HG.test_controller.ClearWrites( 'content_updates' )
+        TG.test_controller.ClearWrites( 'content_updates' )
         
         hash = bytes.fromhex( '3b820114f658d768550e4e3d4f1dced3ff8db77443472b5ad93700647ad2d3ba' )
         unnormalised_url = 'https://rule34.xxx/index.php?page=post&id=2588418&s=view'
@@ -3719,13 +3720,13 @@ class TestClientAPI( unittest.TestCase ):
         
         expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_URLS, HC.CONTENT_UPDATE_ADD, ( [ unnormalised_url ], { hash } ) ) ] )
         
-        [ ( ( content_update_package, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+        [ ( ( content_update_package, ), kwargs ) ] = TG.test_controller.GetWrite( 'content_updates' )
         
         HF.compare_content_update_packages( self, content_update_package, expected_content_update_package )
         
         # normalisation - crazy url error
         
-        HG.test_controller.ClearWrites( 'content_updates' )
+        TG.test_controller.ClearWrites( 'content_updates' )
         
         hash = bytes.fromhex( '3b820114f658d768550e4e3d4f1dced3ff8db77443472b5ad93700647ad2d3ba' )
         crazy_nonsense = 'hello'
@@ -3744,7 +3745,7 @@ class TestClientAPI( unittest.TestCase ):
         
         # normalisation - crazy url ok
         
-        HG.test_controller.ClearWrites( 'content_updates' )
+        TG.test_controller.ClearWrites( 'content_updates' )
         
         hash = bytes.fromhex( '3b820114f658d768550e4e3d4f1dced3ff8db77443472b5ad93700647ad2d3ba' )
         crazy_nonsense = 'hello'
@@ -3763,7 +3764,7 @@ class TestClientAPI( unittest.TestCase ):
         
         expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_URLS, HC.CONTENT_UPDATE_ADD, ( [ crazy_nonsense ], { hash } ) ) ] )
         
-        [ ( ( content_update_package, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+        [ ( ( content_update_package, ), kwargs ) ] = TG.test_controller.GetWrite( 'content_updates' )
         
         HF.compare_content_update_packages( self, content_update_package, expected_content_update_package )
         
@@ -3939,7 +3940,7 @@ class TestClientAPI( unittest.TestCase ):
         
         self.assertEqual( response.status, 200 )
         
-        current_headers = HG.test_controller.network_engine.domain_manager.GetHeaders( [ ClientNetworkingContexts.GLOBAL_NETWORK_CONTEXT ] )
+        current_headers = TG.test_controller.network_engine.domain_manager.GetHeaders( [ ClientNetworkingContexts.GLOBAL_NETWORK_CONTEXT ] )
         
         self.assertEqual( current_headers[ 'User-Agent' ], new_user_agent )
         
@@ -3957,7 +3958,7 @@ class TestClientAPI( unittest.TestCase ):
         
         self.assertEqual( response.status, 200 )
         
-        current_headers = HG.test_controller.network_engine.domain_manager.GetHeaders( [ ClientNetworkingContexts.GLOBAL_NETWORK_CONTEXT ] )
+        current_headers = TG.test_controller.network_engine.domain_manager.GetHeaders( [ ClientNetworkingContexts.GLOBAL_NETWORK_CONTEXT ] )
         
         from hydrus.client import ClientDefaults
         
@@ -4342,7 +4343,7 @@ class TestClientAPI( unittest.TestCase ):
         
         expected_data = { 'hell forever' : 666 }
         
-        HG.test_controller.SetRead( 'boned_stats', expected_data )
+        TG.test_controller.SetRead( 'boned_stats', expected_data )
         
         path = '/manage_database/mr_bones'
         
@@ -4362,7 +4363,7 @@ class TestClientAPI( unittest.TestCase ):
         
         self.assertEqual( boned_stats, dict( expected_data ) )
         
-        [ ( args, kwargs ) ] = HG.test_controller.GetRead( 'boned_stats' )
+        [ ( args, kwargs ) ] = TG.test_controller.GetRead( 'boned_stats' )
         
         file_search_context = kwargs[ 'file_search_context' ]
         
@@ -4370,7 +4371,7 @@ class TestClientAPI( unittest.TestCase ):
         
         #
         
-        HG.test_controller.SetRead( 'boned_stats', expected_data )
+        TG.test_controller.SetRead( 'boned_stats', expected_data )
         
         path = '/manage_database/mr_bones?tags={}'.format( urllib.parse.quote( json.dumps( [ 'skirt', 'blue_eyes' ] ) ) )
         
@@ -4390,7 +4391,7 @@ class TestClientAPI( unittest.TestCase ):
         
         self.assertEqual( boned_stats, dict( expected_data ) )
         
-        [ ( args, kwargs ) ] = HG.test_controller.GetRead( 'boned_stats' )
+        [ ( args, kwargs ) ] = TG.test_controller.GetRead( 'boned_stats' )
         
         file_search_context = kwargs[ 'file_search_context' ]
         
@@ -4435,7 +4436,7 @@ class TestClientAPI( unittest.TestCase ):
             }
         }
         
-        HG.test_controller.SetRead( 'file_relationships_for_api', example_response )
+        TG.test_controller.SetRead( 'file_relationships_for_api', example_response )
         
         path = '/manage_file_relationships/get_file_relationships?hash={}'.format( file_relationships_hash.hex() )
         
@@ -4453,7 +4454,7 @@ class TestClientAPI( unittest.TestCase ):
         
         self.assertEqual( d[ 'file_relationships' ], example_response )
         
-        [ ( args, kwargs ) ] = HG.test_controller.GetRead( 'file_relationships_for_api' )
+        [ ( args, kwargs ) ] = TG.test_controller.GetRead( 'file_relationships_for_api' )
 
         ( location_context, hashes ) = args
         
@@ -4479,7 +4480,7 @@ class TestClientAPI( unittest.TestCase ):
         
         test_file_search_context_1 = ClientSearchFileSearchContext.FileSearchContext( location_context = default_location_context, tag_context = test_tag_context_1, predicates = test_predicates_1 )
         
-        test_tag_service_key_2 = HG.test_controller.example_tag_repo_service_key
+        test_tag_service_key_2 = TG.test_controller.example_tag_repo_service_key
         test_tags_2 = [ 'system:untagged' ]
         
         test_tag_context_2 = ClientSearchTagContext.TagContext( test_tag_service_key_2 )
@@ -4493,7 +4494,7 @@ class TestClientAPI( unittest.TestCase ):
         
         # get count
         
-        HG.test_controller.SetRead( 'potential_duplicates_count', 5 )
+        TG.test_controller.SetRead( 'potential_duplicates_count', 5 )
         
         path = '/manage_file_relationships/get_potentials_count'
         
@@ -4511,7 +4512,7 @@ class TestClientAPI( unittest.TestCase ):
         
         self.assertEqual( d[ 'potential_duplicates_count' ], 5 )
         
-        [ ( args, kwargs ) ] = HG.test_controller.GetRead( 'potential_duplicates_count' )
+        [ ( args, kwargs ) ] = TG.test_controller.GetRead( 'potential_duplicates_count' )
 
         ( file_search_context_1, file_search_context_2, potentials_search_type, pixel_duplicates, max_hamming_distance ) = args
         
@@ -4523,7 +4524,7 @@ class TestClientAPI( unittest.TestCase ):
         
         # get count with params
         
-        HG.test_controller.SetRead( 'potential_duplicates_count', 5 )
+        TG.test_controller.SetRead( 'potential_duplicates_count', 5 )
         
         path = '/manage_file_relationships/get_potentials_count?tag_service_key_1={}&tags_1={}&tag_service_key_2={}&tags_2={}&potentials_search_type={}&pixel_duplicates={}&max_hamming_distance={}'.format(
             test_tag_service_key_1.hex(),
@@ -4549,7 +4550,7 @@ class TestClientAPI( unittest.TestCase ):
         
         self.assertEqual( d[ 'potential_duplicates_count' ], 5 )
         
-        [ ( args, kwargs ) ] = HG.test_controller.GetRead( 'potential_duplicates_count' )
+        [ ( args, kwargs ) ] = TG.test_controller.GetRead( 'potential_duplicates_count' )
 
         ( file_search_context_1, file_search_context_2, potentials_search_type, pixel_duplicates, max_hamming_distance ) = args
         
@@ -4568,7 +4569,7 @@ class TestClientAPI( unittest.TestCase ):
         test_media_result_pairs = [ ( HF.GetFakeMediaResult( h1 ), HF.GetFakeMediaResult( h2 ) ) for ( h1, h2 ) in test_hash_pairs ]
         test_hash_pairs_hex = [ [ h1.hex(), h2.hex() ] for ( h1, h2 ) in test_hash_pairs ]
         
-        HG.test_controller.SetRead( 'duplicate_pairs_for_filtering', test_media_result_pairs )
+        TG.test_controller.SetRead( 'duplicate_pairs_for_filtering', test_media_result_pairs )
         
         path = '/manage_file_relationships/get_potential_pairs'
         
@@ -4586,7 +4587,7 @@ class TestClientAPI( unittest.TestCase ):
         
         self.assertEqual( d[ 'potential_duplicate_pairs' ], test_hash_pairs_hex )
         
-        [ ( args, kwargs ) ] = HG.test_controller.GetRead( 'duplicate_pairs_for_filtering' )
+        [ ( args, kwargs ) ] = TG.test_controller.GetRead( 'duplicate_pairs_for_filtering' )
         
         ( file_search_context_1, file_search_context_2, potentials_search_type, pixel_duplicates, max_hamming_distance ) = args
         
@@ -4601,7 +4602,7 @@ class TestClientAPI( unittest.TestCase ):
         
         # get pairs with params
         
-        HG.test_controller.SetRead( 'duplicate_pairs_for_filtering', test_media_result_pairs )
+        TG.test_controller.SetRead( 'duplicate_pairs_for_filtering', test_media_result_pairs )
         
         path = '/manage_file_relationships/get_potential_pairs?tag_service_key_1={}&tags_1={}&tag_service_key_2={}&tags_2={}&potentials_search_type={}&pixel_duplicates={}&max_hamming_distance={}&max_num_pairs={}'.format(
             test_tag_service_key_1.hex(),
@@ -4628,7 +4629,7 @@ class TestClientAPI( unittest.TestCase ):
         
         self.assertEqual( d[ 'potential_duplicate_pairs' ], test_hash_pairs_hex )
         
-        [ ( args, kwargs ) ] = HG.test_controller.GetRead( 'duplicate_pairs_for_filtering' )
+        [ ( args, kwargs ) ] = TG.test_controller.GetRead( 'duplicate_pairs_for_filtering' )
 
         ( file_search_context_1, file_search_context_2, potentials_search_type, pixel_duplicates, max_hamming_distance ) = args
         
@@ -4646,7 +4647,7 @@ class TestClientAPI( unittest.TestCase ):
         test_hashes = [ os.urandom( 32 ) for i in range( 6 ) ]
         test_hash_pairs_hex = [ h.hex() for h in test_hashes ]
         
-        HG.test_controller.SetRead( 'random_potential_duplicate_hashes', test_hashes )
+        TG.test_controller.SetRead( 'random_potential_duplicate_hashes', test_hashes )
         
         path = '/manage_file_relationships/get_random_potentials'
         
@@ -4664,7 +4665,7 @@ class TestClientAPI( unittest.TestCase ):
         
         self.assertEqual( d[ 'random_potential_duplicate_hashes' ], test_hash_pairs_hex )
         
-        [ ( args, kwargs ) ] = HG.test_controller.GetRead( 'random_potential_duplicate_hashes' )
+        [ ( args, kwargs ) ] = TG.test_controller.GetRead( 'random_potential_duplicate_hashes' )
         
         ( file_search_context_1, file_search_context_2, potentials_search_type, pixel_duplicates, max_hamming_distance ) = args
         
@@ -4676,7 +4677,7 @@ class TestClientAPI( unittest.TestCase ):
         
         # get random with params
         
-        HG.test_controller.SetRead( 'random_potential_duplicate_hashes', test_hashes )
+        TG.test_controller.SetRead( 'random_potential_duplicate_hashes', test_hashes )
         
         path = '/manage_file_relationships/get_random_potentials?tag_service_key_1={}&tags_1={}&tag_service_key_2={}&tags_2={}&potentials_search_type={}&pixel_duplicates={}&max_hamming_distance={}'.format(
             test_tag_service_key_1.hex(),
@@ -4702,7 +4703,7 @@ class TestClientAPI( unittest.TestCase ):
         
         self.assertEqual( d[ 'random_potential_duplicate_hashes' ], test_hash_pairs_hex )
         
-        [ ( args, kwargs ) ] = HG.test_controller.GetRead( 'random_potential_duplicate_hashes' )
+        [ ( args, kwargs ) ] = TG.test_controller.GetRead( 'random_potential_duplicate_hashes' )
 
         ( file_search_context_1, file_search_context_2, potentials_search_type, pixel_duplicates, max_hamming_distance ) = args
         
@@ -4716,9 +4717,9 @@ class TestClientAPI( unittest.TestCase ):
         
         # this is tricky to test fully
         
-        HG.test_controller.ClearWrites( 'duplicate_pair_status' )
+        TG.test_controller.ClearWrites( 'duplicate_pair_status' )
         
-        HG.test_controller.ClearReads( 'media_result' )
+        TG.test_controller.ClearReads( 'media_result' )
         
         hashes = {
             'b54d09218e0d6efc964b78b070620a1fa19c7e069672b4c6313cee2c9b0623f2',
@@ -4732,7 +4733,7 @@ class TestClientAPI( unittest.TestCase ):
         # TODO: populate the fakes here with real tags and test actual content merge
         # to test the content merge, we'd want to set some content merge options and populate these fakes with real tags
         # don't need to be too clever, just test one thing and we know it'll all be hooked up right
-        HG.test_controller.SetRead( 'media_results', [ HF.GetFakeMediaResult( bytes.fromhex( hash_hex ) ) for hash_hex in hashes ] )
+        TG.test_controller.SetRead( 'media_results', [ HF.GetFakeMediaResult( bytes.fromhex( hash_hex ) ) for hash_hex in hashes ] )
         
         headers = { 'Hydrus-Client-API-Access-Key' : access_key_hex, 'Content-Type' : HC.mime_mimetype_string_lookup[ HC.APPLICATION_JSON ] }
         
@@ -4773,7 +4774,7 @@ class TestClientAPI( unittest.TestCase ):
         
         self.assertEqual( response.status, 200 )
         
-        [ ( args, kwargs ) ] = HG.test_controller.GetWrite( 'duplicate_pair_status' )
+        [ ( args, kwargs ) ] = TG.test_controller.GetWrite( 'duplicate_pair_status' )
 
         ( written_rows, ) = args
         
@@ -4807,7 +4808,7 @@ class TestClientAPI( unittest.TestCase ):
         
         # remove potentials
         
-        HG.test_controller.ClearWrites( 'remove_potential_pairs' )
+        TG.test_controller.ClearWrites( 'remove_potential_pairs' )
         
         headers = { 'Hydrus-Client-API-Access-Key' : access_key_hex, 'Content-Type' : HC.mime_mimetype_string_lookup[ HC.APPLICATION_JSON ] }
         
@@ -4830,13 +4831,13 @@ class TestClientAPI( unittest.TestCase ):
         
         self.assertEqual( response.status, 200 )
         
-        [ ( args, kwargs ) ] = HG.test_controller.GetWrite( 'remove_potential_pairs' )
+        [ ( args, kwargs ) ] = TG.test_controller.GetWrite( 'remove_potential_pairs' )
         
         self.assertEqual( set( args[0] ), { bytes.fromhex( h ) for h in test_hashes } )
         
         # set kings
         
-        HG.test_controller.ClearWrites( 'duplicate_set_king' )
+        TG.test_controller.ClearWrites( 'duplicate_set_king' )
         
         headers = { 'Hydrus-Client-API-Access-Key' : access_key_hex, 'Content-Type' : HC.mime_mimetype_string_lookup[ HC.APPLICATION_JSON ] }
         
@@ -4859,7 +4860,7 @@ class TestClientAPI( unittest.TestCase ):
         
         self.assertEqual( response.status, 200 )
         
-        [ ( args1, kwargs1 ), ( args2, kwargs2 ) ] = HG.test_controller.GetWrite( 'duplicate_set_king' )
+        [ ( args1, kwargs1 ), ( args2, kwargs2 ) ] = TG.test_controller.GetWrite( 'duplicate_set_king' )
         
         self.assertEqual( { args1[0], args2[0] }, { bytes.fromhex( h ) for h in test_hashes } )
         
@@ -4912,7 +4913,7 @@ class TestClientAPI( unittest.TestCase ):
         
         self.assertEqual( response.status, 200 )
         
-        result = HG.test_controller.GetWrite( 'show_page' ) # a fake hook in the controller handles this
+        result = TG.test_controller.GetWrite( 'show_page' ) # a fake hook in the controller handles this
         
         expected_result = [ ( ( page_key, ), {} ) ]
         
@@ -4938,7 +4939,7 @@ class TestClientAPI( unittest.TestCase ):
         
         self.assertEqual( response.status, 200 )
         
-        result = HG.test_controller.GetWrite( 'refresh_page' ) # a fake hook in the controller handles this
+        result = TG.test_controller.GetWrite( 'refresh_page' ) # a fake hook in the controller handles this
         
         expected_result = [ ( ( page_key, ), {} ) ]
         
@@ -5007,7 +5008,7 @@ class TestClientAPI( unittest.TestCase ):
             }
         }
         
-        HG.test_controller.SetRead( 'nums_pending', db_response )
+        TG.test_controller.SetRead( 'nums_pending', db_response )
         
         path = '/manage_services/get_pending_counts'
         
@@ -5053,7 +5054,7 @@ class TestClientAPI( unittest.TestCase ):
         
         path = '/manage_services/commit_pending'
         
-        body_dict = { 'service_key' : HG.test_controller.example_file_repo_service_key_1.hex() }
+        body_dict = { 'service_key' : TG.test_controller.example_file_repo_service_key_1.hex() }
         
         body = json.dumps( body_dict )
         
@@ -5101,13 +5102,13 @@ class TestClientAPI( unittest.TestCase ):
         
         #
         
-        HG.test_controller.ClearWrites( 'delete_pending' )
+        TG.test_controller.ClearWrites( 'delete_pending' )
         
         headers = { 'Content-Type' : HC.mime_mimetype_string_lookup[ HC.APPLICATION_JSON ], 'Hydrus-Client-API-Access-Key' : access_key_hex }
         
         path = '/manage_services/forget_pending'
         
-        body_dict = { 'service_key' : HG.test_controller.example_file_repo_service_key_1.hex() }
+        body_dict = { 'service_key' : TG.test_controller.example_file_repo_service_key_1.hex() }
         
         body = json.dumps( body_dict )
         
@@ -5119,9 +5120,9 @@ class TestClientAPI( unittest.TestCase ):
         
         self.assertEqual( response.status, 200 )
         
-        [ ( ( service_key, ), kwargs ) ] = HG.test_controller.GetWrite( 'delete_pending' )
+        [ ( ( service_key, ), kwargs ) ] = TG.test_controller.GetWrite( 'delete_pending' )
         
-        self.assertEqual( service_key, HG.test_controller.example_file_repo_service_key_1 )
+        self.assertEqual( service_key, TG.test_controller.example_file_repo_service_key_1 )
         
     
     def _test_options( self, connection, set_up_permissions ):
@@ -5190,7 +5191,7 @@ class TestClientAPI( unittest.TestCase ):
         
         sample_hash_ids = set( random.sample( list( hash_ids ), 3 ) )
         
-        HG.test_controller.SetRead( 'file_query_ids', set( sample_hash_ids ) )
+        TG.test_controller.SetRead( 'file_query_ids', set( sample_hash_ids ) )
         
         tags = [ 'kino' ]
         
@@ -5206,11 +5207,11 @@ class TestClientAPI( unittest.TestCase ):
         
         # search files
         
-        HG.test_controller.ClearReads( 'file_query_ids' )
+        TG.test_controller.ClearReads( 'file_query_ids' )
         
         sample_hash_ids = set( random.sample( list( hash_ids ), 3 ) )
         
-        HG.test_controller.SetRead( 'file_query_ids', set( sample_hash_ids ) )
+        TG.test_controller.SetRead( 'file_query_ids', set( sample_hash_ids ) )
         
         tags = [ 'kino', 'green' ]
         
@@ -5234,7 +5235,7 @@ class TestClientAPI( unittest.TestCase ):
         
         self.assertEqual( d, expected_result )
         
-        [ ( args, kwargs ) ] = HG.test_controller.GetRead( 'file_query_ids' )
+        [ ( args, kwargs ) ] = TG.test_controller.GetRead( 'file_query_ids' )
         
         ( file_search_context, ) = args
         
@@ -5257,11 +5258,11 @@ class TestClientAPI( unittest.TestCase ):
         
         # include current/pending
         
-        HG.test_controller.ClearReads( 'file_query_ids' )
+        TG.test_controller.ClearReads( 'file_query_ids' )
         
         sample_hash_ids = set( random.sample( list( hash_ids ), 3 ) )
         
-        HG.test_controller.SetRead( 'file_query_ids', set( sample_hash_ids ) )
+        TG.test_controller.SetRead( 'file_query_ids', set( sample_hash_ids ) )
         
         tags = [ 'kino', 'green' ]
         
@@ -5285,7 +5286,7 @@ class TestClientAPI( unittest.TestCase ):
         
         self.assertEqual( d, expected_result )
         
-        [ ( args, kwargs ) ] = HG.test_controller.GetRead( 'file_query_ids' )
+        [ ( args, kwargs ) ] = TG.test_controller.GetRead( 'file_query_ids' )
         
         ( file_search_context, ) = args
         
@@ -5313,7 +5314,7 @@ class TestClientAPI( unittest.TestCase ):
         
         self.assertEqual( d, expected_result )
         
-        [ ( args, kwargs ) ] = HG.test_controller.GetRead( 'file_query_ids' )
+        [ ( args, kwargs ) ] = TG.test_controller.GetRead( 'file_query_ids' )
         
         ( file_search_context, ) = args
         
@@ -5323,15 +5324,15 @@ class TestClientAPI( unittest.TestCase ):
         
         # search files and get hashes
         
-        HG.test_controller.ClearReads( 'file_query_ids' )
+        TG.test_controller.ClearReads( 'file_query_ids' )
         
         sample_hash_ids = set( random.sample( list( hash_ids ), 3 ) )
         
         hash_ids_to_hashes = { hash_id : os.urandom( 32 ) for hash_id in sample_hash_ids }
         
-        HG.test_controller.SetRead( 'file_query_ids', set( sample_hash_ids ) )
+        TG.test_controller.SetRead( 'file_query_ids', set( sample_hash_ids ) )
         
-        HG.test_controller.SetRead( 'hash_ids_to_hashes', hash_ids_to_hashes )
+        TG.test_controller.SetRead( 'hash_ids_to_hashes', hash_ids_to_hashes )
         
         tags = [ 'kino', 'green' ]
         
@@ -5355,7 +5356,7 @@ class TestClientAPI( unittest.TestCase ):
         
         self.assertIn( 'file_ids', d )
         
-        [ ( args, kwargs ) ] = HG.test_controller.GetRead( 'file_query_ids' )
+        [ ( args, kwargs ) ] = TG.test_controller.GetRead( 'file_query_ids' )
         
         ( file_search_context, ) = args
         
@@ -5374,7 +5375,7 @@ class TestClientAPI( unittest.TestCase ):
         
         self.assertEqual( kwargs[ 'apply_implicit_limit' ], False )
         
-        [ ( args, kwargs ) ] = HG.test_controller.GetRead( 'hash_ids_to_hashes' )
+        [ ( args, kwargs ) ] = TG.test_controller.GetRead( 'hash_ids_to_hashes' )
         
         hash_ids = kwargs[ 'hash_ids' ]
         
@@ -5384,15 +5385,15 @@ class TestClientAPI( unittest.TestCase ):
         
         # search files and only get hashes
         
-        HG.test_controller.ClearReads( 'file_query_ids' )
+        TG.test_controller.ClearReads( 'file_query_ids' )
         
         sample_hash_ids = set( random.sample( list( hash_ids ), 3 ) )
         
         hash_ids_to_hashes = { hash_id : os.urandom( 32 ) for hash_id in sample_hash_ids }
         
-        HG.test_controller.SetRead( 'file_query_ids', set( sample_hash_ids ) )
+        TG.test_controller.SetRead( 'file_query_ids', set( sample_hash_ids ) )
         
-        HG.test_controller.SetRead( 'hash_ids_to_hashes', hash_ids_to_hashes )
+        TG.test_controller.SetRead( 'hash_ids_to_hashes', hash_ids_to_hashes )
         
         tags = [ 'kino', 'green' ]
         
@@ -5416,7 +5417,7 @@ class TestClientAPI( unittest.TestCase ):
         
         self.assertNotIn( 'file_ids', d )
         
-        [ ( args, kwargs ) ] = HG.test_controller.GetRead( 'file_query_ids' )
+        [ ( args, kwargs ) ] = TG.test_controller.GetRead( 'file_query_ids' )
         
         ( file_search_context, ) = args
         
@@ -5435,7 +5436,7 @@ class TestClientAPI( unittest.TestCase ):
         
         self.assertEqual( kwargs[ 'apply_implicit_limit' ], False )
         
-        [ ( args, kwargs ) ] = HG.test_controller.GetRead( 'hash_ids_to_hashes' )
+        [ ( args, kwargs ) ] = TG.test_controller.GetRead( 'hash_ids_to_hashes' )
         
         hash_ids = kwargs[ 'hash_ids' ]
         
@@ -5445,11 +5446,11 @@ class TestClientAPI( unittest.TestCase ):
         
         # this just tests if it parses, we don't have a full test for read params yet
         
-        HG.test_controller.ClearReads( 'file_query_ids' )
+        TG.test_controller.ClearReads( 'file_query_ids' )
         
         sample_hash_ids = set( random.sample( list( hash_ids ), 3 ) )
         
-        HG.test_controller.SetRead( 'file_query_ids', set( sample_hash_ids ) )
+        TG.test_controller.SetRead( 'file_query_ids', set( sample_hash_ids ) )
         
         tags = [ 'kino', 'green' ]
         
@@ -5465,7 +5466,7 @@ class TestClientAPI( unittest.TestCase ):
         
         self.assertEqual( response.status, 200 )
         
-        [ ( args, kwargs ) ] = HG.test_controller.GetRead( 'file_query_ids' )
+        [ ( args, kwargs ) ] = TG.test_controller.GetRead( 'file_query_ids' )
         
         ( file_search_context, ) = args
         
@@ -5486,11 +5487,11 @@ class TestClientAPI( unittest.TestCase ):
         
         # sort
         
-        HG.test_controller.ClearReads( 'file_query_ids' )
+        TG.test_controller.ClearReads( 'file_query_ids' )
         
         sample_hash_ids = set( random.sample( list( hash_ids ), 3 ) )
         
-        HG.test_controller.SetRead( 'file_query_ids', set( sample_hash_ids ) )
+        TG.test_controller.SetRead( 'file_query_ids', set( sample_hash_ids ) )
         
         tags = [ 'kino', 'green' ]
         
@@ -5506,7 +5507,7 @@ class TestClientAPI( unittest.TestCase ):
         
         self.assertEqual( response.status, 200 )
         
-        [ ( args, kwargs ) ] = HG.test_controller.GetRead( 'file_query_ids' )
+        [ ( args, kwargs ) ] = TG.test_controller.GetRead( 'file_query_ids' )
         
         ( file_search_context, ) = args
         
@@ -5527,11 +5528,11 @@ class TestClientAPI( unittest.TestCase ):
         
         # file domain
         
-        HG.test_controller.ClearReads( 'file_query_ids' )
+        TG.test_controller.ClearReads( 'file_query_ids' )
         
         sample_hash_ids = set( random.sample( list( hash_ids ), 3 ) )
         
-        HG.test_controller.SetRead( 'file_query_ids', set( sample_hash_ids ) )
+        TG.test_controller.SetRead( 'file_query_ids', set( sample_hash_ids ) )
         
         tags = [ 'kino', 'green' ]
         
@@ -5552,7 +5553,7 @@ class TestClientAPI( unittest.TestCase ):
         
         self.assertEqual( response.status, 200 )
         
-        [ ( args, kwargs ) ] = HG.test_controller.GetRead( 'file_query_ids' )
+        [ ( args, kwargs ) ] = TG.test_controller.GetRead( 'file_query_ids' )
         
         ( file_search_context, ) = args
         
@@ -5573,11 +5574,11 @@ class TestClientAPI( unittest.TestCase ):
         
         # file and tag domain
         
-        HG.test_controller.ClearReads( 'file_query_ids' )
+        TG.test_controller.ClearReads( 'file_query_ids' )
         
         sample_hash_ids = set( random.sample( list( hash_ids ), 3 ) )
         
-        HG.test_controller.SetRead( 'file_query_ids', set( sample_hash_ids ) )
+        TG.test_controller.SetRead( 'file_query_ids', set( sample_hash_ids ) )
         
         tags = [ 'kino', 'green' ]
         
@@ -5599,7 +5600,7 @@ class TestClientAPI( unittest.TestCase ):
         
         self.assertEqual( response.status, 200 )
         
-        [ ( args, kwargs ) ] = HG.test_controller.GetRead( 'file_query_ids' )
+        [ ( args, kwargs ) ] = TG.test_controller.GetRead( 'file_query_ids' )
         
         ( file_search_context, ) = args
         
@@ -5624,7 +5625,7 @@ class TestClientAPI( unittest.TestCase ):
         
         sample_hash_ids = set( random.sample( list( hash_ids ), 3 ) )
         
-        HG.test_controller.SetRead( 'file_query_ids', set( sample_hash_ids ) )
+        TG.test_controller.SetRead( 'file_query_ids', set( sample_hash_ids ) )
         
         tags = [ 'kino', 'green' ]
         
@@ -5651,7 +5652,7 @@ class TestClientAPI( unittest.TestCase ):
         sample_hash_ids = set( random.sample( list( hash_ids ), 3 ) )
         
         # set it, just to check we aren't ever asking
-        HG.test_controller.SetRead( 'file_query_ids', set( sample_hash_ids ) )
+        TG.test_controller.SetRead( 'file_query_ids', set( sample_hash_ids ) )
         
         tags = []
         
@@ -5838,7 +5839,7 @@ class TestClientAPI( unittest.TestCase ):
         
         source_to_dest = { md5_hash : sha256_hash }
         
-        HG.test_controller.SetRead( 'file_hashes', source_to_dest )
+        TG.test_controller.SetRead( 'file_hashes', source_to_dest )
         
         path = '/get_files/file_hashes?source_hash_type=md5&desired_hash_type=sha256&hash={}'.format( md5_hash.hex() )
         
@@ -5902,8 +5903,8 @@ class TestClientAPI( unittest.TestCase ):
         
         sorted_urls = sorted( urls )
         
-        random_file_service_hex_current = HG.test_controller.example_file_repo_service_key_1
-        random_file_service_hex_deleted = HG.test_controller.example_file_repo_service_key_2
+        random_file_service_hex_current = TG.test_controller.example_file_repo_service_key_1
+        random_file_service_hex_deleted = TG.test_controller.example_file_repo_service_key_2
         
         current_import_timestamp_ms = 500127
         ipfs_import_timestamp_ms = 123456126
@@ -5948,9 +5949,9 @@ class TestClientAPI( unittest.TestCase ):
                 
                 done_a_multihash = True
                 
-                current_to_timestamps_ms[ HG.test_controller.example_ipfs_service_key ] = ipfs_import_timestamp_ms
+                current_to_timestamps_ms[ TG.test_controller.example_ipfs_service_key ] = ipfs_import_timestamp_ms
                 
-                service_keys_to_filenames[ HG.test_controller.example_ipfs_service_key ] = 'QmReHtaET3dsgh7ho5NVyHb5U13UgJoGipSWbZsnuuM8tb'
+                service_keys_to_filenames[ TG.test_controller.example_ipfs_service_key ] = 'QmReHtaET3dsgh7ho5NVyHb5U13UgJoGipSWbZsnuuM8tb'
                 
             
             tags_manager = ClientMediaManagers.TagsManager( service_keys_to_statuses_to_tags, service_keys_to_statuses_to_display_tags )
@@ -5981,17 +5982,17 @@ class TestClientAPI( unittest.TestCase ):
             
             if random.random() > 0.6:
                 
-                ratings_dict[ HG.test_controller.example_like_rating_service_key ] = 0.0 if random.random() < 0 else 1.0
+                ratings_dict[ TG.test_controller.example_like_rating_service_key ] = 0.0 if random.random() < 0 else 1.0
                 
             
             if random.random() > 0.6:
                 
-                ratings_dict[ HG.test_controller.example_numerical_rating_service_key ] = random.random()
+                ratings_dict[ TG.test_controller.example_numerical_rating_service_key ] = random.random()
                 
             
             if random.random() > 0.6:
                 
-                ratings_dict[ HG.test_controller.example_incdec_rating_service_key ] = int( random.random() * 16 )
+                ratings_dict[ TG.test_controller.example_incdec_rating_service_key ] = int( random.random() * 16 )
                 
             
             if random.random() > 0.8:
@@ -6053,8 +6054,8 @@ class TestClientAPI( unittest.TestCase ):
             
             if file_info_manager.mime in HC.MIMES_WITH_THUMBNAILS:
                 
-                bounding_dimensions = HG.test_controller.options[ 'thumbnail_dimensions' ]
-                thumbnail_scale_type = HG.test_controller.new_options.GetInteger( 'thumbnail_scale_type' )
+                bounding_dimensions = TG.test_controller.options[ 'thumbnail_dimensions' ]
+                thumbnail_scale_type = TG.test_controller.new_options.GetInteger( 'thumbnail_scale_type' )
                 thumbnail_dpr_percent = CG.client_controller.new_options.GetInteger( 'thumbnail_dpr_percent' )
                 
                 ( thumbnail_expected_width, thumbnail_expected_height ) = HydrusImageHandling.GetThumbnailResolution( ( file_info_manager.width, file_info_manager.height ), bounding_dimensions, thumbnail_scale_type, thumbnail_dpr_percent )
@@ -6068,18 +6069,18 @@ class TestClientAPI( unittest.TestCase ):
                     'current' : {
                         random_file_service_hex_current.hex() : {
                             'time_imported' : HydrusTime.SecondiseMS( current_import_timestamp_ms ),
-                            'name' : HG.test_controller.services_manager.GetName( random_file_service_hex_current ),
-                            'type' : HG.test_controller.services_manager.GetServiceType( random_file_service_hex_current ),
-                            'type_pretty' : HC.service_string_lookup[ HG.test_controller.services_manager.GetServiceType( random_file_service_hex_current ) ]
+                            'name' : TG.test_controller.services_manager.GetName( random_file_service_hex_current ),
+                            'type' : TG.test_controller.services_manager.GetServiceType( random_file_service_hex_current ),
+                            'type_pretty' : HC.service_string_lookup[ TG.test_controller.services_manager.GetServiceType( random_file_service_hex_current ) ]
                         }
                     },
                     'deleted' : {
                         random_file_service_hex_deleted.hex() : {
                             'time_deleted' : HydrusTime.SecondiseMS( deleted_deleted_timestamp_ms ),
                             'time_imported' : HydrusTime.SecondiseMS( previously_imported_timestamp_ms ),
-                            'name' : HG.test_controller.services_manager.GetName( random_file_service_hex_deleted ),
-                            'type' : HG.test_controller.services_manager.GetServiceType( random_file_service_hex_deleted ),
-                            'type_pretty' : HC.service_string_lookup[ HG.test_controller.services_manager.GetServiceType( random_file_service_hex_deleted ) ]
+                            'name' : TG.test_controller.services_manager.GetName( random_file_service_hex_deleted ),
+                            'type' : TG.test_controller.services_manager.GetServiceType( random_file_service_hex_deleted ),
+                            'type_pretty' : HC.service_string_lookup[ TG.test_controller.services_manager.GetServiceType( random_file_service_hex_deleted ) ]
                         }
                     }
                 },
@@ -6108,9 +6109,9 @@ class TestClientAPI( unittest.TestCase ):
                     
                     metadata_row[ 'file_services' ][ 'current' ][ i_s_k.hex() ] = {
                         'time_imported' : HydrusTime.SecondiseMS( ipfs_import_timestamp_ms ),
-                        'name' : HG.test_controller.services_manager.GetName( i_s_k ),
-                        'type' : HG.test_controller.services_manager.GetServiceType( i_s_k ),
-                        'type_pretty' : HC.service_string_lookup[ HG.test_controller.services_manager.GetServiceType( i_s_k ) ]
+                        'name' : TG.test_controller.services_manager.GetName( i_s_k ),
+                        'type' : TG.test_controller.services_manager.GetServiceType( i_s_k ),
+                        'type_pretty' : HC.service_string_lookup[ TG.test_controller.services_manager.GetServiceType( i_s_k ) ]
                     }
                     
                     metadata_row[ 'ipfs_multihashes' ][ i_s_k.hex() ] = multihash
@@ -6191,17 +6192,17 @@ class TestClientAPI( unittest.TestCase ):
         wash_example_json_response( expected_only_return_basic_information_result )
         wash_example_json_response( expected_only_return_basic_information_but_blurhash_too_result )
         
-        HG.test_controller.SetRead( 'hash_ids_to_hashes', file_ids_to_hashes )
-        HG.test_controller.SetRead( 'media_results', media_results )
-        HG.test_controller.SetRead( 'media_results_from_ids', media_results )
-        HG.test_controller.SetRead( 'file_info_managers', file_info_managers )
-        HG.test_controller.SetRead( 'file_info_managers_from_ids', file_info_managers )
+        TG.test_controller.SetRead( 'hash_ids_to_hashes', file_ids_to_hashes )
+        TG.test_controller.SetRead( 'media_results', media_results )
+        TG.test_controller.SetRead( 'media_results_from_ids', media_results )
+        TG.test_controller.SetRead( 'file_info_managers', file_info_managers )
+        TG.test_controller.SetRead( 'file_info_managers_from_ids', file_info_managers )
         
         api_permissions.SetLastSearchResults( [ 1, 2, 3, 4, 5, 6 ] )
         
         # fail on non-permitted files
         
-        HG.test_controller.SetRead( 'hash_ids_to_hashes', { k : v for ( k, v ) in file_ids_to_hashes.items() if k in [ 1, 2, 3, 7 ] } )
+        TG.test_controller.SetRead( 'hash_ids_to_hashes', { k : v for ( k, v ) in file_ids_to_hashes.items() if k in [ 1, 2, 3, 7 ] } )
         
         path = '/get_files/file_metadata?file_ids={}&only_return_identifiers=true'.format( urllib.parse.quote( json.dumps( [ 1, 2, 3, 7 ] ) ) )
         
@@ -6227,7 +6228,7 @@ class TestClientAPI( unittest.TestCase ):
         
         # identifiers from file_ids
         
-        HG.test_controller.SetRead( 'hash_ids_to_hashes', { k : v for ( k, v ) in file_ids_to_hashes.items() if k in [ 1, 2, 3 ] } )
+        TG.test_controller.SetRead( 'hash_ids_to_hashes', { k : v for ( k, v ) in file_ids_to_hashes.items() if k in [ 1, 2, 3 ] } )
         
         path = '/get_files/file_metadata?file_ids={}&only_return_identifiers=true'.format( urllib.parse.quote( json.dumps( [ 1, 2, 3 ] ) ) )
         
@@ -6247,7 +6248,7 @@ class TestClientAPI( unittest.TestCase ):
         
         # basic metadata from file_ids
         
-        HG.test_controller.SetRead( 'hash_ids_to_hashes', { k : v for ( k, v ) in file_ids_to_hashes.items() if k in [ 1, 2, 3 ] } )
+        TG.test_controller.SetRead( 'hash_ids_to_hashes', { k : v for ( k, v ) in file_ids_to_hashes.items() if k in [ 1, 2, 3 ] } )
         
         path = '/get_files/file_metadata?file_ids={}&only_return_basic_information=true'.format( urllib.parse.quote( json.dumps( [ 1, 2, 3 ] ) ) )
         
@@ -6267,7 +6268,7 @@ class TestClientAPI( unittest.TestCase ):
         
         # basic metadata with blurhash
         
-        HG.test_controller.SetRead( 'hash_ids_to_hashes', { k : v for ( k, v ) in file_ids_to_hashes.items() if k in [ 1, 2, 3 ] } )
+        TG.test_controller.SetRead( 'hash_ids_to_hashes', { k : v for ( k, v ) in file_ids_to_hashes.items() if k in [ 1, 2, 3 ] } )
         
         path = '/get_files/file_metadata?file_ids={}&only_return_basic_information=true&include_blurhash=true'.format( urllib.parse.quote( json.dumps( [ 1, 2, 3 ] ) ) )
         
@@ -6289,7 +6290,7 @@ class TestClientAPI( unittest.TestCase ):
         
         expected_order = [ 3, 1, 2 ]
         
-        HG.test_controller.SetRead( 'hash_ids_to_hashes', { k : v for ( k, v ) in file_ids_to_hashes.items() if k in [ 1, 2, 3 ] } )
+        TG.test_controller.SetRead( 'hash_ids_to_hashes', { k : v for ( k, v ) in file_ids_to_hashes.items() if k in [ 1, 2, 3 ] } )
         
         path = '/get_files/file_metadata?file_ids={}&only_return_basic_information=true'.format( urllib.parse.quote( json.dumps( [ 3, 1, 2 ] ) ) )
         
@@ -6315,7 +6316,7 @@ class TestClientAPI( unittest.TestCase ):
         
         # metadata from file_ids
         
-        HG.test_controller.SetRead( 'hash_ids_to_hashes', { k : v for ( k, v ) in file_ids_to_hashes.items() if k in [ 1, 2, 3 ] } )
+        TG.test_controller.SetRead( 'hash_ids_to_hashes', { k : v for ( k, v ) in file_ids_to_hashes.items() if k in [ 1, 2, 3 ] } )
         
         path = '/get_files/file_metadata?file_ids={}'.format( urllib.parse.quote( json.dumps( [ 1, 2, 3 ] ) ) )
         
@@ -6364,7 +6365,7 @@ class TestClientAPI( unittest.TestCase ):
         
         expected_order = [ 3, 1, 2 ]
         
-        HG.test_controller.SetRead( 'hash_ids_to_hashes', { k : v for ( k, v ) in file_ids_to_hashes.items() if k in [ 1, 2, 3 ] } )
+        TG.test_controller.SetRead( 'hash_ids_to_hashes', { k : v for ( k, v ) in file_ids_to_hashes.items() if k in [ 1, 2, 3 ] } )
         
         path = '/get_files/file_metadata?file_ids={}'.format( urllib.parse.quote( json.dumps( expected_order ) ) )
         
@@ -6419,7 +6420,7 @@ class TestClientAPI( unittest.TestCase ):
         
         # metadata from file_ids, with milliseconds
         
-        HG.test_controller.SetRead( 'hash_ids_to_hashes', { k : v for ( k, v ) in file_ids_to_hashes.items() if k in [ 1, 2, 3 ] } )
+        TG.test_controller.SetRead( 'hash_ids_to_hashes', { k : v for ( k, v ) in file_ids_to_hashes.items() if k in [ 1, 2, 3 ] } )
         
         path = '/get_files/file_metadata?file_ids={}&include_milliseconds=true'.format( urllib.parse.quote( json.dumps( [ 1, 2, 3 ] ) ) )
         
@@ -6628,7 +6629,7 @@ class TestClientAPI( unittest.TestCase ):
         
         # failure on missing file_ids
         
-        HG.test_controller.SetRead( 'hash_ids_to_hashes', HydrusExceptions.DataMissing( 'test missing' ) )
+        TG.test_controller.SetRead( 'hash_ids_to_hashes', HydrusExceptions.DataMissing( 'test missing' ) )
         
         api_permissions = set_up_permissions[ 'everything' ]
         
@@ -6651,8 +6652,8 @@ class TestClientAPI( unittest.TestCase ):
         
         # no new file_ids
         
-        HG.test_controller.SetRead( 'hash_ids_to_hashes', file_ids_to_hashes )
-        HG.test_controller.SetRead( 'media_results_from_ids', media_results )
+        TG.test_controller.SetRead( 'hash_ids_to_hashes', file_ids_to_hashes )
+        TG.test_controller.SetRead( 'media_results_from_ids', media_results )
         
         hashes_in_test = [ mr.GetHash() for mr in media_results ]
         
@@ -6722,12 +6723,12 @@ class TestClientAPI( unittest.TestCase ):
         
         media_result = ClientMediaResult.MediaResult( file_info_manager, tags_manager, times_manager, locations_manager, ratings_manager, notes_manager, file_viewing_stats_manager )
         
-        HG.test_controller.SetRead( 'media_result', media_result )
-        HG.test_controller.SetRead( 'media_results_from_ids', ( media_result, ) )
+        TG.test_controller.SetRead( 'media_result', media_result )
+        TG.test_controller.SetRead( 'media_results_from_ids', ( media_result, ) )
         
         path = os.path.join( HC.STATIC_DIR, 'hydrus.png' )
         
-        file_path = HG.test_controller.client_files_manager.GetFilePath( hash, HC.IMAGE_PNG, check_file_exists = False )
+        file_path = TG.test_controller.client_files_manager.GetFilePath( hash, HC.IMAGE_PNG, check_file_exists = False )
         
         HydrusPaths.safe_copy2( path, file_path )
         
@@ -6735,7 +6736,7 @@ class TestClientAPI( unittest.TestCase ):
         
         path = os.path.join( HC.STATIC_DIR, 'hydrus_small.png' )
         
-        thumb_path = HG.test_controller.client_files_manager._GenerateExpectedThumbnailPath( hash )
+        thumb_path = TG.test_controller.client_files_manager._GenerateExpectedThumbnailPath( hash )
         
         HydrusPaths.safe_copy2( path, thumb_path )
         
@@ -6991,7 +6992,7 @@ class TestClientAPI( unittest.TestCase ):
         
         self.assertEqual( response.status, 200 )
         
-        self.assertEqual( d[ 'path' ], os.path.join( HG.test_controller.db_dir, 'client_files', f'f{hash_hex[:2]}', f'{hash_hex}.png' ) )
+        self.assertEqual( d[ 'path' ], os.path.join( TG.test_controller.db_dir, 'client_files', f'f{hash_hex[:2]}', f'{hash_hex}.png' ) )
         
         # thumbnail path
         
@@ -7009,7 +7010,7 @@ class TestClientAPI( unittest.TestCase ):
         
         self.assertEqual( response.status, 200 )
         
-        self.assertEqual( d[ 'path' ], os.path.join( HG.test_controller.db_dir, 'client_files', f't{hash_hex[:2]}', f'{hash_hex}.thumbnail' ) )
+        self.assertEqual( d[ 'path' ], os.path.join( TG.test_controller.db_dir, 'client_files', f't{hash_hex[:2]}', f'{hash_hex}.thumbnail' ) )
         
         # with "sha256:"" on the front
         
@@ -7033,8 +7034,8 @@ class TestClientAPI( unittest.TestCase ):
         
         media_result = ClientMediaResult.MediaResult( file_info_manager, tags_manager, times_manager, locations_manager, ratings_manager, notes_manager, file_viewing_stats_manager )
         
-        HG.test_controller.SetRead( 'media_result', media_result )
-        HG.test_controller.SetRead( 'media_results_from_ids', ( media_result, ) )
+        TG.test_controller.SetRead( 'media_result', media_result )
+        TG.test_controller.SetRead( 'media_results_from_ids', ( media_result, ) )
         
         #
         
@@ -7094,7 +7095,7 @@ class TestClientAPI( unittest.TestCase ):
         
         self.assertEqual( locations[0][ 'ideal_weight' ], 1 )
         self.assertEqual( locations[0][ 'max_num_bytes' ], None )
-        self.assertEqual( locations[0][ 'path' ], os.path.join( HG.test_controller.db_dir, 'client_files' ) )
+        self.assertEqual( locations[0][ 'path' ], os.path.join( TG.test_controller.db_dir, 'client_files' ) )
         self.assertEqual( set( locations[0][ 'prefixes' ] ), { f'f{p}' for p in HydrusData.IterateHexPrefixes() }.union( { f't{p}' for p in HydrusData.IterateHexPrefixes() } ) )
         
     

@@ -27,7 +27,6 @@ from hydrus.core import HydrusPaths
 from hydrus.core import HydrusProfiling
 from hydrus.core import HydrusPSUtil
 from hydrus.core import HydrusSerialisable
-from hydrus.core import HydrusTags
 from hydrus.core import HydrusTemp
 from hydrus.core import HydrusText
 from hydrus.core import HydrusTime
@@ -36,7 +35,6 @@ from hydrus.core.files import HydrusPSDHandling
 from hydrus.core.files import HydrusOLEHandling
 from hydrus.core.files import HydrusVideoHandling
 from hydrus.core.files.images import HydrusImageHandling
-from hydrus.core.files.images import HydrusImageNormalisation
 from hydrus.core.networking import HydrusNetwork
 
 from hydrus.client import ClientApplicationCommand as CAC

@@ -3,7 +3,8 @@ import os
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
-from hydrus.core import HydrusTime
+
+from hydrus.server import ServerGlobals as SG
 
 def GetAllHashes( file_type ):
     
@@ -11,7 +12,7 @@ def GetAllHashes( file_type ):
     
 def GetExpectedFilePath( hash ):
     
-    files_dir = HG.server_controller.GetFilesDir()
+    files_dir = SG.server_controller.GetFilesDir()
     
     hash_encoded = hash.hex()
     
@@ -23,7 +24,7 @@ def GetExpectedFilePath( hash ):
     
 def GetExpectedThumbnailPath( hash ):
     
-    files_dir = HG.server_controller.GetFilesDir()
+    files_dir = SG.server_controller.GetFilesDir()
     
     hash_encoded = hash.hex()
     
@@ -57,7 +58,7 @@ def GetThumbnailPath( hash ):
     
 def IterateAllPaths( file_type ):
     
-    files_dir = HG.server_controller.GetFilesDir()
+    files_dir = SG.server_controller.GetFilesDir()
     
     for prefix in HydrusData.IterateHexPrefixes():
         

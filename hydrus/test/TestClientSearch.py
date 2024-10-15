@@ -1643,12 +1643,7 @@ class TestAutocompletePredGubbins( unittest.TestCase ):
         
         or_texts_and_namespaces = []
         
-        or_texts_and_namespaces.append( ( 'blue eyes', 'namespace', '' ) )
-        or_texts_and_namespaces.append( ( ' OR ', 'or', 'system' ) )
-        or_texts_and_namespaces.append( ( 'character:samus aran', 'namespace', 'character' ) )
-        or_texts_and_namespaces.append( ( ' OR ', 'or', 'system' ) )
-        or_texts_and_namespaces.append( ( 'system:height < 2,000', 'namespace', 'system' ) )
-        
+        or_texts_and_namespaces.append( ( 'OR:', 'or', 'system' ) )
         
         self.assertEqual( p.GetTextsAndNamespaces( render_for_user ), or_texts_and_namespaces )
         

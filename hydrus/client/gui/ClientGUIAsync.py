@@ -1,8 +1,5 @@
-import os
 import sys
 import threading
-
-from qtpy import QtWidgets as QW
 
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions

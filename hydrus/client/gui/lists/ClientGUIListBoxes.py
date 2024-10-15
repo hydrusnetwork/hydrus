@@ -1265,7 +1265,7 @@ class ListBox( QW.QScrollArea ):
             terms = self._selected_terms
             
         
-        texts = [ term.GetCopyableText() for term in terms ]
+        texts = HydrusLists.MassExtend( [ term.GetCopyableTexts() for term in terms ] )
         
         if len( texts ) > 0:
             
@@ -2550,7 +2550,7 @@ class ListBoxTags( ListBox ):
             terms = self._ordered_terms
             
         
-        copyable_tag_strings = [ term.GetCopyableText( with_counts = with_counts ) for term in terms ]
+        copyable_tag_strings = HydrusLists.MassExtend( [ term.GetCopyableTexts( with_counts = with_counts ) for term in terms ] )
         
         if only_subtags:
             

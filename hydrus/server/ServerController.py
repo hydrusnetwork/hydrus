@@ -22,6 +22,7 @@ from hydrus.core.networking import HydrusNetworking
 
 from hydrus.server import ServerDB
 from hydrus.server import ServerFiles
+from hydrus.server import ServerGlobals as SG
 from hydrus.server.networking import ServerServer
 
 def ProcessStartingAction( db_dir, action ):
@@ -165,6 +166,7 @@ def ShutdownSiblingInstance( db_dir ):
     
     HydrusData.Print( 'The existing server is shut down!' )
     
+
 class Controller( HydrusController.HydrusController ):
     
     def __init__( self, db_dir ):
@@ -175,7 +177,7 @@ class Controller( HydrusController.HydrusController ):
         
         self._shutdown = False
         
-        HG.server_controller = self
+        SG.server_controller = self
         
         self.CallToThreadLongRunning( self.DAEMONPubSub )
         

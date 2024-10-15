@@ -1326,6 +1326,8 @@ class ImportFoldersManager( object ):
         self._import_folder_names_fetched = False
         self._import_folder_names_to_next_work_time_cache: typing.Dict[ str, int ] = {}
         
+        self._startup_delay = 5
+        
         self._wake_event = threading.Event()
         self._shutdown = threading.Event()
         
@@ -1456,7 +1458,7 @@ class ImportFoldersManager( object ):
         
         try:
             
-            time_to_start = HydrusTime.GetNow() + 5
+            time_to_start = HydrusTime.GetNow() + self._startup_delay
             
             while not HydrusTime.TimeHasPassed( time_to_start ):
                 
@@ -1530,7 +1532,9 @@ class ImportFoldersManager( object ):
         self.Wake()
         
     
-    def Start( self ):
+    def Start( self, startup_delay = 5 ):
+        
+        self._startup_delay = startup_delay
         
         self._controller.CallToThreadLongRunning( self.MainLoop )
         

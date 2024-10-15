@@ -23,6 +23,7 @@ from hydrus.client.metadata import ClientMetadataMigrationImporters
 from hydrus.client.metadata import ClientTags
 
 from hydrus.test import HelperFunctions as HF
+from hydrus.test import TestGlobals as TG
 
 class TestSingleFileMetadataRouter( unittest.TestCase ):
     
@@ -39,7 +40,7 @@ class TestSingleFileMetadataRouter( unittest.TestCase ):
             CC.DEFAULT_LOCAL_TAG_SERVICE_KEY : {
                 HC.CONTENT_STATUS_CURRENT : my_current_storage_tags
             },
-            HG.test_controller.example_tag_repo_service_key : {
+            TG.test_controller.example_tag_repo_service_key : {
                 HC.CONTENT_STATUS_CURRENT : repo_current_storage_tags,
                 HC.CONTENT_STATUS_PENDING : repo_pending_storage_tags
             }
@@ -49,7 +50,7 @@ class TestSingleFileMetadataRouter( unittest.TestCase ):
             CC.DEFAULT_LOCAL_TAG_SERVICE_KEY : {
                 HC.CONTENT_STATUS_CURRENT : my_current_display_tags
             },
-            HG.test_controller.example_tag_repo_service_key : {
+            TG.test_controller.example_tag_repo_service_key : {
                 HC.CONTENT_STATUS_CURRENT : repo_current_display_tags,
                 HC.CONTENT_STATUS_PENDING : repo_pending_display_tags
             }
@@ -97,7 +98,7 @@ class TestSingleFileMetadataRouter( unittest.TestCase ):
         
         #
         
-        actual_file_path = os.path.join( HG.test_controller.db_dir, 'file.jpg' )
+        actual_file_path = os.path.join( TG.test_controller.db_dir, 'file.jpg' )
         
         expected_output_path = actual_file_path + '.txt'
         
@@ -176,7 +177,7 @@ class TestSingleFileMetadataImporters( unittest.TestCase ):
             CC.DEFAULT_LOCAL_TAG_SERVICE_KEY : {
                 HC.CONTENT_STATUS_CURRENT : my_current_storage_tags
             },
-            HG.test_controller.example_tag_repo_service_key : {
+            TG.test_controller.example_tag_repo_service_key : {
                 HC.CONTENT_STATUS_CURRENT : repo_current_storage_tags,
                 HC.CONTENT_STATUS_PENDING : repo_pending_storage_tags
             }
@@ -186,7 +187,7 @@ class TestSingleFileMetadataImporters( unittest.TestCase ):
             CC.DEFAULT_LOCAL_TAG_SERVICE_KEY : {
                 HC.CONTENT_STATUS_CURRENT : my_current_display_tags
             },
-            HG.test_controller.example_tag_repo_service_key : {
+            TG.test_controller.example_tag_repo_service_key : {
                 HC.CONTENT_STATUS_CURRENT : repo_current_display_tags,
                 HC.CONTENT_STATUS_PENDING : repo_pending_display_tags
             }
@@ -250,7 +251,7 @@ class TestSingleFileMetadataImporters( unittest.TestCase ):
         
         # simple repo
         
-        importer = ClientMetadataMigrationImporters.SingleFileMetadataImporterMediaTags( service_key = HG.test_controller.example_tag_repo_service_key )
+        importer = ClientMetadataMigrationImporters.SingleFileMetadataImporterMediaTags( service_key = TG.test_controller.example_tag_repo_service_key )
         
         result = importer.Import( media_result )
         
@@ -461,7 +462,7 @@ class TestSingleFileMetadataImporters( unittest.TestCase ):
     
     def test_media_txt( self ):
         
-        actual_file_path = os.path.join( HG.test_controller.db_dir, 'file.jpg' )
+        actual_file_path = os.path.join( TG.test_controller.db_dir, 'file.jpg' )
         rows = [ 'character:samus aran', 'blonde hair' ]
         
         # simple
@@ -527,7 +528,7 @@ class TestSingleFileMetadataImporters( unittest.TestCase ):
         
         # with filename remove ext and string conversion
         
-        expected_input_path = os.path.join( HG.test_controller.db_dir, 'file.jpg'[1:].rsplit( '.', 1 )[0] ) + '.txt'
+        expected_input_path = os.path.join( TG.test_controller.db_dir, 'file.jpg'[1:].rsplit( '.', 1 )[0] ) + '.txt'
         
         with open( expected_input_path, 'w', encoding = 'utf-8' ) as f:
             
@@ -546,7 +547,7 @@ class TestSingleFileMetadataImporters( unittest.TestCase ):
     
     def test_media_json( self ):
         
-        actual_file_path = os.path.join( HG.test_controller.db_dir, 'file.jpg' )
+        actual_file_path = os.path.join( TG.test_controller.db_dir, 'file.jpg' )
         rows = [ 'character:samus aran', 'blonde hair' ]
         
         # no file means no rows
@@ -615,7 +616,7 @@ class TestSingleFileMetadataImporters( unittest.TestCase ):
         
         # with filename remove ext and string conversion
         
-        expected_input_path = os.path.join( HG.test_controller.db_dir, 'file.jpg'[1:].rsplit( '.', 1 )[0] ) + '.json'
+        expected_input_path = os.path.join( TG.test_controller.db_dir, 'file.jpg'[1:].rsplit( '.', 1 )[0] ) + '.json'
         
         with open( expected_input_path, 'w', encoding = 'utf-8' ) as f:
             
@@ -643,17 +644,17 @@ class TestSingleFileMetadataExporters( unittest.TestCase ):
         
         # no tags makes no write
         
-        service_key = HG.test_controller.example_tag_repo_service_key
+        service_key = TG.test_controller.example_tag_repo_service_key
         
         exporter = ClientMetadataMigrationExporters.SingleFileMetadataExporterMediaTags( service_key )
         
-        HG.test_controller.ClearWrites( 'content_updates' )
+        TG.test_controller.ClearWrites( 'content_updates' )
         
         exporter.Export( hash, [] )
         
         with self.assertRaises( Exception ):
             
-            [ ( ( content_update_package, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+            [ ( ( content_update_package, ), kwargs ) ] = TG.test_controller.GetWrite( 'content_updates' )
             
         
         # simple local
@@ -662,7 +663,7 @@ class TestSingleFileMetadataExporters( unittest.TestCase ):
         
         exporter = ClientMetadataMigrationExporters.SingleFileMetadataExporterMediaTags( service_key )
         
-        HG.test_controller.ClearWrites( 'content_updates' )
+        TG.test_controller.ClearWrites( 'content_updates' )
         
         exporter.Export( hash, rows )
         
@@ -670,17 +671,17 @@ class TestSingleFileMetadataExporters( unittest.TestCase ):
         
         expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( service_key, [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( tag, hashes ) ) for tag in rows ] )
         
-        [ ( ( content_update_package, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+        [ ( ( content_update_package, ), kwargs ) ] = TG.test_controller.GetWrite( 'content_updates' )
         
         HF.compare_content_update_packages( self, content_update_package, expected_content_update_package )
         
         # simple repo
         
-        service_key = HG.test_controller.example_tag_repo_service_key
+        service_key = TG.test_controller.example_tag_repo_service_key
         
         exporter = ClientMetadataMigrationExporters.SingleFileMetadataExporterMediaTags( service_key )
         
-        HG.test_controller.ClearWrites( 'content_updates' )
+        TG.test_controller.ClearWrites( 'content_updates' )
         
         exporter.Export( hash, rows )
         
@@ -688,7 +689,7 @@ class TestSingleFileMetadataExporters( unittest.TestCase ):
         
         expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( service_key, [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_PEND, ( tag, hashes ) ) for tag in rows ] )
         
-        [ ( ( content_update_package, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+        [ ( ( content_update_package, ), kwargs ) ] = TG.test_controller.GetWrite( 'content_updates' )
         
         HF.compare_content_update_packages( self, content_update_package, expected_content_update_package )
         
@@ -702,22 +703,22 @@ class TestSingleFileMetadataExporters( unittest.TestCase ):
         
         exporter = ClientMetadataMigrationExporters.SingleFileMetadataExporterMediaNotes()
         
-        HG.test_controller.ClearWrites( 'content_updates' )
+        TG.test_controller.ClearWrites( 'content_updates' )
         
         exporter.Export( hash, [] )
         
         with self.assertRaises( Exception ):
             
-            [ ( ( content_update_package, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+            [ ( ( content_update_package, ), kwargs ) ] = TG.test_controller.GetWrite( 'content_updates' )
             
         
         # simple
         
         exporter = ClientMetadataMigrationExporters.SingleFileMetadataExporterMediaNotes()
         
-        HG.test_controller.SetRead( 'media_result', HF.GetFakeMediaResult( hash ) )
+        TG.test_controller.SetRead( 'media_result', HF.GetFakeMediaResult( hash ) )
         
-        HG.test_controller.ClearWrites( 'content_updates' )
+        TG.test_controller.ClearWrites( 'content_updates' )
         
         exporter.Export( hash, notes )
         
@@ -725,7 +726,7 @@ class TestSingleFileMetadataExporters( unittest.TestCase ):
         
         expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( CC.LOCAL_NOTES_SERVICE_KEY, content_updates )
         
-        [ ( ( content_update_package, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+        [ ( ( content_update_package, ), kwargs ) ] = TG.test_controller.GetWrite( 'content_updates' )
         
         HF.compare_content_update_packages( self, content_update_package, expected_content_update_package )
         
@@ -736,9 +737,9 @@ class TestSingleFileMetadataExporters( unittest.TestCase ):
         
         exporter = ClientMetadataMigrationExporters.SingleFileMetadataExporterMediaNotes( forced_name = forced_name )
         
-        HG.test_controller.SetRead( 'media_result', HF.GetFakeMediaResult( hash ) )
+        TG.test_controller.SetRead( 'media_result', HF.GetFakeMediaResult( hash ) )
         
-        HG.test_controller.ClearWrites( 'content_updates' )
+        TG.test_controller.ClearWrites( 'content_updates' )
         
         exporter.Export( hash, notes )
         
@@ -746,7 +747,7 @@ class TestSingleFileMetadataExporters( unittest.TestCase ):
         
         expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( CC.LOCAL_NOTES_SERVICE_KEY, content_updates )
         
-        [ ( ( content_update_package, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+        [ ( ( content_update_package, ), kwargs ) ] = TG.test_controller.GetWrite( 'content_updates' )
         
         HF.compare_content_update_packages( self, content_update_package, expected_content_update_package )
         
@@ -760,26 +761,26 @@ class TestSingleFileMetadataExporters( unittest.TestCase ):
         
         exporter = ClientMetadataMigrationExporters.SingleFileMetadataExporterMediaURLs()
         
-        HG.test_controller.ClearWrites( 'content_updates' )
+        TG.test_controller.ClearWrites( 'content_updates' )
         
         exporter.Export( hash, [] )
         
         with self.assertRaises( Exception ):
             
-            [ ( ( content_update_package, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+            [ ( ( content_update_package, ), kwargs ) ] = TG.test_controller.GetWrite( 'content_updates' )
             
         
         # simple
         
         exporter = ClientMetadataMigrationExporters.SingleFileMetadataExporterMediaURLs()
         
-        HG.test_controller.ClearWrites( 'content_updates' )
+        TG.test_controller.ClearWrites( 'content_updates' )
         
         exporter.Export( hash, urls )
         
         expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_URLS, HC.CONTENT_UPDATE_ADD, ( urls, { hash } ) ) ] )
         
-        [ ( ( content_update_package, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+        [ ( ( content_update_package, ), kwargs ) ] = TG.test_controller.GetWrite( 'content_updates' )
         
         HF.compare_content_update_packages( self, content_update_package, expected_content_update_package )
         
@@ -799,13 +800,13 @@ class TestSingleFileMetadataExporters( unittest.TestCase ):
         
         exporter.SetTimestampDataStub( timestamp_data_stub )
         
-        HG.test_controller.ClearWrites( 'content_updates' )
+        TG.test_controller.ClearWrites( 'content_updates' )
         
         exporter.Export( hash, [] )
         
         with self.assertRaises( Exception ):
             
-            [ ( ( content_update_package, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+            [ ( ( content_update_package, ), kwargs ) ] = TG.test_controller.GetWrite( 'content_updates' )
             
         
         # simple
@@ -814,7 +815,7 @@ class TestSingleFileMetadataExporters( unittest.TestCase ):
         
         exporter.SetTimestampDataStub( timestamp_data_stub )
         
-        HG.test_controller.ClearWrites( 'content_updates' )
+        TG.test_controller.ClearWrites( 'content_updates' )
         
         exporter.Export( hash, rows )
         
@@ -822,14 +823,14 @@ class TestSingleFileMetadataExporters( unittest.TestCase ):
         
         expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TIMESTAMP, HC.CONTENT_UPDATE_SET, ( ( hash, ), expected_timestamp_data_result ) ) ] )
         
-        [ ( ( content_update_package, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+        [ ( ( content_update_package, ), kwargs ) ] = TG.test_controller.GetWrite( 'content_updates' )
         
         HF.compare_content_update_packages( self, content_update_package, expected_content_update_package )
         
     
     def test_media_txt( self ):
         
-        actual_file_path = os.path.join( HG.test_controller.db_dir, 'file.jpg' )
+        actual_file_path = os.path.join( TG.test_controller.db_dir, 'file.jpg' )
         rows = [ 'character:samus aran', 'blonde hair' ]
         
         # no rows makes no write
@@ -903,7 +904,7 @@ class TestSingleFileMetadataExporters( unittest.TestCase ):
         
         # with filename remove ext and string conversion
         
-        expected_output_path = os.path.join( HG.test_controller.db_dir, 'file.jpg'[1:].rsplit( '.', 1 )[0] ) + '.txt'
+        expected_output_path = os.path.join( TG.test_controller.db_dir, 'file.jpg'[1:].rsplit( '.', 1 )[0] ) + '.txt'
         
         exporter = ClientMetadataMigrationExporters.SingleFileMetadataExporterTXT( remove_actual_filename_ext = True, filename_string_converter = ClientStrings.StringConverter( conversions = [ ( ClientStrings.STRING_CONVERSION_REMOVE_TEXT_FROM_BEGINNING, 1 ) ] ) )
         
@@ -921,7 +922,7 @@ class TestSingleFileMetadataExporters( unittest.TestCase ):
     
     def test_media_json( self ):
         
-        actual_file_path = os.path.join( HG.test_controller.db_dir, 'file.jpg' )
+        actual_file_path = os.path.join( TG.test_controller.db_dir, 'file.jpg' )
         rows = [ 'character:samus aran', 'blonde hair' ]
         
         # no rows makes no write
@@ -974,7 +975,7 @@ class TestSingleFileMetadataExporters( unittest.TestCase ):
         
         # with filename remove ext and string conversion
         
-        expected_output_path = os.path.join( HG.test_controller.db_dir, 'file.jpg'[1:].rsplit( '.', 1 )[0] ) + '.json'
+        expected_output_path = os.path.join( TG.test_controller.db_dir, 'file.jpg'[1:].rsplit( '.', 1 )[0] ) + '.json'
         
         exporter = ClientMetadataMigrationExporters.SingleFileMetadataExporterJSON( remove_actual_filename_ext = True, filename_string_converter = ClientStrings.StringConverter( conversions = [ ( ClientStrings.STRING_CONVERSION_REMOVE_TEXT_FROM_BEGINNING, 1 ) ] ) )
         
@@ -994,7 +995,7 @@ class TestSingleFileMetadataExporters( unittest.TestCase ):
     
     def test_media_json_combined( self ):
         
-        actual_file_path = os.path.join( HG.test_controller.db_dir, 'file.jpg' )
+        actual_file_path = os.path.join( TG.test_controller.db_dir, 'file.jpg' )
         
         #
         

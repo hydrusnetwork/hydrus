@@ -3,7 +3,6 @@ import typing
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
-from hydrus.core import HydrusDB
 
 from hydrus.client import ClientThreading
 from hydrus.client.db import ClientDBMaster

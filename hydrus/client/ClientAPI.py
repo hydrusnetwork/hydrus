@@ -43,22 +43,22 @@ ALLOWED_PERMISSIONS = (
     CLIENT_API_PERMISSION_SEE_LOCAL_PATHS
 )
 
-basic_permission_to_str_lookup = {}
-
-basic_permission_to_str_lookup[ CLIENT_API_PERMISSION_ADD_URLS ] = 'import and edit urls'
-basic_permission_to_str_lookup[ CLIENT_API_PERMISSION_ADD_FILES ] = 'import and delete files'
-basic_permission_to_str_lookup[ CLIENT_API_PERMISSION_ADD_TAGS ] = 'edit file tags'
-basic_permission_to_str_lookup[ CLIENT_API_PERMISSION_SEARCH_FILES ] = 'search for and fetch files'
-basic_permission_to_str_lookup[ CLIENT_API_PERMISSION_MANAGE_PAGES ] = 'manage pages'
-basic_permission_to_str_lookup[ CLIENT_API_PERMISSION_MANAGE_HEADERS ] = 'manage cookies and headers'
-basic_permission_to_str_lookup[ CLIENT_API_PERMISSION_MANAGE_DATABASE ] = 'manage database'
-basic_permission_to_str_lookup[ CLIENT_API_PERMISSION_ADD_NOTES ] = 'edit file notes'
-basic_permission_to_str_lookup[ CLIENT_API_PERMISSION_MANAGE_FILE_RELATIONSHIPS ] = 'edit file relationships'
-basic_permission_to_str_lookup[ CLIENT_API_PERMISSION_EDIT_RATINGS ] = 'edit file ratings'
-basic_permission_to_str_lookup[ CLIENT_API_PERMISSION_MANAGE_POPUPS ] = 'manage popups'
-basic_permission_to_str_lookup[ CLIENT_API_PERMISSION_EDIT_TIMES ] = 'edit file times'
-basic_permission_to_str_lookup[ CLIENT_API_PERMISSION_COMMIT_PENDING ] = 'commit pending'
-basic_permission_to_str_lookup[ CLIENT_API_PERMISSION_SEE_LOCAL_PATHS ] = 'see local file paths'
+basic_permission_to_str_lookup = {
+    CLIENT_API_PERMISSION_ADD_URLS : 'import and edit urls',
+    CLIENT_API_PERMISSION_ADD_FILES : 'import and delete files',
+    CLIENT_API_PERMISSION_ADD_TAGS : 'edit file tags',
+    CLIENT_API_PERMISSION_SEARCH_FILES : 'search for and fetch files',
+    CLIENT_API_PERMISSION_MANAGE_PAGES : 'manage pages',
+    CLIENT_API_PERMISSION_MANAGE_HEADERS : 'manage cookies and headers',
+    CLIENT_API_PERMISSION_MANAGE_DATABASE : 'manage database',
+    CLIENT_API_PERMISSION_ADD_NOTES : 'edit file notes',
+    CLIENT_API_PERMISSION_MANAGE_FILE_RELATIONSHIPS : 'edit file relationships',
+    CLIENT_API_PERMISSION_EDIT_RATINGS : 'edit file ratings',
+    CLIENT_API_PERMISSION_MANAGE_POPUPS : 'manage popups',
+    CLIENT_API_PERMISSION_EDIT_TIMES : 'edit file times',
+    CLIENT_API_PERMISSION_COMMIT_PENDING : 'commit pending',
+    CLIENT_API_PERMISSION_SEE_LOCAL_PATHS : 'see local file paths'
+}
 
 SEARCH_RESULTS_CACHE_TIMEOUT = 4 * 3600
 
@@ -99,7 +99,7 @@ class APIManager( HydrusSerialisable.SerialisableBase ):
         
         serialisable_api_permissions_objects = serialisable_info
         
-        api_permissions_objects = [ HydrusSerialisable.CreateFromSerialisableTuple( serialisable_api_permissions ) for serialisable_api_permissions in serialisable_api_permissions_objects ]
+        api_permissions_objects: typing.List[ APIPermissions ] = [ HydrusSerialisable.CreateFromSerialisableTuple( serialisable_api_permissions ) for serialisable_api_permissions in serialisable_api_permissions_objects ]
         
         self._access_keys_to_permissions = { api_permissions.GetAccessKey() : api_permissions for api_permissions in api_permissions_objects }
         
@@ -305,7 +305,7 @@ class APIPermissions( HydrusSerialisable.SerialisableBaseNamed ):
             basic_permissions = set( serialisable_basic_permissions )
             
             # note this isn't everything as of 2024-09, but everything until recently. we want to capture more people for the whole convenience point of doing this
-            permits_everything = basic_permissions.issubset( {
+            permits_everything = {
                 CLIENT_API_PERMISSION_ADD_FILES,
                 CLIENT_API_PERMISSION_ADD_TAGS,
                 CLIENT_API_PERMISSION_ADD_URLS,
@@ -316,7 +316,7 @@ class APIPermissions( HydrusSerialisable.SerialisableBaseNamed ):
                 CLIENT_API_PERMISSION_ADD_NOTES,
                 CLIENT_API_PERMISSION_MANAGE_FILE_RELATIONSHIPS,
                 CLIENT_API_PERMISSION_EDIT_RATINGS 
-            } )
+            }.issubset( basic_permissions )
             
             new_serialisable_info = ( serialisable_access_key, permits_everything, serialisable_basic_permissions, serialisable_search_tag_filter )
             
@@ -534,6 +534,14 @@ class APIPermissions( HydrusSerialisable.SerialisableBaseNamed ):
             self._last_search_results = set( hash_ids )
             
             self._search_results_timeout = HydrusTime.GetNow() + SEARCH_RESULTS_CACHE_TIMEOUT
+            
+        
+    
+    def SetPermitsEverything( self, value: bool ):
+        
+        with self._lock:
+            
+            self._permits_everything = value
             
         
     

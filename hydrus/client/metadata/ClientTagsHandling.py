@@ -965,6 +965,7 @@ class TagParentsStructure( object ):
         self._ancestors_to_descendants = collections.defaultdict( set )
         
         # some sort of structure for 'bad cycles' so we can later raise these to the user to fix
+        # we now do this elsewhere, in the dialog code. maybe we'll want to merge, not sure
         
     
     def AddPair( self, child: object, parent: object ):
@@ -1049,6 +1050,7 @@ class TagSiblingsStructure( object ):
         self._ideal_tags_to_all_worse_tags = collections.defaultdict( set )
         
         # some sort of structure for 'bad cycles' so we can later raise these to the user to fix
+        # we now do this elsewhere, in the dialog code. maybe we'll want to merge, not sure
         
     
     def AddPair( self, bad_tag: object, good_tag: object ):

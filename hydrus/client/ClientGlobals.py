@@ -1,5 +1,8 @@
 import typing
 
-from hydrus.client.interfaces import ClientControllerInterface
+if typing.TYPE_CHECKING:
+    
+    from hydrus.client import ClientController
+    
 
-client_controller: typing.Optional[ ClientControllerInterface.ClientControllerInterface ] = None
+client_controller: typing.Optional[ "ClientController.Controller" ] = None

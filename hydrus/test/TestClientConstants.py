@@ -11,6 +11,7 @@ from hydrus.client import ClientServices
 from hydrus.client.metadata import ClientContentUpdates
 
 from hydrus.test import HelperFunctions as HF
+from hydrus.test import TestGlobals as TG
 
 class TestManagers( unittest.TestCase ):
     
@@ -33,7 +34,7 @@ class TestManagers( unittest.TestCase ):
         
         services.append( repo )
         
-        HG.test_controller.SetRead( 'services', services )
+        TG.test_controller.SetRead( 'services', services )
         
         services_manager = ClientServices.ServicesManager( CG.client_controller )
         
@@ -55,7 +56,7 @@ class TestManagers( unittest.TestCase ):
         
         services = []
         
-        HG.test_controller.SetRead( 'services', services )
+        TG.test_controller.SetRead( 'services', services )
         
         services_manager.RefreshServices()
         
@@ -79,7 +80,7 @@ class TestManagers( unittest.TestCase ):
         
         #
         
-        HG.test_controller.ClearWrites( 'content_updates' )
+        TG.test_controller.ClearWrites( 'content_updates' )
         
         undo_manager.AddCommand( 'content_updates', command_1 )
         
@@ -93,13 +94,13 @@ class TestManagers( unittest.TestCase ):
         
         self.assertEqual( ( 'undo archive 1 files', 'redo inbox 1 files' ), undo_manager.GetUndoRedoStrings() )
         
-        [ ( ( content_update_package, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+        [ ( ( content_update_package, ), kwargs ) ] = TG.test_controller.GetWrite( 'content_updates' )
         
         HF.compare_content_update_packages( self, content_update_package, command_2_inverted )
         
         undo_manager.Redo()
         
-        [ ( ( content_update_package, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+        [ ( ( content_update_package, ), kwargs ) ] = TG.test_controller.GetWrite( 'content_updates' )
         
         HF.compare_content_update_packages( self, content_update_package, command_2 )
         
@@ -107,13 +108,13 @@ class TestManagers( unittest.TestCase ):
         
         undo_manager.Undo()
         
-        [ ( ( content_update_package, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+        [ ( ( content_update_package, ), kwargs ) ] = TG.test_controller.GetWrite( 'content_updates' )
         
         HF.compare_content_update_packages( self, content_update_package, command_2_inverted )
         
         undo_manager.Undo()
         
-        [ ( ( content_update_package, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+        [ ( ( content_update_package, ), kwargs ) ] = TG.test_controller.GetWrite( 'content_updates' )
         
         HF.compare_content_update_packages( self, content_update_package, command_1_inverted )
         

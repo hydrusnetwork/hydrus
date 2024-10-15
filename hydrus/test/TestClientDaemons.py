@@ -13,6 +13,8 @@ from hydrus.client import ClientDaemons
 from hydrus.client.importing import ClientImportFiles
 from hydrus.client.importing import ClientImportLocal
 
+from hydrus.test import TestGlobals as TG
+
 with open( os.path.join( HC.STATIC_DIR, 'hydrus.png' ), 'rb' ) as f:
     
     EXAMPLE_FILE = f.read()
@@ -25,7 +27,7 @@ class TestDaemons( unittest.TestCase ):
         
         try:
             
-            HG.test_controller.SetRead( 'hash_status', ClientImportFiles.FileImportStatus.STATICGetUnknownStatus() )
+            TG.test_controller.SetRead( 'hash_status', ClientImportFiles.FileImportStatus.STATICGetUnknownStatus() )
             
             HydrusPaths.MakeSureDirectoryExists( test_dir )
             
@@ -49,27 +51,36 @@ class TestDaemons( unittest.TestCase ):
             
             import_folder = ClientImportLocal.ImportFolder( 'imp', path = test_dir, actions = actions )
             
-            HG.test_controller.SetRead( 'serialisable_names', [ 'imp' ] )
-            HG.test_controller.SetRead( 'serialisable_named', import_folder )
+            TG.test_controller.SetRead( 'serialisable_names', [ 'imp' ] )
+            TG.test_controller.SetRead( 'serialisable_named', import_folder )
             
-            HG.test_controller.ClearWrites( 'import_file' )
-            HG.test_controller.ClearWrites( 'serialisable' )
+            TG.test_controller.ClearWrites( 'import_file' )
+            TG.test_controller.ClearWrites( 'serialisable' )
             
             manager = ClientImportLocal.ImportFoldersManager( HG.controller )
             
-            manager.Start()
+            manager.Start( startup_delay = 0 )
             
-            time.sleep( 8 )
+            time.sleep( 3 )
+            
+            for i in range( 10 ):
+                
+                if HG.import_folders_running:
+                    
+                    time.sleep( 1 )
+                    
+                
             
             try:
                 
-                import_file = HG.test_controller.GetWrite( 'import_file' )
+                import_file = TG.test_controller.GetWrite( 'import_file' )
                 
+                # let's check that three files were imported; local importers do not do pre-import metadata stuff to skip work, so this will be three actual db jobs
                 self.assertEqual( len( import_file ), 3 )
                 
                 # I need to expand tests here with the new file system
                 
-                [ ( ( updated_import_folder, ), empty_dict ) ] = HG.test_controller.GetWrite( 'serialisable' )
+                [ ( ( updated_import_folder, ), empty_dict ) ] = TG.test_controller.GetWrite( 'serialisable' )
                 
                 self.assertEqual( updated_import_folder, import_folder )
                 
