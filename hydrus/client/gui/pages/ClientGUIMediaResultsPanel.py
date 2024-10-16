@@ -229,11 +229,6 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.Liste
             return
             
         
-        if len( hashes_physically_deleted ) > 0:
-            
-            self._RemoveMediaByHashes( hashes_physically_deleted )
-            
-        
         def do_it( content_update_packages ):
             
             for content_update_package in content_update_packages:
@@ -1988,7 +1983,7 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.Liste
                                 
                                 ordered_selected_media = self._GetSelectedMediaOrdered()
                                 
-                                earliest_index = self._sorted_media.index( ordered_selected_media[0] )
+                                earliest_index = self._sorted_media.index( ordered_selected_media[ 0 ] )
                                 
                                 if rearrange_command == CAC.MOVE_LEFT:
                                     

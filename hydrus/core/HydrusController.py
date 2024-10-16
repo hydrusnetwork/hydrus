@@ -223,17 +223,20 @@ class HydrusController( HydrusControllerInterface.HydrusControllerInterface ):
             job.Cancel()
             
         
-        started = HydrusTime.GetNow()
-        
-        while True in ( daemon_job.CurrentlyWorking() for daemon_job in self._daemon_jobs.values() ):
+        if not self._doing_fast_exit:
             
-            self._ReportShutdownDaemonsStatus()
+            started = HydrusTime.GetNow()
             
-            time.sleep( 0.1 )
-            
-            if HydrusTime.TimeHasPassed( started + 30 ):
+            while True in ( daemon_job.CurrentlyWorking() for daemon_job in self._daemon_jobs.values() ):
                 
-                break
+                self._ReportShutdownDaemonsStatus()
+                
+                time.sleep( 0.1 )
+                
+                if HydrusTime.TimeHasPassed( started + 30 ):
+                    
+                    break
+                    
                 
             
         
@@ -770,11 +773,6 @@ class HydrusController( HydrusControllerInterface.HydrusControllerInterface ):
         self.TouchTime( 'last_user_action' )
         
     
-    def SetDoingFastExit( self, value: bool ) -> None:
-        
-        self._doing_fast_exit = value
-        
-    
     def SetTimestampMS( self, name: str, timestamp_ms: int ) -> None:
         
         with self._timestamps_lock:
@@ -817,11 +815,14 @@ class HydrusController( HydrusControllerInterface.HydrusControllerInterface ):
             
             self.db.Shutdown()
             
-            while not self.db.LoopIsFinished():
+            if not self._doing_fast_exit:
                 
-                self._PublishShutdownSubtext( 'waiting for db to finish up' + HC.UNICODE_ELLIPSIS )
-                
-                time.sleep( 0.1 )
+                while not self.db.LoopIsFinished():
+                    
+                    self._PublishShutdownSubtext( 'waiting for db to finish up' + HC.UNICODE_ELLIPSIS )
+                    
+                    time.sleep( 0.1 )
+                    
                 
             
         

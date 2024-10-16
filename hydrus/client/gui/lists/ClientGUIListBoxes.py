@@ -3314,9 +3314,16 @@ class ListBoxTags( ListBox ):
                             ClientGUIMenus.AppendMenuItem( search_menu, 'add {} to current search'.format( predicates_selection_string ), 'Add the selected predicates to the current search.', self._ProcessMenuPredicateEvent, 'add_predicates' )
                             
                         
-                        if or_predicate is not None:
+                        if or_predicate is not None and or_predicate not in predicates:
                             
                             ClientGUIMenus.AppendMenuItem( search_menu, 'add an OR of {} to current search'.format( predicates_selection_string ), 'Add the selected predicates as an OR predicate to the current search.', self._ProcessMenuPredicateEvent, 'add_or_predicate' )
+                            
+                            all_selected_in_current = predicates.issubset( current_predicates )
+                            
+                            if all_selected_in_current:
+                                
+                                ClientGUIMenus.AppendMenuItem( search_menu, f'replace {predicates_selection_string} with their OR', 'Remove the selected predicates and replace them with an OR predicate that searches for any of them.', self._ProcessMenuPredicateEvent, 'replace_or_predicate')
+                                
                             
                         
                         some_selected_in_current = HydrusLists.SetsIntersect( predicates, current_predicates )

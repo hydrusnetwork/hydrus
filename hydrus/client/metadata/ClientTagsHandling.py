@@ -9,9 +9,11 @@ from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTags
+from hydrus.core import HydrusThreading
 from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientDaemons
 from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientLocation
 
@@ -346,9 +348,11 @@ class TagAutocompleteOptions( HydrusSerialisable.SerialisableBase ):
     
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_TAG_AUTOCOMPLETE_OPTIONS ] = TagAutocompleteOptions
 
-class TagDisplayMaintenanceManager( object ):
+class TagDisplayMaintenanceManager( ClientDaemons.ManagerWithMainLoop ):
     
     def __init__( self, controller ):
+        
+        super().__init__()
         
         self._controller = controller
         
@@ -550,7 +554,7 @@ class TagDisplayMaintenanceManager( object ):
         self.Wake()
         
     
-    def GetName( self ):
+    def GetName( self ) -> str:
         
         return 'tag display sync'
         
@@ -562,13 +566,23 @@ class TagDisplayMaintenanceManager( object ):
     
     def MainLoop( self ):
         
+        def check_shutdown():
+            
+            if HydrusThreading.IsThreadShuttingDown() or self._shutdown:
+                
+                raise HydrusExceptions.ShutdownException()
+                
+            
+        
         try:
             
             INIT_WAIT = 10
             
             self._wake_event.wait( INIT_WAIT )
             
-            while not ( HG.started_shutdown or self._shutdown ):
+            while True:
+                
+                check_shutdown()
                 
                 self._controller.WaitUntilViewFree()
                 
@@ -608,6 +622,8 @@ class TagDisplayMaintenanceManager( object ):
                     wait_time = 10
                     
                 
+                check_shutdown()
+                
                 self._wake_event.wait( wait_time )
                 
                 self._wake_event.clear()
@@ -624,6 +640,10 @@ class TagDisplayMaintenanceManager( object ):
                     self._new_data_event.clear()
                     
                 
+            
+        except HydrusExceptions.ShutdownException:
+            
+            pass
             
         finally:
             
@@ -682,6 +702,7 @@ class TagDisplayMaintenanceManager( object ):
         self._wake_event.set()
         
     
+
 class TagDisplayManager( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_TAG_DISPLAY_MANAGER

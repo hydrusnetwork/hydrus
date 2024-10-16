@@ -1802,6 +1802,7 @@ class TestAutocompletePredGubbins( unittest.TestCase ):
             ( 'system:does not have url with class safebooru file page', "system:doesn't have a url with url class safebooru file page " ),
             ( 'system:tag as number: page less than 5', "system:tag as number page < 5" ),
             ( 'system:tag as number: page less than 5', "system:tag as number: page less than 5" ),
+            ( 'system:tag as number: page_underscore less than 5', "system:tag as number page_underscore < 5" ),
             ( 'system:number of notes: has notes', 'system:has note' ),
             ( 'system:number of notes: has notes', 'system:has notes' ),
             ( 'system:number of notes: no notes', 'system:no note' ),

@@ -426,7 +426,7 @@ def ReadFetch(
             matches = predicates
             
         
-        matches = HydrusData.FastIndexUniqueList( matches )
+        matches = HydrusLists.FastIndexUniqueList( matches )
         
         matches = ClientSearchPredicate.SortPredicates( matches )
         
@@ -441,7 +441,7 @@ def ReadFetch(
     
     allow_auto_wildcard_conversion = True
     
-    matches = HydrusData.FastIndexUniqueList( matches )
+    matches = HydrusLists.FastIndexUniqueList( matches )
     
     InsertTagPredicates( matches, tag_service_key, parsed_autocomplete_text, allow_auto_wildcard_conversion, insert_if_does_not_exist = False )
     
@@ -614,7 +614,7 @@ def WriteFetch(
     
     matches = ClientSearchPredicate.SortPredicates( matches )
     
-    matches = HydrusData.FastIndexUniqueList( matches )
+    matches = HydrusLists.FastIndexUniqueList( matches )
     
     allow_auto_wildcard_conversion = False
     
@@ -3124,6 +3124,14 @@ class ListBoxTagsActiveSearchPredicates( ClientGUIListBoxes.ListBoxTagsPredicate
             
             if or_predicate is not None:
                 
+                self._EnterPredicates( ( or_predicate, ), permit_remove = False )
+                
+            
+        elif command == 'replace_or_predicate':
+            
+            if or_predicate is not None:
+                
+                self._EnterPredicates( predicates, permit_add = False )
                 self._EnterPredicates( ( or_predicate, ), permit_remove = False )
                 
             

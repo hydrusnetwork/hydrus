@@ -25,6 +25,7 @@ from hydrus.core.files.images import HydrusImageOpening
 from hydrus.core.networking import HydrusNetworking
 
 from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientDaemons
 from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientFilesPhysical
 from hydrus.client import ClientImageHandling
@@ -1018,7 +1019,7 @@ class ClientFilesManager( object ):
         self._controller.new_options.SetBoolean( 'pause_subs_sync', True )
         self._controller.new_options.SetBoolean( 'pause_all_file_queues', True )
         
-        HydrusData.ShowText( 'A critical drive error has occurred. All importers--subscriptions, import folders, and paged file import queues--have been paused. Once the issue is clear, restart the client and resume your imports after restart under the file and network menus!' )
+        HydrusData.ShowText( 'A critical drive error has occurred. All importers--subscriptions, import folders, and paged file import queues--have been paused. Once the issue is clear, restart the client and resume your imports under the file and network menus!' )
         
         self._controller.pub( 'notify_refresh_network_menu' )
         
@@ -2071,9 +2072,11 @@ def add_extra_comments_to_job_status( job_status: ClientThreading.JobStatus ):
         
     
 
-class FilesMaintenanceManager( object ):
+class FilesMaintenanceManager( ClientDaemons.ManagerWithMainLoop ):
     
     def __init__( self, controller ):
+        
+        super().__init__()
         
         self._controller = controller
         
@@ -2095,6 +2098,7 @@ class FilesMaintenanceManager( object ):
         self._wake_background_event = threading.Event()
         self._reset_background_event = threading.Event()
         self._shutdown = False
+        self._mainloop_is_finished = False
         
         self._controller.sub( self, 'NotifyNewOptions', 'notify_new_options' )
         self._controller.sub( self, 'Wake', 'checkbox_manager_inverted' )
@@ -3165,6 +3169,16 @@ class FilesMaintenanceManager( object ):
             
         
     
+    def GetName( self ) -> str:
+        
+        return 'file maintenance'
+        
+    
+    def IsShutdown( self ) -> bool:
+        
+        return self._mainloop_is_finished
+        
+    
     def MainLoopBackgroundWork( self ):
         
         def check_shutdown():
@@ -3212,7 +3226,7 @@ class FilesMaintenanceManager( object ):
                 
                 check_shutdown()
                 
-                time.sleep( 1 )
+                self._wake_background_event.wait( 1 )
                 
             
             while True:
@@ -3290,6 +3304,10 @@ class FilesMaintenanceManager( object ):
         except HydrusExceptions.ShutdownException:
             
             pass
+            
+        finally:
+            
+            self._mainloop_is_finished = True
             
         
     

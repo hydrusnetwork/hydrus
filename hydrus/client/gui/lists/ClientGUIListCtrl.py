@@ -782,7 +782,7 @@ class BetterListCtrlTreeView( QW.QTreeView ):
         # this straight-up returns 0 during dialog init wew, I guess when I ask during init the text isn't initialised or whatever
         if self.model().rowCount() > 0 and False:
             
-            model_index = self.model().index( 0, 0 )
+            model_index = self.model().index( 0 )
             
             height = self.rowHeight( model_index )
             

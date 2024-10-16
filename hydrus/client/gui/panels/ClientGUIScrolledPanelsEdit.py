@@ -1627,7 +1627,7 @@ class EditDuplicateContentMergeOptionsPanel( ClientGUIScrolledPanels.EditPanel )
                 
                 try:
                     
-                    action = ClientGUIDialogsQuick.SelectFromList( self, 'select action', choice_tuples )
+                    action = ClientGUIDialogsQuick.SelectFromList( self, 'select action', choice_tuples, value_to_select = action )
                     
                 except HydrusExceptions.CancelledException:
                     
@@ -1663,7 +1663,7 @@ class EditDuplicateContentMergeOptionsPanel( ClientGUIScrolledPanels.EditPanel )
                 
                 try:
                     
-                    action = ClientGUIDialogsQuick.SelectFromList( self, 'select action', choice_tuples )
+                    action = ClientGUIDialogsQuick.SelectFromList( self, 'select action', choice_tuples, value_to_select = action )
                     
                 except HydrusExceptions.CancelledException:
                     

@@ -1189,7 +1189,7 @@ class LocationsManager( object ):
                 
                 if service_key == CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY:
                     
-                    for s_k in CG.client_controller.services_manager.GetServiceKeys( ( HC.LOCAL_FILE_DOMAIN, ) ):
+                    for s_k in CG.client_controller.services_manager.GetServiceKeys( ( HC.LOCAL_FILE_DOMAIN, HC.COMBINED_LOCAL_MEDIA ) ):
                         
                         if s_k in self._current:
                             
@@ -1199,7 +1199,7 @@ class LocationsManager( object ):
                     
                 elif service_key == CC.COMBINED_LOCAL_FILE_SERVICE_KEY:
                     
-                    for s_k in CG.client_controller.services_manager.GetServiceKeys( ( HC.COMBINED_LOCAL_MEDIA, HC.LOCAL_FILE_DOMAIN, HC.LOCAL_FILE_TRASH_DOMAIN, HC.LOCAL_FILE_UPDATE_DOMAIN ) ):
+                    for s_k in CG.client_controller.services_manager.GetServiceKeys( ( HC.COMBINED_LOCAL_FILE, HC.COMBINED_LOCAL_MEDIA, HC.LOCAL_FILE_DOMAIN, HC.LOCAL_FILE_TRASH_DOMAIN, HC.LOCAL_FILE_UPDATE_DOMAIN ) ):
                         
                         if s_k in self._current:
                             

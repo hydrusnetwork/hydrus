@@ -307,7 +307,10 @@ def parse_system_predicate( string: str ):
         string = string.lower()
         
     
-    string = string.replace( '_', ' ' )
+    # hydev is removing this v594. there's several cases where we might want underscores, and I'm not sure the convenience of converting to spaces is worth losing that
+    # it isn't like system preds are expressed in underscore for on a third party site or something, like a parsed tag might be
+    # string = string.replace( '_', ' ' )
+    
     if string.startswith( "-" ):
         raise ValueError( "System predicate can't start with negation" )
     if not string.startswith( SYSTEM_PREDICATE_PREFIX ):

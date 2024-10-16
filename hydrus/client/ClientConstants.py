@@ -632,7 +632,7 @@ class GlobalIcons( object ):
                 
         self.hydrus = QG.QIcon( os.path.join( HC.STATIC_DIR, 'hydrus_black_square.svg' ) )
         self.github = QG.QIcon( os.path.join( HC.STATIC_DIR, 'github.svg' ) )
-        self.twitter = QG.QIcon( os.path.join( HC.STATIC_DIR, 'twitter.svg' ) )
+        self.x = QG.QIcon( os.path.join( HC.STATIC_DIR, 'x.svg' ) )
         self.tumblr = QG.QIcon( os.path.join( HC.STATIC_DIR, 'tumblr.svg' ) )
         self.discord = QG.QIcon( os.path.join( HC.STATIC_DIR, 'discord.svg' ) )
         self.patreon = QG.QIcon( os.path.join( HC.STATIC_DIR, 'patreon.svg' ) )

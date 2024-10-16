@@ -121,3 +121,21 @@ def DAEMONMaintainTrash():
             
         
     
+
+class ManagerWithMainLoop( object ):
+    
+    def GetName( self ) -> str:
+        
+        raise NotImplementedError()
+        
+    
+    def IsShutdown( self ) -> bool:
+        
+        raise NotImplementedError()
+        
+    
+    def Shutdown( self ):
+        
+        raise NotImplementedError()
+        
+    

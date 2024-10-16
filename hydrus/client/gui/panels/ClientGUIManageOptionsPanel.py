@@ -1,10 +1,8 @@
-import collections
 import os
 import random
 import traceback
 import typing
 
-from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
 from qtpy import QtGui as QG
 
@@ -18,9 +16,7 @@ from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTags
 from hydrus.core.files.images import HydrusImageHandling
 
-from hydrus.client import ClientApplicationCommand as CAC
 from hydrus.client import ClientConstants as CC
-from hydrus.client import ClientFilesPhysical
 from hydrus.client import ClientGlobals as CG
 from hydrus.client.importing.options import FileImportOptions
 from hydrus.client.gui import ClientGUIDialogs
@@ -48,7 +44,6 @@ from hydrus.client.gui.widgets import ClientGUIColourPicker
 from hydrus.client.gui.widgets import ClientGUICommon
 from hydrus.client.gui.widgets import ClientGUIBytes
 from hydrus.client.media import ClientMedia
-from hydrus.client.metadata import ClientContentUpdates
 from hydrus.client.metadata import ClientTags
 from hydrus.client.networking import ClientNetworkingSessions
 
@@ -1767,6 +1762,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._controls_panel = ClientGUICommon.StaticBox( self, 'controls and preview' )
             
             self._set_search_focus_on_page_change = QW.QCheckBox( self._controls_panel )
+            self._set_search_focus_on_page_change.setToolTip( 'Set it so whenever you switch between pages, the keyboard focus immediately moves to the tag autocomplete or search text input.' )
             
             self._hide_preview = QW.QCheckBox( self._controls_panel )
             
@@ -1890,7 +1886,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             rows = []
             
-            rows.append( ( 'When switching to a page, focus its text input field (if any): ', self._set_search_focus_on_page_change ) )
+            rows.append( ( 'When switching to pages, move keyboard focus to any text input field: ', self._set_search_focus_on_page_change ) )
             rows.append( ( 'Hide the bottom-left preview window: ', self._hide_preview ) )
             gridbox = ClientGUICommon.WrapInGrid( self._controls_panel, rows )
             

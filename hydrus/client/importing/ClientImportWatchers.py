@@ -1924,7 +1924,7 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
             
             if CG.client_controller.new_options.GetBoolean( 'pause_all_watcher_checkers' ):
                 
-                raise HydrusExceptions.VetoException( 'all checkers are paused! network->pause to resume!' )
+                raise HydrusExceptions.VetoException( 'all checkers are paused! hit network->pause to resume!' )
                 
             
             if not self._HasURL():

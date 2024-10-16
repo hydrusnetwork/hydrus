@@ -189,11 +189,6 @@ class HydrusControllerInterface( object ):
         raise NotImplementedError()
         
     
-    def SetDoingFastExit( self, value: bool ) -> None:
-        
-        raise NotImplementedError()
-        
-    
     def SetTimestampMS( self, name: str, timestamp_ms: int ) -> None:
         
         raise NotImplementedError()

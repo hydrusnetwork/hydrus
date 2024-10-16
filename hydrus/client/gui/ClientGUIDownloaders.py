@@ -2721,6 +2721,7 @@ class EditURLClassLinksPanel( ClientGUIScrolledPanels.EditPanel ):
         ( url_class_key, parser_key ) = data
         
         url_class = self._url_class_keys_to_url_classes[ url_class_key ]
+        default_parser = self._parser_keys_to_parsers.get( parser_key, None )
         
         matching_parsers = [ parser for parser in self._parsers if True in ( url_class.Matches( url ) for url in parser.GetExampleURLs() ) ]
         unmatching_parsers = [ parser for parser in self._parsers if parser not in matching_parsers ]
@@ -2734,7 +2735,7 @@ class EditURLClassLinksPanel( ClientGUIScrolledPanels.EditPanel ):
         
         try:
             
-            parser = ClientGUIDialogsQuick.SelectFromList( self, 'select parser for ' + url_class.GetName(), choice_tuples, sort_tuples = False )
+            parser = ClientGUIDialogsQuick.SelectFromList( self, 'select parser for ' + url_class.GetName(), choice_tuples, sort_tuples = False, value_to_select = default_parser )
             
         except HydrusExceptions.CancelledException:
             
