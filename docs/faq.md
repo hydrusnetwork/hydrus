@@ -10,7 +10,7 @@ A _repository_ is a service in the hydrus network that stores a certain kind of 
 
 ## What is a tag? { id="tags" }
 
-[wiki](https://en.wikipedia.org/wiki/Tag_(metadata))
+[Wikipedia](https://en.wikipedia.org/wiki/Tag_(metadata))
 
 A _tag_ is a small bit of text describing a single property of something. They make searching easy. Good examples are "flower" or "nicolas cage" or "the sopranos" or "2003". By combining several tags together ( e.g. \[ 'tiger woods', 'sports illustrated', '2008' \] or \[ 'cosplay', 'the legend of zelda' \] ), a huge image collection is reduced to a tiny and easy-to-digest sample.
 
@@ -81,7 +81,7 @@ Since this question has come up frequently, a user has written an excellent docu
 
 ## What is a hash? { id="hashes" }
 
-[wiki](https://en.wikipedia.org/wiki/Hash_function)
+[Wikipedia](https://en.wikipedia.org/wiki/Hash_function)
 
 Hashes are a subject you usually have to be a software engineer to find interesting. The simple answer is that they are unique names for things. Hashes make excellent identifiers inside software, as you can safely assume that f099b5823f4e36a4bd6562812582f60e49e818cf445902b504b5533c6a5dad94 refers to one particular file and no other. In the client's normal operation, you will never encounter a file's hash. If you want to see a thumbnail bigger, double-click it; the software handles the mathematics.
 
