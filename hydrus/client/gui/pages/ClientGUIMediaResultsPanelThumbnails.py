@@ -1564,9 +1564,9 @@ class MediaResultsPanelThumbnails( ClientGUIMediaResultsPanel.MediaResultsPanel 
                 
                 try:
                     
-                    earliest_index = self._sorted_media.index( ordered_selected_media[0] )
+                    earliest_index = self._sorted_media.index( ordered_selected_media[ 0 ] )
                     
-                    selection_is_contiguous = any_selected and self._sorted_media.index( ordered_selected_media[-1] ) - earliest_index == num_selected - 1
+                    selection_is_contiguous = any_selected and self._sorted_media.index( ordered_selected_media[ -1 ] ) - earliest_index == num_selected - 1
                     
                     ClientGUIMediaResultsPanelMenus.AddRearrangeMenu( self, menu, self._selected_media, self._sorted_media, self._focused_media, selection_is_contiguous, earliest_index )
                     

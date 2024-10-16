@@ -1297,6 +1297,9 @@ class CallAfterEvent( QC.QEvent ):
             
         
     
+
+# TODO: CallAfter gubbins may be replaceable by QMetaObject.invokeMethod( obj, "methodname", Qt.QueuedConnection/Qt.BlockingQueuedConnection ) and such???
+
 class CallAfterEventCatcher( QC.QObject ):
     
     def __init__( self, parent ):

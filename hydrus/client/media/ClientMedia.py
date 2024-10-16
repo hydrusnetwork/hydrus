@@ -575,7 +575,7 @@ class MediaList( object ):
         self._media_sort = MediaSort( ( 'system', CC.SORT_FILES_BY_FILESIZE ), CC.SORT_ASC )
         self._media_collect = MediaCollect()
         
-        self._sorted_media = HydrusData.FastIndexUniqueList( [ self._GenerateMediaSingleton( media_result ) for media_result in media_results ] )
+        self._sorted_media = HydrusLists.FastIndexUniqueList( [ self._GenerateMediaSingleton( media_result ) for media_result in media_results ] )
         self._selected_media = set()
         
         self._singleton_media = set( self._sorted_media )
@@ -869,7 +869,7 @@ class MediaList( object ):
         self._collected_media = set()
         
         self._selected_media = set()
-        self._sorted_media = HydrusData.FastIndexUniqueList()
+        self._sorted_media = HydrusLists.FastIndexUniqueList()
         
         self._RecalcAfterMediaRemove()
         
@@ -921,7 +921,7 @@ class MediaList( object ):
             self._collected_media = set()
             
         
-        self._sorted_media = HydrusData.FastIndexUniqueList( list( self._singleton_media ) + list( self._collected_media ) )
+        self._sorted_media = HydrusLists.FastIndexUniqueList( list( self._singleton_media ) + list( self._collected_media ) )
         
         self._RecalcHashes()
         
@@ -2916,7 +2916,7 @@ class MediaSort( HydrusSerialisable.SerialisableBase ):
         return sort_string
         
     
-    def Sort( self, location_context: ClientLocation.LocationContext, media_results_list: HydrusData.FastIndexUniqueList ):
+    def Sort( self, location_context: ClientLocation.LocationContext, media_results_list: HydrusLists.FastIndexUniqueList ):
         
         ( sort_metadata, sort_data ) = self.sort_type
         

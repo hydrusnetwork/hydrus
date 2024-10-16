@@ -1995,8 +1995,8 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
                     
                     tab_pos = self.tabBar().mapFromGlobal( screen_position )
                     
-                    over_a_tab = tab_pos != -1
-                    over_tab_greyspace = tab_pos == -1
+                    over_a_tab = self.tabBar().tabAt( tab_pos ) != -1
+                    over_tab_greyspace = not over_a_tab
                     
                 else:
                     

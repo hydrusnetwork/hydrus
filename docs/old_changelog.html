@@ -35,6 +35,32 @@
             <h1 id="changelog"><a href="#changelog">changelog</a></h1>
             <ul>
                 <li>
+                    <h2 id="version_594"><a href="#version_594">version 594</a></h2>
+                    <ul>
+                        <li><h3>misc</h3></li>
+                        <li>fixed an error that was stopping files from being removed sometimes (it also messed up thumbnail selection). it could even cause crashes! the stupid logical problem was in my new list code; it was causing the thumbnail grid backing list to get pseudorandomly poisoned with bad indices when a previous remove event removed the last item in the list</li>
+                        <li>the tag `right-click-&gt;search` menu, on a multiple selection of non-OR predicates that exists in its entirely in the current search context, now has `replace selected with their OR`, which removes the selection and replaces it with an OR of them all!</li>
+                        <li>the system predicate parser no longer removes all underscores from to-be-parsed text. this fixes parsing for namespaces, URLs, service names, etc.. with underscores in (issue #1610)</li>
+                        <li>fixed some bad layout in the edit predicates dialog for system:hash (issue #1590)</li>
+                        <li>fixed some content update logic for the advanced delete choices of 'delete from all local file domains' and 'physically delete now', where the UI-side thumbnail logic was not removing the file from the 'all my files' or 'all local files' domains respectively, which caused some funny thumbnail display and hide/show rules until a restart rebuilt the media object from the (correct) db source</li>
+                        <li>if you physically delete a file, I no longer force-remove it from view so enthusiastically. if you are looking at 'all known files', it should generally still display after the delete (and now it will properly recognise it is now non-local)</li>
+                        <li>I may have fixed an issue with page tab bar clicks on the very new Qt 6.8, which has been rolling out this week</li>
+                        <li>wrote out my two rules for tagging (don't be perfect, only tag what you search) to the 'getting started - more tags' help page: https://hydrusnetwork.github.io/hydrus/getting_started_more_tags.html#tags_are_for_searching_not_describing</li>
+                        <li><h3>shutdown improvements</h3></li>
+                        <li>I cleaned up and think I fixed some SIGTERM and related 'woah, we have to shut down right now' shutdown handling. if a non-UI thread calls for the program to exit, the main 'save data now' calls are now all done by or blocked on that thread, with improved thread safety for when it does tell Qt to hide and save the UI and so on (issue #1601, but not sure I totally fixed it)</li>
+                        <li>added some SIGTERM test calls to `help-&gt;debug-&gt;tests` so we can explore this more in future</li>
+                        <li>on the client, the managers for db maintenance, quick downloads, file maintanence, and import folders now shut down more gracefully, with overall program shutdown waiting for them to exit their loops and reporting what it is still waiting on in the exit splash (like it already does for subscriptions and tag display). as a side thing, these managers also start faster on program boot if you nudge their systems to do something</li>
+                        <li><h3>boring cleanup</h3></li>
+                        <li>wrote some unit tests to test my unique list and better catch stupid errors like I made last week</li>
+                        <li>added default values for the 'select from list of things' dialogs for: edit duplicate merge rating action; edit duplicate merge tag action; and edit url/parser link</li>
+                        <li>moved `FastIndexUniqueList` from `HydrusData` to `HydrusLists`</li>
+                        <li>fixed an error in the main import object if it parses (and desires to skip associating) a domain-modified 'post time' that's in the first week of 1970</li>
+                        <li>reworked the text for the 'focus the text input when you change pages' checkbox under `options-&gt;gui pages` and added a tooltip</li>
+                        <li>reworded and changed tone of the boot error message on missing database tables if the tables are all caches and completely recoverable</li>
+                        <li>updated the twitter link and icon in `help-&gt;links` to X</li>
+                    </ul>
+                </li>
+                <li>
                     <h2 id="version_593"><a href="#version_593">version 593</a></h2>
                     <ul>
                         <li><h3>misc</h3></li>

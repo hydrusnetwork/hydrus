@@ -6,6 +6,21 @@ title: More Tags
 
 Tags are powerful, and there are many tools within hydrus to customise how they apply and display. I recommend you play around with the basics before making your own new local tag services or jumping right into the PTR, so take it slow. 
 
+## Tags are for Searching not Describing
+
+Hydrus users tend to be nerds of one sort or another, and we all like thinking about categorisation and semantic relationships. I provide several clever tools in this program, and it is not uncommon for newer users to spend hours sketching out intricate tree-charts and idiosyncratic taxonomy algebra in a One True Plan and then only tagging five actual files of anime cat girls before burning out. Try not to let this happen to you.
+
+In making hydrus, I have discovered two rules to stop you going crazy:
+
+1. Don't try to be perfect.
+2. Only add those tags you actually use in searches.
+
+There is always work to do, and it is easy to exhaust onesself or get lost in the bushes agonising over whether to use 'smile' or 'smiling' or 'smirk'--before you know it, you have been tagging the same file for four minutes, and there are twelve thousand to go. The details are not as important as the broad strokes, and problems are easy to correct in future. There is often also no perfect answer, and even if there were, we would never have time to apply it everywhere. The ride never ends.
+
+The sheer number of tags can also be overwhelming. Importing all the many tags from boorus is totally fine, but if you are typing tags yourself, I suggest you try not to exhaustively tag [everything](http://safebooru.org/index.php?page=post&s=list&tags=card_on_necklace) [in](http://gelbooru.com/index.php?page=post&s=list&tags=collarbone) [the](https://e621.net/post/index?tags=cum_on_neck) [image](http://danbooru.donmai.us/posts?tags=brown_vest). You will go crazy and burn out!
+
+Ultimately, tags are a medium for _searching_, not describing. Anyone can see what is in an image just by looking at it, so--for the most part--the only use in writing any of it down is if you would ever use those particular words to find the thing again. Character, series and creator namespaces are a great simple place to start. After that, add whatever you are most interested in, be that 'blue sky' or 'midriff' or fanfic ship names, whatever you would actually use in a search, and then you can spend your valuable time actually using your media rather than drowning-by-categorisation.
+
 ## Tag services
 Hydrus lets you organise tags across multiple separate 'services'. By default there are two, but you can have however many you want (`services->manage services`). You might like to add more for different sets of siblings/parents, tags you don't want to see but still search by, parsing tags into different services based on reliability of the source or the source itself. You could for example parse all tags from Pixiv into one service, Danbooru tags into another, Deviantart etc. and so on as you chose. You must always have at least one local tag service.
 

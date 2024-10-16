@@ -7,6 +7,35 @@ title: Changelog
 !!! note
     This is the new changelog, only the most recent builds. For all versions, see the [old changelog](old_changelog.html).
 
+## [Version 594](https://github.com/hydrusnetwork/hydrus/releases/tag/v594)
+
+### misc
+
+* fixed an error that was stopping files from being removed sometimes (it also messed up thumbnail selection). it could even cause crashes! the stupid logical problem was in my new list code; it was causing the thumbnail grid backing list to get pseudorandomly poisoned with bad indices when a previous remove event removed the last item in the list
+* the tag `right-click->search` menu, on a multiple selection of non-OR predicates that exists in its entirely in the current search context, now has `replace selected with their OR`, which removes the selection and replaces it with an OR of them all!
+* the system predicate parser no longer removes all underscores from to-be-parsed text. this fixes parsing for namespaces, URLs, service names, etc.. with underscores in (issue #1610)
+* fixed some bad layout in the edit predicates dialog for system:hash (issue #1590)
+* fixed some content update logic for the advanced delete choices of 'delete from all local file domains' and 'physically delete now', where the UI-side thumbnail logic was not removing the file from the 'all my files' or 'all local files' domains respectively, which caused some funny thumbnail display and hide/show rules until a restart rebuilt the media object from the (correct) db source
+* if you physically delete a file, I no longer force-remove it from view so enthusiastically. if you are looking at 'all known files', it should generally still display after the delete (and now it will properly recognise it is now non-local)
+* I may have fixed an issue with page tab bar clicks on the very new Qt 6.8, which has been rolling out this week
+* wrote out my two rules for tagging (don't be perfect, only tag what you search) to the 'getting started - more tags' help page: https://hydrusnetwork.github.io/hydrus/getting_started_more_tags.html#tags_are_for_searching_not_describing
+
+### shutdown improvements
+
+* I cleaned up and think I fixed some SIGTERM and related 'woah, we have to shut down right now' shutdown handling. if a non-UI thread calls for the program to exit, the main 'save data now' calls are now all done by or blocked on that thread, with improved thread safety for when it does tell Qt to hide and save the UI and so on (issue #1601, but not sure I totally fixed it)
+* added some SIGTERM test calls to `help->debug->tests` so we can explore this more in future
+* on the client, the managers for db maintenance, quick downloads, file maintanence, and import folders now shut down more gracefully, with overall program shutdown waiting for them to exit their loops and reporting what it is still waiting on in the exit splash (like it already does for subscriptions and tag display). as a side thing, these managers also start faster on program boot if you nudge their systems to do something
+
+### boring cleanup
+
+* wrote some unit tests to test my unique list and better catch stupid errors like I made last week
+* added default values for the 'select from list of things' dialogs for: edit duplicate merge rating action; edit duplicate merge tag action; and edit url/parser link
+* moved `FastIndexUniqueList` from `HydrusData` to `HydrusLists`
+* fixed an error in the main import object if it parses (and desires to skip associating) a domain-modified 'post time' that's in the first week of 1970
+* reworked the text for the 'focus the text input when you change pages' checkbox under `options->gui pages` and added a tooltip
+* reworded and changed tone of the boot error message on missing database tables if the tables are all caches and completely recoverable
+* updated the twitter link and icon in `help->links` to X
+
 ## [Version 593](https://github.com/hydrusnetwork/hydrus/releases/tag/v593)
 
 ### misc
@@ -361,37 +390,3 @@ title: Changelog
 
 * the new `/manage_services/get_pending_counts` command now includes the 'Services Object' in its response
 * the client api version is now 67
-
-## [Version 584](https://github.com/hydrusnetwork/hydrus/releases/tag/v584)
-
-### misc
-
-* fixed a logical hole in the recent 'is this URL that is saying (deleted/already in db) trustworthy, or does it have weird mappings to other files?' pre-download check that was causing Pixiv, Kemono, and Twitter and any other multiple-URL Post URL Class to, on re-encountering the URL in a downloader, classify the underlying file URL as untrustworthy and re-download the files(l!!)
-* the 'copy all' and paste buttons in the manage known urls dialog are replaced with icon buttons, and the copy button now copies the current selection if there is one
-* the newish Regex input widget (the one that goes green/red based on current text validity) now propagates an Enter key into a dialog ok event when appropriate
-* when you ctrl+double-click a taglist, the program now ensures the item under the mouse is selected before firing off the double-click nega-activation event. this is slightly awkward, but I hope it smoothes out the awkward moment where you want to invert a selection of tags but doing a normal ctrl+double-click on them causes the one of them to be deselected and then messes up the selection
-* regex URL searches are now always the last job to run in a file query. if you mix in any other predicate like filesize or just some tag, your regex URL searches should run massively massively faster
-* improved some boot error handling when Qt fails to import
-* fixed the whack alignment of the 'filename'/'first directory'/etc.. checkbox-and-text-edit widgets in the filename tagging panel, and set 'namespace' placeholder text
-* force-selecting a null value in a 'select one from this list of things' dialog should no longer raise errors
-* thanks to a user, the new shimmie parser gets tags in a simpler, more reliable way
-
-### client api
-
-* added a new permission, `Commit Pending` (12), which allows you to see and commit pending content for each service
-* added `/manage_services/get_pending_counts`, which basically returns the content of the client's 'pending' menu
-* added `/manage_services/commit_pending`, which fires those commands off
-* added `/manage_services/forget_pending`, which does the same 'forget' command on that menu
-* added `/manage_file_relationships/remove_potentials`, which clears any known potential pairs off the given files
-* the `/manage_pages/get_pages` and `/manage_pages/get_page_info` commands now return `is_media_page` boolean, which is a simple shorthand for 'not a page of pages'
-* added the above to the Client API help
-* wrote unit tests covering the above
-* the client api version is now 66
-
-### boring cleanup
-
-* fixed up how some lists deliver their underlying data to various methods
-* `CallBlockingToQt` no longer spams encountered errors to the log--proper error handling should (and does now) occur elsewhere
-* the way the initial focus is set on system predicate flesh-out panels (when you double-click on like 'system:dimensions' and get a bunch of sub-panels) is more sane. should be, fairly reliably, on the first editable panel's ok button. I want it to be on an editable widget in the panel in future, I think, but I need to do some behind the scenes stuff to make this work in a nicer way
-* pulled some stuff out of `HydrusData`, mostly to `HydrusNumbers`, `HydrusLists`, and the new `HydrusProcess`, mostly for decoupling purposes
-* renamed some `ConvertXToY` stuff to just `XToY`

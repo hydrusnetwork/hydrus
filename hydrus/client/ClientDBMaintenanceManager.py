@@ -6,12 +6,15 @@ from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusThreading
 from hydrus.core import HydrusTime
 
+from hydrus.client import ClientDaemons
 from hydrus.client import ClientGlobals as CG
 from hydrus.client.interfaces import ClientControllerInterface
 
-class DatabaseMaintenanceManager( object ):
+class DatabaseMaintenanceManager( ClientDaemons.ManagerWithMainLoop ):
     
     def __init__( self, controller: ClientControllerInterface.ClientControllerInterface ):
+        
+        super().__init__()
         
         self._controller = controller
         
@@ -22,6 +25,7 @@ class DatabaseMaintenanceManager( object ):
         self._wake_event = threading.Event()
         self._shutdown = False
         self._is_working_hard = False
+        self._mainloop_is_finished = False
         
         self._controller.sub( self, 'Shutdown', 'shutdown' )
         self._controller.sub( self, 'Wake', 'checkbox_manager_inverted' )
@@ -117,7 +121,7 @@ class DatabaseMaintenanceManager( object ):
                 
                 check_shutdown()
                 
-                time.sleep( 1 )
+                self._wake_event.wait( 1 )
                 
             
             while True:
@@ -180,6 +184,10 @@ class DatabaseMaintenanceManager( object ):
             
             pass
             
+        finally:
+            
+            self._mainloop_is_finished = True
+            
         
     
     def FlipWorkingHard( self ):
@@ -192,6 +200,16 @@ class DatabaseMaintenanceManager( object ):
         self._controller.pub( 'notify_deferred_delete_database_maintenance_state_change' )
         
         self.Wake()
+        
+    
+    def GetName( self ) -> str:
+        
+        return 'db maintenance'
+        
+    
+    def IsShutdown( self ) -> bool:
+        
+        return self._mainloop_is_finished
         
     
     def IsWorkingHard( self ) -> bool:
@@ -210,7 +228,6 @@ class DatabaseMaintenanceManager( object ):
             
         
         self.Wake()
-        
         
     
     def Start( self ):

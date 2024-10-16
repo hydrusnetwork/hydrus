@@ -202,8 +202,23 @@ class ListBoxTagsMediaManagementPanel( ClientGUIListBoxes.ListBoxTagsMedia ):
             
         elif command == 'add_or_predicate':
             
+            if or_predicate is None:
+                
+                return
+                
+            
             p = ( or_predicate, )
             permit_remove = False
+            
+        elif command == 'replace_or_predicate':
+            
+            if or_predicate is None:
+                
+                return
+                
+            
+            CG.client_controller.pub( 'enter_predicates', self._page_key, predicates, permit_remove = True, permit_add = False )
+            CG.client_controller.pub( 'enter_predicates', self._page_key, ( or_predicate, ), permit_remove = False, permit_add = True )
             
         elif command == 'remove_predicates':
             

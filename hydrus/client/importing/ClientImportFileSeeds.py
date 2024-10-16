@@ -1779,6 +1779,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
                     
                     potentially_associable_urls.add( self.file_seed_data_for_comparison )
                     
+                    # TODO: Ok, if we get URL renaming, we'll want to say domain_manager.GetCanonicalDomain( self.file_seed_data ) or something here!
                     domain = ClientNetworkingFunctions.ConvertURLIntoDomain( self.file_seed_data )
                     
                     if self.source_time is None:
@@ -1796,8 +1797,8 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
                         
                         content_update = ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TIMESTAMP, HC.CONTENT_UPDATE_ADD, ( ( hash, ), timestamp_data ) )
                         
-                    
-                    content_update_package.AddContentUpdate( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, content_update )
+                        content_update_package.AddContentUpdate( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, content_update )
+                        
                     
                     if self._cloudflare_last_modified_time is not None and ClientTime.TimestampIsSensible( self._cloudflare_last_modified_time ):
                         

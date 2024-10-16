@@ -26,7 +26,7 @@ class ClientDBModule( HydrusDBModule.HydrusDBModule ):
         HydrusData.DebugPrint( 'The "{}" database module is missing the following indices:'.format( self.name ) )
         HydrusData.DebugPrint( '\n'.join( index_names ) )
         
-        message = 'Your "{}" database module was missing {} indices. More information has been written to the log. This may or may not be a big deal, and on its own it is completely recoverable. If you do not have further problems, hydev does not need to know about it. The indices will be regenerated once you proceed--it may take some time.'.format( self.name, len( index_names ) )
+        message = 'Your "{}" database module is missing {} indices. More information has been written to the log. This may or may not be a big deal, and on its own this error is completely recoverable. If you do not have further problems, hydev does not need to know about it. The indices will be regenerated once you proceed--it may take some time.'.format( self.name, len( index_names ) )
         
         CG.client_controller.BlockingSafeShowMessage( message )
         
@@ -40,7 +40,16 @@ class ClientDBModule( HydrusDBModule.HydrusDBModule ):
         HydrusData.DebugPrint( 'The "{}" database module is missing the following tables:'.format( self.name ) )
         HydrusData.DebugPrint( '\n'.join( table_names ) )
         
-        message = 'Your "{}" database module was missing {} tables. More information has been written to the log. This is a serious problem.'.format( self.name, len( table_names ) )
+        
+        if self.CAN_REPOPULATE_ALL_MISSING_DATA:
+            
+            message = f'Your "{self.name}" database module is missing {len(table_names)} tables. More information has been written to the log. This is indicative of a serious problem, but it appears--in this case--to be completely recoverable.'
+            
+        else:
+            
+            message = f'Your "{self.name}" database module is missing {len(table_names)} tables. More information has been written to the log. This is a serious problem.'
+            
+        
         message += '\n' * 2
         message += 'If this is happening on the first boot after an update, it is likely a fault in the update code. If you updated many versions in one go, kill the hydrus process now and update in a smaller version increment.'
         message += '\n' * 2
@@ -49,7 +58,7 @@ class ClientDBModule( HydrusDBModule.HydrusDBModule ):
         
         if self.CAN_REPOPULATE_ALL_MISSING_DATA:
             
-            recovery_info = 'This module stores copies of core data and believes it can recover everything that was lost by recomputing its cache. It may do that immediately after this dialog, or it may be delayed to a later stage of boot. Either way, the regeneration job may take some time. There may also still be miscounts or other missing/incorrect data when you boot. Please let Hydev know how you get on.'
+            recovery_info = 'The good news is that this module stores copies of core data and believes it can recover everything that was lost by recomputing its cache. It may do that immediately after this dialog, or this work may be delayed to a later stage of boot. Either way, the regeneration job may take some time. There may also still be miscounts or other missing/incorrect data when you boot. Please let Hydev know how you get on.'
             
         else:
             

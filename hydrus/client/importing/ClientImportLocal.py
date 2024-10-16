@@ -16,6 +16,7 @@ from hydrus.core import HydrusTime
 from hydrus.core.files import HydrusFileHandling
 
 from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientDaemons
 from hydrus.client import ClientFiles
 from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientPaths
@@ -1313,9 +1314,11 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
 
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_IMPORT_FOLDER ] = ImportFolder
 
-class ImportFoldersManager( object ):
+class ImportFoldersManager( ClientDaemons.ManagerWithMainLoop ):
     
     def __init__( self, controller: ClientControllerInterface.ClientControllerInterface ):
+        
+        super().__init__()
         
         self._controller = controller
         
@@ -1330,6 +1333,8 @@ class ImportFoldersManager( object ):
         
         self._wake_event = threading.Event()
         self._shutdown = threading.Event()
+        
+        self._mainloop_is_finished = False
         
         self._controller.sub( self, 'Shutdown', 'shutdown' )
         self._controller.sub( self, 'NotifyImportFoldersHaveChanged', 'notify_new_import_folders' )
@@ -1446,6 +1451,11 @@ class ImportFoldersManager( object ):
         return max( HydrusTime.TimeUntil( next_work_time ), 1 )
         
     
+    def GetName( self ) -> str:
+        
+        return 'import folders'
+        
+    
     def MainLoop( self ):
         
         def check_shutdown():
@@ -1464,7 +1474,7 @@ class ImportFoldersManager( object ):
                 
                 check_shutdown()
                 
-                time.sleep( 1 )
+                self._wake_event.wait( 1 )
                 
             
             while True:
@@ -1512,6 +1522,15 @@ class ImportFoldersManager( object ):
             
             pass
             
+        finally:
+            
+            self._mainloop_is_finished = True
+            
+        
+    
+    def IsShutdown( self ) -> bool:
+        
+        return self._mainloop_is_finished
         
     
     def NotifyImportFoldersHaveChanged( self ):

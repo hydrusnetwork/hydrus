@@ -15,6 +15,7 @@ from hydrus.core import HydrusText
 from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientDaemons
 from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientThreading
 from hydrus.client import ClientTime
@@ -1804,9 +1805,11 @@ class SubscriptionJob( object ):
         
     
 
-class SubscriptionsManager( object ):
+class SubscriptionsManager( ClientDaemons.ManagerWithMainLoop ):
     
     def __init__( self, controller, subscriptions: typing.List[ Subscription ] ):
+        
+        super().__init__()
         
         self._controller = controller
         
@@ -1975,7 +1978,7 @@ class SubscriptionsManager( object ):
             
         
     
-    def GetName( self ):
+    def GetName( self ) -> str:
         
         return 'subscriptions'
         
