@@ -315,27 +315,17 @@ def GenerateThumbnailNumPy( path, target_resolution, mime, duration, num_frames,
         
     elif mime == HC.ANIMATION_UGOIRA:
         
-        ( os_file_handle, temp_path ) = HydrusTemp.GetTempPath()
-        
         try:
             
             desired_thumb_frame_index = int( ( percentage_in / 100.0 ) * ( num_frames - 1 ) )
             
-            HydrusUgoiraHandling.ExtractFrame( path, desired_thumb_frame_index, temp_path )
-            
-            cover_mime = GetMime( temp_path )
-            
-            thumbnail_numpy = HydrusImageHandling.GenerateThumbnailNumPyFromStaticImagePath( temp_path, target_resolution, cover_mime )
+            thumbnail_numpy = HydrusUgoiraHandling.GenerateThumbnailNumPyFromUgoiraPath( path, target_resolution, desired_thumb_frame_index )
             
         except Exception as e:
             
             PrintMoreThumbErrorInfo( e, f'Problem generating thumbnail for "{path}".', extra_description = extra_description )
             
             thumbnail_numpy = GenerateDefaultThumbnail(mime, target_resolution)
-            
-        finally:
-            
-            HydrusTemp.CleanUpTempPath( os_file_handle, temp_path )
             
         
     else: # animations and video
@@ -594,6 +584,11 @@ def GetFileInfo( path, mime = None, ok_to_look_for_hydrus_updates = False ):
             ( width, height ) = HydrusPSDHandling.GetPSDResolutionFallback( path )
             
         
+    # must be before VIEWABLE_ANIMATIONS
+    elif mime == HC.ANIMATION_UGOIRA:
+        
+        ( ( width, height ), duration, num_frames ) = HydrusUgoiraHandling.GetUgoiraProperties( path )
+        
     elif mime in HC.VIDEO or mime in HC.HEIF_TYPE_SEQUENCES:
         
         ( ( width, height ), duration, num_frames, has_audio ) = HydrusVideoHandling.GetFFMPEGVideoProperties( path )
@@ -602,9 +597,6 @@ def GetFileInfo( path, mime = None, ok_to_look_for_hydrus_updates = False ):
         
         ( ( width, height ), duration, num_frames ) = HydrusAnimationHandling.GetAnimationProperties( path, mime )
         
-    elif mime == HC.ANIMATION_UGOIRA:
-        
-        ( ( width, height ), num_frames ) = HydrusUgoiraHandling.GetUgoiraProperties( path )
         
     elif mime in HC.IMAGES:
         
