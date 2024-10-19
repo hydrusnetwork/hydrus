@@ -16,6 +16,7 @@ def RawOpenPILImage( path: typing.Union[ str, typing.BinaryIO ], human_file_desc
         
     except Exception as e:
         
+        
         if human_file_description is not None:
             
             message = f'Could not load the image at "{human_file_description}"--it was likely malformed!'

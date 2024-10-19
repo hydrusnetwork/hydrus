@@ -22,6 +22,8 @@ from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientImageHandling
 from hydrus.client import ClientVideoHandling
 from hydrus.client.caches import ClientCachesBase
+from hydrus.client.media import ClientMedia
+from hydrus.client import ClientUgoiraHandling
 
 def FrameIndexOutOfRange( index, range_start, range_end ):
     
@@ -504,7 +506,7 @@ class ImageTile( ClientCachesBase.CacheableObject ):
     
 class RasterContainer( object ):
     
-    def __init__( self, media, target_resolution = None ):
+    def __init__( self, media: ClientMedia.MediaSingleton, target_resolution = None ):
         
         if target_resolution is None: target_resolution = media.GetResolution()
         
@@ -549,7 +551,7 @@ class RasterContainer( object ):
     
 class RasterContainerVideo( RasterContainer ):
     
-    def __init__( self, media, target_resolution = None, init_position = 0 ):
+    def __init__( self, media: ClientMedia.MediaSingleton, target_resolution = None, init_position = 0, frame_durations = None ):
         
         super().__init__( media, target_resolution )
         
@@ -579,6 +581,15 @@ class RasterContainerVideo( RasterContainer ):
         
         duration = self._media.GetDurationMS()
         num_frames_in_video = self._media.GetNumFrames()
+        
+        if frame_durations is not None:
+            
+            self._durations = frame_durations
+            
+            if duration is None:
+                
+                duration = sum( frame_durations )
+            
         
         if duration is None or duration == 0:
             
@@ -652,7 +663,7 @@ class RasterContainerVideo( RasterContainer ):
         
         with self._lock:
             
-            return self._media.GetMime() == HC.ANIMATION_GIF
+            return self._media.GetMime() == HC.ANIMATION_GIF or self._media.GetMime() == HC.ANIMATION_UGOIRA
             
         
     
@@ -670,7 +681,7 @@ class RasterContainerVideo( RasterContainer ):
     
     def GetDurationMS( self, index ):
         
-        if self._media.GetMime() == HC.ANIMATION_GIF:
+        if self._media.GetMime() == HC.ANIMATION_GIF or self._media.GetMime() == HC.ANIMATION_UGOIRA:
             
             if 0 <= index <= len( self._durations ) - 1:
                 
@@ -802,7 +813,7 @@ class RasterContainerVideo( RasterContainer ):
     
     def GetFrameIndex( self, timestamp_ms ):
         
-        if self._media.GetMime() == HC.ANIMATION_GIF:
+        if self._media.GetMime() == HC.ANIMATION_GIF or self._media.GetMime() == HC.ANIMATION_UGOIRA:
             
             so_far = 0
             
@@ -835,7 +846,7 @@ class RasterContainerVideo( RasterContainer ):
     
     def GetTimestampMS( self, frame_index ):
         
-        if self._media.GetMime() == HC.ANIMATION_GIF:
+        if self._media.GetMime() == HC.ANIMATION_GIF or self._media.GetMime() == HC.ANIMATION_UGOIRA:
             
             return sum( self._durations[ : frame_index ] )
             
@@ -847,7 +858,7 @@ class RasterContainerVideo( RasterContainer ):
     
     def GetTotalDuration( self ):
         
-        if self._media.GetMime() == HC.ANIMATION_GIF:
+        if self._media.GetMime() == HC.ANIMATION_GIF or self._media.GetMime() == HC.ANIMATION_UGOIRA:
             
             return sum( self._durations )
             
@@ -896,6 +907,10 @@ class RasterContainerVideo( RasterContainer ):
             self._durations = [] # we only support constant framerate for apng, I think the spec support variable though if PIL ever supports that
             self._times_to_play_animation = HydrusAnimationHandling.GetTimesToPlayAPNG( self._path )
             
+        elif self._media.GetMime() == HC.ANIMATION_UGOIRA:
+                        
+            self._times_to_play_animation = 1
+            
         else:
             
             try:
@@ -913,6 +928,10 @@ class RasterContainerVideo( RasterContainer ):
         if self._media.GetMime() in ( HC.ANIMATION_GIF, HC.ANIMATION_WEBP ):
             
             self._renderer = ClientVideoHandling.AnimationRendererPIL( self._path, num_frames_in_video, self._target_resolution )
+            
+        elif self._media.GetMime() == HC.ANIMATION_UGOIRA:
+            
+            self._renderer = ClientUgoiraHandling.UgoiraRenderer( self._path, num_frames_in_video, self._target_resolution )
             
         else:
             

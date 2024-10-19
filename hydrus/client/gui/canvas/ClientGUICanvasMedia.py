@@ -30,6 +30,7 @@ from hydrus.client import ClientApplicationCommand as CAC
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientRendering
+from hydrus.client import ClientUgoiraHandling
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIShortcuts
 from hydrus.client.gui import QtInit
@@ -274,7 +275,7 @@ def ShouldHaveAnimationBar( media, show_action ):
         return False
         
     
-    if not media.HasDuration():
+    if not media.HasDuration() and media.GetMime() is not HC.ANIMATION_UGOIRA:
         
         return False
         
@@ -335,6 +336,8 @@ class Animation( QW.QWidget ):
         self._playthrough_count = 0
         
         self._num_frames = 1
+        
+        self._frame_durations = None
         
         self._stop_for_slideshow = False
         
@@ -411,7 +414,7 @@ class Animation( QW.QWidget ):
                         
                         self._video_container.Stop()
                         
-                        self._video_container = ClientRendering.RasterContainerVideo( self._media, ( target_width, target_height ), init_position = self._current_frame_index )
+                        self._video_container = ClientRendering.RasterContainerVideo( self._media, ( target_width, target_height ), init_position = self._current_frame_index, frame_durations = self._frame_durations )
                         
                     
                 elif we_just_zoomed_out:
@@ -420,7 +423,7 @@ class Animation( QW.QWidget ):
                         
                         self._video_container.Stop()
                         
-                        self._video_container = ClientRendering.RasterContainerVideo( self._media, ( my_raw_width, my_raw_height ), init_position = self._current_frame_index )
+                        self._video_container = ClientRendering.RasterContainerVideo( self._media, ( my_raw_width, my_raw_height ), init_position = self._current_frame_index, frame_durations = self._frame_durations )
                         
                     
                 
@@ -436,7 +439,7 @@ class Animation( QW.QWidget ):
         
         if self._video_container is None:
             
-            self._video_container = ClientRendering.RasterContainerVideo( self._media, ( my_raw_width, my_raw_height ), init_position = self._current_frame_index )
+            self._video_container = ClientRendering.RasterContainerVideo( self._media, ( my_raw_width, my_raw_height ), init_position = self._current_frame_index, frame_durations = self._frame_durations )
             
         
         if not self._video_container.HasFrame( self._current_frame_index ):
@@ -460,6 +463,8 @@ class Animation( QW.QWidget ):
         
         current_frame_image = current_frame.GetQtImage()
         
+        painter.setRenderHint( QG.QPainter.SmoothPixmapTransform, True )
+
         # note we draw to self.rect(), which is in DPR coordinates. the pixmap needs to be DPR'd by here mate, this caught us up before
         painter.drawImage( self.rect(), current_frame_image )
         
@@ -776,6 +781,8 @@ class Animation( QW.QWidget ):
         
         self._video_container = None
         
+        self._frame_durations = None
+        
         if self._media is None:
             
             self._num_frames = 1
@@ -786,11 +793,29 @@ class Animation( QW.QWidget ):
             
             self._num_frames = self._media.GetNumFrames()
             
+            self._duration = self._media.GetDurationMS()
+            
+            if self._media.GetMime() == HC.ANIMATION_UGOIRA:
+            
+                self._frame_durations = ClientUgoiraHandling.GetFrameDurationsUgoira( media )
+            
+            if self._duration is None and self._frame_durations is not None:
+            
+                self._duration = sum( self._frame_durations )
+            
             CG.client_controller.gui.RegisterAnimationUpdateWindow( self )
             
             self.update()
             
         
+        
+    def GetDuration( self ):
+        
+        return self._duration
+    
+    def GetNumFrames( self ):
+        
+        return self._num_frames
     
     def TIMERAnimationUpdate( self ):
         
@@ -1237,10 +1262,9 @@ class AnimationBar( QW.QWidget ):
         self.update()
         
     
-    def SetMediaAndWindow( self, media, media_window ):
+    def SetMediaAndWindow( self, media, media_window, ):
         
         self._media_window = media_window
-        self._duration_ms = max( media.GetDurationMS(), 1 )
         
         num_frames = media.GetNumFrames()
         
@@ -1251,6 +1275,14 @@ class AnimationBar( QW.QWidget ):
         else:
             
             self._num_frames = max( num_frames, 1 )
+        
+        duration = media.GetDurationMS()
+        
+        if duration is None and isinstance(media_window, Animation):
+            
+             duration = media_window.GetDuration()
+        
+        self._duration_ms = max( duration, 1 )
             
         
         self._currently_in_a_drag = False

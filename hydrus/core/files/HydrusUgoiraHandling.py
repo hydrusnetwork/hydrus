@@ -1,88 +1,83 @@
 import zipfile
+import json
+import typing
+import functools
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusExceptions
-from hydrus.core import HydrusTemp
 from hydrus.core.files import HydrusArchiveHandling
 from hydrus.core.files.images import HydrusImageHandling
 
-def ExtractFrame( path_to_zip, frame_index, extract_path ):
+from PIL import Image as PILImage
+
+
+# handle getting a list of frame paths from a ugoira without json metadata:
+def GetFramePathsFromUgoiraZip( path ):
     
-    # this is too ugly to use for an animation thing, but it'll work for fetching a thumb fine
-    
-    with zipfile.ZipFile( path_to_zip ) as zip_handle:
+    with zipfile.ZipFile( path ) as zip_handle:
         
-        all_file_paths = [ zip_info.filename for zip_info in zip_handle.infolist() if not zip_info.is_dir() ]
+        paths = [ zip_info.filename for zip_info in zip_handle.infolist() if (not zip_info.is_dir()) and HydrusArchiveHandling.filename_has_image_ext(zip_info.filename) ]
         
-        if len( all_file_paths ) == 0:
+        if len( paths ) == 0:
             
             raise HydrusExceptions.DamagedOrUnusualFileException( 'This Ugoira seems to be empty! It has probably been corrupted!' )
             
         
-        all_file_paths.sort()
+        paths.sort()
         
-        frame_index = min( frame_index, len( all_file_paths ) - 1 )
-        
-        frame_path = all_file_paths[ frame_index ]
-        
-        with zip_handle.open( frame_path ) as reader:
-            
-            with open( extract_path, 'wb' ) as writer:
-                
-                writer.write( reader.read() )
-                
-            
+        return paths
         
     
 
 def GetUgoiraProperties( path_to_zip ):
     
-    ( os_file_handle, temp_path ) = HydrusTemp.GetTempPath()
+    # try to get properties from json file first:
+    try:
+        
+        return GetUgoiraPropertiesFromJSON( path_to_zip )
+            
+    except:
+        
+        pass
     
     try:
         
-        try:
-            
-            HydrusArchiveHandling.ExtractCoverPage( path_to_zip, temp_path )
-            
-            pil_image = HydrusImageHandling.GeneratePILImage( temp_path, dequantize = False )
-            
-            ( width, height ) = pil_image.size
-            
-        except:
-            
-            ( width, height ) = ( 100, 100 )
-            
+        pil_image = GetUgoiraFramePIL( path_to_zip, 0 )
         
-        try:
-            
-            with zipfile.ZipFile( path_to_zip ) as zip_handle:
-                
-                # let's discount the .js or .json
-                
-                def is_js_stuff( s ):
-                    
-                    return s.endswith( '.js' ) or s.endswith( '.json' )
-                    
-                
-                num_frames = len( [ 1 for zip_info in zip_handle.infolist() if not is_js_stuff( zip_info.filename ) ] )
-                
-            
-        except:
-            
-            num_frames = None
-            
+        ( width, height ) = pil_image.size
         
-    finally:
+    except:
         
-        HydrusTemp.CleanUpTempPath( os_file_handle, temp_path )
+        ( width, height ) = ( 100, 100 )
         
     
-    return ( ( width, height ), num_frames )
+    try:
+        
+        num_frames = len(GetFramePathsFromUgoiraZip( path_to_zip ))
+        
+    except:
+        
+        num_frames = None
+    
+    return ( ( width, height ), None, num_frames )
     
 
 def ZipLooksLikeUgoira( path_to_zip ):
     
+    # Check zip for valid ugoira json first:
+    try:
+        
+        frames = GetUgoiraFrameDataJSON( path_to_zip )
+                
+        if frames is not None and len( frames ) > 0 and all(('delay' in frame and 'file' in frame) for frame in frames):
+            
+            return True
+            
+        
+    except:
+        
+        pass
+
     # what does an Ugoira look like? it has a standard, but this is not always followed, so be somewhat forgiving
     # it is a list of images named in the format 000123.jpg. this is 6-figure, starting at 000000
     # I have seen 'Ugoiras' that are zero-padded with 4 digits and/or 1-indexed instead of 0-indexed, but this is so atypical we are assuming these are ancient handmade artifacts and actually incorrect
@@ -171,3 +166,115 @@ def ZipLooksLikeUgoira( path_to_zip ):
     
     return True
     
+
+
+
+
+### Handling ugoira files with frame data json:
+
+def GetUgoiraJSON( path: str ):
+
+    jsonFile = HydrusArchiveHandling.GetZipAsPath( path, 'animation.json' )
+
+    if not jsonFile.exists():
+
+        raise HydrusExceptions.LimitedSupportFileException( 'Zip file has no animation.json!' )
+
+    with jsonFile.open('rb') as jsonData:
+
+        return json.load( jsonData )
+    
+
+
+# {file: "000000.jpg", "delay": 100} where delay is in ms
+UgoiraFrame = typing.TypedDict('UgoiraFrame', {'file': str, 'delay': int})
+
+# this function is called multiple times for a single ugoira file 
+# and involves opening and parsing JSON so let's cache it
+@functools.lru_cache( maxsize = 8 )
+def GetUgoiraFrameDataJSON( path: str ) -> typing.Optional[typing.List[UgoiraFrame]]:
+    
+    try:
+        
+        ugoiraJson = GetUgoiraJSON( path )
+        
+        # JSON from gallery-dl is just the array
+        if isinstance(ugoiraJson, list):
+            
+            return ugoiraJson
+        
+        else:
+            
+            return ugoiraJson['frames']
+        
+    except:
+        
+        return None
+    
+
+
+
+def GetUgoiraPropertiesFromJSON( path ):
+
+    frameData = GetUgoiraFrameDataJSON( path )
+    
+    if frameData is None:
+        
+        raise HydrusExceptions.LimitedSupportFileException( 'Zip file has no animation.json or it cannot be parsed' )
+        
+    
+    durations = [data['delay'] for data in frameData]
+
+    duration = sum( durations )
+    num_frames = len( durations )
+
+    firstFrame = GetUgoiraFramePIL( path, 0 )
+
+    return ( firstFrame.size, duration, num_frames )
+
+
+
+# Combined Ugoira functions:
+
+def GetFramePathsUgoira( path ): 
+
+    try:
+        
+        frameData = GetUgoiraFrameDataJSON( path )
+        
+        if frameData is not None:
+            
+            return [data['file'] for data in frameData]
+    
+    except:
+        
+        pass
+        
+    return GetFramePathsFromUgoiraZip( path )
+    
+
+
+def GetUgoiraFramePIL( path: str, frameIndex: int ) -> PILImage.Image:
+    
+    framePaths = GetFramePathsUgoira( path )
+
+    frameName = framePaths[frameIndex]
+        
+    frameFromZip = HydrusArchiveHandling.GetZipAsPath( path, frameName ).open( 'rb' )
+    
+    return HydrusImageHandling.GeneratePILImage( frameFromZip )
+    
+
+
+def GenerateThumbnailNumPyFromUgoiraPath( path: str, target_resolution: typing.Tuple[int, int], frame_index: int ):
+
+    pil_image = GetUgoiraFramePIL( path, frame_index )
+
+    thumbnail_pil_image = pil_image.resize( target_resolution, PILImage.LANCZOS )
+
+    numpy_image = HydrusImageHandling.GenerateNumPyImageFromPILImage( thumbnail_pil_image )
+
+    return numpy_image
+
+
+
