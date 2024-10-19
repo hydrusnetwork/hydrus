@@ -26,7 +26,7 @@ A particular repository may have a preferred standard, but it is not easy to gua
 
 After some time, you get this:
 
-![](images/tag_siblings_venn_1.png)
+![](images/tag_siblings_venn_1.png){: .light-image }
 
 Without continual intervention by janitors or other experienced users to make sure y⊇x (i.e. making the yellow circle entirely overlap the blue by manually giving y to everything with x), searches can only return x (blue circle) or y (yellow circle) or x∩y (the lens-shaped overlap). What we really want is x∪y (both circles).
 
@@ -36,7 +36,7 @@ So, how do we fix this problem?
 
 Let's define a relationship, **A->B**, that means that any time we would normally see or use tag A or tag B, we will instead only get tag B:
 
-![](images/tag_siblings_venn_2.png)
+![](images/tag_siblings_venn_2.png){: .light-image }
 
 Note that this relationship implies that B is in some way 'better' than A.
 

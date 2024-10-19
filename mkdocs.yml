@@ -72,20 +72,27 @@ nav:
 theme:
   name: material
   palette:
+    # Palette toggle for automatic mode
+    - media: "(prefers-color-scheme)"
+      toggle:
+        icon: material/brightness-auto
+        name: Switch to light mode
+    # Palette toggle for light mode
     - media: "(prefers-color-scheme: light)" 
       scheme: default
       primary: blue grey
       accent: blue
       toggle:
-        icon: material/toggle-switch-off-outline
+        icon: material/brightness-7
         name: Switch to dark mode
+    # Palette toggle for dark mode
     - media: "(prefers-color-scheme: dark)" 
       scheme: slate
       primary: black
       accent: blue
       toggle:
-        icon: material/toggle-switch
-        name: Switch to light mode
+        icon: material/brightness-4
+        name: Switch to system preference
   logo: assets/hydrus-white.svg
   favicon: assets/favicon.svg
   font: false
@@ -106,8 +113,8 @@ extra:
   social:
     - icon: fontawesome/brands/github
       link: https://github.com/hydrusnetwork/hydrus
-    - icon: fontawesome/brands/twitter
-      link: https://twitter.com/hydrusnetwork
+    - icon: fontawesome/brands/x-twitter
+      link: https://x.com/hydrusnetwork
     - icon: fontawesome/brands/tumblr
       link: https://hydrus.tumblr.com/
     - icon: fontawesome/solid/envelope
