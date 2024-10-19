@@ -62,24 +62,35 @@ def GetFrameTimesFromNote(media: ClientMedia.MediaSingleton):
         try:
             
             ugoiraJson = json.loads(notes['ugoira json'])
-        
-            frameData: typing.List[HydrusUgoiraHandling.UgoiraFrame] = ugoiraJson['frames']
             
-            return [data['delay'] for data in frameData]
+            if isinstance(ugoiraJson, list):
+                
+                frameData: typing.List[HydrusUgoiraHandling.UgoiraFrame] = ugoiraJson
+                
+            else:
+                
+                frameData: typing.List[HydrusUgoiraHandling.UgoiraFrame] = ugoiraJson['frames']
+            
+            
+            frames = [data['delay'] for data in frameData]
+            
+            if len(frames) > 0 and isinstance(frames[0], int):
+            
+                return frames 
         
         except:
             
             pass
         
-    if 'ugoira frame delays json' in notes:
+    if 'ugoira frame delay array' in notes:
         
         try:
             
-            ugoiraJson = json.loads(notes['ugoira frame delays json'])
+            ugoiraJsonArray: typing.List[int] = json.loads(notes['ugoira frame delay array'])
         
-            frameData: typing.List[int] = ugoiraJson
+            if len(ugoiraJsonArray) > 0 and isinstance(ugoiraJsonArray[0], int):
             
-            return frameData
+                return ugoiraJsonArray
         
         except:
             
