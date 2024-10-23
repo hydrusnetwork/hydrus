@@ -1,7 +1,11 @@
+import io
+
+from hydrus.core import HydrusConstants as HC
 from hydrus.core.files import HydrusUgoiraHandling
 from hydrus.core.files.images import HydrusImageHandling
 from hydrus.core.files import HydrusArchiveHandling
 from hydrus.client.media import ClientMedia
+from hydrus.client.media import ClientMediaResult
 from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientFiles
 
@@ -10,7 +14,7 @@ import typing
 
 UGOIRA_DEFAULT_FRAME_DURATION_MS = 125
 
-def GetFrameDurationsUgoira( media: ClientMedia.MediaSingleton ): 
+def GetFrameDurationsUgoira( media: ClientMedia.MediaSingleton | ClientMediaResult.MediaResult ): 
     
     client_files_manager: ClientFiles.ClientFilesManager = CG.client_controller.client_files_manager
         
@@ -47,7 +51,7 @@ def GetFrameDurationsUgoira( media: ClientMedia.MediaSingleton ):
     return [UGOIRA_DEFAULT_FRAME_DURATION_MS] * num_frames
         
     
-def GetFrameTimesFromNote(media: ClientMedia.MediaSingleton):
+def GetFrameTimesFromNote(media: ClientMedia.MediaSingleton | ClientMediaResult.MediaResult):
     
     if not media.HasNotes():
         
@@ -137,3 +141,49 @@ class UgoiraRenderer(object):
 
         return numpy_image
 
+def ConvertUgoiraToBytesForAPI( media: ClientMediaResult.MediaResult, format: int, quality: int ):
+    
+    client_files_manager: ClientFiles.ClientFilesManager = CG.client_controller.client_files_manager
+        
+    path = client_files_manager.GetFilePath( media.GetHash(), media.GetMime() )
+    
+    frame_paths = HydrusUgoiraHandling.GetFramePathsUgoira( path )
+
+    zip = HydrusArchiveHandling.GetZipAsPath( path )
+    
+    frames = [HydrusImageHandling.GeneratePILImage( zip.joinpath(frame_path_from_zip).open('rb') ) for frame_path_from_zip in frame_paths]
+    
+    frame_durations = GetFrameDurationsUgoira( media )
+    
+    file = io.BytesIO()
+    
+    if format == HC.ANIMATION_APNG:
+
+        frames[0].save(
+            file,
+            'PNG',
+            save_all=True,
+            append_images=frames[1:],
+            duration=frame_durations,  # duration of each frame in milliseconds
+            loop=0,  # loop forever
+            #compress_level = quality # seems to have no effect for APNG
+        )
+        
+    elif format == HC.ANIMATION_WEBP:
+
+        frames[0].save(
+            file,
+            'WEBP',
+            save_all=True,
+            append_images=frames[1:],
+            duration=frame_durations,  # duration of each frame in milliseconds
+            loop=0,  # loop forever
+            quality = quality - 100 if quality > 100 else quality,
+            lossless = quality > 100
+        )
+    
+    file_bytes = file.getvalue()
+    
+    file.close()
+    
+    return file_bytes
