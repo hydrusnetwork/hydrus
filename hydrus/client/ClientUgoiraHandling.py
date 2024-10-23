@@ -5,6 +5,7 @@ from hydrus.core.files import HydrusUgoiraHandling
 from hydrus.core.files.images import HydrusImageHandling
 from hydrus.core.files import HydrusArchiveHandling
 from hydrus.client.media import ClientMedia
+from hydrus.client.media import ClientMediaResult
 from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientFiles
 
@@ -13,7 +14,7 @@ import typing
 
 UGOIRA_DEFAULT_FRAME_DURATION_MS = 125
 
-def GetFrameDurationsUgoira( media: ClientMedia.MediaSingleton ): 
+def GetFrameDurationsUgoira( media: ClientMedia.MediaSingleton | ClientMediaResult.MediaResult ): 
     
     client_files_manager: ClientFiles.ClientFilesManager = CG.client_controller.client_files_manager
         
@@ -50,7 +51,7 @@ def GetFrameDurationsUgoira( media: ClientMedia.MediaSingleton ):
     return [UGOIRA_DEFAULT_FRAME_DURATION_MS] * num_frames
         
     
-def GetFrameTimesFromNote(media: ClientMedia.MediaSingleton):
+def GetFrameTimesFromNote(media: ClientMedia.MediaSingleton | ClientMediaResult.MediaResult):
     
     if not media.HasNotes():
         
@@ -140,7 +141,7 @@ class UgoiraRenderer(object):
 
         return numpy_image
 
-def ConvertUgoiraToBytesForAPI( media: ClientMedia.MediaSingleton, format: int, quality: int ):
+def ConvertUgoiraToBytesForAPI( media: ClientMediaResult.MediaResult, format: int, quality: int ):
     
     client_files_manager: ClientFiles.ClientFilesManager = CG.client_controller.client_files_manager
         

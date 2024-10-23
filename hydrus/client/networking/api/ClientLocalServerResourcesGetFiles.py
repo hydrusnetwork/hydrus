@@ -208,7 +208,7 @@ class HydrusResourceClientAPIRestrictedGetFilesGetRenderedFile( HydrusResourceCl
         
         try:
             
-            media_result: ClientMedia.MediaSingleton
+            media_result: ClientMediaResult.MediaResult
             
             if 'file_id' in request.parsed_request_args:
                 
@@ -326,7 +326,7 @@ class HydrusResourceClientAPIRestrictedGetFilesGetRenderedFile( HydrusResourceCl
             
             body = ClientUgoiraHandling.ConvertUgoiraToBytesForAPI( media_result, format, quality )
             
-            if media_result.HasDuration():
+            if media_result.GetDurationMS() is not None:
                 
                 # if a ugoira has a duration, it has valid animation.json
                 # thus frame timings and the resulting render are immutable
