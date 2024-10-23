@@ -11,7 +11,7 @@ So, you have some files imported. Let's give them some tags so we can find them 
 
 [FAQ: what is a tag?](faq.md#tags)
 
-Your client starts with two [local tags services](getting_started_tags.md#tag_services), called 'my tags' and 'downloader tags' which keep all of their file->tag mappings in your client's database where only you can see them. 'my tags' is a good place to practise.
+Your client starts with two [local tags services](getting_started_more_tags.md#tag_services), called 'my tags' and 'downloader tags' which keep all of their file->tag mappings in your client's database where only you can see them. 'my tags' is a good place to practise.
 
 Select a file and press F3 to open the _manage tags dialog_:
 

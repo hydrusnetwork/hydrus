@@ -8078,6 +8078,32 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         self._controller.CallToThread( self._controller.SaveGUISession, session )
         
     
+    def RedownloadURLsForceFetch( self, urls ):
+        
+        if len( urls ) == 0:
+            
+            return
+            
+        
+        urls = sorted( urls )
+        
+        tag_import_options = CG.client_controller.network_engine.domain_manager.GetDefaultTagImportOptionsForURL( urls[0] )
+        
+        tag_import_options = tag_import_options.Duplicate()
+        
+        tag_import_options.SetShouldFetchTagsEvenIfHashKnownAndFileAlreadyInDB( True )
+        tag_import_options.SetShouldFetchTagsEvenIfURLKnownAndFileAlreadyInDB( True )
+        
+        page = self._notebook.GetOrMakeURLImportPage( desired_page_name = 'forced urls downloader', destination_tag_import_options = tag_import_options )
+        
+        management_panel = page.GetManagementPanel()
+        
+        for url in urls:
+            
+            management_panel.PendURL( url )
+            
+        
+    
     def RefreshPage( self, page_key: bytes ):
         
         page = self._notebook.GetPageFromPageKey( page_key )

@@ -14,6 +14,7 @@ from hydrus.core.files.images import HydrusImageMetadata
 from hydrus.core.files.images import HydrusImageOpening
 
 from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientData
 from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientThreading
 from hydrus.client import ClientTime
@@ -247,7 +248,7 @@ def GetDuplicateComparisonStatements( shown_media, comparison_media ):
                 
             else:
                 
-                s_string = HydrusNumbers.ResolutionToPrettyString( s_resolution )
+                s_string = ClientData.ResolutionToPrettyString( s_resolution )
                 
                 if s_w % 2 == 1 or s_h % 2 == 1:
                     
@@ -261,7 +262,7 @@ def GetDuplicateComparisonStatements( shown_media, comparison_media ):
                 
             else:
                 
-                c_string = HydrusNumbers.ResolutionToPrettyString( c_resolution )
+                c_string = ClientData.ResolutionToPrettyString( c_resolution )
                 
                 if c_w % 2 == 1 or c_h % 2 == 1:
                     
@@ -851,13 +852,16 @@ class DuplicateContentMergeOptions( HydrusSerialisable.SerialisableBase ):
         
         super().__init__()
         
+        # it is important that the default init of this guy syncs absolutely nothing!
+        # we use empty dupe merge option guys to do some other processing, so empty must mean empty
+        
         self._tag_service_actions = []
         self._rating_service_actions = []
         self._sync_notes_action = HC.CONTENT_MERGE_ACTION_NONE
         self._sync_note_import_options = NoteImportOptions.NoteImportOptions()
         self._sync_archive_action = SYNC_ARCHIVE_NONE
         self._sync_urls_action = HC.CONTENT_MERGE_ACTION_NONE
-        self._sync_file_modified_date_action = HC.CONTENT_MERGE_ACTION_COPY
+        self._sync_file_modified_date_action = HC.CONTENT_MERGE_ACTION_NONE
         
     
     def _GetSerialisableInfo( self ):

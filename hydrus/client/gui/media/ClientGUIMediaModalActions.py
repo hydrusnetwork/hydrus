@@ -941,6 +941,43 @@ def OpenMediaURLClassURLs( win: QW.QWidget, medias, url_class ):
     OpenURLs( win, urls )
     
 
+def RedownloadURLClassURLsForceRefetch( win: QW.QWidget, medias, url_class ):
+    
+    urls = set()
+    
+    for media in medias:
+        
+        media_urls = media.GetLocationsManager().GetURLs()
+        
+        for url in media_urls:
+            
+            # can't do 'url_class.matches', as it will match too many
+            if CG.client_controller.network_engine.domain_manager.GetURLClass( url ) == url_class:
+                
+                urls.add( url )
+                
+            
+        
+    
+    if len( urls ) == 0:
+        
+        return
+        
+    
+    message = f'Open a new search page and force metadata redownload for {len( urls )} "{url_class.GetName()}" URLs? This is inefficient and should only be done to fill in known gaps in one-time jobs.'
+    message += '\n' * 2
+    message += 'DO NOT USE THIS TO RECHECK TEN THOUSAND URLS EVERY MONTH JUST FOR MAYBE A FEW NEW TAGS.'
+    
+    result = ClientGUIDialogsQuick.GetYesNo( win, message )
+    
+    if result != QW.QDialog.Accepted:
+        
+        return
+        
+    
+    CG.client_controller.gui.RedownloadURLsForceFetch( urls )
+    
+
 def SetFilesForcedFiletypes( win: QW.QWidget, medias: typing.Collection[ ClientMedia.Media ] ):
     
     # boot a panel, it shows the user what current mimes are, what forced mimes are, and they have the choice to set all to x

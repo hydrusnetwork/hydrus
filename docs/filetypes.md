@@ -43,7 +43,7 @@ The filetype for a file can be overridden with `manage -> force filetype` in the
 
 If there are no frame durations provided hydrus will assume each frame should last 125ms. Hydrus will look inside the zip for a file called `animation.json` and try to parse it as the 2 most common metadata formats that PixivUtil and gallery-dl generate. The Ugoira file will only have a duration in the database if it contains a valid `animation.json`. 
 
-When played hydrus will first attempt to use the `animation.json` file but if it can't it will look for notes containing frame delays. First it looks for a note named `ugoira json` and attempts to read it like the `animation.json`, it then looks for a note called `ugoira frame delay array` which should be a note containing a simple JSON array, for example: `#!json [90, 90, 40, 90]`.
+When played hydrus will first attempt to use the `animation.json` file, but if that does not exist, it will look for notes containing frame delays. First it looks for a note named `ugoira json` and attempts to read it like the `animation.json`, it then looks for a note called `ugoira frame delay array` which should be a note containing a simple JSON array, for example: `#!json [90, 90, 40, 90]`.
 
 
 ## Video

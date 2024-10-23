@@ -131,7 +131,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_FILE_SEED
     SERIALISABLE_NAME = 'File Import'
-    SERIALISABLE_VERSION = 7
+    SERIALISABLE_VERSION = 8
     
     def __init__( self, file_seed_type: int = None, file_seed_data: str = None ):
         
@@ -140,9 +140,11 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
             file_seed_type = FILE_SEED_TYPE_URL
             
         
+        top_wew_default = 'https://big-guys.4u/monica_lewinsky_hott.tiff.exe.vbs'
+        
         if file_seed_data is None:
             
-            file_seed_data = 'https://big-guys.4u/monica_lewinsky_hott.tiff.exe.vbs'
+            file_seed_data = top_wew_default
             
         
         super().__init__()
@@ -151,7 +153,10 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
         self.file_seed_data = file_seed_data
         self.file_seed_data_for_comparison = file_seed_data
         
-        self.Normalise() # this fixes the comparison file seed data and fails safely
+        if self.file_seed_data != top_wew_default:
+            
+            self.Normalise() # this fixes the comparison file seed data and fails safely
+            
         
         self.created = HydrusTime.GetNow()
         self.modified = self.created
@@ -280,6 +285,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
         return (
             self.file_seed_type,
             self.file_seed_data,
+            self.file_seed_data_for_comparison,
             self.created,
             self.modified,
             self.source_time,
@@ -302,6 +308,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
         (
             self.file_seed_type,
             self.file_seed_data,
+            self.file_seed_data_for_comparison,
             self.created,
             self.modified,
             self.source_time,
@@ -317,20 +324,6 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
             serialisable_names_and_notes_dict,
             serialisable_hashes
         ) = serialisable_info
-        
-        self.file_seed_data_for_comparison = self.file_seed_data
-        
-        if self.file_seed_type == FILE_SEED_TYPE_URL:
-            
-            try:
-                
-                self.file_seed_data_for_comparison = CG.client_controller.network_engine.domain_manager.NormaliseURL( self.file_seed_data )
-                
-            except:
-                
-                pass
-                
-            
         
         self._external_filterable_tags = set( serialisable_external_filterable_tags )
         self._external_additional_service_keys_to_tags = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_external_additional_service_keys_to_tags )
@@ -564,6 +557,64 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
             )
             
             return ( 7, new_serialisable_info )
+            
+        
+        if version == 7:
+            
+            (
+                file_seed_type,
+                file_seed_data,
+                created,
+                modified,
+                source_time,
+                status,
+                note,
+                referral_url,
+                request_headers,
+                serialisable_external_filterable_tags,
+                serialisable_external_additional_service_keys_to_tags,
+                serialisable_primary_urls,
+                serialisable_source_urls,
+                serialisable_tags,
+                names_and_notes,
+                serialisable_hashes
+            ) = old_serialisable_info
+            
+            file_seed_data_for_comparison = None
+            
+            if file_seed_type == FILE_SEED_TYPE_URL:
+                
+                try:
+                    
+                    file_seed_data_for_comparison = CG.client_controller.network_engine.domain_manager.NormaliseURL( file_seed_data )
+                    
+                except:
+                    
+                    pass
+                    
+                
+            
+            new_serialisable_info = (
+                file_seed_type,
+                file_seed_data,
+                file_seed_data_for_comparison,
+                created,
+                modified,
+                source_time,
+                status,
+                note,
+                referral_url,
+                request_headers,
+                serialisable_external_filterable_tags,
+                serialisable_external_additional_service_keys_to_tags,
+                serialisable_primary_urls,
+                serialisable_source_urls,
+                serialisable_tags,
+                names_and_notes,
+                serialisable_hashes
+            )
+            
+            return ( 8, new_serialisable_info )
             
         
     

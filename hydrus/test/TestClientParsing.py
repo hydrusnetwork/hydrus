@@ -263,13 +263,25 @@ class TestStringConverter( unittest.TestCase ):
         
         string_converter = ClientStrings.StringConverter( conversions = [ ( ClientStrings.STRING_CONVERSION_ENCODE, 'hex' ) ] )
         
-        self.assertEqual( string_converter.Convert( b'\xe5\xafW\xa6\x87\xf0\x89\x89O^\xce\xdeP\x04\x94X' ), 'e5af57a687f089894f5ecede50049458' )
+        self.assertEqual( string_converter.Convert( 'hello world' ), '68656c6c6f20776f726c64' )
         
         #
         
         string_converter = ClientStrings.StringConverter( conversions = [ ( ClientStrings.STRING_CONVERSION_ENCODE, 'base64' ) ] )
         
-        self.assertEqual( string_converter.Convert( b'\xe5\xafW\xa6\x87\xf0\x89\x89O^\xce\xdeP\x04\x94X' ), '5a9XpofwiYlPXs7eUASUWA==' )
+        self.assertEqual( string_converter.Convert( 'hello world' ), 'aGVsbG8gd29ybGQ=' )
+        
+        #
+        
+        string_converter = ClientStrings.StringConverter( conversions = [ ( ClientStrings.STRING_CONVERSION_DECODE, 'hex' ) ] )
+        
+        self.assertEqual( string_converter.Convert( '68656c6c6f20776f726c64' ), 'hello world' )
+        
+        #
+        
+        string_converter = ClientStrings.StringConverter( conversions = [ ( ClientStrings.STRING_CONVERSION_DECODE, 'base64' ) ] )
+        
+        self.assertEqual( string_converter.Convert( 'aGVsbG8gd29ybGQ=' ), 'hello world' )
         
         #
         

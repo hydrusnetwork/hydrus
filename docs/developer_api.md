@@ -2193,11 +2193,13 @@ Only use one. As with metadata fetching, you may only use the hash argument if y
 ```
 
 Response:
-:   The actual path to the file on the host system.
+:   The actual path to the file on the host system. Filetype and size are included for convenience.
 
 ``` json title="Example response"
 {
-	"path" : "D:\hydrus_files\f7f\7f30c113810985b69014957c93bc25e8eb4cf3355dae36d8b9d011d8b0cf623a.jpg"
+	"path" : "D:\hydrus_files\f7f\7f30c113810985b69014957c93bc25e8eb4cf3355dae36d8b9d011d8b0cf623a.jpg",
+	"filetype" : "image/jpeg",
+	"size" : 95237
 }
 ```
 
@@ -2584,7 +2586,7 @@ If there are no potential duplicate groups in the search, this returns an empty 
 
 ### **POST `/manage_file_relationships/remove_potentials`** { id="manage_file_relationships_remove_potentials" }
 
-Remove all potential pairs that any of the given files are a part of. If you hit [/manage\_file\_relationships/get\_file\_relationships](#get-manage_file_relationshipsget_file_relationships) after this on any of these files, they will have no potential relationships, and any hashes that were potential to them before will no longer, conversely, refer to these files as potentials.
+Remove all potential pairs that any of the given files are a part of. If you hit [/manage\_file\_relationships/get\_file\_relationships](#manage_file_relationships_get_file_relationships) after this on any of these files, they will have no potential relationships, and any hashes that were potential to them before will no longer, conversely, refer to these files as potentials.
 
 Restricted access: 
 :   YES. Manage File Relationships permission needed.

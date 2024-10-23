@@ -77,7 +77,7 @@ And when you are ready to close the shell cleanly, go:
 
 .exit
 
-It can be slow. A few MB a second is typical on an HDD (SSDs obviously faster), so expect a 10GB file to take a while. If it takes hours and hours, and your Task Manager suggests only 50KB/s read, consider again if your hard drive is healthy or not.
+It can be slow. A few MB a second is typical on an HDD (SSDs obviously faster), so expect a 10GB file to take a while. A 60GB mappings.db may take two hours. If it takes way way too long, and your Task Manager suggests only 50KB/s read, consider again if your hard drive is healthy or not.
 
 Please note that newer versions of SQLite support a second check command:
 
@@ -97,6 +97,7 @@ PRAGMA integrity_check;
 PRAGMA integrity_check;
 .exit
 
+(this one can take ages simply because of the size of the file, so only do it if you really need to check; if you know it is broke, just move on to cloning now, no need to waste time confirming it)
 .open client.mappings.db
 PRAGMA integrity_check;
 .exit
@@ -118,7 +119,7 @@ This instructs the database to copy itself to a new file. When it comes across d
 
 And wait a bit. It'll report its progress as it tries to copy your db. It will be slow. Remember to go '.exit' once it is done to close the shell neatly.
 
-If the clone says some errors like 'subtags_fts4_content already exists' but keeps on working, don't worry about it! That isn't a real error. Same if you get an error about a missing 'sqlite_stat1' table.
+If the clone says some errors involving 'fts' or 'fts4', like 'subtags_fts4_content already exists', but it keeps on working, don't worry about it! That probably isn't a real error, and even if it is, 'fts' stuff will be automatically fixed on the next boot. Same if you get any errors about 'sqlite_stat1' table.
 
 Once it is done, the cloned file may be significantly smaller than the original. 50% reduction in size is typical. This means some data has been lost. If this is in client.caches.db, client.master.db or client.mappings.db, it is probably fine (particularly if you sync to a tag repository like the PTR), as we can regenerate that data with some work once you are working again.
 
@@ -139,6 +140,8 @@ If a different file is broken, then use of these:
 .exit
 
 Do not delete your original files for now. Just rename them to 'old' and move them somewhere safe. Also be careful not to lose track of which is which (filesize and creation date can help here)! Make sure your new cloned files are all named right and then try running the client!
+
+You do not have to do an integrity_check after you clone. If you know your current hard drive is good, you can assume a clone works to create a 'clean' database.
 
 ** repair **
 

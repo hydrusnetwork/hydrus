@@ -567,7 +567,7 @@ class ListBoxItemPredicate( ListBoxItem ):
             
             for sub_pred in self._predicate.GetORPredicates():
                 
-                rows_of_texts_and_namespaces.append( sub_pred.GetTextsAndNamespaces( render_for_user, prefix = '  ' ) )
+                rows_of_texts_and_namespaces.append( sub_pred.GetTextsAndNamespaces( render_for_user, prefix = '    ' ) )
                 
             
         

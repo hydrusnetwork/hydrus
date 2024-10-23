@@ -6993,6 +6993,8 @@ class TestClientAPI( unittest.TestCase ):
         self.assertEqual( response.status, 200 )
         
         self.assertEqual( d[ 'path' ], os.path.join( TG.test_controller.db_dir, 'client_files', f'f{hash_hex[:2]}', f'{hash_hex}.png' ) )
+        self.assertEqual( d[ 'filetype' ], 'image/png' )
+        self.assertEqual( d[ 'size' ], 100 )
         
         # thumbnail path
         

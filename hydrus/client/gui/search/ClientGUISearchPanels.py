@@ -74,7 +74,7 @@ class EditFavouriteSearchPanel( ClientGUIScrolledPanels.EditPanel ):
         
         rows = []
         
-        rows.append( ( 'folder (blank for none): ', self._foldername ) )
+        rows.append( ( 'folder (blank for none, "/" for nested): ', self._foldername ) )
         rows.append( ( 'name: ', self._name ) )
         
         top_gridbox = ClientGUICommon.WrapInGrid( self, rows )

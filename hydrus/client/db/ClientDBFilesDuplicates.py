@@ -599,7 +599,7 @@ class ClientDBFilesDuplicates( ClientDBModule.ClientDBModule ):
             table_join = '{} CROSS JOIN {} USING ( media_id )'.format( temp_media_ids_table_name, 'duplicate_file_members' )
             
             if db_location_context is not None:
-            
+                
                 table_join = db_location_context.GetTableJoinLimitedByFileDomain( table_join )
                 
             

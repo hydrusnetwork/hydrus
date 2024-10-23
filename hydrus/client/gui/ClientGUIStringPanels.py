@@ -719,12 +719,13 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
             for e in ( 'hex', 'base64', 'url percent encoding', 'unicode escape characters', 'html entities' ):
                 
                 self._data_encoding.addItem( e, e )
-                
-            
-            for e in ( 'url percent encoding', 'unicode escape characters', 'html entities' ):
-                
                 self._data_decoding.addItem( e, e )
                 
+            
+            utf8_tt = '"hex" and "base64" here will use UTF-8 encoding.'
+            
+            self._data_encoding.setToolTip( ClientGUIFunctions.WrapToolTip( utf8_tt ) )
+            self._data_decoding.setToolTip( ClientGUIFunctions.WrapToolTip( utf8_tt ) )
             
             self._data_timezone_decode.addItem( 'UTC', HC.TIMEZONE_UTC )
             self._data_timezone_decode.addItem( 'Local', HC.TIMEZONE_LOCAL )

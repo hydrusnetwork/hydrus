@@ -3314,18 +3314,6 @@ class ListBoxTags( ListBox ):
                             ClientGUIMenus.AppendMenuItem( search_menu, 'add {} to current search'.format( predicates_selection_string ), 'Add the selected predicates to the current search.', self._ProcessMenuPredicateEvent, 'add_predicates' )
                             
                         
-                        if or_predicate is not None and or_predicate not in predicates:
-                            
-                            ClientGUIMenus.AppendMenuItem( search_menu, 'add an OR of {} to current search'.format( predicates_selection_string ), 'Add the selected predicates as an OR predicate to the current search.', self._ProcessMenuPredicateEvent, 'add_or_predicate' )
-                            
-                            all_selected_in_current = predicates.issubset( current_predicates )
-                            
-                            if all_selected_in_current:
-                                
-                                ClientGUIMenus.AppendMenuItem( search_menu, f'replace {predicates_selection_string} with their OR', 'Remove the selected predicates and replace them with an OR predicate that searches for any of them.', self._ProcessMenuPredicateEvent, 'replace_or_predicate')
-                                
-                            
-                        
                         some_selected_in_current = HydrusLists.SetsIntersect( predicates, current_predicates )
                         
                         if some_selected_in_current:
@@ -3364,6 +3352,36 @@ class ListBoxTags( ListBox ):
                             
                             ClientGUIMenus.AppendMenuItem( search_menu, text, desc, self._ProcessMenuPredicateEvent, 'add_inverse_predicates' )
                             
+                        
+                        ClientGUIMenus.AppendSeparator( search_menu )
+                        
+                        if or_predicate is not None and or_predicate not in predicates:
+                            
+                            all_selected_in_current = predicates.issubset( current_predicates )
+                            
+                            if all_selected_in_current:
+                                
+                                ClientGUIMenus.AppendMenuItem( search_menu, f'replace {predicates_selection_string} with their OR', 'Remove the selected predicates and replace them with an OR predicate that searches for any of them.', self._ProcessMenuPredicateEvent, 'replace_or_predicate')
+                                
+                            else:
+                                
+                                ClientGUIMenus.AppendMenuItem( search_menu, 'add an OR of {} to current search'.format( predicates_selection_string ), 'Add the selected predicates as an OR predicate to the current search.', self._ProcessMenuPredicateEvent, 'add_or_predicate' )
+                                
+                            
+                        
+                        if True not in ( p.IsORPredicate() for p in predicates ):
+                            
+                            ClientGUIMenus.AppendMenuItem( search_menu, f'start an OR predicate with {predicates_selection_string}', 'Start up the Edit OR Predicate panel starting with this.', self._ProcessMenuPredicateEvent, 'start_or_predicate' )
+                            
+                        
+                        if False not in ( p.IsORPredicate() for p in predicates ):
+                            
+                            label = f'dissolve {predicates_selection_string} into single predicates'
+                            
+                            ClientGUIMenus.AppendMenuItem( search_menu, label, 'Convert OR predicates to their constituent parts.', self._ProcessMenuPredicateEvent, 'dissolve_or_predicate' )
+                            
+                        
+                        ClientGUIMenus.AppendSeparator( search_menu )
                         
                         if namespace_predicate is not None and namespace_predicate not in current_predicates:
                             

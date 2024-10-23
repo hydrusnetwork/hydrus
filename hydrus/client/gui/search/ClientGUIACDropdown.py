@@ -2328,7 +2328,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
     
     def _CreateNewOR( self ):
         
-        predicates = { ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_OR_CONTAINER, value = [ ] ) }
+        predicates = { ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_OR_CONTAINER, value = [] ) }
         
         try:
             
@@ -2365,47 +2365,46 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
             ClientGUIMenus.AppendMenuItem( menu, 'save this search', 'Save this search for later.', self._SaveFavouriteSearch )
             
         
-        folders_to_names = CG.client_controller.favourite_search_manager.GetFoldersToNames()
+        # what the hell, this will work for now
+        # I am bodging this weird 'string and None' system to support '/' for nested menu structure, let's go
+        nested_folders_to_names = CG.client_controller.favourite_search_manager.GetNestedFoldersToNames()
         
-        if len( folders_to_names ) > 0:
+        if len( nested_folders_to_names ) > 0:
             
             ClientGUIMenus.AppendSeparator( menu )
             
-            folder_names = list( folders_to_names.keys() )
+            def populate_a_folder( folder_menu, folder_dict ):
+                
+                subfolder_names = list( folder_dict.keys() )
+                
+                if None in subfolder_names:
+                    
+                    subfolder_names.remove( None )
+                    
+                    folder_names_and_names_on_this_level = folder_dict[ None ]
+                    
+                    # trust me on the key lambda, in some annoying situations the folder name can be none or '/'
+                    for ( full_folder_name, name ) in sorted( folder_names_and_names_on_this_level, key = lambda a: a[1] ):
+                        
+                        ClientGUIMenus.AppendMenuItem( folder_menu, name, 'Load the {} search.'.format( name ), self._LoadFavouriteSearch, full_folder_name, name )
+                        
+                    
+                
+                subfolder_names.sort()
+                
+                for subfolder_name in subfolder_names:
+                    
+                    subfolder_menu = ClientGUIMenus.GenerateMenu( menu )
+                    
+                    ClientGUIMenus.AppendMenu( folder_menu, subfolder_menu, subfolder_name )
+                    
+                    subfolder_dict = folder_dict[ subfolder_name ]
+                    
+                    populate_a_folder( subfolder_menu, subfolder_dict )
+                    
+                
             
-            if None in folder_names:
-                
-                folder_names.remove( None )
-                
-                folder_names.sort()
-                
-                folder_names.insert( 0, None )
-                
-            else:
-                
-                folder_names.sort()
-                
-            
-            for folder_name in folder_names:
-                
-                if folder_name is None:
-                    
-                    menu_to_use = menu
-                    
-                else:
-                    
-                    menu_to_use = ClientGUIMenus.GenerateMenu( menu )
-                    
-                    ClientGUIMenus.AppendMenu( menu, menu_to_use, folder_name )
-                    
-                
-                names = sorted( folders_to_names[ folder_name ] )
-                
-                for name in names:
-                    
-                    ClientGUIMenus.AppendMenuItem( menu_to_use, name, 'Load the {} search.'.format( name ), self._LoadFavouriteSearch, folder_name, name )
-                    
-                
+            populate_a_folder( menu, nested_folders_to_names )
             
         
         CGC.core().PopupMenu( self, menu )
@@ -3034,9 +3033,32 @@ class ListBoxTagsActiveSearchPredicates( ClientGUIListBoxes.ListBoxTagsPredicate
         self._DataHasChanged()
         
     
-    def _EnterPredicates( self, predicates, permit_add = True, permit_remove = True ):
+    def _EnterPredicates( self, predicates, permit_add = True, permit_remove = True, start_or_predicate = False ):
         
         if len( predicates ) == 0:
+            
+            return
+            
+        
+        if start_or_predicate:
+            
+            or_based_predicates = { ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_OR_CONTAINER, value = list( predicates ) ) }
+            
+            try:
+                
+                empty_file_search_context = self._file_search_context.Duplicate()
+                
+                empty_file_search_context.SetPredicates( or_based_predicates )
+                
+                or_based_predicates = ClientGUISearch.EditPredicates( self, or_based_predicates, empty_file_search_context = empty_file_search_context )
+                
+            except HydrusExceptions.CancelledException:
+                
+                return
+                
+            
+            self._EnterPredicates( predicates, permit_add = False )
+            self._EnterPredicates( or_based_predicates, permit_remove = False )
             
             return
             
@@ -3127,6 +3149,15 @@ class ListBoxTagsActiveSearchPredicates( ClientGUIListBoxes.ListBoxTagsPredicate
                 self._EnterPredicates( ( or_predicate, ), permit_remove = False )
                 
             
+        elif command == 'dissolve_or_predicate':
+            
+            or_preds = [ p for p in predicates if p.IsORPredicate() ]
+            
+            sub_preds = HydrusLists.MassUnion( [ p.GetValue() for p in or_preds ] )
+            
+            self._EnterPredicates( or_preds, permit_add = False )
+            self._EnterPredicates( sub_preds, permit_remove = False )
+            
         elif command == 'replace_or_predicate':
             
             if or_predicate is not None:
@@ -3134,6 +3165,10 @@ class ListBoxTagsActiveSearchPredicates( ClientGUIListBoxes.ListBoxTagsPredicate
                 self._EnterPredicates( predicates, permit_add = False )
                 self._EnterPredicates( ( or_predicate, ), permit_remove = False )
                 
+            
+        elif command == 'start_or_predicate':
+            
+            self._EnterPredicates( predicates, start_or_predicate = True )
             
         elif command == 'remove_predicates':
             
@@ -3153,11 +3188,11 @@ class ListBoxTagsActiveSearchPredicates( ClientGUIListBoxes.ListBoxTagsPredicate
             
         
     
-    def EnterPredicates( self, page_key, predicates, permit_add = True, permit_remove = True ):
+    def EnterPredicates( self, page_key, predicates, permit_add = True, permit_remove = True, start_or_predicate = False ):
         
         if page_key == self._page_key:
             
-            self._EnterPredicates( predicates, permit_add = permit_add, permit_remove = permit_remove )
+            self._EnterPredicates( predicates, permit_add = permit_add, permit_remove = permit_remove, start_or_predicate = start_or_predicate )
             
         
     

@@ -265,7 +265,7 @@ def GenerateHumanTextSortKey():
     
     int_convert = lambda t: int( t ) if t.isdecimal() else t
     
-    split_alphanum = lambda t: tuple( ( int_convert( sub_t ) for sub_t in re.split( '([0-9]+)', t.lower() ) ) )
+    split_alphanum = lambda t: tuple( ( int_convert( sub_t ) for sub_t in re.split( '([0-9]+)', t.casefold() ) ) )
     
     return split_alphanum
     

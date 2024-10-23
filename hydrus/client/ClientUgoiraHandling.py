@@ -1,7 +1,7 @@
 from hydrus.core.files import HydrusUgoiraHandling
 from hydrus.core.files.images import HydrusImageHandling
 from hydrus.core.files import HydrusArchiveHandling
-from hydrus.client.media import ClientMedia
+from hydrus.client.media import ClientMediaResult
 from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientFiles
 
@@ -10,26 +10,28 @@ import typing
 
 UGOIRA_DEFAULT_FRAME_DURATION_MS = 125
 
-def GetFrameDurationsUgoira( media: ClientMedia.MediaSingleton ): 
+def GetFrameDurationsUgoira( media: ClientMediaResult.MediaResult ): 
     
     client_files_manager: ClientFiles.ClientFilesManager = CG.client_controller.client_files_manager
-        
+    
     path = client_files_manager.GetFilePath( media.GetHash(), media.GetMime() )
-        
+    
     try:
         
         frameData = HydrusUgoiraHandling.GetUgoiraFrameDataJSON( path )
-
+        
         if frameData is not None:
             
             durations = [data['delay'] for data in frameData]
             
             return durations
-    
+            
+        
     except:
         
         pass
         
+    
     try:
         
         durations = GetFrameTimesFromNote(media)
@@ -37,21 +39,24 @@ def GetFrameDurationsUgoira( media: ClientMedia.MediaSingleton ):
         if durations is not None:
             
             return durations
+            
         
     except:
         
         pass
+        
     
     num_frames = media.GetNumFrames()
     
     return [UGOIRA_DEFAULT_FRAME_DURATION_MS] * num_frames
-        
     
-def GetFrameTimesFromNote(media: ClientMedia.MediaSingleton):
+
+def GetFrameTimesFromNote( media: ClientMediaResult.MediaResult ):
     
     if not media.HasNotes():
         
         return None
+        
     
     noteManager = media.GetNotesManager()
     
@@ -70,34 +75,52 @@ def GetFrameTimesFromNote(media: ClientMedia.MediaSingleton):
             else:
                 
                 frameData: typing.List[HydrusUgoiraHandling.UgoiraFrame] = ugoiraJson['frames']
-            
+                
             
             frames = [data['delay'] for data in frameData]
             
             if len(frames) > 0 and isinstance(frames[0], int):
-            
+                
                 return frames 
-        
+                
+            
         except:
             
             pass
+            
         
+    
     if 'ugoira frame delay array' in notes:
         
         try:
             
             ugoiraJsonArray: typing.List[int] = json.loads(notes['ugoira frame delay array'])
-        
-            if len(ugoiraJsonArray) > 0 and isinstance(ugoiraJsonArray[0], int):
             
+            if len(ugoiraJsonArray) > 0 and isinstance(ugoiraJsonArray[0], int):
+                
                 return ugoiraJsonArray
-        
+                
+            
         except:
             
             pass
+            
         
+    
     return None
+    
+
+def HasFrameTimesNote( media: ClientMediaResult.MediaResult ):
+    
+    if not media.HasNotes():
         
+        return False
+        
+    
+    names_to_notes = media.GetNotesManager().GetNamesToNotes()
+    
+    return 'ugoira json' in names_to_notes or 'ugoira frame delay array' in names_to_notes
+    
 
 class UgoiraRenderer(object):
 

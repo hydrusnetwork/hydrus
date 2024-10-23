@@ -12,10 +12,12 @@ from hydrus.core import HydrusTime
 from hydrus.core.files import HydrusPSDHandling
 
 from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientData
 from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientLocation
 from hydrus.client import ClientServices
 from hydrus.client import ClientTime
+from hydrus.client import ClientUgoiraHandling
 from hydrus.client.media import ClientMediaManagers
 from hydrus.client.media import ClientMediaResult
 from hydrus.client.metadata import ClientContentUpdates
@@ -1941,12 +1943,44 @@ class MediaSingleton( Media ):
         
         if width is not None and height is not None:
             
-            info_string += f' ({HydrusNumbers.ResolutionToPrettyString( ( width, height ) )})'
+            info_string += f' ({ClientData.ResolutionToPrettyString( ( width, height ) )})'
             
         
         if duration is not None:
             
             info_string += f', {HydrusTime.MillisecondsDurationToPrettyTime( duration )}'
+            
+        elif mime == HC.ANIMATION_UGOIRA:
+            
+            if ClientUgoiraHandling.HasFrameTimesNote( self.GetMediaResult() ):
+                
+                try:
+                    
+                    # this is more work than we'd normally want to do, but prettyinfolines is called on a per-file basis so I think we are good. a tiny no-latency json load per human click is fine
+                    # we'll see how it goes
+                    frame_times = ClientUgoiraHandling.GetFrameTimesFromNote( self.GetMediaResult() )
+                    
+                    if frame_times is not None:
+                        
+                        note_duration = sum( frame_times )
+                        
+                        info_string += f', {HydrusTime.MillisecondsDurationToPrettyTime( note_duration )} (note-based)'
+                        
+                    
+                except:
+                    
+                    info_string += f', unknown note-based duration'
+                    
+                
+            else:
+                
+                if num_frames is not None:
+                    
+                    simulated_duration = num_frames * ClientUgoiraHandling.UGOIRA_DEFAULT_FRAME_DURATION_MS
+                    
+                    info_string += f', {HydrusTime.MillisecondsDurationToPrettyTime( simulated_duration )} (speculated)'
+                    
+                
             
         
         if num_frames is not None:

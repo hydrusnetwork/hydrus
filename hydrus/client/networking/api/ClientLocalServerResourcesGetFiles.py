@@ -859,6 +859,7 @@ class HydrusResourceClientAPIRestrictedGetFilesGetFilePath( HydrusResourceClient
             
             hash = media_result.GetHash()
             mime = media_result.GetMime()
+            size = media_result.GetSize()
             
             path = CG.client_controller.client_files_manager.GetFilePath( hash, mime )
             
@@ -873,7 +874,9 @@ class HydrusResourceClientAPIRestrictedGetFilesGetFilePath( HydrusResourceClient
             
         
         body_dict = {
-            'path' : path
+            'path' : path,
+            'filetype' : HC.mime_mimetype_string_lookup[ mime ],
+            'size' : size
         }
         
         mime = request.preferred_mime

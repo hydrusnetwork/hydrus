@@ -9,6 +9,7 @@ from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientData
 from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientLocation
 from hydrus.client.importing.options import PresentationImportOptions
@@ -368,7 +369,7 @@ class FileImportOptions( HydrusSerialisable.SerialisableBase ):
             
             if too_thin or too_short:
                 
-                raise HydrusExceptions.FileImportRulesException( 'File had resolution ' + HydrusNumbers.ResolutionToPrettyString( ( width, height ) ) + ' but the lower limit is ' + HydrusNumbers.ResolutionToPrettyString( self._min_resolution ) )
+                raise HydrusExceptions.FileImportRulesException( 'File had resolution ' + ClientData.ResolutionToPrettyString( ( width, height ) ) + ' but the lower limit is ' + ClientData.ResolutionToPrettyString( self._min_resolution ) )
                 
             
         
@@ -381,7 +382,7 @@ class FileImportOptions( HydrusSerialisable.SerialisableBase ):
             
             if too_wide or too_tall:
                 
-                raise HydrusExceptions.FileImportRulesException( 'File had resolution ' + HydrusNumbers.ResolutionToPrettyString( ( width, height ) ) + ' but the upper limit is ' + HydrusNumbers.ResolutionToPrettyString( self._max_resolution ) )
+                raise HydrusExceptions.FileImportRulesException( 'File had resolution ' + ClientData.ResolutionToPrettyString( ( width, height ) ) + ' but the upper limit is ' + ClientData.ResolutionToPrettyString( self._max_resolution ) )
                 
             
         

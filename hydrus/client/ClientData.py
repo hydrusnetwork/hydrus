@@ -4,8 +4,10 @@ import time
 import traceback
 import yaml
 
+from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusNumbers
 
 from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientThreading
@@ -130,6 +132,36 @@ def OrdIsNumber( o ):
     
     return 48 <= o <= 57
     
+
+def ResolutionToPrettyString( resolution ):
+    
+    if resolution is None:
+        
+        return 'no resolution'
+        
+    
+    if not isinstance( resolution, tuple ):
+        
+        try:
+            
+            resolution = tuple( resolution )
+            
+        except:
+            
+            return 'broken resolution'
+            
+        
+    
+    if resolution in HC.NICE_RESOLUTIONS and CG.client_controller.new_options.GetBoolean( 'use_nice_resolution_strings' ):
+        
+        return HC.NICE_RESOLUTIONS[ resolution ]
+        
+    
+    ( width, height ) = resolution
+    
+    return '{}x{}'.format( HydrusNumbers.ToHumanInt( width ), HydrusNumbers.ToHumanInt( height ) )
+    
+
 def ShowExceptionClient( e, do_wait = True ):
     
     ( etype, value, tb ) = sys.exc_info()

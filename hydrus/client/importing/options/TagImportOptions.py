@@ -250,7 +250,15 @@ class TagImportOptions( HydrusSerialisable.SerialisableBase ):
     SERIALISABLE_NAME = 'Tag Import Options'
     SERIALISABLE_VERSION = 8
     
-    def __init__( self, fetch_tags_even_if_url_recognised_and_file_already_in_db = False, fetch_tags_even_if_hash_recognised_and_file_already_in_db = False, tag_blacklist = None, tag_whitelist = None, service_keys_to_service_tag_import_options = None, is_default = False ):
+    def __init__(
+        self,
+        fetch_tags_even_if_url_recognised_and_file_already_in_db = False,
+        fetch_tags_even_if_hash_recognised_and_file_already_in_db = False,
+        tag_blacklist = None,
+        tag_whitelist = None,
+        service_keys_to_service_tag_import_options = None,
+        is_default = False
+    ):
         
         super().__init__()
         
@@ -641,6 +649,16 @@ class TagImportOptions( HydrusSerialisable.SerialisableBase ):
         self._is_default = value
         
     
+    def SetShouldFetchTagsEvenIfHashKnownAndFileAlreadyInDB( self, value: bool ):
+        
+        self._fetch_tags_even_if_hash_recognised_and_file_already_in_db = value
+        
+    
+    def SetShouldFetchTagsEvenIfURLKnownAndFileAlreadyInDB( self, value: bool ):
+        
+        self._fetch_tags_even_if_url_recognised_and_file_already_in_db = value
+        
+    
     def ShouldFetchTagsEvenIfHashKnownAndFileAlreadyInDB( self ):
         
         return self._fetch_tags_even_if_hash_recognised_and_file_already_in_db
@@ -656,6 +674,7 @@ class TagImportOptions( HydrusSerialisable.SerialisableBase ):
         return True in ( service_tag_import_options.WorthFetchingTags() for service_tag_import_options in self._service_keys_to_service_tag_import_options.values() )
         
     
+
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_TAG_IMPORT_OPTIONS ] = TagImportOptions
 
 def NewInboxArchiveMatch( new_files, inbox_files, archive_files, status, inbox ):
