@@ -2332,7 +2332,7 @@ Also, it won't be long before the client supports moving to _some_ form of three
 
 ### **GET `/get_files/render`** { id="get_files_render" }
 
-_Get an image file as rendered by Hydrus._
+_Get an image or ugoira file as rendered by Hydrus._
 
 Restricted access: 
 :   YES. Search for Files permission needed. Additional search permission limits may apply.
@@ -2344,19 +2344,24 @@ Arguments :
     *   `file_id`: (selective, numerical file id for the file)
     *   `hash`: (selective, a hexadecimal SHA256 hash for the file)
     *   `download`: (optional, boolean, default `false`)
-    *   `render_format`: (optional, integer, the filetype enum value to render the file to, default `2` for PNG)
-    *   `render_quality`: (optional, integer, the quality or PNG compression level to use for encoding the image, default `1` for PNG and `80` for JPEG and WEBP)
-    *   `width` and `height`: (optional but must provide both if used, integer, the width and height to scale the image to)
+    *   `render_format`: (optional, integer, the filetype enum value to render the file to, for still images it defaults `2` for PNG, for Ugoiras it defaults to `23` for APNG)
+    *   `render_quality`: (optional, integer, the quality or PNG compression level to use for encoding the image, default `1` for PNG and `80` for JPEG and WEBP, has no effect for Ugoiras using APNG)
+    *   `width` and `height`: (optional but must provide both if used, integer, the width and height to scale the image to. Doesn't apply to Ugoiras)
 
     Only use one of file_id or hash. As with metadata fetching, you may only use the hash argument if you have access to all files. If you are tag-restricted, you will have to use a file_id in the last search you ran.
     
-    Currently the only accepted values for `render_format` are:
+    Currently the accepted values for `render_format` for image files are:
     
     *   `1` for JPEG (`quality` sets JPEG quality 0 to 100, always progressive 4:2:0 encoding)
     *   `2` for PNG (`quality` sets the compression level from 0 to 9. A higher value means a smaller size and longer compression time)
     *   `33` for WEBP (`quality` sets WEBP quality 1 to 100, for values over 100 lossless compression is used)
+    
+    The accepted values for Ugoiras are:
+    
+    *   `23` for APNG (`quality` does nothing for this format)
+    *   `83` for animated WEBP (`quality` sets WEBP quality 1 to 100, for values over 100 lossless compression is used)
 
-The file you request must be a still image file that Hydrus can render (this includes PSD files). This request uses the client image cache.
+The file you request must be a still image file that Hydrus can render (this includes PSD files) or a Ugoira file. This request uses the client image cache for images.
 
 ``` title="Example request"
 /get_files/render?file_id=452158
@@ -2366,7 +2371,7 @@ The file you request must be a still image file that Hydrus can render (this inc
 ```
    
 Response:
-:   A PNG, JPEG, or WEBP file of the image as would be rendered in the client, optionally resized as specified in the query parameters. It will be converted to sRGB color if the file had a color profile but the rendered file will not have any color profile.
+:   A PNG (or APNG), JPEG, or WEBP file of the image as would be rendered in the client, optionally resized as specified in the query parameters. It will be converted to sRGB color if the file had a color profile but the rendered file will not have any color profile.
 
 By default, this will set the `Content-Disposition` header to `inline`, which causes a web browser to show the file. If you set `download=true`, it will set it to `attachment`, which triggers the browser to automatically download it (or open the 'save as' dialog) instead.
 

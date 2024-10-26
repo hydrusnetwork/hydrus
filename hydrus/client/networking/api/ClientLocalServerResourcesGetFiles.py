@@ -17,6 +17,7 @@ from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientLocation
 from hydrus.client import ClientRendering
 from hydrus.client import ClientThreading
+from hydrus.client import ClientUgoiraHandling
 from hydrus.client.media import ClientMedia
 from hydrus.client.media import ClientMediaResult
 from hydrus.client.metadata import ClientTags
@@ -203,22 +204,11 @@ class HydrusResourceClientAPIRestrictedGetFilesGetRenderedFile( HydrusResourceCl
     
     def _threadDoGETJob( self, request: HydrusServerRequest.HydrusRequest ):
         
-        if 'render_format' in request.parsed_request_args:
-            
-            format = request.parsed_request_args.GetValue( 'render_format', int )
-            
-            if not format in [ HC.IMAGE_PNG, HC.IMAGE_JPEG, HC.IMAGE_WEBP ]:
-                
-                raise HydrusExceptions.BadRequestException( 'Invalid render format!' )
-                
-            
-        else:
-            
-            format = HC.IMAGE_PNG
+        
         
         try:
             
-            media_result: ClientMedia.MediaSingleton
+            media_result: ClientMediaResult.MediaResult
             
             if 'file_id' in request.parsed_request_args:
                 
@@ -246,64 +236,114 @@ class HydrusResourceClientAPIRestrictedGetFilesGetRenderedFile( HydrusResourceCl
             raise HydrusExceptions.NotFoundException( 'One or more of those file identifiers was missing!' )
             
         
-        if not media_result.IsStaticImage():
+        if media_result.IsStaticImage():
             
-            raise HydrusExceptions.BadRequestException('Requested file is not an image!')
-            
-        
-        renderer: ClientRendering.ImageRenderer = CG.client_controller.GetCache( 'images' ).GetImageRenderer( media_result )
-        
-        while not renderer.IsReady():
-            
-            if request.disconnected:
+            if 'render_format' in request.parsed_request_args:
                 
-                return
+                format = request.parsed_request_args.GetValue( 'render_format', int )
                 
-            
-            time.sleep( 0.01 )
-            
-        
-        numpy_image = renderer.GetNumPyImage()
-        
-        if 'width' in request.parsed_request_args and 'height' in request.parsed_request_args:
-            
-            width = request.parsed_request_args.GetValue( 'width', int )
-            height = request.parsed_request_args.GetValue( 'height', int )
-            
-            if width < 1:
-                
-                raise HydrusExceptions.BadRequestException( 'Width must be greater than 0!' )
-                
-            
-            if height < 1:
-                
-                raise HydrusExceptions.BadRequestException( 'Height must be greater than 0!' )
-                
-            
-            numpy_image = HydrusImageHandling.ResizeNumPyImage( numpy_image, ( width, height ) )
-            
-        
-        if 'render_quality' in request.parsed_request_args:
-            
-            quality = request.parsed_request_args.GetValue( 'render_quality', int )
-            
-        else:
-            
-            if format == HC.IMAGE_PNG:
-                
-                quality = 1  # fastest png compression
+                if not format in [ HC.IMAGE_PNG, HC.IMAGE_JPEG, HC.IMAGE_WEBP ]:
+                    
+                    raise HydrusExceptions.BadRequestException( 'Invalid render format!' )
                 
             else:
                 
-                quality = 80
+                format = HC.IMAGE_PNG
+            
+            renderer: ClientRendering.ImageRenderer = CG.client_controller.GetCache( 'images' ).GetImageRenderer( media_result )
+            
+            while not renderer.IsReady():
+                
+                if request.disconnected:
+                    
+                    return
+                    
+                
+                time.sleep( 0.01 )
                 
             
+            numpy_image = renderer.GetNumPyImage()
+            
+            if 'width' in request.parsed_request_args and 'height' in request.parsed_request_args:
+                
+                width = request.parsed_request_args.GetValue( 'width', int )
+                height = request.parsed_request_args.GetValue( 'height', int )
+                
+                if width < 1:
+                    
+                    raise HydrusExceptions.BadRequestException( 'Width must be greater than 0!' )
+                    
+                
+                if height < 1:
+                    
+                    raise HydrusExceptions.BadRequestException( 'Height must be greater than 0!' )
+                    
+                
+                numpy_image = HydrusImageHandling.ResizeNumPyImage( numpy_image, ( width, height ) )
+                
+            
+            if 'render_quality' in request.parsed_request_args:
+                
+                quality = request.parsed_request_args.GetValue( 'render_quality', int )
+                
+            else:
+                
+                if format == HC.IMAGE_PNG:
+                    
+                    quality = 1  # fastest png compression
+                    
+                else:
+                    
+                    quality = 80
+                    
+                
+            max_age = 86400 * 365
+            
+            body = HydrusImageHandling.GenerateFileBytesForRenderAPI( numpy_image, format, quality )
         
-        body = HydrusImageHandling.GenerateFileBytesForRenderAPI( numpy_image, format, quality )
+        elif media_result.GetMime() == HC.ANIMATION_UGOIRA:
+            
+            if 'render_format' in request.parsed_request_args:
+                
+                format = request.parsed_request_args.GetValue( 'render_format', int )
+                
+                if not format in [ HC.ANIMATION_APNG, HC.ANIMATION_WEBP ]:
+                    
+                    raise HydrusExceptions.BadRequestException( 'Invalid render format!' )
+                
+            else:
+                
+                format = HC.ANIMATION_APNG # maybe we should default to animated webp, it is much faster
+                
+            
+            if 'render_quality' in request.parsed_request_args:
+                
+                quality = request.parsed_request_args.GetValue( 'render_quality', int )
+                
+            else:
+                
+                quality = 80 # compress_level has no effect for APNG so we don't use quality in that case.
+            
+            body = ClientUgoiraHandling.ConvertUgoiraToBytesForAPI( media_result, format, quality )
+            
+            if media_result.GetDurationMS() is not None:
+                
+                # if a ugoira has a duration, it has valid animation.json
+                # thus frame timings and the resulting render are immutable
+                max_age = 86400 * 365
+                
+            else:
+                
+                # frame timing could change with notes!
+                max_age = 3600
+        
+        else:
+            
+            raise HydrusExceptions.BadRequestException('Requested file is not an image!')
         
         is_attachment = request.parsed_request_args.GetValue( 'download', bool, default_value = False )
 
-        response_context = HydrusServerResources.ResponseContext( 200, mime = format, body = body, is_attachment = is_attachment, max_age = 86400 * 365 )
+        response_context = HydrusServerResources.ResponseContext( 200, mime = format, body = body, is_attachment = is_attachment, max_age = max_age )
         
         return response_context
         
