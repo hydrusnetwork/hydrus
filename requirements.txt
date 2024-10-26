@@ -30,5 +30,5 @@ mpv==1.0.6
 QtPy==2.4.1
 PySide6==6.6.3.1
 
-requests==2.31.0
-setuptools==69.1.1
+requests==2.32.3
+setuptools==70.3.0

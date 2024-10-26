@@ -35,6 +35,60 @@
             <h1 id="changelog"><a href="#changelog">changelog</a></h1>
             <ul>
                 <li>
+                    <h2 id="version_595"><a href="#version_595">version 595</a></h2>
+                    <ul>
+                        <li><h3>ugoiras</h3></li>
+                        <li>thanks to a user who put in a lot of work, we finally have Ugoira rendering! all ugoiras will now animate using the hydrus native animation player. if the ugoira has json timing data in its zip (those downloaded with PixivUtil and gallery-dl will!), we will use that, but if it is just a zip of images (which is most older ugoiras you'll see in the wild), it'll check a couple of note names for the timing data, and, failing that, will assign a default 125ms per frame fallback. ugoiras without internal timing data will currently get no 'duration' metadata property, but right-clicking on them will show their note-based or simulated duration on the file info line</li>
+                        <li>all existing ugoiras will be metadata rescanned and thumbnail regenned on update</li>
+                        <li>technical info here: https://hydrusnetwork.github.io/hydrus/filetypes.html#ugoira</li>
+                        <li>ugoira metadata and thumbnail generation is cleaner</li>
+                        <li>a bug in ugoira thumbnail selection, when the file contains non-image files, is fixed</li>
+                        <li>a future step will be to write a special hook into the hydrus downloader engine to recognise ugoiras (typically on Pixiv) and splice the timing data into the zip on download, at which point we'll finally be able to turn on Ugoira downloading on Pixiv on our end. for now, please check out PixivUtil or gallery-dl to get rich Ugoiras</li>
+                        <li>I'd like to bake the simulated or note-based durations into the database somehow, as I don't like the underlying media object thinking these things have no duration, but it'll need more thought</li>
+                        <li><h3>misc</h3></li>
+                        <li>all multi-column lists now sort string columns in a caseless manner. a subscription called 'Tents' will now slot between 'sandwiches' and 'umbrellas'</li>
+                        <li>in 'favourite searches', the 'folder' name now has hacky nested folder support. just put '/' in the folder name and it'll make nested submenus. in future this will be implemented with a nicer tree widget</li>
+                        <li>file logs now load faster in a couple of ways, which should speed up UI session and subscriptions dialog load. previously, there were two rounds of URL normalisation on URL file import object load, one wasteful and one fixable with a cache; these are now dealt with. thanks to the users who sent in profiles of the subscriptions dialog opening; let me know how things seem now (hopefully this fixes/relieves #1612)</li>
+                        <li>added 'Swap in common resolution labels' to `options-&gt;media viewer`. this lets you turn off the '1080p' and '4k'-style label swap-ins for common resolutions on file descriptor strings</li>
+                        <li>the 'are you sure you want to exit the client? 3 pages say "I am still importing"' popup now says the page names, and in a pretty way, and it shows multiple messages nicer</li>
+                        <li>the primary 'sort these tags in a human way m8' routine now uses unicode tech to sort things like ß better</li>
+                        <li>the String Converter can decode 'hex' and 'base64' again (so you can now do '68656c6c6f20776f726c64' or 'aGVsbG8gd29ybGQ=' to 'hello world'). these functions were a holdover from hash parsing in the python 2 times, but I've brushed them off and cleared out the 'what if we put raw bytes in the parsing system bro' nonsense we used to have to deal with. these types are now explictly UTF-8. I also added a couple unit tests for them</li>
+                        <li>fixed an options initialisation bug where setting two files in the duplicate filter as 'not related' was updating the A file to have the B file's file modified time if that was earlier!! if you have files in this category, you will be asked on update if you want to reset their file modified date back to what is actually on disk (the duplicate merge would not have overwritten this; this only happens if you edit the time in the times dialog by hand). a unit test now checks this situation. sorry for the trouble, and thank you to the user who noticed and reported this</li>
+                        <li>the hydrus Docker package now sets the 'hydrus' process to `autorestart=unexpected`. I understand this makes `file-&gt;exit` stick without an automatic restart. it seems like commanding the whole Docker image to shut down still causes a near-instant unclean exit (some SIGTERM thing isn't being caught right, I think), but `file-&gt;exit` should now be doable beforehand. we will keep working here</li>
+                        <li><h3>more OR preds</h3></li>
+                        <li>the new 'replace selected with their OR' and the original 'add an OR of the selected' are now mutually exclusive, depending on whether the current selection is entirely in the active search list</li>
+                        <li>added 'start an OR with selected', which opens the 'edit OR predicate' panel on the current selection. this works if you only select one item, too</li>
+                        <li>added 'dissolve selected into single predicates', when you select only OR predicates. it does the opposite of the 'replace'</li>
+                        <li>the new OR menu gubbins is now in its own separated menu section on the tag right-click</li>
+                        <li>the indent for OR sub preds is moved up from two spaces to four</li>
+                        <li><h3>urls</h3></li>
+                        <li>wrote some help about the 'force page refetch' checkboxes in 'tag import options' here: https://hydrusnetwork.github.io/hydrus/getting_started_downloading.html#force_page_fetch</li>
+                        <li>added a new submenu `urls-&gt;force metadata refetch` that lets you quickly and automatically create a new urls downloader page with the selected files' 'x URL Class' urls with the tag import options set to the respective URLs' default but with these checkboxes all set for you. we finally have a simple answer to 'I messed up my tag parse, I need to redownload these files to get the tags'!</li>
+                        <li>the urls menu offers the 'for x url class' even when only one file is selected now. crazy files with fifty of the same url class can now be handled</li>
+                        <li><h3>duplicates auto-resolution</h3></li>
+                        <li>wrote some placeholder UI for the new system. anyone who happens to be in advanced mode will see another tab on duplicate filter pages. you can poke around if you like, but it is mostly just blank lists that aren't plugged into anything</li>
+                        <li>wrote some placeholder help too. same deal, just a placeholder that you have to look for to find that I'll keep working on</li>
+                        <li>I still feel good about the duplicates auto-resolution system. there is much more work to do, but I'll keep iterating and fleshing things out</li>
+                        <li><h3>client api</h3></li>
+                        <li>the new `/get_files/file_path` command now returns the `filetype` and `size` of the file</li>
+                        <li>updated the Client API help and unit tests for this</li>
+                        <li>client api version is now 73</li>
+                        <li><h3>new build stuff</h3></li>
+                        <li>the library updates we've been testing the past few weeks have gone well, so I am rolling them into the normal builds for everyone. the libraries that do 'fetch stuff from the internet' and 'help python manage its packages' are being updated because of some security problems that I don't think matter for us at all (there's some persistent https verification thing in requests that I know we don't care about, and a malicious URL exploit in setuptools that only matters if you are using it to download packages, which, as I understand, we don't), but we are going to be good and update anyway</li>
+                        <li>`requests` is updated from `2.31.0` to `2.32.3`</li>
+                        <li>`setuptools` is updated from `69.1.1` to `70.3.0`</li>
+                        <li>`PyInstaller` is updated from `6.2` to `6.7` for Windows and Linux to handle the new `setuptools`</li>
+                        <li>there do not appear to be any update conflicts with dlls or anything, so just update like you normally do. I don't think the new pyinstaller will have problems with older/weirder Windows, but let me know if you run into anything</li>
+                        <li>users who run from source may like to reinstall their venvs after pulling to get the new libraries too</li>
+                        <li><h3>boring cleanup</h3></li>
+                        <li>refactored `ClientGUIDuplicates` to a new `duplicates` gui module and renamed it to `ClientGUIDuplicateActions`</li>
+                        <li>harmonised some duplicates auto-resolution terminology across the client to exactly that form. not auto-duplicates or duplicate auto resolution, but 'duplicates auto-resolution'</li>
+                        <li>fixed some bad help link anchors</li>
+                        <li>clarified a couple things in the 'help my db is broke.txt' document</li>
+                        <li>updated the new x.svg to a black version; it looks a bit better in light & dark styles</li>
+                    </ul>
+                </li>
+                <li>
                     <h2 id="version_594"><a href="#version_594">version 594</a></h2>
                     <ul>
                         <li><h3>misc</h3></li>

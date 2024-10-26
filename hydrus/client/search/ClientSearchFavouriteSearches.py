@@ -22,6 +22,9 @@ class FavouriteSearchManager( HydrusSerialisable.SerialisableBase ):
     
     def _GetSerialisableInfo( self ):
         
+        # TODO: overhaul this whole thing, and the edit dialog, to not use None but '' for 'base folder path'
+        # just needs a serialisable update on this end
+        
         serialisable_favourite_search_info = []
         
         for row in self._favourite_search_rows:
@@ -111,18 +114,45 @@ class FavouriteSearchManager( HydrusSerialisable.SerialisableBase ):
         return list( self._favourite_search_rows )
         
     
-    def GetFoldersToNames( self ):
+    def GetNestedFoldersToNames( self ):
         
         with self._lock:
             
-            folders_to_names = collections.defaultdict( list )
+            nested_folders_to_names = {}
             
             for ( folder, name, file_search_context, synchronised, media_sort, media_collect ) in self._favourite_search_rows:
                 
-                folders_to_names[ folder ].append( name )
+                current_dict = nested_folders_to_names
+                
+                if folder is not None:
+                    
+                    folder_parts = folder.split( '/' )
+                    
+                    for folder_part in folder_parts:
+                        
+                        if folder_part == '':
+                            
+                            continue
+                            
+                        
+                        if folder_part not in current_dict:
+                            
+                            current_dict[ folder_part ] = {}
+                            
+                        
+                        current_dict = current_dict[ folder_part ]
+                        
+                    
+                
+                if None not in current_dict:
+                    
+                    current_dict[ None ] = []
+                    
+                
+                current_dict[ None ].append( ( folder, name ) )
                 
             
-            return folders_to_names
+            return nested_folders_to_names
             
         
     

@@ -203,8 +203,8 @@ class StringConverter( StringProcessingStep ):
                         
                     else:
                         
-                        # due to py3, this is now a bit of a pain
-                        # _for now_, let's convert to bytes if not already and then spit out a str
+                        # this was originally an old py2 bytes/str hack to enable some file lookup script file id param generation
+                        # but we are now formalising it into some more 'real'
                         
                         if isinstance( s, str ):
                             
@@ -225,26 +225,50 @@ class StringConverter( StringProcessingStep ):
                             
                             s = str( s_bytes, 'utf-8' )
                             
+                        else:
+                            
+                            raise Exception( 'unknown encode type!' )
+                            
                         
                     
                 elif conversion_type == STRING_CONVERSION_DECODE:
                     
-                    encode_type = data
+                    decode_type = data
                     
-                    if encode_type == 'url percent encoding':
+                    if decode_type == 'url percent encoding':
                         
                         s = urllib.parse.unquote( s )
                         
-                    elif encode_type == 'unicode escape characters':
+                    elif decode_type == 'unicode escape characters':
                         
                         s = s.encode( 'utf-8' ).decode( 'unicode-escape' )
                         
-                    elif encode_type == 'html entities':
+                    elif decode_type == 'html entities':
                         
                         s = html.unescape( s )
                         
-                    
-                    # the old 'hex' and 'base64' are now deprecated, no-ops
+                    else:
+                        
+                        # I originally didn't have these, only had them for the encode side, and it was always a py2 bytes/str hack to enable some file lookup script file id param generation
+                        # 
+                        # due to py3, this is now a bit of a pain
+                        # _for now_, let's convert to bytes if not already and then spit out a str
+                        
+                        if decode_type == 'hex':
+                            
+                            s_bytes = bytes.fromhex( s )
+                            
+                        elif decode_type == 'base64':
+                            
+                            s_bytes = base64.b64decode( s )
+                            
+                        else:
+                            
+                            raise Exception( 'unknown decode type!' )
+                            
+                        
+                        s = str( s_bytes, 'utf-8', errors = 'replace' )
+                        
                     
                 elif conversion_type == STRING_CONVERSION_REVERSE:
                     
@@ -438,11 +462,6 @@ class StringConverter( StringProcessingStep ):
             return 'encode to ' + data
             
         elif conversion_type == STRING_CONVERSION_DECODE:
-            
-            if data in ( 'hex', 'base64' ):
-                
-                return 'deprecated {} decode, now a no-op, can be deleted'.format( data )
-                
             
             return 'decode from ' + data
             

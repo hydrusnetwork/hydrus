@@ -14,7 +14,7 @@ from hydrus.client.db import ClientDBMaintenance
 from hydrus.client.db import ClientDBModule
 from hydrus.client.db import ClientDBSerialisable
 from hydrus.client.db import ClientDBServices
-from hydrus.client.duplicates import ClientAutoDuplicates
+from hydrus.client.duplicates import ClientDuplicatesAutoResolution
 
 def GenerateResolutionDecisionTableNames( resolution_rule_id ) -> typing.Dict[ int, str ]:
     
@@ -23,10 +23,10 @@ def GenerateResolutionDecisionTableNames( resolution_rule_id ) -> typing.Dict[ i
     results = {}
     
     for status in (
-        ClientAutoDuplicates.DUPLICATE_STATUS_NOT_SEARCHED,
-        ClientAutoDuplicates.DUPLICATE_STATUS_MATCHES_SEARCH_BUT_NOT_TESTED,
-        ClientAutoDuplicates.DUPLICATE_STATUS_DOES_NOT_MATCH_SEARCH,
-        ClientAutoDuplicates.DUPLICATE_STATUS_MATCHES_SEARCH_FAILED_TEST
+        ClientDuplicatesAutoResolution.DUPLICATE_STATUS_NOT_SEARCHED,
+        ClientDuplicatesAutoResolution.DUPLICATE_STATUS_MATCHES_SEARCH_BUT_NOT_TESTED,
+        ClientDuplicatesAutoResolution.DUPLICATE_STATUS_DOES_NOT_MATCH_SEARCH,
+        ClientDuplicatesAutoResolution.DUPLICATE_STATUS_MATCHES_SEARCH_FAILED_TEST
     ):
         
         results[ status ] = f'{table_core}_{status}'
@@ -55,7 +55,7 @@ class ClientDBFilesDuplicatesAutoResolution( ClientDBModule.ClientDBModule ):
         
         super().__init__( 'client duplicates auto-resolution', cursor )
         
-        self._ids_to_resolution_rules: typing.Dict[ int, ClientAutoDuplicates.DuplicatesAutoResolutionRule ] = {}
+        self._ids_to_resolution_rules: typing.Dict[ int, ClientDuplicatesAutoResolution.DuplicatesAutoResolutionRule ] = {}
         
         self._Reinit()
         
@@ -76,10 +76,10 @@ class ClientDBFilesDuplicatesAutoResolution( ClientDBModule.ClientDBModule ):
     
     def _Reinit( self ):
         
-        self._ids_to_resolution_rules = { rule.GetId() : rule for rule in self.modules_serialisable.GetJSONDumpNamed( HydrusSerialisable.SERIALISABLE_TYPE_AUTO_DUPLICATES_RULE ) }
+        self._ids_to_resolution_rules = { rule.GetId() : rule for rule in self.modules_serialisable.GetJSONDumpNamed( HydrusSerialisable.SERIALISABLE_TYPE_DUPLICATES_AUTO_RESOLUTION_RULE ) }
         
     
-    def AddRule( self, rule: ClientAutoDuplicates.DuplicatesAutoResolutionRule ):
+    def AddRule( self, rule: ClientDuplicatesAutoResolution.DuplicatesAutoResolutionRule ):
         
         self._Execute( 'INSERT INTO duplicate_files_auto_resolution_rules DEFAULT VALUES;' )
         
@@ -100,12 +100,12 @@ class ClientDBFilesDuplicatesAutoResolution( ClientDBModule.ClientDBModule ):
             self._CreateIndex( table_name, ( 'larger_media_id', 'smaller_media_id' ) )
             
         
-        self._ExecuteMany( f'INSERT OR IGNORE INTO {statuses_to_table_names[ ClientAutoDuplicates.DUPLICATE_STATUS_NOT_SEARCHED ]} ( smaller_media_id, larger_media_id ) SELECT smaller_media_id, larger_media_id FROM potential_duplicate_pairs;' )
+        self._ExecuteMany( f'INSERT OR IGNORE INTO {statuses_to_table_names[ ClientDuplicatesAutoResolution.DUPLICATE_STATUS_NOT_SEARCHED ]} ( smaller_media_id, larger_media_id ) SELECT smaller_media_id, larger_media_id FROM potential_duplicate_pairs;' )
         
-        ClientAutoDuplicates.DuplicatesAutoResolutionManager.instance().Wake()
+        ClientDuplicatesAutoResolution.DuplicatesAutoResolutionManager.instance().Wake()
         
     
-    def DeleteRule( self, rule: ClientAutoDuplicates.DuplicatesAutoResolutionRule ):
+    def DeleteRule( self, rule: ClientDuplicatesAutoResolution.DuplicatesAutoResolutionRule ):
         
         resolution_rule_id = rule.GetId()
         
@@ -120,7 +120,7 @@ class ClientDBFilesDuplicatesAutoResolution( ClientDBModule.ClientDBModule ):
         
         del self._ids_to_resolution_rules[ resolution_rule_id ]
         
-        self.modules_serialisable.DeleteJSONDumpNamed( HydrusSerialisable.SERIALISABLE_TYPE_AUTO_DUPLICATES_RULE, dump_name = rule.GetName() )
+        self.modules_serialisable.DeleteJSONDumpNamed( HydrusSerialisable.SERIALISABLE_TYPE_DUPLICATES_AUTO_RESOLUTION_RULE, dump_name = rule.GetName() )
         
     
     def DoResolutionWork( self, resolution_rule_id: int, max_work_time = 0.5 ) -> bool:
@@ -135,7 +135,7 @@ class ClientDBFilesDuplicatesAutoResolution( ClientDBModule.ClientDBModule ):
         
         def get_row():
             
-            return self._Execute( f'SELECT smaller_media_id, larger_media_id FROM {statuses_to_table_names[ ClientAutoDuplicates.DUPLICATE_STATUS_MATCHES_SEARCH_BUT_NOT_TESTED ]};' ).fetchone()
+            return self._Execute( f'SELECT smaller_media_id, larger_media_id FROM {statuses_to_table_names[ ClientDuplicatesAutoResolution.DUPLICATE_STATUS_MATCHES_SEARCH_BUT_NOT_TESTED ]};' ).fetchone()
             
         
         pair_to_work = get_row()
@@ -172,7 +172,7 @@ class ClientDBFilesDuplicatesAutoResolution( ClientDBModule.ClientDBModule ):
         
         def get_rows():
             
-            return self._Execute( f'SELECT smaller_media_id, larger_media_id FROM {statuses_to_table_names[ ClientAutoDuplicates.DUPLICATE_STATUS_NOT_SEARCHED ]} LIMIT 256;' ).fetchone()
+            return self._Execute( f'SELECT smaller_media_id, larger_media_id FROM {statuses_to_table_names[ ClientDuplicatesAutoResolution.DUPLICATE_STATUS_NOT_SEARCHED ]} LIMIT 256;' ).fetchone()
             
         
         pairs_to_work = get_rows()
@@ -236,7 +236,7 @@ class ClientDBFilesDuplicatesAutoResolution( ClientDBModule.ClientDBModule ):
             
             for name in orphaned_object_names:
                 
-                self.modules_serialisable.DeleteJSONDumpNamed( HydrusSerialisable.SERIALISABLE_TYPE_AUTO_DUPLICATES_RULE, dump_name = name )
+                self.modules_serialisable.DeleteJSONDumpNamed( HydrusSerialisable.SERIALISABLE_TYPE_DUPLICATES_AUTO_RESOLUTION_RULE, dump_name = name )
                 
             
             HydrusData.ShowText( f'Deleted {HydrusNumbers.ToHumanInt( len( orphaned_on_object_side ) )} orphaned auto-resolution rule objects!' )
@@ -255,12 +255,12 @@ class ClientDBFilesDuplicatesAutoResolution( ClientDBModule.ClientDBModule ):
             statuses_to_table_names = GenerateResolutionDecisionTableNames( resolution_rule_id )
             
             self._ExecuteMany(
-                f'INSERT OR IGNORE INTO {statuses_to_table_names[ ClientAutoDuplicates.DUPLICATE_STATUS_NOT_SEARCHED ]} ( smaller_media_id, larger_media_id ) VALUES ( ?, ? );',
+                f'INSERT OR IGNORE INTO {statuses_to_table_names[ ClientDuplicatesAutoResolution.DUPLICATE_STATUS_NOT_SEARCHED ]} ( smaller_media_id, larger_media_id ) VALUES ( ?, ? );',
                 pairs_to_add
             )
             
         
-        ClientAutoDuplicates.DuplicatesAutoResolutionManager.instance().Wake()
+        ClientDuplicatesAutoResolution.DuplicatesAutoResolutionManager.instance().Wake()
         
     
     def NotifyDeletePairs( self, pairs_to_remove ):
@@ -280,10 +280,10 @@ class ClientDBFilesDuplicatesAutoResolution( ClientDBModule.ClientDBModule ):
                 
             
         
-        ClientAutoDuplicates.DuplicatesAutoResolutionManager.instance().Wake()
+        ClientDuplicatesAutoResolution.DuplicatesAutoResolutionManager.instance().Wake()
         
     
-    def ResearchRule( self, rule: ClientAutoDuplicates.DuplicatesAutoResolutionRule ):
+    def ResearchRule( self, rule: ClientDuplicatesAutoResolution.DuplicatesAutoResolutionRule ):
         # rule was edited or user wants to run it again (maybe it has num_tags or something in it)
         
         resolution_rule_id = rule.GetId()
@@ -292,11 +292,11 @@ class ClientDBFilesDuplicatesAutoResolution( ClientDBModule.ClientDBModule ):
         
         statuses_to_table_names = GenerateResolutionDecisionTableNames( resolution_rule_id )
         
-        not_searched_table_name = statuses_to_table_names[ ClientAutoDuplicates.DUPLICATE_STATUS_NOT_SEARCHED ]
+        not_searched_table_name = statuses_to_table_names[ ClientDuplicatesAutoResolution.DUPLICATE_STATUS_NOT_SEARCHED ]
         
         for ( status, table_name ) in statuses_to_table_names.items():
             
-            if status == ClientAutoDuplicates.DUPLICATE_STATUS_NOT_SEARCHED:
+            if status == ClientDuplicatesAutoResolution.DUPLICATE_STATUS_NOT_SEARCHED:
                 
                 continue
                 
@@ -344,7 +344,7 @@ class ClientDBFilesDuplicatesAutoResolution( ClientDBModule.ClientDBModule ):
             if len( pairs_we_should_add ) > 0:
                 
                 self._ExecuteMany(
-                    f'INSERT OR IGNORE INTO {statuses_to_table_names[ ClientAutoDuplicates.DUPLICATE_STATUS_NOT_SEARCHED ]} ( smaller_media_id, larger_media_id ) VALUES ( ?, ? );',
+                    f'INSERT OR IGNORE INTO {statuses_to_table_names[ ClientDuplicatesAutoResolution.DUPLICATE_STATUS_NOT_SEARCHED ]} ( smaller_media_id, larger_media_id ) VALUES ( ?, ? );',
                     pairs_we_should_add
                 )
                 
@@ -363,6 +363,6 @@ class ClientDBFilesDuplicatesAutoResolution( ClientDBModule.ClientDBModule ):
                 
             
         
-        ClientAutoDuplicates.DuplicatesAutoResolutionManager.instance().Wake()
+        ClientDuplicatesAutoResolution.DuplicatesAutoResolutionManager.instance().Wake()
         
     

@@ -184,6 +184,8 @@ class TestSerialisables( unittest.TestCase ):
         duplicate_content_merge_options_merge.SetTagServiceActions( [ ( CC.DEFAULT_LOCAL_TAG_SERVICE_KEY, HC.CONTENT_MERGE_ACTION_TWO_WAY_MERGE, HydrusTags.TagFilter() ) ] )
         duplicate_content_merge_options_merge.SetRatingServiceActions( [ ( TC.LOCAL_RATING_LIKE_SERVICE_KEY, HC.CONTENT_MERGE_ACTION_TWO_WAY_MERGE ), ( TC.LOCAL_RATING_NUMERICAL_SERVICE_KEY, HC.CONTENT_MERGE_ACTION_TWO_WAY_MERGE ), ( TC.LOCAL_RATING_INCDEC_SERVICE_KEY, HC.CONTENT_MERGE_ACTION_TWO_WAY_MERGE ) ] )
         
+        duplicate_content_merge_options_empty = ClientDuplicates.DuplicateContentMergeOptions()
+        
         inbox = True
         size = 40960
         mime = HC.IMAGE_JPEG
@@ -427,6 +429,20 @@ class TestSerialisables( unittest.TestCase ):
         content_update_package.AddContentUpdate( TC.LOCAL_RATING_LIKE_SERVICE_KEY, ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( 1.0, { two_hash } ) ) )
         content_update_package.AddContentUpdate( TC.LOCAL_RATING_NUMERICAL_SERVICE_KEY, ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( 0.8, { two_hash } ) ) )
         content_update_package.AddContentUpdates( TC.LOCAL_RATING_INCDEC_SERVICE_KEY, [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( 8, { one_hash } ) ), ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( 8, { two_hash } ) ) ] )
+        
+        HF.compare_content_update_packages( self, result, content_update_package )
+        
+        #
+        
+        result = duplicate_content_merge_options_empty.ProcessPairIntoContentUpdatePackage( one_media, two_media )
+        
+        content_update_package = ClientContentUpdates.ContentUpdatePackage()
+        
+        HF.compare_content_update_packages( self, result, content_update_package )
+        
+        result = duplicate_content_merge_options_empty.ProcessPairIntoContentUpdatePackage( two_media, one_media )
+        
+        content_update_package = ClientContentUpdates.ContentUpdatePackage()
         
         HF.compare_content_update_packages( self, result, content_update_package )
         

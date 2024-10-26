@@ -23,7 +23,6 @@ from hydrus.client.gui import ClientGUIDialogs
 from hydrus.client.gui import ClientGUIDialogsManage
 from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIDialogsQuick
-from hydrus.client.gui import ClientGUIDuplicates
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIMenus
 from hydrus.client.gui import ClientGUIRatings
@@ -33,6 +32,7 @@ from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.canvas import ClientGUICanvasHoverFrames
 from hydrus.client.gui.canvas import ClientGUICanvasMedia
+from hydrus.client.gui.duplicates import ClientGUIDuplicateActions
 from hydrus.client.gui.media import ClientGUIMediaSimpleActions
 from hydrus.client.gui.media import ClientGUIMediaModalActions
 from hydrus.client.gui.media import ClientGUIMediaControls
@@ -1028,7 +1028,7 @@ class Canvas( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
                     
                     hash = self._current_media.GetHash()
                     
-                    ClientGUIDuplicates.ClearFalsePositives( self, ( hash, ) )
+                    ClientGUIDuplicateActions.ClearFalsePositives( self, ( hash, ) )
                     
                 
             elif action == CAC.SIMPLE_DUPLICATE_MEDIA_CLEAR_FALSE_POSITIVES:
@@ -1037,7 +1037,7 @@ class Canvas( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
                     
                     hash = self._current_media.GetHash()
                     
-                    ClientGUIDuplicates.ClearFalsePositives( self, ( hash, ) )
+                    ClientGUIDuplicateActions.ClearFalsePositives( self, ( hash, ) )
                     
                 
             elif action == CAC.SIMPLE_DUPLICATE_MEDIA_DISSOLVE_FOCUSED_ALTERNATE_GROUP:
@@ -1046,7 +1046,7 @@ class Canvas( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
                     
                     hash = self._current_media.GetHash()
                     
-                    ClientGUIDuplicates.DissolveAlternateGroup( self, ( hash, ) )
+                    ClientGUIDuplicateActions.DissolveAlternateGroup( self, ( hash, ) )
                     
                 
             elif action == CAC.SIMPLE_DUPLICATE_MEDIA_DISSOLVE_ALTERNATE_GROUP:
@@ -1055,7 +1055,7 @@ class Canvas( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
                     
                     hash = self._current_media.GetHash()
                     
-                    ClientGUIDuplicates.DissolveAlternateGroup( self, ( hash, ) )
+                    ClientGUIDuplicateActions.DissolveAlternateGroup( self, ( hash, ) )
                     
                 
             elif action == CAC.SIMPLE_DUPLICATE_MEDIA_DISSOLVE_FOCUSED_DUPLICATE_GROUP:
@@ -1064,7 +1064,7 @@ class Canvas( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
                     
                     hash = self._current_media.GetHash()
                     
-                    ClientGUIDuplicates.DissolveDuplicateGroup( self, ( hash, ) )
+                    ClientGUIDuplicateActions.DissolveDuplicateGroup( self, ( hash, ) )
                     
                 
             elif action == CAC.SIMPLE_DUPLICATE_MEDIA_DISSOLVE_DUPLICATE_GROUP:
@@ -1073,7 +1073,7 @@ class Canvas( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
                     
                     hash = self._current_media.GetHash()
                     
-                    ClientGUIDuplicates.DissolveDuplicateGroup( self, ( hash, ) )
+                    ClientGUIDuplicateActions.DissolveDuplicateGroup( self, ( hash, ) )
                     
                 
             elif action == CAC.SIMPLE_DUPLICATE_MEDIA_REMOVE_FOCUSED_FROM_ALTERNATE_GROUP:
@@ -1082,7 +1082,7 @@ class Canvas( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
                     
                     hash = self._current_media.GetHash()
                     
-                    ClientGUIDuplicates.RemoveFromAlternateGroup( self, ( hash, ) )
+                    ClientGUIDuplicateActions.RemoveFromAlternateGroup( self, ( hash, ) )
                     
                 
             elif action == CAC.SIMPLE_DUPLICATE_MEDIA_REMOVE_FOCUSED_FROM_DUPLICATE_GROUP:
@@ -1091,7 +1091,7 @@ class Canvas( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
                     
                     hash = self._current_media.GetHash()
                     
-                    ClientGUIDuplicates.RemoveFromDuplicateGroup( self, ( hash, ) )
+                    ClientGUIDuplicateActions.RemoveFromDuplicateGroup( self, ( hash, ) )
                     
                 
             elif action == CAC.SIMPLE_DUPLICATE_MEDIA_RESET_FOCUSED_POTENTIAL_SEARCH:
@@ -1100,7 +1100,7 @@ class Canvas( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
                     
                     hash = self._current_media.GetHash()
                     
-                    ClientGUIDuplicates.ResetPotentialSearch( self, ( hash, ) )
+                    ClientGUIDuplicateActions.ResetPotentialSearch( self, ( hash, ) )
                     
                 
             elif action == CAC.SIMPLE_DUPLICATE_MEDIA_RESET_POTENTIAL_SEARCH:
@@ -1109,7 +1109,7 @@ class Canvas( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
                     
                     hash = self._current_media.GetHash()
                     
-                    ClientGUIDuplicates.ResetPotentialSearch( self, ( hash, ) )
+                    ClientGUIDuplicateActions.ResetPotentialSearch( self, ( hash, ) )
                     
                 
             elif action == CAC.SIMPLE_DUPLICATE_MEDIA_REMOVE_FOCUSED_POTENTIALS:
@@ -1118,7 +1118,7 @@ class Canvas( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
                     
                     hash = self._current_media.GetHash()
                     
-                    ClientGUIDuplicates.RemovePotentials( self, ( hash, ) )
+                    ClientGUIDuplicateActions.RemovePotentials( self, ( hash, ) )
                     
                 
             elif action == CAC.SIMPLE_DUPLICATE_MEDIA_REMOVE_POTENTIALS:
@@ -1127,7 +1127,7 @@ class Canvas( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
                     
                     hash = self._current_media.GetHash()
                     
-                    ClientGUIDuplicates.RemovePotentials( self, ( hash, ) )
+                    ClientGUIDuplicateActions.RemovePotentials( self, ( hash, ) )
                     
                 
             elif action == CAC.SIMPLE_MEDIA_SEEK_DELTA:

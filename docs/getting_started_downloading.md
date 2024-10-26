@@ -134,7 +134,7 @@ A few of the options have more information if you hover over them.
 :    See [multiple file services](advanced_multiple_local_file_services.md), an advanced feature.
 
 **post import actions**
-:    See the [files section on filtering](getting_started_files.md#inbox-and-archive) for the first option, the other two have information if you hover over them.
+:    See the [files section on filtering](getting_started_files.md#inbox_and_archive) for the first option, the other two have information if you hover over them.
 
 ### Tag Parsing
 By default, hydrus now starts with a local tag service called 'downloader tags' and it will parse (get) all the tags from normal gallery sites and put them in this service. You don't have to do anything, you will get some decent tags. As you use the client, you will figure out which tags you like and where you want them. On the downloader page, click `import options`:
@@ -153,6 +153,14 @@ The blacklist button will let you skip downloading files that have certain tags 
 
 !!! warning
     The file limit and import options on the upper panel of a gallery or watcher page, if changed, will only apply to **new** queries. If you want to change the options for an existing queue, either do so on its highlight panel below or use the 'set options to queries' button.
+
+#### Force Page Fetch
+
+By default, hydrus will not revisit web pages or API endpoints for URLs it knows A) refer to one known file only, and B) that file is already in your database or has previously been deleted. The way it navigates this can be a complicated mix of hash and URL data, and in certain logical situations hydrus will determine its own records are untrustworthy and decide to check the source again. This saves bandwidth and time as you run successive queries that include the same results. You should not disable the capability for normal operation.
+
+But if you mess up your tag import options somewhere and need to re-run a download with forced tag re-fetching, how to do it?
+
+At the moment, this is in tag import options, the `force page fetch even if...` checkboxes. You can either set up a one-time downloader page with specific tag import options that check both of these checkboxes and then paste URLs in, or you can right-click a selection of thumbnails and have hydrus create the page for you under the _urls->force metadata refetch_ menu. Once you are done with the downloader page, delete it and do not use it for normal jobs--again, this method of downloading is inefficient and should not be used for repeating, long-term, or speculative jobs. Only use it to fill in specific holes.
 
 ### Note Parsing
 

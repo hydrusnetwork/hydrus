@@ -101,35 +101,6 @@ def PixelsToInt( unit ):
     elif unit == 'megapixels': return 1000000
     
 
-def ResolutionToPrettyString( resolution ):
-    
-    if resolution is None:
-        
-        return 'no resolution'
-        
-    
-    if not isinstance( resolution, tuple ):
-        
-        try:
-            
-            resolution = tuple( resolution )
-            
-        except:
-            
-            return 'broken resolution'
-            
-        
-    
-    if resolution in HC.NICE_RESOLUTIONS:
-        
-        return HC.NICE_RESOLUTIONS[ resolution ]
-        
-    
-    ( width, height ) = resolution
-    
-    return '{}x{}'.format( ToHumanInt( width ), ToHumanInt( height ) )
-    
-
 def ToHumanInt( num ):
     
     try:

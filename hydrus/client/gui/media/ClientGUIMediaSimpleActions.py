@@ -353,8 +353,7 @@ def OpenFileWithDialog( media: typing.Optional[ ClientMedia.MediaSingleton ] ) -
     ClientPaths.OpenFileWithDialog( path )
     
     return True
-
-
+    
 
 def ShowDuplicatesInNewPage( location_context: ClientLocation.LocationContext, hash, duplicate_type ):
     

@@ -25,13 +25,13 @@ from hydrus.client.gui import ClientGUIDialogs
 from hydrus.client.gui import ClientGUIDialogsManage
 from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIDialogsQuick
-from hydrus.client.gui import ClientGUIDuplicates
 from hydrus.client.gui import ClientGUIShortcuts
 from hydrus.client.gui import ClientGUITags
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.canvas import ClientGUICanvas
 from hydrus.client.gui.canvas import ClientGUICanvasFrame
+from hydrus.client.gui.duplicates import ClientGUIDuplicateActions
 from hydrus.client.gui.media import ClientGUIMediaSimpleActions
 from hydrus.client.gui.media import ClientGUIMediaModalActions
 from hydrus.client.gui.networking import ClientGUIHydrusNetwork
@@ -2038,7 +2038,7 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.Liste
                     
                     hash = media.GetHash()
                     
-                    ClientGUIDuplicates.ClearFalsePositives( self, ( hash, ) )
+                    ClientGUIDuplicateActions.ClearFalsePositives( self, ( hash, ) )
                     
                 
             elif action == CAC.SIMPLE_DUPLICATE_MEDIA_CLEAR_FALSE_POSITIVES:
@@ -2047,7 +2047,7 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.Liste
                 
                 if len( hashes ) > 0:
                     
-                    ClientGUIDuplicates.ClearFalsePositives( self, hashes )
+                    ClientGUIDuplicateActions.ClearFalsePositives( self, hashes )
                     
                 
             elif action == CAC.SIMPLE_DUPLICATE_MEDIA_DISSOLVE_FOCUSED_ALTERNATE_GROUP:
@@ -2058,7 +2058,7 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.Liste
                     
                     hash = media.GetHash()
                     
-                    ClientGUIDuplicates.DissolveAlternateGroup( self, ( hash, ) )
+                    ClientGUIDuplicateActions.DissolveAlternateGroup( self, ( hash, ) )
                     
                 
             elif action == CAC.SIMPLE_DUPLICATE_MEDIA_DISSOLVE_ALTERNATE_GROUP:
@@ -2067,7 +2067,7 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.Liste
                 
                 if len( hashes ) > 0:
                     
-                    ClientGUIDuplicates.DissolveAlternateGroup( self, hashes )
+                    ClientGUIDuplicateActions.DissolveAlternateGroup( self, hashes )
                     
                 
             elif action == CAC.SIMPLE_DUPLICATE_MEDIA_DISSOLVE_FOCUSED_DUPLICATE_GROUP:
@@ -2078,7 +2078,7 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.Liste
                     
                     hash = media.GetHash()
                     
-                    ClientGUIDuplicates.DissolveDuplicateGroup( self, ( hash, ) )
+                    ClientGUIDuplicateActions.DissolveDuplicateGroup( self, ( hash, ) )
                     
                 
             elif action == CAC.SIMPLE_DUPLICATE_MEDIA_DISSOLVE_DUPLICATE_GROUP:
@@ -2087,7 +2087,7 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.Liste
                 
                 if len( hashes ) > 0:
                     
-                    ClientGUIDuplicates.DissolveDuplicateGroup( self, hashes )
+                    ClientGUIDuplicateActions.DissolveDuplicateGroup( self, hashes )
                     
                 
             elif action == CAC.SIMPLE_DUPLICATE_MEDIA_REMOVE_FOCUSED_FROM_ALTERNATE_GROUP:
@@ -2098,7 +2098,7 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.Liste
                     
                     hash = media.GetHash()
                     
-                    ClientGUIDuplicates.RemoveFromAlternateGroup( self, ( hash, ) )
+                    ClientGUIDuplicateActions.RemoveFromAlternateGroup( self, ( hash, ) )
                     
                 
             elif action == CAC.SIMPLE_DUPLICATE_MEDIA_REMOVE_FOCUSED_FROM_DUPLICATE_GROUP:
@@ -2109,7 +2109,7 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.Liste
                     
                     hash = media.GetHash()
                     
-                    ClientGUIDuplicates.RemoveFromDuplicateGroup( self, ( hash, ) )
+                    ClientGUIDuplicateActions.RemoveFromDuplicateGroup( self, ( hash, ) )
                     
                 
             elif action == CAC.SIMPLE_DUPLICATE_MEDIA_RESET_FOCUSED_POTENTIAL_SEARCH:
@@ -2120,7 +2120,7 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.Liste
                     
                     hash = media.GetHash()
                     
-                    ClientGUIDuplicates.ResetPotentialSearch( self, ( hash, ) )
+                    ClientGUIDuplicateActions.ResetPotentialSearch( self, ( hash, ) )
                     
                 
             elif action == CAC.SIMPLE_DUPLICATE_MEDIA_RESET_POTENTIAL_SEARCH:
@@ -2129,7 +2129,7 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.Liste
                 
                 if len( hashes ) > 0:
                     
-                    ClientGUIDuplicates.ResetPotentialSearch( self, hashes )
+                    ClientGUIDuplicateActions.ResetPotentialSearch( self, hashes )
                     
                 
             elif action == CAC.SIMPLE_DUPLICATE_MEDIA_REMOVE_FOCUSED_POTENTIALS:
@@ -2140,7 +2140,7 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.Liste
                     
                     hash = media.GetHash()
                     
-                    ClientGUIDuplicates.RemovePotentials( self, ( hash, ) )
+                    ClientGUIDuplicateActions.RemovePotentials( self, ( hash, ) )
                     
                 
             elif action == CAC.SIMPLE_DUPLICATE_MEDIA_REMOVE_POTENTIALS:
@@ -2149,7 +2149,7 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.Liste
                 
                 if len( hashes ) > 0:
                     
-                    ClientGUIDuplicates.RemovePotentials( self, hashes )
+                    ClientGUIDuplicateActions.RemovePotentials( self, hashes )
                     
                 
             elif action == CAC.SIMPLE_DUPLICATE_MEDIA_SET_ALTERNATE:

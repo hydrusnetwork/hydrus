@@ -307,6 +307,29 @@ class FastIndexUniqueList( collections.abc.MutableSequence ):
         
     
 
+def ConvertTupleOfDatasToCasefolded( l: typing.Sequence ) -> typing.Tuple:
+    
+    # TODO: We could convert/augment this guy to do HumanTextSort too so we have 3 < 22
+    
+    def casefold_obj( o ):
+        
+        if isinstance( o, str ):
+            
+            return o.casefold()
+            
+        elif isinstance( o, collections.abc.Sequence ):
+            
+            return ConvertTupleOfDatasToCasefolded( o )
+            
+        else:
+            
+            return o
+            
+        
+    
+    return tuple( ( casefold_obj( obj ) for obj in l ) )
+    
+
 def IntelligentMassIntersect( sets_to_reduce: typing.Collection[ set ] ):
     
     answer = None

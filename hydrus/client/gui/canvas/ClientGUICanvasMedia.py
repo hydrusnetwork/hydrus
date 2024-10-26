@@ -782,6 +782,7 @@ class Animation( QW.QWidget ):
         self._video_container = None
         
         self._frame_durations = None
+        self._duration = None
         
         if self._media is None:
             
@@ -796,12 +797,14 @@ class Animation( QW.QWidget ):
             self._duration = self._media.GetDurationMS()
             
             if self._media.GetMime() == HC.ANIMATION_UGOIRA:
-            
-                self._frame_durations = ClientUgoiraHandling.GetFrameDurationsUgoira( media )
+                
+                self._frame_durations = ClientUgoiraHandling.GetFrameDurationsUgoira( media.GetMediaResult() )
+                
             
             if self._duration is None and self._frame_durations is not None:
-            
+                
                 self._duration = sum( self._frame_durations )
+                
             
             CG.client_controller.gui.RegisterAnimationUpdateWindow( self )
             
@@ -812,10 +815,12 @@ class Animation( QW.QWidget ):
     def GetDuration( self ):
         
         return self._duration
+        
     
     def GetNumFrames( self ):
         
         return self._num_frames
+        
     
     def TIMERAnimationUpdate( self ):
         

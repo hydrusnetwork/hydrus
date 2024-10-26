@@ -11112,6 +11112,79 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
+        if version == 594:
+            
+            try:
+                
+                all_local_hash_ids = self.modules_files_storage.GetCurrentHashIdsList( self.modules_services.combined_local_file_service_id )
+                
+                with self._MakeTemporaryIntegerTable( all_local_hash_ids, 'hash_id' ) as temp_hash_ids_table_name:
+                    
+                    mimes_we_want = ( HC.ANIMATION_UGOIRA, )
+                    
+                    hash_ids = self._STS( self._Execute( 'SELECT hash_id FROM {} CROSS JOIN files_info USING ( hash_id ) WHERE mime IN {};'.format( temp_hash_ids_table_name, HydrusData.SplayListForDB( mimes_we_want ) ) ) )
+                    self.modules_files_maintenance_queue.AddJobs( hash_ids, ClientFiles.REGENERATE_FILE_DATA_JOB_FILE_METADATA )
+                    self.modules_files_maintenance_queue.AddJobs( hash_ids, ClientFiles.REGENERATE_FILE_DATA_JOB_FORCE_THUMBNAIL )
+                    
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Some ugoira-scanning failed to schedule! This is not super important, but hydev would be interested in seeing the error that was printed to the log.'
+                
+                self.pub_initial_message( message )
+                
+            
+            try:
+                
+                false_positive_alternates_group_ids = self._STS( self._Execute( 'SELECT smaller_alternates_group_id FROM duplicate_false_positives;' ) )
+                false_positive_alternates_group_ids.update( self._STS( self._Execute( 'SELECT larger_alternates_group_id FROM duplicate_false_positives;' ) ) )
+                
+                false_positive_medias_ids = set()
+                
+                for alternates_group_id in false_positive_alternates_group_ids:
+                    
+                    false_positive_medias_ids.update( self.modules_files_duplicates.GetAlternateMediaIds( alternates_group_id ) )
+                    
+                
+                db_location_context = self.modules_files_storage.GetDBLocationContext( ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_FILE_SERVICE_KEY ) )
+                
+                false_positive_hash_ids = self.modules_files_duplicates.GetDuplicatesHashIds( false_positive_medias_ids, db_location_context )
+                
+                if len( false_positive_hash_ids ) > 0:
+                    
+                    def ask_what_to_do_false_positive_modified_dates():
+                        
+                        message = 'Hey, due to a bug, some potential duplicate pairs that were set as "false positive/not related" in the duplicates system may have had their file modified date database records merged. The files\' true file modified dates on your hard drive were not affected.'
+                        message += '\n' * 2
+                        message += f'You have {len( false_positive_hash_ids)} files ever set as "not related". Shall I reset their file modified dates back to whatever they have on your hard drive? I recommend doing this unless you have a complicated file modified merging scheme already in place and would rather go through all these manually.'
+                        
+                        from hydrus.client.gui import ClientGUIDialogsQuick
+                        
+                        result = ClientGUIDialogsQuick.GetYesNo( None, message, title = 'Reset modified dates?', yes_label = 'do it', no_label = 'do not do it' )
+                        
+                        return result == QW.QDialog.Accepted
+                        
+                    
+                    do_it = self._controller.CallBlockingToQt( None, ask_what_to_do_false_positive_modified_dates )
+                    
+                    if do_it:
+                        
+                        self.modules_files_maintenance_queue.AddJobs( false_positive_hash_ids, ClientFiles.REGENERATE_FILE_DATA_JOB_FILE_MODIFIED_TIMESTAMP )
+                        
+                    
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Some alternates metadata updates failed to schedule! This is not super important, but hydev would be interested in seeing the error that was printed to the log.'
+                
+                self.pub_initial_message( message )
+                
+            
+        
         self._controller.frame_splash_status.SetTitleText( 'updated db to v{}'.format( HydrusNumbers.ToHumanInt( version + 1 ) ) )
         
         self._Execute( 'UPDATE version SET version = ?;', ( version + 1, ) )

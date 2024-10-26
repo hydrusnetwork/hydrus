@@ -1,5 +1,6 @@
 import collections
 import os
+import random
 import time
 import typing
 
@@ -858,8 +859,6 @@ class Page( QW.QWidget ):
             self._management_panel.CheckAbleToClose()
             
         except HydrusExceptions.VetoException as e:
-            
-            reason = str( e )
             
             message = '{} Are you sure you want to close it?'.format( str( e ) )
             
@@ -2246,7 +2245,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
             
         
     
-    def GetOrMakeURLImportPage( self, desired_page_name = None, desired_page_key = None, select_page = True, destination_location_context = None ):
+    def GetOrMakeURLImportPage( self, desired_page_name = None, desired_page_key = None, select_page = True, destination_location_context = None, destination_tag_import_options = None ):
         
         potential_url_import_pages = [ page for page in self._GetMediaPages( False ) if page.IsURLImportPage() ]
         
@@ -2278,6 +2277,25 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
             potential_url_import_pages = good_url_import_pages
             
         
+        if destination_tag_import_options is not None:
+            
+            good_url_import_pages = []
+            
+            for url_import_page in potential_url_import_pages:
+                
+                urls_import = url_import_page.GetManagementController().GetVariable( 'urls_import' )
+                
+                tag_import_options = urls_import.GetTagImportOptions()
+                
+                if tag_import_options.GetSerialisableTuple() == destination_tag_import_options.GetSerialisableTuple():
+                    
+                    good_url_import_pages.append( url_import_page )
+                    
+                
+            
+            potential_url_import_pages = good_url_import_pages
+            
+        
         if len( potential_url_import_pages ) > 0:
             
             # ok, we can use an existing one. should we use the current?
@@ -2295,7 +2313,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
             
         else:
             
-            return self.NewPageImportURLs( page_name = desired_page_name, on_deepest_notebook = True, select_page = select_page, destination_location_context = destination_location_context )
+            return self.NewPageImportURLs( page_name = desired_page_name, on_deepest_notebook = True, select_page = select_page, destination_location_context = destination_location_context, destination_tag_import_options = destination_tag_import_options )
             
         
     
@@ -2424,6 +2442,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
     
     def GetTestAbleToCloseStatement( self ):
         
+        reasons_to_names = collections.defaultdict( list )
         count = collections.Counter()
         
         for page in self._GetMediaPages( False ):
@@ -2436,27 +2455,33 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
                 
                 reason = str( e )
                 
+                reasons_to_names[ reason ].append( page.GetName() )
+                
                 count[ reason ] += 1
                 
             
         
         if len( count ) > 0:
             
-            message = ''
+            message_blocks = []
             
-            for ( reason, c ) in list(count.items()):
+            for ( reason, c ) in sorted( count.items() ):
+                
+                names = sorted( reasons_to_names[ reason ], key = HydrusData.HumanTextSortKey )
                 
                 if c == 1:
                     
-                    message = '1 page says: ' + reason
+                    message_block = f'page "{names[0]}" says: {reason}'
                     
                 else:
                     
-                    message = HydrusNumbers.ToHumanInt( c ) + ' pages say:' + reason
+                    message_block = f'pages{HydrusText.ConvertManyStringsToNiceInsertableHumanSummary( names )}say: {reason}'
                     
                 
-                message += '\n'
+                message_blocks.append( message_block )
                 
+            
+            message = '\n----\n'.join( message_blocks )
             
             return message
             
@@ -2995,9 +3020,9 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         return self.NewPage( management_controller, on_deepest_notebook = on_deepest_notebook, select_page = select_page )
         
     
-    def NewPageImportURLs( self, page_name = None, on_deepest_notebook = False, select_page = True, destination_location_context = None ):
+    def NewPageImportURLs( self, page_name = None, on_deepest_notebook = False, select_page = True, destination_location_context = None, destination_tag_import_options = None ):
         
-        management_controller = ClientGUIManagementController.CreateManagementControllerImportURLs( page_name = page_name, destination_location_context = destination_location_context )
+        management_controller = ClientGUIManagementController.CreateManagementControllerImportURLs( page_name = page_name, destination_location_context = destination_location_context, destination_tag_import_options = destination_tag_import_options )
         
         return self.NewPage( management_controller, on_deepest_notebook = on_deepest_notebook, select_page = select_page )
         

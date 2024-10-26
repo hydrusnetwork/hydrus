@@ -7,6 +7,7 @@ from qtpy import QtWidgets as QW
 
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusLists
 from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusText
@@ -363,7 +364,7 @@ class HydrusListItemModel( QC.QAbstractItemModel ):
             
             if data not in self._data_to_sort_tuples:
                 
-                sort_tuple = self._data_to_sort_tuple_func( data )
+                sort_tuple = HydrusLists.ConvertTupleOfDatasToCasefolded( self._data_to_sort_tuple_func( data ) )
                 
                 self._data_to_sort_tuples[ data ] = sort_tuple
                 
@@ -457,7 +458,7 @@ class HydrusListItemModel( QC.QAbstractItemModel ):
                     
                     existing_sort_tuple = self._data_to_sort_tuples[ data ]
                     
-                    new_sort_tuple = self._data_to_sort_tuple_func( data )
+                    new_sort_tuple = HydrusLists.ConvertTupleOfDatasToCasefolded( self._data_to_sort_tuple_func( data ) )
                     
                     if existing_sort_tuple[ existing_sort_logical_index ] != new_sort_tuple[ existing_sort_logical_index ]:
                         
@@ -737,44 +738,6 @@ class BetterListCtrlTreeView( QW.QTreeView ):
         status.SetSort( sort_column_type, sort_asc )
         
         return status
-        
-    
-    def _GetDisplayAndSortTuples( self, data ):
-        
-        try:
-            
-            ( display_tuple, sort_tuple ) = self._data_to_tuples_func( data )
-            
-        except Exception as e:
-            
-            if not self._have_shown_a_column_data_error:
-                
-                HydrusData.ShowText( 'A multi-column list was unable to generate text or sort data for one or more rows! Please send hydrus dev the traceback!' )
-                HydrusData.ShowException( e )
-                
-                self._have_shown_a_column_data_error = True
-                
-            
-            error_display_tuple = [ 'unable to display' for i in range( self._column_list_status.GetColumnCount() ) ]
-            
-            return ( error_display_tuple, None )
-            
-        
-        better_sort = []
-        
-        for item in sort_tuple:
-            
-            if isinstance( item, str ):
-                
-                item = HydrusData.HumanTextSortKey( item )
-                
-            
-            better_sort.append( item )
-            
-        
-        sort_tuple = tuple( better_sort )
-        
-        return ( display_tuple, sort_tuple )
         
     
     def _GetRowHeightEstimate( self ):

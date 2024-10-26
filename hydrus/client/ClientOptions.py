@@ -264,7 +264,8 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             'command_palette_show_media_menu' : False,
             'disallow_media_drags_on_duration_media' : False,
             'show_all_my_files_on_page_chooser' : True,
-            'show_local_files_on_page_chooser' : False
+            'show_local_files_on_page_chooser' : False,
+            'use_nice_resolution_strings' : True
         }
         
         #

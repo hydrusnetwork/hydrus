@@ -32,7 +32,7 @@ Each tag service comes with its own tags, siblings and parents.
 The intent is to use this service for tags you yourself want to add.
 
 ### Downloader tags
-The default [tag parse target](getting_started_downloading.md#parsing). Tags of things you download will end up here unless you change the settings. It's probably a good idea to set up some tag blacklists for tags you don't want.
+The default place for tags coming from downloaders. Tags of things you download will end up here unless you change the settings. It is a good idea to set up some tag blacklists for tags you do not want.
 
 ## Tag repositories
 

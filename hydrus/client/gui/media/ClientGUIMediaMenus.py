@@ -412,7 +412,7 @@ def AddKnownURLsViewCopyMenu( win, menu, focus_media, num_files_selected: int, s
         
         selected_media = ClientMedia.FlattenMedia( selected_media )
         
-        if len( selected_media ) > 1:
+        if len( selected_media ) > 0:
             
             SAMPLE_SIZE = 256
             
@@ -475,15 +475,13 @@ def AddKnownURLsViewCopyMenu( win, menu, focus_media, num_files_selected: int, s
         
         urls_visit_menu = ClientGUIMenus.GenerateMenu( urls_menu )
         urls_copy_menu = ClientGUIMenus.GenerateMenu( urls_menu )
+        urls_force_refetch_menu = ClientGUIMenus.GenerateMenu( urls_menu )
         
         if len( focus_labels_and_urls ) > 0:
             
             urls_open_page_menu = ClientGUIMenus.GenerateMenu( urls_menu )
             
-        
-        # copy each this file's urls (of a particular type)
-        
-        if len( focus_labels_and_urls ) > 0:
+            # copy each this file's urls (of a particular type)
             
             MAX_TO_SHOW = 15
             
@@ -587,9 +585,9 @@ def AddKnownURLsViewCopyMenu( win, menu, focus_media, num_files_selected: int, s
                 
                 ClientGUIMenus.AppendMenuItem( urls_visit_menu, label, 'Open this url class in your web browser for all files.', ClientGUIMediaModalActions.OpenMediaURLClassURLs, win, selected_media, url_class )
                 
-                label = 'these files\' ' + url_class.GetName() + ' urls'
-                
                 ClientGUIMenus.AppendMenuItem( urls_copy_menu, label, 'Copy this url class for all files.', ClientGUIMediaSimpleActions.CopyMediaURLClassURLs, selected_media, url_class )
+                
+                ClientGUIMenus.AppendMenuItem( urls_force_refetch_menu, label, 'Re-download these URLs with forced metadata re-fetch enabled.', ClientGUIMediaModalActions.RedownloadURLClassURLsForceRefetch, win, selected_media, url_class )
                 
             
         
@@ -616,6 +614,10 @@ def AddKnownURLsViewCopyMenu( win, menu, focus_media, num_files_selected: int, s
             
         
         ClientGUIMenus.AppendMenu( urls_menu, urls_copy_menu, 'copy' )
+        
+        ClientGUIMenus.AppendSeparator( urls_menu )
+        
+        ClientGUIMenus.AppendMenu( urls_menu, urls_force_refetch_menu, 'force metadata refetch' )
         
     
     ClientGUIMenus.AppendMenu( menu, urls_menu, 'urls' )

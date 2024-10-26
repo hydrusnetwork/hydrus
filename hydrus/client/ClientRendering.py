@@ -908,8 +908,8 @@ class RasterContainerVideo( RasterContainer ):
             self._times_to_play_animation = HydrusAnimationHandling.GetTimesToPlayAPNG( self._path )
             
         elif self._media.GetMime() == HC.ANIMATION_UGOIRA:
-                        
-            self._times_to_play_animation = 1
+            
+            self._times_to_play_animation = 0
             
         else:
             

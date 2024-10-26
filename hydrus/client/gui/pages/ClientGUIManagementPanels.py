@@ -37,6 +37,7 @@ from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.canvas import ClientGUICanvas
 from hydrus.client.gui.canvas import ClientGUICanvasFrame
+from hydrus.client.gui.duplicates import ClientGUIDuplicatesAutoResolution
 from hydrus.client.gui.importing import ClientGUIFileSeedCache
 from hydrus.client.gui.importing import ClientGUIGallerySeedLog
 from hydrus.client.gui.importing import ClientGUIImport
@@ -210,6 +211,15 @@ class ListBoxTagsMediaManagementPanel( ClientGUIListBoxes.ListBoxTagsMedia ):
             p = ( or_predicate, )
             permit_remove = False
             
+        elif command == 'dissolve_or_predicate':
+            
+            or_preds = [ p for p in predicates if p.IsORPredicate() ]
+            
+            sub_preds = HydrusLists.MassUnion( [ p.GetValue() for p in or_preds ] )
+            
+            CG.client_controller.pub( 'enter_predicates', self._page_key, or_preds, permit_remove = True, permit_add = False )
+            CG.client_controller.pub( 'enter_predicates', self._page_key, sub_preds, permit_remove = False, permit_add = True )
+            
         elif command == 'replace_or_predicate':
             
             if or_predicate is None:
@@ -219,6 +229,10 @@ class ListBoxTagsMediaManagementPanel( ClientGUIListBoxes.ListBoxTagsMedia ):
             
             CG.client_controller.pub( 'enter_predicates', self._page_key, predicates, permit_remove = True, permit_add = False )
             CG.client_controller.pub( 'enter_predicates', self._page_key, ( or_predicate, ), permit_remove = False, permit_add = True )
+            
+        elif command == 'start_or_predicate':
+            
+            CG.client_controller.pub( 'enter_predicates', self._page_key, predicates, start_or_predicate = True )
             
         elif command == 'remove_predicates':
             
@@ -481,8 +495,11 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         
         self._main_notebook = ClientGUICommon.BetterNotebook( self )
         
+        # TODO: make these two panels into their own classes and rewire everything into panel signals
         self._main_left_panel = QW.QWidget( self._main_notebook )
         self._main_right_panel = QW.QWidget( self._main_notebook )
+        
+        self._duplicates_auto_resolution_panel = ClientGUIDuplicatesAutoResolution.ReviewDuplicatesAutoResolutionPanel( self )
         
         #
         
@@ -601,6 +618,16 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         
         self._main_notebook.addTab( self._main_left_panel, 'preparation' )
         self._main_notebook.addTab( self._main_right_panel, 'filtering' )
+        
+        if CG.client_controller.new_options.GetBoolean( 'advanced_mode' ):
+            
+            self._main_notebook.addTab( self._duplicates_auto_resolution_panel, 'auto-resolution' )
+            
+        else:
+            
+            self._duplicates_auto_resolution_panel.setVisible( False )
+            
+        
         self._main_notebook.setCurrentWidget( self._main_right_panel )
         
         #
