@@ -116,7 +116,7 @@ class EditSingleFileMetadataRouterPanel( ClientGUIScrolledPanels.EditPanel ):
         self._UpdateTestPanel()
         
     
-    def _ConvertTestRowToListCtrlTuples( self, test_row ):
+    def _ConvertTestRowToDisplayTuple( self, test_row ):
         
         ( importer, test_object ) = test_row
         
@@ -138,9 +138,31 @@ class EditSingleFileMetadataRouterPanel( ClientGUIScrolledPanels.EditPanel ):
         pretty_processed_strings_output = ', '.join( processed_strings_output )
         
         display_tuple = ( test_object_pretty, pretty_importer_strings_output, pretty_processed_strings_output )
+        
+        return display_tuple
+        
+    
+    def _ConvertTestRowToSortTuple( self, test_row ):
+        
+        ( importer, test_object ) = test_row
+        
+        string_processor = self._string_processor_button.GetValue()
+        
+        test_object_pretty = self._test_context_factory.GetTestObjectString( test_object )
+        importer_strings_output = sorted( self._test_context_factory.GetExampleTestStrings( importer, test_object ) )
+        
+        if string_processor.MakesChanges():
+            
+            processed_strings_output = string_processor.ProcessStrings( importer_strings_output )
+            
+        else:
+            
+            processed_strings_output = [ 'no changes' ]
+            
+        
         sort_tuple = ( test_object_pretty, len( importer_strings_output ), len( processed_strings_output ) )
         
-        return ( display_tuple, sort_tuple )
+        return sort_tuple
         
     
     def _GetExampleStringProcessorTestData( self ):
@@ -202,7 +224,7 @@ class EditSingleFileMetadataRouterPanel( ClientGUIScrolledPanels.EditPanel ):
             
             if self._test_notebook.count() < i + 1:
                 
-                model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_METADATA_ROUTER_TEST_RESULTS.ID, self._ConvertTestRowToListCtrlTuples )
+                model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_METADATA_ROUTER_TEST_RESULTS.ID, self._ConvertTestRowToDisplayTuple, self._ConvertTestRowToSortTuple )
                 
                 list_ctrl = ClientGUIListCtrl.BetterListCtrlTreeView( self._test_notebook, CGLC.COLUMN_LIST_METADATA_ROUTER_TEST_RESULTS.ID, 11, model )
                 

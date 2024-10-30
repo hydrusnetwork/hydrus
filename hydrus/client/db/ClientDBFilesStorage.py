@@ -1162,12 +1162,14 @@ class ClientDBFilesStorage( ClientDBModule.ClientDBModule ):
     
     def GetTablesAndColumnsThatUseDefinitions( self, content_type: int ) -> typing.List[ typing.Tuple[ str, str ] ]:
         
-        tables_and_columns = [
-            ( 'deferred_physical_file_deletes', 'hash_id' ),
-            ( 'deferred_physical_thumbnail_deletes', 'hash_id' )
-        ]
+        tables_and_columns = []
         
         if content_type == HC.CONTENT_TYPE_HASH:
+            
+            tables_and_columns.extend( [
+                ( 'deferred_physical_file_deletes', 'hash_id' ),
+                ( 'deferred_physical_thumbnail_deletes', 'hash_id' )
+            ] )
             
             for service_id in self.modules_services.GetServiceIds( HC.FILE_SERVICES_WITH_SPECIFIC_MAPPING_CACHES ):
                 

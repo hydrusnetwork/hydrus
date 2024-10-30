@@ -8,26 +8,15 @@ from hydrus.core import HydrusTime
 
 from hydrus.client import ClientDaemons
 from hydrus.client import ClientGlobals as CG
-from hydrus.client.interfaces import ClientControllerInterface
 
 class DatabaseMaintenanceManager( ClientDaemons.ManagerWithMainLoop ):
     
-    def __init__( self, controller: ClientControllerInterface.ClientControllerInterface ):
+    def __init__( self, controller: "CG.ClientController.Controller" ):
         
-        super().__init__()
+        super().__init__( controller )
         
-        self._controller = controller
-        
-        self._lock = threading.Lock()
-        
-        self._serious_error_encountered = False
-        
-        self._wake_event = threading.Event()
-        self._shutdown = False
         self._is_working_hard = False
-        self._mainloop_is_finished = False
         
-        self._controller.sub( self, 'Shutdown', 'shutdown' )
         self._controller.sub( self, 'Wake', 'checkbox_manager_inverted' )
         self._controller.sub( self, 'Wake', 'notify_deferred_delete_database_maintenance_new_work' )
         
@@ -103,15 +92,32 @@ class DatabaseMaintenanceManager( ClientDaemons.ManagerWithMainLoop ):
             
         
     
-    def MainLoopBackgroundWork( self ):
+    def FlipWorkingHard( self ):
         
-        def check_shutdown():
+        with self._lock:
             
-            if HydrusThreading.IsThreadShuttingDown() or self._shutdown or self._serious_error_encountered:
-                
-                raise HydrusExceptions.ShutdownException()
-                
+            self._is_working_hard = not self._is_working_hard
             
+        
+        self._controller.pub( 'notify_deferred_delete_database_maintenance_state_change' )
+        
+        self.Wake()
+        
+    
+    def GetName( self ) -> str:
+        
+        return 'db maintenance'
+        
+    
+    def IsWorkingHard( self ) -> bool:
+        
+        with self._lock:
+            
+            return self._is_working_hard
+            
+        
+    
+    def MainLoop( self ):
         
         try:
             
@@ -119,7 +125,10 @@ class DatabaseMaintenanceManager( ClientDaemons.ManagerWithMainLoop ):
             
             while not HydrusTime.TimeHasPassed( time_to_start ):
                 
-                check_shutdown()
+                with self._lock:
+                    
+                    self._CheckShutdown()
+                    
                 
                 self._wake_event.wait( 1 )
                 
@@ -128,7 +137,10 @@ class DatabaseMaintenanceManager( ClientDaemons.ManagerWithMainLoop ):
                 
                 still_work_to_do = False
                 
-                check_shutdown()
+                with self._lock:
+                    
+                    self._CheckShutdown()
+                    
                 
                 self._controller.WaitUntilViewFree()
                 
@@ -188,55 +200,5 @@ class DatabaseMaintenanceManager( ClientDaemons.ManagerWithMainLoop ):
             
             self._mainloop_is_finished = True
             
-        
-    
-    def FlipWorkingHard( self ):
-        
-        with self._lock:
-            
-            self._is_working_hard = not self._is_working_hard
-            
-        
-        self._controller.pub( 'notify_deferred_delete_database_maintenance_state_change' )
-        
-        self.Wake()
-        
-    
-    def GetName( self ) -> str:
-        
-        return 'db maintenance'
-        
-    
-    def IsShutdown( self ) -> bool:
-        
-        return self._mainloop_is_finished
-        
-    
-    def IsWorkingHard( self ) -> bool:
-        
-        with self._lock:
-            
-            return self._is_working_hard
-            
-        
-    
-    def Shutdown( self ):
-        
-        with self._lock:
-            
-            self._shutdown = True
-            
-        
-        self.Wake()
-        
-    
-    def Start( self ):
-        
-        self._controller.CallToThreadLongRunning( self.MainLoopBackgroundWork )
-        
-    
-    def Wake( self ):
-        
-        self._wake_event.set()
         
     

@@ -268,7 +268,7 @@ class ManagementPanel( QW.QScrollArea ):
     
     SHOW_COLLECT = True
     
-    def __init__( self, parent, page, controller, management_controller: ClientGUIManagementController.ManagementController ):
+    def __init__( self, parent, page, controller: "CG.ClientController.Controller", management_controller: ClientGUIManagementController.ManagementController ):
         
         super().__init__( parent )
         

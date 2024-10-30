@@ -7,6 +7,7 @@ from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 
 from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientGlobals as CG
 from hydrus.client.duplicates import ClientDuplicatesAutoResolution
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
@@ -310,7 +311,7 @@ class ReviewDuplicatesAutoResolutionPanel( QW.QWidget ):
             
         else:
             
-            running_status = ClientDuplicatesAutoResolution.DuplicatesAutoResolutionManager.instance().GetRunningStatus( duplicates_auto_resolution_rule.GetId() )
+            running_status = CG.client_controller.duplicates_auto_resolution_manager.GetRunningStatus( duplicates_auto_resolution_rule.GetId() )
             
         
         return ( name, search_status, running_status )
@@ -334,14 +335,14 @@ class ReviewDuplicatesAutoResolutionPanel( QW.QWidget ):
                 
                 edited_duplicates_auto_resolution_rules = panel.GetValue()
                 
-                ClientDuplicatesAutoResolution.DuplicatesAutoResolutionManager.instance().SetRules( edited_duplicates_auto_resolution_rules )
+                CG.client_controller.duplicates_auto_resolution_manager.SetRules( edited_duplicates_auto_resolution_rules )
                 
             
         
     
     def _ResetListData( self ):
         
-        rules = ClientDuplicatesAutoResolution.DuplicatesAutoResolutionManager.instance().GetRules()
+        rules = CG.client_controller.duplicates_auto_resolution_manager.GetRules()
         
         self._duplicates_auto_resolution_rules.SetData( rules )
         

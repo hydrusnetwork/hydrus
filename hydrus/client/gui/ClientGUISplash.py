@@ -10,6 +10,7 @@ from hydrus.core import HydrusData
 from hydrus.core import HydrusGlobals as HG
 
 from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientGlobals as CG
 from hydrus.client.gui import ClientGUIAsync
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import QtPorting as QP
@@ -17,7 +18,7 @@ from hydrus.client.gui.widgets import ClientGUICommon
 
 class FrameSplashPanel( QW.QWidget ):
     
-    def __init__( self, parent, controller, frame_splash_status ):
+    def __init__( self, parent, controller: "CG.ClientController.Controller", frame_splash_status ):
         
         super().__init__( parent )
         
@@ -230,7 +231,7 @@ class FrameSplashStatus( object ):
     
 class FrameSplash( QW.QWidget ):
     
-    def __init__( self, controller, title, frame_splash_status: FrameSplashStatus ):
+    def __init__( self, controller: "CG.ClientController.Controller", title, frame_splash_status: FrameSplashStatus ):
         
         self._controller = controller
         

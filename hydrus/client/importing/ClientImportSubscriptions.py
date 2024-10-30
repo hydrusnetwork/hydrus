@@ -1728,6 +1728,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
         return ( self._name, self._gug_key_and_name, self._query_headers, self._checker_options, self._initial_file_limit, self._periodic_file_limit, self._paused, self._file_import_options, self._tag_import_options, self._no_work_until, self._no_work_until_reason )
         
     
+
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_SUBSCRIPTION ] = Subscription
 
 LOG_CONTAINER_SYNCED = 0
@@ -1768,7 +1769,7 @@ HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIAL
 
 class SubscriptionJob( object ):
     
-    def __init__( self, controller, subscription ):
+    def __init__( self, controller: "CG.ClientController.Controller", subscription: Subscription ):
         
         self._controller = controller
         self._subscription = subscription
@@ -1809,33 +1810,21 @@ class SubscriptionsManager( ClientDaemons.ManagerWithMainLoop ):
     
     def __init__( self, controller, subscriptions: typing.List[ Subscription ] ):
         
-        super().__init__()
-        
-        self._controller = controller
+        super().__init__( controller )
         
         self._names_to_subscriptions = { subscription.GetName() : subscription for subscription in subscriptions }
         self._names_to_running_subscription_info = {}
         self._names_that_cannot_run = set()
         self._names_to_next_work_time = {}
         
-        self._lock = threading.Lock()
-        
-        self._shutdown = False
-        self._mainloop_finished = False
-        
         self._pause_subscriptions_for_editing = False
-        
-        self._wake_event = threading.Event()
         
         self._big_pauser = HydrusThreading.BigJobPauser( wait_time = 0.8 )
         
-        self._controller.sub( self, 'Shutdown', 'shutdown' )
         self._controller.sub( self, 'Wake', 'notify_network_traffic_unpaused' )
         
     
     def _ClearFinishedSubscriptions( self ):
-        
-        done_some = False
         
         for ( name, ( job, subscription ) ) in list( self._names_to_running_subscription_info.items() ):
             
@@ -1844,8 +1833,6 @@ class SubscriptionsManager( ClientDaemons.ManagerWithMainLoop ):
                 self._UpdateSubscriptionInfo( subscription, just_finished_work = True )
                 
                 del self._names_to_running_subscription_info[ name ]
-                
-                done_some = True
                 
             
         
@@ -1991,20 +1978,17 @@ class SubscriptionsManager( ClientDaemons.ManagerWithMainLoop ):
             
         
     
-    def IsShutdown( self ):
-        
-        return self._mainloop_finished
-        
-    
     def MainLoop( self ):
         
         try:
             
             self._wake_event.wait( 3 )
             
-            while not ( HG.started_shutdown or self._shutdown ):
+            while True:
                 
                 with self._lock:
+                    
+                    self._CheckShutdown()
                     
                     subscription = self._GetSubscriptionReadyToGo()
                     
@@ -2028,6 +2012,10 @@ class SubscriptionsManager( ClientDaemons.ManagerWithMainLoop ):
                 
                 self._wake_event.clear()
                 
+            
+        except HydrusExceptions.ShutdownException:
+            
+            pass
             
         finally:
             
@@ -2056,15 +2044,7 @@ class SubscriptionsManager( ClientDaemons.ManagerWithMainLoop ):
                     
                 
             
-            self._mainloop_finished = True
-            
-        
-    
-    def ResumeSubscriptionsAfterEditing( self ):
-        
-        with self._lock:
-            
-            self._pause_subscriptions_for_editing = False
+            self._mainloop_is_finished = True
             
         
     
@@ -2073,6 +2053,14 @@ class SubscriptionsManager( ClientDaemons.ManagerWithMainLoop ):
         with self._lock:
             
             self._pause_subscriptions_for_editing = True
+            
+        
+    
+    def ResumeSubscriptionsAfterEditing( self ):
+        
+        with self._lock:
+            
+            self._pause_subscriptions_for_editing = False
             
         
     
@@ -2120,16 +2108,9 @@ class SubscriptionsManager( ClientDaemons.ManagerWithMainLoop ):
     
     def Shutdown( self ):
         
-        self._shutdown = True
-        
         self.PauseSubscriptionsForEditing()
         
-        self._wake_event.set()
-        
-    
-    def Start( self ):
-        
-        self._controller.CallToThreadLongRunning( self.MainLoop )
+        super().Shutdown()
         
     
     def SubscriptionsArePausedForEditing( self ):
@@ -2148,10 +2129,5 @@ class SubscriptionsManager( ClientDaemons.ManagerWithMainLoop ):
             
             return len( self._names_to_running_subscription_info ) > 0
             
-        
-    
-    def Wake( self ):
-        
-        self._wake_event.set()
         
     

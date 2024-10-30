@@ -39,7 +39,6 @@ from hydrus.client.db import ClientDB
 from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUISplash
 from hydrus.client.gui import QtPorting as QP
-from hydrus.client.interfaces import ClientControllerInterface
 
 if not HG.twisted_is_broke:
     
@@ -164,7 +163,8 @@ class App( QW.QApplication ):
             
         
     
-class Controller( ClientControllerInterface.ClientControllerInterface, HydrusController.HydrusController ):
+
+class Controller( HydrusController.HydrusController ):
     
     my_instance = None
     
@@ -1409,6 +1409,12 @@ class Controller( ClientControllerInterface.ClientControllerInterface, HydrusCon
         
         self._managers_with_mainloops.append( self.database_maintenance_manager )
         
+        from hydrus.client.duplicates import ClientDuplicatesAutoResolution
+        
+        self.duplicates_auto_resolution_manager = ClientDuplicatesAutoResolution.DuplicatesAutoResolutionManager( self )
+        
+        self._managers_with_mainloops.append( self.duplicates_auto_resolution_manager )
+        
         from hydrus.client.importing import ClientImportLocal
         
         self.import_folders_manager = ClientImportLocal.ImportFoldersManager( self )
@@ -1793,6 +1799,7 @@ class Controller( ClientControllerInterface.ClientControllerInterface, HydrusCon
         
         self.files_maintenance_manager.Start()
         self.database_maintenance_manager.Start()
+        self.duplicates_auto_resolution_manager.Start()
         self.import_folders_manager.Start()
         self.subscriptions_manager.Start()
         

@@ -171,6 +171,8 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             'saving_sash_positions_on_exit' : True,
             'database_deferred_delete_maintenance_during_idle' : True,
             'database_deferred_delete_maintenance_during_active' : True,
+            'duplicates_auto_resolution_during_idle' : True,
+            'duplicates_auto_resolution_during_active' : True,
             'file_maintenance_during_idle' : True,
             'file_maintenance_during_active' : True,
             'tag_display_maintenance_during_idle' : True,

@@ -716,10 +716,10 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
             tt = 'This hashes the string\'s UTF-8-decoded bytes to hexadecimal.'
             self._data_hash_function.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
             
-            for e in ( 'hex', 'base64', 'url percent encoding', 'unicode escape characters', 'html entities' ):
+            for e in ( ClientStrings.ENCODING_TYPE_HEX_UTF8, ClientStrings.ENCODING_TYPE_BASE64_UTF8, ClientStrings.ENCODING_TYPE_URL_PERCENT, ClientStrings.ENCODING_TYPE_UNICODE_ESCAPE, ClientStrings.ENCODING_TYPE_HTML_ENTITIES ):
                 
-                self._data_encoding.addItem( e, e )
-                self._data_decoding.addItem( e, e )
+                self._data_encoding.addItem( ClientStrings.encoding_type_str_lookup[ e ], e )
+                self._data_decoding.addItem( ClientStrings.encoding_type_str_lookup[ e ], e )
                 
             
             utf8_tt = '"hex" and "base64" here will use UTF-8 encoding.'

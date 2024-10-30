@@ -22,17 +22,11 @@ class HydrusResourceClientAPIRestrictedAddNotesSetNotes( HydrusResourceClientAPI
     
     def _threadDoPOSTJob( self, request: HydrusServerRequest.HydrusRequest ):
         
-        if 'hash' in request.parsed_request_args:
+        hashes = set( ClientLocalServerCore.ParseHashes( request ) )
+        
+        if len( hashes ) == 1:
             
-            hash = request.parsed_request_args.GetValue( 'hash', bytes )
-            
-        elif 'file_id' in request.parsed_request_args:
-            
-            hash_id = request.parsed_request_args.GetValue( 'file_id', int )
-            
-            hash_ids_to_hashes = CG.client_controller.Read( 'hash_ids_to_hashes', hash_ids = [ hash_id ] )
-            
-            hash = hash_ids_to_hashes[ hash_id ]
+            hash = list( hashes )[0]
             
         else:
             
@@ -95,17 +89,11 @@ class HydrusResourceClientAPIRestrictedAddNotesDeleteNotes( HydrusResourceClient
     
     def _threadDoPOSTJob( self, request: HydrusServerRequest.HydrusRequest ):
         
-        if 'hash' in request.parsed_request_args:
+        hashes = set( ClientLocalServerCore.ParseHashes( request ) )
+        
+        if len( hashes ) == 1:
             
-            hash = request.parsed_request_args.GetValue( 'hash', bytes )
-            
-        elif 'file_id' in request.parsed_request_args:
-            
-            hash_id = request.parsed_request_args.GetValue( 'file_id', int )
-            
-            hash_ids_to_hashes = CG.client_controller.Read( 'hash_ids_to_hashes', hash_ids = [ hash_id ] )
-            
-            hash = hash_ids_to_hashes[ hash_id ]
+            hash = list( hashes )[0]
             
         else:
             

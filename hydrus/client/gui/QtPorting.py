@@ -1015,6 +1015,8 @@ class GridLayout( QW.QGridLayout ):
 
 def AddToLayout( layout, item, flag = None, alignment = None ):
     
+    # TODO: yo, this whole thing could do with a pass to clear out stuff that isn't doing what I expect and cut down to essentials
+    
     if isinstance( layout, GridLayout ):
         
         row = layout.next_row
@@ -1087,9 +1089,9 @@ def AddToLayout( layout, item, flag = None, alignment = None ):
         
         pass
         
-    elif flag in ( CC.FLAGS_CENTER, CC.FLAGS_ON_LEFT, CC.FLAGS_ON_RIGHT, CC.FLAGS_CENTER_PERPENDICULAR, CC.FLAGS_CENTER_PERPENDICULAR_EXPAND_DEPTH ):
+    elif flag in ( CC.FLAGS_CENTER, CC.FLAGS_ON_LEFT, CC.FLAGS_ON_RIGHT, CC.FLAGS_CENTER_PERPENDICULAR, CC.FLAGS_CENTER_PERPENDICULAR_EXPAND_DEPTH, CC.FLAGS_SIZER_CENTER ):
         
-        if flag == CC.FLAGS_CENTER:
+        if flag in ( CC.FLAGS_CENTER, CC.FLAGS_SIZER_CENTER ):
             
             alignment = QC.Qt.AlignVCenter | QC.Qt.AlignHCenter
             
@@ -1123,7 +1125,7 @@ def AddToLayout( layout, item, flag = None, alignment = None ):
                 
             
         
-        if isinstance( item, QW.QLayout ):
+        if isinstance( item, QW.QLayout ): # what in the
             
             zero_border = True
             

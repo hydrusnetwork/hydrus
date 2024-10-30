@@ -13,7 +13,6 @@ from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusProfiling
 from hydrus.core import HydrusTime
-from hydrus.core.interfaces import HydrusThreadingInterface
 
 NEXT_THREAD_CLEAROUT = 0
 
@@ -189,7 +188,7 @@ class BigJobPauser( object ):
 
 class DAEMON( threading.Thread ):
     
-    def __init__( self, controller, name ):
+    def __init__( self, controller: "HG.HydrusController.HydrusController", name: str ):
         
         super().__init__( name = name )
         
@@ -482,7 +481,7 @@ class THREADCallToThread( DAEMON ):
     
 class JobScheduler( threading.Thread ):
     
-    def __init__( self, controller ):
+    def __init__( self, controller: "HG.HydrusController.HydrusController" ):
         
         super().__init__( name = 'Job Scheduler' )
         
@@ -742,11 +741,11 @@ class JobScheduler( threading.Thread ):
         
     
 
-class SchedulableJob( HydrusThreadingInterface.SchedulableJobInterface ):
+class SchedulableJob( object ):
     
     PRETTY_CLASS_NAME = 'job base'
     
-    def __init__( self, controller, scheduler: JobScheduler, initial_delay, work_callable ):
+    def __init__( self, controller: "HG.HydrusController.HydrusController", scheduler: JobScheduler, initial_delay, work_callable ):
         
         super().__init__()
         

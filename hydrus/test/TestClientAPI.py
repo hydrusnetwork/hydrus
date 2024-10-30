@@ -6292,7 +6292,7 @@ class TestClientAPI( unittest.TestCase ):
         
         TG.test_controller.SetRead( 'hash_ids_to_hashes', { k : v for ( k, v ) in file_ids_to_hashes.items() if k in [ 1, 2, 3 ] } )
         
-        path = '/get_files/file_metadata?file_ids={}&only_return_basic_information=true'.format( urllib.parse.quote( json.dumps( [ 3, 1, 2 ] ) ) )
+        path = '/get_files/file_metadata?file_ids={}&only_return_basic_information=true'.format( urllib.parse.quote( json.dumps( expected_order ) ) )
         
         connection.request( 'GET', path, headers = headers )
         

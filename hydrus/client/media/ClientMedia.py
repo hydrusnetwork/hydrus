@@ -1991,7 +1991,20 @@ class MediaSingleton( Media ):
                 
             else:
                 
-                framerate_insert = f', {round( num_frames / ( duration / 1000 ) )}fps'
+                fps = num_frames / ( duration / 1000 )
+                
+                if fps < 1:
+                    
+                    framerate_insert = ', {:.2f}fps'.format( fps )
+                    
+                elif fps < 10:
+                    
+                    framerate_insert = ', {:.1f}fps'.format( fps )
+                    
+                else:
+                    
+                    framerate_insert = f', {round( num_frames / ( duration / 1000 ) )}fps'
+                    
                 
             
             info_string += f' ({HydrusNumbers.ToHumanInt( num_frames )} frames{framerate_insert})'

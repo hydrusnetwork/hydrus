@@ -1186,7 +1186,7 @@ class NoneableSpinCtrl( QW.QWidget ):
         
         width = ClientGUIFunctions.ConvertTextToPixelWidth( self._number_value, len( str( max ) ) + 5 )
         
-        self._number_value.setMaximumWidth( width )
+        self._number_value.setMinimumWidth( width )
         
         self.SetValue( default_int )
         
@@ -1197,7 +1197,7 @@ class NoneableSpinCtrl( QW.QWidget ):
             QP.AddToLayout( hbox, BetterStaticText(self,message+': '), CC.FLAGS_CENTER_PERPENDICULAR )
             
         
-        QP.AddToLayout( hbox, self._number_value, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._number_value, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         if self._unit is not None:
             
@@ -1205,8 +1205,6 @@ class NoneableSpinCtrl( QW.QWidget ):
             
         
         QP.AddToLayout( hbox, self._checkbox, CC.FLAGS_CENTER_PERPENDICULAR )
-        
-        hbox.addStretch( 1 )
         
         self.setLayout( hbox )
         
@@ -1578,14 +1576,12 @@ class OnOffButton( QW.QPushButton ):
 
 class StaticBox( QW.QFrame ):
     
-    def __init__( self, parent, title ):
+    def __init__( self, parent, title, can_expand = False, start_expanded = True ):
         
         super().__init__( parent )
         
         self.setFrameStyle( QW.QFrame.Box | QW.QFrame.Raised )
         self._spacer = QW.QSpacerItem( 0, 0, QW.QSizePolicy.Minimum, QW.QSizePolicy.MinimumExpanding )
-        
-        self._sizer = QP.VBoxLayout()
         
         normal_font = self.font()
         
@@ -1597,20 +1593,73 @@ class StaticBox( QW.QFrame ):
         self._title_st = BetterStaticText( self, label = title )
         self._title_st.setFont( title_font )
         
-        QP.AddToLayout( self._sizer, self._title_st, CC.FLAGS_CENTER )
+        self._expand_button = BetterButton( self, label = '\u25B2', func = self.ExpandCollapse )
+        self._expand_button.setFixedWidth( ClientGUIFunctions.ConvertTextToPixelWidth( self._expand_button, 4 ) )
         
-        self.setLayout( self._sizer )
+        self._content_panel = QW.QWidget( self )
         
-        self.layout().addSpacerItem( self._spacer )
+        if not can_expand:
+            
+            self._expand_button.hide()
+            
+        
+        button_hbox = QP.HBoxLayout( 0, 0 )
+        
+        QP.AddToLayout( button_hbox, QW.QWidget( self ), CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( button_hbox, self._expand_button, CC.FLAGS_ON_RIGHT )
+        
+        hbox = QP.HBoxLayout()
+        
+        QP.AddToLayout( hbox, QW.QWidget( self ), CC.FLAGS_CENTER_PERPENDICULAR_EXPAND_DEPTH )
+        QP.AddToLayout( hbox, self._title_st, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, button_hbox, CC.FLAGS_CENTER_PERPENDICULAR_EXPAND_DEPTH )
+        
+        vbox = QP.VBoxLayout()
+        
+        QP.AddToLayout( vbox, hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._content_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        self.setLayout( vbox )
+        
+        self._sizer = QP.VBoxLayout()
+        
+        self._content_panel.setLayout( self._sizer )
+        
+        self._sizer.addSpacerItem( self._spacer )
+        
+        self._expanded = True
+        
+        if not start_expanded:
+            
+            self.ExpandCollapse()
+            
         
     
     def Add( self, widget, flags = None ):
         
-        self.layout().removeItem( self._spacer )
+        self._sizer.removeItem( self._spacer )
         
         QP.AddToLayout( self._sizer, widget, flags )
-
-        self.layout().addSpacerItem( self._spacer )
+        
+        self._sizer.addSpacerItem( self._spacer )
+        
+    
+    def ExpandCollapse( self ):
+        
+        if self._expanded:
+            
+            new_label = '\u25BC'
+            
+        else:
+            
+            new_label = '\u25B2'
+            
+        
+        self._expand_button.setText( new_label )
+        
+        self._expanded = not self._expanded
+        
+        self._content_panel.setVisible( self._expanded )
         
     
     def SetTitle( self, title ):

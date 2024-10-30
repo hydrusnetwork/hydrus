@@ -244,7 +244,7 @@ def PopulateGallerySeedLogButton( win: QW.QWidget, menu: QW.QMenu, gallery_seed_
     
 class EditGallerySeedLogPanel( ClientGUIScrolledPanels.EditPanel ):
     
-    def __init__( self, parent, controller, read_only: bool, can_generate_more_pages: bool, gallery_type_string: str, gallery_seed_log: ClientImportGallerySeeds.GallerySeedLog ):
+    def __init__( self, parent, controller: "CG.ClientController.Controller", read_only: bool, can_generate_more_pages: bool, gallery_type_string: str, gallery_seed_log: ClientImportGallerySeeds.GallerySeedLog ):
         
         super().__init__( parent )
         
@@ -576,7 +576,7 @@ class EditGallerySeedLogPanel( ClientGUIScrolledPanels.EditPanel ):
     
 class GallerySeedLogButton( ClientGUICommon.ButtonWithMenuArrow ):
     
-    def __init__( self, parent, controller, read_only: bool, can_generate_more_pages: bool, gallery_type_string: str, gallery_seed_log_get_callable, gallery_seed_log_set_callable = None ):
+    def __init__( self, parent, controller: "CG.ClientController.Controller", read_only: bool, can_generate_more_pages: bool, gallery_type_string: str, gallery_seed_log_get_callable, gallery_seed_log_set_callable = None ):
         
         self._controller = controller
         self._read_only = read_only
@@ -654,9 +654,10 @@ class GallerySeedLogButton( ClientGUICommon.ButtonWithMenuArrow ):
     
 class GallerySeedLogStatusControl( QW.QFrame ):
     
-    def __init__( self, parent, controller, read_only: bool, can_generate_more_pages: bool, gallery_type_string: str, page_key = None ):
+    def __init__( self, parent: QW.QWidget, controller: "CG.ClientController.Controller", read_only: bool, can_generate_more_pages: bool, gallery_type_string: str, page_key = None ):
         
         super().__init__( parent )
+        
         self.setFrameStyle( QW.QFrame.Box | QW.QFrame.Raised )
         
         self._controller = controller

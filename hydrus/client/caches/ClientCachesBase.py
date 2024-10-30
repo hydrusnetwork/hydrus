@@ -6,6 +6,8 @@ from hydrus.core import HydrusData
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusTime
 
+from hydrus.client import ClientGlobals as CG
+
 class CacheableObject( object ):
     
     def GetEstimatedMemoryFootprint( self ) -> int:
@@ -16,7 +18,7 @@ class CacheableObject( object ):
 
 class DataCache( object ):
     
-    def __init__( self, controller, name, cache_size, timeout = 1200 ):
+    def __init__( self, controller: "CG.ClientController.Controller", name, cache_size, timeout = 1200 ):
         
         self._controller = controller
         self._name = name

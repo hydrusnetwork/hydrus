@@ -254,7 +254,7 @@ class FilenameTaggingOptionsPanel( QW.QWidget ):
             
             quick_namespaces_listctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self._quick_namespaces_panel )
             
-            model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_QUICK_NAMESPACES.ID, self._ConvertQuickRegexDataToListCtrlTuples )
+            model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_QUICK_NAMESPACES.ID, self._ConvertQuickRegexDataToDisplayTuple, self._ConvertQuickRegexDataToSortTuple )
             
             self._quick_namespaces_list = ClientGUIListCtrl.BetterListCtrlTreeView( quick_namespaces_listctrl_panel, CGLC.COLUMN_LIST_QUICK_NAMESPACES.ID, 4, model, use_simple_delete = True, activation_callback = self.EditQuickNamespaces )
             
@@ -352,15 +352,16 @@ class FilenameTaggingOptionsPanel( QW.QWidget ):
             self._regex_input.SetEnterCallable( self.AddRegex )
             
         
-        def _ConvertQuickRegexDataToListCtrlTuples( self, data ):
+        def _ConvertQuickRegexDataToDisplayTuple( self, data ):
             
             ( namespace, regex ) = data
             
             display_tuple = ( namespace, regex )
-            sort_tuple = ( namespace, regex )
             
-            return ( display_tuple, sort_tuple )
+            return display_tuple
             
+        
+        _ConvertQuickRegexDataToSortTuple = _ConvertQuickRegexDataToDisplayTuple
         
         def AddQuickNamespace( self ):
             

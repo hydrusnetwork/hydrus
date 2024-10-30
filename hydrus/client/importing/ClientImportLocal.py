@@ -26,7 +26,6 @@ from hydrus.client.importing import ClientImporting
 from hydrus.client.importing import ClientImportFileSeeds
 from hydrus.client.importing.options import FileImportOptions
 from hydrus.client.importing.options import TagImportOptions
-from hydrus.client.interfaces import ClientControllerInterface
 from hydrus.client.metadata import ClientContentUpdates
 from hydrus.client.metadata import ClientMetadataMigration
 from hydrus.client.metadata import ClientMetadataMigrationExporters
@@ -1316,27 +1315,13 @@ HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIAL
 
 class ImportFoldersManager( ClientDaemons.ManagerWithMainLoop ):
     
-    def __init__( self, controller: ClientControllerInterface.ClientControllerInterface ):
+    def __init__( self, controller: "CG.ClientController.Controller" ):
         
-        super().__init__()
-        
-        self._controller = controller
-        
-        self._lock = threading.Lock()
-        
-        self._serious_error_encountered = False
+        super().__init__( controller )
         
         self._import_folder_names_fetched = False
         self._import_folder_names_to_next_work_time_cache: typing.Dict[ str, int ] = {}
         
-        self._startup_delay = 5
-        
-        self._wake_event = threading.Event()
-        self._shutdown = threading.Event()
-        
-        self._mainloop_is_finished = False
-        
-        self._controller.sub( self, 'Shutdown', 'shutdown' )
         self._controller.sub( self, 'NotifyImportFoldersHaveChanged', 'notify_new_import_folders' )
         
     
@@ -1458,28 +1443,25 @@ class ImportFoldersManager( ClientDaemons.ManagerWithMainLoop ):
     
     def MainLoop( self ):
         
-        def check_shutdown():
-            
-            if HydrusThreading.IsThreadShuttingDown() or self._shutdown.is_set() or self._serious_error_encountered:
-                
-                raise HydrusExceptions.ShutdownException()
-                
-            
-        
         try:
             
-            time_to_start = HydrusTime.GetNow() + self._startup_delay
+            time_to_start = HydrusTime.GetNow() + 10
             
             while not HydrusTime.TimeHasPassed( time_to_start ):
                 
-                check_shutdown()
+                self._CheckShutdown()
                 
                 self._wake_event.wait( 1 )
+                
+                if self._wake_event.is_set():
+                    
+                    break
+                    
                 
             
             while True:
                 
-                check_shutdown()
+                self._CheckShutdown()
                 
                 self._controller.WaitUntilViewFree()
                 
@@ -1528,11 +1510,6 @@ class ImportFoldersManager( ClientDaemons.ManagerWithMainLoop ):
             
         
     
-    def IsShutdown( self ) -> bool:
-        
-        return self._mainloop_is_finished
-        
-    
     def NotifyImportFoldersHaveChanged( self ):
         
         with self._lock:
@@ -1542,24 +1519,5 @@ class ImportFoldersManager( ClientDaemons.ManagerWithMainLoop ):
             
         
         self.Wake()
-        
-    
-    def Shutdown( self ):
-        
-        self._shutdown.set()
-        
-        self.Wake()
-        
-    
-    def Start( self, startup_delay = 5 ):
-        
-        self._startup_delay = startup_delay
-        
-        self._controller.CallToThreadLongRunning( self.MainLoop )
-        
-    
-    def Wake( self ):
-        
-        self._wake_event.set()
         
     

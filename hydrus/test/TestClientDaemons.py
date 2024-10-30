@@ -59,7 +59,9 @@ class TestDaemons( unittest.TestCase ):
             
             manager = ClientImportLocal.ImportFoldersManager( HG.controller )
             
-            manager.Start( startup_delay = 0 )
+            manager.Start()
+            
+            manager.Wake()
             
             time.sleep( 3 )
             

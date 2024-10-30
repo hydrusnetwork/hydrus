@@ -1700,6 +1700,7 @@ class ReviewServicePanel( QW.QWidget ):
         if not CG.client_controller.new_options.GetBoolean( 'advanced_mode' ):
             
             self._id_button.hide()
+            self._service_key_button.hide()
             
         
         vbox = QP.VBoxLayout()
@@ -1883,7 +1884,7 @@ class ReviewServiceClientAPISubPanel( ClientGUICommon.StaticBox ):
     
     def __init__( self, parent, service ):
         
-        super().__init__( parent, 'client api' )
+        super().__init__( parent, 'client api access keys' )
         
         self._service = service
         
@@ -1920,6 +1921,9 @@ class ReviewServiceClientAPISubPanel( ClientGUICommon.StaticBox ):
         
         #
         
+        st = ClientGUICommon.BetterStaticText( self, label = 'Manage your Client API\'s different access key permissions here.' )
+        
+        self.Add( st, CC.FLAGS_EXPAND_PERPENDICULAR )
         self.Add( self._service_status, CC.FLAGS_EXPAND_PERPENDICULAR )
         self.Add( permissions_list_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         
@@ -2341,7 +2345,7 @@ class ReviewServiceRemoteSubPanel( ClientGUICommon.StaticBox ):
     
     def __init__( self, parent, service ):
         
-        super().__init__( parent, 'this client\'s network use' )
+        super().__init__( parent, 'this client\'s network use', can_expand = True, start_expanded = False )
         
         self._service = service
         
@@ -2447,7 +2451,7 @@ class ReviewServiceRestrictedSubPanel( ClientGUICommon.StaticBox ):
     
     def __init__( self, parent, service ):
         
-        super().__init__( parent, 'hydrus service account - shared by all clients using the same access key' )
+        super().__init__( parent, 'hydrus service account - shared by all clients using the same access key', can_expand = True, start_expanded = False )
         
         self._service = service
         
@@ -2716,7 +2720,7 @@ class ReviewServiceRepositorySubPanel( QW.QWidget ):
         
         self._my_updater = ClientGUIAsync.FastThreadToGUIUpdater( self, self._Refresh )
         
-        self._network_panel = ClientGUICommon.StaticBox( self, 'network sync' )
+        self._network_panel = ClientGUICommon.StaticBox( self, 'network sync', can_expand = True, start_expanded = False )
         
         self._repo_options_st = ClientGUICommon.BetterStaticText( self._network_panel )
         
@@ -2750,7 +2754,7 @@ class ReviewServiceRepositorySubPanel( QW.QWidget ):
         
         #
         
-        self._processing_panel = ClientGUICommon.StaticBox( self, 'processing sync' )
+        self._processing_panel = ClientGUICommon.StaticBox( self, 'processing sync', can_expand = True, start_expanded = False )
         
         self._update_processing_paused_button = ClientGUICommon.BetterBitmapButton( self._processing_panel, CC.global_pixmaps().pause, self._PausePlayUpdateProcessing )
         self._update_processing_paused_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'pause/play all update processing' ) )
@@ -3457,7 +3461,7 @@ class ReviewServiceIPFSSubPanel( ClientGUICommon.StaticBox ):
     
     def __init__( self, parent, service ):
         
-        super().__init__( parent, 'ipfs' )
+        super().__init__( parent, 'ipfs', can_expand = True, start_expanded = False )
         
         self._service = service
         
@@ -3980,7 +3984,7 @@ class ReviewServiceTrashSubPanel( ClientGUICommon.StaticBox ):
     
 class ReviewServicesPanel( ClientGUIScrolledPanels.ReviewPanel ):
     
-    def __init__( self, parent, controller ):
+    def __init__( self, parent: QW.QWidget, controller: "CG.ClientController.Controller" ):
         
         self._controller = controller
         

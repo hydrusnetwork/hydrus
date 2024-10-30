@@ -105,8 +105,8 @@ options = {}
 # Misc
 
 NETWORK_VERSION = 20
-SOFTWARE_VERSION = 595
-CLIENT_API_VERSION = 73
+SOFTWARE_VERSION = 596
+CLIENT_API_VERSION = 74
 
 SERVER_THUMBNAIL_DIMENSIONS = ( 200, 200 )
 
@@ -214,6 +214,7 @@ content_type_string_lookup = {
     CONTENT_TYPE_TITLE : 'title',
     CONTENT_TYPE_NOTES : 'notes',
     CONTENT_TYPE_FILE_VIEWING_STATS : 'file viewing stats',
+    CONTENT_TYPE_TAG : 'tag',
     CONTENT_TYPE_DEFINITIONS : 'definitions',
     CONTENT_TYPE_HTTP_HEADERS : 'http headers'
 }

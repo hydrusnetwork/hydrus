@@ -542,13 +542,18 @@ class ClientDBTagParents( ClientDBModule.ClientDBModule ):
         
         if content_type == HC.CONTENT_TYPE_TAG:
             
-            # don't are for actual/ideal, they feed off these guys
             for service_id in self._GetServiceIdsWeGenerateDynamicTablesFor():
                 
-                for table_name in GenerateTagParentsStorageTableNames( service_id ):
+                for table_name in GenerateTagParentsStorageTableNames( service_id ).values():
                     
                     tables_and_columns.append( ( table_name, 'child_tag_id' ) )
                     tables_and_columns.append( ( table_name, 'parent_tag_id' ) )
+                    
+                
+                for table_name in GenerateTagParentsLookupCacheTableNames( service_id ):
+                    
+                    tables_and_columns.append( ( table_name, 'child_tag_id' ) )
+                    tables_and_columns.append( ( table_name, 'ancestor_tag_id' ) )
                     
                 
             

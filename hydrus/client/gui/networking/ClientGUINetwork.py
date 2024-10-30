@@ -559,7 +559,7 @@ class NetworkContextButton( ClientGUICommon.BetterButton ):
     
 class ReviewAllBandwidthPanel( ClientGUIScrolledPanels.ReviewPanel ):
     
-    def __init__( self, parent, controller ):
+    def __init__( self, parent: QW.QWidget, controller: "CG.ClientController.Controller" ):
         
         self._controller = controller
         
@@ -840,7 +840,7 @@ class ReviewAllBandwidthPanel( ClientGUIScrolledPanels.ReviewPanel ):
     
 class ReviewNetworkContextBandwidthPanel( ClientGUIScrolledPanels.ReviewPanel ):
     
-    def __init__( self, parent, controller, network_context ):
+    def __init__( self, parent: QW.QWidget, controller: "CG.ClientController.Controller", network_context ):
         
         self._controller = controller
         
@@ -1098,7 +1098,7 @@ class ReviewNetworkContextBandwidthPanel( ClientGUIScrolledPanels.ReviewPanel ):
     
 class ReviewNetworkJobs( ClientGUIScrolledPanels.ReviewPanel ):
     
-    def __init__( self, parent, controller ):
+    def __init__( self, parent: QW.QWidget, controller: "CG.ClientController.Controller" ):
         
         self._controller = controller
         

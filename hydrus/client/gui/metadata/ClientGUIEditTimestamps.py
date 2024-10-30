@@ -58,7 +58,7 @@ class EditFileTimestampsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUISc
         
         self._domain_modified_list_ctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( domain_box )
         
-        model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_DOMAIN_MODIFIED_TIMESTAMPS.ID, self._ConvertDomainToDomainModifiedListCtrlTuples )
+        model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_DOMAIN_MODIFIED_TIMESTAMPS.ID, self._ConvertDomainToDomainModifiedDisplayTuple, self._ConvertDomainToDomainModifiedSortTuple )
         
         self._domain_modified_list_ctrl = ClientGUIListCtrl.BetterListCtrlTreeView( self._domain_modified_list_ctrl_panel, CGLC.COLUMN_LIST_DOMAIN_MODIFIED_TIMESTAMPS.ID, 8, model, use_simple_delete = True, activation_callback = self._EditDomainModifiedTimestamp )
         
@@ -74,7 +74,7 @@ class EditFileTimestampsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUISc
         
         self._file_services_list_ctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( file_services_box )
         
-        model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_FILE_SERVICE_TIMESTAMPS.ID, self._ConvertDataRowToFileServiceListCtrlTuples )
+        model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_FILE_SERVICE_TIMESTAMPS.ID, self._ConvertDataRowToFileServiceDisplayTuple, self._ConvertDataRowToFileServiceSortTuple )
         
         self._file_services_list_ctrl = ClientGUIListCtrl.BetterListCtrlTreeView( self._file_services_list_ctrl_panel, CGLC.COLUMN_LIST_FILE_SERVICE_TIMESTAMPS.ID, 8, model, activation_callback = self._EditFileServiceTimestamp )
         
@@ -310,20 +310,52 @@ class EditFileTimestampsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUISc
         ClientGUIFunctions.SetFocusLater( self )
         
     
-    def _ConvertDomainToDomainModifiedListCtrlTuples( self, domain ):
+    def _ConvertDomainToDomainModifiedDisplayTuple( self, domain ):
         
         ( hashes, datetime_value_range, user_has_edited ) = self._domain_modified_list_ctrl_data_dict[ domain ]
         
         pretty_timestamp = datetime_value_range.ToString()
-        sort_timestamp = datetime_value_range
         
         display_tuple = ( domain, pretty_timestamp )
-        sort_tuple = ( domain, sort_timestamp )
         
-        return ( display_tuple, sort_tuple )
+        return display_tuple
         
     
-    def _ConvertDataRowToFileServiceListCtrlTuples( self, row ):
+    def _ConvertDomainToDomainModifiedSortTuple( self, domain ):
+        
+        ( hashes, datetime_value_range, user_has_edited ) = self._domain_modified_list_ctrl_data_dict[ domain ]
+        
+        sort_timestamp = datetime_value_range
+        
+        sort_tuple = ( domain, sort_timestamp )
+        
+        return sort_tuple
+        
+    
+    def _ConvertDataRowToFileServiceDisplayTuple( self, row ):
+        
+        ( file_service_key, timestamp_type ) = row
+        
+        ( hashes, datetime_value_range, user_has_edited ) = self._file_services_list_ctrl_data_dict[ row ]
+        
+        try:
+            
+            pretty_name = CG.client_controller.services_manager.GetName( file_service_key )
+            
+        except HydrusExceptions.DataMissing:
+            
+            pretty_name = 'unknown service!'
+            
+        
+        pretty_timestamp_type = HC.timestamp_type_str_lookup[ timestamp_type ]
+        pretty_timestamp = datetime_value_range.ToString()
+        
+        display_tuple = ( pretty_name, pretty_timestamp_type, pretty_timestamp )
+        
+        return display_tuple
+        
+    
+    def _ConvertDataRowToFileServiceSortTuple( self, row ):
         
         ( file_service_key, timestamp_type ) = row
         
@@ -341,16 +373,14 @@ class EditFileTimestampsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUISc
         sort_name = pretty_name
         
         pretty_timestamp_type = HC.timestamp_type_str_lookup[ timestamp_type ]
-        sort_timestamp_type = pretty_timestamp_type
         
-        pretty_timestamp = datetime_value_range.ToString()
+        sort_timestamp_type = pretty_timestamp_type
         
         sort_timestamp = datetime_value_range
         
-        display_tuple = ( pretty_name, pretty_timestamp_type, pretty_timestamp )
         sort_tuple = ( sort_name, sort_timestamp_type, sort_timestamp )
         
-        return ( display_tuple, sort_tuple )
+        return sort_tuple
         
     
     def _Copy( self, allowed_timestamp_types = None ):

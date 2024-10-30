@@ -124,9 +124,10 @@ class ParsingCache( object ):
             
         
     
+
 class ImageRendererCache( object ):
     
-    def __init__( self, controller ):
+    def __init__( self, controller: "CG.ClientController.Controller" ):
         
         self._controller = controller
         
@@ -204,7 +205,7 @@ class ImageRendererCache( object ):
     
 class ImageTileCache( object ):
     
-    def __init__( self, controller ):
+    def __init__( self, controller: "CG.ClientController.Controller" ):
         
         self._controller = controller
         
@@ -264,7 +265,7 @@ class ImageTileCache( object ):
     
 class ThumbnailCache( object ):
     
-    def __init__( self, controller ):
+    def __init__( self, controller: "CG.ClientController.Controller" ):
         
         self._controller = controller
         

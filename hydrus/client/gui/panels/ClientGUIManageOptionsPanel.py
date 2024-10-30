@@ -1472,10 +1472,19 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_FRAME_LOCATIONS.ID, self._GetPrettyFrameLocationInfo, self._GetPrettyFrameLocationInfo )
             
-            self._frame_locations = ClientGUIListCtrl.BetterListCtrlTreeView( frame_locations_panel, CGLC.COLUMN_LIST_FRAME_LOCATIONS.ID, 15, model, activation_callback = self.EditFrameLocations )
+            self._frame_locations_panel = ClientGUIListCtrl.BetterListCtrlPanel( frame_locations_panel )
             
-            self._frame_locations_edit_button = QW.QPushButton( 'edit', frame_locations_panel )
-            self._frame_locations_edit_button.clicked.connect( self.EditFrameLocations )
+            self._frame_locations = ClientGUIListCtrl.BetterListCtrlTreeView( self._frame_locations_panel, CGLC.COLUMN_LIST_FRAME_LOCATIONS.ID, 15, model, activation_callback = self.EditFrameLocations )
+            
+            self._frame_locations_panel.SetListCtrl( self._frame_locations )
+            
+            self._frame_locations_panel.AddButton( 'edit', self.EditFrameLocations, enabled_only_on_single_selection = True )
+            self._frame_locations_panel.AddSeparator()
+            self._frame_locations_panel.AddButton( 'flip remember size', self._FlipRememberSize, enabled_only_on_selection = True )
+            self._frame_locations_panel.AddButton( 'flip remember position', self._FlipRememberPosition, enabled_only_on_selection = True )
+            self._frame_locations_panel.NewButtonRow()
+            self._frame_locations_panel.AddButton( 'reset last size', self._ResetLastSize, enabled_only_on_selection = True )
+            self._frame_locations_panel.AddButton( 'reset last position', self._ResetLastPosition, enabled_only_on_selection = True )
             
             #
             
@@ -1563,8 +1572,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             gridbox = ClientGUICommon.WrapInGrid( self, rows )
             
             frame_locations_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-            frame_locations_panel.Add( self._frame_locations, CC.FLAGS_EXPAND_BOTH_WAYS )
-            frame_locations_panel.Add( self._frame_locations_edit_button, CC.FLAGS_ON_RIGHT )
+            frame_locations_panel.Add( self._frame_locations_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
             
             vbox = QP.VBoxLayout()
             
@@ -1577,6 +1585,86 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._discord_dnd_fix.clicked.connect( self._UpdateDnDFilenameEnabled )
             
             self._UpdateDnDFilenameEnabled()
+            
+        
+        def _FlipRememberPosition( self ):
+            
+            existing_datas = self._frame_locations.GetData( only_selected = True )
+            
+            replacement_tuples = []
+            
+            for listctrl_list in existing_datas:
+                
+                ( name, remember_size, remember_position, last_size, last_position, default_gravity, default_position, maximised, fullscreen ) = listctrl_list
+                
+                remember_position = not remember_position
+                
+                new_listctrl_list = ( name, remember_size, remember_position, last_size, last_position, default_gravity, default_position, maximised, fullscreen )
+                
+                replacement_tuples.append( ( listctrl_list, new_listctrl_list ) )
+                
+            
+            self._frame_locations.ReplaceDatas( replacement_tuples, sort_and_scroll = True )
+            
+        
+        def _FlipRememberSize( self ):
+            
+            existing_datas = self._frame_locations.GetData( only_selected = True )
+            
+            replacement_tuples = []
+            
+            for listctrl_list in existing_datas:
+                
+                ( name, remember_size, remember_position, last_size, last_position, default_gravity, default_position, maximised, fullscreen ) = listctrl_list
+                
+                remember_size = not remember_size
+                
+                new_listctrl_list = ( name, remember_size, remember_position, last_size, last_position, default_gravity, default_position, maximised, fullscreen )
+                
+                replacement_tuples.append( ( listctrl_list, new_listctrl_list ) )
+                
+            
+            self._frame_locations.ReplaceDatas( replacement_tuples, sort_and_scroll = True )
+            
+        
+        def _ResetLastPosition( self ):
+            
+            existing_datas = self._frame_locations.GetData( only_selected = True )
+            
+            replacement_tuples = []
+            
+            for listctrl_list in existing_datas:
+                
+                ( name, remember_size, remember_position, last_size, last_position, default_gravity, default_position, maximised, fullscreen ) = listctrl_list
+                
+                last_position = None
+                
+                new_listctrl_list = ( name, remember_size, remember_position, last_size, last_position, default_gravity, default_position, maximised, fullscreen )
+                
+                replacement_tuples.append( ( listctrl_list, new_listctrl_list ) )
+                
+            
+            self._frame_locations.ReplaceDatas( replacement_tuples, sort_and_scroll = True )
+            
+        
+        def _ResetLastSize( self ):
+            
+            existing_datas = self._frame_locations.GetData( only_selected = True )
+            
+            replacement_tuples = []
+            
+            for listctrl_list in existing_datas:
+                
+                ( name, remember_size, remember_position, last_size, last_position, default_gravity, default_position, maximised, fullscreen ) = listctrl_list
+                
+                last_size = None
+                
+                new_listctrl_list = ( name, remember_size, remember_position, last_size, last_position, default_gravity, default_position, maximised, fullscreen )
+                
+                replacement_tuples.append( ( listctrl_list, new_listctrl_list ) )
+                
+            
+            self._frame_locations.ReplaceDatas( replacement_tuples, sort_and_scroll = True )
             
         
         def _GetPrettyFrameLocationInfo( self, listctrl_list ):
@@ -3386,7 +3474,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             misc_panel = ClientGUICommon.StaticBox( self, 'file search' )
             
-            self._forced_search_limit = ClientGUICommon.NoneableSpinCtrl( misc_panel, 10000, min = 1, max = 100000 )
+            self._forced_search_limit = ClientGUICommon.NoneableSpinCtrl( misc_panel, 10000, min = 1, max = 100000000 )
             self._forced_search_limit.setToolTip( ClientGUIFunctions.WrapToolTip( 'This is overruled if you set an explicit system:limit larger than it.' ) )
             
             #
@@ -3824,12 +3912,12 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             image_cache_storage_sizer = QP.HBoxLayout()
             
-            QP.AddToLayout( image_cache_storage_sizer, self._image_cache_storage_limit_percentage, CC.FLAGS_CENTER )
+            QP.AddToLayout( image_cache_storage_sizer, self._image_cache_storage_limit_percentage, CC.FLAGS_EXPAND_BOTH_WAYS_SHY )
             QP.AddToLayout( image_cache_storage_sizer, self._image_cache_storage_limit_percentage_st, CC.FLAGS_EXPAND_BOTH_WAYS )
             
             image_cache_prefetch_sizer = QP.HBoxLayout()
             
-            QP.AddToLayout( image_cache_prefetch_sizer, self._image_cache_prefetch_limit_percentage, CC.FLAGS_CENTER )
+            QP.AddToLayout( image_cache_prefetch_sizer, self._image_cache_prefetch_limit_percentage, CC.FLAGS_EXPAND_BOTH_WAYS_SHY )
             QP.AddToLayout( image_cache_prefetch_sizer, self._image_cache_prefetch_limit_percentage_st, CC.FLAGS_EXPAND_BOTH_WAYS )
             
             video_buffer_sizer = QP.HBoxLayout()

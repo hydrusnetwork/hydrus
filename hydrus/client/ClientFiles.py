@@ -363,7 +363,7 @@ def GetAllFilePaths( raw_paths, do_human_sort = True, clear_out_sidecars = True 
 
 class ClientFilesManager( object ):
     
-    def __init__( self, controller ):
+    def __init__( self, controller: "CG.ClientController.Controller" ):
         
         self._controller = controller
         
@@ -423,6 +423,8 @@ class ClientFilesManager( object ):
             message = f'Copying the file from "{source_path}" to "{dest_path}" failed! Details should be shown and other import queues should be paused. You should shut the client down now and fix this!'
             
             HydrusData.ShowText( message )
+            
+            HydrusData.ShowException( e )
             
             self._HandleCriticalDriveError()
             
@@ -2076,9 +2078,7 @@ class FilesMaintenanceManager( ClientDaemons.ManagerWithMainLoop ):
     
     def __init__( self, controller ):
         
-        super().__init__()
-        
-        self._controller = controller
+        super().__init__( controller )
         
         self._pubbed_message_about_bad_file_record_delete = False
         self._pubbed_message_about_invalid_file_export = False
@@ -2091,18 +2091,11 @@ class FilesMaintenanceManager( ClientDaemons.ManagerWithMainLoop ):
         self._ReInitialiseWorkRules()
         
         self._maintenance_lock = threading.Lock()
-        self._lock = threading.Lock()
         
-        self._serious_error_encountered = False
-        
-        self._wake_background_event = threading.Event()
         self._reset_background_event = threading.Event()
-        self._shutdown = False
-        self._mainloop_is_finished = False
         
         self._controller.sub( self, 'NotifyNewOptions', 'notify_new_options' )
         self._controller.sub( self, 'Wake', 'checkbox_manager_inverted' )
-        self._controller.sub( self, 'Shutdown', 'shutdown' )
         
     
     def _AbleToDoBackgroundMaintenance( self ):
@@ -3174,26 +3167,15 @@ class FilesMaintenanceManager( ClientDaemons.ManagerWithMainLoop ):
         return 'file maintenance'
         
     
-    def IsShutdown( self ) -> bool:
+    def MainLoop( self ):
         
-        return self._mainloop_is_finished
-        
-    
-    def MainLoopBackgroundWork( self ):
-        
-        def check_shutdown():
-            
-            if HydrusThreading.IsThreadShuttingDown() or self._shutdown or self._serious_error_encountered:
-                
-                raise HydrusExceptions.ShutdownException()
-                
-            
+        # TODO: locking on CheckShutdown is lax, let's be good and smooth it all out
         
         def wait_on_maintenance():
             
             while True:
                 
-                check_shutdown()
+                self._CheckShutdown()
                 
                 if self._AbleToDoBackgroundMaintenance() or self._reset_background_event.is_set():
                     
@@ -3224,14 +3206,14 @@ class FilesMaintenanceManager( ClientDaemons.ManagerWithMainLoop ):
             
             while not HydrusTime.TimeHasPassed( time_to_start ):
                 
-                check_shutdown()
+                self._CheckShutdown()
                 
-                self._wake_background_event.wait( 1 )
+                self._wake_event.wait( 1 )
                 
             
             while True:
                 
-                check_shutdown()
+                self._CheckShutdown()
                 
                 did_work = False
                 
@@ -3281,7 +3263,7 @@ class FilesMaintenanceManager( ClientDaemons.ManagerWithMainLoop ):
                                 self._controller.pub( 'notify_files_maintenance_done' )
                                 
                             
-                            check_shutdown()
+                            self._CheckShutdown()
                             
                         finally:
                             
@@ -3292,9 +3274,9 @@ class FilesMaintenanceManager( ClientDaemons.ManagerWithMainLoop ):
                 
                 if not did_work:
                     
-                    self._wake_background_event.wait( 600 )
+                    self._wake_event.wait( 600 )
                     
-                    self._wake_background_event.clear()
+                    self._wake_event.clear()
                     
                 
                 # a small delay here is helpful for the forcemaintenance guy to have a chance to step in on reset
@@ -3388,7 +3370,7 @@ class FilesMaintenanceManager( ClientDaemons.ManagerWithMainLoop ):
             
             self._controller.Write( 'file_maintenance_add_jobs_hashes', hashes, job_type, time_can_start )
             
-            self._wake_background_event.set()
+            self._wake_event.set()
             
         
     
@@ -3398,24 +3380,7 @@ class FilesMaintenanceManager( ClientDaemons.ManagerWithMainLoop ):
             
             self._controller.Write( 'file_maintenance_add_jobs', hash_ids, job_type, time_can_start )
             
-            self._wake_background_event.set()
+            self._wake_event.set()
             
-        
-    
-    def Shutdown( self ):
-        
-        self._shutdown = True
-        
-        self._wake_background_event.set()
-        
-    
-    def Start( self ):
-        
-        self._controller.CallToThreadLongRunning( self.MainLoopBackgroundWork )
-        
-    
-    def Wake( self ):
-        
-        self._wake_background_event.set()
         
     

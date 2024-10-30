@@ -26,7 +26,6 @@ from hydrus.client.gui.panels import ClientGUIScrolledPanels
 from hydrus.client.gui.widgets import ClientGUICommon
 from hydrus.client.importing import ClientImportLocal
 from hydrus.client.importing.options import TagImportOptions
-from hydrus.client.metadata import ClientMetadataMigration
 from hydrus.client.metadata import ClientMetadataMigrationExporters
 from hydrus.client.metadata import ClientMetadataMigrationImporters
 
@@ -38,7 +37,7 @@ class EditImportFoldersPanel( ClientGUIScrolledPanels.EditPanel ):
         
         import_folders_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
-        model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_IMPORT_FOLDERS.ID, self._ConvertImportFolderToListCtrlTuples )
+        model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_IMPORT_FOLDERS.ID, self._ConvertImportFolderToDisplayTuple, self._ConvertImportFolderToSortTuple )
         
         self._import_folders = ClientGUIListCtrl.BetterListCtrlTreeView( import_folders_panel, CGLC.COLUMN_LIST_IMPORT_FOLDERS.ID, 8, model, use_simple_delete = True, activation_callback = self._Edit )
         
@@ -94,7 +93,7 @@ class EditImportFoldersPanel( ClientGUIScrolledPanels.EditPanel ):
             
         
     
-    def _ConvertImportFolderToListCtrlTuples( self, import_folder ):
+    def _ConvertImportFolderToDisplayTuple( self, import_folder ):
         
         ( name, path, paused, check_regularly, check_period ) = import_folder.ToListBoxTuple()
         
@@ -116,10 +115,27 @@ class EditImportFoldersPanel( ClientGUIScrolledPanels.EditPanel ):
             pretty_check_period = HydrusTime.TimeDeltaToPrettyTimeDelta( check_period )
             
         
-        sort_tuple = ( name, path, paused, check_period )
         display_tuple = ( name, path, pretty_paused, pretty_check_period )
         
-        return ( display_tuple, sort_tuple )
+        return display_tuple
+        
+    
+    def _ConvertImportFolderToSortTuple( self, import_folder ):
+        
+        ( name, path, paused, check_regularly, check_period ) = import_folder.ToListBoxTuple()
+        
+        if not check_regularly:
+            
+            sort_check_period = ( 1, 0 )
+            
+        else:
+            
+            sort_check_period = ( 0, check_period )
+            
+        
+        sort_tuple = ( name, path, paused, check_period )
+        
+        return sort_tuple
         
     
     def _Edit( self ):
@@ -171,6 +187,7 @@ class EditImportFoldersPanel( ClientGUIScrolledPanels.EditPanel ):
         return import_folders
         
     
+
 class EditImportFolderPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def __init__( self, parent, import_folder: ClientImportLocal.ImportFolder ):
@@ -251,7 +268,7 @@ class EditImportFolderPanel( ClientGUIScrolledPanels.EditPanel ):
         
         filename_tagging_options_panel = ClientGUIListCtrl.BetterListCtrlPanel( self._filename_tagging_options_box )
         
-        model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_FILENAME_TAGGING_OPTIONS.ID, self._ConvertFilenameTaggingOptionsToListCtrlTuples )
+        model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_FILENAME_TAGGING_OPTIONS.ID, self._ConvertFilenameTaggingOptionsToDisplayTuple, self._ConvertFilenameTaggingOptionsToSortTuple )
         
         self._filename_tagging_options = ClientGUIListCtrl.BetterListCtrlTreeView( filename_tagging_options_panel, CGLC.COLUMN_LIST_FILENAME_TAGGING_OPTIONS.ID, 5, model, use_simple_delete = True, activation_callback = self._EditFilenameTaggingOptions )
         
@@ -558,17 +575,18 @@ class EditImportFolderPanel( ClientGUIScrolledPanels.EditPanel ):
             
         
     
-    def _ConvertFilenameTaggingOptionsToListCtrlTuples( self, data ):
+    def _ConvertFilenameTaggingOptionsToDisplayTuple( self, data ):
         
         ( service_key, filename_tagging_options ) = data
         
         name = CG.client_controller.services_manager.GetName( service_key )
         
         display_tuple = ( name, )
-        sort_tuple = ( name, )
         
-        return ( display_tuple, sort_tuple )
+        return display_tuple
         
+    
+    _ConvertFilenameTaggingOptionsToSortTuple = _ConvertFilenameTaggingOptionsToDisplayTuple
     
     def _EditFilenameTaggingOptions( self ):
         

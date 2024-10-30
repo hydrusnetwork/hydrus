@@ -1,8 +1,8 @@
 import random
-import threading
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
+from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusSerialisable
@@ -186,20 +186,9 @@ class QuickDownloadManager( ClientDaemons.ManagerWithMainLoop ):
     
     def __init__( self, controller ):
         
-        super().__init__()
-        
-        self._controller = controller
+        super().__init__( controller )
         
         self._pending_hashes = set()
-        
-        self._lock = threading.Lock()
-        
-        self._shutting_down = False
-        self._mainloop_is_finished = False
-        
-        self._new_files_event = threading.Event()
-        
-        self._controller.sub( self, 'Wake', 'wake_daemons' )
         
     
     def DownloadFiles( self, hashes ):
@@ -208,18 +197,13 @@ class QuickDownloadManager( ClientDaemons.ManagerWithMainLoop ):
             
             self._pending_hashes.update( hashes )
             
-            self._new_files_event.set()
-            
+        
+        self.Wake()
         
     
     def GetName( self ) -> str:
         
         return 'quick downloader'
-        
-    
-    def IsShutdown( self ) -> bool:
-        
-        return self._mainloop_is_finished
         
     
     def MainLoop( self ):
@@ -230,9 +214,11 @@ class QuickDownloadManager( ClientDaemons.ManagerWithMainLoop ):
         
         try:
             
-            while not ( HydrusThreading.IsThreadShuttingDown() or self._shutting_down or HG.started_shutdown ):
+            while True:
                 
                 with self._lock:
+                    
+                    self._CheckShutdown()
                     
                     if len( self._pending_hashes ) > 0:
                         
@@ -264,9 +250,9 @@ class QuickDownloadManager( ClientDaemons.ManagerWithMainLoop ):
                     total_hashes_in_this_run = 0
                     total_successful_hashes_in_this_run = 0
                     
-                    self._new_files_event.wait( 5 )
+                    self._wake_event.wait( 5 )
                     
-                    self._new_files_event.clear()
+                    self._wake_event.clear()
                     
                     continue
                     
@@ -422,20 +408,13 @@ class QuickDownloadManager( ClientDaemons.ManagerWithMainLoop ):
                     
                 
             
+        except HydrusExceptions.ShutdownException:
+            
+            pass
+            
         finally:
             
             self._mainloop_is_finished = True
             
         
     
-    def Shutdown( self ):
-        
-        self._shutting_down = True
-        
-        self._new_files_event.set()
-        
-    
-    def Wake( self ):
-        
-        self._new_files_event.set()
-        

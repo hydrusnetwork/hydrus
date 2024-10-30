@@ -5,7 +5,6 @@ from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusProfiling
-from hydrus.core.interfaces import HydrusControllerInterface
 
 class HydrusPubSub( object ):
     

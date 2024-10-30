@@ -53,6 +53,28 @@ conversion_type_str_lookup[ STRING_CONVERSION_INTEGER_ADDITION ] = 'integer addi
 conversion_type_str_lookup[ STRING_CONVERSION_DATE_ENCODE ] = 'timestamp to datestring'
 conversion_type_str_lookup[ STRING_CONVERSION_HASH_FUNCTION ] = 'get hash of string'
 
+ENCODING_TYPE_URL_PERCENT = 0
+ENCODING_TYPE_UNICODE_ESCAPE = 1
+ENCODING_TYPE_HTML_ENTITIES = 2
+ENCODING_TYPE_HEX_UTF8 = 3
+ENCODING_TYPE_BASE64_UTF8 = 4
+
+encoding_type_str_lookup = {
+    ENCODING_TYPE_URL_PERCENT : 'url percent encoding',
+    ENCODING_TYPE_UNICODE_ESCAPE : ' unicode escape characters',
+    ENCODING_TYPE_HTML_ENTITIES : 'html entities',
+    ENCODING_TYPE_HEX_UTF8 : 'hex (utf-8)',
+    ENCODING_TYPE_BASE64_UTF8 : 'base64 (utf-8)'
+}
+
+encoding_type_legacy_to_enum_lookup = {
+    'url percent encoding' : ENCODING_TYPE_URL_PERCENT,
+    'unicode escape characters' : ENCODING_TYPE_UNICODE_ESCAPE,
+    'html entities' : ENCODING_TYPE_HTML_ENTITIES,
+    'hex' : ENCODING_TYPE_HEX_UTF8,
+    'base64' : ENCODING_TYPE_BASE64_UTF8
+}
+
 class StringProcessingStep( HydrusSerialisable.SerialisableBase ):
     
     def _GetSerialisableInfo( self ):
@@ -80,7 +102,7 @@ class StringConverter( StringProcessingStep ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_STRING_CONVERTER
     SERIALISABLE_NAME = 'String Converter'
-    SERIALISABLE_VERSION = 1
+    SERIALISABLE_VERSION = 2
     
     def __init__( self, conversions = None, example_string = None ):
         
@@ -127,6 +149,48 @@ class StringConverter( StringProcessingStep ):
         except:
             
             pass
+            
+        
+    
+    def _UpdateSerialisableInfo( self, version, old_serialisable_info ):
+        
+        if version == 1:
+            
+            ( serialisable_conversions, self.example_string ) = old_serialisable_info
+            
+            new_conversions = []
+            
+            try:
+                
+                for ( conversion_type, data ) in serialisable_conversions:
+                    
+                    if conversion_type in ( STRING_CONVERSION_ENCODE, STRING_CONVERSION_DECODE ):
+                        
+                        # ok the problem here was that this stuff was depreciated to a no-op and then I brought it back using the same string identifier and it un-no-opped a bunch of downloaders aaahhhhhhhhh
+                        if conversion_type == STRING_CONVERSION_DECODE and data in ( 'hex', 'base64' ):
+                            
+                            # just delete the no-op mate
+                            continue
+                            
+                        else:
+                            
+                            data = encoding_type_legacy_to_enum_lookup[ data ]
+                            
+                        
+                    
+                    new_conversions.append( ( conversion_type, data ) )
+                    
+                
+            except:
+                
+                pass
+                
+            
+            serialisable_conversions = new_conversions
+            
+            new_serialisable_info = ( serialisable_conversions, self.example_string )
+            
+            return ( 2, new_serialisable_info )
             
         
     
@@ -189,15 +253,15 @@ class StringConverter( StringProcessingStep ):
                     
                     encode_type = data
                     
-                    if encode_type == 'url percent encoding':
+                    if encode_type == ENCODING_TYPE_URL_PERCENT:
                         
                         s = urllib.parse.quote( s, safe = '' )
                         
-                    elif encode_type == 'unicode escape characters':
+                    elif encode_type == ENCODING_TYPE_UNICODE_ESCAPE:
                         
                         s = s.encode( 'unicode-escape' ).decode( 'utf-8' )
                         
-                    elif encode_type == 'html entities':
+                    elif encode_type == ENCODING_TYPE_HTML_ENTITIES:
                         
                         s = html.escape( s )
                         
@@ -215,11 +279,11 @@ class StringConverter( StringProcessingStep ):
                             s_bytes = s
                             
                         
-                        if encode_type == 'hex':
+                        if encode_type == ENCODING_TYPE_HEX_UTF8:
                             
                             s = s_bytes.hex()
                             
-                        elif encode_type == 'base64':
+                        elif encode_type == ENCODING_TYPE_BASE64_UTF8:
                             
                             s_bytes = base64.b64encode( s_bytes )
                             
@@ -235,15 +299,15 @@ class StringConverter( StringProcessingStep ):
                     
                     decode_type = data
                     
-                    if decode_type == 'url percent encoding':
+                    if decode_type == ENCODING_TYPE_URL_PERCENT:
                         
                         s = urllib.parse.unquote( s )
                         
-                    elif decode_type == 'unicode escape characters':
+                    elif decode_type == ENCODING_TYPE_UNICODE_ESCAPE:
                         
                         s = s.encode( 'utf-8' ).decode( 'unicode-escape' )
                         
-                    elif decode_type == 'html entities':
+                    elif decode_type == ENCODING_TYPE_HTML_ENTITIES:
                         
                         s = html.unescape( s )
                         
@@ -254,11 +318,11 @@ class StringConverter( StringProcessingStep ):
                         # due to py3, this is now a bit of a pain
                         # _for now_, let's convert to bytes if not already and then spit out a str
                         
-                        if decode_type == 'hex':
+                        if decode_type == ENCODING_TYPE_HEX_UTF8:
                             
                             s_bytes = bytes.fromhex( s )
                             
-                        elif decode_type == 'base64':
+                        elif decode_type == ENCODING_TYPE_BASE64_UTF8:
                             
                             s_bytes = base64.b64decode( s )
                             
@@ -459,11 +523,11 @@ class StringConverter( StringProcessingStep ):
             
         elif conversion_type == STRING_CONVERSION_ENCODE:
             
-            return 'encode to ' + data
+            return 'encode to ' + encoding_type_str_lookup[ data ]
             
         elif conversion_type == STRING_CONVERSION_DECODE:
             
-            return 'decode from ' + data
+            return 'decode from ' + encoding_type_str_lookup[ data ]
             
         elif conversion_type == STRING_CONVERSION_REVERSE:
             
@@ -530,7 +594,7 @@ class StringJoiner( StringProcessingStep ):
         
         if version == 1:
             
-            ( joiner, join_tuple_size )  = old_serialisable_info
+            ( joiner, join_tuple_size ) = old_serialisable_info
             
             joiner = joiner.replace( '\\', '\\\\' )
             

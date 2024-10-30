@@ -2,8 +2,14 @@ import random
 import threading
 import typing
 
+from hydrus.core import HydrusData
+from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusSerialisable
+from hydrus.core import HydrusThreading
+from hydrus.core import HydrusTime
 
+from hydrus.client import ClientDaemons
+from hydrus.client import ClientGlobals as CG
 from hydrus.client.duplicates import ClientDuplicates
 from hydrus.client.metadata import ClientMetadataConditional
 
@@ -256,38 +262,51 @@ def GetDefaultRuleSuggestions() -> typing.List[ DuplicatesAutoResolutionRule ]:
     return suggested_rules
     
 
-# TODO: get this guy to inherit that new MainLoop Daemon class and hook it into the other client controller managers
-# ditch the instance() stuff or don't, whatever you like
-class DuplicatesAutoResolutionManager( object ):
+class DuplicatesAutoResolutionManager( ClientDaemons.ManagerWithMainLoop ):
     
-    my_instance = None
-    
-    def __init__( self ):
+    def __init__( self, controller: "CG.ClientController.Controller" ):
         """
         This guy is going to be the mainloop daemon that runs all this gubbins.
         
         Needs some careful locking for when the edit dialog is open, like import folders manager etc..
         """
         
-        DuplicatesAutoResolutionManager.my_instance = self
+        super().__init__( controller )
         
         self._ids_to_rules = {}
         
         # load rules from db or whatever on controller init
         # on program first boot, we should initialise with the defaults set to paused!
         
-        self._lock = threading.Lock()
+    
+    def _AbleToWork( self ):
+        
+        if CG.client_controller.CurrentlyIdle():
+            
+            if not CG.client_controller.new_options.GetBoolean( 'duplicates_auto_resolution_during_idle' ):
+                
+                return False
+                
+            
+            if not CG.client_controller.GoodTimeToStartBackgroundWork():
+                
+                return False
+                
+            
+        else:
+            
+            if not CG.client_controller.new_options.GetBoolean( 'duplicates_auto_resolution_during_active' ):
+                
+                return False
+                
+            
+        
+        return True
         
     
-    @staticmethod
-    def instance() -> 'DuplicatesAutoResolutionManager':
+    def GetName( self ) -> str:
         
-        if DuplicatesAutoResolutionManager.my_instance is None:
-            
-            DuplicatesAutoResolutionManager()
-            
-        
-        return DuplicatesAutoResolutionManager.my_instance
+        return 'duplicates auto-resolution'
         
     
     def GetRules( self ):
@@ -300,6 +319,105 @@ class DuplicatesAutoResolutionManager( object ):
         return 'idle'
         
     
+    def MainLoop( self ):
+        
+        try:
+            
+            time_to_start = HydrusTime.GetNow() + 15
+            
+            while not HydrusTime.TimeHasPassed( time_to_start ):
+                
+                with self._lock:
+                    
+                    self._CheckShutdown()
+                    
+                
+                self._wake_event.wait( 1 )
+                
+            
+            while True:
+                
+                with self._lock:
+                    
+                    self._CheckShutdown()
+                    
+                    able_to_work = self._AbleToWork()
+                    
+                
+                still_work_to_do = False
+                
+                work_period = 0.25
+                time_it_took = 1.0
+                
+                if able_to_work:
+                    
+                    CG.client_controller.WaitUntilViewFree()
+                    
+                    start_time = HydrusTime.GetNowFloat()
+                    
+                    try:
+                        
+                        pass # get some work, do some work
+                        still_work_to_do = False
+                        
+                    except Exception as e:
+                        
+                        self._serious_error_encountered = True
+                        
+                        HydrusData.PrintException( e )
+                        
+                        message = 'There was an unexpected problem during duplicates auto-resolution work! This system will not run again this boot. A full traceback of this error should be written to the log.'
+                        message += '\n' * 2
+                        message += str( e )
+                        
+                        HydrusData.ShowText( message )
+                        
+                    finally:
+                        
+                        CG.client_controller.pub( 'notify_duplicates_auto_resolution_work_complete' )
+                        
+                    
+                    time_it_took = HydrusTime.GetNowFloat() - start_time
+                    
+                
+                wait_period = self._GetWaitPeriod( work_period, time_it_took, still_work_to_do )
+                
+                self._wake_event.wait( wait_period )
+                
+                self._wake_event.clear()
+                
+            
+        except HydrusExceptions.ShutdownException:
+            
+            pass
+            
+        finally:
+            
+            self._mainloop_is_finished = True
+            
+        
+    
+    def _GetWaitPeriod( self, work_period: float, time_it_took: float, still_work_to_do: bool ):
+        
+        if not still_work_to_do:
+            
+            return 600
+            
+        
+        if CG.client_controller.CurrentlyIdle():
+            
+            rest_ratio = 1
+            
+        else:
+            
+            rest_ratio = 10
+            
+        
+        reasonable_work_time = min( 5 * work_period, time_it_took )
+        
+        return reasonable_work_time * rest_ratio
+        
+    
     def SetRules( self, rules: typing.Collection[ DuplicatesAutoResolutionRule ] ):
         
         # save to database
@@ -309,10 +427,5 @@ class DuplicatesAutoResolutionManager( object ):
         self._ids_to_rules = { rule.GetId() : rule for rule in rules }
         
         # send out an update signal
-        
-    
-    def Wake( self ):
-        
-        pass
         
     

@@ -346,15 +346,14 @@ class TagAutocompleteOptions( HydrusSerialisable.SerialisableBase ):
         self._fetch_all_allowed = fetch_all_allowed
         
     
+
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_TAG_AUTOCOMPLETE_OPTIONS ] = TagAutocompleteOptions
 
 class TagDisplayMaintenanceManager( ClientDaemons.ManagerWithMainLoop ):
     
     def __init__( self, controller ):
         
-        super().__init__()
-        
-        self._controller = controller
+        super().__init__( controller )
         
         self._service_keys_to_needs_work = {}
         
@@ -362,18 +361,11 @@ class TagDisplayMaintenanceManager( ClientDaemons.ManagerWithMainLoop ):
         
         self._last_loop_work_time = 0.5
         
-        self._shutdown = False
-        self._mainloop_finished = False
-        
-        self._wake_event = threading.Event()
         self._new_data_event = threading.Event()
         
         self._last_last_new_data_event_time = 0
         self._last_new_data_event_time = 0
         
-        self._lock = threading.Lock()
-        
-        self._controller.sub( self, 'Shutdown', 'shutdown' )
         self._controller.sub( self, 'NotifyNewDisplayData', 'notify_new_tag_display_application' )
         
     
@@ -559,20 +551,7 @@ class TagDisplayMaintenanceManager( ClientDaemons.ManagerWithMainLoop ):
         return 'tag display sync'
         
     
-    def IsShutdown( self ):
-        
-        return self._mainloop_finished
-        
-    
     def MainLoop( self ):
-        
-        def check_shutdown():
-            
-            if HydrusThreading.IsThreadShuttingDown() or self._shutdown:
-                
-                raise HydrusExceptions.ShutdownException()
-                
-            
         
         try:
             
@@ -582,7 +561,10 @@ class TagDisplayMaintenanceManager( ClientDaemons.ManagerWithMainLoop ):
             
             while True:
                 
-                check_shutdown()
+                with self._lock:
+                    
+                    self._CheckShutdown()
+                    
                 
                 self._controller.WaitUntilViewFree()
                 
@@ -622,7 +604,10 @@ class TagDisplayMaintenanceManager( ClientDaemons.ManagerWithMainLoop ):
                     wait_time = 10
                     
                 
-                check_shutdown()
+                with self._lock:
+                    
+                    self._CheckShutdown()
+                    
                 
                 self._wake_event.wait( wait_time )
                 
@@ -647,7 +632,7 @@ class TagDisplayMaintenanceManager( ClientDaemons.ManagerWithMainLoop ):
             
         finally:
             
-            self._mainloop_finished = True
+            self._mainloop_is_finished = True
             
         
     
@@ -656,18 +641,6 @@ class TagDisplayMaintenanceManager( ClientDaemons.ManagerWithMainLoop ):
         self._new_data_event.set()
         
         self.Wake()
-        
-    
-    def Shutdown( self ):
-        
-        self._shutdown = True
-        
-        self.Wake()
-        
-    
-    def Start( self ):
-        
-        self._controller.CallToThreadLongRunning( self.MainLoop )
         
     
     def SyncFasterNow( self ) -> bool:
@@ -695,11 +668,6 @@ class TagDisplayMaintenanceManager( ClientDaemons.ManagerWithMainLoop ):
         self.Wake()
         
         return True
-        
-    
-    def Wake( self ):
-        
-        self._wake_event.set()
         
     
 

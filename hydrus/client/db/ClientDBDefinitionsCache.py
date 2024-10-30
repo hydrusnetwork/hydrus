@@ -50,7 +50,7 @@ class ClientDBCacheLocalHashes( ClientDBModule.ClientDBModule ):
         }
         
     
-    def _PopulateHashIdsToHashesCache( self, hash_ids ):
+    def _PopulateHashIdsToHashesCache( self, hash_ids, error_on_missing_hash_ids = False ):
         
         if len( self._hash_ids_to_hashes_cache ) > 100000:
             
@@ -89,7 +89,7 @@ class ClientDBCacheLocalHashes( ClientDBModule.ClientDBModule ):
         
         if len( uncached_hash_ids ) > 0:
             
-            hash_ids_to_hashes = self.modules_hashes.GetHashIdsToHashes( hash_ids = uncached_hash_ids )
+            hash_ids_to_hashes = self.modules_hashes.GetHashIdsToHashes( hash_ids = uncached_hash_ids, error_on_missing_hash_ids = error_on_missing_hash_ids )
             
             self._hash_ids_to_hashes_cache.update( hash_ids_to_hashes )
             
@@ -185,13 +185,13 @@ class ClientDBCacheLocalHashes( ClientDBModule.ClientDBModule ):
         return hash_ids
         
     
-    def GetHashIdsToHashes( self, hash_ids = None, hashes = None, create_new_hash_ids = True ) -> typing.Dict[ int, bytes ]:
+    def GetHashIdsToHashes( self, hash_ids = None, hashes = None, create_new_hash_ids = True, error_on_missing_hash_ids = False ) -> typing.Dict[ int, bytes ]:
         
         hash_ids_to_hashes = {}
         
         if hash_ids is not None:
             
-            self._PopulateHashIdsToHashesCache( hash_ids )
+            self._PopulateHashIdsToHashesCache( hash_ids, error_on_missing_hash_ids = error_on_missing_hash_ids )
             
             hash_ids_to_hashes = { hash_id : self._hash_ids_to_hashes_cache[ hash_id ] for hash_id in hash_ids }
             

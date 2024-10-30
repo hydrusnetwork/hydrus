@@ -15,10 +15,9 @@ from hydrus.core import HydrusPubSub
 from hydrus.core import HydrusThreading
 from hydrus.core import HydrusTemp
 from hydrus.core import HydrusTime
-from hydrus.core.interfaces import HydrusControllerInterface
 from hydrus.core.networking import HydrusNATPunch
 
-class HydrusController( HydrusControllerInterface.HydrusControllerInterface ):
+class HydrusController( object ):
     
     def __init__( self, db_dir ):
         

@@ -348,7 +348,7 @@ def PopulateFileSeedCacheMenu( win: QW.QWidget, menu: QW.QMenu, file_seed_cache:
 
 class EditFileSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
     
-    def __init__( self, parent, controller, file_seed_cache: ClientImportFileSeeds.FileSeedCache ):
+    def __init__( self, parent: QW.QWidget, controller: "CG.ClientController.Controller", file_seed_cache: ClientImportFileSeeds.FileSeedCache ):
         
         super().__init__( parent )
         
@@ -904,9 +904,10 @@ class EditFileSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
             
         
     
+
 class FileSeedCacheButton( ClientGUICommon.ButtonWithMenuArrow ):
     
-    def __init__( self, parent, controller, file_seed_cache_get_callable, file_seed_cache_set_callable = None ):
+    def __init__( self, parent, controller: "CG.ClientController.Controller", file_seed_cache_get_callable, file_seed_cache_set_callable = None ):
         
         self._controller = controller
         self._file_seed_cache_get_callable = file_seed_cache_get_callable
@@ -979,9 +980,10 @@ class FileSeedCacheButton( ClientGUICommon.ButtonWithMenuArrow ):
             
         
     
+
 class FileSeedCacheStatusControl( QW.QFrame ):
     
-    def __init__( self, parent, controller, page_key = None ):
+    def __init__( self, parent, controller: "CG.ClientController.Controller", page_key = None ):
         
         super().__init__( parent )
         

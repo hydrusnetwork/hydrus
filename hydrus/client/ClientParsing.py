@@ -3257,11 +3257,11 @@ class ParseRootFileLookup( HydrusSerialisable.SerialisableBaseNamed ):
                 
             elif file_identifier_encoding == HC.ENCODING_HEX:
                 
-                conversions.append( ( ClientStrings.STRING_CONVERSION_ENCODE, 'hex' ) )
+                conversions.append( ( ClientStrings.STRING_CONVERSION_ENCODE, ClientStrings.ENCODING_TYPE_HEX_UTF8 ) )
                 
             elif file_identifier_encoding == HC.ENCODING_BASE64:
                 
-                conversions.append( ( ClientStrings.STRING_CONVERSION_ENCODE, 'base64' ) )
+                conversions.append( ( ClientStrings.STRING_CONVERSION_ENCODE, ClientStrings.ENCODING_TYPE_BASE64_UTF8 ) )
                 
             
             file_identifier_string_converter = ClientStrings.StringConverter( conversions, 'some hash bytes' )

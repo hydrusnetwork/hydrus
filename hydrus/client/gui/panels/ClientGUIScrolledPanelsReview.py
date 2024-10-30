@@ -128,7 +128,7 @@ class AboutPanel( ClientGUIScrolledPanels.ReviewPanel ):
 
 class MoveMediaFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
     
-    def __init__( self, parent, controller ):
+    def __init__( self, parent: QW.QWidget, controller: "CG.ClientController.Controller" ):
         
         self._controller = controller
         
@@ -3408,7 +3408,7 @@ class ReviewLocalFileImports( ClientGUIScrolledPanels.ReviewPanel ):
     
 class JobSchedulerPanel( QW.QWidget ):
     
-    def __init__( self, parent, controller, scheduler_name ):
+    def __init__( self, parent: QW.QWidget, controller: "CG.ClientController.Controller", scheduler_name ):
         
         self._controller = controller
         self._scheduler_name = scheduler_name
@@ -3467,7 +3467,7 @@ class JobSchedulerPanel( QW.QWidget ):
     
 class ThreadsPanel( QW.QWidget ):
     
-    def __init__( self, parent, controller ):
+    def __init__( self, parent: QW.QWidget, controller: "CG.ClientController.Controller" ):
         
         self._controller = controller
         
@@ -3526,7 +3526,7 @@ class ThreadsPanel( QW.QWidget ):
 
 class ReviewDeferredDeleteTableData( ClientGUIScrolledPanels.ReviewPanel ):
     
-    def __init__( self, parent, controller ):
+    def __init__( self, parent: QW.QWidget, controller: "CG.ClientController.Controller" ):
         
         super().__init__( parent )
         
@@ -3714,7 +3714,7 @@ class ReviewThreads( ClientGUIScrolledPanels.ReviewPanel ):
 
 class ReviewVacuumData( ClientGUIScrolledPanels.ReviewPanel ):
     
-    def __init__( self, parent, controller, vacuum_data ):
+    def __init__( self, parent: QW.QWidget, controller: "CG.ClientController.Controller", vacuum_data ):
         
         super().__init__( parent )
         

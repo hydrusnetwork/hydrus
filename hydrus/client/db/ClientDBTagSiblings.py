@@ -669,13 +669,18 @@ class ClientDBTagSiblings( ClientDBModule.ClientDBModule ):
         
         if content_type == HC.CONTENT_TYPE_TAG:
             
-            # don't are for actual/ideal, they feed off these guys
             for service_id in self._GetServiceIdsWeGenerateDynamicTablesFor():
                 
-                for table_name in GenerateTagSiblingsStorageTableNames( service_id ):
+                for table_name in GenerateTagSiblingsStorageTableNames( service_id ).values():
                     
                     tables_and_columns.append( ( table_name, 'bad_tag_id' ) )
                     tables_and_columns.append( ( table_name, 'good_tag_id' ) )
+                    
+                
+                for table_name in GenerateTagSiblingsLookupCacheTableNames( service_id ):
+                    
+                    tables_and_columns.append( ( table_name, 'bad_tag_id' ) )
+                    tables_and_columns.append( ( table_name, 'ideal_tag_id' ) )
                     
                 
             

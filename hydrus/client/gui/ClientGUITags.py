@@ -3661,7 +3661,7 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
             
             workspace_hbox = QP.HBoxLayout()
             
-            QP.AddToLayout( workspace_hbox, self._wipe_workspace, CC.FLAGS_SIZER_VCENTER )
+            QP.AddToLayout( workspace_hbox, self._wipe_workspace, CC.FLAGS_SIZER_CENTER )
             QP.AddToLayout( workspace_hbox, self._count_st, CC.FLAGS_EXPAND_BOTH_WAYS )
             
             vbox = QP.VBoxLayout()
@@ -4432,7 +4432,7 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
             
             workspace_hbox = QP.HBoxLayout()
             
-            QP.AddToLayout( workspace_hbox, self._wipe_workspace, CC.FLAGS_SIZER_VCENTER )
+            QP.AddToLayout( workspace_hbox, self._wipe_workspace, CC.FLAGS_SIZER_CENTER )
             QP.AddToLayout( workspace_hbox, self._count_st, CC.FLAGS_EXPAND_BOTH_WAYS )
             
             vbox = QP.VBoxLayout()

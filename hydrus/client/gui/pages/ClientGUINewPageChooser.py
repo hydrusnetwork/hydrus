@@ -16,7 +16,7 @@ from hydrus.client.search import ClientSearchTagContext
 
 class DialogPageChooser( ClientGUIDialogs.Dialog ):
     
-    def __init__( self, parent, controller ):
+    def __init__( self, parent, controller: "CG.ClientController.Controller" ):
         
         super().__init__( parent, 'new page', position = 'center' )
         

@@ -1,7 +1,9 @@
+import threading
 import time
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
+from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusThreading
@@ -124,18 +126,61 @@ def DAEMONMaintainTrash():
 
 class ManagerWithMainLoop( object ):
     
+    def __init__( self, controller: "CG.ClientController.Controller" ):
+        
+        self._controller = controller
+        
+        self._lock = threading.Lock()
+        
+        self._wake_event = threading.Event()
+        self._shutdown = False
+        self._mainloop_is_finished = False
+        self._serious_error_encountered = False
+        
+        self._controller.sub( self, 'Shutdown', 'shutdown' )
+        self._controller.sub( self, 'Wake', 'wake_daemons' )
+        
+    
+    def _CheckShutdown( self ):
+        
+        if HydrusThreading.IsThreadShuttingDown() or self._shutdown or self._serious_error_encountered:
+            
+            raise HydrusExceptions.ShutdownException()
+            
+        
+    
     def GetName( self ) -> str:
         
         raise NotImplementedError()
         
     
-    def IsShutdown( self ) -> bool:
+    def MainLoop( self ):
         
         raise NotImplementedError()
         
     
+    def IsShutdown( self ):
+        
+        return self._mainloop_is_finished
+        
+    
     def Shutdown( self ):
         
-        raise NotImplementedError()
+        with self._lock:
+            
+            self._shutdown = True
+            
+        
+        self.Wake()
+        
+    
+    def Start( self ):
+        
+        self._controller.CallToThreadLongRunning( self.MainLoop )
+        
+    
+    def Wake( self ):
+        
+        self._wake_event.set()
         
     

@@ -48,7 +48,7 @@ class ClientDBMasterHashes( ClientDBModule.ClientDBModule ):
         }
         
     
-    def _PopulateHashIdsToHashesCache( self, hash_ids ):
+    def _PopulateHashIdsToHashesCache( self, hash_ids, error_on_missing_hash_ids = False ):
         
         if len( self._hash_ids_to_hashes_cache ) > 100000:
             
@@ -82,6 +82,23 @@ class ClientDBMasterHashes( ClientDBModule.ClientDBModule ):
             uncached_hash_ids_to_hashes = dict( rows )
             
             if len( uncached_hash_ids_to_hashes ) < len( uncached_hash_ids ):
+                
+                if True in ( hash_id < 0 for hash_id in uncached_hash_ids ):
+                    
+                    raise Exception( f'Was asked about a novel hash_id that was also negative! Was this an external request that somehow slipped through? All missing hash_ids were: {sorted(uncached_hash_ids)}' )
+                    
+                
+                too_big_m8 = 1024 ** 5 # a quadrillion
+                
+                if True in ( hash_id > too_big_m8 for hash_id in uncached_hash_ids ):
+                    
+                    raise Exception( f'Was asked about a novel hash_id that was also way too big! Was this an external request that somehow slipped through? All missing hash_ids were: {sorted(uncached_hash_ids)}' )
+                    
+                
+                if error_on_missing_hash_ids:
+                    
+                    raise HydrusExceptions.DataMissing( f'Was asked about these novel hash_ids: {sorted(uncached_hash_ids)}' )
+                    
                 
                 pubbed_error = False
                 
@@ -294,17 +311,21 @@ class ClientDBMasterHashes( ClientDBModule.ClientDBModule ):
         return hash_ids
         
     
-    def GetHashIdsToHashes( self, hash_ids = None, hashes = None ):
+    def GetHashIdsToHashes( self, hash_ids = None, hashes = None, error_on_missing_hash_ids = False ):
         
         if hash_ids is not None:
             
-            self._PopulateHashIdsToHashesCache( hash_ids )
+            self._PopulateHashIdsToHashesCache( hash_ids, error_on_missing_hash_ids = error_on_missing_hash_ids )
             
             hash_ids_to_hashes = { hash_id : self._hash_ids_to_hashes_cache[ hash_id ] for hash_id in hash_ids }
             
         elif hashes is not None:
             
             hash_ids_to_hashes = { self.GetHashId( hash ) : hash for hash in hashes }
+            
+        else:
+            
+            raise NotImplementedError()
             
         
         return hash_ids_to_hashes
@@ -314,7 +335,10 @@ class ClientDBMasterHashes( ClientDBModule.ClientDBModule ):
         
         if content_type == HC.CONTENT_TYPE_HASH:
             
-            return [ ( 'local_hashes', 'hash_id' ) ]
+            return [
+                ( 'hashes', 'hash_id' ),
+                ( 'local_hashes', 'hash_id' )
+            ]
             
         
         return []
@@ -410,6 +434,8 @@ class ClientDBMasterTexts( ClientDBModule.ClientDBModule ):
         
     
     def GetTablesAndColumnsThatUseDefinitions( self, content_type: int ) -> typing.List[ typing.Tuple[ str, str ] ]:
+        
+        # maaaybe a note content_type in the end
         
         return []
         
@@ -594,7 +620,9 @@ class ClientDBMasterTags( ClientDBModule.ClientDBModule ):
         
         # maybe content type subtag/namespace, which would useful for bad subtags, although that's tricky because then the knock-on is killing tag definition rows
         
-        return []
+        return [
+            ( 'tags', 'tag_id' )
+        ]
         
     
     def GetTag( self, tag_id ) -> str:

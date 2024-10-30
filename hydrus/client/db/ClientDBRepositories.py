@@ -111,6 +111,14 @@ class ClientDBRepositories( ClientDBModule.ClientDBModule ):
             
         
     
+    def _GetInitialTableGenerationDict( self ) -> dict:
+        
+        # TODO: move some remote thumb calls from ClientDB to here
+        return {
+            'main.remote_thumbnails' : ( 'CREATE TABLE IF NOT EXISTS {} ( service_id INTEGER, hash_id INTEGER, PRIMARY KEY ( service_id, hash_id ) );', 50 )
+        }
+        
+    
     def _GetServiceIndexGenerationDict( self, service_id ) -> dict:
         
         ( repository_updates_table_name, repository_unregistered_updates_table_name, repository_updates_processed_table_name ) = GenerateRepositoryUpdatesTableNames( service_id )
@@ -495,6 +503,8 @@ class ClientDBRepositories( ClientDBModule.ClientDBModule ):
         tables_and_columns = []
         
         if content_type == HC.CONTENT_TYPE_HASH:
+            
+            tables_and_columns.append( ( 'remote_thumbnails', 'hash_id' ) )
             
             for service_id in self.modules_services.GetServiceIds( HC.REPOSITORIES ):
                 

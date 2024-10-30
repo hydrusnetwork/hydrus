@@ -96,7 +96,6 @@ from hydrus.client.gui.services import ClientGUIModalClientsideServiceActions
 from hydrus.client.gui.services import ClientGUIModalServersideServiceActions
 from hydrus.client.gui.services import ClientGUIServersideServices
 from hydrus.client.gui.widgets import ClientGUICommon
-from hydrus.client.interfaces import ClientControllerInterface
 from hydrus.client.media import ClientMediaResult
 from hydrus.client.metadata import ClientContentUpdates
 from hydrus.client.metadata import ClientTags
@@ -466,7 +465,7 @@ def THREADUploadPending( service_key ):
 
 class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.MainFrameThatResizes ):
     
-    def __init__( self, controller: ClientControllerInterface.ClientControllerInterface ):
+    def __init__( self, controller: "CG.ClientController.Controller" ):
         
         self._controller = controller
         
@@ -2065,6 +2064,39 @@ QMenuBar::item { padding: 2px 8px; margin: 0px; }'''
         with ClientGUIDialogs.DialogGenerateNewAccounts( self, service_key ) as dlg: dlg.exec()
         
     
+    def _GetTablesAndColumnsUsingDefinitions( self ):
+        
+        choice_tuples = [ ( HC.content_type_string_lookup[ content_type ], content_type, HC.content_type_string_lookup[ content_type ] ) for content_type in [ HC.CONTENT_TYPE_HASH, HC.CONTENT_TYPE_TAG ] ]
+        
+        try:
+            
+            message = '''SUPER ADVANCED!
+
+This will gather all the tables and columns that use the particular content type and put them in your clipboard in the format "(schema_name.)table_name,column_name". If you want to do mass SELECT or DELETE operations for each of a particular definition, use a multi-editor tool in a powerful text editor to edit all the lines at once (with Ctrl+D, usually).
+
+Some tables are referred to by "external_x" schema name, so when you have your commands written out, you will need to either remove the schema names; or use the connect.bat in the db dir, which sets up the correct names for you; or manually initialise your session like so:
+
+.open client.db
+ATTACH "client.caches.db" as external_caches;
+ATTACH "client.master.db" as external_master;
+ATTACH "client.mappings.db" as external_mappings;'''
+            
+            content_type = ClientGUIDialogsQuick.SelectFromListButtons( self, 'Select which content type to fetch for', choice_tuples, message )
+            
+        except HydrusExceptions.CancelledException:
+            
+            return
+            
+        
+        tables_and_columns = self._controller.Read( 'tables_and_columns_using_definitions', content_type )
+        
+        text = '\n'.join( ( f'{table_name},{column_name}' for ( table_name, column_name ) in tables_and_columns ) )
+        
+        CG.client_controller.pub( 'clipboard', 'text', text )
+        
+        HydrusData.ShowText( f'{HydrusNumbers.ToHumanInt(len(tables_and_columns))} table and column pairs sent to clipboard.' )
+        
+    
     def _HowBonedAmI( self ):
         
         self._controller.file_viewing_stats_manager.Flush()
@@ -3250,6 +3282,10 @@ QMenuBar::item { padding: 2px 8px; margin: 0px; }'''
         ClientGUIMenus.AppendMenuItem( db_maintenance_submenu, 'clear orphan tables' + HC.UNICODE_ELLIPSIS, 'Clear out surplus db tables that have not been deleted correctly.', self._ClearOrphanTables )
         
         ClientGUIMenus.AppendMenuItem( db_maintenance_submenu, 'clear orphan hashed serialisables' + HC.UNICODE_ELLIPSIS, 'Clear non-needed cached hashed serialisable objects.', self._ClearOrphanHashedSerialisables )
+        
+        ClientGUIMenus.AppendSeparator( db_maintenance_submenu )
+        
+        ClientGUIMenus.AppendMenuItem( db_maintenance_submenu, 'get tables using definitions' + HC.UNICODE_ELLIPSIS, 'Fetch every table from the database that uses a particular id type.', self._GetTablesAndColumnsUsingDefinitions )
         
         ClientGUIMenus.AppendMenu( menu, db_maintenance_submenu, 'db maintenance' )
         

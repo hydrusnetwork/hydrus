@@ -57,7 +57,7 @@ def ConvertNumSeedsToWeight( num_seeds: int ) -> int:
 
 class Page( QW.QWidget ):
     
-    def __init__( self, parent, controller, management_controller: ClientGUIManagementController.ManagementController, initial_hashes ):
+    def __init__( self, parent: QW.QWidget, controller: "CG.ClientController.Controller", management_controller: ClientGUIManagementController.ManagementController, initial_hashes ):
         
         super().__init__( parent )
         
@@ -888,7 +888,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
     
     freshSessionLoaded = QC.Signal( ClientGUISession.GUISessionContainer )
     
-    def __init__( self, parent, controller, name ):
+    def __init__( self, parent: QW.QWidget, controller: "CG.ClientController.Controller", name ):
         
         super().__init__( parent )
         

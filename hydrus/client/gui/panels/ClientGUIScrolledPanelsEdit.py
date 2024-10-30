@@ -88,7 +88,7 @@ class EditDefaultImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._list_ctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
-        model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_DEFAULT_TAG_IMPORT_OPTIONS.ID, self._ConvertDataToListCtrlTuples )
+        model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_DEFAULT_TAG_IMPORT_OPTIONS.ID, self._ConvertDataToDisplayTuple, self._ConvertDataToSortTuple )
         
         self._list_ctrl = ClientGUIListCtrl.BetterListCtrlTreeView( self._list_ctrl_panel, CGLC.COLUMN_LIST_DEFAULT_TAG_IMPORT_OPTIONS.ID, 15, model, activation_callback = self._Edit )
         
@@ -160,7 +160,7 @@ class EditDefaultImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         return False
         
     
-    def _ConvertDataToListCtrlTuples( self, url_class ):
+    def _ConvertDataToDisplayTuple( self, url_class ):
         
         url_class_key = url_class.GetClassKey()
         
@@ -185,10 +185,11 @@ class EditDefaultImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         pretty_defaults_set = ', '.join( defaults_components )
         
         display_tuple = ( pretty_name, pretty_url_type, pretty_defaults_set )
-        sort_tuple = ( name, pretty_url_type, pretty_defaults_set )
         
-        return ( display_tuple, sort_tuple )
+        return display_tuple
         
+    
+    _ConvertDataToSortTuple = _ConvertDataToDisplayTuple
     
     def _ClearNotes( self ):
         
@@ -1185,7 +1186,7 @@ class EditDuplicateContentMergeOptionsPanel( ClientGUIScrolledPanels.EditPanel )
         
         tag_services_listctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( tag_services_panel )
         
-        model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_DUPLICATE_CONTENT_MERGE_OPTIONS_TAG_SERVICES.ID, self._ConvertTagDataToListCtrlTuple )
+        model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_DUPLICATE_CONTENT_MERGE_OPTIONS_TAG_SERVICES.ID, self._ConvertTagDataToDisplayTuple, self._ConvertTagDataToSortTuple )
         
         self._tag_service_actions = ClientGUIListCtrl.BetterListCtrlTreeView( tag_services_listctrl_panel, CGLC.COLUMN_LIST_DUPLICATE_CONTENT_MERGE_OPTIONS_TAG_SERVICES.ID, 5, model, delete_key_callback = self._DeleteTag, activation_callback = self._EditTag )
         
@@ -1201,7 +1202,7 @@ class EditDuplicateContentMergeOptionsPanel( ClientGUIScrolledPanels.EditPanel )
         
         rating_services_listctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( rating_services_panel )
         
-        model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_DUPLICATE_CONTENT_MERGE_OPTIONS_RATING_SERVICES.ID, self._ConvertRatingDataToListCtrlTuple )
+        model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_DUPLICATE_CONTENT_MERGE_OPTIONS_RATING_SERVICES.ID, self._ConvertRatingDataToDisplayTuple, self._ConvertRatingDataToSortTuple )
         
         self._rating_service_actions = ClientGUIListCtrl.BetterListCtrlTreeView( rating_services_listctrl_panel, CGLC.COLUMN_LIST_DUPLICATE_CONTENT_MERGE_OPTIONS_RATING_SERVICES.ID, 5, model, delete_key_callback = self._DeleteRating, activation_callback = self._EditRating )
         
@@ -1490,7 +1491,7 @@ class EditDuplicateContentMergeOptionsPanel( ClientGUIScrolledPanels.EditPanel )
             
         
     
-    def _ConvertRatingDataToListCtrlTuple( self, service_key ):
+    def _ConvertRatingDataToDisplayTuple( self, service_key ):
         
         action = self._service_keys_to_rating_options[ service_key ]
         
@@ -1520,12 +1521,13 @@ class EditDuplicateContentMergeOptionsPanel( ClientGUIScrolledPanels.EditPanel )
         pretty_action = str_lookup_dict[ action ]
         
         display_tuple = ( service_name, pretty_action )
-        sort_tuple = ( service_name, pretty_action )
         
-        return ( display_tuple, sort_tuple )
+        return display_tuple
         
     
-    def _ConvertTagDataToListCtrlTuple( self, service_key ):
+    _ConvertRatingDataToSortTuple = _ConvertRatingDataToDisplayTuple
+    
+    def _ConvertTagDataToDisplayTuple( self, service_key ):
         
         ( action, tag_filter ) = self._service_keys_to_tag_options[ service_key ]
         
@@ -1542,10 +1544,11 @@ class EditDuplicateContentMergeOptionsPanel( ClientGUIScrolledPanels.EditPanel )
         pretty_tag_filter = tag_filter.ToPermittedString()
         
         display_tuple = ( service_name, pretty_action, pretty_tag_filter )
-        sort_tuple = ( service_name, pretty_action, pretty_tag_filter )
         
-        return ( display_tuple, sort_tuple )
+        return display_tuple
         
+    
+    _ConvertTagDataToSortTuple = _ConvertTagDataToDisplayTuple
     
     def _DeleteRating( self ):
         
@@ -2626,7 +2629,7 @@ class EditRegexFavourites( ClientGUIScrolledPanels.EditPanel ):
         
         regex_listctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
-        model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_REGEX_FAVOURITES.ID, self._ConvertDataToListCtrlTuples )
+        model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_REGEX_FAVOURITES.ID, self._ConvertDataToDisplayTuple, self._ConvertDataToSortTuple )
         
         self._regexes = ClientGUIListCtrl.BetterListCtrlTreeView( regex_listctrl_panel, CGLC.COLUMN_LIST_REGEX_FAVOURITES.ID, 8, model, use_simple_delete = True, activation_callback = self._Edit )
         
@@ -2683,15 +2686,16 @@ class EditRegexFavourites( ClientGUIScrolledPanels.EditPanel ):
             
         
     
-    def _ConvertDataToListCtrlTuples( self, row ):
+    def _ConvertDataToDisplayTuple( self, row ):
         
         ( regex_phrase, description ) = row
         
         display_tuple = ( regex_phrase, description )
-        sort_tuple = ( regex_phrase, description )
         
-        return ( display_tuple, sort_tuple )
+        return display_tuple
         
+    
+    _ConvertDataToSortTuple = _ConvertDataToDisplayTuple
     
     def _Edit( self ):
         
@@ -2765,7 +2769,7 @@ class EditURLsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPane
         
         self._current_media = [ m.Duplicate() for m in medias ]
         
-        self._multiple_files_warning = ClientGUICommon.BetterStaticText( self, label = 'Warning: you are editing urls for multiple files!\nBe very careful about adding URLs here, as they will apply to everything.\nAdding the same URL to multiple files is only appropriate for gallery-type URLs!' )
+        self._multiple_files_warning = ClientGUICommon.BetterStaticText( self, label = 'Warning: you are editing urls for multiple files!\nBe very careful about adding URLs here, as they will apply to everything.\nAdding the same URL to multiple files is only appropriate for Post URLs that are set to expect multiple files, or if you really need to associate a Gallery URL.' )
         self._multiple_files_warning.setObjectName( 'HydrusWarning' )
         
         if len( self._current_media ) == 1:

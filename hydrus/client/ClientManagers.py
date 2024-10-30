@@ -129,7 +129,7 @@ class BitmapManager( object ):
     
     MAX_MEMORY_ALLOWANCE = 512 * 1024 * 1024
     
-    def __init__( self, controller ):
+    def __init__( self, controller: "CG.ClientController.Controller" ):
         
         self._controller = controller
         
@@ -251,9 +251,10 @@ class BitmapManager( object ):
         return self._media_background_pixmap
         
     
+
 class FileViewingStatsManager( object ):
     
-    def __init__( self, controller ):
+    def __init__( self, controller: "CG.ClientController.Controller" ):
         
         self._controller = controller
         
@@ -417,7 +418,7 @@ class FileViewingStatsManager( object ):
     
 class UndoManager( object ):
     
-    def __init__( self, controller ):
+    def __init__( self, controller: "CG.ClientController.Controller" ):
         
         self._controller = controller
         

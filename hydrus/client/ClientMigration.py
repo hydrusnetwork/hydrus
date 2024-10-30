@@ -6,6 +6,7 @@ from hydrus.core import HydrusLists
 from hydrus.core import HydrusTagArchive
 from hydrus.core import HydrusTime
 
+from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientThreading
 from hydrus.client import ClientLocation
 from hydrus.client.metadata import ClientContentUpdates
@@ -37,7 +38,7 @@ def GetBasicSpeedStatement( num_done, time_started_precise ):
     
 class MigrationDestination( object ):
     
-    def __init__( self, controller, name ):
+    def __init__( self, controller: "CG.ClientController.Controller", name: str ):
         
         self._controller = controller
         self._name = name
@@ -63,6 +64,7 @@ class MigrationDestination( object ):
         pass
         
     
+
 class MigrationDestinationHTA( MigrationDestination ):
     
     def __init__( self, controller, path, desired_hash_type ):
@@ -353,7 +355,7 @@ class MigrationDestinationTagServicePairs( MigrationDestinationTagService ):
     
 class MigrationJob( object ):
     
-    def __init__( self, controller, title, source, destination ):
+    def __init__( self, controller: "CG.ClientController.Controller", title, source, destination ):
         
         self._controller = controller
         self._title = title
@@ -413,7 +415,7 @@ class MigrationJob( object ):
     
 class MigrationSource( object ):
     
-    def __init__( self, controller, name ):
+    def __init__( self, controller: "CG.ClientController.Controller", name ):
         
         self._controller = controller
         self._name = name

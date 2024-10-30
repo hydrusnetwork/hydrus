@@ -8,6 +8,7 @@ from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTime
 
+from hydrus.client import ClientGlobals as CG
 from hydrus.client.db import ClientDBFilesDuplicates
 from hydrus.client.db import ClientDBFilesSearch
 from hydrus.client.db import ClientDBMaintenance
@@ -102,7 +103,7 @@ class ClientDBFilesDuplicatesAutoResolution( ClientDBModule.ClientDBModule ):
         
         self._ExecuteMany( f'INSERT OR IGNORE INTO {statuses_to_table_names[ ClientDuplicatesAutoResolution.DUPLICATE_STATUS_NOT_SEARCHED ]} ( smaller_media_id, larger_media_id ) SELECT smaller_media_id, larger_media_id FROM potential_duplicate_pairs;' )
         
-        ClientDuplicatesAutoResolution.DuplicatesAutoResolutionManager.instance().Wake()
+        CG.client_controller.duplicates_auto_resolution_manager.Wake()
         
     
     def DeleteRule( self, rule: ClientDuplicatesAutoResolution.DuplicatesAutoResolutionRule ):
@@ -260,7 +261,7 @@ class ClientDBFilesDuplicatesAutoResolution( ClientDBModule.ClientDBModule ):
             )
             
         
-        ClientDuplicatesAutoResolution.DuplicatesAutoResolutionManager.instance().Wake()
+        CG.client_controller.duplicates_auto_resolution_manager.Wake()
         
     
     def NotifyDeletePairs( self, pairs_to_remove ):
@@ -280,7 +281,7 @@ class ClientDBFilesDuplicatesAutoResolution( ClientDBModule.ClientDBModule ):
                 
             
         
-        ClientDuplicatesAutoResolution.DuplicatesAutoResolutionManager.instance().Wake()
+        CG.client_controller.duplicates_auto_resolution_manager.Wake()
         
     
     def ResearchRule( self, rule: ClientDuplicatesAutoResolution.DuplicatesAutoResolutionRule ):
@@ -363,6 +364,6 @@ class ClientDBFilesDuplicatesAutoResolution( ClientDBModule.ClientDBModule ):
                 
             
         
-        ClientDuplicatesAutoResolution.DuplicatesAutoResolutionManager.instance().Wake()
+        CG.client_controller.duplicates_auto_resolution_manager.Wake()
         
     

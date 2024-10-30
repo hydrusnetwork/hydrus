@@ -225,61 +225,61 @@ class TestStringConverter( unittest.TestCase ):
         
         #
         
-        string_converter = ClientStrings.StringConverter( conversions = [ ( ClientStrings.STRING_CONVERSION_ENCODE, 'url percent encoding' ) ] )
+        string_converter = ClientStrings.StringConverter( conversions = [ ( ClientStrings.STRING_CONVERSION_ENCODE, ClientStrings.ENCODING_TYPE_URL_PERCENT ) ] )
         
         self.assertEqual( string_converter.Convert( '01234 56789' ), '01234%2056789' )
         
         #
         
-        string_converter = ClientStrings.StringConverter( conversions = [ ( ClientStrings.STRING_CONVERSION_DECODE, 'url percent encoding' ) ] )
+        string_converter = ClientStrings.StringConverter( conversions = [ ( ClientStrings.STRING_CONVERSION_DECODE, ClientStrings.ENCODING_TYPE_URL_PERCENT ) ] )
         
         self.assertEqual( string_converter.Convert( '01234%2056789' ), '01234 56789' )
         
         #
         
-        string_converter = ClientStrings.StringConverter( conversions = [ ( ClientStrings.STRING_CONVERSION_ENCODE, 'unicode escape characters' ) ] )
+        string_converter = ClientStrings.StringConverter( conversions = [ ( ClientStrings.STRING_CONVERSION_ENCODE, ClientStrings.ENCODING_TYPE_UNICODE_ESCAPE ) ] )
         
         self.assertEqual( string_converter.Convert( '01234\u039456789' ), '01234\\u039456789' )
         
         #
         
-        string_converter = ClientStrings.StringConverter( conversions = [ ( ClientStrings.STRING_CONVERSION_DECODE, 'unicode escape characters' ) ] )
+        string_converter = ClientStrings.StringConverter( conversions = [ ( ClientStrings.STRING_CONVERSION_DECODE, ClientStrings.ENCODING_TYPE_UNICODE_ESCAPE ) ] )
         
         self.assertEqual( string_converter.Convert( '01234\\u039456789' ), '01234\u039456789' )
         
         #
         
-        string_converter = ClientStrings.StringConverter( conversions = [ ( ClientStrings.STRING_CONVERSION_ENCODE, 'html entities' ) ] )
+        string_converter = ClientStrings.StringConverter( conversions = [ ( ClientStrings.STRING_CONVERSION_ENCODE, ClientStrings.ENCODING_TYPE_HTML_ENTITIES ) ] )
         
         self.assertEqual( string_converter.Convert( '01234&56789' ), '01234&amp;56789' )
         
         #
         
-        string_converter = ClientStrings.StringConverter( conversions = [ ( ClientStrings.STRING_CONVERSION_DECODE, 'html entities' ) ] )
+        string_converter = ClientStrings.StringConverter( conversions = [ ( ClientStrings.STRING_CONVERSION_DECODE, ClientStrings.ENCODING_TYPE_HTML_ENTITIES ) ] )
         
         self.assertEqual( string_converter.Convert( '01234&amp;56789' ), '01234&56789' )
         
         #
         
-        string_converter = ClientStrings.StringConverter( conversions = [ ( ClientStrings.STRING_CONVERSION_ENCODE, 'hex' ) ] )
+        string_converter = ClientStrings.StringConverter( conversions = [ ( ClientStrings.STRING_CONVERSION_ENCODE, ClientStrings.ENCODING_TYPE_HEX_UTF8 ) ] )
         
         self.assertEqual( string_converter.Convert( 'hello world' ), '68656c6c6f20776f726c64' )
         
         #
         
-        string_converter = ClientStrings.StringConverter( conversions = [ ( ClientStrings.STRING_CONVERSION_ENCODE, 'base64' ) ] )
+        string_converter = ClientStrings.StringConverter( conversions = [ ( ClientStrings.STRING_CONVERSION_ENCODE, ClientStrings.ENCODING_TYPE_BASE64_UTF8 ) ] )
         
         self.assertEqual( string_converter.Convert( 'hello world' ), 'aGVsbG8gd29ybGQ=' )
         
         #
         
-        string_converter = ClientStrings.StringConverter( conversions = [ ( ClientStrings.STRING_CONVERSION_DECODE, 'hex' ) ] )
+        string_converter = ClientStrings.StringConverter( conversions = [ ( ClientStrings.STRING_CONVERSION_DECODE, ClientStrings.ENCODING_TYPE_HEX_UTF8 ) ] )
         
         self.assertEqual( string_converter.Convert( '68656c6c6f20776f726c64' ), 'hello world' )
         
         #
         
-        string_converter = ClientStrings.StringConverter( conversions = [ ( ClientStrings.STRING_CONVERSION_DECODE, 'base64' ) ] )
+        string_converter = ClientStrings.StringConverter( conversions = [ ( ClientStrings.STRING_CONVERSION_DECODE, ClientStrings.ENCODING_TYPE_BASE64_UTF8 ) ] )
         
         self.assertEqual( string_converter.Convert( 'aGVsbG8gd29ybGQ=' ), 'hello world' )
         
@@ -376,7 +376,7 @@ class TestStringConverter( unittest.TestCase ):
         
         #
         
-        conversions.append( ( ClientStrings.STRING_CONVERSION_ENCODE, 'url percent encoding' ) )
+        conversions.append( ( ClientStrings.STRING_CONVERSION_ENCODE, ClientStrings.ENCODING_TYPE_URL_PERCENT ) )
         
         string_converter = ClientStrings.StringConverter( conversions = conversions )
         
@@ -384,7 +384,7 @@ class TestStringConverter( unittest.TestCase ):
         
         #
         
-        conversions.append( ( ClientStrings.STRING_CONVERSION_DECODE, 'url percent encoding' ) )
+        conversions.append( ( ClientStrings.STRING_CONVERSION_DECODE, ClientStrings.ENCODING_TYPE_URL_PERCENT ) )
         
         string_converter = ClientStrings.StringConverter( conversions = conversions )
         

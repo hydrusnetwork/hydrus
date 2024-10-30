@@ -3437,7 +3437,7 @@ class ServiceIPFS( ServiceRemote ):
 
 class ServicesManager( object ):
     
-    def __init__( self, controller ):
+    def __init__( self, controller: "CG.ClientController.Controller" ):
         
         self._controller = controller
         
