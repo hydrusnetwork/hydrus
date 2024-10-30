@@ -6312,7 +6312,7 @@ Accept: application/json
 <p>For now, a prefix only occurs in one location, so there will always be 512 total prefixes in this response, all unique. <strong>However, please note that this will not always be true!</strong> In a future expansion, the client will be, on user command, slowly migrating files from one place to another in the background, and during that time there will be multiple valid locations for a file to actually be. When this happens, you will have to hit all the possible locations and test.</p>
 <p>Also, it won't be long before the client supports moving to <em>some</em> form of three- and four-character prefix. I am still thinking how this will happen other than it will be an atomic change--no slow migration where we try to support both at once--but it will certainly complicate something in here (e.g. while the prefix may be 'f012', maybe the subfolder will be '\f01\2'), so we'll see.</p>
 <h3 id="get_files_render"><strong>GET <code>/get_files/render</code></strong><a class="headerlink" href="#get_files_render" title="Permanent link">&para;</a></h3>
-<p><em>Get an image file as rendered by Hydrus.</em></p>
+<p><em>Get an image or ugoira file as rendered by Hydrus.</em></p>
 <dl>
 <dt>Restricted access:</dt>
 <dd>YES. Search for Files permission needed. Additional search permission limits may apply.</dd>
@@ -6325,27 +6325,32 @@ Accept: application/json
 <li><code>file_id</code>: (selective, numerical file id for the file)</li>
 <li><code>hash</code>: (selective, a hexadecimal SHA256 hash for the file)</li>
 <li><code>download</code>: (optional, boolean, default <code>false</code>)</li>
-<li><code>render_format</code>: (optional, integer, the filetype enum value to render the file to, default <code>2</code> for PNG)</li>
-<li><code>render_quality</code>: (optional, integer, the quality or PNG compression level to use for encoding the image, default <code>1</code> for PNG and <code>80</code> for JPEG and WEBP)</li>
-<li><code>width</code> and <code>height</code>: (optional but must provide both if used, integer, the width and height to scale the image to)</li>
+<li><code>render_format</code>: (optional, integer, the filetype enum value to render the file to, for still images it defaults <code>2</code> for PNG, for Ugoiras it defaults to <code>23</code> for APNG)</li>
+<li><code>render_quality</code>: (optional, integer, the quality or PNG compression level to use for encoding the image, default <code>1</code> for PNG and <code>80</code> for JPEG and WEBP, has no effect for Ugoiras using APNG)</li>
+<li><code>width</code> and <code>height</code>: (optional but must provide both if used, integer, the width and height to scale the image to. Doesn't apply to Ugoiras)</li>
 </ul>
 <p>Only use one of file_id or hash. As with metadata fetching, you may only use the hash argument if you have access to all files. If you are tag-restricted, you will have to use a file_id in the last search you ran.</p>
-<p>Currently the only accepted values for <code>render_format</code> are:</p>
+<p>Currently the accepted values for <code>render_format</code> for image files are:</p>
 <ul>
 <li><code>1</code> for JPEG (<code>quality</code> sets JPEG quality 0 to 100, always progressive 4:2:0 encoding)</li>
 <li><code>2</code> for PNG (<code>quality</code> sets the compression level from 0 to 9. A higher value means a smaller size and longer compression time)</li>
 <li><code>33</code> for WEBP (<code>quality</code> sets WEBP quality 1 to 100, for values over 100 lossless compression is used)</li>
 </ul>
+<p>The accepted values for Ugoiras are:</p>
+<ul>
+<li><code>23</code> for APNG (<code>quality</code> does nothing for this format)</li>
+<li><code>83</code> for animated WEBP (<code>quality</code> sets WEBP quality 1 to 100, for values over 100 lossless compression is used)</li>
+</ul>
 </dd>
 </dl>
-<p>The file you request must be a still image file that Hydrus can render (this includes PSD files). This request uses the client image cache.</p>
+<p>The file you request must be a still image file that Hydrus can render (this includes PSD files) or a Ugoira file. This request uses the client image cache for images.</p>
 <p><div class="highlight"><span class="filename">Example request</span><pre><span></span><code>/get_files/render?file_id=452158
 </code></pre></div>
 <div class="highlight"><span class="filename">Example request</span><pre><span></span><code>/get_files/render?hash=7f30c113810985b69014957c93bc25e8eb4cf3355dae36d8b9d011d8b0cf623a&amp;download=true
 </code></pre></div></p>
 <dl>
 <dt>Response:</dt>
-<dd>A PNG, JPEG, or WEBP file of the image as would be rendered in the client, optionally resized as specified in the query parameters. It will be converted to sRGB color if the file had a color profile but the rendered file will not have any color profile.</dd>
+<dd>A PNG (or APNG), JPEG, or WEBP file of the image as would be rendered in the client, optionally resized as specified in the query parameters. It will be converted to sRGB color if the file had a color profile but the rendered file will not have any color profile.</dd>
 </dl>
 <p>By default, this will set the <code>Content-Disposition</code> header to <code>inline</code>, which causes a web browser to show the file. If you set <code>download=true</code>, it will set it to <code>attachment</code>, which triggers the browser to automatically download it (or open the 'save as' dialog) instead.</p>
 <h2 id="managing_file_relationships">Managing File Relationships<a class="headerlink" href="#managing_file_relationships" title="Permanent link">&para;</a></h2>
@@ -7739,7 +7744,7 @@ This request will also return any cookies for subdomains. The session system in 
     <span class="md-icon" title="Last update">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 13.1c-.1 0-.3.1-.4.2l-1 1 2.1 2.1 1-1c.2-.2.2-.6 0-.8l-1.3-1.3c-.1-.1-.2-.2-.4-.2m-1.9 1.8-6.1 6V23h2.1l6.1-6.1zM12.5 7v5.2l4 2.4-1 1L11 13V7zM11 21.9c-5.1-.5-9-4.8-9-9.9C2 6.5 6.5 2 12 2c5.3 0 9.6 4.1 10 9.3-.3-.1-.6-.2-1-.2s-.7.1-1 .2C19.6 7.2 16.2 4 12 4c-4.4 0-8 3.6-8 8 0 4.1 3.1 7.5 7.1 7.9l-.1.2z"/></svg>
     </span>
-    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">October 23, 2024</span>
+    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">October 26, 2024</span>
   </span>
 
     
