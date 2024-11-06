@@ -72,6 +72,7 @@ from hydrus.client.db import ClientDBTagSiblings
 from hydrus.client.db import ClientDBTagSuggestions
 from hydrus.client.db import ClientDBURLMap
 from hydrus.client.duplicates import ClientDuplicates
+from hydrus.client.duplicates import ClientPotentialDuplicatesSearchContext
 from hydrus.client.importing import ClientImportFiles
 from hydrus.client.media import ClientMediaManagers
 from hydrus.client.media import ClientMediaResult
@@ -1810,14 +1811,17 @@ class DB( HydrusDB.HydrusDB ):
         HydrusDB.HydrusDB._DoAfterJobWork( self )
         
     
-    def _DuplicatesGetRandomPotentialDuplicateHashes(
-        self,
-        file_search_context_1: ClientSearchFileSearchContext.FileSearchContext,
-        file_search_context_2: ClientSearchFileSearchContext.FileSearchContext,
-        dupe_search_type: int,
-        pixel_dupes_preference,
-        max_hamming_distance
-    ) -> typing.List[ bytes ]:
+    def _DuplicatesGetRandomPotentialDuplicateHashes( self, potential_duplicates_search_context: ClientPotentialDuplicatesSearchContext.PotentialDuplicatesSearchContext ) -> typing.List[ bytes ]:
+        
+        potential_duplicates_search_context = potential_duplicates_search_context.Duplicate()
+        
+        potential_duplicates_search_context.OptimiseForSearch()
+        
+        file_search_context_1 = potential_duplicates_search_context.GetFileSearchContext1()
+        file_search_context_2 = potential_duplicates_search_context.GetFileSearchContext2()
+        dupe_search_type = potential_duplicates_search_context.GetDupeSearchType()
+        pixel_dupes_preference = potential_duplicates_search_context.GetPixelDupesPreference()
+        max_hamming_distance = potential_duplicates_search_context.GetMaxHammingDistance()
         
         db_location_context = self.modules_files_storage.GetDBLocationContext( file_search_context_1.GetLocationContext() )
         
@@ -1947,12 +1951,22 @@ class DB( HydrusDB.HydrusDB ):
             
         
     
-    def _DuplicatesGetPotentialDuplicatePairsForFiltering( self, file_search_context_1: ClientSearchFileSearchContext.FileSearchContext, file_search_context_2: ClientSearchFileSearchContext.FileSearchContext, dupe_search_type: int, pixel_dupes_preference, max_hamming_distance, max_num_pairs: typing.Optional[ int ] = None ):
+    def _DuplicatesGetPotentialDuplicatePairsForFiltering( self, potential_duplicates_search_context: ClientPotentialDuplicatesSearchContext.PotentialDuplicatesSearchContext, max_num_pairs: typing.Optional[ int ] = None ):
         
         if max_num_pairs is None:
             
             max_num_pairs = CG.client_controller.new_options.GetInteger( 'duplicate_filter_max_batch_size' )
             
+        
+        potential_duplicates_search_context = potential_duplicates_search_context.Duplicate()
+        
+        potential_duplicates_search_context.OptimiseForSearch()
+        
+        file_search_context_1 = potential_duplicates_search_context.GetFileSearchContext1()
+        file_search_context_2 = potential_duplicates_search_context.GetFileSearchContext2()
+        dupe_search_type = potential_duplicates_search_context.GetDupeSearchType()
+        pixel_dupes_preference = potential_duplicates_search_context.GetPixelDupesPreference()
+        max_hamming_distance = potential_duplicates_search_context.GetMaxHammingDistance()
         
         # we need to batch non-intersecting decisions here to keep it simple at the gui-level
         # we also want to maximise per-decision value
@@ -2150,7 +2164,17 @@ class DB( HydrusDB.HydrusDB ):
         return batch_of_pairs_of_media_results
         
     
-    def _DuplicatesGetPotentialDuplicatesCount( self, file_search_context_1, file_search_context_2, dupe_search_type, pixel_dupes_preference, max_hamming_distance ):
+    def _DuplicatesGetPotentialDuplicatesCount( self, potential_duplicates_search_context: ClientPotentialDuplicatesSearchContext.PotentialDuplicatesSearchContext ):
+        
+        potential_duplicates_search_context = potential_duplicates_search_context.Duplicate()
+        
+        potential_duplicates_search_context.OptimiseForSearch()
+        
+        file_search_context_1 = potential_duplicates_search_context.GetFileSearchContext1()
+        file_search_context_2 = potential_duplicates_search_context.GetFileSearchContext2()
+        dupe_search_type = potential_duplicates_search_context.GetDupeSearchType()
+        pixel_dupes_preference = potential_duplicates_search_context.GetPixelDupesPreference()
+        max_hamming_distance = potential_duplicates_search_context.GetMaxHammingDistance()
         
         db_location_context = self.modules_files_storage.GetDBLocationContext( file_search_context_1.GetLocationContext() )
         

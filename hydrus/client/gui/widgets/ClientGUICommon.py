@@ -493,6 +493,7 @@ class BetterChoice( QW.QComboBox ):
             
         
     
+
 class BetterNotebook( QW.QTabWidget ):
     
     def _ShiftSelection( self, delta ):
@@ -550,6 +551,7 @@ class BetterNotebook( QW.QTabWidget ):
         self._ShiftSelection( 1 )
         
     
+
 class BetterSpinBox( QW.QSpinBox ):
     
     def __init__( self, parent: QW.QWidget, initial = None, min = None, max = None, width = None ):

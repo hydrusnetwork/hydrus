@@ -2289,6 +2289,15 @@ class EditFrameLocationPanel( ClientGUIScrolledPanels.EditPanel ):
         
         text = 'Setting frame location info for ' + name + '.'
         
+        if name == 'manage_tags_dialog':
+            
+            text += '\n\nThis is the manage tags dialog launched off the thumbnail grid.'
+            
+        elif name == 'manage_tags_frame':
+            
+            text += '\n\nThis is the manage tags dialog launched off the media viewer.'
+            
+        
         QP.AddToLayout( vbox, ClientGUICommon.BetterStaticText(self,text), CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, self._remember_size, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, self._remember_position, CC.FLAGS_EXPAND_PERPENDICULAR )

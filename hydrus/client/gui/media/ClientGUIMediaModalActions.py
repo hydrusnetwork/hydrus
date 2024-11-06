@@ -376,7 +376,7 @@ def EditFileNotes( win: QW.QWidget, media: ClientMedia.MediaSingleton, name_to_s
     
     title = 'manage notes'
     
-    with ClientGUITopLevelWindowsPanels.DialogEdit( win, title ) as dlg:
+    with ClientGUITopLevelWindowsPanels.DialogEdit( win, title, frame_key = 'manage_notes_dialog' ) as dlg:
         
         panel = ClientGUIScrolledPanelsEdit.EditFileNotesPanel( dlg, names_to_notes, name_to_start_on = name_to_start_on )
         
@@ -402,7 +402,7 @@ def EditFileTimestamps( win: QW.QWidget, ordered_medias: typing.List[ ClientMedi
     
     title = 'manage times'
     
-    with ClientGUITopLevelWindowsPanels.DialogEdit( win, title ) as dlg:
+    with ClientGUITopLevelWindowsPanels.DialogEdit( win, title, frame_key = 'manage_times_dialog' ) as dlg:
         
         panel = ClientGUIEditTimestamps.EditFileTimestampsPanel( dlg, ordered_medias )
         
@@ -477,7 +477,7 @@ def ExportFiles( win: QW.QWidget, medias: typing.Collection[ ClientMedia.Media ]
     
     if len( flat_media ) > 0:
         
-        frame = ClientGUITopLevelWindowsPanels.FrameThatTakesScrollablePanel( win, 'export files' )
+        frame = ClientGUITopLevelWindowsPanels.FrameThatTakesScrollablePanel( win, 'export files', frame_key = 'export_files_frame' )
         
         panel = ClientGUIExport.ReviewExportFilesPanel( frame, flat_media, do_export_and_then_quit = do_export_and_then_quit )
         

@@ -40,7 +40,7 @@ class ListBoxItem( object ):
         return False
         
     
-    def GetCopyableTexts( self, with_counts: bool = False ) -> typing.List[ str ]:
+    def GetCopyableTexts( self, with_counts: bool = False, include_parents = False ) -> typing.List[ str ]:
         
         raise NotImplementedError()
         
@@ -84,7 +84,7 @@ class ListBoxItemTagSlice( ListBoxItem ):
         return self._tag_slice.__hash__()
         
     
-    def GetCopyableTexts( self, with_counts: bool = False ) -> typing.List[ str ]:
+    def GetCopyableTexts( self, with_counts: bool = False, include_parents = False ) -> typing.List[ str ]:
         
         return [ self._tag_slice ]
         
@@ -136,7 +136,7 @@ class ListBoxItemNamespaceColour( ListBoxItem ):
         return self._namespace.__hash__()
         
     
-    def GetCopyableTexts( self, with_counts: bool = False ) -> typing.List[ str ]:
+    def GetCopyableTexts( self, with_counts: bool = False, include_parents = False ) -> typing.List[ str ]:
         
         if self._namespace is None:
             
@@ -249,9 +249,16 @@ class ListBoxItemTextTag( ListBoxItem ):
         return self._ideal_tag
         
     
-    def GetCopyableTexts( self, with_counts: bool = False ) -> typing.List[ str ]:
+    def GetCopyableTexts( self, with_counts: bool = False, include_parents = False ) -> typing.List[ str ]:
         
-        return [ self._tag ]
+        rows = [ self._tag ]
+        
+        if include_parents and self._parent_tags is not None:
+            
+            rows.extend( self._parent_tags )
+            
+        
+        return rows
         
     
     def GetSearchPredicates( self ) -> typing.List[ ClientSearchPredicate.Predicate ]:
@@ -328,6 +335,7 @@ class ListBoxItemTextTag( ListBoxItem ):
         self._parent_tags = parents
         
     
+
 class ListBoxItemTextTagWithCounts( ListBoxItemTextTag ):
     
     def __init__( self, tag: str, current_count: int, deleted_count: int, pending_count: int, petitioned_count: int, include_actual_counts: bool ):
@@ -358,7 +366,7 @@ class ListBoxItemTextTagWithCounts( ListBoxItemTextTag ):
         return NotImplemented
         
     
-    def GetCopyableTexts( self, with_counts: bool = False ) -> typing.List[ str ]:
+    def GetCopyableTexts( self, with_counts: bool = False, include_parents = False ) -> typing.List[ str ]:
         
         if with_counts:
             
@@ -376,7 +384,14 @@ class ListBoxItemTextTagWithCounts( ListBoxItemTextTag ):
             
         else:
             
-            return [ self._tag ]
+            rows = [ self._tag ]
+            
+            if include_parents and self._parent_tags is not None:
+                
+                rows.extend( self._parent_tags )
+                
+            
+            return rows
             
         
     
@@ -498,7 +513,7 @@ class ListBoxItemPredicate( ListBoxItem ):
         return not self._predicate.IsORPredicate()
         
     
-    def GetCopyableTexts( self, with_counts: bool = False ) -> typing.List[ str ]:
+    def GetCopyableTexts( self, with_counts: bool = False, include_parents = False ) -> typing.List[ str ]:
         
         if self._predicate.IsORPredicate():
             
@@ -525,7 +540,7 @@ class ListBoxItemPredicate( ListBoxItem ):
             
             texts = [ self._predicate.ToString( with_count = with_counts, for_parsable_export = True ) ]
             
-            if self._predicate.HasParentPredicates():
+            if include_parents and self._predicate.HasParentPredicates():
                 
                 texts.extend( [ parent.ToString( with_count = with_counts, for_parsable_export = True ) for parent in self._predicate.GetParentPredicates() ] )
                 

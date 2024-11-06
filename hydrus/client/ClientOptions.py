@@ -730,6 +730,11 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         self._dictionary[ 'frame_locations' ][ 'deeply_nested_dialog' ] = ( False, False, None, None, ( -1, -1 ), 'topleft', False, False )
         self._dictionary[ 'frame_locations' ][ 'regular_center_dialog' ] = ( False, False, None, None, ( -1, -1 ), 'center', False, False )
         self._dictionary[ 'frame_locations' ][ 'file_history_chart' ] = ( True, True, ( 960, 720 ), None, ( -1, -1 ), 'topleft', False, False )
+        self._dictionary[ 'frame_locations' ][ 'mr_bones' ] = ( True, True, None, None, ( -1, -1 ), 'topleft', False, False )
+        self._dictionary[ 'frame_locations' ][ 'manage_urls_dialog' ] = ( True, True, None, None, ( -1, -1 ), 'topleft', False, False )
+        self._dictionary[ 'frame_locations' ][ 'manage_times_dialog' ] = ( True, True, None, None, ( -1, -1 ), 'topleft', False, False )
+        self._dictionary[ 'frame_locations' ][ 'manage_notes_dialog' ] = ( True, True, None, None, ( -1, -1 ), 'topleft', False, False )
+        self._dictionary[ 'frame_locations' ][ 'export_files_frame' ] = ( True, True, None, None, ( -1, -1 ), 'topleft', False, False )
         
         #
         
@@ -790,7 +795,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         loaded_dictionary = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_info )
         
-        for ( key, value ) in list(loaded_dictionary.items()):
+        for ( key, value ) in loaded_dictionary.items():
             
             if key in self._dictionary and isinstance( self._dictionary[ key ], dict ) and isinstance( value, dict ):
                 
@@ -811,7 +816,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             
             if 'media_view' in loaded_dictionary:
                 
-                mimes = list(loaded_dictionary[ 'media_view' ].keys())
+                mimes = list( loaded_dictionary[ 'media_view' ].keys() )
                 
                 for mime in mimes:
                     
@@ -1249,7 +1254,18 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         with self._lock:
             
-            return self._dictionary[ 'frame_locations' ][ frame_key ]
+            d = self._dictionary[ 'frame_locations' ]
+            
+            if frame_key in d:
+                
+                return d[ frame_key ]
+                
+            else:
+                
+                HydrusData.Print( f'Could not find {frame_key} in the frame locations options!' )
+                
+                return ( False, False, None, None, ( -1, -1 ), 'topleft', False, False )
+                
             
         
     

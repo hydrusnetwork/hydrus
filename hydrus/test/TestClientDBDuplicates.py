@@ -11,6 +11,7 @@ from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientLocation
 from hydrus.client.db import ClientDB
 from hydrus.client.duplicates import ClientDuplicates
+from hydrus.client.duplicates import ClientPotentialDuplicatesSearchContext
 from hydrus.client.importing import ClientImportFiles
 from hydrus.client.importing.options import FileImportOptions
 from hydrus.client.metadata import ClientContentUpdates
@@ -129,17 +130,25 @@ class TestClientDBDuplicates( unittest.TestCase ):
         max_hamming_distance = 4
         dupe_search_type = ClientDuplicates.DUPE_SEARCH_BOTH_FILES_MATCH_ONE_SEARCH
         
-        num_potentials = self._read( 'potential_duplicates_count', self._file_search_context_1, self._file_search_context_2, dupe_search_type, pixel_dupes_preference, max_hamming_distance )
+        potential_duplicates_search_context = ClientPotentialDuplicatesSearchContext.PotentialDuplicatesSearchContext()
+        
+        potential_duplicates_search_context.SetFileSearchContext1( self._file_search_context_1 )
+        potential_duplicates_search_context.SetFileSearchContext2( self._file_search_context_2 )
+        potential_duplicates_search_context.SetDupeSearchType( dupe_search_type )
+        potential_duplicates_search_context.SetPixelDupesPreference( pixel_dupes_preference )
+        potential_duplicates_search_context.SetMaxHammingDistance( max_hamming_distance )
+        
+        num_potentials = self._read( 'potential_duplicates_count', potential_duplicates_search_context )
         
         self.assertEqual( num_potentials, self._expected_num_potentials )
         
-        result = self._read( 'random_potential_duplicate_hashes', self._file_search_context_1, self._file_search_context_2, dupe_search_type, pixel_dupes_preference, max_hamming_distance )
+        result = self._read( 'random_potential_duplicate_hashes', potential_duplicates_search_context )
         
         self.assertEqual( len( result ), len( self._all_hashes ) )
         
         self.assertEqual( set( result ), self._all_hashes )
         
-        filtering_pairs = self._read( 'duplicate_pairs_for_filtering', self._file_search_context_1, self._file_search_context_2, dupe_search_type, pixel_dupes_preference, max_hamming_distance )
+        filtering_pairs = self._read( 'duplicate_pairs_for_filtering', potential_duplicates_search_context )
         
         for ( a, b ) in filtering_pairs:
             
@@ -182,7 +191,15 @@ class TestClientDBDuplicates( unittest.TestCase ):
         max_hamming_distance = 4
         dupe_search_type = ClientDuplicates.DUPE_SEARCH_BOTH_FILES_MATCH_ONE_SEARCH
         
-        num_potentials = self._read( 'potential_duplicates_count', self._file_search_context_1, self._file_search_context_2, dupe_search_type, pixel_dupes_preference, max_hamming_distance )
+        potential_duplicates_search_context = ClientPotentialDuplicatesSearchContext.PotentialDuplicatesSearchContext()
+        
+        potential_duplicates_search_context.SetFileSearchContext1( self._file_search_context_1 )
+        potential_duplicates_search_context.SetFileSearchContext2( self._file_search_context_2 )
+        potential_duplicates_search_context.SetDupeSearchType( dupe_search_type )
+        potential_duplicates_search_context.SetPixelDupesPreference( pixel_dupes_preference )
+        potential_duplicates_search_context.SetMaxHammingDistance( max_hamming_distance )
+        
+        num_potentials = self._read( 'potential_duplicates_count', potential_duplicates_search_context )
         
         self._num_free_agents -= 1
         
@@ -270,7 +287,15 @@ class TestClientDBDuplicates( unittest.TestCase ):
         max_hamming_distance = 4
         dupe_search_type = ClientDuplicates.DUPE_SEARCH_BOTH_FILES_MATCH_ONE_SEARCH
         
-        num_potentials = self._read( 'potential_duplicates_count', self._file_search_context_1, self._file_search_context_2, dupe_search_type, pixel_dupes_preference, max_hamming_distance )
+        potential_duplicates_search_context = ClientPotentialDuplicatesSearchContext.PotentialDuplicatesSearchContext()
+        
+        potential_duplicates_search_context.SetFileSearchContext1( self._file_search_context_1 )
+        potential_duplicates_search_context.SetFileSearchContext2( self._file_search_context_2 )
+        potential_duplicates_search_context.SetDupeSearchType( dupe_search_type )
+        potential_duplicates_search_context.SetPixelDupesPreference( pixel_dupes_preference )
+        potential_duplicates_search_context.SetMaxHammingDistance( max_hamming_distance )
+        
+        num_potentials = self._read( 'potential_duplicates_count', potential_duplicates_search_context )
         
         self._num_free_agents -= 1
         
@@ -337,7 +362,15 @@ class TestClientDBDuplicates( unittest.TestCase ):
         max_hamming_distance = 4
         dupe_search_type = ClientDuplicates.DUPE_SEARCH_BOTH_FILES_MATCH_ONE_SEARCH
         
-        num_potentials = self._read( 'potential_duplicates_count', self._file_search_context_1, self._file_search_context_2, dupe_search_type, pixel_dupes_preference, max_hamming_distance )
+        potential_duplicates_search_context = ClientPotentialDuplicatesSearchContext.PotentialDuplicatesSearchContext()
+        
+        potential_duplicates_search_context.SetFileSearchContext1( self._file_search_context_1 )
+        potential_duplicates_search_context.SetFileSearchContext2( self._file_search_context_2 )
+        potential_duplicates_search_context.SetDupeSearchType( dupe_search_type )
+        potential_duplicates_search_context.SetPixelDupesPreference( pixel_dupes_preference )
+        potential_duplicates_search_context.SetMaxHammingDistance( max_hamming_distance )
+        
+        num_potentials = self._read( 'potential_duplicates_count', potential_duplicates_search_context )
         
         self._num_free_agents -= 1
         
@@ -515,7 +548,15 @@ class TestClientDBDuplicates( unittest.TestCase ):
         max_hamming_distance = 4
         dupe_search_type = ClientDuplicates.DUPE_SEARCH_BOTH_FILES_MATCH_ONE_SEARCH
         
-        num_potentials = self._read( 'potential_duplicates_count', self._file_search_context_1, self._file_search_context_2, dupe_search_type, pixel_dupes_preference, max_hamming_distance )
+        potential_duplicates_search_context = ClientPotentialDuplicatesSearchContext.PotentialDuplicatesSearchContext()
+        
+        potential_duplicates_search_context.SetFileSearchContext1( self._file_search_context_1 )
+        potential_duplicates_search_context.SetFileSearchContext2( self._file_search_context_2 )
+        potential_duplicates_search_context.SetDupeSearchType( dupe_search_type )
+        potential_duplicates_search_context.SetPixelDupesPreference( pixel_dupes_preference )
+        potential_duplicates_search_context.SetMaxHammingDistance( max_hamming_distance )
+        
+        num_potentials = self._read( 'potential_duplicates_count', potential_duplicates_search_context )
         
         self.assertLess( num_potentials, self._expected_num_potentials )
         
@@ -599,7 +640,15 @@ class TestClientDBDuplicates( unittest.TestCase ):
         max_hamming_distance = 4
         dupe_search_type = ClientDuplicates.DUPE_SEARCH_BOTH_FILES_MATCH_ONE_SEARCH
         
-        num_potentials = self._read( 'potential_duplicates_count', self._file_search_context_1, self._file_search_context_2, dupe_search_type, pixel_dupes_preference, max_hamming_distance )
+        potential_duplicates_search_context = ClientPotentialDuplicatesSearchContext.PotentialDuplicatesSearchContext()
+        
+        potential_duplicates_search_context.SetFileSearchContext1( self._file_search_context_1 )
+        potential_duplicates_search_context.SetFileSearchContext2( self._file_search_context_2 )
+        potential_duplicates_search_context.SetDupeSearchType( dupe_search_type )
+        potential_duplicates_search_context.SetPixelDupesPreference( pixel_dupes_preference )
+        potential_duplicates_search_context.SetMaxHammingDistance( max_hamming_distance )
+        
+        num_potentials = self._read( 'potential_duplicates_count', potential_duplicates_search_context )
         
         self.assertLess( num_potentials, self._expected_num_potentials )
         
@@ -643,7 +692,15 @@ class TestClientDBDuplicates( unittest.TestCase ):
         max_hamming_distance = 4
         dupe_search_type = ClientDuplicates.DUPE_SEARCH_BOTH_FILES_MATCH_ONE_SEARCH
         
-        num_potentials = self._read( 'potential_duplicates_count', self._file_search_context_1, self._file_search_context_2, dupe_search_type, pixel_dupes_preference, max_hamming_distance )
+        potential_duplicates_search_context = ClientPotentialDuplicatesSearchContext.PotentialDuplicatesSearchContext()
+        
+        potential_duplicates_search_context.SetFileSearchContext1( self._file_search_context_1 )
+        potential_duplicates_search_context.SetFileSearchContext2( self._file_search_context_2 )
+        potential_duplicates_search_context.SetDupeSearchType( dupe_search_type )
+        potential_duplicates_search_context.SetPixelDupesPreference( pixel_dupes_preference )
+        potential_duplicates_search_context.SetMaxHammingDistance( max_hamming_distance )
+        
+        num_potentials = self._read( 'potential_duplicates_count', potential_duplicates_search_context )
         
         self.assertLess( num_potentials, self._expected_num_potentials )
         
@@ -663,7 +720,15 @@ class TestClientDBDuplicates( unittest.TestCase ):
         max_hamming_distance = 4
         dupe_search_type = ClientDuplicates.DUPE_SEARCH_BOTH_FILES_MATCH_ONE_SEARCH
         
-        num_potentials = self._read( 'potential_duplicates_count', self._file_search_context_1, self._file_search_context_2, dupe_search_type, pixel_dupes_preference, max_hamming_distance )
+        potential_duplicates_search_context = ClientPotentialDuplicatesSearchContext.PotentialDuplicatesSearchContext()
+        
+        potential_duplicates_search_context.SetFileSearchContext1( self._file_search_context_1 )
+        potential_duplicates_search_context.SetFileSearchContext2( self._file_search_context_2 )
+        potential_duplicates_search_context.SetDupeSearchType( dupe_search_type )
+        potential_duplicates_search_context.SetPixelDupesPreference( pixel_dupes_preference )
+        potential_duplicates_search_context.SetMaxHammingDistance( max_hamming_distance )
+        
+        num_potentials = self._read( 'potential_duplicates_count', potential_duplicates_search_context )
         
         self.assertLess( num_potentials, self._expected_num_potentials )
         
@@ -719,7 +784,15 @@ class TestClientDBDuplicates( unittest.TestCase ):
         max_hamming_distance = 4
         dupe_search_type = ClientDuplicates.DUPE_SEARCH_BOTH_FILES_MATCH_ONE_SEARCH
         
-        num_potentials = self._read( 'potential_duplicates_count', self._file_search_context_1, self._file_search_context_2, dupe_search_type, pixel_dupes_preference, max_hamming_distance )
+        potential_duplicates_search_context = ClientPotentialDuplicatesSearchContext.PotentialDuplicatesSearchContext()
+        
+        potential_duplicates_search_context.SetFileSearchContext1( self._file_search_context_1 )
+        potential_duplicates_search_context.SetFileSearchContext2( self._file_search_context_2 )
+        potential_duplicates_search_context.SetDupeSearchType( dupe_search_type )
+        potential_duplicates_search_context.SetPixelDupesPreference( pixel_dupes_preference )
+        potential_duplicates_search_context.SetMaxHammingDistance( max_hamming_distance )
+        
+        num_potentials = self._read( 'potential_duplicates_count', potential_duplicates_search_context )
         
         self.assertLess( num_potentials, self._expected_num_potentials )
         
@@ -739,7 +812,15 @@ class TestClientDBDuplicates( unittest.TestCase ):
         max_hamming_distance = 4
         dupe_search_type = ClientDuplicates.DUPE_SEARCH_BOTH_FILES_MATCH_ONE_SEARCH
         
-        num_potentials = self._read( 'potential_duplicates_count', self._file_search_context_1, self._file_search_context_2, dupe_search_type, pixel_dupes_preference, max_hamming_distance )
+        potential_duplicates_search_context = ClientPotentialDuplicatesSearchContext.PotentialDuplicatesSearchContext()
+        
+        potential_duplicates_search_context.SetFileSearchContext1( self._file_search_context_1 )
+        potential_duplicates_search_context.SetFileSearchContext2( self._file_search_context_2 )
+        potential_duplicates_search_context.SetDupeSearchType( dupe_search_type )
+        potential_duplicates_search_context.SetPixelDupesPreference( pixel_dupes_preference )
+        potential_duplicates_search_context.SetMaxHammingDistance( max_hamming_distance )
+        
+        num_potentials = self._read( 'potential_duplicates_count', potential_duplicates_search_context )
         
         self.assertLess( num_potentials, self._expected_num_potentials )
         
@@ -801,7 +882,15 @@ class TestClientDBDuplicates( unittest.TestCase ):
         max_hamming_distance = 4
         dupe_search_type = ClientDuplicates.DUPE_SEARCH_BOTH_FILES_MATCH_ONE_SEARCH
         
-        num_potentials = self._read( 'potential_duplicates_count', self._file_search_context_1, self._file_search_context_2, dupe_search_type, pixel_dupes_preference, max_hamming_distance )
+        potential_duplicates_search_context = ClientPotentialDuplicatesSearchContext.PotentialDuplicatesSearchContext()
+        
+        potential_duplicates_search_context.SetFileSearchContext1( self._file_search_context_1 )
+        potential_duplicates_search_context.SetFileSearchContext2( self._file_search_context_2 )
+        potential_duplicates_search_context.SetDupeSearchType( dupe_search_type )
+        potential_duplicates_search_context.SetPixelDupesPreference( pixel_dupes_preference )
+        potential_duplicates_search_context.SetMaxHammingDistance( max_hamming_distance )
+        
+        num_potentials = self._read( 'potential_duplicates_count', potential_duplicates_search_context )
         
         self.assertLess( num_potentials, self._expected_num_potentials )
         
@@ -864,7 +953,15 @@ class TestClientDBDuplicates( unittest.TestCase ):
         max_hamming_distance = 4
         dupe_search_type = ClientDuplicates.DUPE_SEARCH_BOTH_FILES_MATCH_ONE_SEARCH
         
-        num_potentials = self._read( 'potential_duplicates_count', self._file_search_context_1, self._file_search_context_2, dupe_search_type, pixel_dupes_preference, max_hamming_distance )
+        potential_duplicates_search_context = ClientPotentialDuplicatesSearchContext.PotentialDuplicatesSearchContext()
+        
+        potential_duplicates_search_context.SetFileSearchContext1( self._file_search_context_1 )
+        potential_duplicates_search_context.SetFileSearchContext2( self._file_search_context_2 )
+        potential_duplicates_search_context.SetDupeSearchType( dupe_search_type )
+        potential_duplicates_search_context.SetPixelDupesPreference( pixel_dupes_preference )
+        potential_duplicates_search_context.SetMaxHammingDistance( max_hamming_distance )
+        
+        num_potentials = self._read( 'potential_duplicates_count', potential_duplicates_search_context )
         
         self.assertLess( num_potentials, self._expected_num_potentials )
         

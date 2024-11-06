@@ -142,6 +142,8 @@ def OpenDocumentation( win: QW.QWidget, documentation_path: str ):
         
     else:
         
+        HydrusData.Print( f'Was asked to open "{documentation_path}", which appeared to be "{local_path}" locally, but it did not seem to exist!' )
+        
         message = 'You do not have a local help! Are you running from source? Would you like to open the online help or see a guide on how to build your own?'
         
         yes_tuples = []

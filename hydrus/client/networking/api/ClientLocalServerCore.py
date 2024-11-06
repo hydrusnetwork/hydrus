@@ -27,6 +27,7 @@ from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientLocation
 from hydrus.client.duplicates import ClientDuplicates
+from hydrus.client.duplicates import ClientPotentialDuplicatesSearchContext
 from hydrus.client.metadata import ClientRatings
 from hydrus.client.search import ClientSearchFileSearchContext
 from hydrus.client.search import ClientSearchParseSystemPredicates
@@ -653,7 +654,7 @@ def ParseClientAPISearchPredicates( request ) -> typing.List[ ClientSearchPredic
     return predicates
     
 
-def ParseDuplicateSearch( request: HydrusServerRequest.HydrusRequest ):
+def ParsePotentialDuplicatesSearchContext( request: HydrusServerRequest.HydrusRequest ) -> ClientPotentialDuplicatesSearchContext.PotentialDuplicatesSearchContext:
     
     location_context = ParseLocationContext( request, ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY ) )
     
@@ -687,7 +688,6 @@ def ParseDuplicateSearch( request: HydrusServerRequest.HydrusRequest ):
         predicates_2 = ConvertTagListToPredicates( request, tags_2, do_permission_check = False )
         
     
-    
     file_search_context_1 = ClientSearchFileSearchContext.FileSearchContext( location_context = location_context, tag_context = tag_context_1, predicates = predicates_1 )
     file_search_context_2 = ClientSearchFileSearchContext.FileSearchContext( location_context = location_context, tag_context = tag_context_2, predicates = predicates_2 )
     
@@ -695,13 +695,15 @@ def ParseDuplicateSearch( request: HydrusServerRequest.HydrusRequest ):
     pixel_dupes_preference = request.parsed_request_args.GetValue( 'pixel_duplicates', int, default_value = ClientDuplicates.SIMILAR_FILES_PIXEL_DUPES_ALLOWED )
     max_hamming_distance = request.parsed_request_args.GetValue( 'max_hamming_distance', int, default_value = 4 )
     
-    return (
-        file_search_context_1,
-        file_search_context_2,
-        dupe_search_type,
-        pixel_dupes_preference,
-        max_hamming_distance
-    )
+    potential_duplicates_search_context = ClientPotentialDuplicatesSearchContext.PotentialDuplicatesSearchContext()
+    
+    potential_duplicates_search_context.SetFileSearchContext1( file_search_context_1 )
+    potential_duplicates_search_context.SetFileSearchContext2( file_search_context_2 )
+    potential_duplicates_search_context.SetDupeSearchType( dupe_search_type )
+    potential_duplicates_search_context.SetPixelDupesPreference( pixel_dupes_preference )
+    potential_duplicates_search_context.SetMaxHammingDistance( max_hamming_distance )
+    
+    return potential_duplicates_search_context
     
 
 def ParseLocationContext( request: HydrusServerRequest.HydrusRequest, default: ClientLocation.LocationContext, deleted_allowed = True ):
