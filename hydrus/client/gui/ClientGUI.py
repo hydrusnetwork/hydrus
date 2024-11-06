@@ -2467,7 +2467,7 @@ ATTACH "client.mappings.db" as external_mappings;'''
         
         def publish_callable( result ):
             
-            frame = ClientGUITopLevelWindowsPanels.FrameThatTakesScrollablePanel( self, 'review your fate' )
+            frame = ClientGUITopLevelWindowsPanels.FrameThatTakesScrollablePanel( self, 'review your fate', frame_key = 'mr_bones' )
             
             panel = ClientGUIScrolledPanelsReview.ReviewHowBonedAmI( frame )
             

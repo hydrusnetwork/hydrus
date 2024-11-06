@@ -1943,7 +1943,14 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
             
         elif self._predicate_type == PREDICATE_TYPE_PARENT:
             
-            base = '    '
+            if for_parsable_export:
+                
+                base = ''
+                
+            else:
+                
+                base = '    '
+                
             
             tag = self._value
             

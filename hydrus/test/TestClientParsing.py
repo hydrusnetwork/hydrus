@@ -14,7 +14,7 @@ class DummyFormula( ClientParsing.ParseFormula ):
     
     def __init__( self, result: typing.List[ str ] ):
         
-        super().__init__()
+        super().__init__( name = 'dummy formula' )
         
         self._result = result
         
@@ -36,12 +36,30 @@ class DummyFormula( ClientParsing.ParseFormula ):
     
     def ToPrettyString( self ):
         
-        return 'test dummy formula'
+        if self._name == '':
+            
+            t = ''
+            
+        else:
+            
+            t = f'{self._name}: '
+            
+        
+        return t + 'test'
         
     
     def ToPrettyMultilineString( self ):
         
-        return 'test dummy formula' + '\n' + 'returns what you give it'
+        if self._name == '':
+            
+            t = ''
+            
+        else:
+            
+            t = f'{self._name}: '
+            
+        
+        return t + 'test' + '\n' + 'returns what you give it'
         
     
 

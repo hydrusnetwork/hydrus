@@ -224,7 +224,12 @@ def ElideText( text, max_length, elide_center = False ):
     return text
     
 
-def GetFirstLine( text: str ) -> str:
+def GetFirstLine( text: typing.Optional[ str ] ) -> str:
+    
+    if text is None:
+        
+        return 'unknown'
+        
     
     if len( text ) > 0:
         

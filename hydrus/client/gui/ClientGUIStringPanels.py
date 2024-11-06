@@ -314,6 +314,7 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_STRING_CONVERTER_CONVERSIONS.ID, self._ConvertConversionToDisplayTuple, self._ConvertConversionToSortTuple )
         
+        # TODO: Yo, if I converted the conversion steps to their own serialisable object, this guy could have import/export/duplicate buttons nice and easy
         self._conversions = ClientGUIListCtrl.BetterListCtrlTreeView( conversions_panel, CGLC.COLUMN_LIST_STRING_CONVERTER_CONVERSIONS.ID, 7, model, delete_key_callback = self._DeleteConversion, activation_callback = self._EditConversion )
         
         conversions_panel.SetListCtrl( self._conversions )
@@ -2168,6 +2169,7 @@ class EditStringProcessorPanel( ClientGUIScrolledPanels.EditPanel ):
         self._controls_panel = ClientGUICommon.StaticBox( self, 'processing steps' )
         
         self._processing_steps = ClientGUIListBoxes.QueueListBox( self, 8, self._ConvertDataToListBoxString, add_callable = self._Add, edit_callable = self._Edit )
+        self._processing_steps.AddImportExportButtons( ( ClientStrings.StringProcessingStep, ) )
         
         #
         

@@ -12,6 +12,7 @@ from hydrus.client.duplicates import ClientDuplicatesAutoResolution
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
+from hydrus.client.gui.duplicates import ClientGUIPotentialDuplicatesSearchContext
 from hydrus.client.gui.lists import ClientGUIListConstants as CGLC
 from hydrus.client.gui.lists import ClientGUIListCtrl
 from hydrus.client.gui.panels import ClientGUIScrolledPanels
@@ -139,7 +140,7 @@ class EditDuplicatesAutoResolutionRulesPanel( ClientGUIScrolledPanels.EditPanel 
             return
             
         
-        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit export folder' ) as dlg:
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit duplicates auto-resolution rule' ) as dlg:
             
             panel = EditDuplicatesAutoResolutionRulePanel( dlg, duplicates_auto_resolution_rule )
             
@@ -193,24 +194,41 @@ class EditDuplicatesAutoResolutionRulePanel( ClientGUIScrolledPanels.EditPanel )
         
         self._name = QW.QLineEdit( self._rule_panel )
         
-        # paused
-        # search gubbins
+        self._paused = QW.QCheckBox( self._rule_panel )
+        
+        self._main_notebook = ClientGUICommon.BetterNotebook( self )
+        
+        potential_duplicates_search_context = duplicates_auto_resolution_rule.GetPotentialDuplicatesSearchContext()
+        
+        self._potential_duplicates_search_context = ClientGUIPotentialDuplicatesSearchContext.EditPotentialDuplicatesSearchContextPanel( self._main_notebook, potential_duplicates_search_context, put_searches_side_by_side = True )
+        
+        self._potential_duplicates_search_context.setEnabled( False )
+        
         # comparator gubbins
         # some way to test-run searches and see pair counts, and, eventually, a way to preview some pairs and the auto-choices we'd see
         
         #
         
         self._name.setText( self._duplicates_auto_resolution_rule.GetName() )
+        self._paused.setChecked( self._duplicates_auto_resolution_rule.IsPaused() )
+        
+        #
+        
+        self._main_notebook.addTab( self._potential_duplicates_search_context, 'search' )
+        self._main_notebook.addTab( QW.QWidget( self._main_notebook ), 'test' )
+        self._main_notebook.addTab( QW.QWidget( self._main_notebook ), 'action' )
         
         #
         
         rows = []
         
         rows.append( ( 'name: ', self._name ) )
+        rows.append( ( 'paused: ', self._paused ) )
         
         gridbox = ClientGUICommon.WrapInGrid( self._rule_panel, rows )
         
         self._rule_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        self._rule_panel.Add( self._main_notebook, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         #
         
@@ -232,9 +250,15 @@ class EditDuplicatesAutoResolutionRulePanel( ClientGUIScrolledPanels.EditPanel )
         
         duplicates_auto_resolution_rule = ClientDuplicatesAutoResolution.DuplicatesAutoResolutionRule( name )
         
-        # paused and search gubbins, everything else
+        duplicates_auto_resolution_rule.SetPaused( self._paused.isChecked() )
         
-        # TODO: transfer any cached search data, including what we may have re-fetched in this panel's work, to the new folder
+        duplicates_auto_resolution_rule.SetPotentialDuplicatesSearchContext( self._potential_duplicates_search_context.GetValue() )
+        
+        # everything else
+        
+        duplicates_auto_resolution_rule.SetId( self._duplicates_auto_resolution_rule.GetId() )
+        
+        # TODO: transfer any cached search data, including what we may have re-fetched in this panel's work, to the new rule
         
         return duplicates_auto_resolution_rule
         

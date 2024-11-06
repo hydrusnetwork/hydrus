@@ -433,7 +433,7 @@ class HydrusResourceClientAPIRestrictedGetFilesFileMetadata( HydrusResourceClien
         
         if include_milliseconds:
             
-            time_converter = lambda t: t / 1000
+            time_converter = lambda t: t / 1000 if t is not None else None
             
         else:
             

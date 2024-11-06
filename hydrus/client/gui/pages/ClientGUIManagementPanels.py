@@ -1,5 +1,4 @@
 import collections
-import os
 import random
 import threading
 import typing
@@ -38,6 +37,7 @@ from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.canvas import ClientGUICanvas
 from hydrus.client.gui.canvas import ClientGUICanvasFrame
 from hydrus.client.gui.duplicates import ClientGUIDuplicatesAutoResolution
+from hydrus.client.gui.duplicates import ClientGUIPotentialDuplicatesSearchContext
 from hydrus.client.gui.importing import ClientGUIFileSeedCache
 from hydrus.client.gui.importing import ClientGUIGallerySeedLog
 from hydrus.client.gui.importing import ClientGUIImport
@@ -565,11 +565,7 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         
         self._filtering_panel = ClientGUICommon.StaticBox( self._main_right_panel, 'duplicate filter' )
         
-        file_search_context_1 = management_controller.GetVariable( 'file_search_context_1' )
-        file_search_context_2 = management_controller.GetVariable( 'file_search_context_2' )
-        
-        file_search_context_1.FixMissingServices( CG.client_controller.services_manager.FilterValidServiceKeys )
-        file_search_context_2.FixMissingServices( CG.client_controller.services_manager.FilterValidServiceKeys )
+        potential_duplicates_search_context = management_controller.GetVariable( 'potential_duplicates_search_context' )
         
         if self._management_controller.HasVariable( 'synchronised' ):
             
@@ -580,24 +576,9 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
             synchronised = True
             
         
-        self._tag_autocomplete_1 = ClientGUIACDropdown.AutoCompleteDropdownTagsRead( self._filtering_panel, self._page_key, file_search_context_1, media_sort_widget = self._media_sort_widget, media_collect_widget = self._media_collect_widget, allow_all_known_files = False, only_allow_local_file_domains = True, synchronised = synchronised, force_system_everything = True )
-        self._tag_autocomplete_2 = ClientGUIACDropdown.AutoCompleteDropdownTagsRead( self._filtering_panel, self._page_key, file_search_context_2, media_sort_widget = self._media_sort_widget, media_collect_widget = self._media_collect_widget, allow_all_known_files = False, only_allow_local_file_domains = True, synchronised = synchronised, force_system_everything = True )
+        self._potential_duplicates_search_context = ClientGUIPotentialDuplicatesSearchContext.EditPotentialDuplicatesSearchContextPanel( self._filtering_panel, potential_duplicates_search_context, synchronised = synchronised, page_key = self._page_key )
         
-        self._dupe_search_type = ClientGUICommon.BetterChoice( self._filtering_panel )
-        
-        self._dupe_search_type.addItem( 'at least one file matches the search', ClientDuplicates.DUPE_SEARCH_ONE_FILE_MATCHES_ONE_SEARCH )
-        self._dupe_search_type.addItem( 'both files match the search', ClientDuplicates.DUPE_SEARCH_BOTH_FILES_MATCH_ONE_SEARCH )
-        self._dupe_search_type.addItem( 'both files match different searches', ClientDuplicates.DUPE_SEARCH_BOTH_FILES_MATCH_DIFFERENT_SEARCHES )
-        
-        self._pixel_dupes_preference = ClientGUICommon.BetterChoice( self._filtering_panel )
-        
-        for p in ( ClientDuplicates.SIMILAR_FILES_PIXEL_DUPES_REQUIRED, ClientDuplicates.SIMILAR_FILES_PIXEL_DUPES_ALLOWED, ClientDuplicates.SIMILAR_FILES_PIXEL_DUPES_EXCLUDED ):
-            
-            self._pixel_dupes_preference.addItem( ClientDuplicates.similar_files_pixel_dupes_string_lookup[ p ], p )
-            
-        
-        self._max_hamming_distance_for_filter = ClientGUICommon.BetterSpinBox( self._filtering_panel, min = 0, max = 64 )
-        self._max_hamming_distance_for_filter.setSingleStep( 2 )
+        self._potential_duplicates_search_context.valueChanged.connect( self._PotentialDuplicatesSearchContextChanged )
         
         self._num_potential_duplicates = ClientGUICommon.BetterStaticText( self._filtering_panel, ellipsize_end = True )
         self._refresh_dupe_counts_button = ClientGUICommon.BetterBitmapButton( self._filtering_panel, CC.global_pixmaps().refresh, self.RefreshDuplicateNumbers )
@@ -629,34 +610,6 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
             
         
         self._main_notebook.setCurrentWidget( self._main_right_panel )
-        
-        #
-        
-        self._max_hamming_distance_for_potential_discovery_spinctrl.setValue( new_options.GetInteger( 'similar_files_duplicate_pairs_search_distance' ) )
-        
-        self._dupe_search_type.SetValue( management_controller.GetVariable( 'dupe_search_type' ) )
-        
-        if not management_controller.HasVariable( 'pixel_dupes_preference' ):
-            
-            management_controller.SetVariable( 'pixel_dupes_preference', ClientDuplicates.SIMILAR_FILES_PIXEL_DUPES_ALLOWED )
-            
-        
-        self._pixel_dupes_preference.SetValue( management_controller.GetVariable( 'pixel_dupes_preference' ) )
-        
-        self._pixel_dupes_preference.currentIndexChanged.connect( self.FilterSearchDomainChanged )
-        
-        if not management_controller.HasVariable( 'max_hamming_distance' ):
-            
-            management_controller.SetVariable( 'max_hamming_distance', 4 )
-            
-        
-        self._max_hamming_distance_for_filter.setValue( management_controller.GetVariable( 'max_hamming_distance' ) )
-        
-        self._max_hamming_distance_for_filter.valueChanged.connect( self.FilterSearchDomainChanged )
-        
-        #
-        
-        self._UpdateFilterSearchControls()
         
         #
         
@@ -703,17 +656,7 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         QP.AddToLayout( text_and_button_hbox, self._num_potential_duplicates, CC.FLAGS_CENTER_PERPENDICULAR_EXPAND_DEPTH )
         QP.AddToLayout( text_and_button_hbox, self._refresh_dupe_counts_button, CC.FLAGS_CENTER_PERPENDICULAR )
         
-        rows = []
-        
-        rows.append( ( 'maximum search distance of pair: ', self._max_hamming_distance_for_filter ) )
-        
-        gridbox = ClientGUICommon.WrapInGrid( self._filtering_panel, rows )
-        
-        self._filtering_panel.Add( self._dupe_search_type, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._filtering_panel.Add( self._tag_autocomplete_1, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._filtering_panel.Add( self._tag_autocomplete_2, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._filtering_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        self._filtering_panel.Add( self._pixel_dupes_preference, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._filtering_panel.Add( self._potential_duplicates_search_context, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._filtering_panel.Add( text_and_button_hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._filtering_panel.Add( self._launch_filter, CC.FLAGS_EXPAND_PERPENDICULAR )
         
@@ -742,11 +685,6 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         self._controller.sub( self, 'NotifyNewMaintenanceNumbers', 'new_similar_files_maintenance_numbers' )
         self._controller.sub( self, 'NotifyNewPotentialsSearchNumbers', 'new_similar_files_potentials_search_numbers' )
         
-        self._tag_autocomplete_1.searchChanged.connect( self.Search1Changed )
-        self._tag_autocomplete_2.searchChanged.connect( self.Search2Changed )
-        
-        self._dupe_search_type.currentIndexChanged.connect( self.FilterDupeSearchTypeChanged )
-        
         self._max_hamming_distance_for_potential_discovery_spinctrl.valueChanged.connect( self.MaxHammingDistanceForPotentialDiscoveryChanged )
         
     
@@ -771,79 +709,35 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
             
         
     
-    def _FilterSearchDomainUpdated( self ):
-        
-        ( file_search_context_1, file_search_context_2, dupe_search_type, pixel_dupes_preference, max_hamming_distance ) = self._GetDuplicateFileSearchData( optimise_for_search = False )
-        
-        self._management_controller.SetVariable( 'file_search_context_1', file_search_context_1 )
-        self._management_controller.SetVariable( 'file_search_context_2', file_search_context_2 )
-        
-        synchronised = self._tag_autocomplete_1.IsSynchronised()
-        
-        self._management_controller.SetVariable( 'synchronised', synchronised )
-        
-        self._management_controller.SetVariable( 'dupe_search_type', dupe_search_type )
-        self._management_controller.SetVariable( 'pixel_dupes_preference', pixel_dupes_preference )
-        self._management_controller.SetVariable( 'max_hamming_distance', max_hamming_distance )
-        
-        self._SetLocationContext( file_search_context_1.GetLocationContext() )
-        
-        self._UpdateFilterSearchControls()
-        
-        if self._tag_autocomplete_1.IsSynchronised():
-            
-            self._dupe_count_numbers_dirty = True
-            
-        
-    
-    def _GetDuplicateFileSearchData( self, optimise_for_search = True ) -> typing.Tuple[ ClientSearchFileSearchContext.FileSearchContext, ClientSearchFileSearchContext.FileSearchContext, int, int, int ]:
-        
-        file_search_context_1 = self._tag_autocomplete_1.GetFileSearchContext()
-        file_search_context_2 = self._tag_autocomplete_2.GetFileSearchContext()
-        
-        dupe_search_type = self._dupe_search_type.GetValue()
-        
-        if optimise_for_search:
-            
-            if dupe_search_type == ClientDuplicates.DUPE_SEARCH_BOTH_FILES_MATCH_ONE_SEARCH and ( file_search_context_1.IsJustSystemEverything() or file_search_context_1.HasNoPredicates() ):
-                
-                dupe_search_type = ClientDuplicates.DUPE_SEARCH_ONE_FILE_MATCHES_ONE_SEARCH
-                
-            elif dupe_search_type == ClientDuplicates.DUPE_SEARCH_BOTH_FILES_MATCH_DIFFERENT_SEARCHES:
-                
-                if file_search_context_1.IsJustSystemEverything() or file_search_context_1.HasNoPredicates():
-                    
-                    f = file_search_context_1
-                    file_search_context_1 = file_search_context_2
-                    file_search_context_2 = f
-                    
-                    dupe_search_type = ClientDuplicates.DUPE_SEARCH_ONE_FILE_MATCHES_ONE_SEARCH
-                    
-                elif file_search_context_2.IsJustSystemEverything() or file_search_context_2.HasNoPredicates():
-                    
-                    dupe_search_type = ClientDuplicates.DUPE_SEARCH_ONE_FILE_MATCHES_ONE_SEARCH
-                    
-                
-            
-        
-        pixel_dupes_preference = self._pixel_dupes_preference.GetValue()
-        
-        max_hamming_distance = self._max_hamming_distance_for_filter.value()
-        
-        return ( file_search_context_1, file_search_context_2, dupe_search_type, pixel_dupes_preference, max_hamming_distance )
-        
-    
     def _LaunchFilter( self ):
         
-        ( file_search_context_1, file_search_context_2, dupe_search_type, pixel_dupes_preference, max_hamming_distance ) = self._GetDuplicateFileSearchData()
+        potential_duplicates_search_context = self._potential_duplicates_search_context.GetValue()
         
         canvas_frame = ClientGUICanvasFrame.CanvasFrame( self.window() )
         
-        canvas_window = ClientGUICanvas.CanvasFilterDuplicates( canvas_frame, file_search_context_1, file_search_context_2, dupe_search_type, pixel_dupes_preference, max_hamming_distance )
+        canvas_window = ClientGUICanvas.CanvasFilterDuplicates( canvas_frame, potential_duplicates_search_context )
         
         canvas_window.showPairInPage.connect( self._ShowPairInPage )
         
         canvas_frame.SetCanvas( canvas_window )
+        
+    
+    def _PotentialDuplicatesSearchContextChanged( self ):
+        
+        potential_duplicates_search_context = self._potential_duplicates_search_context.GetValue()
+        
+        self._management_controller.SetVariable( 'potential_duplicates_search_context', potential_duplicates_search_context )
+        
+        synchronised = self._potential_duplicates_search_context.IsSynchronised()
+        
+        self._management_controller.SetVariable( 'synchronised', synchronised )
+        
+        self._SetLocationContext( potential_duplicates_search_context.GetFileSearchContext1().GetLocationContext() )
+        
+        if synchronised:
+            
+            self._dupe_count_numbers_dirty = True
+            
         
     
     def _RefreshDuplicateCounts( self ):
@@ -864,9 +758,9 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
             self._UpdatePotentialDuplicatesCount( potential_duplicates_count )
             
         
-        def thread_do_it( file_search_context_1, file_search_context_2, dupe_search_type, pixel_dupes_preference, max_hamming_distance ):
+        def thread_do_it( potential_duplicates_search_context ):
             
-            potential_duplicates_count = CG.client_controller.Read( 'potential_duplicates_count', file_search_context_1, file_search_context_2, dupe_search_type, pixel_dupes_preference, max_hamming_distance )
+            potential_duplicates_count = CG.client_controller.Read( 'potential_duplicates_count', potential_duplicates_search_context )
             
             QP.CallAfter( qt_code, potential_duplicates_count )
             
@@ -879,9 +773,9 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
             
             self._num_potential_duplicates.setText( 'updating' + HC.UNICODE_ELLIPSIS )
             
-            ( file_search_context_1, file_search_context_2, dupe_search_type, pixel_dupes_preference, max_hamming_distance ) = self._GetDuplicateFileSearchData()
+            potential_duplicates_search_context = self._potential_duplicates_search_context.GetValue()
             
-            CG.client_controller.CallToThread( thread_do_it, file_search_context_1, file_search_context_2, dupe_search_type, pixel_dupes_preference, max_hamming_distance )
+            CG.client_controller.CallToThread( thread_do_it, potential_duplicates_search_context )
             
         
     
@@ -938,9 +832,10 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
     
     def _ShowPotentialDupes( self, hashes ):
         
-        ( file_search_context_1, file_search_context_2, dupe_search_type, pixel_dupes_preference, max_hamming_distance ) = self._GetDuplicateFileSearchData()
+        potential_duplicates_search_context = self._potential_duplicates_search_context.GetValue()
         
-        location_context = file_search_context_1.GetLocationContext()
+        # I think this forces the matter if we are not currently synchronised, maybe it is redundant though, not sure
+        location_context = potential_duplicates_search_context.GetFileSearchContext1().GetLocationContext()
         
         self._SetLocationContext( location_context )
         
@@ -964,11 +859,11 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
     
     def _ShowRandomPotentialDupes( self ):
         
-        ( file_search_context_1, file_search_context_2, dupe_search_type, pixel_dupes_preference, max_hamming_distance ) = self._GetDuplicateFileSearchData()
+        potential_duplicates_search_context = self._potential_duplicates_search_context.GetValue()
         
         self._page_state = CC.PAGE_STATE_SEARCHING
         
-        hashes = self._controller.Read( 'random_potential_duplicate_hashes', file_search_context_1, file_search_context_2, dupe_search_type, pixel_dupes_preference, max_hamming_distance )
+        hashes = self._controller.Read( 'random_potential_duplicate_hashes', potential_duplicates_search_context )
         
         if len( hashes ) == 0:
             
@@ -1069,25 +964,6 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
             
         
     
-    def _UpdateFilterSearchControls( self ):
-        
-        ( file_search_context_1, file_search_context_2, dupe_search_type, pixel_dupes_preference, max_hamming_distance ) = self._GetDuplicateFileSearchData( optimise_for_search = False )
-        
-        self._tag_autocomplete_2.setVisible( dupe_search_type == ClientDuplicates.DUPE_SEARCH_BOTH_FILES_MATCH_DIFFERENT_SEARCHES )
-        
-        self._max_hamming_distance_for_filter.setEnabled( self._pixel_dupes_preference.GetValue() != ClientDuplicates.SIMILAR_FILES_PIXEL_DUPES_REQUIRED )
-        
-    
-    def FilterDupeSearchTypeChanged( self ):
-        
-        self._FilterSearchDomainUpdated()
-        
-    
-    def FilterSearchDomainChanged( self ):
-        
-        self._FilterSearchDomainUpdated()
-        
-    
     def MaxHammingDistanceForPotentialDiscoveryChanged( self ):
         
         search_distance = self._max_hamming_distance_for_potential_discovery_spinctrl.value()
@@ -1113,14 +989,14 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         
         ManagementPanel.PageHidden( self )
         
-        self._tag_autocomplete_1.SetForceDropdownHide( True )
+        self._potential_duplicates_search_context.PageHidden()
         
     
     def PageShown( self ):
         
         ManagementPanel.PageShown( self )
         
-        self._tag_autocomplete_1.SetForceDropdownHide( False )
+        self._potential_duplicates_search_context.PageShown()
         
     
     def RefreshDuplicateNumbers( self ):
@@ -1130,7 +1006,7 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
     
     def RefreshQuery( self ):
         
-        self._FilterSearchDomainUpdated()
+        self._PotentialDuplicatesSearchContextChanged()
         
     
     def REPEATINGPageUpdate( self ):
@@ -1149,32 +1025,7 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
             self._RefreshDuplicateCounts()
             
         
-        self._tag_autocomplete_1.REPEATINGPageUpdate()
-        self._tag_autocomplete_2.REPEATINGPageUpdate()
-        
-    
-    def Search1Changed( self, file_search_context: ClientSearchFileSearchContext.FileSearchContext ):
-        
-        self._tag_autocomplete_2.blockSignals( True )
-        
-        self._tag_autocomplete_2.SetLocationContext( self._tag_autocomplete_1.GetLocationContext() )
-        self._tag_autocomplete_2.SetSynchronised( self._tag_autocomplete_1.IsSynchronised() )
-        
-        self._tag_autocomplete_2.blockSignals( False )
-        
-        self._FilterSearchDomainUpdated()
-        
-    
-    def Search2Changed( self, file_search_context: ClientSearchFileSearchContext.FileSearchContext ):
-        
-        self._tag_autocomplete_1.blockSignals( True )
-        
-        self._tag_autocomplete_1.SetLocationContext( self._tag_autocomplete_2.GetLocationContext() )
-        self._tag_autocomplete_1.SetSynchronised( self._tag_autocomplete_2.IsSynchronised() )
-        
-        self._tag_autocomplete_1.blockSignals( False )
-        
-        self._FilterSearchDomainUpdated()
+        self._potential_duplicates_search_context.REPEATINGPageUpdate()
         
     
 

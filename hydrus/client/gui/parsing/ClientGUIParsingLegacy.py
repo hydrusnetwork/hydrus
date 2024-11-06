@@ -1196,6 +1196,7 @@ class ManageParsingScriptsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
         
     
+
 class ScriptManagementControl( QW.QWidget ):
     
     def __init__( self, parent ):

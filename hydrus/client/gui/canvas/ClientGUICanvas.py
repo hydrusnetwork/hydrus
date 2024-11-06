@@ -18,6 +18,7 @@ from hydrus.client import ClientData
 from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientLocation
 from hydrus.client.duplicates import ClientDuplicates
+from hydrus.client.duplicates import ClientPotentialDuplicatesSearchContext
 from hydrus.client.gui import ClientGUICore as CGC
 from hydrus.client.gui import ClientGUIDialogs
 from hydrus.client.gui import ClientGUIDialogsManage
@@ -316,6 +317,9 @@ class Canvas( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
     
     CANVAS_TYPE = CC.CANVAS_MEDIA_VIEWER
     
+    mediaCleared = QC.Signal()
+    mediaChanged = QC.Signal( ClientMedia.MediaSingleton )
+    
     def __init__( self, parent, location_context: ClientLocation.LocationContext ):
         
         self._qss_colours = {
@@ -558,7 +562,7 @@ class Canvas( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
         
         title = 'manage known urls'
         
-        with ClientGUITopLevelWindowsPanels.DialogEdit( self, title ) as dlg:
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, title, frame_key = 'manage_urls_dialog' ) as dlg:
             
             panel = ClientGUIScrolledPanelsEdit.EditURLsPanel( dlg, ( self._current_media, ) )
             
@@ -1293,6 +1297,15 @@ class Canvas( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
                     
                     self._current_media = None
                     
+                
+            
+            if self._current_media is None:
+                
+                self.mediaCleared.emit()
+                
+            elif isinstance( self._current_media, ClientMedia.MediaSingleton ): # just to be safe on the delicate type def requirements here
+                
+                self.mediaChanged.emit( self._current_media )
                 
             
             CG.client_controller.pub( 'canvas_new_display_media', self._canvas_key, self._current_media )
@@ -2113,6 +2126,9 @@ class CanvasWithHovers( CanvasWithDetails ):
         
         top_hover = self._GenerateHoverTopFrame()
         
+        self.mediaChanged.connect( top_hover.SetMedia )
+        self.mediaCleared.connect( top_hover.ClearMedia )
+        
         top_hover.sendApplicationCommand.connect( self.ProcessApplicationCommand )
         
         self._media_container.zoomChanged.connect( top_hover.SetCurrentZoom )
@@ -2123,6 +2139,9 @@ class CanvasWithHovers( CanvasWithDetails ):
         
         tags_hover = ClientGUICanvasHoverFrames.CanvasHoverFrameTags( self, self, top_hover, self._canvas_key, self._location_context )
         
+        self.mediaChanged.connect( tags_hover.SetMedia )
+        self.mediaCleared.connect( tags_hover.ClearMedia )
+        
         tags_hover.sendApplicationCommand.connect( self.ProcessApplicationCommand )
         
         self._hovers.append( tags_hover )
@@ -2131,6 +2150,9 @@ class CanvasWithHovers( CanvasWithDetails ):
         
         top_right_hover = ClientGUICanvasHoverFrames.CanvasHoverFrameTopRight( self, self, top_hover, self._canvas_key )
         
+        self.mediaChanged.connect( top_right_hover.SetMedia )
+        self.mediaCleared.connect( top_right_hover.ClearMedia )
+        
         top_right_hover.sendApplicationCommand.connect( self.ProcessApplicationCommand )
         
         self._hovers.append( top_right_hover )
@@ -2138,6 +2160,9 @@ class CanvasWithHovers( CanvasWithDetails ):
         self._my_shortcuts_handler.AddWindowToFilter( top_right_hover )
         
         self._right_notes_hover = ClientGUICanvasHoverFrames.CanvasHoverFrameRightNotes( self, self, top_right_hover, self._canvas_key )
+        
+        self.mediaChanged.connect( self._right_notes_hover.SetMedia )
+        self.mediaCleared.connect( self._right_notes_hover.ClearMedia )
         
         self._right_notes_hover.sendApplicationCommand.connect( self.ProcessApplicationCommand )
         
@@ -2408,13 +2433,18 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
     
     showPairInPage = QC.Signal( list )
     
-    def __init__( self, parent, file_search_context_1: ClientSearchFileSearchContext.FileSearchContext, file_search_context_2: ClientSearchFileSearchContext.FileSearchContext, dupe_search_type, pixel_dupes_preference, max_hamming_distance ):
+    def __init__( self, parent, potential_duplicates_search_context: ClientPotentialDuplicatesSearchContext.PotentialDuplicatesSearchContext ):
         
-        location_context = file_search_context_1.GetLocationContext()
+        self._potential_duplicates_search_context = potential_duplicates_search_context
+        
+        location_context = self._potential_duplicates_search_context.GetFileSearchContext1().GetLocationContext()
         
         super().__init__( parent, location_context )
         
         self._duplicates_right_hover = ClientGUICanvasHoverFrames.CanvasHoverFrameRightDuplicates( self, self, self._canvas_key )
+        
+        self.mediaChanged.connect( self._duplicates_right_hover.SetMedia )
+        self.mediaCleared.connect( self._duplicates_right_hover.ClearMedia )
         
         self._right_notes_hover.AddHoverThatCanBeOnTop( self._duplicates_right_hover )
         
@@ -2428,12 +2458,6 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
         self._media_container.SetBackgroundColourGenerator( self._background_colour_generator )
         
         self._my_shortcuts_handler.AddWindowToFilter( self._duplicates_right_hover )
-        
-        self._file_search_context_1 = file_search_context_1
-        self._file_search_context_2 = file_search_context_2
-        self._dupe_search_type = dupe_search_type
-        self._pixel_dupes_preference = pixel_dupes_preference
-        self._max_hamming_distance = max_hamming_distance
         
         self._maintain_pan_and_zoom = True
         
@@ -2794,7 +2818,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
         
         self._currently_fetching_pairs = True
         
-        CG.client_controller.CallToThread( self.THREADFetchPairs, self._file_search_context_1, self._file_search_context_2, self._dupe_search_type, self._pixel_dupes_preference, self._max_hamming_distance )
+        CG.client_controller.CallToThread( self.THREADFetchPairs, self._potential_duplicates_search_context )
         
         self.update()
         
@@ -3434,7 +3458,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
             
         
     
-    def THREADFetchPairs( self, file_search_context_1, file_search_context_2, dupe_search_type, pixel_dupes_preference, max_hamming_distance ):
+    def THREADFetchPairs( self, potential_duplicates_search_context: ClientPotentialDuplicatesSearchContext.PotentialDuplicatesSearchContext ):
         
         def qt_close():
             
@@ -3463,7 +3487,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
             self._ShowCurrentPair()
             
         
-        result = CG.client_controller.Read( 'duplicate_pairs_for_filtering', file_search_context_1, file_search_context_2, dupe_search_type, pixel_dupes_preference, max_hamming_distance )
+        result = CG.client_controller.Read( 'duplicate_pairs_for_filtering', potential_duplicates_search_context )
         
         if len( result ) == 0:
             
@@ -3475,6 +3499,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
             
         
     
+
 class CanvasMediaList( ClientMedia.ListeningMediaList, CanvasWithHovers ):
     
     exitFocusMedia = QC.Signal( ClientMedia.Media )

@@ -33,6 +33,7 @@ from hydrus.client.gui.panels import ClientGUIScrolledPanels
 from hydrus.client.gui.panels import ClientGUIScrolledPanelsEdit
 from hydrus.client.gui.widgets import ClientGUICommon
 from hydrus.client.gui.widgets import ClientGUIMenuButton
+from hydrus.client.media import ClientMedia
 from hydrus.client.metadata import ClientContentUpdates
 from hydrus.client.metadata import ClientRatings
 
@@ -50,7 +51,6 @@ class RatingIncDecCanvas( ClientGUIRatings.RatingIncDec ):
         self._hashes = set()
         
         CG.client_controller.sub( self, 'ProcessContentUpdatePackage', 'content_updates_gui' )
-        CG.client_controller.sub( self, 'SetDisplayMedia', 'canvas_new_display_media' )
         
     
     def _Draw( self, painter ):
@@ -75,6 +75,11 @@ class RatingIncDecCanvas( ClientGUIRatings.RatingIncDec ):
             
             CG.client_controller.Write( 'content_updates', ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( self._service_key, content_update ) )
             
+        
+    
+    def ClearMedia( self ):
+        
+        self.SetMedia( None )
         
     
     def ProcessContentUpdatePackage( self, content_update_package: ClientContentUpdates.ContentUpdatePackage ):
@@ -107,30 +112,27 @@ class RatingIncDecCanvas( ClientGUIRatings.RatingIncDec ):
             
         
     
-    def SetDisplayMedia( self, canvas_key, media ):
+    def SetMedia( self, media ):
         
-        if canvas_key == self._canvas_key:
+        self._current_media = media
+        
+        if self._current_media is None:
             
-            self._current_media = media
+            self._hashes = set()
             
-            if self._current_media is None:
-                
-                self._hashes = set()
-                
-                self._rating_state = None
-                self._rating = None
-                
-            else:
-                
-                self._hashes = self._current_media.GetHashes()
-                
-                ( self._rating_state, self._rating ) = ClientRatings.GetIncDecStateFromMedia( ( self._current_media, ), self._service_key )
-                
+            self._rating_state = None
+            self._rating = None
             
-            self.update()
+        else:
             
-            self._UpdateTooltip()
+            self._hashes = self._current_media.GetHashes()
             
+            ( self._rating_state, self._rating ) = ClientRatings.GetIncDecStateFromMedia( ( self._current_media, ), self._service_key )
+            
+        
+        self.update()
+        
+        self._UpdateTooltip()    
         
     
 
@@ -145,7 +147,6 @@ class RatingLikeCanvas( ClientGUIRatings.RatingLike ):
         self._hashes = set()
         
         CG.client_controller.sub( self, 'ProcessContentUpdatePackage', 'content_updates_gui' )
-        CG.client_controller.sub( self, 'SetDisplayMedia', 'canvas_new_display_media' )
         
     
     def _Draw( self, painter ):
@@ -158,6 +159,25 @@ class RatingLikeCanvas( ClientGUIRatings.RatingLike ):
             
             ClientGUIRatings.DrawLike( painter, 0, 0, self._service_key, self._rating_state )
             
+        
+    
+    def _SetRatingFromCurrentMedia( self ):
+        
+        if self._current_media is None:
+            
+            rating_state = ClientRatings.NULL
+            
+        else:
+            
+            rating_state = ClientRatings.GetLikeStateFromMedia( ( self._current_media, ), self._service_key )
+            
+        
+        self._SetRating( rating_state )
+        
+    
+    def ClearMedia( self ):
+        
+        self.SetMedia( None )
         
     
     def EventLeftDown( self, event ):
@@ -214,41 +234,25 @@ class RatingLikeCanvas( ClientGUIRatings.RatingLike ):
             
         
     
-    def _SetRatingFromCurrentMedia( self ):
+    def SetMedia( self, media ):
+        
+        self._current_media = media
         
         if self._current_media is None:
             
-            rating_state = ClientRatings.NULL
+            self._hashes = set()
             
         else:
             
-            rating_state = ClientRatings.GetLikeStateFromMedia( ( self._current_media, ), self._service_key )
+            self._hashes = self._current_media.GetHashes()
             
         
-        self._SetRating( rating_state )
+        self._SetRatingFromCurrentMedia()
         
-    
-    def SetDisplayMedia( self, canvas_key, media ):
-        
-        if canvas_key == self._canvas_key:
-            
-            self._current_media = media
-            
-            if self._current_media is None:
-                
-                self._hashes = set()
-                
-            else:
-                
-                self._hashes = self._current_media.GetHashes()
-                
-            
-            self._SetRatingFromCurrentMedia()
-            
-            self.update()
-            
+        self.update()
         
     
+
 class RatingNumericalCanvas( ClientGUIRatings.RatingNumerical ):
 
     def __init__( self, parent, service_key, canvas_key ):
@@ -263,7 +267,6 @@ class RatingNumericalCanvas( ClientGUIRatings.RatingNumerical ):
         self._hashes = set()
         
         CG.client_controller.sub( self, 'ProcessContentUpdatePackage', 'content_updates_gui' )
-        CG.client_controller.sub( self, 'SetDisplayMedia', 'canvas_new_display_media' )
         
     
     def _ClearRating( self ):
@@ -306,6 +309,11 @@ class RatingNumericalCanvas( ClientGUIRatings.RatingNumerical ):
             
         
     
+    def ClearMedia( self ):
+        
+        self.SetMedia( None )
+        
+    
     def ProcessContentUpdatePackage( self, content_update_package: ClientContentUpdates.ContentUpdatePackage ):
         
         if self._current_media is not None:
@@ -336,25 +344,22 @@ class RatingNumericalCanvas( ClientGUIRatings.RatingNumerical ):
             
         
     
-    def SetDisplayMedia( self, canvas_key, media ):
+    def SetMedia( self, media ):
         
-        if canvas_key == self._canvas_key:
+        self._current_media = media
+        
+        if self._current_media is None:
             
-            self._current_media = media
+            self._hashes = set()
             
-            if self._current_media is None:
-                
-                self._hashes = set()
-                
-            else:
-                
-                self._hashes = self._current_media.GetHashes()
-                
+        else:
             
-            self.update()
+            self._hashes = self._current_media.GetHashes()
             
-            self._UpdateTooltip()
-            
+        
+        self.update()
+        
+        self._UpdateTooltip()
         
     
 
@@ -369,6 +374,9 @@ class CanvasHoverFrame( QW.QFrame ):
     hoverResizedOrMoved = QC.Signal()
     
     sendApplicationCommand = QC.Signal( CAC.ApplicationCommand )
+    
+    mediaCleared = QC.Signal()
+    mediaChanged = QC.Signal( ClientMedia.MediaSingleton )
     
     def __init__( self, parent: QW.QWidget, my_canvas, canvas_key ):
         
@@ -403,8 +411,6 @@ class CanvasHoverFrame( QW.QFrame ):
         self._position_initialised = False
         
         parent.installEventFilter( self )
-        
-        CG.client_controller.sub( self, 'SetDisplayMedia', 'canvas_new_display_media' )
         
     
     def _GetIdealSizeAndPosition( self ):
@@ -520,6 +526,11 @@ class CanvasHoverFrame( QW.QFrame ):
     def AddHoverThatCanBeOnTop( self, win: "CanvasHoverFrame" ):
         
         self._hover_panels_that_can_be_on_top_of_us.append( win )
+        
+    
+    def ClearMedia( self ):
+        
+        self.SetMedia( None )
         
     
     def DoRegularHideShow( self ):
@@ -655,14 +666,21 @@ class CanvasHoverFrame( QW.QFrame ):
         return self._position_initialised
         
     
-    def SetDisplayMedia( self, canvas_key, media ):
+    def SetMedia( self, media ):
         
-        if canvas_key == self._canvas_key:
+        self._current_media = media
+        
+        if self._current_media is None:
             
-            self._current_media = media
+            self.mediaCleared.emit()
+            
+        elif isinstance( self._current_media, ClientMedia.MediaSingleton ): # just to be safe on the delicate type def requirements here
+            
+            self.mediaChanged.emit( self._current_media )
             
         
     
+
 class CanvasHoverFrameTop( CanvasHoverFrame ):
     
     def __init__( self, parent, my_canvas, canvas_key ):
@@ -1120,21 +1138,18 @@ class CanvasHoverFrameTop( CanvasHoverFrame ):
         self._zoom_text.setText( label )
         
     
-    def SetDisplayMedia( self, canvas_key, media ):
+    def SetMedia( self, media ):
         
-        if canvas_key == self._canvas_key:
-            
-            CanvasHoverFrame.SetDisplayMedia( self, canvas_key, media )
-            
-            self._ResetText()
-            
-            self._ResetButtons()
-            
-            # minimumsize is not immediately updated without this
-            self.layout().activate()
-            
-            self._SizeAndPosition( force = True )
-            
+        super().SetMedia( media )
+        
+        self._ResetText()
+        
+        self._ResetButtons()
+        
+        # minimumsize is not immediately updated without this
+        self.layout().activate()
+        
+        self._SizeAndPosition( force = True )
         
     
     def SetIndexString( self, canvas_key, text ):
@@ -1286,6 +1301,9 @@ class CanvasHoverFrameTopRight( CanvasHoverFrame ):
             
             control = RatingLikeCanvas( self, service_key, canvas_key )
             
+            self.mediaChanged.connect( control.SetMedia )
+            self.mediaCleared.connect( control.ClearMedia )
+            
             QP.AddToLayout( like_hbox, control, CC.FLAGS_NONE )
             
         
@@ -1300,6 +1318,9 @@ class CanvasHoverFrameTopRight( CanvasHoverFrame ):
             service_key = service.GetServiceKey()
             
             control = RatingNumericalCanvas( self, service_key, canvas_key )
+            
+            self.mediaChanged.connect( control.SetMedia )
+            self.mediaCleared.connect( control.ClearMedia )
             
             QP.AddToLayout( vbox, control, CC.FLAGS_NONE )
             
@@ -1322,6 +1343,9 @@ class CanvasHoverFrameTopRight( CanvasHoverFrame ):
             service_key = service.GetServiceKey()
             
             control = RatingIncDecCanvas( self, service_key, canvas_key )
+            
+            self.mediaChanged.connect( control.SetMedia )
+            self.mediaCleared.connect( control.ClearMedia )
             
             QP.AddToLayout( incdec_hbox, control, CC.FLAGS_NONE )
             
@@ -1506,19 +1530,16 @@ class CanvasHoverFrameTopRight( CanvasHoverFrame ):
             
         
     
-    def SetDisplayMedia( self, canvas_key, media ):
+    def SetMedia( self, media ):
         
-        if canvas_key == self._canvas_key:
-            
-            CanvasHoverFrame.SetDisplayMedia( self, canvas_key, media )
-            
-            self._ResetData()
-            
-            # size is not immediately updated without this
-            self.layout().activate()
-            
-            self._SizeAndPosition( force = True )
-            
+        super().SetMedia( media )
+        
+        self._ResetData()
+        
+        # size is not immediately updated without this
+        self.layout().activate()
+        
+        self._SizeAndPosition( force = True )
         
     
 class NotePanel( QW.QWidget ):
@@ -1818,25 +1839,22 @@ class CanvasHoverFrameRightNotes( CanvasHoverFrame ):
             
         
     
-    def SetDisplayMedia( self, canvas_key, media ):
+    def SetMedia( self, media ):
         
-        if canvas_key == self._canvas_key:
+        super().SetMedia( media )
+        
+        if self._is_currently_up:
             
-            CanvasHoverFrame.SetDisplayMedia( self, canvas_key, media )
+            # magical refresh that makes the labels look correct and not be hidden???
+            self._LowerHover()
+            self._ResetNotes()
+            self._RaiseHover()
             
-            if self._is_currently_up:
-                
-                # magical refresh that makes the labels look correct and not be hidden???
-                self._LowerHover()
-                self._ResetNotes()
-                self._RaiseHover()
-                
-            else:
-                
-                self._ResetNotes()
-                
-                self._position_initialised = False
-                
+        else:
+            
+            self._ResetNotes()
+            
+            self._position_initialised = False
             
         
     
@@ -2238,14 +2256,11 @@ class CanvasHoverFrameTags( CanvasHoverFrame ):
             
         
     
-    def SetDisplayMedia( self, canvas_key, media ):
+    def SetMedia( self, media ):
         
-        if canvas_key == self._canvas_key:
-            
-            CanvasHoverFrame.SetDisplayMedia( self, canvas_key, media )
-            
-            self._ResetTags()
-            
+        super().SetMedia( media )
+        
+        self._ResetTags()
         
     
     def wheelEvent( self, event ):

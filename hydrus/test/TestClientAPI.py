@@ -4514,7 +4514,13 @@ class TestClientAPI( unittest.TestCase ):
         
         [ ( args, kwargs ) ] = TG.test_controller.GetRead( 'potential_duplicates_count' )
 
-        ( file_search_context_1, file_search_context_2, potentials_search_type, pixel_duplicates, max_hamming_distance ) = args
+        ( potential_duplicates_search_context, ) = args
+        
+        file_search_context_1 = potential_duplicates_search_context.GetFileSearchContext1()
+        file_search_context_2 = potential_duplicates_search_context.GetFileSearchContext2()
+        potentials_search_type = potential_duplicates_search_context.GetDupeSearchType()
+        pixel_duplicates = potential_duplicates_search_context.GetPixelDupesPreference()
+        max_hamming_distance = potential_duplicates_search_context.GetMaxHammingDistance()
         
         self.assertEqual( file_search_context_1.GetSerialisableTuple(), default_file_search_context.GetSerialisableTuple() )
         self.assertEqual( file_search_context_2.GetSerialisableTuple(), default_file_search_context.GetSerialisableTuple() )
@@ -4552,7 +4558,13 @@ class TestClientAPI( unittest.TestCase ):
         
         [ ( args, kwargs ) ] = TG.test_controller.GetRead( 'potential_duplicates_count' )
 
-        ( file_search_context_1, file_search_context_2, potentials_search_type, pixel_duplicates, max_hamming_distance ) = args
+        ( potential_duplicates_search_context, ) = args
+        
+        file_search_context_1 = potential_duplicates_search_context.GetFileSearchContext1()
+        file_search_context_2 = potential_duplicates_search_context.GetFileSearchContext2()
+        potentials_search_type = potential_duplicates_search_context.GetDupeSearchType()
+        pixel_duplicates = potential_duplicates_search_context.GetPixelDupesPreference()
+        max_hamming_distance = potential_duplicates_search_context.GetMaxHammingDistance()
         
         self.assertEqual( file_search_context_1.GetSerialisableTuple(), test_file_search_context_1.GetSerialisableTuple() )
         self.assertEqual( file_search_context_2.GetSerialisableTuple(), test_file_search_context_2.GetSerialisableTuple() )
@@ -4589,9 +4601,15 @@ class TestClientAPI( unittest.TestCase ):
         
         [ ( args, kwargs ) ] = TG.test_controller.GetRead( 'duplicate_pairs_for_filtering' )
         
-        ( file_search_context_1, file_search_context_2, potentials_search_type, pixel_duplicates, max_hamming_distance ) = args
+        ( potential_duplicates_search_context, ) = args
         
         max_num_pairs = kwargs[ 'max_num_pairs' ]
+        
+        file_search_context_1 = potential_duplicates_search_context.GetFileSearchContext1()
+        file_search_context_2 = potential_duplicates_search_context.GetFileSearchContext2()
+        potentials_search_type = potential_duplicates_search_context.GetDupeSearchType()
+        pixel_duplicates = potential_duplicates_search_context.GetPixelDupesPreference()
+        max_hamming_distance = potential_duplicates_search_context.GetMaxHammingDistance()
         
         self.assertEqual( file_search_context_1.GetSerialisableTuple(), default_file_search_context.GetSerialisableTuple() )
         self.assertEqual( file_search_context_2.GetSerialisableTuple(), default_file_search_context.GetSerialisableTuple() )
@@ -4631,9 +4649,15 @@ class TestClientAPI( unittest.TestCase ):
         
         [ ( args, kwargs ) ] = TG.test_controller.GetRead( 'duplicate_pairs_for_filtering' )
 
-        ( file_search_context_1, file_search_context_2, potentials_search_type, pixel_duplicates, max_hamming_distance ) = args
+        ( potential_duplicates_search_context, ) = args
         
         max_num_pairs = kwargs[ 'max_num_pairs' ]
+        
+        file_search_context_1 = potential_duplicates_search_context.GetFileSearchContext1()
+        file_search_context_2 = potential_duplicates_search_context.GetFileSearchContext2()
+        potentials_search_type = potential_duplicates_search_context.GetDupeSearchType()
+        pixel_duplicates = potential_duplicates_search_context.GetPixelDupesPreference()
+        max_hamming_distance = potential_duplicates_search_context.GetMaxHammingDistance()
         
         self.assertEqual( file_search_context_1.GetSerialisableTuple(), test_file_search_context_1.GetSerialisableTuple() )
         self.assertEqual( file_search_context_2.GetSerialisableTuple(), test_file_search_context_2.GetSerialisableTuple() )
@@ -4667,7 +4691,13 @@ class TestClientAPI( unittest.TestCase ):
         
         [ ( args, kwargs ) ] = TG.test_controller.GetRead( 'random_potential_duplicate_hashes' )
         
-        ( file_search_context_1, file_search_context_2, potentials_search_type, pixel_duplicates, max_hamming_distance ) = args
+        ( potential_duplicates_search_context, ) = args
+        
+        file_search_context_1 = potential_duplicates_search_context.GetFileSearchContext1()
+        file_search_context_2 = potential_duplicates_search_context.GetFileSearchContext2()
+        potentials_search_type = potential_duplicates_search_context.GetDupeSearchType()
+        pixel_duplicates = potential_duplicates_search_context.GetPixelDupesPreference()
+        max_hamming_distance = potential_duplicates_search_context.GetMaxHammingDistance()
         
         self.assertEqual( file_search_context_1.GetSerialisableTuple(), default_file_search_context.GetSerialisableTuple() )
         self.assertEqual( file_search_context_2.GetSerialisableTuple(), default_file_search_context.GetSerialisableTuple() )
@@ -4705,7 +4735,13 @@ class TestClientAPI( unittest.TestCase ):
         
         [ ( args, kwargs ) ] = TG.test_controller.GetRead( 'random_potential_duplicate_hashes' )
 
-        ( file_search_context_1, file_search_context_2, potentials_search_type, pixel_duplicates, max_hamming_distance ) = args
+        ( potential_duplicates_search_context, ) = args
+        
+        file_search_context_1 = potential_duplicates_search_context.GetFileSearchContext1()
+        file_search_context_2 = potential_duplicates_search_context.GetFileSearchContext2()
+        potentials_search_type = potential_duplicates_search_context.GetDupeSearchType()
+        pixel_duplicates = potential_duplicates_search_context.GetPixelDupesPreference()
+        max_hamming_distance = potential_duplicates_search_context.GetMaxHammingDistance()
         
         self.assertEqual( file_search_context_1.GetSerialisableTuple(), test_file_search_context_1.GetSerialisableTuple() )
         self.assertEqual( file_search_context_2.GetSerialisableTuple(), test_file_search_context_2.GetSerialisableTuple() )

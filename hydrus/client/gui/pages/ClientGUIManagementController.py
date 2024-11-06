@@ -10,6 +10,7 @@ from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientLocation
 from hydrus.client.duplicates import ClientDuplicates
+from hydrus.client.duplicates import ClientPotentialDuplicatesSearchContext
 from hydrus.client.importing import ClientImportGallery
 from hydrus.client.importing import ClientImportLocal
 from hydrus.client.importing import ClientImportSimpleURLs
@@ -68,17 +69,13 @@ def CreateManagementControllerDuplicateFilter(
     
     management_controller = CreateManagementController( page_name, MANAGEMENT_TYPE_DUPLICATE_FILTER )
     
-    file_search_context = ClientSearchFileSearchContext.FileSearchContext( location_context = location_context, predicates = initial_predicates )
-    
     synchronised = CG.client_controller.new_options.GetBoolean( 'default_search_synchronised' )
     
     management_controller.SetVariable( 'synchronised', synchronised )
     
-    management_controller.SetVariable( 'file_search_context_1', file_search_context )
-    management_controller.SetVariable( 'file_search_context_2', file_search_context.Duplicate() )
-    management_controller.SetVariable( 'dupe_search_type', ClientDuplicates.DUPE_SEARCH_ONE_FILE_MATCHES_ONE_SEARCH )
-    management_controller.SetVariable( 'pixel_dupes_preference', ClientDuplicates.SIMILAR_FILES_PIXEL_DUPES_ALLOWED )
-    management_controller.SetVariable( 'max_hamming_distance', 4 )
+    potential_duplicates_search_context = ClientPotentialDuplicatesSearchContext.PotentialDuplicatesSearchContext( location_context = location_context, initial_predicates = initial_predicates )
+    
+    management_controller.SetVariable( 'potential_duplicates_search_context', potential_duplicates_search_context )
     
     return management_controller
     
@@ -196,7 +193,7 @@ class ManagementController( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_MANAGEMENT_CONTROLLER
     SERIALISABLE_NAME = 'Client Page Management Controller'
-    SERIALISABLE_VERSION = 13
+    SERIALISABLE_VERSION = 14
     
     def __init__( self, page_name = 'page' ):
         
@@ -563,6 +560,56 @@ class ManagementController( HydrusSerialisable.SerialisableBase ):
             new_serialisable_info = ( page_name, management_type, serialisable_variables )
             
             return ( 13, new_serialisable_info )
+            
+        
+        if version == 13:
+            
+            ( page_name, management_type, serialisable_variables ) = old_serialisable_info
+            
+            if management_type == MANAGEMENT_TYPE_DUPLICATE_FILTER:
+                
+                variables: HydrusSerialisable.SerialisableDictionary = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_variables )
+                
+                file_search_context_1 = variables[ 'file_search_context_1' ]
+                file_search_context_2 = variables[ 'file_search_context_2' ]
+                dupe_search_type = variables.get( 'dupe_search_type', ClientDuplicates.DUPE_SEARCH_ONE_FILE_MATCHES_ONE_SEARCH )
+                pixel_dupes_preference = variables.get( 'pixel_dupes_preference', ClientDuplicates.SIMILAR_FILES_PIXEL_DUPES_ALLOWED )
+                max_hamming_distance = variables.get( 'max_hamming_distance', 4 )
+                
+                potential_duplicates_search_context = ClientPotentialDuplicatesSearchContext.PotentialDuplicatesSearchContext()
+                
+                potential_duplicates_search_context.SetFileSearchContext1( file_search_context_1 )
+                potential_duplicates_search_context.SetFileSearchContext2( file_search_context_2 )
+                potential_duplicates_search_context.SetDupeSearchType( dupe_search_type )
+                potential_duplicates_search_context.SetPixelDupesPreference( pixel_dupes_preference )
+                potential_duplicates_search_context.SetMaxHammingDistance( max_hamming_distance )
+                
+                variables[ 'potential_duplicates_search_context' ] = potential_duplicates_search_context
+                
+                del variables[ 'file_search_context_1' ]
+                del variables[ 'file_search_context_2' ]
+                
+                if 'dupe_search_type' in variables:
+                    
+                    del variables[ 'dupe_search_type' ]
+                    
+                
+                if 'pixel_dupes_preference' in variables:
+                    
+                    del variables[ 'pixel_dupes_preference' ]
+                    
+                
+                if 'max_hamming_distance' in variables:
+                    
+                    del variables[ 'max_hamming_distance' ]
+                    
+                
+                serialisable_variables = variables.GetSerialisableTuple()
+                
+            
+            new_serialisable_info = ( page_name, management_type, serialisable_variables )
+            
+            return ( 14, new_serialisable_info )
             
         
     

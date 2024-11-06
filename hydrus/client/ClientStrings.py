@@ -704,13 +704,15 @@ FLEXIBLE_MATCH_NUMERIC = 2
 FLEXIBLE_MATCH_HEX = 3
 FLEXIBLE_MATCH_BASE64 = 4
 
+DEFAULT_EXAMPLE_STRING = 'example string'
+
 class StringMatch( StringProcessingStep ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_STRING_MATCH
     SERIALISABLE_NAME = 'String Match'
     SERIALISABLE_VERSION = 1
     
-    def __init__( self, match_type = STRING_MATCH_ANY, match_value = '', min_chars = None, max_chars = None, example_string = 'example string' ):
+    def __init__( self, match_type = STRING_MATCH_ANY, match_value = '', min_chars = None, max_chars = None, example_string = DEFAULT_EXAMPLE_STRING ):
         
         super().__init__()
         
@@ -912,8 +914,6 @@ class StringMatch( StringProcessingStep ):
             
             result += 'characters'
             
-            show_example = False
-            
         elif self._match_type == STRING_MATCH_FIXED:
             
             result = self._match_value
@@ -954,7 +954,10 @@ class StringMatch( StringProcessingStep ):
         
         if show_example:
             
-            result += ', such as "' + self._example_string + '"'
+            if self._example_string != DEFAULT_EXAMPLE_STRING:
+                
+                result += ', such as "' + self._example_string + '"'
+                
             
         
         if with_type:

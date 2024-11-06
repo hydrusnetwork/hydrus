@@ -48,15 +48,9 @@ class HydrusResourceClientAPIRestrictedManageFileRelationshipsGetPotentialsCount
     
     def _threadDoGETJob( self, request: HydrusServerRequest.HydrusRequest ):
         
-        (
-            file_search_context_1,
-            file_search_context_2,
-            dupe_search_type,
-            pixel_dupes_preference,
-            max_hamming_distance
-        ) = ClientLocalServerCore.ParseDuplicateSearch( request )
+        potential_duplicates_search_context = ClientLocalServerCore.ParsePotentialDuplicatesSearchContext( request )
         
-        count = CG.client_controller.Read( 'potential_duplicates_count', file_search_context_1, file_search_context_2, dupe_search_type, pixel_dupes_preference, max_hamming_distance )
+        count = CG.client_controller.Read( 'potential_duplicates_count', potential_duplicates_search_context )
         
         body_dict = { 'potential_duplicates_count' : count }
         
@@ -72,17 +66,11 @@ class HydrusResourceClientAPIRestrictedManageFileRelationshipsGetPotentialPairs(
     
     def _threadDoGETJob( self, request: HydrusServerRequest.HydrusRequest ):
         
-        (
-            file_search_context_1,
-            file_search_context_2,
-            dupe_search_type,
-            pixel_dupes_preference,
-            max_hamming_distance
-        ) = ClientLocalServerCore.ParseDuplicateSearch( request )
+        potential_duplicates_search_context = ClientLocalServerCore.ParsePotentialDuplicatesSearchContext( request )
         
         max_num_pairs = request.parsed_request_args.GetValue( 'max_num_pairs', int, default_value = CG.client_controller.new_options.GetInteger( 'duplicate_filter_max_batch_size' ) )
         
-        filtering_pairs_media_results = CG.client_controller.Read( 'duplicate_pairs_for_filtering', file_search_context_1, file_search_context_2, dupe_search_type, pixel_dupes_preference, max_hamming_distance, max_num_pairs = max_num_pairs )
+        filtering_pairs_media_results = CG.client_controller.Read( 'duplicate_pairs_for_filtering', potential_duplicates_search_context, max_num_pairs = max_num_pairs )
         
         filtering_pairs_hashes = [ ( m1.GetHash().hex(), m2.GetHash().hex() ) for ( m1, m2 ) in filtering_pairs_media_results ]
         
@@ -100,15 +88,9 @@ class HydrusResourceClientAPIRestrictedManageFileRelationshipsGetRandomPotential
     
     def _threadDoGETJob( self, request: HydrusServerRequest.HydrusRequest ):
         
-        (
-            file_search_context_1,
-            file_search_context_2,
-            dupe_search_type,
-            pixel_dupes_preference,
-            max_hamming_distance
-        ) = ClientLocalServerCore.ParseDuplicateSearch( request )
+        potential_duplicates_search_context = ClientLocalServerCore.ParsePotentialDuplicatesSearchContext( request )
         
-        hashes = CG.client_controller.Read( 'random_potential_duplicate_hashes', file_search_context_1, file_search_context_2, dupe_search_type, pixel_dupes_preference, max_hamming_distance )
+        hashes = CG.client_controller.Read( 'random_potential_duplicate_hashes', potential_duplicates_search_context )
         
         body_dict = { 'random_potential_duplicate_hashes' : [ hash.hex() for hash in hashes ] }
         

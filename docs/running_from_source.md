@@ -50,7 +50,19 @@ There are now setup scripts that make this easy on Windows and Linux. You do not
         Git should now be installed on your system. Any new terminal/command line/powershell window (shift+right-click on any folder and hit something like 'Open in terminal') now has the `git` command!
         
     
-    Then you will need to install Python. Get 3.10 or 3.11 [here](https://www.python.org/downloads/windows/) (or, if you are Win 7, I think you'll want [this](https://www.python.org/downloads/release/python-3810/)). During the install process, make sure it has something like 'Add Python to PATH' checked. This makes Python available everywhere in Windows.  
+    ??? warning "Windows 7"
+        For a long time, I supported Windows 7 via running from source. Unfortunately, as libraries and code inevitably updated, this finally seems to no longer be feasible. Python 3.8 will no longer run the program. I understand v582 is one of the last versions of the program to work.
+        
+        First, you will have to install the older [Python 3.8](https://www.python.org/downloads/release/python-3810/), since that is the latest version that you can run.
+        
+        Then, later, when you do the `git clone https://github.com/hydrusnetwork/hydrus` line, you will need to run `git checkout tags/v578`, which will rewind you to that point in time.
+        
+        You will also need to navigate to `install_dir/static/requirements/advanced` and edit `requirements_core.txt`; remove the 'psd-tools' line before you run setup_venv.
+        
+        I can't promise anything though. The requirements.txt isn't perfect, and something else may break in future! You may like to think about setting up a Linux instance.
+        
+
+    Then you will need to install Python. Get 3.10 or 3.11 [here](https://www.python.org/downloads/windows/). During the install process, make sure it has something like 'Add Python to PATH' checked. This makes Python available everywhere in Windows.  
     
 
 === "Linux"
@@ -61,9 +73,9 @@ There are now setup scripts that make this easy on Windows and Linux. You do not
 
     You should already have a fairly new python. Ideally, you want at least 3.9. You can find out what version you have just by opening a new terminal and typing 'python'.
 
-If you are already on newer python, like 3.12+, that's ok--you might need to select the 'advanced' setup later on and choose the '(t)est' options. If you are stuck on a much older version of python, try the same thing, but with the '(o)lder' options (but I can't promise it will work!).
+If you are already on newer python, like 3.12+, that's ok--you might need to select the 'advanced' setup later on and choose the '(t)est' options. If you are stuck on 3.9, try the same thing, but with the '(o)lder' options (but I can't promise it will work!).
 
-Then, get the hydrus source. It is best to get it with Git: make a new folder somewhere, open a terminal in it, and then paste:
+**Then, get the hydrus source.** It is best to get it with Git: make a new folder somewhere, open a terminal in it, and then paste:
 
     git clone https://github.com/hydrusnetwork/hydrus
 
@@ -76,7 +88,7 @@ If Git is not available, then just go to the [latest release](https://github.com
 
 We will call the base extract directory, the one with 'hydrus_client.py' in it, `install_dir`.
 
-!!! info "Mixed Builds"
+!!! warning "Mixed Builds"
     Don't mix and match build extracts and source extracts. The process that runs the code gets confused if there are unexpected extra .dlls in the directory. **If you need to convert between built and source releases, perform a [clean install](getting_started_installing.md#clean_installs).**  
     
     If you are converting from one install type to another, make a backup before you start. Then, if it all goes wrong, you'll always have a safe backup to rollback to.

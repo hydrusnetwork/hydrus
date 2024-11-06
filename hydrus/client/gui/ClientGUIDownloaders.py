@@ -590,6 +590,7 @@ class EditNGUGPanel( ClientGUIScrolledPanels.EditPanel ):
         return ngug
         
     
+
 class EditGUGsPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def __init__( self, parent: QW.QWidget, gugs ):

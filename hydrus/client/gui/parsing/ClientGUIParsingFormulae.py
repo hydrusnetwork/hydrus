@@ -7,13 +7,17 @@ from qtpy import QtWidgets as QW
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusSerialisable
 
 from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientParsing
+from hydrus.client import ClientSerialisable
 from hydrus.client import ClientStrings
 from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIFunctions
+from hydrus.client.gui import ClientGUISerialisable
 from hydrus.client.gui import ClientGUIStringControls
 from hydrus.client.gui import ClientGUIStringPanels
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
@@ -39,251 +43,6 @@ class EditSpecificFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
         
     
 
-class EditZipperFormulaPanel( EditSpecificFormulaPanel ):
-    
-    def __init__( self, parent: QW.QWidget, collapse_newlines: bool, formula: ClientParsing.ParseFormulaZipper, test_data: ClientParsing.ParsingTestData ):
-        
-        super().__init__( parent, collapse_newlines )
-        
-        #
-        
-        menu_items = []
-        
-        page_func = HydrusData.Call( ClientGUIDialogsQuick.OpenDocumentation, self, HC.DOCUMENTATION_DOWNLOADER_PARSERS_FORMULAE_ZIPPER_FORMULA )
-        
-        menu_items.append( ( 'normal', 'open the zipper formula help', 'Open the help page for zipper formulae in your web browser.', page_func ) )
-        
-        help_button = ClientGUIMenuButton.MenuBitmapButton( self, CC.global_pixmaps().help, menu_items )
-        
-        help_hbox = ClientGUICommon.WrapInText( help_button, self, 'help for this panel -->', object_name = 'HydrusIndeterminate' )
-        
-        #
-        
-        test_panel = ClientGUICommon.StaticBox( self, 'test' )
-        
-        self._test_panel = ClientGUIParsingTest.TestPanelFormula( test_panel, self.GetValue, test_data = test_data )
-        
-        self._test_panel.SetCollapseNewlines( self._collapse_newlines )
-        
-        #
-        
-        edit_panel = ClientGUICommon.StaticBox( self, 'edit' )
-        
-        # TODO: get rid of all the GetClientData for this guy, below. replace with newer stuff, add methods to BetterQListWidget (ReplaceData?) as needed
-        self._formulae = ClientGUIListBoxes.BetterQListWidget( edit_panel )
-        self._formulae.setSelectionMode( QW.QAbstractItemView.SingleSelection )
-        self._formulae.itemDoubleClicked.connect( self.Edit )
-        
-        self._add_formula = ClientGUICommon.BetterButton( edit_panel, 'add', self.Add )
-        
-        self._edit_formula = ClientGUICommon.BetterButton( edit_panel, 'edit', self.Edit )
-        
-        self._move_formula_up = ClientGUICommon.BetterButton( edit_panel, '\u2191', self.MoveUp )
-        
-        self._delete_formula = ClientGUICommon.BetterButton( edit_panel, 'X', self.Delete )
-        
-        self._move_formula_down = ClientGUICommon.BetterButton( edit_panel, '\u2193', self.MoveDown )
-        
-        self._sub_phrase = QW.QLineEdit( edit_panel )
-        
-        formulae = formula.GetFormulae()
-        sub_phrase = formula.GetSubstitutionPhrase()
-        string_processor = formula.GetStringProcessor()
-        
-        self._string_processor_button = ClientGUIStringControls.StringProcessorWidget( edit_panel, string_processor, self._test_panel.GetTestDataForStringProcessor )
-        
-        #
-        
-        for formula in formulae:
-            
-            pretty_formula = formula.ToPrettyString()
-            
-            item = QW.QListWidgetItem()
-            item.setText( pretty_formula )
-            item.setData( QC.Qt.UserRole, formula )
-            self._formulae.addItem( item )
-            
-        
-        self._sub_phrase.setText( sub_phrase )
-        
-        #
-        
-        udd_button_vbox = QP.VBoxLayout()
-        
-        udd_button_vbox.addStretch( 1 )
-        QP.AddToLayout( udd_button_vbox, self._move_formula_up, CC.FLAGS_CENTER_PERPENDICULAR )
-        QP.AddToLayout( udd_button_vbox, self._delete_formula, CC.FLAGS_CENTER_PERPENDICULAR )
-        QP.AddToLayout( udd_button_vbox, self._move_formula_down, CC.FLAGS_CENTER_PERPENDICULAR )
-        udd_button_vbox.addStretch( 1 )
-        
-        formulae_hbox = QP.HBoxLayout()
-        
-        QP.AddToLayout( formulae_hbox, self._formulae, CC.FLAGS_EXPAND_BOTH_WAYS )
-        QP.AddToLayout( formulae_hbox, udd_button_vbox, CC.FLAGS_CENTER_PERPENDICULAR )
-        
-        ae_button_hbox = QP.HBoxLayout()
-        
-        QP.AddToLayout( ae_button_hbox, self._add_formula, CC.FLAGS_CENTER_PERPENDICULAR )
-        QP.AddToLayout( ae_button_hbox, self._edit_formula, CC.FLAGS_CENTER_PERPENDICULAR )
-        
-        rows = []
-        
-        rows.append( ( 'substitution phrase:', self._sub_phrase ) )
-        
-        gridbox = ClientGUICommon.WrapInGrid( edit_panel, rows )
-        
-        edit_panel.Add( formulae_hbox, CC.FLAGS_EXPAND_BOTH_WAYS )
-        edit_panel.Add( ae_button_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        edit_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        
-        if collapse_newlines:
-            
-            label = 'Newlines are removed from parsed strings right after parsing, before string processing.'
-            
-        else:
-            
-            label = 'Newlines are not collapsed here (probably a note parser)'
-            
-        
-        edit_panel.Add( ClientGUICommon.BetterStaticText( edit_panel, label, ellipsize_end = True ), CC.FLAGS_EXPAND_PERPENDICULAR )
-        edit_panel.Add( self._string_processor_button, CC.FLAGS_EXPAND_PERPENDICULAR )
-        
-        #
-        
-        test_panel.Add( self._test_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
-        
-        #
-        
-        hbox = QP.HBoxLayout()
-        
-        QP.AddToLayout( hbox, edit_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
-        QP.AddToLayout( hbox, test_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
-        
-        vbox = QP.VBoxLayout()
-        
-        QP.AddToLayout( vbox, help_hbox, CC.FLAGS_ON_RIGHT )
-        QP.AddToLayout( vbox, hbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
-        
-        self.widget().setLayout( vbox )
-        
-    
-    def Add( self ):
-        
-        existing_formula = ClientParsing.ParseFormulaHTML()
-        
-        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit formula', frame_key = 'deeply_nested_dialog' ) as dlg:
-            
-            panel = EditFormulaPanel( dlg, existing_formula, self._test_panel.GetTestDataForChild )
-            
-            dlg.SetPanel( panel )
-            
-            if dlg.exec() == QW.QDialog.Accepted:
-                
-                new_formula = panel.GetValue()
-                
-                pretty_formula = new_formula.ToPrettyString()
-                
-                item = QW.QListWidgetItem()
-                item.setText( pretty_formula )
-                item.setData( QC.Qt.UserRole, new_formula )
-                self._formulae.addItem( item )
-                
-            
-        
-    
-    def Delete( self ):
-        
-        selection = QP.ListWidgetGetSelection( self._formulae )
-        
-        if selection != -1:
-            
-            if self._formulae.count() == 1:
-                
-                ClientGUIDialogsMessage.ShowWarning( self, 'A zipper formula needs at least one sub-formula!' )
-                
-            else:
-                
-                QP.ListWidgetDelete( self._formulae, selection )
-                
-            
-        
-    
-    def Edit( self ):
-        
-        selection = QP.ListWidgetGetSelection( self._formulae )
-        
-        if selection != -1:
-            
-            old_formula = QP.GetClientData( self._formulae, selection )
-            
-            with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit formula', frame_key = 'deeply_nested_dialog' ) as dlg:
-                
-                panel = EditFormulaPanel( dlg, old_formula, self._test_panel.GetTestDataForChild )
-                
-                dlg.SetPanel( panel )
-                
-                if dlg.exec() == QW.QDialog.Accepted:
-                    
-                    new_formula = panel.GetValue()
-                    
-                    pretty_formula = new_formula.ToPrettyString()
-                    
-                    self._formulae.item( selection ).setText( pretty_formula )
-                    self._formulae.item( selection ).setData( QC.Qt.UserRole, new_formula )
-                    
-                
-            
-        
-    
-    def GetValue( self ):
-        
-        formulae = self._formulae.GetData()
-        
-        sub_phrase = self._sub_phrase.text()
-        
-        string_processor = self._string_processor_button.GetValue()
-        
-        formula = ClientParsing.ParseFormulaZipper( formulae, sub_phrase, string_processor )
-        
-        return formula
-        
-    
-    def MoveDown( self ):
-        
-        selection = QP.ListWidgetGetSelection( self._formulae )
-        
-        if selection != -1 and selection + 1 < self._formulae.count():
-            
-            pretty_rule = self._formulae.item( selection ).text()
-            rule = QP.GetClientData( self._formulae, selection )
-            
-            QP.ListWidgetDelete( self._formulae, selection )
-            
-            item = QW.QListWidgetItem()
-            item.setText( pretty_rule )
-            item.setData( QC.Qt.UserRole, rule )
-            self._formulae.insertItem( selection + 1, item )
-            
-        
-    
-    def MoveUp( self ):
-        
-        selection = QP.ListWidgetGetSelection( self._formulae )
-        
-        if selection != -1 and selection > 0:
-            
-            pretty_rule = self._formulae.item( selection ).text()
-            rule = QP.GetClientData( self._formulae, selection )
-            
-            QP.ListWidgetDelete( self._formulae, selection )
-            
-            item = QW.QListWidgetItem()
-            item.setText( pretty_rule )
-            item.setData( QC.Qt.UserRole, rule )
-            self._formulae.insertItem( selection - 1, item )
-            
-        
-    
 class EditContextVariableFormulaPanel( EditSpecificFormulaPanel ):
     
     def __init__( self, parent: QW.QWidget, collapse_newlines: bool, formula: ClientParsing.ParseFormulaContextVariable, test_data: ClientParsing.ParsingTestData ):
@@ -317,7 +76,12 @@ class EditContextVariableFormulaPanel( EditSpecificFormulaPanel ):
         self._variable_name = QW.QLineEdit( edit_panel )
         
         variable_name = formula.GetVariableName()
+        name = formula.GetName()
         string_processor = formula.GetStringProcessor()
+        
+        self._name = QW.QLineEdit( edit_panel )
+        self._name.setText( name )
+        self._name.setToolTip( ClientGUIFunctions.WrapToolTip( 'Optional, and decorative only. Leave blank to set nothing.' ) )
         
         self._string_processor_button = ClientGUIStringControls.StringProcessorWidget( edit_panel, string_processor, self._test_panel.GetTestDataForStringProcessor )
         
@@ -329,6 +93,7 @@ class EditContextVariableFormulaPanel( EditSpecificFormulaPanel ):
         
         rows = []
         
+        rows.append( ( 'name/description:', self._name ) )
         rows.append( ( 'variable name:', self._variable_name ) )
         
         gridbox = ClientGUICommon.WrapInGrid( edit_panel, rows )
@@ -370,9 +135,11 @@ class EditContextVariableFormulaPanel( EditSpecificFormulaPanel ):
         
         variable_name = self._variable_name.text()
         
+        name = self._name.text()
+        
         string_processor = self._string_processor_button.GetValue()
         
-        formula = ClientParsing.ParseFormulaContextVariable( variable_name, string_processor )
+        formula = ClientParsing.ParseFormulaContextVariable( variable_name = variable_name, name = name, string_processor = string_processor )
         
         return formula
         
@@ -405,6 +172,20 @@ class EditFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._change_formula_type = ClientGUICommon.BetterButton( my_panel, 'change formula type', self._ChangeFormulaType )
         
+        menu_items = []
+        
+        menu_items.append( ( 'normal', 'to clipboard', 'Serialise the formula and put it on your clipboard.', self.ExportToClipboard ) )
+        menu_items.append( ( 'normal', 'to png', 'Serialise the formula and encode it to an image file you can easily share with other hydrus users.', self.ExportToPNG ) )
+        
+        self._export_button = ClientGUIMenuButton.MenuButton( self, 'export', menu_items )
+        
+        menu_items = []
+        
+        menu_items.append( ( 'normal', 'from clipboard', 'Load a formula from text in your clipboard.', self.ImportFromClipboard ) )
+        menu_items.append( ( 'normal', 'from png', 'Load a formula from an encoded png.', self.ImportFromPNG ) )
+        
+        self._import_button = ClientGUIMenuButton.MenuButton( self, 'import', menu_items )
+        
         #
         
         self._UpdateControls()
@@ -415,6 +196,8 @@ class EditFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
         
         QP.AddToLayout( button_hbox, self._edit_formula, CC.FLAGS_EXPAND_BOTH_WAYS )
         QP.AddToLayout( button_hbox, self._change_formula_type, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( button_hbox, self._export_button, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( button_hbox, self._import_button, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         my_panel.Add( self._formula_description, CC.FLAGS_EXPAND_BOTH_WAYS )
         my_panel.Add( button_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
@@ -526,6 +309,120 @@ class EditFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
                 self._current_formula = panel.GetValue()
                 
                 self._UpdateControls()
+                
+            
+        
+    
+    def _GetExportObject( self ):
+        
+        return self._current_formula
+        
+    
+    def _ImportObject( self, obj ):
+        
+        if isinstance( obj, ClientParsing.ParseFormula ):
+            
+            formula = obj
+            
+            self._current_formula = formula
+            
+            self._UpdateControls()
+            
+        else:
+            
+            ClientGUIDialogsMessage.ShowWarning( self, f'That was not a formula--it was a: {type(obj).__name__}' )
+            
+        
+    
+    def ExportToClipboard( self ):
+        
+        export_object = self._GetExportObject()
+        
+        if export_object is not None:
+            
+            json = export_object.DumpToString()
+            
+            CG.client_controller.pub( 'clipboard', 'text', json )
+            
+        
+    
+    def ExportToPNG( self ):
+        
+        export_object = self._GetExportObject()
+        
+        if export_object is not None:
+            
+            with ClientGUITopLevelWindowsPanels.DialogNullipotent( self, 'export to png' ) as dlg:
+                
+                panel = ClientGUISerialisable.PNGExportPanel( dlg, export_object )
+                
+                dlg.SetPanel( panel )
+                
+                dlg.exec()
+                
+            
+        
+    
+    def ImportFromClipboard( self ):
+        
+        try:
+            
+            raw_text = CG.client_controller.GetClipboardText()
+            
+        except HydrusExceptions.DataMissing as e:
+            
+            HydrusData.PrintException( e )
+            
+            ClientGUIDialogsMessage.ShowCritical( self, 'Problem importing!', str(e) )
+            
+            return
+            
+        
+        try:
+            
+            obj = HydrusSerialisable.CreateFromString( raw_text )
+            
+            self._ImportObject( obj )
+            
+        except Exception as e:
+            
+            ClientGUIDialogsQuick.PresentClipboardParseError( self, raw_text, 'JSON-serialised Formula', e )
+            
+        
+    
+    def ImportFromPNG( self ):
+        
+        with QP.FileDialog( self, 'select the png with the encoded formula', wildcard = 'PNG (*.png)' ) as dlg:
+            
+            if dlg.exec() == QW.QDialog.Accepted:
+                
+                path = dlg.GetPath()
+                
+                try:
+                    
+                    payload = ClientSerialisable.LoadFromPNG( path )
+                    
+                except Exception as e:
+                    
+                    HydrusData.PrintException( e )
+                    
+                    ClientGUIDialogsMessage.ShowCritical( self, 'Problem loading!', str(e) )
+                    
+                    return
+                    
+                
+                try:
+                    
+                    obj = HydrusSerialisable.CreateFromNetworkBytes( payload )
+                    
+                    self._ImportObject( obj )
+                    
+                except Exception as e:
+                    
+                    HydrusData.PrintException( e )
+                    
+                    ClientGUIDialogsMessage.ShowCritical( self, 'Problem loading!', 'I could not understand what was encoded in the png!' )
+                    
                 
             
         
@@ -810,7 +707,12 @@ class EditHTMLFormulaPanel( EditSpecificFormulaPanel ):
         tag_rules = formula.GetTagRules()
         content_to_fetch = formula.GetContentToFetch()
         attribute_to_fetch = formula.GetAttributeToFetch()
+        name = formula.GetName()
         string_processor = formula.GetStringProcessor()
+        
+        self._name = QW.QLineEdit( edit_panel )
+        self._name.setText( name )
+        self._name.setToolTip( ClientGUIFunctions.WrapToolTip( 'Optional, and decorative only. Leave blank to set nothing.' ) )
         
         self._string_processor_button = ClientGUIStringControls.StringProcessorWidget( edit_panel, string_processor, self._test_panel.GetTestDataForStringProcessor )
         
@@ -854,13 +756,22 @@ class EditHTMLFormulaPanel( EditSpecificFormulaPanel ):
         
         rows = []
         
+        rows.append( ( 'name/description:', self._name ) )
+        
+        gridbox = ClientGUICommon.WrapInGrid( edit_panel, rows )
+        
+        edit_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        
+        edit_panel.Add( tag_rules_hbox, CC.FLAGS_EXPAND_BOTH_WAYS )
+        edit_panel.Add( ae_button_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        
+        rows = []
+        
         rows.append( ( 'content to fetch:', self._content_to_fetch ) )
         rows.append( ( 'attribute to fetch: ', self._attribute_to_fetch ) )
         
         gridbox = ClientGUICommon.WrapInGrid( edit_panel, rows )
         
-        edit_panel.Add( tag_rules_hbox, CC.FLAGS_EXPAND_BOTH_WAYS )
-        edit_panel.Add( ae_button_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         edit_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
         if collapse_newlines:
@@ -973,7 +884,7 @@ class EditHTMLFormulaPanel( EditSpecificFormulaPanel ):
     
     def GetValue( self ):
         
-        tags_rules = [ QP.GetClientData( self._tag_rules, i ) for i in range( self._tag_rules.count() ) ]
+        tag_rules = [ QP.GetClientData( self._tag_rules, i ) for i in range( self._tag_rules.count() ) ]
         
         content_to_fetch = self._content_to_fetch.GetValue()
         
@@ -984,9 +895,17 @@ class EditHTMLFormulaPanel( EditSpecificFormulaPanel ):
             raise HydrusExceptions.VetoException( 'Please enter an attribute to fetch!' )
             
         
+        name = self._name.text()
+        
         string_processor = self._string_processor_button.GetValue()
         
-        formula = ClientParsing.ParseFormulaHTML( tags_rules, content_to_fetch, attribute_to_fetch, string_processor )
+        formula = ClientParsing.ParseFormulaHTML(
+            tag_rules = tag_rules,
+            content_to_fetch = content_to_fetch,
+            attribute_to_fetch = attribute_to_fetch,
+            name = name,
+            string_processor = string_processor
+        )
         
         return formula
         
@@ -1186,7 +1105,12 @@ class EditJSONFormulaPanel( EditSpecificFormulaPanel ):
         
         parse_rules = formula.GetParseRules()
         content_to_fetch = formula.GetContentToFetch()
+        name = formula.GetName()
         string_processor = formula.GetStringProcessor()
+        
+        self._name = QW.QLineEdit( edit_panel )
+        self._name.setText( name )
+        self._name.setToolTip( ClientGUIFunctions.WrapToolTip( 'Optional, and decorative only. Leave blank to set nothing.' ) )
         
         self._string_processor_button = ClientGUIStringControls.StringProcessorWidget( edit_panel, string_processor, self._test_panel.GetTestDataForStringProcessor )
         
@@ -1226,12 +1150,21 @@ class EditJSONFormulaPanel( EditSpecificFormulaPanel ):
         
         rows = []
         
+        rows.append( ( 'name/description:', self._name ) )
+        
+        gridbox = ClientGUICommon.WrapInGrid( edit_panel, rows )
+        
+        edit_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        
+        edit_panel.Add( parse_rules_hbox, CC.FLAGS_EXPAND_BOTH_WAYS )
+        edit_panel.Add( ae_button_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        
+        rows = []
+        
         rows.append( ( 'content to fetch:', self._content_to_fetch ) )
         
         gridbox = ClientGUICommon.WrapInGrid( edit_panel, rows )
         
-        edit_panel.Add( parse_rules_hbox, CC.FLAGS_EXPAND_BOTH_WAYS )
-        edit_panel.Add( ae_button_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         edit_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
         if collapse_newlines:
@@ -1336,9 +1269,11 @@ class EditJSONFormulaPanel( EditSpecificFormulaPanel ):
         
         content_to_fetch = self._content_to_fetch.GetValue()
         
+        name = self._name.text()
+        
         string_processor = self._string_processor_button.GetValue()
         
-        formula = ClientParsing.ParseFormulaJSON( parse_rules, content_to_fetch, string_processor )
+        formula = ClientParsing.ParseFormulaJSON( parse_rules = parse_rules, content_to_fetch = content_to_fetch, name = name, string_processor = string_processor )
         
         return formula
         
@@ -1421,7 +1356,12 @@ class EditNestedFormulaPanel( EditSpecificFormulaPanel ):
         
         self._sub_formula_panel = EditFormulaPanel( sub_panel, sub_formula, test_data_callable = self._GetSubTestData )
         
+        name = formula.GetName()
         string_processor = formula.GetStringProcessor()
+        
+        self._name = QW.QLineEdit( edit_panel )
+        self._name.setText( name )
+        self._name.setToolTip( ClientGUIFunctions.WrapToolTip( 'Optional, and decorative only. Leave blank to set nothing.' ) )
         
         self._string_processor_button = ClientGUIStringControls.StringProcessorWidget( edit_panel, string_processor, self._test_panel.GetTestDataForStringProcessor )
         
@@ -1437,6 +1377,15 @@ class EditNestedFormulaPanel( EditSpecificFormulaPanel ):
         st.setWordWrap( True )
         
         edit_panel.Add( st, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        rows = []
+        
+        rows.append( ( 'name/description:', self._name ) )
+        
+        gridbox = ClientGUICommon.WrapInGrid( edit_panel, rows )
+        
+        edit_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        
         edit_panel.Add( main_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         edit_panel.Add( sub_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         
@@ -1505,9 +1454,184 @@ class EditNestedFormulaPanel( EditSpecificFormulaPanel ):
         
         main_formula = self._main_formula_panel.GetValue()
         sub_formula = self._sub_formula_panel.GetValue()
+        name = self._name.text()
         string_processor = self._string_processor_button.GetValue()
         
-        formula = ClientParsing.ParseFormulaNested( main_formula = main_formula, sub_formula = sub_formula, string_processor = string_processor )
+        formula = ClientParsing.ParseFormulaNested( main_formula = main_formula, sub_formula = sub_formula, name = name, string_processor = string_processor )
+        
+        return formula
+        
+    
+
+class EditZipperFormulaPanel( EditSpecificFormulaPanel ):
+    
+    def __init__( self, parent: QW.QWidget, collapse_newlines: bool, formula: ClientParsing.ParseFormulaZipper, test_data: ClientParsing.ParsingTestData ):
+        
+        super().__init__( parent, collapse_newlines )
+        
+        #
+        
+        menu_items = []
+        
+        page_func = HydrusData.Call( ClientGUIDialogsQuick.OpenDocumentation, self, HC.DOCUMENTATION_DOWNLOADER_PARSERS_FORMULAE_ZIPPER_FORMULA )
+        
+        menu_items.append( ( 'normal', 'open the zipper formula help', 'Open the help page for zipper formulae in your web browser.', page_func ) )
+        
+        help_button = ClientGUIMenuButton.MenuBitmapButton( self, CC.global_pixmaps().help, menu_items )
+        
+        help_hbox = ClientGUICommon.WrapInText( help_button, self, 'help for this panel -->', object_name = 'HydrusIndeterminate' )
+        
+        #
+        
+        test_panel = ClientGUICommon.StaticBox( self, 'test' )
+        
+        self._test_panel = ClientGUIParsingTest.TestPanelFormula( test_panel, self.GetValue, test_data = test_data )
+        
+        self._test_panel.SetCollapseNewlines( self._collapse_newlines )
+        
+        #
+        
+        edit_panel = ClientGUICommon.StaticBox( self, 'edit' )
+        
+        self._formulae = ClientGUIListBoxes.QueueListBox( edit_panel, 6, self._ConvertFormulaToListString, add_callable = self._Add, edit_callable = self._Edit )
+        
+        self._formulae.AddImportExportButtons( ( ClientParsing.ParseFormula, ) )
+        
+        self._sub_phrase = QW.QLineEdit( edit_panel )
+        
+        formulae = formula.GetFormulae()
+        sub_phrase = formula.GetSubstitutionPhrase()
+        name = formula.GetName()
+        string_processor = formula.GetStringProcessor()
+        
+        self._name = QW.QLineEdit( edit_panel )
+        self._name.setText( name )
+        self._name.setToolTip( ClientGUIFunctions.WrapToolTip( 'Optional, and decorative only. Leave blank to set nothing.' ) )
+        
+        self._string_processor_button = ClientGUIStringControls.StringProcessorWidget( edit_panel, string_processor, self._test_panel.GetTestDataForStringProcessor )
+        
+        #
+        
+        self._formulae.AddDatas( formulae )
+        
+        self._sub_phrase.setText( sub_phrase )
+        
+        #
+        
+        rows = []
+        
+        rows.append( ( 'name/description:', self._name ) )
+        
+        gridbox = ClientGUICommon.WrapInGrid( edit_panel, rows )
+        
+        edit_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        
+        edit_panel.Add( self._formulae, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        rows = []
+        
+        rows.append( ( 'substitution phrase:', self._sub_phrase ) )
+        
+        gridbox = ClientGUICommon.WrapInGrid( edit_panel, rows )
+        
+        edit_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        
+        if collapse_newlines:
+            
+            label = 'Newlines are removed from parsed strings right after parsing, before string processing.'
+            
+        else:
+            
+            label = 'Newlines are not collapsed here (probably a note parser)'
+            
+        
+        edit_panel.Add( ClientGUICommon.BetterStaticText( edit_panel, label, ellipsize_end = True ), CC.FLAGS_EXPAND_PERPENDICULAR )
+        edit_panel.Add( self._string_processor_button, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        #
+        
+        test_panel.Add( self._test_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        #
+        
+        hbox = QP.HBoxLayout()
+        
+        QP.AddToLayout( hbox, edit_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( hbox, test_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        vbox = QP.VBoxLayout()
+        
+        QP.AddToLayout( vbox, help_hbox, CC.FLAGS_ON_RIGHT )
+        QP.AddToLayout( vbox, hbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        
+        self.widget().setLayout( vbox )
+        
+    
+    def _Add( self ):
+        
+        existing_formula = ClientParsing.ParseFormulaHTML()
+        
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit formula', frame_key = 'deeply_nested_dialog' ) as dlg:
+            
+            panel = EditFormulaPanel( dlg, existing_formula, self._test_panel.GetTestDataForChild )
+            
+            dlg.SetPanel( panel )
+            
+            if dlg.exec() == QW.QDialog.Accepted:
+                
+                new_formula = panel.GetValue()
+                
+                return new_formula
+                
+            else:
+                
+                raise HydrusExceptions.VetoException()
+                
+            
+        
+    
+    def _ConvertFormulaToListString( self, formula: ClientParsing.ParseFormula ) -> str:
+        
+        return formula.ToPrettyString()
+        
+    
+    def _Edit( self, old_formula ):
+        
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit formula', frame_key = 'deeply_nested_dialog' ) as dlg:
+            
+            panel = EditFormulaPanel( dlg, old_formula, self._test_panel.GetTestDataForChild )
+            
+            dlg.SetPanel( panel )
+            
+            if dlg.exec() == QW.QDialog.Accepted:
+                
+                new_formula = panel.GetValue()
+                
+                return new_formula
+                
+            else:
+                
+                raise HydrusExceptions.VetoException()
+                
+            
+        
+    
+    def GetValue( self ):
+        
+        formulae = self._formulae.GetData()
+        
+        sub_phrase = self._sub_phrase.text()
+        
+        name = self._name.text()
+        
+        string_processor = self._string_processor_button.GetValue()
+        
+        formula = ClientParsing.ParseFormulaZipper(
+            formulae = formulae,
+            sub_phrase = sub_phrase,
+            name = name,
+            string_processor = string_processor
+        )
         
         return formula
         

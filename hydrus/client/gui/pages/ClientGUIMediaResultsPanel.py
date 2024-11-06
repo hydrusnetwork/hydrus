@@ -932,7 +932,7 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.Liste
             
             title = 'manage urls for {} files'.format( num_files )
             
-            with ClientGUITopLevelWindowsPanels.DialogEdit( self, title ) as dlg:
+            with ClientGUITopLevelWindowsPanels.DialogEdit( self, title, frame_key = 'manage_urls_dialog' ) as dlg:
                 
                 panel = ClientGUIScrolledPanelsEdit.EditURLsPanel( dlg, flat_media )
                 
