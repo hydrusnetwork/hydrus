@@ -2,12 +2,12 @@ import collections
 import os
 import random
 import time
+import typing
 import unittest
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusTagArchive
 from hydrus.core import HydrusData
-from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusTags
 
 from hydrus.test import TestController
@@ -113,6 +113,8 @@ count_filter_pairs[ HC.CONTENT_TYPE_TAG_PARENTS ] = [
 ]
 
 class TestMigration( unittest.TestCase ):
+    
+    _db: typing.Any = None
     
     @classmethod
     def _clear_db( cls ):

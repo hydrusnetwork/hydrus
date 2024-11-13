@@ -20,6 +20,8 @@ class HydrusRequest( Request ):
         self.preferred_mime = HC.APPLICATION_JSON
         self.disconnected = False
         
+        self.profile_result = None
+        
     
     def IsGET( self ):
         

@@ -1,4 +1,6 @@
 import base64
+import typing
+
 import bs4
 import collections
 import html
@@ -11,7 +13,6 @@ import warnings
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
-from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTags
@@ -272,6 +273,8 @@ def ConvertParsableContentToPrettyString( parsable_content, include_veto = False
         return 'COULD NOT RENDER--probably a broken object!'
         
     
+    pretty_strings = HydrusData.DedupeList( pretty_strings )
+    
     pretty_strings.sort()
     
     if len( pretty_strings ) == 0:
@@ -392,7 +395,7 @@ def GetHTMLTagString( tag: bs4.Tag ):
         
         for sub_tag in tag.descendants:
             
-            if sub_tag.name in ( 'br', 'p' ):
+            if isinstance( sub_tag, bs4.Tag ) and sub_tag.name in ( 'br', 'p' ):
                 
                 all_strings.append( '\n' )
                 
@@ -2832,7 +2835,7 @@ class PageParser( HydrusSerialisable.SerialisableBaseNamed ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_PAGE_PARSER
     SERIALISABLE_NAME = 'Page Parser'
-    SERIALISABLE_VERSION = 2
+    SERIALISABLE_VERSION = 3
     
     def __init__( self, name, parser_key = None, string_converter = None, sub_page_parsers = None, content_parsers = None, example_urls = None, example_parsing_context = None ):
         
@@ -2870,12 +2873,12 @@ class PageParser( HydrusSerialisable.SerialisableBaseNamed ):
         
         super().__init__( name )
         
-        self._parser_key = parser_key
-        self._string_converter = string_converter
-        self._sub_page_parsers = sub_page_parsers
-        self._content_parsers = content_parsers
-        self._example_urls = example_urls
-        self._example_parsing_context = example_parsing_context
+        self._parser_key: bytes = parser_key
+        self._string_converter: ClientStrings.StringConverter = string_converter
+        self._sub_page_parsers: typing.List[ SubsidiaryPageParser ] = sub_page_parsers
+        self._content_parsers: typing.List[ ContentParser ] = content_parsers
+        self._example_urls: typing.Collection[ str ] = example_urls
+        self._example_parsing_context: dict = example_parsing_context
         
     
     def _GetSerialisableInfo( self ):
@@ -2883,9 +2886,9 @@ class PageParser( HydrusSerialisable.SerialisableBaseNamed ):
         serialisable_parser_key = self._parser_key.hex()
         serialisable_string_converter = self._string_converter.GetSerialisableTuple()
         
-        serialisable_sub_page_parsers = [ ( formula.GetSerialisableTuple(), page_parser.GetSerialisableTuple() ) for ( formula, page_parser ) in sorted( self._sub_page_parsers, key = lambda p: p[1].GetName() ) ]
+        serialisable_sub_page_parsers = HydrusSerialisable.SerialisableList( sorted( self._sub_page_parsers, key = lambda spp: spp.GetPageParser().GetName().casefold() ) ).GetSerialisableTuple()
         
-        serialisable_content_parsers = HydrusSerialisable.SerialisableList( sorted( self._content_parsers, key = lambda p: p.GetName() ) ).GetSerialisableTuple()
+        serialisable_content_parsers = HydrusSerialisable.SerialisableList( sorted( self._content_parsers, key = lambda p: p.GetName().casefold() ) ).GetSerialisableTuple()
         
         return ( self._name, serialisable_parser_key, serialisable_string_converter, serialisable_sub_page_parsers, serialisable_content_parsers, self._example_urls, self._example_parsing_context )
         
@@ -2896,7 +2899,7 @@ class PageParser( HydrusSerialisable.SerialisableBaseNamed ):
         
         self._parser_key = bytes.fromhex( serialisable_parser_key )
         self._string_converter = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_string_converter )
-        self._sub_page_parsers = [ ( HydrusSerialisable.CreateFromSerialisableTuple( serialisable_formula ), HydrusSerialisable.CreateFromSerialisableTuple( serialisable_page_parser ) ) for ( serialisable_formula, serialisable_page_parser ) in serialisable_sub_page_parsers ]
+        self._sub_page_parsers = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_sub_page_parsers )
         self._content_parsers = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_content_parsers )
         
     
@@ -2913,6 +2916,21 @@ class PageParser( HydrusSerialisable.SerialisableBaseNamed ):
             new_serialisable_info = ( name, serialisable_parser_key, serialisable_string_converter, serialisable_sub_page_parsers, serialisable_content_parsers, example_urls, example_parsing_context )
             
             return ( 2, new_serialisable_info )
+            
+        
+        if version == 2:
+            
+            ( name, serialisable_parser_key, serialisable_string_converter, serialisable_sub_page_parsers, serialisable_content_parsers, example_urls, example_parsing_context ) = old_serialisable_info
+            
+            old_sub_page_parsers = [ ( HydrusSerialisable.CreateFromSerialisableTuple( serialisable_formula ), HydrusSerialisable.CreateFromSerialisableTuple( serialisable_page_parser ) ) for ( serialisable_formula, serialisable_page_parser ) in serialisable_sub_page_parsers ]
+            
+            sub_page_parsers = HydrusSerialisable.SerialisableList( [ SubsidiaryPageParser( formula = formula, page_parser = page_parser ) for ( formula, page_parser ) in old_sub_page_parsers ] )
+            
+            serialisable_sub_page_parsers = sub_page_parsers.GetSerialisableTuple()
+            
+            new_serialisable_info = ( name, serialisable_parser_key, serialisable_string_converter, serialisable_sub_page_parsers, serialisable_content_parsers, example_urls, example_parsing_context )
+            
+            return ( 3, new_serialisable_info )
             
         
     
@@ -2980,9 +2998,9 @@ class PageParser( HydrusSerialisable.SerialisableBaseNamed ):
         
         parsable_content = set()
         
-        for ( formula, page_parser ) in self._sub_page_parsers:
+        for sub_page_parser in self._sub_page_parsers:
             
-            parsable_content.update( page_parser.GetParsableContent() )
+            parsable_content.update( sub_page_parser.GetPageParser().GetParsableContent() )
             
         
         for content_parser in self._content_parsers:
@@ -3014,9 +3032,9 @@ class PageParser( HydrusSerialisable.SerialisableBaseNamed ):
         
         self._example_parsing_context = {}
         
-        for ( formula, page_parser ) in self._sub_page_parsers:
+        for sub_page_parser in self._sub_page_parsers:
             
-            page_parser.NullifyTestData()
+            sub_page_parser.GetPageParser().NullifyTestData()
             
         
     
@@ -3082,59 +3100,16 @@ class PageParser( HydrusSerialisable.SerialisableBaseNamed ):
             
         else:
             
-            def sort_key( sub_page_parser ):
-                
-                ( formula, page_parser ) = sub_page_parser
-                
-                return page_parser.GetName()
-                
+            # we don't add the basic 'whole page' results to our results here since if we are using sub page parsers, that guy shouldn't have a URL in it; if there's no URL, we don't want it anyway!
+            # he is however getting tacked onto every post parser by the sub page parsers
             
-            sub_page_parsers = list( self._sub_page_parsers )
+            sub_page_parsers = sorted( self._sub_page_parsers, key = lambda spp: spp.GetPageParser().GetName().casefold() )
             
-            sub_page_parsers.sort( key = sort_key )
-            
-            try:
+            for sub_page_parser in sub_page_parsers:
                 
-                for ( formula, page_parser ) in self._sub_page_parsers:
-                    
-                    try:
-                        
-                        collapse_newlines = False
-                        
-                        posts = formula.Parse( parsing_context, converted_parsing_text, collapse_newlines )
-                        
-                    except HydrusExceptions.ParseException:
-                        
-                        continue
-                        
-                    
-                    for ( i, post ) in enumerate( posts ):
-                        
-                        try:
-                            
-                            page_parser_all_parse_results = page_parser.Parse( parsing_context, post )
-                            
-                        except HydrusExceptions.VetoException:
-                            
-                            continue
-                            
-                        
-                        for page_parser_parse_results in page_parser_all_parse_results:
-                            
-                            page_parser_parse_results.extend( whole_page_parse_results )
-                            
-                            all_parse_results.append( page_parser_parse_results )
-                            
-                        
-                    
+                sub_page_parser_parse_results = sub_page_parser.Parse( whole_page_parse_results, parsing_context, converted_parsing_text )
                 
-            except HydrusExceptions.ParseException as e:
-                
-                prefix = 'Page Parser ' + self._name + ': '
-                
-                e = HydrusExceptions.ParseException( prefix + str( e ) )
-                
-                raise e
+                all_parse_results.extend( sub_page_parser_parse_results )
                 
             
         
@@ -3193,7 +3168,117 @@ class PageParser( HydrusSerialisable.SerialisableBaseNamed ):
         self._parser_key = parser_key
         
     
+
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_PAGE_PARSER ] = PageParser
+
+class SubsidiaryPageParser( HydrusSerialisable.SerialisableBase ):
+    
+    SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_SUBSIDIARY_PAGE_PARSER
+    SERIALISABLE_NAME = 'Subsidiary Page Parser'
+    SERIALISABLE_VERSION = 1
+    
+    def __init__( self, formula = None, page_parser = None ):
+        
+        if formula is None:
+            
+            formula = ParseFormulaHTML( tag_rules = [ ParseRuleHTML( rule_type = HTML_RULE_TYPE_DESCENDING, tag_name = 'div', tag_attributes = { 'class' : 'thumb' } ) ], content_to_fetch = HTML_CONTENT_HTML )
+            
+        
+        if page_parser is None:
+            
+            page_parser = PageParser( 'new sub page parser' )
+            
+        
+        self._formula = formula
+        self._page_parser = page_parser
+        
+    
+    def _GetSerialisableInfo( self ):
+        
+        serialisable_formula = self._formula.GetSerialisableTuple()
+        serialisable_page_parser = self._page_parser.GetSerialisableTuple()
+        
+        return ( serialisable_formula, serialisable_page_parser )
+        
+    
+    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
+        
+        ( serialisable_formula, serialisable_page_parser ) = serialisable_info
+        
+        self._formula = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_formula )
+        self._page_parser = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_page_parser )
+        
+    
+    def GetFormula( self ) -> ParseFormula:
+        
+        return self._formula
+        
+    
+    def GetPageParser( self ) -> PageParser:
+        
+        return self._page_parser
+        
+    
+    def Parse( self, parent_parse_results, parsing_context, parsing_text ):
+        
+        all_parse_results = []
+        
+        try:
+            
+            try:
+                
+                collapse_newlines = False
+                
+                posts = self._formula.Parse( parsing_context, parsing_text, collapse_newlines )
+                
+            except HydrusExceptions.ParseException:
+                
+                return all_parse_results
+                
+            
+            for ( i, post ) in enumerate( posts ):
+                
+                try:
+                    
+                    page_parser_all_parse_results = self._page_parser.Parse( parsing_context, post )
+                    
+                except HydrusExceptions.VetoException:
+                    
+                    continue
+                    
+                
+                for page_parser_parse_results in page_parser_all_parse_results:
+                    
+                    page_parser_parse_results.extend( parent_parse_results )
+                    
+                    all_parse_results.append( page_parser_parse_results )
+                    
+                
+            
+        except HydrusExceptions.ParseException as e:
+            
+            prefix = f'Subsidiary Page Parser {self._page_parser.GetName()}: '
+            
+            e = HydrusExceptions.ParseException( prefix + str( e ) )
+            
+            raise e
+            
+        
+        return all_parse_results
+        
+    
+    def SetFormula( self, formula: ParseFormula ):
+        
+        self._formula = formula
+        
+    
+    def SetPageParser( self, page_parser: PageParser ):
+        
+        self._page_parser = page_parser
+        
+    
+
+HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_SUBSIDIARY_PAGE_PARSER ] = SubsidiaryPageParser
 
 class ParseNodeContentLink( HydrusSerialisable.SerialisableBase ):
     

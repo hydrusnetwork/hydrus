@@ -4,7 +4,6 @@ import unittest
 from mock import patch
 
 from hydrus.core import HydrusConstants as HC
-from hydrus.core import HydrusData
 from hydrus.core import HydrusTime
 from hydrus.core.networking import HydrusNetworking
 

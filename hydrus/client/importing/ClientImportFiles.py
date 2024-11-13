@@ -2,7 +2,6 @@ from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
-from hydrus.core import HydrusTime
 from hydrus.core.files import HydrusFileHandling
 from hydrus.core.files import HydrusPSDHandling
 from hydrus.core.files.images import HydrusBlurhash
@@ -15,7 +14,6 @@ from hydrus.client import ClientFiles
 from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientImageHandling
 from hydrus.client.importing.options import FileImportOptions
-from hydrus.client.metadata import ClientContentUpdates
 
 class FileImportStatus( object ):
     

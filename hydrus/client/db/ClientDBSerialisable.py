@@ -306,7 +306,7 @@ class ClientDBSerialisable( ClientDBModule.ClientDBModule ):
         return session_container
         
     
-    def GetJSONDump( self, dump_type ):
+    def GetJSONDump( self, dump_type ) -> typing.Any:
         
         result = self._Execute( 'SELECT version, dump FROM json_dumps WHERE dump_type = ?;', ( dump_type, ) ).fetchone()
         
@@ -355,7 +355,7 @@ class ClientDBSerialisable( ClientDBModule.ClientDBModule ):
             
         
     
-    def GetJSONDumpNamed( self, dump_type, dump_name = None, timestamp_ms = None ):
+    def GetJSONDumpNamed( self, dump_type, dump_name = None, timestamp_ms = None ) -> typing.Any:
         
         if dump_name is None:
             
@@ -603,11 +603,13 @@ class ClientDBSerialisable( ClientDBModule.ClientDBModule ):
             
             if dump_type == HydrusSerialisable.SERIALISABLE_TYPE_GUI_SESSION_CONTAINER:
                 
+                # noinspection PyUnresolvedReferences
                 if not obj.HasAllDirtyPageData():
                     
                     raise Exception( 'A session with name "{}" was set to save, but it did not have all its dirty page data!'.format( dump_name ) )
                     
                 
+                # noinspection PyUnresolvedReferences
                 hashes_to_page_data = obj.GetHashesToPageData()
                 
                 self.SetHashedJSONDumps( hashes_to_page_data )

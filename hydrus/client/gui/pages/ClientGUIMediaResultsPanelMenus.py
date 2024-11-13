@@ -2,7 +2,6 @@ import typing
 
 from qtpy import QtWidgets as QW
 
-from hydrus.core import HydrusData
 from hydrus.core import HydrusLists
 from hydrus.core import HydrusExceptions
 

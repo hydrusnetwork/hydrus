@@ -267,7 +267,9 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             'disallow_media_drags_on_duration_media' : False,
             'show_all_my_files_on_page_chooser' : True,
             'show_local_files_on_page_chooser' : False,
-            'use_nice_resolution_strings' : True
+            'use_nice_resolution_strings' : True,
+            'use_listbook_for_tag_service_panels' : False
+            
         }
         
         #
@@ -499,7 +501,8 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             'slideshow_short_duration_loop_seconds' : 10,
             'slideshow_short_duration_cutoff_percentage' : 75,
             'slideshow_long_duration_overspill_percentage' : 50,
-            'num_to_show_in_ac_dropdown_children_tab' : 40
+            'num_to_show_in_ac_dropdown_children_tab' : 40,
+            'number_of_unselected_medias_to_present_tags_for' : 4096
         }
         
         #

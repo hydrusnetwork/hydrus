@@ -9,7 +9,6 @@ from hydrus.core import HydrusPaths
 from hydrus.core import HydrusTemp
 
 from hydrus.client import ClientConstants as CC
-from hydrus.client import ClientDaemons
 from hydrus.client.importing import ClientImportFiles
 from hydrus.client.importing import ClientImportLocal
 

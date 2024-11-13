@@ -1,15 +1,14 @@
 import os
 import random
 import time
+import typing
 import unittest
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
-from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusLists
 
 from hydrus.client import ClientConstants as CC
-from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientLocation
 from hydrus.client import ClientServices
 from hydrus.client.db import ClientDB
@@ -531,6 +530,8 @@ IRL_SIBLING_PAIRS = {
 }
 
 class TestClientDBTags( unittest.TestCase ):
+    
+    _db: typing.Any = None
     
     @classmethod
     def _create_db( cls ):

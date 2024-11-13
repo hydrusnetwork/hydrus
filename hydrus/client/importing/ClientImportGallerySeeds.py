@@ -1,6 +1,5 @@
 import collections
 import itertools
-import os
 import random
 import threading
 import time
@@ -10,7 +9,6 @@ import typing
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
-from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusText
@@ -794,18 +792,6 @@ class GallerySeedLog( HydrusSerialisable.SerialisableBase ):
         return None
         
     
-    def _GetStatusesToCounts( self ):
-        
-        statuses_to_counts = collections.Counter()
-        
-        for gallery_seed in self._gallery_seeds:
-            
-            statuses_to_counts[ gallery_seed.status ] += 1
-            
-        
-        return statuses_to_counts
-        
-    
     def _GetGallerySeeds( self, status = None ):
         
         if status is None:
@@ -820,7 +806,24 @@ class GallerySeedLog( HydrusSerialisable.SerialisableBase ):
     
     def _GetSerialisableInfo( self ):
         
+        if not isinstance( self._gallery_seeds, HydrusSerialisable.SerialisableList ):
+            
+            self._gallery_seeds = HydrusSerialisable.SerialisableList( self._gallery_seeds )
+            
+        
         return self._gallery_seeds.GetSerialisableTuple()
+        
+    
+    def _GetStatusesToCounts( self ):
+        
+        statuses_to_counts = collections.Counter()
+        
+        for gallery_seed in self._gallery_seeds:
+            
+            statuses_to_counts[ gallery_seed.status ] += 1
+            
+        
+        return statuses_to_counts
         
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):

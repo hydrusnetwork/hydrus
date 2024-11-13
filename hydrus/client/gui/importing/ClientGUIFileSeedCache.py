@@ -1,5 +1,3 @@
-import os
-
 from qtpy import QtWidgets as QW
 
 from hydrus.core import HydrusConstants as HC
@@ -361,7 +359,7 @@ class EditFileSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
         
         model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_FILE_SEED_CACHE.ID, self._ConvertFileSeedToDisplayTuple, self._ConvertFileSeedToSortTuple )
         
-        self._list_ctrl = ClientGUIListCtrl.BetterListCtrlTreeView( self, CGLC.COLUMN_LIST_FILE_SEED_CACHE.ID, 30, model, activation_callback = self._ShowSelectionInNewPage, delete_key_callback = self._DeleteSelected )
+        self._list_ctrl = ClientGUIListCtrl.BetterListCtrlTreeView( self, 30, model, activation_callback = self._ShowSelectionInNewPage, delete_key_callback = self._DeleteSelected )
         
         #
         
@@ -794,8 +792,6 @@ class EditFileSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
                 if result == QW.QDialog.Accepted:
                     
                     deletee_hashes = { file_seed.GetHash() for file_seed in deleted_and_clearable_file_seeds }
-                    
-                    from hydrus.client.gui.media import ClientGUIMediaModalActions
                     
                     ClientGUIMediaSimpleActions.UndeleteFiles( deletee_hashes )
                     

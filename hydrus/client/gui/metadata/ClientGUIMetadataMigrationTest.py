@@ -37,6 +37,11 @@ class MigrationTestContextFactorySidecar( MigrationTestContextFactory ):
         self._example_file_paths = example_file_paths
         
     
+    def GetExampleFilePaths( self ) -> typing.List[ str ]:
+        
+        return list( self._example_file_paths )
+        
+    
     def GetExampleTestStrings( self, importer: ClientMetadataMigrationImporters.SingleFileMetadataImporterSidecar, test_object: str ):
         
         return importer.Import( test_object )

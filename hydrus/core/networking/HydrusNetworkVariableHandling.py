@@ -1,6 +1,5 @@
 import collections
 import json
-import os
 import traceback
 import typing
 import urllib
@@ -450,7 +449,7 @@ def GetValueFromDict( dictionary: dict, key, expected_type, expected_list_type =
         
     
 
-def TestVariableType( name: str, value: typing.Any, expected_type: type, expected_list_type = None, expected_dict_types = None, allowed_values = None ):
+def TestVariableType( name: str, value: typing.Any, expected_type, expected_list_type = None, expected_dict_types = None, allowed_values = None ):
     
     if not isinstance( value, expected_type ):
         

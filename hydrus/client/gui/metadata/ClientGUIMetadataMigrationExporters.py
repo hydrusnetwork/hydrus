@@ -1,5 +1,3 @@
-import os
-
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
 

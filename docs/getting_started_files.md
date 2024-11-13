@@ -46,6 +46,7 @@ Now:
     
 *   Press ++enter++ or double/middle-click again to close the media viewer.
 *   You can quickly select multiple files by shift- or ctrl- clicking. Notice how the status bar at the bottom of the screen updates with the number selected and their total size. Right-clicking your selection will present another summary and many actions.
+*   You can quickly copy-export files out of the client by drag-and-dropping to a folder or external program, including web browser upload boxes. Discord support may need a special checkbox set under _options->exporting_. 
 *   Hit ++f9++ to bring up a new page chooser. You can navigate it with the arrow keys, your numpad, or your mouse.
 *   On the left of a normal search page is a text box. When it is focused, a dropdown window appears. It looks like this:
     

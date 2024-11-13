@@ -703,6 +703,13 @@ class TabWidgetWithDnD( QW.QTabWidget ):
         
         #if self.currentWidget() and self.currentWidget().rect().contains( self.currentWidget().mapFromGlobal( self.mapToGlobal( event.position().toPoint() ) ) ): return QW.QTabWidget.dragMoveEvent( self, event )
         
+        if 'application/hydrus-tab' not in event.mimeData().formats():
+            
+            event.ignore()
+            
+            return
+            
+        
         screen_pos = self.mapToGlobal( event.position().toPoint() )
         
         tab_pos = self._tab_bar.mapFromGlobal( screen_pos )
@@ -727,13 +734,6 @@ class TabWidgetWithDnD( QW.QTabWidget ):
                 self.setCurrentIndex( tab_index )
                 
             
-        
-        if 'application/hydrus-tab' not in event.mimeData().formats():
-            
-            event.reject()
-            
-
-        #return QW.QTabWidget.dragMoveEvent( self, event )
         
 
     def dragLeaveEvent( self, e: QG.QDragLeaveEvent ):

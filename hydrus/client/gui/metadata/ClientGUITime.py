@@ -1,5 +1,4 @@
 import json
-import os
 import typing
 
 from qtpy import QtCore as QC

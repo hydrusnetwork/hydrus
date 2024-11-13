@@ -1,5 +1,3 @@
-import os
-
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
 from qtpy import QtGui as QG
@@ -408,7 +406,7 @@ class CanvasHoverFrame( QW.QFrame ):
         
         self.setCursor( QG.QCursor( QC.Qt.ArrowCursor ) )
         
-        self._position_initialised = False
+        self._position_initialised_since_last_media = False
         
         parent.installEventFilter( self )
         
@@ -481,7 +479,7 @@ class CanvasHoverFrame( QW.QFrame ):
                 self.move( my_ideal_position )
                 
             
-            self._position_initialised = True
+            self._position_initialised_since_last_media = True
             
             if should_resize or should_move:
                 
@@ -535,9 +533,9 @@ class CanvasHoverFrame( QW.QFrame ):
     
     def DoRegularHideShow( self ):
         
-        if not self._position_initialised:
+        if not self._position_initialised_since_last_media:
             
-            self._SizeAndPosition()
+            self._SizeAndPosition( force = True )
             
         
         current_focus_tlw = QW.QApplication.activeWindow()
@@ -661,14 +659,16 @@ class CanvasHoverFrame( QW.QFrame ):
             
         
     
-    def PositionIsInitialised( self ):
+    def PositionInitialisedSinceLastMedia( self ):
         
-        return self._position_initialised
+        return self._position_initialised_since_last_media
         
     
     def SetMedia( self, media ):
         
         self._current_media = media
+        
+        self._position_initialised_since_last_media = False
         
         if self._current_media is None:
             
@@ -1394,12 +1394,14 @@ class CanvasHoverFrameTopRight( CanvasHoverFrame ):
         
         my_ideal_width = self.sizeHint().width()
         
-        if not self._top_hover.PositionIsInitialised():
+        if not self._top_hover.PositionInitialisedSinceLastMedia():
             
             self._top_hover.DoRegularHideShow()
             
         
-        if self._top_hover.PositionIsInitialised():
+        top_hover_bottom_right = QC.QPoint( 0, 0 )
+        
+        if self._top_hover.PositionInitialisedSinceLastMedia():
             
             # don't use .rect() here, it (sometimes) isn't updated on a hidden window until next show, I think
             top_hover_bottom_right = QC.QPoint( self._top_hover.x() + self._top_hover.width(), self._top_hover.y() + self._top_hover.height() )
@@ -1417,7 +1419,7 @@ class CanvasHoverFrameTopRight( CanvasHoverFrame ):
         
         ideal_position = QC.QPoint( int( parent_width - my_ideal_width ), 0 )
         
-        if self._top_hover.PositionIsInitialised():
+        if self._top_hover.PositionInitialisedSinceLastMedia():
             
             if top_hover_bottom_right.x() > ideal_position.x():
                 
@@ -1711,12 +1713,12 @@ class CanvasHoverFrameRightNotes( CanvasHoverFrame ):
         
         ideal_position = QC.QPoint( parent_width - my_width, 0 )
         
-        if not self._top_right_hover.PositionIsInitialised():
+        if not self._top_right_hover.PositionInitialisedSinceLastMedia():
             
             self._top_right_hover.DoRegularHideShow()
             
         
-        if self._top_right_hover.PositionIsInitialised():
+        if self._top_right_hover.PositionInitialisedSinceLastMedia():
             
             my_ideal_width = self._top_right_hover.width()
             
@@ -1854,7 +1856,7 @@ class CanvasHoverFrameRightNotes( CanvasHoverFrame ):
             
             self._ResetNotes()
             
-            self._position_initialised = False
+            self._position_initialised_since_last_media = False
             
         
     

@@ -10,7 +10,7 @@ try:
     
     PDF_OK = True
     
-except Exception as e:
+except Exception:
     
     pdf_failed_reason = traceback.format_exc()
     
@@ -23,7 +23,6 @@ from qtpy import QtCore as QC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core.files import HydrusPDFHandling
-from hydrus.core.files.images import HydrusImageHandling
 
 from hydrus.client.gui import ClientGUIFunctions
 

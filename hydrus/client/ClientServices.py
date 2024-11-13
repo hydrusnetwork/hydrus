@@ -1,6 +1,5 @@
 import hashlib
 import json
-import os
 import random
 import threading
 import time

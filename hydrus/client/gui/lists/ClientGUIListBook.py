@@ -1,238 +1,168 @@
+import typing
+
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
 
-from hydrus.core import HydrusExceptions
-
 from hydrus.client import ClientConstants as CC
+from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.lists import ClientGUIListBoxes
 
 class ListBook( QW.QWidget ):
     
-    def __init__( self, *args, **kwargs ):
+    currentChanged = QC.Signal( int )
+    
+    def __init__( self, parent: QW.QWidget, list_chars_width = 24 ):
         
-        super().__init__( *args, **kwargs )
+        super().__init__( parent )
         
-        self._keys_to_active_pages = {}
+        self._page_list = ClientGUIListBoxes.BetterQListWidget( self )
+        self._page_list.setSelectionMode( QW.QListWidget.SingleSelection )
         
-        self._list_box = ClientGUIListBoxes.BetterQListWidget( self )
-        self._list_box.setSelectionMode( QW.QListWidget.SingleSelection )
+        self._page_list.setFixedWidth( ClientGUIFunctions.ConvertTextToPixelWidth( self._page_list, list_chars_width ) )
         
-        self._empty_panel = QW.QWidget( self )
+        self._widget_stack = QW.QStackedWidget( self )
         
-        self._current_key = None
+        #
         
-        self._current_panel = self._empty_panel
+        hbox = QW.QHBoxLayout()
         
-        self._panel_sizer = QP.VBoxLayout()
-        
-        QP.AddToLayout( self._panel_sizer, self._empty_panel, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
-        
-        hbox = QP.HBoxLayout( margin = 0 )
-        
-        QP.AddToLayout( hbox, self._list_box, CC.FLAGS_EXPAND_PERPENDICULAR )
-        QP.AddToLayout( hbox, self._panel_sizer, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
-        
-        self._list_box.itemSelectionChanged.connect( self._ListBoxSelected )
+        QP.AddToLayout( hbox, self._page_list, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._widget_stack, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         self.setLayout( hbox )
         
-    
-    def _GetIndex( self, key ):
+        #
         
-        for i in range( self._list_box.count() ):
-            
-            i_key = self._list_box.item( i ).data( QC.Qt.UserRole )
-            
-            if i_key == key:
-                
-                return i
-                
-            
-        
-        return -1
+        self._page_list.itemSelectionChanged.connect( self._ChangePage )
+        self._widget_stack.currentChanged.connect( self.currentChanged )
         
     
-    def _ListBoxSelected( self ):
+    def _ChangePage( self ):
         
-        selected_datas = list( self._list_box.GetData( only_selected = True ) )
+        # we avoid index here which allows us to resort the list and not have to worry about the widget stack's sort
         
-        if len( selected_datas ) > 0:
-            
-            key = selected_datas[0]
-            
-            self._ShowPage( key )
-            
+        num_selected = self._page_list.GetNumSelected()
         
-    
-    def _ShowPage( self, key ):
-        
-        self._current_key = key
-        
-        self._current_panel.setVisible( False )
-        
-        if self._current_key is None:
+        if num_selected != 1:
             
-            self._current_panel = self._empty_panel
-            
-        else:
-            
-            self._current_panel = self._keys_to_active_pages[ self._current_key ]
+            return
             
         
-        self._current_panel.show()
+        page = self._page_list.GetData( only_selected = True )[0]
         
-        self.update()
+        self._widget_stack.setCurrentWidget( page )
         
     
-    def AddPage( self, display_name, key, page, select = False, do_sort = True ):
+    def _ShiftSelection( self, delta ):
         
-        if self.HasKey( key ):
-            
-            raise HydrusExceptions.NameException( 'That entry already exists!' )
-            
+        count = self._page_list.count()
         
-        if not isinstance( page, tuple ):
+        if count < 2:
             
-            page.setVisible( False )
-            
-            QP.AddToLayout( self._panel_sizer, page, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+            return
             
         
-        if self._list_box.count() == 0:
+        current_index = self._page_list.currentRow()
+        
+        new_index = ( current_index + delta ) % count
+        
+        self._page_list.setCurrentRow( new_index )
+        
+    
+    def AddPage( self, name: str, page: QW.QWidget, select = False ):
+        
+        if self._page_list.count() == 0:
             
             select = True
             
         
-        self._keys_to_active_pages[ key ] = page
+        self._widget_stack.addWidget( page )
         
-        self._list_box.Append( display_name, key, select = select )
+        self._page_list.Append( name, page, select = select )
         
-        if do_sort:
+    
+    def addTab( self, page: QW.QWidget, name: str, select = False ):
+        
+        self.AddPage( name, page, select = select )
+        
+    
+    def count( self ) -> int:
+        
+        return self._page_list.count()
+        
+    
+    def currentWidget( self ) -> typing.Optional[ QW.QWidget ]:
+        
+        if self._widget_stack.count() == 0:
             
-            self._list_box.sortItems()
+            return None
             
         
-        if select:
-            
-            self._list_box.SelectData( [ key ] )
-            
+        return self._widget_stack.currentWidget()
         
     
     def DeleteAllPages( self ):
         
-        self._panel_sizer.removeWidget( self._empty_panel )
+        self._page_list.clear()
         
-        QP.ClearLayout( self._panel_sizer, delete_widgets=True )
-        
-        QP.AddToLayout( self._panel_sizer, self._empty_panel, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
-        
-        self._current_key = None
-        
-        self._current_panel = self._empty_panel
-        
-        self._keys_to_active_pages = {}
-        
-        self._list_box.clear()
+        while self._widget_stack.count() > 0:
+            
+            page = self._widget_stack.widget( 0 )
+            
+            self._widget_stack.removeWidget( page )
+            
+            page.deleteLater()
+            
         
     
-    def DeleteCurrentPage( self ):
+    def GetPages( self ) -> typing.List[ QW.QWidget ]:
         
-        if self._list_box.GetNumSelected() > 0:
+        return self._page_list.GetData()
+        
+    
+    def setTabText( self, index, text ):
+        
+        self._page_list.item( index ).setText( text )
+        
+    
+    def SelectLeft( self ):
+        
+        self._ShiftSelection( -1 )
+        
+    
+    def SelectPage( self, page: QW.QWidget ):
+        
+        for list_item in [ self._page_list.item( i ) for i in range( self._page_list.count() ) ]:
             
-            key_to_delete = self._current_key
-            page_to_delete = self._current_panel
-            
-            selected_indices = self._list_box.GetSelectedIndices()
-            
-            selection = selected_indices[0]
-            
-            next_selection = selection + 1
-            previous_selection = selection - 1
-            
-            self._panel_sizer.removeWidget( page_to_delete )
-            
-            page_to_delete.deleteLater()
-            
-            del self._keys_to_active_pages[ key_to_delete ]
-            
-            self._list_box.DeleteSelected()
-            
-            if next_selection < self._list_box.count():
+            if list_item.data( QC.Qt.UserRole ) == page:
                 
-                self._list_box.SelectData( [ self._list_box.item( next_selection ).data( QC.Qt.UserRole ) ] )
-                
-            elif previous_selection >= 0:
-                
-                self._list_box.SelectData( [ self._list_box.item( previous_selection ).data( QC.Qt.UserRole ) ] )
-                
-            else:
-                
-                self._ShowPage( None )
-                
-            
-        
-    
-    def GetCurrentKey( self ):
-        
-        return self._current_key
-        
-    
-    def GetCurrentPage( self ):
-        
-        if self._current_panel == self._empty_panel:
-            
-            return None
-            
-        else:
-            
-            return self._current_panel
-            
-        
-    
-    def GetActivePages( self ):
-        
-        return list(self._keys_to_active_pages.values())
-        
-    
-    def GetPage( self, key ):
-        
-        if key in self._keys_to_active_pages:
-            
-            return self._keys_to_active_pages[ key ]
-            
-        
-        raise Exception( 'That page not found!' )
-        
-    
-    def GetPageCount( self ):
-        
-        return len( self._keys_to_active_pages )
-        
-    
-    def HasKey( self, key ):
-        
-        return key in self._keys_to_active_pages
-        
-    
-    def Select( self, key ):
-        
-        if self.HasKey( key ):
-            
-            self._list_box.SelectData( [ key ] )
-            
-        
-    
-    def SelectPage( self, page_to_select ):
-        
-        for ( key, page ) in self._keys_to_active_pages.items():
-            
-            if page == page_to_select:
-                
-                self._list_box.SelectData( [ key ] )
+                self._page_list.setCurrentItem( list_item )
                 
                 return
                 
             
+        
+    
+    setCurrentWidget = SelectPage
+    
+    def SelectRight( self ):
+        
+        self._ShiftSelection( 1 )
+        
+    
+    def SortList( self ):
+        
+        self._page_list.sortItems( QC.Qt.SortOrder.AscendingOrder )
+        
+    
+    def tabText( self, index ):
+        
+        return self._page_list.item( index ).text()
+        
+    
+    def widget( self, index: int ):
+        
+        return self._page_list.item( index ).data( QC.Qt.UserRole )
         
     

@@ -1187,7 +1187,7 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
         
         model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_GALLERY_IMPORTERS.ID, self._ConvertDataToDisplayTuple, self._ConvertDataToSortTuple )
         
-        self._gallery_importers_listctrl = ClientGUIListCtrl.BetterListCtrlTreeView( self._gallery_importers_listctrl_panel, CGLC.COLUMN_LIST_GALLERY_IMPORTERS.ID, 4, model, delete_key_callback = self._RemoveGalleryImports, activation_callback = self._HighlightSelectedGalleryImport )
+        self._gallery_importers_listctrl = ClientGUIListCtrl.BetterListCtrlTreeView( self._gallery_importers_listctrl_panel, 4, model, delete_key_callback = self._RemoveGalleryImports, activation_callback = self._HighlightSelectedGalleryImport )
         
         self._gallery_importers_listctrl_panel.SetListCtrl( self._gallery_importers_listctrl )
         
@@ -2278,7 +2278,7 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
         
         model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_WATCHERS.ID, self._ConvertDataToDisplayTuple, self._ConvertDataToSortTuple )
         
-        self._watchers_listctrl = ClientGUIListCtrl.BetterListCtrlTreeView( self._watchers_listctrl_panel, CGLC.COLUMN_LIST_WATCHERS.ID, 4, model, delete_key_callback = self._RemoveWatchers, activation_callback = self._HighlightSelectedWatcher )
+        self._watchers_listctrl = ClientGUIListCtrl.BetterListCtrlTreeView( self._watchers_listctrl_panel, 4, model, delete_key_callback = self._RemoveWatchers, activation_callback = self._HighlightSelectedWatcher )
         
         self._watchers_listctrl_panel.SetListCtrl( self._watchers_listctrl )
         
@@ -4195,7 +4195,7 @@ class ManagementPanelPetitions( ManagementPanel ):
         
         model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_PETITIONS_SUMMARY.ID, self._ConvertDataToListCtrlTuples )
         
-        self._petitions_summary_list = ClientGUIListCtrl.BetterListCtrlTreeView( self._petitions_summary_list_panel, CGLC.COLUMN_LIST_PETITIONS_SUMMARY.ID, 12, model, activation_callback = self._ActivateToHighlightPetition )
+        self._petitions_summary_list = ClientGUIListCtrl.BetterListCtrlTreeView( self._petitions_summary_list_panel, 12, model, activation_callback = self._ActivateToHighlightPetition )
         
         self._petitions_summary_list_panel.SetListCtrl( self._petitions_summary_list )
         
@@ -5649,7 +5649,6 @@ class ManagementPanelQuery( ManagementPanel ):
         if self._search_enabled:
             
             QP.AddToLayout( vbox, self._search_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-            
         
         self._MakeCurrentSelectionTagsBox( vbox )
         
@@ -5692,7 +5691,7 @@ class ManagementPanelQuery( ManagementPanel ):
         return 'no search done yet'
         
     
-    def _MakeCurrentSelectionTagsBox( self, sizer ):
+    def _MakeCurrentSelectionTagsBox( self, sizer, **kwargs ):
         
         self._current_selection_tags_box = ClientGUIListBoxes.StaticBoxSorterForListBoxTags( self, 'selection tags', CC.TAG_PRESENTATION_SEARCH_PAGE )
         

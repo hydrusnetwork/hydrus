@@ -1,7 +1,6 @@
 import collections
 import hashlib
 import os
-import random
 import sqlite3
 import sys
 import time

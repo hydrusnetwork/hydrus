@@ -1,17 +1,14 @@
 import collections
 import threading
-import typing
 
 from qtpy import QtGui as QG
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
-from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
-from hydrus.client import ClientData
 from hydrus.client.media import ClientMedia
 from hydrus.client.metadata import ClientContentUpdates
 
@@ -185,7 +182,7 @@ class BitmapManager( object ):
         
         if isinstance( data, memoryview ) and not data.c_contiguous:
             
-            data = data.copy()
+            data = memoryview( bytearray( data ) )
             
         
         qt_image_format = self._GetQtImageFormat( depth )
@@ -208,7 +205,7 @@ class BitmapManager( object ):
         
         if isinstance( data, memoryview ) and not data.c_contiguous:
             
-            data = data.copy()
+            data = memoryview( bytearray( data ) )
             
         
         qt_image_format = self._GetQtImageFormat( depth )
@@ -267,7 +264,7 @@ class FileViewingStatsManager( object ):
         self._my_flush_job = self._controller.CallRepeating( 5, 60, self.REPEATINGFlush )
         
     
-    def _GenerateViewsRow( self, media: ClientMedia.Media, canvas_type: int, view_timestamp_ms: int, viewtime_delta: int ):
+    def _GenerateViewsRow( self, media: ClientMedia.MediaSingleton, canvas_type: int, view_timestamp_ms: int, viewtime_delta: int ):
         
         new_options = CG.client_controller.new_options
         

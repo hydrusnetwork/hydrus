@@ -1,6 +1,9 @@
+# noinspection PyUnresolvedReferences
 import numpy
+# noinspection PyUnresolvedReferences
 import numpy.core.multiarray # important this comes before cv!
 
+# noinspection PyUnresolvedReferences
 import cv2
 from PIL import Image as PILImage
 import warnings
@@ -9,8 +12,11 @@ try:
     
     # more hidden imports for pyinstaller
     
+    # noinspection PyUnresolvedReferences
     import numpy.random.common  # pylint: disable=E0401
+    # noinspection PyUnresolvedReferences
     import numpy.random.bounded_integers  # pylint: disable=E0401
+    # noinspection PyUnresolvedReferences
     import numpy.random.entropy  # pylint: disable=E0401
     
 except:
@@ -22,7 +28,7 @@ if not hasattr( PILImage, 'DecompressionBombError' ):
     
     # super old versions don't have this, so let's just make a stub, wew
     
-    class DBEStub( Exception ):
+    class DBEStub( Warning ):
         
         pass
         
@@ -34,7 +40,7 @@ if not hasattr( PILImage, 'DecompressionBombWarning' ):
     
     # super old versions don't have this, so let's just make a stub, wew
     
-    class DBWStub( Exception ):
+    class DBWStub( Warning ):
         
         pass
         

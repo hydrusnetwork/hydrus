@@ -1,11 +1,9 @@
-import os
 import threading
 import time
 import typing
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
-from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusThreading
 from hydrus.core import HydrusTime
 

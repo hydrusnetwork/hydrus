@@ -1,5 +1,4 @@
 import http.cookies
-import os
 import threading
 import time
 
@@ -9,12 +8,10 @@ from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusPaths
 from hydrus.core import HydrusSerialisable
-from hydrus.core import HydrusTags
 from hydrus.core import HydrusTemp
 from hydrus.core import HydrusTime
 from hydrus.core.networking import HydrusNetwork
 from hydrus.core.networking import HydrusNetworkVariableHandling
-from hydrus.core.networking import HydrusNetworking
 from hydrus.core.networking import HydrusServerRequest
 from hydrus.core.networking import HydrusServerResources
 

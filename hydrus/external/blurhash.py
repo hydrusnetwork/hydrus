@@ -163,7 +163,7 @@ def blurhash_decode(blurhash, width, height, punch = 1.0, linear = False):
                     pixel[0] += colour[0] * basis
                     pixel[1] += colour[1] * basis
                     pixel[2] += colour[2] * basis
-            if linear == False:
+            if not linear:
                 pixel_row.append([
                     linear_to_srgb(pixel[0]),
                     linear_to_srgb(pixel[1]),
@@ -193,7 +193,7 @@ def blurhash_encode(image, components_x = 4, components_y = 4, linear = False):
     
     # Convert to linear if neeeded
     image_linear = []
-    if linear == False:
+    if not linear:
         for y in range(int(height)):
             image_linear_line = []
             for x in range(int(width)):

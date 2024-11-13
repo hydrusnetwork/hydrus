@@ -15,5 +15,5 @@ Twisted>=20.3.0
 
 opencv-python-headless==4.8.1.78
 
-requests==2.31.0
-setuptools==69.1.1
+requests==2.32.3
+setuptools==70.3.0

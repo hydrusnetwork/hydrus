@@ -1,8 +1,5 @@
-import os
-
 from qtpy import QtWidgets as QW
 
-from hydrus.core import HydrusData
 from hydrus.core import HydrusNumbers
 
 from hydrus.client import ClientGlobals as CG

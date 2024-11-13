@@ -52,13 +52,13 @@ class EditDefaultImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         parent: QW.QWidget,
         url_classes,
         parsers,
-        url_class_keys_to_parser_keys,
-        file_post_default_tag_import_options,
-        watchable_default_tag_import_options,
-        url_class_keys_to_tag_import_options,
-        file_post_default_note_import_options,
-        watchable_default_note_import_options,
-        url_class_keys_to_note_import_options
+        url_class_keys_to_parser_keys: typing.Dict[ bytes, bytes ],
+        file_post_default_tag_import_options: TagImportOptions.TagImportOptions,
+        watchable_default_tag_import_options: TagImportOptions.TagImportOptions,
+        url_class_keys_to_tag_import_options: typing.Dict[ bytes, TagImportOptions.TagImportOptions ],
+        file_post_default_note_import_options: NoteImportOptions.NoteImportOptions,
+        watchable_default_note_import_options: NoteImportOptions.NoteImportOptions,
+        url_class_keys_to_note_import_options: typing.Dict[ bytes, NoteImportOptions.NoteImportOptions ]
     ):
         
         super().__init__( parent )
@@ -90,7 +90,7 @@ class EditDefaultImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_DEFAULT_TAG_IMPORT_OPTIONS.ID, self._ConvertDataToDisplayTuple, self._ConvertDataToSortTuple )
         
-        self._list_ctrl = ClientGUIListCtrl.BetterListCtrlTreeView( self._list_ctrl_panel, CGLC.COLUMN_LIST_DEFAULT_TAG_IMPORT_OPTIONS.ID, 15, model, activation_callback = self._Edit )
+        self._list_ctrl = ClientGUIListCtrl.BetterListCtrlTreeView( self._list_ctrl_panel, 15, model, activation_callback = self._Edit )
         
         self._list_ctrl_panel.SetListCtrl( self._list_ctrl )
         
@@ -1188,7 +1188,7 @@ class EditDuplicateContentMergeOptionsPanel( ClientGUIScrolledPanels.EditPanel )
         
         model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_DUPLICATE_CONTENT_MERGE_OPTIONS_TAG_SERVICES.ID, self._ConvertTagDataToDisplayTuple, self._ConvertTagDataToSortTuple )
         
-        self._tag_service_actions = ClientGUIListCtrl.BetterListCtrlTreeView( tag_services_listctrl_panel, CGLC.COLUMN_LIST_DUPLICATE_CONTENT_MERGE_OPTIONS_TAG_SERVICES.ID, 5, model, delete_key_callback = self._DeleteTag, activation_callback = self._EditTag )
+        self._tag_service_actions = ClientGUIListCtrl.BetterListCtrlTreeView( tag_services_listctrl_panel, 5, model, delete_key_callback = self._DeleteTag, activation_callback = self._EditTag )
         
         tag_services_listctrl_panel.SetListCtrl( self._tag_service_actions )
         
@@ -1204,7 +1204,7 @@ class EditDuplicateContentMergeOptionsPanel( ClientGUIScrolledPanels.EditPanel )
         
         model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_DUPLICATE_CONTENT_MERGE_OPTIONS_RATING_SERVICES.ID, self._ConvertRatingDataToDisplayTuple, self._ConvertRatingDataToSortTuple )
         
-        self._rating_service_actions = ClientGUIListCtrl.BetterListCtrlTreeView( rating_services_listctrl_panel, CGLC.COLUMN_LIST_DUPLICATE_CONTENT_MERGE_OPTIONS_RATING_SERVICES.ID, 5, model, delete_key_callback = self._DeleteRating, activation_callback = self._EditRating )
+        self._rating_service_actions = ClientGUIListCtrl.BetterListCtrlTreeView( rating_services_listctrl_panel, 5, model, delete_key_callback = self._DeleteRating, activation_callback = self._EditRating )
         
         rating_services_listctrl_panel.SetListCtrl( self._rating_service_actions )
         
@@ -2640,7 +2640,7 @@ class EditRegexFavourites( ClientGUIScrolledPanels.EditPanel ):
         
         model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_REGEX_FAVOURITES.ID, self._ConvertDataToDisplayTuple, self._ConvertDataToSortTuple )
         
-        self._regexes = ClientGUIListCtrl.BetterListCtrlTreeView( regex_listctrl_panel, CGLC.COLUMN_LIST_REGEX_FAVOURITES.ID, 8, model, use_simple_delete = True, activation_callback = self._Edit )
+        self._regexes = ClientGUIListCtrl.BetterListCtrlTreeView( regex_listctrl_panel, 8, model, use_simple_delete = True, activation_callback = self._Edit )
         
         regex_listctrl_panel.SetListCtrl( self._regexes )
         

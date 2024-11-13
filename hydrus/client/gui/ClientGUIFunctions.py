@@ -6,7 +6,6 @@ from qtpy import QtWidgets as QW
 from qtpy import QtGui as QG
 
 from hydrus.core import HydrusConstants as HC
-from hydrus.core import HydrusData
 from hydrus.core import HydrusText
 
 from hydrus.client import ClientGlobals as CG

@@ -2,8 +2,6 @@ import io
 
 import numpy
 
-import cv2
-
 from PIL import Image as PILImage
 from PIL import ImageCms as PILImageCms
 
@@ -249,19 +247,19 @@ def RotateEXIFPILImage( pil_image: PILImage.Image )-> PILImage.Image:
                 
                 # mirrored horizontal
                 
-                pil_image = pil_image.transpose( PILImage.FLIP_LEFT_RIGHT )
+                pil_image = pil_image.transpose( PILImage.Transpose.FLIP_LEFT_RIGHT )
                 
             elif orientation == 3:
                 
                 # 180
                 
-                pil_image = pil_image.transpose( PILImage.ROTATE_180 )
+                pil_image = pil_image.transpose( PILImage.Transpose.ROTATE_180 )
                 
             elif orientation == 4:
                 
                 # mirrored vertical
                 
-                pil_image = pil_image.transpose( PILImage.FLIP_TOP_BOTTOM )
+                pil_image = pil_image.transpose( PILImage.Transpose.FLIP_TOP_BOTTOM )
                 
             elif orientation == 5:
                 
@@ -269,25 +267,25 @@ def RotateEXIFPILImage( pil_image: PILImage.Image )-> PILImage.Image:
                 
                 # mirrored horizontal, then 90 CCW
                 
-                pil_image = pil_image.transpose( PILImage.FLIP_LEFT_RIGHT ).transpose( PILImage.ROTATE_90 )
+                pil_image = pil_image.transpose( PILImage.Transpose.FLIP_LEFT_RIGHT ).transpose( PILImage.Transpose.ROTATE_90 )
                 
             elif orientation == 6:
                 
                 # 90 CW
                 
-                pil_image = pil_image.transpose( PILImage.ROTATE_270 )
+                pil_image = pil_image.transpose( PILImage.Transpose.ROTATE_270 )
                 
             elif orientation == 7:
                 
                 # mirrored horizontal, then 90 CCW
                 
-                pil_image = pil_image.transpose( PILImage.FLIP_LEFT_RIGHT ).transpose( PILImage.ROTATE_270 )
+                pil_image = pil_image.transpose( PILImage.Transpose.FLIP_LEFT_RIGHT ).transpose( PILImage.Transpose.ROTATE_270 )
                 
             elif orientation == 8:
                 
                 # 90 CCW
                 
-                pil_image = pil_image.transpose( PILImage.ROTATE_90 )
+                pil_image = pil_image.transpose( PILImage.Transpose.ROTATE_90 )
                 
             
         

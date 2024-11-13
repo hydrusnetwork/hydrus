@@ -30,6 +30,7 @@ from hydrus.core.networking import HydrusNetwork
 
 try:
     
+    # noinspection PyUnresolvedReferences
     import speedcopy
     
     speedcopy.patch_copyfile()
@@ -555,15 +556,17 @@ def GetFileInfo( path, mime = None, ok_to_look_for_hydrus_updates = False ):
             
             pass
             
+        
     elif mime in HC.POTENTIAL_OFFICE_OLE_MIMES:
         
         try:
-        
+            
             num_words = HydrusOLEHandling.OfficeOLEDocumentWordCount( path )
             
         except HydrusExceptions.LimitedSupportFileException:
             
             pass
+            
         
     elif mime == HC.APPLICATION_FLASH:
         
@@ -596,7 +599,6 @@ def GetFileInfo( path, mime = None, ok_to_look_for_hydrus_updates = False ):
     elif mime in HC.VIEWABLE_ANIMATIONS:
         
         ( ( width, height ), duration, num_frames ) = HydrusAnimationHandling.GetAnimationProperties( path, mime )
-        
         
     elif mime in HC.IMAGES:
         

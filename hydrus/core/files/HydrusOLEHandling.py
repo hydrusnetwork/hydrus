@@ -1,8 +1,5 @@
-import typing
-
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusExceptions
-from hydrus.core.files.images import HydrusImageHandling
 
 try:
     

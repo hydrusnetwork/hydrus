@@ -49,7 +49,7 @@ class RepairFileSystemPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_REPAIR_LOCATIONS.ID, self._ConvertPrefixToListCtrlTuples )
         
-        self._locations = ClientGUIListCtrl.BetterListCtrlTreeView( self, CGLC.COLUMN_LIST_REPAIR_LOCATIONS.ID, 12, model, activation_callback = self._SetLocations )
+        self._locations = ClientGUIListCtrl.BetterListCtrlTreeView( self, 12, model, activation_callback = self._SetLocations )
         
         self._set_button = ClientGUICommon.BetterButton( self, 'set correct location', self._SetLocations )
         self._add_button = ClientGUICommon.BetterButton( self, 'add a possibly correct location (let the client figure out what it contains)', self._AddLocation )

@@ -1,5 +1,4 @@
 import itertools
-import os
 import traceback
 import typing
 
@@ -64,7 +63,7 @@ class DownloaderExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_DOWNLOADER_EXPORT.ID, self._ConvertContentToDisplayTuple, self._ConvertContentToSortTuple )
         
-        self._listctrl = ClientGUIListCtrl.BetterListCtrlTreeView( listctrl_panel, CGLC.COLUMN_LIST_DOWNLOADER_EXPORT.ID, 14, model, use_simple_delete = True )
+        self._listctrl = ClientGUIListCtrl.BetterListCtrlTreeView( listctrl_panel, 14, model, use_simple_delete = True )
         
         self._listctrl.Sort()
         
@@ -1032,7 +1031,7 @@ class EditContentParsersPanel( ClientGUICommon.StaticBox ):
         
         model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_CONTENT_PARSERS.ID, self._ConvertContentParserToDisplayTuple, self._ConvertContentParserToSortTuple )
         
-        self._content_parsers = ClientGUIListCtrl.BetterListCtrlTreeView( content_parsers_panel, CGLC.COLUMN_LIST_CONTENT_PARSERS.ID, 6, model, use_simple_delete = True, activation_callback = self._Edit )
+        self._content_parsers = ClientGUIListCtrl.BetterListCtrlTreeView( content_parsers_panel, 6, model, use_simple_delete = True, activation_callback = self._Edit )
         
         content_parsers_panel.SetListCtrl( self._content_parsers )
         
@@ -1256,13 +1255,20 @@ class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
         
         model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_SUB_PAGE_PARSERS.ID, self._ConvertSubPageParserToDisplayTuple, self._ConvertSubPageParserToSortTuple )
         
-        self._sub_page_parsers = ClientGUIListCtrl.BetterListCtrlTreeView( sub_page_parsers_panel, CGLC.COLUMN_LIST_SUB_PAGE_PARSERS.ID, 4, model, use_simple_delete = True, activation_callback = self._EditSubPageParser )
+        self._sub_page_parsers = ClientGUIListCtrl.BetterListCtrlTreeView( sub_page_parsers_panel, 4, model, use_simple_delete = True, activation_callback = self._EditSubPageParser )
         
         sub_page_parsers_panel.SetListCtrl( self._sub_page_parsers )
         
         sub_page_parsers_panel.AddButton( 'add', self._AddSubPageParser )
         sub_page_parsers_panel.AddButton( 'edit', self._EditSubPageParser, enabled_only_on_single_selection = True )
         sub_page_parsers_panel.AddDeleteButton()
+        
+        sub_page_parsers_panel.AddSeparator()
+        
+        sub_page_parsers_panel.AddImportExportButtons(
+            permitted_object_types = ( ClientParsing.SubsidiaryPageParser, ),
+            import_add_callable = self._ImportAddSubsidiaryPageParser
+        )
         
         #
         
@@ -1410,8 +1416,10 @@ class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _AddSubPageParser( self ):
         
-        formula = ClientParsing.ParseFormulaHTML( tag_rules = [ ClientParsing.ParseRuleHTML( rule_type = ClientParsing.HTML_RULE_TYPE_DESCENDING, tag_name = 'div', tag_attributes = { 'class' : 'thumb' } ) ], content_to_fetch = ClientParsing.HTML_CONTENT_HTML )
-        page_parser = ClientParsing.PageParser( 'new sub page parser' )
+        sub_page_parser = ClientParsing.SubsidiaryPageParser()
+        
+        formula = sub_page_parser.GetFormula()
+        page_parser = sub_page_parser.GetPageParser()
         
         with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit sub page parser', frame_key = 'deeply_nested_dialog' ) as dlg:
             
@@ -1425,18 +1433,17 @@ class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 new_formula = panel.GetFormula()
                 
-                new_sub_page_parser = ( new_formula, new_page_parser )
+                new_sub_page_parser = ClientParsing.SubsidiaryPageParser( formula = new_formula, page_parser = new_page_parser )
                 
-                self._sub_page_parsers.AddDatas( ( new_sub_page_parser, ) )
-                
-                self._sub_page_parsers.Sort()
+                self._sub_page_parsers.AddDatas( ( new_sub_page_parser, ), select_sort_and_scroll = True )
                 
             
         
     
-    def _ConvertSubPageParserToDisplayTuple( self, sub_page_parser ):
+    def _ConvertSubPageParserToDisplayTuple( self, sub_page_parser: ClientParsing.SubsidiaryPageParser ):
         
-        ( formula, page_parser ) = sub_page_parser
+        formula = sub_page_parser.GetFormula()
+        page_parser = sub_page_parser.GetPageParser()
         
         name = page_parser.GetName()
         
@@ -1477,7 +1484,8 @@ class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
         
         for sub_page_parser in selected_data:
             
-            ( formula, page_parser ) = sub_page_parser
+            formula = sub_page_parser.GetFormula()
+            page_parser = sub_page_parser.GetPageParser()
             
             with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit sub page parser', frame_key = 'deeply_nested_dialog' ) as dlg:
                 
@@ -1493,7 +1501,7 @@ class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
                     
                     new_formula = panel.GetFormula()
                     
-                    new_sub_page_parser = ( new_formula, new_page_parser )
+                    new_sub_page_parser = ClientParsing.SubsidiaryPageParser( formula = new_formula, page_parser = new_page_parser )
                     
                     self._sub_page_parsers.AddDatas( ( new_sub_page_parser, ) )
                     
@@ -1595,6 +1603,11 @@ class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
         CG.client_controller.CallToThread( wait_and_do_it, network_job )
         
     
+    def _ImportAddSubsidiaryPageParser( self, subsidiary_page_parser: ClientParsing.SubsidiaryPageParser ):
+        
+        self._sub_page_parsers.AddDatas( ( subsidiary_page_parser, ), select_sort_and_scroll = True )
+        
+    
     def GetFormula( self ):
         
         return self._formula.GetValue()
@@ -1655,7 +1668,7 @@ class EditParsersPanel( ClientGUIScrolledPanels.EditPanel ):
         
         model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_PARSERS.ID, self._ConvertParserToListCtrlTuples )
         
-        self._parsers = ClientGUIListCtrl.BetterListCtrlTreeView( parsers_panel, CGLC.COLUMN_LIST_PARSERS.ID, 20, model, use_simple_delete = True, activation_callback = self._Edit )
+        self._parsers = ClientGUIListCtrl.BetterListCtrlTreeView( parsers_panel, 20, model, use_simple_delete = True, activation_callback = self._Edit )
         
         parsers_panel.SetListCtrl( self._parsers )
         

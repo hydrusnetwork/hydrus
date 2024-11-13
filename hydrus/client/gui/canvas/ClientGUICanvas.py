@@ -46,7 +46,6 @@ from hydrus.client.metadata import ClientContentUpdates
 from hydrus.client.metadata import ClientRatings
 from hydrus.client.metadata import ClientTags
 from hydrus.client.metadata import ClientTagSorting
-from hydrus.client.search import ClientSearchFileSearchContext
 
 def AddAudioVolumeMenu( menu, canvas_type ):
     

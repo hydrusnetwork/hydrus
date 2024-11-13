@@ -1,6 +1,5 @@
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
-from qtpy import QtGui as QG
 
 from hydrus.core import HydrusData
 from hydrus.core import HydrusTime

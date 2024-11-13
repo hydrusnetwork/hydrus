@@ -1,6 +1,5 @@
 import collections
 import itertools
-import os
 import threading
 import typing
 
@@ -163,7 +162,7 @@ class BetterQListWidget( QW.QListWidget ):
         self._DeleteIndices( indices )
         
     
-    def GetData( self, only_selected: bool = False ) -> typing.List[ object ]:
+    def GetData( self, only_selected: bool = False ) -> typing.List[ typing.Any ]:
         
         datas = []
         
@@ -841,6 +840,7 @@ class AddEditDeleteListBox( QW.QWidget ):
         return self.GetData()
         
     
+
 class AddEditDeleteListBoxUniqueNamedObjects( AddEditDeleteListBox ):
     
     def _SetNonDupeName( self, obj ):
@@ -2240,6 +2240,10 @@ class ListBox( QW.QScrollArea ):
         
     
     def _RegenTermsToIndices( self ):
+        
+        # TODO: although it is a pain in the neck, it would be best if this just cleared and set a flag for deferred regen
+        # we'll have to go through all references to these variables though and ensure it is all wrapped in 'if dirty, regen' stuff
+        # it mite b cool to also develop 'swap' tech for sort-swapping stuff, which will not change the total rows or indices outside of the range between the two swappers
         
         self._terms_to_logical_indices = {}
         self._terms_to_positional_indices = {}
@@ -4705,13 +4709,32 @@ class ListBoxTagsMedia( ListBoxTagsDisplayCapable ):
                 
             
         
-        sort_needed = self._tag_sort.AffectedByCount()
+        sort_needed = False
         
         if len( new_terms ) > 0:
+            
+            # TODO: see about doing an _InsertTerms that will do insort, bisect.insort_left kind of thing, assuming I can get better 'key' tech going in tag sort
             
             self._AppendTerms( new_terms )
             
             sort_needed = True
+            
+        
+        if not sort_needed and self._tag_sort.AffectedByCount():
+            
+            if len( altered_terms ) < len( self._ordered_terms ) / 20:
+                
+                # TODO: for every term we have altered or added or whatever...
+                # calc its new sort count. if the guy above or below have a higher/lower (wrong) count, immediately stop and say sort needed
+                # this gets complicated with namespace grouping and stuff, so we need to have a single key/cmp call tbh
+                
+                sort_needed = True
+                
+            else:
+                
+                # just do it, whatever
+                sort_needed = True
+                
             
         
         for term in previous_selected_terms:

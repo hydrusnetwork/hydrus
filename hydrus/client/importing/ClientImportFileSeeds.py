@@ -12,7 +12,6 @@ import urllib.parse
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
-from hydrus.core import HydrusLists
 from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusPaths
 from hydrus.core import HydrusSerialisable
@@ -2473,6 +2472,11 @@ class FileSeedCache( HydrusSerialisable.SerialisableBase ):
         
     
     def _GetSerialisableInfo( self ):
+        
+        if not isinstance( self._file_seeds, HydrusSerialisable.SerialisableList ):
+            
+            self._file_seeds = HydrusSerialisable.SerialisableList( self._file_seeds )
+            
         
         return self._file_seeds.GetSerialisableTuple()
         

@@ -264,7 +264,7 @@ class HydrusTagArchive( object ):
     
     def DeleteNamespaces( self ):
         
-        self._namespaces = {}
+        self._namespaces = set()
         self._namespaces.add( '' )
         
         self._c.execute( 'DELETE FROM namespaces;' )

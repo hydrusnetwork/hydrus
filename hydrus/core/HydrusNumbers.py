@@ -1,5 +1,3 @@
-from hydrus.core import HydrusConstants as HC
-
 def FloatToPercentage( f ):
     
     percent = f * 100

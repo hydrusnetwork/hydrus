@@ -1,4 +1,3 @@
-import random
 import unittest
 
 from hydrus.core import HydrusExceptions

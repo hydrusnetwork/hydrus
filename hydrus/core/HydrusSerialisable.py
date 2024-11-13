@@ -1,12 +1,8 @@
 import hashlib
 import json
-import os
 import typing
 
-import typing_extensions
-
 from hydrus.core import HydrusCompression
-from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 
@@ -149,17 +145,18 @@ SERIALISABLE_TYPE_DUPLICATES_AUTO_RESOLUTION_PAIR_COMPARATOR_TWO_FILES_RELATIVE 
 SERIALISABLE_TYPE_METADATA_CONDITIONAL = 132
 SERIALISABLE_TYPE_PARSE_FORMULA_NESTED = 133
 SERIALISABLE_TYPE_POTENTIAL_DUPLICATES_SEARCH_CONTEXT = 134
+SERIALISABLE_TYPE_SUBSIDIARY_PAGE_PARSER = 135
 
 SERIALISABLE_TYPES_TO_OBJECT_TYPES = {}
 
-def CreateFromNetworkBytes( network_bytes: bytes, raise_error_on_future_version = False ):
+def CreateFromNetworkBytes( network_bytes: bytes, raise_error_on_future_version = False ) -> typing.Any:
     
     obj_string = HydrusCompression.DecompressBytesToString( network_bytes )
     
     return CreateFromString( obj_string, raise_error_on_future_version = raise_error_on_future_version )
     
 
-def CreateFromNoneableSerialisableTuple( obj_tuple_or_none, raise_error_on_future_version = False ):
+def CreateFromNoneableSerialisableTuple( obj_tuple_or_none, raise_error_on_future_version = False ) -> typing.Any:
     
     if obj_tuple_or_none is None:
         
@@ -171,14 +168,14 @@ def CreateFromNoneableSerialisableTuple( obj_tuple_or_none, raise_error_on_futur
         
     
 
-def CreateFromString( obj_string: str, raise_error_on_future_version = False ) -> "SerialisableBase":
+def CreateFromString( obj_string: str, raise_error_on_future_version = False ) -> typing.Any:
     
     obj_tuple = json.loads( obj_string )
     
     return CreateFromSerialisableTuple( obj_tuple, raise_error_on_future_version = raise_error_on_future_version )
     
 
-def CreateFromSerialisableTuple( obj_tuple: tuple, raise_error_on_future_version = False ) -> "SerialisableBase":
+def CreateFromSerialisableTuple( obj_tuple: tuple, raise_error_on_future_version = False ) -> typing.Any:
     
     if len( obj_tuple ) == 3:
         

@@ -88,8 +88,11 @@ from hydrus.client.search import ClientSearchFavouriteSearches
 from hydrus.client.search import ClientSearchFileSearchContext
 from hydrus.client.search import ClientSearchPredicate
 
+# noinspection PyUnresolvedReferences
 from hydrus.client.importing import ClientImportSubscriptionLegacy
+# noinspection PyUnresolvedReferences
 from hydrus.client.networking import ClientNetworkingSessionsLegacy
+# noinspection PyUnresolvedReferences
 from hydrus.client.networking import ClientNetworkingBandwidthLegacy
 
 #
@@ -248,6 +251,9 @@ class DB( HydrusDB.HydrusDB ):
         self._regen_tags_managers_tag_ids = set()
         
         super().__init__( controller, db_dir, db_name )
+        
+        # helps linter
+        self._controller = controller
         
     
     def _AddFiles( self, service_id, rows ):
@@ -11658,7 +11664,7 @@ class DB( HydrusDB.HydrusDB ):
                     
                     time_took = HydrusTime.GetNowPrecise() - started
                     
-                    HydrusData.Print( 'Vacuumed ' + db_path + ' in ' + HydrusTime.TimeDeltaToPrettyTimeDelta( time_took ) )
+                    HydrusData.Print( f'Vacuumed {db_path} in {HydrusTime.TimeDeltaToPrettyTimeDelta( time_took )}' )
                     
                     successful_names.append( name )
                     

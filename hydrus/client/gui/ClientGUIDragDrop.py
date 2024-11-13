@@ -9,6 +9,7 @@ from hydrus.core import HydrusData
 from hydrus.core import HydrusPaths
 from hydrus.core import HydrusTemp
 from hydrus.core import HydrusText
+from hydrus.core import HydrusTime
 
 from hydrus.client import ClientGlobals as CG
 from hydrus.client.exporting import ClientExportingFiles
@@ -37,6 +38,8 @@ class QMimeDataHydrusFiles( QC.QMimeData ):
         
     
 
+DND_TEMP_DIRS = []
+
 def DoFileExportDragDrop( window, page_key, media, alt_down ):
     
     drop_source = QG.QDrag( window )
@@ -46,8 +49,6 @@ def DoFileExportDragDrop( window, page_key, media, alt_down ):
     #
     
     new_options = CG.client_controller.new_options
-    
-    do_secret_discord_dnd_fix = new_options.GetBoolean( 'secret_discord_dnd_fix' ) and alt_down
     
     #
     
@@ -75,19 +76,47 @@ def DoFileExportDragDrop( window, page_key, media, alt_down ):
     
     discord_dnd_fix_possible = new_options.GetBoolean( 'discord_dnd_fix' ) and len( original_paths ) <= 50 and total_size < 200 * 1048576
     
-    # TODO: figure out regular cleaning of these DnD subfolders
-    # ok I don't want to leave hundreds of MB of no-longer-useful files in our temp dir. we want to delete them regularly
-    # HOWEVER, we can't do it on every DnD because what if a user is setting up a bulk upload of ten files with four separate DnDs? if the browser doesn't copy the files to its cache immediately, we'd be killing the original source
-    # so I think we'd probably be looking at some sort of thing that regularly runs, scans the temp dir for 'DnDxxxx' folders, and deletes any with a creation date more than twelve hours or something. tricky question
-    dnd_temp_dir = HydrusTemp.GetSubTempDir( prefix = 'DnD' )
-    
-    if do_secret_discord_dnd_fix:
+    if discord_dnd_fix_possible:
         
-        dnd_paths = original_paths
+        global DND_TEMP_DIRS
         
-        flags = QC.Qt.MoveAction
+        TEMP_DIR_TIMEOUT = 3600 * 6
         
-    elif discord_dnd_fix_possible and os.path.exists( dnd_temp_dir ):
+        new_list = []
+        
+        for ( creation_time, path ) in DND_TEMP_DIRS:
+            
+            if HydrusTime.TimeHasPassed( creation_time + TEMP_DIR_TIMEOUT ):
+                
+                HydrusPaths.DeletePath( path )
+                
+            else:
+                
+                new_list.append( ( creation_time, path ) )
+                
+            
+        
+        DND_TEMP_DIRS = new_list
+        
+        this_dnd_temp_dir = HydrusTemp.GetSubTempDir( prefix = 'DnD' )
+        
+        if this_dnd_temp_dir is None or not os.path.exists( this_dnd_temp_dir ):
+            
+            raise Exception( f'Could not create a temporary directory ("{this_dnd_temp_dir}") to handle the drag and drop!' )
+            
+        
+        DND_TEMP_DIRS.append( ( HydrusTime.GetNow(), this_dnd_temp_dir ) )
+        
+        make_it_a_move_flag = new_options.GetBoolean( 'secret_discord_dnd_fix' )
+        
+        if make_it_a_move_flag:
+            
+            flags = QC.Qt.MoveAction
+            
+        else:
+            
+            flags = QC.Qt.MoveAction | QC.Qt.CopyAction
+            
         
         seen_export_filenames = set()
         
@@ -114,7 +143,7 @@ def DoFileExportDragDrop( window, page_key, media, alt_down ):
             
             try:
                 
-                filename = ClientExportingFiles.GenerateExportFilename( dnd_temp_dir, m, filename_terms, i + 1, do_not_use_filenames = seen_export_filenames )
+                filename = ClientExportingFiles.GenerateExportFilename( this_dnd_temp_dir, m, filename_terms, i + 1, do_not_use_filenames = seen_export_filenames )
                 
                 if filename == HC.mime_ext_lookup[ m.GetMime() ]:
                     
@@ -123,19 +152,17 @@ def DoFileExportDragDrop( window, page_key, media, alt_down ):
                 
             except:
                 
-                filename = ClientExportingFiles.GenerateExportFilename( dnd_temp_dir, m, fallback_filename_terms, i + 1, do_not_use_filenames = seen_export_filenames )
+                filename = ClientExportingFiles.GenerateExportFilename( this_dnd_temp_dir, m, fallback_filename_terms, i + 1, do_not_use_filenames = seen_export_filenames )
                 
             
             seen_export_filenames.add( filename )
             
-            dnd_path = os.path.join( dnd_temp_dir, filename )
+            dnd_path = os.path.join( this_dnd_temp_dir, filename )
             
             HydrusPaths.MirrorFile( original_path, dnd_path )
             
             dnd_paths.append( dnd_path )
             
-        
-        flags = QC.Qt.MoveAction | QC.Qt.CopyAction
         
     else:
         

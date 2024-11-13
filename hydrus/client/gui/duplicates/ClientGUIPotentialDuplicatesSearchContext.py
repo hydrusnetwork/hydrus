@@ -8,10 +8,8 @@ from hydrus.client import ClientGlobals as CG
 from hydrus.client.duplicates import ClientDuplicates
 from hydrus.client.duplicates import ClientPotentialDuplicatesSearchContext
 from hydrus.client.gui import QtPorting as QP
-from hydrus.client.gui.panels import ClientGUIScrolledPanels
 from hydrus.client.gui.search import ClientGUIACDropdown
 from hydrus.client.gui.widgets import ClientGUICommon
-from hydrus.client.search import ClientSearchFileSearchContext
 
 class EditPotentialDuplicatesSearchContextPanel( QW.QWidget ):
     

@@ -40,7 +40,6 @@ from hydrus.client.gui.lists import ClientGUIListCtrl
 from hydrus.client.gui.media import ClientGUIMediaSimpleActions
 from hydrus.client.gui.metadata import ClientGUIMigrateTags
 from hydrus.client.gui.panels import ClientGUIScrolledPanels
-from hydrus.client.gui.panels import ClientGUIScrolledPanelsReview
 from hydrus.client.gui.widgets import ClientGUIBandwidth
 from hydrus.client.gui.widgets import ClientGUIColourPicker
 from hydrus.client.gui.widgets import ClientGUICommon
@@ -58,7 +57,7 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_MANAGE_SERVICES.ID, self._ConvertServiceToListCtrlTuples )
         
-        self._listctrl = ClientGUIListCtrl.BetterListCtrlTreeView( self, CGLC.COLUMN_LIST_MANAGE_SERVICES.ID, 25, model, delete_key_callback = self._Delete, activation_callback = self._Edit)
+        self._listctrl = ClientGUIListCtrl.BetterListCtrlTreeView( self, 25, model, delete_key_callback = self._Delete, activation_callback = self._Edit)
         
         menu_items = []
         
@@ -935,9 +934,9 @@ class EditServiceRestrictedSubPanel( ClientGUICommon.StaticBox ):
                 
                 for account_type in unavailable_account_types:
                     
-                    ( num_accounts, time_delta ) = account_type.GetAutoCreationVelocity()
+                    ( num_accounts, time_delta ) = account_type.GetAutoCreateAccountVelocity()
                     
-                    history = account_type.GetAutoCreationHistory()
+                    history = account_type.GetAutoCreateAccountHistory()
                     
                     text = '{} - {}'.format( account_type.GetTitle(), history.GetWaitingEstimate( HC.BANDWIDTH_TYPE_REQUESTS, time_delta, num_accounts ) )
                     
@@ -1763,16 +1762,18 @@ class ReviewServicePanel( QW.QWidget ):
     
     def EventImmediateSync( self, event ):
         
+        service = self._service
+        
         def do_it():
             
             job_status = ClientThreading.JobStatus( pausable = True, cancellable = True )
             
-            job_status.SetStatusTitle( self._service.GetName() + ': immediate sync' )
+            job_status.SetStatusTitle( service.GetName() + ': immediate sync' )
             job_status.SetStatusText( 'downloading' )
             
-            self._controller.pub( 'message', job_status )
+            CG.client_controller.pub( 'message', job_status )
             
-            content_update_package = self._service.Request( HC.GET, 'immediate_content_update_package' )
+            content_update_package = service.Request( HC.GET, 'immediate_content_update_package' )
             
             c_u_p_num_rows = content_update_package.GetNumRows()
             c_u_p_total_weight_processed = 0
@@ -1804,7 +1805,7 @@ class ReviewServicePanel( QW.QWidget ):
                 
                 precise_timestamp = HydrusTime.GetNowPrecise()
                 
-                self._controller.WriteSynchronous( 'content_updates', ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( self._service_key, content_updates ) )
+                CG.client_controller.WriteSynchronous( 'content_updates', ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( service.GetServiceKey(), content_updates ) )
                 
                 it_took = HydrusTime.GetNowPrecise() - precise_timestamp
                 
@@ -1824,7 +1825,7 @@ class ReviewServicePanel( QW.QWidget ):
             job_status.Finish()
             
         
-        self._controller.CallToThread( do_it )
+        CG.client_controller.CallToThread( do_it )
         
     
     def GetServiceKey( self ):
@@ -1896,7 +1897,7 @@ class ReviewServiceClientAPISubPanel( ClientGUICommon.StaticBox ):
         
         model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_CLIENT_API_PERMISSIONS.ID, self._ConvertDataToListCtrlTuples )
         
-        self._permissions_list = ClientGUIListCtrl.BetterListCtrlTreeView( permissions_list_panel, CGLC.COLUMN_LIST_CLIENT_API_PERMISSIONS.ID, 10, model, delete_key_callback = self._Delete, activation_callback = self._Edit )
+        self._permissions_list = ClientGUIListCtrl.BetterListCtrlTreeView( permissions_list_panel, 10, model, delete_key_callback = self._Delete, activation_callback = self._Edit )
         
         permissions_list_panel.SetListCtrl( self._permissions_list )
         
@@ -3473,7 +3474,7 @@ class ReviewServiceIPFSSubPanel( ClientGUICommon.StaticBox ):
         
         model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_IPFS_SHARES.ID, self._ConvertDataToListCtrlTuple )
         
-        self._ipfs_shares = ClientGUIListCtrl.BetterListCtrlTreeView( self._ipfs_shares_panel, CGLC.COLUMN_LIST_IPFS_SHARES.ID, 6, model, delete_key_callback = self._Unpin, activation_callback = self._SetNotes )
+        self._ipfs_shares = ClientGUIListCtrl.BetterListCtrlTreeView( self._ipfs_shares_panel, 6, model, delete_key_callback = self._Unpin, activation_callback = self._SetNotes )
         
         self._ipfs_shares_panel.SetListCtrl( self._ipfs_shares )
         

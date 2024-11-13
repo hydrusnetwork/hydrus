@@ -214,6 +214,11 @@ class HydrusListItemModel( QC.QAbstractItemModel ):
         return QC.Qt.ItemIsEnabled | QC.Qt.ItemIsSelectable | QC.Qt.ItemNeverHasChildren
         
     
+    def GetColumnListType( self ) -> int:
+        
+        return self._column_list_type
+        
+    
     def GetData( self, indices: typing.Optional[ typing.Collection[ int ] ] = None ):
         
         if indices is None:
@@ -521,7 +526,7 @@ class BetterListCtrlTreeView( QW.QTreeView ):
     
     columnListContentsChanged = QC.Signal()
     
-    def __init__( self, parent, column_list_type, height_num_chars, model: HydrusListItemModel, use_simple_delete = False, delete_key_callback = None, can_delete_callback = None, activation_callback = None, column_types_to_name_overrides = None ):
+    def __init__( self, parent, height_num_chars, model: HydrusListItemModel, use_simple_delete = False, delete_key_callback = None, can_delete_callback = None, activation_callback = None, column_types_to_name_overrides = None ):
         
         super().__init__( parent )
         
@@ -529,8 +534,7 @@ class BetterListCtrlTreeView( QW.QTreeView ):
         
         self._creation_time = HydrusTime.GetNow()
         
-        # TODO: pull this from the model m8
-        self._column_list_type = column_list_type
+        self._column_list_type = model.GetColumnListType()
         
         self._column_list_status: ClientGUIListStatus.ColumnListStatus = CG.client_controller.column_list_manager.GetStatus( self._column_list_type )
         self._original_column_list_status = self._column_list_status
@@ -963,7 +967,7 @@ class BetterListCtrlTreeView( QW.QTreeView ):
             
         
     
-    def GetTopSelectedData( self ) -> typing.Optional[ object ]:
+    def GetTopSelectedData( self ) -> typing.Optional[ typing.Any ]:
         
         indices = self._GetSelectedIndices()
         
@@ -1332,25 +1336,34 @@ class BetterListCtrlTreeView( QW.QTreeView ):
     
     def Sort( self, sort_column_type = None, sort_asc = None ):
         
-        ( default_sort_column_type, default_sort_asc ) = self._column_list_status.GetSort()
-        
-        if sort_column_type is None:
+        try:
             
-            sort_column_type = default_sort_column_type
+            ( default_sort_column_type, default_sort_asc ) = self._column_list_status.GetSort()
             
-        
-        if sort_asc is None:
+            if sort_column_type is None:
+                
+                sort_column_type = default_sort_column_type
+                
             
-            sort_asc = default_sort_asc
+            if sort_asc is None:
+                
+                sort_asc = default_sort_asc
+                
             
-        
-        # TODO: this may want to be column_list_column_type_logical_position_lookup rather than the status lookup, depending on how we implement column order memory
-        # or it may simply need to navigate that question carefully if we have multiple lists open with different orders or whatever
-        column = self._column_list_status.GetColumnIndexFromType( sort_column_type )
-        ord = QC.Qt.AscendingOrder if sort_asc else QC.Qt.DescendingOrder
-        
-        # do not call model().sort directly, it does not update the header arrow gubbins
-        self.sortByColumn( column, ord )
+            # TODO: this may want to be column_list_column_type_logical_position_lookup rather than the status lookup, depending on how we implement column order memory
+            # or it may simply need to navigate that question carefully if we have multiple lists open with different orders or whatever
+            column = self._column_list_status.GetColumnIndexFromType( sort_column_type )
+            ord = QC.Qt.AscendingOrder if sort_asc else QC.Qt.DescendingOrder
+            
+            # do not call model().sort directly, it does not update the header arrow gubbins
+            self.sortByColumn( column, ord )
+            
+        except Exception as e:
+            
+            HydrusData.ShowText( 'An attempt to sort a multi-column list failed! Error follows:' )
+            
+            HydrusData.ShowException( e )
+            
         
     
     def UpdateDatas( self, datas: typing.Optional[ typing.Iterable[ object ] ] = None, check_for_changed_sort_data = False ):
@@ -2072,7 +2085,7 @@ class BetterListCtrlPanel( QW.QWidget ):
         QP.AddToLayout( self._vbox, self._buttonbox, CC.FLAGS_ON_RIGHT )
         
     
-    def SetListCtrl( self, listctrl ):
+    def SetListCtrl( self, listctrl: BetterListCtrlTreeView ):
         
         self._listctrl = listctrl
         

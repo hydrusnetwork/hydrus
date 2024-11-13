@@ -748,12 +748,14 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
             
             if QtInit.WE_ARE_PYSIDE:
                 
+                # noinspection PyUnresolvedReferences
                 import PySide2
                 
                 qt_string = 'Qt: PySide2 {}'.format( PySide2.__version__ )
                 
             elif QtInit.WE_ARE_PYQT:
                 
+                # noinspection PyUnresolvedReferences
                 from PyQt5.Qt import PYQT_VERSION_STR # pylint: disable=E0401,E0611
                 
                 qt_string = 'Qt: PyQt5 {}'.format( PYQT_VERSION_STR )

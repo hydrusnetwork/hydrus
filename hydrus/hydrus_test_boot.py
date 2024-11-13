@@ -12,7 +12,6 @@ except: pass
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusGlobals as HG
-from hydrus.core import HydrusTime
 
 from hydrus.test import TestController
 
@@ -37,7 +36,10 @@ def boot():
     
     try:
         
-        threading.Thread( target = reactor.run, kwargs = { 'installSignalHandlers' : 0 } ).start()
+        # noinspection PyUnresolvedReferences
+        target = reactor.run
+        
+        threading.Thread( target = target, kwargs = { 'installSignalHandlers' : 0 } ).start()
         
         QtInit.MonkeyPatchMissingMethods()
         app = QW.QApplication( sys.argv )
@@ -88,7 +90,11 @@ def boot():
         
     finally:
         
-        reactor.callFromThread( reactor.stop )
+        # noinspection PyUnresolvedReferences
+        target = reactor.stop
+        
+        # noinspection PyUnresolvedReferences
+        reactor.callFromThread( target )
         
         print( 'This was version ' + str( HC.SOFTWARE_VERSION ) )
         

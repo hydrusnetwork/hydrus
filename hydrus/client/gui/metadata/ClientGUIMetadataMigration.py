@@ -226,7 +226,7 @@ class EditSingleFileMetadataRouterPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_METADATA_ROUTER_TEST_RESULTS.ID, self._ConvertTestRowToDisplayTuple, self._ConvertTestRowToSortTuple )
                 
-                list_ctrl = ClientGUIListCtrl.BetterListCtrlTreeView( self._test_notebook, CGLC.COLUMN_LIST_METADATA_ROUTER_TEST_RESULTS.ID, 11, model )
+                list_ctrl = ClientGUIListCtrl.BetterListCtrlTreeView( self._test_notebook, 11, model )
                 
                 self._test_notebook.addTab( list_ctrl, 'init' )
                 

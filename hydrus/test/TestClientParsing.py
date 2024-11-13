@@ -4,7 +4,6 @@ import typing
 import unittest
 
 from hydrus.core import HydrusConstants as HC
-from hydrus.core import HydrusExceptions
 
 from hydrus.client import ClientParsing
 from hydrus.client import ClientStrings

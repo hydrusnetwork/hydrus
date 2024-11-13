@@ -1,13 +1,11 @@
 import itertools
 import json
-import os
 
 from qtpy import QtWidgets as QW
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
-from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusNumbers
 from hydrus.core.networking import HydrusNATPunch
 from hydrus.core import HydrusTime
@@ -608,7 +606,7 @@ class DialogManageUPnP( ClientGUIDialogs.Dialog ):
         
         model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_MANAGE_UPNP_MAPPINGS.ID, self._ConvertDataToDisplayTuple, self._ConvertDataToSortTuple )
         
-        self._mappings_list = ClientGUIListCtrl.BetterListCtrlTreeView( self._mappings_listctrl_panel, CGLC.COLUMN_LIST_MANAGE_UPNP_MAPPINGS.ID, 12, model, delete_key_callback = self._Remove, activation_callback = self._Edit )
+        self._mappings_list = ClientGUIListCtrl.BetterListCtrlTreeView( self._mappings_listctrl_panel, 12, model, delete_key_callback = self._Remove, activation_callback = self._Edit )
         
         self._mappings_listctrl_panel.SetListCtrl( self._mappings_list )
         

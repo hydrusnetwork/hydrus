@@ -603,7 +603,7 @@ def ConvertKeyEventToSimpleTuple( event ):
 GLOBAL_MOUSE_SCROLL_DELTA_FOR_TRACKPADS = 0
 ONE_TICK_ON_A_NORMAL_MOUSE_IN_EIGHTS_OF_A_DEGREE = 15 * 8 # fifteen degrees, in eighths of a degree
 
-def ConvertMouseEventToShortcut( event: QG.QMouseEvent ):
+def ConvertMouseEventToShortcut( event: typing.Union[ QG.QMouseEvent, QG.QWheelEvent ] ):
     
     key = None
     

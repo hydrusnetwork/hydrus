@@ -1,9 +1,7 @@
 import collections
 import itertools
-import os
 import random
 import re
-import threading
 import time
 import typing
 
@@ -26,7 +24,6 @@ from hydrus.client import ClientApplicationCommand as CAC
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientLocation
-from hydrus.client import ClientManagers
 from hydrus.client.gui import ClientGUIAsync
 from hydrus.client.gui import ClientGUICore as CGC
 from hydrus.client.gui import ClientGUIDialogs
@@ -39,6 +36,7 @@ from hydrus.client.gui import ClientGUITagSuggestions
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.lists import ClientGUIListBoxes
+from hydrus.client.gui.lists import ClientGUIListBook
 from hydrus.client.gui.lists import ClientGUIListConstants as CGLC
 from hydrus.client.gui.lists import ClientGUIListCtrl
 from hydrus.client.gui.metadata import ClientGUIMigrateTags
@@ -329,11 +327,11 @@ class EditTagDisplayApplication( ClientGUIScrolledPanels.EditPanel ):
         
         super().__init__( parent )
         
-        self._tag_services_notebook = ClientGUICommon.BetterNotebook( self )
+        self._tag_services = ClientGUICommon.BetterNotebook( self )
         
-        min_width = ClientGUIFunctions.ConvertTextToPixelWidth( self._tag_services_notebook, 100 )
+        min_width = ClientGUIFunctions.ConvertTextToPixelWidth( self._tag_services, 100 )
         
-        self._tag_services_notebook.setMinimumWidth( min_width )
+        self._tag_services.setMinimumWidth( min_width )
         
         #
         
@@ -349,14 +347,14 @@ class EditTagDisplayApplication( ClientGUIScrolledPanels.EditPanel ):
             sibling_applicable_service_keys = master_service_keys_to_sibling_applicable_service_keys[ master_service_key ]
             parent_applicable_service_keys = master_service_keys_to_parent_applicable_service_keys[ master_service_key ]
             
-            page = self._Panel( self._tag_services_notebook, master_service_key, sibling_applicable_service_keys, parent_applicable_service_keys )
+            page = self._Panel( self._tag_services, master_service_key, sibling_applicable_service_keys, parent_applicable_service_keys )
             
-            self._tag_services_notebook.addTab( page, name )
+            self._tag_services.addTab( page, name )
             
             if master_service_key == default_tag_service_key:
                 
                 # Py 3.11/PyQt6 6.5.0/two tabs/total tab characters > ~12/select second tab during init = first tab disappears bug
-                QP.CallAfter( self._tag_services_notebook.setCurrentWidget, page )
+                QP.CallAfter( self._tag_services.setCurrentWidget, page )
                 
             
         
@@ -407,18 +405,18 @@ class EditTagDisplayApplication( ClientGUIScrolledPanels.EditPanel ):
         QP.AddToLayout( vbox, self._warning, CC.FLAGS_CENTER )
         QP.AddToLayout( vbox, self._message, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, self._sync_status, CC.FLAGS_EXPAND_PERPENDICULAR )
-        QP.AddToLayout( vbox, self._tag_services_notebook, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( vbox, self._tag_services, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         self.widget().setLayout( vbox )
         
-        self._tag_services_notebook.currentChanged.connect( self._ServicePageChanged )
+        self._tag_services.currentChanged.connect( self._ServicePageChanged )
         
     
     def _ServicePageChanged( self ):
         
         if CG.client_controller.new_options.GetBoolean( 'save_default_tag_service_tab_on_change' ):
             
-            current_page = self._tag_services_notebook.currentWidget()
+            current_page = self._tag_services.currentWidget()
             
             CG.client_controller.new_options.SetKey( 'default_tag_service_tab', current_page.GetServiceKey() )
             
@@ -429,7 +427,7 @@ class EditTagDisplayApplication( ClientGUIScrolledPanels.EditPanel ):
         master_service_keys_to_sibling_applicable_service_keys = collections.defaultdict( list )
         master_service_keys_to_parent_applicable_service_keys = collections.defaultdict( list )
         
-        for page in self._tag_services_notebook.GetPages():
+        for page in self._tag_services.GetPages():
             
             ( master_service_key, sibling_applicable_service_keys, parent_applicable_service_keys ) = page.GetValue()
             
@@ -548,7 +546,14 @@ class EditTagDisplayManagerPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._original_tag_display_manager = tag_display_manager
         
-        self._tag_services = ClientGUICommon.BetterNotebook( self )
+        if CG.client_controller.new_options.GetBoolean( 'use_listbook_for_tag_service_panels' ):
+            
+            self._tag_services = ClientGUIListBook.ListBook( self )
+            
+        else:
+            
+            self._tag_services = ClientGUICommon.BetterNotebook( self )
+            
         
         min_width = ClientGUIFunctions.ConvertTextToPixelWidth( self._tag_services, 100 )
         
@@ -2309,7 +2314,14 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
             self._hashes.update( m.GetHashes() )
             
         
-        self._tag_services = ClientGUICommon.BetterNotebook( self )
+        if CG.client_controller.new_options.GetBoolean( 'use_listbook_for_tag_service_panels' ):
+            
+            self._tag_services = ClientGUIListBook.ListBook( self )
+            
+        else:
+            
+            self._tag_services = ClientGUICommon.BetterNotebook( self )
+            
         
         #
         
@@ -3463,7 +3475,14 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
         
         super().__init__( parent )
         
-        self._tag_services = ClientGUICommon.BetterNotebook( self )
+        if CG.client_controller.new_options.GetBoolean( 'use_listbook_for_tag_service_panels' ):
+            
+            self._tag_services = ClientGUIListBook.ListBook( self )
+            
+        else:
+            
+            self._tag_services = ClientGUICommon.BetterNotebook( self )
+            
         
         #
         
@@ -3590,7 +3609,7 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
             
             model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_TAG_PARENTS.ID, self._ConvertPairToDisplayTuple, self._ConvertPairToSortTuple )
             
-            self._tag_parents = ClientGUIListCtrl.BetterListCtrlTreeView( self._listctrl_panel, CGLC.COLUMN_LIST_TAG_PARENTS.ID, 6, model, delete_key_callback = self._DeleteSelectedRows, activation_callback = self._DeleteSelectedRows )
+            self._tag_parents = ClientGUIListCtrl.BetterListCtrlTreeView( self._listctrl_panel, 6, model, delete_key_callback = self._DeleteSelectedRows, activation_callback = self._DeleteSelectedRows )
             
             self._listctrl_panel.SetListCtrl( self._tag_parents )
             
@@ -4232,7 +4251,14 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
         
         super().__init__( parent )
         
-        self._tag_services = ClientGUICommon.BetterNotebook( self )
+        if CG.client_controller.new_options.GetBoolean( 'use_listbook_for_tag_service_panels' ):
+            
+            self._tag_services = ClientGUIListBook.ListBook( self )
+            
+        else:
+            
+            self._tag_services = ClientGUICommon.BetterNotebook( self )
+            
         
         #
         
@@ -4362,7 +4388,7 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
             
             model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_TAG_SIBLINGS.ID, self._ConvertPairToDisplayTuple, self._ConvertPairToSortTuple )
             
-            self._tag_siblings = ClientGUIListCtrl.BetterListCtrlTreeView( self._listctrl_panel, CGLC.COLUMN_LIST_TAG_SIBLINGS.ID, 14, model, delete_key_callback = self._DeleteSelectedRows, activation_callback = self._DeleteSelectedRows )
+            self._tag_siblings = ClientGUIListCtrl.BetterListCtrlTreeView( self._listctrl_panel, 14, model, delete_key_callback = self._DeleteSelectedRows, activation_callback = self._DeleteSelectedRows )
             
             self._listctrl_panel.SetListCtrl( self._tag_siblings )
             
@@ -5036,11 +5062,18 @@ class ReviewTagDisplayMaintenancePanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         super().__init__( parent )
         
-        self._tag_services_notebook = ClientGUICommon.BetterNotebook( self )
+        if CG.client_controller.new_options.GetBoolean( 'use_listbook_for_tag_service_panels' ):
+            
+            self._tag_services = ClientGUIListBook.ListBook( self )
+            
+        else:
+            
+            self._tag_services = ClientGUICommon.BetterNotebook( self )
+            
         
-        min_width = ClientGUIFunctions.ConvertTextToPixelWidth( self._tag_services_notebook, 100 )
+        min_width = ClientGUIFunctions.ConvertTextToPixelWidth( self._tag_services, 100 )
         
-        self._tag_services_notebook.setMinimumWidth( min_width )
+        self._tag_services.setMinimumWidth( min_width )
         
         #
         
@@ -5053,13 +5086,13 @@ class ReviewTagDisplayMaintenancePanel( ClientGUIScrolledPanels.ReviewPanel ):
             service_key = service.GetServiceKey()
             name = service.GetName()
             
-            page = self._Panel( self._tag_services_notebook, service_key )
+            page = self._Panel( self._tag_services, service_key )
             
-            self._tag_services_notebook.addTab( page, name )
+            self._tag_services.addTab( page, name )
             
             if service_key == default_tag_service_key:
                 
-                QP.CallAfter( self._tag_services_notebook.setCurrentWidget, page )
+                QP.CallAfter( self._tag_services.setCurrentWidget, page )
                 
             
         
@@ -5081,20 +5114,20 @@ class ReviewTagDisplayMaintenancePanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         QP.AddToLayout( vbox, self._message, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, self._sync_status, CC.FLAGS_EXPAND_PERPENDICULAR )
-        QP.AddToLayout( vbox, self._tag_services_notebook, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( vbox, self._tag_services, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         self.widget().setLayout( vbox )
         
         CG.client_controller.sub( self, '_UpdateStatusText', 'notify_new_menu_option' )
         
-        self._tag_services_notebook.currentChanged.connect( self._ServicePageChanged )
+        self._tag_services.currentChanged.connect( self._ServicePageChanged )
         
     
     def _ServicePageChanged( self ):
         
         if CG.client_controller.new_options.GetBoolean( 'save_default_tag_service_tab_on_change' ):
             
-            current_page = self._tag_services_notebook.currentWidget()
+            current_page = self._tag_services.currentWidget()
             
             CG.client_controller.new_options.SetKey( 'default_tag_service_tab', current_page.GetServiceKey() )
             

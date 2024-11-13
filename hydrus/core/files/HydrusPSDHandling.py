@@ -43,7 +43,7 @@ def GenerateThumbnailNumPyFromPSDPath( path: str, target_resolution: typing.Tupl
     
     pil_image = MergedPILImageFromPSD( path )
     
-    thumbnail_pil_image = pil_image.resize( target_resolution, PILImage.LANCZOS )
+    thumbnail_pil_image = pil_image.resize( target_resolution, PILImage.Resampling.LANCZOS )
     
     numpy_image = HydrusImageHandling.GenerateNumPyImageFromPILImage( thumbnail_pil_image )
     

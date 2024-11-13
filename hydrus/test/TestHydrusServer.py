@@ -4,6 +4,7 @@ import os
 import random
 import ssl
 import time
+import typing
 import unittest
 
 from twisted.internet import reactor
@@ -12,7 +13,6 @@ import twisted.internet.ssl
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusEncryption
-from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusPaths
 from hydrus.core import HydrusTime
 from hydrus.core.networking import HydrusNetwork
@@ -36,6 +36,19 @@ with open( os.path.join( HC.STATIC_DIR, 'hydrus_small.png' ), 'rb' ) as f_g:
     EXAMPLE_THUMBNAIL = f_g.read()
     
 class TestServer( unittest.TestCase ):
+    
+    _access_key: bytes = HydrusData.GenerateKey()
+    
+    _serverside_file_service: typing.Any = None
+    _serverside_tag_service: typing.Any = None
+    _serverside_admin_service: typing.Any = None
+    
+    _clientside_file_service: typing.Any = None
+    _clientside_tag_service: typing.Any = None
+    _clientside_admin_service: typing.Any = None
+    
+    _ssl_cert_path: str = ''
+    _ssl_key_path: str = ''
     
     @classmethod
     def setUpClass( cls ):

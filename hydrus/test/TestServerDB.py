@@ -1,12 +1,12 @@
 import os
 import random
 import time
+import typing
 import unittest
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
-from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusTime
 from hydrus.core.networking import HydrusNetwork
 from hydrus.core.networking import HydrusNetworking
@@ -17,6 +17,8 @@ from hydrus.test import TestController
 from hydrus.test import TestGlobals as TG
 
 class TestServerDB( unittest.TestCase ):
+    
+    _db: typing.Any = None
     
     def _read( self, action, *args, **kwargs ): return TestServerDB._db.Read( action, *args, **kwargs )
     def _write( self, action, *args, **kwargs ): return TestServerDB._db.Write( action, True, *args, **kwargs )

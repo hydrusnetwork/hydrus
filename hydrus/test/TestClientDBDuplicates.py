@@ -1,10 +1,10 @@
 import os
 import time
+import typing
 import unittest
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
-from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusNumbers
 
 from hydrus.client import ClientConstants as CC
@@ -22,6 +22,8 @@ from hydrus.test import TestController
 from hydrus.test import TestGlobals as TG
 
 class TestClientDBDuplicates( unittest.TestCase ):
+    
+    _db: typing.Any = None
     
     @classmethod
     def _clear_db( cls ):

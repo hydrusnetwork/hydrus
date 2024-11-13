@@ -1,3 +1,5 @@
+import typing
+
 from hydrus.client.gui.QLocator import QAbstractLocatorSearchProvider, QCalculatorSearchProvider, QLocatorSearchResult
 
 from html import escape
@@ -182,13 +184,13 @@ class MainMenuSearchProvider( QAbstractLocatorSearchProvider ):
         super().__init__( parent )
         
         self.result_id_counter = 0
-        self.result_ids_to_actions = {}
-
+        self.result_ids_to_actions: typing.Dict[ int, QW.QAction ] = {}
+        
 
     def title( self ):
         
         return "Main Menu"
-
+        
 
     def suggestedReservedItemCount( self ):
         
@@ -199,12 +201,13 @@ class MainMenuSearchProvider( QAbstractLocatorSearchProvider ):
         
         action = self.result_ids_to_actions.get( resultID, None )
 
-        if action:
-
+        if action is not None:
+            
             action.trigger()
             
             self.result_ids_to_actions = {}
-
+            
+        
 
     def processQuery( self, query: str, context, jobID: int ):
         
@@ -303,7 +306,7 @@ class MediaMenuSearchProvider( QAbstractLocatorSearchProvider ):
         super().__init__( parent )
         
         self.result_id_counter = 0
-        self.result_ids_to_actions = {}
+        self.result_ids_to_actions: typing.Dict[ int, QW.QAction ] = {}
         self.menu = None
 
 
@@ -321,8 +324,8 @@ class MediaMenuSearchProvider( QAbstractLocatorSearchProvider ):
         
         action = self.result_ids_to_actions.get( resultID, None )
 
-        if action:
-
+        if action is not None:
+            
             action.trigger()
             
             self.result_ids_to_actions = {}

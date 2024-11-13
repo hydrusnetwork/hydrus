@@ -1,5 +1,6 @@
 import typing
 
+from hydrus.core import HydrusData
 from hydrus.core import HydrusSerialisable
 
 from hydrus.client.gui.lists import ClientGUIListConstants as CGLC
@@ -169,6 +170,13 @@ class ColumnListStatus( HydrusSerialisable.SerialisableBase ):
     
     def GetColumnTypeFromIndex( self, column_index: int ):
         
+        if column_index >= len( self._column_types_in_order ):
+            
+            HydrusData.ShowText( f'A column status ("{self._column_list_type}") was asked for a non-existing column index ("{column_index}")!' )
+            
+            return self._column_types_in_order[-1]
+            
+        
         return self._column_types_in_order[ column_index ]
         
     
@@ -225,4 +233,5 @@ class ColumnListStatus( HydrusSerialisable.SerialisableBase ):
         return status
         
     
+
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_COLUMN_LIST_STATUS ] = ColumnListStatus

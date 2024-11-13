@@ -1,3 +1,12 @@
+# Couldn't think where else to put this, but I want a record:
+# If you are setting up a new IDE, here are hydev's current ignore rules for PyUnresolvedReferences:
+#
+# connect # it sucks, but for qtpy Qt Signals gubbins
+# emit # it sucks a little, but for qtpy Qt Signals gubbins
+# twisted.internet.reactor.*
+# PySide6.QtWidgets.QStyle.*
+#
+
 import threading
 import typing
 

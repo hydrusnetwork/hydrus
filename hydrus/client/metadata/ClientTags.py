@@ -1,6 +1,5 @@
 import collections
 import re
-import typing
 
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTags

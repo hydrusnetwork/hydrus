@@ -1,4 +1,3 @@
-import os
 import random
 import threading
 import time
@@ -1464,22 +1463,6 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
         else:
             
             self._query_headers = [ query_header for query_header in self._query_headers if query_header.GetQueryText().lower() not in removee_query_texts ]
-            
-        
-    
-    def RetryFailed( self ):
-        
-        for query_header in self._query_headers:
-            
-            query_header.RetryFailed()
-            
-        
-    
-    def RetryIgnored( self, ignored_regex = None ):
-        
-        for query_header in self._query_headers:
-            
-            query_header.RetryIgnored( ignored_regex = ignored_regex )
             
         
     

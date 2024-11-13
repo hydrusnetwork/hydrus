@@ -83,7 +83,7 @@ class FileInfoManager( object ):
         self.has_human_readable_embedded_metadata = False
         self.has_icc_profile = False
         self.blurhash = None
-        self.pixel_hash = None
+        self.pixel_hash: typing.Optional[ bytes ] = None
         
     
     def Duplicate( self ):

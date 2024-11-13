@@ -1,7 +1,4 @@
 import collections
-import os
-import random
-import time
 import typing
 
 from qtpy import QtCore as QC
@@ -27,7 +24,6 @@ from hydrus.client.gui import ClientGUIDialogs
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIMenus
-from hydrus.client.gui import ClientGUIShortcuts
 from hydrus.client.gui import QtInit
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.canvas import ClientGUICanvas
@@ -37,7 +33,10 @@ from hydrus.client.gui.pages import ClientGUINewPageChooser
 from hydrus.client.gui.pages import ClientGUIMediaResultsPanel
 from hydrus.client.gui.pages import ClientGUIMediaResultsPanelThumbnails
 from hydrus.client.gui.pages import ClientGUISession
+
+# noinspection PyUnresolvedReferences
 from hydrus.client.gui.pages import ClientGUISessionLegacy # to get serialisable data types loaded
+
 from hydrus.client.search import ClientSearchFileSearchContext
 from hydrus.client.search import ClientSearchPredicate
 from hydrus.client.search import ClientSearchTagContext

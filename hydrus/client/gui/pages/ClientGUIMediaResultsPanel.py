@@ -260,7 +260,10 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.Liste
             self._selected_media.update( media_to_select )
             
         
-        self._PublishSelectionChange()
+        if len( media_to_select ) + len( media_to_deselect ) > 0:
+            
+            self._PublishSelectionChange()
+            
         
     
     def _DownloadSelected( self ):
@@ -1091,7 +1094,16 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.Liste
             
             if len( self._selected_media ) == 0:
                 
-                tags_media = self._sorted_media
+                number_of_unselected_medias_to_present_tags_for = CG.client_controller.new_options.GetNoneableInteger( 'number_of_unselected_medias_to_present_tags_for' )
+                
+                if number_of_unselected_medias_to_present_tags_for is None:
+                    
+                    tags_media = self._sorted_media
+                    
+                else:
+                    
+                    tags_media = self._sorted_media[ :number_of_unselected_medias_to_present_tags_for ]
+                    
                 
             else:
                 

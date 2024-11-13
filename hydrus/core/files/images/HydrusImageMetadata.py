@@ -1,4 +1,3 @@
-import os
 import typing
 
 from PIL import Image as PILImage

@@ -1,6 +1,5 @@
 from hydrus.core import HydrusData
 from hydrus.core import HydrusSerialisable
-from hydrus.core import HydrusTime
 
 from hydrus.client.gui.pages import ClientGUISession
 

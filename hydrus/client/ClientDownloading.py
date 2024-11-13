@@ -3,11 +3,9 @@ import random
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
-from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTemp
-from hydrus.core import HydrusThreading
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientDaemons

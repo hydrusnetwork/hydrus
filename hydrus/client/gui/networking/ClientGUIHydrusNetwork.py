@@ -221,7 +221,7 @@ class EditAccountTypesPanel( ClientGUIScrolledPanels.EditPanel ):
         
         model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_ACCOUNT_TYPES.ID, self._ConvertAccountTypeToTuples )
         
-        self._account_types_listctrl = ClientGUIListCtrl.BetterListCtrlTreeView( self, CGLC.COLUMN_LIST_ACCOUNT_TYPES.ID, 20, model, delete_key_callback = self._Delete, activation_callback = self._Edit )
+        self._account_types_listctrl = ClientGUIListCtrl.BetterListCtrlTreeView( self, 20, model, delete_key_callback = self._Delete, activation_callback = self._Edit )
         
         self._add_button = ClientGUICommon.BetterButton( self, 'add', self._Add )
         self._edit_button = ClientGUICommon.BetterButton( self, 'edit', self._Edit )
@@ -410,7 +410,7 @@ class EditAccountTypesPanel( ClientGUIScrolledPanels.EditPanel ):
     
 class ListAccountsPanel( ClientGUIScrolledPanels.ReviewPanel ):
     
-    def __init__( self, parent: QW.QWidget, service_key: bytes, accounts: typing.Collection[ HydrusNetwork.Account ] ):
+    def __init__( self, parent: QW.QWidget, service_key: bytes, accounts: typing.List[ HydrusNetwork.Account ] ):
         
         super().__init__( parent )
         

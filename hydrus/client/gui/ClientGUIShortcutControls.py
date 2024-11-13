@@ -1,12 +1,9 @@
-import os
 import typing
 
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
 
-from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
-from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusSerialisable
 
@@ -113,7 +110,7 @@ class EditShortcutSetPanel( ClientGUIScrolledPanels.EditPanel ):
         
         model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_SHORTCUTS.ID, self._ConvertShortcutTupleToDisplayTuple, self._ConvertShortcutTupleToSortTuple )
         
-        self._shortcuts = ClientGUIListCtrl.BetterListCtrlTreeView( self._shortcuts_panel, CGLC.COLUMN_LIST_SHORTCUTS.ID, 20, model, delete_key_callback = self.RemoveShortcuts, activation_callback = self.EditShortcuts )
+        self._shortcuts = ClientGUIListCtrl.BetterListCtrlTreeView( self._shortcuts_panel, 20, model, delete_key_callback = self.RemoveShortcuts, activation_callback = self.EditShortcuts )
         
         self._shortcuts_panel.SetListCtrl( self._shortcuts )
         
@@ -387,7 +384,7 @@ class EditShortcutsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_SHORTCUT_SETS.ID, self._GetDisplayTuple, self._GetSortTuple )
         
-        self._reserved_shortcuts = ClientGUIListCtrl.BetterListCtrlTreeView( reserved_panel, CGLC.COLUMN_LIST_SHORTCUT_SETS.ID, 6, model, activation_callback = self._EditReserved )
+        self._reserved_shortcuts = ClientGUIListCtrl.BetterListCtrlTreeView( reserved_panel, 6, model, activation_callback = self._EditReserved )
         
         self._reserved_shortcuts.setMinimumSize( QC.QSize( 320, 200 ) )
         
@@ -400,7 +397,7 @@ class EditShortcutsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_SHORTCUT_SETS.ID, self._GetDisplayTuple, self._GetSortTuple )
         
-        self._custom_shortcuts = ClientGUIListCtrl.BetterListCtrlTreeView( custom_panel, CGLC.COLUMN_LIST_SHORTCUT_SETS.ID, 6, model, delete_key_callback = self._Delete, activation_callback = self._EditCustom )
+        self._custom_shortcuts = ClientGUIListCtrl.BetterListCtrlTreeView( custom_panel, 6, model, delete_key_callback = self._Delete, activation_callback = self._EditCustom )
         
         self._add_button = ClientGUICommon.BetterButton( custom_panel, 'add', self._Add )
         self._edit_custom_button = ClientGUICommon.BetterButton( custom_panel, 'edit', self._EditCustom )

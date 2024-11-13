@@ -7,7 +7,7 @@ from twisted.internet import reactor, defer
 from twisted.internet.threads import deferToThread
 from twisted.web.server import NOT_DONE_YET
 from twisted.web.resource import Resource
-from twisted.web.static import File as FileResource, NoRangeStaticProducer, SingleRangeStaticProducer, MultipleRangeStaticProducer
+from twisted.web.static import File as FileResource, NoRangeStaticProducer, SingleRangeStaticProducer
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
@@ -16,7 +16,6 @@ from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusProfiling
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTemp
-from hydrus.core import HydrusTime
 from hydrus.core.networking import HydrusServerRequest
 
 def GetServerSummaryTexts( service ):
@@ -774,9 +773,9 @@ class HydrusResource( Resource ):
     
     def _profileJob( self, call, request: HydrusServerRequest.HydrusRequest ):
         
-        HydrusProfiling.Profile( 'Profiling {}: {}'.format( self._service.GetName(), request.path ), 'request.result_lmao = call( request )', globals(), locals(), min_duration_ms = HG.server_profile_min_job_time_ms )
+        HydrusProfiling.Profile( 'Profiling {}: {}'.format( self._service.GetName(), request.path ), 'request.profile_result = call( request )', globals(), locals(), min_duration_ms = HG.server_profile_min_job_time_ms )
         
-        return request.result_lmao
+        return request.profile_result
         
     
     def _DecompressionBombsOK( self, request: HydrusServerRequest.HydrusRequest ):
@@ -1087,12 +1086,12 @@ class HydrusResource( Resource ):
         
         allowed_methods = []
         
-        if self._threadDoGETJob.__func__ is not HydrusResource._threadDoGETJob:
+        if self.__class__._threadDoGETJob is not HydrusResource._threadDoGETJob:
             
             allowed_methods.append( 'GET' )
             
         
-        if self._threadDoPOSTJob.__func__ is not HydrusResource._threadDoPOSTJob:
+        if self.__class__._threadDoPOSTJob is not HydrusResource._threadDoPOSTJob:
             
             allowed_methods.append( 'POST' )
             

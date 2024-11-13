@@ -1,4 +1,3 @@
-import os
 import typing
 
 from hydrus.core import HydrusData

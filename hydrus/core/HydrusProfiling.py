@@ -1,6 +1,5 @@
 import cProfile
 import io
-import os
 import pstats
 
 from hydrus.core import HydrusData

@@ -1,7 +1,6 @@
 import random
 import unittest
 
-from hydrus.core import HydrusData
 from hydrus.core import HydrusLists
 from hydrus.core import HydrusNumbers
 

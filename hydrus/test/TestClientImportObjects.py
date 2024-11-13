@@ -7,7 +7,6 @@ from hydrus.client import ClientStrings
 from hydrus.client.importing import ClientImportFileSeeds
 from hydrus.client.networking import ClientNetworkingURLClass
 
-from hydrus.test import HelperFunctions as HF
 from hydrus.test import TestGlobals as TG
 
 class TestFileSeedCache( unittest.TestCase ):

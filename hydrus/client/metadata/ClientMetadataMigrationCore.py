@@ -2,7 +2,6 @@ import os.path
 
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
-from hydrus.core import HydrusTime
 
 from hydrus.client import ClientStrings
 

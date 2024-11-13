@@ -3,7 +3,6 @@ import os
 import threading
 import tempfile
 import time
-import typing
 import unittest
 
 from qtpy import QtCore as QC
@@ -48,7 +47,6 @@ from hydrus.server import ServerGlobals as SG
 from hydrus.test import TestClientAPI
 from hydrus.test import TestClientConstants
 from hydrus.test import TestClientDaemons
-from hydrus.test import TestClientData
 from hydrus.test import TestClientDB
 from hydrus.test import TestClientDBDuplicates
 from hydrus.test import TestClientDBTags
@@ -795,7 +793,6 @@ class Controller( object ):
         
         module_lookup[ 'data' ] = [
             TestClientConstants,
-            TestClientData,
             TestClientFileStorage,
             TestClientImportObjects,
             TestClientImportOptions,

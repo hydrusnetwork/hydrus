@@ -4,7 +4,6 @@ import typing
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusExceptions
-from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTags
 from hydrus.core import HydrusText
@@ -14,7 +13,6 @@ from hydrus.client import ClientGlobals as CG
 from hydrus.client.importing.options import ClientImportOptions
 from hydrus.client.media import ClientMediaResult
 from hydrus.client.metadata import ClientContentUpdates
-from hydrus.client.metadata import ClientMetadataMigrationImporters
 from hydrus.client.metadata import ClientTags
 
 class FilenameTaggingOptions( HydrusSerialisable.SerialisableBase ):

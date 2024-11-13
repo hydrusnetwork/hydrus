@@ -1,5 +1,3 @@
-import typing
-
 from qtpy import QtCore as QC
 from qtpy import QtGui as QG
 from qtpy import QtWidgets as QW
@@ -7,7 +5,6 @@ from qtpy import QtWidgets as QW
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
-from hydrus.core import HydrusGlobals as HG
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
@@ -237,9 +234,9 @@ class CollectComboCtrl( QW.QComboBox ):
         self.initStyleOption( opt )
 
         opt.currentText = self._cached_text
-
+        
         painter.drawComplexControl( QW.QStyle.CC_ComboBox, opt )
-
+        
         painter.drawControl( QW.QStyle.CE_ComboBoxLabel, opt )
         
     

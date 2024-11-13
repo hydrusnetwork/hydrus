@@ -363,8 +363,8 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
     
     def __init__(
         self,
-        predicate_type: int = None,
-        value: object = None,
+        predicate_type: typing.Optional[ int ] = None,
+        value: typing.Any = None,
         inclusive: bool = True,
         count = None
         ):
@@ -391,8 +391,8 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
             count = PredicateCount.STATICCreateNullCount()
             
         
-        self._predicate_type = predicate_type
-        self._value = value
+        self._predicate_type: int = predicate_type
+        self._value: typing.Any = value
         
         self._inclusive = inclusive
         
@@ -1008,7 +1008,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
         return self.GetCopy()
         
     
-    def GetValue( self ):
+    def GetValue( self ) -> typing.Any:
         
         return self._value
         
@@ -1086,9 +1086,10 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
         
         ideal_value = ideal_predicate.GetValue()
         
-        if self._value is None and ideal_value is not None:
+        if self._value is None:
             
-            return False
+            # delicate linter tapdance going on here, alter only with care
+            return ideal_value is None
             
         
         if self._predicate_type in ( PREDICATE_TYPE_SYSTEM_AGE, PREDICATE_TYPE_SYSTEM_LAST_VIEWED_TIME, PREDICATE_TYPE_SYSTEM_MODIFIED_TIME, PREDICATE_TYPE_SYSTEM_ARCHIVED_TIME ):

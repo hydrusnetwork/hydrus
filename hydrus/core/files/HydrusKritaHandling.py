@@ -1,4 +1,3 @@
-import io
 import typing
 
 from hydrus.core import HydrusExceptions
@@ -50,7 +49,8 @@ def GenerateThumbnailNumPyFromKraPath( path: str, target_resolution: typing.Tupl
         pil_image = ThumbnailPILImageFromKra( path )
         
     
-    thumbnail_pil_image = pil_image.resize( target_resolution, PILImage.LANCZOS )
+    # noinspection PyUnresolvedReferences
+    thumbnail_pil_image = pil_image.resize( target_resolution, PILImage.Resampling.LANCZOS )
     
     numpy_image = HydrusImageHandling.GenerateNumPyImageFromPILImage( thumbnail_pil_image )
     

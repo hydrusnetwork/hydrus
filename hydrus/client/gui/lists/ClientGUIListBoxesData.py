@@ -1,7 +1,5 @@
-import collections
 import typing
 
-from hydrus.core import HydrusData
 from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusTags
 

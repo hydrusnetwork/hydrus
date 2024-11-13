@@ -15,7 +15,6 @@ import json
 import re
 
 from hydrus.core import HydrusConstants as HC
-from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusNumbers
 
 re_one_or_more_whitespace = re.compile( r'\s+' ) # this does \t and friends too

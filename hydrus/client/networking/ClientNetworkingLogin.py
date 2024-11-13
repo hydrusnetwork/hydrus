@@ -1,12 +1,10 @@
 import itertools
-import os
 import re
 import threading
 import time
 import typing
 import urllib.parse
 
-from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusSerialisable

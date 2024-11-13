@@ -2,7 +2,6 @@ import os
 
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
-from hydrus.core import HydrusGlobals as HG
 
 from hydrus.server import ServerGlobals as SG
 

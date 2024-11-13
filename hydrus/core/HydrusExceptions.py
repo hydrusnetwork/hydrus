@@ -1,5 +1,4 @@
 import collections.abc
-import os
 
 class HydrusException( Exception ):
     

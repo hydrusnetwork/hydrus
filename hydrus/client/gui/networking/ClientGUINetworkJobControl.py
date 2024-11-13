@@ -1,10 +1,7 @@
-import typing
-
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
 
 from hydrus.core import HydrusData
-from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusText
 from hydrus.core import HydrusTime
 

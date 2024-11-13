@@ -1,3 +1,4 @@
+# noinspection PyUnresolvedReferences
 from hydrus.core.files.images import HydrusImageInit # right up top
 
 import cv2
@@ -72,27 +73,15 @@ def SetEnableLoadTruncatedImages( value: bool ):
 OLD_PIL_MAX_IMAGE_PIXELS = PILImage.MAX_IMAGE_PIXELS
 PILImage.MAX_IMAGE_PIXELS = None # this turns off decomp check entirely, wew
 
-if cv2.__version__.startswith( '2' ):
-    
-    CV_IMREAD_FLAGS_PNG = cv2.CV_LOAD_IMAGE_UNCHANGED
-    CV_IMREAD_FLAGS_JPEG = CV_IMREAD_FLAGS_PNG
-    CV_IMREAD_FLAGS_WEIRD = CV_IMREAD_FLAGS_PNG
-    
-    CV_JPEG_THUMBNAIL_ENCODE_PARAMS = []
-    CV_PNG_THUMBNAIL_ENCODE_PARAMS = []
-    
-else:
-    
-    # allows alpha channel
-    CV_IMREAD_FLAGS_PNG = cv2.IMREAD_UNCHANGED
-    # this preserves colour info but does EXIF reorientation and flipping
-    CV_IMREAD_FLAGS_JPEG = cv2.IMREAD_ANYDEPTH | cv2.IMREAD_ANYCOLOR
-    # this seems to allow weirdass tiffs to load as non greyscale, although the LAB conversion 'whitepoint' or whatever can be wrong
-    CV_IMREAD_FLAGS_WEIRD = CV_IMREAD_FLAGS_PNG
-    
-    CV_JPEG_THUMBNAIL_ENCODE_PARAMS = [ cv2.IMWRITE_JPEG_QUALITY, 92 ]
-    CV_PNG_THUMBNAIL_ENCODE_PARAMS = [ cv2.IMWRITE_PNG_COMPRESSION, 9 ]
-    
+# allows alpha channel
+CV_IMREAD_FLAGS_PNG = cv2.IMREAD_UNCHANGED
+# this preserves colour info but does EXIF reorientation and flipping
+CV_IMREAD_FLAGS_JPEG = cv2.IMREAD_ANYDEPTH | cv2.IMREAD_ANYCOLOR
+# this seems to allow weirdass tiffs to load as non greyscale, although the LAB conversion 'whitepoint' or whatever can be wrong
+CV_IMREAD_FLAGS_WEIRD = CV_IMREAD_FLAGS_PNG
+
+CV_JPEG_THUMBNAIL_ENCODE_PARAMS = [ cv2.IMWRITE_JPEG_QUALITY, 92 ]
+CV_PNG_THUMBNAIL_ENCODE_PARAMS = [ cv2.IMWRITE_PNG_COMPRESSION, 9 ]
 
 PIL_ONLY_MIMETYPES = { HC.ANIMATION_GIF, HC.IMAGE_ICON, HC.IMAGE_WEBP, HC.IMAGE_QOI, HC.IMAGE_BMP, HC.ANIMATION_WEBP }.union( HC.PIL_HEIF_MIMES )
 
@@ -379,6 +368,7 @@ def GenerateFileBytesNumPy( numpy_image, ext: str = '.png', params: list[int] = 
     
     if result_success:
         
+        # noinspection PyUnresolvedReferences
         return result_byte_array.tostring()
         
     else:
@@ -686,7 +676,7 @@ def ResizeNumPyImage( numpy_image: numpy.array, target_resolution, forced_interp
     
 
 def GenerateDefaultThumbnailNumPyFromPath( path: str, target_resolution: typing.Tuple[ int, int ] ):
-        
+    
     thumb_image = GeneratePILImage( path )
     
     pil_image = PILImageOps.pad( thumb_image, target_resolution, PILImage.Resampling.LANCZOS )

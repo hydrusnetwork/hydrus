@@ -1,10 +1,8 @@
 import collections
-import os
 import unittest
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
-from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusTags
 
 from hydrus.client import ClientConstants as CC
@@ -12,10 +10,6 @@ from hydrus.client.media import ClientMediaManagers
 from hydrus.client.metadata import ClientContentUpdates
 from hydrus.client.metadata import ClientTags
 from hydrus.client.metadata import ClientTagsHandling
-from hydrus.client.search import ClientNumberTest
-from hydrus.client.search import ClientSearchAutocomplete
-from hydrus.client.search import ClientSearchParseSystemPredicates
-from hydrus.client.search import ClientSearchPredicate
 from hydrus.client.search import ClientSearchTagContext
 
 from hydrus.test import TestGlobals as TG
@@ -103,7 +97,16 @@ class TestMergeTagsManagers( unittest.TestCase ):
         self.assertEqual( tags_manager.GetNamespaceSlice( CC.COMBINED_TAG_SERVICE_KEY, ( 'character', ), ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), frozenset( { 'character:cibo' } ) )
         
     
+
 class TestTagsManager( unittest.TestCase ):
+    
+    _first_key: bytes = HydrusData.GenerateKey()
+    _second_key: bytes = HydrusData.GenerateKey()
+    _third_key: bytes = HydrusData.GenerateKey()
+    
+    _pending_service_key: bytes = HydrusData.GenerateKey()
+    _content_update_service_key: bytes = HydrusData.GenerateKey()
+    _reset_service_key: bytes = HydrusData.GenerateKey()
     
     @classmethod
     def setUpClass( cls ):

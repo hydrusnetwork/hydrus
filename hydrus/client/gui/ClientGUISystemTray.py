@@ -184,6 +184,7 @@ class ClientSystemTrayIcon( QW.QSystemTrayIcon ):
             return
             
         
+        # noinspection PyUnresolvedReferences
         if activation_reason in ( QW.QSystemTrayIcon.Unknown, QW.QSystemTrayIcon.Trigger ):
             
             if self._ui_is_currently_shown:
@@ -199,8 +200,10 @@ class ClientSystemTrayIcon( QW.QSystemTrayIcon ):
                 self.flip_show_ui.emit()
                 
             
+            # noinspection PyUnresolvedReferences
         elif activation_reason in ( QW.QSystemTrayIcon.DoubleClick, QW.QSystemTrayIcon.MiddleClick ):
             
+            # noinspection PyUnresolvedReferences
             if activation_reason == QW.QSystemTrayIcon.DoubleClick and self._just_clicked_to_show:
                 
                 return

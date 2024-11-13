@@ -1,4 +1,3 @@
-import collections
 from hydrus.core import HydrusData
 
 try:
@@ -85,6 +84,7 @@ def PrintSnapshotDiff():
     
     HydrusData.Print( '---printing memory diff to log--' )
     
+    # noinspection PyUnresolvedReferences
     diff = CURRENT_TRACKER.diff()
     
     summary.print_( diff, limit = 500 )

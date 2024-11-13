@@ -1,7 +1,6 @@
 import collections
 import cv2
 import numpy
-import os
 import struct
 
 from qtpy import QtCore as QC
@@ -29,14 +28,7 @@ from hydrus.client.gui import ClientGUIFunctions
 # read that many pixels after that, you got the payload
 # it should be zlib compressed these days and is most likely a dumped hydrus serialisable object, which is a json guy with a whole complicated loading system. utf-8 it into a string and you are half way there :^)
 
-if cv2.__version__.startswith( '2' ):
-    
-    IMREAD_UNCHANGED = cv2.CV_LOAD_IMAGE_UNCHANGED
-    
-else:
-    
-    IMREAD_UNCHANGED = cv2.IMREAD_UNCHANGED
-    
+IMREAD_UNCHANGED = cv2.IMREAD_UNCHANGED
 
 def CreateTopImage( width, title, payload_description, text ):
     

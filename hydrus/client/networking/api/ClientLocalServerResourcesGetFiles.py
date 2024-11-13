@@ -1,5 +1,6 @@
 import os
 import time
+import typing
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
@@ -20,6 +21,7 @@ from hydrus.client import ClientThreading
 from hydrus.client import ClientUgoiraHandling
 from hydrus.client.media import ClientMedia
 from hydrus.client.media import ClientMediaResult
+from hydrus.client.media import ClientMediaManagers
 from hydrus.client.metadata import ClientTags
 from hydrus.client.networking.api import ClientLocalServerCore
 from hydrus.client.networking.api import ClientLocalServerResources
@@ -475,7 +477,7 @@ class HydrusResourceClientAPIRestrictedGetFilesFileMetadata( HydrusResourceClien
             
         elif only_return_basic_information:
             
-            file_info_managers = CG.client_controller.Read( 'file_info_managers_from_ids', hash_ids )
+            file_info_managers: typing.List[ ClientMediaManagers.FileInfoManager ] = CG.client_controller.Read( 'file_info_managers_from_ids', hash_ids )
             
             hashes_to_file_info_managers = { file_info_manager.hash : file_info_manager for file_info_manager in file_info_managers }
             
@@ -525,7 +527,7 @@ class HydrusResourceClientAPIRestrictedGetFilesFileMetadata( HydrusResourceClien
             
         else:
             
-            media_results = CG.client_controller.Read( 'media_results_from_ids', hash_ids )
+            media_results: typing.List[ ClientMediaResult.MediaResult ] = CG.client_controller.Read( 'media_results_from_ids', hash_ids )
             
             hashes_to_media_results = { media_result.GetFileInfoManager().hash : media_result for media_result in media_results }
             
@@ -554,6 +556,17 @@ class HydrusResourceClientAPIRestrictedGetFilesFileMetadata( HydrusResourceClien
                     width = file_info_manager.width
                     height = file_info_manager.height
                     
+                    pixel_hash = file_info_manager.pixel_hash
+                    
+                    if pixel_hash is not None:
+                        
+                        pixel_hash_encoded = pixel_hash.hex()
+                        
+                    else:
+                        
+                        pixel_hash_encoded = None
+                        
+                    
                     metadata_row = {
                         'file_id' : file_info_manager.hash_id,
                         'hash' : file_info_manager.hash.hex(),
@@ -569,7 +582,7 @@ class HydrusResourceClientAPIRestrictedGetFilesFileMetadata( HydrusResourceClien
                         'num_words' : file_info_manager.num_words,
                         'has_audio' : file_info_manager.has_audio,
                         'blurhash' : file_info_manager.blurhash,
-                        'pixel_hash' : None if file_info_manager.pixel_hash is None else file_info_manager.pixel_hash.hex()
+                        'pixel_hash' : pixel_hash_encoded
                     }
                     
                     filetype_forced = file_info_manager.FiletypeIsForced()

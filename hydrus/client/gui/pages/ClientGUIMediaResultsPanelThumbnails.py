@@ -305,7 +305,7 @@ class MediaResultsPanelThumbnails( ClientGUIMediaResultsPanel.MediaResultsPanel 
                 
                 y = ( thumbnail_row - ( page_index * self._num_rows_per_canvas_page ) ) * thumbnail_span_height + thumbnail_margin
                 
-                painter.drawImage( x, y, thumbnail.GetQtImage( self, self.devicePixelRatio() ) )
+                painter.drawImage( x, y, thumbnail.GetQtImage( thumbnail, self, self.devicePixelRatio() ) )
                 
             else:
                 
@@ -366,7 +366,7 @@ class MediaResultsPanelThumbnails( ClientGUIMediaResultsPanel.MediaResultsPanel 
             
             self._StopFading( hash )
             
-            bitmap = thumbnail.GetQtImage( self, self.devicePixelRatio() )
+            bitmap = thumbnail.GetQtImage( thumbnail, self, self.devicePixelRatio() )
             
             fade_thumbnails = CG.client_controller.new_options.GetBoolean( 'fade_thumbnails' )
             
@@ -867,7 +867,23 @@ class MediaResultsPanelThumbnails( ClientGUIMediaResultsPanel.MediaResultsPanel 
                 
                 CG.client_controller.GetCache( 'thumbnail' ).Waterfall( self._page_key, thumbnails )
                 
+                send_publish = False
+                
                 if len( self._selected_media ) == 0:
+                    
+                    max_number = CG.client_controller.new_options.GetNoneableInteger( 'number_of_unselected_medias_to_present_tags_for' )
+                    
+                    if max_number is None:
+                        
+                        send_publish = True
+                        
+                    elif len( self._sorted_media ) < max_number:
+                        
+                        send_publish = True
+                        
+                    
+                
+                if send_publish:
                     
                     self._PublishSelectionIncrement( thumbnails )
                     
@@ -2094,7 +2110,7 @@ class Thumbnail( Selectable ):
         self._last_lower_summary = None
         
     
-    def GetQtImage( self, media_panel: ClientGUIMediaResultsPanel.MediaResultsPanel, device_pixel_ratio ) -> QG.QImage:
+    def GetQtImage( self, media: ClientMedia.Media, media_panel: ClientGUIMediaResultsPanel.MediaResultsPanel, device_pixel_ratio ) -> QG.QImage:
         
         # we probably don't really want to say DPR as a param here, but instead ask for a qt_image in a certain resolution?
         # or just give the qt_image to be drawn to?
@@ -2116,9 +2132,12 @@ class Thumbnail( Selectable ):
         
         qt_image.setDevicePixelRatio( device_pixel_ratio )
         
-        inbox = self.HasInbox()
+        # TODO: obviously this is the lynchpin of remaining ugly rewrites. we want to re-wangle this guy out of the Media system and broadly decouple this knot entirely
+        # Step one I am doing is fixing the linting by passing the Media object as an explicit param rather than asking self.HasInbox() etc.., despite that Media secretly being self
         
-        local = self.GetLocationsManager().IsLocal()
+        inbox = media.HasInbox()
+        
+        local = media.GetLocationsManager().IsLocal()
         
         #
         # BAD FONT QUALITY AT 100% UI Scale (semi fixed now, look at the bottom)
@@ -2226,7 +2245,7 @@ class Thumbnail( Selectable ):
         
         new_options = CG.client_controller.new_options
         
-        tags = self.GetTagsManager().GetCurrentAndPending( CC.COMBINED_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_SINGLE_MEDIA )
+        tags = media.GetTagsManager().GetCurrentAndPending( CC.COMBINED_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_SINGLE_MEDIA )
         
         if len( tags ) > 0:
             
@@ -2356,7 +2375,7 @@ class Thumbnail( Selectable ):
         
         ICON_MARGIN = 1
         
-        locations_manager = self.GetLocationsManager()
+        locations_manager = media.GetLocationsManager()
         
         icons_to_draw = []
         
@@ -2365,7 +2384,7 @@ class Thumbnail( Selectable ):
             icons_to_draw.append( CC.global_pixmaps().downloading )
             
         
-        if self.HasNotes():
+        if media.HasNotes():
             
             icons_to_draw.append( CC.global_pixmaps().notes )
             
@@ -2394,7 +2413,7 @@ class Thumbnail( Selectable ):
                 
             
         
-        if self.IsCollection():
+        if media.IsCollection():
             
             icon = CC.global_pixmaps().collection
             
@@ -2403,7 +2422,7 @@ class Thumbnail( Selectable ):
             
             painter.drawPixmap( icon_x, icon_y, icon )
             
-            num_files_str = HydrusNumbers.ToHumanInt( self.GetNumFiles() )
+            num_files_str = HydrusNumbers.ToHumanInt( media.GetNumFiles() )
             
             ( text_size, num_files_str ) = ClientGUIFunctions.GetTextSizeFromPainter( painter, num_files_str )
             
@@ -2429,11 +2448,11 @@ class Thumbnail( Selectable ):
         
         icons_to_draw = []
         
-        if self.HasAudio():
+        if media.HasAudio():
             
             icons_to_draw.append( CC.global_pixmaps().sound )
             
-        elif self.HasDuration():
+        elif media.HasDuration():
             
             icons_to_draw.append( CC.global_pixmaps().play )
             

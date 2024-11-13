@@ -1,32 +1,19 @@
 import os
 import random
-import traceback
-import typing
 
-from qtpy import QtWidgets as QW
 from qtpy import QtGui as QG
-
-from hydrus.core import HydrusConstants as HC
-from hydrus.core import HydrusData
-from hydrus.core import HydrusExceptions
-from hydrus.core import HydrusNumbers
-from hydrus.core import HydrusPaths
-from hydrus.core import HydrusPSUtil
-from hydrus.core import HydrusSerialisable
-from hydrus.core import HydrusTags
-from hydrus.core.files.images import HydrusImageHandling
+from qtpy import QtWidgets as QW
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientData
 from hydrus.client import ClientGlobals as CG
-from hydrus.client.importing.options import FileImportOptions
 from hydrus.client.gui import ClientGUIDialogs
 from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIStyle
-from hydrus.client.gui import ClientGUITags
 from hydrus.client.gui import ClientGUITagSorting
+from hydrus.client.gui import ClientGUITags
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.importing import ClientGUIImport
@@ -41,12 +28,23 @@ from hydrus.client.gui.panels import ClientGUIScrolledPanels
 from hydrus.client.gui.panels import ClientGUIScrolledPanelsEdit
 from hydrus.client.gui.search import ClientGUIACDropdown
 from hydrus.client.gui.search import ClientGUILocation
+from hydrus.client.gui.widgets import ClientGUIBytes
 from hydrus.client.gui.widgets import ClientGUIColourPicker
 from hydrus.client.gui.widgets import ClientGUICommon
-from hydrus.client.gui.widgets import ClientGUIBytes
+from hydrus.client.importing.options import FileImportOptions
 from hydrus.client.media import ClientMedia
 from hydrus.client.metadata import ClientTags
 from hydrus.client.networking import ClientNetworkingSessions
+from hydrus.core import HydrusConstants as HC
+from hydrus.core import HydrusData
+from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusNumbers
+from hydrus.core import HydrusPSUtil
+from hydrus.core import HydrusPaths
+from hydrus.core import HydrusSerialisable
+from hydrus.core import HydrusTags
+from hydrus.core.files.images import HydrusImageHandling
+
 
 class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
     
@@ -59,37 +57,42 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         self._new_options = CG.client_controller.new_options
         self._original_new_options = self._new_options.Duplicate()
         
-        self._listbook = ClientGUIListBook.ListBook( self )
+        self._listbook = ClientGUIListBook.ListBook( self, list_chars_width = 28 )
         
-        self._listbook.AddPage( 'gui', 'gui', self._GUIPanel( self._listbook ) ) # leave this at the top, to make it default page
-        self._listbook.AddPage( 'gui pages', 'gui pages', self._GUIPagesPanel( self._listbook, self._new_options ) )
-        self._listbook.AddPage( 'command palette', 'command palette', self._CommandPalettePanel( self._listbook, self._new_options ) )
-        self._listbook.AddPage( 'connection', 'connection', self._ConnectionPanel( self._listbook ) )
-        self._listbook.AddPage( 'external programs', 'external programs', self._ExternalProgramsPanel( self._listbook ) )
-        self._listbook.AddPage( 'files and trash', 'files and trash', self._FilesAndTrashPanel( self._listbook ) )
-        self._listbook.AddPage( 'file viewing statistics', 'file viewing statistics', self._FileViewingStatisticsPanel( self._listbook ) )
-        self._listbook.AddPage( 'speed and memory', 'speed and memory', self._SpeedAndMemoryPanel( self._listbook, self._new_options ) )
-        self._listbook.AddPage( 'maintenance and processing', 'maintenance and processing', self._MaintenanceAndProcessingPanel( self._listbook ) )
-        self._listbook.AddPage( 'media viewer', 'media viewer', self._MediaViewerPanel( self._listbook ) )
-        self._listbook.AddPage( 'media playback', 'media playback', self._MediaPlaybackPanel( self._listbook ) )
-        self._listbook.AddPage( 'audio', 'audio', self._AudioPanel( self._listbook, self._new_options ) )
-        self._listbook.AddPage( 'system tray', 'system tray', self._SystemTrayPanel( self._listbook, self._new_options ) )
-        self._listbook.AddPage( 'search', 'search', self._SearchPanel( self._listbook, self._new_options ) )
-        self._listbook.AddPage( 'colours', 'colours', self._ColoursPanel( self._listbook ) )
-        self._listbook.AddPage( 'popups', 'popups', self._PopupPanel( self._listbook, self._new_options ) )
-        self._listbook.AddPage( 'regex favourites', 'regex favourites', self._RegexPanel( self._listbook ) )
-        self._listbook.AddPage( 'sort/collect', 'sort/collect', self._SortCollectPanel( self._listbook, self._new_options ) )
-        self._listbook.AddPage( 'downloading', 'downloading', self._DownloadingPanel( self._listbook, self._new_options ) )
-        self._listbook.AddPage( 'duplicates', 'duplicates', self._DuplicatesPanel( self._listbook, self._new_options ) )
-        self._listbook.AddPage( 'importing', 'importing', self._ImportingPanel( self._listbook, self._new_options ) )
-        self._listbook.AddPage( 'style', 'style', self._StylePanel( self._listbook, self._new_options ) )
-        self._listbook.AddPage( 'tag presentation', 'tag presentation', self._TagPresentationPanel( self._listbook, self._new_options ) )
-        self._listbook.AddPage( 'tag suggestions', 'tag suggestions', self._TagSuggestionsPanel( self._listbook, self._new_options ) )
-        self._listbook.AddPage( 'tags', 'tags', self._TagsPanel( self._listbook, self._new_options ) )
-        self._listbook.AddPage( 'thumbnails', 'thumbnails', self._ThumbnailsPanel( self._listbook, self._new_options ) )
-        self._listbook.AddPage( 'system', 'system', self._SystemPanel( self._listbook, self._new_options ) )
-        self._listbook.AddPage( 'notes', 'notes', self._NotesPanel( self._listbook, self._new_options ) )
-        self._listbook.AddPage( '𝖆𝖉𝖛𝖆𝖓𝖈𝖊𝖉', 'advanced', self._AdvancedPanel( self._listbook, self._new_options ), do_sort = False )
+        self._listbook.AddPage( 'gui', self._GUIPanel( self._listbook ) ) # leave this at the top, to make it default page
+        self._listbook.AddPage( 'gui pages', self._GUIPagesPanel( self._listbook, self._new_options ) )
+        self._listbook.AddPage( 'command palette', self._CommandPalettePanel( self._listbook, self._new_options ) )
+        self._listbook.AddPage( 'connection', self._ConnectionPanel( self._listbook ) )
+        self._listbook.AddPage( 'exporting', self._ExportingPanel( self._listbook ) )
+        self._listbook.AddPage( 'external programs', self._ExternalProgramsPanel( self._listbook ) )
+        self._listbook.AddPage( 'files and trash', self._FilesAndTrashPanel( self._listbook ) )
+        self._listbook.AddPage( 'file viewing statistics', self._FileViewingStatisticsPanel( self._listbook ) )
+        self._listbook.AddPage( 'speed and memory', self._SpeedAndMemoryPanel( self._listbook, self._new_options ) )
+        self._listbook.AddPage( 'maintenance and processing', self._MaintenanceAndProcessingPanel( self._listbook ) )
+        self._listbook.AddPage( 'media viewer', self._MediaViewerPanel( self._listbook ) )
+        self._listbook.AddPage( 'media playback', self._MediaPlaybackPanel( self._listbook ) )
+        self._listbook.AddPage( 'audio', self._AudioPanel( self._listbook, self._new_options ) )
+        self._listbook.AddPage( 'system tray', self._SystemTrayPanel( self._listbook, self._new_options ) )
+        self._listbook.AddPage( 'file search', self._FileSearchPanel( self._listbook, self._new_options ) )
+        self._listbook.AddPage( 'colours', self._ColoursPanel( self._listbook ) )
+        self._listbook.AddPage( 'popups', self._PopupPanel( self._listbook, self._new_options ) )
+        self._listbook.AddPage( 'regex favourites', self._RegexPanel( self._listbook ) )
+        self._listbook.AddPage( 'sort/collect', self._SortCollectPanel( self._listbook, self._new_options ) )
+        self._listbook.AddPage( 'downloading', self._DownloadingPanel( self._listbook, self._new_options ) )
+        self._listbook.AddPage( 'duplicates', self._DuplicatesPanel( self._listbook, self._new_options ) )
+        self._listbook.AddPage( 'importing', self._ImportingPanel( self._listbook, self._new_options ) )
+        self._listbook.AddPage( 'style', self._StylePanel( self._listbook, self._new_options ) )
+        self._listbook.AddPage( 'tag editing', self._TagEditingPanel( self._listbook, self._new_options ) )
+        self._listbook.AddPage( 'tag presentation', self._TagPresentationPanel( self._listbook, self._new_options ) )
+        self._listbook.AddPage( 'tag suggestions', self._TagSuggestionsPanel( self._listbook, self._new_options ) )
+        self._listbook.AddPage( 'tag autocomplete tabs', self._TagsPanel( self._listbook, self._new_options ) )
+        self._listbook.AddPage( 'thumbnails', self._ThumbnailsPanel( self._listbook, self._new_options ) )
+        self._listbook.AddPage( 'system', self._SystemPanel( self._listbook, self._new_options ) )
+        self._listbook.AddPage( 'notes', self._NotesPanel( self._listbook, self._new_options ) )
+        
+        self._listbook.SortList()
+        
+        self._listbook.AddPage( 'advanced', self._AdvancedPanel( self._listbook, self._new_options ) )
         
         #
         
@@ -111,7 +114,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             # https://github.com/hydrusnetwork/hydrus/issues/1558
             
             self._advanced_mode = QW.QCheckBox( self )
-            self._advanced_mode.setToolTip( ClientGUIFunctions.WrapToolTip( 'This controls a variety of different features across the program, too many to list neatly. The plan is to blow this single option out into many granular options on this pgae.' ) )
+            self._advanced_mode.setToolTip( ClientGUIFunctions.WrapToolTip( 'This controls a variety of different features across the program, too many to list neatly. The plan is to blow this single option out into many granular options on this page.\n\nThis plan is failing.' ) )
             
             self._advanced_mode.setChecked( self._new_options.GetBoolean( 'advanced_mode' ) )
             
@@ -896,6 +899,94 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
         
     
+    class _ExportingPanel( QW.QWidget ):
+        
+        def __init__( self, parent ):
+            
+            super().__init__( parent )
+            
+            self._dnd_panel = ClientGUICommon.StaticBox( self, 'drag and drop' )
+            
+            # TODO: Yo, make the 50 files/200MB thresholds options of their own with warnings about lag!
+            # ALSO do gubbins where the temp folder stuff is fired if ctrl is held down or something, otherwise no export and hash filenames
+            
+            self._discord_dnd_fix = QW.QCheckBox( self._dnd_panel )
+            self._discord_dnd_fix.setToolTip( ClientGUIFunctions.WrapToolTip( 'This makes small file drag-and-drops a little laggier in exchange for Discord support. It also lets you set custom filenames for drag and drop exports.' ) )
+            
+            self._discord_dnd_filename_pattern = QW.QLineEdit( self._dnd_panel )
+            self._discord_dnd_filename_pattern.setToolTip( ClientGUIFunctions.WrapToolTip( 'When you put your DnD files in your temp folder, we have a chance to rename them. This export phrase will do that. If no filename can be generated, hash will be used instead.' ) )
+            
+            self._export_pattern_button = ClientGUICommon.ExportPatternButton( self )
+            
+            self._secret_discord_dnd_fix = QW.QCheckBox( self._dnd_panel )
+            self._secret_discord_dnd_fix.setToolTip( ClientGUIFunctions.WrapToolTip( 'Because of weird security/permission issues, a program will sometimes not accept a drag and drop file export from hydrus unless the DnD is set to "move" rather than "copy" (discord has done this for some people). Since we do not want to let you accidentally move your files out of your primary file store, this is only enabled if you are copying the files in question to your temp folder first!' ) )
+            
+            #
+            
+            self._new_options = CG.client_controller.new_options
+            
+            self._discord_dnd_fix.setChecked( self._new_options.GetBoolean( 'discord_dnd_fix' ) )
+            
+            self._discord_dnd_filename_pattern.setText( self._new_options.GetString( 'discord_dnd_filename_pattern' ) )
+            
+            self._secret_discord_dnd_fix.setChecked( self._new_options.GetBoolean( 'secret_discord_dnd_fix' ) )
+            
+            #
+            
+            rows = []
+            
+            rows.append( ( 'Copy files to temp folder for drag-and-drop (works for <=50, <200MB file DnDs--fixes Discord!): ', self._discord_dnd_fix ) )
+            rows.append( ( 'Set drag-and-drops to have a "move" flag: ', self._secret_discord_dnd_fix ) )
+            rows.append( ( 'Drag-and-drop export filename pattern: ', self._discord_dnd_filename_pattern ) )
+            rows.append( ( '', self._export_pattern_button ) )
+            
+            gridbox = ClientGUICommon.WrapInGrid( self, rows )
+            
+            label = 'You can drag-and-drop a selection of files out of the client to quickly copy-export them to a folder or an external program (include web browser upload boxes).'
+            
+            if HC.PLATFORM_WINDOWS:
+                
+                label += '\n\nNote, however, that Windows will generally be unhappy about DnDs between two programs where one is in admin mode and the other not. In this case, you will want to export to a neutral folder like your Desktop and then do a second drag from there to your destination program.'
+                
+            
+            st = ClientGUICommon.BetterStaticText( self._dnd_panel, label = label )
+            
+            st.setWordWrap( True )
+            
+            self._dnd_panel.Add( st, CC.FLAGS_EXPAND_PERPENDICULAR )
+            
+            self._dnd_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            
+            vbox = QP.VBoxLayout()
+            
+            QP.AddToLayout( vbox, self._dnd_panel, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            
+            vbox.addStretch( 1 )
+            
+            self.setLayout( vbox )
+            
+            self._discord_dnd_fix.clicked.connect( self._UpdateDnDFilenameEnabled )
+            
+            self._UpdateDnDFilenameEnabled()
+            
+        
+        def _UpdateDnDFilenameEnabled( self ):
+            
+            enabled = self._discord_dnd_fix.isChecked()
+            
+            self._discord_dnd_filename_pattern.setEnabled( enabled )
+            self._export_pattern_button.setEnabled( enabled )
+            self._secret_discord_dnd_fix.setEnabled( enabled )
+            
+        
+        def UpdateOptions( self ):
+            
+            self._new_options.SetBoolean( 'discord_dnd_fix', self._discord_dnd_fix.isChecked() )
+            self._new_options.SetString( 'discord_dnd_filename_pattern', self._discord_dnd_filename_pattern.text() )
+            self._new_options.SetBoolean( 'secret_discord_dnd_fix', self._secret_discord_dnd_fix.isChecked() )
+            
+        
+    
     class _ExternalProgramsPanel( QW.QWidget ):
         
         def __init__( self, parent ):
@@ -921,7 +1012,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_EXTERNAL_PROGRAMS.ID, self._ConvertMimeToListCtrlTuples )
             
-            self._mime_launch_listctrl = ClientGUIListCtrl.BetterListCtrlTreeView( mime_panel, CGLC.COLUMN_LIST_EXTERNAL_PROGRAMS.ID, 15, model, activation_callback = self._EditMimeLaunch )
+            self._mime_launch_listctrl = ClientGUIListCtrl.BetterListCtrlTreeView( mime_panel, 15, model, activation_callback = self._EditMimeLaunch )
             
             for mime in HC.SEARCHABLE_MIMES:
                 
@@ -1448,15 +1539,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._human_bytes_sig_figs = ClientGUICommon.BetterSpinBox( self._misc_panel, min = 1, max = 6 )
             self._human_bytes_sig_figs.setToolTip( ClientGUIFunctions.WrapToolTip( 'When the program presents a bytes size above 1KB, like 21.3KB or 4.11GB, how many total digits do we want in the number? 2 or 3 is best.') )
             
-            self._discord_dnd_fix = QW.QCheckBox( self._misc_panel )
-            self._discord_dnd_fix.setToolTip( ClientGUIFunctions.WrapToolTip( 'This makes small file drag-and-drops a little laggier in exchange for Discord support. It also lets you set custom filenames for drag and drop exports.' ) )
-            
-            self._discord_dnd_filename_pattern = QW.QLineEdit( self._misc_panel )
-            self._discord_dnd_filename_pattern.setToolTip( ClientGUIFunctions.WrapToolTip( 'When the above is enabled, this export phrase will rename your files. If no filename can be generated, hash will be used instead.' ) )
-            
-            self._secret_discord_dnd_fix = QW.QCheckBox( self._misc_panel )
-            self._secret_discord_dnd_fix.setToolTip( ClientGUIFunctions.WrapToolTip( 'This saves the lag but is potentially dangerous, as it (may) treat the from-db-files-drag as a move rather than a copy and hence only works when the drop destination will not consume the files. It requires an additional secret Alternate key to unlock.' ) )
-            
             self._do_macos_debug_dialog_menus = QW.QCheckBox( self._misc_panel )
             self._do_macos_debug_dialog_menus.setToolTip( ClientGUIFunctions.WrapToolTip( 'There is a bug in Big Sur Qt regarding interacting with some menus in dialogs. The menus show but cannot be clicked. This shows the menu items in a debug dialog instead.' ) )
             
@@ -1474,7 +1556,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._frame_locations_panel = ClientGUIListCtrl.BetterListCtrlPanel( frame_locations_panel )
             
-            self._frame_locations = ClientGUIListCtrl.BetterListCtrlTreeView( self._frame_locations_panel, CGLC.COLUMN_LIST_FRAME_LOCATIONS.ID, 15, model, activation_callback = self.EditFrameLocations )
+            self._frame_locations = ClientGUIListCtrl.BetterListCtrlTreeView( self._frame_locations_panel, 15, model, activation_callback = self.EditFrameLocations )
             
             self._frame_locations_panel.SetListCtrl( self._frame_locations )
             
@@ -1503,14 +1585,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._use_native_menubar.setChecked( self._new_options.GetBoolean( 'use_native_menubar' ) )
             
             self._human_bytes_sig_figs.setValue( self._new_options.GetInteger( 'human_bytes_sig_figs' ) )
-            
-            self._discord_dnd_fix.setChecked( self._new_options.GetBoolean( 'discord_dnd_fix' ) )
-            
-            self._discord_dnd_filename_pattern.setText( self._new_options.GetString( 'discord_dnd_filename_pattern' ) )
-            
-            self._export_pattern_button = ClientGUICommon.ExportPatternButton( self )
-            
-            self._secret_discord_dnd_fix.setChecked( self._new_options.GetBoolean( 'secret_discord_dnd_fix' ) )
             
             self._do_macos_debug_dialog_menus.setChecked( self._new_options.GetBoolean( 'do_macos_debug_dialog_menus' ) )
             
@@ -1543,12 +1617,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             rows.append( ( 'Prefer ISO time ("2018-03-01 12:40:23") to "5 days ago": ', self._always_show_iso_time ) )
             rows.append( ( 'Mouse wheel can "scroll" through menu buttons: ', self._menu_choice_buttons_can_mouse_scroll ) )
-            rows.append( ( 'Copy temp files for drag-and-drop (works for <=25, <200MB file DnDs--fixes Discord!): ', self._discord_dnd_fix ) )
-            rows.append( ( 'Drag-and-drop export filename pattern: ', self._discord_dnd_filename_pattern ) )
-            rows.append( ( '', self._export_pattern_button ) )
             rows.append( ( 'Use Native MenuBar (if available): ', self._use_native_menubar ) )
             rows.append( ( 'EXPERIMENTAL: Bytes strings >1KB pseudo significant figures: ', self._human_bytes_sig_figs ) )
-            rows.append( ( 'EXPERIMENTAL BUGFIX: Secret discord file drag-and-drop fix: ', self._secret_discord_dnd_fix ) )
             rows.append( ( 'BUGFIX: If on macOS, show dialog menus in a debug menu: ', self._do_macos_debug_dialog_menus ) )
             rows.append( ( 'ANTI-CRASH BUGFIX: Use Qt file/directory selection dialogs, rather than OS native: ', self._use_qt_file_dialogs ) )
             
@@ -1581,10 +1651,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             QP.AddToLayout( vbox, frame_locations_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
             
             self.setLayout( vbox )
-            
-            self._discord_dnd_fix.clicked.connect( self._UpdateDnDFilenameEnabled )
-            
-            self._UpdateDnDFilenameEnabled()
             
         
         def _FlipRememberPosition( self ):
@@ -1679,14 +1745,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             return pretty_listctrl_list
             
         
-        def _UpdateDnDFilenameEnabled( self ):
-            
-            enabled = self._discord_dnd_fix.isChecked()
-            
-            self._discord_dnd_filename_pattern.setEnabled( enabled )
-            self._export_pattern_button.setEnabled( enabled )
-            
-        
         def EditFrameLocations( self ):
             
             data = self._frame_locations.GetTopSelectedData()
@@ -1736,9 +1794,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._new_options.SetString( 'app_display_name', app_display_name )
             
-            self._new_options.SetBoolean( 'discord_dnd_fix', self._discord_dnd_fix.isChecked() )
-            self._new_options.SetString( 'discord_dnd_filename_pattern', self._discord_dnd_filename_pattern.text() )
-            self._new_options.SetBoolean( 'secret_discord_dnd_fix', self._secret_discord_dnd_fix.isChecked() )
             self._new_options.SetBoolean( 'do_macos_debug_dialog_menus', self._do_macos_debug_dialog_menus.isChecked() )
             self._new_options.SetBoolean( 'use_qt_file_dialogs', self._use_qt_file_dialogs.isChecked() )
             
@@ -2163,7 +2218,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             #
             
-            self._idle_panel = ClientGUICommon.StaticBox( self._jobs_panel, 'idle' )
+            self._idle_panel = ClientGUICommon.StaticBox( self._jobs_panel, 'idle', can_expand = True, start_expanded = False )
             
             self._idle_normal = QW.QCheckBox( self._idle_panel )
             self._idle_normal.clicked.connect( self._EnableDisableIdleNormal )
@@ -2176,7 +2231,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             #
             
-            self._shutdown_panel = ClientGUICommon.StaticBox( self._jobs_panel, 'shutdown' )
+            self._shutdown_panel = ClientGUICommon.StaticBox( self._jobs_panel, 'shutdown', can_expand = True, start_expanded = False )
             
             self._idle_shutdown = ClientGUICommon.BetterChoice( self._shutdown_panel )
             
@@ -2192,7 +2247,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             #
             
-            self._file_maintenance_panel = ClientGUICommon.StaticBox( self, 'file maintenance' )
+            self._file_maintenance_panel = ClientGUICommon.StaticBox( self, 'file maintenance', can_expand = True, start_expanded = False )
             
             min_unit_value = 1
             max_unit_value = 1000
@@ -2215,7 +2270,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             #
             
-            self._repository_processing_panel = ClientGUICommon.StaticBox( self, 'repository processing' )
+            self._repository_processing_panel = ClientGUICommon.StaticBox( self, 'repository processing', can_expand = True, start_expanded = False )
             
             self._repository_processing_work_time_very_idle = ClientGUITime.TimeDeltaCtrl( self._repository_processing_panel, min = 0.1, seconds = True, milliseconds = True )
             tt = 'DO NOT CHANGE UNLESS YOU KNOW WHAT YOU ARE DOING. Repository processing operates on a work-rest cycle. This setting determines how long it should work for in each work packet. Actual work time will normally be a little larger than this. Very Idle is after an hour of idle mode.'
@@ -2243,7 +2298,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             #
             
-            self._tag_display_processing_panel = ClientGUICommon.StaticBox( self, 'sibling/parent sync processing' )
+            self._tag_display_processing_panel = ClientGUICommon.StaticBox( self, 'sibling/parent sync processing', can_expand = True, start_expanded = False )
             
             self._tag_display_maintenance_during_idle = QW.QCheckBox( self._tag_display_processing_panel )
             self._tag_display_maintenance_during_active = QW.QCheckBox( self._tag_display_processing_panel )
@@ -2276,7 +2331,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             #
             
-            self._duplicates_panel = ClientGUICommon.StaticBox( self, 'potential duplicates search' )
+            self._duplicates_panel = ClientGUICommon.StaticBox( self, 'potential duplicates search', can_expand = True, start_expanded = False )
             
             self._maintain_similar_files_duplicate_pairs_during_idle = QW.QCheckBox( self._duplicates_panel )
             
@@ -2290,7 +2345,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             #
             
-            self._deferred_table_delete_panel = ClientGUICommon.StaticBox( self, 'deferred table delete' )
+            self._deferred_table_delete_panel = ClientGUICommon.StaticBox( self, 'deferred table delete', can_expand = True, start_expanded = False )
             
             self._deferred_table_delete_work_time_idle = ClientGUITime.TimeDeltaCtrl( self._deferred_table_delete_panel, min = 0.1, seconds = True, milliseconds = True )
             tt = 'DO NOT CHANGE UNLESS YOU KNOW WHAT YOU ARE DOING. Deferred table delete operates on a work-rest cycle. This setting determines how long it should work for in each work packet. Actual work time will normally be a little larger than this. This is for idle mode.'
@@ -2948,7 +3003,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_MEDIA_VIEWER_OPTIONS.ID, self._GetListCtrlData )
             
-            self._filetype_handling_listctrl = ClientGUIListCtrl.BetterListCtrlTreeView( media_viewer_list_panel, CGLC.COLUMN_LIST_MEDIA_VIEWER_OPTIONS.ID, 20, model, activation_callback = self.EditMediaViewerOptions, use_simple_delete = True )
+            self._filetype_handling_listctrl = ClientGUIListCtrl.BetterListCtrlTreeView( media_viewer_list_panel, 20, model, activation_callback = self.EditMediaViewerOptions, use_simple_delete = True )
             
             media_viewer_list_panel.SetListCtrl( self._filetype_handling_listctrl )
             
@@ -3421,7 +3476,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
         
     
-    class _SearchPanel( QW.QWidget ):
+    class _FileSearchPanel( QW.QWidget ):
         
         def __init__( self, parent, new_options ):
             
@@ -3462,16 +3517,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             #
             
-            self._write_autocomplete_panel = ClientGUICommon.StaticBox( self, 'tag edit autocomplete' )
-            
-            self._default_tag_service_tab = ClientGUICommon.BetterChoice( self._write_autocomplete_panel )
-            
-            self._save_default_tag_service_tab_on_change = QW.QCheckBox( self._write_autocomplete_panel )
-            
-            self._ac_write_list_height_num_chars = ClientGUICommon.BetterSpinBox( self._write_autocomplete_panel, min = 1, max = 128 )
-            
-            #
-            
             misc_panel = ClientGUICommon.StaticBox( self, 'file search' )
             
             self._forced_search_limit = ClientGUICommon.NoneableSpinCtrl( misc_panel, 10000, min = 1, max = 100000000 )
@@ -3485,14 +3530,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             for service in services:
                 
-                self._default_tag_service_tab.addItem( service.GetName(), service.GetServiceKey() )
-                
                 self._default_tag_service_search_page.addItem( service.GetName(), service.GetServiceKey() )
                 
-            
-            self._default_tag_service_tab.SetValue( self._new_options.GetKey( 'default_tag_service_tab' ) )
-            
-            self._save_default_tag_service_tab_on_change.setChecked( self._new_options.GetBoolean( 'save_default_tag_service_tab_on_change' ) )
             
             self._default_tag_service_search_page.SetValue( self._new_options.GetKey( 'default_tag_service_search_page' ) )
             
@@ -3501,7 +3540,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._autocomplete_float_main_gui.setChecked( self._new_options.GetBoolean( 'autocomplete_float_main_gui' ) )
             
             self._ac_read_list_height_num_chars.setValue( self._new_options.GetInteger( 'ac_read_list_height_num_chars' ) )
-            self._ac_write_list_height_num_chars.setValue( self._new_options.GetInteger( 'ac_write_list_height_num_chars' ) )
             
             self._always_show_system_everything.setChecked( self._new_options.GetBoolean( 'always_show_system_everything' ) )
             
@@ -3533,24 +3571,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             #
             
-            message = 'This tag autocomplete appears in the manage tags dialog and other places where you edit a list of tags.'
-            
-            st = ClientGUICommon.BetterStaticText( self._write_autocomplete_panel, label = message )
-            
-            self._write_autocomplete_panel.Add( st, CC.FLAGS_CENTER )
-            
-            rows = []
-            
-            rows.append( ( 'Remember last used default tag service in manage tag dialogs: ', self._save_default_tag_service_tab_on_change ) )
-            rows.append( ( 'Default tag service in manage tag dialogs: ', self._default_tag_service_tab ) )
-            rows.append( ( 'Autocomplete list height: ', self._ac_write_list_height_num_chars ) )
-            
-            gridbox = ClientGUICommon.WrapInGrid( self._write_autocomplete_panel, rows )
-            
-            self._write_autocomplete_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
-            
-            #
-            
             rows = []
             
             rows.append( ( 'Implicit system:limit for all searches: ', self._forced_search_limit ) )
@@ -3565,22 +3585,10 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             QP.AddToLayout( vbox, self._read_autocomplete_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
             QP.AddToLayout( vbox, misc_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-            QP.AddToLayout( vbox, self._write_autocomplete_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
             
             vbox.addStretch( 1 )
             
             self.setLayout( vbox )
-            
-            self._UpdateDefaultTagServiceControl()
-            
-            self._save_default_tag_service_tab_on_change.clicked.connect( self._UpdateDefaultTagServiceControl )
-            
-        
-        def _UpdateDefaultTagServiceControl( self ):
-            
-            enabled = not self._save_default_tag_service_tab_on_change.isChecked()
-            
-            self._default_tag_service_tab.setEnabled( enabled )
             
         
         def UpdateOptions( self ):
@@ -3594,10 +3602,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._new_options.SetBoolean( 'autocomplete_float_main_gui', self._autocomplete_float_main_gui.isChecked() )
             
             self._new_options.SetInteger( 'ac_read_list_height_num_chars', self._ac_read_list_height_num_chars.value() )
-            self._new_options.SetInteger( 'ac_write_list_height_num_chars', self._ac_write_list_height_num_chars.value() )
-            
-            self._new_options.SetBoolean( 'save_default_tag_service_tab_on_change', self._save_default_tag_service_tab_on_change.isChecked() )
-            self._new_options.SetKey( 'default_tag_service_tab', self._default_tag_service_tab.GetValue() )
             
             self._new_options.SetBoolean( 'always_show_system_everything', self._always_show_system_everything.isChecked() )
             self._new_options.SetBoolean( 'filter_inbox_and_archive_predicates', self._filter_inbox_and_archive_predicates.isChecked() )
@@ -4444,27 +4448,9 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             #
             
-            general_panel = ClientGUICommon.StaticBox( self, 'general tag options' )
-            
-            self._expand_parents_on_storage_taglists = QW.QCheckBox( general_panel )
-            self._expand_parents_on_storage_autocomplete_taglists = QW.QCheckBox( general_panel )
-            
-            self._show_parent_decorators_on_storage_taglists = QW.QCheckBox( general_panel )
-            self._show_parent_decorators_on_storage_autocomplete_taglists = QW.QCheckBox( general_panel )
-            self._show_sibling_decorators_on_storage_taglists = QW.QCheckBox( general_panel )
-            self._show_sibling_decorators_on_storage_autocomplete_taglists = QW.QCheckBox( general_panel )
-            
-            self._num_recent_petition_reasons = ClientGUICommon.BetterSpinBox( general_panel, initial = 5, min = 0, max = 100 )
-            tt = 'In manage tags, tag siblings, and tag parents, you may be asked to provide a reason with a petition you make to a hydrus repository. There are some fixed reasons, but the dialog can also remember what you recently typed. This controls how many recent reasons it will remember.'
-            self._num_recent_petition_reasons.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
-            
-            self._ac_select_first_with_count = QW.QCheckBox( general_panel )
-            
-            #
-            
             favourites_panel = ClientGUICommon.StaticBox( self, 'favourite tags' )
             
-            desc = 'These tags will appear in your tag autocomplete results area, under the \'favourites\' tab.'
+            desc = 'These tags will appear in every tag autocomplete results dropdown, under the \'favourites\' tab.'
             
             favourites_st = ClientGUICommon.BetterStaticText( favourites_panel, desc )
             favourites_st.setWordWrap( True )
@@ -4487,52 +4473,11 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             #
             
-            self._expand_parents_on_storage_taglists.setChecked( self._new_options.GetBoolean( 'expand_parents_on_storage_taglists' ) )
-            self._expand_parents_on_storage_taglists.setToolTip( ClientGUIFunctions.WrapToolTip( 'This affects taglists in places like the manage tags dialog, where you edit tags as they actually are, and implied parents hang below tags.' ) )
-            
-            self._expand_parents_on_storage_autocomplete_taglists.setChecked( self._new_options.GetBoolean( 'expand_parents_on_storage_autocomplete_taglists' ) )
-            self._expand_parents_on_storage_autocomplete_taglists.setToolTip( ClientGUIFunctions.WrapToolTip( 'This affects the autocomplete results taglist.' ) )
-            
-            self._show_parent_decorators_on_storage_taglists.setChecked( self._new_options.GetBoolean( 'show_parent_decorators_on_storage_taglists' ) )
-            self._show_parent_decorators_on_storage_taglists.setToolTip( ClientGUIFunctions.WrapToolTip( 'This affects taglists in places like the manage tags dialog, where you edit tags as they actually are, and implied parents either hang below tags or summarise in a suffix.' ) )
-            
-            self._show_parent_decorators_on_storage_autocomplete_taglists.setChecked( self._new_options.GetBoolean( 'show_parent_decorators_on_storage_autocomplete_taglists' ) )
-            self._show_parent_decorators_on_storage_autocomplete_taglists.setToolTip( ClientGUIFunctions.WrapToolTip( 'This affects the autocomplete results taglist.' ) )
-            
-            self._show_sibling_decorators_on_storage_taglists.setChecked( self._new_options.GetBoolean( 'show_sibling_decorators_on_storage_taglists' ) )
-            self._show_sibling_decorators_on_storage_taglists.setToolTip( ClientGUIFunctions.WrapToolTip( 'This affects taglists in places like the manage tags dialog, where you edit tags as they actually are, and siblings summarise in a suffix.' ) )
-            
-            self._show_sibling_decorators_on_storage_autocomplete_taglists.setChecked( self._new_options.GetBoolean( 'show_sibling_decorators_on_storage_autocomplete_taglists' ) )
-            self._show_sibling_decorators_on_storage_autocomplete_taglists.setToolTip( ClientGUIFunctions.WrapToolTip( 'This affects the autocomplete results taglist.' ) )
-            
-            self._num_recent_petition_reasons.setValue( self._new_options.GetInteger( 'num_recent_petition_reasons' ) )
-            
-            self._ac_select_first_with_count.setChecked( self._new_options.GetBoolean( 'ac_select_first_with_count' ) )
-            
-            #
-            
             self._favourites.SetTags( self._new_options.GetStringList( 'favourite_tags' ) )
             
             #
             
             self._num_to_show_in_ac_dropdown_children_tab.SetValue( self._new_options.GetNoneableInteger( 'num_to_show_in_ac_dropdown_children_tab' ) )
-            
-            #
-            
-            rows = []
-            
-            rows.append( ( 'Show parent info by default on edit/write taglists: ', self._show_parent_decorators_on_storage_taglists ) )
-            rows.append( ( 'Show parent info by default on edit/write autocomplete taglists: ', self._show_parent_decorators_on_storage_autocomplete_taglists ) )
-            rows.append( ( 'Show parents expanded by default on edit/write taglists: ', self._expand_parents_on_storage_taglists ) )
-            rows.append( ( 'Show parents expanded by default on edit/write autocomplete taglists: ', self._expand_parents_on_storage_autocomplete_taglists ) )
-            rows.append( ( 'Show sibling info by default on edit/write taglists: ', self._show_sibling_decorators_on_storage_taglists ) )
-            rows.append( ( 'Show sibling info by default on edit/write autocomplete taglists: ', self._show_sibling_decorators_on_storage_autocomplete_taglists ) )
-            rows.append( ( 'Number of recent petition reasons to remember in dialogs: ', self._num_recent_petition_reasons ) )
-            rows.append( ( 'By default, select the first tag result with actual count in write-autocomplete: ', self._ac_select_first_with_count ) )
-            
-            gridbox = ClientGUICommon.WrapInGrid( general_panel, rows )
-            
-            general_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
             #
             
@@ -4554,9 +4499,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             vbox = QP.VBoxLayout()
             
-            QP.AddToLayout( vbox, general_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-            QP.AddToLayout( vbox, favourites_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
             QP.AddToLayout( vbox, children_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+            QP.AddToLayout( vbox, favourites_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
             
             self.setLayout( vbox )
             
@@ -4579,6 +4523,161 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         def UpdateOptions( self ):
             
+            self._new_options.SetStringList( 'favourite_tags', list( self._favourites.GetTags() ) )
+            
+            #
+            
+            self._new_options.SetNoneableInteger( 'num_to_show_in_ac_dropdown_children_tab', self._num_to_show_in_ac_dropdown_children_tab.GetValue() )
+            
+        
+    
+    class _TagEditingPanel( QW.QWidget ):
+        
+        def __init__( self, parent, new_options ):
+            
+            super().__init__( parent )
+            
+            self._new_options = new_options
+            
+            #
+            
+            self._tag_services_panel = ClientGUICommon.StaticBox( self, 'tag dialogs' )
+            
+            self._use_listbook_for_tag_service_panels = QW.QCheckBox( self._tag_services_panel )
+            
+            self._expand_parents_on_storage_taglists = QW.QCheckBox( self._tag_services_panel )
+            self._show_parent_decorators_on_storage_taglists = QW.QCheckBox( self._tag_services_panel )
+            self._show_sibling_decorators_on_storage_taglists = QW.QCheckBox( self._tag_services_panel )
+            
+            self._num_recent_petition_reasons = ClientGUICommon.BetterSpinBox( self._tag_services_panel, initial = 5, min = 0, max = 100 )
+            tt = 'In manage tags, tag siblings, and tag parents, you may be asked to provide a reason with a petition you make to a hydrus repository. There are some fixed reasons, but the dialog can also remember what you recently typed. This controls how many recent reasons it will remember.'
+            self._num_recent_petition_reasons.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
+            
+            self._save_default_tag_service_tab_on_change = QW.QCheckBox( self._tag_services_panel )
+            
+            self._default_tag_service_tab = ClientGUICommon.BetterChoice( self._tag_services_panel )
+            
+            #
+            
+            self._write_autocomplete_panel = ClientGUICommon.StaticBox( self, 'tag edit autocomplete' )
+            
+            self._ac_select_first_with_count = QW.QCheckBox( self._write_autocomplete_panel )
+            
+            self._ac_write_list_height_num_chars = ClientGUICommon.BetterSpinBox( self._write_autocomplete_panel, min = 1, max = 128 )
+            
+            self._expand_parents_on_storage_autocomplete_taglists = QW.QCheckBox( self._write_autocomplete_panel )
+            self._show_parent_decorators_on_storage_autocomplete_taglists = QW.QCheckBox( self._write_autocomplete_panel )
+            self._show_sibling_decorators_on_storage_autocomplete_taglists = QW.QCheckBox( self._write_autocomplete_panel )
+            
+            #
+            
+            services = CG.client_controller.services_manager.GetServices( HC.REAL_TAG_SERVICES )
+            
+            for service in services:
+                
+                self._default_tag_service_tab.addItem( service.GetName(), service.GetServiceKey() )
+                
+            
+            self._default_tag_service_tab.SetValue( self._new_options.GetKey( 'default_tag_service_tab' ) )
+            
+            self._num_recent_petition_reasons.setValue( self._new_options.GetInteger( 'num_recent_petition_reasons' ) )
+            
+            self._use_listbook_for_tag_service_panels.setChecked( self._new_options.GetBoolean( 'use_listbook_for_tag_service_panels' ) )
+            self._use_listbook_for_tag_service_panels.setToolTip( ClientGUIFunctions.WrapToolTip( 'If you have many tag services, you might prefer to use a vertical list to navigate your various tag dialogs.' ) )
+            
+            self._save_default_tag_service_tab_on_change.setChecked( self._new_options.GetBoolean( 'save_default_tag_service_tab_on_change' ) )
+            
+            self._ac_select_first_with_count.setChecked( self._new_options.GetBoolean( 'ac_select_first_with_count' ) )
+            
+            self._ac_write_list_height_num_chars.setValue( self._new_options.GetInteger( 'ac_write_list_height_num_chars' ) )
+            
+            self._expand_parents_on_storage_taglists.setChecked( self._new_options.GetBoolean( 'expand_parents_on_storage_taglists' ) )
+            self._expand_parents_on_storage_taglists.setToolTip( ClientGUIFunctions.WrapToolTip( 'This affects taglists in places like the manage tags dialog, where you edit tags as they actually are, and implied parents hang below tags.' ) )
+            
+            self._expand_parents_on_storage_autocomplete_taglists.setChecked( self._new_options.GetBoolean( 'expand_parents_on_storage_autocomplete_taglists' ) )
+            self._expand_parents_on_storage_autocomplete_taglists.setToolTip( ClientGUIFunctions.WrapToolTip( 'This affects the autocomplete results taglist.' ) )
+            
+            self._show_parent_decorators_on_storage_taglists.setChecked( self._new_options.GetBoolean( 'show_parent_decorators_on_storage_taglists' ) )
+            self._show_parent_decorators_on_storage_taglists.setToolTip( ClientGUIFunctions.WrapToolTip( 'This affects taglists in places like the manage tags dialog, where you edit tags as they actually are, and implied parents either hang below tags or summarise in a suffix.' ) )
+            
+            self._show_parent_decorators_on_storage_autocomplete_taglists.setChecked( self._new_options.GetBoolean( 'show_parent_decorators_on_storage_autocomplete_taglists' ) )
+            self._show_parent_decorators_on_storage_autocomplete_taglists.setToolTip( ClientGUIFunctions.WrapToolTip( 'This affects the autocomplete results taglist.' ) )
+            
+            self._show_sibling_decorators_on_storage_taglists.setChecked( self._new_options.GetBoolean( 'show_sibling_decorators_on_storage_taglists' ) )
+            self._show_sibling_decorators_on_storage_taglists.setToolTip( ClientGUIFunctions.WrapToolTip( 'This affects taglists in places like the manage tags dialog, where you edit tags as they actually are, and siblings summarise in a suffix.' ) )
+            
+            self._show_sibling_decorators_on_storage_autocomplete_taglists.setChecked( self._new_options.GetBoolean( 'show_sibling_decorators_on_storage_autocomplete_taglists' ) )
+            self._show_sibling_decorators_on_storage_autocomplete_taglists.setToolTip( ClientGUIFunctions.WrapToolTip( 'This affects the autocomplete results taglist.' ) )
+            
+            #
+            
+            rows = []
+            
+            rows.append( ( 'Use listbook instead of tabbed notebook for tag service panels: ', self._use_listbook_for_tag_service_panels ) )
+            rows.append( ( 'Remember last used default tag service in manage tag dialogs: ', self._save_default_tag_service_tab_on_change ) )
+            rows.append( ( 'Default tag service in tag dialogs: ', self._default_tag_service_tab ) )
+            rows.append( ( 'Number of recent petition reasons to remember in dialogs: ', self._num_recent_petition_reasons ) )
+            rows.append( ( 'Show parent info by default on edit/write taglists: ', self._show_parent_decorators_on_storage_taglists ) )
+            rows.append( ( 'Show parents expanded by default on edit/write taglists: ', self._expand_parents_on_storage_taglists ) )
+            rows.append( ( 'Show sibling info by default on edit/write taglists: ', self._show_sibling_decorators_on_storage_taglists ) )
+            
+            gridbox = ClientGUICommon.WrapInGrid( self._tag_services_panel, rows )
+            
+            self._tag_services_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+            
+            #
+            
+            message = 'This tag autocomplete appears in the manage tags dialog and other places where you edit a list of tags.'
+            
+            st = ClientGUICommon.BetterStaticText( self._write_autocomplete_panel, label = message )
+            
+            self._write_autocomplete_panel.Add( st, CC.FLAGS_CENTER )
+            
+            rows = []
+            
+            rows.append( ( 'By default, select the first tag result with actual count in write-autocomplete: ', self._ac_select_first_with_count ) )
+            rows.append( ( 'Show parent info by default on edit/write autocomplete taglists: ', self._show_parent_decorators_on_storage_autocomplete_taglists ) )
+            rows.append( ( 'Show parents expanded by default on edit/write autocomplete taglists: ', self._expand_parents_on_storage_autocomplete_taglists ) )
+            rows.append( ( 'Show sibling info by default on edit/write autocomplete taglists: ', self._show_sibling_decorators_on_storage_autocomplete_taglists ) )
+            rows.append( ( 'Autocomplete list height: ', self._ac_write_list_height_num_chars ) )
+            
+            gridbox = ClientGUICommon.WrapInGrid( self._write_autocomplete_panel, rows )
+            
+            self._write_autocomplete_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+            
+            #
+            
+            vbox = QP.VBoxLayout()
+            
+            QP.AddToLayout( vbox, self._tag_services_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+            QP.AddToLayout( vbox, self._write_autocomplete_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+            
+            vbox.addStretch( 1 )
+            
+            self.setLayout( vbox )
+            
+            self._UpdateDefaultTagServiceControl()
+            
+            self._save_default_tag_service_tab_on_change.clicked.connect( self._UpdateDefaultTagServiceControl )
+            
+        
+        def _UpdateDefaultTagServiceControl( self ):
+            
+            enabled = not self._save_default_tag_service_tab_on_change.isChecked()
+            
+            self._default_tag_service_tab.setEnabled( enabled )
+            
+        
+        def UpdateOptions( self ):
+            
+            self._new_options.SetBoolean( 'use_listbook_for_tag_service_panels', self._use_listbook_for_tag_service_panels.isChecked() )
+            
+            self._new_options.SetInteger( 'num_recent_petition_reasons', self._num_recent_petition_reasons.value() )
+            
+            self._new_options.SetBoolean( 'ac_select_first_with_count', self._ac_select_first_with_count.isChecked() )
+            
+            self._new_options.SetInteger( 'ac_write_list_height_num_chars', self._ac_write_list_height_num_chars.value() )
+            
             self._new_options.SetBoolean( 'show_parent_decorators_on_storage_taglists', self._show_parent_decorators_on_storage_taglists.isChecked() )
             self._new_options.SetBoolean( 'show_parent_decorators_on_storage_autocomplete_taglists', self._show_parent_decorators_on_storage_autocomplete_taglists.isChecked() )
             self._new_options.SetBoolean( 'expand_parents_on_storage_taglists', self._expand_parents_on_storage_taglists.isChecked() )
@@ -4586,17 +4685,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._new_options.SetBoolean( 'show_sibling_decorators_on_storage_taglists', self._show_sibling_decorators_on_storage_taglists.isChecked() )
             self._new_options.SetBoolean( 'show_sibling_decorators_on_storage_autocomplete_taglists', self._show_sibling_decorators_on_storage_autocomplete_taglists.isChecked() )
             
-            self._new_options.SetInteger( 'num_recent_petition_reasons', self._num_recent_petition_reasons.value() )
-            
-            self._new_options.SetBoolean( 'ac_select_first_with_count', self._ac_select_first_with_count.isChecked() )
-            
-            #
-            
-            self._new_options.SetStringList( 'favourite_tags', list( self._favourites.GetTags() ) )
-            
-            #
-            
-            self._new_options.SetNoneableInteger( 'num_to_show_in_ac_dropdown_children_tab', self._num_to_show_in_ac_dropdown_children_tab.GetValue() )
+            self._new_options.SetBoolean( 'save_default_tag_service_tab_on_change', self._save_default_tag_service_tab_on_change.isChecked() )
+            self._new_options.SetKey( 'default_tag_service_tab', self._default_tag_service_tab.GetValue() )
             
         
     
@@ -4610,17 +4700,25 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             #
             
+            self._tag_banners_panel = ClientGUICommon.StaticBox( self, 'tag banners' )
+            
             tag_summary_generator = self._new_options.GetTagSummaryGenerator( 'thumbnail_top' )
             
-            self._thumbnail_top = ClientGUITags.TagSummaryGeneratorButton( self, tag_summary_generator )
+            self._thumbnail_top = ClientGUITags.TagSummaryGeneratorButton( self._tag_banners_panel, tag_summary_generator )
             
             tag_summary_generator = self._new_options.GetTagSummaryGenerator( 'thumbnail_bottom_right' )
             
-            self._thumbnail_bottom_right = ClientGUITags.TagSummaryGeneratorButton( self, tag_summary_generator )
+            self._thumbnail_bottom_right = ClientGUITags.TagSummaryGeneratorButton( self._tag_banners_panel, tag_summary_generator )
             
             tag_summary_generator = self._new_options.GetTagSummaryGenerator( 'media_viewer_top' )
             
-            self._media_viewer_top = ClientGUITags.TagSummaryGeneratorButton( self, tag_summary_generator )
+            self._media_viewer_top = ClientGUITags.TagSummaryGeneratorButton( self._tag_banners_panel, tag_summary_generator )
+            
+            #
+            
+            self._selection_tags_panel = ClientGUICommon.StaticBox( self, 'selection tags' )
+            
+            self._number_of_unselected_medias_to_present_tags_for = ClientGUICommon.NoneableSpinCtrl( self._selection_tags_panel, 4096, max = 10000000 )
             
             #
             
@@ -4669,6 +4767,9 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             #
             
+            self._number_of_unselected_medias_to_present_tags_for.SetValue( self._new_options.GetNoneableInteger( 'number_of_unselected_medias_to_present_tags_for' ) )
+            self._number_of_unselected_medias_to_present_tags_for.setToolTip( ClientGUIFunctions.WrapToolTip( 'The "selection tags" box on any search page will show the tags for all files when none are selected. To save CPU, very large pages will cap out and not try to generate (and regenerate on any changes) for everything.') )
+            
             self._show_namespaces.setChecked( new_options.GetBoolean( 'show_namespaces' ) )
             self._show_number_namespaces.setChecked( new_options.GetBoolean( 'show_number_namespaces' ) )
             self._show_subtag_number_namespaces.setChecked( new_options.GetBoolean( 'show_subtag_number_namespaces' ) )
@@ -4680,6 +4781,16 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._sibling_connector_custom_namespace_colour.SetValue( new_options.GetNoneableString( 'sibling_connector_custom_namespace_colour' ) )
             self._or_connector.setText( new_options.GetString( 'or_connector' ) )
             self._or_connector_custom_namespace_colour.setText( new_options.GetNoneableString( 'or_connector_custom_namespace_colour' ) )
+            
+            #
+            
+            rows = []
+            
+            rows.append( ( 'Max number of thumbnails to compute tags for when none are selected: ', self._number_of_unselected_medias_to_present_tags_for ) )
+            
+            gridbox = ClientGUICommon.WrapInGrid( self._selection_tags_panel, rows )
+            
+            self._selection_tags_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
             #
             
@@ -4707,7 +4818,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             gridbox = ClientGUICommon.WrapInGrid( self, rows )
             
-            QP.AddToLayout( vbox, gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            self._tag_banners_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
             #
             
@@ -4730,10 +4841,11 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             render_panel.Add( render_st, CC.FLAGS_EXPAND_PERPENDICULAR )
             render_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
-            QP.AddToLayout( vbox, render_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-            
             #
             
+            QP.AddToLayout( vbox, self._tag_banners_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+            QP.AddToLayout( vbox, self._selection_tags_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+            QP.AddToLayout( vbox, render_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
             QP.AddToLayout( vbox, namespace_colours_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
             
             #
@@ -4821,6 +4933,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
         
         def UpdateOptions( self ):
+            
+            self._new_options.SetNoneableInteger( 'number_of_unselected_medias_to_present_tags_for', self._number_of_unselected_medias_to_present_tags_for.GetValue() )
             
             self._new_options.SetTagSummaryGenerator( 'thumbnail_top', self._thumbnail_top.GetValue() )
             self._new_options.SetTagSummaryGenerator( 'thumbnail_bottom_right', self._thumbnail_bottom_right.GetValue() )
@@ -4921,7 +5035,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_TAG_SLICE_WEIGHT.ID, self._ConvertTagSliceAndWeightToListCtrlTuples )
             
-            self._search_tag_slices_weights = ClientGUIListCtrl.BetterListCtrlTreeView( search_tag_slices_weight_panel, CGLC.COLUMN_LIST_TAG_SLICE_WEIGHT.ID, 8, model, activation_callback = self._EditSearchTagSliceWeight, use_simple_delete = True, can_delete_callback = self._CanDeleteSearchTagSliceWeight )
+            self._search_tag_slices_weights = ClientGUIListCtrl.BetterListCtrlTreeView( search_tag_slices_weight_panel, 8, model, activation_callback = self._EditSearchTagSliceWeight, use_simple_delete = True, can_delete_callback = self._CanDeleteSearchTagSliceWeight )
             tt = 'ADVANCED! These weights adjust the ranking scores of suggested tags by the tag type that searched for them. Set to 0 to not search with that type of tag.'
             self._search_tag_slices_weights.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
             
@@ -4939,7 +5053,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_TAG_SLICE_WEIGHT.ID, self._ConvertTagSliceAndWeightToListCtrlTuples )
             
-            self._result_tag_slices_weights = ClientGUIListCtrl.BetterListCtrlTreeView( result_tag_slices_weight_panel, CGLC.COLUMN_LIST_TAG_SLICE_WEIGHT.ID, 8, model, activation_callback = self._EditResultTagSliceWeight, use_simple_delete = True, can_delete_callback = self._CanDeleteResultTagSliceWeight )
+            self._result_tag_slices_weights = ClientGUIListCtrl.BetterListCtrlTreeView( result_tag_slices_weight_panel, 8, model, activation_callback = self._EditResultTagSliceWeight, use_simple_delete = True, can_delete_callback = self._CanDeleteResultTagSliceWeight )
             tt = 'ADVANCED! These weights adjust the ranking scores of suggested tags by their tag type. Set to 0 to not suggest that type of tag at all.'
             self._result_tag_slices_weights.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
             
@@ -5516,7 +5630,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
     
     def CommitChanges( self ):
         
-        for page in self._listbook.GetActivePages():
+        for page in self._listbook.GetPages():
             
             page.UpdateOptions()
             

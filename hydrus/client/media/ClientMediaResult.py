@@ -1,8 +1,5 @@
-import typing
-
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusExceptions
-from hydrus.core import HydrusGlobals as HG
 
 from hydrus.client import ClientGlobals as CG
 from hydrus.client.media import ClientMediaManagers

@@ -4,7 +4,6 @@ import time
 import typing
 
 from hydrus.core import HydrusConstants as HC
-from hydrus.core import HydrusData
 from hydrus.core import HydrusNumbers
 
 def DateTimeToPrettyTime( dt: datetime.datetime, include_24h_time = True, include_milliseconds = False ):

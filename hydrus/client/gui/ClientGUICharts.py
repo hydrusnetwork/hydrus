@@ -1,5 +1,3 @@
-import itertools
-
 from qtpy import QtCore as QC
 
 try:

@@ -216,7 +216,10 @@ def boot():
                 
                 import threading
                 
-                threading.Thread( target = reactor.run, name = 'twisted', kwargs = { 'installSignalHandlers' : 0 } ).start()
+                # noinspection PyUnresolvedReferences
+                target = reactor.run
+                
+                threading.Thread( target = target, name = 'twisted', kwargs = { 'installSignalHandlers' : 0 } ).start()
                 
             
             from hydrus.client import ClientController
@@ -246,7 +249,11 @@ def boot():
             
             if not HG.twisted_is_broke:
                 
-                reactor.callFromThread( reactor.stop )
+                # noinspection PyUnresolvedReferences
+                target = reactor.stop
+                
+                # noinspection PyUnresolvedReferences
+                reactor.callFromThread( target )
                 
             
             HydrusData.Print( 'hydrus client shut down' )

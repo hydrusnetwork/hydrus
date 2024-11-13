@@ -1,7 +1,6 @@
 import typing
 
 from hydrus.core import HydrusConstants as HC
-from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusSerialisable
@@ -523,7 +522,7 @@ class ApplicationCommand( HydrusSerialisable.SerialisableBase ):
         super().__init__()
         
         self._command_type = command_type
-        self._data = data
+        self._data: typing.Any = data
         
     
     def __eq__( self, other ):

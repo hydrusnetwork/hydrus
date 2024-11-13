@@ -242,32 +242,18 @@ def GetDuplicateComparisonStatements( shown_media, comparison_media ):
                 score = -duplicate_comparison_score_higher_resolution
                 
             
-            if s_resolution in HC.NICE_RESOLUTIONS:
+            s_string = ClientData.ResolutionToPrettyString( s_resolution )
+            
+            if s_w % 2 == 1 or s_h % 2 == 1:
                 
-                s_string = HC.NICE_RESOLUTIONS[ s_resolution ]
-                
-            else:
-                
-                s_string = ClientData.ResolutionToPrettyString( s_resolution )
-                
-                if s_w % 2 == 1 or s_h % 2 == 1:
-                    
-                    s_string += ' (unusual)'
-                    
+                s_string += ' (unusual)'
                 
             
-            if c_resolution in HC.NICE_RESOLUTIONS:
+            c_string = ClientData.ResolutionToPrettyString( c_resolution )
+            
+            if c_w % 2 == 1 or c_h % 2 == 1:
                 
-                c_string = HC.NICE_RESOLUTIONS[ c_resolution ]
-                
-            else:
-                
-                c_string = ClientData.ResolutionToPrettyString( c_resolution )
-                
-                if c_w % 2 == 1 or c_h % 2 == 1:
-                    
-                    c_string += ' (unusual)'
-                    
+                c_string += ' (unusual)'
                 
             
             statement = '{} {} {}'.format( s_string, operator, c_string )

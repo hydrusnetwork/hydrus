@@ -189,7 +189,10 @@ def boot():
                 
                 HydrusData.Print( 'Initialising controller' + HC.UNICODE_ELLIPSIS )
                 
-                threading.Thread( target = reactor.run, name = 'twisted', kwargs = { 'installSignalHandlers' : 0 } ).start()
+                # noinspection PyUnresolvedReferences
+                target = reactor.run
+                
+                threading.Thread( target = target, name = 'twisted', kwargs = { 'installSignalHandlers' : 0 } ).start()
                 
                 controller = ServerController.Controller( db_dir )
                 
@@ -223,7 +226,11 @@ def boot():
                 controller.pubimmediate( 'wake_daemons' )
                 
             
-            reactor.callFromThread( reactor.stop )
+            # noinspection PyUnresolvedReferences
+            target = reactor.stop
+            
+            # noinspection PyUnresolvedReferences
+            reactor.callFromThread( target )
             
             HydrusData.Print( 'hydrus server shut down' )
             

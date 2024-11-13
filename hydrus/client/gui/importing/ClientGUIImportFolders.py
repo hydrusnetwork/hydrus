@@ -39,7 +39,7 @@ class EditImportFoldersPanel( ClientGUIScrolledPanels.EditPanel ):
         
         model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_IMPORT_FOLDERS.ID, self._ConvertImportFolderToDisplayTuple, self._ConvertImportFolderToSortTuple )
         
-        self._import_folders = ClientGUIListCtrl.BetterListCtrlTreeView( import_folders_panel, CGLC.COLUMN_LIST_IMPORT_FOLDERS.ID, 8, model, use_simple_delete = True, activation_callback = self._Edit )
+        self._import_folders = ClientGUIListCtrl.BetterListCtrlTreeView( import_folders_panel, 8, model, use_simple_delete = True, activation_callback = self._Edit )
         
         import_folders_panel.SetListCtrl( self._import_folders )
         
@@ -270,7 +270,7 @@ class EditImportFolderPanel( ClientGUIScrolledPanels.EditPanel ):
         
         model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_FILENAME_TAGGING_OPTIONS.ID, self._ConvertFilenameTaggingOptionsToDisplayTuple, self._ConvertFilenameTaggingOptionsToSortTuple )
         
-        self._filename_tagging_options = ClientGUIListCtrl.BetterListCtrlTreeView( filename_tagging_options_panel, CGLC.COLUMN_LIST_FILENAME_TAGGING_OPTIONS.ID, 5, model, use_simple_delete = True, activation_callback = self._EditFilenameTaggingOptions )
+        self._filename_tagging_options = ClientGUIListCtrl.BetterListCtrlTreeView( filename_tagging_options_panel, 5, model, use_simple_delete = True, activation_callback = self._EditFilenameTaggingOptions )
         
         filename_tagging_options_panel.SetListCtrl( self._filename_tagging_options )
         
@@ -424,11 +424,22 @@ class EditImportFolderPanel( ClientGUIScrolledPanels.EditPanel ):
             return
             
         
+        example_paths = self._sidecar_test_context_factory.GetExampleFilePaths()
+        
+        if len( example_paths ) > 0:
+            
+            example_path = example_paths[0]
+            
+        else:
+            
+            example_path = None
+            
+        
         with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit filename tagging options' ) as dlg:
             
             filename_tagging_options = TagImportOptions.FilenameTaggingOptions()
             
-            panel = ClientGUIImport.EditFilenameTaggingOptionPanel( dlg, service_key, filename_tagging_options )
+            panel = ClientGUIImport.EditFilenameTaggingOptionPanel( dlg, service_key, filename_tagging_options, example_path = example_path )
             
             dlg.SetPanel( panel )
             
@@ -599,9 +610,20 @@ class EditImportFolderPanel( ClientGUIScrolledPanels.EditPanel ):
         
         ( service_key, filename_tagging_options ) = data
         
+        example_paths = self._sidecar_test_context_factory.GetExampleFilePaths()
+        
+        if len( example_paths ) > 0:
+            
+            example_path = example_paths[0]
+            
+        else:
+            
+            example_path = None
+            
+        
         with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit filename tagging options' ) as dlg:
             
-            panel = ClientGUIImport.EditFilenameTaggingOptionPanel( dlg, service_key, filename_tagging_options )
+            panel = ClientGUIImport.EditFilenameTaggingOptionPanel( dlg, service_key, filename_tagging_options, example_path = example_path )
             
             dlg.SetPanel( panel )
             
@@ -627,7 +649,7 @@ class EditImportFolderPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 filenames = list( os.listdir( path ) )[:ClientGUIMetadataMigrationTest.HOW_MANY_EXAMPLE_OBJECTS_TO_USE]
                 
-                example_paths = [ os.path.join( path, filename ) for filename in filenames ]
+                example_paths = [ f for f in [ os.path.join( path, filename ) for filename in filenames ] if os.path.isfile( f ) ]
                 
                 self._sidecar_test_context_factory.SetExampleFilePaths( example_paths )
                 

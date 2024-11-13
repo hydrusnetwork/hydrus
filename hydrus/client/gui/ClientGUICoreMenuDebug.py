@@ -1,8 +1,5 @@
 from qtpy import QtCore as QC
-from qtpy import QtGui as QG
 from qtpy import QtWidgets as QW
-
-from hydrus.core import HydrusConstants as HC
 
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui.panels import ClientGUIScrolledPanels

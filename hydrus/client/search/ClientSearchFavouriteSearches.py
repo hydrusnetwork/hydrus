@@ -1,4 +1,3 @@
-import collections
 import threading
 
 from hydrus.core import HydrusExceptions

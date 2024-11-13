@@ -1,12 +1,9 @@
 import collections
 import itertools
-import typing
 
 from qtpy import QtWidgets as QW
 
 from hydrus.core import HydrusData
-from hydrus.core import HydrusGlobals as HG
-from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
@@ -179,7 +176,7 @@ class EditFavouriteSearchesPanel( ClientGUIScrolledPanels.EditPanel ):
         
         model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_FAVOURITE_SEARCHES.ID, self._ConvertRowToDisplayTuple, self._ConvertRowToSortTuple )
         
-        self._favourite_searches = ClientGUIListCtrl.BetterListCtrlTreeView( self._favourite_searches_panel, CGLC.COLUMN_LIST_FAVOURITE_SEARCHES.ID, 20, model, use_simple_delete = True, activation_callback = self._EditFavouriteSearch )
+        self._favourite_searches = ClientGUIListCtrl.BetterListCtrlTreeView( self._favourite_searches_panel, 20, model, use_simple_delete = True, activation_callback = self._EditFavouriteSearch )
         
         self._favourite_searches_panel.SetListCtrl( self._favourite_searches )
         

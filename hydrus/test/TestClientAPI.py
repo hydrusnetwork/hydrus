@@ -4,6 +4,7 @@ import json
 import os
 import random
 import time
+import typing
 import unittest
 import urllib
 import urllib.parse
@@ -143,6 +144,9 @@ def GetExampleServicesDict():
     
 
 class TestClientAPI( unittest.TestCase ):
+    
+    _client_api: typing.Any = None
+    _client_api_cors: typing.Any = None
     
     @classmethod
     def setUpClass( cls ):
@@ -3530,7 +3534,7 @@ class TestClientAPI( unittest.TestCase ):
         self.assertEqual( response_json[ 'normalised_url' ], 'https://8ch.net/tv/res/1846574.html' )
         
         filterable_tags = [ 'filename:yo' ]
-        additional_service_keys_to_tags = ClientTags.ServiceKeysToTags( { CC.DEFAULT_LOCAL_TAG_SERVICE_KEY : set( [ '/tv/ thread' ] ) } )
+        additional_service_keys_to_tags = ClientTags.ServiceKeysToTags( { CC.DEFAULT_LOCAL_TAG_SERVICE_KEY : { '/tv/ thread' } } )
         
         self.assertEqual( TG.test_controller.GetWrite( 'import_url_test' ), [ ( ( url, set( filterable_tags ), additional_service_keys_to_tags, 'muh /tv/', None, True, None ), {} ) ] )
         
@@ -3558,7 +3562,7 @@ class TestClientAPI( unittest.TestCase ):
         self.assertEqual( response_json[ 'normalised_url' ], 'https://8ch.net/tv/res/1846574.html' )
         
         filterable_tags = [ 'filename:yo' ]
-        additional_service_keys_to_tags = ClientTags.ServiceKeysToTags( { CC.DEFAULT_LOCAL_TAG_SERVICE_KEY : set( [ '/tv/ thread' ] ) } )
+        additional_service_keys_to_tags = ClientTags.ServiceKeysToTags( { CC.DEFAULT_LOCAL_TAG_SERVICE_KEY : { '/tv/ thread' } } )
         
         self.assertEqual( TG.test_controller.GetWrite( 'import_url_test' ), [ ( ( url, set( filterable_tags ), additional_service_keys_to_tags, 'muh /tv/', None, True, None ), {} ) ] )
         

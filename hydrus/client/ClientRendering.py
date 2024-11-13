@@ -1,4 +1,3 @@
-import os
 import numpy
 import threading
 import time
@@ -14,7 +13,6 @@ from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core.files import HydrusAnimationHandling
 from hydrus.core.files import HydrusVideoHandling
-from hydrus.core.files.images import HydrusImageColours
 from hydrus.core.files.images import HydrusImageHandling
 
 from hydrus.client import ClientFiles

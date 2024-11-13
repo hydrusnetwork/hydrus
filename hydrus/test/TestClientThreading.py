@@ -1,8 +1,6 @@
 import time
 import unittest
 
-from hydrus.core import HydrusGlobals as HG
-
 from hydrus.client import ClientThreading
 
 from hydrus.test import TestGlobals as TG

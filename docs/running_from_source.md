@@ -113,7 +113,11 @@ There are three special external libraries. You just have to get them and put th
         
     2. SQLite3  
         
-        Go to `install_dir/static/build_files/windows` and copy 'sqlite3.dll' into `install_dir`.
+        _This is optional and might feel scary, so feel free to ignore. It updates your python install to newer, faster database tech._
+        
+        Open your python install location and find the DLLs folder. Likely something like `C:\Program Files\Python311\DLLs` or `C:\Python311\DLLs`. There should be a sqlite3.dll there. Rename it to sqlite3.dll.old, and then open `install_dir/static/build_files/windows` and copy that 'sqlite3.dll' into the python `DLLs` folder.
+        
+        The absolute newest sqlite3.dll is always available [here](https://sqlite.org/download.html). You want the x64 dll.
         
     3. FFMPEG  
         

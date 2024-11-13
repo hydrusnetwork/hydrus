@@ -29,7 +29,6 @@ from hydrus.client import ClientData
 from hydrus.client import ClientFiles
 from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientLocation
-from hydrus.client import ClientMigration
 from hydrus.client import ClientParsing
 from hydrus.client import ClientFilesPhysical
 from hydrus.client import ClientRendering
@@ -41,7 +40,6 @@ from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIDragDrop
 from hydrus.client.gui import ClientGUIFunctions
-from hydrus.client.gui import ClientGUITags
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.importing import ClientGUIImport
@@ -50,7 +48,6 @@ from hydrus.client.gui.lists import ClientGUIListConstants as CGLC
 from hydrus.client.gui.lists import ClientGUIListCtrl
 from hydrus.client.gui.panels import ClientGUIScrolledPanels
 from hydrus.client.gui.search import ClientGUIACDropdown
-from hydrus.client.gui.search import ClientGUILocation
 from hydrus.client.gui.widgets import ClientGUICommon
 from hydrus.client.gui.widgets import ClientGUIBytes
 from hydrus.client.gui.widgets import ClientGUIMenuButton
@@ -169,7 +166,7 @@ class MoveMediaFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_DB_MIGRATION_LOCATIONS.ID, self._ConvertLocationToListCtrlTuples )
         
-        self._current_media_base_locations_listctrl = ClientGUIListCtrl.BetterListCtrlTreeView( current_media_base_locations_listctrl_panel, CGLC.COLUMN_LIST_DB_MIGRATION_LOCATIONS.ID, 8, model, activation_callback = self._SetMaxNumBytes )
+        self._current_media_base_locations_listctrl = ClientGUIListCtrl.BetterListCtrlTreeView( current_media_base_locations_listctrl_panel, 8, model, activation_callback = self._SetMaxNumBytes )
         self._current_media_base_locations_listctrl.setSelectionMode( QW.QAbstractItemView.SingleSelection )
         
         self._current_media_base_locations_listctrl.Sort()
@@ -1487,7 +1484,7 @@ class ReviewFileEmbeddedMetadata( ClientGUIScrolledPanels.ReviewPanel ):
         
         model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_EXIF_DATA.ID, self._ConvertEXIFToListCtrlTuples )
         
-        self._exif_listctrl = ClientGUIListCtrl.BetterListCtrlTreeView( exif_panel, CGLC.COLUMN_LIST_EXIF_DATA.ID, 16, model, activation_callback = self._CopyRow )
+        self._exif_listctrl = ClientGUIListCtrl.BetterListCtrlTreeView( exif_panel, 16, model, activation_callback = self._CopyRow )
         
         label = 'Double-click a row to copy its value to clipboard.'
         
@@ -1845,7 +1842,7 @@ class ReviewFileMaintenance( ClientGUIScrolledPanels.ReviewPanel ):
         
         model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_FILE_MAINTENANCE_JOBS.ID, self._ConvertJobTypeToListCtrlTuples )
         
-        self._jobs_listctrl = ClientGUIListCtrl.BetterListCtrlTreeView( jobs_listctrl_panel, CGLC.COLUMN_LIST_FILE_MAINTENANCE_JOBS.ID, 8, model )
+        self._jobs_listctrl = ClientGUIListCtrl.BetterListCtrlTreeView( jobs_listctrl_panel, 8, model )
         
         jobs_listctrl_panel.SetListCtrl( self._jobs_listctrl )
         
@@ -2811,7 +2808,7 @@ class ReviewLocalFileImports( ClientGUIScrolledPanels.ReviewPanel ):
         
         model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_INPUT_LOCAL_FILES.ID, self._ConvertListCtrlDataToTuple )
         
-        self._paths_list = ClientGUIListCtrl.BetterListCtrlTreeView( listctrl_panel, CGLC.COLUMN_LIST_INPUT_LOCAL_FILES.ID, 12, model, delete_key_callback = self.RemovePaths )
+        self._paths_list = ClientGUIListCtrl.BetterListCtrlTreeView( listctrl_panel, 12, model, delete_key_callback = self.RemovePaths )
         
         listctrl_panel.SetListCtrl( self._paths_list )
         
@@ -3419,7 +3416,7 @@ class JobSchedulerPanel( QW.QWidget ):
         
         model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_JOB_SCHEDULER_REVIEW.ID, self._ConvertDataToListCtrlTuples )
         
-        self._list_ctrl = ClientGUIListCtrl.BetterListCtrlTreeView( self._list_ctrl_panel, CGLC.COLUMN_LIST_JOB_SCHEDULER_REVIEW.ID, 20, model )
+        self._list_ctrl = ClientGUIListCtrl.BetterListCtrlTreeView( self._list_ctrl_panel, 20, model )
         
         self._list_ctrl_panel.SetListCtrl( self._list_ctrl )
         
@@ -3477,7 +3474,7 @@ class ThreadsPanel( QW.QWidget ):
         
         model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_THREADS_REVIEW.ID, self._ConvertDataToListCtrlTuples )
         
-        self._list_ctrl = ClientGUIListCtrl.BetterListCtrlTreeView( self._list_ctrl_panel, CGLC.COLUMN_LIST_THREADS_REVIEW.ID, 20, model )
+        self._list_ctrl = ClientGUIListCtrl.BetterListCtrlTreeView( self._list_ctrl_panel, 20, model )
         
         self._list_ctrl_panel.SetListCtrl( self._list_ctrl )
         
@@ -3546,7 +3543,7 @@ class ReviewDeferredDeleteTableData( ClientGUIScrolledPanels.ReviewPanel ):
         
         model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_DEFERRED_DELETE_TABLE_DATA.ID, self._ConvertRowToListCtrlTuples )
         
-        self._deferred_delete_listctrl = ClientGUIListCtrl.BetterListCtrlTreeView( deferred_delete_listctrl_panel, CGLC.COLUMN_LIST_DEFERRED_DELETE_TABLE_DATA.ID, 24, model )
+        self._deferred_delete_listctrl = ClientGUIListCtrl.BetterListCtrlTreeView( deferred_delete_listctrl_panel, 24, model )
         
         deferred_delete_listctrl_panel.SetListCtrl( self._deferred_delete_listctrl )
         
@@ -3739,7 +3736,7 @@ Vacuuming is an expensive operation. It requires lots of free space on your driv
         
         model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_VACUUM_DATA.ID, self._ConvertNameToListCtrlTuples )
         
-        self._vacuum_listctrl = ClientGUIListCtrl.BetterListCtrlTreeView( vacuum_listctrl_panel, CGLC.COLUMN_LIST_VACUUM_DATA.ID, 6, model )
+        self._vacuum_listctrl = ClientGUIListCtrl.BetterListCtrlTreeView( vacuum_listctrl_panel, 6, model )
         
         vacuum_listctrl_panel.SetListCtrl( self._vacuum_listctrl )
         

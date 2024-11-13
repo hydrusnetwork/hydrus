@@ -7,6 +7,69 @@ title: Changelog
 !!! note
     This is the new changelog, only the most recent builds. For all versions, see the [old changelog](old_changelog.html).
 
+## [Version 598](https://github.com/hydrusnetwork/hydrus/releases/tag/v598)
+
+### misc
+
+* I screwed up the import folder deduplication fix last week! it caused import folders that contained duplicated items (and a handful of subscriptions, and even one normal GUI session) to not be able to save back their work. nothing was damaged, _per se_, but progress was not being saved and work was stopping after the respective systems paused out of safety. I am sorry for the trouble and worry here, and I hate it when this kind of error happens. I did made a test to test this thing worked, but it wasn't good enough. I have fixed it now and I am rejigging my test procedures to explicitly check for this specific class of object type problem (issue #1624)
+* fixed the duplicate filter comparison statements to obey the new 'do not use pretty (720p etc..) resolution swap-in strings' option (issue #1621)
+* the 'maintenance and processing' page now has some expand/collapse stuff on its boxes to make the options page not want to be so tall on startup
+* the 'edit filename tagging options' panel under the 'edit import folder' dialog now auto-populates the example filename from the actual folder's current contents. thanks to a user for pointing this out
+* moved a bunch of checkboxes around in the options. `options->tags` is renamed `tag autocomplete tabs` and now just handles children and favourites. `search` is renamed `file search` and handles the 'read' autocomplete and implicit system:limit, and a new page `tag editing` is added to handle the 'write' autocomplete and various 'tag service panel' settings
+* the normal search page 'selection tags' list now only computes the tags for the first n thumbnails (default 4096) on a page when you have no files selected. this saves time on mega pages when you click off a selection and also on giant import pages where new files are continually streaming in at the end. I expect this to reduce CPU and lag significantly on clients that idle looking at big import pages. you can set the n under `options->tag presentation`, including turning it off entirely. I did some misc optimisation here too, but I also found some places I can improve the general tag re-compute in future cleanup work
+* I may have improved some media viewer hover window positioning, sizing, and flicker in layout, particularly on the note window
+* the 'do really heavy sibling and parents calculation work in the background' daemon now waits 60 seconds after boot to start work (previously 10s). since I added the new fast sibling and parent cache (which works quick but takes some extra work to initialise), I've noticed you often get a heap of lag as this guy is initially populated right after boot. so, the primary caller now happens a little later in the boot rush and _should_ smooth out the curve a little
+
+### listbooks
+
+* I rewrote the 'ListBook' the options dialog relies on from ancient and irll-desingned wx code to a nice clean simple Qt panel
+* if you have a ton of tag services, a new 'use listbook instead of tabbed notebook for tag service panels' checkbox under `options->tag editing` now lets you use the new listbook instead of the old notebook/tabbed widget in: manage tags, manage tag siblings, manage tag parents, manage tag display and application, and review tag display sync
+
+### drag and drops
+
+* moved the DnD options out of `options->gui` and to a new `exporting` panel and added a bit of text
+* the BUGFIX 'secret' Discord fix is now formalised into an always-on 'set the DnD to a move flag', with a nice explanatory tooltip. it is now also always safe because it will now only ever run if you are set to export your DnDs to the temp folder
+* the 'DnD temp folder' system is now cleaner and DnD temp folders will now be deleted after six hours (previously they were only cleaned up on client exit)
+* added a note to the 'getting started with files' help to say you can export files with drag and drop m8
+
+### some multi-column list fixes
+
+* fixed a bad list type definition in the new auto-resolution rules UI. it thought it was the export folder dialog's list and was throwing weird errors if that list was sorted in column &gt;=4
+* if a multi-column list fails to sort, it now catches and displays the error and continues with whatever was going on at the time
+* if a multi-column list status is asked for a non-existing column type, the status now reports the error info and attempts its best fallback
+* improved multi-column list initialisation across the board so the above problem cannot happen again (the list type was being set in two different locations, and I missed a ctrl+c/v edit)
+
+### parsing
+
+* behind the scenes, the 'subsidiary page parser' is now one object. it was a janky thing before
+* the subsidiary page parsers list in the parsing edit UI now has import/export/duplicate buttons
+* it doesn't matter outside of file log post order, I don't think, but subsidiary page parsers now always work in alphabetical order
+* they also now name themselves specifically when they cause an error
+* parsers now deduplicate the list when saying what they 'produce/parse' in UI
+
+### boring linting cleanup
+
+* tweaked my linter settings to better catch some stupid errors and put the effort into cleaning up the hundreds of long-time warnings, probably more than a thousand items of Qt Signal false-positive spam, and the actual real bugs. I am hoping to better expose future needles without a haystack of garbage in the way. I am determined to maintain a 0 error count on Unresolved References going forward
+* every single unused import statement is now removed or suppressed. I'm sure there are still tangles and bad ideas generally, but everything is completely lean now
+* fixed some PILImage enum references
+* improved some hydrus serialisable typedefs
+* fixed some exception/warning defs
+* deleted some old defunct 'retry' code from subscriptions
+* fixed some bitmap generation code to handle non-c-contiguous memoryviews properly
+* cleaned up some html parsing to properly navigate weird stuff bs4 might put out
+* fixed a stupid type error in the old HydrusTagArchive namespace code
+* fixed some account type calls in _manage services_ auto-account creation
+* fixed an issue with unusual tab drag and drops
+* deleted the empty `TestClientData.py`
+* deleted the empty `ServerServices.py`
+* fixed a bunch of misc typedefs in general
+
+### boring build/source stuff
+
+* updated my Windows 'running from source' help to now say you need to put the sqlite3.dll in your actual python DLLs dir. as this is more scary than just dropping it in your hydrus install dir, I emphasise this is optional
+* updated my 'requirements_server.txt', which is not used but a reference, to use the new requests and setuptools versions we recently updated to
+* I am dropping support for the ancient OpenCV 2. we've had some enum monkeypatches in place for years and years, but I don't even know if 2 will even run on any modern python; it is gone now
+
 ## [Version 597](https://github.com/hydrusnetwork/hydrus/releases/tag/v597)
 
 ### misc
@@ -399,33 +462,3 @@ title: Changelog
 * replaced many of my ancient static inheritance references with python's `super()` gubbins. I disentangled all the program's multiple inheritance into super() and did I think about half of the rest. still like 360 `__init__` lines to do in future
 * a couple of the 'noneable text' widgets that I recently set to have a default text, in the subscription dialogs, now use that text as placeholder rather than actual default. having 'my subscription' or whatever is ok as a guide, but when the user actually wants to edit, having it be real text is IRL a pain
 * refactored the repair file locations dialog and manage options dialog and new page picker mini-dialog to their own python files
-
-## [Version 588](https://github.com/hydrusnetwork/hydrus/releases/tag/v588)
-
-### fast new lists
-
-* tl;dr: big lists faster now. you do not need to do anything
-* every multi-column list in the program (there's about 75 of them) now works on a more sophisticated model (specifically, we are updating from QTreeWidget to QTreeView). instead of the list storing and regenerating display labels for every single row of a table, only the rows that are currently in view are generally consulted. sort events are similarly extremely fast, with off-screen updates virtualised and deferred
-* in my tests, a list with 170,000 rows now sorts in about four seconds. my code is still connected to a non-optimised part of the old system, so I hope to improve gains with background cleanup work in coming months. I believe I can make it work at least twice as fast in places, particularly in initialisation
-* multi-column lists are much better about initialising/migrating the selection 'focus' (the little, usually dotted-line-border box that says where keyboard focus is) through programmatic insertions and deletes and sorts
-* column headers now show the up/down 'sort' arrows using native style. everything is a bit more Qt-native and closer to C++ instead of my old custom garbage
-* none of this changes anything to do with single-column lists across the program, which are still using somewhat jank old code. my taglist in particular is an entirely custom object that is neat in some ways but stuck in place by my brittle design. the above rewrite was tricky in a couple of annoying ways but overall very worth doing, so I expect to replicate it elsewhere. another open choice is rewriting the similarly entirely custom thumbnail canvas to a proper Qt widget with a QLayout and such. we'll see how future work goes
-
-### misc
-
-* fixed the 'show' part of 'pages-&gt;sidebar and preview panels-&gt;show/hide sidebar and preview panel', which was busted last week in the page relayout cleanup
-* I think I fixed the frame of flicker (usually a moment of page-wide autocomplete input) you would sometimes get when clicking a 'show these files' popup message files button
-* fixed the new shimmie parser (by adding a simpler dupe and wangling the example urls around) to correctly parse r34h tags
-* I think I may have fixed some deadlocks and/or mega-pauses in the manage tag parents/siblings dialogs when entering pairs causes a dialog (a yes/no confirmation, or the 'enter a reason' input) to pop up
-* I think I have fixed the 'switch between fullscreen borderless and regular framed window' command when set to the 'media_viewer' shortcut set. some command-processing stuff wasn't wired up fully after I cleared out some old hacks a while ago
-* the manage tag parents dialog has some less janky layout as it is expanded/shrunk
-* if similar files search tree maintenance fails to regenerate a branch, the user is now told to try running the full regen
-* the full similar files search tree regen now filters out nodes with invalid phashes (i.e. due to database damage), deleting those nodes fully and printing all pertinent info to the log, and tells the user what to do next
-* you can now regen the similar files search tree on an empty database without error, lol
-* while I was poking around lists, I fixed a bit of bad error handling when you try to import a broken serialised data png to a multi-column list
-
-### client api
-
-* the `/get_files/search_files` command now supports `include_current_tags` and `include_pending_tags`, mirroring the buttons on the normal search interface (issue #1577)
-* updated the help and unit tests to check these new params
-* client api version is now 69

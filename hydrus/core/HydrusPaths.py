@@ -3,6 +3,7 @@ import os
 import typing
 
 import re
+
 import send2trash
 import shlex
 import shutil
@@ -427,6 +428,7 @@ def GetDevice( path ) -> typing.Optional[ str ]:
         
     else:
         
+        # noinspection PyUnresolvedReferences
         return partition_info.device
         
     
@@ -441,6 +443,7 @@ def GetFileSystemType( path: str ) -> typing.Optional[ str ]:
         
     else:
         
+        # noinspection PyUnresolvedReferences
         return partition_info.fstype
         
     

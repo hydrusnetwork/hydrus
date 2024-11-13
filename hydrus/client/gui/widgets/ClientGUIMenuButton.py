@@ -1,5 +1,3 @@
-import typing
-
 from qtpy import QtCore as QC
 
 from hydrus.client import ClientGlobals as CG

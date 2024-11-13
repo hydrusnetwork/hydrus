@@ -192,6 +192,7 @@ if qtpy.PYQT5:
     WE_ARE_QT5 = True
     WE_ARE_PYQT = True
     
+    # noinspection PyUnresolvedReferences
     from PyQt5 import sip # pylint: disable=E0401
     
     def isValid( obj ):
@@ -226,6 +227,7 @@ elif qtpy.PYSIDE2:
     WE_ARE_QT5 = True
     WE_ARE_PYSIDE = True
     
+    # noinspection PyUnresolvedReferences
     import shiboken2
     
     isValid = shiboken2.isValid
