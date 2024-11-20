@@ -639,6 +639,20 @@ class Controller( HydrusController.HydrusController ):
             
         
     
+    def ClipboardHasLocalPaths( self ):
+        
+        try:
+            
+            self.GetClipboardLocalPaths()
+            
+            return True
+            
+        except HydrusExceptions.DataMissing:
+            
+            return False
+            
+        
+    
     def ClosePageKeys( self, page_keys ):
         
         with self._page_key_lock:
@@ -1007,6 +1021,25 @@ class Controller( HydrusController.HydrusController ):
         return clipboard_image
         
     
+    def GetClipboardLocalPaths( self ):
+        
+        mime_data = QW.QApplication.clipboard().mimeData()
+        
+        if mime_data.hasUrls():
+            
+            urls = mime_data.urls()
+            
+            local_paths = [ url.toLocalFile() for url in urls if url.isLocalFile() ]
+            
+            if len( local_paths ) > 0:
+                
+                return local_paths
+                
+            
+        
+        raise HydrusExceptions.DataMissing( 'No local paths on clipboard!' )
+        
+    
     def GetClipboardText( self ):
         
         clipboard_text = QW.QApplication.clipboard().text()
@@ -1128,6 +1161,10 @@ class Controller( HydrusController.HydrusController ):
         HydrusImageNormalisation.SetDoICCProfileNormalisation( self.new_options.GetBoolean( 'do_icc_profile_normalisation' ) )
         
         HydrusImageHandling.FORCE_PIL_ALWAYS = self.new_options.GetBoolean( 'load_images_with_pil' )
+        
+        from hydrus.core import HydrusTime
+        
+        HydrusTime.ALWAYS_SHOW_ISO_TIME_ON_DELTA_CALL = self.new_options.GetBoolean( 'always_show_iso_time' )
         
     
     def InitModel( self ):

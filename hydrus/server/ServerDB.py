@@ -5077,7 +5077,7 @@ class DB( HydrusDB.HydrusDB ):
                             
                             started = HydrusTime.GetNowPrecise()
                             
-                            HydrusDB.VacuumDB( db_path )
+                            HydrusDB.VacuumDBInto( db_path )
                             
                             time_took = HydrusTime.GetNowPrecise() - started
                             

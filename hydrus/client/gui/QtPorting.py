@@ -558,12 +558,14 @@ class TabWidgetWithDnD( QW.QTabWidget ):
         current_index = self.currentIndex()
 
         for i in range( self.count() ):
-
+            
             self.setCurrentIndex( i )
-
-            if isinstance( self.widget( i ), TabWidgetWithDnD ):
+            
+            widget = self.widget( i )
+            
+            if isinstance( widget, TabWidgetWithDnD ):
                 
-                self.widget( i )._LayoutPagesHelper()
+                widget._LayoutPagesHelper()
                 
             
         
@@ -605,6 +607,7 @@ class TabWidgetWithDnD( QW.QTabWidget ):
     def AddSupplementaryTabBarDropTarget( self, drop_target ):
         
         self._supplementary_drop_target = drop_target
+        # noinspection PyUnresolvedReferences
         self.tabBar().AddSupplementaryTabBarDropTarget( drop_target )
         
     
@@ -790,7 +793,7 @@ class TabWidgetWithDnD( QW.QTabWidget ):
         
         source_tab_bar.clearLastClickedTabInfo()
         
-        source_notebook = source_tab_bar.parentWidget()
+        source_notebook: TabWidgetWithDnD = source_tab_bar.parentWidget()
         source_page = source_notebook.widget( source_page_index )
         source_name = source_tab_bar.tabText( source_page_index )
         
@@ -909,10 +912,14 @@ class TabWidgetWithDnD( QW.QTabWidget ):
                     
                     neighbour_page = source_notebook.widget( source_page_index - 1 )
                     
+                    # TODO: Probably ditch this for signals somehow
+                    # noinspection PyUnresolvedReferences
                     page_key = neighbour_page.GetPageKey()
                     
                 else:
                     
+                    # TODO: Probably ditch this for signals somehow
+                    # noinspection PyUnresolvedReferences
                     page_key = source_notebook.GetPageKey()
                     
                 

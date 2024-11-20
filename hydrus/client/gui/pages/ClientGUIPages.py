@@ -916,10 +916,14 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         self.currentChanged.connect( self.pageJustChanged )
         self.pageDragAndDropped.connect( self._RefreshPageNamesAfterDnD )
         
+        # noinspection PyUnresolvedReferences
         self.tabBar().tabDoubleLeftClicked.connect( self._RenamePage )
+        # noinspection PyUnresolvedReferences
         self.tabBar().tabMiddleClicked.connect( self._ClosePage )
         
+        # noinspection PyUnresolvedReferences
         self.tabBar().tabSpaceDoubleLeftClicked.connect( self.ChooseNewPage )
+        # noinspection PyUnresolvedReferences
         self.tabBar().tabSpaceDoubleMiddleClicked.connect( self.ChooseNewPage )
         
         self._previous_page_index = -1
@@ -1037,7 +1041,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
             return False
             
         
-        page = self.widget( index )
+        page: typing.Union[ Page, PagesNotebook ] = self.widget( index )
         
         if polite:
             
@@ -1136,7 +1140,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
             return False
             
         
-        page = self.widget( index )
+        page: typing.Union[ Page, PagesNotebook ] = self.widget( index )
         
         only_changed_page_data = False
         about_to_save = False
@@ -1243,7 +1247,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         return self
         
     
-    def _GetPages( self ):
+    def _GetPages( self ) -> typing.List[ Page ]:
         
         return [ self.widget( i ) for i in range( self.count() ) ]
         
@@ -1343,7 +1347,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         
         import_page_progress_display = new_options.GetBoolean( 'import_page_progress_display' )
         
-        page = self.widget( index )
+        page: typing.Union[ Page, PagesNotebook ] = self.widget( index )
         
         if isinstance( page, Page ) and not page.IsInitialised():
             
@@ -1415,7 +1419,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
             return
             
         
-        page = self.widget( index )
+        page: typing.Union[ Page, PagesNotebook ] = self.widget( index )
         
         current_name = page.GetName()
         
@@ -1527,7 +1531,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         
         if click_over_tab:
             
-            page = self.widget( tab_index )
+            page: typing.Union[ Page, PagesNotebook ] = self.widget( tab_index )
             
             click_over_page_of_pages = isinstance( page, PagesNotebook )
             
@@ -3202,7 +3206,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
     
     def PageHidden( self ):
         
-        result = self.currentWidget()
+        result: typing.Union[ Page, PagesNotebook ] = self.currentWidget()
         
         if result is not None:
             
@@ -3217,12 +3221,14 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         
         if old_selection != -1 and old_selection < self.count():
             
-            self.widget( old_selection ).PageHidden()
+            old_page: typing.Union[ Page, PagesNotebook ] = self.widget( old_selection )
+            
+            old_page.PageHidden()
             
         
         if selection != -1:
             
-            new_page = self.widget( selection )
+            new_page: typing.Union[ Page, PagesNotebook ] = self.widget( selection )
             
             new_page.PageShown()
             
@@ -3236,7 +3242,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
     
     def PageShown( self ):
         
-        result = self.currentWidget()
+        result: typing.Union[ Page, PagesNotebook ] = self.currentWidget()
         
         if result is not None:
             

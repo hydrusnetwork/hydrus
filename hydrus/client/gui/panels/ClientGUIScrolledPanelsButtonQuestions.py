@@ -12,9 +12,13 @@ class QuestionYesNoPanel( ClientGUIScrolledPanels.ResizingScrolledPanel ):
         
         super().__init__( parent )
         
+        # TODO: Replace this with signals bro
+        # noinspection PyUnresolvedReferences
         self._yes = ClientGUICommon.BetterButton( self, yes_label, self.parentWidget().done, QW.QDialog.Accepted )
         self._yes.setObjectName( 'HydrusAccept' )
         
+        # TODO: Replace this with signals bro
+        # noinspection PyUnresolvedReferences
         self._no = ClientGUICommon.BetterButton( self, no_label, self.parentWidget().done, QW.QDialog.Rejected )
         self._no.setObjectName( 'HydrusCancel' )
         
@@ -62,6 +66,8 @@ class QuestionYesYesNoPanel( ClientGUIScrolledPanels.ResizingScrolledPanel ):
             yes_buttons.append( yes_button )
             
         
+        # TODO: Replace this with signals bro
+        # noinspection PyUnresolvedReferences
         self._no = ClientGUICommon.BetterButton( self, no_label, self.parentWidget().done, QW.QDialog.Rejected )
         self._no.setObjectName( 'HydrusCancel' )
         
@@ -93,6 +99,8 @@ class QuestionYesYesNoPanel( ClientGUIScrolledPanels.ResizingScrolledPanel ):
         
         self._value = value
         
+        # TODO: Replace this with signals bro
+        # noinspection PyUnresolvedReferences
         self.parentWidget().done( QW.QDialog.Accepted )
         
     

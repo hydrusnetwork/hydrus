@@ -398,7 +398,7 @@ class QLocatorWidget(QW.QWidget):
         self.resultList.setWidget(QW.QWidget())
         self.resultList.widget().setLayout(self.resultLayout)
         self.resultList.setWidgetResizable(True)
-        self.resultLayout.setSizeConstraint(QW.QLayout.SetMinAndMaxSize)
+        self.resultLayout.setSizeConstraint(QW.QLayout.SizeConstraint.SetMinAndMaxSize)
         self.layout().addWidget(self.searchEdit)
         self.layout().addWidget(self.resultList)
         self.layout().setContentsMargins(0, 0, 0, 0)

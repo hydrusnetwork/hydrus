@@ -923,7 +923,7 @@ class PopupMessageManager( QW.QFrame ):
             
             sizer_item = self._message_vbox.itemAt( i )
             
-            message_window = sizer_item.widget()
+            message_window: typing.Optional[ PopupMessage ] = sizer_item.widget()
             
             if not message_window:
                 
@@ -1061,7 +1061,7 @@ class PopupMessageManager( QW.QFrame ):
             
             sizer_item = self._message_vbox.itemAt( i )
             
-            message_window = sizer_item.widget()
+            message_window: typing.Optional[ PopupMessage ] = sizer_item.widget()
             
             if message_window:
                 
@@ -1115,7 +1115,7 @@ class PopupMessageManager( QW.QFrame ):
         
         for i in range( self._message_vbox.count() ):
             
-            message_window = self._message_vbox.itemAt( i ).widget()
+            message_window: typing.Optional[ PopupMessage ] = self._message_vbox.itemAt( i ).widget()
             
             if not message_window:
                 
@@ -1181,7 +1181,7 @@ class PopupMessageManager( QW.QFrame ):
             
             item = self._message_vbox.itemAt( i )
             
-            message_window = item.widget()
+            message_window: typing.Optional[ PopupMessage ] = item.widget()
             
             if not message_window:
                 
@@ -1278,6 +1278,8 @@ class PopupMessageManager( QW.QFrame ):
 
 # This was originally a reviewpanel subclass which is a scroll area subclass, but having it in a scroll area didn't work out with dynamically updating size as the widget contents change.
 class PopupMessageDialogPanel( QW.QWidget ):
+    
+    okSignal = QC.Signal()
     
     def __init__( self, parent, job_status, hide_main_gui = False ):
         
@@ -1454,7 +1456,7 @@ class PopupMessageDialogPanel( QW.QWidget ):
                     
                     if parent.isModal(): # event sometimes fires after modal done
                         
-                        parent.DoOK()
+                        self.okSignal.emit()
                         
                     
                 

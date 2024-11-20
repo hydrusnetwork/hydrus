@@ -783,7 +783,7 @@ class EditLoginsPanel( ClientGUIScrolledPanels.EditPanel ):
             
             self._domains_to_login_after_ok = domains_to_login
             
-            self.parentWidget().DoOK()
+            self._OKParent()
             
         
     

@@ -2428,7 +2428,16 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
         
         if self._under_construction_or_predicate is not None and self._text_ctrl.text() == '':
             
-            self._CancelORConstruction()
+            or_preds = self._under_construction_or_predicate.GetValue()
+            
+            if len( or_preds ) > 1:
+                
+                self._RewindORConstruction()
+                
+            else:
+                
+                self._CancelORConstruction()
+                
             
             return True
             

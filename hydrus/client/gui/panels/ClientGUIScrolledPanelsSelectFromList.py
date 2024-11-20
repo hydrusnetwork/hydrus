@@ -86,7 +86,7 @@ class EditSelectFromListPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def EventSelect( self, item ):
         
-        self.parentWidget().DoOK()
+        self._OKParent()
         
     
     def GetValue( self ):
@@ -151,7 +151,7 @@ class EditSelectFromListButtonsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._data = data
         
-        self.parentWidget().DoOK()
+        self._OKParent()
         
     
     def GetValue( self ):

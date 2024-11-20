@@ -198,14 +198,27 @@ class EditDuplicatesAutoResolutionRulePanel( ClientGUIScrolledPanels.EditPanel )
         
         self._main_notebook = ClientGUICommon.BetterNotebook( self )
         
+        #
+        
+        self._search_panel = QW.QWidget( self._main_notebook )
+        
         potential_duplicates_search_context = duplicates_auto_resolution_rule.GetPotentialDuplicatesSearchContext()
         
-        self._potential_duplicates_search_context = ClientGUIPotentialDuplicatesSearchContext.EditPotentialDuplicatesSearchContextPanel( self._main_notebook, potential_duplicates_search_context, put_searches_side_by_side = True )
+        self._potential_duplicates_search_context = ClientGUIPotentialDuplicatesSearchContext.EditPotentialDuplicatesSearchContextPanel( self._search_panel, potential_duplicates_search_context, put_searches_side_by_side = True )
         
         self._potential_duplicates_search_context.setEnabled( False )
         
-        # comparator gubbins
-        # some way to test-run searches and see pair counts, and, eventually, a way to preview some pairs and the auto-choices we'd see
+        #
+        
+        self._selector_panel = QW.QWidget( self._main_notebook )
+        
+        #
+        
+        self._action_panel = QW.QWidget( self._main_notebook )
+        
+        #
+        
+        self._preview_panel = QW.QWidget( self._main_notebook )
         
         #
         
@@ -214,9 +227,67 @@ class EditDuplicatesAutoResolutionRulePanel( ClientGUIScrolledPanels.EditPanel )
         
         #
         
-        self._main_notebook.addTab( self._potential_duplicates_search_context, 'search' )
-        self._main_notebook.addTab( QW.QWidget( self._main_notebook ), 'test' )
-        self._main_notebook.addTab( QW.QWidget( self._main_notebook ), 'action' )
+        label = 'Set which potential duplicates pairs you wish to test. This can be system:everything if you like, but it is best to narrow it down if you can.'
+        
+        st = ClientGUICommon.BetterStaticText( self._search_panel, label = label )
+        
+        st.setWordWrap( True )
+        
+        vbox = QP.VBoxLayout()
+        
+        QP.AddToLayout( vbox, st, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._potential_duplicates_search_context, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        self._search_panel.setLayout( vbox )
+        
+        #
+        
+        label = 'In future, this panel will edit the test that determines when we should commit our action and which file should be A or B.\n\nAdd/Remove Single Column list of Comparator objects'
+        
+        st = ClientGUICommon.BetterStaticText( self._selector_panel, label = label )
+        
+        st.setWordWrap( True )
+        
+        vbox = QP.VBoxLayout()
+        
+        QP.AddToLayout( vbox, st, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        self._selector_panel.setLayout( vbox )
+        
+        #
+        
+        label = 'In future, this panel will edit the action and content updates/merge for pairs that pass the test.\n\nduplicate action\n\ndelete A, delete B\n\nNoneable custom content merge options'
+        
+        st = ClientGUICommon.BetterStaticText( self._action_panel, label = label )
+        
+        st.setWordWrap( True )
+        
+        vbox = QP.VBoxLayout()
+        
+        QP.AddToLayout( vbox, st, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        self._action_panel.setLayout( vbox )
+        
+        #
+        
+        label = 'In future, this panel will run some live database queries and preview examples of the pairs it finds and which pass the test.\n\nRun Search (pair count)\n\nRun Test on n pairs\n\nTest Results%\n\nShow a Failing Test | Show a Passing Test\n\nthumb A <-> thumb B, some way to launch a (read-only?) media viewer or something'
+        
+        st = ClientGUICommon.BetterStaticText( self._preview_panel, label = label )
+        
+        st.setWordWrap( True )
+        
+        vbox = QP.VBoxLayout()
+        
+        QP.AddToLayout( vbox, st, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        self._preview_panel.setLayout( vbox )
+        
+        #
+        
+        self._main_notebook.addTab( self._search_panel, 'search' )
+        self._main_notebook.addTab( self._selector_panel, 'comparison' )
+        self._main_notebook.addTab( self._action_panel, 'action' )
+        self._main_notebook.addTab( self._preview_panel, 'preview' )
         
         #
         

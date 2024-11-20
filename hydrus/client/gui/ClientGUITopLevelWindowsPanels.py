@@ -58,7 +58,10 @@ class DialogThatTakesScrollablePanel( ClientGUITopLevelWindows.DialogThatResizes
         
         self._panel = panel
         
-        if hasattr( self._panel, 'okSignal'): self._panel.okSignal.connect( self.DoOK )
+        if hasattr( self._panel, 'okSignal'):
+            
+            self._panel.okSignal.connect( self.DoOK )
+            
         
         buttonbox = self._GetButtonBox()
         

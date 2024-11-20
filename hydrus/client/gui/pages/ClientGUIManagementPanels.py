@@ -23,7 +23,6 @@ from hydrus.client import ClientParsing
 from hydrus.client import ClientPaths
 from hydrus.client import ClientServices
 from hydrus.client import ClientThreading
-from hydrus.client import ClientTime
 from hydrus.client.duplicates import ClientDuplicates
 from hydrus.client.gui import ClientGUIAsync
 from hydrus.client.gui import ClientGUICore as CGC
@@ -1446,7 +1445,7 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
         
         added = gallery_import.GetCreationTime()
         
-        pretty_added = ClientTime.TimestampToPrettyTimeDelta( added, show_seconds = False )
+        pretty_added = HydrusTime.TimestampToPrettyTimeDelta( added, show_seconds = False )
         
         return ( pretty_query_text, pretty_source, pretty_files_paused, pretty_gallery_paused, pretty_status, pretty_progress, pretty_added )
         
@@ -2550,7 +2549,7 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
         
         added = watcher.GetCreationTime()
         
-        pretty_added = ClientTime.TimestampToPrettyTimeDelta( added, show_seconds = False )
+        pretty_added = HydrusTime.TimestampToPrettyTimeDelta( added, show_seconds = False )
         
         ( status_enum, pretty_watcher_status ) = self._multiple_watcher_import.GetWatcherSimpleStatus( watcher )
         

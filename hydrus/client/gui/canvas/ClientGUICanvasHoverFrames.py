@@ -32,6 +32,7 @@ from hydrus.client.gui.panels import ClientGUIScrolledPanelsEdit
 from hydrus.client.gui.widgets import ClientGUICommon
 from hydrus.client.gui.widgets import ClientGUIMenuButton
 from hydrus.client.media import ClientMedia
+from hydrus.client.media import ClientMediaResultPrettyInfo
 from hydrus.client.metadata import ClientContentUpdates
 from hydrus.client.metadata import ClientRatings
 
@@ -432,8 +433,6 @@ class CanvasHoverFrame( QW.QFrame ):
             self.parentWidget().setFocus( QC.Qt.OtherFocusReason )
             
         
-        pass
-        
     
     def _RaiseHover( self ):
         
@@ -461,9 +460,9 @@ class CanvasHoverFrame( QW.QFrame ):
         return self._always_on_top
         
     
-    def _SizeAndPosition( self, force = False ):
+    def _SizeAndPosition( self ):
         
-        if self.parentWidget().isVisible() or force:
+        if self.parentWidget().isVisible():
             
             ( should_resize, my_ideal_size, my_ideal_position ) = self._GetIdealSizeAndPosition()
             
@@ -533,9 +532,14 @@ class CanvasHoverFrame( QW.QFrame ):
     
     def DoRegularHideShow( self ):
         
+        if not self.parentWidget().isVisible():
+            
+            return
+            
+        
         if not self._position_initialised_since_last_media:
             
-            self._SizeAndPosition( force = True )
+            self._SizeAndPosition()
             
         
         current_focus_tlw = QW.QApplication.activeWindow()
@@ -968,11 +972,22 @@ class CanvasHoverFrameTop( CanvasHoverFrame ):
                 self._title_text.hide()
                 
             
-            lines = [ line for line in self._current_media.GetPrettyInfoLines( only_interesting_lines = True ) if isinstance( line, str ) ]
             
-            label = ' | '.join( lines )
+            lines = ClientMediaResultPrettyInfo.GetPrettyMediaResultInfoLines( self._current_media.GetMediaResult(), only_interesting_lines = True )
             
-            self._info_text.setText( label )
+            lines = [ line for line in lines if not line.IsSubmenu() ]
+            
+            texts = [ line.text for line in lines ]
+            
+            info_string = ' | '.join( texts )
+            
+            self._info_text.setText( info_string )
+            
+            texts = [ line.tooltip for line in lines ]
+            
+            info_string = ' | '.join( texts )
+            
+            self._info_text.setToolTip( info_string )
             
             self._info_text.show()
             
@@ -1149,7 +1164,7 @@ class CanvasHoverFrameTop( CanvasHoverFrame ):
         # minimumsize is not immediately updated without this
         self.layout().activate()
         
-        self._SizeAndPosition( force = True )
+        self._SizeAndPosition()
         
     
     def SetIndexString( self, canvas_key, text ):
@@ -1541,16 +1556,18 @@ class CanvasHoverFrameTopRight( CanvasHoverFrame ):
         # size is not immediately updated without this
         self.layout().activate()
         
-        self._SizeAndPosition( force = True )
+        self._SizeAndPosition()
         
     
 class NotePanel( QW.QWidget ):
     
     editNote = QC.Signal( str )
     
-    def __init__( self, parent: QW.QWidget, name: str, note: str, note_visible: bool ):
+    def __init__( self, parent: "CanvasHoverFrameRightNotes", name: str, note: str, note_visible: bool ):
         
         super().__init__( parent )
+        
+        self._parent = parent
         
         self._name = name
         self._note_visible = note_visible
@@ -1660,7 +1677,7 @@ class NotePanel( QW.QWidget ):
     
     def sizeHint( self ) -> QC.QSize:
         
-        width = self.parentWidget().GetNoteWidth()
+        width = self._parent.GetNoteWidth()
         height = self.heightForWidth( width )
         
         return QC.QSize( width, height )
@@ -1709,20 +1726,22 @@ class CanvasHoverFrameRightNotes( CanvasHoverFrame ):
         my_width = my_size.width()
         my_height = my_size.height()
         
-        my_ideal_width = min( self.sizeHint().width(), parent_width * SIDE_HOVER_PROPORTIONS )
+        my_ideal_width = int( parent_width * SIDE_HOVER_PROPORTIONS )
         
-        ideal_position = QC.QPoint( parent_width - my_width, 0 )
+        ideal_position = QC.QPoint( parent_width - my_ideal_width, 0 )
         
         if not self._top_right_hover.PositionInitialisedSinceLastMedia():
             
             self._top_right_hover.DoRegularHideShow()
             
         
+        spacing = self.layout().spacing()
+        
         if self._top_right_hover.PositionInitialisedSinceLastMedia():
             
-            my_ideal_width = self._top_right_hover.width()
+            # steer clear of 'top_right.bottomLeft' style gubbins, easy to get tripped up on some weird overspill circumstance
             
-            ideal_position = self._top_right_hover.geometry().bottomRight() + QC.QPoint( 0, 2 ) - QC.QPoint( my_ideal_width, 0 )
+            ideal_position.setY( self._top_right_hover.height() + spacing )
             
         
         max_possible_height = parent_size.height() - ideal_position.y()
@@ -1733,7 +1752,6 @@ class CanvasHoverFrameRightNotes( CanvasHoverFrame ):
         # VBoxLayout doesn't support heightForWidth, but statictext does, so let's hack it
         # ideal solution here is to write a new layout that delivers heightforwidth, but lmao. maybe Qt6 will do it. EDIT: It didn't really work?
         
-        spacing = self.layout().spacing()
         margin = self.layout().contentsMargins().top()
         
         my_axis_frame_width = self.frameWidth() * 2
@@ -2166,7 +2184,7 @@ class CanvasHoverFrameRightDuplicates( CanvasHoverFrame ):
             # minimumsize is not immediately updated without this
             self.layout().activate()
             
-            self._SizeAndPosition( force = True )
+            self._SizeAndPosition()
             
         
     

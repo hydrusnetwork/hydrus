@@ -85,6 +85,35 @@ class PotentialDuplicatesSearchContext( HydrusSerialisable.SerialisableBase ):
         return self._pixel_dupes_preference
         
     
+    def GetSummary( self ) -> str:
+        
+        if self._dupe_search_type == ClientDuplicates.DUPE_SEARCH_BOTH_FILES_MATCH_DIFFERENT_SEARCHES:
+            
+            search_string = f'files matching [{self._file_search_context_1.GetSummary()}] and [{self._file_search_context_2.GetSummary()}]'
+            
+        elif self._dupe_search_type == ClientDuplicates.DUPE_SEARCH_BOTH_FILES_MATCH_ONE_SEARCH:
+            
+            search_string = f'both files matching [{self._file_search_context_1.GetSummary()}]'
+            
+        else:
+            
+            search_string = f'one file matching [{self._file_search_context_1.GetSummary()}]'
+            
+        
+        pixel_dupes_string = ''
+        
+        if self._pixel_dupes_preference == ClientDuplicates.SIMILAR_FILES_PIXEL_DUPES_REQUIRED:
+            
+            pixel_dupes_string = ', pixel duplicates'
+            
+        elif self._pixel_dupes_preference == ClientDuplicates.SIMILAR_FILES_PIXEL_DUPES_EXCLUDED:
+            
+            pixel_dupes_string = ', not pixel duplicates'
+            
+        
+        return search_string + pixel_dupes_string
+        
+    
     def OptimiseForSearch( self ):
         
         if self._dupe_search_type == ClientDuplicates.DUPE_SEARCH_BOTH_FILES_MATCH_ONE_SEARCH and ( self._file_search_context_1.IsJustSystemEverything() or self._file_search_context_1.HasNoPredicates() ):

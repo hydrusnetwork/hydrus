@@ -601,7 +601,14 @@ def TimestampToPrettyTime( timestamp: typing.Optional[ int ], in_utc = False, in
     return DateTimeToPrettyTime( dt, include_24h_time = include_24h_time )
     
 
-def BaseTimestampToPrettyTimeDelta( timestamp, just_now_string = 'now', just_now_threshold = 3, history_suffix = ' ago', show_seconds = True, no_prefix = False ):
+ALWAYS_SHOW_ISO_TIME_ON_DELTA_CALL = False
+
+def TimestampToPrettyTimeDelta( timestamp, just_now_string = 'now', just_now_threshold = 3, history_suffix = ' ago', show_seconds = True, no_prefix = False, reverse_iso_delta_setting = False, force_no_iso = False ) -> str:
+    
+    if not force_no_iso and ( ALWAYS_SHOW_ISO_TIME_ON_DELTA_CALL ^ reverse_iso_delta_setting ):
+        
+        return TimestampToPrettyTime( timestamp )
+        
     
     if timestamp is None:
         
@@ -645,8 +652,6 @@ def BaseTimestampToPrettyTimeDelta( timestamp, just_now_string = 'now', just_now
         return 'unparseable time {}'.format( timestamp )
         
     
-
-TimestampToPrettyTimeDelta = BaseTimestampToPrettyTimeDelta
 
 def ValueRangeToScanbarTimestampsMS( value_ms, range_ms ):
     

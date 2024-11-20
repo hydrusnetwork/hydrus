@@ -798,6 +798,7 @@ class BetterStaticText( QP.EllipsizedLabel ):
             
         
     
+
 class BetterHyperLink( BetterStaticText ):
     
     def __init__( self, parent, label, url ):

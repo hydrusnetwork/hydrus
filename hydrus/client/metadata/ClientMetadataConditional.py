@@ -33,6 +33,21 @@ class MetadataConditional( HydrusSerialisable.SerialisableBase ):
         self._predicate = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_predicate )
         
     
+    def GetPredicate( self ) -> ClientSearchPredicate.Predicate:
+        
+        return self._predicate
+        
+    
+    def GetSummary( self ):
+        
+        return self._predicate.ToString()
+        
+    
+    def SetPredicate( self, predicate: ClientSearchPredicate.Predicate ):
+        
+        self._predicate = predicate
+        
+    
     def Test( self, media_result: ClientMediaResult.MediaResult ) -> bool:
         
         if self._predicate.CanTestMediaResult():

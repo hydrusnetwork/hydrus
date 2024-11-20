@@ -13,7 +13,8 @@ from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientLocation
 from hydrus.client.duplicates import ClientDuplicates
 from hydrus.client.duplicates import ClientPotentialDuplicatesSearchContext
-from hydrus.client.metadata import ClientMetadataConditional
+from hydrus.client.media import ClientMediaResult
+from hydrus.client.metadata import ClientMetadataConditional 
 from hydrus.client.search import ClientNumberTest
 from hydrus.client.search import ClientSearchPredicate
 from hydrus.client.search import ClientSearchFileSearchContext
@@ -27,7 +28,12 @@ DUPLICATE_STATUS_NOT_SEARCHED = 4 # assign this to new pairs that are added, by 
 
 class PairComparator( HydrusSerialisable.SerialisableBase ):
     
-    def Test( self, media_result_better, media_result_worse ):
+    def GetSummary( self ) -> str:
+        
+        raise NotImplementedError()
+        
+    
+    def Test( self, media_result_better, media_result_worse ) -> bool:
         
         raise NotImplementedError()
         
@@ -61,10 +67,53 @@ class PairComparatorOneFile( PairComparator ):
         self._metadata_conditional = ClientMetadataConditional.MetadataConditional()
         
     
-    # serialisable gubbins
-    # get/set
+    def _GetSerialisableInfo( self ):
+        
+        serialisable_metadata_conditional = self._metadata_conditional.GetSerialisableTuple()
+        
+        return ( self._looking_at, serialisable_metadata_conditional )
+        
     
-    def Test( self, media_result_better, media_result_worse ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
+        
+        ( self._looking_at, serialisable_metadata_conditional ) = serialisable_info
+        
+        self._metadata_conditional = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_metadata_conditional )
+        
+    
+    def GetLookingAt( self ) -> int:
+        
+        return self._looking_at
+        
+    
+    def GetMetadataConditional( self ) -> ClientMetadataConditional.MetadataConditional:
+        
+        return self._metadata_conditional
+        
+    
+    def GetSummary( self ):
+        
+        if self._looking_at == LOOKING_AT_BETTER_CANDIDATE:
+            
+            return f'A: {self._metadata_conditional.GetSummary()}'
+            
+        else:
+            
+            return f'B: {self._metadata_conditional.GetSummary()}'
+            
+        
+    
+    def SetLookingAt( self, looking_at: int ):
+        
+        self._looking_at = looking_at
+        
+    
+    def SetMetadataConditional( self, metadata_conditional: ClientMetadataConditional.MetadataConditional ):
+        
+        self._metadata_conditional = metadata_conditional
+        
+    
+    def Test( self, media_result_better: ClientMediaResult.MediaResult, media_result_worse: ClientMediaResult.MediaResult ) -> bool:
         
         if self._looking_at == LOOKING_AT_BETTER_CANDIDATE:
             
@@ -94,9 +143,10 @@ class PairComparatorRelative( PairComparator ):
         
         # this work does not need to be done yet!
         
-        # if I am feeling big brain, isn't this just a dynamic one-file metadata conditional?
-            # if we want 4x size, then we just pull the size of A and ask if B is <0.25x that or whatever. we don't need a clever two-file MetadataConditional test
-        # so, this guy should yeah just store two or three simple enums to handle type, operator, and quantity
+        # THIS WILL NOT BE A METADATA CONDITIONAL
+        # THIS WILL BE A NEW OBJECT ENTIRELY
+        # IT WILL CONSULT TWO MEDIA RESULTS AND CREATE A DYNAMIC NUMBER TEST TO DO >, x4, approx-=, whatever
+        # WE _MAY_ USE UN-FLESHED SYSTEM PREDS OR SIMILAR TO SPECIFY AND PERFORM OUR METADATA FETCH, SINCE THOSE GUYS WILL LEARN THAT TECH FOR MEDIA TESTS ANYWAY
         
         # property
             # width
@@ -111,18 +161,23 @@ class PairComparatorRelative( PairComparator ):
     # serialisable gubbins
     # get/set
     
-    def Test( self, media_result_better, media_result_worse ):
+    def GetSummary( self ):
         
-        pass
+        return 'A has 4x pixel count of B'
+        
+    
+    def Test( self, media_result_better: ClientMediaResult.MediaResult, media_result_worse: ClientMediaResult.MediaResult ) -> bool:
+        
+        return False
         
     
 
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_DUPLICATES_AUTO_RESOLUTION_PAIR_COMPARATOR_TWO_FILES_RELATIVE ] = PairComparatorRelative
 
-class PairSelectorAndComparator( HydrusSerialisable.SerialisableBase ):
+class PairSelector( HydrusSerialisable.SerialisableBase ):
     
-    SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_DUPLICATES_AUTO_RESOLUTION_PAIR_SELECTOR_AND_COMPARATOR
-    SERIALISABLE_NAME = 'Duplicates Auto-Resolution Pair Selector and Comparator'
+    SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_DUPLICATES_AUTO_RESOLUTION_PAIR_SELECTOR
+    SERIALISABLE_NAME = 'Duplicates Auto-Resolution Pair Selector'
     SERIALISABLE_VERSION = 1
     
     def __init__( self ):
@@ -134,13 +189,34 @@ class PairSelectorAndComparator( HydrusSerialisable.SerialisableBase ):
         
         super().__init__()
         
-        self._comparators = HydrusSerialisable.SerialisableList()
+        self._comparators: typing.List[ PairComparator ] = HydrusSerialisable.SerialisableList()
         
     
-    # serialisable gubbins
-    # get/set
+    def _GetSerialisableInfo( self ):
+        
+        serialisable_comparators = HydrusSerialisable.SerialisableList( self._comparators ).GetSerialisableTuple()
+        
+        return serialisable_comparators
+        
     
-    def GetMatchingMedia( self, media_result_1, media_result_2 ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
+        
+        serialisable_comparators = serialisable_info
+        
+        self._comparators = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_comparators )
+        
+    
+    def AddComparator( self, comparator: PairComparator ):
+        
+        self._comparators.append( comparator )
+        
+    
+    def GetComparators( self ):
+        
+        return self._comparators
+        
+    
+    def GetMatchingMedia( self, media_result_1: ClientMediaResult.MediaResult, media_result_2: ClientMediaResult.MediaResult ):
         
         pair = [ media_result_1, media_result_2 ]
         
@@ -163,8 +239,15 @@ class PairSelectorAndComparator( HydrusSerialisable.SerialisableBase ):
             
         
     
+    def GetSummary( self ) -> str:
+        
+        comparator_strings = sorted( [ comparator.GetSummary() for comparator in self._comparators ] )
+        
+        return ', '.join( comparator_strings )
+        
+    
 
-HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_DUPLICATES_AUTO_RESOLUTION_PAIR_SELECTOR_AND_COMPARATOR ] = PairSelectorAndComparator
+HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_DUPLICATES_AUTO_RESOLUTION_PAIR_SELECTOR ] = PairSelector
 
 class DuplicatesAutoResolutionRule( HydrusSerialisable.SerialisableBaseNamed ):
     
@@ -186,12 +269,14 @@ class DuplicatesAutoResolutionRule( HydrusSerialisable.SerialisableBaseNamed ):
         
         self._potential_duplicates_search_context = ClientPotentialDuplicatesSearchContext.PotentialDuplicatesSearchContext()
         
-        self._selector_and_comparator = None
+        self._pair_selector = PairSelector()
         
-        # action info
-            # set as better
-            # delete the other one
-            # optional custom merge options
+        self._action = HC.DUPLICATE_BETTER
+        
+        self._delete_first = False
+        self._delete_second = False
+        
+        self._custom_duplicate_content_merge_options: typing.Optional[ ClientDuplicates.DuplicateContentMergeOptions ] = None
         
         # a search cache that we can update on every run, just some nice numbers for the human to see or force-populate in UI that say 'ok for this search we have 700,000 pairs, and we already processed 220,000'
         # I think a dict of numbers to strings
@@ -216,7 +301,7 @@ class DuplicatesAutoResolutionRule( HydrusSerialisable.SerialisableBaseNamed ):
     
     def GetComparatorSummary( self ) -> str:
         
-        return 'if A is jpeg and B is png'
+        return self._pair_selector.GetSummary()
         
     
     def GetPotentialDuplicatesSearchContext( self ) -> ClientPotentialDuplicatesSearchContext.PotentialDuplicatesSearchContext:
@@ -226,7 +311,7 @@ class DuplicatesAutoResolutionRule( HydrusSerialisable.SerialisableBaseNamed ):
     
     def GetRuleSummary( self ) -> str:
         
-        return 'system:filetype is jpeg & system:filetype is png, pixel duplicates'
+        return self._potential_duplicates_search_context.GetSummary()
         
     
     def GetSearchSummary( self ) -> str:
@@ -237,6 +322,33 @@ class DuplicatesAutoResolutionRule( HydrusSerialisable.SerialisableBaseNamed ):
     def IsPaused( self ) -> bool:
         
         return self._paused
+        
+    
+    def TestPair( self, media_result_1: ClientMediaResult.MediaResult, media_result_2: ClientMediaResult.MediaResult ):
+        
+        result = self._pair_selector.GetMatchingMedia( media_result_1, media_result_2 )
+        
+        if result is None:
+            
+            return None
+            
+        elif result == media_result_1:
+            
+            better_media_result = media_result_1
+            worse_media_result = media_result_2
+            
+        else:
+            
+            better_media_result = media_result_2
+            worse_media_result = media_result_1
+            
+        
+        first_hash = better_media_result.GetHash()
+        second_hash = worse_media_result.GetHash()
+        
+        content_update_packages = [ self._custom_duplicate_content_merge_options.ProcessPairIntoContentUpdatePackage( better_media_result, worse_media_result, delete_first = self._delete_first, delete_second = self._delete_second, file_deletion_reason = f'duplicates auto-resolution ({self._name})' ) ]
+        
+        return ( self._action, first_hash, second_hash, content_update_packages )
         
     
     def SetId( self, value: int ):
@@ -252,6 +364,11 @@ class DuplicatesAutoResolutionRule( HydrusSerialisable.SerialisableBaseNamed ):
     def SetPotentialDuplicatesSearchContext( self, value: ClientPotentialDuplicatesSearchContext.PotentialDuplicatesSearchContext ):
         
         self._potential_duplicates_search_context = value
+        
+    
+    def SetPairSelector( self, value: PairSelector ):
+        
+        self._pair_selector = value
         
     
 
@@ -293,14 +410,31 @@ def GetDefaultRuleSuggestions() -> typing.List[ DuplicatesAutoResolutionRule ]:
     potential_duplicates_search_context.SetFileSearchContext2( file_search_context_2 )
     potential_duplicates_search_context.SetDupeSearchType( ClientDuplicates.DUPE_SEARCH_BOTH_FILES_MATCH_DIFFERENT_SEARCHES )
     potential_duplicates_search_context.SetPixelDupesPreference( ClientDuplicates.SIMILAR_FILES_PIXEL_DUPES_REQUIRED )
+    potential_duplicates_search_context.SetMaxHammingDistance( 0 )
     
     duplicates_auto_resolution_rule = DuplicatesAutoResolutionRule( 'pixel-perfect jpegs vs pngs' )
     
     duplicates_auto_resolution_rule.SetPotentialDuplicatesSearchContext( potential_duplicates_search_context )
     
-    suggested_rules.append( duplicates_auto_resolution_rule )
+    selector = PairSelector()
     
-    # add on a thing here about resolution. one(both) files need to be like at least 128x128
+    comparator = PairComparatorOneFile()
+    
+    comparator.SetLookingAt( LOOKING_AT_BETTER_CANDIDATE )
+    
+    mc = ClientMetadataConditional.MetadataConditional()
+    
+    mc.SetPredicate( ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_MIME, value = ( HC.IMAGE_JPEG, ) ) )
+    
+    comparator.SetMetadataConditional( mc )
+    
+    selector.AddComparator( comparator )
+    
+    duplicates_auto_resolution_rule.SetPairSelector( selector )
+    
+    #
+    
+    suggested_rules.append( duplicates_auto_resolution_rule )
     
     #
     

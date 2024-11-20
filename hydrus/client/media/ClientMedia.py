@@ -8,16 +8,12 @@ from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusLists
 from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusSerialisable
-from hydrus.core import HydrusTime
 from hydrus.core.files import HydrusPSDHandling
 
 from hydrus.client import ClientConstants as CC
-from hydrus.client import ClientData
 from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientLocation
 from hydrus.client import ClientServices
-from hydrus.client import ClientTime
-from hydrus.client import ClientUgoiraHandling
 from hydrus.client.media import ClientMediaManagers
 from hydrus.client.media import ClientMediaResult
 from hydrus.client.metadata import ClientContentUpdates
@@ -362,11 +358,6 @@ class Media( object ):
         
     
     def GetNumWords( self ) -> typing.Optional[ int ]:
-        
-        raise NotImplementedError()
-        
-    
-    def GetPrettyInfoLines( self, only_interesting_lines = False ) -> typing.List[ str ]:
         
         raise NotImplementedError()
         
@@ -1117,7 +1108,7 @@ class MediaList( object ):
         return self._sorted_media.index( media )
         
     
-    def GetNext( self, media ):
+    def GetNext( self, media ) -> Media:
         
         return self._GetNext( media )
         
@@ -1697,19 +1688,6 @@ class MediaCollection( MediaList, Media ):
         return sum( ( nw for nw in num_words if nw is not None ) )
         
     
-    def GetPrettyInfoLines( self, only_interesting_lines = False ):
-        
-        size = HydrusData.ToHumanBytes( self._size )
-        
-        mime = HC.mime_string_lookup[ HC.APPLICATION_HYDRUS_CLIENT_COLLECTION ]
-        
-        info_string = size + ' ' + mime
-        
-        info_string += ' (' + HydrusNumbers.ToHumanInt( self.GetNumFiles() ) + ' files)'
-        
-        return [ info_string ]
-        
-    
     def GetRatingsManager( self ):
         
         return self._ratings_manager
@@ -1918,295 +1896,6 @@ class MediaSingleton( Media ):
         
     
     def GetNumWords( self ): return self._media_result.GetNumWords()
-    
-    def GetPrettyInfoLines( self, only_interesting_lines = False ):
-        
-        def timestamp_ms_is_interesting( timestamp_ms_1, timestamp_ms_2 ):
-            
-            distance_1 = abs( timestamp_ms_1 - HydrusTime.GetNowMS() )
-            distance_2 = abs( timestamp_ms_2 - HydrusTime.GetNowMS() )
-            
-            # 50000 / 51000 = 0.98 = not interesting
-            # 10000 / 51000 = 0.20 = interesting
-            difference = min( distance_1, distance_2 ) / max( distance_1, distance_2, 1 )
-            
-            return difference < 0.9
-            
-        
-        file_info_manager = self._media_result.GetFileInfoManager()
-        locations_manager = self._media_result.GetLocationsManager()
-        times_manager = locations_manager.GetTimesManager()
-        
-        ( hash_id, hash, size, mime, width, height, duration, num_frames, has_audio, num_words ) = file_info_manager.ToTuple()
-        
-        info_string = f'{HydrusData.ToHumanBytes( size )} {HC.mime_string_lookup[ mime ]}'
-        
-        if width is not None and height is not None:
-            
-            info_string += f' ({ClientData.ResolutionToPrettyString( ( width, height ) )})'
-            
-        
-        if duration is not None:
-            
-            info_string += f', {HydrusTime.MillisecondsDurationToPrettyTime( duration )}'
-            
-        elif mime == HC.ANIMATION_UGOIRA:
-            
-            if ClientUgoiraHandling.HasFrameTimesNote( self.GetMediaResult() ):
-                
-                try:
-                    
-                    # this is more work than we'd normally want to do, but prettyinfolines is called on a per-file basis so I think we are good. a tiny no-latency json load per human click is fine
-                    # we'll see how it goes
-                    frame_times = ClientUgoiraHandling.GetFrameTimesFromNote( self.GetMediaResult() )
-                    
-                    if frame_times is not None:
-                        
-                        note_duration = sum( frame_times )
-                        
-                        info_string += f', {HydrusTime.MillisecondsDurationToPrettyTime( note_duration )} (note-based)'
-                        
-                    
-                except:
-                    
-                    info_string += f', unknown note-based duration'
-                    
-                
-            else:
-                
-                if num_frames is not None:
-                    
-                    simulated_duration = num_frames * ClientUgoiraHandling.UGOIRA_DEFAULT_FRAME_DURATION_MS
-                    
-                    info_string += f', {HydrusTime.MillisecondsDurationToPrettyTime( simulated_duration )} (speculated)'
-                    
-                
-            
-        
-        if num_frames is not None:
-            
-            if duration is None or duration == 0 or num_frames == 0:
-                
-                framerate_insert = ''
-                
-            else:
-                
-                fps = num_frames / ( duration / 1000 )
-                
-                if fps < 1:
-                    
-                    framerate_insert = ', {:.2f}fps'.format( fps )
-                    
-                elif fps < 10:
-                    
-                    framerate_insert = ', {:.1f}fps'.format( fps )
-                    
-                else:
-                    
-                    framerate_insert = f', {round( num_frames / ( duration / 1000 ) )}fps'
-                    
-                
-            
-            info_string += f' ({HydrusNumbers.ToHumanInt( num_frames )} frames{framerate_insert})'
-            
-        
-        if has_audio:
-            
-            audio_label = CG.client_controller.new_options.GetString( 'has_audio_label' )
-            
-            info_string += f', {audio_label}'
-            
-        
-        if num_words is not None:
-            
-            info_string += f' ({HydrusNumbers.ToHumanInt( num_words )} words)'
-            
-        
-        lines = [ ( True, info_string ) ]
-        
-        if file_info_manager.FiletypeIsForced():
-            
-            lines.append( ( False, f'filetype was originally: {HC.mime_string_lookup[ file_info_manager.original_mime ]}' ) )
-            
-        
-        current_service_keys = locations_manager.GetCurrent()
-        deleted_service_keys = locations_manager.GetDeleted()
-        
-        local_file_services = CG.client_controller.services_manager.GetLocalMediaFileServices()
-        
-        seen_local_file_service_timestamps_ms = set()
-        
-        current_local_file_services = [ service for service in local_file_services if service.GetServiceKey() in current_service_keys ]
-        
-        if len( current_local_file_services ) > 0:
-            
-            for local_file_service in current_local_file_services:
-                
-                import_timestamp_ms = times_manager.GetImportedTimestampMS( local_file_service.GetServiceKey() )
-                
-                lines.append( ( False, 'added to {}: {}'.format( local_file_service.GetName(), ClientTime.TimestampToPrettyTimeDelta( HydrusTime.SecondiseMS( import_timestamp_ms ) ) ) ) )
-                
-                seen_local_file_service_timestamps_ms.add( import_timestamp_ms )
-                
-            
-        
-        if CC.COMBINED_LOCAL_FILE_SERVICE_KEY in current_service_keys:
-            
-            import_timestamp_ms = times_manager.GetImportedTimestampMS( CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
-            
-            line_is_interesting = True
-            
-            lines.append( ( line_is_interesting, 'imported: {}'.format( ClientTime.TimestampToPrettyTimeDelta( HydrusTime.SecondiseMS( import_timestamp_ms ) ) ) ) )
-            
-            if line_is_interesting:
-                
-                seen_local_file_service_timestamps_ms.add( import_timestamp_ms )
-                
-            
-        
-        deleted_local_file_services = [ service for service in local_file_services if service.GetServiceKey() in deleted_service_keys ]
-        
-        local_file_deletion_reason = locations_manager.GetLocalFileDeletionReason()
-        
-        if CC.COMBINED_LOCAL_FILE_SERVICE_KEY in deleted_service_keys:
-            
-            timestamp_ms = times_manager.GetDeletedTimestampMS( CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
-            
-            lines.append( ( True, 'deleted from this client {} ({})'.format( ClientTime.TimestampToPrettyTimeDelta( HydrusTime.SecondiseMS( timestamp_ms ) ), local_file_deletion_reason ) ) )
-            
-        elif CC.TRASH_SERVICE_KEY in current_service_keys:
-            
-            # I used to list these always as part of 'interesting' lines, but without the trash qualifier, you get spammy 'removed from x 5 years ago' lines for migrations. not helpful!
-            
-            for local_file_service in deleted_local_file_services:
-                
-                timestamp_ms = times_manager.GetDeletedTimestampMS( local_file_service.GetServiceKey() )
-                
-                line = 'removed from {} {}'.format( local_file_service.GetName(), ClientTime.TimestampToPrettyTimeDelta( HydrusTime.SecondiseMS( timestamp_ms ) ) )
-                
-                if len( deleted_local_file_services ) == 1:
-                    
-                    line = f'{line} ({local_file_deletion_reason})'
-                    
-                
-                lines.append( ( True, line ) )
-                
-            
-            if len( deleted_local_file_services ) > 1:
-                
-                lines.append( ( False, 'Deletion reason: {}'.format( local_file_deletion_reason ) ) )
-                
-            
-        
-        if locations_manager.IsTrashed():
-            
-            lines.append( ( True, 'in the trash' ) )
-            
-        
-        times_manager = locations_manager.GetTimesManager()
-        
-        file_modified_timestamp_ms = times_manager.GetAggregateModifiedTimestampMS()
-        
-        if file_modified_timestamp_ms is not None:
-            
-            if CG.client_controller.new_options.GetBoolean( 'hide_uninteresting_modified_time' ):
-                
-                # if we haven't already printed this timestamp somewhere
-                line_is_interesting = False not in ( timestamp_ms_is_interesting( timestamp_ms, file_modified_timestamp_ms ) for timestamp_ms in seen_local_file_service_timestamps_ms )
-                
-            else:
-                
-                line_is_interesting = True
-                
-            
-            lines.append( ( line_is_interesting, 'modified: {}'.format( ClientTime.TimestampToPrettyTimeDelta( HydrusTime.SecondiseMS( file_modified_timestamp_ms ) ) ) ) )
-            
-            modified_timestamp_lines = []
-            
-            timestamp_ms = times_manager.GetFileModifiedTimestampMS()
-            
-            if timestamp_ms is not None:
-                
-                modified_timestamp_lines.append( 'local: {}'.format( ClientTime.TimestampToPrettyTimeDelta( HydrusTime.SecondiseMS( timestamp_ms ) ) ) )
-                
-            
-            for ( domain, timestamp_ms ) in sorted( times_manager.GetDomainModifiedTimestampsMS().items() ):
-                
-                modified_timestamp_lines.append( '{}: {}'.format( domain, ClientTime.TimestampToPrettyTimeDelta( HydrusTime.SecondiseMS( timestamp_ms ) ) ) )
-                
-            
-            if len( modified_timestamp_lines ) > 1:
-                
-                lines.append( ( False, ( 'all modified times', modified_timestamp_lines ) ) )
-                
-            
-        
-        if not locations_manager.inbox:
-            
-            archived_timestamp_ms = times_manager.GetArchivedTimestampMS()
-            
-            if archived_timestamp_ms is not None:
-                
-                lines.append( ( False, 'archived: {}'.format( ClientTime.TimestampToPrettyTimeDelta( HydrusTime.SecondiseMS( archived_timestamp_ms ) ) ) ) )
-                
-            
-        
-        for service_key in current_service_keys.intersection( CG.client_controller.services_manager.GetServiceKeys( HC.REMOTE_FILE_SERVICES ) ):
-            
-            timestamp_ms = times_manager.GetImportedTimestampMS( service_key )
-            
-            try:
-                
-                service = CG.client_controller.services_manager.GetService( service_key )
-                
-            except HydrusExceptions.DataMissing:
-                
-                continue
-                
-            
-            service_type = service.GetServiceType()
-            
-            if service_type == HC.IPFS:
-                
-                status_label = 'pinned'
-                
-            else:
-                
-                status_label = 'uploaded'
-                
-            
-            lines.append( ( True, '{} to {} {}'.format( status_label, service.GetName(), ClientTime.TimestampToPrettyTimeDelta( HydrusTime.SecondiseMS( timestamp_ms ) ) ) ) )
-            
-        
-        if self.GetFileInfoManager().has_audio:
-            
-            lines.append( ( False, 'has audio' ) )
-            
-        
-        if self.GetFileInfoManager().has_transparency:
-            
-            lines.append( ( False, 'has transparency' ) )
-            
-        
-        if self.GetFileInfoManager().has_exif:
-            
-            lines.append( ( False, 'has exif data' ) )
-            
-        
-        if self.GetFileInfoManager().has_human_readable_embedded_metadata:
-            
-            lines.append( ( False, 'has human-readable embedded metadata' ) )
-            
-        
-        if self.GetFileInfoManager().has_icc_profile:
-            
-            lines.append( ( False, 'has icc profile' ) )
-            
-        
-        lines = [ line for ( interesting, line ) in lines if interesting or not only_interesting_lines ]
-        
-        return lines
-        
     
     def GetRatingsManager( self ): return self._media_result.GetRatingsManager()
     

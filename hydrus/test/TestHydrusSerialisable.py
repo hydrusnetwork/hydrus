@@ -16,7 +16,6 @@ from hydrus.client.importing import ClientImportSubscriptionQuery
 from hydrus.client.importing.options import ClientImportOptions
 from hydrus.client.importing.options import FileImportOptions
 from hydrus.client.importing.options import TagImportOptions
-from hydrus.client.media import ClientMedia
 from hydrus.client.media import ClientMediaManagers
 from hydrus.client.media import ClientMediaResult
 from hydrus.client.metadata import ClientContentUpdates
@@ -244,9 +243,7 @@ class TestSerialisables( unittest.TestCase ):
         
         file_info_manager = ClientMediaManagers.FileInfoManager( 1, local_hash_has_values, size, mime, width, height, duration, num_frames, has_audio, num_words )
         
-        media_result = ClientMediaResult.MediaResult( file_info_manager, substantial_tags_manager, local_times_manager, local_locations_manager, substantial_ratings_manager, notes_manager, file_viewing_stats_manager )
-        
-        local_media_has_values = ClientMedia.MediaSingleton( media_result )
+        local_media_result_has_values = ClientMediaResult.MediaResult( file_info_manager, substantial_tags_manager, local_times_manager, local_locations_manager, substantial_ratings_manager, notes_manager, file_viewing_stats_manager )
         
         #
         
@@ -254,9 +251,7 @@ class TestSerialisables( unittest.TestCase ):
         
         file_info_manager = ClientMediaManagers.FileInfoManager( 2, other_local_hash_has_values, size, mime, width, height, duration, num_frames, has_audio, num_words )
         
-        media_result = ClientMediaResult.MediaResult( file_info_manager, substantial_tags_manager, local_times_manager, local_locations_manager, substantial_ratings_manager, notes_manager, file_viewing_stats_manager )
-        
-        other_local_media_has_values = ClientMedia.MediaSingleton( media_result )
+        other_local_media_result_has_values = ClientMediaResult.MediaResult( file_info_manager, substantial_tags_manager, local_times_manager, local_locations_manager, substantial_ratings_manager, notes_manager, file_viewing_stats_manager )
         
         #
         
@@ -264,9 +259,7 @@ class TestSerialisables( unittest.TestCase ):
         
         file_info_manager = ClientMediaManagers.FileInfoManager( 3, local_hash_empty, size, mime, width, height, duration, num_frames, has_audio, num_words )
         
-        media_result = ClientMediaResult.MediaResult( file_info_manager, empty_tags_manager, local_times_manager, local_locations_manager, empty_ratings_manager, notes_manager, file_viewing_stats_manager )
-        
-        local_media_empty = ClientMedia.MediaSingleton( media_result )
+        local_media_result_empty = ClientMediaResult.MediaResult( file_info_manager, empty_tags_manager, local_times_manager, local_locations_manager, empty_ratings_manager, notes_manager, file_viewing_stats_manager )
         
         #
         
@@ -274,9 +267,7 @@ class TestSerialisables( unittest.TestCase ):
         
         file_info_manager = ClientMediaManagers.FileInfoManager( 4, trashed_hash_empty, size, mime, width, height, duration, num_frames, has_audio, num_words )
         
-        media_result = ClientMediaResult.MediaResult( file_info_manager, empty_tags_manager, deleted_times_manager, trash_locations_manager, empty_ratings_manager, notes_manager, file_viewing_stats_manager )
-        
-        trashed_media_empty = ClientMedia.MediaSingleton( media_result )
+        trashed_media_result_empty = ClientMediaResult.MediaResult( file_info_manager, empty_tags_manager, deleted_times_manager, trash_locations_manager, empty_ratings_manager, notes_manager, file_viewing_stats_manager )
         
         #
         
@@ -284,9 +275,7 @@ class TestSerialisables( unittest.TestCase ):
         
         file_info_manager = ClientMediaManagers.FileInfoManager( 5, deleted_hash_empty, size, mime, width, height, duration, num_frames, has_audio, num_words )
         
-        media_result = ClientMediaResult.MediaResult( file_info_manager, empty_tags_manager, deleted_times_manager, deleted_locations_manager, empty_ratings_manager, notes_manager, file_viewing_stats_manager )
-        
-        deleted_media_empty = ClientMedia.MediaSingleton( media_result )
+        deleted_media_result_empty = ClientMediaResult.MediaResult( file_info_manager, empty_tags_manager, deleted_times_manager, deleted_locations_manager, empty_ratings_manager, notes_manager, file_viewing_stats_manager )
         
         #
         
@@ -294,9 +283,7 @@ class TestSerialisables( unittest.TestCase ):
         
         file_info_manager = ClientMediaManagers.FileInfoManager( 6, one_hash, size, mime, width, height, duration, num_frames, has_audio, num_words )
         
-        media_result = ClientMediaResult.MediaResult( file_info_manager, one_tags_manager, local_times_manager, local_locations_manager, one_ratings_manager, notes_manager, file_viewing_stats_manager )
-        
-        one_media = ClientMedia.MediaSingleton( media_result )
+        one_media_result = ClientMediaResult.MediaResult( file_info_manager, one_tags_manager, local_times_manager, local_locations_manager, one_ratings_manager, notes_manager, file_viewing_stats_manager )
         
         #
         
@@ -304,9 +291,7 @@ class TestSerialisables( unittest.TestCase ):
         
         file_info_manager = ClientMediaManagers.FileInfoManager( 7, two_hash, size, mime, width, height, duration, num_frames, has_audio, num_words )
         
-        media_result = ClientMediaResult.MediaResult( file_info_manager, two_tags_manager, local_times_manager, local_locations_manager, two_ratings_manager, notes_manager, file_viewing_stats_manager )
-        
-        two_media = ClientMedia.MediaSingleton( media_result )
+        two_media_result = ClientMediaResult.MediaResult( file_info_manager, two_tags_manager, local_times_manager, local_locations_manager, two_ratings_manager, notes_manager, file_viewing_stats_manager )
         
         #
         
@@ -320,7 +305,7 @@ class TestSerialisables( unittest.TestCase ):
         
         #
         
-        result = duplicate_content_merge_options_delete_and_move.ProcessPairIntoContentUpdatePackage( local_media_has_values, local_media_empty, delete_second = True, file_deletion_reason = file_deletion_reason )
+        result = duplicate_content_merge_options_delete_and_move.ProcessPairIntoContentUpdatePackage( local_media_result_has_values, local_media_result_empty, delete_second = True, file_deletion_reason = file_deletion_reason )
         
         content_update_package = ClientContentUpdates.ContentUpdatePackage()
         
@@ -330,7 +315,7 @@ class TestSerialisables( unittest.TestCase ):
         
         #
         
-        result = duplicate_content_merge_options_delete_and_move.ProcessPairIntoContentUpdatePackage( local_media_has_values, trashed_media_empty, delete_second = True, file_deletion_reason = file_deletion_reason )
+        result = duplicate_content_merge_options_delete_and_move.ProcessPairIntoContentUpdatePackage( local_media_result_has_values, trashed_media_result_empty, delete_second = True, file_deletion_reason = file_deletion_reason )
         
         content_update_package = ClientContentUpdates.ContentUpdatePackage()
         
@@ -340,13 +325,13 @@ class TestSerialisables( unittest.TestCase ):
         
         #
         
-        result = duplicate_content_merge_options_delete_and_move.ProcessPairIntoContentUpdatePackage( local_media_has_values, deleted_media_empty, delete_second = True, file_deletion_reason = file_deletion_reason )
+        result = duplicate_content_merge_options_delete_and_move.ProcessPairIntoContentUpdatePackage( local_media_result_has_values, deleted_media_result_empty, delete_second = True, file_deletion_reason = file_deletion_reason )
         
         HF.compare_content_update_packages( self, result, ClientContentUpdates.ContentUpdatePackage() )
         
         #
         
-        result = duplicate_content_merge_options_delete_and_move.ProcessPairIntoContentUpdatePackage( local_media_has_values, other_local_media_has_values, delete_second = True, file_deletion_reason = file_deletion_reason )
+        result = duplicate_content_merge_options_delete_and_move.ProcessPairIntoContentUpdatePackage( local_media_result_has_values, other_local_media_result_has_values, delete_second = True, file_deletion_reason = file_deletion_reason )
         
         content_update_package = ClientContentUpdates.ContentUpdatePackage()
         
@@ -360,7 +345,7 @@ class TestSerialisables( unittest.TestCase ):
         
         #
         
-        result = duplicate_content_merge_options_delete_and_move.ProcessPairIntoContentUpdatePackage( local_media_empty, other_local_media_has_values, delete_second = True, file_deletion_reason = file_deletion_reason )
+        result = duplicate_content_merge_options_delete_and_move.ProcessPairIntoContentUpdatePackage( local_media_result_empty, other_local_media_result_has_values, delete_second = True, file_deletion_reason = file_deletion_reason )
         
         content_update_package = ClientContentUpdates.ContentUpdatePackage()
         
@@ -375,13 +360,13 @@ class TestSerialisables( unittest.TestCase ):
         #
         #
         
-        result = duplicate_content_merge_options_copy.ProcessPairIntoContentUpdatePackage( local_media_has_values, local_media_empty, file_deletion_reason = file_deletion_reason )
+        result = duplicate_content_merge_options_copy.ProcessPairIntoContentUpdatePackage( local_media_result_has_values, local_media_result_empty, file_deletion_reason = file_deletion_reason )
         
         HF.compare_content_update_packages( self, result, ClientContentUpdates.ContentUpdatePackage() )
         
         #
         
-        result = duplicate_content_merge_options_copy.ProcessPairIntoContentUpdatePackage( local_media_empty, other_local_media_has_values, file_deletion_reason = file_deletion_reason )
+        result = duplicate_content_merge_options_copy.ProcessPairIntoContentUpdatePackage( local_media_result_empty, other_local_media_result_has_values, file_deletion_reason = file_deletion_reason )
         
         content_update_package = ClientContentUpdates.ContentUpdatePackage()
         
@@ -395,7 +380,7 @@ class TestSerialisables( unittest.TestCase ):
         #
         #
         
-        result = duplicate_content_merge_options_merge.ProcessPairIntoContentUpdatePackage( local_media_has_values, local_media_empty, file_deletion_reason = file_deletion_reason )
+        result = duplicate_content_merge_options_merge.ProcessPairIntoContentUpdatePackage( local_media_result_has_values, local_media_result_empty, file_deletion_reason = file_deletion_reason )
         
         content_update_package = ClientContentUpdates.ContentUpdatePackage()
         
@@ -408,7 +393,7 @@ class TestSerialisables( unittest.TestCase ):
         
         #
         
-        result = duplicate_content_merge_options_merge.ProcessPairIntoContentUpdatePackage( local_media_empty, other_local_media_has_values, file_deletion_reason = file_deletion_reason )
+        result = duplicate_content_merge_options_merge.ProcessPairIntoContentUpdatePackage( local_media_result_empty, other_local_media_result_has_values, file_deletion_reason = file_deletion_reason )
         
         content_update_package = ClientContentUpdates.ContentUpdatePackage()
         
@@ -421,7 +406,7 @@ class TestSerialisables( unittest.TestCase ):
         
         #
         
-        result = duplicate_content_merge_options_merge.ProcessPairIntoContentUpdatePackage( one_media, two_media, file_deletion_reason = file_deletion_reason )
+        result = duplicate_content_merge_options_merge.ProcessPairIntoContentUpdatePackage( one_media_result, two_media_result, file_deletion_reason = file_deletion_reason )
         
         content_update_package = ClientContentUpdates.ContentUpdatePackage()
         
@@ -434,13 +419,13 @@ class TestSerialisables( unittest.TestCase ):
         
         #
         
-        result = duplicate_content_merge_options_empty.ProcessPairIntoContentUpdatePackage( one_media, two_media )
+        result = duplicate_content_merge_options_empty.ProcessPairIntoContentUpdatePackage( one_media_result, two_media_result )
         
         content_update_package = ClientContentUpdates.ContentUpdatePackage()
         
         HF.compare_content_update_packages( self, result, content_update_package )
         
-        result = duplicate_content_merge_options_empty.ProcessPairIntoContentUpdatePackage( two_media, one_media )
+        result = duplicate_content_merge_options_empty.ProcessPairIntoContentUpdatePackage( two_media_result, one_media_result )
         
         content_update_package = ClientContentUpdates.ContentUpdatePackage()
         

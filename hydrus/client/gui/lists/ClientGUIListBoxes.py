@@ -2385,6 +2385,11 @@ class ListBox( QW.QScrollArea ):
     
     def keyPressEvent( self, event ):
         
+        if not self.isEnabled():
+            
+            return
+            
+        
         shift = event.modifiers() & QC.Qt.ShiftModifier
         ctrl = event.modifiers() & QC.Qt.ControlModifier
         
@@ -2495,7 +2500,7 @@ class ListBox( QW.QScrollArea ):
             
             # we do the event filter since we need to 'scroll' the click, so we capture the event on the widget, not ourselves
             
-            if watched == self.widget():
+            if watched == self.widget() and self.isEnabled():
                 
                 if event.type() == QC.QEvent.MouseButtonPress:
                     
@@ -2603,7 +2608,7 @@ class ListBox( QW.QScrollArea ):
     
     class _InnerWidget( QW.QWidget ):
         
-        def __init__( self, parent ):
+        def __init__( self, parent: "ListBox" ):
             
             super().__init__( parent )
             
@@ -2667,6 +2672,11 @@ class ListBox( QW.QScrollArea ):
     
     def MoveSelectionDown( self ):
         
+        if not self.isEnabled():
+            
+            return
+            
+        
         if len( self._ordered_terms ) > 1 and self._last_hit_logical_index is not None:
             
             logical_index = ( self._last_hit_logical_index + 1 ) % len( self._ordered_terms )
@@ -2677,6 +2687,11 @@ class ListBox( QW.QScrollArea ):
     
     def MoveSelectionUp( self ):
         
+        if not self.isEnabled():
+            
+            return
+            
+        
         if len( self._ordered_terms ) > 1 and self._last_hit_logical_index is not None:
             
             logical_index = ( self._last_hit_logical_index - 1 ) % len( self._ordered_terms )
@@ -2686,6 +2701,11 @@ class ListBox( QW.QScrollArea ):
         
     
     def SelectTopItem( self ):
+        
+        if not self.isEnabled():
+            
+            return
+            
         
         if len( self._ordered_terms ) > 0:
             
@@ -2700,6 +2720,16 @@ class ListBox( QW.QScrollArea ):
             
             self.widget().update()
             
+        
+    
+    def setEnabled( self, value ):
+        
+        if not value:
+            
+            self._DeselectAll()
+            
+        
+        super().setEnabled( value )
         
     
     def SetExtraParentRowsAllowed( self, value: bool ):
@@ -2767,6 +2797,7 @@ class ListBox( QW.QScrollArea ):
         return size_hint
         
     
+
 COPY_ALL_TAGS = 0
 COPY_ALL_TAGS_WITH_COUNTS = 1
 COPY_SELECTED_TAGS = 2
@@ -3189,7 +3220,7 @@ class ListBoxTags( ListBox ):
     
     def ShowMenu( self ):
         
-        if len( self._ordered_terms ) == 0:
+        if len( self._ordered_terms ) == 0 or not self.isEnabled():
             
             return
             

@@ -208,8 +208,8 @@ class HydrusResourceClientAPIRestrictedManageFileRelationshipsSetRelationships( 
             
             content_update_packages = []
             
-            first_media = ClientMedia.MediaSingleton( hashes_to_media_results[ hash_a ] )
-            second_media = ClientMedia.MediaSingleton( hashes_to_media_results[ hash_b ] )
+            first_media_result = ClientMedia.MediaSingleton( hashes_to_media_results[ hash_a ] )
+            second_media_result = ClientMedia.MediaSingleton( hashes_to_media_results[ hash_b ] )
             
             file_deletion_reason = 'From Client API (duplicates processing).'
             
@@ -217,34 +217,34 @@ class HydrusResourceClientAPIRestrictedManageFileRelationshipsSetRelationships( 
                 
                 duplicate_content_merge_options = CG.client_controller.new_options.GetDuplicateContentMergeOptions( duplicate_type )
                 
-                content_update_packages.append( duplicate_content_merge_options.ProcessPairIntoContentUpdatePackage( first_media, second_media, file_deletion_reason = file_deletion_reason, delete_first = delete_first, delete_second = delete_second ) )
+                content_update_packages.append( duplicate_content_merge_options.ProcessPairIntoContentUpdatePackage( first_media_result, second_media_result, file_deletion_reason = file_deletion_reason, delete_first = delete_first, delete_second = delete_second ) )
                 
             elif delete_first or delete_second:
                 
                 content_update_package = ClientContentUpdates.ContentUpdatePackage()
                 
-                deletee_media = set()
+                deletee_media_results = set()
                 
                 if delete_first:
                     
-                    deletee_media.add( first_media )
+                    deletee_media_results.add( first_media_result )
                     
                 
                 if delete_second:
                     
-                    deletee_media.add( second_media )
+                    deletee_media_results.add( second_media_result )
                     
                 
-                for media in deletee_media:
+                for media_result in deletee_media_results:
                     
-                    if media.HasDeleteLocked():
+                    if media_result.IsDeleteLocked():
                         
-                        ClientMediaFileFilter.ReportDeleteLockFailures( [ media ] )
+                        ClientMediaFileFilter.ReportDeleteLockFailures( [ media_result ] )
                         
                         continue
                         
                     
-                    if media.GetLocationsManager().IsTrashed():
+                    if media_result.GetLocationsManager().IsTrashed():
                         
                         deletee_service_keys = ( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, )
                         
@@ -252,12 +252,12 @@ class HydrusResourceClientAPIRestrictedManageFileRelationshipsSetRelationships( 
                         
                         local_file_service_keys = CG.client_controller.services_manager.GetServiceKeys( ( HC.LOCAL_FILE_DOMAIN, ) )
                         
-                        deletee_service_keys = media.GetLocationsManager().GetCurrent().intersection( local_file_service_keys )
+                        deletee_service_keys = media_result.GetLocationsManager().GetCurrent().intersection( local_file_service_keys )
                         
                     
                     for deletee_service_key in deletee_service_keys:
                         
-                        content_update = ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, media.GetHashes(), reason = file_deletion_reason )
+                        content_update = ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, { media_result.GetHash() }, reason = file_deletion_reason )
                         
                         content_update_package.AddContentUpdate( deletee_service_key, content_update )
                         

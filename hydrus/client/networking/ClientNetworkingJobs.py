@@ -1081,7 +1081,7 @@ class NetworkJob( object ):
             
             with self._lock:
                 
-                self._status_text = '{} - retrying in {}'.format( status_text, ClientTime.TimestampToPrettyTimeDelta( self._connection_error_wake_time ) )
+                self._status_text = '{} - retrying in {}'.format( status_text, HydrusTime.TimestampToPrettyTimeDelta( self._connection_error_wake_time ) )
                 
             
             time.sleep( 1 )
@@ -1126,7 +1126,7 @@ class NetworkJob( object ):
             
             with self._lock:
                 
-                self._status_text = '{} - retrying in {}'.format( status_text, ClientTime.TimestampToPrettyTimeDelta( self._serverside_bandwidth_wake_time ) )
+                self._status_text = '{} - retrying in {}'.format( status_text, HydrusTime.TimestampToPrettyTimeDelta( self._serverside_bandwidth_wake_time ) )
                 
             
             time.sleep( 1 )
@@ -1922,7 +1922,7 @@ class NetworkJob( object ):
                         
                     else:
                         
-                        self._status_text = 'waiting to start: {}'.format( ClientTime.TimestampToPrettyTimeDelta( next_timestamp, just_now_threshold = 2, just_now_string = 'checking', no_prefix = True ) )
+                        self._status_text = 'waiting to start: {}'.format( HydrusTime.TimestampToPrettyTimeDelta( next_timestamp, just_now_threshold = 2, just_now_string = 'checking', no_prefix = True ) )
                         
                         self._last_gallery_token_estimate = next_timestamp
                         
@@ -1970,7 +1970,7 @@ class NetworkJob( object ):
                         
                         waiting_duration = override_waiting_duration
                         
-                        waiting_str = 'overriding bandwidth ' + ClientTime.TimestampToPrettyTimeDelta( self._bandwidth_manual_override_delayed_timestamp, just_now_string = 'imminently', just_now_threshold = just_now_threshold )
+                        waiting_str = 'overriding bandwidth ' + HydrusTime.TimestampToPrettyTimeDelta( self._bandwidth_manual_override_delayed_timestamp, just_now_string = 'imminently', just_now_threshold = just_now_threshold )
                         
                     else:
                         
@@ -1984,7 +1984,7 @@ class NetworkJob( object ):
                             
                         else:
                             
-                            waiting_str = 'bandwidth free ' + ClientTime.TimestampToPrettyTimeDelta( bandwidth_time_estimate, just_now_string = 'imminently', just_now_threshold = just_now_threshold )
+                            waiting_str = 'bandwidth free ' + HydrusTime.TimestampToPrettyTimeDelta( bandwidth_time_estimate, just_now_string = 'imminently', just_now_threshold = just_now_threshold )
                             
                             self._last_bandwidth_time_estimate = bandwidth_time_estimate
                             

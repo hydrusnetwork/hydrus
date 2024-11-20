@@ -15,7 +15,6 @@ from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
-from hydrus.client import ClientTime
 from hydrus.client.gui import ClientGUIDialogs
 from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIDialogsQuick
@@ -870,7 +869,7 @@ class EditLocalImportFilenameTaggingPanel( ClientGUIScrolledPanels.EditPanel ):
             page.movePageLeft.connect( self.MovePageLeft )
             page.movePageRight.connect( self.MovePageRight )
             
-            tab_index = self._notebook.addTab( page, name )
+            self._notebook.addTab( page, name )
             
             if service_key == default_tag_service_key:
                 
@@ -901,7 +900,7 @@ class EditLocalImportFilenameTaggingPanel( ClientGUIScrolledPanels.EditPanel ):
         
         if CG.client_controller.new_options.GetBoolean( 'save_default_tag_service_tab_on_change' ):
             
-            current_page = self._notebook.currentWidget()
+            current_page: EditLocalImportFilenameTaggingPanel._FilenameTaggingOptionsPanel = self._notebook.currentWidget()
             
             if current_page in self._filename_tagging_option_pages:
                 
@@ -912,7 +911,9 @@ class EditLocalImportFilenameTaggingPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _SetSearchFocus( self ):
         
-        self._notebook.currentWidget().SetSearchFocus()
+        current_page: EditLocalImportFilenameTaggingPanel._FilenameTaggingOptionsPanel = self._notebook.currentWidget()
+        
+        current_page.SetSearchFocus()
         
     
     def GetValue( self ):
@@ -943,14 +944,14 @@ class EditLocalImportFilenameTaggingPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._notebook.SelectLeft()
         
-        self._notebook.currentWidget().SetSearchFocus()
+        self._SetSearchFocus()
         
     
     def MovePageRight( self ):
         
         self._notebook.SelectRight()
         
-        self._notebook.currentWidget().SetSearchFocus()
+        self._SetSearchFocus()
         
     
     class _FilenameTaggingOptionsPanel( QW.QWidget ):
@@ -1988,7 +1989,7 @@ class WatcherReviewPanel( ClientGUICommon.StaticBox ):
                         
                     else:
                         
-                        watcher_status = 'next check ' + ClientTime.TimestampToPrettyTimeDelta( next_check_time, just_now_threshold = 0 )
+                        watcher_status = 'next check ' + HydrusTime.TimestampToPrettyTimeDelta( next_check_time, just_now_threshold = 0 )
                         
                     
                 

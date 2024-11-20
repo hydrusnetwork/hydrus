@@ -4012,17 +4012,26 @@ class ReviewServicesPanel( ClientGUIScrolledPanels.ReviewPanel ):
     
     def _InitialiseServices( self ):
         
-        lb = self._notebook.currentWidget()
-        
-        if lb.count() == 0:
+        try:
+            
+            notebook: ClientGUICommon.BetterNotebook = self._notebook.currentWidget()
+            
+            if notebook.count() == 0:
+                
+                previous_service_key = None
+                
+            else:
+                
+                notebook_2: ClientGUICommon.BetterNotebook = notebook.currentWidget()
+                
+                page: ReviewServicePanel = notebook_2.currentWidget()
+                
+                previous_service_key = page.GetServiceKey()
+                
+            
+        except:
             
             previous_service_key = None
-            
-        else:
-            
-            page = lb.currentWidget().currentWidget()
-            
-            previous_service_key = page.GetServiceKey()
             
         
         QP.DeleteAllNotebookPages( self._local_notebook )

@@ -16,7 +16,6 @@ from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
-from hydrus.client import ClientTime
 from hydrus.client.gui import ClientGUIAsync
 from hydrus.client.gui import ClientGUIDialogs
 from hydrus.client.gui import ClientGUIDialogsMessage
@@ -617,7 +616,7 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
             
         else:
             
-            pretty_latest_new_file_time = ClientTime.TimestampToPrettyTimeDelta( latest_new_file_time )
+            pretty_latest_new_file_time = HydrusTime.TimestampToPrettyTimeDelta( latest_new_file_time )
             
         
         if last_check_time is None or last_check_time == 0:
@@ -626,7 +625,7 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
             
         else:
             
-            pretty_last_check_time = ClientTime.TimestampToPrettyTimeDelta( last_check_time )
+            pretty_last_check_time = HydrusTime.TimestampToPrettyTimeDelta( last_check_time )
             
         
         pretty_next_check_time = query_header.GetNextCheckStatusString()
@@ -1237,7 +1236,7 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
             
         else:
             
-            status = 'delayed--retrying ' + ClientTime.TimestampToPrettyTimeDelta( self._no_work_until, just_now_threshold = 0 ) + ' because: ' + self._no_work_until_reason
+            status = 'delayed--retrying ' + HydrusTime.TimestampToPrettyTimeDelta( self._no_work_until, just_now_threshold = 0 ) + ' because: ' + self._no_work_until_reason
             
         
         self._delay_st.setText( status )
@@ -1696,7 +1695,7 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             
         else:
             
-            pretty_latest_new_file_time = ClientTime.TimestampToPrettyTimeDelta( latest_new_file_time )
+            pretty_latest_new_file_time = HydrusTime.TimestampToPrettyTimeDelta( latest_new_file_time )
             
         
         if last_checked is None or last_checked == 0:
@@ -1705,7 +1704,7 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             
         else:
             
-            pretty_last_checked = ClientTime.TimestampToPrettyTimeDelta( last_checked )
+            pretty_last_checked = HydrusTime.TimestampToPrettyTimeDelta( last_checked )
             
         
         #
@@ -1784,7 +1783,7 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             
         else:
             
-            pretty_delay = 'delayed--retrying ' + ClientTime.TimestampToPrettyTimeDelta( no_work_until, just_now_threshold = 0 ) + ' - because: ' + no_work_until_reason
+            pretty_delay = 'delayed--retrying ' + HydrusTime.TimestampToPrettyTimeDelta( no_work_until, just_now_threshold = 0 ) + ' - because: ' + no_work_until_reason
             
         
         file_seed_cache_status = ClientImportSubscriptionQuery.GenerateQueryHeadersStatus( query_headers )

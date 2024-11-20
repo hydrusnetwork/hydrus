@@ -3066,6 +3066,9 @@ class FilesMaintenanceManager( ClientDaemons.ManagerWithMainLoop ):
     
     def ForceMaintenance( self, mandated_job_types = None ):
         
+        # TODO: When you are feeling good, rework this guy into a set of simpler 'work hard' flags and fold it all into a throttle in the mainloop
+        # we can figure out a popup in that mode, but w/e tbh
+        
         if self._serious_error_encountered:
             
             return

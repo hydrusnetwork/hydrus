@@ -24,6 +24,7 @@ def CheckCanVacuum( db_path, stop_time = None ):
     
     CheckCanVacuumCursor( db_path, c, stop_time = stop_time )
     
+
 def CheckCanVacuumCursor( db_path, c, stop_time = None ):
     
     ( page_size, ) = c.execute( 'PRAGMA page_size;' ).fetchone()
@@ -32,6 +33,7 @@ def CheckCanVacuumCursor( db_path, c, stop_time = None ):
     
     CheckCanVacuumData( db_path, page_size, page_count, freelist_count, stop_time = stop_time )
     
+
 def CheckCanVacuumData( db_path, page_size, page_count, freelist_count, stop_time = None ):
     
     db_size = ( page_count - freelist_count ) * page_size
@@ -53,11 +55,65 @@ def CheckCanVacuumData( db_path, page_size, page_count, freelist_count, stop_tim
     HydrusDBBase.CheckHasSpaceForDBTransaction( db_dir, db_size )
     
 
+def CheckCanVacuumInto( db_path, stop_time = None ):
+    
+    db = sqlite3.connect( db_path, isolation_level = None, detect_types = sqlite3.PARSE_DECLTYPES )
+    
+    c = db.cursor()
+    
+    CheckCanVacuumIntoCursor( db_path, c, stop_time = stop_time )
+    
+
+def CheckCanVacuumIntoCursor( db_path, c, stop_time = None ):
+    
+    ( page_size, ) = c.execute( 'PRAGMA page_size;' ).fetchone()
+    ( page_count, ) = c.execute( 'PRAGMA page_count;' ).fetchone()
+    ( freelist_count, ) = c.execute( 'PRAGMA freelist_count;' ).fetchone()
+    
+    CheckCanVacuumIntoData( db_path, page_size, page_count, freelist_count, stop_time = stop_time )
+    
+
+def CheckCanVacuumIntoData( db_path, page_size, page_count, freelist_count, stop_time = None ):
+    
+    db_size = ( page_count - freelist_count ) * page_size
+    
+    if stop_time is not None:
+        
+        approx_vacuum_duration = GetApproxVacuumIntoDuration( db_size )
+        
+        time_i_will_have_to_start = stop_time - approx_vacuum_duration
+        
+        if HydrusTime.TimeHasPassed( time_i_will_have_to_start ):
+            
+            raise Exception( 'I believe you need about ' + HydrusTime.TimeDeltaToPrettyTimeDelta( approx_vacuum_duration ) + ' to vacuum, but there is not enough time allotted.' )
+            
+        
+    
+    db_dir = os.path.dirname( db_path )
+    
+    HydrusDBBase.CheckHasSpaceForDBTransaction( db_dir, db_size, no_temp_needed = True )
+    
+
 def GetApproxVacuumDuration( db_size ):
     
     vacuum_estimate = int( db_size * 1.2 )
     
     approx_vacuum_speed_mb_per_s = 1048576 * 1
+    
+    approx_vacuum_duration = vacuum_estimate // approx_vacuum_speed_mb_per_s
+    
+    return approx_vacuum_duration
+    
+
+def GetApproxVacuumIntoDuration( db_size ):
+    
+    # I've seen 200MB/s on a 600MB file in memory
+    # I've seen 30MB/s on a 4GB file not in memory
+    # I'll presume a real 20GB file is going to trend just a bit lower, but we can adjust this if we get some IRL data
+    
+    vacuum_estimate = int( db_size * 1.2 )
+    
+    approx_vacuum_speed_mb_per_s = 1048576 * 10
     
     approx_vacuum_duration = vacuum_estimate // approx_vacuum_speed_mb_per_s
     
@@ -125,6 +181,105 @@ def VacuumDB( db_path ):
     c.execute( 'VACUUM;' )
     
     c.execute( 'PRAGMA journal_mode = {};'.format( HG.db_journal_mode ) )
+    
+
+def VacuumDBInto( db_path ):
+    
+    started = HydrusTime.GetNowPrecise()
+    
+    vacuum_path = db_path + '.vacuum'
+    deletee_path = db_path + '.prevacuum'
+    
+    if os.path.exists( vacuum_path ):
+        
+        raise Exception( f'Hey, I wanted to vacuum "{db_path}", but "{vacuum_path}", which I wanted to use, already existed! Did a recent vacuum attempt fail? Please delete "{vacuum_path}" yourself before you try again.' )
+        
+    
+    if os.path.exists( deletee_path ):
+        
+        raise Exception( f'Hey, I wanted to vacuum "{db_path}", but "{deletee_path}", which I wanted to use briefly, already existed! Did a recent vacuum attempt fail? Please delete "{deletee_path}" yourself before you try again.' )
+        
+    
+    original_size = os.path.getsize( db_path )
+    
+    db = sqlite3.connect( db_path, isolation_level = None, detect_types = sqlite3.PARSE_DECLTYPES )
+    
+    c = db.cursor()
+    
+    c.execute( 'VACUUM INTO ?;', ( vacuum_path, ) )
+    
+    c.close()
+    
+    db.close()
+    
+    del c
+    
+    del db
+    
+    try:
+        
+        os.rename( db_path, deletee_path )
+        
+    except Exception as e:
+        
+        message = f'While attempting to vacuum "{db_path}", I could not rename it to "{deletee_path}"! You now have a spare vacuum file in your database directory at "{vacuum_path}", which you should manually delete.'
+        
+        raise Exception( message ) from e
+        
+    
+    try:
+        
+        os.rename( vacuum_path, db_path )
+        
+    except Exception as e:
+        
+        try:
+            
+            os.rename( deletee_path, db_path )
+            
+        except Exception as e2:
+            
+            HydrusData.PrintException( e )
+            HydrusData.PrintException( e2 )
+            
+            message = f'While attempting to vacuum "{db_path}", I could not rename "{vacuum_path}" to "{db_path}"! This is a very bad situation, because now there is no database file in the desired location!'
+            message += '\n\n'
+            message += f'Also, when I attempted to recover by renaming "{deletee_path}" back to "{db_path}", that also failed, even though I only just renamed it the other way! It is like your hard drive suddenly disconnected!'
+            message += '\n\n'
+            message += f'Go into your db directory now and review the paths. I recommend renaming the "prevacuum" file back to the original name, since we do not know if this vacuum file is ok. Contact hydev if you need more help. Do not delete the "vacuum" file until you know things are good.'
+            message += '\n\n'
+            message += f'The program will exit suddenly and rudely after this message is closed.'
+            
+            HG.controller.BlockingSafeShowCriticalMessage( 'CRITICAL VACUUM ERROR', message )
+            
+            # noinspection PyUnresolvedReferences
+            os._exit( 1 )
+            
+        
+        message = f'The vacuum failed, but I have successfully rolled back to where you started. While attempting to vacuum "{db_path}", I could not rename "{vacuum_path}" to "{db_path}"! This was a very bad situation, but I have recovered by renaming the original, to-be-deleted "{deletee_path}" back to "{db_path}".'
+        message += '\n\n'
+        message += f'You now have a spare "{vacuum_path}" file in your db dir that you should delete. You should investigate what is wrong with your database folder--could there be a permissions error, or something with free space? Why can I rename the main file but not the new vacuum? Hydev would be interested in anything you learn.'
+        
+        raise Exception( message ) from e
+        
+    
+    try:
+        
+        os.remove( deletee_path )
+        
+    except Exception as e:
+        
+        HydrusData.ShowText( f'Hey, the vacuum of "{db_path}" went ok, but I could not delete the leftover file "{deletee_path}"! Does hydrus not have delete permission on your db folder? In any case, please delete this file yourself.' )
+        HydrusData.ShowException( e )
+        
+    
+    vacuum_size = os.path.getsize( db_path )
+    
+    time_took = HydrusTime.GetNowPrecise() - started
+    
+    bytes_per_sec = vacuum_size / time_took
+    
+    HydrusData.ShowText( f'Vacuumed {db_path} in {HydrusTime.TimeDeltaToPrettyTimeDelta( time_took )} ({HydrusData.ToHumanBytes(bytes_per_sec)}/s). It went from {HydrusData.ToHumanBytes( original_size )} to {HydrusData.ToHumanBytes( vacuum_size )}' )
     
 
 class HydrusDB( HydrusDBBase.DBBase ):

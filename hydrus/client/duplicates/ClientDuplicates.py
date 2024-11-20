@@ -19,7 +19,7 @@ from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientThreading
 from hydrus.client import ClientTime
 from hydrus.client.importing.options import NoteImportOptions
-from hydrus.client.media import ClientMedia
+from hydrus.client.media import ClientMediaResult
 from hydrus.client.media import ClientMediaFileFilter
 from hydrus.client.metadata import ClientContentUpdates
 from hydrus.client.metadata import ClientTags
@@ -419,7 +419,7 @@ def GetDuplicateComparisonStatements( shown_media, comparison_media ):
             score = 0
             
         
-        statement = '{}, {} {}'.format( ClientTime.TimestampToPrettyTimeDelta( s_import_timestamp, history_suffix = ' old' ), operator, ClientTime.TimestampToPrettyTimeDelta( c_import_timestamp, history_suffix = ' old' ) )
+        statement = '{}, {} {}'.format( HydrusTime.TimestampToPrettyTimeDelta( s_import_timestamp, history_suffix = ' old' ), operator, HydrusTime.TimestampToPrettyTimeDelta( c_import_timestamp, history_suffix = ' old' ) )
         
         statements_and_scores[ 'time_imported' ] = ( statement, score )
         
@@ -775,7 +775,7 @@ class DuplicatesManager( object ):
         
     
 
-def get_updated_domain_modified_timestamp_datas( destination_media: ClientMedia.MediaSingleton, source_media: ClientMedia.MediaSingleton, urls: typing.Collection[ str ] ):
+def get_updated_domain_modified_timestamp_datas( destination_media_result: ClientMediaResult.MediaResult, source_media_result: ClientMediaResult.MediaResult, urls: typing.Collection[ str ] ):
     
     from hydrus.client.networking import ClientNetworkingFunctions
     
@@ -796,8 +796,8 @@ def get_updated_domain_modified_timestamp_datas( destination_media: ClientMedia.
         
     
     timestamp_datas = []
-    source_timestamp_manager = source_media.GetLocationsManager().GetTimesManager()
-    destination_timestamp_manager = destination_media.GetLocationsManager().GetTimesManager()
+    source_timestamp_manager = source_media_result.GetTimesManager()
+    destination_timestamp_manager = destination_media_result.GetTimesManager()
     
     for domain in domains:
         
@@ -819,11 +819,11 @@ def get_updated_domain_modified_timestamp_datas( destination_media: ClientMedia.
     return timestamp_datas
     
 
-def get_domain_modified_content_updates( destination_media: ClientMedia.MediaSingleton, source_media: ClientMedia.MediaSingleton, urls: typing.Collection[ str ] ):
+def get_domain_modified_content_updates( destination_media_result: ClientMediaResult.MediaResult, source_media_result: ClientMediaResult.MediaResult, urls: typing.Collection[ str ] ):
     
-    timestamp_datas = get_updated_domain_modified_timestamp_datas( destination_media, source_media, urls )
+    timestamp_datas = get_updated_domain_modified_timestamp_datas( destination_media_result, source_media_result, urls )
     
-    content_updates = [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TIMESTAMP, HC.CONTENT_UPDATE_SET, ( ( destination_media.GetHash(), ), timestamp_data ) ) for timestamp_data in timestamp_datas ]
+    content_updates = [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TIMESTAMP, HC.CONTENT_UPDATE_SET, ( ( destination_media_result.GetHash(), ), timestamp_data ) ) for timestamp_data in timestamp_datas ]
     
     return content_updates
     
@@ -1080,7 +1080,7 @@ class DuplicateContentMergeOptions( HydrusSerialisable.SerialisableBase ):
         self._sync_urls_action = sync_urls_action
         
     
-    def ProcessPairIntoContentUpdatePackage( self, first_media: ClientMedia.MediaSingleton, second_media: ClientMedia.MediaSingleton, delete_first = False, delete_second = False, file_deletion_reason = None, do_not_do_deletes = False ) -> ClientContentUpdates.ContentUpdatePackage:
+    def ProcessPairIntoContentUpdatePackage( self, first_media_result: ClientMediaResult.MediaResult, second_media_result: ClientMediaResult.MediaResult, delete_first = False, delete_second = False, file_deletion_reason = None, do_not_do_deletes = False ) -> ClientContentUpdates.ContentUpdatePackage:
         
         if file_deletion_reason is None:
             
@@ -1089,13 +1089,10 @@ class DuplicateContentMergeOptions( HydrusSerialisable.SerialisableBase ):
         
         content_update_package = ClientContentUpdates.ContentUpdatePackage()
         
-        first_hash = first_media.GetHash()
-        second_hash = second_media.GetHash()
+        first_hash = first_media_result.GetHash()
+        second_hash = second_media_result.GetHash()
         first_hashes = { first_hash }
         second_hashes = { second_hash }
-        
-        first_media_result = first_media.GetMediaResult()
-        second_media_result = second_media.GetMediaResult()
         
         #
         
@@ -1129,8 +1126,8 @@ class DuplicateContentMergeOptions( HydrusSerialisable.SerialisableBase ):
                 continue
                 
             
-            first_tags = first_media.GetTagsManager().GetCurrentAndPending( service_key, ClientTags.TAG_DISPLAY_STORAGE )
-            second_tags = second_media.GetTagsManager().GetCurrentAndPending( service_key, ClientTags.TAG_DISPLAY_STORAGE )
+            first_tags = first_media_result.GetTagsManager().GetCurrentAndPending( service_key, ClientTags.TAG_DISPLAY_STORAGE )
+            second_tags = second_media_result.GetTagsManager().GetCurrentAndPending( service_key, ClientTags.TAG_DISPLAY_STORAGE )
             
             first_tags = tag_filter.Filter( first_tags )
             second_tags = tag_filter.Filter( second_tags )
@@ -1186,8 +1183,8 @@ class DuplicateContentMergeOptions( HydrusSerialisable.SerialisableBase ):
                 continue
                 
             
-            first_current_value = first_media.GetRatingsManager().GetRating( service_key )
-            second_current_value = second_media.GetRatingsManager().GetRating( service_key )
+            first_current_value = first_media_result.GetRatingsManager().GetRating( service_key )
+            second_current_value = second_media_result.GetRatingsManager().GetRating( service_key )
             
             service_type = service.GetServiceType()
             
@@ -1268,8 +1265,8 @@ class DuplicateContentMergeOptions( HydrusSerialisable.SerialisableBase ):
         
         if self._sync_notes_action != HC.CONTENT_MERGE_ACTION_NONE:
             
-            first_names_and_notes = list( first_media.GetNotesManager().GetNamesToNotes().items() )
-            second_names_and_notes = list( second_media.GetNotesManager().GetNamesToNotes().items() )
+            first_names_and_notes = list( first_media_result.GetNotesManager().GetNamesToNotes().items() )
+            second_names_and_notes = list( second_media_result.GetNotesManager().GetNamesToNotes().items() )
             
             # TODO: rework this to UpdateeNamesToNotes
             
@@ -1307,25 +1304,28 @@ class DuplicateContentMergeOptions( HydrusSerialisable.SerialisableBase ):
         # and not delete_first gubbins here to help out the delete lock lmao. don't want to archive and then try to delete
         # TODO: this is obviously a bad solution, so better to refactor this function to return a list of content_update_packages and stick the delete command right up top, tested for locks on current info
         
+        first_locations_manager = first_media_result.GetLocationsManager()
+        second_locations_manager = second_media_result.GetLocationsManager()
+        
         if self._sync_archive_action == SYNC_ARCHIVE_IF_ONE_DO_BOTH:
             
-            if first_media.HasInbox() and second_media.HasArchive() and not delete_first:
+            if first_locations_manager.inbox and not second_locations_manager.inbox and not delete_first:
                 
                 content_update_package.AddContentUpdate( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, content_update_archive_first )
                 
-            elif first_media.HasArchive() and second_media.HasInbox() and not delete_second:
+            elif not first_locations_manager.inbox and second_locations_manager.inbox and not delete_second:
                 
                 content_update_package.AddContentUpdate( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, content_update_archive_second )
                 
             
         elif self._sync_archive_action == SYNC_ARCHIVE_DO_BOTH_REGARDLESS:
             
-            if first_media.HasInbox() and not delete_first:
+            if first_locations_manager.inbox and not delete_first:
                 
                 content_update_package.AddContentUpdate( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, content_update_archive_first )
                 
             
-            if second_media.HasInbox() and not delete_second:
+            if second_locations_manager.inbox and not delete_second:
                 
                 content_update_package.AddContentUpdate( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, content_update_archive_second )
                 
@@ -1335,8 +1335,8 @@ class DuplicateContentMergeOptions( HydrusSerialisable.SerialisableBase ):
         
         if self._sync_file_modified_date_action != HC.CONTENT_MERGE_ACTION_NONE:
             
-            first_timestamp_ms = first_media.GetMediaResult().GetTimesManager().GetFileModifiedTimestampMS()
-            second_timestamp_ms = second_media.GetMediaResult().GetTimesManager().GetFileModifiedTimestampMS()
+            first_timestamp_ms = first_media_result.GetTimesManager().GetFileModifiedTimestampMS()
+            second_timestamp_ms = second_media_result.GetTimesManager().GetFileModifiedTimestampMS()
             
             if self._sync_file_modified_date_action == HC.CONTENT_MERGE_ACTION_TWO_WAY_MERGE:
                 
@@ -1362,8 +1362,8 @@ class DuplicateContentMergeOptions( HydrusSerialisable.SerialisableBase ):
         
         if self._sync_urls_action != HC.CONTENT_MERGE_ACTION_NONE:
             
-            first_urls = set( first_media.GetLocationsManager().GetURLs() )
-            second_urls = set( second_media.GetLocationsManager().GetURLs() )
+            first_urls = set( first_media_result.GetLocationsManager().GetURLs() )
+            second_urls = set( second_media_result.GetLocationsManager().GetURLs() )
             
             if self._sync_urls_action == HC.CONTENT_MERGE_ACTION_TWO_WAY_MERGE:
                 
@@ -1374,14 +1374,14 @@ class DuplicateContentMergeOptions( HydrusSerialisable.SerialisableBase ):
                     
                     content_update_package.AddContentUpdate( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_URLS, HC.CONTENT_UPDATE_ADD, ( first_needs, first_hashes ) ) )
                     
-                    content_update_package.AddContentUpdates( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, get_domain_modified_content_updates( first_media, second_media, first_needs ) )
+                    content_update_package.AddContentUpdates( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, get_domain_modified_content_updates( first_media_result, second_media_result, first_needs ) )
                     
                 
                 if len( second_needs ) > 0:
                     
                     content_update_package.AddContentUpdate( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_URLS, HC.CONTENT_UPDATE_ADD, ( second_needs, second_hashes ) ) )
                     
-                    content_update_package.AddContentUpdates( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, get_domain_modified_content_updates( second_media, first_media, second_needs ) )
+                    content_update_package.AddContentUpdates( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, get_domain_modified_content_updates( second_media_result, first_media_result, second_needs ) )
                     
                 
             elif self._sync_urls_action == HC.CONTENT_MERGE_ACTION_COPY:
@@ -1392,40 +1392,40 @@ class DuplicateContentMergeOptions( HydrusSerialisable.SerialisableBase ):
                     
                     content_update_package.AddContentUpdate( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_URLS, HC.CONTENT_UPDATE_ADD, ( first_needs, first_hashes ) ) )
                     
-                    content_update_package.AddContentUpdates( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, get_domain_modified_content_updates( first_media, second_media, first_needs ) )
+                    content_update_package.AddContentUpdates( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, get_domain_modified_content_updates( first_media_result, second_media_result, first_needs ) )
                     
                 
             
         
         #
         
-        deletee_media = []
+        deletee_media_results = []
         
         if delete_first:
             
-            deletee_media.append( first_media )
+            deletee_media_results.append( first_media_result )
             
         
         if delete_second:
             
-            deletee_media.append( second_media )
+            deletee_media_results.append( second_media_result )
             
         
-        for media in deletee_media:
+        for media_result in deletee_media_results:
             
             if do_not_do_deletes:
                 
                 continue
                 
             
-            if media.HasDeleteLocked():
+            if media_result.IsDeleteLocked():
                 
-                ClientMediaFileFilter.ReportDeleteLockFailures( [ media ] )
+                ClientMediaFileFilter.ReportDeleteLockFailures( [ media_result ] )
                 
                 continue
                 
             
-            if media.GetLocationsManager().IsTrashed():
+            if media_result.GetLocationsManager().IsTrashed():
                 
                 deletee_service_keys = ( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, )
                 
@@ -1433,12 +1433,12 @@ class DuplicateContentMergeOptions( HydrusSerialisable.SerialisableBase ):
                 
                 local_file_service_keys = CG.client_controller.services_manager.GetServiceKeys( ( HC.LOCAL_FILE_DOMAIN, ) )
                 
-                deletee_service_keys = media.GetLocationsManager().GetCurrent().intersection( local_file_service_keys )
+                deletee_service_keys = media_result.GetLocationsManager().GetCurrent().intersection( local_file_service_keys )
                 
             
             for deletee_service_key in deletee_service_keys:
                 
-                content_update = ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, media.GetHashes(), reason = file_deletion_reason )
+                content_update = ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, { media_result.GetHash() }, reason = file_deletion_reason )
                 
                 content_update_package.AddContentUpdate( deletee_service_key, content_update )
                 

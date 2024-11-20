@@ -553,137 +553,96 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
         self._publish_files_to_page = publish_files_to_page
         
     
-    def _ActionPaths( self ):
+    def _ActionSeed( self, file_seed: ClientImportFileSeeds.FileSeed ):
         
-        for status in ( CC.STATUS_SUCCESSFUL_AND_NEW, CC.STATUS_SUCCESSFUL_BUT_REDUNDANT, CC.STATUS_DELETED, CC.STATUS_ERROR ):
+        status = file_seed.status
+        
+        if status not in self._actions:
             
-            action = self._actions[ status ]
+            return
             
-            if action == CC.IMPORT_FOLDER_DELETE:
+        
+        action = self._actions[ status ]
+        
+        path = file_seed.file_seed_data
+        
+        if action == CC.IMPORT_FOLDER_DELETE:
+            
+            try:
                 
-                while True:
+                if os.path.exists( path ) and not os.path.isdir( path ):
                     
-                    file_seed = self._file_seed_cache.GetNextFileSeed( status )
+                    ClientPaths.DeletePath( path )
                     
-                    if file_seed is None or HG.started_shutdown:
-                        
-                        break
-                        
+                
+                possible_sidecar_paths = set()
+                
+                for router in self._metadata_routers:
                     
-                    path = file_seed.file_seed_data
+                    possible_sidecar_paths.update( router.GetPossibleImporterSidecarPaths( path ) )
                     
-                    try:
+                
+                for possible_sidecar_path in possible_sidecar_paths:
+                    
+                    if os.path.exists( possible_sidecar_path ):
                         
-                        if os.path.exists( path ) and not os.path.isdir( path ):
-                            
-                            ClientPaths.DeletePath( path )
-                            
-                        
-                        possible_sidecar_paths = set()
-                        
-                        for router in self._metadata_routers:
-                            
-                            possible_sidecar_paths.update( router.GetPossibleImporterSidecarPaths( path ) )
-                            
-                        
-                        for possible_sidecar_path in possible_sidecar_paths:
-                            
-                            if os.path.exists( possible_sidecar_path ):
-                                
-                                ClientPaths.DeletePath( possible_sidecar_path )
-                                
-                            
-                        
-                        self._file_seed_cache.RemoveFileSeeds( ( file_seed, ) )
-                        
-                    except Exception as e:
-                        
-                        raise Exception( 'Tried to delete "{}", but could not.'.format( path ) )
+                        ClientPaths.DeletePath( possible_sidecar_path )
                         
                     
                 
-            elif action == CC.IMPORT_FOLDER_MOVE:
+                self._file_seed_cache.RemoveFileSeeds( ( file_seed, ) )
                 
-                while True:
+            except Exception as e:
+                
+                raise Exception( 'Tried to delete "{}", but could not.'.format( path ) )
+                
+            
+        elif action == CC.IMPORT_FOLDER_MOVE:
+            
+            try:
+                
+                dest_dir = self._action_locations[ status ]
+                
+                if not os.path.exists( dest_dir ):
                     
-                    file_seed = self._file_seed_cache.GetNextFileSeed( status )
-                    
-                    if file_seed is None or HG.started_shutdown:
-                        
-                        break
-                        
-                    
-                    path = file_seed.file_seed_data
-                    
-                    try:
-                        
-                        dest_dir = self._action_locations[ status ]
-                        
-                        if not os.path.exists( dest_dir ):
-                            
-                            raise Exception( 'Tried to move "{}" to "{}", but the destination directory did not exist.'.format( path, dest_dir ) )
-                            
-                        
-                        if os.path.exists( path ) and not os.path.isdir( path ):
-                            
-                            filename = os.path.basename( path )
-                            
-                            dest_path = os.path.join( dest_dir, filename )
-                            
-                            dest_path = HydrusPaths.AppendPathUntilNoConflicts( dest_path )
-                            
-                            HydrusPaths.MergeFile( path, dest_path )
-                            
-                        
-                        txt_path = path + '.txt'
-                        
-                        if os.path.exists( txt_path ):
-                            
-                            txt_filename = os.path.basename( txt_path )
-                            
-                            txt_dest_path = os.path.join( dest_dir, txt_filename )
-                            
-                            txt_dest_path = HydrusPaths.AppendPathUntilNoConflicts( txt_dest_path )
-                            
-                            HydrusPaths.MergeFile( txt_path, txt_dest_path )
-                            
-                        
-                        self._file_seed_cache.RemoveFileSeeds( ( file_seed, ) )
-                        
-                    except Exception as e:
-                        
-                        HydrusData.ShowText( f'Import folder tried to move "{path}", but it encountered an error:' )
-                        
-                        HydrusData.ShowException( e )
-                        
-                        HydrusData.ShowText( 'Import folder has been paused.' )
-                        
-                        self._paused = True
-                        
-                        return
-                        
+                    raise Exception( 'Tried to move "{}" to "{}", but the destination directory did not exist.'.format( path, dest_dir ) )
                     
                 
-            elif status == CC.IMPORT_FOLDER_IGNORE:
+                if os.path.exists( path ) and not os.path.isdir( path ):
+                    
+                    filename = os.path.basename( path )
+                    
+                    dest_path = os.path.join( dest_dir, filename )
+                    
+                    dest_path = HydrusPaths.AppendPathUntilNoConflicts( dest_path )
+                    
+                    HydrusPaths.MergeFile( path, dest_path )
+                    
                 
-                file_seeds = self._file_seed_cache.GetFileSeeds( status )
+                txt_path = path + '.txt'
                 
-                for file_seed in file_seeds:
+                if os.path.exists( txt_path ):
                     
-                    path = file_seed.file_seed_data
+                    txt_filename = os.path.basename( txt_path )
                     
-                    try:
-                        
-                        if not os.path.exists( path ):
-                            
-                            self._file_seed_cache.RemoveFileSeeds( ( file_seed, ) )
-                            
-                        
-                    except Exception as e:
-                        
-                        raise Exception( 'Tried to check existence of "{}", but could not.'.format( path ) ) from e
-                        
+                    txt_dest_path = os.path.join( dest_dir, txt_filename )
                     
+                    txt_dest_path = HydrusPaths.AppendPathUntilNoConflicts( txt_dest_path )
+                    
+                    HydrusPaths.MergeFile( txt_path, txt_dest_path )
+                    
+                
+                self._file_seed_cache.RemoveFileSeeds( ( file_seed, ) )
+                
+            except Exception as e:
+                
+                HydrusData.ShowText( f'Import folder tried to move "{path}", but it encountered an error:' )
+                
+                HydrusData.ShowException( e )
+                
+                HydrusData.ShowText( 'Import folder has been paused.' )
+                
+                self._paused = True
                 
             
         
@@ -790,105 +749,107 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
             
             path = file_seed.file_seed_data
             
-            file_seed.ImportPath( self._file_seed_cache, self._file_import_options, FileImportOptions.IMPORT_TYPE_QUIET )
-            
-            if file_seed.status in CC.SUCCESSFUL_IMPORT_STATES:
+            try:
                 
-                hash = None
+                file_seed.ImportPath( self._file_seed_cache, self._file_import_options, FileImportOptions.IMPORT_TYPE_QUIET )
                 
-                if file_seed.HasHash():
+                if file_seed.status in CC.SUCCESSFUL_IMPORT_STATES:
                     
-                    hash = file_seed.GetHash()
+                    hash = None
                     
-                    if self._tag_import_options.HasAdditionalTags() or len( self._metadata_routers ) > 0:
+                    if file_seed.HasHash():
                         
-                        media_result = CG.client_controller.Read( 'media_result', hash )
+                        hash = file_seed.GetHash()
                         
-                        if self._tag_import_options.HasAdditionalTags():
+                        if self._tag_import_options.HasAdditionalTags() or len( self._metadata_routers ) > 0:
                             
-                            downloaded_tags = []
+                            media_result = CG.client_controller.Read( 'media_result', hash )
                             
-                            content_update_package = self._tag_import_options.GetContentUpdatePackage( file_seed.status, media_result, downloaded_tags ) # additional tags
-                            
-                            if content_update_package.HasContent():
+                            if self._tag_import_options.HasAdditionalTags():
                                 
-                                CG.client_controller.WriteSynchronous( 'content_updates', content_update_package )
+                                downloaded_tags = []
+                                
+                                content_update_package = self._tag_import_options.GetContentUpdatePackage( file_seed.status, media_result, downloaded_tags ) # additional tags
+                                
+                                if content_update_package.HasContent():
+                                    
+                                    CG.client_controller.WriteSynchronous( 'content_updates', content_update_package )
+                                    
+                                
+                            
+                            for metadata_router in self._metadata_routers:
+                                
+                                try:
+                                    
+                                    metadata_router.Work( media_result, path )
+                                    
+                                except Exception as e:
+                                    
+                                    HydrusData.ShowText( 'Trying to run metadata routing in the import folder "' + self._name + '" threw an error!' )
+                                    
+                                    HydrusData.ShowException( e )
+                                    
                                 
                             
                         
-                        for metadata_router in self._metadata_routers:
+                        service_keys_to_tags = ClientTags.ServiceKeysToTags()
+                        
+                        for ( tag_service_key, filename_tagging_options ) in self._tag_service_keys_to_filename_tagging_options.items():
+                            
+                            if not CG.client_controller.services_manager.ServiceExists( tag_service_key ):
+                                
+                                continue
+                                
                             
                             try:
                                 
-                                metadata_router.Work( media_result, path )
+                                tags = filename_tagging_options.GetTags( tag_service_key, path )
+                                
+                                if len( tags ) > 0:
+                                    
+                                    service_keys_to_tags[ tag_service_key ] = tags
+                                    
                                 
                             except Exception as e:
                                 
-                                HydrusData.ShowText( 'Trying to run metadata routing in the import folder "' + self._name + '" threw an error!' )
+                                HydrusData.ShowText( 'Trying to parse filename tags in the import folder "' + self._name + '" threw an error!' )
                                 
                                 HydrusData.ShowException( e )
                                 
                             
                         
-                    
-                    service_keys_to_tags = ClientTags.ServiceKeysToTags()
-                    
-                    for ( tag_service_key, filename_tagging_options ) in self._tag_service_keys_to_filename_tagging_options.items():
-                        
-                        if not CG.client_controller.services_manager.ServiceExists( tag_service_key ):
+                        if len( service_keys_to_tags ) > 0:
                             
-                            continue
+                            content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromServiceKeysToTags( { hash }, service_keys_to_tags )
                             
-                        
-                        try:
-                            
-                            tags = filename_tagging_options.GetTags( tag_service_key, path )
-                            
-                            if len( tags ) > 0:
-                                
-                                service_keys_to_tags[ tag_service_key ] = tags
-                                
-                            
-                        except Exception as e:
-                            
-                            HydrusData.ShowText( 'Trying to parse filename tags in the import folder "' + self._name + '" threw an error!' )
-                            
-                            HydrusData.ShowException( e )
+                            CG.client_controller.WriteSynchronous( 'content_updates', content_update_package )
                             
                         
                     
-                    if len( service_keys_to_tags ) > 0:
+                    num_files_imported += 1
+                    
+                    if hash not in presentation_hashes_fast:
                         
-                        content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromServiceKeysToTags( { hash }, service_keys_to_tags )
+                        real_presentation_import_options = FileImportOptions.GetRealPresentationImportOptions( self._file_import_options, FileImportOptions.IMPORT_TYPE_LOUD )
                         
-                        CG.client_controller.WriteSynchronous( 'content_updates', content_update_package )
+                        if file_seed.ShouldPresent( real_presentation_import_options ):
+                            
+                            presentation_hashes.append( hash )
+                            
+                            presentation_hashes_fast.add( hash )
+                            
                         
+                    
+                elif file_seed.status == CC.STATUS_ERROR:
+                    
+                    HydrusData.Print( 'A file failed to import from import folder ' + self._name + ':' + path )
                     
                 
-                num_files_imported += 1
+                i += 1
                 
-                if hash not in presentation_hashes_fast:
-                    
-                    real_presentation_import_options = FileImportOptions.GetRealPresentationImportOptions( self._file_import_options, FileImportOptions.IMPORT_TYPE_LOUD )
-                    
-                    if file_seed.ShouldPresent( real_presentation_import_options ):
-                        
-                        presentation_hashes.append( hash )
-                        
-                        presentation_hashes_fast.add( hash )
-                        
-                    
+            finally:
                 
-            elif file_seed.status == CC.STATUS_ERROR:
-                
-                HydrusData.Print( 'A file failed to import from import folder ' + self._name + ':' + path )
-                
-            
-            i += 1
-            
-            if i % 10 == 0:
-                
-                self._ActionPaths()
+                self._ActionSeed( file_seed )
                 
             
         
@@ -901,8 +862,6 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
                 ClientImporting.PublishPresentationHashes( self._name, presentation_hashes, self._publish_files_to_popup_button, self._publish_files_to_page )
                 
             
-        
-        self._ActionPaths()
         
         return did_work
         

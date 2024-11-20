@@ -259,7 +259,9 @@ class SingleStringConversionTestPanel( QW.QWidget ):
             
             try:
                 
-                t = self._example_results.widget( step_index - 1 ).item( 0 ).text()
+                list_widget: ClientGUIListBoxes.BetterQListWidget = self._example_results.widget( step_index - 1 )
+                
+                t = list_widget.item( 0 ).text()
                 
                 if t != NO_RESULTS_TEXT:
                     

@@ -19,6 +19,7 @@ from hydrus.client import ClientApplicationCommand as CAC
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientFiles
 from hydrus.client import ClientGlobals as CG
+from hydrus.client import ClientLocation
 from hydrus.client import ClientPaths
 from hydrus.client import ClientServices
 from hydrus.client.gui import ClientGUIDialogs
@@ -373,47 +374,30 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.Liste
             
             s += ' - '
             
-            # if 1 selected, we show the whole mime string, so no need to specify
-            if num_selected == 1 or selected_files_string == num_files_string:
+            num_inbox = sum( ( media.GetNumInbox() for media in self._selected_media ) )
+            
+            if num_inbox == num_selected:
                 
-                selected_files_string = HydrusNumbers.ToHumanInt( num_selected )
+                inbox_phrase = 'all in inbox' if num_inbox > 1 else 'in inbox'
+                
+            elif num_inbox == 0:
+                
+                inbox_phrase = 'all archived' if num_selected > 1 else 'archived'
+                
+            else:
+                
+                inbox_phrase = '{} in inbox and {} archived'.format( HydrusNumbers.ToHumanInt( num_inbox ), HydrusNumbers.ToHumanInt( num_selected - num_inbox ) )
                 
             
-            if num_selected == 1: # 23 files - 1 video selected, file_info
+            pretty_total_size = self._GetPrettyTotalSize( only_selected = True )
+            
+            s += '{} selected, {}, totalling {}'.format( selected_files_string, inbox_phrase, pretty_total_size )
+            
+            pretty_total_duration = self._GetPrettyTotalDuration( only_selected = True )
+            
+            if pretty_total_duration != '':
                 
-                ( selected_media, ) = self._selected_media
-                
-                pretty_info_lines = [ line for line in selected_media.GetPrettyInfoLines( only_interesting_lines = True ) if isinstance( line, str ) ]
-                
-                s += '{} selected, {}'.format( selected_files_string, ', '.join( pretty_info_lines ) )
-                
-            else: # 23 files - 5 selected, selection_info
-                
-                num_inbox = sum( ( media.GetNumInbox() for media in self._selected_media ) )
-                
-                if num_inbox == num_selected:
-                    
-                    inbox_phrase = 'all in inbox'
-                    
-                elif num_inbox == 0:
-                    
-                    inbox_phrase = 'all archived'
-                    
-                else:
-                    
-                    inbox_phrase = '{} in inbox and {} archived'.format( HydrusNumbers.ToHumanInt( num_inbox ), HydrusNumbers.ToHumanInt( num_selected - num_inbox ) )
-                    
-                
-                pretty_total_size = self._GetPrettyTotalSize( only_selected = True )
-                
-                s += '{} selected, {}, totalling {}'.format( selected_files_string, inbox_phrase, pretty_total_size )
-                
-                pretty_total_duration = self._GetPrettyTotalDuration( only_selected = True )
-                
-                if pretty_total_duration != '':
-                    
-                    s += ', {}'.format( pretty_total_duration )
-                    
+                s += ', {}'.format( pretty_total_duration )
                 
             
         
@@ -1386,23 +1370,27 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.Liste
                 return False
                 
             
+            media_results = [ media_singleton.GetMediaResult() for media_singleton in flat_media ]
+            
             if duplicate_type in ( HC.DUPLICATE_FALSE_POSITIVE, HC.DUPLICATE_ALTERNATE, HC.DUPLICATE_POTENTIAL ):
                 
-                media_pairs = list( itertools.combinations( flat_media, 2 ) )
+                media_result_pairs = list( itertools.combinations( media_results, 2 ) )
                 
             else:
                 
-                first_media = flat_media[0]
+                first_media_result = media_results[0]
                 
-                media_pairs = [ ( first_media, other_media ) for other_media in flat_media if other_media != first_media ]
+                media_result_pairs = [ ( first_media_result, other_media_result ) for other_media_result in media_results if other_media_result != first_media_result ]
                 
             
         else:
             
+            media_result_pairs = [ ( media_a.GetMediaResult(), media_b.GetMediaResult() ) for ( media_a, media_b ) in media_pairs ]
+            
             num_files_str = HydrusNumbers.ToHumanInt( len( self._GetSelectedFlatMedia() ) )
             
         
-        if len( media_pairs ) == 0:
+        if len( media_result_pairs ) == 0:
             
             return False
             
@@ -1412,17 +1400,17 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.Liste
             yes_label = 'yes'
             no_label = 'no'
             
-            if len( media_pairs ) > 1 and duplicate_type in ( HC.DUPLICATE_FALSE_POSITIVE, HC.DUPLICATE_ALTERNATE ):
+            if len( media_result_pairs ) > 1 and duplicate_type in ( HC.DUPLICATE_FALSE_POSITIVE, HC.DUPLICATE_ALTERNATE ):
                 
-                media_pairs_str = HydrusNumbers.ToHumanInt( len( media_pairs ) )
+                media_result_pairs_str = HydrusNumbers.ToHumanInt( len( media_result_pairs ) )
                 
-                message = 'Are you sure you want to {} for the {} selected files? The relationship will be applied between every pair combination in the file selection ({} pairs).'.format( yes_no_text, num_files_str, media_pairs_str )
+                message = 'Are you sure you want to {} for the {} selected files? The relationship will be applied between every pair combination in the file selection ({} pairs).'.format( yes_no_text, num_files_str, media_result_pairs_str )
                 
-                if len( media_pairs ) > 100:
+                if len( media_result_pairs ) > 100:
                     
                     if duplicate_type == HC.DUPLICATE_FALSE_POSITIVE:
                         
-                        message = 'False positive records are complicated, and setting that relationship for {} files ({} pairs) at once is likely a mistake.'.format( num_files_str, media_pairs_str )
+                        message = 'False positive records are complicated, and setting that relationship for {} files ({} pairs) at once is likely a mistake.'.format( num_files_str, media_result_pairs_str )
                         message += '\n' * 2
                         message += 'Are you sure all of these files are all potential duplicates and that they are all false positive matches with each other? If not, I recommend you step back for now.'
                         
@@ -1462,29 +1450,29 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.Liste
         # There's a second issue, wew, in that in order to propagate C back to B, we need to do the whole thing twice! wow!
         # some service_key_to_content_updates preservation gubbins is needed as a result
         
-        hashes_to_duplicated_media = {}
+        hashes_to_duplicated_media_results = {}
         hash_pairs_to_content_update_packages = collections.defaultdict( list )
         
         for is_first_run in ( True, False ):
             
-            for ( first_media, second_media ) in media_pairs:
+            for ( first_media_result, second_media_result ) in media_result_pairs:
                 
-                first_hash = first_media.GetHash()
-                second_hash = second_media.GetHash()
+                first_hash = first_media_result.GetHash()
+                second_hash = second_media_result.GetHash()
                 
-                if first_hash not in hashes_to_duplicated_media:
+                if first_hash not in hashes_to_duplicated_media_results:
                     
-                    hashes_to_duplicated_media[ first_hash ] = first_media.Duplicate()
-                    
-                
-                first_duplicated_media = hashes_to_duplicated_media[ first_hash ]
-                
-                if second_hash not in hashes_to_duplicated_media:
-                    
-                    hashes_to_duplicated_media[ second_hash ] = second_media.Duplicate()
+                    hashes_to_duplicated_media_results[ first_hash ] = first_media_result.Duplicate()
                     
                 
-                second_duplicated_media = hashes_to_duplicated_media[ second_hash ]
+                first_duplicated_media_result = hashes_to_duplicated_media_results[ first_hash ]
+                
+                if second_hash not in hashes_to_duplicated_media_results:
+                    
+                    hashes_to_duplicated_media_results[ second_hash ] = second_media_result.Duplicate()
+                    
+                
+                second_duplicated_media_result = hashes_to_duplicated_media_results[ second_hash ]
                 
                 content_update_packages = hash_pairs_to_content_update_packages[ ( first_hash, second_hash ) ]
                 
@@ -1494,7 +1482,7 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.Liste
                     
                     # so the important part of this mess is here. we send the duplicated media, which is keeping up with content updates, to the method here
                     # original 'first_media' is not changed, and won't be until the database Write clears and publishes everything
-                    content_update_packages.append( duplicate_content_merge_options.ProcessPairIntoContentUpdatePackage( first_duplicated_media, second_duplicated_media, file_deletion_reason = file_deletion_reason, do_not_do_deletes = do_not_do_deletes ) )
+                    content_update_packages.append( duplicate_content_merge_options.ProcessPairIntoContentUpdatePackage( first_duplicated_media_result, second_duplicated_media_result, file_deletion_reason = file_deletion_reason, do_not_do_deletes = do_not_do_deletes ) )
                     
                 
                 for content_update_package in content_update_packages:
@@ -1507,12 +1495,12 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.Liste
                             
                             if first_hash in hashes:
                                 
-                                first_duplicated_media.GetMediaResult().ProcessContentUpdate( service_key, content_update )
+                                first_duplicated_media_result.ProcessContentUpdate( service_key, content_update )
                                 
                             
                             if second_hash in hashes:
                                 
-                                second_duplicated_media.GetMediaResult().ProcessContentUpdate( service_key, content_update )
+                                second_duplicated_media_result.ProcessContentUpdate( service_key, content_update )
                                 
                             
                         
@@ -2331,7 +2319,16 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.Liste
                 
                 hashes = self._GetSelectedHashes( ordered = True )
                 
-                ClientGUIMediaSimpleActions.ShowFilesInNewDuplicatesFilterPage( hashes, self._location_context )
+                if CG.client_controller.new_options.GetBoolean( 'open_files_to_duplicate_filter_uses_all_my_files' ):
+                    
+                    location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY )
+                    
+                else:
+                    
+                    location_context = self._location_context
+                    
+                
+                ClientGUIMediaSimpleActions.ShowFilesInNewDuplicatesFilterPage( hashes, location_context )
                 
             elif action == CAC.SIMPLE_OPEN_SIMILAR_LOOKING_FILES:
                 
@@ -2560,7 +2557,7 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.Liste
     
     class _InnerWidget( QW.QWidget ):
         
-        def __init__( self, parent ):
+        def __init__( self, parent: "MediaResultsPanel" ):
             
             super().__init__( parent )
             

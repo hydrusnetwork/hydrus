@@ -235,7 +235,7 @@ class EditSingleFileMetadataRouterPanel( ClientGUIScrolledPanels.EditPanel ):
             
             self._test_notebook.setTabText( i, page_name )
             
-            list_ctrl = self._test_notebook.widget( i )
+            list_ctrl: ClientGUIListCtrl.BetterListCtrlTreeView = self._test_notebook.widget( i )
             
             test_objects = self._test_context_factory.GetTestObjects()
             

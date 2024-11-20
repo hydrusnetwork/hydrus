@@ -1,4 +1,3 @@
-import itertools
 import traceback
 import typing
 
@@ -477,15 +476,17 @@ def FilterAndReportDeleteLockFailures( medias: typing.Collection[ ClientMedia.Me
         
         locked_medias = [ media for media in medias if media.HasDeleteLocked() ]
         
-        ReportDeleteLockFailures( locked_medias )
+        locked_media_results = [ media_singleton.GetMediaResult() for media_singleton in ClientMedia.FlattenMedia( locked_medias ) ]
+        
+        ReportDeleteLockFailures( locked_media_results )
         
     
     return deletee_medias
     
 
-def ReportDeleteLockFailures( medias: typing.Collection[ ClientMedia.Media ] ):
+def ReportDeleteLockFailures( media_results: typing.Collection[ ClientMedia.ClientMediaResult ] ):
     
-    HydrusData.Print( 'Hey, we had a delete-lock problem, here is the stack, which hydev may care to see:' )
+    HydrusData.Print( 'Hey, we had a delete-lock problem. Here is the stack, which hydev may care to see:' )
     
     traceback.print_stack()
     
@@ -495,7 +496,7 @@ def ReportDeleteLockFailures( medias: typing.Collection[ ClientMedia.Media ] ):
     
     job_status.SetStatusText( message )
     
-    hashes = list( itertools.chain.from_iterable( ( media.GetHashes() for media in medias ) ) )
+    hashes = [ media_result.GetHash() for media_result in media_results ]
     
     job_status.SetFiles( hashes, 'see them' )
     

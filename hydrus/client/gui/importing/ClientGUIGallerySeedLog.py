@@ -5,12 +5,12 @@ from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusText
+from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientPaths
 from hydrus.client import ClientSerialisable
-from hydrus.client import ClientTime
 from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIFunctions
@@ -303,8 +303,8 @@ class EditGallerySeedLogPanel( ClientGUIScrolledPanels.EditPanel ):
         
         pretty_url = ClientNetworkingFunctions.ConvertURLToHumanString( url )
         pretty_status = CC.status_string_lookup[ status ] if status != CC.STATUS_UNKNOWN else ''
-        pretty_added = ClientTime.TimestampToPrettyTimeDelta( added )
-        pretty_modified = ClientTime.TimestampToPrettyTimeDelta( modified )
+        pretty_added = HydrusTime.TimestampToPrettyTimeDelta( added )
+        pretty_modified = HydrusTime.TimestampToPrettyTimeDelta( modified )
         
         pretty_note = HydrusText.GetFirstLine( note )
         

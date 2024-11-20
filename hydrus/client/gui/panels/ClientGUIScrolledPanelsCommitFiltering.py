@@ -63,9 +63,13 @@ class QuestionCommitInterstitialFilteringPanel( ClientGUIScrolledPanels.Resizing
         
         super().__init__( parent )
         
+        # TODO: Replace this with signals bro
+        # noinspection PyUnresolvedReferences
         self._commit = ClientGUICommon.BetterButton( self, 'commit and continue', self.parentWidget().done, QW.QDialog.Accepted )
         self._commit.setObjectName( 'HydrusAccept' )
         
+        # TODO: Replace this with signals bro
+        # noinspection PyUnresolvedReferences
         self._back = ClientGUICommon.BetterButton( self, 'go back', self.parentWidget().done, QW.QDialog.Rejected )
         
         vbox = QP.VBoxLayout()
@@ -230,19 +234,27 @@ class QuestionArchiveDeleteFinishFilteringPanel( ClientGUIScrolledPanels.Resizin
         
         if result == QW.QDialog.Accepted:
             
+        # TODO: Replace this with signals bro
+        # noinspection PyUnresolvedReferences
             self.parentWidget().done( QW.QDialog.Rejected )
             
         
     
     def DoGoBack( self ):
         
+        # TODO: Replace this with signals bro
+        # noinspection PyUnresolvedReferences
         self.parentWidget().SetCancelled( True )
+        # TODO: Replace this with signals bro
+        # noinspection PyUnresolvedReferences
         self.parentWidget().done( QW.QDialog.Rejected )
         
     
     def DoCommit( self, location_context ):
         
         self._location_context = location_context
+        # TODO: Replace this with signals bro
+        # noinspection PyUnresolvedReferences
         self.parentWidget().done( QW.QDialog.Accepted )
         
     
@@ -258,6 +270,8 @@ class QuestionFinishFilteringPanel( ClientGUIScrolledPanels.ResizingScrolledPane
         
         super().__init__( parent )
         
+        # TODO: Replace this with signals bro
+        # noinspection PyUnresolvedReferences
         self._commit = ClientGUICommon.BetterButton( self, 'commit', self.parentWidget().done, QW.QDialog.Accepted )
         self._commit.setObjectName( 'HydrusAccept' )
         
@@ -306,6 +320,8 @@ class QuestionFinishFilteringPanel( ClientGUIScrolledPanels.ResizingScrolledPane
         
         if result == QW.QDialog.Accepted:
             
+            # TODO: Replace this with signals bro
+            # noinspection PyUnresolvedReferences
             self.parentWidget().done( QW.QDialog.Rejected )
             
         

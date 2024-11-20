@@ -916,12 +916,12 @@ class FleshOutPredicatePanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._predicates = predicates
         
-        self.parentWidget().DoOK()
+        self._OKParent()
         
     
     class _PredOKPanel( QW.QWidget ):
         
-        def __init__( self, parent, predicate_panel_class, predicate ):
+        def __init__( self, parent: "FleshOutPredicatePanel", predicate_panel_class, predicate ):
             
             super().__init__( parent )
             

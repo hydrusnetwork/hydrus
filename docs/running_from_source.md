@@ -130,7 +130,9 @@ There are three special external libraries. You just have to get them and put th
 
     1. mpv  
         
-        Try running `apt-get install libmpv1` in a new terminal. You can type `apt show libmpv1` to see your current version. Or, if you use a different package manager, try searching `libmpv` or `libmpv1` on that.
+        Linux can provide what we need in a couple of different ways. It is important that we get `libmpv`, rather than just the `mpv` player. Some Linux installs of mpv do also bring libmpv, but others do not. If your package manager provides mpv and it says it comes with libmpv, you are probably good just to get that.
+        
+        Otherwise, try just running `apt-get install libmpv1` in a new terminal. You can also try `apt show libmpv1` to see any current version. Or, if you use a different package manager, try searching `libmpv`, `libmpv1`, or again, just `mpv` on that.
         
         1. If you have earlier than 0.34.1, you will be looking at running the 'advanced' setup in the next section and selecting the 'old' mpv.
         2. If you have 0.34.1 or later, you can run the normal setup script.

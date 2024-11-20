@@ -268,8 +268,8 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             'show_all_my_files_on_page_chooser' : True,
             'show_local_files_on_page_chooser' : False,
             'use_nice_resolution_strings' : True,
-            'use_listbook_for_tag_service_panels' : False
-            
+            'use_listbook_for_tag_service_panels' : False,
+            'open_files_to_duplicate_filter_uses_all_my_files' : True
         }
         
         #

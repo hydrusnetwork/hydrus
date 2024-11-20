@@ -966,9 +966,12 @@ class ReviewDownloaderImport( ClientGUIScrolledPanels.ReviewPanel ):
         self._repo_link = ClientGUICommon.BetterHyperLink( self, 'get user-made downloaders here', 'https://github.com/CuddleBear92/Hydrus-Presets-and-Scripts/tree/master/Downloaders' )
         
         self._paste_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().paste, self._Paste )
-        self._paste_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'Or you can paste bitmaps from clipboard!' ) )
+        self._paste_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'Paste paths/bitmaps/JSON from clipboard!' ) )
         
-        st = ClientGUICommon.BetterStaticText( self, label = 'Drop downloader-encoded pngs onto Lain to import.' )
+        st = ClientGUICommon.BetterStaticText( self, label = 'To import, drag-and-drop hydrus\'s special downloader-encoded pngs onto Lain. Or click her to open a file selection dialog, or copy the png bitmap, file path, or raw downloader JSON to your clipboard and hit the paste button.' )
+        
+        st.setWordWrap( True )
+        st.setAlignment( QC.Qt.AlignCenter )
         
         lain_path = os.path.join( HC.STATIC_DIR, 'lain.jpg' )
         
@@ -979,6 +982,7 @@ class ReviewDownloaderImport( ClientGUIScrolledPanels.ReviewPanel ):
         win.setCursor( QG.QCursor( QC.Qt.PointingHandCursor ) )
         
         self._select_from_list = QW.QCheckBox( self )
+        self._select_from_list.setToolTip( ClientGUIFunctions.WrapToolTip( 'If the payload includes multiple objects (most do), select what you want to import.' ) )
         
         if CG.client_controller.new_options.GetBoolean( 'advanced_mode' ):
             
@@ -987,7 +991,7 @@ class ReviewDownloaderImport( ClientGUIScrolledPanels.ReviewPanel ):
         
         QP.AddToLayout( vbox, help_hbox, CC.FLAGS_ON_RIGHT )
         QP.AddToLayout( vbox, self._repo_link, CC.FLAGS_CENTER )
-        QP.AddToLayout( vbox, st, CC.FLAGS_CENTER )
+        QP.AddToLayout( vbox, st, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, self._paste_button, CC.FLAGS_ON_RIGHT )
         QP.AddToLayout( vbox, win, CC.FLAGS_CENTER )
         QP.AddToLayout( vbox, ClientGUICommon.WrapInText( self._select_from_list, self, 'select objects from list' ), CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
@@ -1427,6 +1431,23 @@ class ReviewDownloaderImport( ClientGUIScrolledPanels.ReviewPanel ):
             except Exception as e:
                 
                 ClientGUIDialogsMessage.ShowCritical( self, 'Problem pasting image!', f'Sorry, seemed to be a problem: {e}' )
+                
+                return
+                
+            
+        elif CG.client_controller.ClipboardHasLocalPaths():
+            
+            try:
+                
+                paths = CG.client_controller.GetClipboardLocalPaths()
+                
+                self._ImportPaths( paths )
+                
+                return
+                
+            except HydrusExceptions.DataMissing as e:
+                
+                ClientGUIDialogsMessage.ShowCritical( self, 'Problem pasting paths!', f'Sorry, seemed to be a problem: {e}' )
                 
                 return
                 
@@ -3852,9 +3873,9 @@ Vacuuming is an expensive operation. It requires lots of free space on your driv
         
         from hydrus.core import HydrusDB
         
-        vacuum_time_estimate = HydrusDB.GetApproxVacuumDuration( db_size )
+        vacuum_time_estimate = HydrusDB.GetApproxVacuumIntoDuration( db_size )
         
-        pretty_vacuum_time_estimate = '{} to {}'.format( HydrusTime.TimeDeltaToPrettyTimeDelta( vacuum_time_estimate / 40 ), HydrusTime.TimeDeltaToPrettyTimeDelta( vacuum_time_estimate ) )
+        pretty_vacuum_time_estimate = '{} to {}'.format( HydrusTime.TimeDeltaToPrettyTimeDelta( vacuum_time_estimate / 20 ), HydrusTime.TimeDeltaToPrettyTimeDelta( vacuum_time_estimate ) )
         
         return ( vacuum_time_estimate, pretty_vacuum_time_estimate )
         

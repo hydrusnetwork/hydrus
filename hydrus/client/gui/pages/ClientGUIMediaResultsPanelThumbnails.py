@@ -31,6 +31,7 @@ from hydrus.client.gui.pages import ClientGUIMediaResultsPanel
 from hydrus.client.gui.pages import ClientGUIMediaResultsPanelMenus
 from hydrus.client.media import ClientMedia
 from hydrus.client.media import ClientMediaFileFilter
+from hydrus.client.media import ClientMediaResultPrettyInfo
 from hydrus.client.metadata import ClientTags
 
 FRAME_DURATION_60FPS = 1.0 / 60
@@ -1454,15 +1455,13 @@ class MediaResultsPanelThumbnails( ClientGUIMediaResultsPanel.MediaResultsPanel 
             
         else:
             
-            # TODO: move away from this hell function GetPrettyInfoLines and set the timestamp tooltips to the be the full ISO time
-            
             if self._HasFocusSingleton():
                 
                 focus_singleton = self._GetFocusSingleton()
                 
-                pretty_info_lines = list( focus_singleton.GetPrettyInfoLines() )
+                pretty_info_lines = ClientMediaResultPrettyInfo.GetPrettyMediaResultInfoLines( focus_singleton.GetMediaResult() )
                 
-                ClientGUIMediaMenus.AddPrettyInfoLines( selection_info_menu, pretty_info_lines )
+                ClientGUIMediaMenus.AddPrettyMediaResultInfoLines( selection_info_menu, pretty_info_lines )
                 
             
         
@@ -1957,7 +1956,7 @@ class MediaResultsPanelThumbnails( ClientGUIMediaResultsPanel.MediaResultsPanel 
     
     class _InnerWidget( QW.QWidget ):
         
-        def __init__( self, parent ):
+        def __init__( self, parent: "MediaResultsPanelThumbnails" ):
             
             super().__init__( parent )
             

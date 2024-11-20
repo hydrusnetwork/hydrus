@@ -10,7 +10,6 @@ from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
-from hydrus.client import ClientTime
 from hydrus.client.importing import ClientImportControl
 from hydrus.client.importing import ClientImporting
 from hydrus.client.importing import ClientImportFileSeeds
@@ -1434,11 +1433,11 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
                 
                 if self._next_check_time is None:
                     
-                    text = '{} - working again {}'.format( self._no_work_until_reason, ClientTime.TimestampToPrettyTimeDelta( self._no_work_until ) )
+                    text = '{} - working again {}'.format( self._no_work_until_reason, HydrusTime.TimestampToPrettyTimeDelta( self._no_work_until ) )
                     
                 else:
                     
-                    text = '{} - next check {}'.format( self._no_work_until_reason, ClientTime.TimestampToPrettyTimeDelta( max( self._no_work_until, self._next_check_time ) ) )
+                    text = '{} - next check {}'.format( self._no_work_until_reason, HydrusTime.TimestampToPrettyTimeDelta( max( self._no_work_until, self._next_check_time ) ) )
                     
                 
                 return ( ClientImporting.DOWNLOADER_SIMPLE_STATUS_DEFERRED, text )
@@ -1483,7 +1482,7 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
                         
                     else:
                         
-                        return ( ClientImporting.DOWNLOADER_SIMPLE_STATUS_DEFERRED, ClientTime.TimestampToPrettyTimeDelta( self._next_check_time, no_prefix = True ) )
+                        return ( ClientImporting.DOWNLOADER_SIMPLE_STATUS_DEFERRED, HydrusTime.TimestampToPrettyTimeDelta( self._next_check_time, no_prefix = True ) )
                         
                     
                 
@@ -1498,11 +1497,11 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
                 
                 if self._next_check_time is None:
                     
-                    no_work_text = '{} - working again {}'.format( self._no_work_until_reason, ClientTime.TimestampToPrettyTimeDelta( self._no_work_until ) )
+                    no_work_text = '{} - working again {}'.format( self._no_work_until_reason, HydrusTime.TimestampToPrettyTimeDelta( self._no_work_until ) )
                     
                 else:
                     
-                    no_work_text = '{} - next check {}'.format( self._no_work_until_reason, ClientTime.TimestampToPrettyTimeDelta( max( self._no_work_until, self._next_check_time ) ) )
+                    no_work_text = '{} - next check {}'.format( self._no_work_until_reason, HydrusTime.TimestampToPrettyTimeDelta( max( self._no_work_until, self._next_check_time ) ) )
                     
                 
                 files_status = no_work_text

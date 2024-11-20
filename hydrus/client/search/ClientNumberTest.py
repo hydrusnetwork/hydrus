@@ -316,5 +316,10 @@ class NumberTest( HydrusSerialisable.SerialisableBase ):
         return lambda x: False not in ( lamb( x ) for lamb in lambdas )
         
     
+    def Test( self, value ) -> bool:
+        
+        return self.GetLambda()( value )
+        
+    
 
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_NUMBER_TEST ] = NumberTest

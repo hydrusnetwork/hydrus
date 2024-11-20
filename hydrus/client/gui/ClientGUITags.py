@@ -416,7 +416,7 @@ class EditTagDisplayApplication( ClientGUIScrolledPanels.EditPanel ):
         
         if CG.client_controller.new_options.GetBoolean( 'save_default_tag_service_tab_on_change' ):
             
-            current_page = self._tag_services.currentWidget()
+            current_page: EditTagDisplayApplication._Panel = self._tag_services.currentWidget()
             
             CG.client_controller.new_options.SetKey( 'default_tag_service_tab', current_page.GetServiceKey() )
             
@@ -2407,7 +2407,7 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
     
     def _SetSearchFocus( self ):
         
-        page = self._tag_services.currentWidget()
+        page: ManageTagsPanel._Panel = self._tag_services.currentWidget()
         
         if page is not None:
             
@@ -2419,7 +2419,7 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
         
         for index in range( self._tag_services.count() ):
             
-            page = self._tag_services.widget( index )
+            page: ManageTagsPanel._Panel = self._tag_services.widget( index )
             
             service_key = page.GetServiceKey()
             
@@ -2498,16 +2498,14 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
             return
             
         
-        page = self._tag_services.currentWidget()
+        current_page: typing.Optional[ ManageTagsPanel._Panel ] = self._tag_services.currentWidget()
         
-        if page is not None:
+        if current_page is not None:
             
-            CG.client_controller.CallAfterQtSafe( page, 'setting page focus', page.SetTagBoxFocus )
+            CG.client_controller.CallAfterQtSafe( current_page, 'setting page focus', current_page.SetTagBoxFocus )
             
         
         if CG.client_controller.new_options.GetBoolean( 'save_default_tag_service_tab_on_change' ):
-            
-            current_page = self._tag_services.currentWidget()
             
             CG.client_controller.new_options.SetKey( 'default_tag_service_tab', current_page.GetServiceKey() )
             
@@ -3523,7 +3521,7 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
         
         if CG.client_controller.new_options.GetBoolean( 'save_default_tag_service_tab_on_change' ):
             
-            current_page = self._tag_services.currentWidget()
+            current_page: ManageTagParents._Panel = self._tag_services.currentWidget()
             
             CG.client_controller.new_options.SetKey( 'default_tag_service_tab', current_page.GetServiceKey() )
             
@@ -3531,7 +3529,7 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
     
     def _SetSearchFocus( self ):
         
-        page = self._tag_services.currentWidget()
+        page: ManageTagParents._Panel = self._tag_services.currentWidget()
         
         if page is not None:
             
@@ -3558,7 +3556,9 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
     
     def UserIsOKToOK( self ):
         
-        if self._tag_services.currentWidget().HasUncommittedPair():
+        current_page: ManageTagParents._Panel = self._tag_services.currentWidget()
+        
+        if current_page.HasUncommittedPair():
             
             message = 'Are you sure you want to OK? You have an uncommitted pair.'
             
@@ -4299,7 +4299,7 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
         
         if CG.client_controller.new_options.GetBoolean( 'save_default_tag_service_tab_on_change' ):
             
-            current_page = self._tag_services.currentWidget()
+            current_page: ManageTagSiblings._Panel = self._tag_services.currentWidget()
             
             CG.client_controller.new_options.SetKey( 'default_tag_service_tab', current_page.GetServiceKey() )
             
@@ -4307,7 +4307,7 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
     
     def _SetSearchFocus( self ):
         
-        page = self._tag_services.currentWidget()
+        page: ManageTagSiblings._Panel = self._tag_services.currentWidget()
         
         if page is not None:
             
@@ -4334,7 +4334,9 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
     
     def UserIsOKToOK( self ):
         
-        if self._tag_services.currentWidget().HasUncommittedPair():
+        current_page: ManageTagSiblings._Panel = self._tag_services.currentWidget()
+        
+        if current_page.HasUncommittedPair():
             
             message = 'Are you sure you want to OK? You have an uncommitted pair.'
             
@@ -4351,7 +4353,7 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
     
     def EventServiceChanged( self, event ):
         
-        page = self._tag_services.currentWidget()
+        page: ManageTagSiblings._Panel = self._tag_services.currentWidget()
         
         if page is not None:
             
@@ -5127,7 +5129,7 @@ class ReviewTagDisplayMaintenancePanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         if CG.client_controller.new_options.GetBoolean( 'save_default_tag_service_tab_on_change' ):
             
-            current_page = self._tag_services.currentWidget()
+            current_page: ManageTagSiblings._Panel = self._tag_services.currentWidget()
             
             CG.client_controller.new_options.SetKey( 'default_tag_service_tab', current_page.GetServiceKey() )
             

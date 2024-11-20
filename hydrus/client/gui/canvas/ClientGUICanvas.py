@@ -42,6 +42,7 @@ from hydrus.client.gui.panels import ClientGUIScrolledPanelsCommitFiltering
 from hydrus.client.gui.panels import ClientGUIScrolledPanelsEdit
 from hydrus.client.media import ClientMedia
 from hydrus.client.media import ClientMediaFileFilter
+from hydrus.client.media import ClientMediaResultPrettyInfo
 from hydrus.client.metadata import ClientContentUpdates
 from hydrus.client.metadata import ClientRatings
 from hydrus.client.metadata import ClientTags
@@ -346,7 +347,7 @@ class Canvas( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
         
         self._service_keys_to_services = {}
         
-        self._current_media = None
+        self._current_media: typing.Optional[ ClientMedia.MediaSingleton ] = None
         
         catch_mouse = True
         
@@ -958,7 +959,16 @@ class Canvas( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
                     
                     hash = self._current_media.GetHash()
                     
-                    ClientGUIMediaSimpleActions.ShowFilesInNewDuplicatesFilterPage( [ hash ], self._location_context )
+                    if CG.client_controller.new_options.GetBoolean( 'open_files_to_duplicate_filter_uses_all_my_files' ):
+                        
+                        location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY )
+                        
+                    else:
+                        
+                        location_context = self._location_context
+                        
+                    
+                    ClientGUIMediaSimpleActions.ShowFilesInNewDuplicatesFilterPage( [ hash ], location_context )
                     
                     self._MediaFocusWentToExternalProgram()
                     
@@ -1496,17 +1506,20 @@ class CanvasPanel( Canvas ):
             
             #
             
-            info_lines = list( self._current_media.GetPrettyInfoLines() )
-            
-            top_line = info_lines.pop( 0 )
+            info_lines = ClientMediaResultPrettyInfo.GetPrettyMediaResultInfoLines( self._current_media.GetMediaResult() )
             
             info_menu = ClientGUIMenus.GenerateMenu( menu )
             
-            ClientGUIMediaMenus.AddPrettyInfoLines( info_menu, info_lines )
+            ClientGUIMediaMenus.AddPrettyMediaResultInfoLines( info_menu, info_lines )
             
             ClientGUIMediaMenus.AddFileViewingStatsMenu( info_menu, (self._current_media,) )
             
-            ClientGUIMenus.AppendMenu( menu, info_menu, top_line )
+            filetype_summary = ClientMedia.GetMediasFiletypeSummaryString( [ self._current_media ] )
+            size_summary = HydrusData.ToHumanBytes( self._current_media.GetSize() )
+            
+            info_summary = f'{filetype_summary}, {size_summary}'
+            
+            ClientGUIMenus.AppendMenu( menu, info_menu, info_summary )
             
             ClientGUIMenus.AppendSeparator( menu )
             
@@ -2089,11 +2102,15 @@ class CanvasWithDetails( Canvas ):
     
     def _GetInfoString( self ):
         
-        lines = [ line for line in self._current_media.GetPrettyInfoLines( only_interesting_lines = True ) if isinstance( line, str ) ]
+        lines = ClientMediaResultPrettyInfo.GetPrettyMediaResultInfoLines( self._current_media.GetMediaResult(), only_interesting_lines = True )
         
-        lines.insert( 1, ClientData.ConvertZoomToPercentage( self._media_container.GetCurrentZoom() ) )
+        lines = [ line for line in lines if not line.IsSubmenu() ]
         
-        info_string = ' | '.join( lines )
+        texts = [ line.text for line in lines ]
+        
+        texts.insert( 1, ClientData.ConvertZoomToPercentage( self._media_container.GetCurrentZoom() ) )
+        
+        info_string = ' | '.join( texts )
         
         return info_string
         
@@ -2844,7 +2861,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
             return
             
         
-        other_media = self._media_list.GetNext( self._current_media )
+        other_media: ClientMedia.MediaSingleton = self._media_list.GetNext( self._current_media )
         
         media_to_prefetch = [ other_media ]
         
@@ -2895,7 +2912,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
             
         
         first_media = self._current_media
-        second_media = self._media_list.GetNext( first_media )
+        second_media: ClientMedia.MediaSingleton = self._media_list.GetNext( first_media )
         
         was_auto_skipped = False
         
@@ -2940,7 +2957,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
             file_deletion_reason = None
             
         
-        content_update_packages = [ duplicate_content_merge_options.ProcessPairIntoContentUpdatePackage( first_media, second_media, delete_first = delete_first, delete_second = delete_second, file_deletion_reason = file_deletion_reason ) ]
+        content_update_packages = [ duplicate_content_merge_options.ProcessPairIntoContentUpdatePackage( first_media.GetMediaResult(), second_media.GetMediaResult(), delete_first = delete_first, delete_second = delete_second, file_deletion_reason = file_deletion_reason ) ]
         
         process_tuple = ( duplicate_type, first_media, second_media, content_update_packages, was_auto_skipped )
         
@@ -4583,15 +4600,15 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
             
             #
             
-            info_lines = self._current_media.GetPrettyInfoLines()
+            info_lines = ClientMediaResultPrettyInfo.GetPrettyMediaResultInfoLines( self._current_media.GetMediaResult() )
             
             info_menu = ClientGUIMenus.GenerateMenu( menu )
             
-            ClientGUIMediaMenus.AddPrettyInfoLines( info_menu, info_lines )
+            ClientGUIMediaMenus.AddPrettyMediaResultInfoLines( info_menu, info_lines )
             
             ClientGUIMenus.AppendSeparator( info_menu )
             
-            ClientGUIMediaMenus.AddFileViewingStatsMenu( info_menu, (self._current_media,) )
+            ClientGUIMediaMenus.AddFileViewingStatsMenu( info_menu, ( self._current_media, ) )
             
             filetype_summary = ClientMedia.GetMediasFiletypeSummaryString( [ self._current_media ] )
             size_summary = HydrusData.ToHumanBytes( self._current_media.GetSize() )

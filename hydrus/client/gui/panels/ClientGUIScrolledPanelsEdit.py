@@ -3028,7 +3028,7 @@ class EditURLsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPane
         
         if url == '':
             
-            self.parentWidget().DoOK()
+            self._OKParent()
             
         else:
             

@@ -23,6 +23,7 @@ from hydrus.client.gui.media import ClientGUIMediaModalActions
 from hydrus.client.gui.media import ClientGUIMediaSimpleActions
 from hydrus.client.media import ClientMedia
 from hydrus.client.media import ClientMediaManagers
+from hydrus.client.media import ClientMediaResultPrettyInfoObjects
 from hydrus.client.networking import ClientNetworkingFunctions
 from hydrus.client.search import ClientSearchPredicate
 
@@ -771,39 +772,34 @@ def AddOpenMenu( win: QW.QWidget, menu: QW.QMenu, focused_media: typing.Optional
     ClientGUIMenus.AppendMenu( menu, open_menu, 'open' )
     
 
-def AddPrettyInfoLines( menu, pretty_info_lines ):
+def AddPrettyMediaResultInfoLines( menu: QW.QMenu, pretty_info_lines: typing.List[ ClientMediaResultPrettyInfoObjects.PrettyMediaResultInfoLine ] ):
     
-    def add_pretty_info_str( m, line ):
+    def add_pretty_info_str( m: QW.QMenu, line: ClientMediaResultPrettyInfoObjects.PrettyMediaResultInfoLine ):
         
-        ClientGUIMenus.AppendMenuLabel( m, line )
+        tt = line.tooltip if line.tooltip != line.text else ''
+        
+        ClientGUIMenus.AppendMenuLabel( m, line.text, description = tt )
         
     
-    def add_pretty_info_rows( m, rows ):
+    def add_pretty_info_rows( m: QW.QMenu, lines ):
         
-        for row in rows:
+        for line in lines:
             
-            if isinstance( row, str ):
+            if isinstance( line, ClientMediaResultPrettyInfoObjects.PrettyMediaResultInfoLinesSubmenu ):
                 
-                add_pretty_info_str( m, row )
+                submenu_label = line.text
                 
-            else:
-                
-                try:
-                    
-                    ( submenu_label, rows ) = row
-                    
-                except:
-                    
-                    add_pretty_info_str( m, 'unknown submenu' )
-                    
-                    continue
-                    
+                sublines = line.sublines
                 
                 lines_submenu = ClientGUIMenus.GenerateMenu( m )
                 
-                add_pretty_info_rows( lines_submenu, rows )
+                add_pretty_info_rows( lines_submenu, sublines )
                 
                 ClientGUIMenus.AppendMenu( m, lines_submenu, submenu_label )
+                
+            else:
+                
+                add_pretty_info_str( m, line )
                 
             
         

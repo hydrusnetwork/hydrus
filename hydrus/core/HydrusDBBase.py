@@ -13,10 +13,20 @@ from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusTemp
 from hydrus.core import HydrusTime
 
-def CheckHasSpaceForDBTransaction( db_dir, num_bytes ):
+def CheckHasSpaceForDBTransaction( db_dir, num_bytes, no_temp_needed = False ):
     
-    temp_space_needed = int( num_bytes * 1.1 )
-    destination_space_needed = temp_space_needed * 2 # not only do we need the space on disk, we'll have a very brief WAL or (for vacuum) complete file copy!
+    if no_temp_needed:
+        
+        temp_space_needed = 0
+        
+        destination_space_needed = int( num_bytes * 1.1 )
+        
+    else:
+        
+        temp_space_needed = int( num_bytes * 1.1 )
+        
+        destination_space_needed = temp_space_needed * 2 # not only do we need the space on disk, we'll have a very brief WAL copy!
+        
     
     if HG.no_db_temp_files:
         
@@ -45,7 +55,7 @@ def CheckHasSpaceForDBTransaction( db_dir, num_bytes ):
         
         temp_and_db_on_same_device = HydrusPaths.GetDevice( temp_dir ) == HydrusPaths.GetDevice( db_dir )
         
-        if temp_and_db_on_same_device:
+        if temp_and_db_on_same_device and temp_space_needed > 0:
             
             space_needed = temp_space_needed + destination_space_needed
             

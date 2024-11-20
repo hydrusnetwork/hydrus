@@ -786,7 +786,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
     
     def CanTestMediaResult( self ) -> bool:
         
-        return self._predicate_type in ( PREDICATE_TYPE_SYSTEM_MIME, )
+        return self._predicate_type in { PREDICATE_TYPE_SYSTEM_MIME, PREDICATE_TYPE_SYSTEM_HEIGHT, PREDICATE_TYPE_SYSTEM_WIDTH }
         
     
     def GetCopy( self ):
@@ -1163,6 +1163,18 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
             mimes = ConvertSummaryFiletypesToSpecific( self._value )
             
             return media_result.GetMime() in mimes
+            
+        elif self._predicate_type == PREDICATE_TYPE_SYSTEM_HEIGHT:
+            
+            number_test: ClientNumberTest.NumberTest = self._value
+            
+            return number_test.Test( media_result.GetFileInfoManager().height )
+            
+        elif self._predicate_type == PREDICATE_TYPE_SYSTEM_WIDTH:
+            
+            number_test: ClientNumberTest.NumberTest = self._value
+            
+            return number_test.Test( media_result.GetFileInfoManager().width )
             
         
         return False

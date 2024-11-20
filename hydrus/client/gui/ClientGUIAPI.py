@@ -56,7 +56,7 @@ class CaptureAPIAccessPermissionsRequestPanel( ClientGUIScrolledPanels.ReviewPan
             
             if parent.isModal(): # event sometimes fires after modal done
                 
-                parent.DoOK()
+                self._OKParent()
                 
             
         
