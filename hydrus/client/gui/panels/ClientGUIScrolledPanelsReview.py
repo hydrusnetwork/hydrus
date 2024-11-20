@@ -3747,7 +3747,7 @@ class ReviewVacuumData( ClientGUIScrolledPanels.ReviewPanel ):
 
 Because the new database is tightly packed, it will generally be smaller than the original file. This is currently the only way to truncate a hydrus database file.
 
-Vacuuming is an expensive operation. It requires lots of free space on your drive(s) as it creates one (temporary) copy of the database file in your temp directory and another copy in your db dir. Hydrus cannot operate while it is going on, and it tends to run quite slow, about 1-40MB/s. The main benefit is in truncating the database files after you delete a lot of data, so I recommend you only do it after you delete the PTR or similar. If the db file is more than 2GB and has less than 5% free pages, it probably is not worth doing.'''
+Vacuuming is an expensive operation. It creates one (temporary) copy of the database file in your db dir. Hydrus cannot operate while it is going on, and it tends to run quite slow, about 10-50MB/s. The main benefit is in truncating the database files after you delete a lot of data, so I recommend you only do it after you delete the PTR or similar. If the db file is more than 2GB and has less than 5% free pages, it is probably not worth doing.'''
         
         st = ClientGUICommon.BetterStaticText( self, label = info_message )
         
