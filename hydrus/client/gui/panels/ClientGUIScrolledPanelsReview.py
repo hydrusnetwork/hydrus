@@ -3792,7 +3792,7 @@ Vacuuming is an expensive operation. It creates one (temporary) copy of the data
             page_count = vacuum_dict[ 'page_count' ]
             freelist_count = vacuum_dict[ 'freelist_count' ]
             
-            HydrusDB.CheckCanVacuumData( path, page_size, page_count, freelist_count )
+            HydrusDB.CheckCanVacuumIntoData( path, page_size, page_count, freelist_count )
             
         except Exception as e:
             
