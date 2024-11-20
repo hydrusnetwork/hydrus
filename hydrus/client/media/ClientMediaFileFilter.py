@@ -12,6 +12,7 @@ from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientThreading
 from hydrus.client.media import ClientMedia
+from hydrus.client.media import ClientMediaResult
 from hydrus.client.metadata import ClientTags
 
 FILE_FILTER_ALL = 0
@@ -484,7 +485,7 @@ def FilterAndReportDeleteLockFailures( medias: typing.Collection[ ClientMedia.Me
     return deletee_medias
     
 
-def ReportDeleteLockFailures( media_results: typing.Collection[ ClientMedia.ClientMediaResult ] ):
+def ReportDeleteLockFailures( media_results: typing.Collection[ ClientMediaResult.MediaResult ] ):
     
     HydrusData.Print( 'Hey, we had a delete-lock problem. Here is the stack, which hydev may care to see:' )
     
