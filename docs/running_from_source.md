@@ -101,15 +101,11 @@ There are three special external libraries. You just have to get them and put th
 
     1. mpv  
         
-        1. If you are on Windows 8.1 or older, [this](https://sourceforge.net/projects/mpv-player-windows/files/libmpv/mpv-dev-x86_64-20210228-git-d1be8bb.7z) is known safe.
-        2. If you are on Windows 10 or newer and want the very safe answer, try [this](https://sourceforge.net/projects/mpv-player-windows/files/libmpv/mpv-dev-x86_64-20220501-git-9ffaa6b.7z).
-        3. Otherwise, go for [this](https://sourceforge.net/projects/mpv-player-windows/files/libmpv/mpv-dev-x86_64-20230820-git-19384e0.7z).
-        4. I have been testing [this newer version](https://sourceforge.net/projects/mpv-player-windows/files/libmpv/mpv-dev-x86_64-20231231-git-abc2a74.7z) and [this very new version](https://sourceforge.net/projects/mpv-player-windows/files/libmpv/mpv-dev-x86_64-20240421-git-b364e4a.7z/download) and things seem to be fine too, at least on updated Windows.
+        1. If you are on Windows 8.1 or older, [2021-02-28](https://sourceforge.net/projects/mpv-player-windows/files/libmpv/mpv-dev-x86_64-20210228-git-d1be8bb.7z) is known safe.
+        2. If you are on Windows 10 or newer but need the safe answer (e.g. your Windows is under-updated), try [2023-08-20](https://sourceforge.net/projects/mpv-player-windows/files/libmpv/mpv-dev-x86_64-20230820-git-19384e0.7z).
+        3. Otherwise, if you are just normal, use [2024-10-20](https://sourceforge.net/projects/mpv-player-windows/files/libmpv/mpv-dev-x86_64-20241020-git-37159a8.7z).
         
         Then open that archive and place the 'mpv-1.dll'/'mpv-2.dll'/'libmpv-2.dll' into `install_dir`.
-        
-        ??? info "mpv on older Windows"
-            I have word that that newer mpv, the API version 2.1 that you have to rename to mpv-2.dll, will work on Qt5 and Windows 7. If this applies to you, have a play around with different versions here. You'll need the newer mpv choice in the setup-venv script however, which, depending on your situation, may not be possible.
         
     2. SQLite3  
         
