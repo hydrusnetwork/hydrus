@@ -40,6 +40,7 @@ from hydrus.client.gui.pages import ClientGUIManagementController
 from hydrus.client.gui.panels import ClientGUIScrolledPanelsEdit
 from hydrus.client.media import ClientMedia
 from hydrus.client.media import ClientMediaFileFilter
+from hydrus.client.media import ClientMediaResultPrettyInfo
 from hydrus.client.metadata import ClientContentUpdates
 
 MAC_QUARTZ_OK = True
@@ -372,32 +373,48 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.Liste
             
         else:
             
-            s += ' - '
+            s += f' - {selected_files_string} selected, '
             
-            num_inbox = sum( ( media.GetNumInbox() for media in self._selected_media ) )
-            
-            if num_inbox == num_selected:
+            if len( self._selected_media ) == 1 and len( list(self._selected_media)[0].GetHashes() ) == 1 and CG.client_controller.new_options.GetBoolean( 'show_extended_single_file_info_in_status_bar' ):
                 
-                inbox_phrase = 'all in inbox' if num_inbox > 1 else 'in inbox'
+                singleton_media = ClientMedia.FlattenMedia( self._selected_media )[0]
                 
-            elif num_inbox == 0:
+                lines = ClientMediaResultPrettyInfo.GetPrettyMediaResultInfoLines( singleton_media.GetMediaResult(), only_interesting_lines = True )
                 
-                inbox_phrase = 'all archived' if num_selected > 1 else 'archived'
+                lines = [ line for line in lines if not line.IsSubmenu() ]
+                
+                texts = [ line.text for line in lines ]
+                
+                s += ', '.join( texts )
+                
                 
             else:
                 
-                inbox_phrase = '{} in inbox and {} archived'.format( HydrusNumbers.ToHumanInt( num_inbox ), HydrusNumbers.ToHumanInt( num_selected - num_inbox ) )
+                num_inbox = sum( ( media.GetNumInbox() for media in self._selected_media ) )
                 
-            
-            pretty_total_size = self._GetPrettyTotalSize( only_selected = True )
-            
-            s += '{} selected, {}, totalling {}'.format( selected_files_string, inbox_phrase, pretty_total_size )
-            
-            pretty_total_duration = self._GetPrettyTotalDuration( only_selected = True )
-            
-            if pretty_total_duration != '':
+                if num_inbox == num_selected:
+                    
+                    inbox_phrase = 'all in inbox' if num_inbox > 1 else 'in inbox'
+                    
+                elif num_inbox == 0:
+                    
+                    inbox_phrase = 'all archived' if num_selected > 1 else 'archived'
+                    
+                else:
+                    
+                    inbox_phrase = '{} in inbox and {} archived'.format( HydrusNumbers.ToHumanInt( num_inbox ), HydrusNumbers.ToHumanInt( num_selected - num_inbox ) )
+                    
                 
-                s += ', {}'.format( pretty_total_duration )
+                pretty_total_size = self._GetPrettyTotalSize( only_selected = True )
+                
+                s += '{}, totalling {}'.format( inbox_phrase, pretty_total_size )
+                
+                pretty_total_duration = self._GetPrettyTotalDuration( only_selected = True )
+                
+                if pretty_total_duration != '':
+                    
+                    s += ', {}'.format( pretty_total_duration )
+                    
                 
             
         
@@ -2335,6 +2352,39 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.Liste
                 media = self._GetSelectedFlatMedia()
                 
                 hamming_distance = command.GetSimpleData()
+                
+                if hamming_distance is None:
+                    
+                    from hydrus.client.gui.panels import ClientGUIScrolledPanels
+                    from hydrus.client.gui.widgets import ClientGUICommon
+                    
+                    with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'choose distance' ) as dlg:
+                        
+                        panel = ClientGUIScrolledPanels.EditSingleCtrlPanel( dlg )
+                        
+                        #
+                        
+                        # make a treeview control thing from menu
+                        
+                        control = ClientGUICommon.BetterSpinBox( panel )
+                        
+                        control.setSingleStep( 2 )
+                        control.setValue( 10 )
+                        
+                        panel.SetControl( control )
+                        
+                        dlg.SetPanel( panel )
+                        
+                        if dlg.exec() == QW.QDialog.Accepted:
+                            
+                            hamming_distance = control.value()
+                            
+                        else:
+                            
+                            return
+                            
+                        
+                    
                 
                 ClientGUIMediaSimpleActions.ShowSimilarFilesInNewPage( media, self._location_context, hamming_distance )
                 

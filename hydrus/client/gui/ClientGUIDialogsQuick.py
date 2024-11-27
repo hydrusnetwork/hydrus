@@ -197,9 +197,9 @@ def PresentClipboardParseError( win: QW.QWidget, content: str, expected_content_
     ClientGUIDialogsMessage.ShowCritical( win, 'Clipboard Error!', message )
     
 
-def SelectFromList( win, title, choice_tuples, value_to_select = None, sort_tuples = True ):
+def SelectFromList( win, title, choice_tuples, value_to_select = None, sort_tuples = True, allow_insta_one_item_select = True ):
     
-    if len( choice_tuples ) == 1:
+    if len( choice_tuples ) == 1 and allow_insta_one_item_select:
         
         ( ( text, data ), ) = choice_tuples
         

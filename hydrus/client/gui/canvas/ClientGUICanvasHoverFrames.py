@@ -593,18 +593,11 @@ class CanvasHoverFrame( QW.QFrame ):
             my_ideal_height = max( my_height, 50 )
             
         
-        in_ideal_x = my_ideal_x <= mouse_x <= my_ideal_x + my_ideal_width
-        in_ideal_y = my_ideal_y <= mouse_y <= my_ideal_y + my_ideal_height
+        ideal_rect = QC.QRect( my_ideal_x, my_ideal_y, my_ideal_width, my_ideal_height )
         
-        in_actual_x = my_x <= mouse_x <= my_x + my_width
-        in_actual_y = my_y <= mouse_y <= my_y + my_height
-        
-        # we test both ideal and actual here because setposition is not always honoured by the OS
-        # for instance, in some Linux window managers on a fullscreen view, the top taskbar is hidden, but when hover window is shown, it takes focus and causes taskbar to reappear
-        # the reappearance shuffles the screen coordinates down a bit so the hover sits +20px y despite wanting to be lined up with the underlying fullscreen viewer
-        # wew lad
-        
-        in_position = ( in_ideal_x or in_actual_x ) and ( in_ideal_y or in_actual_y )
+        # we used to test for 'contains' on both the ideal and actual, to compensate for some Linux window managers that would be upset about a (taskbarless top level) hover window appearing and make the taskbar jitter, altering layout state
+        # but we no longer have top level hover windows!! begone!
+        in_position = ideal_rect.contains( mouse_pos )
         
         menu_open = CGC.core().MenuIsOpen()
         
@@ -627,8 +620,8 @@ class CanvasHoverFrame( QW.QFrame ):
         
         hide_focus_is_good = focus_is_good or current_focus_tlw is None # don't hide if focus is either gone to another problem or temporarily sperging-out due to a click-transition or similar
         
-        ready_to_show = in_position and not mouse_is_over_something_else_important and focus_is_good and not dialog_is_open and not menu_open and not mouse_is_over_a_dominant_hover
-        ready_to_hide = not menu_open and ( not in_position or dialog_is_open or not hide_focus_is_good or mouse_is_over_a_dominant_hover )
+        ready_to_show = not self._is_currently_up and in_position and not mouse_is_over_something_else_important and focus_is_good and not dialog_is_open and not menu_open and not mouse_is_over_a_dominant_hover
+        ready_to_hide = self._is_currently_up and not menu_open and ( not in_position or dialog_is_open or not hide_focus_is_good or mouse_is_over_a_dominant_hover )
         
         def get_logic_report_string():
             
@@ -653,11 +646,39 @@ class CanvasHoverFrame( QW.QFrame ):
         
         if ready_to_show:
             
+            if HG.hover_window_report_mode:
+                
+                HydrusData.ShowText( 'showing' )
+                
+                h1 = get_logic_report_string()
+                HydrusData.ShowText( h1 )
+                
+            
             self._SizeAndPosition()
+            
+            if HG.hover_window_report_mode:
+                
+                h2 = get_logic_report_string()
+                
+                if h1 == h2:
+                    
+                    HydrusData.ShowText( 'no change' )
+                    
+                else:
+                    
+                    HydrusData.ShowText( h2 )
+                    
+                
             
             self._RaiseHover()
             
         elif ready_to_hide:
+            
+            if HG.hover_window_report_mode:
+                
+                HydrusData.ShowText( 'hiding' )
+                HydrusData.ShowText( get_logic_report_string() )
+                
             
             self._LowerHover()
             

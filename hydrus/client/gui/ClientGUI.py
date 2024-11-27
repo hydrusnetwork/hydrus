@@ -930,23 +930,37 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         message += '\n' * 2
         message += 'A \'full\' analyze will force a run over every index in the database. This can take substantially longer. If you do not have a specific reason to select this, it is probably pointless.'
         
-        ( result, was_cancelled ) = ClientGUIDialogsQuick.GetYesNo( self, message, title = 'Choose how thorough your analyze will be.', yes_label = 'soft', no_label = 'full', check_for_cancelled = True )
+        yes_tuples = []
         
-        if was_cancelled:
+        yes_tuples.append( ( 'soft', False ) )
+        yes_tuples.append( ( 'full', True ) )
+        
+        try:
+            
+            do_full = ClientGUIDialogsQuick.GetYesYesNo( self, message, yes_tuples = yes_tuples, no_label = 'forget it' )
+            
+        except HydrusExceptions.CancelledException:
             
             return
             
         
-        if result == QW.QDialog.Accepted:
+        def do_it():
             
-            stop_time = HydrusTime.GetNow() + 120
+            if do_full:
+                
+                CG.client_controller.WriteSynchronous( 'analyze', maintenance_mode = HC.MAINTENANCE_FORCED, force_reanalyze = True )
+                
+            else:
+                
+                stop_time = HydrusTime.GetNow() + 120
+                
+                CG.client_controller.WriteSynchronous( 'analyze', maintenance_mode = HC.MAINTENANCE_FORCED, stop_time = stop_time )
+                
             
-            self._controller.Write( 'analyze', maintenance_mode = HC.MAINTENANCE_FORCED, stop_time = stop_time )
+            HydrusData.ShowText( 'Done!' )
             
-        elif result == QW.QDialog.Rejected:
-            
-            self._controller.Write( 'analyze', maintenance_mode = HC.MAINTENANCE_FORCED, force_reanalyze = True )
-            
+        
+        CG.client_controller.CallToThread( do_it )
         
     
     def _AutoRepoSetup( self ):
@@ -3499,8 +3513,9 @@ ATTACH "client.mappings.db" as external_mappings;'''
         ClientGUIMenus.AppendMenuCheckItem( report_modes, 'canvas tile borders mode', 'Draw tile borders.', HG.canvas_tile_outline_mode, self._SwitchBoolean, 'canvas_tile_outline_mode' )
         ClientGUIMenus.AppendMenuCheckItem( report_modes, 'daemon report mode', 'Have the daemons report whenever they fire their jobs.', HG.daemon_report_mode, self._SwitchBoolean, 'daemon_report_mode' )
         ClientGUIMenus.AppendMenuCheckItem( report_modes, 'db report mode', 'Have the db report query information, where supported.', HG.db_report_mode, self._SwitchBoolean, 'db_report_mode' )
-        ClientGUIMenus.AppendMenuCheckItem( report_modes, 'file import report mode', 'Have the db and file manager report file import progress.', HG.file_import_report_mode, self._SwitchBoolean, 'file_import_report_mode' )
         ClientGUIMenus.AppendMenuCheckItem( report_modes, 'file report mode', 'Have the file manager report file request information, where supported.', HG.file_report_mode, self._SwitchBoolean, 'file_report_mode' )
+        ClientGUIMenus.AppendMenuCheckItem( report_modes, 'file import report mode', 'Have the db and file manager report file import progress.', HG.file_import_report_mode, self._SwitchBoolean, 'file_import_report_mode' )
+        ClientGUIMenus.AppendMenuCheckItem( report_modes, 'file sort report mode', 'Have the file sorter spam you with sort key results.', HG.file_sort_report_mode, self._SwitchBoolean, 'file_sort_report_mode' )
         ClientGUIMenus.AppendMenuCheckItem( report_modes, 'gui report mode', 'Have the gui report inside information, where supported.', HG.gui_report_mode, self._SwitchBoolean, 'gui_report_mode' )
         ClientGUIMenus.AppendMenuCheckItem( report_modes, 'hover window report mode', 'Have the hover windows report their show/hide logic.', HG.hover_window_report_mode, self._SwitchBoolean, 'hover_window_report_mode' )
         ClientGUIMenus.AppendMenuCheckItem( report_modes, 'media load report mode', 'Have the client report media load information, where supported.', HG.media_load_report_mode, self._SwitchBoolean, 'media_load_report_mode' )
@@ -3557,10 +3572,11 @@ ATTACH "client.mappings.db" as external_mappings;'''
         data_actions = ClientGUIMenus.GenerateMenu( debug_menu )
         
         ClientGUIMenus.AppendMenuCheckItem( data_actions, 'db ui-hang relief mode', 'Have UI-synchronised database jobs process pending Qt events while they wait.', HG.db_ui_hang_relief_mode, self._SwitchBoolean, 'db_ui_hang_relief_mode' )
+        ClientGUIMenus.AppendMenuItem( data_actions, 'flush log', 'Command the log to write any buffered contents to hard drive.', HydrusData.DebugPrint, 'Flushing log' )
+        ClientGUIMenus.AppendMenuItem( data_actions, 'force database commit', 'Command the database to flush all pending changes to disk.', CG.client_controller.ForceDatabaseCommit )
         ClientGUIMenus.AppendMenuItem( data_actions, 'review threads', 'Show current threads and what they are doing.', self._ReviewThreads )
         ClientGUIMenus.AppendMenuItem( data_actions, 'show scheduled jobs', 'Print some information about the currently scheduled jobs log.', self._DebugShowScheduledJobs )
         ClientGUIMenus.AppendMenuItem( data_actions, 'subscription manager snapshot', 'Have the subscription system show what it is doing.', self._controller.subscriptions_manager.ShowSnapshot )
-        ClientGUIMenus.AppendMenuItem( data_actions, 'flush log', 'Command the log to write any buffered contents to hard drive.', HydrusData.DebugPrint, 'Flushing log' )
         ClientGUIMenus.AppendSeparator( data_actions )
         ClientGUIMenus.AppendMenuItem( data_actions, 'simulate program exit signal', 'Kill the program via a QApplication exit.', QW.QApplication.instance().exit )
         
@@ -6857,6 +6873,10 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         elif name == 'file_report_mode':
             
             HG.file_report_mode = not HG.file_report_mode
+            
+        elif name == 'file_sort_report_mode':
+            
+            HG.file_sort_report_mode = not HG.file_sort_report_mode
             
         elif name == 'gui_report_mode':
             

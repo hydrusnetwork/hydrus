@@ -189,7 +189,7 @@ class Controller( HydrusController.HydrusController ):
     
     def _InitDB( self ):
         
-        return ServerDB.DB( self, self.db_dir, 'server' )
+        self.db = ServerDB.DB( self, self.db_dir, 'server' )
         
     
     def DAEMONPubSub( self ):

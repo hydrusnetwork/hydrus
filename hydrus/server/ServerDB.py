@@ -100,56 +100,6 @@ class DB( HydrusDB.HydrusDB ):
         
         self._files_dir = os.path.join( db_dir, 'server_files' )
         
-        self._read_commands_to_methods = {
-            'access_key' : self._GetAccessKey,
-            'account' : self._GetAccountFromAccountKey,
-            'account_info' : self._GetAccountInfo,
-            'account_key_from_access_key' : self._GetAccountKeyFromAccessKey,
-            'account_key_from_content' : self._GetAccountKeyFromContent,
-            'account_types' : self._GetAccountTypes,
-            'auto_create_account_types' : self._GetAutoCreateAccountTypes,
-            'auto_create_registration_key' : self._GetAutoCreateRegistrationKey,
-            'all_accounts' : self._GetAllAccounts,
-            'deferred_physical_delete' : self._GetDeferredPhysicalDelete,
-            'immediate_update' : self._RepositoryGenerateImmediateUpdate,
-            'ip' : self._RepositoryGetIPTimestamp,
-            'is_an_orphan' : self._IsAnOrphan,
-            'num_petitions' : self._RepositoryGetNumPetitions,
-            'petition' : self._RepositoryGetPetition,
-            'petitions_summary' : self._RepositoryGetPetitionsSummary,
-            'registration_keys' : self._GenerateRegistrationKeysFromAccount,
-            'service_has_file' : self._RepositoryHasFile,
-            'service_info' : self._GetServiceInfo,
-            'service_keys' : self._GetServiceKeys,
-            'services' : self._GetServices,
-            'services_from_account' : self._GetServicesFromAccount,
-            'sessions' : self._GetSessions,
-            'verify_access_key' : self._VerifyAccessKey
-        }
-        
-        self._write_commands_to_methods = {
-            'account_types' : self._ModifyAccountTypes,
-            'analyze' : self._Analyze,
-            'backup' : self._Backup,
-            'clear_deferred_physical_delete' : self._ClearDeferredPhysicalDelete,
-            'create_update' : self._RepositoryCreateUpdate,
-            'dirty_accounts' : self._SaveDirtyAccounts,
-            'dirty_services' : self._SaveDirtyServices,
-            'file' : self._RepositoryProcessAddFile,
-            'maintenance_regen_service_info' : self._RepositoryRegenerateServiceInfoServiceKey,
-            'modify_account_account_type' : self._ModifyAccountAccountType,
-            'modify_account_ban' : self._ModifyAccountBan,
-            'modify_account_delete_all_content' : self._ModifyAccountDeleteAllContent,
-            'modify_account_expires' : self._ModifyAccountExpires,
-            'modify_account_set_message' : self._ModifyAccountSetMessage,
-            'modify_account_unban' : self._ModifyAccountUnban,
-            'nullify_history' : self._RepositoryNullifyHistory,
-            'services' : self._ModifyServices,
-            'session' : self._AddSession,
-            'update' : self._RepositoryProcessClientToServerUpdate,
-            'vacuum' : self._Vacuum
-        }
-        
         self._service_ids_to_account_type_ids = collections.defaultdict( set )
         self._service_ids_to_null_account_ids = {}
         self._account_type_ids_to_account_types = {}
@@ -1320,6 +1270,65 @@ class DB( HydrusDB.HydrusDB ):
         self._RefreshAccountInfoCache()
         
     
+    def _InitCommandsToMethods( self ):
+        
+        super()._InitCommandsToMethods()
+        
+        self._read_commands_to_methods.update(
+            {
+                'access_key' : self._GetAccessKey,
+                'account' : self._GetAccountFromAccountKey,
+                'account_info' : self._GetAccountInfo,
+                'account_key_from_access_key' : self._GetAccountKeyFromAccessKey,
+                'account_key_from_content' : self._GetAccountKeyFromContent,
+                'account_types' : self._GetAccountTypes,
+                'auto_create_account_types' : self._GetAutoCreateAccountTypes,
+                'auto_create_registration_key' : self._GetAutoCreateRegistrationKey,
+                'all_accounts' : self._GetAllAccounts,
+                'deferred_physical_delete' : self._GetDeferredPhysicalDelete,
+                'immediate_update' : self._RepositoryGenerateImmediateUpdate,
+                'ip' : self._RepositoryGetIPTimestamp,
+                'is_an_orphan' : self._IsAnOrphan,
+                'num_petitions' : self._RepositoryGetNumPetitions,
+                'petition' : self._RepositoryGetPetition,
+                'petitions_summary' : self._RepositoryGetPetitionsSummary,
+                'registration_keys' : self._GenerateRegistrationKeysFromAccount,
+                'service_has_file' : self._RepositoryHasFile,
+                'service_info' : self._GetServiceInfo,
+                'service_keys' : self._GetServiceKeys,
+                'services' : self._GetServices,
+                'services_from_account' : self._GetServicesFromAccount,
+                'sessions' : self._GetSessions,
+                'verify_access_key' : self._VerifyAccessKey
+            }
+        )
+        
+        self._write_commands_to_methods.update(
+            {
+                'account_types' : self._ModifyAccountTypes,
+                'analyze' : self._Analyze,
+                'backup' : self._Backup,
+                'clear_deferred_physical_delete' : self._ClearDeferredPhysicalDelete,
+                'create_update' : self._RepositoryCreateUpdate,
+                'dirty_accounts' : self._SaveDirtyAccounts,
+                'dirty_services' : self._SaveDirtyServices,
+                'file' : self._RepositoryProcessAddFile,
+                'maintenance_regen_service_info' : self._RepositoryRegenerateServiceInfoServiceKey,
+                'modify_account_account_type' : self._ModifyAccountAccountType,
+                'modify_account_ban' : self._ModifyAccountBan,
+                'modify_account_delete_all_content' : self._ModifyAccountDeleteAllContent,
+                'modify_account_expires' : self._ModifyAccountExpires,
+                'modify_account_set_message' : self._ModifyAccountSetMessage,
+                'modify_account_unban' : self._ModifyAccountUnban,
+                'nullify_history' : self._RepositoryNullifyHistory,
+                'services' : self._ModifyServices,
+                'session' : self._AddSession,
+                'update' : self._RepositoryProcessClientToServerUpdate,
+                'vacuum' : self._Vacuum
+            }
+        )
+        
+    
     def _InitExternalDatabases( self ):
         
         self._db_filenames[ 'external_mappings' ] = 'server.mappings.db'
@@ -1751,16 +1760,6 @@ class DB( HydrusDB.HydrusDB ):
             
         
         return service_keys_to_access_keys
-        
-    
-    def _Read( self, action, *args, **kwargs ):
-        
-        if action not in self._read_commands_to_methods:
-            
-            raise Exception( 'db received an unknown read command: ' + action )
-            
-        
-        return self._read_commands_to_methods[ action ]( *args, **kwargs )
         
     
     def _RefreshAccountInfoCache( self ):
@@ -5124,16 +5123,6 @@ class DB( HydrusDB.HydrusDB ):
             
         
         return True
-        
-    
-    def _Write( self, action, *args, **kwargs ):
-        
-        if action not in self._write_commands_to_methods:
-            
-            raise Exception( 'db received an unknown write command: ' + action )
-            
-        
-        return self._write_commands_to_methods[ action ]( *args, **kwargs )
         
     
     def GetFilesDir( self ):

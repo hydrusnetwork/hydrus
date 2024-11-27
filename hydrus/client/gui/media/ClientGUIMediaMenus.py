@@ -728,6 +728,8 @@ def AddOpenMenu( win: QW.QWidget, menu: QW.QMenu, focused_media: typing.Optional
             ClientGUIMenus.AppendMenuItem( similar_menu, 'very similar', 'Search the database for files that look just like those selected.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_OPEN_SIMILAR_LOOKING_FILES, simple_data = CC.HAMMING_VERY_SIMILAR ) )
             ClientGUIMenus.AppendMenuItem( similar_menu, 'similar', 'Search the database for files that look generally like those selected.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_OPEN_SIMILAR_LOOKING_FILES, simple_data = CC.HAMMING_SIMILAR ) )
             ClientGUIMenus.AppendMenuItem( similar_menu, 'speculative', 'Search the database for files that probably look like those selected. This is sometimes useful for symbols with sharp edges or lines.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_OPEN_SIMILAR_LOOKING_FILES, simple_data = CC.HAMMING_SPECULATIVE ) )
+            ClientGUIMenus.AppendSeparator( similar_menu )
+            ClientGUIMenus.AppendMenuItem( similar_menu, 'custom', 'Search the database for files that probably look like those selected. This is sometimes useful for symbols with sharp edges or lines.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_OPEN_SIMILAR_LOOKING_FILES ) )
             
             ClientGUIMenus.AppendMenu( open_menu, similar_menu, 'similar files in a new page' )
             

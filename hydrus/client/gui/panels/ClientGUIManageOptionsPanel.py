@@ -5524,6 +5524,10 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._media_background_bmp_path = QP.FilePickerCtrl( self )
             
+            self._show_extended_single_file_info_in_status_bar = QW.QCheckBox( self )
+            tt = 'This will show the info texts you see in the top hover window of the media viewer in the main gui status bar any time a single thumbnail is selected.'
+            self._show_extended_single_file_info_in_status_bar.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
+            
             #
             
             ( thumbnail_width, thumbnail_height ) = HC.options[ 'thumbnail_dimensions' ]
@@ -5559,6 +5563,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 self._media_background_bmp_path.SetPath( media_background_bmp_path )
                 
             
+            self._show_extended_single_file_info_in_status_bar.setChecked( self._new_options.GetBoolean( 'show_extended_single_file_info_in_status_bar' ) )
+            
             #
             
             rows = []
@@ -5577,6 +5583,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows.append( ( 'Use blurhash missing thumbnail fallback: ', self._allow_blurhash_fallback ) )
             rows.append( ( 'Fade thumbnails: ', self._fade_thumbnails ) )
             rows.append( ( 'Do not scroll down on key navigation if thumbnail at least this % visible: ', self._thumbnail_visibility_scroll_percent ) )
+            rows.append( ( 'Show additional status bar text when a single thumbnail is selected: ', self._show_extended_single_file_info_in_status_bar ) )
             rows.append( ( 'EXPERIMENTAL: Scroll thumbnails at this rate per scroll tick: ', self._thumbnail_scroll_rate ) )
             rows.append( ( 'EXPERIMENTAL: Image path for thumbnail panel background image (set blank to clear): ', self._media_background_bmp_path ) )
             
@@ -5619,6 +5626,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._new_options.SetBoolean( 'allow_blurhash_fallback', self._allow_blurhash_fallback.isChecked() )
             
             self._new_options.SetBoolean( 'fade_thumbnails', self._fade_thumbnails.isChecked() )
+            
+            self._new_options.SetBoolean( 'show_extended_single_file_info_in_status_bar', self._show_extended_single_file_info_in_status_bar.isChecked() )
             
             try:
                 

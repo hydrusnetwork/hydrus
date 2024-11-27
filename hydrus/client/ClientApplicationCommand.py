@@ -937,7 +937,11 @@ class ApplicationCommand( HydrusSerialisable.SerialisableBase ):
                     
                     hamming_distance = self.GetSimpleData()
                     
-                    if hamming_distance in CC.hamming_string_lookup:
+                    if hamming_distance is None:
+                        
+                        pass
+                        
+                    elif hamming_distance in CC.hamming_string_lookup:
                         
                         s = f'{s} ({hamming_distance} - {CC.hamming_string_lookup[ hamming_distance ]})'
                         

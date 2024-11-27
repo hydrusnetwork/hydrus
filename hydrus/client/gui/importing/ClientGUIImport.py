@@ -1636,12 +1636,12 @@ class GUGKeyAndNameSelector( ClientGUICommon.BetterButton ):
         
         if len( second_choice_tuples ) > 0:
             
-            choice_tuples.append( ( '--other galleries', -1 ) )
+            choice_tuples.append( ( f'--other galleries{HC.UNICODE_ELLIPSIS}', -1 ) )
             
         
+        non_functional_choice_tuples = []
+        
         if len( non_functional_gugs ) > 0:
-            
-            non_functional_choice_tuples = []
             
             for gug in non_functional_gugs:
                 
@@ -1659,12 +1659,12 @@ class GUGKeyAndNameSelector( ClientGUICommon.BetterButton ):
                 non_functional_choice_tuples.append( ( s, gug ) )
                 
             
-            choice_tuples.append( ( '--non-functional galleries', -2 ) )
+            choice_tuples.append( ( f'--non-functional galleries{HC.UNICODE_ELLIPSIS}', -2 ) )
             
         
         try:
             
-            gug = ClientGUIDialogsQuick.SelectFromList( self, 'select gallery', choice_tuples, value_to_select = my_gug, sort_tuples = False )
+            gug = ClientGUIDialogsQuick.SelectFromList( self, 'select gallery', choice_tuples, value_to_select = my_gug, sort_tuples = False, allow_insta_one_item_select = False )
             
         except HydrusExceptions.CancelledException:
             
@@ -1675,7 +1675,7 @@ class GUGKeyAndNameSelector( ClientGUICommon.BetterButton ):
             
             try:
                 
-                gug = ClientGUIDialogsQuick.SelectFromList( self, 'select gallery', second_choice_tuples, value_to_select = my_gug, sort_tuples = False )
+                gug = ClientGUIDialogsQuick.SelectFromList( self, 'select gallery', second_choice_tuples, value_to_select = my_gug, sort_tuples = False, allow_insta_one_item_select = False )
                 
             except HydrusExceptions.CancelledException:
                 
@@ -1686,7 +1686,7 @@ class GUGKeyAndNameSelector( ClientGUICommon.BetterButton ):
             
             try:
                 
-                gug = ClientGUIDialogsQuick.SelectFromList( self, 'select gallery', non_functional_choice_tuples, value_to_select = my_gug, sort_tuples = False )
+                gug = ClientGUIDialogsQuick.SelectFromList( self, 'select gallery', non_functional_choice_tuples, value_to_select = my_gug, sort_tuples = False, allow_insta_one_item_select = False )
                 
             except HydrusExceptions.CancelledException:
                 

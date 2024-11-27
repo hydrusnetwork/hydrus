@@ -5,6 +5,7 @@ import typing
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusLists
 from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusSerialisable
@@ -58,11 +59,11 @@ def CanDisplayMedia( media: "MediaSingleton" ) -> bool:
     return True
     
 
-def FlattenMedia( media_list ) -> typing.List[ "MediaSingleton" ]:
+def FlattenMedia( medias ) -> typing.List[ "MediaSingleton" ]:
     
     flat_media = []
     
-    for media in media_list:
+    for media in medias:
         
         if media.IsCollection():
             
@@ -1578,6 +1579,28 @@ class MediaCollection( MediaList, Media ):
         
         self._has_notes = True in ( media.HasNotes() for media in self._sorted_media )
         
+        self._width = None
+        self._height = None
+        current_num_pixels_leader = 0
+        
+        for m in self._sorted_media:
+            
+            ( width, height ) = m.GetResolution()
+            
+            if width is not None and height is not None:
+                
+                num_pixels = width * height
+                
+                if num_pixels > current_num_pixels_leader:
+                    
+                    self._width = width
+                    self._height = height
+                    
+                    current_num_pixels_leader = num_pixels
+                    
+                
+            
+        
         self._RecalcRatings()
         self._RecalcFileViewingStats()
         
@@ -2665,6 +2688,16 @@ class MediaSort( HydrusSerialisable.SerialisableBase ):
             ( sort_key, reverse ) = self.GetSortKeyAndReverse( location_context )
             
             media_results_list.sort( key = sort_key, reverse = reverse )
+            
+            if HG.file_sort_report_mode:
+                
+                HydrusData.ShowText( f'Sort occurred according to {self.ToString()}' )
+                
+                for mr in media_results_list:
+                    
+                    HydrusData.ShowText( ( mr.GetHash().hex(), sort_key( mr ) ) )
+                    
+                
             
         
     

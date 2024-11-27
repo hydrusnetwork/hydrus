@@ -122,10 +122,11 @@ class HydrusServiceClientAPI( HydrusClientService ):
         
         root.putChild( b'manage_database', manage_database )
         
-        manage_database.putChild( b'mr_bones', ClientLocalServerResourcesManageDatabase.HydrusResourceClientAPIRestrictedManageDatabaseMrBones( self._service, self._client_requests_domain ) )
+        manage_database.putChild( b'force_commit', ClientLocalServerResourcesManageDatabase.HydrusResourceClientAPIRestrictedManageDatabaseForceCommit( self._service, self._client_requests_domain ) )
+        manage_database.putChild( b'get_client_options', ClientLocalServerResourcesManageDatabase.HydrusResourceClientAPIRestrictedManageDatabaseGetClientOptions( self._service, self._client_requests_domain ) )
         manage_database.putChild( b'lock_on', ClientLocalServerResourcesManageDatabase.HydrusResourceClientAPIRestrictedManageDatabaseLockOn( self._service, self._client_requests_domain ) )
         manage_database.putChild( b'lock_off', ClientLocalServerResourcesManageDatabase.HydrusResourceClientAPIRestrictedManageDatabaseLockOff( self._service, self._client_requests_domain ) )
-        manage_database.putChild( b'get_client_options', ClientLocalServerResourcesManageDatabase.HydrusResourceClientAPIRestrictedManageDatabaseGetClientOptions( self._service, self._client_requests_domain ) )
+        manage_database.putChild( b'mr_bones', ClientLocalServerResourcesManageDatabase.HydrusResourceClientAPIRestrictedManageDatabaseMrBones( self._service, self._client_requests_domain ) )
         
         manage_services = NoResource()
         

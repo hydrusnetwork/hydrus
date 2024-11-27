@@ -200,19 +200,19 @@ class QLocatorResultWidget(QW.QWidget):
         if not self.closeOnActivated:
             self.toggled = not self.toggled
             iconToUse = self.currentIcon if not self.toggled else self.currentToggledIcon
-            self.iconLabel.setPixmap(iconToUse.pixmap(self.iconHeight, self.iconHeight, QG.QIcon.Selected if self.selected else QG.QIcon.Normal))
+            self.iconLabel.setPixmap(iconToUse.pixmap(self.iconHeight, self.iconHeight, QG.QIcon.Mode.Selected if self.selected else QG.QIcon.Mode.Normal))
         self.activated.emit(self.providerIndex, self.id, self.closeOnActivated)
 
     def updateData(self, providerIndex: int, data: QLocatorSearchResult):
         self.toggled = data.toggled
         self.currentIcon = QG.QIcon()
-        self.currentIcon.addFile(data.defaultIconPath, QC.QSize(), QG.QIcon.Normal)
-        self.currentIcon.addFile(data.selectedIconPath, QC.QSize(), QG.QIcon.Selected)
+        self.currentIcon.addFile(data.defaultIconPath, QC.QSize(), QG.QIcon.Mode.Normal)
+        self.currentIcon.addFile(data.selectedIconPath, QC.QSize(), QG.QIcon.Mode.Selected)
         self.currentToggledIcon = QG.QIcon()
-        self.currentToggledIcon.addFile(data.toggledIconPath, QC.QSize(), QG.QIcon.Normal)
-        self.currentToggledIcon.addFile(data.toggledSelectedIconPath, QC.QSize(), QG.QIcon.Selected)
+        self.currentToggledIcon.addFile(data.toggledIconPath, QC.QSize(), QG.QIcon.Mode.Normal)
+        self.currentToggledIcon.addFile(data.toggledSelectedIconPath, QC.QSize(), QG.QIcon.Mode.Selected)
         iconToUse = self.currentIcon if not self.toggled else self.currentToggledIcon
-        self.iconLabel.setPixmap(iconToUse.pixmap(self.iconHeight, self.iconHeight, QG.QIcon.Selected if self.selected else QG.QIcon.Normal))
+        self.iconLabel.setPixmap(iconToUse.pixmap(self.iconHeight, self.iconHeight, QG.QIcon.Mode.Selected if self.selected else QG.QIcon.Mode.Normal))
         self.mainTextLabel.clear()
         self.secondaryTextLabel.clear()
         if len(data.text) > 0:
@@ -241,7 +241,7 @@ class QLocatorResultWidget(QW.QWidget):
             self.style().unpolish(self)
             self.style().polish(self)
         iconToUse = self.currentIcon if not self.toggled else self.currentToggledIcon
-        self.iconLabel.setPixmap(iconToUse.pixmap(self.iconHeight, self.iconHeight, QG.QIcon.Selected if self.selected else QG.QIcon.Normal))
+        self.iconLabel.setPixmap(iconToUse.pixmap(self.iconHeight, self.iconHeight, QG.QIcon.Mode.Selected if self.selected else QG.QIcon.Mode.Normal))
 
     def keyPressEvent(self, ev: QG.QKeyEvent):
         if ev.key() != QC.Qt.Key_Up and ev.key() != QC.Qt.Key_Down and ev.key() != QC.Qt.Key_Enter and ev.key() != QC.Qt.Key_Return:

@@ -1,9 +1,12 @@
+import typing
+
 from qtpy import QtWidgets as QW
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusNumbers
+from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusText
 from hydrus.core import HydrusTime
 
@@ -153,6 +156,16 @@ def ImportURLs( win: QW.QWidget, gallery_seed_log: ClientImportGallerySeeds.Gall
     
     gallery_seed_log.AddGallerySeeds( gallery_seeds )
     
+
+def ExportGallerySeedsToClipboard( gallery_seeds: typing.Collection[ ClientImportGallerySeeds.GallerySeed ] ):
+    
+    gallery_seeds = HydrusSerialisable.SerialisableList( gallery_seeds )
+    
+    payload = gallery_seeds.DumpToString()
+    
+    CG.client_controller.pub( 'clipboard', 'text', payload )
+    
+
 def ExportToPNG( win: QW.QWidget, gallery_seed_log: ClientImportGallerySeeds.GallerySeedLog ):
     
     payload = GetExportableURLsString( gallery_seed_log )
@@ -183,7 +196,7 @@ def RetryErrors( win: QW.QWidget, gallery_seed_log: ClientImportGallerySeeds.Gal
         gallery_seed_log.RetryFailed()
         
     
-def PopulateGallerySeedLogButton( win: QW.QWidget, menu: QW.QMenu, gallery_seed_log: ClientImportGallerySeeds.GallerySeedLog, read_only: bool, can_generate_more_pages: bool, gallery_type_string: str ):
+def PopulateGallerySeedLogButton( win: QW.QWidget, menu: QW.QMenu, gallery_seed_log: ClientImportGallerySeeds.GallerySeedLog, selected_gallery_seeds: typing.List[ ClientImportGallerySeeds.GallerySeed ], read_only: bool, can_generate_more_pages: bool, gallery_type_string: str ):
     
     num_successful = gallery_seed_log.GetGallerySeedCount( CC.STATUS_SUCCESSFUL_AND_NEW )
     num_vetoed = gallery_seed_log.GetGallerySeedCount( CC.STATUS_VETOED )
@@ -239,6 +252,19 @@ def PopulateGallerySeedLogButton( win: QW.QWidget, menu: QW.QMenu, gallery_seed_
         ClientGUIMenus.AppendMenu( menu, submenu, 'import new urls' )
         
     
+    if len( selected_gallery_seeds ) > 0:
+        
+        submenu = ClientGUIMenus.GenerateMenu( menu )
+        
+        if len( selected_gallery_seeds ) > 0:
+            
+            ClientGUIMenus.AppendMenuItem( submenu, 'export selected page objects to clipboard', 'Advanced JSON inspection.', ExportGallerySeedsToClipboard, selected_gallery_seeds )
+            
+        
+        ClientGUIMenus.AppendMenu( menu, submenu, 'advanced' )
+        
+    
+
 class EditGallerySeedLogPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def __init__( self, parent, controller: "CG.ClientController.Controller", read_only: bool, can_generate_more_pages: bool, gallery_type_string: str, gallery_seed_log: ClientImportGallerySeeds.GallerySeedLog ):
@@ -399,7 +425,7 @@ class EditGallerySeedLogPanel( ClientGUIScrolledPanels.EditPanel ):
         
         if len( selected_gallery_seeds ) == 0:
             
-            PopulateGallerySeedLogButton( self, menu, self._gallery_seed_log, self._read_only, self._can_generate_more_pages, self._gallery_type_string )
+            PopulateGallerySeedLogButton( self, menu, self._gallery_seed_log, selected_gallery_seeds, self._read_only, self._can_generate_more_pages, self._gallery_type_string )
             
             return menu
             
@@ -450,7 +476,7 @@ class EditGallerySeedLogPanel( ClientGUIScrolledPanels.EditPanel ):
         
         submenu = ClientGUIMenus.GenerateMenu( menu )
         
-        PopulateGallerySeedLogButton( self, submenu, self._gallery_seed_log, self._read_only, self._can_generate_more_pages, self._gallery_type_string )
+        PopulateGallerySeedLogButton( self, submenu, self._gallery_seed_log, selected_gallery_seeds, self._read_only, self._can_generate_more_pages, self._gallery_type_string )
         
         ClientGUIMenus.AppendMenu( menu, submenu, 'whole log' )
         
@@ -596,7 +622,7 @@ class GallerySeedLogButton( ClientGUICommon.ButtonWithMenuArrow ):
         
         gallery_seed_log = self._gallery_seed_log_get_callable()
         
-        PopulateGallerySeedLogButton( self, menu, gallery_seed_log, self._read_only, self._can_generate_more_pages, self._gallery_type_string )
+        PopulateGallerySeedLogButton( self, menu, gallery_seed_log, [], self._read_only, self._can_generate_more_pages, self._gallery_type_string )
         
     
     def _ShowGallerySeedLogFrame( self ):

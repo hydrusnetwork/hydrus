@@ -4,9 +4,11 @@ import random
 import sys
 import threading
 import time
+import typing
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
+from hydrus.core import HydrusDB
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusPaths
 from hydrus.core import HydrusProcess
@@ -31,7 +33,7 @@ class HydrusController( object ):
         
         self.db_dir = db_dir
         
-        self.db = None
+        self.db: typing.Optional[ HydrusDB.HydrusDB ] = None
         
         pubsub_valid_callable = self._GetPubsubValidCallable()
         
@@ -451,6 +453,16 @@ class HydrusController( object ):
         return self._doing_fast_exit
         
     
+    def ForceDatabaseCommit( self ):
+        
+        if self.db is None:
+            
+            raise Exception( 'Sorry, database does not seem to be alive at the moment!' )
+            
+        
+        self.db.ForceACommit()
+        
+    
     def GetBootTimestampMS( self ):
         
         return self.GetTimestampMS( 'boot' )
@@ -587,7 +599,7 @@ class HydrusController( object ):
         self._fast_job_scheduler.start()
         self._slow_job_scheduler.start()
         
-        self.db = self._InitDB()
+        self._InitDB()
         
         # reset after a long db update
         self.TouchTime( 'last_sleep_check' )

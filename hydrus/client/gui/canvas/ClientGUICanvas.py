@@ -979,6 +979,39 @@ class Canvas( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
                     
                     hamming_distance = command.GetSimpleData()
                     
+                    if hamming_distance is None:
+                        
+                        from hydrus.client.gui.panels import ClientGUIScrolledPanels
+                        from hydrus.client.gui.widgets import ClientGUICommon
+                        
+                        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'choose distance' ) as dlg:
+                            
+                            panel = ClientGUIScrolledPanels.EditSingleCtrlPanel( dlg )
+                            
+                            #
+                            
+                            # make a treeview control thing from menu
+                            
+                            control = ClientGUICommon.BetterSpinBox( panel )
+                            
+                            control.setSingleStep( 2 )
+                            control.setValue( 10 )
+                            
+                            panel.SetControl( control )
+                            
+                            dlg.SetPanel( panel )
+                            
+                            if dlg.exec() == QW.QDialog.Accepted:
+                                
+                                hamming_distance = control.value()
+                                
+                            else:
+                                
+                                return
+                                
+                            
+                        
+                    
                     ClientGUIMediaSimpleActions.ShowSimilarFilesInNewPage( [ self._current_media ], self._location_context, hamming_distance )
                     
                 
@@ -4533,7 +4566,7 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
     
     def contextMenuEvent( self, event ):
         
-        if event.reason() == QG.QContextMenuEvent.Keyboard:
+        if event.reason() == QG.QContextMenuEvent.Reason.Keyboard:
             
             self.ShowMenu()
             

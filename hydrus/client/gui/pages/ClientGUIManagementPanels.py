@@ -922,6 +922,8 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         
         self._search_button.setEnabled( we_can_start_work )
         
+        page_name = 'preparation'
+        
         if not_all_files_searched:
             
             if num_searched == 0:
@@ -933,13 +935,14 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
                 self._num_searched.SetValue( 'Searched ' + HydrusNumbers.ValueRangeToPrettyString( num_searched, total_num_files ) + ' files at this distance.', num_searched, total_num_files )
                 
             
-            page_name = 'preparation (needs work)'
+            if num_searched / total_num_files < 0.99:
+                
+                page_name = 'preparation (needs work)'
+                
             
         else:
             
             self._num_searched.SetValue( 'All potential duplicates found at this distance.', total_num_files, total_num_files )
-            
-            page_name = 'preparation'
             
         
         self._main_notebook.setTabText( 0, page_name )
@@ -1576,7 +1579,7 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
             
             ClientGUIMenus.AppendSeparator( submenu )
             
-            ClientGUIGallerySeedLog.PopulateGallerySeedLogButton( self, submenu, gallery_seed_log, False, True, 'search' )
+            ClientGUIGallerySeedLog.PopulateGallerySeedLogButton( self, submenu, gallery_seed_log, [], False, True, 'search' )
             
             ClientGUIMenus.AppendMenu( menu, submenu, 'search log' )
             
@@ -2699,7 +2702,7 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
             
             ClientGUIMenus.AppendSeparator( submenu )
             
-            ClientGUIGallerySeedLog.PopulateGallerySeedLogButton( self, submenu, gallery_seed_log, True, False, 'check' )
+            ClientGUIGallerySeedLog.PopulateGallerySeedLogButton( self, submenu, gallery_seed_log, [], True, False, 'check' )
             
             ClientGUIMenus.AppendMenu( menu, submenu, 'check log' )
             

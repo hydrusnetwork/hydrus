@@ -7,6 +7,59 @@ title: Changelog
 !!! note
     This is the new changelog, only the most recent builds. For all versions, see the [old changelog](old_changelog.html).
 
+## [Version 600](https://github.com/hydrusnetwork/hydrus/releases/tag/v600)
+
+### misc
+
+* fixed a typoed type def that caused a boot error in python 3.10. this also sometimes/always broke the v599 macOS App, which I yanked. I have improved my testing situation to catch anything like this in future (ironically, I accidentally stopped booting the program in py 3.10 every Wednesday just recently when I stopped testing for Qt5) (issue #1630)
+* brought back the 'show more text about one file on the status bar' functionality with the new 'show additional status bar text when a single thumbnail is selected' checkbox under `options->thumbnails`. this tech works with single-file collections now, too. **this checkbox is default off, so go hit it if you miss this!**
+* the 'manage times' dialog now also shows '(3 days ago)' accompanying string variants with all the times displayed. time objects can get complicated, so let me know how this works out if you have weird times from the future or whatever
+* if your similar files search progress is greater than 99%, the tab no longer says (needs work). don't worry about that tiny little bit on every file import lads, the ride never ends
+* the 'open similar files in a new page' file menu now has a 'custom' entry that spawns a simple spinner to choose a different hamming distance. it starts at 10 and has step 2 (i.e. 10, 12, 14...). **related:** I understand there are sometimes small file count differences between a hamming distance of (even number) n and (odd) n+1, but it typically isn't significant. I force a hamming distance step of 2 in some places and allow a step of 1 in others. if you care about this stuff, would you be ok with me enforcing step 2 everywhere, or do you have use for odd-number hamming distance searches?
+* the various core file copy/move operations used in hydrus are now wrapped in retry modes for `BlockingIOError`, which can be raised by NASes and the like that are under deep stress. these will be retried five times, with ~1-3 second delays between re-attempts, before raising the Exception as before. thanks to the user who pointed out this could even happen. let me know if anything more complicated, let's say folder mirrors/merges, can still trip the problem
+* the 'analyze' database maintenance job's yes/no dialog is now a yes/yes/no dialog. the 'soft' and 'full' options are green, the cancel is red
+* cleaned up how hidden or non-functional galleries are chosen in the gallery-selector. the respective entries now have ellipses, and if there is only one item to select, it still shows the 'select from list' thing rather than confusingly insta-selecting that item
+* collections now sort by anything involving width and height by using its largest-num-pixels image as proxy. this isn't perfect, and it is invisible, and I suspect in particularly crazy situations the sort may change depending on the previous sort, but collections should at least do something here now rather than always counting as 'none' for their dimensions. a thought was floated to optionally sort collections by 'average' file property in places, which may be another avenue to explore here--for instance, although sum num_pixels might make some sense, sum of height doesn't
+* the 'sort by dimensions' submenu now lists width first, then height. a three-part hack was needed to make this work lol
+
+### more vacuum and db stuff
+
+* last week the vacuum stuff went well, but I forgot to update the dialog to use the new 'do we have enough free space to do a vacuum?' check! the dialog now properly uses the new check and won't moan about you not having enough temporary space
+* if you try to do a vacuum with an external program connected to the database file we want to vacuum (it tests this by looking for '-wal' or '-journal' journal sidecars), the program now abandons the vacuum attempt and tells you to disconnect and try again (or switch to WAL, if you are in TRUNCATE). one user did this by accident this week, with a pending write commit from the external program, and it caused malformation!! hydrus will now not let this happen
+* if the client or server have a failed vacuum due to a file rename failing and do not fix it themselves, and the program thus next boots with a db file with the `db_path.prevacuum` filename, the program now recognises this, tells you about it, automatically recovers from the situation, and, if one exists, tells you what to do with the `db_path.vacuum` file
+* the 'do we have a missing database file?' initialisation check is improved: it will now report on a mix of missing main and external files; it will now differentiate between the first connection attempt and subsequent normal reconnections (and only run 'create db' checks and so on on the first attempt); and it will recognise if a database file suddenly goes missing during program operation and trigger an immediate program halt after its popup
+* the various places the database can trigger an immediate program halt are now formalised into one careful method in a special place that won't be accidentally shuffled around or called via typo
+* I rejiggered the 'let's map our incoming db command to the bound method call' process and finally replaced the comp-sci-tier 80-line-tall if/else towers in the main `ClientDB` read/write methods. it is all now a much nicer dynamically initialised name-&gt;method dict. I don't suppose it really saves all that much overhead per call, but it is finally done
+* the database now reports 'db committing' in the main gui status bar when it does this in its 'idle' time. previously it only reported after a big job overran the due time
+
+### more hover windows
+
+* I may have fixed another hover window position bug (most probably certain window managers in Linux only, where sometimes windows will defer geometry updates until they are shown), where, before being shown any other time in that media viewer, it could flash into place in the correct position for one frame despite the mouse not being over it
+* simplified the hover window show/hide logic a bit more and removed an unusual hack that handled Window Managers that weren't happy about taskbarless top level hover windows appearing (because hover windows are no longer top level but just internal widgets to the normal media viewer)
+* re-integrated some spammy hover window reporting text into the 'hover window report mode', and rejiggered the logic to ensure the critical show/hide calls here are not so spammy
+
+### client api
+
+* added a new command, `/manage_database/force_commit`, which immediately and synchronously commits the database, flushing all pending (savepointed) changes to disk
+* added help for this: https://hydrusnetwork.github.io/hydrus/developer_api.html#manage_database_force_commit
+* the client api version is now 76
+
+### debugging
+
+* added a new `help->debug->report modes->file sort report mode`, which spams the thumbnail sorts going on with all the `sort_key` results it saw. we're trying to figure out some weird namespace sort, so let's see what this generates
+* file and search logs have a new advanced menu item, tucked under the 'whole log' submenu, to export the current selection to the clipboard in JSON serialised format
+
+### boring cleanup
+
+* fixed some more unresolved references caused by Qt enums
+
+### new mpv and sqlite on Windows
+
+* I am rolling in two new dlls for Windows today, for SQLite (database) and libmpv (video/audio player)
+* SQLite is updated from 3.45.3 to 3.47.0
+* mpv is updated from 202-08-20 to 2024-10-20
+* both dlls are mostly just bugfixes and performance improvements, but the mpv release is slightly special--in the 'future test' we ran a few weeks ago, users with unusual Windows, be that Windows Server, under-updated Windows 10, or Windows 10 on a VM, might see a grid of black bars over some webms. no one on Windows 11 or normal updated Windows 10 reported any problems. the new mpv does perform much better than the older, and I am told it fixes some gif bugs, so I do want to update, but I do so hesitantly. if many users on updated/normal Windows do run into trouble with this release, I expect to roll back again. in the meantime, I have updated the 'running from source' help to talk more about stable versions of mpv on older Windows. users who need to keep their OS under-updated are now recommended to run from source: https://hydrusnetwork.github.io/hydrus/running_from_source.html
+
 ## [Version 599](https://github.com/hydrusnetwork/hydrus/releases/tag/v599)
 
 ### misc
@@ -428,37 +481,3 @@ title: Changelog
 * the main `ClientLocalServerResources` file has been getting too huge (5,000 lines), so I've moved it and `ClientLocalServer` to their own `api` module and broken the Resources file up into core functions, the superclass, and the main verbs
 * fixed permissions check for `/manage_popups/update_popup`, which was checking for pages permission rather than popup permission
 * did a general linting pass of these easier-to-handle files; cleaned up some silly stuff
-
-## [Version 590](https://github.com/hydrusnetwork/hydrus/releases/tag/v590)
-
-### misc
-
-* the 'check now' button in manage subscriptions is generally more intelligent and now offers questions around paused status: if _all_ the selected queries are DEAD, it now asks you if you want to resurrect them with a yes/no variant of the DEAD/ALIVE question (previously it just did it); if you are in _edit subscriptions_ and any of the selected subs are paused, it now asks you if you want to include them (and unpause) in the check now, and if not it reduces the queries examined for the DEAD/ALIVE question appropriately (previously it just did their queries, and did not unpause); in either _edit subscriptions_ or _edit subscription_, if any queries in the selection after any 'paused subs' or 'DEAD/ALIVE' filtering are paused, it asks you if you want to include (and unpause) them in the check now (previously it just did and unpaused them all)
-* if you shrink the search page's preview window down to 0 size (which it will suddenly snap to, and which is a silghtly different hide state to the one caused by double-left-clicking the splitter sash), the preview canvas will now recognise it is hidden and no longer load media as you click on thumbs. previously this thing was loading noisy videos in the background etc..
-* the `StringMatch` 'character set' match type now has 'hexadecimal characters' (`^[\da-fA-F]+$`) and 'base-64 characters' (`^[a-zA-Z\d+/]+={0,2}$`) in its dropdown choice
-* the 'gui pages' options panel now has 'when closing tabs, move focus (left/right)', so if you'd rather move left when middle-clicking tabs etc.., you can now set it, and if your style's default behaviour is whack and never moved to the right before despite you wanting it, now you can force it; it is now explicit either way. let me know if any crazy edge-case focus logic happens in this mode with nested page of pages or whatever
-* when you right-click a file, in the _share-&gt;copy hash_ menu, the md5, sha1, and sha512 hashes are now loaded from the database, usually in the milliseconds after the menu is opened, and shown in the menu labels for quick human reference. if your client does not have these hashes for the file, it says so
-* the 'share' thumbnail menu is now visible on non-local files. it is severely truncated, basically just shows copy hash/file_id stuff
-* wrote a 'Current Deleted Pending Petitioned' section for the Developer API to discuss how the states in the content storage system overlap and change in relation to various commands in the content update pipeline https://hydrusnetwork.github.io/hydrus/developer_api.html#CDPP It may be of interest to non-API-devs who are generally interested in what exactly the 'pending' state etc.. is
-* if the file import options in a hard drive import page currently imports to an empty location context (e.g. you deleted the local file service it wanted to import to), the import page now pauses and presents an appropriate error text. the URL importers already did this, so this is the hdd import joining them
-* this 'check we are good to do file work' test in the importer pages now in all cases pursues a 'default' file import options to the actual real one that will be used, so if your importer file import options are borked, this is now detected too and the importer will pause rather than fail everything in its file log
-* thanks to a user, fixed a typo bug in the new multi-column list work that was causing problems when looking at gallery logs that included mis-linked log entries. in general, the main 'turn this integer into something human' function will now handle errors better
-
-### default downloaders
-
-* _advanced/technical, tl;dr: x.com URLs save better now._ since a better fix will take more work, the 'x post' URL class is for now set to associate URLs. this fixes the association of x.com URLs when those are explicitly referred to as source URLs in a booru post. previously, some hydrus network engine magic related to how x URLs are converted to twitter URLs (and then fx/vxtwitter URLs) to get parsed by the twitter parser was causing some problems. a full 'render this URL as this URL' system will roll out in future to better handle this situation where two non-API URLs can mean the same thing. this will result in some twitter/x post URL duplication--we'll figure out a nice merge later!
-
-### duplicate auto-resolution tech
-
-* I have written the first skeleton of the `MetadataConditional` object. it has a rule based on a system predicate (like 'width &gt; 400px') and returns True/False when you give it a media object. this lego-brick will plug into a variety of different systems in future, including the duplicate auto-resolution system, with a unified UI
-* system predicates cannot yet do this arbitrarily, so it will be future work to fill out this code. to start with, I've just got system:filetype working to ultimately effect the first duplicate auto-resolution job of 'if pixel duplicates and one is jpeg, one png, then keep the jpeg'
-* add some unit tests to test this capability
-
-### boring search object code decoupling
-
-* refactored the main `Predicate` object and friends to the new `ClientSearchPredicate`
-* refactored the main `NumberTest` object and friends to the new `ClientNumberTest`
-* refactored the main `TagContext` object and friends to the new `ClientTagContext`
-* refactored the main `FileSearchContext` object and friends to the new `ClientSearchFileSearchContext`
-* moved some other `ClientSearch` stuff to other places and renamed the original file to `ClientSearchFavourites`; it now just contains the favourite searches manager
-* some misc cleanup around here. some enums had bad names, that sort of thing

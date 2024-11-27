@@ -5070,6 +5070,184 @@ class DB( HydrusDB.HydrusDB ):
         self._AddFiles( self.modules_services.local_update_service_id, [ ( hash_id, now_ms ) ] )
         
     
+    def _InitCommandsToMethods( self ):
+        
+        super()._InitCommandsToMethods()
+        
+        self._read_commands_to_methods.update(
+            {
+                'boned_stats' : self._GetBonedStats,
+                'duplicate_pairs_for_filtering' : self._DuplicatesGetPotentialDuplicatePairsForFiltering,
+                'file_history' : self._GetFileHistory,
+                'file_info_managers' : self._GetFileInfoManagersFromHashes,
+                'file_info_managers_from_ids' : self._GetFileInfoManagers,
+                'file_system_predicates' : self._GetFileSystemPredicates,
+                'force_refresh_tags_managers' : self._GetForceRefreshTagsManagers,
+                'inbox_hashes' : self._FilterInboxHashes,
+                'is_an_orphan' : self._IsAnOrphan,
+                'maintenance_due' : self._GetMaintenanceDue,
+                'media_result' : self._GetMediaResultFromHash,
+                'media_results' : self._GetMediaResultsFromHashes,
+                'media_results_from_ids' : self._GetMediaResults,
+                'migration_filter_pairs_by_count' : self._MigrationFilterPairsByCount,
+                'migration_get_mappings' : self._MigrationGetMappings,
+                'migration_get_pairs' : self._MigrationGetPairs,
+                'missing_thumbnail_hashes' : self._GetRepositoryThumbnailHashesIDoNotHave,
+                'nums_pending' : self._GetNumsPending,
+                'options' : self._GetOptions,
+                'pending' : self._GetPending,
+                'potential_duplicates_count' : self._DuplicatesGetPotentialDuplicatesCount,
+                'random_potential_duplicate_hashes' : self._DuplicatesGetRandomPotentialDuplicateHashes,
+                'related_tags' : self._GetRelatedTags,
+                'service_info' : self._GetServiceInfo,
+                'tables_and_columns_using_definitions' : self._GetTablesAndColumnsUsingDefinitions,
+                'tag_display_maintenance_status' : self._CacheTagDisplayGetApplicationStatusNumbers,
+                'trash_hashes' : self._GetTrashHashes,
+            }
+        )
+        
+        self._read_commands_to_methods.update(
+            {
+                'autocomplete_predicates' : self.modules_tag_search.GetAutocompletePredicates,
+                'client_files_subfolders' : self.modules_files_physical_storage.GetClientFilesSubfolders,
+                'deferred_delete_data' : self.modules_db_maintenance.GetDeferredDeleteTableData,
+                'deferred_physical_delete' : self.modules_files_storage.GetDeferredPhysicalDelete,
+                'file_duplicate_hashes' : self.modules_files_duplicates.GetFileHashesByDuplicateType,
+                'file_duplicate_info' : self.modules_files_duplicates.GetFileDuplicateInfo,
+                'file_hashes' : self.modules_hashes.GetFileHashes,
+                'file_maintenance_get_job_counts' : self.modules_files_maintenance_queue.GetJobCounts,
+                'file_maintenance_get_jobs' : self.modules_files_maintenance_queue.GetJobs,
+                'file_query_ids' : self.modules_files_query.GetHashIdsFromQuery,
+                'file_relationships_for_api' : self.modules_files_duplicates.GetFileRelationshipsForAPI,
+                'filter_existing_tags' : self.modules_mappings_counts_update.FilterExistingTags,
+                'filter_hashes' : self.modules_files_metadata_rich.FilterHashesByService,
+                'gui_session' : self.modules_serialisable.GetGUISession,
+                'hash_ids_to_hashes' : self.modules_hashes_local_cache.GetHashIdsToHashes,
+                'hash_status' : self.modules_files_metadata_rich.GetHashStatus,
+                'have_hashed_serialised_objects' : self.modules_serialisable.HaveHashedJSONDumps,
+                'ideal_client_files_locations' : self.modules_files_physical_storage.GetIdealClientFilesLocations,
+                'last_shutdown_work_time' : self.modules_db_maintenance.GetLastShutdownWorkTime,
+                'media_predicates' : self.modules_tag_display.GetMediaPredicates,
+                'missing_repository_update_hashes' : self.modules_repositories.GetRepositoryUpdateHashesIDoNotHave,
+                'num_deferred_file_deletes' : self.modules_files_storage.GetDeferredPhysicalDeleteCounts,
+                'recent_tags' : self.modules_recent_tags.GetRecentTags,
+                'repository_progress' : self.modules_repositories.GetRepositoryProgress,
+                'repository_update_hashes_to_process' : self.modules_repositories.GetRepositoryUpdateHashesICanProcess,
+                'serialisable' : self.modules_serialisable.GetJSONDump,
+                'serialisable_simple' : self.modules_serialisable.GetJSONSimple,
+                'serialisable_named' : self.modules_serialisable.GetJSONDumpNamed,
+                'serialisable_names' : self.modules_serialisable.GetJSONDumpNames,
+                'serialisable_names_to_backup_timestamps_ms' : self.modules_serialisable.GetJSONDumpNamesToBackupTimestampsMS,
+                'service_directory' : self.modules_service_paths.GetServiceDirectoryHashes,
+                'service_directories' : self.modules_service_paths.GetServiceDirectoriesInfo,
+                'service_id' : self.modules_services.GetServiceId,
+                'services' : self.modules_services.GetServices,
+                'similar_files_maintenance_status' : self.modules_similar_files.GetMaintenanceStatus,
+                'tag_descendants_lookup' : self.modules_tag_display.GetDescendantsForTags,
+                'tag_display_application' : self.modules_tag_display.GetApplication,
+                'tag_parents' : self.modules_tag_parents.GetTagParents,
+                'tag_predicates' : self.modules_tag_search.GetTagPredicates,
+                'tag_siblings' : self.modules_tag_siblings.GetTagSiblings,
+                'tag_siblings_all_ideals' : self.modules_tag_siblings.GetTagSiblingsIdeals,
+                'tag_display_decorators' : self.modules_tag_display.GetUIDecorators,
+                'tag_siblings_and_parents_lookup' : self.modules_tag_display.GetSiblingsAndParentsForTags,
+                'tag_siblings_lookup' : self.modules_tag_siblings.GetTagSiblingsForTags,
+                'url_statuses' : self.modules_files_metadata_rich.GetURLStatuses,
+                'vacuum_data' : self.modules_db_maintenance.GetVacuumData
+            }
+        )
+        
+        self._write_commands_to_methods.update(
+            {
+                'backup' : self._Backup,
+                'clear_orphan_file_records' : self._ClearOrphanFileRecords,
+                'content_updates' : self._ProcessContentUpdatePackage,
+                'delete_pending' : self._DeletePending,
+                'delete_service_info' : self._DeleteServiceInfo,
+                'dirty_services' : self._SaveDirtyServices,
+                'duplicate_pair_status' : self._DuplicatesSetDuplicatePairStatus,
+                'fix_logically_inconsistent_mappings' : self._FixLogicallyInconsistentMappings,
+                'force_filetype' : self._ForceFiletypes,
+                'import_file' : self._ImportFile,
+                'import_update' : self._ImportUpdate,
+                'maintain_similar_files_search_for_potential_duplicates' : self._PerceptualHashesSearchForPotentialDuplicates,
+                'migration_clear_job' : self._MigrationClearJob,
+                'migration_start_mappings_job' : self._MigrationStartMappingsJob,
+                'migration_start_pairs_job' : self._MigrationStartPairsJob,
+                'process_repository_content' : self._ProcessRepositoryContent,
+                'regenerate_local_hash_cache' : self._RegenerateLocalHashCache,
+                'regenerate_local_tag_cache' : self._RegenerateLocalTagCache,
+                'regenerate_searchable_subtag_maps' : self._RegenerateTagCacheSearchableSubtagMaps,
+                'regenerate_tag_cache' : self._RegenerateTagCache,
+                'regenerate_tag_display_mappings_cache' : self._RegenerateTagDisplayMappingsCache,
+                'regenerate_tag_display_pending_mappings_cache' : self._RegenerateTagDisplayPendingMappingsCache,
+                'regenerate_tag_mappings_cache' : self._RegenerateTagMappingsCache,
+                'regenerate_tag_mappings_tags' : self._RegenerateTagMappingsTags,
+                'regenerate_tag_parents_cache' : self._RegenerateTagParentsCache,
+                'regenerate_tag_pending_mappings_cache' : self._RegenerateTagPendingMappingsCache,
+                'repopulate_mappings_from_cache' : self._RepopulateMappingsFromCache,
+                'repopulate_tag_cache_missing_subtags' : self._RepopulateTagCacheMissingSubtags,
+                'repopulate_tag_display_mappings_cache' : self._RepopulateTagDisplayMappingsCache,
+                'repair_invalid_tags' : self._RepairInvalidTags,
+                'reset_repository' : self._ResetRepository,
+                'reset_repository_processing' : self._ResetRepositoryProcessing,
+                'reset_potential_search_status' : self._PerceptualHashesResetSearchFromHashes,
+                'resync_combined_deleted_files' : self._ResyncCombinedDeletedFiles,
+                'resync_tag_mappings_cache_files' : self._ResyncTagMappingsCacheFiles,
+                'save_options' : self._SaveOptions,
+                'set_password' : self._SetPassword,
+                'sync_tag_display_maintenance' : self._CacheTagDisplaySync,
+                'update_server_services' : self._UpdateServerServices,
+                'update_services' : self._UpdateServices,
+                'vacuum' : self._Vacuum
+            }
+        )
+        
+        self._write_commands_to_methods.update(
+            {
+                'analyze' : self.modules_db_maintenance.AnalyzeDueTables,
+                'associate_repository_update_hashes' : self.modules_repositories.AssociateRepositoryUpdateHashes,
+                'clear_deferred_physical_delete' : self.modules_files_storage.ClearDeferredPhysicalDelete,
+                'clear_false_positive_relations' : self.modules_files_duplicates.ClearAllFalsePositiveRelationsFromHashes,
+                'clear_false_positive_relations_between_groups' : self.modules_files_duplicates.ClearFalsePositiveRelationsBetweenGroupsFromHashes,
+                'clear_orphan_tables' : self.modules_db_maintenance.ClearOrphanTables,
+                'cull_file_viewing_statistics' : self.modules_files_viewing_stats.CullFileViewingStatistics,
+                'db_integrity' : self.modules_db_maintenance.CheckDBIntegrity,
+                'delete_serialisable_named' : self.modules_serialisable.DeleteJSONDumpNamed,
+                'delete_potential_duplicate_pairs' : self.modules_files_duplicates.DeleteAllPotentialDuplicatePairs,
+                'dissolve_alternates_group' : self.modules_files_duplicates.DissolveAlternatesGroupIdFromHashes,
+                'dissolve_duplicates_group' : self.modules_files_duplicates.DissolveMediaIdFromHashes,
+                'do_deferred_table_delete_work' : self.modules_db_maintenance.DoDeferredDeleteTablesWork,
+                'duplicate_set_king' : self.modules_files_duplicates.SetKingFromHash,
+                'file_maintenance_add_jobs' : self.modules_files_maintenance_queue.AddJobs,
+                'file_maintenance_add_jobs_hashes' : self.modules_files_maintenance_queue.AddJobsHashes,
+                'file_maintenance_cancel_jobs' : self.modules_files_maintenance_queue.CancelJobs,
+                'file_maintenance_clear_jobs' : self.modules_files_maintenance.ClearJobs,
+                'ideal_client_files_locations' : self.modules_files_physical_storage.SetIdealClientFilesLocations,
+                'maintain_hashed_serialisables' : self.modules_serialisable.MaintainHashedStorage,
+                'maintain_similar_files_tree' : self.modules_similar_files.MaintainTree,
+                'process_repository_definitions' : self.modules_repositories.ProcessRepositoryDefinitions,
+                'push_recent_tags' : self.modules_recent_tags.PushRecentTags,
+                'regenerate_similar_files' : self.modules_similar_files.RegenerateTree,
+                'regenerate_tag_siblings_and_parents_cache' : self.modules_tag_display.RegenerateTagSiblingsAndParentsCache,
+                'register_shutdown_work' : self.modules_db_maintenance.RegisterShutdownWork,
+                'relocate_client_files' : self.modules_files_physical_storage.RelocateClientFiles,
+                'remove_alternates_member' : self.modules_files_duplicates.RemoveAlternateMemberFromHashes,
+                'remove_duplicates_member' : self.modules_files_duplicates.RemoveMediaIdMemberFromHashes,
+                'remove_potential_pairs' : self.modules_files_duplicates.RemovePotentialPairsFromHashes,
+                'repair_client_files' : self.modules_files_physical_storage.RepairClientFiles,
+                'reprocess_repository' : self.modules_repositories.ReprocessRepository,
+                'serialisable' : self.modules_serialisable.SetJSONDump,
+                'serialisable_atomic' : self.modules_serialisable.SetJSONComplex,
+                'serialisable_simple' : self.modules_serialisable.SetJSONSimple,
+                'serialisables_overwrite' : self.modules_serialisable.OverwriteJSONDumps,
+                'set_repository_update_hashes' : self.modules_repositories.SetRepositoryUpdateHashes,
+                'schedule_repository_update_file_maintenance' : self.modules_repositories.ScheduleRepositoryUpdateFileMaintenance,
+                'tag_display_application' : self.modules_tag_display.SetApplication
+            }
+        )
+        
+    
     def _InitExternalDatabases( self ):
         
         self._db_filenames[ 'external_caches' ] = 'client.caches.db'
@@ -6953,86 +7131,6 @@ class DB( HydrusDB.HydrusDB ):
         self.modules_repositories.SetUpdateProcessed( service_id, content_hash, content_types_to_process )
         
         return num_rows_processed
-        
-    
-    def _Read( self, action, *args, **kwargs ):
-        
-        if action == 'autocomplete_predicates': result = self.modules_tag_search.GetAutocompletePredicates( *args, **kwargs )
-        elif action == 'boned_stats': result = self._GetBonedStats( *args, **kwargs )
-        elif action == 'client_files_subfolders': result = self.modules_files_physical_storage.GetClientFilesSubfolders( *args, **kwargs )
-        elif action == 'deferred_delete_data': result = self.modules_db_maintenance.GetDeferredDeleteTableData( *args, **kwargs )
-        elif action == 'deferred_physical_delete': result = self.modules_files_storage.GetDeferredPhysicalDelete( *args, **kwargs )
-        elif action == 'duplicate_pairs_for_filtering': result = self._DuplicatesGetPotentialDuplicatePairsForFiltering( *args, **kwargs )
-        elif action == 'file_duplicate_hashes': result = self.modules_files_duplicates.GetFileHashesByDuplicateType( *args, **kwargs )
-        elif action == 'file_duplicate_info': result = self.modules_files_duplicates.GetFileDuplicateInfo( *args, **kwargs )
-        elif action == 'file_hashes': result = self.modules_hashes.GetFileHashes( *args, **kwargs )
-        elif action == 'file_history': result = self._GetFileHistory( *args, **kwargs )
-        elif action == 'file_info_managers': result = self._GetFileInfoManagersFromHashes( *args, **kwargs )
-        elif action == 'file_info_managers_from_ids': result = self._GetFileInfoManagers( *args, **kwargs )
-        elif action == 'file_maintenance_get_job_counts': result = self.modules_files_maintenance_queue.GetJobCounts( *args, **kwargs )
-        elif action == 'file_maintenance_get_jobs': result = self.modules_files_maintenance_queue.GetJobs( *args, **kwargs )
-        elif action == 'file_query_ids': result = self.modules_files_query.GetHashIdsFromQuery( *args, **kwargs )
-        elif action == 'file_relationships_for_api': result = self.modules_files_duplicates.GetFileRelationshipsForAPI( *args, **kwargs )
-        elif action == 'file_system_predicates': result = self._GetFileSystemPredicates( *args, **kwargs )
-        elif action == 'filter_existing_tags': result = self.modules_mappings_counts_update.FilterExistingTags( *args, **kwargs )
-        elif action == 'filter_hashes': result = self.modules_files_metadata_rich.FilterHashesByService( *args, **kwargs )
-        elif action == 'force_refresh_tags_managers': result = self._GetForceRefreshTagsManagers( *args, **kwargs )
-        elif action == 'gui_session': result = self.modules_serialisable.GetGUISession( *args, **kwargs )
-        elif action == 'hash_ids_to_hashes': result = self.modules_hashes_local_cache.GetHashIdsToHashes( *args, **kwargs )
-        elif action == 'hash_status': result = self.modules_files_metadata_rich.GetHashStatus( *args, **kwargs )
-        elif action == 'have_hashed_serialised_objects': result = self.modules_serialisable.HaveHashedJSONDumps( *args, **kwargs )
-        elif action == 'ideal_client_files_locations': result = self.modules_files_physical_storage.GetIdealClientFilesLocations( *args, **kwargs )
-        elif action == 'inbox_hashes': result = self._FilterInboxHashes( *args, **kwargs )
-        elif action == 'is_an_orphan': result = self._IsAnOrphan( *args, **kwargs )
-        elif action == 'last_shutdown_work_time': result = self.modules_db_maintenance.GetLastShutdownWorkTime( *args, **kwargs )
-        elif action == 'maintenance_due': result = self._GetMaintenanceDue( *args, **kwargs )
-        elif action == 'media_predicates': result = self.modules_tag_display.GetMediaPredicates( *args, **kwargs )
-        elif action == 'media_result': result = self._GetMediaResultFromHash( *args, **kwargs )
-        elif action == 'media_results': result = self._GetMediaResultsFromHashes( *args, **kwargs )
-        elif action == 'media_results_from_ids': result = self._GetMediaResults( *args, **kwargs )
-        elif action == 'migration_filter_pairs_by_count': result = self._MigrationFilterPairsByCount( *args, **kwargs )
-        elif action == 'migration_get_mappings': result = self._MigrationGetMappings( *args, **kwargs )
-        elif action == 'migration_get_pairs': result = self._MigrationGetPairs( *args, **kwargs )
-        elif action == 'missing_repository_update_hashes': result = self.modules_repositories.GetRepositoryUpdateHashesIDoNotHave( *args, **kwargs )
-        elif action == 'missing_thumbnail_hashes': result = self._GetRepositoryThumbnailHashesIDoNotHave( *args, **kwargs )
-        elif action == 'num_deferred_file_deletes': result = self.modules_files_storage.GetDeferredPhysicalDeleteCounts()
-        elif action == 'nums_pending': result = self._GetNumsPending( *args, **kwargs )
-        elif action == 'options': result = self._GetOptions( *args, **kwargs )
-        elif action == 'pending': result = self._GetPending( *args, **kwargs )
-        elif action == 'random_potential_duplicate_hashes': result = self._DuplicatesGetRandomPotentialDuplicateHashes( *args, **kwargs )
-        elif action == 'recent_tags': result = self.modules_recent_tags.GetRecentTags( *args, **kwargs )
-        elif action == 'repository_progress': result = self.modules_repositories.GetRepositoryProgress( *args, **kwargs )
-        elif action == 'repository_update_hashes_to_process': result = self.modules_repositories.GetRepositoryUpdateHashesICanProcess( *args, **kwargs )
-        elif action == 'serialisable': result = self.modules_serialisable.GetJSONDump( *args, **kwargs )
-        elif action == 'serialisable_simple': result = self.modules_serialisable.GetJSONSimple( *args, **kwargs )
-        elif action == 'serialisable_named': result = self.modules_serialisable.GetJSONDumpNamed( *args, **kwargs )
-        elif action == 'serialisable_names': result = self.modules_serialisable.GetJSONDumpNames( *args, **kwargs )
-        elif action == 'serialisable_names_to_backup_timestamps_ms': result = self.modules_serialisable.GetJSONDumpNamesToBackupTimestampsMS( *args, **kwargs )
-        elif action == 'service_directory': result = self.modules_service_paths.GetServiceDirectoryHashes( *args, **kwargs )
-        elif action == 'service_directories': result = self.modules_service_paths.GetServiceDirectoriesInfo( *args, **kwargs )
-        elif action == 'service_info': result = self._GetServiceInfo( *args, **kwargs )
-        elif action == 'service_id': result = self.modules_services.GetServiceId( *args, **kwargs )
-        elif action == 'services': result = self.modules_services.GetServices( *args, **kwargs )
-        elif action == 'similar_files_maintenance_status': result = self.modules_similar_files.GetMaintenanceStatus( *args, **kwargs )
-        elif action == 'related_tags': result = self._GetRelatedTags( *args, **kwargs )
-        elif action == 'tables_and_columns_using_definitions': result = self._GetTablesAndColumnsUsingDefinitions( *args, **kwargs )
-        elif action == 'tag_descendants_lookup': result = self.modules_tag_display.GetDescendantsForTags( *args, **kwargs )
-        elif action == 'tag_display_application': result = self.modules_tag_display.GetApplication( *args, **kwargs )
-        elif action == 'tag_display_maintenance_status': result = self._CacheTagDisplayGetApplicationStatusNumbers( *args, **kwargs )
-        elif action == 'tag_parents': result = self.modules_tag_parents.GetTagParents( *args, **kwargs )
-        elif action == 'tag_predicates': result = self.modules_tag_search.GetTagPredicates( *args, **kwargs )
-        elif action == 'tag_siblings': result = self.modules_tag_siblings.GetTagSiblings( *args, **kwargs )
-        elif action == 'tag_siblings_all_ideals': result = self.modules_tag_siblings.GetTagSiblingsIdeals( *args, **kwargs )
-        elif action == 'tag_display_decorators': result = self.modules_tag_display.GetUIDecorators( *args, **kwargs )
-        elif action == 'tag_siblings_and_parents_lookup': result = self.modules_tag_display.GetSiblingsAndParentsForTags( *args, **kwargs )
-        elif action == 'tag_siblings_lookup': result = self.modules_tag_siblings.GetTagSiblingsForTags( *args, **kwargs )
-        elif action == 'trash_hashes': result = self._GetTrashHashes( *args, **kwargs )
-        elif action == 'potential_duplicates_count': result = self._DuplicatesGetPotentialDuplicatesCount( *args, **kwargs )
-        elif action == 'url_statuses': result = self.modules_files_metadata_rich.GetURLStatuses( *args, **kwargs )
-        elif action == 'vacuum_data': result = self.modules_db_maintenance.GetVacuumData( *args, **kwargs )
-        else: raise Exception( 'db received an unknown read command: ' + action )
-        
-        return result
         
     
     def _RecoverFromMissingDefinitions( self, content_type ):
@@ -11772,95 +11870,6 @@ class DB( HydrusDB.HydrusDB ):
             
             job_status.FinishAndDismiss( 10 )
             
-        
-    
-    def _Write( self, action, *args, **kwargs ):
-        
-        result = None
-        
-        if action == 'analyze': self.modules_db_maintenance.AnalyzeDueTables( *args, **kwargs )
-        elif action == 'associate_repository_update_hashes': self.modules_repositories.AssociateRepositoryUpdateHashes( *args, **kwargs )
-        elif action == 'backup': self._Backup( *args, **kwargs )
-        elif action == 'clear_deferred_physical_delete': self.modules_files_storage.ClearDeferredPhysicalDelete( *args, **kwargs )
-        elif action == 'clear_false_positive_relations': self.modules_files_duplicates.ClearAllFalsePositiveRelationsFromHashes( *args, **kwargs )
-        elif action == 'clear_false_positive_relations_between_groups': self.modules_files_duplicates.ClearFalsePositiveRelationsBetweenGroupsFromHashes( *args, **kwargs )
-        elif action == 'clear_orphan_file_records': self._ClearOrphanFileRecords( *args, **kwargs )
-        elif action == 'clear_orphan_tables': self.modules_db_maintenance.ClearOrphanTables( *args, **kwargs )
-        elif action == 'content_updates': self._ProcessContentUpdatePackage( *args, **kwargs )
-        elif action == 'cull_file_viewing_statistics': self.modules_files_viewing_stats.CullFileViewingStatistics( *args, **kwargs )
-        elif action == 'db_integrity': self.modules_db_maintenance.CheckDBIntegrity( *args, **kwargs )
-        elif action == 'delete_pending': self._DeletePending( *args, **kwargs )
-        elif action == 'delete_serialisable_named': self.modules_serialisable.DeleteJSONDumpNamed( *args, **kwargs )
-        elif action == 'delete_service_info': self._DeleteServiceInfo( *args, **kwargs )
-        elif action == 'delete_potential_duplicate_pairs': self.modules_files_duplicates.DeleteAllPotentialDuplicatePairs( *args, **kwargs )
-        elif action == 'dirty_services': self._SaveDirtyServices( *args, **kwargs )
-        elif action == 'dissolve_alternates_group': self.modules_files_duplicates.DissolveAlternatesGroupIdFromHashes( *args, **kwargs )
-        elif action == 'dissolve_duplicates_group': self.modules_files_duplicates.DissolveMediaIdFromHashes( *args, **kwargs )
-        elif action == 'do_deferred_table_delete_work': result = self.modules_db_maintenance.DoDeferredDeleteTablesWork( *args, **kwargs )
-        elif action == 'duplicate_pair_status': self._DuplicatesSetDuplicatePairStatus( *args, **kwargs )
-        elif action == 'duplicate_set_king': self.modules_files_duplicates.SetKingFromHash( *args, **kwargs )
-        elif action == 'file_maintenance_add_jobs': self.modules_files_maintenance_queue.AddJobs( *args, **kwargs )
-        elif action == 'file_maintenance_add_jobs_hashes': self.modules_files_maintenance_queue.AddJobsHashes( *args, **kwargs )
-        elif action == 'file_maintenance_cancel_jobs': self.modules_files_maintenance_queue.CancelJobs( *args, **kwargs )
-        elif action == 'file_maintenance_clear_jobs': self.modules_files_maintenance.ClearJobs( *args, **kwargs )
-        elif action == 'fix_logically_inconsistent_mappings': self._FixLogicallyInconsistentMappings( *args, **kwargs )
-        elif action == 'force_filetype': self._ForceFiletypes( *args, **kwargs )
-        elif action == 'ideal_client_files_locations': self.modules_files_physical_storage.SetIdealClientFilesLocations( *args, **kwargs )
-        elif action == 'import_file': result = self._ImportFile( *args, **kwargs )
-        elif action == 'import_update': self._ImportUpdate( *args, **kwargs )
-        elif action == 'maintain_hashed_serialisables': result = self.modules_serialisable.MaintainHashedStorage( *args, **kwargs )
-        elif action == 'maintain_similar_files_search_for_potential_duplicates': result = self._PerceptualHashesSearchForPotentialDuplicates( *args, **kwargs )
-        elif action == 'maintain_similar_files_tree': self.modules_similar_files.MaintainTree( *args, **kwargs )
-        elif action == 'migration_clear_job': self._MigrationClearJob( *args, **kwargs )
-        elif action == 'migration_start_mappings_job': self._MigrationStartMappingsJob( *args, **kwargs )
-        elif action == 'migration_start_pairs_job': self._MigrationStartPairsJob( *args, **kwargs )
-        elif action == 'process_repository_content': result = self._ProcessRepositoryContent( *args, **kwargs )
-        elif action == 'process_repository_definitions': result = self.modules_repositories.ProcessRepositoryDefinitions( *args, **kwargs )
-        elif action == 'push_recent_tags': self.modules_recent_tags.PushRecentTags( *args, **kwargs )
-        elif action == 'regenerate_local_hash_cache': self._RegenerateLocalHashCache( *args, **kwargs )
-        elif action == 'regenerate_local_tag_cache': self._RegenerateLocalTagCache( *args, **kwargs )
-        elif action == 'regenerate_similar_files': self.modules_similar_files.RegenerateTree( *args, **kwargs )
-        elif action == 'regenerate_searchable_subtag_maps': self._RegenerateTagCacheSearchableSubtagMaps( *args, **kwargs )
-        elif action == 'regenerate_tag_cache': self._RegenerateTagCache( *args, **kwargs )
-        elif action == 'regenerate_tag_display_mappings_cache': self._RegenerateTagDisplayMappingsCache( *args, **kwargs )
-        elif action == 'regenerate_tag_display_pending_mappings_cache': self._RegenerateTagDisplayPendingMappingsCache( *args, **kwargs )
-        elif action == 'regenerate_tag_mappings_cache': self._RegenerateTagMappingsCache( *args, **kwargs )
-        elif action == 'regenerate_tag_mappings_tags': self._RegenerateTagMappingsTags( *args, **kwargs )
-        elif action == 'regenerate_tag_parents_cache': self._RegenerateTagParentsCache( *args, **kwargs )
-        elif action == 'regenerate_tag_pending_mappings_cache': self._RegenerateTagPendingMappingsCache( *args, **kwargs )
-        elif action == 'regenerate_tag_siblings_and_parents_cache': self.modules_tag_display.RegenerateTagSiblingsAndParentsCache( *args, **kwargs )
-        elif action == 'register_shutdown_work': self.modules_db_maintenance.RegisterShutdownWork( *args, **kwargs )
-        elif action == 'repopulate_mappings_from_cache': self._RepopulateMappingsFromCache( *args, **kwargs )
-        elif action == 'repopulate_tag_cache_missing_subtags': self._RepopulateTagCacheMissingSubtags( *args, **kwargs )
-        elif action == 'repopulate_tag_display_mappings_cache': self._RepopulateTagDisplayMappingsCache( *args, **kwargs )
-        elif action == 'relocate_client_files': self.modules_files_physical_storage.RelocateClientFiles( *args, **kwargs )
-        elif action == 'remove_alternates_member': self.modules_files_duplicates.RemoveAlternateMemberFromHashes( *args, **kwargs )
-        elif action == 'remove_duplicates_member': self.modules_files_duplicates.RemoveMediaIdMemberFromHashes( *args, **kwargs )
-        elif action == 'remove_potential_pairs': self.modules_files_duplicates.RemovePotentialPairsFromHashes( *args, **kwargs )
-        elif action == 'repair_client_files': self.modules_files_physical_storage.RepairClientFiles( *args, **kwargs )
-        elif action == 'repair_invalid_tags': self._RepairInvalidTags( *args, **kwargs )
-        elif action == 'reprocess_repository': self.modules_repositories.ReprocessRepository( *args, **kwargs )
-        elif action == 'reset_repository': self._ResetRepository( *args, **kwargs )
-        elif action == 'reset_repository_processing': self._ResetRepositoryProcessing( *args, **kwargs )
-        elif action == 'reset_potential_search_status': self._PerceptualHashesResetSearchFromHashes( *args, **kwargs )
-        elif action == 'resync_combined_deleted_files': self._ResyncCombinedDeletedFiles( *args, **kwargs )
-        elif action == 'resync_tag_mappings_cache_files': self._ResyncTagMappingsCacheFiles( *args, **kwargs )
-        elif action == 'save_options': self._SaveOptions( *args, **kwargs )
-        elif action == 'serialisable': self.modules_serialisable.SetJSONDump( *args, **kwargs )
-        elif action == 'serialisable_atomic': self.modules_serialisable.SetJSONComplex( *args, **kwargs )
-        elif action == 'serialisable_simple': self.modules_serialisable.SetJSONSimple( *args, **kwargs )
-        elif action == 'serialisables_overwrite': self.modules_serialisable.OverwriteJSONDumps( *args, **kwargs )
-        elif action == 'set_password': self._SetPassword( *args, **kwargs )
-        elif action == 'set_repository_update_hashes': self.modules_repositories.SetRepositoryUpdateHashes( *args, **kwargs )
-        elif action == 'schedule_repository_update_file_maintenance': self.modules_repositories.ScheduleRepositoryUpdateFileMaintenance( *args, **kwargs )
-        elif action == 'sync_tag_display_maintenance': result = self._CacheTagDisplaySync( *args, **kwargs )
-        elif action == 'tag_display_application': self.modules_tag_display.SetApplication( *args, **kwargs )
-        elif action == 'update_server_services': self._UpdateServerServices( *args, **kwargs )
-        elif action == 'update_services': self._UpdateServices( *args, **kwargs )
-        elif action == 'vacuum': self._Vacuum( *args, **kwargs )
-        else: raise Exception( 'db received an unknown write command: ' + action )
-        
-        return result
         
     
     def pub_content_update_package_after_commit( self, content_update_package ):

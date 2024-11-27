@@ -218,7 +218,7 @@ class Controller( HydrusController.HydrusController ):
     
     def _InitDB( self ):
         
-        return ClientDB.DB( self, self.db_dir, 'client' )
+        self.db = ClientDB.DB( self, self.db_dir, 'client' )
         
     
     def _DestroySplash( self ):

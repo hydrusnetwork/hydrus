@@ -1,9 +1,12 @@
+import typing
+
 from qtpy import QtWidgets as QW
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusNumbers
+from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusText
 from hydrus.core import HydrusTime
 
@@ -71,6 +74,16 @@ def GetSourcesFromSourcesString( sources_string ):
     
     return sources
     
+
+def ExportFileSeedsToClipboard( file_seeds: typing.Collection[ ClientImportFileSeeds.FileSeed ] ):
+    
+    file_seeds = HydrusSerialisable.SerialisableList( file_seeds )
+    
+    payload = file_seeds.DumpToString()
+    
+    CG.client_controller.pub( 'clipboard', 'text', payload )
+    
+
 def ExportToClipboard( file_seed_cache: ClientImportFileSeeds.FileSeedCache ):
     
     payload = GetExportableSourcesString( file_seed_cache )
@@ -232,7 +245,7 @@ def ShowFilesInNewPage( file_seed_cache: ClientImportFileSeeds.FileSeedCache, sh
         
     
 
-def PopulateFileSeedCacheMenu( win: QW.QWidget, menu: QW.QMenu, file_seed_cache: ClientImportFileSeeds.FileSeedCache ):
+def PopulateFileSeedCacheMenu( win: QW.QWidget, menu: QW.QMenu, file_seed_cache: ClientImportFileSeeds.FileSeedCache, selected_file_seeds: typing.List[ ClientImportFileSeeds.FileSeed ] ):
     
     num_already_in = file_seed_cache.GetFileSeedCount( CC.STATUS_SUCCESSFUL_BUT_REDUNDANT )
     num_successful = file_seed_cache.GetFileSeedCount( CC.STATUS_SUCCESSFUL_AND_NEW ) + num_already_in
@@ -334,11 +347,19 @@ def PopulateFileSeedCacheMenu( win: QW.QWidget, menu: QW.QMenu, file_seed_cache:
     
     ClientGUIMenus.AppendMenu( menu, submenu, 'import new sources' )
     
-    if len( file_seed_cache ) > 0 and file_seed_cache.IsURLFileSeeds():
+    if len( selected_file_seeds ) > 0 or file_seed_cache.IsURLFileSeeds():
         
         submenu = ClientGUIMenus.GenerateMenu( menu )
         
-        ClientGUIMenus.AppendMenuItem( submenu, 're-normalise all URLs', 'Normalise all the import objects\' URLs and discard duplicates.', RenormaliseFileSeedCache, win, file_seed_cache )
+        if len( selected_file_seeds ) > 0:
+            
+            ClientGUIMenus.AppendMenuItem( submenu, 'export selected import objects to clipboard', 'Advanced JSON inspection.', ExportFileSeedsToClipboard, selected_file_seeds )
+            
+        
+        if file_seed_cache.IsURLFileSeeds():
+            
+            ClientGUIMenus.AppendMenuItem( submenu, 're-normalise all URLs', 'Normalise all the import objects\' URLs and discard duplicates.', RenormaliseFileSeedCache, win, file_seed_cache )
+            
         
         ClientGUIMenus.AppendMenu( menu, submenu, 'advanced' )
         
@@ -529,7 +550,7 @@ class EditFileSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
         
         if len( selected_file_seeds ) == 0:
             
-            PopulateFileSeedCacheMenu( self, menu, self._file_seed_cache )
+            PopulateFileSeedCacheMenu( self, menu, self._file_seed_cache, selected_file_seeds )
             
             return menu
             
@@ -728,7 +749,7 @@ class EditFileSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
         
         submenu = ClientGUIMenus.GenerateMenu( menu )
         
-        PopulateFileSeedCacheMenu( self, submenu, self._file_seed_cache )
+        PopulateFileSeedCacheMenu( self, submenu, self._file_seed_cache, selected_file_seeds )
         
         ClientGUIMenus.AppendMenu( menu, submenu, 'whole log' )
         
@@ -923,7 +944,7 @@ class FileSeedCacheButton( ClientGUICommon.ButtonWithMenuArrow ):
         
         file_seed_cache = self._file_seed_cache_get_callable()
         
-        PopulateFileSeedCacheMenu( self, menu, file_seed_cache )
+        PopulateFileSeedCacheMenu( self, menu, file_seed_cache, [] )
         
     
     def _ShowFileSeedCacheFrame( self ):

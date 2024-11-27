@@ -3743,13 +3743,30 @@ Response:
 
 ## Managing the Database
 
+### **POST `/manage_database/force_commit`** { id="manage_database_force_commit" }
+
+_Force the database to write all pending changes to disk immediately._
+
+Restricted access: 
+:   YES. Manage Database permission needed.
+
+Arguments: None
+
+!!! info
+    Hydrus holds a constant `BEGIN IMMEDIATE` transaction on its database. Separate jobs are 'transactionalised' using `SAVEPOINT`, and the real transactions are only `COMMIT`-ed to disk every 30 seconds or so. Thus, if the client crashes, a user can lose up to 30 seconds of changes (or more, if they use the launch path to extend the inter-transaction duration).
+
+This command lets you force a `COMMIT` as soon as possible. The request will only return when the commit is done and finished, so you can trust when this returns 200 OK that you are in the clear and everything is saved. If the database is currently disconnected (e.g. there is a vacuum going on), then it returns very fast, but you can typically expect it to take a handful of milliseconds. If there is a normal database job already happening when you call, it will `COMMIT` when that is complete, and if things are really busy (e.g. amidst idle-time repository processing) then there could be hundreds of megabytes to write. This job may, when the database is under strain, take ten or more seconds to complete.
+
+Response:
+:   200 with no content.
+
 ### **POST `/manage_database/lock_on`** { id="manage_database_lock_on" }
 
 _Pause the client's database activity and disconnect the current connection._
 
 Restricted access: 
 :   YES. Manage Database permission needed.
-    
+
 Arguments: None
 
 This is a hacky prototype. It commands the client database to pause its job queue and release its connection (and related file locks and journal files). This puts the client in a similar position as a long VACUUM command--it'll hang in there, but not much will work, and since the UI async code isn't great yet, the UI may lock up after a minute or two. If you would like to automate database backup without shutting the client down, this is the thing to play with.
@@ -3758,16 +3775,22 @@ This should return pretty quick, but it will wait up to five seconds for the dat
 
 As long as this lock is on, all Client API calls except the unlock command will return 503. (This is a decent way to test the current lock status, too)
 
+Response:
+:   200 with no content.
+
 ### **POST `/manage_database/lock_off`** { id="manage_database_lock_off" }
 
 _Reconnect the client's database and resume activity._
 
 Restricted access: 
 :   YES. Manage Database permission needed.
-    
+
 Arguments: None
 
 This is the obvious complement to the lock. The client will resume processing its job queue and will catch up. If the UI was frozen, it should free up in a few seconds, just like after a big VACUUM.
+
+Response:
+:   200 with no content.
 
 ### **GET `/manage_database/mr_bones`** { id="manage_database_mr_bones" }
 

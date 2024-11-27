@@ -24,6 +24,19 @@ class HydrusResourceClientAPIRestrictedManageDatabase( ClientLocalServerResource
         request.client_api_permissions.CheckPermission( ClientAPI.CLIENT_API_PERMISSION_MANAGE_DATABASE )
         
     
+
+class HydrusResourceClientAPIRestrictedManageDatabaseForceCommit( HydrusResourceClientAPIRestrictedManageDatabase ):
+    
+    def _threadDoPOSTJob( self, request: HydrusServerRequest.HydrusRequest ):
+        
+        CG.client_controller.db.ForceACommit()
+        
+        response_context = HydrusServerResources.ResponseContext( 200 )
+        
+        return response_context
+        
+    
+
 class HydrusResourceClientAPIRestrictedManageDatabaseLockOff( HydrusResourceClientAPIRestrictedManageDatabase ):
     
     BLOCKED_WHEN_BUSY = False
@@ -46,6 +59,7 @@ class HydrusResourceClientAPIRestrictedManageDatabaseLockOff( HydrusResourceClie
         return response_context
         
     
+
 class HydrusResourceClientAPIRestrictedManageDatabaseLockOn( HydrusResourceClientAPIRestrictedManageDatabase ):
     
     def _threadDoPOSTJob( self, request: HydrusServerRequest.HydrusRequest ):
@@ -76,6 +90,7 @@ class HydrusResourceClientAPIRestrictedManageDatabaseLockOn( HydrusResourceClien
         return response_context
         
     
+
 class HydrusResourceClientAPIRestrictedManageDatabaseMrBones( HydrusResourceClientAPIRestrictedManageDatabase ):
     
     def _threadDoGETJob( self, request: HydrusServerRequest.HydrusRequest ):

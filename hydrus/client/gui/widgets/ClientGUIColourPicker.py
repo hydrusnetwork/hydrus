@@ -233,7 +233,7 @@ class ColourPickerButton( QW.QPushButton ):
     
     def contextMenuEvent( self, event ):
         
-        if event.reason() == QG.QContextMenuEvent.Keyboard:
+        if event.reason() == QG.QContextMenuEvent.Reason.Keyboard:
             
             self.ShowMenu()
             

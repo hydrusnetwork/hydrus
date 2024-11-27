@@ -676,6 +676,8 @@ class DBCursorTransactionWrapper( DBBase ):
         self._in_transaction = False
         self._transaction_contains_writes = False
         
+        self._committing_as_soon_as_possible = False
+        
         self._last_mem_refresh_time = HydrusTime.GetNow()
         self._last_wal_passive_checkpoint_time = HydrusTime.GetNow()
         self._last_wal_truncate_checkpoint_time = HydrusTime.GetNow()
@@ -778,6 +780,8 @@ class DBCursorTransactionWrapper( DBBase ):
             HydrusData.Print( 'Received a call to commit, but was not in a transaction!' )
             
         
+        self._committing_as_soon_as_possible = False
+        
     
     def CommitAndBegin( self ):
         
@@ -789,12 +793,22 @@ class DBCursorTransactionWrapper( DBBase ):
             
         
     
+    def DoACommitAsSoonAsPossible( self ):
+        
+        self._committing_as_soon_as_possible = True
+        
+    
     def DoPubSubs( self ):
         
         for ( topic, args, kwargs ) in self._pubsubs:
             
             HG.controller.pub( topic, *args, **kwargs )
             
+        
+    
+    def IsCommittingAsSoonAsPossible( self ) -> bool:
+        
+        return self._committing_as_soon_as_possible
         
     
     def InTransaction( self ):
@@ -861,6 +875,6 @@ class DBCursorTransactionWrapper( DBBase ):
     
     def TimeToCommit( self ):
         
-        return self._in_transaction and self._transaction_contains_writes and HydrusTime.TimeHasPassed( self._transaction_start_time + self._transaction_commit_period )
+        return self._in_transaction and self._transaction_contains_writes and ( HydrusTime.TimeHasPassed( self._transaction_start_time + self._transaction_commit_period ) or self._committing_as_soon_as_possible )
         
     

@@ -42,9 +42,8 @@ def QDateTimeToPrettyString( dt: typing.Optional[ QC.QDateTime ], include_millis
             phrase = 'yyyy-MM-dd hh:mm:ss'
             
         
-        return dt.toString( phrase )
+        return f'{dt.toString( phrase )} ({HydrusTime.TimestampToPrettyTimeDelta( dt.toSecsSinceEpoch(), force_no_iso = True )})'
         
-    
     
 
 class EditCheckerOptions( ClientGUIScrolledPanels.EditPanel ):
