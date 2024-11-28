@@ -1567,7 +1567,7 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
             
             ClientGUIMenus.AppendSeparator( submenu )
             
-            ClientGUIFileSeedCache.PopulateFileSeedCacheMenu( self, submenu, file_seed_cache )
+            ClientGUIFileSeedCache.PopulateFileSeedCacheMenu( self, submenu, file_seed_cache, [] )
             
             ClientGUIMenus.AppendMenu( menu, submenu, 'file log' )
             
@@ -2690,7 +2690,7 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
             
             ClientGUIMenus.AppendSeparator( submenu )
             
-            ClientGUIFileSeedCache.PopulateFileSeedCacheMenu( self, submenu, file_seed_cache )
+            ClientGUIFileSeedCache.PopulateFileSeedCacheMenu( self, submenu, file_seed_cache, [] )
             
             ClientGUIMenus.AppendMenu( menu, submenu, 'file log' )
             
