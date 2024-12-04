@@ -65,7 +65,7 @@ class CheckerOptionsButton( ClientGUICommon.BetterButton ):
             
             dlg.SetPanel( panel )
             
-            if dlg.exec() == QW.QDialog.Accepted:
+            if dlg.exec() == QW.QDialog.DialogCode.Accepted:
                 
                 checker_options = panel.GetValue()
                 
@@ -366,7 +366,7 @@ class FilenameTaggingOptionsPanel( QW.QWidget ):
             
             with ClientGUIDialogs.DialogInputNamespaceRegex( self ) as dlg:
                 
-                if dlg.exec() == QW.QDialog.Accepted:
+                if dlg.exec() == QW.QDialog.DialogCode.Accepted:
                     
                     ( namespace, regex ) = dlg.GetInfo()
                     
@@ -389,7 +389,7 @@ class FilenameTaggingOptionsPanel( QW.QWidget ):
                 
                 with ClientGUIDialogs.DialogInputNamespaceRegex( self, namespace = namespace, regex = regex ) as dlg:
                     
-                    if dlg.exec() == QW.QDialog.Accepted:
+                    if dlg.exec() == QW.QDialog.DialogCode.Accepted:
                         
                         ( new_namespace, new_regex ) = dlg.GetInfo()
                         
@@ -1126,7 +1126,7 @@ class EditLocalImportFilenameTaggingPanel( ClientGUIScrolledPanels.EditPanel ):
             
             ( index, path ) = data
             
-            strings = self._GetStrings( path )
+            strings = self._GetPrettyStrings( path )
             
             pretty_index = HydrusNumbers.ToHumanInt( index + 1 )
             
@@ -1143,7 +1143,7 @@ class EditLocalImportFilenameTaggingPanel( ClientGUIScrolledPanels.EditPanel ):
             return ( index, path, index )
             
         
-        def _GetStrings( self, path ):
+        def _GetPrettyStrings( self, path ):
             
             strings = []
             
@@ -1177,6 +1177,10 @@ class EditLocalImportFilenameTaggingPanel( ClientGUIScrolledPanels.EditPanel ):
                 if isinstance( exporter, ClientMetadataMigrationExporters.SingleFileMetadataExporterMediaTags ):
                     
                     processed_strings = HydrusTags.CleanTags( processed_strings )
+                    
+                elif isinstance( exporter, ClientMetadataMigrationExporters.SingleFileMetadataExporterMediaNotes ):
+                    
+                    processed_strings = [ f'note: {HydrusText.GetFirstLineSummary( s )}' for s in processed_strings ]
                     
                 
                 strings.extend( sorted( processed_strings ) )

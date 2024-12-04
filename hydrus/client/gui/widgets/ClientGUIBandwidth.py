@@ -95,7 +95,7 @@ class BandwidthRulesCtrl( ClientGUICommon.StaticBox ):
             
             dlg.SetPanel( panel )
             
-            if dlg.exec() == QW.QDialog.Accepted:
+            if dlg.exec() == QW.QDialog.DialogCode.Accepted:
                 
                 new_rule = panel.GetValue()
                 
@@ -143,7 +143,7 @@ class BandwidthRulesCtrl( ClientGUICommon.StaticBox ):
                 
                 dlg.SetPanel( panel )
                 
-                if dlg.exec() == QW.QDialog.Accepted:
+                if dlg.exec() == QW.QDialog.DialogCode.Accepted:
                     
                     edited_rule = panel.GetValue()
                     

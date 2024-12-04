@@ -71,7 +71,7 @@ def ShowMenuDialog( window: QW.QWidget, menu: QW.QMenu ):
         
         dlg.SetPanel( panel )
         
-        if dlg.exec() == QW.QDialog.Accepted:
+        if dlg.exec() == QW.QDialog.DialogCode.Accepted:
             
             selected_items = control.selectedItems()
             

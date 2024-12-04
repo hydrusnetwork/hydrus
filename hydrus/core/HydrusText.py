@@ -240,6 +240,32 @@ def GetFirstLine( text: typing.Optional[ str ] ) -> str:
         
     
 
+def GetFirstLineSummary( text: typing.Optional[ str ] ) -> str:
+    
+    if text is None:
+        
+        return 'unknown'
+        
+    
+    if len( text ) > 0:
+        
+        lines = text.splitlines()
+        
+        if len( lines ) > 1:
+            
+            return lines[0] + HC.UNICODE_ELLIPSIS + f' (+{HydrusNumbers.ToHumanInt(len( lines) - 1)} lines)'
+            
+        else:
+            
+            return text
+            
+        
+    else:
+        
+        return ''
+        
+    
+
 def LooksLikeHTML( file_data: typing.Union[ str, bytes ] ):
     # this will false-positive if it is json that contains html, ha ha
     

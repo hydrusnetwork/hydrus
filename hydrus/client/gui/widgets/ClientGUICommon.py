@@ -113,15 +113,15 @@ def WrapInGrid( parent, rows, expand_text = False, add_stretch_at_end = True, ex
             gridbox.next_row += 1
             gridbox.next_col = 0
             
-            h_policy = QW.QSizePolicy.Expanding
+            h_policy = QW.QSizePolicy.Policy.Expanding
             
             if expand_single_widgets:
                 
-                v_policy = QW.QSizePolicy.Expanding
+                v_policy = QW.QSizePolicy.Policy.Expanding
                 
             else:
                 
-                v_policy = QW.QSizePolicy.Fixed
+                v_policy = QW.QSizePolicy.Policy.Fixed
                 
             
             control.setSizePolicy( h_policy, v_policy )
@@ -259,7 +259,7 @@ class BetterBitmapButton( ShortcutAwareToolTipMixin, QW.QPushButton ):
         
         self.setIcon( QG.QIcon( bitmap ) )
         self.setIconSize( bitmap.size() )
-        self.setSizePolicy( QW.QSizePolicy.Maximum, QW.QSizePolicy.Maximum )
+        self.setSizePolicy( QW.QSizePolicy.Policy.Maximum, QW.QSizePolicy.Policy.Maximum )
         
         self._func = func
         self._args = args
@@ -300,13 +300,20 @@ class BetterButton( ShortcutAwareToolTipMixin, QW.QPushButton ):
             
             result = ClientGUIDialogsQuick.GetYesNo( self, message = self._yes_no_text )
             
-            if result != QW.QDialog.Accepted:
+            if result != QW.QDialog.DialogCode.Accepted:
                 
                 return
                 
             
         
         self._func( *self._args,  **self._kwargs )
+        
+    
+    def SetCall( self, func, *args, **kwargs ):
+        
+        self._func = func
+        self._args = args
+        self._kwargs = kwargs
         
     
     def SetYesNoText( self, text: str ):
@@ -334,7 +341,7 @@ class BetterCheckBoxList( QW.QListWidget ):
         
         self.itemClicked.connect( self._ItemCheckStateChanged )
         
-        self.setSelectionMode( QW.QAbstractItemView.ExtendedSelection )
+        self.setSelectionMode( QW.QAbstractItemView.SelectionMode.ExtendedSelection )
         
     
     def _ItemCheckStateChanged( self, item ):
@@ -585,7 +592,7 @@ class ButtonWithMenuArrow( QW.QToolButton ):
         
         super().__init__( parent )
         
-        self.setPopupMode( QW.QToolButton.MenuButtonPopup )
+        self.setPopupMode( QW.QToolButton.ToolButtonPopupMode.MenuButtonPopup )
         
         self.setToolButtonStyle( QC.Qt.ToolButtonTextOnly )
         
@@ -643,7 +650,7 @@ class BetterRadioBox( QW.QFrame ):
         
         super().__init__( parent )
         
-        self.setFrameStyle( QW.QFrame.Box | QW.QFrame.Raised )
+        self.setFrameStyle( QW.QFrame.Shape.Box | QW.QFrame.Shadow.Raised )
         
         if vertical:
             
@@ -1404,7 +1411,7 @@ class NoneableTextCtrl( QW.QWidget ):
 
     valueChanged = QC.Signal()
     
-    def __init__( self, parent, default_text, message = '', placeholder_text = '', none_phrase = 'none' ):
+    def __init__( self, parent, default_text, message = '', placeholder_text = '', none_phrase = 'none', min_chars_width: typing.Optional[ int ] = None ):
         
         super().__init__( parent )
         
@@ -1422,6 +1429,11 @@ class NoneableTextCtrl( QW.QWidget ):
         if placeholder_text != '':
             
             self._text.setPlaceholderText( placeholder_text )
+            
+        
+        if min_chars_width is not None:
+            
+            self._text.setMinimumWidth( ClientGUIFunctions.ConvertTextToPixelWidth( self._text, min_chars_width ) )
             
         
         hbox = QP.HBoxLayout( margin = 0 )
@@ -1583,8 +1595,8 @@ class StaticBox( QW.QFrame ):
         
         super().__init__( parent )
         
-        self.setFrameStyle( QW.QFrame.Box | QW.QFrame.Raised )
-        self._spacer = QW.QSpacerItem( 0, 0, QW.QSizePolicy.Minimum, QW.QSizePolicy.MinimumExpanding )
+        self.setFrameStyle( QW.QFrame.Shape.Box | QW.QFrame.Shadow.Raised )
+        self._spacer = QW.QSpacerItem( 0, 0, QW.QSizePolicy.Policy.Minimum, QW.QSizePolicy.Policy.MinimumExpanding )
         
         normal_font = self.font()
         

@@ -76,7 +76,7 @@ class RepairFileSystemPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         with QP.DirDialog( self, 'Select the potential correct location.' ) as dlg:
             
-            if dlg.exec() == QW.QDialog.Accepted:
+            if dlg.exec() == QW.QDialog.DialogCode.Accepted:
                 
                 path = dlg.GetPath()
                 
@@ -200,7 +200,7 @@ class RepairFileSystemPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             with QP.DirDialog( self, 'Select correct location.' ) as dlg:
                 
-                if dlg.exec() == QW.QDialog.Accepted:
+                if dlg.exec() == QW.QDialog.DialogCode.Accepted:
                     
                     path = dlg.GetPath()
                     
@@ -248,7 +248,7 @@ class RepairFileSystemPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             result = ClientGUIDialogsQuick.GetYesNo( self, message )
             
-            if result != QW.QDialog.Accepted:
+            if result != QW.QDialog.DialogCode.Accepted:
                 
                 return False
                 

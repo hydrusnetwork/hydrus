@@ -312,7 +312,7 @@ class AddEditDeleteListBox( QW.QWidget ):
         super().__init__( parent )
         
         self._listbox = BetterQListWidget( self )
-        self._listbox.setSelectionMode( QW.QListWidget.ExtendedSelection )
+        self._listbox.setSelectionMode( QW.QAbstractItemView.SelectionMode.ExtendedSelection )
         
         self._add_button = ClientGUICommon.BetterButton( self, 'add', self._Add )
         self._edit_button = ClientGUICommon.BetterButton( self, 'edit', self._Edit )
@@ -442,7 +442,7 @@ class AddEditDeleteListBox( QW.QWidget ):
         
         result = ClientGUIDialogsQuick.GetYesNo( self, 'Remove {} selected?'.format( HydrusNumbers.ToHumanInt( num_selected ) ) )
         
-        if result != QW.QDialog.Accepted:
+        if result != QW.QDialog.DialogCode.Accepted:
             
             return
             
@@ -604,9 +604,9 @@ class AddEditDeleteListBox( QW.QWidget ):
     
     def _ImportFromPNG( self ):
         
-        with QP.FileDialog( self, 'select the png or pngs with the encoded data', acceptMode = QW.QFileDialog.AcceptOpen, fileMode = QW.QFileDialog.ExistingFiles, wildcard = 'PNG (*.png)|*.png' ) as dlg:
+        with QP.FileDialog( self, 'select the png or pngs with the encoded data', acceptMode = QW.QFileDialog.AcceptMode.AcceptOpen, fileMode = QW.QFileDialog.FileMode.ExistingFiles, wildcard = 'PNG (*.png)|*.png' ) as dlg:
             
-            if dlg.exec() == QW.QDialog.Accepted:
+            if dlg.exec() == QW.QDialog.DialogCode.Accepted:
                 
                 for path in dlg.GetPaths():
                     
@@ -868,7 +868,7 @@ class QueueListBox( QW.QWidget ):
         self._permitted_object_types = tuple()
         
         self._listbox = BetterQListWidget( self )
-        self._listbox.setSelectionMode( QW.QListWidget.ExtendedSelection )
+        self._listbox.setSelectionMode( QW.QAbstractItemView.SelectionMode.ExtendedSelection )
         
         self._up_button = ClientGUICommon.BetterButton( self, '\u2191', self._Up )
         
@@ -980,7 +980,7 @@ class QueueListBox( QW.QWidget ):
         
         result = ClientGUIDialogsQuick.GetYesNo( self, 'Remove {} selected?'.format( HydrusNumbers.ToHumanInt( num_selected ) ) )
         
-        if result == QW.QDialog.Accepted:
+        if result == QW.QDialog.DialogCode.Accepted:
             
             self._listbox.DeleteSelected()
             
@@ -1145,9 +1145,9 @@ class QueueListBox( QW.QWidget ):
     
     def _ImportFromPNG( self ):
         
-        with QP.FileDialog( self, 'select the png or pngs with the encoded data', acceptMode = QW.QFileDialog.AcceptOpen, fileMode = QW.QFileDialog.ExistingFiles, wildcard = 'PNG (*.png)|*.png' ) as dlg:
+        with QP.FileDialog( self, 'select the png or pngs with the encoded data', acceptMode = QW.QFileDialog.AcceptMode.AcceptOpen, fileMode = QW.QFileDialog.FileMode.ExistingFiles, wildcard = 'PNG (*.png)|*.png' ) as dlg:
             
-            if dlg.exec() == QW.QDialog.Accepted:
+            if dlg.exec() == QW.QDialog.DialogCode.Accepted:
                 
                 for path in dlg.GetPaths():
                     
@@ -1371,7 +1371,7 @@ class ListBox( QW.QScrollArea ):
     def __init__( self, parent: QW.QWidget, terms_may_have_sibling_or_parent_info: bool, height_num_chars = 10, has_async_text_info = False ):
         
         super().__init__( parent )
-        self.setFrameStyle( QW.QFrame.Panel | QW.QFrame.Sunken )
+        self.setFrameStyle( QW.QFrame.Shape.Panel | QW.QFrame.Shadow.Sunken )
         self.setHorizontalScrollBarPolicy( QC.Qt.ScrollBarAlwaysOff )
         self.setVerticalScrollBarPolicy( QC.Qt.ScrollBarAsNeeded )
         self.setWidget( ListBox._InnerWidget( self ) )
@@ -3048,7 +3048,7 @@ class ListBoxTags( ListBox ):
                 
                 result = ClientGUIDialogsQuick.GetYesNo( self, message )
                 
-                if result != QW.QDialog.Accepted:
+                if result != QW.QDialog.DialogCode.Accepted:
                     
                     return
                     
@@ -3066,7 +3066,7 @@ class ListBoxTags( ListBox ):
                 
                 result = ClientGUIDialogsQuick.GetYesNo( self, message )
                 
-                if result != QW.QDialog.Accepted:
+                if result != QW.QDialog.DialogCode.Accepted:
                     
                     return
                     
@@ -3847,7 +3847,7 @@ class ListBoxTags( ListBox ):
                 
                 result = ClientGUIDialogsQuick.GetYesNo( self, message )
                 
-                if result != QW.QDialog.Accepted:
+                if result != QW.QDialog.DialogCode.Accepted:
                     
                     return
                     
@@ -3870,7 +3870,7 @@ class ListBoxTags( ListBox ):
             
             result = ClientGUIDialogsQuick.GetYesNo( self, message )
             
-            if result != QW.QDialog.Accepted:
+            if result != QW.QDialog.DialogCode.Accepted:
                 
                 return
                 
@@ -3948,7 +3948,7 @@ class ListBoxTags( ListBox ):
                 
                 result = ClientGUIDialogsQuick.GetYesNo( self, message, title = 'Regen tags?', yes_label = 'let\'s go', no_label = 'forget it' )
                 
-                if result == QW.QDialog.Accepted:
+                if result == QW.QDialog.DialogCode.Accepted:
                     
                     CG.client_controller.Write( 'regenerate_tag_mappings_tags', selected_actual_tags )
                     
@@ -4135,7 +4135,7 @@ class ListBoxTagsColourOptions( ListBoxTags ):
             
             result = ClientGUIDialogsQuick.GetYesNo( self, 'Delete all selected colours?' )
             
-            if result == QW.QDialog.Accepted:
+            if result == QW.QDialog.DialogCode.Accepted:
                 
                 self._RemoveTerms( deletable_terms )
                 

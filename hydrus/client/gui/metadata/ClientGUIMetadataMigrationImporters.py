@@ -243,7 +243,7 @@ class EditSingleFileMetadataImporterPanel( ClientGUIScrolledPanels.EditPanel ):
             
             dlg.SetPanel( panel )
             
-            if dlg.exec() == QW.QDialog.Accepted:
+            if dlg.exec() == QW.QDialog.DialogCode.Accepted:
                 
                 self._json_parsing_formula = panel.GetValue()
                 
@@ -458,7 +458,7 @@ class SingleFileMetadataImportersControl( ClientGUIListBoxes.AddEditDeleteListBo
             
             dlg.SetPanel( panel )
             
-            if dlg.exec() == QW.QDialog.Accepted:
+            if dlg.exec() == QW.QDialog.DialogCode.Accepted:
                 
                 importer = panel.GetValue()
                 
@@ -477,7 +477,7 @@ class SingleFileMetadataImportersControl( ClientGUIListBoxes.AddEditDeleteListBo
             
             dlg.SetPanel( panel )
             
-            if dlg.exec() == QW.QDialog.Accepted:
+            if dlg.exec() == QW.QDialog.DialogCode.Accepted:
                 
                 edited_importer = panel.GetValue()
                 

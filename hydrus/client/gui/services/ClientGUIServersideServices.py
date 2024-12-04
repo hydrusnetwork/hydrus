@@ -328,7 +328,7 @@ class ManageServerServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             dlg_edit.SetPanel( panel )
             
-            if dlg_edit.exec() == QW.QDialog.Accepted:
+            if dlg_edit.exec() == QW.QDialog.DialogCode.Accepted:
                 
                 new_service = panel.GetValue()
                 
@@ -355,7 +355,7 @@ class ManageServerServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         result = ClientGUIDialogsQuick.GetYesNo( self, 'Remove all selected?' )
         
-        if result == QW.QDialog.Accepted:
+        if result == QW.QDialog.DialogCode.Accepted:
             
             for service in self._services_listctrl.GetData( only_selected = True ):
                 
@@ -387,7 +387,7 @@ class ManageServerServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             result = dlg_edit.exec()
             
-            if result == QW.QDialog.Accepted:
+            if result == QW.QDialog.DialogCode.Accepted:
                 
                 edited_service = panel.GetValue()
                 

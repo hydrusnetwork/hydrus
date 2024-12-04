@@ -14,12 +14,12 @@ class QuestionYesNoPanel( ClientGUIScrolledPanels.ResizingScrolledPanel ):
         
         # TODO: Replace this with signals bro
         # noinspection PyUnresolvedReferences
-        self._yes = ClientGUICommon.BetterButton( self, yes_label, self.parentWidget().done, QW.QDialog.Accepted )
+        self._yes = ClientGUICommon.BetterButton( self, yes_label, self.parentWidget().done, QW.QDialog.DialogCode.Accepted )
         self._yes.setObjectName( 'HydrusAccept' )
         
         # TODO: Replace this with signals bro
         # noinspection PyUnresolvedReferences
-        self._no = ClientGUICommon.BetterButton( self, no_label, self.parentWidget().done, QW.QDialog.Rejected )
+        self._no = ClientGUICommon.BetterButton( self, no_label, self.parentWidget().done, QW.QDialog.DialogCode.Rejected )
         self._no.setObjectName( 'HydrusCancel' )
         
         #
@@ -40,6 +40,73 @@ class QuestionYesNoPanel( ClientGUIScrolledPanels.ResizingScrolledPanel ):
         self.widget().setLayout( vbox )
         
         ClientGUIFunctions.SetFocusLater( self._yes )
+        
+    
+
+class QuestionYesNoNoPanel( ClientGUIScrolledPanels.ResizingScrolledPanel ):
+    
+    def __init__( self, parent, message, yes_label = 'yes', no_tuples = None ):
+        
+        super().__init__( parent )
+        
+        if no_tuples is None:
+            
+            no_tuples = [ ( 'no', 'no' ) ]
+            
+        
+        self._value = no_tuples[0][1]
+        
+        # TODO: Replace this with signals bro
+        # noinspection PyUnresolvedReferences
+        self._yes = ClientGUICommon.BetterButton( self, yes_label, self.parentWidget().done, QW.QDialog.DialogCode.Accepted )
+        self._yes.setObjectName( 'HydrusAccept' )
+        
+        no_buttons = []
+        
+        for ( label, data ) in no_tuples:
+            
+            no_button = ClientGUICommon.BetterButton( self, label, self._DoNo, data )
+            no_button.setObjectName( 'HydrusCancel' )
+            
+            no_buttons.append( no_button )
+            
+        
+        #
+        
+        text = ClientGUICommon.BetterStaticText( self, message )
+        text.setWordWrap( True )
+        
+        hbox = QP.HBoxLayout()
+        
+        QP.AddToLayout( hbox, self._yes, CC.FLAGS_CENTER_PERPENDICULAR )
+        
+        for no_button in no_buttons:
+            
+            QP.AddToLayout( hbox, no_button, CC.FLAGS_CENTER_PERPENDICULAR )
+            
+        
+        vbox = QP.VBoxLayout()
+        
+        QP.AddToLayout( vbox, text, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( vbox, hbox, CC.FLAGS_ON_RIGHT )
+        
+        self.widget().setLayout( vbox )
+        
+        ClientGUIFunctions.SetFocusLater( self._yes )
+        
+    
+    def _DoNo( self, value ):
+        
+        self._value = value
+        
+        # TODO: Replace this with signals bro
+        # noinspection PyUnresolvedReferences
+        self.parentWidget().done( QW.QDialog.DialogCode.Rejected )
+        
+    
+    def GetValue( self ):
+        
+        return self._value
         
     
 
@@ -68,7 +135,7 @@ class QuestionYesYesNoPanel( ClientGUIScrolledPanels.ResizingScrolledPanel ):
         
         # TODO: Replace this with signals bro
         # noinspection PyUnresolvedReferences
-        self._no = ClientGUICommon.BetterButton( self, no_label, self.parentWidget().done, QW.QDialog.Rejected )
+        self._no = ClientGUICommon.BetterButton( self, no_label, self.parentWidget().done, QW.QDialog.DialogCode.Rejected )
         self._no.setObjectName( 'HydrusCancel' )
         
         #
@@ -101,7 +168,7 @@ class QuestionYesYesNoPanel( ClientGUIScrolledPanels.ResizingScrolledPanel ):
         
         # TODO: Replace this with signals bro
         # noinspection PyUnresolvedReferences
-        self.parentWidget().done( QW.QDialog.Accepted )
+        self.parentWidget().done( QW.QDialog.DialogCode.Accepted )
         
     
     def GetValue( self ):

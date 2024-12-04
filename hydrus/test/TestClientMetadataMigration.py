@@ -479,6 +479,24 @@ class TestSingleFileMetadataImporters( unittest.TestCase ):
         
         self.assertEqual( set( result ), set( rows ) )
         
+        # carriage return
+        
+        expected_input_path = actual_file_path + '.txt'
+        
+        # we do a magic encode here, but actually in the read step python collapses the \r\n to a single \n anyway, but this is a good way to ensure all that anyway!
+        with open( expected_input_path, 'wb' ) as f:
+            
+            f.write( '\r\n'.join( rows ).encode( 'utf-8' ) )
+            
+        
+        importer = ClientMetadataMigrationImporters.SingleFileMetadataImporterTXT()
+        
+        result = importer.Import( actual_file_path )
+        
+        os.unlink( expected_input_path )
+        
+        self.assertEqual( set( result ), set( rows ) )
+        
         # diff separator
         
         separator = ', '
@@ -539,6 +557,31 @@ class TestSingleFileMetadataImporters( unittest.TestCase ):
         os.unlink( expected_input_path )
         
         self.assertTrue( len( result ) > 0 )
+        self.assertEqual( set( result ), set( rows ) )
+        
+    
+    def test_media_txt_multiline_note( self ):
+        
+        actual_file_path = os.path.join( TG.test_controller.db_dir, 'file.jpg' )
+        rows = [ 'this is a multiline\n\nnote\nthe newline\ns\nmust stay intact!', 'here is\nanother one' ]
+        
+        # simple
+        
+        separator = '||||'
+        
+        expected_input_path = actual_file_path + '.txt'
+        
+        with open( expected_input_path, 'w', encoding = 'utf-8' ) as f:
+            
+            f.write( separator.join( rows ) )
+            
+        
+        importer = ClientMetadataMigrationImporters.SingleFileMetadataImporterTXT( separator = separator )
+        
+        result = importer.Import( actual_file_path )
+        
+        os.unlink( expected_input_path )
+        
         self.assertEqual( set( result ), set( rows ) )
         
     

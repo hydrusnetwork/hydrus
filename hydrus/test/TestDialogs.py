@@ -76,7 +76,7 @@ class TestDBDialogs( unittest.TestCase ):
                 
                 result = dlg.exec()
                 
-                self.assertEqual( result, QW.QDialog.Rejected )
+                self.assertEqual( result, QW.QDialog.DialogCode.Rejected )
                 
             
         
@@ -95,7 +95,7 @@ class TestNonDBDialogs( unittest.TestCase ):
                 
                 result = dlg.exec()
                 
-                self.assertEqual( result, QW.QDialog.Accepted )
+                self.assertEqual( result, QW.QDialog.DialogCode.Accepted )
                 
                 register = dlg.GetRegister()
                 
@@ -108,7 +108,7 @@ class TestNonDBDialogs( unittest.TestCase ):
                 
                 result = dlg.exec()
                 
-                self.assertEqual( result, QW.QDialog.Accepted )
+                self.assertEqual( result, QW.QDialog.DialogCode.Accepted )
                 
                 register = dlg.GetRegister()
                 
@@ -121,7 +121,7 @@ class TestNonDBDialogs( unittest.TestCase ):
                 
                 result = dlg.exec()
                 
-                self.assertEqual( result, QW.QDialog.Rejected )
+                self.assertEqual( result, QW.QDialog.DialogCode.Rejected )
                 
             
         

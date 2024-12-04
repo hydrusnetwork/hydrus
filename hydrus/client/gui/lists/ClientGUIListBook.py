@@ -17,7 +17,7 @@ class ListBook( QW.QWidget ):
         super().__init__( parent )
         
         self._page_list = ClientGUIListBoxes.BetterQListWidget( self )
-        self._page_list.setSelectionMode( QW.QListWidget.SingleSelection )
+        self._page_list.setSelectionMode( QW.QAbstractItemView.SelectionMode.SingleSelection )
         
         self._page_list.setFixedWidth( ClientGUIFunctions.ConvertTextToPixelWidth( self._page_list, list_chars_width ) )
         

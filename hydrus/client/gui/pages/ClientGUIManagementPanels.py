@@ -271,10 +271,10 @@ class ManagementPanel( QW.QScrollArea ):
         
         super().__init__( parent )
         
-        self.setFrameShape( QW.QFrame.NoFrame )
+        self.setFrameShape( QW.QFrame.Shape.NoFrame )
         self.setWidget( QW.QWidget( self ) )
         self.setWidgetResizable( True )
-        #self.setFrameStyle( QW.QFrame.Panel | QW.QFrame.Sunken )
+        #self.setFrameStyle( QW.QFrame.Shape.Panel | QW.QFrame.Shadow.Sunken )
         #self.setLineWidth( 2 )
         #self.setHorizontalScrollBarPolicy( QC.Qt.ScrollBarAlwaysOff )
         self.setVerticalScrollBarPolicy( QC.Qt.ScrollBarAsNeeded )
@@ -699,7 +699,7 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
             
             dlg.SetPanel( panel )
             
-            if dlg.exec() == QW.QDialog.Accepted:
+            if dlg.exec() == QW.QDialog.DialogCode.Accepted:
                 
                 duplicate_content_merge_options = panel.GetValue()
                 
@@ -786,7 +786,7 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         
         result = ClientGUIDialogsQuick.GetYesNo( self, text )
         
-        if result == QW.QDialog.Accepted:
+        if result == QW.QDialog.DialogCode.Accepted:
             
             self._controller.Write( 'delete_potential_duplicate_pairs' )
             
@@ -935,9 +935,25 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
                 self._num_searched.SetValue( 'Searched ' + HydrusNumbers.ValueRangeToPrettyString( num_searched, total_num_files ) + ' files at this distance.', num_searched, total_num_files )
                 
             
-            if num_searched / total_num_files < 0.99:
+            show_page_name = True
+            
+            percent_done = num_searched / total_num_files
+            
+            if CG.client_controller.new_options.GetBoolean( 'hide_duplicates_needs_work_message_when_reasonably_caught_up' ) and percent_done > 0.99:
                 
-                page_name = 'preparation (needs work)'
+                show_page_name = False
+                
+            
+            if show_page_name:
+                
+                percent_string = HydrusNumbers.FloatToPercentage(percent_done)
+                
+                if percent_string == '100.0%':
+                    
+                    percent_string = '99.9%'
+                    
+                
+                page_name = f'preparation ({percent_string} done)'
                 
             
         else:
@@ -1798,7 +1814,7 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
         
         result = ClientGUIDialogsQuick.GetYesNo( self, message )
         
-        if result == QW.QDialog.Accepted:
+        if result == QW.QDialog.DialogCode.Accepted:
             
             highlight_was_included = False
             
@@ -1879,7 +1895,7 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
         
         result = ClientGUIDialogsQuick.GetYesNo( self, message )
         
-        if result == QW.QDialog.Accepted:
+        if result == QW.QDialog.DialogCode.Accepted:
             
             file_limit = self._file_limit.GetValue()
             file_import_options = self._import_options_button.GetFileImportOptions()
@@ -2879,7 +2895,7 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
                 
                 result = ClientGUIDialogsQuick.GetYesNo( self, message )
                 
-                if result != QW.QDialog.Accepted:
+                if result != QW.QDialog.DialogCode.Accepted:
                     
                     return
                     
@@ -2967,7 +2983,7 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
         
         result = ClientGUIDialogsQuick.GetYesNo( self, message )
         
-        if result == QW.QDialog.Accepted:
+        if result == QW.QDialog.DialogCode.Accepted:
             
             highlight_was_included = False
             
@@ -3028,7 +3044,7 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
         
         result = ClientGUIDialogsQuick.GetYesNo( self, message )
         
-        if result == QW.QDialog.Accepted:
+        if result == QW.QDialog.DialogCode.Accepted:
             
             checker_options = self._checker_options.GetValue()
             file_import_options = self._import_options_button.GetFileImportOptions()
@@ -3444,7 +3460,7 @@ class ManagementPanelImporterSimpleDownloader( ManagementPanelImporter ):
         
         self._pending_jobs_listbox = ClientGUIListBoxes.BetterQListWidget( self._simple_parsing_jobs_panel )
         
-        self._pending_jobs_listbox.setSelectionMode( QW.QAbstractItemView.ExtendedSelection )
+        self._pending_jobs_listbox.setSelectionMode( QW.QAbstractItemView.SelectionMode.ExtendedSelection )
         
         self._advance_button = QW.QPushButton( '\u2191', self._simple_parsing_jobs_panel )
         self._advance_button.clicked.connect( self.EventAdvance )
@@ -3574,7 +3590,7 @@ class ManagementPanelImporterSimpleDownloader( ManagementPanelImporter ):
             
             with ClientGUIDialogs.DialogTextEntry( dlg, 'edit name', default = name ) as dlg_2:
                 
-                if dlg_2.exec() == QW.QDialog.Accepted:
+                if dlg_2.exec() == QW.QDialog.DialogCode.Accepted:
                     
                     name = dlg_2.GetValue()
                     
@@ -3596,7 +3612,7 @@ class ManagementPanelImporterSimpleDownloader( ManagementPanelImporter ):
                 
                 dlg_3.SetPanel( panel )
                 
-                if dlg_3.exec() == QW.QDialog.Accepted:
+                if dlg_3.exec() == QW.QDialog.DialogCode.Accepted:
                     
                     formula = control.GetValue()
                     
@@ -3641,7 +3657,7 @@ class ManagementPanelImporterSimpleDownloader( ManagementPanelImporter ):
             
             dlg.SetPanel( panel )
             
-            if dlg.exec() == QW.QDialog.Accepted:
+            if dlg.exec() == QW.QDialog.DialogCode.Accepted:
                 
                 formulae = control.GetData()
                 
@@ -3817,7 +3833,7 @@ class ManagementPanelImporterSimpleDownloader( ManagementPanelImporter ):
         
         result = ClientGUIDialogsQuick.GetYesNo( self, message )
         
-        if result != QW.QDialog.Accepted:
+        if result != QW.QDialog.DialogCode.Accepted:
             
             return
             
@@ -4357,7 +4373,7 @@ class ManagementPanelPetitions( ManagementPanel ):
             
             result = ClientGUIDialogsQuick.GetYesNo( self, text )
             
-            if result == QW.QDialog.Accepted:
+            if result == QW.QDialog.DialogCode.Accepted:
                 
                 for petition in viable_petitions:
                     
@@ -4529,7 +4545,7 @@ class ManagementPanelPetitions( ManagementPanel ):
             
             result = ClientGUIDialogsQuick.GetYesNo( self, text )
             
-            if result == QW.QDialog.Accepted:
+            if result == QW.QDialog.DialogCode.Accepted:
                 
                 for petition in viable_petitions:
                     

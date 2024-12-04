@@ -182,7 +182,7 @@ class EditNodes( QW.QWidget ):
             
             dlg_edit.SetPanel( panel )
             
-            if dlg_edit.exec() == QW.QDialog.Accepted:
+            if dlg_edit.exec() == QW.QDialog.DialogCode.Accepted:
                 
                 new_node = panel.GetValue()
                 
@@ -209,7 +209,7 @@ class EditNodes( QW.QWidget ):
         
         result = ClientGUIDialogsQuick.GetYesNo( self, text )
         
-        if result == QW.QDialog.Accepted:
+        if result == QW.QDialog.DialogCode.Accepted:
             
             self._nodes.DeleteSelected()
             
@@ -253,7 +253,7 @@ class EditNodes( QW.QWidget ):
             
             dlg.SetPanel( panel )
             
-            if dlg.exec() == QW.QDialog.Accepted:
+            if dlg.exec() == QW.QDialog.DialogCode.Accepted:
                 
                 edited_node = panel.GetValue()
                 
@@ -440,20 +440,20 @@ The formula should attempt to parse full or relative urls. If the url is relativ
             
         except HydrusExceptions.CancelledException:
             
-            self._my_example_data.SetValue( 'fetch cancelled' )
+            self._my_example_data.setPlainText( 'fetch cancelled' )
             
             return
             
         except HydrusExceptions.NetworkException as e:
             
-            self._my_example_data.SetValue( 'fetch failed' )
+            self._my_example_data.setPlainText( 'fetch failed' )
             
             raise
             
         
         example_text = network_job.GetContentText()
         
-        self._example_data.SetValue( example_text )
+        self._example_data.setPlainText( example_text )
         
     
     def EventTestParse( self ):
@@ -1019,7 +1019,7 @@ class ManageParsingScriptsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             dlg_edit.SetPanel( panel )
             
-            if dlg_edit.exec() == QW.QDialog.Accepted:
+            if dlg_edit.exec() == QW.QDialog.DialogCode.Accepted:
                 
                 new_script = panel.GetValue()
                 
@@ -1043,7 +1043,7 @@ class ManageParsingScriptsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         result = ClientGUIDialogsQuick.GetYesNo( self, text )
         
-        if result == QW.QDialog.Accepted:
+        if result == QW.QDialog.DialogCode.Accepted:
             
             self._scripts.DeleteSelected()
             
@@ -1089,7 +1089,7 @@ class ManageParsingScriptsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             dlg.SetPanel( panel )
             
-            if dlg.exec() == QW.QDialog.Accepted:
+            if dlg.exec() == QW.QDialog.DialogCode.Accepted:
                 
                 edited_script = panel.GetValue()
                 
@@ -1163,7 +1163,7 @@ class ManageParsingScriptsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         with QP.FileDialog( self, 'select the png with the encoded script', wildcard = 'PNG (*.png)' ) as dlg:
             
-            if dlg.exec() == QW.QDialog.Accepted:
+            if dlg.exec() == QW.QDialog.DialogCode.Accepted:
                 
                 path = dlg.GetPath()
                 

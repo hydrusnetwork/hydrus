@@ -65,12 +65,12 @@ class QuestionCommitInterstitialFilteringPanel( ClientGUIScrolledPanels.Resizing
         
         # TODO: Replace this with signals bro
         # noinspection PyUnresolvedReferences
-        self._commit = ClientGUICommon.BetterButton( self, 'commit and continue', self.parentWidget().done, QW.QDialog.Accepted )
+        self._commit = ClientGUICommon.BetterButton( self, 'commit and continue', self.parentWidget().done, QW.QDialog.DialogCode.Accepted )
         self._commit.setObjectName( 'HydrusAccept' )
         
         # TODO: Replace this with signals bro
         # noinspection PyUnresolvedReferences
-        self._back = ClientGUICommon.BetterButton( self, 'go back', self.parentWidget().done, QW.QDialog.Rejected )
+        self._back = ClientGUICommon.BetterButton( self, 'go back', self.parentWidget().done, QW.QDialog.DialogCode.Rejected )
         
         vbox = QP.VBoxLayout()
         
@@ -232,11 +232,11 @@ class QuestionArchiveDeleteFinishFilteringPanel( ClientGUIScrolledPanels.Resizin
         
         result = ClientGUIDialogsQuick.GetYesNo( self, message )
         
-        if result == QW.QDialog.Accepted:
+        if result == QW.QDialog.DialogCode.Accepted:
             
         # TODO: Replace this with signals bro
         # noinspection PyUnresolvedReferences
-            self.parentWidget().done( QW.QDialog.Rejected )
+            self.parentWidget().done( QW.QDialog.DialogCode.Rejected )
             
         
     
@@ -247,7 +247,7 @@ class QuestionArchiveDeleteFinishFilteringPanel( ClientGUIScrolledPanels.Resizin
         self.parentWidget().SetCancelled( True )
         # TODO: Replace this with signals bro
         # noinspection PyUnresolvedReferences
-        self.parentWidget().done( QW.QDialog.Rejected )
+        self.parentWidget().done( QW.QDialog.DialogCode.Rejected )
         
     
     def DoCommit( self, location_context ):
@@ -255,7 +255,7 @@ class QuestionArchiveDeleteFinishFilteringPanel( ClientGUIScrolledPanels.Resizin
         self._location_context = location_context
         # TODO: Replace this with signals bro
         # noinspection PyUnresolvedReferences
-        self.parentWidget().done( QW.QDialog.Accepted )
+        self.parentWidget().done( QW.QDialog.DialogCode.Accepted )
         
     
     def GetLocationContext( self ) -> ClientLocation.LocationContext:
@@ -272,7 +272,7 @@ class QuestionFinishFilteringPanel( ClientGUIScrolledPanels.ResizingScrolledPane
         
         # TODO: Replace this with signals bro
         # noinspection PyUnresolvedReferences
-        self._commit = ClientGUICommon.BetterButton( self, 'commit', self.parentWidget().done, QW.QDialog.Accepted )
+        self._commit = ClientGUICommon.BetterButton( self, 'commit', self.parentWidget().done, QW.QDialog.DialogCode.Accepted )
         self._commit.setObjectName( 'HydrusAccept' )
         
         self._forget = ClientGUICommon.BetterButton( self, 'forget', self.DoForget )
@@ -281,7 +281,7 @@ class QuestionFinishFilteringPanel( ClientGUIScrolledPanels.ResizingScrolledPane
         def cancel_callback( parent ):
             
             parent.SetCancelled( True )
-            parent.done( QW.QDialog.Rejected )
+            parent.done( QW.QDialog.DialogCode.Rejected )
             
         
         self._back = ClientGUICommon.BetterButton( self, 'back to filtering', cancel_callback, parent )
@@ -318,11 +318,11 @@ class QuestionFinishFilteringPanel( ClientGUIScrolledPanels.ResizingScrolledPane
         
         result = ClientGUIDialogsQuick.GetYesNo( self, message )
         
-        if result == QW.QDialog.Accepted:
+        if result == QW.QDialog.DialogCode.Accepted:
             
             # TODO: Replace this with signals bro
             # noinspection PyUnresolvedReferences
-            self.parentWidget().done( QW.QDialog.Rejected )
+            self.parentWidget().done( QW.QDialog.DialogCode.Rejected )
             
         
     

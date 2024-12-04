@@ -299,7 +299,7 @@ class TagPairActionContext( object ):
                     
                     with ClientGUIDialogs.DialogTextEntry( widget, message, suggestions = suggestions ) as dlg:
                         
-                        if dlg.exec() == QW.QDialog.Accepted:
+                        if dlg.exec() == QW.QDialog.DialogCode.Accepted:
                             
                             reason = dlg.GetValue()
                             
@@ -398,7 +398,7 @@ class TagPairActionContext( object ):
                     
                     with ClientGUIDialogs.DialogTextEntry( widget, message, suggestions = suggestions ) as dlg:
                         
-                        if dlg.exec() == QW.QDialog.Accepted:
+                        if dlg.exec() == QW.QDialog.DialogCode.Accepted:
                             
                             reason = dlg.GetValue()
                             
@@ -476,7 +476,7 @@ class TagPairActionContext( object ):
             
             result = ClientGUIDialogsQuick.GetYesNo( widget, message, title = 'Choose what to do.', yes_label = 'rescind the pend', no_label = 'do nothing' )
             
-            if result == QW.QDialog.Accepted:
+            if result == QW.QDialog.DialogCode.Accepted:
                 
                 with self._lock:
                     
@@ -507,7 +507,7 @@ class TagPairActionContext( object ):
             
             result = ClientGUIDialogsQuick.GetYesNo( widget, message, title = 'Choose what to do.', yes_label = 'rescind the petition', no_label = 'do nothing' )
             
-            if result == QW.QDialog.Accepted:
+            if result == QW.QDialog.DialogCode.Accepted:
                 
                 with self._lock:
                     

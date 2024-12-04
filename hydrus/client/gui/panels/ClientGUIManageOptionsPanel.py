@@ -1,5 +1,6 @@
 import os
 import random
+import typing
 
 from qtpy import QtGui as QG
 from qtpy import QtWidgets as QW
@@ -45,6 +46,13 @@ from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTags
 from hydrus.core.files.images import HydrusImageHandling
 
+class OptionsPagePanel( QW.QWidget ):
+    
+    def UpdateOptions( self ):
+        
+        raise NotImplementedError()
+        
+    
 
 class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
     
@@ -103,7 +111,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         self.widget().setLayout( vbox )
         
     
-    class _AdvancedPanel( QW.QWidget ):
+    class _AdvancedPanel( OptionsPagePanel ):
         
         def __init__( self, parent, new_options ):
             
@@ -137,7 +145,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
         
     
-    class _AudioPanel( QW.QWidget ):
+    class _AudioPanel( OptionsPagePanel ):
         
         def __init__( self, parent, new_options ):
             
@@ -191,7 +199,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
         
     
-    class _ColoursPanel( QW.QWidget ):
+    class _ColoursPanel( OptionsPagePanel ):
         
         def __init__( self, parent ):
             
@@ -347,7 +355,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
         
     
-    class _ConnectionPanel( QW.QWidget ):
+    class _ConnectionPanel( OptionsPagePanel ):
         
         def __init__( self, parent ):
             
@@ -542,7 +550,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
         
     
-    class _DownloadingPanel( QW.QWidget ):
+    class _DownloadingPanel( OptionsPagePanel ):
         
         def __init__( self, parent, new_options ):
             
@@ -752,7 +760,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
         
     
-    class _DuplicatesPanel( QW.QWidget ):
+    class _DuplicatesPanel( OptionsPagePanel ):
         
         def __init__( self, parent, new_options ):
             
@@ -766,6 +774,11 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._open_files_to_duplicate_filter_uses_all_my_files = QW.QCheckBox( open_panel )
             self._open_files_to_duplicate_filter_uses_all_my_files.setToolTip( ClientGUIFunctions.WrapToolTip( 'Normally, when you open a selection of files into a new page, the current file domain is preserved. For duplicates filters, you usually want to search in "all my files", so this sticks that. If you need domain-specific duplicates pages and know what you are doing, you can turn this off.' ) )
+            
+            duplicates_filter_page_panel = ClientGUICommon.StaticBox( self, 'duplicates filter page' )
+            
+            self._hide_duplicates_needs_work_message_when_reasonably_caught_up = QW.QCheckBox( duplicates_filter_page_panel )
+            self._hide_duplicates_needs_work_message_when_reasonably_caught_up.setToolTip( ClientGUIFunctions.WrapToolTip( 'By default, the duplicates filter page will not highlight that there is potential duplicates search work to do if you are 99% done. This saves you being notified by the normal background burble of regular file imports. If you want to know whenever any work is pending, uncheck this.' ) )
             
             weights_panel = ClientGUICommon.StaticBox( self, 'duplicate filter comparison score weights' )
             
@@ -801,6 +814,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._open_files_to_duplicate_filter_uses_all_my_files.setChecked( self._new_options.GetBoolean( 'open_files_to_duplicate_filter_uses_all_my_files' ) )
             
+            self._hide_duplicates_needs_work_message_when_reasonably_caught_up.setChecked( self._new_options.GetBoolean( 'hide_duplicates_needs_work_message_when_reasonably_caught_up' ) )
+            
             self._duplicate_comparison_score_higher_jpeg_quality.setValue( self._new_options.GetInteger( 'duplicate_comparison_score_higher_jpeg_quality' ) )
             self._duplicate_comparison_score_much_higher_jpeg_quality.setValue( self._new_options.GetInteger( 'duplicate_comparison_score_much_higher_jpeg_quality' ) )
             self._duplicate_comparison_score_higher_filesize.setValue( self._new_options.GetInteger( 'duplicate_comparison_score_higher_filesize' ) )
@@ -827,6 +842,16 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             gridbox = ClientGUICommon.WrapInGrid( open_panel, rows )
             
             open_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            
+            #
+            
+            rows = []
+            
+            rows.append( ( 'Hide the "x% done" notification on preparation tab when >99% searched:', self._hide_duplicates_needs_work_message_when_reasonably_caught_up ) )
+            
+            gridbox = ClientGUICommon.WrapInGrid( duplicates_filter_page_panel, rows )
+            
+            duplicates_filter_page_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
             #
             
@@ -887,6 +912,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             vbox = QP.VBoxLayout()
             
             QP.AddToLayout( vbox, open_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+            QP.AddToLayout( vbox, duplicates_filter_page_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
             QP.AddToLayout( vbox, batches_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
             QP.AddToLayout( vbox, weights_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
             QP.AddToLayout( vbox, colours_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -897,6 +923,10 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
         
         def UpdateOptions( self ):
+            
+            self._new_options.SetBoolean( 'open_files_to_duplicate_filter_uses_all_my_files', self._open_files_to_duplicate_filter_uses_all_my_files.isChecked() )
+            
+            self._new_options.SetBoolean( 'hide_duplicates_needs_work_message_when_reasonably_caught_up', self._hide_duplicates_needs_work_message_when_reasonably_caught_up.isChecked() )
             
             self._new_options.SetInteger( 'duplicate_comparison_score_higher_jpeg_quality', self._duplicate_comparison_score_higher_jpeg_quality.value() )
             self._new_options.SetInteger( 'duplicate_comparison_score_much_higher_jpeg_quality', self._duplicate_comparison_score_much_higher_jpeg_quality.value() )
@@ -917,7 +947,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
         
     
-    class _ExportingPanel( QW.QWidget ):
+    class _ExportingPanel( OptionsPagePanel ):
         
         def __init__( self, parent ):
             
@@ -937,7 +967,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._export_pattern_button = ClientGUICommon.ExportPatternButton( self )
             
             self._secret_discord_dnd_fix = QW.QCheckBox( self._dnd_panel )
-            self._secret_discord_dnd_fix.setToolTip( ClientGUIFunctions.WrapToolTip( 'Because of weird security/permission issues, a program will sometimes not accept a drag and drop file export from hydrus unless the DnD is set to "move" rather than "copy" (discord has done this for some people). Since we do not want to let you accidentally move your files out of your primary file store, this is only enabled if you are copying the files in question to your temp folder first!' ) )
+            self._secret_discord_dnd_fix.setToolTip( ClientGUIFunctions.WrapToolTip( 'THIS SOMETIMES FIXES DnD FOR WEIRD PROGRAMS, BUT IT ALSO OFTEN BREAKS IT FOR OTHERS.\n\nBecause of weird security/permission issues, a program will sometimes not accept a drag and drop file export from hydrus unless the DnD is set to "move" rather than "copy" (discord has done this for some people). Since we do not want to let you accidentally move your files out of your primary file store, this is only enabled if you are copying the files in question to your temp folder first!' ) )
             
             #
             
@@ -954,7 +984,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows = []
             
             rows.append( ( 'Copy files to temp folder for drag-and-drop (works for <=50, <200MB file DnDs--fixes Discord!): ', self._discord_dnd_fix ) )
-            rows.append( ( 'Set drag-and-drops to have a "move" flag: ', self._secret_discord_dnd_fix ) )
+            rows.append( ( 'BUGFIX: Set drag-and-drops to have a "move" flag: ', self._secret_discord_dnd_fix ) )
             rows.append( ( 'Drag-and-drop export filename pattern: ', self._discord_dnd_filename_pattern ) )
             rows.append( ( '', self._export_pattern_button ) )
             
@@ -1005,7 +1035,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
         
     
-    class _ExternalProgramsPanel( QW.QWidget ):
+    class _ExternalProgramsPanel( OptionsPagePanel ):
         
         def __init__( self, parent ):
             
@@ -1148,7 +1178,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             with ClientGUIDialogs.DialogTextEntry( self, message, default = default, allow_blank = True ) as dlg:
                 
-                if dlg.exec() == QW.QDialog.Accepted:
+                if dlg.exec() == QW.QDialog.DialogCode.Accepted:
                     
                     new_launch_path = dlg.GetValue()
                     
@@ -1165,7 +1195,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                             
                             result = ClientGUIDialogsQuick.GetYesNo( self, message )
                             
-                            if result != QW.QDialog.Accepted:
+                            if result != QW.QDialog.DialogCode.Accepted:
                                 
                                 return
                                 
@@ -1197,7 +1227,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
         
     
-    class _FilesAndTrashPanel( QW.QWidget ):
+    class _FilesAndTrashPanel( OptionsPagePanel ):
         
         def __init__( self, parent ):
             
@@ -1380,7 +1410,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             with ClientGUIDialogs.DialogTextEntry( self, 'enter the reason', default = reason, allow_blank = False ) as dlg:
                 
-                if dlg.exec() == QW.QDialog.Accepted:
+                if dlg.exec() == QW.QDialog.DialogCode.Accepted:
                     
                     reason = dlg.GetValue()
                     
@@ -1441,7 +1471,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
         
     
-    class _FileViewingStatisticsPanel( QW.QWidget ):
+    class _FileViewingStatisticsPanel( OptionsPagePanel ):
         
         def __init__( self, parent ):
             
@@ -1519,7 +1549,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
         
     
-    class _GUIPanel( QW.QWidget ):
+    class _GUIPanel( OptionsPagePanel ):
         
         def __init__( self, parent ):
             
@@ -1782,7 +1812,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 dlg.SetPanel( panel )
                 
-                if dlg.exec() == QW.QDialog.Accepted:
+                if dlg.exec() == QW.QDialog.DialogCode.Accepted:
                     
                     new_listctrl_list = panel.GetValue()
                     
@@ -1826,7 +1856,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
         
     
-    class _GUIPagesPanel( QW.QWidget ):
+    class _GUIPagesPanel( OptionsPagePanel ):
         
         def __init__( self, parent, new_options ):
             
@@ -2107,7 +2137,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
         
     
-    class _ImportingPanel( QW.QWidget ):
+    class _ImportingPanel( OptionsPagePanel ):
         
         def __init__( self, parent, new_options ):
             
@@ -2164,7 +2194,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
         
     
-    class _CommandPalettePanel( QW.QWidget ):
+    class _CommandPalettePanel( OptionsPagePanel ):
         
         def __init__( self, parent, new_options ):
             
@@ -2224,7 +2254,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
         
     
-    class _MaintenanceAndProcessingPanel( QW.QWidget ):
+    class _MaintenanceAndProcessingPanel( OptionsPagePanel ):
         
         def __init__( self, parent ):
             
@@ -2732,7 +2762,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
         
     
-    class _MediaViewerPanel( QW.QWidget ):
+    class _MediaViewerPanel( OptionsPagePanel ):
         
         def __init__( self, parent ):
             
@@ -2958,7 +2988,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
         
     
-    class _MediaPlaybackPanel( QW.QWidget ):
+    class _MediaPlaybackPanel( OptionsPagePanel ):
         
         def __init__( self, parent ):
             
@@ -3250,7 +3280,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 dlg.SetPanel( panel )
                 
-                if dlg.exec() == QW.QDialog.Accepted:
+                if dlg.exec() == QW.QDialog.DialogCode.Accepted:
                     
                     new_data = panel.GetValue()
                     
@@ -3276,7 +3306,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 dlg.SetPanel( panel )
                 
-                if dlg.exec() == QW.QDialog.Accepted:
+                if dlg.exec() == QW.QDialog.DialogCode.Accepted:
                     
                     new_data = panel.GetValue()
                     
@@ -3366,7 +3396,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
         
     
-    class _NotesPanel( QW.QWidget ):
+    class _NotesPanel( OptionsPagePanel ):
         
         def __init__( self, parent, new_options ):
             
@@ -3398,7 +3428,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
         
     
-    class _PopupPanel( QW.QWidget ):
+    class _PopupPanel( OptionsPagePanel ):
         
         def __init__( self, parent, new_options ):
             
@@ -3469,7 +3499,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
         
     
-    class _RegexPanel( QW.QWidget ):
+    class _RegexPanel( OptionsPagePanel ):
         
         def __init__( self, parent ):
             
@@ -3494,7 +3524,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
         
     
-    class _FileSearchPanel( QW.QWidget ):
+    class _FileSearchPanel( OptionsPagePanel ):
         
         def __init__( self, parent, new_options ):
             
@@ -3628,7 +3658,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
         
     
-    class _SortCollectPanel( QW.QWidget ):
+    class _SortCollectPanel( OptionsPagePanel ):
         
         def __init__( self, parent, new_options ):
             
@@ -3764,7 +3794,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
         
     
-    class _SpeedAndMemoryPanel( QW.QWidget ):
+    class _SpeedAndMemoryPanel( OptionsPagePanel ):
         
         def __init__( self, parent, new_options ):
             
@@ -4180,7 +4210,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
         
     
-    class _StylePanel( QW.QWidget ):
+    class _StylePanel( OptionsPagePanel ):
         
         def __init__( self, parent, new_options ):
             
@@ -4316,7 +4346,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
         
     
-    class _SystemPanel( QW.QWidget ):
+    class _SystemPanel( OptionsPagePanel ):
         
         def __init__( self, parent, new_options ):
             
@@ -4378,7 +4408,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
         
     
-    class _SystemTrayPanel( QW.QWidget ):
+    class _SystemTrayPanel( OptionsPagePanel ):
         
         def __init__( self, parent, new_options ):
             
@@ -4456,7 +4486,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
         
     
-    class _TagsPanel( QW.QWidget ):
+    class _TagsPanel( OptionsPagePanel ):
         
         def __init__( self, parent, new_options ):
             
@@ -4549,7 +4579,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
         
     
-    class _TagEditingPanel( QW.QWidget ):
+    class _TagEditingPanel( OptionsPagePanel ):
         
         def __init__( self, parent, new_options ):
             
@@ -4708,7 +4738,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
         
     
-    class _TagPresentationPanel( QW.QWidget ):
+    class _TagPresentationPanel( OptionsPagePanel ):
         
         def __init__( self, parent, new_options ):
             
@@ -4881,7 +4911,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             with ClientGUIDialogs.DialogTextEntry( self, 'Enter the namespace', allow_blank = False ) as dlg:
                 
-                if dlg.exec() == QW.QDialog.Accepted:
+                if dlg.exec() == QW.QDialog.DialogCode.Accepted:
                     
                     namespace = dlg.GetValue()
                     
@@ -4976,7 +5006,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
         
     
-    class _TagSuggestionsPanel( QW.QWidget ):
+    class _TagSuggestionsPanel( OptionsPagePanel ):
         
         def __init__( self, parent, new_options ):
             
@@ -5272,7 +5302,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             with ClientGUIDialogs.DialogTextEntry( self, message, allow_blank = False ) as dlg:
                 
-                if dlg.exec() == QW.QDialog.Accepted:
+                if dlg.exec() == QW.QDialog.DialogCode.Accepted:
                     
                     tag_slice = dlg.GetValue()
                     
@@ -5307,7 +5337,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                         
                         dlg_2.SetPanel( panel )
                         
-                        if dlg_2.exec() == QW.QDialog.Accepted:
+                        if dlg_2.exec() == QW.QDialog.DialogCode.Accepted:
                             
                             weight = control.value()
                             
@@ -5391,7 +5421,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 dlg.SetPanel( panel )
                 
-                if dlg.exec() == QW.QDialog.Accepted:
+                if dlg.exec() == QW.QDialog.DialogCode.Accepted:
                     
                     edited_weight = control.value()
                     
@@ -5474,7 +5504,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
         
     
-    class _ThumbnailsPanel( QW.QWidget ):
+    class _ThumbnailsPanel( OptionsPagePanel ):
         
         def __init__( self, parent, new_options ):
             
@@ -5658,6 +5688,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
     def CommitChanges( self ):
         
         for page in self._listbook.GetPages():
+            
+            page = typing.cast( OptionsPagePanel, page )
             
             page.UpdateOptions()
             

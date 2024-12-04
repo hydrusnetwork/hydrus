@@ -7,6 +7,65 @@ title: Changelog
 !!! note
     This is the new changelog, only the most recent builds. For all versions, see the [old changelog](old_changelog.html).
 
+## [Version 601](https://github.com/hydrusnetwork/hydrus/releases/tag/v601)
+
+### this page is still importing
+
+* when you try to close the client or a page of pages and one of the sub-pages protests with a reason like "I am still importing", you now get a yes/no dialog with an extra 'no, but show me the pages' button that will spawn a window listing buttons for every page that protested. clicking a button takes you to that page. this window is a frame, not a dialog, and will not go away on a click. if a page is susequently closed, clicking the button greys it out
+
+### misc
+
+* the 'archived time' pretty text string is no longer flagged as an 'uninteresting' line, which again, as intended, elevates it to the top hover window and main gui status bar if you have detailed info set to show
+* `system:width` is now before `system:height` in the `system:dimensions` flesh-out panel. I also hacked this in the 'edit multiple preds' panel for existing fleshed-out predicates, but it is a whack implementation like I did for the sort stuff last week. as I've discussed with some others, the real answer here is probably a `system:resolution` that combines the two
+* re-classified the 'move flag' DnD option under `options->exporting` as a BUGFIX option, and altered the tooltip
+* fixed the new `Set to "all my files" when hitting "Open files in a new duplicates filter page"` `options->duplicates` checkbox, which was not saving on dialog ok
+* changed the 'needs work' tab name suffix on the duplicates filter page to 'x% done'. it will max out at 99.9% and then hide, never rounding up to 100.0%
+* added `Hide the "x% done" notification on preparation tab when >99% searched:` to `options->duplicates` for those who always want to see this for any outstanding work
+
+### sidecar importers
+
+* multiline .txt note sidecar importing is fixed. I previously added some 'clear out empty lines' parsing input cleaning, but this collapsed multiline content by accident. this content-agnostic stage of import is not where cleanup should occur!
+* some explicit unit tests now test CRLF splitting and multiline note parsing from .txt files (previously it was just doing tags). multiline note sidecars have broken a couple times now, precisely because it was un-tested. it will not break for so stupid a reason again!
+* fixed some stupid scrollbars appearing on the 'destination' panel of the main 'metadata migration router' (sidecar job) edit panel, and made sure the 'note name' text input can't get super thin (issue #1634)
+* when a multi-column list is given multi-line content for a cell, it now says `[top line]... (+n lines)` so you know there was more (previously it just trancated to the top line). this now pops up in a couple of note parsing test panel places
+* notes are now specified as notes in the main sidecar path list with expected content (they looked a bit like tags before)
+* it isn't a big deal, but a thing that sorts the sidecar-imported text rows before handing them off to the exporter now only does a (namespace-aware) tag-sort if the exporter is tags, and otherwise just does a straight-up normal text sort
+
+### some dialog validation
+
+* the 'edit cookie' panel now strips leading and trailing whitespace from the name, value, domain, and path
+* the 'edit cookie' panel will now not allow an ok if you accidentally paste a newline into any of these values
+* the 'edit header' panel now strips leading and trailing whitespace from the key and value
+* the 'edit header' panel will now not allow an ok if you accidentally paste a newline into either either
+
+### boring linting cleanup
+
+* now my IDE no longer has a cheeky multi-Qt env, its linter went nuts about old to-be-deprecated Enum references so I did more cleanup
+* moved from QDialog.Accepted/Rejected to the Qt6-only DialogCode Enum reference. there were about 400 of these I think
+* and `QFileDialog.AcceptMode`, `QFileDialog.FileMode`, and `QFileDialog.Option`
+* and `QLineEdit.EchoMode`
+* and `QAbstractItemView.SelectionMode`, `QAbstractItemView.SelectionBehavior`, and `QAbstractItemView.EditTrigger`
+* and `QSlider.TickPosition`
+* and `QFrame.Shadow` and `QFrame.Shape`
+* and `QSizePolicy.Policy`
+* and `QToolButton.ToolButtonPopupMode`
+* and `QTabWidget.TabPosition`
+* and I played around with typing.cast in a few places to handle some custom panels here and there. it is ok!
+* also figured out some nicer typing in my newer command-processing menu generation code, and filled in some places where the Command Processor Mixin was needed
+* also fixed some bad test panel stuff in the ancient lookup script panels
+
+### Qt when running from source
+
+* **I no longer support Qt5!** it may run, depending on version, if you set up your own venv, but my `setup_venv` scripts no longer offer it as a choice and I will no longer fix any new non-trivial Qt5 bugs. if I didn't break it this week with all the Enum linting, then at some point I expect I will use a Qt6 technique for which there is no Qt5 equivalent and things will simply stop working
+* I cleaned up the Qt choice more in the `setup_venv` scripts, reducing it down to the one choice regarding Qt6 options and removing the '(m)iddle' choice in favour of simple old/new/test, and then a new '(q) for PyQt6' that just gets the latest PyQt6, and the '(w)rite your own'
+* the 'setup_venv' scripts now tell you that Python 3.13 is probably not going to work. they also say, in prep for when it will, in the '(w)rite your own' Qt version step, that Python 3.13's earliest version is 6.8.0.2. this is actually later than our current 'test' version, which is 6.7.something. I've now set up a 3.13 dev environment and did get the program booting but there seem to be problems with numpy<2.0.0. too, and then with scikit for psd-tools, which seems to have no Windows wheel, so I'll keep working here and update everything once I figure out something that will work out of the box. for now, assume python 3.13 is a no-go unless you know how to use pip. probably best to just wait six months for all the base stuff here to catch up and settle
+* I removed some Qt5 gubbins from the 'running from source' document
+
+### build stuff
+
+* updated a deprecated term in the Windows inno setup (the installer exe) user script
+* silenced a compiler warning about User-space-while-using-admin-installer in the Windows inno setup script. no good solution here, I think, but it isn't a huge deal
+
 ## [Version 600](https://github.com/hydrusnetwork/hydrus/releases/tag/v600)
 
 ### misc
@@ -57,7 +116,7 @@ title: Changelog
 
 * I am rolling in two new dlls for Windows today, for SQLite (database) and libmpv (video/audio player)
 * SQLite is updated from 3.45.3 to 3.47.0
-* mpv is updated from 202-08-20 to 2024-10-20
+* mpv is updated from 2023-08-20 to 2024-10-20
 * both dlls are mostly just bugfixes and performance improvements, but the mpv release is slightly special--in the 'future test' we ran a few weeks ago, users with unusual Windows, be that Windows Server, under-updated Windows 10, or Windows 10 on a VM, might see a grid of black bars over some webms. no one on Windows 11 or normal updated Windows 10 reported any problems. the new mpv does perform much better than the older, and I am told it fixes some gif bugs, so I do want to update, but I do so hesitantly. if many users on updated/normal Windows do run into trouble with this release, I expect to roll back again. in the meantime, I have updated the 'running from source' help to talk more about stable versions of mpv on older Windows. users who need to keep their OS under-updated are now recommended to run from source: https://hydrusnetwork.github.io/hydrus/running_from_source.html
 
 ## [Version 599](https://github.com/hydrusnetwork/hydrus/releases/tag/v599)
@@ -445,39 +504,3 @@ title: Changelog
 
 * did a bunch more `super()` refactoring. I think all `__init__` is now converted across the program, and I cleared all the normal calls in the canvas and media results panel code too
 * refactored `ClientGUIResults` into four files for the core class, the loading, the thumbnails, and some menu gubbins. also unified the mish-mash of `Results` and `MediaPanel` nomenclature to `MediaResultsPanel`
-
-## [Version 591](https://github.com/hydrusnetwork/hydrus/releases/tag/v591)
-
-### misc
-
-* fixed a stupid oversight with last week's "move page focus left/right after closing tab" thing where it was firing even when the page closed was not the current tab!! it now correctly only moves your focus if you close the _current_ tab, not if you just middle click some other one
-* fixed the _share-&gt;export files_ menu command not showing if you right-clicked on just one file
-* cleaned some of the broader thumbnail menu code, separating the 'stuff to show if we have a focus' and 'stuff to show if we have a selection'; the various 'manage' commands now generally show even if there is no current 'focus' in the preview (which happens if you select with ctrl+click or ctrl+a and then right-click in whitespace)
-* the 'migrate tags' dialog now allows you to filter the sibling or parent pairs by whether the child/worse or parent/ideal tag has actual mapping counts on an arbitrary tag service. some new unit tests ensure this capability
-* fixed an error in the duplicate metadata merge system where if files were exchanging known URLs, and one of those URLs was not actually an URL (e.g. it was garbage data, or human-entered 'location' info), a secondary system that tried to merge correlated domain-based timestamps was throwing an exception
-* to reduce comma-confusion, the template for 'show num files and import status' on page names is now "name - (num_files - import_status)"
-* the option that governs whether page names have the file count after them (under _options-&gt;gui pages_) has a new choice--'show for all pages, but only if greater than zero'--which is now the default for new users
-
-### some boring code cleanup
-
-* broke up the over-coupled 'migrate tags' unit tests into separate content types and the new count-filtering stuff
-* cleaned up the 'share' menu construction code--it was messy after some recent rewrites
-* added some better error handling around some of the file/thumbnail path fetching/regen routines
-
-### client api
-
-* the client api gets a new permissions state this week: the permissions structure you edit for an access key can now be (and, as a convenient default, starts as) a simple 'permits everything' state. if the permissions are set to 'permit everything', then this overrules all the specific rules and tag search filter gubbins. nice and simple, and a permissions set this way will automatically inherit new permissions in the future. any api access keys that have all the permissions up to 'edit ratings' will be auto-updated to 'permits everything' and you will get an update saying this happened--check your permissions in _review services_ if you need finer control
-* added a new permission, `13`, for 'see local paths'
-* added `/get_files/file_path`, which fetches the local path of a file. it needs the new permission
-* added `/get_files/thumbnail_path`, which fetches the local path of a thumbnail and optionally the filetype of the actual thumb (jpeg or png). it needs the new permission
-* the `/request_new_permissions` command now accepts a `permits_everything` bool as a selective alternate to the `basic_permissions` list
-* the `/verify_access_key` command now responds with the name of the access key and the new `permits_everything` value
-* the API help is updated for the above
-* new unit tests test all the above
-* the Client API version is now 71
-
-### client api refactoring
-
-* the main `ClientLocalServerResources` file has been getting too huge (5,000 lines), so I've moved it and `ClientLocalServer` to their own `api` module and broken the Resources file up into core functions, the superclass, and the main verbs
-* fixed permissions check for `/manage_popups/update_popup`, which was checking for pages permission rather than popup permission
-* did a general linting pass of these easier-to-handle files; cleaned up some silly stuff

@@ -321,21 +321,17 @@ If you need different versions of libraries, check the cut-up requirements.txts 
 
 ### Qt { id="qt" }
 
-Qt is the UI library. You can run PySide2, PySide6, PyQt5, or PyQt6. A wrapper library called `qtpy` allows this. The default is PySide6, but if it is missing, qtpy will fall back to an available alternative. For PyQt5 or PyQt6, you need an extra Chart module, so go:
+Qt is the UI library. You can run PySide6 or PyQt6. I used to support Qt5, but no longer. A wrapper library called `qtpy` allows this. The default is PySide6, but if it is missing, qtpy will fall back to an available alternative. For PyQt6, you need an extra Chart module, so go:
 
 ```
-python -m pip install qtpy PyQtChart PyQt5
--or-
 python -m pip install qtpy PyQt6-Charts PyQt6
 ```
 
-If you have multiple Qts installed, then select which one you want to use by setting the `QT_API` environment variable to 'pyside2', 'pyside6', 'pyqt5', or 'pyqt6'. Check _help->about_ to make sure it loaded the right one.
+If you have multiple Qts installed, then select which one you want to use by setting the `QT_API` environment variable to 'pyside6' or 'pyqt6'. Check _help->about_ to make sure it loaded the right one.
 
 If you want to set QT_API in a batch file, do this:
 
 `set QT_API=pyqt6`
-
-If you run <= Windows 8.1 or Ubuntu 18.04, you cannot run Qt6. Try PySide2 or PyQt5.
 
 !!! note "Qt compatibility"
     
@@ -344,7 +340,9 @@ If you run <= Windows 8.1 or Ubuntu 18.04, you cannot run Qt6. Try PySide2 or Py
     * `sudo apt-get install libicu-dev`
     * `sudo apt-get install libxcb-cursor-dev`
     
-    If you still have trouble with the default Qt6 version, check the advanced requirements.txts in `install_dir/static/requirements/advanced`. There should be several older version examples you can explore, and you can also work off these lists: [PySide6](https://pypi.org/project/PySide6/#history) [PyQt6](https://pypi.org/project/PyQt6/#history) [PySide2](https://pypi.org/project/PySide2/#history) [Pyqt5](https://pypi.org/project/PyQt5/#history)
+    If you still have trouble with the default Qt6 version, check the advanced requirements.txts in `install_dir/static/requirements/advanced`. There should be several older version examples you can explore, and you can also work off these lists: [PySide6](https://pypi.org/project/PySide6/#history) [PyQt6](https://pypi.org/project/PyQt6/#history)
+    
+    If your OS is very old (and thus you are stuck on older python), you may only be able to run Qt5, in which case you cannot run modern hydrus, sorry! You could try v578, as above in the Windows 7 note.
     
 
 ### mpv { id="mpv" }

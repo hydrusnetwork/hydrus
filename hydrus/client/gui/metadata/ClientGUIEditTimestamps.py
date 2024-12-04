@@ -303,7 +303,7 @@ class EditFileTimestampsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUISc
         
         self.widget().setLayout( vbox )
         
-        self._my_shortcut_handler = ClientGUIShortcuts.ShortcutsHandler( self, [ 'global', 'media' ] )
+        self._my_shortcut_handler = ClientGUIShortcuts.ShortcutsHandler( self, self, [ 'global', 'media' ] )
         
         self._file_modified_time.dateTimeChanged.connect( self._ShowFileModifiedWarning )
         
@@ -408,7 +408,7 @@ class EditFileTimestampsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUISc
         
         with ClientGUIDialogs.DialogTextEntry( self, message, allow_blank = False ) as dlg:
             
-            if dlg.exec() == QW.QDialog.Accepted:
+            if dlg.exec() == QW.QDialog.DialogCode.Accepted:
                 
                 domain = dlg.GetValue()
                 
@@ -442,7 +442,7 @@ class EditFileTimestampsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUISc
                     
                     dlg_2.SetPanel( panel )
                     
-                    if dlg_2.exec() == QW.QDialog.Accepted: # no 'haschanges' check here, we are ok with starting value
+                    if dlg_2.exec() == QW.QDialog.DialogCode.Accepted: # no 'haschanges' check here, we are ok with starting value
                         
                         new_datetime_value_range = control.GetValue()
                         
@@ -486,7 +486,7 @@ class EditFileTimestampsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUISc
             
             override_with_all_hashes = False
             
-            if dlg.exec() == QW.QDialog.Accepted and control.HasChanges():
+            if dlg.exec() == QW.QDialog.DialogCode.Accepted and control.HasChanges():
                 
                 edited_datetime_value_range = control.GetValue()
                 
@@ -494,7 +494,7 @@ class EditFileTimestampsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUISc
                     
                     result = ClientGUIDialogsQuick.GetYesNo( self, 'Not every file this dialog was launched on has a time for this domain. Do you want to apply what you just set to everything, or just the files that started with this domain?', yes_label = 'all files', no_label = 'only edit existing values' )
                     
-                    if result == QW.QDialog.Accepted:
+                    if result == QW.QDialog.DialogCode.Accepted:
                         
                         override_with_all_hashes = True
                         
@@ -560,7 +560,7 @@ class EditFileTimestampsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUISc
             
             dlg.SetPanel( panel )
             
-            if dlg.exec() == QW.QDialog.Accepted and control.HasChanges():
+            if dlg.exec() == QW.QDialog.DialogCode.Accepted and control.HasChanges():
                 
                 edited_datetime_value_range = control.GetValue()
                 new_user_has_edited = True
@@ -843,7 +843,7 @@ class EditFileTimestampsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUISc
                                 
                                 result = ClientGUIDialogsQuick.GetYesNo( self, 'Not every file this dialog was launched on has a time for this domain. Do you want to apply what you just set to everything, or just the files that started with this domain?', yes_label = 'all files', no_label = 'only edit existing values' )
                                 
-                                if result == QW.QDialog.Accepted:
+                                if result == QW.QDialog.DialogCode.Accepted:
                                     
                                     hashes = all_hashes
                                     datetime_value_range = all_hashes_datetime_value_range
@@ -1031,7 +1031,7 @@ class EditFileTimestampsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUISc
             
             result = ClientGUIDialogsQuick.GetYesNo( self, message )
             
-            if result != QW.QDialog.Accepted:
+            if result != QW.QDialog.DialogCode.Accepted:
                 
                 return False
                 

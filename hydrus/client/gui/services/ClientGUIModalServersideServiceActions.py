@@ -41,7 +41,7 @@ def ManageServiceOptionsTagFilter(
         
         dlg.SetPanel( panel )
         
-        if dlg.exec() == QW.QDialog.Accepted:
+        if dlg.exec() == QW.QDialog.DialogCode.Accepted:
             
             tag_filter = panel.GetValue()
             

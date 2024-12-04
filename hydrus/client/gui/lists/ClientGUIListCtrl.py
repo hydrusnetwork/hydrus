@@ -135,7 +135,7 @@ class HydrusListItemModel( QC.QAbstractItemModel ):
                 
                 display_tuple = self._data_to_display_tuple_func( data )
                 
-                display_tuple = tuple( ( HydrusText.GetFirstLine( t ) for t in display_tuple ) )
+                display_tuple = tuple( ( HydrusText.GetFirstLineSummary( t ) for t in display_tuple ) )
                 
                 self._data_to_display_tuples[ data ] = display_tuple
                 
@@ -144,6 +144,7 @@ class HydrusListItemModel( QC.QAbstractItemModel ):
             
             text = self._data_to_display_tuples[ data ][ column_logical_position ]
             
+            # TODO: might be nice to maintain an optional tooltip dict for when the getfirstlinesummary differs, so we can tooltip the whole contents
             if role == QC.Qt.ToolTipRole:
                 
                 return ClientGUIFunctions.WrapToolTip( text )
@@ -544,10 +545,10 @@ class BetterListCtrlTreeView( QW.QTreeView ):
         self.setUniformRowHeights( True )
         self.setAlternatingRowColors( True )
         self.setSortingEnabled( True )
-        self.setSelectionMode( QW.QAbstractItemView.ExtendedSelection )
-        self.setSelectionBehavior( QW.QTreeView.SelectRows )
+        self.setSelectionMode( QW.QAbstractItemView.SelectionMode.ExtendedSelection )
+        self.setSelectionBehavior( QW.QAbstractItemView.SelectionBehavior.SelectRows )
         self.setRootIsDecorated( False )
-        self.setEditTriggers( QW.QTreeView.NoEditTriggers )
+        self.setEditTriggers( QW.QAbstractItemView.EditTrigger.NoEditTriggers )
         
         self._initial_height_num_chars = height_num_chars
         self._forced_height_num_chars = None
@@ -1328,7 +1329,7 @@ class BetterListCtrlTreeView( QW.QTreeView ):
         
         result = ClientGUIDialogsQuick.GetYesNo( self, 'Remove all selected?' )
         
-        if result == QW.QDialog.Accepted:
+        if result == QW.QDialog.DialogCode.Accepted:
             
             self.DeleteSelected()
             
@@ -1513,9 +1514,9 @@ class BetterListCtrlPanel( QW.QWidget ):
             
             json = export_object.DumpToString()
             
-            with QP.FileDialog( self, 'select where to save the json file', default_filename = 'export.json', wildcard = 'JSON (*.json)', acceptMode = QW.QFileDialog.AcceptSave, fileMode = QW.QFileDialog.AnyFile ) as f_dlg:
+            with QP.FileDialog( self, 'select where to save the json file', default_filename = 'export.json', wildcard = 'JSON (*.json)', acceptMode = QW.QFileDialog.AcceptMode.AcceptSave, fileMode = QW.QFileDialog.FileMode.AnyFile ) as f_dlg:
                 
-                if f_dlg.exec() == QW.QDialog.Accepted:
+                if f_dlg.exec() == QW.QDialog.DialogCode.Accepted:
                     
                     path = f_dlg.GetPath()
                     
@@ -1527,7 +1528,7 @@ class BetterListCtrlPanel( QW.QWidget ):
                         
                         result = ClientGUIDialogsQuick.GetYesNo( self, message )
                         
-                        if result != QW.QDialog.Accepted:
+                        if result != QW.QDialog.DialogCode.Accepted:
                             
                             return
                             
@@ -1704,9 +1705,9 @@ class BetterListCtrlPanel( QW.QWidget ):
     
     def _ImportFromJSON( self ):
         
-        with QP.FileDialog( self, 'select the json or jsons with the serialised data', acceptMode = QW.QFileDialog.AcceptOpen, fileMode = QW.QFileDialog.ExistingFiles, wildcard = 'JSON (*.json)|*.json' ) as dlg:
+        with QP.FileDialog( self, 'select the json or jsons with the serialised data', acceptMode = QW.QFileDialog.AcceptMode.AcceptOpen, fileMode = QW.QFileDialog.FileMode.ExistingFiles, wildcard = 'JSON (*.json)|*.json' ) as dlg:
             
-            if dlg.exec() == QW.QDialog.Accepted:
+            if dlg.exec() == QW.QDialog.DialogCode.Accepted:
                 
                 paths = dlg.GetPaths()
                 
@@ -1719,9 +1720,9 @@ class BetterListCtrlPanel( QW.QWidget ):
     
     def _ImportFromPNG( self ):
         
-        with QP.FileDialog( self, 'select the png or pngs with the encoded data', acceptMode = QW.QFileDialog.AcceptOpen, fileMode = QW.QFileDialog.ExistingFiles, wildcard = 'PNG (*.png)|*.png' ) as dlg:
+        with QP.FileDialog( self, 'select the png or pngs with the encoded data', acceptMode = QW.QFileDialog.AcceptMode.AcceptOpen, fileMode = QW.QFileDialog.FileMode.ExistingFiles, wildcard = 'PNG (*.png)|*.png' ) as dlg:
             
-            if dlg.exec() == QW.QDialog.Accepted:
+            if dlg.exec() == QW.QDialog.DialogCode.Accepted:
                 
                 paths = dlg.GetPaths()
                 
@@ -2067,7 +2068,7 @@ class BetterListCtrlPanel( QW.QWidget ):
         
         result = ClientGUIDialogsQuick.GetYesNo( self, message )
         
-        if result == QW.QDialog.Accepted:
+        if result == QW.QDialog.DialogCode.Accepted:
             
             ( jsons, pngs ) = HydrusData.PartitionIteratorIntoLists( lambda path: path.endswith( '.png' ), paths )
             

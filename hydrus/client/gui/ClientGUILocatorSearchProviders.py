@@ -108,11 +108,22 @@ class PagesSearchProvider( QAbstractLocatorSearchProvider ):
             
             result = []
             
+            from hydrus.client.gui.pages import ClientGUIPages
+            
             for i in range( tab_widget.count() ):
                 
                 widget = tab_widget.widget(i)
                 
                 is_page_of_pages = isinstance( widget, QW.QTabWidget )
+                
+                if is_page_of_pages:
+                    
+                    widget = typing.cast( ClientGUIPages.PagesNotebook, widget )
+                    
+                else:
+                    
+                    widget = typing.cast( ClientGUIPages.Page, widget )
+                    
                 
                 if not is_page_of_pages or CG.client_controller.new_options.GetBoolean( 'command_palette_show_page_of_pages' ):
                     

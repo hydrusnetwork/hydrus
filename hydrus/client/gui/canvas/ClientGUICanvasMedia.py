@@ -314,7 +314,7 @@ def WeAreExpectingToLoadThisMediaFile( media: ClientMedia.MediaSingleton, canvas
     return False
     
 
-class Animation( QW.QWidget ):
+class Animation( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
     
     launchMediaViewer = QC.Signal()
     
@@ -362,7 +362,7 @@ class Animation( QW.QWidget ):
             shortcut_set = 'preview_media_window'
             
         
-        self._my_shortcut_handler = ClientGUIShortcuts.ShortcutsHandler( self, [ shortcut_set ], catch_mouse = True )
+        self._my_shortcut_handler = ClientGUIShortcuts.ShortcutsHandler( self, self, [ shortcut_set ], catch_mouse = True )
         
     
     def _ClearCanvasBitmap( self ):
@@ -920,7 +920,7 @@ class AnimationBar( QW.QWidget ):
         
         self.setCursor( QG.QCursor( QC.Qt.ArrowCursor ) )
         
-        self.setSizePolicy( QW.QSizePolicy.Fixed, QW.QSizePolicy.Fixed )
+        self.setSizePolicy( QW.QSizePolicy.Policy.Fixed, QW.QSizePolicy.Policy.Fixed )
         
         self._media_window = None
         self._duration_ms = 1000
@@ -1393,7 +1393,7 @@ class MediaContainer( QW.QWidget ):
         
         self._background_colour_generator = background_colour_generator
         
-        self.setSizePolicy( QW.QSizePolicy.Fixed, QW.QSizePolicy.Fixed )
+        self.setSizePolicy( QW.QSizePolicy.Policy.Fixed, QW.QSizePolicy.Policy.Fixed )
         
         self._media = None
         self._show_action = CC.MEDIA_VIEWER_ACTION_DO_NOT_SHOW
@@ -2904,7 +2904,7 @@ class OpenExternallyPanel( QW.QWidget ):
         
     
 
-class QtMediaPlayer( QW.QWidget ):
+class QtMediaPlayer( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
     
     launchMediaViewer = QC.Signal()
     
@@ -2952,7 +2952,7 @@ class QtMediaPlayer( QW.QWidget ):
             shortcut_set = 'preview_media_window'
             
         
-        self._my_shortcut_handler = ClientGUIShortcuts.ShortcutsHandler( self, [ shortcut_set ], catch_mouse = True )
+        self._my_shortcut_handler = ClientGUIShortcuts.ShortcutsHandler( self, self, [ shortcut_set ], catch_mouse = True )
         
         CG.client_controller.sub( self, 'UpdateAudioMute', 'new_audio_mute' )
         CG.client_controller.sub( self, 'UpdateAudioVolume', 'new_audio_volume' )
@@ -3255,7 +3255,7 @@ class StaticImage( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
             shortcut_set = 'preview_media_window'
             
         
-        self._my_shortcut_handler = ClientGUIShortcuts.ShortcutsHandler( self, [ shortcut_set ], catch_mouse = True )
+        self._my_shortcut_handler = ClientGUIShortcuts.ShortcutsHandler( self, self, [ shortcut_set ], catch_mouse = True )
         
         CG.client_controller.sub( self, '_ClearCanvasTileCache', 'clear_image_tile_cache' )
         CG.client_controller.sub( self, 'NotifyImageCacheCleared', 'clear_image_cache' )

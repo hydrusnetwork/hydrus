@@ -50,7 +50,7 @@ if [ -d "venv" ]; then
 fi
 
 echo "--------"
-echo "Users on older OSes or Python >=3.11 need the advanced install."
+echo "Users on older OSes need the advanced install. The very new Python 3.13 will probably not work with this setup."
 echo
 echo "Your Python version is:"
 $py_command --version
@@ -66,38 +66,23 @@ elif [ "$install_type" = "a" ]; then
     echo "We are now going to choose which versions of some larger libraries we are going to use. If something doesn't install, or hydrus won't boot, just run this script again and it will delete everything and start over."
     echo
     echo "Qt - User Interface"
-    echo "Most people want \"6\"."
-    echo "If you are <=Ubuntu 18.04 or equivalent, choose \"5\". If you want a specific version, choose \"a\"."
-    echo "Do you want Qt(5), Qt(6), or (a)dvanced? "
+    echo "Most people want \"n\"."
+    echo "If you cannot boot with the normal Qt, try \"o\" or \"w\"."
+    echo "Do you want the (o)lder Qt, (n)ew Qt, (t)est Qt, (q) for PyQt6, or (w)rite your own? "
     read -r qt
-    if [ "$qt" = "5" ]; then
+    if [ "$qt" = "o" ]; then
         :
-    elif [ "$qt" = "6" ]; then
+    elif [ "$qt" = "n" ]; then
         :
-    elif [ "$qt" = "a" ]; then
+    elif [ "$qt" = "q" ]; then
+        :
+    elif [ "$qt" = "t" ]; then
+        :
+    elif [ "$qt" = "w" ]; then
         :
     else
         echo "Sorry, did not understand that input!"
         exit 1
-    fi
-
-    if [ "$qt" = "a" ]; then
-        echo
-        echo "If you cannot boot with the normal Qt6, try \"o\" on Python 3.9 or \"m\" on Python 3.10."
-        echo "Do you want Qt6 (o)lder, Qt6 (m)iddle, Qt6 (t)est, or (w)rite your own? "
-        read -r qt
-        if [ "$qt" = "o" ]; then
-            :
-        elif [ "$qt" = "m" ]; then
-            :
-        elif [ "$qt" = "t" ]; then
-            :
-        elif [ "$qt" = "w" ]; then
-            :
-        else
-            echo "Sorry, did not understand that input!"
-            exit 1
-        fi
     fi
 
     if [ "$qt" = "w" ]; then
@@ -106,6 +91,7 @@ elif [ "$install_type" = "a" ]; then
         echo "- For Python 3.10, your earliest available version is 6.2.0"
         echo "- For Python 3.11, your earliest available version is 6.4.0.1"
         echo "- For Python 3.12, your earliest available version is 6.6.0"
+        echo "- For Python 3.13, your earliest available version is 6.8.0.2"
         echo "Version: "
         read -r qt_custom_pyside6
         echo "Enter the exact qtpy version you want (probably '2.4.1'; if older try '2.3.1'): "
@@ -216,14 +202,12 @@ elif [ "$install_type" = "a" ]; then
 
     python -m pip install -r static/requirements/advanced/requirements_core.txt
 
-    if [ "$qt" = "5" ]; then
-        python -m pip install -r static/requirements/advanced/requirements_qt5.txt
-    elif [ "$qt" = "6" ]; then
-        python -m pip install -r static/requirements/advanced/requirements_qt6.txt
+    if [ "$qt" = "n" ]; then
+        python -m pip install -r static/requirements/advanced/requirements_qt6_new.txt
     elif [ "$qt" = "o" ]; then
         python -m pip install -r static/requirements/advanced/requirements_qt6_older.txt
-    elif [ "$qt" = "m" ]; then
-        python -m pip install -r static/requirements/advanced/requirements_qt6_middle.txt
+    elif [ "$qt" = "q" ]; then
+        python -m pip install -r static/requirements/advanced/requirements_qt6_new_pyqt6.txt
     elif [ "$qt" = "t" ]; then
         python -m pip install -r static/requirements/advanced/requirements_qt6_test.txt
     fi

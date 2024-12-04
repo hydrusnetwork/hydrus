@@ -36,7 +36,7 @@ def ClearGallerySeeds( win: QW.QWidget, gallery_seed_log: ClientImportGallerySee
     
     result = ClientGUIDialogsQuick.GetYesNo( win, message )
     
-    if result == QW.QDialog.Accepted:
+    if result == QW.QDialog.DialogCode.Accepted:
         
         gallery_seed_log.RemoveGallerySeedsByStatus( statuses_to_remove )
         
@@ -85,7 +85,7 @@ def ImportFromPNG( win: QW.QWidget, gallery_seed_log: ClientImportGallerySeeds.G
     
     with QP.FileDialog( win, 'select the png with the urls', wildcard = 'PNG (*.png)' ) as dlg:
         
-        if dlg.exec() == QW.QDialog.Accepted:
+        if dlg.exec() == QW.QDialog.DialogCode.Accepted:
             
             path = dlg.GetPath()
             
@@ -128,11 +128,11 @@ def ImportURLs( win: QW.QWidget, gallery_seed_log: ClientImportGallerySeeds.Gall
             return
             
         
-        if result == QW.QDialog.Accepted:
+        if result == QW.QDialog.DialogCode.Accepted:
             
             urls_to_add = filtered_urls
             
-        elif result == QW.QDialog.Rejected:
+        elif result == QW.QDialog.DialogCode.Rejected:
             
             return
             
@@ -149,7 +149,7 @@ def ImportURLs( win: QW.QWidget, gallery_seed_log: ClientImportGallerySeeds.Gall
             return
             
         
-        can_generate_more_pages = result == QW.QDialog.Rejected
+        can_generate_more_pages = result == QW.QDialog.DialogCode.Rejected
         
     
     gallery_seeds = [ ClientImportGallerySeeds.GallerySeed( url, can_generate_more_pages = can_generate_more_pages ) for url in urls_to_add ]
@@ -191,7 +191,7 @@ def RetryErrors( win: QW.QWidget, gallery_seed_log: ClientImportGallerySeeds.Gal
     
     result = ClientGUIDialogsQuick.GetYesNo( win, message )
     
-    if result == QW.QDialog.Accepted:
+    if result == QW.QDialog.DialogCode.Accepted:
         
         gallery_seed_log.RetryFailed()
         
@@ -403,7 +403,7 @@ class EditGallerySeedLogPanel( ClientGUIScrolledPanels.EditPanel ):
             
             result = ClientGUIDialogsQuick.GetYesNo( self, message )
             
-            if result == QW.QDialog.Accepted:
+            if result == QW.QDialog.DialogCode.Accepted:
                 
                 self._gallery_seed_log.RemoveGallerySeeds( gallery_seeds_to_delete )
                 
@@ -495,7 +495,7 @@ class EditGallerySeedLogPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 result = ClientGUIDialogsQuick.GetYesNo( self, message )
                 
-                if result != QW.QDialog.Accepted:
+                if result != QW.QDialog.DialogCode.Accepted:
                     
                     return
                     
@@ -656,7 +656,7 @@ class GallerySeedLogButton( ClientGUICommon.ButtonWithMenuArrow ):
                     
                     dlg.SetPanel( panel )
                     
-                    if dlg.exec() == QW.QDialog.Accepted:
+                    if dlg.exec() == QW.QDialog.DialogCode.Accepted:
                         
                         self._gallery_seed_log_set_callable( dupe_gallery_seed_log )
                         
@@ -681,7 +681,7 @@ class GallerySeedLogStatusControl( QW.QFrame ):
         
         super().__init__( parent )
         
-        self.setFrameStyle( QW.QFrame.Box | QW.QFrame.Raised )
+        self.setFrameStyle( QW.QFrame.Shape.Box | QW.QFrame.Shadow.Raised )
         
         self._controller = controller
         self._read_only = read_only

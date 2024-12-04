@@ -275,7 +275,7 @@ class MPVWidget( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
         
         self.installEventFilter( self )
         
-        self._my_shortcut_handler = ClientGUIShortcuts.ShortcutsHandler( self, [], catch_mouse = True )
+        self._my_shortcut_handler = ClientGUIShortcuts.ShortcutsHandler( self, self, [], catch_mouse = True )
         
         try:
             

@@ -303,7 +303,7 @@ class EditFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
             
             dlg.SetPanel( panel )
             
-            if dlg.exec() == QW.QDialog.Accepted:
+            if dlg.exec() == QW.QDialog.DialogCode.Accepted:
                 
                 self._current_formula = panel.GetValue()
                 
@@ -393,7 +393,7 @@ class EditFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
         
         with QP.FileDialog( self, 'select the png with the encoded formula', wildcard = 'PNG (*.png)' ) as dlg:
             
-            if dlg.exec() == QW.QDialog.Accepted:
+            if dlg.exec() == QW.QDialog.DialogCode.Accepted:
                 
                 path = dlg.GetPath()
                 
@@ -679,7 +679,7 @@ class EditHTMLFormulaPanel( EditSpecificFormulaPanel ):
         edit_panel = ClientGUICommon.StaticBox( self, 'edit' )
         
         self._tag_rules = ClientGUIListBoxes.BetterQListWidget( edit_panel )
-        self._tag_rules.setSelectionMode( QW.QAbstractItemView.SingleSelection )
+        self._tag_rules.setSelectionMode( QW.QAbstractItemView.SelectionMode.SingleSelection )
 
         self._tag_rules.itemDoubleClicked.connect( self.Edit )
         
@@ -828,7 +828,7 @@ class EditHTMLFormulaPanel( EditSpecificFormulaPanel ):
             
             dlg.SetPanel( panel )
             
-            if dlg.exec() == QW.QDialog.Accepted:
+            if dlg.exec() == QW.QDialog.DialogCode.Accepted:
                 
                 rule = panel.GetValue()
                 
@@ -868,7 +868,7 @@ class EditHTMLFormulaPanel( EditSpecificFormulaPanel ):
                 
                 dlg.SetPanel( panel )
                 
-                if dlg.exec() == QW.QDialog.Accepted:
+                if dlg.exec() == QW.QDialog.DialogCode.Accepted:
                     
                     rule = panel.GetValue()
                     
@@ -1083,7 +1083,7 @@ class EditJSONFormulaPanel( EditSpecificFormulaPanel ):
         edit_panel = ClientGUICommon.StaticBox( self, 'edit' )
         
         self._parse_rules = ClientGUIListBoxes.BetterQListWidget( edit_panel )
-        self._parse_rules.setSelectionMode( QW.QAbstractItemView.SingleSelection )
+        self._parse_rules.setSelectionMode( QW.QAbstractItemView.SelectionMode.SingleSelection )
         self._parse_rules.itemDoubleClicked.connect( self.Edit )
         
         self._add_rule = ClientGUICommon.BetterButton( edit_panel, 'add', self.Add )
@@ -1209,7 +1209,7 @@ class EditJSONFormulaPanel( EditSpecificFormulaPanel ):
             
             dlg.SetPanel( panel )
             
-            if dlg.exec() == QW.QDialog.Accepted:
+            if dlg.exec() == QW.QDialog.DialogCode.Accepted:
                 
                 rule = panel.GetValue()
                 
@@ -1249,7 +1249,7 @@ class EditJSONFormulaPanel( EditSpecificFormulaPanel ):
                 
                 dlg.SetPanel( panel )
                 
-                if dlg.exec() == QW.QDialog.Accepted:
+                if dlg.exec() == QW.QDialog.DialogCode.Accepted:
                     
                     rule = panel.GetValue()
                     
@@ -1576,7 +1576,7 @@ class EditZipperFormulaPanel( EditSpecificFormulaPanel ):
             
             dlg.SetPanel( panel )
             
-            if dlg.exec() == QW.QDialog.Accepted:
+            if dlg.exec() == QW.QDialog.DialogCode.Accepted:
                 
                 new_formula = panel.GetValue()
                 
@@ -1602,7 +1602,7 @@ class EditZipperFormulaPanel( EditSpecificFormulaPanel ):
             
             dlg.SetPanel( panel )
             
-            if dlg.exec() == QW.QDialog.Accepted:
+            if dlg.exec() == QW.QDialog.DialogCode.Accepted:
                 
                 new_formula = panel.GetValue()
                 

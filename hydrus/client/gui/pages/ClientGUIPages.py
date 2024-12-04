@@ -24,6 +24,7 @@ from hydrus.client.gui import ClientGUIDialogs
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIMenus
+from hydrus.client.gui import ClientGUIReviewWindowsQuick
 from hydrus.client.gui import QtInit
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.canvas import ClientGUICanvas
@@ -93,7 +94,7 @@ class Page( QW.QWidget ):
         self._management_panel = ClientGUIManagementPanels.CreateManagementPanel( self._search_preview_split, self, self._controller, self._management_controller )
         
         self._preview_panel = QW.QFrame( self._search_preview_split )
-        self._preview_panel.setFrameStyle( QW.QFrame.Panel | QW.QFrame.Sunken )
+        self._preview_panel.setFrameStyle( QW.QFrame.Shape.Panel | QW.QFrame.Shadow.Sunken )
         self._preview_panel.setLineWidth( 2 )
         
         self._preview_canvas = ClientGUICanvas.CanvasPanel( self._preview_panel, self._page_key, self._management_controller.GetLocationContext() )
@@ -863,7 +864,7 @@ class Page( QW.QWidget ):
             
             result = ClientGUIDialogsQuick.GetYesNo( self, message )
             
-            if result == QW.QDialog.Rejected:
+            if result == QW.QDialog.DialogCode.Rejected:
                 
                 raise HydrusExceptions.VetoException()
                 
@@ -878,10 +879,97 @@ class Page( QW.QWidget ):
 
 directions_for_notebook_tabs = {}
 
-directions_for_notebook_tabs[ CC.DIRECTION_UP ] = QW.QTabWidget.North
-directions_for_notebook_tabs[ CC.DIRECTION_LEFT ] = QW.QTabWidget.West
-directions_for_notebook_tabs[ CC.DIRECTION_RIGHT ] = QW.QTabWidget.East
-directions_for_notebook_tabs[ CC.DIRECTION_DOWN ] = QW.QTabWidget.South
+directions_for_notebook_tabs[ CC.DIRECTION_UP ] = QW.QTabWidget.TabPosition.North
+directions_for_notebook_tabs[ CC.DIRECTION_LEFT ] = QW.QTabWidget.TabPosition.West
+directions_for_notebook_tabs[ CC.DIRECTION_RIGHT ] = QW.QTabWidget.TabPosition.East
+directions_for_notebook_tabs[ CC.DIRECTION_DOWN ] = QW.QTabWidget.TabPosition.South
+
+def ConvertReasonsAndPagesToStatement( reasons_and_pages: list ) -> str:
+    
+    if len( reasons_and_pages ) > 0:
+        
+        message_blocks = []
+        
+        for ( reason, pages ) in reasons_and_pages:
+            
+            reason = typing.cast( str, reason )
+            pages = typing.cast( typing.List[ Page ], pages )
+            
+            names = [ page.GetName() for page in pages ]
+            
+            if len( pages ) == 1:
+                
+                message_block = f'page "{names[0]}" says: {reason}'
+                
+            else:
+                
+                message_block = f'pages{HydrusText.ConvertManyStringsToNiceInsertableHumanSummary( names )}say: {reason}'
+                
+            
+            message_blocks.append( message_block )
+            
+        
+        message = '\n----\n'.join( message_blocks )
+        
+        return message
+        
+    else:
+        
+        return ''
+        
+    
+
+def ShowReasonsAndPagesConfirmationDialog( win: QW.QWidget, reasons_and_pages, message, auto_yes_time = None ):
+    
+    no_tuples = [
+        ( 'no', 'no' ),
+        ( 'no, but show me the pages', 'show' )
+    ]
+    
+    ( result_code, data ) = ClientGUIDialogsQuick.GetYesNoNo( win, message, no_tuples = no_tuples, auto_yes_time = auto_yes_time )
+    
+    if result_code == QW.QDialog.DialogCode.Accepted:
+        
+        return
+        
+    elif result_code == QW.QDialog.DialogCode.Rejected:
+        
+        if data == 'show':
+            
+            def spawn_this_guy():
+                
+                def catch_datamissing( page ):
+                    
+                    try:
+                        
+                        CG.client_controller.gui.ShowPage( page.GetPageKey() )
+                        
+                    except HydrusExceptions.DataMissing as e:
+                        
+                        raise HydrusExceptions.VetoException( str( e ) )
+                        
+                    
+                
+                choice_tuples = []
+                
+                for ( reason, pages ) in reasons_and_pages:
+                    
+                    choice_tuples.extend(
+                        ( f'{reason}: {page.GetName()}', HydrusData.Call( catch_datamissing, page ), 'Show this page.' )
+                        for page
+                        in pages
+                    )
+                    
+                
+                ClientGUIReviewWindowsQuick.OpenListButtons( win, 'Go To Page', choice_tuples )
+                
+            
+            CG.client_controller.CallAfterQtSafe( win, 'creating show pages list', spawn_this_guy )
+            
+        
+        raise HydrusExceptions.VetoException()
+        
+    
 
 class PagesNotebook( QP.TabWidgetWithDnD ):
     
@@ -978,7 +1066,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         
         with ClientGUINewPageChooser.DialogPageChooser( self, self._controller ) as dlg:
             
-            if dlg.exec() == QW.QDialog.Accepted:
+            if dlg.exec() == QW.QDialog.DialogCode.Accepted:
                 
                 ( page_type, page_data ) = dlg.GetValue()
                 
@@ -1009,7 +1097,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         
         result = ClientGUIDialogsQuick.GetYesNo( self, message )
         
-        if result == QW.QDialog.Accepted:
+        if result == QW.QDialog.DialogCode.Accepted:
             
             closees = [ index for index in range( self.count() ) if index < from_index ]
             
@@ -1023,7 +1111,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         
         result = ClientGUIDialogsQuick.GetYesNo( self, message )
         
-        if result == QW.QDialog.Accepted:
+        if result == QW.QDialog.DialogCode.Accepted:
             
             closees = [ index for index in range( self.count() ) if index != except_index ]
             
@@ -1125,7 +1213,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         
         result = ClientGUIDialogsQuick.GetYesNo( self, message )
         
-        if result == QW.QDialog.Accepted:
+        if result == QW.QDialog.DialogCode.Accepted:
             
             closees = [ index for index in range( self.count() ) if index > from_index ]
             
@@ -1425,7 +1513,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         
         with ClientGUIDialogs.DialogTextEntry( self, 'Enter the new name.', default = current_name, allow_blank = False ) as dlg:
             
-            if dlg.exec() == QW.QDialog.Accepted:
+            if dlg.exec() == QW.QDialog.DialogCode.Accepted:
                 
                 new_name = dlg.GetValue()
                 
@@ -1454,7 +1542,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         
         result = ClientGUIDialogsQuick.GetYesNo( self, message )
         
-        if result == QW.QDialog.Accepted:
+        if result == QW.QDialog.DialogCode.Accepted:
             
             pages_index = self.count()
             
@@ -2443,10 +2531,9 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         return root
         
     
-    def GetTestAbleToCloseStatement( self ):
+    def GetTestAbleToCloseData( self ):
         
-        reasons_to_names = collections.defaultdict( list )
-        count = collections.Counter()
+        reasons_to_pages = collections.defaultdict( list )
         
         for page in self._GetMediaPages( False ):
             
@@ -2458,40 +2545,18 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
                 
                 reason = str( e )
                 
-                reasons_to_names[ reason ].append( page.GetName() )
-                
-                count[ reason ] += 1
+                reasons_to_pages[ reason ].append( page )
                 
             
         
-        if len( count ) > 0:
+        for ( reason, pages ) in reasons_to_pages.items():
             
-            message_blocks = []
+            pages.sort( key = lambda p: HydrusData.HumanTextSortKey( p.GetName() ) )
             
-            for ( reason, c ) in sorted( count.items() ):
-                
-                names = sorted( reasons_to_names[ reason ], key = HydrusData.HumanTextSortKey )
-                
-                if c == 1:
-                    
-                    message_block = f'page "{names[0]}" says: {reason}'
-                    
-                else:
-                    
-                    message_block = f'pages{HydrusText.ConvertManyStringsToNiceInsertableHumanSummary( names )}say: {reason}'
-                    
-                
-                message_blocks.append( message_block )
-                
-            
-            message = '\n----\n'.join( message_blocks )
-            
-            return message
-            
-        else:
-            
-            return None
-            
+        
+        reasons_and_pages = sorted( reasons_to_pages.items(), key = lambda a: len( a[1] ) )
+        
+        return reasons_and_pages
         
     
     def GetTotalFileSize( self ):
@@ -2721,7 +2786,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
             
             result = ClientGUIDialogsQuick.GetYesNo( self, message, title = 'Clear and load session?' )
             
-            if result != QW.QDialog.Accepted:
+            if result != QW.QDialog.DialogCode.Accepted:
                 
                 return
                 
@@ -3361,20 +3426,18 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
     
     def TestAbleToClose( self ):
         
-        statement = self.GetTestAbleToCloseStatement()
+        reasons_and_pages = self.GetTestAbleToCloseData()
         
-        if statement is not None:
+        if len( reasons_and_pages ) > 0:
+            
+            statement = ConvertReasonsAndPagesToStatement( reasons_and_pages )
             
             message = 'Are you sure you want to close this page of pages?'
             message += '\n' * 2
             message += statement
             
-            result = ClientGUIDialogsQuick.GetYesNo( self, message )
-            
-            if result == QW.QDialog.Rejected:
-                
-                raise HydrusExceptions.VetoException()
-                
+            # raises veto on no
+            ShowReasonsAndPagesConfirmationDialog( self, reasons_and_pages, message )
             
         
     

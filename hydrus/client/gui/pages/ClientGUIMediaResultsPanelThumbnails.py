@@ -1683,7 +1683,7 @@ class MediaResultsPanelThumbnails( ClientGUIMediaResultsPanel.MediaResultsPanel 
                 
                 focus_singleton = self._GetFocusSingleton()
                 
-                ClientGUIMediaMenus.AddDuplicatesMenu( self, manage_menu, self._location_context, focus_singleton, num_selected, collections_selected )
+                ClientGUIMediaMenus.AddDuplicatesMenu( self, self, manage_menu, self._location_context, focus_singleton, num_selected, collections_selected )
                 
             
             regen_menu = ClientGUIMenus.GenerateMenu( manage_menu )
@@ -1811,11 +1811,11 @@ class MediaResultsPanelThumbnails( ClientGUIMediaResultsPanel.MediaResultsPanel 
             
             #
             
-            ClientGUIMediaMenus.AddKnownURLsViewCopyMenu( self, menu, self._focused_media, num_selected, selected_media = self._selected_media )
+            ClientGUIMediaMenus.AddKnownURLsViewCopyMenu( self, self, menu, self._focused_media, num_selected, selected_media = self._selected_media )
             
-            ClientGUIMediaMenus.AddOpenMenu( self, menu, self._focused_media, self._selected_media )
+            ClientGUIMediaMenus.AddOpenMenu( self, self, menu, self._focused_media, self._selected_media )
             
-            ClientGUIMediaMenus.AddShareMenu( self, menu, self._focused_media, self._selected_media )
+            ClientGUIMediaMenus.AddShareMenu( self, self, menu, self._focused_media, self._selected_media )
             
         
         if not do_not_show_just_return:

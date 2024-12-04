@@ -257,7 +257,7 @@ class EditAccountTypesPanel( ClientGUIScrolledPanels.EditPanel ):
             
             dlg_edit.SetPanel( panel )
             
-            if dlg_edit.exec() == QW.QDialog.Accepted:
+            if dlg_edit.exec() == QW.QDialog.DialogCode.Accepted:
                 
                 new_account_type = panel.GetValue()
                 
@@ -285,7 +285,7 @@ class EditAccountTypesPanel( ClientGUIScrolledPanels.EditPanel ):
         
         result = ClientGUIDialogsQuick.GetYesNo( self, 'Remove all selected?' )
         
-        if result == QW.QDialog.Accepted:
+        if result == QW.QDialog.DialogCode.Accepted:
             
             account_types_about_to_delete = self._account_types_listctrl.GetData( only_selected = True )
             
@@ -363,7 +363,7 @@ class EditAccountTypesPanel( ClientGUIScrolledPanels.EditPanel ):
             
             dlg_edit.SetPanel( panel )
             
-            if dlg_edit.exec() == QW.QDialog.Accepted:
+            if dlg_edit.exec() == QW.QDialog.DialogCode.Accepted:
                 
                 edited_account_type = panel.GetValue()
                 
@@ -421,7 +421,7 @@ class ListAccountsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         self._accounts_box = ClientGUICommon.StaticBox( self, 'accounts' )
         
         self._account_list = ClientGUIListBoxes.BetterQListWidget( self._accounts_box )
-        self._account_list.setSelectionMode( QW.QListWidget.ExtendedSelection )
+        self._account_list.setSelectionMode( QW.QAbstractItemView.SelectionMode.ExtendedSelection )
         
         ( min_width, min_height ) = ClientGUIFunctions.ConvertTextToPixels( self._account_list, ( 74, 16 ) )
         
@@ -510,7 +510,7 @@ class ReviewAccountsPanel( QW.QWidget ):
         self._status_st = ClientGUICommon.BetterStaticText( self._accounts_box )
         
         self._account_list = ClientGUICommon.BetterCheckBoxList( self._accounts_box )
-        self._account_list.setSelectionMode( QW.QAbstractItemView.SingleSelection )
+        self._account_list.setSelectionMode( QW.QAbstractItemView.SelectionMode.SingleSelection )
         
         ( min_width, min_height ) = ClientGUIFunctions.ConvertTextToPixels( self._account_list, ( 74, 6 ) )
         
@@ -1058,7 +1058,7 @@ class ModifyAccountsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         result = ClientGUIDialogsQuick.GetYesNo( self, message )
         
-        if result != QW.QDialog.Accepted:
+        if result != QW.QDialog.DialogCode.Accepted:
             
             return
             
@@ -1105,7 +1105,7 @@ class ModifyAccountsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         result = ClientGUIDialogsQuick.GetYesNo( self, message )
         
-        if result != QW.QDialog.Accepted:
+        if result != QW.QDialog.DialogCode.Accepted:
             
             return
             
@@ -1157,7 +1157,7 @@ class ModifyAccountsPanel( ClientGUIScrolledPanels.ReviewPanel ):
             
             result = ClientGUIDialogsQuick.GetYesNo( self, message )
             
-            if result != QW.QDialog.Accepted:
+            if result != QW.QDialog.DialogCode.Accepted:
                 
                 return
                 
@@ -1178,7 +1178,7 @@ class ModifyAccountsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         result = ClientGUIDialogsQuick.GetYesNo( self, message )
         
-        if result != QW.QDialog.Accepted:
+        if result != QW.QDialog.DialogCode.Accepted:
             
             return
             
@@ -1241,7 +1241,7 @@ class ModifyAccountsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         result = ClientGUIDialogsQuick.GetYesNo( self, message )
         
-        if result != QW.QDialog.Accepted:
+        if result != QW.QDialog.DialogCode.Accepted:
             
             return
             
@@ -1354,7 +1354,7 @@ class ModifyAccountsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         result = ClientGUIDialogsQuick.GetYesNo( self, yn_message )
         
-        if result != QW.QDialog.Accepted:
+        if result != QW.QDialog.DialogCode.Accepted:
             
             return
             
@@ -1415,7 +1415,7 @@ class ModifyAccountsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         result = ClientGUIDialogsQuick.GetYesNo( self, message )
         
-        if result != QW.QDialog.Accepted:
+        if result != QW.QDialog.DialogCode.Accepted:
             
             return
             
@@ -1520,7 +1520,7 @@ class ModifyAccountsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         result = ClientGUIDialogsQuick.GetYesNo( self, message )
         
-        if result != QW.QDialog.Accepted:
+        if result != QW.QDialog.DialogCode.Accepted:
             
             return
             

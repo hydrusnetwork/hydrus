@@ -885,7 +885,7 @@ class AutoCompleteDropdown( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
             
             self._dropdown_window = QW.QFrame( parent_to_use )
             
-            self._dropdown_window.setFrameStyle( QW.QFrame.Panel | QW.QFrame.Raised )
+            self._dropdown_window.setFrameStyle( QW.QFrame.Shape.Panel | QW.QFrame.Shadow.Raised )
             self._dropdown_window.setLineWidth( 2 )
             
             self._dropdown_hidden = True
@@ -926,7 +926,7 @@ class AutoCompleteDropdown( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
         
         self._schedule_results_refresh_job = None
         
-        self._my_shortcut_handler = ClientGUIShortcuts.ShortcutsHandler( self, [ 'tags_autocomplete' ], alternate_filter_target = self._text_ctrl )
+        self._my_shortcut_handler = ClientGUIShortcuts.ShortcutsHandler( self, self, [ 'tags_autocomplete' ], alternate_filter_target = self._text_ctrl )
         
         if self._float_mode:
             
@@ -1311,7 +1311,7 @@ class AutoCompleteDropdown( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
                     
                 elif event.type() == QC.QEvent.Wheel:
                     
-                    current_results_list = self._dropdown_notebook.currentWidget()
+                    current_results_list = typing.cast( ClientGUIListBoxes.ListBoxTags, self._dropdown_notebook.currentWidget() )
                     
                     if self._text_ctrl.text() == '' and len( current_results_list ) == 0:
                         
@@ -2196,7 +2196,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
             
             dlg.SetPanel( panel )
             
-            if dlg.exec() == QW.QDialog.Accepted:
+            if dlg.exec() == QW.QDialog.DialogCode.Accepted:
                 
                 predicates = panel.GetValue()
                 shift_down = False
@@ -2550,7 +2550,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
             
             dlg.SetPanel( panel )
             
-            if dlg.exec() == QW.QDialog.Accepted:
+            if dlg.exec() == QW.QDialog.DialogCode.Accepted:
                 
                 edited_favourite_searches_rows = panel.GetValue()
                 

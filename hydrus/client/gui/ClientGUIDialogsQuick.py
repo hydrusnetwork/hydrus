@@ -34,7 +34,7 @@ def GetDeleteFilesJobs( win, media, default_reason, suggested_file_service_key =
             return ( hashes_physically_deleted, content_update_packages )
             
         
-        if dlg.exec() == QW.QDialog.Accepted:
+        if dlg.exec() == QW.QDialog.DialogCode.Accepted:
             
             ( hashes_physically_deleted, content_update_packages ) = panel.GetValue()
             
@@ -81,6 +81,7 @@ def run_auto_yes_no_gubbins( dlg: QW.QDialog, time_to_fire, original_title, acti
     job = CG.client_controller.CallLaterQtSafe( dlg, 0.0, 'dialog auto yes/no fire', qt_fire_button )
     
 
+# TODO: check_for_cancelled aiiiiieeeeeeeeee
 def GetYesNo( win, message, title = 'Are you sure?', yes_label = 'yes', no_label = 'no', auto_yes_time = None, auto_no_time = None, check_for_cancelled = False ):
     
     with ClientGUITopLevelWindowsPanels.DialogCustomButtonQuestion( win, title ) as dlg:
@@ -93,15 +94,41 @@ def GetYesNo( win, message, title = 'Are you sure?', yes_label = 'yes', no_label
             
             if auto_yes_time is not None:
                 
-                CG.client_controller.CallToThread( run_auto_yes_no_gubbins, dlg, HydrusTime.GetNow() + auto_yes_time, dlg.windowTitle(), 'auto-yes', QW.QDialog.Accepted )
+                CG.client_controller.CallToThread( run_auto_yes_no_gubbins, dlg, HydrusTime.GetNow() + auto_yes_time, dlg.windowTitle(), 'auto-yes', QW.QDialog.DialogCode.Accepted )
                 
             elif auto_no_time is not None:
                 
-                CG.client_controller.CallToThread( run_auto_yes_no_gubbins, dlg, HydrusTime.GetNow() + auto_no_time, dlg.windowTitle(), 'auto-no', QW.QDialog.Rejected )
+                CG.client_controller.CallToThread( run_auto_yes_no_gubbins, dlg, HydrusTime.GetNow() + auto_no_time, dlg.windowTitle(), 'auto-no', QW.QDialog.DialogCode.Rejected )
                 
             
         
         return dlg.exec() if not check_for_cancelled else ( dlg.exec(), dlg.WasCancelled() )
+        
+    
+
+def GetYesNoNo( win, message, title = 'Are you sure?', yes_label = 'yes', no_tuples = None, auto_yes_time = None ):
+    
+    with ClientGUITopLevelWindowsPanels.DialogCustomButtonQuestion( win, title ) as dlg:
+        
+        panel = ClientGUIScrolledPanelsButtonQuestions.QuestionYesNoNoPanel( dlg, message, yes_label = yes_label, no_tuples = no_tuples )
+        
+        dlg.SetPanel( panel )
+        
+        if auto_yes_time is not None:
+            
+            CG.client_controller.CallToThread( run_auto_yes_no_gubbins, dlg, HydrusTime.GetNow() + auto_yes_time, dlg.windowTitle(), 'auto-yes', QW.QDialog.DialogCode.Accepted )
+            
+        
+        result = dlg.exec()
+        
+        if result == QW.QDialog.DialogCode.Accepted:
+            
+            return ( result, None )
+            
+        else:
+            
+            return ( result, panel.GetValue() )
+            
         
     
 
@@ -113,7 +140,7 @@ def GetYesYesNo( win, message, title = 'Are you sure?', yes_tuples = None, no_la
         
         dlg.SetPanel( panel )
         
-        if dlg.exec() == QW.QDialog.Accepted:
+        if dlg.exec() == QW.QDialog.DialogCode.Accepted:
             
             return panel.GetValue()
             
@@ -212,7 +239,7 @@ def SelectFromList( win, title, choice_tuples, value_to_select = None, sort_tupl
         
         dlg.SetPanel( panel )
         
-        if dlg.exec() == QW.QDialog.Accepted:
+        if dlg.exec() == QW.QDialog.DialogCode.Accepted:
             
             result = panel.GetValue()
             
@@ -240,7 +267,7 @@ def SelectFromListButtons( win, title, choice_tuples, message = '' ):
         
         dlg.SetPanel( panel )
         
-        if dlg.exec() == QW.QDialog.Accepted:
+        if dlg.exec() == QW.QDialog.DialogCode.Accepted:
             
             result = panel.GetValue()
             
@@ -261,7 +288,7 @@ def SelectMultipleFromList( win, title, choice_tuples ):
         
         dlg.SetPanel( panel )
         
-        if dlg.exec() == QW.QDialog.Accepted:
+        if dlg.exec() == QW.QDialog.DialogCode.Accepted:
             
             result = panel.GetValue()
             

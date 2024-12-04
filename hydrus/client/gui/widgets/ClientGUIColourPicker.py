@@ -96,7 +96,7 @@ def EditColour( win: QW.QWidget, colour: QG.QColor ):
     
     dialog = QW.QColorDialog( colour, win )
     
-    if dialog.exec_() == QW.QDialog.Accepted:
+    if dialog.exec_() == QW.QDialog.DialogCode.Accepted:
         
         edited_colour = dialog.selectedColor()
         

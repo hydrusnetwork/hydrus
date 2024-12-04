@@ -365,7 +365,7 @@ class RatingIncDec( QW.QWidget ):
                     
                     dlg.SetPanel( panel )
                     
-                    if dlg.exec() == QW.QDialog.Accepted:
+                    if dlg.exec() == QW.QDialog.DialogCode.Accepted:
                         
                         new_rating = control.value()
                         

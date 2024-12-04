@@ -37,7 +37,7 @@ def ManageShortcuts( win: QW.QWidget ):
         
         dlg.SetPanel( panel )
         
-        if dlg.exec() == QW.QDialog.Accepted:
+        if dlg.exec() == QW.QDialog.DialogCode.Accepted:
             
             ( call_mouse_buttons_primary_secondary, shortcuts_merge_non_number_numpad, shortcut_sets ) = panel.GetValue()
             
@@ -274,7 +274,7 @@ class EditShortcutSetPanel( ClientGUIScrolledPanels.EditPanel ):
             
             dlg.SetPanel( panel )
             
-            if dlg.exec() == QW.QDialog.Accepted:
+            if dlg.exec() == QW.QDialog.DialogCode.Accepted:
                 
                 ( shortcut, command ) = panel.GetValue()
                 
@@ -304,7 +304,7 @@ class EditShortcutSetPanel( ClientGUIScrolledPanels.EditPanel ):
             
             dlg.SetPanel( panel )
             
-            if dlg.exec() == QW.QDialog.Accepted:
+            if dlg.exec() == QW.QDialog.DialogCode.Accepted:
                 
                 ( new_shortcut, new_command ) = panel.GetValue()
                 
@@ -358,7 +358,7 @@ class EditShortcutSetPanel( ClientGUIScrolledPanels.EditPanel ):
         
         result = ClientGUIDialogsQuick.GetYesNo( self, 'Remove all selected?' )
         
-        if result == QW.QDialog.Accepted:
+        if result == QW.QDialog.DialogCode.Accepted:
             
             self._shortcuts.DeleteSelected()
             
@@ -492,7 +492,7 @@ class EditShortcutsPanel( ClientGUIScrolledPanels.EditPanel ):
             
             dlg.SetPanel( panel )
             
-            if dlg.exec() == QW.QDialog.Accepted:
+            if dlg.exec() == QW.QDialog.DialogCode.Accepted:
                 
                 new_shortcuts = panel.GetValue()
                 
@@ -505,7 +505,7 @@ class EditShortcutsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         result = ClientGUIDialogsQuick.GetYesNo( self, 'Remove all selected?' )
         
-        if result == QW.QDialog.Accepted:
+        if result == QW.QDialog.DialogCode.Accepted:
             
             self._custom_shortcuts.DeleteSelected()
             
@@ -528,7 +528,7 @@ class EditShortcutsPanel( ClientGUIScrolledPanels.EditPanel ):
             
             dlg.SetPanel( panel )
             
-            if dlg.exec() == QW.QDialog.Accepted:
+            if dlg.exec() == QW.QDialog.DialogCode.Accepted:
                 
                 edited_shortcuts = panel.GetValue()
                 
@@ -554,7 +554,7 @@ class EditShortcutsPanel( ClientGUIScrolledPanels.EditPanel ):
             
             dlg.SetPanel( panel )
             
-            if dlg.exec() == QW.QDialog.Accepted:
+            if dlg.exec() == QW.QDialog.DialogCode.Accepted:
                 
                 edited_shortcuts = panel.GetValue()
                 
@@ -644,7 +644,7 @@ class EditShortcutsPanel( ClientGUIScrolledPanels.EditPanel ):
             
             result = ClientGUIDialogsQuick.GetYesNo( self, message )
             
-            if result == QW.QDialog.Accepted:
+            if result == QW.QDialog.DialogCode.Accepted:
                 
                 self._reserved_shortcuts.ReplaceData( existing_data, new_data, sort_and_scroll = True )
                 

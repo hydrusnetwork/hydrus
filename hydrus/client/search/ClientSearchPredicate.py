@@ -935,6 +935,22 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
             
         
     
+    def GetMagicSortValue( self ):
+        
+        if self._predicate_type == PREDICATE_TYPE_SYSTEM_WIDTH:
+            
+            return -2
+            
+        elif self._predicate_type == PREDICATE_TYPE_SYSTEM_HEIGHT:
+            
+            return -1
+            
+        else:
+            
+            return 0
+            
+        
+    
     def GetMatchableSearchTexts( self ):
         
         return self._matchable_search_texts

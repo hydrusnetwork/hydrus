@@ -294,7 +294,7 @@ class RecentTagsPanel( QW.QWidget ):
         
         result = ClientGUIDialogsQuick.GetYesNo( self, 'Clear recent tags?' )
         
-        if result == QW.QDialog.Accepted:
+        if result == QW.QDialog.DialogCode.Accepted:
             
             CG.client_controller.Write( 'push_recent_tags', self._service_key, None )
             
@@ -702,7 +702,7 @@ class FileLookupScriptTagsPanel( QW.QWidget ):
             
             with ClientGUIDialogs.DialogTextEntry( self, message ) as dlg:
                 
-                if dlg.exec() != QW.QDialog.Accepted:
+                if dlg.exec() != QW.QDialog.DialogCode.Accepted:
                     
                     return
                     

@@ -64,7 +64,7 @@ class Dialog( QP.Dialog ):
         
         if shortcut == escape_shortcut or ( HC.PLATFORM_MACOS and shortcut == command_w_shortcut ):
             
-            self.done( QW.QDialog.Rejected )
+            self.done( QW.QDialog.DialogCode.Rejected )
             
         else:
             
@@ -129,7 +129,7 @@ class DialogChooseNewServiceMethod( Dialog ):
         
         self._should_register = True
         
-        self.done( QW.QDialog.Accepted )
+        self.done( QW.QDialog.DialogCode.Accepted )
         
     
     def GetRegister( self ):
@@ -249,7 +249,7 @@ class DialogGenerateNewAccounts( Dialog ):
             
         finally:
             
-            self.done( QW.QDialog.Accepted )
+            self.done( QW.QDialog.DialogCode.Accepted )
             
         
     
@@ -332,7 +332,7 @@ class DialogInputNamespaceRegex( Dialog ):
             return
             
         
-        self.done( QW.QDialog.Accepted )
+        self.done( QW.QDialog.DialogCode.Accepted )
         
     
     def GetInfo( self ):
@@ -363,7 +363,7 @@ class DialogInputTags( Dialog ):
         
         self._tag_autocomplete.nullEntered.connect( self.OK )
         
-        self._ok = ClientGUICommon.BetterButton( self, 'OK', self.done, QW.QDialog.Accepted )
+        self._ok = ClientGUICommon.BetterButton( self, 'OK', self.done, QW.QDialog.DialogCode.Accepted )
         self._ok.setObjectName( 'HydrusAccept' )
         
         self._cancel = QW.QPushButton( 'Cancel', self )
@@ -436,7 +436,7 @@ class DialogInputTags( Dialog ):
     
     def OK( self ):
         
-        self.done( QW.QDialog.Accepted )
+        self.done( QW.QDialog.DialogCode.Accepted )
         
     
 class DialogInputUPnPMapping( Dialog ):
@@ -455,7 +455,7 @@ class DialogInputUPnPMapping( Dialog ):
         self._description = QW.QLineEdit( self )
         self._duration = ClientGUICommon.BetterSpinBox( self, min=0, max=86400 )
         
-        self._ok = ClientGUICommon.BetterButton( self, 'OK', self.done, QW.QDialog.Accepted )
+        self._ok = ClientGUICommon.BetterButton( self, 'OK', self.done, QW.QDialog.DialogCode.Accepted )
         self._ok.setObjectName( 'HydrusAccept' )
         
         self._cancel = QW.QPushButton( 'Cancel', self )
@@ -522,7 +522,7 @@ class DialogSelectFromURLTree( Dialog ):
         
         self._tree = QP.TreeWidgetWithInheritedCheckState( self )
         
-        self._ok = ClientGUICommon.BetterButton( self, 'OK', self.done, QW.QDialog.Accepted )
+        self._ok = ClientGUICommon.BetterButton( self, 'OK', self.done, QW.QDialog.DialogCode.Accepted )
         self._ok.setObjectName( 'HydrusAccept' )
         
         self._cancel = QW.QPushButton( 'Cancel', self )
@@ -662,7 +662,7 @@ class DialogTextEntry( Dialog ):
         
         if password_entry:
             
-            self._text.setEchoMode( QW.QLineEdit.Password )
+            self._text.setEchoMode( QW.QLineEdit.EchoMode.Password )
             
         
         if self._max_chars is not None:
@@ -670,7 +670,7 @@ class DialogTextEntry( Dialog ):
             self._text.setMaxLength( self._max_chars )
             
         
-        self._ok = ClientGUICommon.BetterButton( self, 'ok', self.done, QW.QDialog.Accepted )
+        self._ok = ClientGUICommon.BetterButton( self, 'ok', self.done, QW.QDialog.DialogCode.Accepted )
         self._ok.setObjectName( 'HydrusAccept' )
         
         self._cancel = QW.QPushButton( 'cancel', self )
@@ -745,7 +745,7 @@ class DialogTextEntry( Dialog ):
         
         self._chosen_suggestion =  text
         
-        self.done( QW.QDialog.Accepted )
+        self.done( QW.QDialog.DialogCode.Accepted )
         
     
     def EventText( self, text ):
@@ -757,7 +757,7 @@ class DialogTextEntry( Dialog ):
         
         if self._ok.isEnabled():
             
-            self.done( QW.QDialog.Accepted )
+            self.done( QW.QDialog.DialogCode.Accepted )
             
         
     

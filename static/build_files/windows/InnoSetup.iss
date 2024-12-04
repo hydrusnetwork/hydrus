@@ -26,8 +26,9 @@ DisableReadyPage=yes
 DisableDirPage=no
 ShowLanguageDialog=no
 SetupIconFile=hydrus\static\hydrus.ico
-Uninstallable=IsComponentSelected('install')
+Uninstallable=WizardIsComponentSelected('install')
 UninstallDisplayIcon={app}\static\hydrus.ico
+UsedUserAreasWarning=no
 [Tasks]
 Name: desktopicons; Description: Create desktop icons; Flags: unchecked; Components: install
 Name: programgroupicons; Description: Create program group icons; Components: install

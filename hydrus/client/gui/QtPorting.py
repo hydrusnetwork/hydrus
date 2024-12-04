@@ -88,7 +88,7 @@ class LabelledSlider( QW.QWidget ):
         self._slider = QW.QSlider()
         self._slider.setOrientation( QC.Qt.Horizontal )
         self._slider.setTickInterval( 1 )
-        self._slider.setTickPosition( QW.QSlider.TicksBothSides )
+        self._slider.setTickPosition( QW.QSlider.TickPosition.TicksBothSides )
         
         top_layout.addWidget( self._min_label )
         top_layout.addWidget( self._slider )
@@ -1042,7 +1042,7 @@ def AddToLayout( layout, item, flag = None, alignment = None ):
                 
             elif isinstance( item, tuple ):
                 
-                spacer = QW.QPushButton()#QW.QSpacerItem( 0, 0, QW.QSizePolicy.Expanding, QW.QSizePolicy.Fixed )
+                spacer = QW.QPushButton()#QW.QSpacerItem( 0, 0, QW.QSizePolicy.Policy.Expanding, QW.QSizePolicy.Policy.Fixed )
                 layout.addWidget( spacer, row, col )
                 spacer.setVisible(False)
                 
@@ -1148,13 +1148,13 @@ def AddToLayout( layout, item, flag = None, alignment = None ):
             
             if isinstance( layout, QW.QHBoxLayout ):
                 
-                h_policy = QW.QSizePolicy.Fixed
-                v_policy = QW.QSizePolicy.Expanding
+                h_policy = QW.QSizePolicy.Policy.Fixed
+                v_policy = QW.QSizePolicy.Policy.Expanding
                 
             else:
                 
-                h_policy = QW.QSizePolicy.Expanding
-                v_policy = QW.QSizePolicy.Fixed
+                h_policy = QW.QSizePolicy.Policy.Expanding
+                v_policy = QW.QSizePolicy.Policy.Fixed
                 
             
             item.setSizePolicy( h_policy, v_policy )
@@ -1169,7 +1169,7 @@ def AddToLayout( layout, item, flag = None, alignment = None ):
         
         if isinstance( item, QW.QWidget ):
             
-            item.setSizePolicy( QW.QSizePolicy.Expanding, QW.QSizePolicy.Expanding )
+            item.setSizePolicy( QW.QSizePolicy.Policy.Expanding, QW.QSizePolicy.Policy.Expanding )
             
         
         if isinstance( layout, QW.QVBoxLayout ) or isinstance( layout, QW.QHBoxLayout ):
@@ -1793,7 +1793,7 @@ class PasswordEntryDialog( Dialog ):
         self._cancel_button.clicked.connect( self.reject )
         
         self._password = QW.QLineEdit( self )
-        self._password.setEchoMode( QW.QLineEdit.Password )
+        self._password.setEchoMode( QW.QLineEdit.EchoMode.Password )
         
         self.setLayout( QW.QVBoxLayout() )
         
@@ -1816,6 +1816,7 @@ class PasswordEntryDialog( Dialog ):
         
         return self._password.text()
         
+    
 
 class DirDialog( QW.QFileDialog ):
     
@@ -1825,15 +1826,15 @@ class DirDialog( QW.QFileDialog ):
         
         if message is not None: self.setWindowTitle( message )
         
-        self.setAcceptMode( QW.QFileDialog.AcceptOpen )
+        self.setAcceptMode( QW.QFileDialog.AcceptMode.AcceptOpen )
         
-        self.setFileMode( QW.QFileDialog.Directory )
+        self.setFileMode( QW.QFileDialog.FileMode.Directory )
         
-        self.setOption( QW.QFileDialog.ShowDirsOnly, True )
+        self.setOption( QW.QFileDialog.Option.ShowDirsOnly, True )
         
         if CG.client_controller.new_options.GetBoolean( 'use_qt_file_dialogs' ):
             
-            self.setOption( QW.QFileDialog.DontUseNativeDialog, True )
+            self.setOption( QW.QFileDialog.Option.DontUseNativeDialog, True )
             
         
     
@@ -1862,11 +1863,12 @@ class DirDialog( QW.QFileDialog ):
             
         
         return None
-
+        
+    
 
 class FileDialog( QW.QFileDialog ):
     
-    def __init__( self, parent = None, message = None, acceptMode = QW.QFileDialog.AcceptOpen, fileMode = QW.QFileDialog.ExistingFile, default_filename = None, default_directory = None, wildcard = None, defaultSuffix = None ):
+    def __init__( self, parent = None, message = None, acceptMode = QW.QFileDialog.AcceptMode.AcceptOpen, fileMode = QW.QFileDialog.FileMode.ExistingFile, default_filename = None, default_directory = None, wildcard = None, defaultSuffix = None ):
         
         super().__init__( parent )
         
@@ -1901,17 +1903,17 @@ class FileDialog( QW.QFileDialog ):
         
         if CG.client_controller.new_options.GetBoolean( 'use_qt_file_dialogs' ):
             
-            self.setOption( QW.QFileDialog.DontUseNativeDialog, True )
+            self.setOption( QW.QFileDialog.Option.DontUseNativeDialog, True )
             
         
-
+    
     def __enter__( self ):
-
+        
         return self
         
 
     def __exit__( self, exc_type, exc_val, exc_tb ):
-
+        
         self.deleteLater()
         
 
@@ -1921,7 +1923,7 @@ class FileDialog( QW.QFileDialog ):
         
     
     def GetPath( self ):
-
+        
         sel = self._GetSelectedFiles()
 
         if len( sel ) > 0:
@@ -1930,12 +1932,13 @@ class FileDialog( QW.QFileDialog ):
             
 
         return None
-    
+        
     
     def GetPaths( self ):
         
         return self._GetSelectedFiles()
-
+        
+    
 
 # A QTreeWidget where if an item is (un)checked, all its children are also (un)checked, recursively
 class TreeWidgetWithInheritedCheckState( QW.QTreeWidget ):

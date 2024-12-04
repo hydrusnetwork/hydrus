@@ -284,7 +284,7 @@ class VolumeSlider( QW.QSlider ):
         
         self.setOrientation( QC.Qt.Vertical )
         self.setTickInterval( 1 )
-        self.setTickPosition( QW.QSlider.TicksBothSides )
+        self.setTickPosition( QW.QSlider.TickPosition.TicksBothSides )
         self.setRange( 0, 100 )
         
         volume = self._GetCorrectValue()

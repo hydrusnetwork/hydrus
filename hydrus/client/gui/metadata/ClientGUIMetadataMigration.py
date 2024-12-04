@@ -80,9 +80,9 @@ class EditSingleFileMetadataRouterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._exporter_panel = ClientGUICommon.StaticBox( self, 'destination' )
         
-        self._exporter_button = ClientGUIMetadataMigrationExporters.EditSingleFileMetadataExporterPanel( self._exporter_panel, exporter, self._allowed_exporter_classes )
+        self._exporter_widget = ClientGUIMetadataMigrationExporters.EditSingleFileMetadataExporterWidget( self._exporter_panel, exporter, self._allowed_exporter_classes )
         
-        self._exporter_panel.Add( self._exporter_button, CC.FLAGS_EXPAND_BOTH_WAYS )
+        self._exporter_panel.Add( self._exporter_widget, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         #
         
@@ -171,7 +171,7 @@ class EditSingleFileMetadataRouterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         importers = self._importers_list.GetData()
         
-        exporter = self._exporter_button.GetValue()
+        exporter = self._exporter_widget.GetValue()
         
         texts = set()
         
@@ -193,7 +193,7 @@ class EditSingleFileMetadataRouterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         string_processor = self._string_processor_button.GetValue()
         
-        exporter = self._exporter_button.GetValue()
+        exporter = self._exporter_widget.GetValue()
         
         router = ClientMetadataMigration.SingleFileMetadataRouter( importers = importers, string_processor = string_processor, exporter = exporter )
         
@@ -337,7 +337,7 @@ class SingleFileMetadataRoutersControl( ClientGUIListBoxes.AddEditDeleteListBox 
             
             dlg.SetPanel( panel )
             
-            if dlg.exec() == QW.QDialog.Accepted:
+            if dlg.exec() == QW.QDialog.DialogCode.Accepted:
                 
                 edited_router = panel.GetValue()
                 
@@ -379,7 +379,7 @@ class SingleFileMetadataRoutersButton( QW.QPushButton ):
             
             dlg.SetPanel( panel )
             
-            if dlg.exec() == QW.QDialog.Accepted:
+            if dlg.exec() == QW.QDialog.DialogCode.Accepted:
                 
                 value = control.GetData()
                 

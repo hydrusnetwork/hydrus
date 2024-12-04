@@ -50,7 +50,7 @@ def SelectClass( win: QW.QWidget, allowed_exporter_classes: list ):
     return exporter_class
     
 
-class EditSingleFileMetadataExporterPanel( ClientGUIScrolledPanels.EditPanel ):
+class EditSingleFileMetadataExporterWidget( QW.QWidget ):
     
     def __init__( self, parent: QW.QWidget, exporter: ClientMetadataMigrationExporters.SingleFileMetadataExporter, allowed_exporter_classes: list ):
         
@@ -80,7 +80,7 @@ class EditSingleFileMetadataExporterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._forced_note_name_panel = ClientGUICommon.StaticBox( self, 'name' )
         
-        self._forced_note_name = ClientGUICommon.NoneableTextCtrl( self._forced_note_name_panel, '', message = 'Forced Note Name: ', none_phrase = 'use "name: text" format' )
+        self._forced_note_name = ClientGUICommon.NoneableTextCtrl( self._forced_note_name_panel, '', message = 'Forced Note Name: ', none_phrase = 'use "name: text" format', min_chars_width = 20 )
         tt = 'Normally, the sidecar exporter is at this stage expecting notes in the format "name: text". If you only have the text, you can force the name here. This is only useful if you are parsing one note through here, or you will get all sorts of renaming conflicts.'
         self._forced_note_name.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
         
@@ -142,7 +142,7 @@ class EditSingleFileMetadataExporterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         vbox.addStretch( 1 )
         
-        self.widget().setLayout( vbox )
+        self.setLayout( vbox )
         
         self._SetValue( exporter )
         
@@ -225,7 +225,7 @@ class EditSingleFileMetadataExporterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         with ClientGUIDialogs.DialogTextEntry( self, 'enter the JSON Object name', default = object_name, allow_blank = False ) as dlg:
             
-            if dlg.exec() == QW.QDialog.Accepted:
+            if dlg.exec() == QW.QDialog.DialogCode.Accepted:
                 
                 object_name = dlg.GetValue()
                 
@@ -462,13 +462,17 @@ class SingleFileMetadataExporterButton( QW.QPushButton ):
         
         with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit metadata migration exporter' ) as dlg:
             
-            panel = EditSingleFileMetadataExporterPanel( dlg, self._exporter, self._allowed_exporter_classes )
+            panel = ClientGUIScrolledPanels.EditSingleCtrlPanel( dlg )
+            
+            control = EditSingleFileMetadataExporterWidget( dlg, self._exporter, self._allowed_exporter_classes )
+            
+            panel.SetControl( control )
             
             dlg.SetPanel( panel )
             
-            if dlg.exec() == QW.QDialog.Accepted:
+            if dlg.exec() == QW.QDialog.DialogCode.Accepted:
                 
-                value = panel.GetValue()
+                value = control.GetValue()
                 
                 self.SetValue( value )
                 

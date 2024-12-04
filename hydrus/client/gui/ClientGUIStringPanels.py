@@ -38,11 +38,11 @@ class MultilineStringConversionTestPanel( QW.QWidget ):
         
         self._test_data = ClientGUIListBoxes.BetterQListWidget( self )
         
-        self._test_data.setSelectionMode( QW.QListWidget.SingleSelection )
+        self._test_data.setSelectionMode( QW.QAbstractItemView.SelectionMode.SingleSelection )
         
         self._result_data = ClientGUIListBoxes.BetterQListWidget( self )
         
-        self._result_data.setSelectionMode( QW.QListView.NoSelection )
+        self._result_data.setSelectionMode( QW.QAbstractItemView.SelectionMode.NoSelection )
         
         #
         
@@ -214,7 +214,7 @@ class SingleStringConversionTestPanel( QW.QWidget ):
                 
             
             results_list = ClientGUIListBoxes.BetterQListWidget( self._example_results )
-            results_list.setSelectionMode( QW.QListWidget.NoSelection )  
+            results_list.setSelectionMode( QW.QAbstractItemView.SelectionMode.NoSelection )  
             
             if len( results ) == 0:
                 
@@ -404,7 +404,7 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
             
             dlg.SetPanel( panel )
             
-            if dlg.exec() == QW.QDialog.Accepted:
+            if dlg.exec() == QW.QDialog.DialogCode.Accepted:
                 
                 number = self._conversions.count() + 1
                 
@@ -493,7 +493,7 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
             
             result = ClientGUIDialogsQuick.GetYesNo( self, text )
             
-            if result == QW.QDialog.Accepted:
+            if result == QW.QDialog.DialogCode.Accepted:
                 
                 self._conversions.DeleteSelected()
                 
@@ -565,7 +565,7 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
             
             dlg.SetPanel( panel )
             
-            if dlg.exec() == QW.QDialog.Accepted:
+            if dlg.exec() == QW.QDialog.DialogCode.Accepted:
                 
                 ( conversion_type, data ) = panel.GetValue()
                 
@@ -1171,7 +1171,7 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
                     
                     result = ClientGUIDialogsQuick.GetYesNo( self, message )
                     
-                    if result != QW.QDialog.Accepted:
+                    if result != QW.QDialog.DialogCode.Accepted:
                         
                         return False
                         
@@ -1211,10 +1211,10 @@ class EditStringJoinerPanel( ClientGUIScrolledPanels.EditPanel ):
         self._example_panel = ClientGUICommon.StaticBox( self, 'test results' )
         
         self._example_strings = ClientGUIListBoxes.BetterQListWidget( self._example_panel )
-        self._example_strings.setSelectionMode( QW.QListWidget.NoSelection )
+        self._example_strings.setSelectionMode( QW.QAbstractItemView.SelectionMode.NoSelection )
         
         self._example_strings_joined = ClientGUIListBoxes.BetterQListWidget( self._example_panel )
-        self._example_strings_joined.setSelectionMode( QW.QListWidget.NoSelection )
+        self._example_strings_joined.setSelectionMode( QW.QAbstractItemView.SelectionMode.NoSelection )
         
         #
         
@@ -1601,10 +1601,10 @@ class EditStringSlicerPanel( ClientGUIScrolledPanels.EditPanel ):
         self._example_panel = ClientGUICommon.StaticBox( self, 'test results' )
         
         self._example_strings = ClientGUIListBoxes.BetterQListWidget( self._example_panel )
-        self._example_strings.setSelectionMode( QW.QListWidget.NoSelection )
+        self._example_strings.setSelectionMode( QW.QAbstractItemView.SelectionMode.NoSelection )
         
         self._example_strings_sliced = ClientGUIListBoxes.BetterQListWidget( self._example_panel )
-        self._example_strings_sliced.setSelectionMode( QW.QListWidget.NoSelection )
+        self._example_strings_sliced.setSelectionMode( QW.QAbstractItemView.SelectionMode.NoSelection )
         
         #
         
@@ -1797,10 +1797,10 @@ class EditStringSorterPanel( ClientGUIScrolledPanels.EditPanel ):
         self._example_panel = ClientGUICommon.StaticBox( self, 'test results' )
         
         self._example_strings = ClientGUIListBoxes.BetterQListWidget( self._example_panel )
-        self._example_strings.setSelectionMode( QW.QListWidget.NoSelection )
+        self._example_strings.setSelectionMode( QW.QAbstractItemView.SelectionMode.NoSelection )
         
         self._example_strings_sorted = ClientGUIListBoxes.BetterQListWidget( self._example_panel )
-        self._example_strings_sorted.setSelectionMode( QW.QListWidget.NoSelection )
+        self._example_strings_sorted.setSelectionMode( QW.QAbstractItemView.SelectionMode.NoSelection )
         
         #
         
@@ -1945,7 +1945,7 @@ class EditStringSplitterPanel( ClientGUIScrolledPanels.EditPanel ):
         self._example_string = QW.QLineEdit( self._example_panel )
         
         self._example_string_splits = ClientGUIListBoxes.BetterQListWidget( self._example_panel )
-        self._example_string_splits.setSelectionMode( QW.QListWidget.NoSelection )
+        self._example_string_splits.setSelectionMode( QW.QAbstractItemView.SelectionMode.NoSelection )
         
         #
         
@@ -2303,7 +2303,7 @@ class EditStringProcessorPanel( ClientGUIScrolledPanels.EditPanel ):
             
             dlg.SetPanel( panel )
             
-            if dlg.exec() == QW.QDialog.Accepted:
+            if dlg.exec() == QW.QDialog.DialogCode.Accepted:
                 
                 string_processing_step = panel.GetValue()
                 

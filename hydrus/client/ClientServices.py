@@ -3012,7 +3012,7 @@ class ServiceIPFS( ServiceRemote ):
                     
                     urls_good = False
                     
-                    if dlg.exec() == QW.QDialog.Accepted:
+                    if dlg.exec() == QW.QDialog.DialogCode.Accepted:
                         
                         urls = dlg.GetURLs()
                         

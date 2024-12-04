@@ -34,7 +34,7 @@ class DialogThatTakesScrollablePanel( ClientGUITopLevelWindows.DialogThatResizes
     
     def _UserIsOKToClose( self, value ):
         
-        if value == QW.QDialog.Accepted:
+        if value == QW.QDialog.DialogCode.Accepted:
             
             return self._panel.UserIsOKToOK()
             
@@ -133,7 +133,7 @@ class DialogApplyCancel( DialogThatTakesScrollablePanel ):
     
     def _TestValidityAndPresentVetoMessage( self, value ):
         
-        if value != QW.QDialog.Accepted:
+        if value != QW.QDialog.DialogCode.Accepted:
             
             return True
             
@@ -170,7 +170,7 @@ class DialogManage( DialogApplyCancel ):
     
     def _DoClose( self, value ):
         
-        if value == QW.QDialog.Accepted:
+        if value == QW.QDialog.DialogCode.Accepted:
             
             try:
                 

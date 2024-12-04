@@ -331,7 +331,7 @@ class Canvas( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
         
         self.setObjectName( 'HydrusMediaViewer' )
         
-        self.setSizePolicy( QW.QSizePolicy.Expanding, QW.QSizePolicy.Expanding )
+        self.setSizePolicy( QW.QSizePolicy.Policy.Expanding, QW.QSizePolicy.Policy.Expanding )
         
         self._location_context = location_context
         
@@ -354,7 +354,7 @@ class Canvas( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
         # once we have catch_mouse full shortcut support for canvases, swap out this out for an option to swallow activating clicks
         ignore_activating_mouse_click = catch_mouse and self.CANVAS_TYPE != CC.CANVAS_PREVIEW
         
-        self._my_shortcuts_handler = ClientGUIShortcuts.ShortcutsHandler( self, [ 'media', 'media_viewer' ], catch_mouse = catch_mouse, ignore_activating_mouse_click = ignore_activating_mouse_click )
+        self._my_shortcuts_handler = ClientGUIShortcuts.ShortcutsHandler( self, self, [ 'media', 'media_viewer' ], catch_mouse = catch_mouse, ignore_activating_mouse_click = ignore_activating_mouse_click )
         
         self._layout_silencer = LayoutEventSilencer( self )
         self.installEventFilter( self._layout_silencer )
@@ -568,7 +568,7 @@ class Canvas( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
             
             dlg.SetPanel( panel )
             
-            if dlg.exec() == QW.QDialog.Accepted:
+            if dlg.exec() == QW.QDialog.DialogCode.Accepted:
                 
                 pending_content_updates = panel.GetValue()
                 
@@ -1001,7 +1001,7 @@ class Canvas( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
                             
                             dlg.SetPanel( panel )
                             
-                            if dlg.exec() == QW.QDialog.Accepted:
+                            if dlg.exec() == QW.QDialog.DialogCode.Accepted:
                                 
                                 hamming_distance = control.value()
                                 
@@ -1624,11 +1624,11 @@ class CanvasPanel( Canvas ):
             
             ClientGUIMenus.AppendMenu( menu, manage_menu, 'manage' )
             
-            ClientGUIMediaMenus.AddKnownURLsViewCopyMenu( self, menu, self._current_media, 1 )
+            ClientGUIMediaMenus.AddKnownURLsViewCopyMenu( self, self, menu, self._current_media, 1 )
             
-            ClientGUIMediaMenus.AddOpenMenu( self, menu, self._current_media, [ self._current_media ] )
+            ClientGUIMediaMenus.AddOpenMenu( self, self, menu, self._current_media, [ self._current_media ] )
             
-            ClientGUIMediaMenus.AddShareMenu( self, menu, self._current_media, [ self._current_media ] )
+            ClientGUIMediaMenus.AddShareMenu( self, self, menu, self._current_media, [ self._current_media ] )
             
         
         CGC.core().PopupMenu( self, menu )
@@ -2694,7 +2694,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
                 
                 dlg_2.SetPanel( panel )
                 
-                if dlg_2.exec() == QW.QDialog.Accepted:
+                if dlg_2.exec() == QW.QDialog.DialogCode.Accepted:
                     
                     duplicate_content_merge_options = panel.GetValue()
                     
@@ -3180,7 +3180,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
                     
                     result = ClientGUIScrolledPanelsCommitFiltering.GetInterstitialFilteringAnswer( self, label )
                     
-                    if result == QW.QDialog.Accepted:
+                    if result == QW.QDialog.DialogCode.Accepted:
                         
                         self._CommitProcessed( blocking = True )
                         
@@ -3490,7 +3490,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
                 
                 return False
                 
-            elif result == QW.QDialog.Accepted:
+            elif result == QW.QDialog.DialogCode.Accepted:
                 
                 self._CommitProcessed( blocking = False )
                 
@@ -4007,7 +4007,7 @@ class CanvasMediaListFilterArchiveDelete( CanvasMediaList ):
                 
                 return False
                 
-            elif result == QW.QDialog.Accepted:
+            elif result == QW.QDialog.DialogCode.Accepted:
                 
                 self._kept = set()
                 self._deleted = set()
@@ -4537,7 +4537,7 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
         
         with ClientGUIDialogs.DialogTextEntry( self, 'Enter the interval, in seconds.', default = '15', min_char_width = 12 ) as dlg:
             
-            if dlg.exec() == QW.QDialog.Accepted:
+            if dlg.exec() == QW.QDialog.DialogCode.Accepted:
                 
                 try:
                     
@@ -4802,11 +4802,11 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
                 ClientGUIMenus.AppendMenu( menu, locations_menu, 'locations' )
                 
             
-            ClientGUIMediaMenus.AddKnownURLsViewCopyMenu( self, menu, self._current_media, 1 )
+            ClientGUIMediaMenus.AddKnownURLsViewCopyMenu( self, self, menu, self._current_media, 1 )
             
-            ClientGUIMediaMenus.AddOpenMenu( self, menu, self._current_media, [ self._current_media ] )
+            ClientGUIMediaMenus.AddOpenMenu( self, self, menu, self._current_media, [ self._current_media ] )
             
-            ClientGUIMediaMenus.AddShareMenu( self, menu, self._current_media, [ self._current_media ] )
+            ClientGUIMediaMenus.AddShareMenu( self, self, menu, self._current_media, [ self._current_media ] )
             
             CGC.core().PopupMenu( self, menu )
             

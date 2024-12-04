@@ -386,7 +386,7 @@ class CanvasHoverFrame( QW.QFrame ):
         
         super().__init__( parent )
         
-        self.setFrameStyle( QW.QFrame.Panel | QW.QFrame.Raised )
+        self.setFrameStyle( QW.QFrame.Shape.Panel | QW.QFrame.Shadow.Raised )
         self.setLineWidth( 2 )
         
         # We need this, or else if the QSS does not define a Widget background color (the default), these 'raised' windows are transparent lmao
@@ -1715,7 +1715,7 @@ class CanvasHoverFrameRightNotes( CanvasHoverFrame ):
         self._vbox = QP.VBoxLayout( spacing = 2, margin = 2 )
         self._names_to_note_panels = {}
         
-        self.setSizePolicy( QW.QSizePolicy.Fixed, QW.QSizePolicy.Expanding )
+        self.setSizePolicy( QW.QSizePolicy.Policy.Fixed, QW.QSizePolicy.Policy.Expanding )
         
         self.setLayout( self._vbox )
         
@@ -2079,7 +2079,7 @@ class CanvasHoverFrameRightDuplicates( CanvasHoverFrame ):
                 
                 dlg.SetPanel( panel )
                 
-                if dlg.exec() == QW.QDialog.Accepted:
+                if dlg.exec() == QW.QDialog.DialogCode.Accepted:
                     
                     new_value = control.GetValue()
                     
@@ -2107,7 +2107,7 @@ class CanvasHoverFrameRightDuplicates( CanvasHoverFrame ):
             
             dlg.SetPanel( panel )
             
-            if dlg.exec() == QW.QDialog.Accepted:
+            if dlg.exec() == QW.QDialog.DialogCode.Accepted:
                 
                 duplicate_content_merge_options = panel.GetValue()
                 

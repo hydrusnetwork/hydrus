@@ -179,7 +179,7 @@ class TestPanel( QW.QWidget ):
         
         with ClientGUIDialogs.DialogTextEntry( self, message, placeholder = 'enter url', allow_blank = False) as dlg:
             
-            if dlg.exec() == QW.QDialog.Accepted:
+            if dlg.exec() == QW.QDialog.DialogCode.Accepted:
                 
                 url = dlg.GetValue()
                 

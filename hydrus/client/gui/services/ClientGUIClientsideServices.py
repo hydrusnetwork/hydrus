@@ -114,7 +114,7 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             dlg.SetPanel( panel )
             
-            if dlg.exec() == QW.QDialog.Accepted:
+            if dlg.exec() == QW.QDialog.DialogCode.Accepted:
                 
                 new_service = panel.GetValue()
                 
@@ -223,7 +223,7 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             result = ClientGUIDialogsQuick.GetYesNo( self, 'Delete the selected services?' )
             
-            if result == QW.QDialog.Accepted:
+            if result == QW.QDialog.DialogCode.Accepted:
                 
                 self._listctrl.DeleteDatas( deletable_services )
                 
@@ -253,7 +253,7 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
                     
                     dlg.SetPanel( panel )
                     
-                    if dlg.exec() == QW.QDialog.Accepted:
+                    if dlg.exec() == QW.QDialog.DialogCode.Accepted:
                         
                         self._listctrl.DeleteDatas( ( service, ) )
                         
@@ -314,7 +314,7 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             result = ClientGUIDialogsQuick.GetYesNo( self, message )
             
-            if result != QW.QDialog.Accepted:
+            if result != QW.QDialog.DialogCode.Accepted:
                 
                 return False
                 
@@ -772,7 +772,7 @@ class EditServiceRestrictedSubPanel( ClientGUICommon.StaticBox ):
         
         with ClientGUIDialogs.DialogTextEntry( self, 'Enter the registration token.' ) as dlg:
             
-            if dlg.exec() == QW.QDialog.Accepted:
+            if dlg.exec() == QW.QDialog.DialogCode.Accepted:
                 
                 registration_key_encoded = dlg.GetValue()
                 
@@ -958,7 +958,7 @@ class EditServiceRestrictedSubPanel( ClientGUICommon.StaticBox ):
                 
                 result = ClientGUIDialogsQuick.GetYesNo( self, message, title = 'One account type available' )
                 
-                if result == QW.QDialog.Accepted:
+                if result == QW.QDialog.DialogCode.Accepted:
                     
                     self._STARTAutoCreateAccount( account_type )
                     
@@ -2017,7 +2017,7 @@ class ReviewServiceClientAPISubPanel( ClientGUICommon.StaticBox ):
             
             dlg.SetPanel( panel )
             
-            if dlg.exec() == QW.QDialog.Accepted:
+            if dlg.exec() == QW.QDialog.DialogCode.Accepted:
                 
                 api_permissions = panel.GetValue()
                 
@@ -2032,7 +2032,7 @@ class ReviewServiceClientAPISubPanel( ClientGUICommon.StaticBox ):
         
         result = ClientGUIDialogsQuick.GetYesNo( self, 'Remove all selected?' )
         
-        if result == QW.QDialog.Accepted:
+        if result == QW.QDialog.DialogCode.Accepted:
             
             access_keys = [ api_permissions.GetAccessKey() for api_permissions in self._permissions_list.GetData( only_selected = True ) ]
             
@@ -2084,7 +2084,7 @@ class ReviewServiceClientAPISubPanel( ClientGUICommon.StaticBox ):
                 
                 dlg.SetPanel( panel )
                 
-                if dlg.exec() == QW.QDialog.Accepted:
+                if dlg.exec() == QW.QDialog.DialogCode.Accepted:
                     
                     api_permissions = panel.GetValue()
                     
@@ -2203,13 +2203,13 @@ class ReviewServiceCombinedLocalFilesSubPanel( ClientGUICommon.StaticBox ):
         
         result = ClientGUIDialogsQuick.GetYesNo( self, message, yes_label = 'do it', no_label = 'forget it' )
         
-        if result == QW.QDialog.Accepted:
+        if result == QW.QDialog.DialogCode.Accepted:
             
             message = 'Hey, I am just going to ask again--are you _absolutely_ sure? This is an advanced action that may mess up your downloads/imports in future.'
             
             result = ClientGUIDialogsQuick.GetYesNo( self, message, yes_label = 'yes, I am', no_label = 'no, I am not sure' )
             
-            if result == QW.QDialog.Accepted:
+            if result == QW.QDialog.DialogCode.Accepted:
                 
                 hashes = None
                 
@@ -2888,7 +2888,7 @@ class ReviewServiceRepositorySubPanel( QW.QWidget ):
         
         result = ClientGUIDialogsQuick.GetYesNo( self, message )
         
-        if result == QW.QDialog.Accepted:
+        if result == QW.QDialog.DialogCode.Accepted:
             
             self._service.DoAFullMetadataResync()
             
@@ -2980,7 +2980,7 @@ class ReviewServiceRepositorySubPanel( QW.QWidget ):
         
         with QP.DirDialog( self, 'Select export location.' ) as dlg:
             
-            if dlg.exec() == QW.QDialog.Accepted:
+            if dlg.exec() == QW.QDialog.DialogCode.Accepted:
                 
                 path = dlg.GetPath()
                 
@@ -3188,7 +3188,7 @@ class ReviewServiceRepositorySubPanel( QW.QWidget ):
         
         result = ClientGUIDialogsQuick.GetYesNo( self, message )
         
-        if result == QW.QDialog.Accepted:
+        if result == QW.QDialog.DialogCode.Accepted:
             
             CG.client_controller.CallToThread( do_it, self._service, self._my_updater )
             
@@ -3220,7 +3220,7 @@ class ReviewServiceRepositorySubPanel( QW.QWidget ):
         
         result = ClientGUIDialogsQuick.GetYesNo( self, message )
         
-        if result == QW.QDialog.Accepted:
+        if result == QW.QDialog.DialogCode.Accepted:
             
             CG.client_controller.CallToThread( do_it, self._service, self._my_updater, content_types )
             
@@ -3234,13 +3234,13 @@ class ReviewServiceRepositorySubPanel( QW.QWidget ):
         
         result = ClientGUIDialogsQuick.GetYesNo( self, message )
         
-        if result == QW.QDialog.Accepted:
+        if result == QW.QDialog.DialogCode.Accepted:
             
             message = 'Seriously, are you absolutely sure?'
             
             result = ClientGUIDialogsQuick.GetYesNo( self, message )
             
-            if result == QW.QDialog.Accepted:
+            if result == QW.QDialog.DialogCode.Accepted:
                 
                 self._service.Reset()
                 
@@ -3273,7 +3273,7 @@ class ReviewServiceRepositorySubPanel( QW.QWidget ):
         
         result = ClientGUIDialogsQuick.GetYesNo( self, message )
         
-        if result == QW.QDialog.Accepted:
+        if result == QW.QDialog.DialogCode.Accepted:
             
             CG.client_controller.CallToThread( do_it, self._service, self._my_updater, content_types )
             
@@ -3341,7 +3341,7 @@ class ReviewServiceRepositorySubPanel( QW.QWidget ):
         
         result = ClientGUIDialogsQuick.GetYesNo( self, message )
         
-        if result == QW.QDialog.Accepted:
+        if result == QW.QDialog.DialogCode.Accepted:
             
             def do_it( service, my_updater ):
                 
@@ -3547,7 +3547,7 @@ class ReviewServiceIPFSSubPanel( ClientGUICommon.StaticBox ):
             
             with ClientGUIDialogs.DialogTextEntry( self, 'Set a note for these shares.' ) as dlg:
                 
-                if dlg.exec() == QW.QDialog.Accepted:
+                if dlg.exec() == QW.QDialog.DialogCode.Accepted:
                     
                     note = dlg.GetValue()
                     
@@ -3641,7 +3641,7 @@ class ReviewServiceIPFSSubPanel( ClientGUICommon.StaticBox ):
         
         result = ClientGUIDialogsQuick.GetYesNo( self, 'Unpin (remove) all selected?' )
         
-        if result == QW.QDialog.Accepted:
+        if result == QW.QDialog.DialogCode.Accepted:
             
             multihashes = [ multihash for ( multihash, num_files, total_size, note ) in self._ipfs_shares.GetData( only_selected = True ) ]
             
@@ -3727,7 +3727,7 @@ class ReviewServiceRatingSubPanel( ClientGUICommon.StaticBox ):
         
         result = ClientGUIDialogsQuick.GetYesNo( self, message, yes_label = 'do it', no_label = 'forget it' )
         
-        if result == QW.QDialog.Accepted:
+        if result == QW.QDialog.DialogCode.Accepted:
             
             content_update = ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADVANCED, advanced_action )
             
@@ -3899,7 +3899,7 @@ class ReviewServiceTrashSubPanel( ClientGUICommon.StaticBox ):
         
         result = ClientGUIDialogsQuick.GetYesNo( self, message, yes_label = 'do it', no_label = 'forget it' )
         
-        if result == QW.QDialog.Accepted:
+        if result == QW.QDialog.DialogCode.Accepted:
             
             def do_it( service ):
                 
@@ -3936,7 +3936,7 @@ class ReviewServiceTrashSubPanel( ClientGUICommon.StaticBox ):
         
         result = ClientGUIDialogsQuick.GetYesNo( self, message, yes_label = 'do it', no_label = 'forget it' )
         
-        if result == QW.QDialog.Accepted:
+        if result == QW.QDialog.DialogCode.Accepted:
             
             def do_it( service ):
                 

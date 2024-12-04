@@ -231,7 +231,7 @@ class EditDownloaderDisplayPanel( ClientGUIScrolledPanels.EditPanel ):
             return
             
         
-        should_display = result == QW.QDialog.Accepted
+        should_display = result == QW.QDialog.DialogCode.Accepted
         
         replacement_tuples = []
         
@@ -265,7 +265,7 @@ class EditDownloaderDisplayPanel( ClientGUIScrolledPanels.EditPanel ):
             return
             
         
-        should_display = result == QW.QDialog.Accepted
+        should_display = result == QW.QDialog.DialogCode.Accepted
         
         replacement_tuples = []
         
@@ -683,7 +683,7 @@ class EditGUGsPanel( ClientGUIScrolledPanels.EditPanel ):
             
             dlg.SetPanel( panel )
             
-            if dlg.exec() == QW.QDialog.Accepted:
+            if dlg.exec() == QW.QDialog.DialogCode.Accepted:
                 
                 gug = panel.GetValue()
                 
@@ -704,7 +704,7 @@ class EditGUGsPanel( ClientGUIScrolledPanels.EditPanel ):
             
             dlg.SetPanel( panel )
             
-            if dlg.exec() == QW.QDialog.Accepted:
+            if dlg.exec() == QW.QDialog.DialogCode.Accepted:
                 
                 ngug = panel.GetValue()
                 
@@ -809,7 +809,7 @@ class EditGUGsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         result = ClientGUIDialogsQuick.GetYesNo( self, 'Remove all selected?' )
         
-        if result == QW.QDialog.Accepted:
+        if result == QW.QDialog.DialogCode.Accepted:
             
             for deletee in deletees:
                 
@@ -837,7 +837,7 @@ class EditGUGsPanel( ClientGUIScrolledPanels.EditPanel ):
                     
                     result = ClientGUIDialogsQuick.GetYesNo( self, message )
                     
-                    if result != QW.QDialog.Accepted:
+                    if result != QW.QDialog.DialogCode.Accepted:
                         
                         break
                         
@@ -865,7 +865,7 @@ class EditGUGsPanel( ClientGUIScrolledPanels.EditPanel ):
             
             dlg.SetPanel( panel )
             
-            if dlg.exec() == QW.QDialog.Accepted:
+            if dlg.exec() == QW.QDialog.DialogCode.Accepted:
                 
                 existing_names = self._GetExistingNames()
                 existing_names.discard( gug.GetName() )
@@ -899,7 +899,7 @@ class EditGUGsPanel( ClientGUIScrolledPanels.EditPanel ):
             
             dlg.SetPanel( panel )
             
-            if dlg.exec() == QW.QDialog.Accepted:
+            if dlg.exec() == QW.QDialog.DialogCode.Accepted:
                 
                 existing_names = self._GetExistingNames()
                 existing_names.discard( ngug.GetName() )
@@ -1767,7 +1767,7 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
             
             dlg.SetPanel( panel )
             
-            if dlg.exec() == QW.QDialog.Accepted:
+            if dlg.exec() == QW.QDialog.DialogCode.Accepted:
                 
                 parameter = panel.GetValue()
                 
@@ -1853,7 +1853,7 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
             
             dlg.SetPanel( panel )
             
-            if dlg.exec() == QW.QDialog.Accepted:
+            if dlg.exec() == QW.QDialog.DialogCode.Accepted:
                 
                 edited_parameter = panel.GetValue()
                 
@@ -1874,7 +1874,7 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
             
             dlg.SetPanel( panel )
             
-            if dlg.exec() == QW.QDialog.Accepted:
+            if dlg.exec() == QW.QDialog.DialogCode.Accepted:
                 
                 ( new_string_match, new_default_value ) = panel.GetValue()
                 
@@ -2291,7 +2291,7 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 result = ClientGUIDialogsQuick.GetYesNo( self, message )
                 
-                if result != QW.QDialog.Accepted:
+                if result != QW.QDialog.DialogCode.Accepted:
                     
                     return False
                     
@@ -2375,7 +2375,7 @@ class EditURLClassesPanel( ClientGUIScrolledPanels.EditPanel ):
             
             dlg.SetPanel( panel )
             
-            if dlg.exec() == QW.QDialog.Accepted:
+            if dlg.exec() == QW.QDialog.DialogCode.Accepted:
                 
                 url_class = panel.GetValue()
                 
@@ -2437,7 +2437,7 @@ class EditURLClassesPanel( ClientGUIScrolledPanels.EditPanel ):
             
             dlg.SetPanel( panel )
             
-            if dlg.exec() == QW.QDialog.Accepted:
+            if dlg.exec() == QW.QDialog.DialogCode.Accepted:
                 
                 existing_names = self._GetExistingNames()
                 existing_names.discard( url_class.GetName() )
@@ -2527,7 +2527,7 @@ class EditURLClassesPanel( ClientGUIScrolledPanels.EditPanel ):
             
             result = ClientGUIDialogsQuick.GetYesNo( self, message )
             
-            if result != QW.QDialog.Accepted:
+            if result != QW.QDialog.DialogCode.Accepted:
                 
                 return False
                 
@@ -2638,7 +2638,7 @@ class EditURLClassLinksPanel( ClientGUIScrolledPanels.EditPanel ):
         
         result = ClientGUIDialogsQuick.GetYesNo( self, 'Clear all the selected linked parsers?' )
         
-        if result == QW.QDialog.Accepted:
+        if result == QW.QDialog.DialogCode.Accepted:
             
             replace_tuples = []
             

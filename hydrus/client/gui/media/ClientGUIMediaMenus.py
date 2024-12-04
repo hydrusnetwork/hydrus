@@ -27,7 +27,7 @@ from hydrus.client.media import ClientMediaResultPrettyInfoObjects
 from hydrus.client.networking import ClientNetworkingFunctions
 from hydrus.client.search import ClientSearchPredicate
 
-def AddDuplicatesMenu( win: QW.QWidget, menu: QW.QMenu, location_context: ClientLocation.LocationContext, focus_singleton: ClientMedia.Media, num_selected: int, collections_selected: bool ):
+def AddDuplicatesMenu( win: QW.QWidget, command_processor: CAC.ApplicationCommandProcessorMixin, menu: QW.QMenu, location_context: ClientLocation.LocationContext, focus_singleton: ClientMedia.Media, num_selected: int, collections_selected: bool ):
     
     # TODO: I am hesitating making this async since we'll have duplicate relations available in the MediaResult soon enough
     # it would be great to have it in the Canvas though, hence the refactoring. needs a bit more reworking for that, but a good step forward
@@ -173,7 +173,7 @@ def AddDuplicatesMenu( win: QW.QWidget, menu: QW.QMenu, location_context: Client
             
             if not focus_is_definitely_king:
                 
-                ClientGUIMenus.AppendMenuItem( duplicates_action_submenu, 'set this file as the best quality of its group', 'Set the focused media to be the King of its group.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_SET_FOCUSED_KING ) )
+                ClientGUIMenus.AppendMenuItem( duplicates_action_submenu, 'set this file as the best quality of its group', 'Set the focused media to be the King of its group.', command_processor.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_SET_FOCUSED_KING ) )
                 
             
         
@@ -183,25 +183,25 @@ def AddDuplicatesMenu( win: QW.QWidget, menu: QW.QMenu, location_context: Client
             
             label = 'set this file as better than the ' + HydrusNumbers.ToHumanInt( num_selected - 1 ) + ' other selected'
             
-            ClientGUIMenus.AppendMenuItem( duplicates_action_submenu, label, 'Set the focused media to be better than the other selected files.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_SET_FOCUSED_BETTER ) )
+            ClientGUIMenus.AppendMenuItem( duplicates_action_submenu, label, 'Set the focused media to be better than the other selected files.', command_processor.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_SET_FOCUSED_BETTER ) )
             
             num_pairs = num_selected * ( num_selected - 1 ) / 2 # com // ations -- n!/2(n-2)!
             
             num_pairs_text = HydrusNumbers.ToHumanInt( num_pairs ) + ' pairs'
             
-            ClientGUIMenus.AppendMenuItem( duplicates_action_submenu, 'set all selected as same quality duplicates', 'Set all the selected files as same quality duplicates.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_SET_SAME_QUALITY ) )
+            ClientGUIMenus.AppendMenuItem( duplicates_action_submenu, 'set all selected as same quality duplicates', 'Set all the selected files as same quality duplicates.', command_processor.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_SET_SAME_QUALITY ) )
             
             ClientGUIMenus.AppendSeparator( duplicates_action_submenu )
             
-            ClientGUIMenus.AppendMenuItem( duplicates_action_submenu, 'set all selected as alternates', 'Set all the selected files as alternates.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_SET_ALTERNATE ) )
+            ClientGUIMenus.AppendMenuItem( duplicates_action_submenu, 'set all selected as alternates', 'Set all the selected files as alternates.', command_processor.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_SET_ALTERNATE ) )
             
-            ClientGUIMenus.AppendMenuItem( duplicates_action_submenu, 'set a relationship with custom metadata merge options', 'Choose which duplicates status to set to this selection and customise non-default duplicate metadata merge options.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_SET_CUSTOM ) )
+            ClientGUIMenus.AppendMenuItem( duplicates_action_submenu, 'set a relationship with custom metadata merge options', 'Choose which duplicates status to set to this selection and customise non-default duplicate metadata merge options.', command_processor.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_SET_CUSTOM ) )
             
             if collections_selected:
                 
                 ClientGUIMenus.AppendSeparator( duplicates_action_submenu )
                 
-                ClientGUIMenus.AppendMenuItem( duplicates_action_submenu, 'set selected collections as groups of alternates', 'Set files in the selection which are collected together as alternates.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_SET_ALTERNATE_COLLECTIONS ) )
+                ClientGUIMenus.AppendMenuItem( duplicates_action_submenu, 'set selected collections as groups of alternates', 'Set files in the selection which are collected together as alternates.', command_processor.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_SET_ALTERNATE_COLLECTIONS ) )
                 
             
             #
@@ -226,7 +226,7 @@ def AddDuplicatesMenu( win: QW.QWidget, menu: QW.QMenu, location_context: Client
             
             ClientGUIMenus.AppendSeparator( duplicates_action_submenu )
             
-            ClientGUIMenus.AppendMenuItem( duplicates_action_submenu, 'set all possible pair combinations as \'potential\' duplicates for the duplicates filter.', 'Queue all these files up in the duplicates filter.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_SET_POTENTIAL ) )
+            ClientGUIMenus.AppendMenuItem( duplicates_action_submenu, 'set all possible pair combinations as \'potential\' duplicates for the duplicates filter.', 'Queue all these files up in the duplicates filter.', command_processor.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_SET_POTENTIAL ) )
             
         
         if dissolution_actions_available:
@@ -237,34 +237,34 @@ def AddDuplicatesMenu( win: QW.QWidget, menu: QW.QMenu, location_context: Client
             
             if focus_can_be_searched:
                 
-                ClientGUIMenus.AppendMenuItem( duplicates_single_dissolution_menu, 'schedule this file to be searched for potentials again', 'Queue this file for another potentials search. Will not remove any existing potentials.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_RESET_FOCUSED_POTENTIAL_SEARCH ) )
+                ClientGUIMenus.AppendMenuItem( duplicates_single_dissolution_menu, 'schedule this file to be searched for potentials again', 'Queue this file for another potentials search. Will not remove any existing potentials.', command_processor.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_RESET_FOCUSED_POTENTIAL_SEARCH ) )
                 
             
             if focus_has_potentials:
                 
-                ClientGUIMenus.AppendMenuItem( duplicates_single_dissolution_menu, 'remove this file\'s potential relationships', 'Clear out this file\'s potential relationships.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_REMOVE_FOCUSED_POTENTIALS ) )
+                ClientGUIMenus.AppendMenuItem( duplicates_single_dissolution_menu, 'remove this file\'s potential relationships', 'Clear out this file\'s potential relationships.', command_processor.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_REMOVE_FOCUSED_POTENTIALS ) )
                 
             
             if focus_is_in_duplicate_group:
                 
                 if not focus_is_definitely_king:
                     
-                    ClientGUIMenus.AppendMenuItem( duplicates_single_dissolution_menu, 'remove this file from its duplicate group', 'Extract this file from its duplicate group and reset its search status.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_REMOVE_FOCUSED_FROM_DUPLICATE_GROUP ) )
+                    ClientGUIMenus.AppendMenuItem( duplicates_single_dissolution_menu, 'remove this file from its duplicate group', 'Extract this file from its duplicate group and reset its search status.', command_processor.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_REMOVE_FOCUSED_FROM_DUPLICATE_GROUP ) )
                     
                 
-                ClientGUIMenus.AppendMenuItem( duplicates_single_dissolution_menu, 'dissolve this file\'s duplicate group completely', 'Completely eliminate this file\'s duplicate group and reset all files\' search status.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_DISSOLVE_FOCUSED_DUPLICATE_GROUP ) )
+                ClientGUIMenus.AppendMenuItem( duplicates_single_dissolution_menu, 'dissolve this file\'s duplicate group completely', 'Completely eliminate this file\'s duplicate group and reset all files\' search status.', command_processor.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_DISSOLVE_FOCUSED_DUPLICATE_GROUP ) )
                 
             
             if focus_is_in_alternate_group:
                 
-                ClientGUIMenus.AppendMenuItem( duplicates_single_dissolution_menu, 'remove this file from its alternate group', 'Extract this file\'s duplicate group from its alternate group and reset the duplicate group\'s search status.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_REMOVE_FOCUSED_FROM_ALTERNATE_GROUP ) )
+                ClientGUIMenus.AppendMenuItem( duplicates_single_dissolution_menu, 'remove this file from its alternate group', 'Extract this file\'s duplicate group from its alternate group and reset the duplicate group\'s search status.', command_processor.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_REMOVE_FOCUSED_FROM_ALTERNATE_GROUP ) )
                 
-                ClientGUIMenus.AppendMenuItem( duplicates_single_dissolution_menu, 'dissolve this file\'s alternate group completely', 'Completely eliminate this file\'s alternate group and all duplicate group members. This resets search status for all involved files.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_DISSOLVE_FOCUSED_ALTERNATE_GROUP ) )
+                ClientGUIMenus.AppendMenuItem( duplicates_single_dissolution_menu, 'dissolve this file\'s alternate group completely', 'Completely eliminate this file\'s alternate group and all duplicate group members. This resets search status for all involved files.', command_processor.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_DISSOLVE_FOCUSED_ALTERNATE_GROUP ) )
                 
             
             if focus_has_fps:
                 
-                ClientGUIMenus.AppendMenuItem( duplicates_single_dissolution_menu, 'delete all false-positive relationships this file\'s alternate group has with other groups', 'Clear out all false-positive relationships this file\'s alternates group has with other groups and resets search status.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_CLEAR_FOCUSED_FALSE_POSITIVES ) )
+                ClientGUIMenus.AppendMenuItem( duplicates_single_dissolution_menu, 'delete all false-positive relationships this file\'s alternate group has with other groups', 'Clear out all false-positive relationships this file\'s alternates group has with other groups and resets search status.', command_processor.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_CLEAR_FOCUSED_FALSE_POSITIVES ) )
                 
             
             ClientGUIMenus.AppendMenu( duplicates_action_submenu, duplicates_single_dissolution_menu, 'remove/reset for this file' )
@@ -274,11 +274,11 @@ def AddDuplicatesMenu( win: QW.QWidget, menu: QW.QMenu, location_context: Client
             
             duplicates_multiple_dissolution_menu = ClientGUIMenus.GenerateMenu( duplicates_action_submenu )
             
-            ClientGUIMenus.AppendMenuItem( duplicates_multiple_dissolution_menu, 'schedule these files to be searched for potentials again', 'Queue these files for another potentials search. Will not remove any existing potentials.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_RESET_POTENTIAL_SEARCH ) )
-            ClientGUIMenus.AppendMenuItem( duplicates_multiple_dissolution_menu, 'remove these files\' potential relationships', 'Clear out these files\' potential relationships.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_REMOVE_POTENTIALS ) )
-            ClientGUIMenus.AppendMenuItem( duplicates_multiple_dissolution_menu, 'dissolve these files\' duplicate groups completely', 'Completely eliminate these files\' duplicate groups and reset all files\' search status.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_DISSOLVE_DUPLICATE_GROUP ) )
-            ClientGUIMenus.AppendMenuItem( duplicates_multiple_dissolution_menu, 'dissolve these files\' alternate groups completely', 'Completely eliminate these files\' alternate groups and all duplicate group members. This resets search status for all involved files.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_DISSOLVE_ALTERNATE_GROUP ) )
-            ClientGUIMenus.AppendMenuItem( duplicates_multiple_dissolution_menu, 'delete all false-positive relationships these files\' alternate groups have with other groups', 'Clear out all false-positive relationships these files\' alternates groups has with other groups and resets search status.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_CLEAR_FALSE_POSITIVES ) )
+            ClientGUIMenus.AppendMenuItem( duplicates_multiple_dissolution_menu, 'schedule these files to be searched for potentials again', 'Queue these files for another potentials search. Will not remove any existing potentials.', command_processor.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_RESET_POTENTIAL_SEARCH ) )
+            ClientGUIMenus.AppendMenuItem( duplicates_multiple_dissolution_menu, 'remove these files\' potential relationships', 'Clear out these files\' potential relationships.', command_processor.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_REMOVE_POTENTIALS ) )
+            ClientGUIMenus.AppendMenuItem( duplicates_multiple_dissolution_menu, 'dissolve these files\' duplicate groups completely', 'Completely eliminate these files\' duplicate groups and reset all files\' search status.', command_processor.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_DISSOLVE_DUPLICATE_GROUP ) )
+            ClientGUIMenus.AppendMenuItem( duplicates_multiple_dissolution_menu, 'dissolve these files\' alternate groups completely', 'Completely eliminate these files\' alternate groups and all duplicate group members. This resets search status for all involved files.', command_processor.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_DISSOLVE_ALTERNATE_GROUP ) )
+            ClientGUIMenus.AppendMenuItem( duplicates_multiple_dissolution_menu, 'delete all false-positive relationships these files\' alternate groups have with other groups', 'Clear out all false-positive relationships these files\' alternates groups has with other groups and resets search status.', command_processor.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_CLEAR_FALSE_POSITIVES ) )
             
             ClientGUIMenus.AppendMenu( duplicates_action_submenu, duplicates_multiple_dissolution_menu, 'advanced: remove/reset for all selected' )
             
@@ -350,7 +350,7 @@ def AddFileViewingStatsMenu( menu, medias: typing.Collection[ ClientMedia.Media 
         
     
 
-def AddKnownURLsViewCopyMenu( win, menu, focus_media, num_files_selected: int, selected_media = None ):
+def AddKnownURLsViewCopyMenu( win: QW.QWidget, command_processor: CAC.ApplicationCommandProcessorMixin, menu, focus_media, num_files_selected: int, selected_media = None ):
     
     # figure out which urls this focused file has
     
@@ -469,7 +469,7 @@ def AddKnownURLsViewCopyMenu( win, menu, focus_media, num_files_selected: int, s
         description = 'Edit which URLs this file has.'
         
     
-    ClientGUIMenus.AppendMenuItem( urls_menu, 'manage', description, win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_MANAGE_FILE_URLS ) )
+    ClientGUIMenus.AppendMenuItem( urls_menu, 'manage', description, command_processor.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_MANAGE_FILE_URLS ) )
     
     if len( focus_labels_and_urls ) > 0 or len( selected_media_url_classes ) > 0 or multiple_or_unmatching_selection_url_classes:
         
@@ -702,7 +702,7 @@ def AddManageFileViewingStatsMenu( win: QW.QWidget, menu: QW.QMenu, flat_medias:
     ClientGUIMenus.AppendMenu( menu, submenu, 'viewing stats' )
     
 
-def AddOpenMenu( win: QW.QWidget, menu: QW.QMenu, focused_media: typing.Optional[ ClientMedia.Media ], selected_media: typing.Collection[ ClientMedia.Media ] ):
+def AddOpenMenu( win: QW.QWidget, command_processor: CAC.ApplicationCommandProcessorMixin, menu: QW.QMenu, focused_media: typing.Optional[ ClientMedia.Media ], selected_media: typing.Collection[ ClientMedia.Media ] ):
     
     if len( selected_media ) == 0:
         
@@ -713,8 +713,8 @@ def AddOpenMenu( win: QW.QWidget, menu: QW.QMenu, focused_media: typing.Optional
     
     open_menu = ClientGUIMenus.GenerateMenu( menu )
     
-    ClientGUIMenus.AppendMenuItem( open_menu, 'in a new page', 'Copy your current selection into a simple new page.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_OPEN_SELECTION_IN_NEW_PAGE ) )
-    ClientGUIMenus.AppendMenuItem( open_menu, 'in a new duplicate filter page', 'Make a new duplicate filter page that searches for these files specifically.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_OPEN_SELECTION_IN_NEW_DUPLICATES_FILTER_PAGE ) )
+    ClientGUIMenus.AppendMenuItem( open_menu, 'in a new page', 'Copy your current selection into a simple new page.', command_processor.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_OPEN_SELECTION_IN_NEW_PAGE ) )
+    ClientGUIMenus.AppendMenuItem( open_menu, 'in a new duplicate filter page', 'Make a new duplicate filter page that searches for these files specifically.', command_processor.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_OPEN_SELECTION_IN_NEW_DUPLICATES_FILTER_PAGE ) )
     
     similar_menu = ClientGUIMenus.GenerateMenu( open_menu )
     
@@ -724,12 +724,12 @@ def AddOpenMenu( win: QW.QWidget, menu: QW.QMenu, focused_media: typing.Optional
             
             ClientGUIMenus.AppendSeparator( similar_menu )
             
-            ClientGUIMenus.AppendMenuItem( similar_menu, 'exact match', 'Search the database for files that look precisely like those selected.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_OPEN_SIMILAR_LOOKING_FILES, simple_data = CC.HAMMING_EXACT_MATCH ) )
-            ClientGUIMenus.AppendMenuItem( similar_menu, 'very similar', 'Search the database for files that look just like those selected.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_OPEN_SIMILAR_LOOKING_FILES, simple_data = CC.HAMMING_VERY_SIMILAR ) )
-            ClientGUIMenus.AppendMenuItem( similar_menu, 'similar', 'Search the database for files that look generally like those selected.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_OPEN_SIMILAR_LOOKING_FILES, simple_data = CC.HAMMING_SIMILAR ) )
-            ClientGUIMenus.AppendMenuItem( similar_menu, 'speculative', 'Search the database for files that probably look like those selected. This is sometimes useful for symbols with sharp edges or lines.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_OPEN_SIMILAR_LOOKING_FILES, simple_data = CC.HAMMING_SPECULATIVE ) )
+            ClientGUIMenus.AppendMenuItem( similar_menu, 'exact match', 'Search the database for files that look precisely like those selected.', command_processor.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_OPEN_SIMILAR_LOOKING_FILES, simple_data = CC.HAMMING_EXACT_MATCH ) )
+            ClientGUIMenus.AppendMenuItem( similar_menu, 'very similar', 'Search the database for files that look just like those selected.', command_processor.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_OPEN_SIMILAR_LOOKING_FILES, simple_data = CC.HAMMING_VERY_SIMILAR ) )
+            ClientGUIMenus.AppendMenuItem( similar_menu, 'similar', 'Search the database for files that look generally like those selected.', command_processor.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_OPEN_SIMILAR_LOOKING_FILES, simple_data = CC.HAMMING_SIMILAR ) )
+            ClientGUIMenus.AppendMenuItem( similar_menu, 'speculative', 'Search the database for files that probably look like those selected. This is sometimes useful for symbols with sharp edges or lines.', command_processor.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_OPEN_SIMILAR_LOOKING_FILES, simple_data = CC.HAMMING_SPECULATIVE ) )
             ClientGUIMenus.AppendSeparator( similar_menu )
-            ClientGUIMenus.AppendMenuItem( similar_menu, 'custom', 'Search the database for files that probably look like those selected. This is sometimes useful for symbols with sharp edges or lines.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_OPEN_SIMILAR_LOOKING_FILES ) )
+            ClientGUIMenus.AppendMenuItem( similar_menu, 'custom', 'Search the database for files that probably look like those selected. This is sometimes useful for symbols with sharp edges or lines.', command_processor.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_OPEN_SIMILAR_LOOKING_FILES ) )
             
             ClientGUIMenus.AppendMenu( open_menu, similar_menu, 'similar files in a new page' )
             
@@ -745,8 +745,8 @@ def AddOpenMenu( win: QW.QWidget, menu: QW.QMenu, focused_media: typing.Optional
             prefix = ''
             
         
-        ClientGUIMenus.AppendMenuItem( open_menu, f'{prefix}in external program', 'Launch this file with your OS\'s default program for it.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_OPEN_FILE_IN_EXTERNAL_PROGRAM ) )
-        ClientGUIMenus.AppendMenuItem( open_menu, f'{prefix}in web browser', 'Show this file in your OS\'s web browser.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_OPEN_FILE_IN_WEB_BROWSER ) )
+        ClientGUIMenus.AppendMenuItem( open_menu, f'{prefix}in external program', 'Launch this file with your OS\'s default program for it.', command_processor.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_OPEN_FILE_IN_EXTERNAL_PROGRAM ) )
+        ClientGUIMenus.AppendMenuItem( open_menu, f'{prefix}in web browser', 'Show this file in your OS\'s web browser.', command_processor.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_OPEN_FILE_IN_WEB_BROWSER ) )
         
         if focused_media.GetLocationsManager().IsLocal():
             
@@ -754,19 +754,19 @@ def AddOpenMenu( win: QW.QWidget, menu: QW.QMenu, focused_media: typing.Optional
             
             if show_windows_native_options:
                 
-                ClientGUIMenus.AppendMenuItem( open_menu, f'{prefix}in another program', 'Choose which program to open this file with.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_NATIVE_OPEN_FILE_WITH_DIALOG ) )
+                ClientGUIMenus.AppendMenuItem( open_menu, f'{prefix}in another program', 'Choose which program to open this file with.', command_processor.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_NATIVE_OPEN_FILE_WITH_DIALOG ) )
                 
             
             show_open_in_explorer = advanced_mode and ClientPaths.CAN_OPEN_FILE_LOCATION
             
             if show_open_in_explorer:
                 
-                ClientGUIMenus.AppendMenuItem( open_menu, f'{prefix}in file browser', 'Show this file in your OS\'s file browser.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_OPEN_FILE_IN_FILE_EXPLORER ) )
+                ClientGUIMenus.AppendMenuItem( open_menu, f'{prefix}in file browser', 'Show this file in your OS\'s file browser.', command_processor.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_OPEN_FILE_IN_FILE_EXPLORER ) )
                 
             
             if show_windows_native_options:
                 
-                ClientGUIMenus.AppendMenuItem( open_menu, f'{prefix}properties', 'Open your OS\'s properties window for this file.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_NATIVE_OPEN_FILE_PROPERTIES ) )
+                ClientGUIMenus.AppendMenuItem( open_menu, f'{prefix}properties', 'Open your OS\'s properties window for this file.', command_processor.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_NATIVE_OPEN_FILE_PROPERTIES ) )
                 
             
         
@@ -912,7 +912,7 @@ def StartOtherHashesMenuFetch( win: QW.QWidget, media: ClientMedia.MediaSingleto
     job.start()
     
 
-def AddShareMenu( win: QW.QWidget, menu: QW.QMenu, focused_media: typing.Optional[ ClientMedia.Media ], selected_media: typing.Collection[ ClientMedia.Media ] ):
+def AddShareMenu( win: QW.QWidget, command_processor: CAC.ApplicationCommandProcessorMixin, menu: QW.QMenu, focused_media: typing.Optional[ ClientMedia.Media ], selected_media: typing.Collection[ ClientMedia.Media ] ):
     
     if focused_media is not None:
         
@@ -937,16 +937,16 @@ def AddShareMenu( win: QW.QWidget, menu: QW.QMenu, focused_media: typing.Optiona
     
     if len( local_selection ) > 0:
         
-        ClientGUIMenus.AppendMenuItem( share_menu, 'export files', 'Export the selected files to an external folder.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_EXPORT_FILES ) )
+        ClientGUIMenus.AppendMenuItem( share_menu, 'export files', 'Export the selected files to an external folder.', command_processor.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_EXPORT_FILES ) )
         
         ClientGUIMenus.AppendSeparator( share_menu )
         
     
     if local_selection_verbs_are_appropriate:
         
-        ClientGUIMenus.AppendMenuItem( share_menu, 'copy files', 'Copy these files to your clipboard.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_COPY_FILES, simple_data = CAC.FILE_COMMAND_TARGET_SELECTED_FILES ) )
+        ClientGUIMenus.AppendMenuItem( share_menu, 'copy files', 'Copy these files to your clipboard.', command_processor.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_COPY_FILES, simple_data = CAC.FILE_COMMAND_TARGET_SELECTED_FILES ) )
         
-        ClientGUIMenus.AppendMenuItem( share_menu, 'copy paths', 'Copy these files\' paths to your clipboard, just as raw text.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_COPY_FILE_PATHS, simple_data = CAC.FILE_COMMAND_TARGET_SELECTED_FILES ) )
+        ClientGUIMenus.AppendMenuItem( share_menu, 'copy paths', 'Copy these files\' paths to your clipboard, just as raw text.', command_processor.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_COPY_FILE_PATHS, simple_data = CAC.FILE_COMMAND_TARGET_SELECTED_FILES ) )
         
     
     if selection_verbs_are_appropriate:
@@ -971,22 +971,22 @@ def AddShareMenu( win: QW.QWidget, menu: QW.QMenu, focused_media: typing.Optiona
             
             application_command = CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_COPY_FILE_SERVICE_FILENAMES, simple_data = hacky_ipfs_dict )
             
-            ClientGUIMenus.AppendMenuItem( share_menu, f'copy {name} multihashes ({HydrusNumbers.ToHumanInt(ipfs_service_keys_to_num_filenames[ipfs_service_key])} hashes)', 'Copy the selected files\' multihashes to the clipboard.', win.ProcessApplicationCommand, application_command )
+            ClientGUIMenus.AppendMenuItem( share_menu, f'copy {name} multihashes ({HydrusNumbers.ToHumanInt(ipfs_service_keys_to_num_filenames[ipfs_service_key])} hashes)', 'Copy the selected files\' multihashes to the clipboard.', command_processor.ProcessApplicationCommand, application_command )
             
         
         copy_hashes_menu = ClientGUIMenus.GenerateMenu( share_menu )
         
-        ClientGUIMenus.AppendMenuItem( copy_hashes_menu, 'sha256', 'Copy these files\' SHA256 hashes to your clipboard.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_COPY_FILE_HASHES, simple_data = ( CAC.FILE_COMMAND_TARGET_SELECTED_FILES, 'sha256' ) ) )
-        ClientGUIMenus.AppendMenuItem( copy_hashes_menu, 'md5', 'Copy these files\' MD5 hashes to your clipboard. Your client may not know all of these.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_COPY_FILE_HASHES, simple_data = ( CAC.FILE_COMMAND_TARGET_SELECTED_FILES, 'md5' ) ) )
-        ClientGUIMenus.AppendMenuItem( copy_hashes_menu, 'sha1', 'Copy these files\' SHA1 hashes to your clipboard. Your client may not know all of these.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_COPY_FILE_HASHES, simple_data = ( CAC.FILE_COMMAND_TARGET_SELECTED_FILES, 'sha1' ) ) )
-        ClientGUIMenus.AppendMenuItem( copy_hashes_menu, 'sha512', 'Copy these files\' SHA512 hashes to your clipboard. Your client may not know all of these.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_COPY_FILE_HASHES, simple_data = ( CAC.FILE_COMMAND_TARGET_SELECTED_FILES, 'sha512' ) ) )
+        ClientGUIMenus.AppendMenuItem( copy_hashes_menu, 'sha256', 'Copy these files\' SHA256 hashes to your clipboard.', command_processor.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_COPY_FILE_HASHES, simple_data = ( CAC.FILE_COMMAND_TARGET_SELECTED_FILES, 'sha256' ) ) )
+        ClientGUIMenus.AppendMenuItem( copy_hashes_menu, 'md5', 'Copy these files\' MD5 hashes to your clipboard. Your client may not know all of these.', command_processor.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_COPY_FILE_HASHES, simple_data = ( CAC.FILE_COMMAND_TARGET_SELECTED_FILES, 'md5' ) ) )
+        ClientGUIMenus.AppendMenuItem( copy_hashes_menu, 'sha1', 'Copy these files\' SHA1 hashes to your clipboard. Your client may not know all of these.', command_processor.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_COPY_FILE_HASHES, simple_data = ( CAC.FILE_COMMAND_TARGET_SELECTED_FILES, 'sha1' ) ) )
+        ClientGUIMenus.AppendMenuItem( copy_hashes_menu, 'sha512', 'Copy these files\' SHA512 hashes to your clipboard. Your client may not know all of these.', command_processor.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_COPY_FILE_HASHES, simple_data = ( CAC.FILE_COMMAND_TARGET_SELECTED_FILES, 'sha512' ) ) )
         
         blurhashes = [ media.GetFileInfoManager().blurhash for media in selected_media ]
         blurhashes = [ b for b in blurhashes if b is not None ]
         
         if len( blurhashes ) > 0:
             
-            ClientGUIMenus.AppendMenuItem( copy_hashes_menu, f'blurhash ({HydrusNumbers.ToHumanInt(len(blurhashes))} hashes)', 'Copy these files\' blurhashes.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_COPY_FILE_HASHES, simple_data = ( CAC.FILE_COMMAND_TARGET_SELECTED_FILES, 'blurhash' ) ) )
+            ClientGUIMenus.AppendMenuItem( copy_hashes_menu, f'blurhash ({HydrusNumbers.ToHumanInt(len(blurhashes))} hashes)', 'Copy these files\' blurhashes.', command_processor.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_COPY_FILE_HASHES, simple_data = ( CAC.FILE_COMMAND_TARGET_SELECTED_FILES, 'blurhash' ) ) )
             
         
         pixel_hashes = [ media.GetFileInfoManager().pixel_hash for media in selected_media ]
@@ -994,21 +994,21 @@ def AddShareMenu( win: QW.QWidget, menu: QW.QMenu, focused_media: typing.Optiona
         
         if len( pixel_hashes ):
             
-            ClientGUIMenus.AppendMenuItem( copy_hashes_menu, f'pixel hashes ({HydrusNumbers.ToHumanInt(len(pixel_hashes))} hashes)', 'Copy these files\' pixel hashes.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_COPY_FILE_HASHES, simple_data = ( CAC.FILE_COMMAND_TARGET_SELECTED_FILES, 'pixel_hash' ) ) )
+            ClientGUIMenus.AppendMenuItem( copy_hashes_menu, f'pixel hashes ({HydrusNumbers.ToHumanInt(len(pixel_hashes))} hashes)', 'Copy these files\' pixel hashes.', command_processor.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_COPY_FILE_HASHES, simple_data = ( CAC.FILE_COMMAND_TARGET_SELECTED_FILES, 'pixel_hash' ) ) )
             
         
         ClientGUIMenus.AppendMenu( share_menu, copy_hashes_menu, 'copy hashes' )
         
-        ClientGUIMenus.AppendMenuItem( share_menu, 'copy file ids', 'Copy these files\' internal file/hash_ids.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_COPY_FILE_ID, simple_data = CAC.FILE_COMMAND_TARGET_SELECTED_FILES ) )
+        ClientGUIMenus.AppendMenuItem( share_menu, 'copy file ids', 'Copy these files\' internal file/hash_ids.', command_processor.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_COPY_FILE_ID, simple_data = CAC.FILE_COMMAND_TARGET_SELECTED_FILES ) )
         
         ClientGUIMenus.AppendSeparator( share_menu )
         
     
     if focused_is_local:
         
-        ClientGUIMenus.AppendMenuItem( share_menu, 'copy file', 'Copy this file to your clipboard.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_COPY_FILES, simple_data = CAC.FILE_COMMAND_TARGET_FOCUSED_FILE ) )
+        ClientGUIMenus.AppendMenuItem( share_menu, 'copy file', 'Copy this file to your clipboard.', command_processor.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_COPY_FILES, simple_data = CAC.FILE_COMMAND_TARGET_FOCUSED_FILE ) )
         
-        ClientGUIMenus.AppendMenuItem( share_menu, 'copy path', 'Copy this file\'s path to your clipboard, just as raw text.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_COPY_FILE_PATHS, simple_data = CAC.FILE_COMMAND_TARGET_FOCUSED_FILE ) )
+        ClientGUIMenus.AppendMenuItem( share_menu, 'copy path', 'Copy this file\'s path to your clipboard, just as raw text.', command_processor.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_COPY_FILE_PATHS, simple_data = CAC.FILE_COMMAND_TARGET_FOCUSED_FILE ) )
         
     
     if focused_media is not None:
@@ -1026,15 +1026,15 @@ def AddShareMenu( win: QW.QWidget, menu: QW.QMenu, focused_media: typing.Optiona
             
             application_command = CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_COPY_FILE_SERVICE_FILENAMES, simple_data = hacky_ipfs_dict )
             
-            ClientGUIMenus.AppendMenuItem( share_menu, f'copy {name} multihash ({multihash})', 'Copy the selected file\'s multihash to the clipboard.', win.ProcessApplicationCommand, application_command )
+            ClientGUIMenus.AppendMenuItem( share_menu, f'copy {name} multihash ({multihash})', 'Copy the selected file\'s multihash to the clipboard.', command_processor.ProcessApplicationCommand, application_command )
             
         
         copy_hash_menu = ClientGUIMenus.GenerateMenu( share_menu )
         
-        ClientGUIMenus.AppendMenuItem( copy_hash_menu, 'sha256 ({})'.format( focused_media.GetHash().hex() ), 'Copy this file\'s SHA256 hash to your clipboard.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_COPY_FILE_HASHES, simple_data = ( CAC.FILE_COMMAND_TARGET_FOCUSED_FILE, 'sha256' ) ) )
-        md5_menu_item = ClientGUIMenus.AppendMenuItem( copy_hash_menu, 'md5', 'Copy this file\'s MD5 hash to your clipboard. Your client may not know this.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_COPY_FILE_HASHES, simple_data = ( CAC.FILE_COMMAND_TARGET_FOCUSED_FILE, 'md5' ) ) )
-        sha1_menu_item = ClientGUIMenus.AppendMenuItem( copy_hash_menu, 'sha1', 'Copy this file\'s SHA1 hash to your clipboard. Your client may not know this.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_COPY_FILE_HASHES, simple_data = ( CAC.FILE_COMMAND_TARGET_FOCUSED_FILE, 'sha1' ) ) )
-        sha512_menu_item = ClientGUIMenus.AppendMenuItem( copy_hash_menu, 'sha512', 'Copy this file\'s SHA512 hash to your clipboard. Your client may not know this.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_COPY_FILE_HASHES, simple_data = ( CAC.FILE_COMMAND_TARGET_FOCUSED_FILE, 'sha512' ) ) )
+        ClientGUIMenus.AppendMenuItem( copy_hash_menu, 'sha256 ({})'.format( focused_media.GetHash().hex() ), 'Copy this file\'s SHA256 hash to your clipboard.', command_processor.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_COPY_FILE_HASHES, simple_data = ( CAC.FILE_COMMAND_TARGET_FOCUSED_FILE, 'sha256' ) ) )
+        md5_menu_item = ClientGUIMenus.AppendMenuItem( copy_hash_menu, 'md5', 'Copy this file\'s MD5 hash to your clipboard. Your client may not know this.', command_processor.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_COPY_FILE_HASHES, simple_data = ( CAC.FILE_COMMAND_TARGET_FOCUSED_FILE, 'md5' ) ) )
+        sha1_menu_item = ClientGUIMenus.AppendMenuItem( copy_hash_menu, 'sha1', 'Copy this file\'s SHA1 hash to your clipboard. Your client may not know this.', command_processor.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_COPY_FILE_HASHES, simple_data = ( CAC.FILE_COMMAND_TARGET_FOCUSED_FILE, 'sha1' ) ) )
+        sha512_menu_item = ClientGUIMenus.AppendMenuItem( copy_hash_menu, 'sha512', 'Copy this file\'s SHA512 hash to your clipboard. Your client may not know this.', command_processor.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_COPY_FILE_HASHES, simple_data = ( CAC.FILE_COMMAND_TARGET_FOCUSED_FILE, 'sha512' ) ) )
         
         StartOtherHashesMenuFetch( share_menu, focused_media, md5_menu_item, sha1_menu_item, sha512_menu_item )
         
@@ -1042,26 +1042,26 @@ def AddShareMenu( win: QW.QWidget, menu: QW.QMenu, focused_media: typing.Optiona
         
         if file_info_manager.blurhash is not None:
             
-            ClientGUIMenus.AppendMenuItem( copy_hash_menu, f'blurhash ({file_info_manager.blurhash})', 'Copy this file\'s blurhash.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_COPY_FILE_HASHES, simple_data = ( CAC.FILE_COMMAND_TARGET_FOCUSED_FILE, 'blurhash' ) ) )
+            ClientGUIMenus.AppendMenuItem( copy_hash_menu, f'blurhash ({file_info_manager.blurhash})', 'Copy this file\'s blurhash.', command_processor.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_COPY_FILE_HASHES, simple_data = ( CAC.FILE_COMMAND_TARGET_FOCUSED_FILE, 'blurhash' ) ) )
             
         
         if file_info_manager.pixel_hash is not None:
             
-            ClientGUIMenus.AppendMenuItem( copy_hash_menu, f'pixel hash ({file_info_manager.pixel_hash.hex()})', 'Copy this file\'s pixel hash.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_COPY_FILE_HASHES, simple_data = ( CAC.FILE_COMMAND_TARGET_FOCUSED_FILE, 'pixel_hash' ) ) )
+            ClientGUIMenus.AppendMenuItem( copy_hash_menu, f'pixel hash ({file_info_manager.pixel_hash.hex()})', 'Copy this file\'s pixel hash.', command_processor.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_COPY_FILE_HASHES, simple_data = ( CAC.FILE_COMMAND_TARGET_FOCUSED_FILE, 'pixel_hash' ) ) )
             
         
         ClientGUIMenus.AppendMenu( share_menu, copy_hash_menu, 'copy hash' )
         
         hash_id_str = HydrusNumbers.ToHumanInt( focused_media.GetHashId() )
         
-        ClientGUIMenus.AppendMenuItem( share_menu, 'copy file id ({})'.format( hash_id_str ), 'Copy this file\'s internal file/hash_id.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_COPY_FILE_ID, simple_data = CAC.FILE_COMMAND_TARGET_FOCUSED_FILE ) )
+        ClientGUIMenus.AppendMenuItem( share_menu, 'copy file id ({})'.format( hash_id_str ), 'Copy this file\'s internal file/hash_id.', command_processor.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_COPY_FILE_ID, simple_data = CAC.FILE_COMMAND_TARGET_FOCUSED_FILE ) )
         
     
     if focused_is_local:
         
         if focused_media.IsStaticImage():
             
-            ClientGUIMenus.AppendMenuItem( share_menu, 'copy bitmap', 'Copy this file\'s bitmap.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_COPY_FILE_BITMAP, simple_data = CAC.BITMAP_TYPE_FULL ) )
+            ClientGUIMenus.AppendMenuItem( share_menu, 'copy bitmap', 'Copy this file\'s bitmap.', command_processor.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_COPY_FILE_BITMAP, simple_data = CAC.BITMAP_TYPE_FULL ) )
             
             ( width, height ) = focused_media.GetResolution()
             
@@ -1069,13 +1069,13 @@ def AddShareMenu( win: QW.QWidget, menu: QW.QMenu, focused_media: typing.Optiona
                 
                 target_resolution = HydrusImageHandling.GetThumbnailResolution( focused_media.GetResolution(), ( 1024, 1024 ), HydrusImageHandling.THUMBNAIL_SCALE_TO_FIT, 100 )
                 
-                ClientGUIMenus.AppendMenuItem( share_menu, 'copy source lookup bitmap ({}x{})'.format( target_resolution[0], target_resolution[1] ), 'Copy a smaller bitmap of this file, for quicker lookup on source-finding websites.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_COPY_FILE_BITMAP, simple_data = CAC.BITMAP_TYPE_SOURCE_LOOKUPS ) )
+                ClientGUIMenus.AppendMenuItem( share_menu, 'copy source lookup bitmap ({}x{})'.format( target_resolution[0], target_resolution[1] ), 'Copy a smaller bitmap of this file, for quicker lookup on source-finding websites.', command_processor.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_COPY_FILE_BITMAP, simple_data = CAC.BITMAP_TYPE_SOURCE_LOOKUPS ) )
                 
             
         
         if focused_media.GetMime() in HC.MIMES_WITH_THUMBNAILS:
             
-            ClientGUIMenus.AppendMenuItem( share_menu, 'copy thumbnail bitmap', 'Copy this file\'s thumbnail\'s bitmap.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_COPY_FILE_BITMAP, simple_data = CAC.BITMAP_TYPE_THUMBNAIL ) )
+            ClientGUIMenus.AppendMenuItem( share_menu, 'copy thumbnail bitmap', 'Copy this file\'s thumbnail\'s bitmap.', command_processor.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_COPY_FILE_BITMAP, simple_data = CAC.BITMAP_TYPE_THUMBNAIL ) )
             
         
     

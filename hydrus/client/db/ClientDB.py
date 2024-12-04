@@ -9052,7 +9052,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 result = ClientGUIDialogsQuick.GetYesNo( None, message, title = 'Scan PNGs?', yes_label = 'do it', no_label = 'do not do it' )
                 
-                return result == QW.QDialog.Accepted
+                return result == QW.QDialog.DialogCode.Accepted
                 
             
             try:
@@ -9701,7 +9701,7 @@ class DB( HydrusDB.HydrusDB ):
                         
                         result = ClientGUIDialogsQuick.GetYesNo( None, message, title = 'Regen animation thumbnails?', auto_yes_time = 600 )
                         
-                        return result == QW.QDialog.Accepted
+                        return result == QW.QDialog.DialogCode.Accepted
                         
                     
                     do_thumb_regen = self._controller.CallBlockingToQt( None, ask_what_to_do_thumb_regen )
@@ -10118,7 +10118,7 @@ class DB( HydrusDB.HydrusDB ):
                     
                     result = ClientGUIDialogsQuick.GetYesNo( None, message, title = 'Fix broken URLs?', yes_label = 'do it', no_label = 'do not do it, I intentionally store whitespace-separated URLs in my URL store!', auto_yes_time = 600 )
                     
-                    return result == QW.QDialog.Accepted
+                    return result == QW.QDialog.DialogCode.Accepted
                     
                 
                 do_url_fix = self._controller.CallBlockingToQt( None, ask_what_to_do_concatenated_urls )
@@ -10164,7 +10164,7 @@ class DB( HydrusDB.HydrusDB ):
                             
                             result = ClientGUIDialogsQuick.GetYesNo( None, message, title = 'Delete broken URLs?', yes_label = 'do it', no_label = 'no, that sounds like way way way too many, I will talk to hydev', auto_yes_time = 600 )
                             
-                            return result == QW.QDialog.Accepted
+                            return result == QW.QDialog.DialogCode.Accepted
                             
                         
                         do_url_delete = self._controller.CallBlockingToQt( None, ask_what_to_do_delete_urls )
@@ -10203,7 +10203,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 result = ClientGUIDialogsQuick.GetYesNo( None, message, title = 'Find docx?', yes_label = 'yes, I might have imported some', no_label = 'no, I would not have imported anything like that', auto_yes_time = 600 )
                 
-                return result == QW.QDialog.Accepted
+                return result == QW.QDialog.DialogCode.Accepted
                 
             
             do_docx_scan = self._controller.CallBlockingToQt( None, ask_what_to_do_zip_docx_scan )
@@ -11139,7 +11139,7 @@ class DB( HydrusDB.HydrusDB ):
                     
                     result = ClientGUIDialogsQuick.GetYesNo( None, message, title = 'Re-do permissions update?', yes_label = 'yes, re-run the update', no_label = 'no, I checked everything in "review services" already' )
                     
-                    return result == QW.QDialog.Accepted
+                    return result == QW.QDialog.DialogCode.Accepted
                     
                 
                 client_api_manager = self.modules_serialisable.GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_CLIENT_API_MANAGER )
@@ -11294,7 +11294,7 @@ class DB( HydrusDB.HydrusDB ):
                         
                         result = ClientGUIDialogsQuick.GetYesNo( None, message, title = 'Reset modified dates?', yes_label = 'do it', no_label = 'do not do it' )
                         
-                        return result == QW.QDialog.Accepted
+                        return result == QW.QDialog.DialogCode.Accepted
                         
                     
                     do_it = self._controller.CallBlockingToQt( None, ask_what_to_do_false_positive_modified_dates )

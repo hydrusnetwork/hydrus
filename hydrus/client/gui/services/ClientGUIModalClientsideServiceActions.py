@@ -89,7 +89,7 @@ class ReviewPurgeTagsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         result = ClientGUIDialogsQuick.GetYesNo( self, text )
         
-        if result != QW.QDialog.Accepted:
+        if result != QW.QDialog.DialogCode.Accepted:
             
             return
             
@@ -163,7 +163,7 @@ def StartPurgeTagFilter(
     
     result = ClientGUIDialogsQuick.GetYesNo( win, text )
     
-    if result != QW.QDialog.Accepted:
+    if result != QW.QDialog.DialogCode.Accepted:
         
         return
         

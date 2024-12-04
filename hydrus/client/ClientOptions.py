@@ -270,7 +270,8 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             'use_nice_resolution_strings' : True,
             'use_listbook_for_tag_service_panels' : False,
             'open_files_to_duplicate_filter_uses_all_my_files' : True,
-            'show_extended_single_file_info_in_status_bar' : False
+            'show_extended_single_file_info_in_status_bar' : False,
+            'hide_duplicates_needs_work_message_when_reasonably_caught_up' : True
         }
         
         #

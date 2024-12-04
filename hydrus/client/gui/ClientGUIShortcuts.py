@@ -1361,7 +1361,7 @@ HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIAL
 
 class ShortcutsHandler( QC.QObject ):
     
-    def __init__( self, parent: QW.QWidget, initial_shortcuts_names: typing.Collection[ str ], alternate_filter_target = None, catch_mouse = False, ignore_activating_mouse_click = False ):
+    def __init__( self, parent: QW.QWidget, command_processor: CAC.ApplicationCommandProcessorMixin, initial_shortcuts_names: typing.Collection[ str ], alternate_filter_target = None, catch_mouse = False, ignore_activating_mouse_click = False ):
         
         super().__init__( parent )
         
@@ -1379,6 +1379,7 @@ class ShortcutsHandler( QC.QObject ):
         self._filter_target = filter_target
         
         self._parent = parent
+        self._command_processor = command_processor
         self._filter_target.installEventFilter( self )
         self._shortcuts_names = list( initial_shortcuts_names )
         
@@ -1438,7 +1439,7 @@ class ShortcutsHandler( QC.QObject ):
         
         if command is not None:
             
-            command_processed = self._parent.ProcessApplicationCommand( command )
+            command_processed = self._command_processor.ProcessApplicationCommand( command )
             
             if command_processed:
                 

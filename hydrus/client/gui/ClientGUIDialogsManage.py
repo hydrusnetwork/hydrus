@@ -110,7 +110,7 @@ class DialogManageRatings( CAC.ApplicationCommandProcessorMixin, ClientGUIDialog
         
         #
         
-        self._my_shortcut_handler = ClientGUIShortcuts.ShortcutsHandler( self, [ 'global', 'media' ] )
+        self._my_shortcut_handler = ClientGUIShortcuts.ShortcutsHandler( self, self, [ 'global', 'media' ] )
         
     
     def _Copy( self ):
@@ -177,7 +177,7 @@ class DialogManageRatings( CAC.ApplicationCommandProcessorMixin, ClientGUIDialog
             
         finally:
             
-            self.done( QW.QDialog.Accepted )
+            self.done( QW.QDialog.DialogCode.Accepted )
             
         
     
@@ -657,7 +657,7 @@ class DialogManageUPnP( ClientGUIDialogs.Dialog ):
         
         with ClientGUIDialogs.DialogInputUPnPMapping( self, external_port, protocol, internal_port, description, duration ) as dlg:
             
-            if dlg.exec() == QW.QDialog.Accepted:
+            if dlg.exec() == QW.QDialog.DialogCode.Accepted:
                 
                 ( external_port, protocol, internal_port, description, duration ) = dlg.GetInfo()
                 
@@ -671,7 +671,7 @@ class DialogManageUPnP( ClientGUIDialogs.Dialog ):
                     
                     result = ClientGUIDialogsQuick.GetYesNo( self, text, yes_label = 'do it', no_label = 'forget it' )
                     
-                    if result != QW.QDialog.Accepted:
+                    if result != QW.QDialog.DialogCode.Accepted:
                         
                         return
                         
@@ -740,7 +740,7 @@ class DialogManageUPnP( ClientGUIDialogs.Dialog ):
             
             with ClientGUIDialogs.DialogInputUPnPMapping( self, old_external_port, old_protocol, internal_port, description, duration ) as dlg:
                 
-                if dlg.exec() == QW.QDialog.Accepted:
+                if dlg.exec() == QW.QDialog.DialogCode.Accepted:
                     
                     ( external_port, protocol, internal_port, description, duration ) = dlg.GetInfo()
                     
@@ -892,7 +892,7 @@ class DialogManageUPnP( ClientGUIDialogs.Dialog ):
         
         result = ClientGUIDialogsQuick.GetYesNo( self, text, yes_label = 'do it', no_label = 'forget it' )
         
-        if result != QW.QDialog.Accepted:
+        if result != QW.QDialog.DialogCode.Accepted:
             
             return
             
@@ -927,6 +927,6 @@ class DialogManageUPnP( ClientGUIDialogs.Dialog ):
     
     def EventOK( self ):
         
-        self.done( QW.QDialog.Accepted )
+        self.done( QW.QDialog.DialogCode.Accepted )
         
     

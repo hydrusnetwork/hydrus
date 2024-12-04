@@ -22,7 +22,7 @@ class ShowKeys( ClientGUITopLevelWindows.Frame ):
         #
         
         self._text_ctrl = QW.QPlainTextEdit( self )
-        self._text_ctrl.setLineWrapMode( QW.QPlainTextEdit.NoWrap )
+        self._text_ctrl.setLineWrapMode( QW.QPlainTextEdit.LineWrapMode.NoWrap )
         self._text_ctrl.setReadOnly( True )
         
         self._save_to_file = QW.QPushButton( 'save to file', self )
@@ -64,9 +64,9 @@ class ShowKeys( ClientGUITopLevelWindows.Frame ):
         
         filename = 'keys.txt'
         
-        with QP.FileDialog( self, acceptMode = QW.QFileDialog.AcceptSave, fileMode = QW.QFileDialog.AnyFile, default_filename = filename ) as dlg:
+        with QP.FileDialog( self, acceptMode = QW.QFileDialog.AcceptMode.AcceptSave, fileMode = QW.QFileDialog.FileMode.AnyFile, default_filename = filename ) as dlg:
             
-            if dlg.exec() == QW.QDialog.Accepted:
+            if dlg.exec() == QW.QDialog.DialogCode.Accepted:
                 
                 path = dlg.GetPath()
                 

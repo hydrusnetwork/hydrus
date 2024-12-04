@@ -526,7 +526,7 @@ class MigrateTagsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         result = ClientGUIDialogsQuick.GetYesNo( self, message, yes_label = 'looks good', no_label = 'go back' )
         
-        if result == QW.QDialog.Accepted:
+        if result == QW.QDialog.DialogCode.Accepted:
             
             if CG.client_controller.new_options.GetBoolean( 'advanced_mode' ):
                 
@@ -538,7 +538,7 @@ class MigrateTagsPanel( ClientGUIScrolledPanels.ReviewPanel ):
                 
                 result = ClientGUIDialogsQuick.GetYesNo( self, message )
                 
-                do_it = result == QW.QDialog.Accepted
+                do_it = result == QW.QDialog.DialogCode.Accepted
                 
             
             if do_it:
@@ -554,9 +554,9 @@ class MigrateTagsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         message = 'Select the destination location for the Archive. Existing Archives are also ok, and will be appended to.'
         
-        with QP.FileDialog( self, message = message, acceptMode = QW.QFileDialog.AcceptSave, default_filename = 'archive.db', fileMode = QW.QFileDialog.AnyFile ) as dlg:
+        with QP.FileDialog( self, message = message, acceptMode = QW.QFileDialog.AcceptMode.AcceptSave, default_filename = 'archive.db', fileMode = QW.QFileDialog.FileMode.AnyFile ) as dlg:
             
-            if dlg.exec() == QW.QDialog.Accepted:
+            if dlg.exec() == QW.QDialog.DialogCode.Accepted:
                 
                 path = dlg.GetPath()
                 
@@ -640,9 +640,9 @@ class MigrateTagsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         message = 'Select the Archive to pull data from.'
         
-        with QP.FileDialog( self, message = message, acceptMode = QW.QFileDialog.AcceptOpen ) as dlg:
+        with QP.FileDialog( self, message = message, acceptMode = QW.QFileDialog.AcceptMode.AcceptOpen ) as dlg:
             
-            if dlg.exec() == QW.QDialog.Accepted:
+            if dlg.exec() == QW.QDialog.DialogCode.Accepted:
                 
                 path = dlg.GetPath()
                 

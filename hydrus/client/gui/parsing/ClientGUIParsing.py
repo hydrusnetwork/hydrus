@@ -94,7 +94,7 @@ class DownloaderExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         with ClientGUIDialogs.DialogTextEntry( self, message ) as dlg:
             
-            if dlg.exec() == QW.QDialog.Accepted:
+            if dlg.exec() == QW.QDialog.DialogCode.Accepted:
                 
                 domain = dlg.GetValue()
                 
@@ -258,7 +258,7 @@ class DownloaderExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         result = ClientGUIDialogsQuick.GetYesNo( self, message )
         
-        if result != QW.QDialog.Accepted:
+        if result != QW.QDialog.DialogCode.Accepted:
             
             return
             
@@ -1010,7 +1010,7 @@ class EditContentParserPanel( ClientGUIScrolledPanels.EditPanel ):
             
             result = ClientGUIDialogsQuick.GetYesNo( self, text )
             
-            return result == QW.QDialog.Accepted
+            return result == QW.QDialog.DialogCode.Accepted
             
         else:
             
@@ -1069,7 +1069,7 @@ class EditContentParsersPanel( ClientGUICommon.StaticBox ):
             
             dlg_edit.SetPanel( panel )
             
-            if dlg_edit.exec() == QW.QDialog.Accepted:
+            if dlg_edit.exec() == QW.QDialog.DialogCode.Accepted:
                 
                 new_content_parser = panel.GetValue()
                 
@@ -1118,7 +1118,7 @@ class EditContentParsersPanel( ClientGUICommon.StaticBox ):
                 
                 dlg.SetPanel( panel )
                 
-                if dlg.exec() == QW.QDialog.Accepted:
+                if dlg.exec() == QW.QDialog.DialogCode.Accepted:
                     
                     edited_content_parser = panel.GetValue()
                     
@@ -1427,7 +1427,7 @@ class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
             
             dlg.SetPanel( panel )
             
-            if dlg.exec() == QW.QDialog.Accepted:
+            if dlg.exec() == QW.QDialog.DialogCode.Accepted:
                 
                 new_page_parser = panel.GetValue()
                 
@@ -1465,7 +1465,7 @@ class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
         
         with ClientGUIDialogs.DialogTextEntry( self, message, default = example_url ) as dlg:
             
-            if dlg.exec() == QW.QDialog.Accepted:
+            if dlg.exec() == QW.QDialog.DialogCode.Accepted:
                 
                 return dlg.GetValue()
                 
@@ -1493,7 +1493,7 @@ class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 dlg.SetPanel( panel )
                 
-                if dlg.exec() == QW.QDialog.Accepted:
+                if dlg.exec() == QW.QDialog.DialogCode.Accepted:
                     
                     self._sub_page_parsers.DeleteDatas( ( sub_page_parser, ) )
                     
@@ -1650,7 +1650,7 @@ class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
             
             result = ClientGUIDialogsQuick.GetYesNo( self, text )
             
-            return result == QW.QDialog.Accepted
+            return result == QW.QDialog.DialogCode.Accepted
             
         else:
             
@@ -1703,7 +1703,7 @@ class EditParsersPanel( ClientGUIScrolledPanels.EditPanel ):
             
             dlg_edit.SetPanel( panel )
             
-            if dlg_edit.exec() == QW.QDialog.Accepted:
+            if dlg_edit.exec() == QW.QDialog.DialogCode.Accepted:
                 
                 new_parser = panel.GetValue()
                 
@@ -1759,7 +1759,7 @@ class EditParsersPanel( ClientGUIScrolledPanels.EditPanel ):
             
             dlg.SetPanel( panel )
             
-            if dlg.exec() == QW.QDialog.Accepted:
+            if dlg.exec() == QW.QDialog.DialogCode.Accepted:
                 
                 edited_parser = panel.GetValue()
                 

@@ -88,7 +88,7 @@ IF EXIST "%venv_location%\" (
 :questions
 
 ECHO --------
-ECHO Users on older Windows or Python ^>=3.11 need the advanced install.
+ECHO Users on older Windows need the advanced install. The very new Python 3.13 will probably not work with this setup.
 ECHO:
 ECHO Your Python version is:
 %python_bin% --version
@@ -108,24 +108,14 @@ ECHO:
 
 ECHO Qt - User Interface
 ECHO:
-ECHO Most people want "6".
-ECHO If you are on Windows ^<=8.1, choose "5". If you want a specific version, choose "a".
-SET /P qt="Do you want Qt(5), Qt(6), or (a)dvanced? "
-
-IF "%qt%" == "5" goto :question_qt_done
-IF "%qt%" == "6" goto :question_qt_done
-IF "%qt%" == "a" goto :question_qt_advanced
-goto :parse_fail
-
-:question_qt_advanced
-
-ECHO:
-ECHO If you have multi-monitor menu position bugs with the normal Qt6, try "o" on Python 3.9 or "m" on Python 3.10.
-SET /P qt="Do you want Qt6 (o)lder, Qt6 (m)iddle, Qt6 (t)est, or (w)rite your own? "
+ECHO Most people want "n".
+ECHO If you cannot boot with the normal Qt, try "o" or "w".
+SET /P qt="Do you want the (o)lder Qt, (n)ew Qt, (t)est Qt, (q) for PyQt6, or (w)rite your own? "
 
 IF "%qt%" == "o" goto :question_qt_advanced_done
-IF "%qt%" == "m" goto :question_qt_advanced_done
+IF "%qt%" == "n" goto :question_qt_advanced_done
 IF "%qt%" == "t" goto :question_qt_advanced_done
+IF "%qt%" == "q" goto :question_qt_advanced_done
 IF "%qt%" == "w" goto :question_qt_custom
 goto :parse_fail
 
@@ -136,6 +126,7 @@ ECHO Enter the exact PySide6 version you want, e.g. '6.6.0':
 ECHO - For Python 3.10, your earliest available version is 6.2.0
 ECHO - For Python 3.11, your earliest available version is 6.4.0.1
 ECHO - For Python 3.12, your earliest available version is 6.6.0
+ECHO - For Python 3.13, your earliest available version is 6.8.0.2
 SET /P qt_custom_pyside6="Version: "
 SET /P qt_custom_qtpy="Enter the exact qtpy version you want (probably '2.4.1'; if older try '2.3.1'): "
 
@@ -227,9 +218,6 @@ IF "%install_type%" == "d" (
     python -m pip install -r static\requirements\advanced\requirements_windows.txt
 
     python -m pip install -r static\requirements\advanced\requirements_qt6_test.txt
-    python -m pip install pyside2
-    python -m pip install PyQtChart PyQt5
-    python -m pip install PyQt6-Charts PyQt6
     python -m pip install -r static\requirements\advanced\requirements_mpv_test.txt
     python -m pip install -r static\requirements\advanced\requirements_opencv_test.txt
     python -m pip install -r static\requirements\advanced\requirements_other_future.txt
@@ -269,10 +257,9 @@ IF "%install_type%" == "a" (
     python -m pip install -r static\requirements\advanced\requirements_core.txt
     python -m pip install -r static\requirements\advanced\requirements_windows.txt
 
-    IF "%qt%" == "5" python -m pip install -r static\requirements\advanced\requirements_qt5.txt
-    IF "%qt%" == "6" python -m pip install -r static\requirements\advanced\requirements_qt6.txt
     IF "%qt%" == "o" python -m pip install -r static\requirements\advanced\requirements_qt6_older.txt
-    IF "%qt%" == "m" python -m pip install -r static\requirements\advanced\requirements_qt6_middle.txt
+    IF "%qt%" == "n" python -m pip install -r static\requirements\advanced\requirements_qt6_new.txt
+    IF "%qt%" == "q" python -m pip install -r static\requirements\advanced\requirements_qt6_new_pyqt6.txt
     IF "%qt%" == "t" python -m pip install -r static\requirements\advanced\requirements_qt6_test.txt
 
     IF "%mpv%" == "o" python -m pip install -r static\requirements\advanced\requirements_mpv_old.txt

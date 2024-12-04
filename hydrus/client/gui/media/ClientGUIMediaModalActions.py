@@ -140,7 +140,7 @@ def ClearDeleteRecord( win, media ):
     
     result = ClientGUIDialogsQuick.GetYesNo( win, 'Clear the deletion record for {} previously deleted files?.'.format( HydrusNumbers.ToHumanInt( len( clearable_media ) ) ) )
     
-    if result == QW.QDialog.Accepted:
+    if result == QW.QDialog.DialogCode.Accepted:
         
         for chunk_of_media in HydrusData.SplitIteratorIntoChunks( clearable_media, 64 ):
             
@@ -276,7 +276,7 @@ def DoClearFileViewingStats( win: QW.QWidget, flat_medias: typing.Collection[ Cl
     
     result = ClientGUIDialogsQuick.GetYesNo( win, message )
     
-    if result == QW.QDialog.Accepted:
+    if result == QW.QDialog.DialogCode.Accepted:
         
         hashes = { m.GetHash() for m in flat_medias }
         
@@ -360,7 +360,7 @@ def EditDuplicateContentMergeOptions( win: QW.QWidget, duplicate_type: int ):
         
         dlg.SetPanel( panel )
         
-        if dlg.exec() == QW.QDialog.Accepted:
+        if dlg.exec() == QW.QDialog.DialogCode.Accepted:
             
             duplicate_content_merge_options = panel.GetValue()
             
@@ -382,7 +382,7 @@ def EditFileNotes( win: QW.QWidget, media: ClientMedia.MediaSingleton, name_to_s
         
         dlg.SetPanel( panel )
         
-        if dlg.exec() == QW.QDialog.Accepted:
+        if dlg.exec() == QW.QDialog.DialogCode.Accepted:
             
             hash = media.GetHash()
             
@@ -408,7 +408,7 @@ def EditFileTimestamps( win: QW.QWidget, ordered_medias: typing.List[ ClientMedi
         
         dlg.SetPanel( panel )
         
-        if dlg.exec() == QW.QDialog.Accepted:
+        if dlg.exec() == QW.QDialog.DialogCode.Accepted:
             
             content_update_package = panel.GetContentUpdatePackage()
             
@@ -707,7 +707,7 @@ def GetContentUpdatesForAppliedContentApplicationCommandTags( win: QW.QWidget, s
             
             with ClientGUIDialogs.DialogTextEntry( win, message ) as dlg:
                 
-                if dlg.exec() == QW.QDialog.Accepted:
+                if dlg.exec() == QW.QDialog.DialogCode.Accepted:
                     
                     content_update_action = HC.CONTENT_UPDATE_PETITION
                     
@@ -825,7 +825,7 @@ def MoveOrDuplicateLocalFiles( win: QW.QWidget, dest_service_key: bytes, action:
         
         result = ClientGUIDialogsQuick.GetYesNo( win, yes_no_text )
         
-        if result != QW.QDialog.Accepted:
+        if result != QW.QDialog.DialogCode.Accepted:
             
             return
             
@@ -851,7 +851,7 @@ def OpenURLs( win: QW.QWidget, urls ):
         
         result = ClientGUIDialogsQuick.GetYesNo( win, message )
         
-        if result != QW.QDialog.Accepted:
+        if result != QW.QDialog.DialogCode.Accepted:
             
             return
             
@@ -970,7 +970,7 @@ def RedownloadURLClassURLsForceRefetch( win: QW.QWidget, medias, url_class ):
     
     result = ClientGUIDialogsQuick.GetYesNo( win, message )
     
-    if result != QW.QDialog.Accepted:
+    if result != QW.QDialog.DialogCode.Accepted:
         
         return
         
@@ -996,7 +996,7 @@ def SetFilesForcedFiletypes( win: QW.QWidget, medias: typing.Collection[ ClientM
         
         dlg.SetPanel( panel )
         
-        if dlg.exec() == QW.QDialog.Accepted:
+        if dlg.exec() == QW.QDialog.DialogCode.Accepted:
             
             forced_mime = panel.GetValue()
             
@@ -1196,7 +1196,7 @@ def UndeleteMedia( win, media ):
                 
                 result = ClientGUIDialogsQuick.GetYesNo( win, 'Undelete this file back to {}?'.format( undelete_service.GetName() ) )
                 
-                if result == QW.QDialog.Accepted:
+                if result == QW.QDialog.DialogCode.Accepted:
                     
                     do_it = True
                     

@@ -40,7 +40,7 @@ def ClearFileSeeds( win: QW.QWidget, file_seed_cache: ClientImportFileSeeds.File
     
     result = ClientGUIDialogsQuick.GetYesNo( win, message )
     
-    if result == QW.QDialog.Accepted:
+    if result == QW.QDialog.DialogCode.Accepted:
         
         file_seed_cache.RemoveFileSeedsByStatus( statuses_to_remove )
         
@@ -132,7 +132,7 @@ def ImportFromPNG( win: QW.QWidget, file_seed_cache: ClientImportFileSeeds.FileS
     
     with QP.FileDialog( win, 'select the png with the sources', wildcard = 'PNG (*.png)' ) as dlg:
         
-        if dlg.exec() == QW.QDialog.Accepted:
+        if dlg.exec() == QW.QDialog.DialogCode.Accepted:
             
             path = dlg.GetPath()
             
@@ -178,7 +178,7 @@ def RenormaliseFileSeedCache( win: QW.QWidget, file_seed_cache: ClientImportFile
     
     result = ClientGUIDialogsQuick.GetYesNo( win, message )
     
-    if result == QW.QDialog.Accepted:
+    if result == QW.QDialog.DialogCode.Accepted:
         
         file_seed_cache.RenormaliseURLs()
         
@@ -190,7 +190,7 @@ def RetryErrors( win: QW.QWidget, file_seed_cache: ClientImportFileSeeds.FileSee
     
     result = ClientGUIDialogsQuick.GetYesNo( win, message )
     
-    if result == QW.QDialog.Accepted:
+    if result == QW.QDialog.DialogCode.Accepted:
         
         file_seed_cache.RetryFailed()
         
@@ -216,7 +216,7 @@ def ReverseFileSeedCache( win: QW.QWidget, file_seed_cache: ClientImportFileSeed
     
     result = ClientGUIDialogsQuick.GetYesNo( win, message )
     
-    if result == QW.QDialog.Accepted:
+    if result == QW.QDialog.DialogCode.Accepted:
         
         file_seed_cache.Reverse()
         
@@ -528,7 +528,7 @@ class EditFileSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
             
             result = ClientGUIDialogsQuick.GetYesNo( self, message )
             
-            if result == QW.QDialog.Accepted:
+            if result == QW.QDialog.DialogCode.Accepted:
                 
                 self._file_seed_cache.RemoveFileSeeds( file_seeds_to_delete )
                 
@@ -768,7 +768,7 @@ class EditFileSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 result = ClientGUIDialogsQuick.GetYesNo( self, message )
                 
-                if result != QW.QDialog.Accepted:
+                if result != QW.QDialog.DialogCode.Accepted:
                     
                     return
                     
@@ -810,7 +810,7 @@ class EditFileSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 result = ClientGUIDialogsQuick.GetYesNo( self, message )
                 
-                if result == QW.QDialog.Accepted:
+                if result == QW.QDialog.DialogCode.Accepted:
                     
                     deletee_hashes = { file_seed.GetHash() for file_seed in deleted_and_clearable_file_seeds }
                     
@@ -978,7 +978,7 @@ class FileSeedCacheButton( ClientGUICommon.ButtonWithMenuArrow ):
                     
                     dlg.SetPanel( panel )
                     
-                    if dlg.exec() == QW.QDialog.Accepted:
+                    if dlg.exec() == QW.QDialog.DialogCode.Accepted:
                         
                         self._file_seed_cache_set_callable( dupe_file_seed_cache )
                         
@@ -1004,7 +1004,7 @@ class FileSeedCacheStatusControl( QW.QFrame ):
         
         super().__init__( parent )
         
-        self.setFrameStyle( QW.QFrame.Box | QW.QFrame.Raised )
+        self.setFrameStyle( QW.QFrame.Shape.Box | QW.QFrame.Shadow.Raised )
         
         self._controller = controller
         self._page_key = page_key

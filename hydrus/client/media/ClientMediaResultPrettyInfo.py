@@ -214,6 +214,36 @@ def GetPrettyMediaResultInfoLines( media_result: ClientMediaResult.MediaResult, 
         pretty_info_lines.append( ClientMediaResultPrettyInfoObjects.PrettyMediaResultInfoLine( 'in the trash', True ) )
         
     
+    for service_key in current_service_keys.intersection( CG.client_controller.services_manager.GetServiceKeys( HC.REMOTE_FILE_SERVICES ) ):
+        
+        timestamp_ms = times_manager.GetImportedTimestampMS( service_key )
+        
+        try:
+            
+            service = CG.client_controller.services_manager.GetService( service_key )
+            
+        except HydrusExceptions.DataMissing:
+            
+            continue
+            
+        
+        service_type = service.GetServiceType()
+        
+        if service_type == HC.IPFS:
+            
+            status_label = 'pinned'
+            
+        else:
+            
+            status_label = 'uploaded'
+            
+        
+        line = f'{status_label} to {service.GetName()} {HydrusTime.TimestampToPrettyTimeDelta( HydrusTime.SecondiseMS( timestamp_ms ) )}'
+        tooltip = f'{status_label} to {service.GetName()} {HydrusTime.TimestampToPrettyTimeDelta( HydrusTime.SecondiseMS( timestamp_ms ), reverse_iso_delta_setting = True )}'
+        
+        pretty_info_lines.append( ClientMediaResultPrettyInfoObjects.PrettyMediaResultInfoLine( line, True, tooltip = tooltip ) )
+        
+    
     times_manager = locations_manager.GetTimesManager()
     
     file_modified_timestamp_ms = times_manager.GetAggregateModifiedTimestampMS()
@@ -273,38 +303,8 @@ def GetPrettyMediaResultInfoLines( media_result: ClientMediaResult.MediaResult, 
             line = f'archived: {HydrusTime.TimestampToPrettyTimeDelta( HydrusTime.SecondiseMS( archived_timestamp_ms ) )}'
             tooltip = f'archived: {HydrusTime.TimestampToPrettyTimeDelta( HydrusTime.SecondiseMS( archived_timestamp_ms ), reverse_iso_delta_setting = True )}'
             
-            pretty_info_lines.append( ClientMediaResultPrettyInfoObjects.PrettyMediaResultInfoLine( line, False, tooltip = tooltip ) )
+            pretty_info_lines.append( ClientMediaResultPrettyInfoObjects.PrettyMediaResultInfoLine( line, True, tooltip = tooltip ) )
             
-        
-    
-    for service_key in current_service_keys.intersection( CG.client_controller.services_manager.GetServiceKeys( HC.REMOTE_FILE_SERVICES ) ):
-        
-        timestamp_ms = times_manager.GetImportedTimestampMS( service_key )
-        
-        try:
-            
-            service = CG.client_controller.services_manager.GetService( service_key )
-            
-        except HydrusExceptions.DataMissing:
-            
-            continue
-            
-        
-        service_type = service.GetServiceType()
-        
-        if service_type == HC.IPFS:
-            
-            status_label = 'pinned'
-            
-        else:
-            
-            status_label = 'uploaded'
-            
-        
-        line = f'{status_label} to {service.GetName()} {HydrusTime.TimestampToPrettyTimeDelta( HydrusTime.SecondiseMS( timestamp_ms ) )}'
-        tooltip = f'{status_label} to {service.GetName()} {HydrusTime.TimestampToPrettyTimeDelta( HydrusTime.SecondiseMS( timestamp_ms ), reverse_iso_delta_setting = True )}'
-        
-        pretty_info_lines.append( ClientMediaResultPrettyInfoObjects.PrettyMediaResultInfoLine( line, True, tooltip = tooltip ) )
         
     
     if file_info_manager.has_audio:

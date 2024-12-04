@@ -195,7 +195,7 @@ class EditDefaultImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         result = ClientGUIDialogsQuick.GetYesNo( self, 'Clear set note import options for all selected?' )
         
-        if result == QW.QDialog.Accepted:
+        if result == QW.QDialog.DialogCode.Accepted:
             
             url_classes_to_clear = self._list_ctrl.GetData( only_selected = True )
             
@@ -217,7 +217,7 @@ class EditDefaultImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         result = ClientGUIDialogsQuick.GetYesNo( self, 'Clear set tag import options for all selected?' )
         
-        if result == QW.QDialog.Accepted:
+        if result == QW.QDialog.DialogCode.Accepted:
             
             url_classes_to_clear = self._list_ctrl.GetData( only_selected = True )
             
@@ -298,7 +298,7 @@ class EditDefaultImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 dlg.SetPanel( panel )
                 
-                if dlg.exec() == QW.QDialog.Accepted:
+                if dlg.exec() == QW.QDialog.DialogCode.Accepted:
                     
                     url_class_key = url_class.GetClassKey()
                     
@@ -1477,7 +1477,7 @@ class EditDuplicateContentMergeOptionsPanel( ClientGUIScrolledPanels.EditPanel )
                 
                 dlg_3.SetPanel( panel )
                 
-                if dlg_3.exec() == QW.QDialog.Accepted:
+                if dlg_3.exec() == QW.QDialog.DialogCode.Accepted:
                     
                     tag_filter = panel.GetValue()
                     
@@ -1554,7 +1554,7 @@ class EditDuplicateContentMergeOptionsPanel( ClientGUIScrolledPanels.EditPanel )
         
         result = ClientGUIDialogsQuick.GetYesNo( self, 'Remove all selected?' )
         
-        if result == QW.QDialog.Accepted:
+        if result == QW.QDialog.DialogCode.Accepted:
             
             for service_key in self._rating_service_actions.GetData( only_selected = True ):
                 
@@ -1569,7 +1569,7 @@ class EditDuplicateContentMergeOptionsPanel( ClientGUIScrolledPanels.EditPanel )
         
         result = ClientGUIDialogsQuick.GetYesNo( self, 'Remove all selected?' )
         
-        if result == QW.QDialog.Accepted:
+        if result == QW.QDialog.DialogCode.Accepted:
             
             for service_key in self._tag_service_actions.GetData( only_selected = True ):
                 
@@ -1590,7 +1590,7 @@ class EditDuplicateContentMergeOptionsPanel( ClientGUIScrolledPanels.EditPanel )
             
             dlg.SetPanel( panel )
             
-            if dlg.exec() == QW.QDialog.Accepted:
+            if dlg.exec() == QW.QDialog.DialogCode.Accepted:
                 
                 self._sync_note_import_options = panel.GetValue()
                 
@@ -1686,7 +1686,7 @@ class EditDuplicateContentMergeOptionsPanel( ClientGUIScrolledPanels.EditPanel )
                 
                 dlg_3.SetPanel( panel )
                 
-                if dlg_3.exec() == QW.QDialog.Accepted:
+                if dlg_3.exec() == QW.QDialog.DialogCode.Accepted:
                     
                     tag_filter = panel.GetValue()
                     
@@ -1922,7 +1922,7 @@ class EditFileNotesPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolle
         
         self._notebook.setCurrentIndex( index_to_select )
         
-        first_panel = self._notebook.currentWidget()
+        first_panel = typing.cast( QW.QPlainTextEdit, self._notebook.currentWidget() )
         
         ClientGUIFunctions.SetFocusLater( first_panel )
         
@@ -1952,7 +1952,7 @@ class EditFileNotesPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolle
         
         self.widget().setLayout( vbox )
         
-        self._my_shortcut_handler = ClientGUIShortcuts.ShortcutsHandler( self, [ 'global', 'media' ] )
+        self._my_shortcut_handler = ClientGUIShortcuts.ShortcutsHandler( self, self, [ 'global', 'media' ] )
         
         self._notebook.tabBarDoubleClicked.connect( self._TabBarDoubleClicked )
         
@@ -1965,7 +1965,7 @@ class EditFileNotesPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolle
         
         with ClientGUIDialogs.DialogTextEntry( self, 'Enter the name for the note.', allow_blank = False ) as dlg:
             
-            if dlg.exec() == QW.QDialog.Accepted:
+            if dlg.exec() == QW.QDialog.DialogCode.Accepted:
                 
                 name = dlg.GetValue()
                 
@@ -2085,7 +2085,7 @@ class EditFileNotesPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolle
             
             if name in existing_panel_names_to_widgets:
                 
-                control = existing_panel_names_to_widgets[ name ]
+                control = typing.cast( QW.QPlainTextEdit, existing_panel_names_to_widgets[ name ] )
                 
                 try:
                     
@@ -2109,7 +2109,7 @@ class EditFileNotesPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolle
         
         result = ClientGUIDialogsQuick.GetYesNo( self, text )
         
-        if result == QW.QDialog.Accepted:
+        if result == QW.QDialog.DialogCode.Accepted:
             
             index = self._notebook.currentIndex()
             
@@ -2140,7 +2140,7 @@ class EditFileNotesPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolle
         
         with ClientGUIDialogs.DialogTextEntry( self, 'Enter the name for the note.', allow_blank = False, default = name ) as dlg:
             
-            if dlg.exec() == QW.QDialog.Accepted:
+            if dlg.exec() == QW.QDialog.DialogCode.Accepted:
                 
                 name = dlg.GetValue()
                 
@@ -2173,7 +2173,7 @@ class EditFileNotesPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolle
     
     def GetValue( self ) -> typing.Tuple[ typing.Dict[ str, str ], typing.Set[ str ] ]:
         
-        names_to_notes = { self._notebook.tabText( i ) : HydrusText.CleanNoteText( self._notebook.widget( i ).toPlainText() ) for i in range( self._notebook.count() ) }
+        names_to_notes = { self._notebook.tabText( i ) : HydrusText.CleanNoteText( typing.cast( QW.QPlainTextEdit, self._notebook.widget( i ) ).toPlainText() ) for i in range( self._notebook.count() ) }
         
         names_to_notes = { name : text for ( name, text ) in names_to_notes.items() if text != '' }
         
@@ -2221,7 +2221,7 @@ class EditFileNotesPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolle
             
             result = ClientGUIDialogsQuick.GetYesNo( self, message )
             
-            if result != QW.QDialog.Accepted:
+            if result != QW.QDialog.DialogCode.Accepted:
                 
                 return False
                 
@@ -2669,13 +2669,13 @@ class EditRegexFavourites( ClientGUIScrolledPanels.EditPanel ):
         
         with ClientGUIDialogs.DialogTextEntry( self, 'Enter regex.' ) as dlg:
             
-            if dlg.exec() == QW.QDialog.Accepted:
+            if dlg.exec() == QW.QDialog.DialogCode.Accepted:
                 
                 regex_phrase = dlg.GetValue()
                 
                 with ClientGUIDialogs.DialogTextEntry( self, 'Enter description.' ) as dlg_2:
                     
-                    if dlg_2.exec() == QW.QDialog.Accepted:
+                    if dlg_2.exec() == QW.QDialog.DialogCode.Accepted:
                         
                         description = dlg_2.GetValue()
                         
@@ -2728,13 +2728,13 @@ class EditRegexFavourites( ClientGUIScrolledPanels.EditPanel ):
                 
                 dlg.SetPanel( panel )
                 
-                if dlg.exec() == QW.QDialog.Accepted:
+                if dlg.exec() == QW.QDialog.DialogCode.Accepted:
                     
                     regex_phrase = control.GetValue()
                     
                     with ClientGUIDialogs.DialogTextEntry( self, 'Update description.', default = description ) as dlg_2:
                         
-                        if dlg_2.exec() == QW.QDialog.Accepted:
+                        if dlg_2.exec() == QW.QDialog.DialogCode.Accepted:
                             
                             description = dlg_2.GetValue()
                             
@@ -2787,7 +2787,7 @@ class EditURLsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPane
             
         
         self._urls_listbox = ClientGUIListBoxes.BetterQListWidget( self, delete_callable = self.DeleteSelected )
-        self._urls_listbox.setSelectionMode( QW.QAbstractItemView.ExtendedSelection )
+        self._urls_listbox.setSelectionMode( QW.QAbstractItemView.SelectionMode.ExtendedSelection )
         self._urls_listbox.setSortingEnabled( False )
         self._urls_listbox.itemDoubleClicked.connect( self.ListDoubleClicked )
         
@@ -2832,7 +2832,7 @@ class EditURLsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPane
         
         self.widget().setLayout( vbox )
         
-        self._my_shortcut_handler = ClientGUIShortcuts.ShortcutsHandler( self, [ 'global', 'media', 'main_gui' ] )
+        self._my_shortcut_handler = ClientGUIShortcuts.ShortcutsHandler( self, self, [ 'global', 'media', 'main_gui' ] )
         
         ClientGUIFunctions.SetFocusLater( self._url_input )
         
@@ -2880,7 +2880,7 @@ class EditURLsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPane
             
             result = ClientGUIDialogsQuick.GetYesNo( self, message )
             
-            if result != QW.QDialog.Accepted:
+            if result != QW.QDialog.DialogCode.Accepted:
                 
                 return False
                 
@@ -3116,7 +3116,7 @@ class EditURLsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPane
             
             result = ClientGUIDialogsQuick.GetYesNo( self, message )
             
-            if result != QW.QDialog.Accepted:
+            if result != QW.QDialog.DialogCode.Accepted:
                 
                 return False
                 

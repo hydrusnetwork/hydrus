@@ -32,6 +32,7 @@ def get_qt_library_str_status():
     
     try:
         
+        # noinspection PyUnresolvedReferences
         import PyQt6
         
         infos.append( 'PyQt6 imported ok' )

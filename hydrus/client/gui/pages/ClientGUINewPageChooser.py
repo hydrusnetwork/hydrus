@@ -39,8 +39,8 @@ class DialogPageChooser( ClientGUIDialogs.Dialog ):
         self._button_3 = QW.QPushButton( '', self )
         
         size_policy = self._button_1.sizePolicy()
-        size_policy.setVerticalPolicy( QW.QSizePolicy.Expanding )
-        size_policy.setHorizontalPolicy( QW.QSizePolicy.Expanding )
+        size_policy.setVerticalPolicy( QW.QSizePolicy.Policy.Expanding )
+        size_policy.setHorizontalPolicy( QW.QSizePolicy.Policy.Expanding )
         size_policy.setRetainSizeWhenHidden( True )
         
         self._button_7.setSizePolicy( size_policy )
@@ -225,7 +225,7 @@ class DialogPageChooser( ClientGUIDialogs.Dialog ):
                 
                 self._action_picked = True
                 
-                self.done( QW.QDialog.Accepted )
+                self.done( QW.QDialog.DialogCode.Accepted )
                 
             
         
@@ -328,7 +328,7 @@ class DialogPageChooser( ClientGUIDialogs.Dialog ):
         
         if event.type() == QC.QEvent.WindowDeactivate and not self._action_picked:
             
-            self.done( QW.QDialog.Rejected )
+            self.done( QW.QDialog.DialogCode.Rejected )
             
             return True
             
@@ -373,7 +373,7 @@ class DialogPageChooser( ClientGUIDialogs.Dialog ):
             
         elif key == QC.Qt.Key_Escape:
             
-            self.done( QW.QDialog.Rejected )
+            self.done( QW.QDialog.DialogCode.Rejected )
             
             return
             

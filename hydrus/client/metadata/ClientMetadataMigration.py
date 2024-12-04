@@ -184,9 +184,18 @@ class SingleFileMetadataRouter( HydrusSerialisable.SerialisableBase ):
                 
             
         
-        rows = sorted( rows, key = HydrusTags.ConvertTagToSortable )
-        
         rows = self._string_processor.ProcessStrings( starting_strings = rows )
+        
+        # bruh maybe exporters should handle their own sort, like after processstrings? or before it?
+        # I just moved this to below processstrings because any potential joiner stuff would be messed with by the sort
+        if isinstance( self._exporter, ClientMetadataMigrationExporters.SingleFileMetadataExporterMediaTags ):
+            
+            rows = sorted( rows, key = HydrusTags.ConvertTagToSortable )
+            
+        else:
+            
+            rows = sorted( rows )
+            
         
         if len( rows ) == 0:
             
