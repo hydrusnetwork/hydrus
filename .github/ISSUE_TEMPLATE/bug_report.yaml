@@ -38,11 +38,12 @@ body:
           - Windows 11
           - Windows 10
           - Windows other (specify in comments)
-          - macOS 12 "Monterey" (Apple silicon)
-          - macOS 12 "Monterey" (Intel)
-          - macOS 11 "Big Sur" (Apple silicon)
-          - macOS 11 "Big Sur" (Intel)
-          - macOS 10.15 "Catalina"
+          - macOS 15 "Sequoia" (Apple silicon)
+          - macOS 15 "Sequoia" (Intel)
+          - macOS 14 "Sonoma" (Apple silicon)
+          - macOS 14 "Sonoma" (Intel)
+          - macOS 13 "Ventura" (Apple silicon)
+          - macOS 13 "Ventura" (Intel)
           - macOS other (specify in comments)
           - Linux (specify distro and version in comments)
           - Other (aka none of the above, specify in the comments)
