@@ -2,23 +2,6 @@
 An e621.net-inspired style/theme for Hydrus.
 Created by IchHabs in February 2024.
 
-Please enable darkmode and consider using the following colors:
-- Thumbnail Background:
-  -     local, normal:       #152f56
-  -     local, selected:     #25477b
-  - not local, normal:       #a0522d
-  - not local, selected:     #ed5d1f
-- Thumbnail Border:
-  -     local, normal:       #152f56
-  -     local, selected:     #b4c7d9
-  - not local, normal:       #a0522d
-  - not local, selected:     #b4c7d9
-- Thumbnail Grid Background: #020f23
-- Autocomplete Background:   #ffffcc
-- Media Viewer Background:   #020f23
-- Media Viewer Text:         #b4c7d9
-- Tabs Box Background:       #152f56
-
 If you want to change your tag namespace colors as well, try these:
 - Character:    #00aa00
 - Copyright:    #dd00dd
@@ -184,6 +167,24 @@ QTreeWidget, QTreeWidget::item {
 QListView, QListView::item {
 	border: none;
 	padding: 1px;
+}
+
+QWidget#HydrusMediaList
+{
+	qproperty-hmrp_background: #020f23;
+	qproperty-hmrp_thumbnail_local_background_normal: #152f56;
+	qproperty-hmrp_thumbnail_local_border_normal: #152f56;
+	qproperty-hmrp_thumbnail_local_background_selected: #25477b;
+	qproperty-hmrp_thumbnail_local_border_selected: #b4c7d9;
+	qproperty-hmrp_thumbnail_not_local_background_normal: #a0522d;
+	qproperty-hmrp_thumbnail_not_local_border_normal: #a0522d;
+	qproperty-hmrp_thumbnail_not_local_background_selected: #ed5d1f;
+	qproperty-hmrp_thumbnail_not_local_border_selected: #b4c7d9;
+}
+
+QWidget#HydrusTagList
+{
+	qproperty-htl_background: #152f56;
 }
 
 
@@ -579,6 +580,11 @@ QPlainTextEdit#HydrusInvalid {
 	background: #800000;
 }
 
+QWidget#HydrusTagAutocomplete
+{
+	qproperty-hta_background: #ffffcc;
+}
+
 
 /******************************** Progress Bar ********************************/
 
@@ -669,50 +675,10 @@ QLocatorResultWidget#selectedLocatorResult {
 	border-bottom: 1px solid#2b538e;
 }
 
-
-/*
-
-Here is more hydev added--now we have this tech, I am copying the default 'darkmode' colours in the options to all of the darkmode stylesheets so the default choice for new users isn't the dark/light jank-mix. Stylesheet authors are welcome to fix this up with better colours for their particular style and send them in.
-
-*/
-
-
-/* The main thumbnail grid. */
-
-QWidget#HydrusMediaList
-{
-    qproperty-hmrp_background: #343434;
-    qproperty-hmrp_thumbnail_local_background_normal: #404048;
-    qproperty-hmrp_thumbnail_local_border_normal: #91a3b0;
-    qproperty-hmrp_thumbnail_local_background_selected: #708090;
-    qproperty-hmrp_thumbnail_local_border_selected: #dfe3e6;
-    qproperty-hmrp_thumbnail_not_local_background_normal: #400d02;
-    qproperty-hmrp_thumbnail_not_local_border_normal: #f8d0cc;
-    qproperty-hmrp_thumbnail_not_local_background_selected: #ab274f;
-    qproperty-hmrp_thumbnail_not_local_border_selected: #e34234;
-}
-
-
-/* The media viewer. */
+/**************************** Hydrus: Media Viewer ****************************/
 
 QWidget#HydrusMediaViewer
 {
-    qproperty-hmv_background: #343434;
-    qproperty-hmv_text: #708090;
-}
-
-
-/* The tag autocomplete text input. */
-
-QWidget#HydrusTagAutocomplete
-{
-    qproperty-hta_background: #536267;
-}
-
-
-/* Tag lists across the program. */
-
-QWidget#HydrusTagList
-{
-    qproperty-htl_background: #232629;
+	qproperty-hmv_background: #020f23;
+	qproperty-hmv_text: #b4c7d9;
 }
