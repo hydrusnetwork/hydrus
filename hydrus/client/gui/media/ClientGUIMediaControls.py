@@ -94,7 +94,7 @@ class VolumeControl( QW.QWidget ):
         self._global_mute = AudioMuteButton( self, AUDIO_GLOBAL )
         
         self._global_mute.setToolTip( ClientGUIFunctions.WrapToolTip( 'Global mute/unmute' ) )
-        self._global_mute.setFocusPolicy( QC.Qt.NoFocus )
+        self._global_mute.setFocusPolicy( QC.Qt.FocusPolicy.NoFocus )
         
         vbox = QP.VBoxLayout( margin = 0, spacing = 0 )
         
@@ -144,9 +144,9 @@ class VolumeControl( QW.QWidget ):
             
             self._direction = direction
             
-            self.setWindowFlags( QC.Qt.Tool | QC.Qt.FramelessWindowHint )
+            self.setWindowFlags( QC.Qt.WindowType.Tool | QC.Qt.WindowType.FramelessWindowHint )
             
-            self.setAttribute( QC.Qt.WA_ShowWithoutActivating )
+            self.setAttribute( QC.Qt.WidgetAttribute.WA_ShowWithoutActivating )
             
             if self._canvas_type in CC.CANVAS_MEDIA_VIEWER_TYPES:
                 
@@ -187,8 +187,8 @@ class VolumeControl( QW.QWidget ):
                 QP.AddToLayout( vbox, self._specific_mute, CC.FLAGS_CENTER )
                 
             
-            #vbox.setAlignment( self._volume, QC.Qt.AlignHCenter )
-            #vbox.setAlignment( self._specific_mute, QC.Qt.AlignHCenter )
+            #vbox.setAlignment( self._volume, QC.Qt.AlignmentFlag.AlignHCenter )
+            #vbox.setAlignment( self._specific_mute, QC.Qt.AlignmentFlag.AlignHCenter )
             
             self.setLayout( vbox )
             
@@ -282,7 +282,7 @@ class VolumeSlider( QW.QSlider ):
         
         self._volume_type = volume_type
         
-        self.setOrientation( QC.Qt.Vertical )
+        self.setOrientation( QC.Qt.Orientation.Vertical )
         self.setTickInterval( 1 )
         self.setTickPosition( QW.QSlider.TickPosition.TicksBothSides )
         self.setRange( 0, 100 )

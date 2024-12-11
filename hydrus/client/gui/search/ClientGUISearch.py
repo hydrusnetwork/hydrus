@@ -4,6 +4,7 @@ from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
 
 from hydrus.core import HydrusConstants as HC
+from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 
 from hydrus.client import ClientConstants as CC
@@ -15,7 +16,6 @@ from hydrus.client.gui import ClientGUIMenus
 from hydrus.client.gui import ClientGUIShortcuts
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.panels import ClientGUIScrolledPanels
-from hydrus.client.gui.search import ClientGUIPredicatesMultiple
 from hydrus.client.gui.search import ClientGUIPredicatesSingle
 from hydrus.client.gui.search import ClientGUIPredicatesOR
 from hydrus.client.gui.widgets import ClientGUICommon
@@ -197,7 +197,7 @@ class EditPredicatesPanel( ClientGUIScrolledPanels.EditPanel ):
         
         predicates = list( predicates )
         
-        predicates.sort( key = lambda p: ( p.GetMagicSortValue(), p.ToString( with_count = False ) ) )
+        predicates.sort( key = lambda p: p.GetMagicSortValue() )
         
         self._uneditable_predicates = []
         
@@ -405,7 +405,56 @@ class EditPredicatesPanel( ClientGUIScrolledPanels.EditPanel ):
         
         if len( rating_preds ) > 0:
             
-            self._editable_pred_panels.append( ClientGUIPredicatesMultiple.PanelPredicateSystemRating( self, rating_preds ) )
+            order_of_panels = [ HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL, HC.LOCAL_RATING_INCDEC ]
+            
+            def key( p: ClientSearchPredicate.Predicate ):
+                
+                s_k = p.GetValue()[2]
+                
+                try:
+                    
+                    service = CG.client_controller.services_manager.GetService( s_k )
+                    
+                    return ( order_of_panels.index( service.GetServiceType() ), service.GetName() )
+                    
+                except HydrusExceptions.DataMissing:
+                    
+                    return ( 3, 'zzz' )
+                    
+                
+            
+            rating_preds = sorted( rating_preds, key = key )
+            
+            for pred in rating_preds:
+                
+                service_key = pred.GetValue()[2]
+                
+                try:
+                    
+                    service = CG.client_controller.services_manager.GetService( service_key )
+                    
+                except HydrusExceptions.DataMissing:
+                    
+                    HydrusData.ShowText( 'Hey, I was asked to edit a rating predicate that seems to refer to a service that no longer exists. I cannot do that, so it was ignored!' )
+                    
+                    continue
+                    
+                
+                type = service.GetServiceType()
+                
+                if type == HC.LOCAL_RATING_LIKE:
+                    
+                    self._editable_pred_panels.append( ClientGUIPredicatesSingle.PredicateSystemRatingLike( self, service_key, pred ) )
+                    
+                elif type == HC.LOCAL_RATING_NUMERICAL:
+                    
+                    self._editable_pred_panels.append( ClientGUIPredicatesSingle.PredicateSystemRatingNumerical( self, service_key, pred ) )
+                    
+                elif type == HC.LOCAL_RATING_INCDEC:
+                    
+                    self._editable_pred_panels.append( ClientGUIPredicatesSingle.PredicateSystemRatingIncDec( self, service_key, pred ) )
+                    
+                
             
         
         vbox = QP.VBoxLayout()
@@ -484,6 +533,8 @@ class FleshOutPredicatePanel( ClientGUIScrolledPanels.EditPanel ):
         recent_predicate_types = [ predicate_type ]
         static_pred_buttons = []
         editable_pred_panels = []
+        
+        do_static_preds_in_two_column_table = False
         
         if predicate_type == ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_AGE:
             
@@ -619,18 +670,22 @@ class FleshOutPredicatePanel( ClientGUIScrolledPanels.EditPanel ):
             
             recent_predicate_types = []
             
+            do_static_preds_in_two_column_table = True
+            
             static_pred_buttons.append( ClientGUIPredicatesSingle.StaticSystemPredicateButton( self, ( ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HAS_AUDIO, True ), ), show_remove_button = False ) )
             static_pred_buttons.append( ClientGUIPredicatesSingle.StaticSystemPredicateButton( self, ( ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HAS_AUDIO, False ), ), show_remove_button = False ) )
-            static_pred_buttons.append( ClientGUIPredicatesSingle.StaticSystemPredicateButton( self, ( ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HAS_TRANSPARENCY, True ), ), show_remove_button = False ) )
-            static_pred_buttons.append( ClientGUIPredicatesSingle.StaticSystemPredicateButton( self, ( ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HAS_TRANSPARENCY, False ), ), show_remove_button = False ) )
-            static_pred_buttons.append( ClientGUIPredicatesSingle.StaticSystemPredicateButton( self, ( ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HAS_EXIF, True ), ), show_remove_button = False ) )
-            static_pred_buttons.append( ClientGUIPredicatesSingle.StaticSystemPredicateButton( self, ( ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HAS_EXIF, False ), ), show_remove_button = False ) )
+            static_pred_buttons.append( ClientGUIPredicatesSingle.StaticSystemPredicateButton( self, ( ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_DURATION, ClientNumberTest.NumberTest.STATICCreateFromCharacters( '>', 0 ) ), ), show_remove_button = False ) )
+            static_pred_buttons.append( ClientGUIPredicatesSingle.StaticSystemPredicateButton( self, ( ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_DURATION, ClientNumberTest.NumberTest.STATICCreateFromCharacters( '=', 0 ) ), ), show_remove_button = False ) )
             static_pred_buttons.append( ClientGUIPredicatesSingle.StaticSystemPredicateButton( self, ( ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HAS_HUMAN_READABLE_EMBEDDED_METADATA, True ), ), show_remove_button = False ) )
             static_pred_buttons.append( ClientGUIPredicatesSingle.StaticSystemPredicateButton( self, ( ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HAS_HUMAN_READABLE_EMBEDDED_METADATA, False ), ), show_remove_button = False ) )
-            static_pred_buttons.append( ClientGUIPredicatesSingle.StaticSystemPredicateButton( self, ( ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HAS_ICC_PROFILE, True ), ), show_remove_button = False ) )
-            static_pred_buttons.append( ClientGUIPredicatesSingle.StaticSystemPredicateButton( self, ( ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HAS_ICC_PROFILE, False ), ), show_remove_button = False ) )
+            static_pred_buttons.append( ClientGUIPredicatesSingle.StaticSystemPredicateButton( self, ( ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HAS_EXIF, True ), ), show_remove_button = False ) )
+            static_pred_buttons.append( ClientGUIPredicatesSingle.StaticSystemPredicateButton( self, ( ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HAS_EXIF, False ), ), show_remove_button = False ) )
             static_pred_buttons.append( ClientGUIPredicatesSingle.StaticSystemPredicateButton( self, ( ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HAS_FORCED_FILETYPE, True ), ), show_remove_button = False ) )
             static_pred_buttons.append( ClientGUIPredicatesSingle.StaticSystemPredicateButton( self, ( ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HAS_FORCED_FILETYPE, False ), ), show_remove_button = False ) )
+            static_pred_buttons.append( ClientGUIPredicatesSingle.StaticSystemPredicateButton( self, ( ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HAS_ICC_PROFILE, True ), ), show_remove_button = False ) )
+            static_pred_buttons.append( ClientGUIPredicatesSingle.StaticSystemPredicateButton( self, ( ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HAS_ICC_PROFILE, False ), ), show_remove_button = False ) )
+            static_pred_buttons.append( ClientGUIPredicatesSingle.StaticSystemPredicateButton( self, ( ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HAS_TRANSPARENCY, True ), ), show_remove_button = False ) )
+            static_pred_buttons.append( ClientGUIPredicatesSingle.StaticSystemPredicateButton( self, ( ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HAS_TRANSPARENCY, False ), ), show_remove_button = False ) )
             
         elif predicate_type == ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HAS_TRANSPARENCY:
             
@@ -712,11 +767,31 @@ class FleshOutPredicatePanel( ClientGUIScrolledPanels.EditPanel ):
             
             services_manager = CG.client_controller.services_manager
             
-            ratings_services = services_manager.GetServices( HC.RATINGS_SERVICES )
+            rating_services = services_manager.GetServices( HC.RATINGS_SERVICES )
             
-            if len( ratings_services ) > 0:
+            if len( rating_services ) > 0:
                 
-                editable_pred_panels.append( self._PredOKPanel( self, ClientGUIPredicatesMultiple.PanelPredicateSystemRating, ( predicate, ) ) )
+                for service_type_in_order in [ HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL, HC.LOCAL_RATING_INCDEC ]:
+                    
+                    for rating_service in rating_services:
+                        
+                        if rating_service.GetServiceType() == service_type_in_order:
+                            
+                            if service_type_in_order == HC.LOCAL_RATING_LIKE:
+                                
+                                editable_pred_panels.append( self._PredOKPanel( self, ClientGUIPredicatesSingle.PredicateSystemRatingLike, rating_service.GetServiceKey(), predicate ) )
+                                
+                            elif service_type_in_order == HC.LOCAL_RATING_NUMERICAL:
+                                
+                                editable_pred_panels.append( self._PredOKPanel( self, ClientGUIPredicatesSingle.PredicateSystemRatingNumerical, rating_service.GetServiceKey(), predicate ) )
+                                
+                            elif service_type_in_order == HC.LOCAL_RATING_INCDEC:
+                                
+                                editable_pred_panels.append( self._PredOKPanel( self, ClientGUIPredicatesSingle.PredicateSystemRatingIncDec, rating_service.GetServiceKey(), predicate ) )
+                                
+                            
+                        
+                    
                 
             
         elif predicate_type == ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_SIMILAR_TO:
@@ -819,9 +894,28 @@ class FleshOutPredicatePanel( ClientGUIScrolledPanels.EditPanel ):
                     
                 
             
-            for button in static_pred_buttons:
+            if do_static_preds_in_two_column_table:
                 
-                QP.AddToLayout( page_vbox, button, CC.FLAGS_EXPAND_PERPENDICULAR )
+                gridbox = QP.GridLayout( cols = 2 )
+                
+                gridbox.setColumnStretch( 1, 1 )
+                
+                for button in static_pred_buttons:
+                    
+                    QP.AddToLayout( gridbox, button, CC.FLAGS_EXPAND_BOTH_WAYS )
+                    
+                
+                QP.AddToLayout( page_vbox, gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+                
+            else:
+                
+                for button in static_pred_buttons:
+                    
+                    QP.AddToLayout( page_vbox, button, CC.FLAGS_EXPAND_PERPENDICULAR )
+                    
+                
+            
+            for button in static_pred_buttons:
                 
                 button.predicatesChosen.connect( self.StaticButtonClicked )
                 button.predicatesRemoved.connect( self.StaticRemoveButtonClicked )
@@ -921,14 +1015,14 @@ class FleshOutPredicatePanel( ClientGUIScrolledPanels.EditPanel ):
     
     class _PredOKPanel( QW.QWidget ):
         
-        def __init__( self, parent: "FleshOutPredicatePanel", predicate_panel_class, predicate ):
+        def __init__( self, parent: "FleshOutPredicatePanel", predicate_panel_class, *args ):
             
             super().__init__( parent )
             
             self._defaults_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().star, self._DefaultsMenu )
             self._defaults_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'Set a new default.' ) )
             
-            self._predicate_panel = predicate_panel_class( self, predicate )
+            self._predicate_panel = predicate_panel_class( self, *args )
             self._parent = parent
             
             self._ok = QW.QPushButton( 'ok', self )
@@ -989,7 +1083,7 @@ class FleshOutPredicatePanel( ClientGUIScrolledPanels.EditPanel ):
             
             ( modifier, key ) = ClientGUIShortcuts.ConvertKeyEventToSimpleTuple( event )
             
-            if key in ( QC.Qt.Key_Enter, QC.Qt.Key_Return ):
+            if key in ( QC.Qt.Key.Key_Enter, QC.Qt.Key.Key_Return ):
                 
                 self._DoOK()
                 

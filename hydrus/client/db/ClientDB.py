@@ -4997,6 +4997,11 @@ class DB( HydrusDB.HydrusDB ):
                     HydrusData.ShowText( 'File import job archiving new file' )
                     
                 
+                if hash_id not in self.modules_files_inbox.inbox_hash_ids:
+                    
+                    self.modules_files_inbox.InboxFiles( ( hash_id, ) )
+                    
+                
                 self.modules_files_inbox.ArchiveFiles( ( hash_id, ) )
                 
                 content_update = ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, ( hash, ) )
@@ -5128,6 +5133,8 @@ class DB( HydrusDB.HydrusDB ):
                 'ideal_client_files_locations' : self.modules_files_physical_storage.GetIdealClientFilesLocations,
                 'last_shutdown_work_time' : self.modules_db_maintenance.GetLastShutdownWorkTime,
                 'media_predicates' : self.modules_tag_display.GetMediaPredicates,
+                'missing_archive_timestamps_import_test' : self.modules_files_inbox.WeHaveMissingImportArchiveTimestamps,
+                'missing_archive_timestamps_legacy_test' : self.modules_files_inbox.WeHaveMissingLegacyArchiveTimestamps,
                 'missing_repository_update_hashes' : self.modules_repositories.GetRepositoryUpdateHashesIDoNotHave,
                 'num_deferred_file_deletes' : self.modules_files_storage.GetDeferredPhysicalDeleteCounts,
                 'recent_tags' : self.modules_recent_tags.GetRecentTags,
@@ -5226,6 +5233,8 @@ class DB( HydrusDB.HydrusDB ):
                 'ideal_client_files_locations' : self.modules_files_physical_storage.SetIdealClientFilesLocations,
                 'maintain_hashed_serialisables' : self.modules_serialisable.MaintainHashedStorage,
                 'maintain_similar_files_tree' : self.modules_similar_files.MaintainTree,
+                'missing_archive_timestamps_import_fillin' : self.modules_files_inbox.FillInMissingImportArchiveTimestamps,
+                'missing_archive_timestamps_legacy_fillin' : self.modules_files_inbox.FillInMissingLegacyArchiveTimestamps,
                 'process_repository_definitions' : self.modules_repositories.ProcessRepositoryDefinitions,
                 'push_recent_tags' : self.modules_recent_tags.PushRecentTags,
                 'regenerate_similar_files' : self.modules_similar_files.RegenerateTree,
@@ -5359,7 +5368,7 @@ class DB( HydrusDB.HydrusDB ):
         
         #
         
-        self.modules_files_inbox = ClientDBFilesInbox.ClientDBFilesInbox( self._c, self.modules_files_storage, self.modules_files_timestamps )
+        self.modules_files_inbox = ClientDBFilesInbox.ClientDBFilesInbox( self._c, self.modules_services, self.modules_files_storage, self.modules_files_timestamps )
         
         self._modules.append( self.modules_files_inbox )
         
@@ -5995,7 +6004,7 @@ class DB( HydrusDB.HydrusDB ):
         group_of_hash_ids = self._STL( self._Execute( 'SELECT hash_id FROM shape_search_cache WHERE searched_distance IS NULL or searched_distance < ?;', ( search_distance, ) ).fetchmany( 10 ) )
         
         while len( group_of_hash_ids ) > 0:
-        
+            
             text = 'searching potential duplicates: {}'.format( HydrusNumbers.ToHumanInt( num_done ) )
             
             CG.client_controller.frame_splash_status.SetSubtext( text )
@@ -11392,6 +11401,40 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
+        if version == 601:
+            
+            try:
+                
+                self._controller.frame_splash_status.SetText( f'scanning for missing import archive timestamps' )
+                
+                we_have_missing_import_archive_timestamps = self.modules_files_inbox.WeHaveMissingImportArchiveTimestamps()
+                
+                if not we_have_missing_import_archive_timestamps:
+                    
+                    self._controller.frame_splash_status.SetText( f'scanning for missing legacy archive timestamps' )
+                    
+                    we_have_missing_legacy_archive_timestamps = self.modules_files_inbox.WeHaveMissingLegacyArchiveTimestamps()
+                    
+                else:
+                    
+                    we_have_missing_legacy_archive_timestamps = False
+                    
+                
+                if we_have_missing_import_archive_timestamps or we_have_missing_legacy_archive_timestamps:
+                    
+                    self.pub_initial_message( 'Hey, I discovered you have some missing file archived times, which we can now fill in with synthetic values. Hit up the new "database->file maintenance->fix missing file archived times" job to review your options!' )
+                    
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to check for archived time gaps failed! Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
+                
+            
+        
         self._controller.frame_splash_status.SetTitleText( 'updated db to v{}'.format( HydrusNumbers.ToHumanInt( version + 1 ) ) )
         
         self._Execute( 'UPDATE version SET version = ?;', ( version + 1, ) )
@@ -11890,7 +11933,7 @@ class DB( HydrusDB.HydrusDB ):
     
     def publish_status_update( self ):
         
-        self._controller.pub( 'set_status_bar_dirty' )
+        self._controller.pub( 'set_status_bar_db_dirty' )
         
     
     def GetInitialMessages( self ):

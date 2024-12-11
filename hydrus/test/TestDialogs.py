@@ -48,7 +48,7 @@ def OKChildDialog( window ):
     
 def PressKey( window, key ):
     
-    window.setFocus( QC.Qt.OtherFocusReason )
+    window.setFocus( QC.Qt.FocusReason.OtherFocusReason )
     
     uias = QP.UIActionSimulator()
     

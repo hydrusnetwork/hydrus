@@ -68,13 +68,13 @@ class CollectComboCtrl( QW.QComboBox ):
         
         item = self.model().itemFromIndex( index )
         
-        if item.checkState() == QC.Qt.Checked:
+        if item.checkState() == QC.Qt.CheckState.Checked:
             
-            item.setCheckState( QC.Qt.Unchecked )
+            item.setCheckState( QC.Qt.CheckState.Unchecked )
             
         else:
             
-            item.setCheckState( QC.Qt.Checked )
+            item.setCheckState( QC.Qt.CheckState.Checked )
             
         
         self.SetValue( self._cached_text )
@@ -118,7 +118,7 @@ class CollectComboCtrl( QW.QComboBox ):
             item = self.model().item( i, 0 )
             
             t = item.text()
-            d = self.itemData( i, QC.Qt.UserRole )
+            d = self.itemData( i, QC.Qt.ItemDataRole.UserRole )
             
             current_text_and_data_tuples.append( ( t, d ) )
             
@@ -140,7 +140,7 @@ class CollectComboCtrl( QW.QComboBox ):
                 
                 item = self.model().item( self.count() - 1, 0 )
                 
-                item.setCheckState( QC.Qt.Unchecked )
+                item.setCheckState( QC.Qt.CheckState.Unchecked )
                 
             
             made_changes = True
@@ -157,7 +157,7 @@ class CollectComboCtrl( QW.QComboBox ):
 
             item = self.model().item( idx )
             
-            if item.checkState() == QC.Qt.Checked:
+            if item.checkState() == QC.Qt.CheckState.Checked:
                 
                 indices.append( idx )
                 
@@ -174,7 +174,7 @@ class CollectComboCtrl( QW.QComboBox ):
             
             item = self.model().item( idx )
             
-            if item.checkState() == QC.Qt.Checked:
+            if item.checkState() == QC.Qt.CheckState.Checked:
                 
                 strings.append( item.text() )
                 
@@ -190,7 +190,7 @@ class CollectComboCtrl( QW.QComboBox ):
         
         for index in self.GetCheckedIndices():
             
-            ( collect_type, collect_data ) = self.itemData( index, QC.Qt.UserRole )
+            ( collect_type, collect_data ) = self.itemData( index, QC.Qt.ItemDataRole.UserRole )
             
             if collect_type == 'namespace':
                 
@@ -261,7 +261,7 @@ class CollectComboCtrl( QW.QComboBox ):
 
             for index in range( self.count() ):
 
-                ( collect_type, collect_data ) = self.itemData( index, QC.Qt.UserRole )
+                ( collect_type, collect_data ) = self.itemData( index, QC.Qt.ItemDataRole.UserRole )
 
                 p1 = collect_type == 'namespace' and collect_data in media_collect.namespaces
                 p2 = collect_type == 'rating' and collect_data in media_collect.rating_service_keys
@@ -292,11 +292,11 @@ class CollectComboCtrl( QW.QComboBox ):
             
             if idx in indices_to_check:
                 
-                item.setCheckState( QC.Qt.Checked )
+                item.setCheckState( QC.Qt.CheckState.Checked )
                 
             else:
                 
-                item.setCheckState( QC.Qt.Unchecked )
+                item.setCheckState( QC.Qt.CheckState.Unchecked )
                 
             
         
@@ -400,7 +400,7 @@ class MediaCollectControl( QW.QWidget ):
             
             if watched == self._collect_comboctrl:
                 
-                if event.type() == QC.QEvent.MouseButtonPress and event.button() == QC.Qt.MiddleButton:
+                if event.type() == QC.QEvent.Type.MouseButtonPress and event.button() == QC.Qt.MouseButton.MiddleButton:
                     
                     self.SetCollect( ClientMedia.MediaCollect( collect_unmatched = self._media_collect.collect_unmatched ) )
                     

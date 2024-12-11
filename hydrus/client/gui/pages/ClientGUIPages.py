@@ -84,10 +84,10 @@ class Page( QW.QWidget ):
         self._pretty_status = ''
         
         self._management_media_split = QW.QSplitter( self )
-        self._management_media_split.setOrientation( QC.Qt.Horizontal )
+        self._management_media_split.setOrientation( QC.Qt.Orientation.Horizontal )
         
         self._search_preview_split = QW.QSplitter( self._management_media_split )
-        self._search_preview_split.setOrientation( QC.Qt.Vertical )
+        self._search_preview_split.setOrientation( QC.Qt.Orientation.Vertical )
         
         self._done_split_setups = False
         
@@ -661,7 +661,7 @@ class Page( QW.QWidget ):
     
     def SetMediaFocus( self ):
         
-        self._media_panel.setFocus( QC.Qt.OtherFocusReason )
+        self._media_panel.setFocus( QC.Qt.FocusReason.OtherFocusReason )
         
     
     def SetName( self, name ):
@@ -1043,11 +1043,11 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         
         if CG.client_controller.new_options.GetBoolean( 'elide_page_tab_names' ):
             
-            self.tabBar().setElideMode( QC.Qt.ElideMiddle )
+            self.tabBar().setElideMode( QC.Qt.TextElideMode.ElideMiddle )
             
         else:
             
-            self.tabBar().setElideMode( QC.Qt.ElideNone )
+            self.tabBar().setElideMode( QC.Qt.TextElideMode.ElideNone )
             
         
         direction = CG.client_controller.new_options.GetInteger( 'notebook_tab_alignment' )
@@ -2077,7 +2077,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         
         try:
             
-            if event.type() in ( QC.QEvent.MouseButtonDblClick, QC.QEvent.MouseButtonRelease ):
+            if event.type() in ( QC.QEvent.Type.MouseButtonDblClick, QC.QEvent.Type.MouseButtonRelease ):
                 
                 screen_position = QG.QCursor.pos()
                 
@@ -2111,24 +2111,24 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
                         
                     
                 
-                if event.type() == QC.QEvent.MouseButtonDblClick:
+                if event.type() == QC.QEvent.Type.MouseButtonDblClick:
                     
-                    if event.button() == QC.Qt.LeftButton and over_tab_greyspace and not over_a_tab:
+                    if event.button() == QC.Qt.MouseButton.LeftButton and over_tab_greyspace and not over_a_tab:
                         
                         self.EventNewPageFromScreenPosition( screen_position )
                         
                         return True
                         
                     
-                elif event.type() == QC.QEvent.MouseButtonRelease:
+                elif event.type() == QC.QEvent.Type.MouseButtonRelease:
                     
-                    if event.button() == QC.Qt.RightButton and ( over_a_tab or over_tab_greyspace ):
+                    if event.button() == QC.Qt.MouseButton.RightButton and ( over_a_tab or over_tab_greyspace ):
                         
                         self.ShowMenuFromScreenPosition( screen_position )
                         
                         return True
                         
-                    elif event.button() == QC.Qt.MiddleButton and over_tab_greyspace and not over_a_tab:
+                    elif event.button() == QC.Qt.MouseButton.MiddleButton and over_tab_greyspace and not over_a_tab:
                         
                         self.EventNewPageFromScreenPosition( screen_position )
                         
@@ -2893,7 +2893,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
             
         
         # queryKBM here for instant check, not waiting for event processing to catch up u wot mate
-        ctrl_down = QW.QApplication.queryKeyboardModifiers() & QC.Qt.ControlModifier
+        ctrl_down = QW.QApplication.queryKeyboardModifiers() & QC.Qt.KeyboardModifier.ControlModifier
         
         if not ctrl_down:
             

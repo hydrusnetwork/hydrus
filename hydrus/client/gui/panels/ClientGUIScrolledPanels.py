@@ -17,7 +17,7 @@ class ResizingEventFilter( QC.QObject ):
         
         try:
             
-            if event.type() == QC.QEvent.Resize:
+            if event.type() == QC.QEvent.Type.Resize:
                 
                 parent = self.parent()
                 

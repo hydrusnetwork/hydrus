@@ -624,6 +624,7 @@ class ClientDBSimilarFiles( ClientDBModule.ClientDBModule ):
         
         if self._GetRowCount() > 0:
             
+            # yes, replace--these files' phashes have just changed, so we want to search again with this new data
             self._Execute( 'REPLACE INTO shape_search_cache ( hash_id, searched_distance ) VALUES ( ?, ? );', ( hash_id, None ) )
             
         
@@ -796,12 +797,6 @@ class ClientDBSimilarFiles( ClientDBModule.ClientDBModule ):
             job_status.SetStatusTitle( 'regenerating similar file search data' )
             
             CG.client_controller.pub( 'modal_message', job_status )
-            
-            job_status.SetStatusText( 'purging search info of orphans' )
-            
-            ( current_files_table_name, deleted_files_table_name, pending_files_table_name, petitioned_files_table_name ) = ClientDBFilesStorage.GenerateFilesTableNames( self.modules_services.combined_local_file_service_id )
-            
-            self._Execute( 'DELETE FROM shape_perceptual_hash_map WHERE hash_id NOT IN ( SELECT hash_id FROM {} );'.format( current_files_table_name ) )
             
             job_status.SetStatusText( 'gathering all leaves' )
             
@@ -1168,10 +1163,6 @@ class ClientDBSimilarFiles( ClientDBModule.ClientDBModule ):
         
     
     def StopSearchingFile( self, hash_id ):
-        
-        perceptual_hash_ids = self._STS( self._Execute( 'SELECT phash_id FROM shape_perceptual_hash_map WHERE hash_id = ?;', ( hash_id, ) ) )
-        
-        self.DisassociatePerceptualHashes( hash_id, perceptual_hash_ids )
         
         self._Execute( 'DELETE FROM shape_search_cache WHERE hash_id = ?;', ( hash_id, ) )
         

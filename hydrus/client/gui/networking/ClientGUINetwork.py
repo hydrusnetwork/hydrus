@@ -898,7 +898,7 @@ class ReviewNetworkContextBandwidthPanel( ClientGUIScrolledPanels.ReviewPanel ):
         rules_panel = ClientGUICommon.StaticBox( self, 'rules' )
         
         self._uses_default_rules_st = ClientGUICommon.BetterStaticText( rules_panel )
-        self._uses_default_rules_st.setAlignment( QC.Qt.AlignVCenter | QC.Qt.AlignHCenter )
+        self._uses_default_rules_st.setAlignment( QC.Qt.AlignmentFlag.AlignVCenter | QC.Qt.AlignmentFlag.AlignHCenter )
         
         self._rules_rows_panel = QW.QWidget( rules_panel )
         

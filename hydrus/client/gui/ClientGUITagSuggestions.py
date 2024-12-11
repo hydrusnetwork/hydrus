@@ -114,7 +114,7 @@ class ListBoxTagsSuggestionsFavourites( ClientGUIListBoxes.ListBoxTagsStrings ):
         
         self.SelectTopItem()
         
-        self.setFocus( QC.Qt.OtherFocusReason )
+        self.setFocus( QC.Qt.FocusReason.OtherFocusReason )
         
     
 class ListBoxTagsSuggestionsRelated( ClientGUIListBoxes.ListBoxTagsPredicates ):
@@ -164,7 +164,7 @@ class ListBoxTagsSuggestionsRelated( ClientGUIListBoxes.ListBoxTagsPredicates ):
         
         self.SelectTopItem()
         
-        self.setFocus( QC.Qt.OtherFocusReason )
+        self.setFocus( QC.Qt.FocusReason.OtherFocusReason )
         
     
 class FavouritesTagsPanel( QW.QWidget ):
@@ -748,7 +748,7 @@ class FileLookupScriptTagsPanel( QW.QWidget ):
             
         else:
             
-            self._fetch_button.setFocus( QC.Qt.OtherFocusReason )
+            self._fetch_button.setFocus( QC.Qt.FocusReason.OtherFocusReason )
             
         
     

@@ -43,7 +43,7 @@ class EditSelectFromListPanel( ClientGUIScrolledPanels.EditPanel ):
             
             item = QW.QListWidgetItem()
             item.setText( label )
-            item.setData( QC.Qt.UserRole, value )
+            item.setData( QC.Qt.ItemDataRole.UserRole, value )
             self._list.addItem( item )
             
         

@@ -1786,8 +1786,16 @@ class NetworkJob( object ):
                     
                     if isinstance( e, requests.exceptions.SSLError ):
                         
-                        fail_text = 'Problem with SSL: {}'.format( repr( e ) )
-                        delay_text = 'SSL connection failed'
+                        if 'SSLCertVerificationError' in str( e ):
+                            
+                            fail_text = f'Problem with SSL Verification. (This may be due to a bad certificate on the site or hydrus\'s "requests" library not having up to date root certs or SSL, but ISP level content blockers can also cause it.): {e}\n\n'
+                            delay_text = 'SSL Cert Verification failed'
+                            
+                        else:
+                            
+                            fail_text = 'Problem with SSL: {}'.format( repr( e ) )
+                            delay_text = 'SSL connection failed'
+                            
                         
                     else:
                         

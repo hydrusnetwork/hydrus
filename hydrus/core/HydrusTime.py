@@ -449,11 +449,11 @@ def TimestampToPrettyExpires( timestamp ):
         
     
 
-def MillisecondsDurationToPrettyTime( duration_ms: typing.Optional[ int ] ) -> str:
+def MillisecondsDurationToPrettyTime( duration_ms: typing.Optional[ int ], force_numbers = False ) -> str:
     
     # should this function just be merged into timedeltatoprettytimedelta or something?
     
-    if duration_ms is None or duration_ms == 0:
+    if ( duration_ms is None or duration_ms == 0 ) and not force_numbers:
         
         return 'no duration'
         

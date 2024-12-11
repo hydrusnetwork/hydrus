@@ -766,7 +766,7 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         self._current_filter_st = ClientGUICommon.BetterStaticText( self, 'current filter: ', ellipsize_end = True )
         
         self._test_result_st = ClientGUICommon.BetterStaticText( self, self.TEST_RESULT_DEFAULT )
-        self._test_result_st.setAlignment( QC.Qt.AlignVCenter | QC.Qt.AlignRight )
+        self._test_result_st.setAlignment( QC.Qt.AlignmentFlag.AlignVCenter | QC.Qt.AlignmentFlag.AlignRight )
         
         self._test_result_st.setWordWrap( True )
         
@@ -3463,7 +3463,7 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
         
         def SetTagBoxFocus( self ):
             
-            self._add_tag_box.setFocus( QC.Qt.OtherFocusReason )
+            self._add_tag_box.setFocus( QC.Qt.FocusReason.OtherFocusReason )
             
         
 
@@ -4081,11 +4081,11 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
             
             if len( self._children.GetTags() ) == 0:
                 
-                self._children_input.setFocus( QC.Qt.OtherFocusReason )
+                self._children_input.setFocus( QC.Qt.FocusReason.OtherFocusReason )
                 
             else:
                 
-                self._parents_input.setFocus( QC.Qt.OtherFocusReason )
+                self._parents_input.setFocus( QC.Qt.FocusReason.OtherFocusReason )
                 
             
         
@@ -4893,11 +4893,11 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
             
             if len( self._old_siblings.GetTags() ) == 0:
                 
-                self._old_input.setFocus( QC.Qt.OtherFocusReason )
+                self._old_input.setFocus( QC.Qt.FocusReason.OtherFocusReason )
                 
             else:
                 
-                self._new_input.setFocus( QC.Qt.OtherFocusReason )
+                self._new_input.setFocus( QC.Qt.FocusReason.OtherFocusReason )
                 
             
         

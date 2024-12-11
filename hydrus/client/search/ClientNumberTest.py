@@ -20,6 +20,17 @@ number_test_operator_to_str_lookup = {
     NUMBER_TEST_OPERATOR_APPROXIMATE_ABSOLUTE : HC.UNICODE_APPROX_EQUAL
 }
 
+legacy_str_operator_to_number_test_operator_lookup = { s : o for ( o, s ) in number_test_operator_to_str_lookup.items() }
+
+number_test_operator_to_pretty_str_lookup = {
+    NUMBER_TEST_OPERATOR_LESS_THAN : 'less than',
+    NUMBER_TEST_OPERATOR_GREATER_THAN : 'more than',
+    NUMBER_TEST_OPERATOR_EQUAL : 'is',
+    NUMBER_TEST_OPERATOR_APPROXIMATE_PERCENT : 'is about',
+    NUMBER_TEST_OPERATOR_NOT_EQUAL : 'is not',
+    NUMBER_TEST_OPERATOR_APPROXIMATE_ABSOLUTE : 'is about'
+}
+
 number_test_str_to_operator_lookup = { value : key for ( key, value ) in number_test_operator_to_str_lookup.items() if key != NUMBER_TEST_OPERATOR_APPROXIMATE_ABSOLUTE }
 
 class NumberTest( HydrusSerialisable.SerialisableBase ):
@@ -149,11 +160,11 @@ class NumberTest( HydrusSerialisable.SerialisableBase ):
             
             if lower <= 0:
                 
-                return lambda x: x is None or x < upper
+                return lambda x: x is None or x <= upper
                 
             else:
                 
-                return lambda x: x is not None and lower < x < upper
+                return lambda x: x is not None and lower <= x <= upper
                 
             
         elif self.operator == NUMBER_TEST_OPERATOR_APPROXIMATE_ABSOLUTE:
@@ -163,11 +174,11 @@ class NumberTest( HydrusSerialisable.SerialisableBase ):
             
             if lower <= 0:
                 
-                return lambda x: x is None or x < upper
+                return lambda x: x is None or x <= upper
                 
             else:
                 
-                return lambda x: x is not None and lower < x < upper
+                return lambda x: x is not None and lower <= x <= upper
                 
             
         elif self.operator == NUMBER_TEST_OPERATOR_NOT_EQUAL:
@@ -225,11 +236,11 @@ class NumberTest( HydrusSerialisable.SerialisableBase ):
             
             if lower <= 0:
                 
-                return [ f'( {variable_name} is NULL OR {variable_name} < {upper} )' ]
+                return [ f'( {variable_name} is NULL OR {variable_name} <= {upper} )' ]
                 
             else:
                 
-                return [ f'{variable_name} > {lower}', f'{variable_name} < {upper}' ]
+                return [ f'{variable_name} >= {lower}', f'{variable_name} <= {upper}' ]
                 
             
         elif self.operator == NUMBER_TEST_OPERATOR_APPROXIMATE_ABSOLUTE:
@@ -239,11 +250,11 @@ class NumberTest( HydrusSerialisable.SerialisableBase ):
             
             if lower <= 0:
                 
-                return [ f'( {variable_name} IS NULL OR {variable_name} < {upper} )' ]
+                return [ f'( {variable_name} IS NULL OR {variable_name} <= {upper} )' ]
                 
             else:
                 
-                return [ f'{variable_name} > {lower}', f'{variable_name} < {upper}' ]
+                return [ f'{variable_name} >= {lower}', f'{variable_name} <= {upper}' ]
                 
             
         elif self.operator == NUMBER_TEST_OPERATOR_NOT_EQUAL:

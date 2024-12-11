@@ -79,53 +79,53 @@ SHORTCUT_KEY_SPECIAL_MEDIA_VOLUME_MUTE_UNMUTE = 32
 
 if HC.PLATFORM_MACOS:
     
-    DELETE_KEYS_QT = ( QC.Qt.Key_Backspace, QC.Qt.Key_Delete )
+    DELETE_KEYS_QT = ( QC.Qt.Key.Key_Backspace, QC.Qt.Key.Key_Delete )
     DELETE_KEYS_HYDRUS = ( SHORTCUT_KEY_SPECIAL_BACKSPACE, SHORTCUT_KEY_SPECIAL_DELETE )
     
 else:
     
-    DELETE_KEYS_QT = ( QC.Qt.Key_Delete, )
+    DELETE_KEYS_QT = ( QC.Qt.Key.Key_Delete, )
     DELETE_KEYS_HYDRUS = ( SHORTCUT_KEY_SPECIAL_DELETE, )
     
 
 special_key_shortcut_enum_lookup = {
-    QC.Qt.Key_Space : SHORTCUT_KEY_SPECIAL_SPACE,
-    QC.Qt.Key_Backspace : SHORTCUT_KEY_SPECIAL_BACKSPACE,
-    QC.Qt.Key_Tab : SHORTCUT_KEY_SPECIAL_TAB,
-    QC.Qt.Key_Return : SHORTCUT_KEY_SPECIAL_RETURN,
-    QC.Qt.Key_Enter : SHORTCUT_KEY_SPECIAL_ENTER,
-    QC.Qt.Key_Pause : SHORTCUT_KEY_SPECIAL_PAUSE,
-    QC.Qt.Key_Escape : SHORTCUT_KEY_SPECIAL_ESCAPE,
-    QC.Qt.Key_Insert : SHORTCUT_KEY_SPECIAL_INSERT,
-    QC.Qt.Key_Delete : SHORTCUT_KEY_SPECIAL_DELETE,
-    QC.Qt.Key_Up : SHORTCUT_KEY_SPECIAL_UP,
-    QC.Qt.Key_Down : SHORTCUT_KEY_SPECIAL_DOWN,
-    QC.Qt.Key_Left : SHORTCUT_KEY_SPECIAL_LEFT,
-    QC.Qt.Key_Right : SHORTCUT_KEY_SPECIAL_RIGHT,
-    QC.Qt.Key_Home : SHORTCUT_KEY_SPECIAL_HOME,
-    QC.Qt.Key_End : SHORTCUT_KEY_SPECIAL_END,
-    QC.Qt.Key_PageUp : SHORTCUT_KEY_SPECIAL_PAGE_UP,
-    QC.Qt.Key_PageDown : SHORTCUT_KEY_SPECIAL_PAGE_DOWN,
-    QC.Qt.Key_F1 : SHORTCUT_KEY_SPECIAL_F1,
-    QC.Qt.Key_F2 : SHORTCUT_KEY_SPECIAL_F2,
-    QC.Qt.Key_F3 : SHORTCUT_KEY_SPECIAL_F3,
-    QC.Qt.Key_F4 : SHORTCUT_KEY_SPECIAL_F4,
-    QC.Qt.Key_F5 : SHORTCUT_KEY_SPECIAL_F5,
-    QC.Qt.Key_F6 : SHORTCUT_KEY_SPECIAL_F6,
-    QC.Qt.Key_F7 : SHORTCUT_KEY_SPECIAL_F7,
-    QC.Qt.Key_F8 : SHORTCUT_KEY_SPECIAL_F8,
-    QC.Qt.Key_F9 : SHORTCUT_KEY_SPECIAL_F9,
-    QC.Qt.Key_F10 : SHORTCUT_KEY_SPECIAL_F10,
-    QC.Qt.Key_F11 : SHORTCUT_KEY_SPECIAL_F11,
-    QC.Qt.Key_F12 : SHORTCUT_KEY_SPECIAL_F12,
-    QC.Qt.Key_MediaTogglePlayPause : SHORTCUT_KEY_SPECIAL_MEDIA_PLAY_PAUSE,
-    QC.Qt.Key_MediaPlay : SHORTCUT_KEY_SPECIAL_MEDIA_PLAY_PAUSE,
-    QC.Qt.Key_MediaPause : SHORTCUT_KEY_SPECIAL_MEDIA_PLAY_PAUSE,
-    QC.Qt.Key_MediaPrevious : SHORTCUT_KEY_SPECIAL_MEDIA_PREVIOUS,
-    QC.Qt.Key_MediaNext : SHORTCUT_KEY_SPECIAL_MEDIA_NEXT,
-    QC.Qt.Key_VolumeDown : SHORTCUT_KEY_SPECIAL_MEDIA_VOLUME_DOWN,
-    QC.Qt.Key_VolumeUp : SHORTCUT_KEY_SPECIAL_MEDIA_VOLUME_UP,
-    QC.Qt.Key_VolumeMute : SHORTCUT_KEY_SPECIAL_MEDIA_VOLUME_MUTE_UNMUTE
+    QC.Qt.Key.Key_Space : SHORTCUT_KEY_SPECIAL_SPACE,
+    QC.Qt.Key.Key_Backspace : SHORTCUT_KEY_SPECIAL_BACKSPACE,
+    QC.Qt.Key.Key_Tab : SHORTCUT_KEY_SPECIAL_TAB,
+    QC.Qt.Key.Key_Return : SHORTCUT_KEY_SPECIAL_RETURN,
+    QC.Qt.Key.Key_Enter : SHORTCUT_KEY_SPECIAL_ENTER,
+    QC.Qt.Key.Key_Pause : SHORTCUT_KEY_SPECIAL_PAUSE,
+    QC.Qt.Key.Key_Escape : SHORTCUT_KEY_SPECIAL_ESCAPE,
+    QC.Qt.Key.Key_Insert : SHORTCUT_KEY_SPECIAL_INSERT,
+    QC.Qt.Key.Key_Delete : SHORTCUT_KEY_SPECIAL_DELETE,
+    QC.Qt.Key.Key_Up : SHORTCUT_KEY_SPECIAL_UP,
+    QC.Qt.Key.Key_Down : SHORTCUT_KEY_SPECIAL_DOWN,
+    QC.Qt.Key.Key_Left : SHORTCUT_KEY_SPECIAL_LEFT,
+    QC.Qt.Key.Key_Right : SHORTCUT_KEY_SPECIAL_RIGHT,
+    QC.Qt.Key.Key_Home : SHORTCUT_KEY_SPECIAL_HOME,
+    QC.Qt.Key.Key_End : SHORTCUT_KEY_SPECIAL_END,
+    QC.Qt.Key.Key_PageUp : SHORTCUT_KEY_SPECIAL_PAGE_UP,
+    QC.Qt.Key.Key_PageDown : SHORTCUT_KEY_SPECIAL_PAGE_DOWN,
+    QC.Qt.Key.Key_F1 : SHORTCUT_KEY_SPECIAL_F1,
+    QC.Qt.Key.Key_F2 : SHORTCUT_KEY_SPECIAL_F2,
+    QC.Qt.Key.Key_F3 : SHORTCUT_KEY_SPECIAL_F3,
+    QC.Qt.Key.Key_F4 : SHORTCUT_KEY_SPECIAL_F4,
+    QC.Qt.Key.Key_F5 : SHORTCUT_KEY_SPECIAL_F5,
+    QC.Qt.Key.Key_F6 : SHORTCUT_KEY_SPECIAL_F6,
+    QC.Qt.Key.Key_F7 : SHORTCUT_KEY_SPECIAL_F7,
+    QC.Qt.Key.Key_F8 : SHORTCUT_KEY_SPECIAL_F8,
+    QC.Qt.Key.Key_F9 : SHORTCUT_KEY_SPECIAL_F9,
+    QC.Qt.Key.Key_F10 : SHORTCUT_KEY_SPECIAL_F10,
+    QC.Qt.Key.Key_F11 : SHORTCUT_KEY_SPECIAL_F11,
+    QC.Qt.Key.Key_F12 : SHORTCUT_KEY_SPECIAL_F12,
+    QC.Qt.Key.Key_MediaTogglePlayPause : SHORTCUT_KEY_SPECIAL_MEDIA_PLAY_PAUSE,
+    QC.Qt.Key.Key_MediaPlay : SHORTCUT_KEY_SPECIAL_MEDIA_PLAY_PAUSE,
+    QC.Qt.Key.Key_MediaPause : SHORTCUT_KEY_SPECIAL_MEDIA_PLAY_PAUSE,
+    QC.Qt.Key.Key_MediaPrevious : SHORTCUT_KEY_SPECIAL_MEDIA_PREVIOUS,
+    QC.Qt.Key.Key_MediaNext : SHORTCUT_KEY_SPECIAL_MEDIA_NEXT,
+    QC.Qt.Key.Key_VolumeDown : SHORTCUT_KEY_SPECIAL_MEDIA_VOLUME_DOWN,
+    QC.Qt.Key.Key_VolumeUp : SHORTCUT_KEY_SPECIAL_MEDIA_VOLUME_UP,
+    QC.Qt.Key.Key_VolumeMute : SHORTCUT_KEY_SPECIAL_MEDIA_VOLUME_MUTE_UNMUTE
 }
 
 special_key_shortcut_str_lookup = {
@@ -180,12 +180,12 @@ SHORTCUT_MOUSE_TASK = 9
 SHORTCUT_MOUSE_CLICKS = { SHORTCUT_MOUSE_LEFT, SHORTCUT_MOUSE_MIDDLE, SHORTCUT_MOUSE_RIGHT, SHORTCUT_MOUSE_BACK, SHORTCUT_MOUSE_FORWARD, SHORTCUT_MOUSE_TASK }
 
 qt_mouse_buttons_to_hydrus_mouse_buttons = {
-    QC.Qt.LeftButton : SHORTCUT_MOUSE_LEFT,
-    QC.Qt.MiddleButton : SHORTCUT_MOUSE_MIDDLE,
-    QC.Qt.RightButton : SHORTCUT_MOUSE_RIGHT,
-    QC.Qt.BackButton : SHORTCUT_MOUSE_BACK,
-    QC.Qt.ForwardButton : SHORTCUT_MOUSE_FORWARD,
-    QC.Qt.TaskButton : SHORTCUT_MOUSE_TASK
+    QC.Qt.MouseButton.LeftButton : SHORTCUT_MOUSE_LEFT,
+    QC.Qt.MouseButton.MiddleButton : SHORTCUT_MOUSE_MIDDLE,
+    QC.Qt.MouseButton.RightButton : SHORTCUT_MOUSE_RIGHT,
+    QC.Qt.MouseButton.BackButton : SHORTCUT_MOUSE_BACK,
+    QC.Qt.MouseButton.ForwardButton : SHORTCUT_MOUSE_FORWARD,
+    QC.Qt.MouseButton.TaskButton : SHORTCUT_MOUSE_TASK
 }
 
 shortcut_mouse_string_lookup = {
@@ -507,32 +507,32 @@ def ConvertKeyEventToShortcut( event ):
         
         modifiers = []
         
-        if event.modifiers() & QC.Qt.AltModifier:
+        if event.modifiers() & QC.Qt.KeyboardModifier.AltModifier:
             
             modifiers.append( SHORTCUT_MODIFIER_ALT )
             
         
-        if event.modifiers() & QC.Qt.ControlModifier:
+        if event.modifiers() & QC.Qt.KeyboardModifier.ControlModifier:
             
             modifiers.append( SHORTCUT_MODIFIER_CTRL )
             
         
-        if event.modifiers() & QC.Qt.MetaModifier:
+        if event.modifiers() & QC.Qt.KeyboardModifier.MetaModifier:
             
             modifiers.append( SHORTCUT_MODIFIER_META )
             
         
-        if event.modifiers() & QC.Qt.ShiftModifier:
+        if event.modifiers() & QC.Qt.KeyboardModifier.ShiftModifier:
             
             modifiers.append( SHORTCUT_MODIFIER_SHIFT )
             
         
-        if event.modifiers() & QC.Qt.GroupSwitchModifier:
+        if event.modifiers() & QC.Qt.KeyboardModifier.GroupSwitchModifier:
             
             modifiers.append( SHORTCUT_MODIFIER_GROUP_SWITCH )
             
         
-        if event.modifiers() & QC.Qt.KeypadModifier:
+        if event.modifiers() & QC.Qt.KeyboardModifier.KeypadModifier:
             
             do_it = True
             
@@ -568,31 +568,31 @@ def ConvertKeyEventToShortcut( event ):
     
 def ConvertKeyEventToSimpleTuple( event ):
     
-    modifier = QC.Qt.NoModifier
+    modifier = QC.Qt.KeyboardModifier.NoModifier
     
-    if event.modifiers() & QC.Qt.AltModifier:
+    if event.modifiers() & QC.Qt.KeyboardModifier.AltModifier:
         
-        modifier = QC.Qt.AltModifier
+        modifier = QC.Qt.KeyboardModifier.AltModifier
         
-    elif event.modifiers() & QC.Qt.ControlModifier:
+    elif event.modifiers() & QC.Qt.KeyboardModifier.ControlModifier:
         
-        modifier = QC.Qt.ControlModifier
+        modifier = QC.Qt.KeyboardModifier.ControlModifier
         
-    elif event.modifiers() & QC.Qt.ShiftModifier:
+    elif event.modifiers() & QC.Qt.KeyboardModifier.ShiftModifier:
         
-        modifier = QC.Qt.ShiftModifier
+        modifier = QC.Qt.KeyboardModifier.ShiftModifier
         
-    elif event.modifiers() & QC.Qt.KeypadModifier:
+    elif event.modifiers() & QC.Qt.KeyboardModifier.KeypadModifier:
         
-        modifier = QC.Qt.KeypadModifier
+        modifier = QC.Qt.KeyboardModifier.KeypadModifier
         
-    elif event.modifiers() & QC.Qt.GroupSwitchModifier:
+    elif event.modifiers() & QC.Qt.KeyboardModifier.GroupSwitchModifier:
         
-        modifier = QC.Qt.GroupSwitchModifier
+        modifier = QC.Qt.KeyboardModifier.GroupSwitchModifier
         
-    elif event.modifiers() & QC.Qt.MetaModifier:
+    elif event.modifiers() & QC.Qt.KeyboardModifier.MetaModifier:
         
-        modifier = QC.Qt.MetaModifier
+        modifier = QC.Qt.KeyboardModifier.MetaModifier
         
     
     key = event.key()
@@ -609,7 +609,7 @@ def ConvertMouseEventToShortcut( event: typing.Union[ QG.QMouseEvent, QG.QWheelE
     
     shortcut_press_type = SHORTCUT_PRESS_TYPE_PRESS
     
-    if event.type() == QC.QEvent.MouseButtonPress:
+    if event.type() == QC.QEvent.Type.MouseButtonPress:
         
         for ( qt_button, hydrus_button ) in qt_mouse_buttons_to_hydrus_mouse_buttons.items():
             
@@ -621,13 +621,13 @@ def ConvertMouseEventToShortcut( event: typing.Union[ QG.QMouseEvent, QG.QWheelE
                 
             
         
-    elif event.type() in ( QC.QEvent.MouseButtonDblClick, QC.QEvent.MouseButtonRelease ):
+    elif event.type() in ( QC.QEvent.Type.MouseButtonDblClick, QC.QEvent.Type.MouseButtonRelease ):
         
-        if event.type() == QC.QEvent.MouseButtonRelease:
+        if event.type() == QC.QEvent.Type.MouseButtonRelease:
             
             shortcut_press_type = SHORTCUT_PRESS_TYPE_RELEASE
             
-        elif event.type() == QC.QEvent.MouseButtonDblClick:
+        elif event.type() == QC.QEvent.Type.MouseButtonDblClick:
             
             shortcut_press_type = SHORTCUT_PRESS_TYPE_DOUBLE_CLICK
             
@@ -642,7 +642,7 @@ def ConvertMouseEventToShortcut( event: typing.Union[ QG.QMouseEvent, QG.QWheelE
                 
             
         
-    elif event.type() == QC.QEvent.Wheel:
+    elif event.type() == QC.QEvent.Type.Wheel:
         
         angle_delta_point = event.angleDelta()
         
@@ -689,27 +689,27 @@ def ConvertMouseEventToShortcut( event: typing.Union[ QG.QMouseEvent, QG.QWheelE
         
         modifiers = []
         
-        if event.modifiers() & QC.Qt.AltModifier:
+        if event.modifiers() & QC.Qt.KeyboardModifier.AltModifier:
             
             modifiers.append( SHORTCUT_MODIFIER_ALT )
             
         
-        if event.modifiers() & QC.Qt.ControlModifier:
+        if event.modifiers() & QC.Qt.KeyboardModifier.ControlModifier:
             
             modifiers.append( SHORTCUT_MODIFIER_CTRL )
             
         
-        if event.modifiers() & QC.Qt.MetaModifier:
+        if event.modifiers() & QC.Qt.KeyboardModifier.MetaModifier:
             
             modifiers.append( SHORTCUT_MODIFIER_META )
             
         
-        if event.modifiers() & QC.Qt.ShiftModifier:
+        if event.modifiers() & QC.Qt.KeyboardModifier.ShiftModifier:
             
             modifiers.append( SHORTCUT_MODIFIER_SHIFT )
             
         
-        if event.modifiers() & QC.Qt.GroupSwitchModifier:
+        if event.modifiers() & QC.Qt.KeyboardModifier.GroupSwitchModifier:
             
             modifiers.append( SHORTCUT_MODIFIER_GROUP_SWITCH )
             
@@ -776,13 +776,13 @@ def IShouldCatchShortcutEvent( event_handler_owner: QC.QObject, event_catcher: Q
         if event_handler_owner != event_catcher:
             
             # don't pass clicks up
-            if event.type() in ( QC.QEvent.MouseButtonPress, QC.QEvent.MouseButtonRelease, QC.QEvent.MouseButtonDblClick ):
+            if event.type() in ( QC.QEvent.Type.MouseButtonPress, QC.QEvent.Type.MouseButtonRelease, QC.QEvent.Type.MouseButtonDblClick ):
                 
                 return False
                 
             
             # don't pass wheels that happen to legit controls that want to eat it, like a list, when the catcher is a window
-            if event.type() == QC.QEvent.Wheel:
+            if event.type() == QC.QEvent.Type.Wheel:
                 
                 widget_under_mouse = event_catcher.childAt( event_catcher.mapFromGlobal( QG.QCursor.pos() ) )
                 
@@ -798,7 +798,7 @@ def IShouldCatchShortcutEvent( event_handler_owner: QC.QObject, event_catcher: Q
                 
             
         
-        if event.type() == QC.QEvent.Wheel:
+        if event.type() == QC.QEvent.Type.Wheel:
             
             do_focus_test = False
             
@@ -1475,7 +1475,7 @@ class ShortcutsHandler( QC.QObject ):
         
         try:
             
-            if event.type() == QC.QEvent.KeyPress:
+            if event.type() == QC.QEvent.Type.KeyPress:
                 
                 i_should_catch_shortcut_event = IShouldCatchShortcutEvent( self._filter_target, watched, event = event )
                 
@@ -1514,20 +1514,20 @@ class ShortcutsHandler( QC.QObject ):
                 
             elif self._catch_mouse:
                 
-                if event.type() in ( QC.QEvent.MouseButtonPress, QC.QEvent.MouseButtonRelease, QC.QEvent.MouseButtonDblClick, QC.QEvent.Wheel ):
+                if event.type() in ( QC.QEvent.Type.MouseButtonPress, QC.QEvent.Type.MouseButtonRelease, QC.QEvent.Type.MouseButtonDblClick, QC.QEvent.Type.Wheel ):
                     
                     global CUMULATIVE_MOUSEWARP_MANHATTAN_LENGTH
                     
-                    if event.type() == QC.QEvent.MouseButtonPress:
+                    if event.type() == QC.QEvent.Type.MouseButtonPress:
                         
                         self._last_click_down_position = event.globalPosition().toPoint()
                         
                         CUMULATIVE_MOUSEWARP_MANHATTAN_LENGTH = 0
                     
-                    #if event.type() != QC.QEvent.Wheel and self._ignore_activating_mouse_click and not HydrusTime.TimeHasPassedPrecise( self._frame_activated_time + 0.017 ):
-                    if event.type() != QC.QEvent.Wheel and self._ignore_activating_mouse_click and not self._parent_currently_activated:
+                    #if event.type() != QC.QEvent.Type.Wheel and self._ignore_activating_mouse_click and not HydrusTime.TimeHasPassedPrecise( self._frame_activated_time + 0.017 ):
+                    if event.type() != QC.QEvent.Type.Wheel and self._ignore_activating_mouse_click and not self._parent_currently_activated:
                         
-                        if event.type() == QC.QEvent.MouseButtonRelease and self._activating_wait_job is not None:
+                        if event.type() == QC.QEvent.Type.MouseButtonRelease and self._activating_wait_job is not None:
                             
                             # first completed click in the time window sets us active instantly
                             self._activating_wait_job.Cancel()
@@ -1538,7 +1538,7 @@ class ShortcutsHandler( QC.QObject ):
                         return False
                         
                     
-                    if event.type() == QC.QEvent.MouseButtonRelease:
+                    if event.type() == QC.QEvent.Type.MouseButtonRelease:
                         
                         release_press_pos = event.globalPosition().toPoint()
                         
@@ -1704,11 +1704,11 @@ class ShortcutsDeactivationCatcher( QC.QObject ):
         
         try:
             
-            if event.type() == QC.QEvent.WindowActivate:
+            if event.type() == QC.QEvent.Type.WindowActivate:
                 
                 self._shortcuts_handler.FrameActivated()
                 
-            elif event.type() == QC.QEvent.WindowDeactivate:
+            elif event.type() == QC.QEvent.Type.WindowDeactivate:
                 
                 self._shortcuts_handler.FrameDeactivated()
                 

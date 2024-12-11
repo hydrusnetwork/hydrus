@@ -939,15 +939,15 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
         
         if self._predicate_type == PREDICATE_TYPE_SYSTEM_WIDTH:
             
-            return -2
+            return 'system:dimensions:0'
             
         elif self._predicate_type == PREDICATE_TYPE_SYSTEM_HEIGHT:
             
-            return -1
+            return 'system:dimensions:1'
             
         else:
             
-            return 0
+            return self.ToString( with_count = False )
             
         
     
@@ -1240,54 +1240,54 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                 if self._predicate_type == PREDICATE_TYPE_SYSTEM_WIDTH:
                     
                     base = 'width'
-                    has_phrase = ': has width'
-                    not_has_phrase = ': no width'
+                    has_phrase = 'has width'
+                    not_has_phrase = 'no width'
                     
                 elif self._predicate_type == PREDICATE_TYPE_SYSTEM_HEIGHT:
                     
                     base = 'height'
-                    has_phrase = ': has height'
-                    not_has_phrase = ': no height'
+                    has_phrase = 'has height'
+                    not_has_phrase = 'no height'
                     
                 elif self._predicate_type == PREDICATE_TYPE_SYSTEM_FRAMERATE:
                     
                     absolute_number_renderer = lambda s: f'{HydrusNumbers.ToHumanInt(s)}fps'
                     
                     base = 'framerate'
-                    has_phrase = ': has framerate'
-                    not_has_phrase = ': no framerate'
+                    has_phrase = 'has framerate'
+                    not_has_phrase = 'no framerate'
                     
                 elif self._predicate_type == PREDICATE_TYPE_SYSTEM_NUM_NOTES:
                     
                     base = 'number of notes'
-                    has_phrase = ': has notes'
-                    not_has_phrase = ': no notes'
+                    has_phrase = 'has notes'
+                    not_has_phrase = 'no notes'
                     
                 elif self._predicate_type == PREDICATE_TYPE_SYSTEM_NUM_WORDS:
                     
                     base = 'number of words'
-                    has_phrase = ': has words'
-                    not_has_phrase = ': no words'
+                    has_phrase = 'has words'
+                    not_has_phrase = 'no words'
                     
                 elif self._predicate_type == PREDICATE_TYPE_SYSTEM_NUM_URLS:
                     
                     base = 'number of urls'
-                    has_phrase = ': has urls'
-                    not_has_phrase = ': no urls'
+                    has_phrase = 'has urls'
+                    not_has_phrase = 'no urls'
                     
                 elif self._predicate_type == PREDICATE_TYPE_SYSTEM_NUM_FRAMES:
                     
                     base = 'number of frames'
-                    has_phrase = ': has frames'
-                    not_has_phrase = ': no frames'
+                    has_phrase = 'has frames'
+                    not_has_phrase = 'no frames'
                     
                 elif self._predicate_type == PREDICATE_TYPE_SYSTEM_DURATION:
                     
-                    absolute_number_renderer = HydrusTime.MillisecondsDurationToPrettyTime
+                    absolute_number_renderer = lambda n: HydrusTime.MillisecondsDurationToPrettyTime( n, force_numbers = True )
                     
                     base = 'duration'
-                    has_phrase = ': has duration'
-                    not_has_phrase = ': no duration'
+                    has_phrase = 'has duration'
+                    not_has_phrase = 'no duration'
                     
                 
                 if self._value is not None:
@@ -1296,11 +1296,11 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                     
                     if number_test.IsZero() and not_has_phrase is not None:
                         
-                        base += not_has_phrase
+                        base = not_has_phrase
                         
                     elif number_test.IsAnythingButZero() and has_phrase is not None:
                         
-                        base += has_phrase
+                        base = has_phrase
                         
                     else:
                         
@@ -1592,7 +1592,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                 
             elif self._predicate_type == PREDICATE_TYPE_SYSTEM_HAS_HUMAN_READABLE_EMBEDDED_METADATA:
                 
-                base = 'has human-readable embedded metadata'
+                base = 'has embedded metadata'
                 
                 if self._value is not None:
                     
@@ -1600,7 +1600,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                     
                     if not has_human_readable_embedded_metadata:
                         
-                        base = 'no human-readable embedded metadata'
+                        base = 'no embedded metadata'
                         
                     
                 
@@ -1694,23 +1694,45 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                     
                     try:
                         
+                        pretty_operator = ClientNumberTest.number_test_operator_to_pretty_str_lookup.get( ClientNumberTest.legacy_str_operator_to_number_test_operator_lookup.get( operator, 'unknown' ), 'unknown' )
+                        
                         service = CG.client_controller.services_manager.GetService( service_key )
                         
                         name = service.GetName()
                         
-                        if value == 'rated':
+                        if service.GetServiceType() == HC.LOCAL_RATING_INCDEC:
                             
-                            base = 'has a rating for {}'.format( name )
-                            
-                        elif value == 'not rated':
-                            
-                            base = 'does not have a rating for {}'.format( name )
+                            if operator == '>' and value == 0:
+                                
+                                base = f'has count for {name}'
+                                
+                            elif ( operator == '<' and value == 1 ) or ( operator == '=' and value == 0 ):
+                                
+                                base = f'no count for {name}'
+                                
+                            else:
+                                
+                                pretty_value = service.ConvertNoneableRatingToString( value )
+                                
+                                base = f'count for {name} {pretty_operator} {pretty_value}'
+                                
                             
                         else:
                             
-                            pretty_value = service.ConvertNoneableRatingToString( value )
-                            
-                            base += ' for {} {} {}'.format( service.GetName(), operator, pretty_value )
+                            if value == 'rated':
+                                
+                                base = f'has rating for {name}'
+                                
+                            elif value == 'not rated':
+                                
+                                base = f'no rating for {name}'
+                                
+                            else:
+                                
+                                pretty_value = service.ConvertNoneableRatingToString( value )
+                                
+                                base = f'rating for {name} {pretty_operator} {pretty_value}'
+                                
                             
                         
                     except HydrusExceptions.DataMissing:

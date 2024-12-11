@@ -297,7 +297,7 @@ class LayoutEventSilencer( QC.QObject ):
         
         try:
             
-            if watched == self.parent() and event.type() == QC.QEvent.LayoutRequest:
+            if watched == self.parent() and event.type() == QC.QEvent.Type.LayoutRequest:
                 
                 return True
                 
@@ -531,7 +531,7 @@ class Canvas( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
             
         
         # take any focus away from hover window, which will mess up window order when it hides due to the new frame
-        self.setFocus( QC.Qt.OtherFocusReason )
+        self.setFocus( QC.Qt.FocusReason.OtherFocusReason )
         
         title = 'manage tags'
         frame_key = 'manage_tags_frame'
@@ -1429,11 +1429,11 @@ class MediaContainerDragClickReportingFilter( QC.QObject ):
         
         try:
             
-            if event.type() == QC.QEvent.MouseButtonPress and event.button() == QC.Qt.LeftButton:
+            if event.type() == QC.QEvent.Type.MouseButtonPress and event.button() == QC.Qt.MouseButton.LeftButton:
                 
                 self._canvas.BeginDrag()
                 
-            elif event.type() == QC.QEvent.MouseButtonRelease and event.button() == QC.Qt.LeftButton:
+            elif event.type() == QC.QEvent.Type.MouseButtonRelease and event.button() == QC.Qt.MouseButton.LeftButton:
                 
                 self._canvas.EndDrag()
                 
@@ -1470,7 +1470,7 @@ class CanvasPanel( Canvas ):
     
     def mouseReleaseEvent( self, event ):
         
-        if event.button() != QC.Qt.RightButton:
+        if event.button() != QC.Qt.MouseButton.RightButton:
             
             Canvas.mouseReleaseEvent( self, event )
             
@@ -1855,7 +1855,7 @@ class CanvasWithDetails( Canvas ):
         if draw_a_test_rect:
             
             painter.setPen( QG.QPen( QG.QColor( 20, 20, 20 ) ) )
-            painter.setBrush( QC.Qt.NoBrush )
+            painter.setBrush( QC.Qt.BrushStyle.NoBrush )
             
             painter.drawRect( left_x, current_y, notes_width, 100 )
             
@@ -1864,9 +1864,9 @@ class CanvasWithDetails( Canvas ):
             
             painter.setFont( name_font )
             
-            text_rect = painter.fontMetrics().boundingRect( left_x, current_y, notes_width, 100, QC.Qt.AlignHCenter | QC.Qt.TextWordWrap, name )
+            text_rect = painter.fontMetrics().boundingRect( left_x, current_y, notes_width, 100, QC.Qt.AlignmentFlag.AlignHCenter | QC.Qt.TextFlag.TextWordWrap, name )
             
-            painter.drawText( text_rect, QC.Qt.AlignHCenter | QC.Qt.TextWordWrap, name )
+            painter.drawText( text_rect, QC.Qt.AlignmentFlag.AlignHCenter | QC.Qt.TextFlag.TextWordWrap, name )
             
             current_y += text_rect.height() + PADDING
             
@@ -1876,9 +1876,9 @@ class CanvasWithDetails( Canvas ):
             
             note = notes_manager.GetNote( name )
             
-            text_rect = painter.fontMetrics().boundingRect( left_x, current_y, notes_width, 100, QC.Qt.AlignJustify | QC.Qt.TextWordWrap, note )
+            text_rect = painter.fontMetrics().boundingRect( left_x, current_y, notes_width, 100, QC.Qt.AlignmentFlag.AlignJustify | QC.Qt.TextFlag.TextWordWrap, note )
             
-            painter.drawText( text_rect, QC.Qt.AlignJustify | QC.Qt.TextWordWrap, note )
+            painter.drawText( text_rect, QC.Qt.AlignmentFlag.AlignJustify | QC.Qt.TextFlag.TextWordWrap, note )
             
             current_y += text_rect.height() + PADDING
             
@@ -2279,7 +2279,7 @@ class CanvasWithHovers( CanvasWithDetails ):
         
         if can_hide:
             
-            self.setCursor( QG.QCursor( QC.Qt.BlankCursor ) )
+            self.setCursor( QG.QCursor( QC.Qt.CursorShape.BlankCursor ) )
             
         elif can_check_again:
             
@@ -2316,7 +2316,7 @@ class CanvasWithHovers( CanvasWithDetails ):
     
     def CleanBeforeDestroy( self ):
         
-        self.setCursor( QG.QCursor( QC.Qt.ArrowCursor ) )
+        self.setCursor( QG.QCursor( QC.Qt.CursorShape.ArrowCursor ) )
         
         super().CleanBeforeDestroy()
         
@@ -2355,10 +2355,10 @@ class CanvasWithHovers( CanvasWithDetails ):
         # due to the mouse setPos below, the event pos can get funky I think due to out of order coordinate setting events, so we'll poll current value directly
         event_pos = self.mapFromGlobal( QG.QCursor.pos() )
         
-        mouse_currently_shown = self.cursor().shape() == QC.Qt.ArrowCursor
+        mouse_currently_shown = self.cursor().shape() == QC.Qt.CursorShape.ArrowCursor
         show_mouse = mouse_currently_shown
         
-        is_dragging = event.buttons() & QC.Qt.LeftButton and self._last_drag_pos is not None
+        is_dragging = event.buttons() & QC.Qt.MouseButton.LeftButton and self._last_drag_pos is not None
         has_moved = event_pos != self._last_motion_pos
         
         if is_dragging:
@@ -2417,7 +2417,7 @@ class CanvasWithHovers( CanvasWithDetails ):
             
             if not mouse_currently_shown:
                 
-                self.setCursor( QG.QCursor( QC.Qt.ArrowCursor ) )
+                self.setCursor( QG.QCursor( QC.Qt.CursorShape.ArrowCursor ) )
                 
             
             self._RestartCursorHideWait()
@@ -2426,7 +2426,7 @@ class CanvasWithHovers( CanvasWithDetails ):
             
             if mouse_currently_shown:
                 
-                self.setCursor( QG.QCursor( QC.Qt.BlankCursor ) )
+                self.setCursor( QG.QCursor( QC.Qt.CursorShape.BlankCursor ) )
                 
             
         

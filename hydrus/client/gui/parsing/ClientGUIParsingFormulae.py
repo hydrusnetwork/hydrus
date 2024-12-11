@@ -723,7 +723,7 @@ class EditHTMLFormulaPanel( EditSpecificFormulaPanel ):
             
             item = QW.QListWidgetItem()
             item.setText( pretty_rule )
-            item.setData( QC.Qt.UserRole, rule )
+            item.setData( QC.Qt.ItemDataRole.UserRole, rule )
             self._tag_rules.addItem( item )
             
         
@@ -836,7 +836,7 @@ class EditHTMLFormulaPanel( EditSpecificFormulaPanel ):
                 
                 item = QW.QListWidgetItem()
                 item.setText( pretty_rule )
-                item.setData( QC.Qt.UserRole, rule )
+                item.setData( QC.Qt.ItemDataRole.UserRole, rule )
                 self._tag_rules.addItem( item )
                 
             
@@ -875,7 +875,7 @@ class EditHTMLFormulaPanel( EditSpecificFormulaPanel ):
                     pretty_rule = rule.ToString()
                     
                     self._tag_rules.item( selection ).setText( pretty_rule )
-                    self._tag_rules.item( selection ).setData( QC.Qt.UserRole, rule )
+                    self._tag_rules.item( selection ).setData( QC.Qt.ItemDataRole.UserRole, rule )
                     
                 
             
@@ -922,7 +922,7 @@ class EditHTMLFormulaPanel( EditSpecificFormulaPanel ):
             
             item = QW.QListWidgetItem()
             item.setText( pretty_rule )
-            item.setData( QC.Qt.UserRole, rule )
+            item.setData( QC.Qt.ItemDataRole.UserRole, rule )
             self._tag_rules.insertItem( selection + 1, item )
             
         
@@ -940,7 +940,7 @@ class EditHTMLFormulaPanel( EditSpecificFormulaPanel ):
             
             item = QW.QListWidgetItem()
             item.setText( pretty_rule )
-            item.setData( QC.Qt.UserRole, rule )
+            item.setData( QC.Qt.ItemDataRole.UserRole, rule )
             self._tag_rules.insertItem( selection - 1, item )
             
         
@@ -1121,7 +1121,7 @@ class EditJSONFormulaPanel( EditSpecificFormulaPanel ):
             
             item = QW.QListWidgetItem()
             item.setText( pretty_rule )
-            item.setData( QC.Qt.UserRole, rule )
+            item.setData( QC.Qt.ItemDataRole.UserRole, rule )
             self._parse_rules.addItem( item )
             
         
@@ -1217,7 +1217,7 @@ class EditJSONFormulaPanel( EditSpecificFormulaPanel ):
 
                 item = QW.QListWidgetItem()
                 item.setText( pretty_rule )
-                item.setData( QC.Qt.UserRole, rule )
+                item.setData( QC.Qt.ItemDataRole.UserRole, rule )
                 self._parse_rules.addItem( item )
                 
             
@@ -1256,7 +1256,7 @@ class EditJSONFormulaPanel( EditSpecificFormulaPanel ):
                     pretty_rule = ClientParsing.RenderJSONParseRule( rule )
                     
                     self._parse_rules.item( selection ).setText( pretty_rule )
-                    self._parse_rules.item( selection ).setData( QC.Qt.UserRole, rule )
+                    self._parse_rules.item( selection ).setData( QC.Qt.ItemDataRole.UserRole, rule )
                     
                 
             
@@ -1290,7 +1290,7 @@ class EditJSONFormulaPanel( EditSpecificFormulaPanel ):
             
             item = QW.QListWidgetItem()
             item.setText( pretty_rule )
-            item.setData( QC.Qt.UserRole, rule )
+            item.setData( QC.Qt.ItemDataRole.UserRole, rule )
             self._parse_rules.insertItem( selection + 1, item )
             
         
@@ -1308,7 +1308,7 @@ class EditJSONFormulaPanel( EditSpecificFormulaPanel ):
             
             item = QW.QListWidgetItem()
             item.setText( pretty_rule )
-            item.setData( QC.Qt.UserRole, rule )
+            item.setData( QC.Qt.ItemDataRole.UserRole, rule )
             self._parse_rules.insertItem( selection - 1, item )
             
         

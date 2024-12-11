@@ -66,7 +66,7 @@ class MultilineStringConversionTestPanel( QW.QWidget ):
     
     def _GetStartingTexts( self ):
         
-        return [ self._test_data.item( i ).data( QC.Qt.UserRole ) for i in range( self._test_data.count() ) ]
+        return [ self._test_data.item( i ).data( QC.Qt.ItemDataRole.UserRole ) for i in range( self._test_data.count() ) ]
         
     
     def _UpdateResults( self ):
@@ -89,7 +89,7 @@ class MultilineStringConversionTestPanel( QW.QWidget ):
             item = QW.QListWidgetItem()
             
             item.setText( result )
-            item.setData( QC.Qt.UserRole, result )
+            item.setData( QC.Qt.ItemDataRole.UserRole, result )
             
             self._result_data.insertItem( insertion_index, item )
             
@@ -103,7 +103,7 @@ class MultilineStringConversionTestPanel( QW.QWidget ):
             
             ( list_widget_item, ) = items
             
-            text = list_widget_item.data( QC.Qt.UserRole )
+            text = list_widget_item.data( QC.Qt.ItemDataRole.UserRole )
             
             self.textSelected.emit( text )
             
@@ -141,7 +141,7 @@ class MultilineStringConversionTestPanel( QW.QWidget ):
             item = QW.QListWidgetItem()
             
             item.setText( text )
-            item.setData( QC.Qt.UserRole, text )
+            item.setData( QC.Qt.ItemDataRole.UserRole, text )
             
             self._test_data.insertItem( insertion_index, item )
             
@@ -153,7 +153,7 @@ class MultilineStringConversionTestPanel( QW.QWidget ):
             self._test_data.item( 0 ).setSelected( False )
             self._test_data.item( 0 ).setSelected( True )
             
-            #self.textSelected.emit( self._test_data.item( 0 ).data( QC.Qt.UserRole ) )
+            #self.textSelected.emit( self._test_data.item( 0 ).data( QC.Qt.ItemDataRole.UserRole ) )
             
         
     

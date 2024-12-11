@@ -7,6 +7,7 @@ import subprocess
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
+from hydrus.core import HydrusEnvironment
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusProcess
 from hydrus.core import HydrusText
@@ -100,13 +101,13 @@ def GetFFMPEGVersion():
     message += '\n' * 2
     message += str( sbp_kwargs )
     message += '\n' * 2
-    message += str( os.environ )
-    message += '\n' * 2
     message += 'STDOUT Response: {}'.format( stdout )
     message += '\n' * 2
     message += 'STDERR Response: {}'.format( stderr )
     
     HydrusData.Print( message )
+    
+    HydrusEnvironment.DumpEnv()
     
     global FFMPEG_NO_CONTENT_ERROR_PUBBED
     
@@ -197,13 +198,13 @@ def GetFFMPEGInfoLines( path, count_frames_manually = False, only_first_second =
             message += '\n' * 2
             message += str( sbp_kwargs )
             message += '\n' * 2
-            message += str( os.environ )
-            message += '\n' * 2
             message += 'STDOUT Response: {}'.format( stdout )
             message += '\n' * 2
             message += 'STDERR Response: {}'.format( stderr )
             
             HydrusData.DebugPrint( message )
+            
+            HydrusEnvironment.DumpEnv()
             
             FFMPEG_NO_CONTENT_ERROR_PUBBED = True
             

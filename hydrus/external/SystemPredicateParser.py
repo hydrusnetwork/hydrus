@@ -90,6 +90,18 @@ class Predicate( Enum ):
     ARCHIVE = auto()
     HAS_DURATION = auto()
     NO_DURATION = auto()
+    HAS_FRAMERATE = auto()
+    NO_FRAMERATE = auto()
+    HAS_FRAMES = auto()
+    NO_FRAMES = auto()
+    HAS_WIDTH = auto()
+    NO_WIDTH = auto()
+    HAS_HEIGHT = auto()
+    NO_HEIGHT = auto()
+    HAS_URLS = auto()
+    NO_URLS = auto()
+    HAS_WORDS = auto()
+    NO_WORDS = auto()
     BEST_QUALITY_OF_GROUP = auto()
     NOT_BEST_QUALITY_OF_GROUP = auto()
     HAS_AUDIO = auto()
@@ -217,6 +229,20 @@ SYSTEM_PREDICATES = {
     'archived?$': (Predicate.ARCHIVE, None, None, None), # $ so as not to clash with system:archive(d) date
     'has duration': (Predicate.HAS_DURATION, None, None, None),
     'no duration': (Predicate.NO_DURATION, None, None, None),
+    'has framerate': (Predicate.HAS_FRAMERATE, None, None, None),
+    'no framerate': (Predicate.NO_FRAMERATE, None, None, None),
+    'has frames': (Predicate.HAS_FRAMES, None, None, None),
+    'no frames': (Predicate.NO_FRAMES, None, None, None),
+    'has width': (Predicate.HAS_WIDTH, None, None, None),
+    'no width': (Predicate.NO_WIDTH, None, None, None),
+    'has height': (Predicate.HAS_HEIGHT, None, None, None),
+    'no height': (Predicate.NO_HEIGHT, None, None, None),
+    'has notes': (Predicate.HAS_NOTES, None, None, None),
+    'no notes': (Predicate.NO_NOTES, None, None, None),
+    'has urls': (Predicate.HAS_URLS, None, None, None),
+    'no urls': (Predicate.NO_URLS, None, None, None),
+    'has words': (Predicate.HAS_WORDS, None, None, None),
+    'no words': (Predicate.NO_WORDS, None, None, None),
     '(is the )?best quality( file)? of( its)?( duplicate)? group': (Predicate.BEST_QUALITY_OF_GROUP, None, None, None),
     '(((is )?not)|(isn\'t))( the)? best quality( file)? of( its)?( duplicate)? group': (Predicate.NOT_BEST_QUALITY_OF_GROUP, None, None, None),
     'has audio': (Predicate.HAS_AUDIO, None, None, None),
@@ -250,7 +276,7 @@ SYSTEM_PREDICATES = {
     'last view(ed)? (date|time)|(date|time) last viewed|last viewed': (Predicate.LAST_VIEWED_TIME, Operators.RELATIONAL_TIME, Value.DATE_OR_TIME_INTERVAL, None),
     'import(ed)? (date|time)|(date|time) imported|imported': (Predicate.TIME_IMPORTED, Operators.RELATIONAL_TIME, Value.DATE_OR_TIME_INTERVAL, None),
     'duration': (Predicate.DURATION, Operators.RELATIONAL, Value.TIME_SEC_MSEC, None),
-    'framerate': (Predicate.FRAMERATE, Operators.RELATIONAL_EXACT, Value.NATURAL, Units.FPS_OR_NONE),
+    'framerate': (Predicate.FRAMERATE, Operators.RELATIONAL, Value.NATURAL, Units.FPS_OR_NONE),
     'num(ber)?( of)? frames': (Predicate.NUM_OF_FRAMES, Operators.RELATIONAL, Value.NATURAL, None),
     'file service': (Predicate.FILE_SERVICE, Operators.FILESERVICE_STATUS, Value.ANY_STRING, None),
     'num(ber)?( of)? file relationships': (Predicate.NUM_FILE_RELS, Operators.RELATIONAL, Value.NATURAL, Units.FILE_RELATIONSHIP_TYPE),
@@ -277,11 +303,11 @@ SYSTEM_PREDICATES = {
     'num(ber)?( of)? notes?': (Predicate.NUM_NOTES, Operators.RELATIONAL_EXACT, Value.NATURAL, None),
     '(has (a )?)?note (with name|named)': (Predicate.HAS_NOTE_NAME, None, Value.ANY_STRING, None),
     '((has )?no|does not have( a)?|doesn\'t have( a)?) note (with name|named)': (Predicate.NO_NOTE_NAME, None, Value.ANY_STRING, None),
-    'has( a)? rating( for)?': (Predicate.HAS_RATING, None, Value.ANY_STRING, None ),
-    '((has )?no|does not have( a)?|doesn\'t have( a)?) rating( for)?': (Predicate.NO_RATING, None, Value.ANY_STRING, None ),
-    r'rating( for)?(?=.+?\d+/\d+$)': (Predicate.RATING_SPECIFIC_NUMERICAL, Operators.RELATIONAL_FOR_RATING_SERVICE, Value.RATING_SERVICE_NAME_AND_NUMERICAL_VALUE, None ),
-    'rating( for)?(?=.+?(like|dislike)$)': (Predicate.RATING_SPECIFIC_LIKE_DISLIKE, None, Value.RATING_SERVICE_NAME_AND_LIKE_DISLIKE, None ),
-    r'rating( for)?(?=.+?[^/]\d+$)': (Predicate.RATING_SPECIFIC_INCDEC, Operators.RELATIONAL_FOR_RATING_SERVICE, Value.RATING_SERVICE_NAME_AND_INCDEC, None ),
+    'has( a)? (rating|count)( for)?': (Predicate.HAS_RATING, None, Value.ANY_STRING, None ),
+    '((has )?no|does not have( a)?|doesn\'t have( a)?) (rating|count)( for)?': (Predicate.NO_RATING, None, Value.ANY_STRING, None ),
+    r'(rating|count)( for)?(?=.+?\d+/\d+$)': (Predicate.RATING_SPECIFIC_NUMERICAL, Operators.RELATIONAL_FOR_RATING_SERVICE, Value.RATING_SERVICE_NAME_AND_NUMERICAL_VALUE, None ),
+    '(rating|count)( for)?(?=.+?(like|dislike)$)': (Predicate.RATING_SPECIFIC_LIKE_DISLIKE, None, Value.RATING_SERVICE_NAME_AND_LIKE_DISLIKE, None ),
+    r'(rating|count)( for)?(?=.+?[^/]\d+$)': (Predicate.RATING_SPECIFIC_INCDEC, Operators.RELATIONAL_FOR_RATING_SERVICE, Value.RATING_SERVICE_NAME_AND_INCDEC, None ),
 }
 
 def string_looks_like_date( string ):
@@ -372,6 +398,7 @@ def parse_unit( string: str, spec ):
         if match: return string[ len( match[ 0 ] ): ], 'megapixels'
         raise ValueError( "Invalid unit, expected pixels" )
     elif spec == Units.FPS_OR_NONE:
+        
         if not string:
             return string, None
         else:

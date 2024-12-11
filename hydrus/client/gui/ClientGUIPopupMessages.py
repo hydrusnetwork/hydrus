@@ -68,7 +68,7 @@ class PopupMessage( PopupWindow ):
         vbox = QP.VBoxLayout( vbox_margin )
         
         self._title = ClientGUICommon.BetterStaticText( self )
-        self._title.setAlignment( QC.Qt.AlignHCenter | QC.Qt.AlignVCenter )
+        self._title.setAlignment( QC.Qt.AlignmentFlag.AlignHCenter | QC.Qt.AlignmentFlag.AlignVCenter )
         
         font = self._title.font()
         font.setBold( True )
@@ -1227,7 +1227,7 @@ class PopupMessageManager( QW.QFrame ):
             
             if watched == self.parentWidget():
                 
-                if event.type() in ( QC.QEvent.Resize, QC.QEvent.Move, QC.QEvent.WindowStateChange ):
+                if event.type() in ( QC.QEvent.Type.Resize, QC.QEvent.Type.Move, QC.QEvent.Type.WindowStateChange ):
                     
                     if self._OKToAlterUI():
                         

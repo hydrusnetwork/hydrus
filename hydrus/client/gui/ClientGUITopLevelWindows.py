@@ -427,7 +427,7 @@ class NewDialog( QP.Dialog ):
         
         if do_not_activate:
             
-            self.setAttribute( QC.Qt.WA_ShowWithoutActivating )
+            self.setAttribute( QC.Qt.WidgetAttribute.WA_ShowWithoutActivating )
             
         
         self.setWindowTitle( title )
@@ -643,10 +643,10 @@ class Frame( QW.QWidget ):
         
         self.setWindowTitle( title )
         
-        self.setWindowFlags( QC.Qt.Window )
-        self.setWindowFlag( QC.Qt.WindowContextHelpButtonHint, on = False )
+        self.setWindowFlags( QC.Qt.WindowType.Window )
+        self.setWindowFlag( QC.Qt.WindowType.WindowContextHelpButtonHint, on = False )
         
-        self.setAttribute( QC.Qt.WA_DeleteOnClose )
+        self.setAttribute( QC.Qt.WidgetAttribute.WA_DeleteOnClose )
         
         self._new_options = CG.client_controller.new_options
         

@@ -44,15 +44,15 @@ class FrameSplashPanel( QW.QWidget ):
         
         self._image_label.setPixmap( self._hydrus_pixmap )
         
-        self._image_label.setAlignment( QC.Qt.AlignCenter )
+        self._image_label.setAlignment( QC.Qt.AlignmentFlag.AlignCenter )
         
         self._title_label = ClientGUICommon.BetterStaticText( self, label = ' ' )
         self._status_label = ClientGUICommon.BetterStaticText( self, label = ' ' )
         self._status_sub_label = ClientGUICommon.BetterStaticText( self, label = ' ' )
         
-        self._title_label.setAlignment( QC.Qt.AlignCenter )
-        self._status_label.setAlignment( QC.Qt.AlignCenter )
-        self._status_sub_label.setAlignment( QC.Qt.AlignCenter )
+        self._title_label.setAlignment( QC.Qt.AlignmentFlag.AlignCenter )
+        self._status_label.setAlignment( QC.Qt.AlignmentFlag.AlignCenter )
+        self._status_sub_label.setAlignment( QC.Qt.AlignmentFlag.AlignCenter )
         
         vbox = QP.VBoxLayout()
         
@@ -70,7 +70,7 @@ class FrameSplashPanel( QW.QWidget ):
     
     def mouseMoveEvent( self, event ):
         
-        if ( event.buttons() & QC.Qt.LeftButton ) and self._drag_last_pos is not None:
+        if ( event.buttons() & QC.Qt.MouseButton.LeftButton ) and self._drag_last_pos is not None:
             
             mouse_pos = QG.QCursor.pos()
             
@@ -92,7 +92,7 @@ class FrameSplashPanel( QW.QWidget ):
     
     def mousePressEvent( self, event ):
         
-        if event.button() == QC.Qt.LeftButton:
+        if event.button() == QC.Qt.MouseButton.LeftButton:
             
             self._drag_last_pos = QG.QCursor.pos()
             
@@ -106,7 +106,7 @@ class FrameSplashPanel( QW.QWidget ):
     
     def mouseReleaseEvent( self, event ):
         
-        if event.button() == QC.Qt.LeftButton:
+        if event.button() == QC.Qt.MouseButton.LeftButton:
             
             self._drag_last_pos = None
             
@@ -237,11 +237,11 @@ class FrameSplash( QW.QWidget ):
         
         super().__init__( None )
         
-        self.setWindowFlag( QC.Qt.CustomizeWindowHint )
-        self.setWindowFlag( QC.Qt.WindowContextHelpButtonHint, on = False )
-        self.setWindowFlag( QC.Qt.WindowCloseButtonHint, on = False )
-        self.setWindowFlag( QC.Qt.WindowMaximizeButtonHint, on = False )
-        self.setAttribute( QC.Qt.WA_DeleteOnClose )
+        self.setWindowFlag( QC.Qt.WindowType.CustomizeWindowHint )
+        self.setWindowFlag( QC.Qt.WindowType.WindowContextHelpButtonHint, on = False )
+        self.setWindowFlag( QC.Qt.WindowType.WindowCloseButtonHint, on = False )
+        self.setWindowFlag( QC.Qt.WindowType.WindowMaximizeButtonHint, on = False )
+        self.setAttribute( QC.Qt.WidgetAttribute.WA_DeleteOnClose )
         
         self.setWindowTitle( title )
         

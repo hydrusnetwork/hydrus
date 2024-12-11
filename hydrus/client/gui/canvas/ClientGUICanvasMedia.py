@@ -516,7 +516,7 @@ class Animation( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
                 
             
             painter.setBrush( QG.QBrush( dark_grey ) )
-            painter.setPen( QG.QPen( QC.Qt.NoPen ) )
+            painter.setPen( QG.QPen( QC.Qt.PenStyle.NoPen ) )
             
             for y_index in range( num_rows ):
                 
@@ -918,7 +918,7 @@ class AnimationBar( QW.QWidget ):
         
         self.setObjectName( 'HydrusAnimationBar' )
         
-        self.setCursor( QG.QCursor( QC.Qt.ArrowCursor ) )
+        self.setCursor( QG.QCursor( QC.Qt.CursorShape.ArrowCursor ) )
         
         self.setSizePolicy( QW.QSizePolicy.Policy.Fixed, QW.QSizePolicy.Policy.Fixed )
         
@@ -1126,7 +1126,7 @@ class AnimationBar( QW.QWidget ):
         
         #
         
-        painter.setBrush( QC.Qt.NoBrush )
+        painter.setBrush( QC.Qt.BrushStyle.NoBrush )
         
         painter.setPen( QG.QPen( self._qss_colours[ 'hab_border' ] ) )
         
@@ -1190,7 +1190,7 @@ class AnimationBar( QW.QWidget ):
         
         if self._currently_in_a_drag:
             
-            if event.buttons() == QC.Qt.NoButton:
+            if event.buttons() == QC.Qt.MouseButton.NoButton:
                 
                 self._currently_in_a_drag = False
                 
@@ -1388,7 +1388,7 @@ class MediaContainer( QW.QWidget ):
             # yes :^(
             # try again with more layout tech on the full canvas
             
-            self.setAttribute( QC.Qt.WA_OpaquePaintEvent, True )
+            self.setAttribute( QC.Qt.WidgetAttribute.WA_OpaquePaintEvent, True )
             
         
         self._background_colour_generator = background_colour_generator
@@ -1430,7 +1430,7 @@ class MediaContainer( QW.QWidget ):
         self._animation_bar = AnimationBar( self._controls_bar )
         self._volume_control = ClientGUIMediaControls.VolumeControl( self._controls_bar, self._canvas_type, direction = 'up' )
         
-        self._volume_control.setCursor( QC.Qt.ArrowCursor )
+        self._volume_control.setCursor( QC.Qt.CursorShape.ArrowCursor )
         
         #
         
@@ -2713,7 +2713,7 @@ class EmbedButton( QW.QWidget ):
         
         self._thumbnail_qt_pixmap = None
         
-        self.setCursor( QG.QCursor( QC.Qt.PointingHandCursor ) )
+        self.setCursor( QG.QCursor( QC.Qt.CursorShape.PointingHandCursor ) )
         
         CG.client_controller.sub( self, 'update', 'notify_new_colourset' )
         
@@ -2778,7 +2778,7 @@ class EmbedButton( QW.QWidget ):
         
         painter.setPen( QG.QPen( QG.QPalette().color( QG.QPalette.Shadow ) ) )
 
-        painter.setBrush( QC.Qt.NoBrush )
+        painter.setBrush( QC.Qt.BrushStyle.NoBrush )
         
         painter.drawRect( 0, 0, my_width, my_height )
         
@@ -2866,20 +2866,20 @@ class OpenExternallyPanel( QW.QWidget ):
         
         button = QW.QPushButton( 'open {} externally'.format( m_text ), self )
         
-        button.setFocusPolicy( QC.Qt.NoFocus )
+        button.setFocusPolicy( QC.Qt.FocusPolicy.NoFocus )
         
         QP.AddToLayout( vbox, button, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         self.setLayout( vbox )
         
-        self.setCursor( QG.QCursor( QC.Qt.PointingHandCursor ) )
+        self.setCursor( QG.QCursor( QC.Qt.CursorShape.PointingHandCursor ) )
         
         button.clicked.connect( self.LaunchFile )
         
     
     def mousePressEvent( self, event ):
         
-        if not ( event.modifiers() & ( QC.Qt.ShiftModifier | QC.Qt.ControlModifier | QC.Qt.AltModifier ) ) and event.button() == QC.Qt.LeftButton:
+        if not ( event.modifiers() & ( QC.Qt.KeyboardModifier.ShiftModifier | QC.Qt.KeyboardModifier.ControlModifier | QC.Qt.KeyboardModifier.AltModifier ) ) and event.button() == QC.Qt.MouseButton.LeftButton:
             
             self.LaunchFile()
             
@@ -3223,7 +3223,7 @@ class StaticImage( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
         
         if HC.PLATFORM_MACOS and not HG.macos_antiflicker_test:
             
-            self.setAttribute( QC.Qt.WA_OpaquePaintEvent, True )
+            self.setAttribute( QC.Qt.WidgetAttribute.WA_OpaquePaintEvent, True )
             
         
         # pass up un-button-pressed mouse moves to parent, which wants to do cursor show/hide
@@ -3368,7 +3368,7 @@ class StaticImage( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
                 
             
             painter.setBrush( QG.QBrush( dark_grey ) )
-            painter.setPen( QG.QPen( QC.Qt.NoPen ) )
+            painter.setPen( QG.QPen( QC.Qt.PenStyle.NoPen ) )
             
             for y_index in range( num_rows ):
                 
@@ -3418,7 +3418,7 @@ class StaticImage( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
         if HG.canvas_tile_outline_mode:
             
             painter.setPen( QG.QPen( QG.QColor( 0, 127, 255 ) ) )
-            painter.setBrush( QC.Qt.NoBrush )
+            painter.setBrush( QC.Qt.BrushStyle.NoBrush )
             
             painter.drawRect( tile_pixmap.rect() )
             
@@ -3581,7 +3581,7 @@ class StaticImage( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
                 
                 raw_pos_f = QC.QPointF( raw_pos )
                 
-                device_pos_f = raw_pos_f / my_dpr
+                device_pos_f = typing.cast( QC.QPointF, raw_pos_f / my_dpr )
                 
                 tile.setDevicePixelRatio( my_dpr )
                 

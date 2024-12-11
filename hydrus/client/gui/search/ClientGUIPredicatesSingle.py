@@ -18,12 +18,14 @@ from hydrus.client import ClientParsing
 from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIOptionsPanels
+from hydrus.client.gui import ClientGUIRatings
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.metadata import ClientGUITime
 from hydrus.client.gui.widgets import ClientGUIBytes
 from hydrus.client.gui.widgets import ClientGUICommon
 from hydrus.client.gui.widgets import ClientGUINumberTest
 from hydrus.client.gui.widgets import ClientGUIRegex
+from hydrus.client.metadata import ClientRatings
 from hydrus.client.search import ClientNumberTest
 from hydrus.client.search import ClientSearchPredicate
 
@@ -2099,6 +2101,434 @@ class PanelPredicateSystemNumWords( PanelPredicateSystemSingle ):
         
     
 
+class PredicateSystemRatingIncDec( PanelPredicateSystemSingle ):
+    
+    def __init__( self, parent: QW.QWidget, service_key: bytes, predicate: typing.Optional[ ClientSearchPredicate.Predicate ] ):
+        
+        super().__init__( parent )
+        
+        self._service_key = service_key
+        
+        try:
+            
+            service = CG.client_controller.services_manager.GetService( self._service_key )
+            
+            name = service.GetName()
+            
+        except:
+            
+            name = 'unknown service'
+            
+        
+        name_st = ClientGUICommon.BetterStaticText( self, name )
+        
+        name_st.setAlignment( QC.Qt.AlignmentFlag.AlignLeft | QC.Qt.AlignmentFlag.AlignVCenter )
+        
+        choice_tuples = [
+            ( 'has count', 'has count' ),
+            ( 'no count', 'no count' ),
+            ( 'more than', '>' ),
+            ( 'less than', '<' ),
+            ( 'is', '=' ),
+            ( 'is about', HC.UNICODE_APPROX_EQUAL )
+        ]
+        
+        self._choice = ClientGUICommon.BetterRadioBox( self, choice_tuples, vertical = True )
+        
+        self._rating_value = ClientGUICommon.BetterSpinBox( self, initial = 0, min = 0, max = 1000000 )
+        
+        self._choice.SetValue( '' )
+        
+        #
+        
+        if predicate is not None:
+            
+            value = predicate.GetValue()
+            
+            if value is not None:
+                
+                ( operator, rating, service_key ) = value
+                
+                self._rating_value.setValue( 0 )
+                
+                if operator == '>' and rating == 0:
+                    
+                    self._choice.SetValue( 'has count' )
+                    
+                elif ( operator == '<' and rating == 1 ) or ( operator == '=' and rating == '0' ):
+                    
+                    self._choice.SetValue( 'no count' )
+                    
+                else:
+                    
+                    self._choice.SetValue( operator )
+                    
+                    self._rating_value.setValue( rating )
+                    
+                
+            
+        
+        #
+        
+        hbox = QP.HBoxLayout()
+        
+        QP.AddToLayout( hbox, name_st, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( hbox, self._choice, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._rating_value, CC.FLAGS_CENTER_PERPENDICULAR )
+        
+        self.setLayout( hbox )
+        
+        self._choice.radioBoxChanged.connect( self._UpdateControls )
+        
+        self._UpdateControls()
+        
+    
+    def _UpdateControls( self ):
+        
+        choice = self._choice.GetValue()
+        
+        spinctrl_matters = choice not in ( 'has count', 'no count' )
+        
+        self._rating_value.setEnabled( spinctrl_matters )
+        
+    
+    def GetDefaultPredicate( self ):
+        
+        return ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_RATING, ( '>', 0, self._service_key ) )
+        
+    
+    def GetPredicates( self ):
+        
+        choice = self._choice.GetValue()
+        
+        if choice == 'has count':
+            
+            operator = '>'
+            rating = 0
+            
+        elif choice == 'no count':
+            
+            operator = '='
+            rating = 0
+            
+        else:
+            
+            operator = choice
+            
+            rating = self._rating_value.value()
+            
+        
+        predicate = ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_RATING, ( operator, rating, self._service_key ) )
+        
+        return [ predicate ]
+        
+    
+
+class PredicateSystemRatingLike( PanelPredicateSystemSingle ):
+    
+    def __init__( self, parent: QW.QWidget, service_key: bytes, predicate: typing.Optional[ ClientSearchPredicate.Predicate ] ):
+        
+        super().__init__( parent )
+        
+        self._service_key = service_key
+        
+        try:
+            
+            service = CG.client_controller.services_manager.GetService( self._service_key )
+            
+            name = service.GetName()
+            
+        except HydrusExceptions.DataMissing:
+            
+            name = 'unknown service'
+            
+        
+        name_st = ClientGUICommon.BetterStaticText( self, name )
+        
+        name_st.setAlignment( QC.Qt.AlignmentFlag.AlignLeft | QC.Qt.AlignmentFlag.AlignVCenter )
+        
+        choice_tuples = [
+            ( 'has rating', 'rated' ),
+            ( 'no rating', 'not rated' ),
+            ( 'is', '=' )
+        ]
+        
+        self._choice = ClientGUICommon.BetterRadioBox( self, choice_tuples, vertical = True )
+        
+        self._rating_control = ClientGUIRatings.RatingLikeDialog( self, service_key )
+        
+        #
+        
+        self._choice.SetValue( '' )
+        
+        if predicate is not None:
+            
+            value = predicate.GetValue()
+            
+            if value is not None:
+                
+                ( operator, rating, service_key ) = value
+                
+                self._rating_control.SetRatingState( ClientRatings.NULL )
+                
+                if rating == 'rated':
+                    
+                    self._choice.SetValue( 'rated' )
+                    
+                elif rating == 'not rated':
+                    
+                    self._choice.SetValue( 'not rated' )
+                    
+                else:
+                    
+                    self._choice.SetValue( '=' )
+                    
+                    if rating == 0:
+                        
+                        self._rating_control.SetRatingState( ClientRatings.DISLIKE )
+                        
+                    elif rating == 1:
+                        
+                        self._rating_control.SetRatingState( ClientRatings.LIKE )
+                        
+                    
+                
+            
+        
+        #
+        
+        hbox = QP.HBoxLayout()
+        
+        QP.AddToLayout( hbox, name_st, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( hbox, self._choice, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._rating_control, CC.FLAGS_CENTER_PERPENDICULAR )
+        
+        self.setLayout( hbox )
+        
+        self._choice.radioBoxChanged.connect( self._UpdateControls )
+        self._rating_control.valueChanged.connect( self._RatingChanged )
+        
+        self._UpdateControls()
+        
+    
+    def _RatingChanged( self ):
+        
+        if self._choice.GetValue() in ( 'rated', 'not rated' ):
+            
+            self._choice.SetValue( '=' )
+            
+        
+    
+    def _UpdateControls( self ):
+        
+        choice = self._choice.GetValue()
+        
+        if choice in ( 'rated', 'not rated' ):
+            
+            self._rating_control.blockSignals( True )
+            self._rating_control.SetRatingState( ClientRatings.NULL )
+            self._rating_control.blockSignals( False )
+            
+        
+    
+    def GetDefaultPredicate( self ):
+        
+        return ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_RATING, ( '=', 'rated', self._service_key ) )
+        
+    
+    def GetPredicates( self ):
+        
+        choice = self._choice.GetValue()
+        
+        if choice == '':
+            
+            return []
+            
+        
+        operator = '='
+        
+        if choice == 'rated':
+            
+            rating = 'rated'
+            
+        elif choice == 'not rated':
+            
+            rating = 'not rated'
+            
+        else:
+            
+            rating_state = self._rating_control.GetRatingState()
+            
+            if rating_state == ClientRatings.LIKE:
+                
+                rating = 1
+                
+            elif rating_state == ClientRatings.DISLIKE:
+                
+                rating = 0
+                
+            else:
+                
+                rating = 'not rated'
+                
+            
+        
+        predicate = ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_RATING, ( operator, rating, self._service_key ) )
+        
+        return [ predicate ]
+        
+    
+
+class PredicateSystemRatingNumerical( PanelPredicateSystemSingle ):
+    
+    def __init__( self, parent: QW.QWidget, service_key: bytes, predicate: typing.Optional[ ClientSearchPredicate.Predicate ] ):
+        
+        super().__init__( parent )
+        
+        self._service_key = service_key
+        
+        try:
+            
+            service = CG.client_controller.services_manager.GetService( self._service_key )
+            
+            name = service.GetName()
+            
+        except HydrusExceptions.DataMissing:
+            
+            name = 'unknown service'
+            
+        
+        name_st = ClientGUICommon.BetterStaticText( self, name )
+        
+        name_st.setAlignment( QC.Qt.AlignmentFlag.AlignLeft | QC.Qt.AlignmentFlag.AlignVCenter )
+        
+        choice_tuples = [
+            ( 'has rating', 'rated' ),
+            ( 'no rating', 'not rated' ),
+            ( 'more than', '>' ),
+            ( 'less than', '<' ),
+            ( 'is', '=' ),
+            ( 'is about', HC.UNICODE_APPROX_EQUAL )
+        ]
+        
+        self._choice = ClientGUICommon.BetterRadioBox( self, choice_tuples, vertical = True )
+        
+        self._rating_control = ClientGUIRatings.RatingNumericalDialog( self, service_key )
+        
+        self._choice.SetValue( '' )
+        
+        #
+        
+        if predicate is not None:
+            
+            value = predicate.GetValue()
+            
+            if value is not None:
+                
+                ( operator, rating, service_key ) = value
+                
+                self._rating_control.SetRating( None )
+                
+                if rating == 'rated':
+                    
+                    self._choice.SetValue( 'rated' )
+                    
+                elif rating == 'not rated':
+                    
+                    self._choice.SetValue( 'not rated' )
+                    
+                else:
+                    
+                    self._choice.SetValue( operator )
+                    
+                    self._rating_control.SetRating( rating )
+                    
+                
+            
+        
+        #
+        
+        hbox = QP.HBoxLayout()
+        
+        QP.AddToLayout( hbox, name_st, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( hbox, self._choice, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._rating_control, CC.FLAGS_CENTER_PERPENDICULAR )
+        
+        self.setLayout( hbox )
+        
+        self._choice.radioBoxChanged.connect( self._UpdateControls )
+        self._rating_control.valueChanged.connect( self._RatingChanged )
+        
+        self._UpdateControls()
+        
+    
+    def _RatingChanged( self ):
+        
+        if self._choice.GetValue() in ( 'rated', 'not rated' ):
+            
+            self._choice.SetValue( '=' )
+            
+        
+    
+    def _UpdateControls( self ):
+        
+        choice = self._choice.GetValue()
+        
+        if choice in ( 'rated', 'not rated' ):
+            
+            self._rating_control.blockSignals( True )
+            self._rating_control.SetRating( None )
+            self._rating_control.blockSignals( False )
+            
+        
+    
+    def GetDefaultPredicate( self ):
+        
+        return ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_RATING, ( '=', 'rated', self._service_key ) )
+        
+    
+    def GetPredicates( self ):
+        
+        choice = self._choice.GetValue()
+        
+        operator = '='
+        rating = None
+        
+        if choice == 'rated':
+            
+            operator = '='
+            rating = 'rated'
+            
+        elif choice == 'not rated':
+            
+            operator = '='
+            rating = 'not rated'
+            
+        else:
+            
+            operator = choice
+            
+            if self._rating_control.GetRatingState() == ClientRatings.NULL:
+                
+                if operator != '=':
+                    
+                    return []
+                    
+                
+                rating = 'not rated'
+                
+            else:
+                
+                rating = self._rating_control.GetRating()
+                
+            
+        
+        predicate = ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_RATING, ( operator, rating, self._service_key ) )
+        
+        return [ predicate ]
+        
+    
+
 class PanelPredicateSystemRatio( PanelPredicateSystemSingle ):
     
     def __init__( self, parent, predicate ):
@@ -2188,8 +2618,8 @@ class PanelPredicateSystemSimilarToData( PanelPredicateSystemSingle ):
         
         predicate = self._GetPredicateToInitialisePanelWith( predicate )
         
-        self._pixel_hashes.setPlaceholderText( 'enter pixel hash (64 chars each, paste newline-separated for multiple)' )
-        self._perceptual_hashes.setPlaceholderText( 'enter perceptual hash (16 chars each, paste newline-separated for multiple)' )
+        self._pixel_hashes.setPlaceholderText( 'pixel hash (64 chars each, paste newline-separated for multiple)' )
+        self._perceptual_hashes.setPlaceholderText( 'perceptual hash (16 chars each, paste newline-separated for multiple)' )
         
         ( pixel_hashes, perceptual_hashes, hamming_distance ) = predicate.GetValue()
         
@@ -2221,10 +2651,10 @@ class PanelPredicateSystemSimilarToData( PanelPredicateSystemSingle ):
         
         big_vbox = QP.VBoxLayout()
         
-        st = ClientGUICommon.BetterStaticText( self, label = 'Use this if you want to look up a file without importing it. Just copy its file path or image data to your clipboard and paste.' )
+        st = ClientGUICommon.BetterStaticText( self, label = 'Use this if you want to look up a file without needing to import it. Just copy its file path or image data to your clipboard and paste, and hydrus will figure out the hash data.' )
         
         st.setWordWrap( True )
-        st.setAlignment( QC.Qt.AlignCenter )
+        st.setAlignment( QC.Qt.AlignmentFlag.AlignCenter )
         
         QP.AddToLayout( big_vbox, st, CC.FLAGS_EXPAND_PERPENDICULAR )
         
@@ -2274,20 +2704,36 @@ class PanelPredicateSystemSimilarToData( PanelPredicateSystemSingle ):
             
         else:
             
-            try:
+            if CG.client_controller.ClipboardHasLocalPaths():
                 
-                raw_text = CG.client_controller.GetClipboardText()
+                paths = CG.client_controller.GetClipboardLocalPaths()
                 
-            except HydrusExceptions.DataMissing as e:
+                if len( paths ) == 0:
+                    
+                    ClientGUIDialogsMessage.ShowWarning( self, 'The clipboard seemed to have local paths on it, but when I asked for them I got nothing!' )
+                    
+                    return
+                    
                 
-                ClientGUIDialogsMessage.ShowWarning( self, 'Did not see an image bitmap or a file path in the clipboard!' )
+                path = list( paths )[0]
                 
-                return
+            else:
+                
+                try:
+                    
+                    raw_text = CG.client_controller.GetClipboardText()
+                    
+                except HydrusExceptions.DataMissing as e:
+                    
+                    ClientGUIDialogsMessage.ShowWarning( self, 'Did not see an image bitmap or a file path in the clipboard!' )
+                    
+                    return
+                    
+                
+                path = raw_text
                 
             
             try:
-                
-                path = raw_text
                 
                 if os.path.exists( path ) and os.path.isfile( path ):
                     
@@ -2384,7 +2830,7 @@ class PanelPredicateSystemSimilarToFiles( PanelPredicateSystemSingle ):
         
         predicate = self._GetPredicateToInitialisePanelWith( predicate )
         
-        self._hashes.setPlaceholderText( 'enter file hash (64 chars each, paste newline-separated for multiple)' )
+        self._hashes.setPlaceholderText( 'file sha-256 hashes (64 chars each, paste newline-separated for multiple)' )
         
         ( hashes, hamming_distance ) = predicate.GetValue()
         
@@ -2405,10 +2851,10 @@ class PanelPredicateSystemSimilarToFiles( PanelPredicateSystemSingle ):
         
         hbox.addStretch( 1 )
         
-        st = ClientGUICommon.BetterStaticText( self, label = 'This searches for files that look like each other, just like in the duplicates system. Paste the files\' hash(es) here, and the results will look like any of them.' )
+        st = ClientGUICommon.BetterStaticText( self, label = 'This searches for files that look like each other within your database, just like in the duplicates system. It uses the SHA256 hash. Paste the files\' hash(es) here, and the results will look like any of them.' )
         
         st.setWordWrap( True )
-        st.setAlignment( QC.Qt.AlignCenter )
+        st.setAlignment( QC.Qt.AlignmentFlag.AlignCenter )
         
         vbox = QP.VBoxLayout()
         
@@ -2497,6 +2943,7 @@ class PanelPredicateSystemSize( PanelPredicateSystemSingle ):
         return predicates
         
     
+
 class PanelPredicateSystemTagAsNumber( PanelPredicateSystemSingle ):
     
     def __init__( self, parent, predicate ):
@@ -2554,6 +3001,7 @@ class PanelPredicateSystemTagAsNumber( PanelPredicateSystemSingle ):
         return predicates
         
     
+
 class PanelPredicateSystemWidth( PanelPredicateSystemSingle ):
     
     def __init__( self, parent, predicate ):

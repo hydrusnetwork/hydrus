@@ -215,23 +215,23 @@ class EditCheckerOptions( ClientGUIScrolledPanels.EditPanel ):
     
     def _ShowHelp( self ):
         
-        help = 'The intention of this object is to govern how frequently the watcher or subscription checks for new files--and when it should stop completely.'
-        help += '\n' * 2
-        help += 'PROTIP: Do not change anything here unless you understand what it means!'
-        help += '\n' * 2
-        help += 'In general, checkers can and should be set up to check faster or slower based on how fast new files are coming in. This is polite to the server you are talking to and saves you CPU and bandwidth. The rate of new files is called the \'file velocity\' and is based on how many files appeared in a certain period before the _most recent check time_.'
-        help += '\n' * 2
-        help += 'Once the first check is done and an initial file velocity is established, the time to the next check will be based on what you set for the \'intended files per check\'. If the current file velocity is 10 files per 24 hours, and you set the intended files per check to 5 files, the checker will set the next check time to be 12 hours after the previous check time.'
-        help += '\n' * 2
-        help += 'After a check is completed, the new file velocity and next check time is calculated, so when files are being posted frequently, it will check more often. When things are slow, it will slow down as well. There are also minimum and maximum check periods to smooth out the bumps.'
-        help += '\n' * 2
-        help += 'But if you would rather just check at a fixed rate, check the checkbox and you will get a simpler \'static checking\' panel.'
-        help += '\n' * 2
-        help += 'If the \'file velocity\' drops below a certain amount, the checker considers the source of files dead and will stop checking. If it falls into this state but you think there might have since been a rush of new files, hit the watcher or subscription\'s \'check now\' button in an attempt to revive the checker. If there are new files, it will start checking again until they drop off once more.'
-        help += '\n' * 2
-        help += 'If you are still not comfortable with how this system works, the \'reasonable defaults\' are good fallbacks. Most of the time, setting some reasonable rules and leaving checkers to do their work is the best way to deal with this stuff, rather than obsessing over the exact perfect values you want for each situation.'
+        help_text = 'The intention of this object is to govern how frequently the watcher or subscription checks for new files--and when it should stop completely.'
+        help_text += '\n' * 2
+        help_text += 'PROTIP: Do not change anything here unless you understand what it means!'
+        help_text += '\n' * 2
+        help_text += 'In general, checkers can and should be set up to check faster or slower based on how fast new files are coming in. This is polite to the server you are talking to and saves you CPU and bandwidth. The rate of new files is called the \'file velocity\' and is based on how many files appeared in a certain period before the _most recent check time_.'
+        help_text += '\n' * 2
+        help_text += 'Once the first check is done and an initial file velocity is established, the time to the next check will be based on what you set for the \'intended files per check\'. If the current file velocity is 10 files per 24 hours, and you set the intended files per check to 5 files, the checker will set the next check time to be 12 hours after the previous check time.'
+        help_text += '\n' * 2
+        help_text += 'After a check is completed, the new file velocity and next check time is calculated, so when files are being posted frequently, it will check more often. When things are slow, it will slow down as well. There are also minimum and maximum check periods to smooth out the bumps.'
+        help_text += '\n' * 2
+        help_text += 'But if you would rather just check at a fixed rate, check the checkbox and you will get a simpler \'static checking\' panel.'
+        help_text += '\n' * 2
+        help_text += 'If the \'file velocity\' drops below a certain amount, the checker considers the source of files dead and will stop checking. If it falls into this state but you think there might have since been a rush of new files, hit the watcher or subscription\'s \'check now\' button in an attempt to revive the checker. If there are new files, it will start checking again until they drop off once more.'
+        help_text += '\n' * 2
+        help_text += 'If you are still not comfortable with how this system works, the \'reasonable defaults\' are good fallbacks. Most of the time, setting some reasonable rules and leaving checkers to do their work is the best way to deal with this stuff, rather than obsessing over the exact perfect values you want for each situation.'
         
-        ClientGUIDialogsMessage.ShowInformation( self, help )
+        ClientGUIDialogsMessage.ShowInformation( self, help_text )
         
     
     def _UpdateEnabledControls( self ):
@@ -1227,7 +1227,7 @@ class TimeDeltaCtrl( QW.QWidget ):
         
         try:
             
-            if event.type() == QC.QEvent.FocusOut:
+            if event.type() == QC.QEvent.Type.FocusOut:
                 
                 if not ClientGUIFunctions.WidgetOrAnyTLWChildHasFocus( self ):
                     
@@ -1251,8 +1251,6 @@ class TimeDeltaCtrl( QW.QWidget ):
         
     
     def EventChange( self ):
-        
-        value = self.GetValue()
         
         self._UpdateEnables()
         
@@ -1296,7 +1294,7 @@ class TimeDeltaCtrl( QW.QWidget ):
         return value
         
     
-    def SetValue( self, value ):
+    def SetValue( self, value: float ):
         
         if self._monthly_allowed:
             
@@ -1329,35 +1327,35 @@ class TimeDeltaCtrl( QW.QWidget ):
             
             if self._show_days:
                 
-                self._days.setValue( multiplier * ( value // 86400 ) )
+                self._days.setValue( int( multiplier * ( value // 86400 ) ) )
                 
                 value %= 86400
                 
             
             if self._show_hours:
                 
-                self._hours.setValue( multiplier * ( value // 3600 ) )
+                self._hours.setValue( int( multiplier * ( value // 3600 ) ) )
                 
                 value %= 3600
                 
             
             if self._show_minutes:
                 
-                self._minutes.setValue( multiplier * ( value // 60 ) )
+                self._minutes.setValue( int( multiplier * ( value // 60 ) ) )
                 
                 value %= 60
                 
             
             if self._show_seconds:
                 
-                self._seconds.setValue( multiplier * int( value ) )
+                self._seconds.setValue( int( multiplier * int( value ) ) )
                 
                 value %= 1
                 
             
             if self._show_milliseconds and value > 0:
                 
-                self._milliseconds.setValue( multiplier * int( value * 1000 ) )
+                self._milliseconds.setValue( int( multiplier * value * 1000 ) )
                 
             
         
@@ -1578,9 +1576,9 @@ class NumberTestWidgetDuration( ClientGUINumberTest.NumberTestWidget ):
         return HydrusTime.MillisecondiseS( self._absolute_plus_or_minus.GetValue() )
         
     
-    def _SetAbsoluteValue( self, value ):
+    def _SetAbsoluteValue( self, value_ms ):
         
-        return self._absolute_plus_or_minus.SetValue( HydrusTime.SecondiseMS( value ) )
+        return self._absolute_plus_or_minus.SetValue( value_ms / 1000 )
         
     
     def _GetSubValue( self ) -> int:
@@ -1588,9 +1586,9 @@ class NumberTestWidgetDuration( ClientGUINumberTest.NumberTestWidget ):
         return HydrusTime.MillisecondiseS( self._value.GetValue() )
         
     
-    def _SetSubValue( self, value ):
+    def _SetSubValue( self, value_ms ):
         
-        return self._value.SetValue( HydrusTime.SecondiseMS( value ) )
+        return self._value.SetValue( value_ms / 1000 )
         
     
 

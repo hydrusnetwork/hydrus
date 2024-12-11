@@ -20,6 +20,49 @@ shape_to_str_lookup_dict = {
     PENTAGRAM_STAR : 'pentagram star'
 }
 
+def ConvertRatingToStars( num_stars: int, allow_zero: bool, rating: float ) -> int:
+    
+    if allow_zero:
+        
+        stars = int( round( rating * num_stars ) )
+        
+    else:
+        
+        stars = int( round( rating * ( num_stars - 1 ) ) ) + 1
+        
+    
+    return stars
+    
+
+def ConvertStarsToRating( num_stars: int, allow_zero: bool, stars: int ) -> float:
+    
+    if stars > num_stars:
+        
+        stars = num_stars
+        
+    
+    if allow_zero:
+        
+        if stars < 0:
+            
+            stars = 0
+            
+        
+        rating = stars / num_stars
+        
+    else:
+        
+        if stars < 1:
+            
+            stars = 1
+            
+        
+        rating = ( stars - 1 ) / ( num_stars - 1 )
+        
+    
+    return rating
+    
+
 def GetIncDecStateFromMedia( media, service_key ):
     
     values_seen = { m.GetRatingsManager().GetRating( service_key ) for m in media }

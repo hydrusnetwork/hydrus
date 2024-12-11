@@ -58,9 +58,9 @@ class OptionsPanelMimesTree( OptionsPanel ):
             
             general_mime_item = QW.QTreeWidgetItem()
             general_mime_item.setText( 0, HC.mime_string_lookup[ general_mime_type ] )
-            general_mime_item.setFlags( general_mime_item.flags() | QC.Qt.ItemIsUserCheckable )
-            general_mime_item.setCheckState( 0, QC.Qt.Unchecked )
-            general_mime_item.setData( 0, QC.Qt.UserRole, general_mime_type )
+            general_mime_item.setFlags( general_mime_item.flags() | QC.Qt.ItemFlag.ItemIsUserCheckable )
+            general_mime_item.setCheckState( 0, QC.Qt.CheckState.Unchecked )
+            general_mime_item.setData( 0, QC.Qt.ItemDataRole.UserRole, general_mime_type )
             self._my_tree.addTopLevelItem( general_mime_item )
             
             self._general_mime_types_to_items[ general_mime_type ] = general_mime_item
@@ -69,8 +69,8 @@ class OptionsPanelMimesTree( OptionsPanel ):
                 
                 mime_item = QW.QTreeWidgetItem()
                 mime_item.setText( 0, HC.mime_string_lookup[ mime ] )
-                mime_item.setFlags( mime_item.flags() | QC.Qt.ItemIsUserCheckable )
-                mime_item.setData( 0, QC.Qt.UserRole, mime )
+                mime_item.setFlags( mime_item.flags() | QC.Qt.ItemFlag.ItemIsUserCheckable )
+                mime_item.setData( 0, QC.Qt.ItemDataRole.UserRole, mime )
                 general_mime_item.addChild( mime_item )
                 
                 self._mimes_to_items[ mime ] = mime_item
@@ -97,7 +97,7 @@ class OptionsPanelMimesTree( OptionsPanel ):
     
     def GetValue( self ) -> typing.Tuple[ int ]:
         
-        mimes = tuple( [ mime for ( mime, item ) in self._mimes_to_items.items() if item.checkState( 0 ) == QC.Qt.Checked ] )
+        mimes = tuple( [ mime for ( mime, item ) in self._mimes_to_items.items() if item.checkState( 0 ) == QC.Qt.CheckState.Checked ] )
         
         return mimes
         
@@ -110,11 +110,11 @@ class OptionsPanelMimesTree( OptionsPanel ):
             
             if mime in checked_mimes:
                 
-                check_state = QC.Qt.Checked
+                check_state = QC.Qt.CheckState.Checked
                 
             else:
                 
-                check_state = QC.Qt.Unchecked
+                check_state = QC.Qt.CheckState.Unchecked
                 
             
             item.setCheckState( 0, check_state )

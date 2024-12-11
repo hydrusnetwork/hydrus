@@ -125,30 +125,12 @@ def GetPrettyMediaResultInfoLines( media_result: ClientMediaResult.MediaResult, 
         pretty_info_lines.append( ClientMediaResultPrettyInfoObjects.PrettyMediaResultInfoLine( f'filetype was originally: {HC.mime_string_lookup[ file_info_manager.original_mime ]}', False ) )
         
     
+    #
+    
     current_service_keys = locations_manager.GetCurrent()
     deleted_service_keys = locations_manager.GetDeleted()
     
-    local_file_services = CG.client_controller.services_manager.GetLocalMediaFileServices()
-    
     seen_local_file_service_timestamps_ms = set()
-    
-    current_local_file_services = [ service for service in local_file_services if service.GetServiceKey() in current_service_keys ]
-    
-    if len( current_local_file_services ) > 0:
-        
-        for local_file_service in current_local_file_services:
-            
-            timestamp_ms = times_manager.GetImportedTimestampMS( local_file_service.GetServiceKey() )
-            
-            line = f'added to {local_file_service.GetName()}: {HydrusTime.TimestampToPrettyTimeDelta( HydrusTime.SecondiseMS( timestamp_ms ) )}'
-            
-            tooltip = f'added to {local_file_service.GetName()}: {HydrusTime.TimestampToPrettyTimeDelta( HydrusTime.SecondiseMS( timestamp_ms ), reverse_iso_delta_setting = True )}'
-            
-            pretty_info_lines.append( ClientMediaResultPrettyInfoObjects.PrettyMediaResultInfoLine( line, False, tooltip = tooltip ) )
-            
-            seen_local_file_service_timestamps_ms.add( timestamp_ms )
-            
-        
     
     if CC.COMBINED_LOCAL_FILE_SERVICE_KEY in current_service_keys:
         
@@ -162,11 +144,41 @@ def GetPrettyMediaResultInfoLines( media_result: ClientMediaResult.MediaResult, 
         
         pretty_info_lines.append( ClientMediaResultPrettyInfoObjects.PrettyMediaResultInfoLine( line, line_is_interesting, tooltip = tooltip ) )
         
-        if line_is_interesting:
+        seen_local_file_service_timestamps_ms.add( timestamp_ms )
+        
+    
+    local_file_services = CG.client_controller.services_manager.GetLocalMediaFileServices()
+    
+    current_local_file_services = [ service for service in local_file_services if service.GetServiceKey() in current_service_keys ]
+    
+    if len( current_local_file_services ) > 0:
+        
+        state_local_service_timestamp = not only_interesting_lines or CG.client_controller.new_options.GetBoolean( 'file_info_line_consider_file_services_import_times_interesting' )
+        
+        line_is_interesting = CG.client_controller.new_options.GetBoolean( 'file_info_line_consider_file_services_interesting' )
+        
+        for local_file_service in current_local_file_services:
+            
+            timestamp_ms = times_manager.GetImportedTimestampMS( local_file_service.GetServiceKey() )
+            
+            if state_local_service_timestamp:
+                
+                line = f'added to {local_file_service.GetName()}: {HydrusTime.TimestampToPrettyTimeDelta( HydrusTime.SecondiseMS( timestamp_ms ) )}'
+                
+            else:
+                
+                line = local_file_service.GetName()
+                
+            
+            tooltip = f'added to {local_file_service.GetName()}: {HydrusTime.TimestampToPrettyTimeDelta( HydrusTime.SecondiseMS( timestamp_ms ), reverse_iso_delta_setting = True )}'
+            
+            pretty_info_lines.append( ClientMediaResultPrettyInfoObjects.PrettyMediaResultInfoLine( line, line_is_interesting, tooltip = tooltip ) )
             
             seen_local_file_service_timestamps_ms.add( timestamp_ms )
             
         
+    
+    #
     
     deleted_local_file_services = [ service for service in local_file_services if service.GetServiceKey() in deleted_service_keys ]
     
@@ -178,9 +190,11 @@ def GetPrettyMediaResultInfoLines( media_result: ClientMediaResult.MediaResult, 
         
         line = f'deleted from this client {HydrusTime.TimestampToPrettyTimeDelta( HydrusTime.SecondiseMS( timestamp_ms ) )} ({local_file_deletion_reason})'
         
+        line_is_interesting = True
+        
         tooltip = f'deleted from this client {HydrusTime.TimestampToPrettyTimeDelta( HydrusTime.SecondiseMS( timestamp_ms ), reverse_iso_delta_setting = True )} ({local_file_deletion_reason})'
         
-        pretty_info_lines.append( ClientMediaResultPrettyInfoObjects.PrettyMediaResultInfoLine( line, True, tooltip = tooltip ) )
+        pretty_info_lines.append( ClientMediaResultPrettyInfoObjects.PrettyMediaResultInfoLine( line, line_is_interesting, tooltip = tooltip ) )
         
     elif CC.TRASH_SERVICE_KEY in current_service_keys:
         
@@ -200,7 +214,9 @@ def GetPrettyMediaResultInfoLines( media_result: ClientMediaResult.MediaResult, 
                 tooltip = f'{tooltip} ({local_file_deletion_reason})'
                 
             
-            pretty_info_lines.append( ClientMediaResultPrettyInfoObjects.PrettyMediaResultInfoLine( line, True, tooltip = tooltip ) )
+            line_is_interesting = False
+            
+            pretty_info_lines.append( ClientMediaResultPrettyInfoObjects.PrettyMediaResultInfoLine( line, line_is_interesting, tooltip = tooltip ) )
             
         
         if len( deleted_local_file_services ) > 1:
@@ -213,6 +229,12 @@ def GetPrettyMediaResultInfoLines( media_result: ClientMediaResult.MediaResult, 
         
         pretty_info_lines.append( ClientMediaResultPrettyInfoObjects.PrettyMediaResultInfoLine( 'in the trash', True ) )
         
+    
+    #
+    
+    state_remote_service_timestamp = not only_interesting_lines or CG.client_controller.new_options.GetBoolean( 'file_info_line_consider_file_services_import_times_interesting' )
+    
+    line_is_interesting = CG.client_controller.new_options.GetBoolean( 'file_info_line_consider_file_services_interesting' )
     
     for service_key in current_service_keys.intersection( CG.client_controller.services_manager.GetServiceKeys( HC.REMOTE_FILE_SERVICES ) ):
         
@@ -238,11 +260,21 @@ def GetPrettyMediaResultInfoLines( media_result: ClientMediaResult.MediaResult, 
             status_label = 'uploaded'
             
         
-        line = f'{status_label} to {service.GetName()} {HydrusTime.TimestampToPrettyTimeDelta( HydrusTime.SecondiseMS( timestamp_ms ) )}'
+        if state_remote_service_timestamp:
+            
+            line = f'{status_label} to {service.GetName()} {HydrusTime.TimestampToPrettyTimeDelta( HydrusTime.SecondiseMS( timestamp_ms ) )}'
+            
+        else:
+            
+            line = f'{status_label} to {service.GetName()}'
+            
+        
         tooltip = f'{status_label} to {service.GetName()} {HydrusTime.TimestampToPrettyTimeDelta( HydrusTime.SecondiseMS( timestamp_ms ), reverse_iso_delta_setting = True )}'
         
-        pretty_info_lines.append( ClientMediaResultPrettyInfoObjects.PrettyMediaResultInfoLine( line, True, tooltip = tooltip ) )
+        pretty_info_lines.append( ClientMediaResultPrettyInfoObjects.PrettyMediaResultInfoLine( line, line_is_interesting, tooltip = tooltip ) )
         
+    
+    #
     
     times_manager = locations_manager.GetTimesManager()
     
@@ -265,6 +297,8 @@ def GetPrettyMediaResultInfoLines( media_result: ClientMediaResult.MediaResult, 
         tooltip = f'modified: {HydrusTime.TimestampToPrettyTimeDelta( HydrusTime.SecondiseMS( file_modified_timestamp_ms ), reverse_iso_delta_setting = True )}'
         
         pretty_info_lines.append( ClientMediaResultPrettyInfoObjects.PrettyMediaResultInfoLine( line, line_is_interesting, tooltip = tooltip ) )
+        
+        #
         
         modified_timestamp_lines = []
         
@@ -294,17 +328,45 @@ def GetPrettyMediaResultInfoLines( media_result: ClientMediaResult.MediaResult, 
             
         
     
+    #
+    
     if not locations_manager.inbox:
+        
+        state_archived_timestamp = not only_interesting_lines or CG.client_controller.new_options.GetBoolean( 'file_info_line_consider_archived_time_interesting' )
         
         archived_timestamp_ms = times_manager.GetArchivedTimestampMS()
         
-        if archived_timestamp_ms is not None:
+        if archived_timestamp_ms is None:
             
-            line = f'archived: {HydrusTime.TimestampToPrettyTimeDelta( HydrusTime.SecondiseMS( archived_timestamp_ms ) )}'
+            if state_archived_timestamp:
+                
+                line = f'archived: unknown time'
+                
+            else:
+                
+                line = 'archived'
+                
+            
+            tooltip = f'archived: unknown time'
+            
+        else:
+            
+            if state_archived_timestamp:
+                
+                line = f'archived: {HydrusTime.TimestampToPrettyTimeDelta( HydrusTime.SecondiseMS( archived_timestamp_ms ) )}'
+                
+            else:
+                
+                line = 'archived'
+                
+            
             tooltip = f'archived: {HydrusTime.TimestampToPrettyTimeDelta( HydrusTime.SecondiseMS( archived_timestamp_ms ), reverse_iso_delta_setting = True )}'
             
-            pretty_info_lines.append( ClientMediaResultPrettyInfoObjects.PrettyMediaResultInfoLine( line, True, tooltip = tooltip ) )
-            
+        
+        line_is_interesting = CG.client_controller.new_options.GetBoolean( 'file_info_line_consider_archived_interesting' )
+        
+        pretty_info_lines.append( ClientMediaResultPrettyInfoObjects.PrettyMediaResultInfoLine( line, line_is_interesting, tooltip = tooltip ) )
+        
         
     
     if file_info_manager.has_audio:
@@ -324,7 +386,7 @@ def GetPrettyMediaResultInfoLines( media_result: ClientMediaResult.MediaResult, 
     
     if file_info_manager.has_human_readable_embedded_metadata:
         
-        pretty_info_lines.append( ClientMediaResultPrettyInfoObjects.PrettyMediaResultInfoLine( 'has human-readable embedded metadata', False ) )
+        pretty_info_lines.append( ClientMediaResultPrettyInfoObjects.PrettyMediaResultInfoLine( 'has embedded metadata', False ) )
         
     
     if file_info_manager.has_icc_profile:

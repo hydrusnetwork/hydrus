@@ -76,14 +76,14 @@ class QuestionCommitInterstitialFilteringPanel( ClientGUIScrolledPanels.Resizing
         
         st = ClientGUICommon.BetterStaticText( self, label )
         
-        st.setAlignment( QC.Qt.AlignCenter )
+        st.setAlignment( QC.Qt.AlignmentFlag.AlignCenter )
         
         QP.AddToLayout( vbox, st, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, self._commit, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
         st = ClientGUICommon.BetterStaticText( self, '-or-' )
         
-        st.setAlignment( QC.Qt.AlignCenter )
+        st.setAlignment( QC.Qt.AlignmentFlag.AlignCenter )
         
         QP.AddToLayout( vbox, st, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, self._back, CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -117,7 +117,7 @@ class QuestionArchiveDeleteFinishFilteringPanel( ClientGUIScrolledPanels.Resizin
             
             st = ClientGUICommon.BetterStaticText( self, label )
             
-            st.setAlignment( QC.Qt.AlignCenter )
+            st.setAlignment( QC.Qt.AlignmentFlag.AlignCenter )
             
             QP.AddToLayout( vbox, st, CC.FLAGS_EXPAND_PERPENDICULAR )
             
@@ -141,7 +141,7 @@ class QuestionArchiveDeleteFinishFilteringPanel( ClientGUIScrolledPanels.Resizin
             
             st = ClientGUICommon.BetterStaticText( self, label )
             
-            st.setAlignment( QC.Qt.AlignCenter )
+            st.setAlignment( QC.Qt.AlignmentFlag.AlignCenter )
             
             QP.AddToLayout( vbox, st, CC.FLAGS_EXPAND_PERPENDICULAR )
             
@@ -158,7 +158,7 @@ class QuestionArchiveDeleteFinishFilteringPanel( ClientGUIScrolledPanels.Resizin
                 
                 st = ClientGUICommon.BetterStaticText( self, label )
                 
-                st.setAlignment( QC.Qt.AlignCenter )
+                st.setAlignment( QC.Qt.AlignmentFlag.AlignCenter )
                 
                 QP.AddToLayout( vbox, st, CC.FLAGS_EXPAND_PERPENDICULAR )
                 
@@ -172,7 +172,7 @@ class QuestionArchiveDeleteFinishFilteringPanel( ClientGUIScrolledPanels.Resizin
                 
                 st = ClientGUICommon.BetterStaticText( self, label )
                 
-                st.setAlignment( QC.Qt.AlignCenter )
+                st.setAlignment( QC.Qt.AlignmentFlag.AlignCenter )
                 
                 QP.AddToLayout( vbox, st, CC.FLAGS_EXPAND_PERPENDICULAR )
                 
@@ -216,7 +216,7 @@ class QuestionArchiveDeleteFinishFilteringPanel( ClientGUIScrolledPanels.Resizin
         
         st = ClientGUICommon.BetterStaticText( self, '-or-' )
         
-        st.setAlignment( QC.Qt.AlignCenter )
+        st.setAlignment( QC.Qt.AlignmentFlag.AlignCenter )
         
         QP.AddToLayout( vbox, st, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, self._back, CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -295,14 +295,14 @@ class QuestionFinishFilteringPanel( ClientGUIScrolledPanels.ResizingScrolledPane
         
         st = ClientGUICommon.BetterStaticText( self, label )
         
-        st.setAlignment( QC.Qt.AlignCenter )
+        st.setAlignment( QC.Qt.AlignmentFlag.AlignCenter )
         
         QP.AddToLayout( vbox, st, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
         st = ClientGUICommon.BetterStaticText( self, '-or-' )
         
-        st.setAlignment( QC.Qt.AlignCenter )
+        st.setAlignment( QC.Qt.AlignmentFlag.AlignCenter )
         
         QP.AddToLayout( vbox, st, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, self._back, CC.FLAGS_EXPAND_PERPENDICULAR )

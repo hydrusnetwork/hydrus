@@ -19,6 +19,7 @@ from hydrus.core import HydrusCompression
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusEncryption
+from hydrus.core import HydrusEnvironment
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusMemory
@@ -485,6 +486,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         self.setStatusBar( self._statusbar )
         
         self._statusbar_thread_updater = ClientGUIAsync.FastThreadToGUIUpdater( self._statusbar, self.RefreshStatusBar )
+        self._statusbar_db_thread_updater = ClientGUIAsync.FastThreadToGUIUpdater( self._statusbar, self.RefreshStatusBarDB )
         
         self._canvas_frames = [] # Keep references to canvas frames so they won't get garbage collected (canvas frames don't have a parent)
         
@@ -550,6 +552,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         self._controller.sub( self, 'PresentImportedFilesToPage', 'imported_files_to_page' )
         self._controller.sub( self, 'SetDBLockedStatus', 'db_locked_status' )
         self._controller.sub( self, 'SetStatusBarDirty', 'set_status_bar_dirty' )
+        self._controller.sub( self, 'SetStatusBarDirtyDB', 'set_status_bar_db_dirty' )
         self._controller.sub( self, 'TryToOpenManageServicesForAutoAccountCreation', 'open_manage_services_and_try_to_auto_create_account' )
         
         vbox = QP.VBoxLayout()
@@ -578,7 +581,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         self._ui_update_windows = set()
         
         self._animation_update_timer = QC.QTimer( self )
-        self._animation_update_timer.setTimerType( QC.Qt.PreciseTimer )
+        self._animation_update_timer.setTimerType( QC.Qt.TimerType.PreciseTimer )
         self._animation_update_timer.timeout.connect( self.TIMEREventAnimationUpdate )
         
         self._animation_update_windows = set()
@@ -635,8 +638,8 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         )
         self._locator_widget.setDefaultStylingEnabled( False )
         self._locator_widget.setLocator( self._locator )
-        self._locator_widget.setAlignment( QC.Qt.AlignCenter )
-        self._locator_widget.setEscapeShortcuts( [ QG.QKeySequence( QC.Qt.Key_Escape ) ] )
+        self._locator_widget.setAlignment( QC.Qt.AlignmentFlag.AlignCenter )
+        self._locator_widget.setEscapeShortcuts( [ QG.QKeySequence( QC.Qt.Key.Key_Escape ) ] )
         # self._locator_widget.setQueryTimeout( 100 ) # how much to wait before starting a search after user edit. default 0
         
         #
@@ -1964,6 +1967,117 @@ QMenuBar::item { padding: 2px 8px; margin: 0px; }'''
             
         
     
+    def _FixMissingArchiveTimes( self ):
+        
+        def do_it_scan_step( job_status ):
+            
+            we_are_missing_legacy = self._controller.Read( 'missing_archive_timestamps_legacy_test', job_status )
+            
+            if job_status.IsCancelled():
+                
+                return
+                
+            
+            we_are_missing_import = self._controller.Read( 'missing_archive_timestamps_import_test', job_status )
+            
+            if job_status.IsCancelled():
+                
+                return
+                
+            
+            CG.client_controller.CallAfterQtSafe( self, 'missing archive times reporter', qt_present_results, job_status, we_are_missing_legacy, we_are_missing_import )
+            
+        
+        def qt_present_results( job_status, we_are_missing_legacy, we_are_missing_import ):
+            
+            if we_are_missing_legacy or we_are_missing_import:
+                
+                message = 'It looks like there are some missing archive times. You have:'
+                
+                yes_tuples = []
+                
+                if we_are_missing_legacy:
+                    
+                    message += '\n\n--Missing Legacy Times--'
+                    message += '\n\nThese are files that were archived before hydrus started tracking archive time (2022-02). If you select to fill these in, hydrus will insert a synthetic time that is import time + 20% of the time to 2022-02 or any file deletion time.'
+                    
+                    yes_tuples.append( ( 'do legacy times', [ 'legacy' ] ) )
+                    
+                
+                if we_are_missing_import:
+                    
+                    message += '\n\n--Missing Import Times--'
+                    message += '\n\nThese are most likely files that were imported with "automatically archive", which for some period until 2024-12 were not recording archive times due to a bug. It may include a few other instances of missing archived files (e.g. you manually deleted one). If you select to fill these in, hydrus will insert a synthetic time that is the same as the import time.'
+                    
+                    yes_tuples.append( ( 'do import times', [ 'import' ] ) )
+                    
+                
+                if we_are_missing_legacy and we_are_missing_import:
+                    
+                    yes_tuples.append( ( 'do both', [ 'legacy', 'import' ] ) )
+                    
+                
+                try:
+                    
+                    jobs = ClientGUIDialogsQuick.GetYesYesNo( self, message, yes_tuples = yes_tuples, no_label = 'forget it' )
+                    
+                except HydrusExceptions.CancelledException:
+                    
+                    job_status.FinishAndDismiss()
+                    
+                    return
+                    
+                
+                self._controller.CallToThread( do_it_fix_step, job_status, jobs )
+                
+            else:
+                
+                job_status.SetStatusText( 'No missing archive times found!' )
+                
+                job_status.Finish()
+                
+            
+        
+        def do_it_fix_step( job_status, jobs ):
+            
+            for job in jobs:
+                
+                if job == 'legacy':
+                    
+                    self._controller.WriteSynchronous( 'missing_archive_timestamps_legacy_fillin', job_status )
+                    
+                elif job == 'import':
+                    
+                    self._controller.WriteSynchronous( 'missing_archive_timestamps_import_fillin', job_status )
+                    
+                
+                if job_status.IsCancelled():
+                    
+                    return
+                    
+                
+            
+            job_status.SetStatusText( 'Done!' )
+            job_status.Finish()
+            
+        
+        message = 'There are a couple of ways your client may be missing archive times for your files. This will scan for missing times and then present you with the results and a choice on what to do.'
+        message += '\n' * 2
+        message += 'The scan may take a while. It will have a popup showing its work, but it may lock up your client for a bit while it works.'
+        
+        result = ClientGUIDialogsQuick.GetYesNo( self, message, yes_label = 'start the scan', no_label = 'forget it' )
+        
+        if result == QW.QDialog.DialogCode.Accepted:
+            
+            job_status = ClientThreading.JobStatus( cancellable = True )
+            
+            job_status.SetStatusTitle( 'missing archive times work' )
+            CG.client_controller.pub( 'message', job_status )
+            
+            self._controller.CallToThread( do_it_scan_step, job_status )
+            
+        
+    
     def _FleshOutSessionWithCleanDataIfNeeded( self, notebook: ClientGUIPages.PagesNotebook, name: str, session: ClientGUISession.GUISessionContainer ):
         
         unchanged_page_data_hashes = session.GetUnchangedPageDataHashes()
@@ -3262,6 +3376,10 @@ ATTACH "client.mappings.db" as external_mappings;'''
         
         ClientGUIMenus.AppendMenuItem( file_maintenance_menu, 'clear orphan files' + HC.UNICODE_ELLIPSIS, 'Clear out surplus files that have found their way into the file structure.', self._ClearOrphanFiles )
         
+        ClientGUIMenus.AppendSeparator( file_maintenance_menu )
+        
+        ClientGUIMenus.AppendMenuItem( file_maintenance_menu, 'fix missing file archived times' + HC.UNICODE_ELLIPSIS, 'Search for and fill-in missing file archive times.', self._FixMissingArchiveTimes )
+        
         ClientGUIMenus.AppendMenu( menu, file_maintenance_menu, 'file maintenance' )
         
         #
@@ -3577,6 +3695,7 @@ ATTACH "client.mappings.db" as external_mappings;'''
         ClientGUIMenus.AppendMenuItem( data_actions, 'flush log', 'Command the log to write any buffered contents to hard drive.', HydrusData.DebugPrint, 'Flushing log' )
         ClientGUIMenus.AppendMenuItem( data_actions, 'force database commit', 'Command the database to flush all pending changes to disk.', CG.client_controller.ForceDatabaseCommit )
         ClientGUIMenus.AppendMenuItem( data_actions, 'review threads', 'Show current threads and what they are doing.', self._ReviewThreads )
+        ClientGUIMenus.AppendMenuItem( data_actions, 'show env', 'Print your current environment variables.', HydrusEnvironment.DumpEnv )
         ClientGUIMenus.AppendMenuItem( data_actions, 'show scheduled jobs', 'Print some information about the currently scheduled jobs log.', self._DebugShowScheduledJobs )
         ClientGUIMenus.AppendMenuItem( data_actions, 'subscription manager snapshot', 'Have the subscription system show what it is doing.', self._controller.subscriptions_manager.ShowSnapshot )
         ClientGUIMenus.AppendSeparator( data_actions )
@@ -5293,6 +5412,16 @@ ATTACH "client.mappings.db" as external_mappings;'''
             busy_tooltip = None
             
         
+        self._statusbar.SetStatusText( media_status, 0 )
+        self._statusbar.SetStatusText( idle_status, 2, tooltip = idle_tooltip )
+        self._statusbar.SetStatusText( hydrus_busy_status, 3, tooltip = hydrus_busy_tooltip )
+        self._statusbar.SetStatusText( busy_status, 4, tooltip = busy_tooltip )
+        
+        self._RefreshStatusBarDB()
+        
+    
+    def _RefreshStatusBarDB( self ):
+        
         ( db_status, job_name ) = CG.client_controller.GetDBStatus()
         
         if job_name is not None and job_name != '':
@@ -5304,12 +5433,6 @@ ATTACH "client.mappings.db" as external_mappings;'''
             db_tooltip = None
             
         
-        self._statusbar.setToolTip( ClientGUIFunctions.WrapToolTip( job_name ) )
-        
-        self._statusbar.SetStatusText( media_status, 0 )
-        self._statusbar.SetStatusText( idle_status, 2, tooltip = idle_tooltip )
-        self._statusbar.SetStatusText( hydrus_busy_status, 3, tooltip = hydrus_busy_tooltip )
-        self._statusbar.SetStatusText( busy_status, 4, tooltip = busy_tooltip )
         self._statusbar.SetStatusText( db_status, 5, tooltip = db_tooltip )
         
     
@@ -6358,31 +6481,31 @@ ATTACH "client.mappings.db" as external_mappings;'''
                 t += 0.01
                 
             
-            CG.client_controller.CallLaterQtSafe( self, t, 'test job', uias.Char, ac_widget, QC.Qt.Key_Return )
+            CG.client_controller.CallLaterQtSafe( self, t, 'test job', uias.Char, ac_widget, QC.Qt.Key.Key_Return )
             
             t += SYS_PRED_REFRESH
             
-            CG.client_controller.CallLaterQtSafe( self, t, 'test job', uias.Char, ac_widget, QC.Qt.Key_Return )
+            CG.client_controller.CallLaterQtSafe( self, t, 'test job', uias.Char, ac_widget, QC.Qt.Key.Key_Return )
             
             t += SYS_PRED_REFRESH
             
-            CG.client_controller.CallLaterQtSafe( self, t, 'test job', uias.Char, ac_widget, QC.Qt.Key_Down )
+            CG.client_controller.CallLaterQtSafe( self, t, 'test job', uias.Char, ac_widget, QC.Qt.Key.Key_Down )
             
             t += 0.05
             
-            CG.client_controller.CallLaterQtSafe( self, t, 'test job', uias.Char, ac_widget, QC.Qt.Key_Return )
+            CG.client_controller.CallLaterQtSafe( self, t, 'test job', uias.Char, ac_widget, QC.Qt.Key.Key_Return )
             
             t += SYS_PRED_REFRESH
             
-            CG.client_controller.CallLaterQtSafe( self, t, 'test job', uias.Char, ac_widget, QC.Qt.Key_Down )
+            CG.client_controller.CallLaterQtSafe( self, t, 'test job', uias.Char, ac_widget, QC.Qt.Key.Key_Down )
             
             t += 0.05
             
-            CG.client_controller.CallLaterQtSafe( self, t, 'test job', uias.Char, ac_widget, QC.Qt.Key_Return )
+            CG.client_controller.CallLaterQtSafe( self, t, 'test job', uias.Char, ac_widget, QC.Qt.Key.Key_Return )
             
             t += SYS_PRED_REFRESH
             
-            CG.client_controller.CallLaterQtSafe( self, t, 'test job', uias.Char, ac_widget, QC.Qt.Key_Return )
+            CG.client_controller.CallLaterQtSafe( self, t, 'test job', uias.Char, ac_widget, QC.Qt.Key.Key_Return )
             
             for i in range( 20 ):
                 
@@ -6390,25 +6513,25 @@ ATTACH "client.mappings.db" as external_mappings;'''
                 
                 for j in range( i + 1 ):
                     
-                    CG.client_controller.CallLaterQtSafe( self, t, 'test job', uias.Char, ac_widget, QC.Qt.Key_Down )
+                    CG.client_controller.CallLaterQtSafe( self, t, 'test job', uias.Char, ac_widget, QC.Qt.Key.Key_Down )
                     
                     t += 0.1
                     
                 
-                CG.client_controller.CallLaterQtSafe( self, t, 'test job', uias.Char, ac_widget, QC.Qt.Key_Return )
+                CG.client_controller.CallLaterQtSafe( self, t, 'test job', uias.Char, ac_widget, QC.Qt.Key.Key_Return )
                 
                 t += SYS_PRED_REFRESH
                 
-                CG.client_controller.CallLaterQtSafe( self, t, 'test job', uias.Char, None, QC.Qt.Key_Return )
+                CG.client_controller.CallLaterQtSafe( self, t, 'test job', uias.Char, None, QC.Qt.Key.Key_Return )
                 
             
             t += 1.0
             
-            CG.client_controller.CallLaterQtSafe( self, t, 'test job', uias.Char, ac_widget, QC.Qt.Key_Down )
+            CG.client_controller.CallLaterQtSafe( self, t, 'test job', uias.Char, ac_widget, QC.Qt.Key.Key_Down )
             
             t += 0.05
             
-            CG.client_controller.CallLaterQtSafe( self, t, 'test job', uias.Char, ac_widget, QC.Qt.Key_Return )
+            CG.client_controller.CallLaterQtSafe( self, t, 'test job', uias.Char, ac_widget, QC.Qt.Key.Key_Return )
             
             t += 1.0
             
@@ -7355,9 +7478,9 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
             if watched == self:
                 
-                if event.type() == QC.QEvent.WindowStateChange:
+                if event.type() == QC.QEvent.Type.WindowStateChange:
                     
-                    was_minimised = event.oldState() == QC.Qt.WindowMinimized
+                    was_minimised = event.oldState() == QC.Qt.WindowState.WindowMinimized
                     is_minimised = self.isMinimized()
                     
                     if was_minimised != is_minimised:
@@ -7369,7 +7492,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                         
                         if is_minimised:
                             
-                            self._was_maximised = event.oldState() == QC.Qt.WindowMaximized
+                            self._was_maximised = event.oldState() == QC.Qt.WindowState.WindowMaximized
                             
                             if not self._currently_minimised_to_system_tray and self._controller.new_options.GetBoolean( 'minimise_client_to_system_tray' ):
                                 
@@ -8181,6 +8304,11 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         self._RefreshStatusBar()
         
     
+    def RefreshStatusBarDB( self ):
+        
+        self._RefreshStatusBarDB()
+        
+    
     def RegisterAnimationUpdateWindow( self, window ):
         
         self._animation_update_windows.add( window )
@@ -8623,6 +8751,11 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     def SetStatusBarDirty( self ):
         
         self._statusbar_thread_updater.Update()
+        
+    
+    def SetStatusBarDirtyDB( self ):
+        
+        self._statusbar_db_thread_updater.Update()
         
     
     def ShowPage( self, page_key ):

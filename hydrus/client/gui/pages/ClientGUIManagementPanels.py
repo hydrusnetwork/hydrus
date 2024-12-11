@@ -277,7 +277,7 @@ class ManagementPanel( QW.QScrollArea ):
         #self.setFrameStyle( QW.QFrame.Shape.Panel | QW.QFrame.Shadow.Sunken )
         #self.setLineWidth( 2 )
         #self.setHorizontalScrollBarPolicy( QC.Qt.ScrollBarAlwaysOff )
-        self.setVerticalScrollBarPolicy( QC.Qt.ScrollBarAsNeeded )
+        self.setVerticalScrollBarPolicy( QC.Qt.ScrollBarPolicy.ScrollBarAsNeeded )
         
         self._controller = controller
         self._management_controller = management_controller
@@ -1879,7 +1879,7 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
             self._query_input.setPlaceholderText( new_initial_search_text )
             
         
-        self._query_input.setFocus( QC.Qt.OtherFocusReason )
+        self._query_input.setFocus( QC.Qt.FocusReason.OtherFocusReason )
         
     
     def _SetOptionsToGalleryImports( self ):
@@ -4249,7 +4249,7 @@ class ManagementPanelPetitions( ManagementPanel ):
         
         self._contents_add = ClientGUICommon.BetterCheckBoxList( self._petition_panel )
         self._contents_add.itemDoubleClicked.connect( self.ContentsAddDoubleClick )
-        self._contents_add.setHorizontalScrollBarPolicy( QC.Qt.ScrollBarAlwaysOff )
+        self._contents_add.setHorizontalScrollBarPolicy( QC.Qt.ScrollBarPolicy.ScrollBarAlwaysOff )
         
         ( min_width, min_height ) = ClientGUIFunctions.ConvertTextToPixels( self._contents_add, ( 16, 20 ) )
         
@@ -4257,7 +4257,7 @@ class ManagementPanelPetitions( ManagementPanel ):
         
         self._contents_delete = ClientGUICommon.BetterCheckBoxList( self._petition_panel )
         self._contents_delete.itemDoubleClicked.connect( self.ContentsDeleteDoubleClick )
-        self._contents_delete.setHorizontalScrollBarPolicy( QC.Qt.ScrollBarAlwaysOff )
+        self._contents_delete.setHorizontalScrollBarPolicy( QC.Qt.ScrollBarPolicy.ScrollBarAlwaysOff )
         
         ( min_width, min_height ) = ClientGUIFunctions.ConvertTextToPixels( self._contents_delete, ( 16, 20 ) )
         

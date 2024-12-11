@@ -365,8 +365,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             general = ClientGUICommon.StaticBox( self, 'general' )
             
-            self._verify_regular_https = QW.QCheckBox( general )
-            
             if self._new_options.GetBoolean( 'advanced_mode' ):
                 
                 network_timeout_min = 1
@@ -412,6 +410,11 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._max_network_jobs = ClientGUICommon.BetterSpinBox( general, min = 1, max = max_network_jobs_max )
             self._max_network_jobs_per_domain = ClientGUICommon.BetterSpinBox( general, min = 1, max = max_network_jobs_per_domain_max )
             
+            self._set_requests_ca_bundle_env = QW.QCheckBox( general )
+            self._set_requests_ca_bundle_env.setToolTip( ClientGUIFunctions.WrapToolTip( 'Just testing something here; ignore unless hydev asks you to use it please. Requires restart.' ) )
+            
+            self._verify_regular_https = QW.QCheckBox( general )
+            
             #
             
             proxy_panel = ClientGUICommon.StaticBox( self, 'proxy settings' )
@@ -431,6 +434,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             #
             
+            self._set_requests_ca_bundle_env.setChecked( self._new_options.GetBoolean( 'set_requests_ca_bundle_env' ) )
             self._verify_regular_https.setChecked( self._new_options.GetBoolean( 'verify_regular_https' ) )
             
             self._http_proxy.SetValue( self._new_options.GetNoneableString( 'http_proxy' ) )
@@ -475,6 +479,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows.append( ( 'Halt new jobs as long as this many network infrastructure errors on their domain (0 for never wait): ', self._domain_network_infrastructure_error_velocity ) )
             rows.append( ( 'max number of simultaneous active network jobs: ', self._max_network_jobs ) )
             rows.append( ( 'max number of simultaneous active network jobs per domain: ', self._max_network_jobs_per_domain ) )
+            rows.append( ( 'DEBUG: set the REQUESTS_CA_BUNDLE env to certifi cacert.pem on program start:', self._set_requests_ca_bundle_env ) )
             rows.append( ( 'BUGFIX: verify regular https traffic:', self._verify_regular_https ) )
             
             gridbox = ClientGUICommon.WrapInGrid( general, rows )
@@ -528,6 +533,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         def UpdateOptions( self ):
             
+            self._new_options.SetBoolean( 'set_requests_ca_bundle_env', self._set_requests_ca_bundle_env.isChecked() )
             self._new_options.SetBoolean( 'verify_regular_https', self._verify_regular_https.isChecked() )
             
             self._new_options.SetNoneableString( 'http_proxy', self._http_proxy.GetValue() )
@@ -969,6 +975,10 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._secret_discord_dnd_fix = QW.QCheckBox( self._dnd_panel )
             self._secret_discord_dnd_fix.setToolTip( ClientGUIFunctions.WrapToolTip( 'THIS SOMETIMES FIXES DnD FOR WEIRD PROGRAMS, BUT IT ALSO OFTEN BREAKS IT FOR OTHERS.\n\nBecause of weird security/permission issues, a program will sometimes not accept a drag and drop file export from hydrus unless the DnD is set to "move" rather than "copy" (discord has done this for some people). Since we do not want to let you accidentally move your files out of your primary file store, this is only enabled if you are copying the files in question to your temp folder first!' ) )
             
+            self._export_folder_panel = ClientGUICommon.StaticBox( self, 'export folder' )
+            
+            self._export_location = QP.DirPickerCtrl( self._export_folder_panel )
+            
             #
             
             self._new_options = CG.client_controller.new_options
@@ -979,6 +989,16 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._secret_discord_dnd_fix.setChecked( self._new_options.GetBoolean( 'secret_discord_dnd_fix' ) )
             
+            if HC.options[ 'export_path' ] is not None:
+                
+                abs_path = HydrusPaths.ConvertPortablePathToAbsPath( HC.options[ 'export_path' ] )
+                
+                if abs_path is not None:
+                    
+                    self._export_location.SetPath( abs_path )
+                    
+                
+            
             #
             
             rows = []
@@ -988,7 +1008,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows.append( ( 'Drag-and-drop export filename pattern: ', self._discord_dnd_filename_pattern ) )
             rows.append( ( '', self._export_pattern_button ) )
             
-            gridbox = ClientGUICommon.WrapInGrid( self, rows )
+            gridbox = ClientGUICommon.WrapInGrid( self._dnd_panel, rows )
             
             label = 'You can drag-and-drop a selection of files out of the client to quickly copy-export them to a folder or an external program (include web browser upload boxes).'
             
@@ -1005,9 +1025,22 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._dnd_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
+            #
+            
+            rows = []
+            
+            rows.append( ( 'Default export directory: ', self._export_location ) )
+            
+            gridbox = ClientGUICommon.WrapInGrid( self._export_folder_panel, rows )
+            
+            self._export_folder_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            
+            #
+            
             vbox = QP.VBoxLayout()
             
             QP.AddToLayout( vbox, self._dnd_panel, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            QP.AddToLayout( vbox, self._export_folder_panel, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
             vbox.addStretch( 1 )
             
@@ -1032,6 +1065,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._new_options.SetBoolean( 'discord_dnd_fix', self._discord_dnd_fix.isChecked() )
             self._new_options.SetString( 'discord_dnd_filename_pattern', self._discord_dnd_filename_pattern.text() )
             self._new_options.SetBoolean( 'secret_discord_dnd_fix', self._secret_discord_dnd_fix.isChecked() )
+            
+            HC.options[ 'export_path' ] = HydrusPaths.ConvertAbsPathToPortablePath( self._export_location.GetPath() )
             
         
     
@@ -1235,8 +1270,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._new_options = CG.client_controller.new_options
             
-            self._export_location = QP.DirPickerCtrl( self )
-            
             self._prefix_hash_when_copying = QW.QCheckBox( self )
             self._prefix_hash_when_copying.setToolTip( ClientGUIFunctions.WrapToolTip( 'If you often paste hashes into boorus, check this to automatically prefix with the type, like "md5:2496dabcbd69e3c56a5d8caabb7acde5".' ) )
             
@@ -1285,16 +1318,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._advanced_file_deletion_reasons = ClientGUIListBoxes.QueueListBox( advanced_file_deletion_panel, 5, str, add_callable = self._AddAFDR, edit_callable = self._EditAFDR )
             
             #
-            
-            if HC.options[ 'export_path' ] is not None:
-                
-                abs_path = HydrusPaths.ConvertPortablePathToAbsPath( HC.options[ 'export_path' ] )
-                
-                if abs_path is not None:
-                    
-                    self._export_location.SetPath( abs_path )
-                    
-                
             
             self._prefix_hash_when_copying.setChecked( self._new_options.GetBoolean( 'prefix_hash_when_copying' ) )
             
@@ -1357,7 +1380,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows.append( ( 'Remove files from view when they are moved to another local file domain: ', self._remove_local_domain_moved_files ) )
             rows.append( ( 'Number of hours a file can be in the trash before being deleted: ', self._trash_max_age ) )
             rows.append( ( 'Maximum size of trash (MB): ', self._trash_max_size ) )
-            rows.append( ( 'Default export directory: ', self._export_location ) )
             
             gridbox = ClientGUICommon.WrapInGrid( self, rows )
             
@@ -1438,8 +1460,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
         
         def UpdateOptions( self ):
-            
-            HC.options[ 'export_path' ] = HydrusPaths.ConvertAbsPathToPortablePath( self._export_location.GetPath() )
             
             self._new_options.SetBoolean( 'prefix_hash_when_copying', self._prefix_hash_when_copying.isChecked() )
             
@@ -2149,8 +2169,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             default_fios = ClientGUICommon.StaticBox( self, 'default file import options' )
             
-            show_downloader_options = True
-            
             quiet_file_import_options = self._new_options.GetDefaultFileImportOptions( FileImportOptions.IMPORT_TYPE_QUIET )
             
             show_downloader_options = True
@@ -2168,10 +2186,16 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             #
             
+            st = ClientGUICommon.BetterStaticText( default_fios, label = 'You might like to set different "presentation options" for importers that work in the background vs those that work in a page in front of you.\n\nNOTE: I am likely to break "File Import Options" into smaller pieces in an upcoming update, and this options page will change too.' )
+            
+            st.setWordWrap( True )
+            
+            default_fios.Add( st, CC.FLAGS_EXPAND_PERPENDICULAR )
+            
             rows = []
             
-            rows.append( ( 'For \'quiet\' import contexts: import folders, subscriptions, Client API:', self._quiet_fios ) )
-            rows.append( ( 'For \'loud\' import contexts: downloader pages:', self._loud_fios ) )
+            rows.append( ( 'For import contexts that happen in a popup window or with no UI at all:\n(import folders, subscriptions, Client API)', self._quiet_fios ) )
+            rows.append( ( 'For import contexts that happen on a page in the main gui window:\n(gallery or url import pages, watchers, local file import pages, any files/urls you drag and drop on the client)', self._loud_fios ) )
             
             gridbox = ClientGUICommon.WrapInGrid( default_fios, rows )
             
@@ -2803,8 +2827,20 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._use_nice_resolution_strings = QW.QCheckBox( media_canvas_panel )
             self._use_nice_resolution_strings.setToolTip( ClientGUIFunctions.WrapToolTip( 'Use "1080p" instead of "1920x1080" for common resolutions.' ) )
             
+            self._file_info_line_consider_archived_interesting = QW.QCheckBox( media_canvas_panel )
+            self._file_info_line_consider_archived_interesting.setToolTip( ClientGUIFunctions.WrapToolTip( 'Should we show the fact a file is archived in the top hover file info summary?' ) )
+            
+            self._file_info_line_consider_archived_time_interesting = QW.QCheckBox( media_canvas_panel )
+            self._file_info_line_consider_archived_time_interesting.setToolTip( ClientGUIFunctions.WrapToolTip( 'If we show the archived status, should we show when it happened?' ) )
+            
+            self._file_info_line_consider_file_services_interesting = QW.QCheckBox( media_canvas_panel )
+            self._file_info_line_consider_file_services_interesting.setToolTip( ClientGUIFunctions.WrapToolTip( 'Should we show all the file services a file is in in the top hover file info summary?' ) )
+            
+            self._file_info_line_consider_file_services_import_times_interesting = QW.QCheckBox( media_canvas_panel )
+            self._file_info_line_consider_file_services_import_times_interesting.setToolTip( ClientGUIFunctions.WrapToolTip( 'If we show the file services, should we show when they were added?' ) )
+            
             self._hide_uninteresting_modified_time = QW.QCheckBox( media_canvas_panel )
-            self._hide_uninteresting_modified_time.setToolTip( ClientGUIFunctions.WrapToolTip( 'If the file has a modified time similar to its import time (i.e. the number of seconds since both events differs by less than 10%), hide the modified time in the top of the media viewer.' ) )
+            self._hide_uninteresting_modified_time.setToolTip( ClientGUIFunctions.WrapToolTip( 'If the file has a modified time similar to its import time (specifically, the number of seconds since both events differs by less than 10%), hide the modified time in the top hover file info summary.' ) )
             
             #
             
@@ -2848,6 +2884,11 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._draw_notes_hover_in_media_viewer_background.setChecked( self._new_options.GetBoolean( 'draw_notes_hover_in_media_viewer_background' ) )
             self._draw_bottom_right_index_in_media_viewer_background.setChecked( self._new_options.GetBoolean( 'draw_bottom_right_index_in_media_viewer_background' ) )
             self._use_nice_resolution_strings.setChecked( self._new_options.GetBoolean( 'use_nice_resolution_strings' ) )
+            
+            self._file_info_line_consider_archived_interesting.setChecked( self._new_options.GetBoolean( 'file_info_line_consider_archived_interesting' ) )
+            self._file_info_line_consider_archived_time_interesting.setChecked( self._new_options.GetBoolean( 'file_info_line_consider_archived_time_interesting' ) )
+            self._file_info_line_consider_file_services_interesting.setChecked( self._new_options.GetBoolean( 'file_info_line_consider_file_services_interesting' ) )
+            self._file_info_line_consider_file_services_import_times_interesting.setChecked( self._new_options.GetBoolean( 'file_info_line_consider_file_services_import_times_interesting' ) )
             self._hide_uninteresting_modified_time.setChecked( self._new_options.GetBoolean( 'hide_uninteresting_modified_time' ) )
             
             self._media_viewer_cursor_autohide_time_ms.SetValue( self._new_options.GetNoneableInteger( 'media_viewer_cursor_autohide_time_ms' ) )
@@ -2889,7 +2930,11 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows.append( ( 'Duplicate notes hover-window information in the background of the viewer:', self._draw_notes_hover_in_media_viewer_background ) )
             rows.append( ( 'Draw bottom-right index text in the background of the viewer:', self._draw_bottom_right_index_in_media_viewer_background ) )
             rows.append( ( 'Swap in common resolution labels:', self._use_nice_resolution_strings ) )
-            rows.append( ( 'Hide uninteresting modified times:', self._hide_uninteresting_modified_time ) )
+            rows.append( ( 'Show archived status in top hover summary', self._file_info_line_consider_archived_interesting ) )
+            rows.append( ( 'Show archived time in top hover summary', self._file_info_line_consider_archived_time_interesting ) )
+            rows.append( ( 'Show file services in top hover summary', self._file_info_line_consider_file_services_interesting ) )
+            rows.append( ( 'Show file service add times in top hover summary', self._file_info_line_consider_file_services_import_times_interesting ) )
+            rows.append( ( 'Hide uninteresting modified times in top hover summary:', self._hide_uninteresting_modified_time ) )
             
             media_canvas_gridbox = ClientGUICommon.WrapInGrid( media_canvas_panel, rows )
             
@@ -2919,6 +2964,17 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             vbox.addStretch( 1 )
             
             self.setLayout( vbox )
+            
+            self._file_info_line_consider_archived_interesting.clicked.connect( self._UpdateFileInfoLineWidgets )
+            self._file_info_line_consider_file_services_interesting.clicked.connect( self._UpdateFileInfoLineWidgets )
+            
+            self._UpdateFileInfoLineWidgets()
+            
+        
+        def _UpdateFileInfoLineWidgets( self ):
+            
+            self._file_info_line_consider_archived_time_interesting.setEnabled( self._file_info_line_consider_archived_interesting.isChecked() )
+            self._file_info_line_consider_file_services_import_times_interesting.setEnabled( self._file_info_line_consider_file_services_interesting.isChecked() )
             
         
         def EventSlideshowChanged( self, text ):
@@ -2951,6 +3007,11 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._new_options.SetBoolean( 'draw_notes_hover_in_media_viewer_background', self._draw_notes_hover_in_media_viewer_background.isChecked() )
             self._new_options.SetBoolean( 'draw_bottom_right_index_in_media_viewer_background', self._draw_bottom_right_index_in_media_viewer_background.isChecked() )
             self._new_options.SetBoolean( 'use_nice_resolution_strings', self._use_nice_resolution_strings.isChecked() )
+            
+            self._new_options.SetBoolean( 'file_info_line_consider_archived_interesting', self._file_info_line_consider_archived_interesting.isChecked() )
+            self._new_options.SetBoolean( 'file_info_line_consider_archived_time_interesting', self._file_info_line_consider_archived_time_interesting.isChecked() )
+            self._new_options.SetBoolean( 'file_info_line_consider_file_services_interesting', self._file_info_line_consider_file_services_interesting.isChecked() )
+            self._new_options.SetBoolean( 'file_info_line_consider_file_services_import_times_interesting', self._file_info_line_consider_file_services_import_times_interesting.isChecked() )
             self._new_options.SetBoolean( 'hide_uninteresting_modified_time', self._hide_uninteresting_modified_time.isChecked() )
             
             self._new_options.SetBoolean( 'disallow_media_drags_on_duration_media', self._disallow_media_drags_on_duration_media.isChecked() )
@@ -5555,7 +5616,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._media_background_bmp_path = QP.FilePickerCtrl( self )
             
             self._show_extended_single_file_info_in_status_bar = QW.QCheckBox( self )
-            tt = 'This will show the info texts you see in the top hover window of the media viewer in the main gui status bar any time a single thumbnail is selected.'
+            tt = 'This will show, any time you have a single thumbnail selected, the file info summary you see in the top hover window of the media viewer in the main gui status bar. Check the "media viewer" options panel to edit this summary more.'
             self._show_extended_single_file_info_in_status_bar.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
             
             #

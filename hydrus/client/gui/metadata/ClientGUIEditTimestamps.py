@@ -51,7 +51,7 @@ class EditFileTimestampsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUISc
         
         self._file_modified_time_warning_st = ClientGUICommon.BetterStaticText( self, label = 'initialising' )
         self._file_modified_time_warning_st.setObjectName( 'HydrusWarning' )
-        self._file_modified_time_warning_st.setAlignment( QC.Qt.AlignCenter )
+        self._file_modified_time_warning_st.setAlignment( QC.Qt.AlignmentFlag.AlignCenter )
         self._file_modified_time_warning_st.setVisible( False )
         
         domain_box = ClientGUICommon.StaticBox( self, 'web domain times' )

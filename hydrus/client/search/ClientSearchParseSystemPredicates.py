@@ -161,6 +161,19 @@ def rating_service_pred_generator( operator, value_and_service_name ):
         
         value = service.ConvertStarsToRating( value )
         
+    elif service.GetServiceType() == HC.LOCAL_RATING_INCDEC:
+        
+        if value == 'rated':
+            
+            operator = '>'
+            value = 0
+            
+        elif value == 'not rated':
+            
+            operator = '='
+            value = 0
+            
+        
     
     predicate_value = ( operator, value, service_key )
     
@@ -225,6 +238,20 @@ pred_generators = {
     SystemPredicateParser.Predicate.FILETYPE : lambda o, v, u: ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_MIME, tuple( v ) ),
     SystemPredicateParser.Predicate.HAS_DURATION : lambda o, v, u: ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_DURATION, ClientNumberTest.NumberTest.STATICCreateFromCharacters( '>', 0 ) ),
     SystemPredicateParser.Predicate.NO_DURATION : lambda o, v, u: ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_DURATION, ClientNumberTest.NumberTest.STATICCreateFromCharacters( '=', 0 ) ),
+    SystemPredicateParser.Predicate.HAS_FRAMERATE : lambda o, v, u: ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_FRAMERATE, ClientNumberTest.NumberTest.STATICCreateFromCharacters( '>', 0 ) ),
+    SystemPredicateParser.Predicate.NO_FRAMERATE : lambda o, v, u: ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_FRAMERATE, ClientNumberTest.NumberTest.STATICCreateFromCharacters( '=', 0 ) ),
+    SystemPredicateParser.Predicate.HAS_FRAMES : lambda o, v, u: ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_NUM_FRAMES, ClientNumberTest.NumberTest.STATICCreateFromCharacters( '>', 0 ) ),
+    SystemPredicateParser.Predicate.NO_FRAMES : lambda o, v, u: ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_NUM_FRAMES, ClientNumberTest.NumberTest.STATICCreateFromCharacters( '=', 0 ) ),
+    SystemPredicateParser.Predicate.HAS_WIDTH : lambda o, v, u: ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_WIDTH, ClientNumberTest.NumberTest.STATICCreateFromCharacters( '>', 0 ) ),
+    SystemPredicateParser.Predicate.NO_WIDTH : lambda o, v, u: ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_WIDTH, ClientNumberTest.NumberTest.STATICCreateFromCharacters( '=', 0 ) ),
+    SystemPredicateParser.Predicate.HAS_HEIGHT : lambda o, v, u: ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HEIGHT, ClientNumberTest.NumberTest.STATICCreateFromCharacters( '>', 0 ) ),
+    SystemPredicateParser.Predicate.NO_HEIGHT : lambda o, v, u: ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HEIGHT, ClientNumberTest.NumberTest.STATICCreateFromCharacters( '=', 0 ) ),
+    SystemPredicateParser.Predicate.HAS_NOTES : lambda o, v, u: ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_NUM_NOTES, ClientNumberTest.NumberTest.STATICCreateFromCharacters( '>', 0 ) ),
+    SystemPredicateParser.Predicate.NO_NOTES : lambda o, v, u: ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_NUM_NOTES, ClientNumberTest.NumberTest.STATICCreateFromCharacters( '=', 0 ) ),
+    SystemPredicateParser.Predicate.HAS_URLS : lambda o, v, u: ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_NUM_URLS, ClientNumberTest.NumberTest.STATICCreateFromCharacters( '>', 0 ) ),
+    SystemPredicateParser.Predicate.NO_URLS : lambda o, v, u: ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_NUM_URLS, ClientNumberTest.NumberTest.STATICCreateFromCharacters( '=', 0 ) ),
+    SystemPredicateParser.Predicate.HAS_WORDS : lambda o, v, u: ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_NUM_WORDS, ClientNumberTest.NumberTest.STATICCreateFromCharacters( '>', 0 ) ),
+    SystemPredicateParser.Predicate.NO_WORDS : lambda o, v, u: ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_NUM_WORDS, ClientNumberTest.NumberTest.STATICCreateFromCharacters( '=', 0 ) ),
     SystemPredicateParser.Predicate.HAS_TAGS : lambda o, v, u: ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_NUM_TAGS, ( '*', '>', 0 ) ),
     SystemPredicateParser.Predicate.UNTAGGED : lambda o, v, u: ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_NUM_TAGS, ( '*', '=', 0 ) ),
     SystemPredicateParser.Predicate.NUM_OF_TAGS : lambda o, v, u: ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_NUM_TAGS, ( '*', o, v ) ),
@@ -264,8 +291,6 @@ pred_generators = {
     SystemPredicateParser.Predicate.TIME_IMPORTED : lambda o, v, u: date_pred_generator( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_AGE, o, v ),
     SystemPredicateParser.Predicate.FILE_SERVICE : file_service_pred_generator,
     SystemPredicateParser.Predicate.NUM_FILE_RELS : num_file_relationships_pred_generator,
-    SystemPredicateParser.Predicate.HAS_NOTES : lambda o, v, u: ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_NUM_NOTES, ClientNumberTest.NumberTest.STATICCreateFromCharacters( '>', 0 ) ),
-    SystemPredicateParser.Predicate.NO_NOTES : lambda o, v, u: ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_NUM_NOTES, ClientNumberTest.NumberTest.STATICCreateFromCharacters( '=', 0 ) ),
     SystemPredicateParser.Predicate.NUM_NOTES : lambda o, v, u: ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_NUM_NOTES, ClientNumberTest.NumberTest.STATICCreateFromCharacters( o, v ) ),
     SystemPredicateParser.Predicate.HAS_NOTE_NAME : lambda o, v, u: ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HAS_NOTE_NAME, ( True, strip_quotes( v ) ) ),
     SystemPredicateParser.Predicate.NO_NOTE_NAME : lambda o, v, u: ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HAS_NOTE_NAME, ( False, strip_quotes( v ) ) ),

@@ -377,6 +377,8 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.Liste
             
             if len( self._selected_media ) == 1 and len( list(self._selected_media)[0].GetHashes() ) == 1 and CG.client_controller.new_options.GetBoolean( 'show_extended_single_file_info_in_status_bar' ):
                 
+                # TODO: Were I feeling clever, this guy would also emit a tooltip, which we can calculate here no prob
+                
                 singleton_media = ClientMedia.FlattenMedia( self._selected_media )[0]
                 
                 lines = ClientMediaResultPrettyInfo.GetPrettyMediaResultInfoLines( singleton_media.GetMediaResult(), only_interesting_lines = True )
@@ -386,7 +388,6 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.Liste
                 texts = [ line.text for line in lines ]
                 
                 s += ', '.join( texts )
-                
                 
             else:
                 
@@ -866,7 +867,7 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.Liste
             
             ClientGUIMediaModalActions.EditFileNotes( self, media )
             
-            self.setFocus( QC.Qt.OtherFocusReason )
+            self.setFocus( QC.Qt.FocusReason.OtherFocusReason )
             
         
     
@@ -883,7 +884,7 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.Liste
                     dlg.exec()
                     
                 
-                self.setFocus( QC.Qt.OtherFocusReason )
+                self.setFocus( QC.Qt.FocusReason.OtherFocusReason )
                 
             
         
@@ -908,7 +909,7 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.Liste
                 dlg.exec()
                 
             
-            self.setFocus( QC.Qt.OtherFocusReason )
+            self.setFocus( QC.Qt.FocusReason.OtherFocusReason )
             
         
     
@@ -922,7 +923,7 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.Liste
             
             ClientGUIMediaModalActions.EditFileTimestamps( self, ordered_selected_flat_media )
             
-            self.setFocus( QC.Qt.OtherFocusReason )
+            self.setFocus( QC.Qt.FocusReason.OtherFocusReason )
             
         
     
@@ -955,7 +956,7 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.Liste
                     
                 
             
-            self.setFocus( QC.Qt.OtherFocusReason )
+            self.setFocus( QC.Qt.FocusReason.OtherFocusReason )
             
         
     
@@ -1076,7 +1077,7 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.Liste
                         
                     
                 
-                self.setFocus( QC.Qt.OtherFocusReason )
+                self.setFocus( QC.Qt.FocusReason.OtherFocusReason )
                 
             elif service_type == HC.IPFS:
                 
@@ -2484,7 +2485,7 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.Liste
             
             self._Select( ClientMediaFileFilter.FileFilter( ClientMediaFileFilter.FILE_FILTER_TAGS, ( tag_service_key, and_or_or, tags ) ) )
             
-            self.setFocus( QC.Qt.OtherFocusReason )
+            self.setFocus( QC.Qt.FocusReason.OtherFocusReason )
             
         
     

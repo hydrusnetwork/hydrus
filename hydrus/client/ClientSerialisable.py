@@ -89,7 +89,7 @@ def CreateTopImage( width, title, payload_description, text ):
     
     painter = QG.QPainter( top_qt_image )
     
-    painter.setBackground( QG.QBrush( QC.Qt.white ) )
+    painter.setBackground( QG.QBrush( QC.Qt.GlobalColor.white ) )
     
     painter.eraseRect( painter.viewport() )
     

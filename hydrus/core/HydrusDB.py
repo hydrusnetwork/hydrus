@@ -862,13 +862,13 @@ class HydrusDB( HydrusDBBase.DBBase ):
             
             if job_type in ( 'read_write', 'write' ):
                 
-                self._current_status = 'db write locked'
+                self._current_status = 'db writing'
                 
                 self._cursor_transaction_wrapper.NotifyWriteOccuring()
                 
             else:
                 
-                self._current_status = 'db read locked'
+                self._current_status = 'db reading'
                 
             
             self.publish_status_update()
@@ -1203,6 +1203,10 @@ class HydrusDB( HydrusDBBase.DBBase ):
                 
                 self._CloseDBConnection()
                 
+                self._current_status = 'db locked'
+                
+                self.publish_status_update()
+                
                 while self._pause_and_disconnect:
                     
                     if self._local_shutdown or HG.model_shutdown:
@@ -1214,6 +1218,8 @@ class HydrusDB( HydrusDBBase.DBBase ):
                     
                 
                 self._InitDBConnection()
+                
+                self._current_status = ''
                 
             
         

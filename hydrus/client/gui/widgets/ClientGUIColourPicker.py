@@ -241,7 +241,7 @@ class ColourPickerButton( QW.QPushButton ):
     
     def mouseReleaseEvent( self, event ):
         
-        if event.button() != QC.Qt.RightButton:
+        if event.button() != QC.Qt.MouseButton.RightButton:
             
             return QW.QPushButton.mouseReleaseEvent( self, event )
             

@@ -258,7 +258,7 @@ class MediaResultsPanelThumbnails( ClientGUIMediaResultsPanel.MediaResultsPanel 
             
             painter.setCompositionMode( QG.QPainter.CompositionMode_Source )
             
-            painter.setBackground( QG.QBrush( QC.Qt.transparent ) )
+            painter.setBackground( QG.QBrush( QC.Qt.GlobalColor.transparent ) )
             
             painter.eraseRect( painter.viewport() )
             
@@ -954,7 +954,7 @@ class MediaResultsPanelThumbnails( ClientGUIMediaResultsPanel.MediaResultsPanel 
     
     def mouseMoveEvent( self, event ):
         
-        if event.buttons() & QC.Qt.LeftButton:
+        if event.buttons() & QC.Qt.MouseButton.LeftButton:
             
             we_started_dragging_on_this_panel = self._drag_init_coordinates is not None
             
@@ -986,11 +986,11 @@ class MediaResultsPanelThumbnails( ClientGUIMediaResultsPanel.MediaResultsPanel 
                     
                     if len( media ) > 0:
                         
-                        alt_down = event.modifiers() & QC.Qt.AltModifier
+                        alt_down = event.modifiers() & QC.Qt.KeyboardModifier.AltModifier
                         
                         result = ClientGUIDragDrop.DoFileExportDragDrop( self, self._page_key, media, alt_down )
                         
-                        if result not in ( QC.Qt.IgnoreAction, ):
+                        if result not in ( QC.Qt.DropAction.IgnoreAction, ):
                             
                             self.focusMediaPaused.emit()
                             
@@ -1010,7 +1010,7 @@ class MediaResultsPanelThumbnails( ClientGUIMediaResultsPanel.MediaResultsPanel 
     
     def mouseReleaseEvent( self, event ):
         
-        if event.button() != QC.Qt.RightButton:
+        if event.button() != QC.Qt.MouseButton.RightButton:
             
             QW.QScrollArea.mouseReleaseEvent( self, event )
             
@@ -1970,11 +1970,11 @@ class MediaResultsPanelThumbnails( ClientGUIMediaResultsPanel.MediaResultsPanel 
             
             thumb = self._parent._GetThumbnailUnderMouse( event )
             
-            right_on_whitespace = event.button() == QC.Qt.RightButton and thumb is None
+            right_on_whitespace = event.button() == QC.Qt.MouseButton.RightButton and thumb is None
             
             if not right_on_whitespace:
                 
-                self._parent._HitMedia( thumb, event.modifiers() & QC.Qt.ControlModifier, event.modifiers() & QC.Qt.ShiftModifier )
+                self._parent._HitMedia( thumb, event.modifiers() & QC.Qt.KeyboardModifier.ControlModifier, event.modifiers() & QC.Qt.KeyboardModifier.ShiftModifier )
                 
             
             # this specifically does not scroll to media, as for clicking (esp. double-clicking attempts), the scroll can be jarring
@@ -2359,7 +2359,7 @@ class Thumbnail( Selectable ):
             bd_colour = media_panel.GetColour( border_colour_type )
             
             painter.setBrush( QG.QBrush( bd_colour ) )
-            painter.setPen( QG.QPen( QC.Qt.NoPen ) )
+            painter.setPen( QG.QPen( QC.Qt.PenStyle.NoPen ) )
             
             rectangles = []
             

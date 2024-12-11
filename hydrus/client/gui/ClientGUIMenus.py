@@ -199,7 +199,7 @@ class StatusBarRedirectFilter( QC.QObject ):
         
         try:
             
-            if event.type() == QC.QEvent.StatusTip:
+            if event.type() == QC.QEvent.Type.StatusTip:
                 
                 QW.QApplication.instance().sendEvent( CG.client_controller.gui, event )
                 

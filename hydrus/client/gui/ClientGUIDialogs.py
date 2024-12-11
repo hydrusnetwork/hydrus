@@ -22,7 +22,7 @@ from hydrus.client.gui.widgets import ClientGUIRegex
 
 class Dialog( QP.Dialog ):
     
-    def __init__( self, parent, title, style = QC.Qt.Dialog, position = 'topleft' ):
+    def __init__( self, parent, title, style = QC.Qt.WindowType.Dialog, position = 'topleft' ):
 
         super().__init__( parent )
         
@@ -39,7 +39,7 @@ class Dialog( QP.Dialog ):
             self.move( pos )
             
         
-        self.setWindowFlag( QC.Qt.WindowContextHelpButtonHint, on = False )
+        self.setWindowFlag( QC.Qt.WindowType.WindowContextHelpButtonHint, on = False )
         
         self._new_options = CG.client_controller.new_options
         
@@ -109,7 +109,7 @@ class DialogChooseNewServiceMethod( Dialog ):
         
         st = ClientGUICommon.BetterStaticText( self, '-or-' )
         
-        st.setAlignment( QC.Qt.AlignCenter )
+        st.setAlignment( QC.Qt.AlignmentFlag.AlignCenter )
         
         QP.AddToLayout( vbox, st, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, self._setup, CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -537,7 +537,7 @@ class DialogSelectFromURLTree( Dialog ):
         
         root_item = QW.QTreeWidgetItem()
         root_item.setText( 0, root_name )
-        root_item.setCheckState( 0, QC.Qt.Checked )
+        root_item.setCheckState( 0, QC.Qt.CheckState.Checked )
         self._tree.addTopLevelItem( root_item )
         
         self._AddDirectory( root_item, children )
@@ -577,7 +577,7 @@ class DialogSelectFromURLTree( Dialog ):
                 item = QW.QTreeWidgetItem()
                 item.setText( 0, item_name )
                 item.setCheckState( 0, root.checkState( 0 ) )
-                item.setData( 0, QC.Qt.UserRole, data )
+                item.setData( 0, QC.Qt.ItemDataRole.UserRole, data )
                 root.addChild( item )
                 
             else:
@@ -600,9 +600,9 @@ class DialogSelectFromURLTree( Dialog ):
             
             child_item = parent_item.child( i )
             
-            if child_item.checkState( 0 ) == QC.Qt.Checked:
+            if child_item.checkState( 0 ) == QC.Qt.CheckState.Checked:
                 
-                data = child_item.data( 0, QC.Qt.UserRole )
+                data = child_item.data( 0, QC.Qt.ItemDataRole.UserRole )
                 
                 if data is not None:
                     
@@ -723,7 +723,7 @@ class DialogTextEntry( Dialog ):
         
         QP.SetInitialSize( self, size_hint )
         
-        self._text.setFocus( QC.Qt.OtherFocusReason )
+        self._text.setFocus( QC.Qt.FocusReason.OtherFocusReason )
         
     
     def _CheckText( self ):

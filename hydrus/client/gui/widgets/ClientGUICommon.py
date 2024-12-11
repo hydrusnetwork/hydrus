@@ -353,15 +353,15 @@ class BetterCheckBoxList( QW.QListWidget ):
         
         item = QW.QListWidgetItem()
         
-        item.setFlags( item.flags() | QC.Qt.ItemIsUserCheckable )
+        item.setFlags( item.flags() | QC.Qt.ItemFlag.ItemIsUserCheckable )
         
-        qt_state = QC.Qt.Checked if starts_checked else QC.Qt.Unchecked
+        qt_state = QC.Qt.CheckState.Checked if starts_checked else QC.Qt.CheckState.Unchecked
         
         item.setCheckState( qt_state )
         
         item.setText( text )
         
-        item.setData( QC.Qt.UserRole, data )
+        item.setData( QC.Qt.ItemDataRole.UserRole, data )
         
         self.addItem( item )
         
@@ -370,7 +370,7 @@ class BetterCheckBoxList( QW.QListWidget ):
     
     def Check( self, index: int, value: bool = True ):
         
-        qt_state = QC.Qt.Checked if value else QC.Qt.Unchecked
+        qt_state = QC.Qt.CheckState.Checked if value else QC.Qt.CheckState.Unchecked
         
         item = self.item( index )
         
@@ -386,7 +386,7 @@ class BetterCheckBoxList( QW.QListWidget ):
     
     def GetData( self, index: int ):
         
-        return self.item( index ).data( QC.Qt.UserRole )
+        return self.item( index ).data( QC.Qt.ItemDataRole.UserRole )
         
     
     def GetCheckedIndices( self ) -> typing.List[ int ]:
@@ -412,7 +412,7 @@ class BetterCheckBoxList( QW.QListWidget ):
     
     def IsChecked( self, index: int ) -> bool:
         
-        return self.item( index ).checkState() == QC.Qt.Checked
+        return self.item( index ).checkState() == QC.Qt.CheckState.Checked
         
     
     def IsSelected( self, index: int ) -> bool:
@@ -434,7 +434,7 @@ class BetterCheckBoxList( QW.QListWidget ):
     
     def mousePressEvent( self, event ):
         
-        if event.button() == QC.Qt.RightButton:
+        if event.button() == QC.Qt.MouseButton.RightButton:
             
             self.rightClicked.emit()
             
@@ -470,11 +470,11 @@ class BetterChoice( QW.QComboBox ):
         
         if selection != -1:
             
-            return self.itemData( selection, QC.Qt.UserRole )
+            return self.itemData( selection, QC.Qt.ItemDataRole.UserRole )
             
         elif self.count() > 0:
             
-            return self.itemData( 0, QC.Qt.UserRole )
+            return self.itemData( 0, QC.Qt.ItemDataRole.UserRole )
             
         else:
             
@@ -486,7 +486,7 @@ class BetterChoice( QW.QComboBox ):
         
         for i in range( self.count() ):
             
-            if data == self.itemData( i, QC.Qt.UserRole ):
+            if data == self.itemData( i, QC.Qt.ItemDataRole.UserRole ):
                 
                 self.setCurrentIndex( i )
                 
@@ -594,7 +594,7 @@ class ButtonWithMenuArrow( QW.QToolButton ):
         
         self.setPopupMode( QW.QToolButton.ToolButtonPopupMode.MenuButtonPopup )
         
-        self.setToolButtonStyle( QC.Qt.ToolButtonTextOnly )
+        self.setToolButtonStyle( QC.Qt.ToolButtonStyle.ToolButtonTextOnly )
         
         self.setDefaultAction( action )
         
@@ -623,7 +623,7 @@ class ButtonWithMenuArrow( QW.QToolButton ):
         
         try:
             
-            if event.type() == QC.QEvent.Show and watched == self._menu:
+            if event.type() == QC.QEvent.Type.Show and watched == self._menu:
                 
                 pos = QG.QCursor.pos()
                 
@@ -762,7 +762,7 @@ class BetterStaticText( QP.EllipsizedLabel ):
         super().__init__( parent, ellipsize_end = ellipsize_end )
         
         # otherwise by default html in 'this is a <hr> parsing step' stuff renders fully lmaoooo
-        self.setTextFormat( QC.Qt.PlainText )
+        self.setTextFormat( QC.Qt.TextFormat.PlainText )
         
         self._tooltip_label = tooltip_label
         
@@ -816,8 +816,8 @@ class BetterHyperLink( BetterStaticText ):
         
         self.setToolTip( ClientNetworkingFunctions.ConvertURLToHumanString( self._url ) )
         
-        self.setTextFormat( QC.Qt.RichText )
-        self.setTextInteractionFlags( QC.Qt.LinksAccessibleByMouse | QC.Qt.LinksAccessibleByKeyboard )
+        self.setTextFormat( QC.Qt.TextFormat.RichText )
+        self.setTextInteractionFlags( QC.Qt.TextInteractionFlag.LinksAccessibleByMouse | QC.Qt.TextInteractionFlag.LinksAccessibleByKeyboard )
         
         self._colours = {
             'link_color' : QG.QColor( 0, 0, 255 )
@@ -932,7 +932,7 @@ class BusyCursor( object ):
     
     def __enter__( self ):
         
-        QW.QApplication.setOverrideCursor( QC.Qt.WaitCursor )
+        QW.QApplication.setOverrideCursor( QC.Qt.CursorShape.WaitCursor )
     
     def __exit__( self, exc_type, exc_val, exc_tb ):
         
@@ -1696,7 +1696,7 @@ class TextCatchEnterEventFilter( QC.QObject ):
         
         try:
             
-            if event.type() == QC.QEvent.KeyPress and event.key() in ( QC.Qt.Key_Enter, QC.Qt.Key_Return ):
+            if event.type() == QC.QEvent.Type.KeyPress and event.key() in ( QC.Qt.Key.Key_Enter, QC.Qt.Key.Key_Return ):
                 
                 self._callable()
                 

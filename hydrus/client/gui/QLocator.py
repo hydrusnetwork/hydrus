@@ -61,7 +61,7 @@ class FocusEventFilter(QC.QObject):
     def eventFilter(self, watched, event) -> bool:
         try:
             
-            if event.type() == QC.QEvent.FocusIn:
+            if event.type() == QC.QEvent.Type.FocusIn:
                 
                 self.focused.emit()
                 
@@ -95,16 +95,16 @@ class QLocatorTitleWidget(QW.QWidget):
         self.iconLabel.setPixmap(self.icon.pixmap(self.iconHeight, self.iconHeight))
         self.titleLabel = QW.QLabel()
         self.titleLabel.setText(title)
-        self.titleLabel.setTextFormat(QC.Qt.RichText)
+        self.titleLabel.setTextFormat(QC.Qt.TextFormat.RichText)
         self.countLabel = QW.QLabel()
         self.layout().setContentsMargins(4, 1, 4, 1)
         self.layout().addWidget(self.iconLabel)
         self.layout().addWidget(self.titleLabel)
         self.layout().addStretch(1)
         self.layout().addWidget(self.countLabel)
-        self.layout().setAlignment(self.countLabel, QC.Qt.AlignVCenter)
-        self.layout().setAlignment(self.iconLabel, QC.Qt.AlignVCenter)
-        self.layout().setAlignment(self.titleLabel, QC.Qt.AlignVCenter)
+        self.layout().setAlignment(self.countLabel, QC.Qt.AlignmentFlag.AlignVCenter)
+        self.layout().setAlignment(self.iconLabel, QC.Qt.AlignmentFlag.AlignVCenter)
+        self.layout().setAlignment(self.titleLabel, QC.Qt.AlignmentFlag.AlignVCenter)
         titleFont = self.titleLabel.font()
         titleFont.setBold(True)
         self.titleLabel.setFont(titleFont)
@@ -136,31 +136,31 @@ class QLocatorResultWidget(QW.QWidget):
         self.mainTextLabel = QW.QLabel(self)
         self.primaryTextWidth = primaryTextWidth
         self.mainTextLabel.setMinimumWidth(primaryTextWidth)
-        self.mainTextLabel.setTextFormat(QC.Qt.RichText)
-        self.mainTextLabel.setTextInteractionFlags(QC.Qt.NoTextInteraction)
+        self.mainTextLabel.setTextFormat(QC.Qt.TextFormat.RichText)
+        self.mainTextLabel.setTextInteractionFlags(QC.Qt.TextInteractionFlag.NoTextInteraction)
         self.secondaryTextLabel = QW.QLabel(self)
         self.secondaryTextWidth = secondaryTextWidth
         self.secondaryTextLabel.setMaximumWidth(secondaryTextWidth)
-        self.secondaryTextLabel.setTextFormat(QC.Qt.RichText)
-        self.secondaryTextLabel.setTextInteractionFlags(QC.Qt.NoTextInteraction)
+        self.secondaryTextLabel.setTextFormat(QC.Qt.TextFormat.RichText)
+        self.secondaryTextLabel.setTextInteractionFlags(QC.Qt.TextInteractionFlag.NoTextInteraction)
         self.layout().setContentsMargins(4, 1, 4, 1)
         self.layout().addWidget(self.iconLabel)
         self.layout().addWidget(self.mainTextLabel)
         self.layout().addStretch(1)
         self.layout().addWidget(self.secondaryTextLabel)
-        self.layout().setAlignment(self.mainTextLabel, QC.Qt.AlignVCenter)
-        self.layout().setAlignment(self.iconLabel, QC.Qt.AlignVCenter)
-        self.layout().setAlignment(self.secondaryTextLabel, QC.Qt.AlignVCenter)
+        self.layout().setAlignment(self.mainTextLabel, QC.Qt.AlignmentFlag.AlignVCenter)
+        self.layout().setAlignment(self.iconLabel, QC.Qt.AlignmentFlag.AlignVCenter)
+        self.layout().setAlignment(self.secondaryTextLabel, QC.Qt.AlignmentFlag.AlignVCenter)
         self.setFixedHeight(height)
         self.setSizePolicy(QW.QSizePolicy.Policy.Expanding, QW.QSizePolicy.Policy.Fixed)
-        self.activateEnterShortcut = QW.QShortcut(QG.QKeySequence(QC.Qt.Key_Enter), self)
-        self.activateEnterShortcut.setContext(QC.Qt.WidgetShortcut)
-        self.activateReturnShortcut = QW.QShortcut(QG.QKeySequence(QC.Qt.Key_Return), self)
-        self.activateReturnShortcut.setContext(QC.Qt.WidgetShortcut)
-        self.upShortcut = QW.QShortcut(QG.QKeySequence(QC.Qt.Key_Up), self)
-        self.upShortcut.setContext(QC.Qt.WidgetShortcut)
-        self.downShortcut = QW.QShortcut(QG.QKeySequence(QC.Qt.Key_Down), self)
-        self.downShortcut.setContext(QC.Qt.WidgetShortcut)
+        self.activateEnterShortcut = QW.QShortcut(QG.QKeySequence(QC.Qt.Key.Key_Enter), self)
+        self.activateEnterShortcut.setContext(QC.Qt.ShortcutContext.WidgetShortcut)
+        self.activateReturnShortcut = QW.QShortcut(QG.QKeySequence(QC.Qt.Key.Key_Return), self)
+        self.activateReturnShortcut.setContext(QC.Qt.ShortcutContext.WidgetShortcut)
+        self.upShortcut = QW.QShortcut(QG.QKeySequence(QC.Qt.Key.Key_Up), self)
+        self.upShortcut.setContext(QC.Qt.ShortcutContext.WidgetShortcut)
+        self.downShortcut = QW.QShortcut(QG.QKeySequence(QC.Qt.Key.Key_Down), self)
+        self.downShortcut.setContext(QC.Qt.ShortcutContext.WidgetShortcut)
 
         self.selectedPalette = self.palette()
         self.selectedPalette.setColor(QG.QPalette.Window, QG.QPalette().color(QG.QPalette.WindowText))
@@ -244,7 +244,7 @@ class QLocatorResultWidget(QW.QWidget):
         self.iconLabel.setPixmap(iconToUse.pixmap(self.iconHeight, self.iconHeight, QG.QIcon.Mode.Selected if self.selected else QG.QIcon.Mode.Normal))
 
     def keyPressEvent(self, ev: QG.QKeyEvent):
-        if ev.key() != QC.Qt.Key_Up and ev.key() != QC.Qt.Key_Down and ev.key() != QC.Qt.Key_Enter and ev.key() != QC.Qt.Key_Return:
+        if ev.key() != QC.Qt.Key.Key_Up and ev.key() != QC.Qt.Key.Key_Down and ev.key() != QC.Qt.Key.Key_Enter and ev.key() != QC.Qt.Key.Key_Return:
             QW.QApplication.postEvent(self.keyEventTarget, QG.QKeyEvent(ev.type(), ev.key(), ev.modifiers(), ev.text(), ev.isAutoRepeat()))
             self.keyEventTarget.setFocus()
         else:
@@ -373,7 +373,7 @@ class QLocatorWidget(QW.QWidget):
     finished = QC.Signal()
     def __init__(self, parent = None, width: int = 600, resultHeight: int = 36, titleHeight: int = 36, primaryTextWidth: int = 320, secondaryTextWidth: int = 200, maxVisibleItemCount: int = 8):
         super().__init__(parent)
-        self.alignment = QC.Qt.AlignCenter
+        self.alignment = QC.Qt.AlignmentFlag.AlignCenter
         self.resultHeight = resultHeight
         self.titleHeight = titleHeight
         self.primaryTextWidth = primaryTextWidth
@@ -406,12 +406,12 @@ class QLocatorWidget(QW.QWidget):
         self.resultLayout.setContentsMargins(0, 0, 0, 0)
         self.resultLayout.setSpacing(0)
         self.setFixedWidth(width)
-        self.setWindowFlags(QC.Qt.FramelessWindowHint | QC.Qt.WindowStaysOnTopHint | QC.Qt.CustomizeWindowHint | QC.Qt.Popup)
+        self.setWindowFlags(QC.Qt.WindowType.FramelessWindowHint | QC.Qt.WindowType.WindowStaysOnTopHint | QC.Qt.WindowType.CustomizeWindowHint | QC.Qt.WindowType.Popup)
         self.resultList.setSizeAdjustPolicy(QW.QAbstractScrollArea.SizeAdjustPolicy.AdjustToContents)
         self.setSizePolicy(QW.QSizePolicy.Policy.Fixed, QW.QSizePolicy.Policy.Maximum)
-        self.setEscapeShortcuts([QC.Qt.Key_Escape])
-        self.editorDownShortcut = QW.QShortcut(QG.QKeySequence(QC.Qt.Key_Down), self.searchEdit)
-        self.editorDownShortcut.setContext(QC.Qt.WidgetShortcut)
+        self.setEscapeShortcuts([QC.Qt.Key.Key_Escape])
+        self.editorDownShortcut = QW.QShortcut(QG.QKeySequence(QC.Qt.Key.Key_Down), self.searchEdit)
+        self.editorDownShortcut.setContext(QC.Qt.ShortcutContext.WidgetShortcut)
         self.editorDownShortcut.activated.connect(self.handleEditorDown)
 
         def handleTextEdited():
@@ -446,10 +446,10 @@ class QLocatorWidget(QW.QWidget):
         self.updateResultListHeight()
 
     def setAlignment( self, alignment ):
-        if alignment == QC.Qt.AlignCenter:
+        if alignment == QC.Qt.AlignmentFlag.AlignCenter:
             self.alignment = alignment
             self.updateAlignment()
-        elif alignment == QC.Qt.AlignTop:
+        elif alignment == QC.Qt.AlignmentFlag.AlignTop:
             self.alignment = alignment
             self.updateAlignment()
 
@@ -466,12 +466,12 @@ class QLocatorWidget(QW.QWidget):
         if widget != self: # there is a parent
             screenRect = widget.geometry()
 
-        if self.alignment == QC.Qt.AlignCenter:
-            centerRect = QW.QStyle.alignedRect(QC.Qt.LeftToRight, QC.Qt.AlignCenter, self.size(), screenRect)
+        if self.alignment == QC.Qt.AlignmentFlag.AlignCenter:
+            centerRect = QW.QStyle.alignedRect(QC.Qt.LayoutDirection.LeftToRight, QC.Qt.AlignmentFlag.AlignCenter, self.size(), screenRect)
             centerRect.setY(max(0, centerRect.y() - self.resultHeight * 4))
             self.setGeometry(centerRect)
-        elif self.alignment == QC.Qt.AlignTop:
-            rect = QW.QStyle.alignedRect(QC.Qt.LeftToRight, QC.Qt.AlignHCenter | QC.Qt.AlignTop, self.size(), screenRect)
+        elif self.alignment == QC.Qt.AlignmentFlag.AlignTop:
+            rect = QW.QStyle.alignedRect(QC.Qt.LayoutDirection.LeftToRight, QC.Qt.AlignmentFlag.AlignHCenter | QC.Qt.AlignmentFlag.AlignTop, self.size(), screenRect)
             self.setGeometry(rect)
 
     def paintEvent(self, event):

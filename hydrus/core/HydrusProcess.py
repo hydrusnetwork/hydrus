@@ -6,6 +6,7 @@ import time
 from hydrus.core import HydrusBoot
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
+from hydrus.core import HydrusEnvironment
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusPSUtil
@@ -70,9 +71,7 @@ def GetSubprocessEnv():
     
     if HG.subprocess_report_mode:
         
-        env = os.environ.copy()
-        
-        HydrusData.ShowText( 'Your unmodified env is: {}'.format( env ) )
+        HydrusEnvironment.DumpEnv()
         
     
     env = os.environ.copy()

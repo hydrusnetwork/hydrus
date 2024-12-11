@@ -86,7 +86,7 @@ class LabelledSlider( QW.QWidget ):
         self._max_label = QW.QLabel()
         self._value_label = QW.QLabel()
         self._slider = QW.QSlider()
-        self._slider.setOrientation( QC.Qt.Horizontal )
+        self._slider.setOrientation( QC.Qt.Orientation.Horizontal )
         self._slider.setTickInterval( 1 )
         self._slider.setTickPosition( QW.QSlider.TickPosition.TicksBothSides )
         
@@ -96,8 +96,8 @@ class LabelledSlider( QW.QWidget ):
         
         self.layout().addLayout( top_layout )
         self.layout().addWidget( self._value_label )
-        self._value_label.setAlignment( QC.Qt.AlignVCenter | QC.Qt.AlignHCenter )
-        self.layout().setAlignment( self._value_label, QC.Qt.AlignHCenter )
+        self._value_label.setAlignment( QC.Qt.AlignmentFlag.AlignVCenter | QC.Qt.AlignmentFlag.AlignHCenter )
+        self.layout().setAlignment( self._value_label, QC.Qt.AlignmentFlag.AlignHCenter )
         
         self._slider.valueChanged.connect( self._UpdateLabels )
         
@@ -370,7 +370,7 @@ class TabBar( QW.QTabBar ):
         
         index = self.tabAt( event.position().toPoint() )
         
-        if event.button() == QC.Qt.LeftButton:
+        if event.button() == QC.Qt.MouseButton.LeftButton:
             
             self._last_clicked_tab_index = index
             
@@ -386,7 +386,7 @@ class TabBar( QW.QTabBar ):
         
         index = self.tabAt( event.position().toPoint() )
         
-        if event.button() == QC.Qt.MiddleButton:
+        if event.button() == QC.Qt.MouseButton.MiddleButton:
             
             if index != -1:
                 
@@ -403,7 +403,7 @@ class TabBar( QW.QTabBar ):
         
         index = self.tabAt( event.position().toPoint() )
         
-        if event.button() == QC.Qt.LeftButton:
+        if event.button() == QC.Qt.MouseButton.LeftButton:
             
             if index == -1:
                 
@@ -416,7 +416,7 @@ class TabBar( QW.QTabBar ):
             
             return
             
-        elif event.button() == QC.Qt.MiddleButton:
+        elif event.button() == QC.Qt.MouseButton.MiddleButton:
             
             if index == -1:
                 
@@ -453,7 +453,7 @@ class TabBar( QW.QTabBar ):
             
             if tab_index != -1:
                 
-                shift_down = event.modifiers() & QC.Qt.ShiftModifier
+                shift_down = event.modifiers() & QC.Qt.KeyboardModifier.ShiftModifier
                 
                 if shift_down:
                     
@@ -622,7 +622,7 @@ class TabWidgetWithDnD( QW.QTabWidget ):
             return
             
         
-        if e.buttons() != QC.Qt.LeftButton:
+        if e.buttons() != QC.Qt.MouseButton.LeftButton:
             
             return
             
@@ -673,16 +673,16 @@ class TabWidgetWithDnD( QW.QTabWidget ):
         
         drag.setPixmap( pixmap )
         
-        cursor = QG.QCursor( QC.Qt.OpenHandCursor )
+        cursor = QG.QCursor( QC.Qt.CursorShape.OpenHandCursor )
         
         drag.setHotSpot( QC.QPoint( 0, 0 ) )
         
         # this puts the tab pixmap exactly where we picked it up, but it looks bad
         # drag.setHotSpot( tab_bar_mouse_pos - tab_rect.topLeft() )
         
-        drag.setDragCursor( cursor.pixmap(), QC.Qt.MoveAction )
+        drag.setDragCursor( cursor.pixmap(), QC.Qt.DropAction.MoveAction )
         
-        drag.exec_( QC.Qt.MoveAction )
+        drag.exec_( QC.Qt.DropAction.MoveAction )
         
 
     def dragEnterEvent( self, e: QG.QDragEnterEvent ):
@@ -721,7 +721,7 @@ class TabWidgetWithDnD( QW.QTabWidget ):
         
         if tab_index != -1:
             
-            shift_down = event.modifiers() & QC.Qt.ShiftModifier
+            shift_down = event.modifiers() & QC.Qt.KeyboardModifier.ShiftModifier
             
             if shift_down:
                 
@@ -809,7 +809,7 @@ class TabWidgetWithDnD( QW.QTabWidget ):
             w = w.parentWidget()
             
 
-        e.setDropAction( QC.Qt.MoveAction )
+        e.setDropAction( QC.Qt.DropAction.MoveAction )
         
         e.accept()
         
@@ -887,7 +887,7 @@ class TabWidgetWithDnD( QW.QTabWidget ):
             
             self.insertTab( insert_index, source_page, source_name )
 
-            shift_down = e.modifiers() & QC.Qt.ShiftModifier
+            shift_down = e.modifiers() & QC.Qt.KeyboardModifier.ShiftModifier
             
             follow_dropped_page = not shift_down
 
@@ -1100,25 +1100,25 @@ def AddToLayout( layout, item, flag = None, alignment = None ):
         
         if flag in ( CC.FLAGS_CENTER, CC.FLAGS_SIZER_CENTER ):
             
-            alignment = QC.Qt.AlignVCenter | QC.Qt.AlignHCenter
+            alignment = QC.Qt.AlignmentFlag.AlignVCenter | QC.Qt.AlignmentFlag.AlignHCenter
             
         if flag == CC.FLAGS_ON_LEFT:
             
-            alignment = QC.Qt.AlignLeft | QC.Qt.AlignVCenter
+            alignment = QC.Qt.AlignmentFlag.AlignLeft | QC.Qt.AlignmentFlag.AlignVCenter
             
         elif flag == CC.FLAGS_ON_RIGHT:
             
-            alignment = QC.Qt.AlignRight | QC.Qt.AlignVCenter
+            alignment = QC.Qt.AlignmentFlag.AlignRight | QC.Qt.AlignmentFlag.AlignVCenter
             
         elif flag in ( CC.FLAGS_CENTER_PERPENDICULAR, CC.FLAGS_CENTER_PERPENDICULAR_EXPAND_DEPTH ):
             
             if isinstance( layout, QW.QHBoxLayout ):
                 
-                alignment = QC.Qt.AlignVCenter
+                alignment = QC.Qt.AlignmentFlag.AlignVCenter
                 
             else:
                 
-                alignment = QC.Qt.AlignHCenter
+                alignment = QC.Qt.AlignmentFlag.AlignHCenter
                 
             
         
@@ -1230,7 +1230,7 @@ def AdjustOpacity( image: QG.QImage, opacity_factor ):
     
     new_image.setDevicePixelRatio( image.devicePixelRatio() )
     
-    new_image.fill( QC.Qt.transparent )
+    new_image.fill( QC.Qt.GlobalColor.transparent )
     
     painter = QG.QPainter( new_image )
     
@@ -1245,11 +1245,12 @@ def ToKeySequence( modifiers, key ):
     
     if QtInit.WE_ARE_QT5:
         
+        # noinspection PyUnresolvedReferences
         if isinstance( modifiers, QC.Qt.KeyboardModifiers ):
             
             seq_str = ''
             
-            for modifier in [ QC.Qt.ShiftModifier, QC.Qt.ControlModifier, QC.Qt.AltModifier, QC.Qt.MetaModifier, QC.Qt.KeypadModifier, QC.Qt.GroupSwitchModifier ]:
+            for modifier in [ QC.Qt.KeyboardModifier.ShiftModifier, QC.Qt.KeyboardModifier.ControlModifier, QC.Qt.KeyboardModifier.AltModifier, QC.Qt.KeyboardModifier.MetaModifier, QC.Qt.KeyboardModifier.KeypadModifier, QC.Qt.KeyboardModifier.GroupSwitchModifier ]:
                 
                 if modifiers & modifier: seq_str += QG.QKeySequence( modifier ).toString()
                 
@@ -1275,7 +1276,7 @@ def AddShortcut( widget, modifier, key, func: typing.Callable, *args ):
     
     shortcut.setKey( ToKeySequence( modifier, key ) )
     
-    shortcut.setContext( QC.Qt.WidgetWithChildrenShortcut )
+    shortcut.setContext( QC.Qt.ShortcutContext.WidgetWithChildrenShortcut )
     
     shortcut.activated.connect( lambda: func( *args ) )
     
@@ -1387,16 +1388,16 @@ def GetClientData( widget, idx ):
     
     if isinstance( widget, QW.QComboBox ):
         
-        return widget.itemData( idx, QC.Qt.UserRole )
+        return widget.itemData( idx, QC.Qt.ItemDataRole.UserRole )
     
     
     elif isinstance( widget, QW.QTreeWidget ):
         
-        return widget.topLevelItem( idx ).data( 0, QC.Qt.UserRole )
+        return widget.topLevelItem( idx ).data( 0, QC.Qt.ItemDataRole.UserRole )
     
     elif isinstance( widget, QW.QListWidget ):
         
-        return widget.item( idx ).data( QC.Qt.UserRole )
+        return widget.item( idx ).data( QC.Qt.ItemDataRole.UserRole )
     
     else:
         
@@ -1574,8 +1575,8 @@ class UIActionSimulator:
             widget = QW.QApplication.focusWidget()
             
         
-        ev1 = QG.QKeyEvent( QC.QEvent.KeyPress, key, QC.Qt.NoModifier, text = text )
-        ev2 = QG.QKeyEvent( QC.QEvent.KeyRelease, key, QC.Qt.NoModifier, text = text )
+        ev1 = QG.QKeyEvent( QC.QEvent.Type.KeyPress, key, QC.Qt.KeyboardModifier.NoModifier, text = text )
+        ev2 = QG.QKeyEvent( QC.QEvent.Type.KeyRelease, key, QC.Qt.KeyboardModifier.NoModifier, text = text )
         
         QW.QApplication.instance().postEvent( widget, ev1 )
         QW.QApplication.instance().postEvent( widget, ev2 )
@@ -1662,7 +1663,7 @@ class EllipsizedLabel( QW.QLabel ):
         
         for text_line in text_lines:
             
-            elided_line = fontMetrics.elidedText( text_line, QC.Qt.ElideRight, my_width )
+            elided_line = fontMetrics.elidedText( text_line, QC.Qt.TextElideMode.ElideRight, my_width )
             
             x = 0
             width = my_width
@@ -1702,7 +1703,7 @@ class EllipsizedLabel( QW.QLabel ):
 
                     last_line = text_line[ line.textStart(): ]
                 
-                    elided_last_line = fontMetrics.elidedText( last_line, QC.Qt.ElideRight, self.width() )
+                    elided_last_line = fontMetrics.elidedText( last_line, QC.Qt.TextElideMode.ElideRight, self.width() )
                 
                     painter.drawText( QC.QPoint( 0, y + fontMetrics.ascent() ), elided_last_line )
                     
@@ -1734,7 +1735,7 @@ class Dialog( QW.QDialog ):
         
         super().__init__( parent, **kwargs )
         
-        self.setWindowFlag( QC.Qt.WindowContextHelpButtonHint, on = False )
+        self.setWindowFlag( QC.Qt.WindowType.WindowContextHelpButtonHint, on = False )
         
         if title is not None:
             
@@ -1985,17 +1986,17 @@ class TreeWidgetWithInheritedCheckState( QW.QTreeWidget ):
             
             all_values = { child.checkState( 0 ) for child in self._GetChildren( parent ) }
             
-            if all_values == { QC.Qt.Checked }:
+            if all_values == { QC.Qt.CheckState.Checked }:
                 
-                end_state = QC.Qt.Checked
+                end_state = QC.Qt.CheckState.Checked
                 
-            elif all_values == { QC.Qt.Unchecked }:
+            elif all_values == { QC.Qt.CheckState.Unchecked }:
                 
-                end_state = QC.Qt.Unchecked
+                end_state = QC.Qt.CheckState.Unchecked
                 
             else:
                 
-                end_state = QC.Qt.PartiallyChecked
+                end_state = QC.Qt.CheckState.PartiallyChecked
                 
             
             if end_state != parent.checkState( 0 ):
@@ -2061,36 +2062,36 @@ class WidgetEventFilter ( QC.QObject ):
             
             event_killed = False
             
-            if type == QC.QEvent.WindowStateChange:
+            if type == QC.QEvent.Type.WindowStateChange:
                 
                 if isValid( self._parent_widget ):
                     
-                    if self._parent_widget.isMaximized() or (event.oldState() & QC.Qt.WindowMaximized): event_killed = event_killed or self._ExecuteCallbacks( 'EVT_MAXIMIZE', event )
+                    if self._parent_widget.isMaximized() or (event.oldState() & QC.Qt.WindowState.WindowMaximized): event_killed = event_killed or self._ExecuteCallbacks( 'EVT_MAXIMIZE', event )
                 
-            elif type == QC.QEvent.MouseButtonDblClick:
+            elif type == QC.QEvent.Type.MouseButtonDblClick:
                 
-                if event.button() == QC.Qt.LeftButton:
+                if event.button() == QC.Qt.MouseButton.LeftButton:
                     
                     event_killed = event_killed or self._ExecuteCallbacks( 'EVT_LEFT_DCLICK', event )
                     
-                elif event.button() == QC.Qt.RightButton:
+                elif event.button() == QC.Qt.MouseButton.RightButton:
                     
                     event_killed = event_killed or self._ExecuteCallbacks( 'EVT_RIGHT_DCLICK', event )
                     
                 
-            elif type == QC.QEvent.MouseButtonPress:
+            elif type == QC.QEvent.Type.MouseButtonPress:
                 
-                if event.buttons() & QC.Qt.LeftButton: event_killed = event_killed or self._ExecuteCallbacks( 'EVT_LEFT_DOWN', event )
+                if event.buttons() & QC.Qt.MouseButton.LeftButton: event_killed = event_killed or self._ExecuteCallbacks( 'EVT_LEFT_DOWN', event )
                 
-                if event.buttons() & QC.Qt.MiddleButton: event_killed = event_killed or self._ExecuteCallbacks( 'EVT_MIDDLE_DOWN', event )
+                if event.buttons() & QC.Qt.MouseButton.MiddleButton: event_killed = event_killed or self._ExecuteCallbacks( 'EVT_MIDDLE_DOWN', event )
                 
-                if event.buttons() & QC.Qt.RightButton: event_killed = event_killed or self._ExecuteCallbacks( 'EVT_RIGHT_DOWN', event )
+                if event.buttons() & QC.Qt.MouseButton.RightButton: event_killed = event_killed or self._ExecuteCallbacks( 'EVT_RIGHT_DOWN', event )
                 
-            elif type == QC.QEvent.MouseButtonRelease:
+            elif type == QC.QEvent.Type.MouseButtonRelease:
                 
-                if event.buttons() & QC.Qt.LeftButton: event_killed = event_killed or self._ExecuteCallbacks( 'EVT_LEFT_UP', event )
+                if event.buttons() & QC.Qt.MouseButton.LeftButton: event_killed = event_killed or self._ExecuteCallbacks( 'EVT_LEFT_UP', event )
                 
-            elif type == QC.QEvent.Move:
+            elif type == QC.QEvent.Type.Move:
                 
                 event_killed = event_killed or self._ExecuteCallbacks( 'EVT_MOVE', event )
                 
@@ -2098,15 +2099,15 @@ class WidgetEventFilter ( QC.QObject ):
                     
                     self._user_moved_window = True
                 
-            elif type == QC.QEvent.Resize:
+            elif type == QC.QEvent.Type.Resize:
                 
                 event_killed = event_killed or self._ExecuteCallbacks( 'EVT_SIZE', event )
                 
-            elif type == QC.QEvent.NonClientAreaMouseButtonPress:
+            elif type == QC.QEvent.Type.NonClientAreaMouseButtonPress:
                 
                 self._user_moved_window = False
                 
-            elif type == QC.QEvent.NonClientAreaMouseButtonRelease:
+            elif type == QC.QEvent.Type.NonClientAreaMouseButtonRelease:
                 
                 if self._user_moved_window:
                     
@@ -2137,7 +2138,7 @@ class WidgetEventFilter ( QC.QObject ):
         
         if evt_name in self._strong_focus_required:
             
-            self._parent_widget.setFocusPolicy( QC.Qt.StrongFocus )
+            self._parent_widget.setFocusPolicy( QC.Qt.FocusPolicy.StrongFocus )
             
         
         self._callback_map[ evt_name ].append( callback )

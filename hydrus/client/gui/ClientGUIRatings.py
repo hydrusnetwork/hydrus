@@ -101,7 +101,7 @@ def DrawIncDec( painter: QG.QPainter, x, y, service_key, rating_state, rating ):
     
     text_rect = QC.QRect( QC.QPoint( x + 1, y + 1 ), INCDEC_SIZE - QC.QSize( 4, 4 ) )
     
-    painter.drawText( text_rect, QC.Qt.AlignRight | QC.Qt.AlignVCenter, text )
+    painter.drawText( text_rect, QC.Qt.AlignmentFlag.AlignRight | QC.Qt.AlignmentFlag.AlignVCenter, text )
     
     painter.setFont( original_font )
     
@@ -331,7 +331,7 @@ class RatingIncDec( QW.QWidget ):
             
             button = event.button()
             
-            if button == QC.Qt.LeftButton:
+            if button == QC.Qt.MouseButton.LeftButton:
                 
                 self._SetRating( self._rating + 1 )
                 
@@ -339,7 +339,7 @@ class RatingIncDec( QW.QWidget ):
                 
                 return
                 
-            elif button == QC.Qt.RightButton:
+            elif button == QC.Qt.MouseButton.RightButton:
                 
                 if self._rating > 0:
                     
@@ -350,7 +350,7 @@ class RatingIncDec( QW.QWidget ):
                     return
                     
                 
-            elif button == QC.Qt.MiddleButton:
+            elif button == QC.Qt.MouseButton.MiddleButton:
                 
                 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
                 from hydrus.client.gui.panels import ClientGUIScrolledPanels
@@ -490,8 +490,6 @@ class RatingLike( QW.QWidget ):
         
         if self.isEnabled():
             
-            text = CG.client_controller.services_manager.GetName( self._service_key )
-            
             try:
                 
                 service = CG.client_controller.services_manager.GetService( self._service_key )
@@ -609,10 +607,18 @@ class RatingNumerical( QW.QWidget ):
         
         self._service_key = service_key
         
-        self._service = CG.client_controller.services_manager.GetService( self._service_key )
-        
-        self._num_stars = self._service.GetNumStars()
-        self._allow_zero = self._service.AllowZero()
+        try:
+            
+            service = CG.client_controller.services_manager.GetService( self._service_key )
+            
+            self._num_stars = service.GetNumStars()
+            self._allow_zero = service.AllowZero()
+            
+        except HydrusExceptions.DataMissing:
+            
+            self._num_stars = 5
+            self._allow_zero = False
+            
         
         my_width = GetNumericalWidth( self._service_key )
         
@@ -680,7 +686,7 @@ class RatingNumerical( QW.QWidget ):
                     
                 
             
-            rating = self._service.ConvertStarsToRating( stars )
+            rating = ClientRatings.ConvertStarsToRating( self._num_stars, self._allow_zero, stars )
             
             return ( ClientRatings.SET, rating )
             
@@ -766,7 +772,7 @@ class RatingNumerical( QW.QWidget ):
     
     def mouseMoveEvent( self, event ):
         
-        if event.buttons() & QC.Qt.LeftButton:
+        if event.buttons() & QC.Qt.MouseButton.LeftButton:
             
             ( rating_state, rating ) = self._GetRatingStateAndRatingFromClickEvent( event )
             
@@ -796,6 +802,7 @@ class RatingNumerical( QW.QWidget ):
         self._UpdateTooltip()
         
     
+
 class RatingNumericalDialog( RatingNumerical ):
     
     def _ClearRating( self ):

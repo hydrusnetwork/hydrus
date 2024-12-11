@@ -724,45 +724,12 @@ class ServiceLocalRatingNumerical( ServiceLocalRatingStars ):
     
     def ConvertRatingToStars( self, rating: float ) -> int:
         
-        if self._allow_zero:
-            
-            stars = int( round( rating * self._num_stars ) )
-            
-        else:
-            
-            stars = int( round( rating * ( self._num_stars - 1 ) ) ) + 1
-            
-        
-        return stars
+        return ClientRatings.ConvertRatingToStars( self._num_stars, self._allow_zero, rating )
         
     
-    def ConvertStarsToRating( self, stars: int ) -> float:
+    def ConvertStarsToRating( self, stars: int ):
         
-        if stars > self._num_stars:
-            
-            stars = self._num_stars
-            
-        
-        if self._allow_zero:
-            
-            if stars < 0:
-                
-                stars = 0
-                
-            
-            rating = stars / self._num_stars
-            
-        else:
-            
-            if stars < 1:
-                
-                stars = 1
-                
-            
-            rating = ( stars - 1 ) / ( self._num_stars - 1 )
-            
-        
-        return rating
+        return ClientRatings.ConvertStarsToRating( self._num_stars, self._allow_zero, stars )
         
     
     def GetNumStars( self ):

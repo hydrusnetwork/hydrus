@@ -316,7 +316,7 @@ class ImageRenderer( ClientCachesBase.CacheableObject ):
         
         painter = QG.QPainter( qt_image )
         
-        painter.setBackground( QG.QBrush( QC.Qt.white ) )
+        painter.setBackground( QG.QBrush( QC.Qt.GlobalColor.white ) )
         
         painter.eraseRect( painter.viewport() )
         
@@ -325,7 +325,7 @@ class ImageRenderer( ClientCachesBase.CacheableObject ):
         pen.setWidth( 5 )
         
         painter.setPen( pen )
-        painter.setBrush( QC.Qt.NoBrush )
+        painter.setBrush( QC.Qt.BrushStyle.NoBrush )
         
         painter.drawRect( 0, 0, width - 1, height - 1 )
         
@@ -343,7 +343,7 @@ class ImageRenderer( ClientCachesBase.CacheableObject ):
         text += '\n'
         text += 'Full info written to the log.'
         
-        painter.drawText( QC.QRectF( 0, 0, width, height ), QC.Qt.AlignCenter, text )
+        painter.drawText( QC.QRectF( 0, 0, width, height ), QC.Qt.AlignmentFlag.AlignCenter, text )
         
         del painter
         
@@ -468,7 +468,7 @@ class ImageRenderer( ClientCachesBase.CacheableObject ):
         
         pixmap = QG.QPixmap( target_resolution )
         
-        pixmap.fill( QC.Qt.black )
+        pixmap.fill( QC.Qt.GlobalColor.black )
         
         return pixmap
         

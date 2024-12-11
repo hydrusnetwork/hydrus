@@ -1559,8 +1559,8 @@ Wildcards and namespace searches are supported, so if you search for 'character:
     *   system:no audio
     *   system:has exif
     *   system:no exif
-    *   system:has human-readable embedded metadata
-    *   system:no human-readable embedded metadata
+    *   system:has embedded metadata
+    *   system:no embedded metadata
     *   system:has icc profile
     *   system:no icc profile
     *   system:has tags

@@ -17,7 +17,7 @@ def DoClick( click, panel, do_delayed_ok_afterwards = False ):
     
     if do_delayed_ok_afterwards:
         
-        TG.test_controller.CallLaterQtSafe( panel, 1, 'test click', PressKeyOnFocusedWindow, QC.Qt.Key_Return )
+        TG.test_controller.CallLaterQtSafe( panel, 1, 'test click', PressKeyOnFocusedWindow, QC.Qt.Key.Key_Return )
         
     
     QW.QApplication.processEvents()
@@ -34,7 +34,7 @@ def GetAllClickableIndices( panel ):
     
     current_y = 5
     
-    click = GenerateClick( panel, QC.QPointF( 10, current_y ), QC.QEvent.MouseButtonPress, QC.Qt.LeftButton, QC.Qt.NoModifier )
+    click = GenerateClick( panel, QC.QPointF( 10, current_y ), QC.QEvent.Type.MouseButtonPress, QC.Qt.MouseButton.LeftButton, QC.Qt.KeyboardModifier.NoModifier )
     
     all_clickable_indices = {}
     
@@ -49,14 +49,14 @@ def GetAllClickableIndices( panel ):
         
         current_y += 5
         
-        click = GenerateClick( panel, QC.QPointF( 10, current_y ), QC.QEvent.MouseButtonPress, QC.Qt.LeftButton, QC.Qt.NoModifier )
+        click = GenerateClick( panel, QC.QPointF( 10, current_y ), QC.QEvent.Type.MouseButtonPress, QC.Qt.MouseButton.LeftButton, QC.Qt.KeyboardModifier.NoModifier )
         
     
     return all_clickable_indices
     
 def PressKey( window, key ):
     
-    window.setFocus( QC.Qt.OtherFocusReason )
+    window.setFocus( QC.Qt.FocusReason.OtherFocusReason )
     
     uias = QP.UIActionSimulator()
     
@@ -117,7 +117,7 @@ class TestListBoxes( unittest.TestCase ):
                 
                 for ( index, y ) in list( all_clickable_indices.items() ):
                     
-                    click = GenerateClick( panel, QC.QPointF( 10, y ), QC.QEvent.MouseButtonPress, QC.Qt.LeftButton, QC.Qt.NoModifier )
+                    click = GenerateClick( panel, QC.QPointF( 10, y ), QC.QEvent.Type.MouseButtonPress, QC.Qt.MouseButton.LeftButton, QC.Qt.KeyboardModifier.NoModifier )
                     
                     DoClick( click, panel )
                     
@@ -128,13 +128,13 @@ class TestListBoxes( unittest.TestCase ):
                 
                 current_y = 5
                 
-                click = QG.QMouseEvent( QC.QEvent.MouseButtonPress, QC.QPointF( 10, current_y ), QC.Qt.LeftButton, QC.Qt.LeftButton, QC.Qt.NoModifier )
+                click = QG.QMouseEvent( QC.QEvent.Type.MouseButtonPress, QC.QPointF( 10, current_y ), QC.Qt.MouseButton.LeftButton, QC.Qt.MouseButton.LeftButton, QC.Qt.KeyboardModifier.NoModifier )
                 
                 while panel._GetLogicalIndexUnderMouse( click ) is not None:
                     
                     current_y += 5
                     
-                    click = GenerateClick( panel, QC.QPointF( 10, current_y ), QC.QEvent.MouseButtonPress, QC.Qt.LeftButton, QC.Qt.NoModifier )
+                    click = GenerateClick( panel, QC.QPointF( 10, current_y ), QC.QEvent.Type.MouseButtonPress, QC.Qt.MouseButton.LeftButton, QC.Qt.KeyboardModifier.NoModifier )
                     
                 
                 DoClick( click, panel )
@@ -151,7 +151,7 @@ class TestListBoxes( unittest.TestCase ):
                     
                     for index in indices:
                         
-                        click = GenerateClick( panel, QC.QPointF( 10, all_clickable_indices[ index ] ), QC.QEvent.MouseButtonPress, QC.Qt.LeftButton, QC.Qt.ControlModifier )
+                        click = GenerateClick( panel, QC.QPointF( 10, all_clickable_indices[ index ] ), QC.QEvent.Type.MouseButtonPress, QC.Qt.MouseButton.LeftButton, QC.Qt.KeyboardModifier.ControlModifier )
                         
                         DoClick( click, panel )
                         
@@ -176,20 +176,20 @@ class TestListBoxes( unittest.TestCase ):
                 
                 current_y = 5
                 
-                click = GenerateClick( panel, QC.QPointF( 10, current_y ), QC.QEvent.MouseButtonPress, QC.Qt.LeftButton, QC.Qt.NoModifier )
+                click = GenerateClick( panel, QC.QPointF( 10, current_y ), QC.QEvent.Type.MouseButtonPress, QC.Qt.MouseButton.LeftButton, QC.Qt.KeyboardModifier.NoModifier )
                 
                 while panel._GetLogicalIndexUnderMouse( click ) is not None:
                     
                     current_y += 5
                     
-                    click = GenerateClick( panel, QC.QPointF( 10, current_y ), QC.QEvent.MouseButtonPress, QC.Qt.LeftButton, QC.Qt.NoModifier )
+                    click = GenerateClick( panel, QC.QPointF( 10, current_y ), QC.QEvent.Type.MouseButtonPress, QC.Qt.MouseButton.LeftButton, QC.Qt.KeyboardModifier.NoModifier )
                     
                 
                 DoClick( click, panel )
                 
                 # select the random index
                 
-                click = GenerateClick( panel, QC.QPointF( 10, all_clickable_indices[ random_index ] ), QC.QEvent.MouseButtonPress, QC.Qt.LeftButton, QC.Qt.NoModifier )
+                click = GenerateClick( panel, QC.QPointF( 10, all_clickable_indices[ random_index ] ), QC.QEvent.Type.MouseButtonPress, QC.Qt.MouseButton.LeftButton, QC.Qt.KeyboardModifier.NoModifier )
                 
                 DoClick( click, panel )
                 

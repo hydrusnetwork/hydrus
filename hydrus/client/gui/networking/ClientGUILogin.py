@@ -304,7 +304,7 @@ class EditLoginsPanel( ClientGUIScrolledPanels.EditPanel ):
         warning += 'If a login script does not work for you, or the site you want has a complicated captcha, check out the Hydrus Companion web browser add-on--it can copy login cookies to hydrus! Pixiv now requires this! If you do set up HC for an external login, I recommend you set the respective domain(s) you are logging into to "not active" here (hit "flip active" on them), so hydrus knows it is not supposed to be taking responsibility.'
         
         warning_st = ClientGUICommon.BetterStaticText( self, warning )
-        warning_st.setAlignment( QC.Qt.AlignHCenter | QC.Qt.AlignVCenter )
+        warning_st.setAlignment( QC.Qt.AlignmentFlag.AlignHCenter | QC.Qt.AlignmentFlag.AlignVCenter )
         warning_st.setWordWrap( True )
         warning_st.setObjectName( 'HydrusWarning' )
         

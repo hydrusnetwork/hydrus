@@ -883,7 +883,7 @@ class MouseShortcutButton( QW.QPushButton ):
     
     def _ProcessMouseEvent( self, event ):
         
-        self.setFocus( QC.Qt.OtherFocusReason )
+        self.setFocus( QC.Qt.FocusReason.OtherFocusReason )
         
         shortcut = ClientGUIShortcuts.ConvertMouseEventToShortcut( event )
         

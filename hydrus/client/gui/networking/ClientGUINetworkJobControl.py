@@ -35,7 +35,7 @@ class NetworkJobControl( QW.QFrame ):
         
         self._left_text = ClientGUICommon.BetterStaticText( self, ellipsize_end = True )
         self._right_text = ClientGUICommon.BetterStaticText( self )
-        self._right_text.setAlignment( QC.Qt.AlignRight | QC.Qt.AlignVCenter )
+        self._right_text.setAlignment( QC.Qt.AlignmentFlag.AlignRight | QC.Qt.AlignmentFlag.AlignVCenter )
         
         self._last_right_min_width = 0
         

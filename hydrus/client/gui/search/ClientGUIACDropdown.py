@@ -1061,7 +1061,7 @@ class AutoCompleteDropdown( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
             
         elif self._float_mode:
             
-            self.parentWidget().setFocus( QC.Qt.OtherFocusReason )
+            self.parentWidget().setFocus( QC.Qt.FocusReason.OtherFocusReason )
             
             return True
             
@@ -1242,7 +1242,7 @@ class AutoCompleteDropdown( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
             
             if watched == self._text_ctrl:
                 
-                if event.type() == QC.QEvent.KeyPress and self._can_intercept_unusual_key_events:
+                if event.type() == QC.QEvent.Type.KeyPress and self._can_intercept_unusual_key_events:
                     
                     # ok for a while this thing was a mis-mash of logical tests and basically sending anything not explicitly caught to the list
                     # this resulted in annoying miss-cases where ctrl+c et al were being passed to the list and so you couldn't copy text from the text input
@@ -1254,24 +1254,24 @@ class AutoCompleteDropdown( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
                     
                     send_input_to_current_list = False
                     
-                    ctrl = event.modifiers() & QC.Qt.ControlModifier
+                    ctrl = event.modifiers() & QC.Qt.KeyboardModifier.ControlModifier
                     
                     # previous/next hardcoded shortcuts, should obviously be migrated to a user-customised shortcut set in future!
                     crazy_n_p_hardcodes = ctrl and key in ( ord( 'P' ), ord( 'p' ), ord( 'N' ), ord( 'n' ) )
                     
-                    we_copying = ctrl and key in( ord( 'C' ), ord( 'c' ), QC.Qt.Key_Insert )
+                    we_copying = ctrl and key in( ord( 'C' ), ord( 'c' ), QC.Qt.Key.Key_Insert )
                     
                     we_copying_the_list = we_copying and self._text_ctrl.selectedText() == ''
                     
-                    if key in ( QC.Qt.Key_Up, QC.Qt.Key_Down, QC.Qt.Key_PageDown, QC.Qt.Key_PageUp, QC.Qt.Key_Home, QC.Qt.Key_End ) or crazy_n_p_hardcodes or we_copying_the_list:
+                    if key in ( QC.Qt.Key.Key_Up, QC.Qt.Key.Key_Down, QC.Qt.Key.Key_PageDown, QC.Qt.Key.Key_PageUp, QC.Qt.Key.Key_Home, QC.Qt.Key.Key_End ) or crazy_n_p_hardcodes or we_copying_the_list:
                         
                         send_input_to_current_list = True
                         
-                    elif key in ( QC.Qt.Key_Return, QC.Qt.Key_Enter ):
+                    elif key in ( QC.Qt.Key.Key_Return, QC.Qt.Key.Key_Enter ):
                         
                         if self._ShouldBroadcastCurrentInputOnEnterKey():
                             
-                            shift_down = modifier == QC.Qt.ShiftModifier
+                            shift_down = modifier == QC.Qt.KeyboardModifier.ShiftModifier
                             
                             self._BroadcastCurrentInputFromEnterKey( shift_down )
                             
@@ -1284,7 +1284,7 @@ class AutoCompleteDropdown( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
                             send_input_to_current_list = True
                             
                         
-                    elif key == QC.Qt.Key_Escape:
+                    elif key == QC.Qt.Key.Key_Escape:
                         
                         escape_caught = self._HandleEscape()
                         
@@ -1309,7 +1309,7 @@ class AutoCompleteDropdown( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
                         return event.isAccepted()
                         
                     
-                elif event.type() == QC.QEvent.Wheel:
+                elif event.type() == QC.QEvent.Type.Wheel:
                     
                     current_results_list = typing.cast( ClientGUIListBoxes.ListBoxTags, self._dropdown_notebook.currentWidget() )
                     
@@ -1328,7 +1328,7 @@ class AutoCompleteDropdown( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
                         
                         return True
                         
-                    elif event.modifiers() & QC.Qt.ControlModifier:
+                    elif event.modifiers() & QC.Qt.KeyboardModifier.ControlModifier:
                         
                         if event.angleDelta().y() > 0:
                             
@@ -1356,13 +1356,13 @@ class AutoCompleteDropdown( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
                     
                     # I could probably wangle this garbagewith setFocusProxy on all the children of the dropdown, assuming that wouldn't break anything, but this seems to work ok nonetheless
                     
-                    if event.type() == QC.QEvent.FocusIn:
+                    if event.type() == QC.QEvent.Type.FocusIn:
                         
                         self._DropdownHideShow()
                         
                         return False
                         
-                    elif event.type() == QC.QEvent.FocusOut:
+                    elif event.type() == QC.QEvent.Type.FocusOut:
                         
                         current_focus_widget = QW.QApplication.focusWidget()
                         
@@ -1383,7 +1383,7 @@ class AutoCompleteDropdown( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
                 
             elif self._temporary_focus_widget is not None and watched == self._temporary_focus_widget:
                 
-                if self._float_mode and event.type() == QC.QEvent.FocusOut:
+                if self._float_mode and event.type() == QC.QEvent.Type.FocusOut:
                     
                     self._temporary_focus_widget.removeEventFilter( self )
                     
@@ -1490,7 +1490,7 @@ class AutoCompleteDropdown( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
             
             self._dropdown_notebook.setCurrentIndex( new_index )
             
-            self.setFocus( QC.Qt.OtherFocusReason )
+            self.setFocus( QC.Qt.FocusReason.OtherFocusReason )
             
         
     

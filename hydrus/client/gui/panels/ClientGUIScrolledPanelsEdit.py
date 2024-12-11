@@ -1009,11 +1009,11 @@ class EditDeleteFilesPanel( ClientGUIScrolledPanels.EditPanel ):
         
         if self._action_radio.isEnabled():
             
-            self._action_radio.setFocus( QC.Qt.OtherFocusReason )
+            self._action_radio.setFocus( QC.Qt.FocusReason.OtherFocusReason )
             
         elif self._reason_panel.isEnabled():
             
-            self._reason_radio.setFocus( QC.Qt.OtherFocusReason )
+            self._reason_radio.setFocus( QC.Qt.FocusReason.OtherFocusReason )
             
         
     
@@ -2984,7 +2984,7 @@ class EditURLsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPane
     
     def _SetSearchFocus( self ):
         
-        self._url_input.setFocus( QC.Qt.OtherFocusReason )
+        self._url_input.setFocus( QC.Qt.FocusReason.OtherFocusReason )
         
     
     def _UpdateList( self ):
@@ -3016,7 +3016,7 @@ class EditURLsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPane
             
             item = QW.QListWidgetItem()
             item.setText( label )
-            item.setData( QC.Qt.UserRole, url )
+            item.setData( QC.Qt.ItemDataRole.UserRole, url )
             
             self._urls_listbox.addItem( item )
             

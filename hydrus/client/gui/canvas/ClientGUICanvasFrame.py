@@ -176,13 +176,13 @@ class CanvasFrame( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindow
         self.show()
         
         # just to reinforce, as Qt sometimes sets none focus for this window until it goes off and back on
-        self._canvas_window.setFocus( QC.Qt.OtherFocusReason )
+        self._canvas_window.setFocus( QC.Qt.FocusReason.OtherFocusReason )
         
     
     def TakeFocusForUser( self ):
         
         self.activateWindow()
         
-        self._canvas_window.setFocus( QC.Qt.OtherFocusReason )
+        self._canvas_window.setFocus( QC.Qt.FocusReason.OtherFocusReason )
         
     

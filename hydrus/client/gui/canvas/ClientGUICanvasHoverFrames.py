@@ -362,7 +362,7 @@ class RatingNumericalCanvas( ClientGUIRatings.RatingNumerical ):
         
     
 
-# Note that I go setFocusPolicy( QC.Qt.TabFocus ) on all the icon buttons in the hover windows
+# Note that I go setFocusPolicy( QC.Qt.FocusPolicy.TabFocus ) on all the icon buttons in the hover windows
 # this means that a user can click a button and not give it focus, allowing the arrow keys and space to still propagate up to the main canvas
 
 TOP_HOVER_PROPORTION = 0.6
@@ -380,7 +380,7 @@ class CanvasHoverFrame( QW.QFrame ):
     def __init__( self, parent: QW.QWidget, my_canvas, canvas_key ):
         
         # TODO: Clean up old references to window stuff, decide on lower/hide/show/raise options
-        # OK, so I converted these from this "self.setWindowFlags( QC.Qt.FramelessWindowHint | QC.Qt.Tool )" to normal raise/lower widgets embedded in the canvas
+        # OK, so I converted these from this "self.setWindowFlags( QC.Qt.WindowType.FramelessWindowHint | QC.Qt.Tool )" to normal raise/lower widgets embedded in the canvas
         # this took some hacks, and there is still a bunch of focus and TLW checking code going on here that needs to be cleaned up
         # note I tried to have them just lower rather than hide and it looked really stupid, so that thought is dead for the current moment. atm I just want to do the same thing as before with no graphics errors
         
@@ -405,7 +405,7 @@ class CanvasHoverFrame( QW.QFrame ):
         self.hide()
         self._is_currently_up = False
         
-        self.setCursor( QG.QCursor( QC.Qt.ArrowCursor ) )
+        self.setCursor( QG.QCursor( QC.Qt.CursorShape.ArrowCursor ) )
         
         self._position_initialised_since_last_media = False
         
@@ -430,7 +430,7 @@ class CanvasHoverFrame( QW.QFrame ):
             
             self._is_currently_up = False
             
-            self.parentWidget().setFocus( QC.Qt.OtherFocusReason )
+            self.parentWidget().setFocus( QC.Qt.FocusReason.OtherFocusReason )
             
         
     
@@ -491,7 +491,7 @@ class CanvasHoverFrame( QW.QFrame ):
         
         try:
             
-            if event.type() == QC.QEvent.Resize:
+            if event.type() == QC.QEvent.Type.Resize:
                 
                 self._SizeAndPosition()
                 
@@ -725,8 +725,8 @@ class CanvasHoverFrameTop( CanvasHoverFrame ):
         self._title_text = ClientGUICommon.BetterStaticText( self, 'title', ellipsize_end = True )
         self._info_text = ClientGUICommon.BetterStaticText( self, 'info', ellipsize_end = True )
         
-        self._title_text.setAlignment( QC.Qt.AlignHCenter | QC.Qt.AlignVCenter )
-        self._info_text.setAlignment( QC.Qt.AlignHCenter | QC.Qt.AlignVCenter )
+        self._title_text.setAlignment( QC.Qt.AlignmentFlag.AlignHCenter | QC.Qt.AlignmentFlag.AlignVCenter )
+        self._info_text.setAlignment( QC.Qt.AlignmentFlag.AlignHCenter | QC.Qt.AlignmentFlag.AlignVCenter )
         
         self._PopulateLeftButtons()
         self._PopulateCenterButtons()
@@ -794,19 +794,19 @@ class CanvasHoverFrameTop( CanvasHoverFrame ):
     def _PopulateCenterButtons( self ):
         
         self._archive_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().archive, self._Archive )
-        self._archive_button.setFocusPolicy( QC.Qt.TabFocus )
+        self._archive_button.setFocusPolicy( QC.Qt.FocusPolicy.TabFocus )
         
         self._trash_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().delete, CG.client_controller.pub, 'canvas_delete', self._canvas_key )
         self._trash_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'send to trash' ) )
-        self._trash_button.setFocusPolicy( QC.Qt.TabFocus )
+        self._trash_button.setFocusPolicy( QC.Qt.FocusPolicy.TabFocus )
         
         self._delete_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().trash_delete, CG.client_controller.pub, 'canvas_delete', self._canvas_key )
         self._delete_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'delete completely' ) )
-        self._delete_button.setFocusPolicy( QC.Qt.TabFocus )
+        self._delete_button.setFocusPolicy( QC.Qt.FocusPolicy.TabFocus )
         
         self._undelete_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().undelete, CG.client_controller.pub, 'canvas_undelete', self._canvas_key )
         self._undelete_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'undelete' ) )
-        self._undelete_button.setFocusPolicy( QC.Qt.TabFocus )
+        self._undelete_button.setFocusPolicy( QC.Qt.FocusPolicy.TabFocus )
         
         QP.AddToLayout( self._top_center_hbox, self._archive_button, CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( self._top_center_hbox, self._trash_button, CC.FLAGS_CENTER_PERPENDICULAR )
@@ -827,15 +827,15 @@ class CanvasHoverFrameTop( CanvasHoverFrame ):
         
         zoom_in = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().zoom_in, self.sendApplicationCommand.emit, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_ZOOM_IN_VIEWER_CENTER ) )
         zoom_in.SetToolTipWithShortcuts( 'zoom in', CAC.SIMPLE_ZOOM_IN )
-        zoom_in.setFocusPolicy( QC.Qt.TabFocus )
+        zoom_in.setFocusPolicy( QC.Qt.FocusPolicy.TabFocus )
         
         zoom_out = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().zoom_out, self.sendApplicationCommand.emit, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_ZOOM_OUT_VIEWER_CENTER ) )
         zoom_out.SetToolTipWithShortcuts( 'zoom out', CAC.SIMPLE_ZOOM_OUT )
-        zoom_out.setFocusPolicy( QC.Qt.TabFocus )
+        zoom_out.setFocusPolicy( QC.Qt.FocusPolicy.TabFocus )
         
         zoom_switch = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().zoom_switch, self.sendApplicationCommand.emit, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_SWITCH_BETWEEN_100_PERCENT_AND_CANVAS_ZOOM_VIEWER_CENTER ) )
         zoom_switch.SetToolTipWithShortcuts( 'zoom switch', CAC.SIMPLE_SWITCH_BETWEEN_100_PERCENT_AND_CANVAS_ZOOM )
-        zoom_switch.setFocusPolicy( QC.Qt.TabFocus )
+        zoom_switch.setFocusPolicy( QC.Qt.FocusPolicy.TabFocus )
         
         self._volume_control = ClientGUIMediaControls.VolumeControl( self, CC.CANVAS_MEDIA_VIEWER )
         
@@ -846,18 +846,18 @@ class CanvasHoverFrameTop( CanvasHoverFrame ):
         
         shortcuts = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().keyboard, self._ShowShortcutMenu )
         shortcuts.setToolTip( ClientGUIFunctions.WrapToolTip( 'shortcuts' ) )
-        shortcuts.setFocusPolicy( QC.Qt.TabFocus )
+        shortcuts.setFocusPolicy( QC.Qt.FocusPolicy.TabFocus )
         
         self._show_embedded_metadata_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().listctrl, self._ShowFileEmbeddedMetadata )
-        self._show_embedded_metadata_button.setFocusPolicy( QC.Qt.TabFocus )
+        self._show_embedded_metadata_button.setFocusPolicy( QC.Qt.FocusPolicy.TabFocus )
         
         view_options = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().eye, self._ShowViewOptionsMenu )
         view_options.setToolTip( ClientGUIFunctions.WrapToolTip( 'view options' ) )
-        view_options.setFocusPolicy( QC.Qt.TabFocus )
+        view_options.setFocusPolicy( QC.Qt.FocusPolicy.TabFocus )
         
         fullscreen_switch = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().fullscreen_switch, CG.client_controller.pub, 'canvas_fullscreen_switch', self._canvas_key )
         fullscreen_switch.setToolTip( ClientGUIFunctions.WrapToolTip( 'fullscreen switch' ) )
-        fullscreen_switch.setFocusPolicy( QC.Qt.TabFocus )
+        fullscreen_switch.setFocusPolicy( QC.Qt.FocusPolicy.TabFocus )
         
         if HC.PLATFORM_MACOS:
             
@@ -866,18 +866,18 @@ class CanvasHoverFrameTop( CanvasHoverFrame ):
         
         open_externally = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().open_externally, self.sendApplicationCommand.emit, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_OPEN_FILE_IN_EXTERNAL_PROGRAM ) )
         open_externally.SetToolTipWithShortcuts( 'open externally', CAC.SIMPLE_OPEN_FILE_IN_EXTERNAL_PROGRAM )
-        open_externally.setFocusPolicy( QC.Qt.TabFocus )
+        open_externally.setFocusPolicy( QC.Qt.FocusPolicy.TabFocus )
         
         drag_button = QW.QPushButton( self )
         drag_button.setIcon( QG.QIcon( CC.global_pixmaps().drag ) )
         drag_button.setIconSize( CC.global_pixmaps().drag.size() )
         drag_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'drag from here to export file' ) )
         drag_button.pressed.connect( self.DragButtonHit )
-        drag_button.setFocusPolicy( QC.Qt.TabFocus )
+        drag_button.setFocusPolicy( QC.Qt.FocusPolicy.TabFocus )
         
         close = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().stop, CG.client_controller.pub, 'canvas_close', self._canvas_key )
         close.setToolTip( ClientGUIFunctions.WrapToolTip( 'close' ) )
-        close.setFocusPolicy( QC.Qt.TabFocus )
+        close.setFocusPolicy( QC.Qt.FocusPolicy.TabFocus )
         
         QP.AddToLayout( self._top_right_hbox, self._zoom_text, CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( self._top_right_hbox, zoom_in, CC.FLAGS_CENTER_PERPENDICULAR )
@@ -953,7 +953,7 @@ class CanvasHoverFrameTop( CanvasHoverFrame ):
                 
                 if has_human_readable_embedded_metadata:
                     
-                    tt_components.append( 'non-exif human-readable embedded metadata' )
+                    tt_components.append( 'non-exif embedded metadata' )
                     
                 
                 if has_extra_rows:
@@ -1121,11 +1121,11 @@ class CanvasHoverFrameTop( CanvasHoverFrame ):
         
         media = [ self._current_media ]
         
-        alt_down = QW.QApplication.keyboardModifiers() & QC.Qt.AltModifier
+        alt_down = QW.QApplication.keyboardModifiers() & QC.Qt.KeyboardModifier.AltModifier
         
         result = ClientGUIDragDrop.DoFileExportDragDrop( self, page_key, media, alt_down )
         
-        if result != QC.Qt.IgnoreAction:
+        if result != QC.Qt.DropAction.IgnoreAction:
             
             self.sendApplicationCommand.emit( CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_PAUSE_MEDIA ) )
             
@@ -1209,7 +1209,7 @@ class CanvasHoverFrameTopArchiveDeleteFilter( CanvasHoverFrameTop ):
         
         self._back_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().previous, self.sendApplicationCommand.emit, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_ARCHIVE_DELETE_FILTER_BACK ) )
         self._back_button.SetToolTipWithShortcuts( 'back', CAC.SIMPLE_ARCHIVE_DELETE_FILTER_BACK )
-        self._back_button.setFocusPolicy( QC.Qt.TabFocus )
+        self._back_button.setFocusPolicy( QC.Qt.FocusPolicy.TabFocus )
         
         QP.AddToLayout( self._top_left_hbox, self._back_button, CC.FLAGS_CENTER_PERPENDICULAR )
         
@@ -1217,7 +1217,7 @@ class CanvasHoverFrameTopArchiveDeleteFilter( CanvasHoverFrameTop ):
         
         self._skip_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().next_bmp, self.sendApplicationCommand.emit, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_ARCHIVE_DELETE_FILTER_SKIP ) )
         self._skip_button.SetToolTipWithShortcuts( 'skip', CAC.SIMPLE_ARCHIVE_DELETE_FILTER_SKIP )
-        self._skip_button.setFocusPolicy( QC.Qt.TabFocus )
+        self._skip_button.setFocusPolicy( QC.Qt.FocusPolicy.TabFocus )
         
         QP.AddToLayout( self._top_left_hbox, self._skip_button, CC.FLAGS_CENTER_PERPENDICULAR )
         
@@ -1234,13 +1234,13 @@ class CanvasHoverFrameTopNavigable( CanvasHoverFrameTop ):
         
         self._previous_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().previous, self.sendApplicationCommand.emit, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_VIEW_PREVIOUS ) )
         self._previous_button.SetToolTipWithShortcuts( 'previous', CAC.SIMPLE_VIEW_PREVIOUS )
-        self._previous_button.setFocusPolicy( QC.Qt.TabFocus )
+        self._previous_button.setFocusPolicy( QC.Qt.FocusPolicy.TabFocus )
         
         self._index_text = ClientGUICommon.BetterStaticText( self, 'index' )
         
         self._next_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().next_bmp, self.sendApplicationCommand.emit, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_VIEW_NEXT ) )
         self._next_button.SetToolTipWithShortcuts( 'next', CAC.SIMPLE_VIEW_NEXT )
-        self._next_button.setFocusPolicy( QC.Qt.TabFocus )
+        self._next_button.setFocusPolicy( QC.Qt.FocusPolicy.TabFocus )
         
         QP.AddToLayout( self._top_left_hbox, self._previous_button, CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( self._top_left_hbox, self._index_text, CC.FLAGS_CENTER_PERPENDICULAR )
@@ -1253,7 +1253,7 @@ class CanvasHoverFrameTopDuplicatesFilter( CanvasHoverFrameTopNavigable ):
         
         self._first_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().first, self.sendApplicationCommand.emit, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_FILTER_BACK ) )
         self._first_button.SetToolTipWithShortcuts( 'go back a pair', CAC.SIMPLE_DUPLICATE_FILTER_BACK )
-        self._first_button.setFocusPolicy( QC.Qt.TabFocus )
+        self._first_button.setFocusPolicy( QC.Qt.FocusPolicy.TabFocus )
         
         QP.AddToLayout( self._top_left_hbox, self._first_button, CC.FLAGS_CENTER_PERPENDICULAR )
         
@@ -1261,7 +1261,7 @@ class CanvasHoverFrameTopDuplicatesFilter( CanvasHoverFrameTopNavigable ):
         
         self._last_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().last, self.sendApplicationCommand.emit, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_FILTER_SKIP ) )
         self._last_button.SetToolTipWithShortcuts( 'show a different pair', CAC.SIMPLE_DUPLICATE_FILTER_SKIP )
-        self._last_button.setFocusPolicy( QC.Qt.TabFocus )
+        self._last_button.setFocusPolicy( QC.Qt.FocusPolicy.TabFocus )
         
         QP.AddToLayout( self._top_left_hbox, self._last_button, CC.FLAGS_CENTER_PERPENDICULAR )
         
@@ -1272,7 +1272,7 @@ class CanvasHoverFrameTopNavigableList( CanvasHoverFrameTopNavigable ):
         
         self._first_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().first, self.sendApplicationCommand.emit, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_VIEW_FIRST ) )
         self._first_button.SetToolTipWithShortcuts( 'first', CAC.SIMPLE_VIEW_FIRST )
-        self._first_button.setFocusPolicy( QC.Qt.TabFocus )
+        self._first_button.setFocusPolicy( QC.Qt.FocusPolicy.TabFocus )
         
         QP.AddToLayout( self._top_left_hbox, self._first_button, CC.FLAGS_CENTER_PERPENDICULAR )
         
@@ -1280,7 +1280,7 @@ class CanvasHoverFrameTopNavigableList( CanvasHoverFrameTopNavigable ):
         
         self._last_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().last, self.sendApplicationCommand.emit, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_VIEW_LAST ) )
         self._last_button.SetToolTipWithShortcuts( 'last', CAC.SIMPLE_VIEW_LAST )
-        self._last_button.setFocusPolicy( QC.Qt.TabFocus )
+        self._last_button.setFocusPolicy( QC.Qt.FocusPolicy.TabFocus )
         
         QP.AddToLayout( self._top_left_hbox, self._last_button, CC.FLAGS_CENTER_PERPENDICULAR )
         
@@ -1313,7 +1313,7 @@ class CanvasHoverFrameTopRight( CanvasHoverFrame ):
         
         self._location_strings = ClientGUICommon.BetterStaticText( self, '' )
         
-        self._location_strings.setAlignment( QC.Qt.AlignRight | QC.Qt.AlignVCenter )
+        self._location_strings.setAlignment( QC.Qt.AlignmentFlag.AlignRight | QC.Qt.AlignmentFlag.AlignVCenter )
         
         # urls
         
@@ -1360,7 +1360,7 @@ class CanvasHoverFrameTopRight( CanvasHoverFrame ):
             
             QP.AddToLayout( vbox, control, CC.FLAGS_NONE )
             
-            vbox.setAlignment( control, QC.Qt.AlignRight )
+            vbox.setAlignment( control, QC.Qt.AlignmentFlag.AlignRight )
             
         
         # now incdec
@@ -1531,7 +1531,7 @@ class CanvasHoverFrameTopRight( CanvasHoverFrame ):
                     
                     link = ClientGUICommon.BetterHyperLink( self, display_string, url )
                     
-                    link.setAlignment( QC.Qt.AlignRight )
+                    link.setAlignment( QC.Qt.AlignmentFlag.AlignRight )
                     
                     QP.AddToLayout( self._urls_vbox, link, CC.FLAGS_EXPAND_PERPENDICULAR )
                     
@@ -1595,7 +1595,7 @@ class NotePanel( QW.QWidget ):
         
         self._note_name = ClientGUICommon.BetterStaticText( self, label = name )
         
-        self._note_name.setAlignment( QC.Qt.AlignHCenter )
+        self._note_name.setAlignment( QC.Qt.AlignmentFlag.AlignHCenter )
         self._note_name.setWordWrap( True )
         
         font = QG.QFont( self._note_name.font() )
@@ -1606,7 +1606,7 @@ class NotePanel( QW.QWidget ):
         
         self._note_text = ClientGUICommon.BetterStaticText( self, label = note )
         
-        self._note_text.setAlignment( QC.Qt.AlignJustify )
+        self._note_text.setAlignment( QC.Qt.AlignmentFlag.AlignJustify )
         self._note_text.setWordWrap( True )
         
         vbox = QP.VBoxLayout( margin = 0 )
@@ -1626,9 +1626,9 @@ class NotePanel( QW.QWidget ):
         
         try:
             
-            if event.type() == QC.QEvent.MouseButtonPress:
+            if event.type() == QC.QEvent.Type.MouseButtonPress:
                 
-                if event.button() == QC.Qt.LeftButton:
+                if event.button() == QC.Qt.MouseButton.LeftButton:
                     
                     self.editNote.emit( self._name )
                     
@@ -1915,11 +1915,11 @@ class CanvasHoverFrameRightDuplicates( CanvasHoverFrame ):
         
         self._show_in_a_page_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().fullscreen_switch, self.showPairInPage.emit )
         self._show_in_a_page_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'send pair to the duplicates media page, for later processing' ) )
-        self._show_in_a_page_button.setFocusPolicy( QC.Qt.TabFocus )
+        self._show_in_a_page_button.setFocusPolicy( QC.Qt.FocusPolicy.TabFocus )
         
         self._trash_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().delete, CG.client_controller.pub, 'canvas_delete', self._canvas_key )
         self._trash_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'send to trash' ) )
-        self._trash_button.setFocusPolicy( QC.Qt.TabFocus )
+        self._trash_button.setFocusPolicy( QC.Qt.FocusPolicy.TabFocus )
         
         menu_items = []
         
@@ -1935,25 +1935,25 @@ class CanvasHoverFrameRightDuplicates( CanvasHoverFrame ):
         menu_items.append( ( 'normal', 'edit background lighten/darken switch intensity', 'edit how much the background will brighten or darken as you switch between the pair', self._EditBackgroundSwitchIntensity ) )
         
         self._cog_button = ClientGUIMenuButton.MenuBitmapButton( self, CC.global_pixmaps().cog, menu_items )
-        self._cog_button.setFocusPolicy( QC.Qt.TabFocus )
+        self._cog_button.setFocusPolicy( QC.Qt.FocusPolicy.TabFocus )
         
         close_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().stop, CG.client_controller.pub, 'canvas_close', self._canvas_key )
         close_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'close filter' ) )
-        close_button.setFocusPolicy( QC.Qt.TabFocus )
+        close_button.setFocusPolicy( QC.Qt.FocusPolicy.TabFocus )
         
         self._back_a_pair = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().first, self.sendApplicationCommand.emit, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_FILTER_BACK ) )
         self._back_a_pair.SetToolTipWithShortcuts( 'go back a pair', CAC.SIMPLE_DUPLICATE_FILTER_BACK )
-        self._back_a_pair.setFocusPolicy( QC.Qt.TabFocus )
+        self._back_a_pair.setFocusPolicy( QC.Qt.FocusPolicy.TabFocus )
         
         self._index_text = ClientGUICommon.BetterStaticText( self, 'index' )
         
         self._next_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().pair, self.sendApplicationCommand.emit, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_VIEW_NEXT ) )
         self._next_button.SetToolTipWithShortcuts( 'next', CAC.SIMPLE_VIEW_NEXT )
-        self._next_button.setFocusPolicy( QC.Qt.TabFocus )
+        self._next_button.setFocusPolicy( QC.Qt.FocusPolicy.TabFocus )
         
         self._skip_a_pair = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().last, self.sendApplicationCommand.emit, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_FILTER_SKIP ) )
         self._skip_a_pair.SetToolTipWithShortcuts( 'show a different pair', CAC.SIMPLE_DUPLICATE_FILTER_SKIP )
-        self._skip_a_pair.setFocusPolicy( QC.Qt.TabFocus )
+        self._skip_a_pair.setFocusPolicy( QC.Qt.FocusPolicy.TabFocus )
         
         command_button_vbox = QP.VBoxLayout()
         
@@ -1984,7 +1984,7 @@ class CanvasHoverFrameRightDuplicates( CanvasHoverFrame ):
             for ( label, tooltip, command ) in dupe_commands:
                 
                 command_button = ClientGUICommon.BetterButton( button_panel, label, self.sendApplicationCommand.emit, command )
-                command_button.setFocusPolicy( QC.Qt.TabFocus )
+                command_button.setFocusPolicy( QC.Qt.FocusPolicy.TabFocus )
                 
                 command_button.SetToolTipWithShortcuts( tooltip, command.GetSimpleAction() )
                 

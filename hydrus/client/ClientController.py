@@ -1233,6 +1233,13 @@ class Controller( HydrusController.HydrusController ):
         
         self.frame_splash_status.SetSubtext( 'network' )
         
+        if self.new_options.GetBoolean( 'set_requests_ca_bundle_env' ):
+            
+            from hydrus.client import ClientEnvironment
+            
+            ClientEnvironment.SetRequestsCABundleEnv()
+            
+        
         if self.new_options.GetBoolean( 'boot_with_network_traffic_paused' ):
             
             CG.client_controller.new_options.SetBoolean( 'pause_all_new_network_traffic', True )

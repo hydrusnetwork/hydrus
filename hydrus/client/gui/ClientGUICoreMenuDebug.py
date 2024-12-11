@@ -47,7 +47,7 @@ def ShowMenuDialog( window: QW.QWidget, menu: QW.QMenu ):
                     
                     twi.setText( 0, action.text() )
                     
-                    twi.setData( 0, QC.Qt.UserRole, action )
+                    twi.setData( 0, QC.Qt.ItemDataRole.UserRole, action )
                     
                 
                 if isinstance( job_parent, QW.QTreeWidget ):
@@ -79,7 +79,7 @@ def ShowMenuDialog( window: QW.QWidget, menu: QW.QMenu ):
                 
                 item = selected_items[0]
                 
-                action = item.data( 0, QC.Qt.UserRole )
+                action = item.data( 0, QC.Qt.ItemDataRole.UserRole )
                 
                 if action is not None:
                     

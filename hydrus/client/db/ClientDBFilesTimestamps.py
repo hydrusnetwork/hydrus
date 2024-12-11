@@ -176,6 +176,28 @@ class ClientDBFilesTimestamps( ClientDBModule.ClientDBModule ):
         return set()
         
     
+    def GetHashIdsToArchivedTimestampsMS( self, hash_ids: typing.Collection[ int ] ):
+        
+        # TODO: generalise this to any timestamp_data stub, but it is a slight pain!
+        
+        with self._MakeTemporaryIntegerTable( hash_ids, 'hash_id' ) as temp_table_name:
+            
+            ( table_name, column_name ) = GetSimpleTimestampTableNames( HC.TIMESTAMP_TYPE_ARCHIVED )
+            
+            result = dict( self._Execute( f'SELECT hash_id, {column_name} FROM {temp_table_name} CROSS JOIN {table_name} USING ( hash_id );' ) )
+            
+        
+        for hash_id in hash_ids:
+            
+            if hash_id not in result:
+                
+                result[ hash_id ] = None
+                
+            
+        
+        return result
+        
+    
     def GetHashIdsToHalfInitialisedTimesManagers( self, hash_ids: typing.Collection[ int ], hash_ids_table_name: str ) -> typing.Dict[ int, ClientMediaManagers.TimesManager ]:
         
         # note that this doesn't fetch everything, just the stuff this module handles directly and can fetch efficiently

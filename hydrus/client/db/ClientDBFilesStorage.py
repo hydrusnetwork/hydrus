@@ -862,10 +862,10 @@ class ClientDBFilesStorage( ClientDBModule.ClientDBModule ):
         
         with self._MakeTemporaryIntegerTable( hash_ids, 'hash_id' ) as temp_hash_ids_table_name:
             
-            rows = dict( self._Execute( 'SELECT hash_id, timestamp_ms FROM {} CROSS JOIN {} USING ( hash_id );'.format( temp_hash_ids_table_name, current_files_table_name ) ) )
+            results_dict = dict( self._Execute( 'SELECT hash_id, timestamp_ms FROM {} CROSS JOIN {} USING ( hash_id );'.format( temp_hash_ids_table_name, current_files_table_name ) ) )
             
         
-        return rows
+        return results_dict
         
     
     def GetDeferredPhysicalDelete( self ):

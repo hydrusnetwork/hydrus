@@ -111,11 +111,11 @@ def DoFileExportDragDrop( window, page_key, media, alt_down ):
         
         if make_it_a_move_flag:
             
-            flags = QC.Qt.MoveAction
+            flags = QC.Qt.DropAction.MoveAction
             
         else:
             
-            flags = QC.Qt.MoveAction | QC.Qt.CopyAction
+            flags = QC.Qt.DropAction.MoveAction | QC.Qt.DropAction.CopyAction
             
         
         seen_export_filenames = set()
@@ -167,7 +167,7 @@ def DoFileExportDragDrop( window, page_key, media, alt_down ):
     else:
         
         dnd_paths = original_paths
-        flags = QC.Qt.CopyAction
+        flags = QC.Qt.DropAction.CopyAction
         
     
     uri_list = []
@@ -208,7 +208,7 @@ def DoFileExportDragDrop( window, page_key, media, alt_down ):
     
     drop_source.setMimeData( data_object )
     
-    result = drop_source.exec_( flags, QC.Qt.CopyAction )
+    result = drop_source.exec_( flags, QC.Qt.DropAction.CopyAction )
     
     return result
     
@@ -234,7 +234,7 @@ class FileDropTarget( QC.QObject ):
         
         try:
             
-            if event.type() == QC.QEvent.Drop:
+            if event.type() == QC.QEvent.Type.Drop:
                 
                 if self.OnDrop( event.position().toPoint().x(), event.position().toPoint().y() ):
                     
@@ -243,7 +243,7 @@ class FileDropTarget( QC.QObject ):
                     event.accept()
                     
                 
-            elif event.type() == QC.QEvent.DragEnter:
+            elif event.type() == QC.QEvent.Type.DragEnter:
                 
                 event.accept()
                 
@@ -279,7 +279,7 @@ class FileDropTarget( QC.QObject ):
                     
                 
             
-            result = QC.Qt.MoveAction
+            result = QC.Qt.DropAction.MoveAction
             
             # old way of doing it that messed up discord et al
             '''
@@ -301,7 +301,7 @@ class FileDropTarget( QC.QObject ):
                 QP.CallAfter( self._media_callable, page_key, hashes )  # callafter so we can terminate dnd event now
                 
 
-            result = QC.Qt.MoveAction
+            result = QC.Qt.DropAction.MoveAction
             '''
         elif urls_dnd or text_dnd:
             
@@ -373,11 +373,11 @@ class FileDropTarget( QC.QObject ):
                     
                 
             
-            result = QC.Qt.IgnoreAction
+            result = QC.Qt.DropAction.IgnoreAction
             
         else:
             
-            result = QC.Qt.IgnoreAction
+            result = QC.Qt.DropAction.IgnoreAction
             
         
         return result

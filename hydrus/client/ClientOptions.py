@@ -271,7 +271,12 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             'use_listbook_for_tag_service_panels' : False,
             'open_files_to_duplicate_filter_uses_all_my_files' : True,
             'show_extended_single_file_info_in_status_bar' : False,
-            'hide_duplicates_needs_work_message_when_reasonably_caught_up' : True
+            'hide_duplicates_needs_work_message_when_reasonably_caught_up' : True,
+            'file_info_line_consider_archived_interesting' : True,
+            'file_info_line_consider_archived_time_interesting' : True,
+            'file_info_line_consider_file_services_interesting' : False,
+            'file_info_line_consider_file_services_import_times_interesting' : False,
+            'set_requests_ca_bundle_env' : False
         }
         
         #

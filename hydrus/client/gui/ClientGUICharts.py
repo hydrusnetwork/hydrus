@@ -56,8 +56,8 @@ try:
             chart = QCh.QtCharts.QChart()
             
             chart.addSeries( bar_series )
-            chart.addAxis( x_category_axis, QC.Qt.AlignBottom )
-            chart.addAxis( y_value_axis, QC.Qt.AlignLeft )
+            chart.addAxis( x_category_axis, QC.Qt.AlignmentFlag.AlignBottom )
+            chart.addAxis( y_value_axis, QC.Qt.AlignmentFlag.AlignLeft )
             
             chart.legend().setVisible( False )
             
@@ -161,8 +161,8 @@ try:
                 self._chart.addSeries( self._deleted_files_series )
                 
             
-            self._chart.addAxis( self._x_datetime_axis, QC.Qt.AlignBottom )
-            self._chart.addAxis( self._y_value_axis, QC.Qt.AlignLeft )
+            self._chart.addAxis( self._x_datetime_axis, QC.Qt.AlignmentFlag.AlignBottom )
+            self._chart.addAxis( self._y_value_axis, QC.Qt.AlignmentFlag.AlignLeft )
             
             self._current_files_series.attachAxis( self._x_datetime_axis )
             self._current_files_series.attachAxis( self._y_value_axis )
