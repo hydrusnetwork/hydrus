@@ -71,7 +71,20 @@ jobs:
         run: |
           cd $GITHUB_WORKSPACE
           temp_dmg="$(mktemp).dmg"
-          hdiutil create "$temp_dmg" -ov -volname "HydrusNetwork" -fs HFS+ -format ULFO -srcfolder "$GITHUB_WORKSPACE/build/$(head -n 1 triple.txt)/release"
+          # we are out here
+          # https://github.com/actions/runner-images/issues/7522
+          # https://github.com/nuttyartist/notes/commit/79170cca1a21929d2d5d33808b8cac02ad58dd7d#diff-7b74d73de878e0e53f6768bbf3a3d4b50c3c6f1f16f9b64518690028b8206b1cR191
+          max_tries=10
+          attempt=0
+          until hdiutil create "$temp_dmg" -ov -volname "HydrusNetwork" -fs HFS+ -format ULFO -srcfolder "$GITHUB_WORKSPACE/build/$(head -n 1 triple.txt)/release"
+          do
+            attempt=$((attempt + 1))
+            if [ "$attempt" -eq "$max_tries" ]; then
+              echo 'Error: $max_tries attempts at hdiutil did not do it!'
+              exit 1
+            fi
+            sleep 5
+          done
           mv "$temp_dmg" Hydrus.Network.${{ env.version_short }}.-.macOS.-.App.dmg
       - 
         name: Upload Files
