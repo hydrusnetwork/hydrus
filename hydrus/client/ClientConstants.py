@@ -461,7 +461,7 @@ def magico_sort_sort( sort_type ):
         
     else:
         
-        return sort_type_basic_string_lookup[ sort_type ]
+        return sort_type_string_lookup[ sort_type ]
         
     
 
