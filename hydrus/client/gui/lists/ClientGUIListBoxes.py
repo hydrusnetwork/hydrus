@@ -2091,9 +2091,12 @@ class ListBox( QW.QScrollArea ):
         
         bg_colour = self._GetBackgroundColour()
         
-        painter.setBackground( QG.QBrush( bg_colour ) )
-        
-        painter.eraseRect( painter.viewport() )
+        if self._draw_background:
+            
+            painter.setBackground( QG.QBrush( bg_colour ) )
+            
+            painter.eraseRect( painter.viewport() )
+            
         
         if len( self._ordered_terms ) == 0:
             
@@ -2845,6 +2848,8 @@ class ListBoxTags( ListBox ):
             
             self._sibling_connector_namespace = CG.client_controller.new_options.GetNoneableString( 'sibling_connector_custom_namespace_colour' )
             
+        
+        self._draw_background = True
         
         self._UpdateBackgroundColour()
         
@@ -4042,6 +4047,18 @@ class ListBoxTags( ListBox ):
         
     
     htl_background = QC.Property( QG.QColor, get_htl_background, set_htl_background )
+    
+    def get_draw_background( self ):
+        
+        return self._draw_background
+        
+    
+    def set_draw_background( self, draw_background ):
+        
+        self._draw_background = draw_background
+        
+    
+    draw_background = QC.Property( bool, get_draw_background, set_draw_background )
     
 
 class ListBoxTagsPredicates( ListBoxTags ):

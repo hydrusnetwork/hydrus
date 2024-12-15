@@ -157,7 +157,9 @@ QListView, QListView::item {
 
 QWidget#HydrusMediaList
 {
-	qproperty-hmrp_background: #152f56;
+	/* Override background drawing; use our own image and colour from the QSplitter parent */
+	qproperty-hmrp_background: transparent;
+
 	qproperty-hmrp_thumbnail_local_background_normal: #25477b;
 	qproperty-hmrp_thumbnail_local_border_normal: #25477b;
 	qproperty-hmrp_thumbnail_local_background_selected: #2b538e;
@@ -652,14 +654,7 @@ QLocatorResultWidget#selectedLocatorResult {
 
 QWidget#HydrusMediaViewer
 {
-	qproperty-hmv_background: #020f23;
-	qproperty-hmv_text: #b4c7d9;
-}
-
-/* Make the preview viewer the same colour as the rest of the page */
-Page QWidget#HydrusMediaViewer
-{
-	qproperty-hmv_background: #152f56;
+	qproperty-hmv_background: transparent;
 	qproperty-hmv_text: #b4c7d9;
 }
 
@@ -685,6 +680,10 @@ QTabWidget::tab-bar {
 
 Page > QSplitter {
 	background-color: #152f56;
+	background-image: url("static/qss/e621/bg-small.svg");
+	background-position: top left;
+	background-repeat: repeat-x;
+	background-attachment: fixed;
 	border-radius: 6px;
 }
 
@@ -773,6 +772,7 @@ Page > .QFrame /* <- dropdowns, which get reparented and have no unique class or
 QWidget#HydrusTagList
 {
 	qproperty-htl_background: #152f56;
+	qproperty-draw_background: 0;
 }
 
 QTabWidget QTabWidget QStackedWidget QWidget#HydrusTagList
