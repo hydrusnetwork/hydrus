@@ -1,4 +1,3 @@
-import collections
 import os
 import time
 import typing
@@ -17,7 +16,6 @@ from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
-from hydrus.client import ClientLocation
 from hydrus.client import ClientThreading
 from hydrus.client.exporting import ClientExportingFiles
 from hydrus.client.gui import ClientGUIAsync
@@ -36,7 +34,6 @@ from hydrus.client.gui.panels import ClientGUIScrolledPanels
 from hydrus.client.gui.search import ClientGUIACDropdown
 from hydrus.client.gui.widgets import ClientGUICommon
 from hydrus.client.media import ClientMedia
-from hydrus.client.media import ClientMediaFileFilter
 from hydrus.client.metadata import ClientContentUpdates
 from hydrus.client.metadata import ClientMetadataMigrationExporters
 from hydrus.client.metadata import ClientMetadataMigrationImporters
@@ -356,7 +353,7 @@ If you select synchronise, be careful!'''
         
         rows = []
         
-        rows.append( ( 'delete files from client after export: ', self._delete_from_client_after_export ) )
+        rows.append( ( 'trash files in hydrus client after export: ', self._delete_from_client_after_export ) )
         rows.append( ( 'EXPERIMENTAL: export symlinks', self._export_symlinks ) )
         
         gridbox = ClientGUICommon.WrapInGrid( self._type_box, rows )
@@ -478,7 +475,7 @@ If you select synchronise, be careful!'''
         
         if self._delete_from_client_after_export.isChecked():
             
-            message = 'You have set this export folder to delete the files from the client after export! Are you absolutely sure this is what you want?'
+            message = 'You have set this export folder to delete the files from the client (send them to trash) after export! Are you absolutely sure this is what you want?'
             
             result = ClientGUIDialogsQuick.GetYesNo( self, message )
             
@@ -495,7 +492,7 @@ If you select synchronise, be careful!'''
         
         if self._delete_from_client_after_export.isChecked():
             
-            ClientGUIDialogsMessage.ShowWarning( self, 'This will delete the exported files from your client after the export! If you do not know what this means, uncheck it!' )
+            ClientGUIDialogsMessage.ShowWarning( self, 'This will delete the exported files from your client (send them to trash) after the export! If you do not know what this means, uncheck it!' )
             
         
     
@@ -609,7 +606,7 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         self._examples = ClientGUICommon.ExportPatternButton( self._filenames_box )
         
-        self._delete_files_after_export = QW.QCheckBox( 'delete files from client after export?', self )
+        self._delete_files_after_export = QW.QCheckBox( 'trash files in hydrus client after export', self )
         self._delete_files_after_export.setObjectName( 'HydrusWarning' )
         
         self._export_symlinks = QW.QCheckBox( 'EXPERIMENTAL: export symlinks', self )
@@ -794,7 +791,7 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
             if delete_afterwards:
                 
                 message += '\n' * 2
-                message += 'THE FILES WILL BE DELETED FROM THE CLIENT AFTERWARDS'
+                message += 'THE FILES WILL BE SENT TO THE TRASH IN THE CLIENT AFTERWARDS'
                 
             
             result = ClientGUIDialogsQuick.GetYesNo( self, message )
@@ -808,7 +805,7 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
             
         elif delete_afterwards:
             
-            message = 'THE FILES WILL BE DELETED FROM THE CLIENT AFTERWARDS'
+            message = 'THE FILES WILL BE SENT TO THE TRASH IN THE CLIENT AFTERWARDS'
             
             result = ClientGUIDialogsQuick.GetYesNo( self, message )
             
@@ -985,32 +982,19 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
                 
                 QP.CallAfter( qt_update_label, 'deleting' )
                 
-                deletee_medias = ClientMediaFileFilter.FilterAndReportDeleteLockFailures( actually_done_ok )
+                actually_done_media_results = [ m.GetMediaResult() for m in actually_done_ok ]
                 
-                local_file_service_keys = CG.client_controller.services_manager.GetServiceKeys( ( HC.LOCAL_FILE_DOMAIN, ) )
+                chunks_of_deletee_media_results = HydrusLists.SplitListIntoChunks( actually_done_media_results, 64 )
                 
-                chunks_of_deletee_medias = HydrusLists.SplitListIntoChunks( list( deletee_medias ), 64 )
-                
-                for chunk_of_deletee_medias in chunks_of_deletee_medias:
+                for chunk_of_deletee_media_results in chunks_of_deletee_media_results:
                     
                     reason = 'Deleted after manual export to "{}".'.format( directory )
                     
-                    service_keys_to_hashes = collections.defaultdict( set )
+                    hashes = [ media_result.GetHash() for media_result in chunk_of_deletee_media_results ]
                     
-                    for media in chunk_of_deletee_medias:
-                        
-                        for service_key in media.GetLocationsManager().GetCurrent().intersection( local_file_service_keys ):
-                            
-                            service_keys_to_hashes[ service_key ].add( media.GetHash() )
-                            
-                        
+                    content_update = ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, hashes, reason = reason )
                     
-                    for service_key in ClientLocation.ValidLocalDomainsFilter( service_keys_to_hashes.keys() ):
-                        
-                        content_update = ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, service_keys_to_hashes[ service_key ], reason = reason )
-                        
-                        CG.client_controller.WriteSynchronous( 'content_updates', ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( service_key, content_update ) )
-                        
+                    CG.client_controller.WriteSynchronous( 'content_updates', ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY, content_update ) )
                     
                 
             

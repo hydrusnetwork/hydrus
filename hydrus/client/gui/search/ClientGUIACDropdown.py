@@ -2060,7 +2060,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
     searchChanged = QC.Signal( ClientSearchFileSearchContext.FileSearchContext )
     searchCancelled = QC.Signal()
     
-    def __init__( self, parent: QW.QWidget, page_key, file_search_context: ClientSearchFileSearchContext.FileSearchContext, media_sort_widget: typing.Optional[ ClientGUIMediaResultsPanelSortCollect.MediaSortControl ] = None, media_collect_widget: typing.Optional[ ClientGUIMediaResultsPanelSortCollect.MediaCollectControl ] = None, media_callable = None, synchronised = True, include_unusual_predicate_types = True, allow_all_known_files = True, only_allow_local_file_domains = False, force_system_everything = False, hide_favourites_edit_actions = False, fixed_results_list_height = None ):
+    def __init__( self, parent: QW.QWidget, page_key, file_search_context: ClientSearchFileSearchContext.FileSearchContext, media_sort_widget: typing.Optional[ ClientGUIMediaResultsPanelSortCollect.MediaSortControl ] = None, media_collect_widget: typing.Optional[ ClientGUIMediaResultsPanelSortCollect.MediaCollectControl ] = None, media_callable = None, synchronised = True, include_unusual_predicate_types = True, allow_all_known_files = True, only_allow_local_file_domains = False, only_allow_all_my_files_domains = False, force_system_everything = False, hide_favourites_edit_actions = False, fixed_results_list_height = None ):
         
         self._page_key = page_key
         
@@ -2090,6 +2090,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
         super().__init__( parent, location_context, tag_context.service_key )
         
         self._location_context_button.SetOnlyLocalFileDomainsAllowed( only_allow_local_file_domains )
+        self._location_context_button.SetOnlyAllMyFilesDomainsAllowed( only_allow_all_my_files_domains )
         self._location_context_button.SetAllKnownFilesAllowed( allow_all_known_files, True )
         
         #

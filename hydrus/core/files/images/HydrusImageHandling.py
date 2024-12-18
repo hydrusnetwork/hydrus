@@ -342,10 +342,15 @@ def GeneratePILImageFromNumPyImage( numpy_image: numpy.array ) -> PILImage.Image
     return pil_image
     
 
-def GenerateFileBytesNumPy( numpy_image, ext: str = '.png', params: list[int] = [] ) -> bytes:
+def GenerateFileBytesNumPy( numpy_image, ext: str = '.png', params: typing.Optional[ typing.List[ int ] ] = None ) -> bytes:
+    
+    if params is None:
+        
+        params = []
+        
     
     if len( numpy_image.shape ) == 2:
-                
+        
         convert = cv2.COLOR_GRAY2RGB
         
     else:

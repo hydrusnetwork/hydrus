@@ -1390,6 +1390,38 @@ class TestClientAPI( unittest.TestCase ):
         
         self.assertIn( not_existing_service_hex, text ) # error message should be complaining about it
         
+        # test file lock, 200 response
+        
+        locked_hash = list( hashes )[0]
+        
+        media_result = HF.GetFakeMediaResult( locked_hash )
+        
+        media_result.GetLocationsManager().inbox = False
+        
+        TG.test_controller.new_options.SetBoolean( 'delete_lock_for_archived_files', True )
+        
+        TG.test_controller.ClearWrites( 'content_updates' )
+        
+        TG.test_controller.SetRead( 'media_results', [ media_result ] )
+        
+        path = '/add_files/delete_files'
+        
+        body_dict = { 'hashes' : [ h.hex() for h in hashes ], 'file_service_key' : CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY.hex() }
+        
+        body = json.dumps( body_dict )
+        
+        connection.request( 'POST', path, body = body, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        self.assertEqual( response.status, 200 )
+        
+        CG.client_controller.new_options.SetBoolean( 'delete_lock_for_archived_files', False )
+        
+        TG.test_controller.ClearReads( 'media_results' )
+        
         # test file lock, 409 response
         
         locked_hash = list( hashes )[0]
@@ -1406,7 +1438,7 @@ class TestClientAPI( unittest.TestCase ):
         
         path = '/add_files/delete_files'
         
-        body_dict = { 'hashes' : [ h.hex() for h in hashes ] }
+        body_dict = { 'hashes' : [ h.hex() for h in hashes ], 'file_service_key' : CC.COMBINED_LOCAL_FILE_SERVICE_KEY.hex() }
         
         body = json.dumps( body_dict )
         
@@ -4836,7 +4868,7 @@ class TestClientAPI( unittest.TestCase ):
                 
                 self.assertTrue( len( content_update_packages ) == 1 )
                 
-                expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( CC.LOCAL_FILE_SERVICE_KEY, ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, { bytes.fromhex( r_dict[ 'hash_b' ] ) }, reason = 'From Client API (duplicates processing).' ) )
+                expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY, ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, { bytes.fromhex( r_dict[ 'hash_b' ] ) }, reason = 'From Client API (duplicates processing).' ) )
                 
                 HF.compare_content_update_packages( self, content_update_packages[0], expected_content_update_package )
                 

@@ -793,14 +793,14 @@ class EditFileTimestampsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUISc
                 
                 if timestamp_data.location == CC.CANVAS_MEDIA_VIEWER:
                     
-                    if self._last_viewed_media_viewer_time.isVisible():
+                    if not self._last_viewed_media_viewer_time.isHidden():
                         
                         self._last_viewed_media_viewer_time.SetValue( self._last_viewed_media_viewer_time.GetValue().DuplicateWithNewTimestampMS( timestamp_data.timestamp_ms ), from_user = from_user )
                         
                     
                 elif timestamp_data.location == CC.CANVAS_PREVIEW:
                     
-                    if self._last_viewed_preview_viewer_time.isVisible():
+                    if not self._last_viewed_preview_viewer_time.isHidden():
                         
                         self._last_viewed_preview_viewer_time.SetValue( self._last_viewed_preview_viewer_time.GetValue().DuplicateWithNewTimestampMS( timestamp_data.timestamp_ms ), from_user = from_user )
                         

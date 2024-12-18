@@ -467,24 +467,6 @@ quick_inverse_lookups.update( {
     FileFilter( FILE_FILTER_REMOTE ) : FileFilter( FILE_FILTER_LOCAL )
 } )
 
-def FilterAndReportDeleteLockFailures( medias: typing.Collection[ ClientMedia.Media ] ):
-    
-    # TODO: update this system with some texts like 'file was archived' so user can know how to fix the situation
-    
-    deletee_medias = [ media for media in medias if not media.HasDeleteLocked() ]
-    
-    if len( deletee_medias ) < len( medias ):
-        
-        locked_medias = [ media for media in medias if media.HasDeleteLocked() ]
-        
-        locked_media_results = [ media_singleton.GetMediaResult() for media_singleton in ClientMedia.FlattenMedia( locked_medias ) ]
-        
-        ReportDeleteLockFailures( locked_media_results )
-        
-    
-    return deletee_medias
-    
-
 def ReportDeleteLockFailures( media_results: typing.Collection[ ClientMediaResult.MediaResult ] ):
     
     HydrusData.Print( 'Hey, we had a delete-lock problem. Here is the stack, which hydev may care to see:' )

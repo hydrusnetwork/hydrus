@@ -473,7 +473,11 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             'deferred_table_delete_work_time_ms_normal' : 250,
             'deferred_table_delete_rest_percentage_normal' : 1000,
             'deferred_table_delete_work_time_ms_work_hard' : 5000,
-            'deferred_table_delete_rest_percentage_work_hard' : 10
+            'deferred_table_delete_rest_percentage_work_hard' : 10,
+            'gallery_page_status_update_time_minimum_ms' : 1000,
+            'gallery_page_status_update_time_ratio_denominator' : 30,
+            'watcher_page_status_update_time_minimum_ms' : 1000,
+            'watcher_page_status_update_time_ratio_denominator' : 30
         }
         
         #

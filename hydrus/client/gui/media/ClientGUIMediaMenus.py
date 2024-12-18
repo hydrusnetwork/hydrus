@@ -366,6 +366,7 @@ def AddKnownURLsViewCopyMenu( win: QW.QWidget, command_processor: CAC.Applicatio
         focus_urls = focus_media.GetLocationsManager().GetURLs()
         
     
+    focus_media_url_classes = set()
     focus_matched_labels_and_urls = []
     focus_unmatched_urls = []
     focus_labels_and_urls = []
@@ -392,6 +393,8 @@ def AddKnownURLsViewCopyMenu( win: QW.QWidget, command_processor: CAC.Applicatio
                 label = url_class.GetName() + ': ' + ClientNetworkingFunctions.ConvertURLToHumanString( url )
                 
                 focus_matched_labels_and_urls.append( ( label, url ) )
+                
+                focus_media_url_classes.add( url_class )
                 
             
         
@@ -526,6 +529,20 @@ def AddKnownURLsViewCopyMenu( win: QW.QWidget, command_processor: CAC.Applicatio
                 
             
         
+        if len( focus_media_url_classes ) > 0:
+            
+            focus_media_url_classes = list( focus_media_url_classes )
+            
+            focus_media_url_classes.sort( key = lambda url_class: url_class.GetName() )
+            
+            for url_class in focus_media_url_classes:
+                
+                label = 'this file\'s ' + url_class.GetName() + ' urls'
+                
+                ClientGUIMenus.AppendMenuItem( urls_force_refetch_menu, label, 'Re-download these URLs with forced metadata re-fetch enabled.', ClientGUIMediaModalActions.RedownloadURLClassURLsForceRefetch, win, { focus_media }, url_class )
+                
+            
+        
         # copy this file's urls
         
         there_are_focus_url_classes_to_action = len( focus_matched_labels_and_urls ) > 1
@@ -571,6 +588,7 @@ def AddKnownURLsViewCopyMenu( win: QW.QWidget, command_processor: CAC.Applicatio
             
             ClientGUIMenus.AppendSeparator( urls_visit_menu )
             ClientGUIMenus.AppendSeparator( urls_copy_menu )
+            ClientGUIMenus.AppendSeparator( urls_force_refetch_menu )
             
         
         if there_are_selection_url_classes_to_action:
@@ -587,7 +605,10 @@ def AddKnownURLsViewCopyMenu( win: QW.QWidget, command_processor: CAC.Applicatio
                 
                 ClientGUIMenus.AppendMenuItem( urls_copy_menu, label, 'Copy this url class for all files.', ClientGUIMediaSimpleActions.CopyMediaURLClassURLs, selected_media, url_class )
                 
-                ClientGUIMenus.AppendMenuItem( urls_force_refetch_menu, label, 'Re-download these URLs with forced metadata re-fetch enabled.', ClientGUIMediaModalActions.RedownloadURLClassURLsForceRefetch, win, selected_media, url_class )
+                if len( selected_media ) > 1:
+                    
+                    ClientGUIMenus.AppendMenuItem( urls_force_refetch_menu, label, 'Re-download these URLs with forced metadata re-fetch enabled.', ClientGUIMediaModalActions.RedownloadURLClassURLsForceRefetch, win, selected_media, url_class )
+                    
                 
             
         

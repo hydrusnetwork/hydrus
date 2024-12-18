@@ -183,11 +183,11 @@ class HydrusResourceClientAPIRestrictedAddFilesDeleteFiles( HydrusResourceClient
         
         location_context.LimitToServiceTypes( CG.client_controller.services_manager.GetServiceType, ( HC.COMBINED_LOCAL_FILE, HC.COMBINED_LOCAL_MEDIA, HC.LOCAL_FILE_DOMAIN ) )
         
-        if CG.client_controller.new_options.GetBoolean( 'delete_lock_for_archived_files' ):
+        if CC.COMBINED_LOCAL_FILE_SERVICE_KEY in location_context.current_service_keys:
             
             media_results = CG.client_controller.Read( 'media_results', hashes )
             
-            undeletable_media_results = [ m for m in media_results if m.IsDeleteLocked() ]
+            undeletable_media_results = [ m for m in media_results if m.IsPhysicalDeleteLocked() ]
             
             if len( undeletable_media_results ) > 0:
                 

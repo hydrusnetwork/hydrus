@@ -147,9 +147,13 @@ This is an important dialog, although you will not need to use it much. It gover
 
 You can see that each tag service on your client has a separate section. If you add the PTR, that will get a new box too. A new client is set to _get all tags_ for 'downloader tags' service. Things can get much more complicated. Have a play around with the options here as you figure things out. Most of the controls have tooltips or longer explainers in sub-dialogs, so don't be afraid to try things.
 
-It is easy to get tens of thousands of tags by downloading this way. Different sites offer different kinds and qualities of tags, and the client's downloaders (which were designed by me, the dev, or a user) may parse all or only some of them. Many users like to just get everything on offer, but others only ever want, say, `creator`, `series`, and `character` tags. If you feel brave, click that 'all tags' button, which will take you into hydrus's advanced 'tag filter', which allows you to select which of the incoming list of tags will be added.
+It is easy to get tens of thousands of tags by downloading this way. Different sites offer different kinds and qualities of tags, and the client's downloaders (which were designed by me, the dev, or a user) may parse all or only some of them. Many users like to just get everything on offer, but others only ever want, say, `creator`, `series`, and `character` tags. Once you feel comfortable with tags, try clicking that 'adding: all tags' button, which will take you into hydrus's advanced 'tag filter', which allows you to select which of the incoming tags will be added.
 
-The blacklist button will let you skip downloading files that have certain tags (perhaps you would like to auto-skip all images with `gore`, `scat`, or `diaper`?), again using the tag filter, while the whitelist enables you to only allow files that have at least one of a set of tags. The 'additional tags' adds some fixed personal tags to all files coming in--for instance, you might like to add 'process into favourites' to your 'my tags' for some query you really like so you can find those files again later and process them separately. That little 'cog' icon button can also do some advanced things.
+The 'additional tags' adds some fixed personal tags to all files coming in--for instance, you might like to add 'this came from the xxxxx subscription' or 'process into favourites' to your 'my tags' so you can find those files again later. That little 'cog' icon button can also do some advanced things.
+
+The blacklist button will let you skip downloading files that have certain tags, again using the tag filter, while the whitelist enables you to only allow files that have at least one of a set of tags.
+
+![](images/tag_filter_blacklist_example.png)
 
 !!! warning
     The file limit and import options on the upper panel of a gallery or watcher page, if changed, will only apply to **new** queries. If you want to change the options for an existing queue, either do so on its highlight panel below or use the 'set options to queries' button.

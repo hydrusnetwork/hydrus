@@ -41,7 +41,6 @@ from hydrus.client.gui.media import ClientGUIMediaMenus
 from hydrus.client.gui.panels import ClientGUIScrolledPanelsCommitFiltering
 from hydrus.client.gui.panels import ClientGUIScrolledPanelsEdit
 from hydrus.client.media import ClientMedia
-from hydrus.client.media import ClientMediaFileFilter
 from hydrus.client.media import ClientMediaResultPrettyInfo
 from hydrus.client.metadata import ClientContentUpdates
 from hydrus.client.metadata import ClientRatings
@@ -1808,13 +1807,11 @@ class CanvasWithDetails( Canvas ):
         my_width = my_size.width()
         my_height = my_size.height()
         
-        max_notes_width_percentage = 20
-        
+        # TODO: this sucks and it is also wrong, we actually want like half this padding in later points.
+        # maybe we'll want to merge the details canvas with the hovers one and then we can talk to the hovers directly to get framewidth and margin/padding/whatever
         PADDING = 4
         
-        max_notes_width = int( my_width * ( max_notes_width_percentage / 100 ) ) - ( PADDING * 2 )
-        
-        notes_width = 0
+        notes_width = int( my_width * ClientGUICanvasHoverFrames.SIDE_HOVER_PROPORTIONS ) - ( PADDING * 2 )
         
         original_font = painter.font()
         
@@ -1824,6 +1821,8 @@ class CanvasWithDetails( Canvas ):
         notes_font = QG.QFont( original_font )
         notes_font.setBold( False )
         
+        # old code that tried to draw it to a smaller box
+        '''
         for ( name, note ) in names_to_notes.items():
             
             # without wrapping, let's see if we fit into a smaller box than the max possible
@@ -1845,10 +1844,11 @@ class CanvasWithDetails( Canvas ):
                 break
                 
             
+        '''
         
         left_x = my_width - ( notes_width + PADDING )
         
-        current_y += PADDING * 2
+        current_y += PADDING * 3
         
         draw_a_test_rect = False
         
@@ -1886,9 +1886,6 @@ class CanvasWithDetails( Canvas ):
                 
                 break
                 
-            
-            # draw a horizontal line
-            
             
         
         painter.setFont( original_font )
@@ -3782,7 +3779,7 @@ class CanvasMediaList( ClientMedia.ListeningMediaList, CanvasWithHovers ):
             
         
     
-def CommitArchiveDelete( page_key: bytes, location_context: ClientLocation.LocationContext, kept: typing.Collection[ ClientMedia.MediaSingleton ], deleted: typing.Collection[ ClientMedia.MediaSingleton ], skipped: typing.Collection[ ClientMedia.MediaSingleton ] ):
+def CommitArchiveDelete( page_key: bytes, deletee_location_context: ClientLocation.LocationContext, kept: typing.Collection[ ClientMedia.MediaSingleton ], deleted: typing.Collection[ ClientMedia.MediaSingleton ], skipped: typing.Collection[ ClientMedia.MediaSingleton ] ):
     
     kept = list( kept )
     deleted = list( deleted )
@@ -3808,13 +3805,13 @@ def CommitArchiveDelete( page_key: bytes, location_context: ClientLocation.Locat
         CG.client_controller.pub( 'remove_media', page_key, all_hashes )
         
     
-    location_context = location_context.Duplicate()
+    deletee_location_context = deletee_location_context.Duplicate()
     
-    location_context.FixMissingServices( ClientLocation.ValidLocalDomainsFilter )
+    deletee_location_context.FixMissingServices( ClientLocation.ValidLocalDomainsFilter )
     
-    if location_context.IncludesCurrent():
+    if deletee_location_context.IncludesCurrent():
         
-        deletee_file_service_keys = location_context.current_service_keys
+        deletee_file_service_keys = deletee_location_context.current_service_keys
         
     else:
         
@@ -3909,7 +3906,7 @@ class CanvasMediaListFilterArchiveDelete( CanvasMediaList ):
         
         kept = list( self._kept )
         
-        deleted = ClientMediaFileFilter.FilterAndReportDeleteLockFailures( self._deleted )
+        deleted = list( self._deleted )
         
         skipped = list( self._skipped )
         
@@ -3930,9 +3927,13 @@ class CanvasMediaListFilterArchiveDelete( CanvasMediaList ):
                 
                 location_contexts_to_present_options_for = []
                 
-                if not self._location_context.IsAllLocalFiles():
+                possible_location_context_at_top = self._location_context.Duplicate()
+                
+                possible_location_context_at_top.LimitToServiceTypes( CG.client_controller.services_manager.GetServiceType, ( HC.COMBINED_LOCAL_MEDIA, HC.LOCAL_FILE_DOMAIN ) )
+                
+                if len( possible_location_context_at_top.current_service_keys ) > 0:
                     
-                    location_contexts_to_present_options_for.append( self._location_context )
+                    location_contexts_to_present_options_for.append( possible_location_context_at_top )
                     
                 
                 current_local_service_keys = HydrusLists.MassUnion( [ m.GetLocationsManager().GetCurrent() for m in deleted ] )
@@ -3955,11 +3956,6 @@ class CanvasMediaListFilterArchiveDelete( CanvasMediaList ):
                         
                     
                 
-                if CC.TRASH_SERVICE_KEY in current_local_service_keys or CC.LOCAL_UPDATE_SERVICE_KEY in current_local_service_keys:
-                    
-                    location_contexts_to_present_options_for.append( ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_FILE_SERVICE_KEY ) )
-                    
-                
                 location_contexts_to_present_options_for = HydrusData.DedupeList( location_contexts_to_present_options_for )
                 
                 only_allow_all_media_files = len( location_contexts_to_present_options_for ) > 1 and CG.client_controller.new_options.GetBoolean( 'only_show_delete_from_all_local_domains_when_filtering' ) and True in ( location_context.IsAllMediaFiles() for location_context in location_contexts_to_present_options_for )
@@ -3980,10 +3976,6 @@ class CanvasMediaListFilterArchiveDelete( CanvasMediaList ):
                         if location_context == ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY ):
                             
                             location_label = 'all local file domains'
-                            
-                        elif location_context == ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_FILE_SERVICE_KEY ):
-                            
-                            location_label = 'my hard disk'
                             
                         else:
                             
@@ -4025,15 +4017,6 @@ class CanvasMediaListFilterArchiveDelete( CanvasMediaList ):
     def _Delete( self, media = None, reason = None, file_service_key = None ):
         
         if self._current_media is None:
-            
-            return False
-            
-        
-        if self._current_media.HasDeleteLocked():
-            
-            message = 'This file is delete-locked! Send it back to the inbox to delete it!'
-            
-            ClientGUIDialogsMessage.ShowWarning( self, message )
             
             return False
             

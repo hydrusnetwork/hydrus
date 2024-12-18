@@ -1303,6 +1303,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             delete_lock_panel = ClientGUICommon.StaticBox( self, 'delete lock' )
             
             self._delete_lock_for_archived_files = QW.QCheckBox( delete_lock_panel )
+            self._delete_lock_for_archived_files.setToolTip( ClientGUIFunctions.WrapToolTip( 'This will stop the client from physically deleting anything you have archived. You can still trash such files, but they cannot go further. It is a last-ditch catch to rescue accidentally deleted good files.' ) )
             
             advanced_file_deletion_panel = ClientGUICommon.StaticBox( self, 'advanced file deletion and custom reasons' )
             
@@ -1389,7 +1390,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             rows = []
             
-            rows.append( ( 'Do not permit archived files to be trashed or deleted: ', self._delete_lock_for_archived_files ) )
+            rows.append( ( 'Do not permit archived files to be deleted from the trash: ', self._delete_lock_for_archived_files ) )
             
             gridbox = ClientGUICommon.WrapInGrid( delete_lock_panel, rows )
             
@@ -1502,12 +1503,15 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._file_viewing_statistics_active = QW.QCheckBox( self )
             self._file_viewing_statistics_active_on_archive_delete_filter = QW.QCheckBox( self )
             self._file_viewing_statistics_active_on_dupe_filter = QW.QCheckBox( self )
-            self._file_viewing_statistics_media_min_time = ClientGUICommon.NoneableSpinCtrl( self, 2 )
+            self._file_viewing_statistics_media_min_time = ClientGUICommon.NoneableSpinCtrl( self, 2, none_phrase = 'count every view' )
+            min_tt = 'If you scroll quickly through many files, you probably do not want to count each of those loads as a view. Set a reasonable minimum here and brief looks will not be counted.'
+            self._file_viewing_statistics_media_min_time.setToolTip( ClientGUIFunctions.WrapToolTip( min_tt ) )
             self._file_viewing_statistics_media_max_time = ClientGUICommon.NoneableSpinCtrl( self, 600 )
-            max_tt = 'If you view a file for a very long time, the amount of viewtime recorded is clipped to this. This stops an outrageous viewtime being saved because you left something open in the background. If the media you view has duration, like a video, the max viewtime is five times its length or this, whichever is larger.'
+            max_tt = 'If you view a file for a very long time, the recorded viewtime is truncated to this. This stops an outrageous viewtime being saved because you left something open in the background. If the media you view has duration, like a video, the max viewtime is five times its length or this, whichever is larger.'
             self._file_viewing_statistics_media_max_time.setToolTip( ClientGUIFunctions.WrapToolTip( max_tt ) )
             
-            self._file_viewing_statistics_preview_min_time = ClientGUICommon.NoneableSpinCtrl( self, 5 )
+            self._file_viewing_statistics_preview_min_time = ClientGUICommon.NoneableSpinCtrl( self, 5, none_phrase = 'count every view' )
+            self._file_viewing_statistics_preview_min_time.setToolTip( ClientGUIFunctions.WrapToolTip( min_tt ) )
             self._file_viewing_statistics_preview_max_time = ClientGUICommon.NoneableSpinCtrl( self, 60 )
             self._file_viewing_statistics_preview_max_time.setToolTip( ClientGUIFunctions.WrapToolTip( max_tt ) )
             
@@ -3968,6 +3972,16 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             #
             
+            pages_panel = ClientGUICommon.StaticBox( self, 'download pages update', can_expand = True, start_expanded = False )
+            
+            self._gallery_page_status_update_time_minimum = ClientGUITime.TimeDeltaCtrl( pages_panel, min = 0.25, seconds = True, milliseconds = True )
+            self._gallery_page_status_update_time_ratio_denominator = ClientGUICommon.BetterSpinBox( pages_panel, min = 1 )
+            
+            self._watcher_page_status_update_time_minimum = ClientGUITime.TimeDeltaCtrl( pages_panel, min = 0.25, seconds = True, milliseconds = True )
+            self._watcher_page_status_update_time_ratio_denominator = ClientGUICommon.BetterSpinBox( pages_panel, min = 1 )
+            
+            #
+            
             buffer_panel = ClientGUICommon.StaticBox( self, 'video buffer' )
             
             self._video_buffer_size = ClientGUIBytes.BytesControl( buffer_panel )
@@ -3986,6 +4000,12 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._image_tile_cache_timeout.SetValue( self._new_options.GetInteger( 'image_tile_cache_timeout' ) )
             
             self._ideal_tile_dimension.setValue( self._new_options.GetInteger( 'ideal_tile_dimension' ) )
+            
+            self._gallery_page_status_update_time_minimum.SetValue( self._new_options.GetInteger( 'gallery_page_status_update_time_minimum_ms' ) / 1000 )
+            self._gallery_page_status_update_time_ratio_denominator.setValue( self._new_options.GetInteger( 'gallery_page_status_update_time_ratio_denominator' ) )
+            
+            self._watcher_page_status_update_time_minimum.SetValue( self._new_options.GetInteger( 'watcher_page_status_update_time_minimum_ms' ) / 1000 )
+            self._watcher_page_status_update_time_ratio_denominator.setValue( self._new_options.GetInteger( 'watcher_page_status_update_time_ratio_denominator' ) )
             
             self._video_buffer_size.SetValue( self._new_options.GetInteger( 'video_buffer_size' ) )
             
@@ -4105,6 +4125,30 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             image_tile_cache_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
             QP.AddToLayout( vbox, image_tile_cache_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+            
+            #
+            
+            text = 'EXPERIMENTAL, HYDEV ONLY, STAY AWAY!'
+            
+            st = ClientGUICommon.BetterStaticText( pages_panel, text )
+            
+            st.setWordWrap( True )
+            
+            pages_panel.Add( st, CC.FLAGS_EXPAND_PERPENDICULAR )
+            
+            rows = []
+            
+            rows.append( ( 'EXPERIMENTAL: Minimum gallery importer update time:', self._gallery_page_status_update_time_minimum ) )
+            rows.append( ( 'EXPERIMENTAL: Gallery importer magic update time denominator:', self._gallery_page_status_update_time_ratio_denominator ) )
+            
+            rows.append( ( 'EXPERIMENTAL: Minimum watcher importer update time:', self._watcher_page_status_update_time_minimum ) )
+            rows.append( ( 'EXPERIMENTAL: Watcher importer magic update time denominator:', self._watcher_page_status_update_time_ratio_denominator ) )
+            
+            gridbox = ClientGUICommon.WrapInGrid( pages_panel, rows )
+            
+            pages_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            
+            QP.AddToLayout( vbox, pages_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
             
             #
             
@@ -4266,6 +4310,12 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._new_options.SetInteger( 'image_cache_storage_limit_percentage', self._image_cache_storage_limit_percentage.value() )
             self._new_options.SetInteger( 'image_cache_prefetch_limit_percentage', self._image_cache_prefetch_limit_percentage.value() )
+            
+            self._new_options.SetInteger( 'gallery_page_status_update_time_minimum_ms', int( self._gallery_page_status_update_time_minimum.GetValue() * 1000 ) )
+            self._new_options.SetInteger( 'gallery_page_status_update_time_ratio_denominator', self._gallery_page_status_update_time_ratio_denominator.value() )
+            
+            self._new_options.SetInteger( 'watcher_page_status_update_time_minimum_ms', int( self._watcher_page_status_update_time_minimum.GetValue() * 1000 ) )
+            self._new_options.SetInteger( 'watcher_page_status_update_time_ratio_denominator', self._watcher_page_status_update_time_ratio_denominator.value() )
             
             self._new_options.SetInteger( 'video_buffer_size', self._video_buffer_size.GetValue() )
             

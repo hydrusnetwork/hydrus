@@ -717,15 +717,19 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        self._import_favourite = ClientGUICommon.BetterButton( self, 'import', self._ImportFavourite )
-        self._export_favourite = ClientGUICommon.BetterButton( self, 'export', self._ExportFavourite )
-        self._load_favourite = ClientGUICommon.BetterButton( self, 'load', self._LoadFavourite )
-        self._save_favourite = ClientGUICommon.BetterButton( self, 'save', self._SaveFavourite )
-        self._delete_favourite = ClientGUICommon.BetterButton( self, 'delete', self._DeleteFavourite )
+        self._favourites_panel = ClientGUICommon.StaticBox( self, 'favourites' )
+        
+        self._import_favourite = ClientGUICommon.BetterButton( self._favourites_panel, 'import', self._ImportFavourite )
+        self._export_favourite = ClientGUICommon.BetterButton( self._favourites_panel, 'export', self._ExportFavourite )
+        self._load_favourite = ClientGUICommon.BetterButton( self._favourites_panel, 'load', self._LoadFavourite )
+        self._save_favourite = ClientGUICommon.BetterButton( self._favourites_panel, 'save', self._SaveFavourite )
+        self._delete_favourite = ClientGUICommon.BetterButton( self._favourites_panel, 'delete', self._DeleteFavourite )
         
         #
         
-        self._show_all_panels_button = ClientGUICommon.BetterButton( self, 'show other panels', self._ShowAllPanels )
+        self._filter_panel = ClientGUICommon.StaticBox( self, 'filter' )
+        
+        self._show_all_panels_button = ClientGUICommon.BetterButton( self._filter_panel, 'show other panels', self._ShowAllPanels )
         self._show_all_panels_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'This shows the whitelist and advanced panels, in case you want to craft a clever blacklist with \'except\' rules.' ) )
         
         show_the_button = self._only_show_blacklist and CG.client_controller.new_options.GetBoolean( 'advanced_mode' )
@@ -734,7 +738,7 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        self._notebook = ClientGUICommon.BetterNotebook( self )
+        self._notebook = ClientGUICommon.BetterNotebook( self._filter_panel )
         
         #
         
@@ -760,17 +764,21 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        self._redundant_st = ClientGUICommon.BetterStaticText( self, '', ellipsize_end = True )
+        self._redundant_st = ClientGUICommon.BetterStaticText( self._filter_panel, '', ellipsize_end = True )
         self._redundant_st.setVisible( False )
         
-        self._current_filter_st = ClientGUICommon.BetterStaticText( self, 'current filter: ', ellipsize_end = True )
+        self._current_filter_st = ClientGUICommon.BetterStaticText( self._filter_panel, 'current filter: ', ellipsize_end = True )
         
-        self._test_result_st = ClientGUICommon.BetterStaticText( self, self.TEST_RESULT_DEFAULT )
+        #
+        
+        self._test_panel = ClientGUICommon.StaticBox( self, 'testing', can_expand = True, start_expanded = True )
+        
+        self._test_result_st = ClientGUICommon.BetterStaticText( self._test_panel, self.TEST_RESULT_DEFAULT )
         self._test_result_st.setAlignment( QC.Qt.AlignmentFlag.AlignVCenter | QC.Qt.AlignmentFlag.AlignRight )
         
         self._test_result_st.setWordWrap( True )
         
-        self._test_input = QW.QPlainTextEdit( self )
+        self._test_input = QW.QPlainTextEdit( self._test_panel )
         
         #
         
@@ -787,12 +795,18 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         if message is not None:
             
-            st = ClientGUICommon.BetterStaticText( self, message )
+            message_panel = ClientGUICommon.StaticBox( self, 'explanation', can_expand = True, start_expanded = True )
+            
+            st = ClientGUICommon.BetterStaticText( message_panel, message )
             
             st.setWordWrap( True )
             
-            QP.AddToLayout( vbox, st, CC.FLAGS_EXPAND_PERPENDICULAR )
+            message_panel.Add( st, CC.FLAGS_EXPAND_PERPENDICULAR )
             
+            QP.AddToLayout( vbox, message_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+            
+        
+        #
         
         hbox = QP.HBoxLayout()
         
@@ -808,18 +822,28 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         QP.AddToLayout( hbox, self._save_favourite, CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( hbox, self._delete_favourite, CC.FLAGS_CENTER_PERPENDICULAR )
         
-        QP.AddToLayout( vbox, hbox, CC.FLAGS_ON_RIGHT )
-        QP.AddToLayout( vbox, self._show_all_panels_button, CC.FLAGS_ON_RIGHT )
+        self._favourites_panel.Add( hbox, CC.FLAGS_ON_RIGHT )
+        
+        QP.AddToLayout( vbox, self._favourites_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        #
+        
+        self._filter_panel.Add( self._show_all_panels_button, CC.FLAGS_ON_RIGHT )
         
         label = 'Click the "(un)namespaced" checkboxes to allow/disallow those tags.\nType "namespace:" to manually input a namespace that is not in the list.'
         st = ClientGUICommon.BetterStaticText( self, label = label )
         st.setWordWrap( True )
+        st.setAlignment( QC.Qt.AlignmentFlag.AlignCenter )
         
-        QP.AddToLayout( vbox, st, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._filter_panel.Add( st, CC.FLAGS_EXPAND_PERPENDICULAR )
         
-        QP.AddToLayout( vbox, self._notebook, CC.FLAGS_EXPAND_BOTH_WAYS )
-        QP.AddToLayout( vbox, self._redundant_st, CC.FLAGS_EXPAND_PERPENDICULAR )
-        QP.AddToLayout( vbox, self._current_filter_st, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._filter_panel.Add( self._notebook, CC.FLAGS_EXPAND_BOTH_WAYS )
+        self._filter_panel.Add( self._redundant_st, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._filter_panel.Add( self._current_filter_st, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        QP.AddToLayout( vbox, self._filter_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        #
         
         test_text_vbox = QP.VBoxLayout()
         
@@ -827,7 +851,7 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
             
             message = 'This is a fixed blacklist. It will apply rules against all test tag siblings and apply unnamespaced rules to namespaced test tags.'
             
-            st = ClientGUICommon.BetterStaticText( self, message )
+            st = ClientGUICommon.BetterStaticText( self._test_input, message )
             
             st.setWordWrap( True )
             
@@ -841,7 +865,9 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         QP.AddToLayout( hbox, test_text_vbox, CC.FLAGS_CENTER_PERPENDICULAR_EXPAND_DEPTH )
         QP.AddToLayout( hbox, self._test_input, CC.FLAGS_CENTER_PERPENDICULAR_EXPAND_DEPTH )
         
-        QP.AddToLayout( vbox, hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._test_panel.Add( hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        QP.AddToLayout( vbox, self._test_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         self.widget().setLayout( vbox )
         
@@ -1280,7 +1306,7 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
 
         ( w, h ) = ClientGUIFunctions.ConvertTextToPixels( self._simple_blacklist_global_checkboxes, ( 20, 3 ) )
         
-        self._simple_blacklist_global_checkboxes.setFixedHeight( h )
+        self._simple_blacklist_global_checkboxes.setFixedHeight( h + ( self._simple_blacklist_global_checkboxes.frameWidth() * 2 ) )
         
         self._simple_blacklist_namespace_checkboxes = ClientGUICommon.BetterCheckBoxList( self._simple_whitelist_panel )
         
@@ -1332,7 +1358,7 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         main_hbox = QP.HBoxLayout()
         
-        QP.AddToLayout( main_hbox, left_vbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        QP.AddToLayout( main_hbox, left_vbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         QP.AddToLayout( main_hbox, right_vbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
         
         self._simple_blacklist_panel.Add( main_hbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
@@ -1369,7 +1395,7 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         ( w, h ) = ClientGUIFunctions.ConvertTextToPixels( self._simple_whitelist_global_checkboxes, ( 20, 3 ) )
         
-        self._simple_whitelist_global_checkboxes.setFixedHeight( h )
+        self._simple_whitelist_global_checkboxes.setFixedHeight( h + ( self._simple_whitelist_global_checkboxes.frameWidth() * 2 ) )
         
         self._simple_whitelist_namespace_checkboxes = ClientGUICommon.BetterCheckBoxList( self._simple_whitelist_panel )
         
@@ -1419,7 +1445,7 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         main_hbox = QP.HBoxLayout()
         
-        QP.AddToLayout( main_hbox, left_vbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        QP.AddToLayout( main_hbox, left_vbox, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( main_hbox, right_vbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
         
         self._simple_whitelist_panel.Add( main_hbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )

@@ -20,7 +20,6 @@ from hydrus.client import ClientThreading
 from hydrus.client import ClientTime
 from hydrus.client.importing.options import NoteImportOptions
 from hydrus.client.media import ClientMediaResult
-from hydrus.client.media import ClientMediaFileFilter
 from hydrus.client.metadata import ClientContentUpdates
 from hydrus.client.metadata import ClientTags
 
@@ -1418,29 +1417,11 @@ class DuplicateContentMergeOptions( HydrusSerialisable.SerialisableBase ):
                 continue
                 
             
-            if media_result.IsDeleteLocked():
-                
-                ClientMediaFileFilter.ReportDeleteLockFailures( [ media_result ] )
-                
-                continue
-                
-            
-            if media_result.GetLocationsManager().IsTrashed():
-                
-                deletee_service_keys = ( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, )
-                
-            else:
-                
-                local_file_service_keys = CG.client_controller.services_manager.GetServiceKeys( ( HC.LOCAL_FILE_DOMAIN, ) )
-                
-                deletee_service_keys = media_result.GetLocationsManager().GetCurrent().intersection( local_file_service_keys )
-                
-            
-            for deletee_service_key in deletee_service_keys:
+            if CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY in media_result.GetLocationsManager().GetCurrent():
                 
                 content_update = ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, { media_result.GetHash() }, reason = file_deletion_reason )
                 
-                content_update_package.AddContentUpdate( deletee_service_key, content_update )
+                content_update_package.AddContentUpdate( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY, content_update )
                 
             
         

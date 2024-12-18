@@ -358,17 +358,17 @@ class PopupMessage( PopupWindow ):
     
     def ShowTB( self ):
         
-        if self._tb_text.isVisible():
-            
-            self._show_tb_button.setText( 'show traceback' )
-            
-            self._tb_text.hide()
-            
-        else:
+        if self._tb_text.isHidden():
             
             self._show_tb_button.setText( 'hide traceback' )
             
             self._tb_text.show()
+            
+        else:
+        
+            self._show_tb_button.setText( 'show traceback' )
+            
+            self._tb_text.hide()
             
         
         self.updateGeometry()
@@ -525,7 +525,7 @@ class PopupMessage( PopupWindow ):
                 self._time_network_job_disappeared = HydrusTime.GetNow()
                 
             
-            if self._network_job_ctrl.isVisible() and HydrusTime.TimeHasPassed( self._time_network_job_disappeared + 10 ):
+            if not self._network_job_ctrl.isHidden() and HydrusTime.TimeHasPassed( self._time_network_job_disappeared + 10 ):
                 
                 self._network_job_ctrl.hide()
                 
@@ -943,11 +943,11 @@ class PopupMessageManager( QW.QFrame ):
     
     def _SizeAndPositionAndShow( self ):
         
-        gui_frame = self.parentWidget()
+        gui_frame = self.window()
         
         try:
             
-            gui_is_hidden = not gui_frame.isVisible()
+            gui_is_hidden = gui_frame.isHidden()
             
             going_to_bug_out_at_hide_or_show = gui_is_hidden
             
@@ -957,7 +957,7 @@ class PopupMessageManager( QW.QFrame ):
             
             if there_is_stuff_to_display:
                 
-                if not self.isVisible() and not going_to_bug_out_at_hide_or_show:
+                if self.isHidden() and not going_to_bug_out_at_hide_or_show:
                     
                     self.show()
                     
@@ -989,7 +989,7 @@ class PopupMessageManager( QW.QFrame ):
                 
             else:
                 
-                if self.isVisible() and not going_to_bug_out_at_hide_or_show:
+                if not self.isHidden() and not going_to_bug_out_at_hide_or_show:
                     
                     self.hide()
                     
@@ -1018,9 +1018,9 @@ class PopupMessageManager( QW.QFrame ):
             return False
             
         
-        main_gui = self.parentWidget()
+        main_gui = self.window()
         
-        if not main_gui.isVisible():
+        if main_gui.isHidden():
             
             return False
             
@@ -1209,14 +1209,7 @@ class PopupMessageManager( QW.QFrame ):
     
     def ExpandCollapse( self ):
         
-        if self._message_panel.isVisible():
-            
-            self._message_panel.setVisible( False )
-            
-        else:
-            
-            self._message_panel.show()
-            
+        self._message_panel.setVisible( self._message_panel.isHidden() )
         
         self.MakeSureEverythingFits()
         

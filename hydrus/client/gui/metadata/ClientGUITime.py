@@ -1353,7 +1353,7 @@ class TimeDeltaCtrl( QW.QWidget ):
                 value %= 1
                 
             
-            if self._show_milliseconds and value > 0:
+            if self._show_milliseconds:
                 
                 self._milliseconds.setValue( int( multiplier * value * 1000 ) )
                 

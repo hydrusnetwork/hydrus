@@ -802,7 +802,13 @@ class QLocator(QC.QObject):
                 dataItem.toggledSelectedIconPath = self.iconBasePath + dataItem.toggledSelectedIconPath
             self.resultsAvailable.emit(providerIndex, jobID)
 
-    def stopJobs(self, ids = []) -> None:
+    def stopJobs(self, ids = None) -> None:
+        
+        if ids is None:
+            
+            ids = []
+            
+        
         if not len(ids):
             self.currentJobs = {}
             for provider in self.providers:

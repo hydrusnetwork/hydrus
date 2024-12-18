@@ -843,6 +843,10 @@ class ClientDBFilesDuplicates( ClientDBModule.ClientDBModule ):
                 return count == num_relationships
                 
             
+        else:
+            
+            raise NotImplementedError( f'Unknown operator "{operator}"!' )
+            
         
         hash_ids = set()
         

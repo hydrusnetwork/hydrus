@@ -984,9 +984,9 @@ class ReviewNetworkContextBandwidthPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         #
         
-        self._rules_job = CG.client_controller.CallRepeatingQtSafe( self, 0.5, 5.0, 'repeating bandwidth rules update', self._UpdateRules )
+        self._rules_job = CG.client_controller.CallRepeatingQtSafe( self, 0.0, 5.0, 'repeating bandwidth rules update', self._UpdateRules )
         
-        self._update_job = CG.client_controller.CallRepeatingQtSafe( self, 0.5, 1.0, 'repeating bandwidth status update', self._Update )
+        self._update_job = CG.client_controller.CallRepeatingQtSafe( self, 0.0, 1.0, 'repeating bandwidth status update', self._Update )
         
     
     def _EditRules( self ):
@@ -1005,7 +1005,7 @@ class ReviewNetworkContextBandwidthPanel( ClientGUIScrolledPanels.ReviewPanel ):
                 
                 self._controller.network_engine.bandwidth_manager.SetRules( self._network_context, self._bandwidth_rules )
                 
-                self._UpdateRules()
+                self._rules_job.Wake()
                 
             
         
@@ -1043,7 +1043,7 @@ class ReviewNetworkContextBandwidthPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         if self._network_context.IsDefault() or self._network_context == ClientNetworkingContexts.GLOBAL_NETWORK_CONTEXT:
             
-            if self._use_default_rules_button.isVisible():
+            if not self._use_default_rules_button.isHidden():
                 
                 self._uses_default_rules_st.hide()
                 self._use_default_rules_button.hide()
@@ -1057,7 +1057,7 @@ class ReviewNetworkContextBandwidthPanel( ClientGUIScrolledPanels.ReviewPanel ):
                 
                 self._edit_rules_button.setText( 'set specific rules' )
                 
-                if self._use_default_rules_button.isVisible():
+                if not self._use_default_rules_button.isHidden():
                     
                     self._use_default_rules_button.hide()
                     
@@ -1068,7 +1068,7 @@ class ReviewNetworkContextBandwidthPanel( ClientGUIScrolledPanels.ReviewPanel ):
                 
                 self._edit_rules_button.setText( 'edit rules' )
                 
-                if not self._use_default_rules_button.isVisible():
+                if self._use_default_rules_button.isHidden():
                     
                     self._use_default_rules_button.show()
                     

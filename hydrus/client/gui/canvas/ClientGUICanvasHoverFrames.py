@@ -434,6 +434,11 @@ class CanvasHoverFrame( QW.QFrame ):
             
         
     
+    def _MouseOverImportantDescendant( self ):
+        
+        return False
+        
+    
     def _RaiseHover( self ):
         
         if not self._is_currently_up:
@@ -452,7 +457,7 @@ class CanvasHoverFrame( QW.QFrame ):
     
     def _ShouldBeHidden( self ):
         
-        return self._current_media is None or not self._my_canvas.isVisible()
+        return self._current_media is None
         
     
     def _ShouldBeShown( self ):
@@ -462,6 +467,7 @@ class CanvasHoverFrame( QW.QFrame ):
     
     def _SizeAndPosition( self ):
         
+        # hey the parentwidget here is the media viewer!
         if self.parentWidget().isVisible():
             
             ( should_resize, my_ideal_size, my_ideal_position ) = self._GetIdealSizeAndPosition()
@@ -601,11 +607,12 @@ class CanvasHoverFrame( QW.QFrame ):
         
         menu_open = CGC.core().MenuIsOpen()
         
+        mouse_over_important_descendant = self._MouseOverImportantDescendant()
+        
         dialog_is_open = ClientGUIFunctions.DialogIsOpen()
         
         mouse_is_near_animation_bar = self._my_canvas.MouseIsNearAnimationBar()
         
-        # this used to have the flash media window test to ensure mouse over flash window hid hovers going over it
         mouse_is_over_something_else_important = mouse_is_near_animation_bar
         
         mouse_is_over_a_dominant_hover = False
@@ -621,7 +628,7 @@ class CanvasHoverFrame( QW.QFrame ):
         hide_focus_is_good = focus_is_good or current_focus_tlw is None # don't hide if focus is either gone to another problem or temporarily sperging-out due to a click-transition or similar
         
         ready_to_show = not self._is_currently_up and in_position and not mouse_is_over_something_else_important and focus_is_good and not dialog_is_open and not menu_open and not mouse_is_over_a_dominant_hover
-        ready_to_hide = self._is_currently_up and not menu_open and ( not in_position or dialog_is_open or not hide_focus_is_good or mouse_is_over_a_dominant_hover )
+        ready_to_hide = self._is_currently_up and not menu_open and not mouse_over_important_descendant and ( not in_position or dialog_is_open or not hide_focus_is_good or mouse_is_over_a_dominant_hover )
         
         def get_logic_report_string():
             
@@ -789,6 +796,16 @@ class CanvasHoverFrameTop( CanvasHoverFrame ):
         ideal_position = QC.QPoint( int( parent_width * SIDE_HOVER_PROPORTIONS ), 0 )
         
         return ( should_resize, ideal_size, ideal_position )
+        
+    
+    def _MouseOverImportantDescendant( self ):
+        
+        if not self._volume_control.isHidden():
+            
+            return self._volume_control.PopupIsVisible()
+            
+        
+        return False
         
     
     def _PopulateCenterButtons( self ):
@@ -992,7 +1009,6 @@ class CanvasHoverFrameTop( CanvasHoverFrame ):
                 
                 self._title_text.hide()
                 
-            
             
             lines = ClientMediaResultPrettyInfo.GetPrettyMediaResultInfoLines( self._current_media.GetMediaResult(), only_interesting_lines = True )
             
@@ -1396,7 +1412,7 @@ class CanvasHoverFrameTopRight( CanvasHoverFrame ):
         
         self.setLayout( vbox )
         
-        self._ResetData()
+        self._ResetWidgets()
         
         CG.client_controller.sub( self, 'ProcessContentUpdatePackage', 'content_updates_gui' )
         
@@ -1466,7 +1482,7 @@ class CanvasHoverFrameTopRight( CanvasHoverFrame ):
         return ( should_resize, ideal_size, ideal_position )
         
     
-    def _ResetData( self ):
+    def _ResetWidgets( self ):
         
         if self._current_media is not None:
             
@@ -1517,6 +1533,11 @@ class CanvasHoverFrameTopRight( CanvasHoverFrame ):
             
             # urls
             
+            # BE WARY TRAVELLER
+            # unusual sizeHint gubbins occurs here if one does not take care
+            # ensure you check for flicker when transitioning from a topright media with and without urls
+            # and check that it is ok when the mouse is over the hover for the transition vs mouse not over and visiting later
+            
             urls = self._current_media.GetLocationsManager().GetURLs()
             
             if urls != self._last_seen_urls:
@@ -1533,10 +1554,17 @@ class CanvasHoverFrameTopRight( CanvasHoverFrame ):
                     
                     link.setAlignment( QC.Qt.AlignmentFlag.AlignRight )
                     
-                    QP.AddToLayout( self._urls_vbox, link, CC.FLAGS_EXPAND_PERPENDICULAR )
+                    # very important!
+                    # needed for magic hover window crazy layout reasons
+                    link.setVisible( True )
+                    
+                    QP.AddToLayout( self._urls_vbox, link, CC.FLAGS_EXPAND_BOTH_WAYS )
                     
                 
             
+        
+        # dare not remove this
+        self.layout().activate()
         
         self._SizeAndPosition()
         
@@ -1563,7 +1591,7 @@ class CanvasHoverFrameTopRight( CanvasHoverFrame ):
             
             if do_redraw:
                 
-                self._ResetData()
+                self._ResetWidgets()
                 
             
         
@@ -1572,17 +1600,16 @@ class CanvasHoverFrameTopRight( CanvasHoverFrame ):
         
         super().SetMedia( media )
         
-        self._ResetData()
+        self._ResetWidgets()
         
-        # size is not immediately updated without this
-        self.layout().activate()
-        
-        self._SizeAndPosition()
+        self._position_initialised_since_last_media = False
         
     
+
 class NotePanel( QW.QWidget ):
     
     editNote = QC.Signal( str )
+    devilsBargainManualUpdateGeometry = QC.Signal()
     
     def __init__( self, parent: "CanvasHoverFrameRightNotes", name: str, note: str, note_visible: bool ):
         
@@ -1614,7 +1641,7 @@ class NotePanel( QW.QWidget ):
         QP.AddToLayout( vbox, self._note_name, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, self._note_text, CC.FLAGS_EXPAND_BOTH_WAYS )
         
-        self._note_text.setVisible( self._note_visible )
+        self._note_text.setVisible( note_visible )
         
         self.setLayout( vbox )
         
@@ -1634,9 +1661,12 @@ class NotePanel( QW.QWidget ):
                     
                 else:
                     
-                    self._note_text.setVisible( not self._note_text.isVisible() )
+                    self._note_text.setVisible( self._note_text.isHidden() )
                     
-                    self._note_visible = self._note_text.isVisible()
+                    self._note_visible = not self._note_text.isHidden()
+                    
+                    # a normal updateGeometry call doesn't seem to do it (and indeed whatever implicit call occurs), I believe because we have the disconnected layout nonsense
+                    self.devilsBargainManualUpdateGeometry.emit()
                     
                 
                 return True
@@ -1670,7 +1700,7 @@ class NotePanel( QW.QWidget ):
         
         total_height += expected_widget_height
         
-        if self._note_text.isVisibleTo( self ):
+        if not self._note_text.isHidden():
             
             total_height += spacing
             
@@ -1691,8 +1721,10 @@ class NotePanel( QW.QWidget ):
         return total_height
         
     
-    def IsNoteVisible( self ) -> bool:
+    def IsNoteTextVisible( self ) -> bool:
         
+        # through various testing, this property appears to be sometimes whack. or it may be good now but was once tangled up in a mess of hacks
+        # don't really like it, so maybe just do `not self._note_text.isHidden()` live
         return self._note_visible
         
     
@@ -1801,7 +1833,7 @@ class CanvasHoverFrameRightNotes( CanvasHoverFrame ):
         
         for ( name, note_panel ) in list( self._names_to_note_panels.items() ):
             
-            if not note_panel.IsNoteVisible():
+            if not note_panel.IsNoteTextVisible():
                 
                 note_panel_names_with_hidden_notes.add( name )
                 
@@ -1810,6 +1842,10 @@ class CanvasHoverFrameRightNotes( CanvasHoverFrame ):
             
             note_panel.deleteLater()
             
+        
+        # BE CAREFUL IF YOU EDIT ANY OF THIS
+        # this is a house of cards because of the whack disconnected layout situation
+        # one minor change and you'll get tumble into flicker hell
         
         self._names_to_note_panels = {}
         
@@ -1825,13 +1861,21 @@ class CanvasHoverFrameRightNotes( CanvasHoverFrame ):
                 
                 note_panel = NotePanel( self, name, note, note_visible )
                 
+                # very important
+                # magico fix as per the urls in the top-right
+                note_panel.setVisible( True )
+                
                 QP.AddToLayout( self._vbox, note_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
                 
                 self._names_to_note_panels[ name ] = note_panel
                 
                 note_panel.editNote.connect( self._EditNotes )
+                note_panel.devilsBargainManualUpdateGeometry.connect( self._SizeAndPosition ) # total wewmode to handle note hide/show
                 
             
+        
+        # dare not remove this
+        self.layout().activate()
         
         self._SizeAndPosition()
         
@@ -1884,19 +1928,9 @@ class CanvasHoverFrameRightNotes( CanvasHoverFrame ):
         
         super().SetMedia( media )
         
-        if self._is_currently_up:
-            
-            # magical refresh that makes the labels look correct and not be hidden???
-            self._LowerHover()
-            self._ResetNotes()
-            self._RaiseHover()
-            
-        else:
-            
-            self._ResetNotes()
-            
-            self._position_initialised_since_last_media = False
-            
+        self._ResetNotes()
+        
+        self._position_initialised_since_last_media = False
         
     
 class CanvasHoverFrameRightDuplicates( CanvasHoverFrame ):
@@ -2118,7 +2152,8 @@ class CanvasHoverFrameRightDuplicates( CanvasHoverFrame ):
     
     def _EnableDisableButtons( self ):
         
-        disabled = self._comparison_media is not None and self._comparison_media.HasDeleteLocked()
+        # old delete-lock stuff. maybe it'll be useful to bring back one day, w/e
+        disabled = False
         
         self._this_is_better_and_delete_other.setEnabled( not disabled )
         
@@ -2160,10 +2195,7 @@ class CanvasHoverFrameRightDuplicates( CanvasHoverFrame ):
             
             show_panel = got_data
             
-            if panel.isVisible() != show_panel:
-                
-                panel.setVisible( show_panel )
-                
+            panel.setVisible( show_panel )
             
             if got_data:
                 

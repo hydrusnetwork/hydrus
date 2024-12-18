@@ -34,7 +34,10 @@ def FilterOutRedundantMetaServices( list_of_service_keys: typing.List[ bytes ] )
     return list_of_service_keys
     
 
-def GetPossibleFileDomainServicesInOrder( all_known_files_allowed: bool, only_importable_domains_allowed: bool, only_local_file_domains_allowed: bool ):
+def GetPossibleFileDomainServicesInOrder( all_known_files_allowed: bool, only_importable_domains_allowed: bool, only_local_file_domains_allowed: bool, only_all_my_files_domains_allowed: bool ):
+    
+    # TODO: WOW the 'only_x' parameters here are awful!!! rewrite all this!
+    # seems like it cascades, so set up an enum instead I think!
     
     services_manager = CG.client_controller.services_manager
     
@@ -49,31 +52,34 @@ def GetPossibleFileDomainServicesInOrder( all_known_files_allowed: bool, only_im
             service_types_in_order.append( HC.COMBINED_LOCAL_MEDIA )
             
         
-        service_types_in_order.append( HC.LOCAL_FILE_TRASH_DOMAIN )
-        
-        if advanced_mode:
+        if not only_all_my_files_domains_allowed:
             
-            service_types_in_order.append( HC.LOCAL_FILE_UPDATE_DOMAIN )
-            
-        
-        if advanced_mode:
-            
-            service_types_in_order.append( HC.COMBINED_LOCAL_FILE )
-            
-        
-        if not only_local_file_domains_allowed:
+            service_types_in_order.append( HC.LOCAL_FILE_TRASH_DOMAIN )
             
             if advanced_mode:
                 
-                service_types_in_order.append( HC.COMBINED_DELETED_FILE )
+                service_types_in_order.append( HC.LOCAL_FILE_UPDATE_DOMAIN )
                 
             
-            service_types_in_order.append( HC.FILE_REPOSITORY )
-            service_types_in_order.append( HC.IPFS )
-            
-            if all_known_files_allowed:
+            if advanced_mode:
                 
-                service_types_in_order.append( HC.COMBINED_FILE )
+                service_types_in_order.append( HC.COMBINED_LOCAL_FILE )
+                
+            
+            if not only_local_file_domains_allowed:
+                
+                if advanced_mode:
+                    
+                    service_types_in_order.append( HC.COMBINED_DELETED_FILE )
+                    
+                
+                service_types_in_order.append( HC.FILE_REPOSITORY )
+                service_types_in_order.append( HC.IPFS )
+                
+                if all_known_files_allowed:
+                    
+                    service_types_in_order.append( HC.COMBINED_FILE )
+                    
                 
             
         
@@ -85,7 +91,7 @@ def GetPossibleFileDomainServicesInOrder( all_known_files_allowed: bool, only_im
 
 def SortFileServiceKeysNicely( list_of_service_keys ):
     
-    services_in_nice_order = GetPossibleFileDomainServicesInOrder( False, False, False )
+    services_in_nice_order = GetPossibleFileDomainServicesInOrder( False, False, False, False )
     
     service_keys_in_nice_order = [ service.GetServiceKey() for service in services_in_nice_order ]
     

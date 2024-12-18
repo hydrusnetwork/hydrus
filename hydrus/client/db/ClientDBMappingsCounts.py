@@ -26,6 +26,10 @@ def GenerateCombinedFilesMappingsCountsCacheTableName( tag_display_type, tag_ser
         
         prefix = FILES_COMBINED_DISPLAY_AC_CACHE_PREFIX
         
+    else:
+        
+        raise NotImplementedError( f'Unknown tag display type "{tag_display_type}"!' )
+        
     
     suffix = str( tag_service_id )
     
@@ -43,6 +47,10 @@ def GenerateSpecificCountsCacheTableName( tag_display_type, file_service_id, tag
     elif tag_display_type == ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL:
         
         prefix = FILES_SPECIFIC_DISPLAY_AC_CACHE_PREFIX
+        
+    else:
+        
+        raise NotImplementedError( f'Unknown tag display type "{tag_display_type}"!' )
         
     
     suffix = '{}_{}'.format( file_service_id, tag_service_id )

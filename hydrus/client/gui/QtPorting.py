@@ -134,8 +134,9 @@ def SplitterVisibleCount( splitter ):
         
         if splitter.widget( i ).isVisibleTo( splitter ): count += 1
         
+    
     return count
-
+    
 
 class DirPickerCtrl( QW.QWidget ):
 
@@ -1361,25 +1362,27 @@ def CallAfter( fn, *args, **kwargs ):
 def ClearLayout( layout, delete_widgets = False ):
     
     while layout.count() > 0:
-
+        
         item = layout.itemAt( 0 )
 
         if delete_widgets:
-
+            
             if item.widget():
-
+                
                 item.widget().deleteLater()
-
+                
             elif item.layout():
-
+                
                 ClearLayout( item.layout(), delete_widgets = True )
                 item.layout().deleteLater()
-
+                
             else:
-
+                
                 spacer = item.layout().spacerItem()
-
+                
                 del spacer
+                
+            
 
         layout.removeItem( item )
         
@@ -2098,6 +2101,7 @@ class WidgetEventFilter ( QC.QObject ):
                 if isValid( self._parent_widget ) and self._parent_widget.isVisible():
                     
                     self._user_moved_window = True
+                    
                 
             elif type == QC.QEvent.Type.Resize:
                 

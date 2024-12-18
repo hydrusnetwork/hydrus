@@ -618,7 +618,7 @@ Arguments (in JSON):
 Response:
 :   200 and no content.
 
-If you specify a file service, the file will only be deleted from that location. Only local file domains are allowed (so you can't delete from a file repository or unpin from ipfs yet). It defaults to _all my files_, which will delete from all local services (i.e. force sending to trash). Sending 'all local files' on a file already in the trash will trigger a physical file delete. 
+If you specify a file service, the file will only be deleted from that location. Only local file domains are allowed (so you can't delete from a file repository or unpin from ipfs yet), or the umbrella `all my files` and `all local files` domains. It defaults to `all my files`, which will delete from all local services (i.e. force sending to trash). Sending `all local files` on a file already in the trash will trigger a physical file delete. 
 
 ### **POST `/add_files/undelete_files`** { id="add_files_undelete_files" }
 

@@ -8,8 +8,6 @@ from hydrus.client import ClientAPI
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientLocation
-from hydrus.client.media import ClientMedia
-from hydrus.client.media import ClientMediaFileFilter
 from hydrus.client.metadata import ClientContentUpdates
 from hydrus.client.networking.api import ClientLocalServerCore
 from hydrus.client.networking.api import ClientLocalServerResources
@@ -208,8 +206,8 @@ class HydrusResourceClientAPIRestrictedManageFileRelationshipsSetRelationships( 
             
             content_update_packages = []
             
-            first_media_result = ClientMedia.MediaSingleton( hashes_to_media_results[ hash_a ] )
-            second_media_result = ClientMedia.MediaSingleton( hashes_to_media_results[ hash_b ] )
+            first_media_result = hashes_to_media_results[ hash_a ]
+            second_media_result = hashes_to_media_results[ hash_b ]
             
             file_deletion_reason = 'From Client API (duplicates processing).'
             
@@ -237,29 +235,11 @@ class HydrusResourceClientAPIRestrictedManageFileRelationshipsSetRelationships( 
                 
                 for media_result in deletee_media_results:
                     
-                    if media_result.IsDeleteLocked():
-                        
-                        ClientMediaFileFilter.ReportDeleteLockFailures( [ media_result ] )
-                        
-                        continue
-                        
-                    
-                    if media_result.GetLocationsManager().IsTrashed():
-                        
-                        deletee_service_keys = ( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, )
-                        
-                    else:
-                        
-                        local_file_service_keys = CG.client_controller.services_manager.GetServiceKeys( ( HC.LOCAL_FILE_DOMAIN, ) )
-                        
-                        deletee_service_keys = media_result.GetLocationsManager().GetCurrent().intersection( local_file_service_keys )
-                        
-                    
-                    for deletee_service_key in deletee_service_keys:
+                    if CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY in media_result.GetLocationsManager().GetCurrent():
                         
                         content_update = ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, { media_result.GetHash() }, reason = file_deletion_reason )
                         
-                        content_update_package.AddContentUpdate( deletee_service_key, content_update )
+                        content_update_package.AddContentUpdate( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY, content_update )
                         
                     
                 

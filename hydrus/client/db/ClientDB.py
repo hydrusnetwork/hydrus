@@ -74,6 +74,7 @@ from hydrus.client.db import ClientDBURLMap
 from hydrus.client.duplicates import ClientDuplicates
 from hydrus.client.duplicates import ClientPotentialDuplicatesSearchContext
 from hydrus.client.importing import ClientImportFiles
+from hydrus.client.media import ClientMediaFileFilter # don't remove this without care, it initialises serialised object early
 from hydrus.client.media import ClientMediaManagers
 from hydrus.client.media import ClientMediaResult
 from hydrus.client.media import ClientMediaResultCache
@@ -4824,6 +4825,9 @@ class DB( HydrusDB.HydrusDB ):
     
     def _GetTrashHashes( self, limit = None, minimum_age = None ):
         
+        # TODO: rework the filedeletelock to be a thing that kicks in _during_ the search, so the LIMIT remains valid. otherwise too many locked files means this chokes
+        # TODO: also update the report mode to talk about the lock
+        
         if limit is None:
             
             limit_phrase = ''
@@ -4850,7 +4854,7 @@ class DB( HydrusDB.HydrusDB ):
         
         hash_ids = self._STS( self._Execute( 'SELECT hash_id FROM {}{}{};'.format( current_files_table_name, age_phrase, limit_phrase ) ) )
         
-        hash_ids = self.modules_file_delete_lock.FilterForFileDeleteLock( self.modules_services.trash_service_id, hash_ids )
+        hash_ids = self.modules_file_delete_lock.FilterForPhysicalFileDeleteLock( hash_ids )
         
         if HG.db_report_mode:
             
@@ -4943,7 +4947,7 @@ class DB( HydrusDB.HydrusDB ):
                     HydrusData.ShowText( 'File import job associating perceptual_hashes' )
                     
                 
-                self.modules_similar_files.AssociatePerceptualHashes( hash_id, perceptual_hashes )
+                self.modules_similar_files.SetPerceptualHashes( hash_id, perceptual_hashes )
                 
             
             if HG.file_import_report_mode:
@@ -6162,22 +6166,32 @@ class DB( HydrusDB.HydrusDB ):
                                 
                             elif action in ( HC.CONTENT_UPDATE_DELETE, HC.CONTENT_UPDATE_DELETE_FROM_SOURCE_AFTER_MIGRATE ):
                                 
-                                if action == HC.CONTENT_UPDATE_DELETE:
-                                    
-                                    actual_delete_hash_ids = self.modules_file_delete_lock.FilterForFileDeleteLock( service_id, hash_ids )
-                                    
-                                else:
-                                    
-                                    actual_delete_hash_ids = hash_ids
-                                    
+                                actual_delete_hash_ids = hash_ids
                                 
-                                if len( actual_delete_hash_ids ) < len( hash_ids ):
+                                if action == HC.CONTENT_UPDATE_DELETE and service_key in ( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, CC.TRASH_SERVICE_KEY ):
                                     
-                                    hash_ids = actual_delete_hash_ids
+                                    local_hash_ids = self.modules_files_storage.FilterHashIds( ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_FILE_SERVICE_KEY ), hash_ids )
                                     
-                                    hashes = self.modules_hashes_local_cache.GetHashes( hash_ids )
+                                    actually_deletable_hash_ids = self.modules_file_delete_lock.FilterForPhysicalFileDeleteLock( local_hash_ids )
                                     
-                                    content_update.SetRow( hashes )
+                                    if len( actually_deletable_hash_ids ) < len( local_hash_ids ):
+                                        
+                                        # ok we hit the lock on some
+                                        undeletable_hash_ids = set( local_hash_ids ).difference( actually_deletable_hash_ids )
+                                        
+                                        media_results = self._GetMediaResults( undeletable_hash_ids, sorted = False )
+                                        
+                                        ClientMediaFileFilter.ReportDeleteLockFailures( media_results )
+                                        
+                                    
+                                    if len( actually_deletable_hash_ids ) < len( hash_ids ):
+                                        
+                                        hash_ids = actually_deletable_hash_ids
+                                        
+                                        hashes = self.modules_hashes_local_cache.GetHashes( hash_ids )
+                                        
+                                        content_update.SetRow( hashes )
+                                        
                                     
                                 
                                 if service_type in ( HC.LOCAL_FILE_DOMAIN, HC.COMBINED_LOCAL_MEDIA, HC.COMBINED_LOCAL_FILE ):
@@ -6203,13 +6217,6 @@ class DB( HydrusDB.HydrusDB ):
                                     # shouldn't be called anymore, but just in case someone fidgets a trash delete with client api or something
                                     
                                     self._DeleteFiles( self.modules_services.combined_local_file_service_id, hash_ids )
-                                    
-                                elif service_id == self.modules_services.combined_local_media_service_id:
-                                    
-                                    for s_id in self.modules_services.GetServiceIds( ( HC.LOCAL_FILE_DOMAIN, ) ):
-                                        
-                                        self._DeleteFiles( s_id, hash_ids, only_if_current = True )
-                                        
                                     
                                 else:
                                     

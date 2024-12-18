@@ -2098,18 +2098,18 @@ class Controller( HydrusController.HydrusController ):
                         continue
                         
                     
-                    try:
+                    if allow_non_local_connections:
                         
-                        if use_https:
-                            
-                            import twisted.internet.ssl
-                            
-                            ( ssl_cert_path, ssl_key_path ) = self.db.GetSSLPaths()
-                            
-                            sslmethod = twisted.internet.ssl.SSL.TLSv1_2_METHOD
-                            
-                            context_factory = twisted.internet.ssl.DefaultOpenSSLContextFactory( ssl_key_path, ssl_cert_path, sslmethod )
-                            
+                        ipv6_interface = '::'
+                        ipv4_interface = ''
+                        
+                    else:
+                        
+                        ipv6_interface = '::1'
+                        ipv4_interface = '127.0.0.1'
+                        
+                    
+                    try:
                         
                         from hydrus.client.networking.api import ClientLocalServer
                         
@@ -2122,26 +2122,30 @@ class Controller( HydrusController.HydrusController ):
                             raise NotImplementedError( 'Unknown service type!' )
                             
                         
+                        context_factory = None
+                        
+                        if use_https:
+                            
+                            import twisted.internet.ssl
+                            
+                            ( ssl_cert_path, ssl_key_path ) = self.db.GetSSLPaths()
+                            
+                            sslmethod = twisted.internet.ssl.SSL.TLSv1_2_METHOD
+                            
+                            context_factory = twisted.internet.ssl.DefaultOpenSSLContextFactory( ssl_key_path, ssl_cert_path, sslmethod )
+                            
+                        
                         ipv6_port = None
                         
                         try:
                             
-                            if allow_non_local_connections:
-                                
-                                interface = '::'
-                                
-                            else:
-                                
-                                interface = '::1'
-                                
-                            
                             if use_https:
                                 
-                                ipv6_port = reactor.listenSSL( port, http_factory, context_factory, interface = interface )
+                                ipv6_port = reactor.listenSSL( port, http_factory, context_factory, interface = ipv6_interface )
                                 
                             else:
                                 
-                                ipv6_port = reactor.listenTCP( port, http_factory, interface = interface )
+                                ipv6_port = reactor.listenTCP( port, http_factory, interface = ipv6_interface )
                                 
                             
                         except Exception as e:
@@ -2155,22 +2159,13 @@ class Controller( HydrusController.HydrusController ):
                         
                         try:
                             
-                            if allow_non_local_connections:
-                                
-                                interface = ''
-                                
-                            else:
-                                
-                                interface = '127.0.0.1'
-                                
-                            
                             if use_https:
                                 
-                                ipv4_port = reactor.listenSSL( port, http_factory, context_factory, interface = interface )
+                                ipv4_port = reactor.listenSSL( port, http_factory, context_factory, interface = ipv4_interface )
                                 
                             else:
                                 
-                                ipv4_port = reactor.listenTCP( port, http_factory, interface = interface )
+                                ipv4_port = reactor.listenTCP( port, http_factory, interface = ipv4_interface )
                                 
                             
                         except:

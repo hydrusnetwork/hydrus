@@ -627,6 +627,11 @@ class ClientDBSimilarFiles( ClientDBModule.ClientDBModule ):
             # yes, replace--these files' phashes have just changed, so we want to search again with this new data
             self._Execute( 'REPLACE INTO shape_search_cache ( hash_id, searched_distance ) VALUES ( ?, ? );', ( hash_id, None ) )
             
+        else:
+            
+            # emergency backstop to ensure we do add this to the system in the case of a weird re-association gap
+            self._Execute( 'INSERT OR IGNORE INTO shape_search_cache ( hash_id, searched_distance ) VALUES ( ?, ? );', ( hash_id, None ) )
+            
         
         return perceptual_hash_ids
         

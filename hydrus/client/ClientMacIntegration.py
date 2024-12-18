@@ -9,6 +9,7 @@ QLPreviewPanelDataSource = objc.protocolNamed('QLPreviewPanelDataSource')
 
 class HydrusQLDataSource(NSObject, protocols=[QLPreviewPanelDataSource]):
     def initWithCurrentlyLooking_(self, currently_showing):
+        # noinspection PyMethodFirstArgAssignment
         self = objc.super(HydrusQLDataSource, self).init()
         if self is None: return None
         

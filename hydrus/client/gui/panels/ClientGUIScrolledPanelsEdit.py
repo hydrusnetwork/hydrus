@@ -39,7 +39,7 @@ from hydrus.client.gui.widgets import ClientGUIRegex
 from hydrus.client.importing.options import NoteImportOptions
 from hydrus.client.importing.options import TagImportOptions
 from hydrus.client.media import ClientMedia
-from hydrus.client.media import ClientMediaFileFilter
+from hydrus.client.media import ClientMediaResult
 from hydrus.client.metadata import ClientContentUpdates
 
 # TODO: ok the general plan here is to move rich panels to topical gui.xxx modules
@@ -521,7 +521,7 @@ class EditDeleteFilesPanel( ClientGUIScrolledPanels.EditPanel ):
             suggested_file_service_key = local_file_service_domains[0].GetServiceKey()
             
         
-        self._media = self._FilterForDeleteLock( ClientMedia.FlattenMedia( media ), suggested_file_service_key )
+        self._media = ClientMedia.FlattenMedia( media )
         
         self._question_is_already_resolved = len( self._media ) == 0
         
@@ -690,18 +690,6 @@ class EditDeleteFilesPanel( ClientGUIScrolledPanels.EditPanel ):
         QP.CallAfter( self._SetFocus )
         
     
-    def _FilterForDeleteLock( self, media, suggested_file_service_key: bytes ):
-        
-        service = CG.client_controller.services_manager.GetService( suggested_file_service_key )
-        
-        if service.GetServiceType() in HC.LOCAL_FILE_SERVICES:
-            
-            media = ClientMediaFileFilter.FilterAndReportDeleteLockFailures( media )
-            
-        
-        return media
-        
-    
     def _GetExistingSharedFileDeletionReason( self ):
         
         all_files_have_existing_file_deletion_reasons = True
@@ -789,7 +777,17 @@ class EditDeleteFilesPanel( ClientGUIScrolledPanels.EditPanel ):
         
         possible_file_service_keys.extend( ( ( rfs.GetServiceKey(), rfs.GetServiceKey() ) for rfs in CG.client_controller.services_manager.GetServices( ( HC.FILE_REPOSITORY, ) ) ) )
         
-        keys_to_hashes = { ( selection_file_service_key, deletee_file_service_key ) : [ m.GetHash() for m in self._media if selection_file_service_key in m.GetLocationsManager().GetCurrent() ] for ( selection_file_service_key, deletee_file_service_key ) in possible_file_service_keys }
+        def PhysicalDeleteLockOK( s_k: bytes, media_result: ClientMediaResult.MediaResult ):
+            
+            if s_k in ( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, CC.TRASH_SERVICE_KEY ):
+                
+                return not media_result.IsPhysicalDeleteLocked()
+                
+            
+            return True
+            
+        
+        keys_to_hashes = { ( selection_file_service_key, deletee_file_service_key ) : [ m.GetHash() for m in self._media if selection_file_service_key in m.GetLocationsManager().GetCurrent() if PhysicalDeleteLockOK( deletee_file_service_key, m.GetMediaResult() ) ] for ( selection_file_service_key, deletee_file_service_key ) in possible_file_service_keys }
         
         trashed_key = ( CC.TRASH_SERVICE_KEY, CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
         combined_key = ( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
@@ -808,6 +806,11 @@ class EditDeleteFilesPanel( ClientGUIScrolledPanels.EditPanel ):
         num_local_services_done = 0
         
         for ( fsk, hashes ) in possible_file_service_keys_and_hashes:
+            
+            if len( hashes ) == 0:
+                
+                continue
+                
             
             num_to_delete = len( hashes )
             
@@ -964,7 +967,7 @@ class EditDeleteFilesPanel( ClientGUIScrolledPanels.EditPanel ):
         
         if CG.client_controller.new_options.GetBoolean( 'use_advanced_file_deletion_dialog' ):
             
-            hashes = [ m.GetHash() for m in self._media if CC.COMBINED_LOCAL_FILE_SERVICE_KEY in m.GetLocationsManager().GetCurrent() ]
+            hashes = [ m.GetHash() for m in self._media if CC.COMBINED_LOCAL_FILE_SERVICE_KEY in m.GetLocationsManager().GetCurrent() if PhysicalDeleteLockOK( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, m.GetMediaResult() ) ]
             
             num_to_delete = len( hashes )
             

@@ -259,6 +259,10 @@ class ClientDBMasterHashes( ClientDBModule.ClientDBModule ):
             
             result = self._Execute( 'SELECT hash_id FROM local_hashes WHERE sha512 = ?;', ( sqlite3.Binary( hash ), ) ).fetchone()
             
+        else:
+            
+            raise NotImplementedError( f'Unknown hash type "{hash_type}"!' )
+            
         
         if result is None:
             
@@ -679,6 +683,10 @@ class ClientDBMasterTags( ClientDBModule.ClientDBModule ):
         elif tags is not None:
             
             tag_ids_to_tags = { self.GetTagId( tag ) : tag for tag in tags }
+            
+        else:
+            
+            raise Exception( 'Called without tag parameter!' )
             
         
         return tag_ids_to_tags

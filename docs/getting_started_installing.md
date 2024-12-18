@@ -40,12 +40,21 @@ I try to release a new version every Wednesday by 8pm EST and write an accompany
         
         One user notes that launching with the environment variable `QT_QPA_PLATFORM=xcb` may help!
     
-    !!! note "XCB Qt compatibility"
+    !!! note "Qt compatibility"
         
-        If you run into trouble running Qt6, usually with an XCB-related error like `qt.qpa.plugin: Could not load the Qt platform plugin "xcb" in "" even though it was found.`, try installing the packages `libicu-dev` and `libxcb-cursor-dev`. With `apt` that will be:
+        If you run into trouble running newer versions of Qt6, some users have fixed it by installing one or more of these additional packages:
+        
+        * `libicu-dev`
+        * `libxcb-cursor-dev`
+        * `libgthread`
+        
+        With `apt` that will be:
         
         * `sudo apt-get install libicu-dev`
         * `sudo apt-get install libxcb-cursor-dev`
+        * `sudo apt-get install libgthread2.0-0`
+        
+        Or check your OS's package manager.
         
     
     *   Get the .tag.gz. Extract it somewhere useful and create shortcuts to 'client' and 'server' as you like. The build is made on Ubuntu, so if you run something else, compatibility is hit and miss.

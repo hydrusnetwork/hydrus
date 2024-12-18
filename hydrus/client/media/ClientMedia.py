@@ -398,11 +398,6 @@ class Media( object ):
         raise NotImplementedError()
         
     
-    def HasDeleteLocked( self ) -> bool:
-        
-        raise NotImplementedError()
-        
-    
     def HasDuration( self ) -> bool:
         
         raise NotImplementedError()
@@ -1757,11 +1752,6 @@ class MediaCollection( MediaList, Media ):
         return self._has_audio
         
     
-    def HasDeleteLocked( self ):
-        
-        return True in ( media.HasDeleteLocked() for media in self._sorted_media )
-        
-    
     def HasDuration( self ):
         
         return self._duration is not None
@@ -1978,12 +1968,10 @@ class MediaSingleton( Media ):
         return self._media_result.HasAudio()
         
     
-    def HasDeleteLocked( self ):
+    def IsPhysicalDeleteLocked( self ):
         
-        return self._media_result.IsDeleteLocked()
+        return self._media_result.IsPhysicalDeleteLocked()
         
-    
-    IsDeleteLocked = HasDeleteLocked
     
     def HasDuration( self ):
         

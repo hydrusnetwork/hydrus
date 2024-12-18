@@ -709,55 +709,26 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
         
         if self._delete_from_client_after_export:
             
-            local_file_service_keys = CG.client_controller.services_manager.GetServiceKeys( ( HC.LOCAL_FILE_DOMAIN, ) )
+            my_files_media_results = [ media_result for media_result in media_results if CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY in media_result.GetLocationsManager().GetCurrent() ]
             
-            service_keys_to_deletee_hashes = collections.defaultdict( list )
+            reason = 'Deleted after export to Export Folder "{}".'.format( self._path )
             
-            for ( i, media_result ) in enumerate( media_results ):
+            CHUNK_SIZE = 64
+            
+            chunks_of_media_results = HydrusLists.SplitListIntoChunks( my_files_media_results, CHUNK_SIZE )
+            
+            for ( i, chunk_of_media_results ) in enumerate( chunks_of_media_results ):
                 
                 if job_status.IsCancelled():
                     
                     return
                     
                 
-                job_status.SetStatusText( 'delete-prepping: {}'.format( HydrusNumbers.ValueRangeToPrettyString( i + 1, len( media_results ) ) ) )
+                job_status.SetStatusText( 'deleting: {}'.format( HydrusNumbers.ValueRangeToPrettyString( i * CHUNK_SIZE, len( my_files_media_results ) ) ) )
                 
-                if media_result.IsDeleteLocked():
-                    
-                    continue
-                    
+                content_update = ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, { media_result.GetHash() for media_result in chunk_of_media_results }, reason = reason )
                 
-                hash = media_result.GetHash()
-                
-                deletee_service_keys = media_result.GetLocationsManager().GetCurrent().intersection( local_file_service_keys )
-                
-                for deletee_service_key in deletee_service_keys:
-                    
-                    service_keys_to_deletee_hashes[ deletee_service_key ].append( hash )
-                    
-                
-            
-            reason = 'Deleted after export to Export Folder "{}".'.format( self._path )
-            
-            for ( service_key, deletee_hashes ) in service_keys_to_deletee_hashes.items():
-                
-                CHUNK_SIZE = 64
-                
-                chunks_of_hashes = HydrusLists.SplitListIntoChunks( deletee_hashes, CHUNK_SIZE )
-                
-                for ( i, chunk_of_hashes ) in enumerate( chunks_of_hashes ):
-                    
-                    if job_status.IsCancelled():
-                        
-                        return
-                        
-                    
-                    job_status.SetStatusText( 'deleting: {}'.format( HydrusNumbers.ValueRangeToPrettyString( i * CHUNK_SIZE, len( deletee_hashes ) ) ) )
-                    
-                    content_update = ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, chunk_of_hashes, reason = reason )
-                    
-                    CG.client_controller.WriteSynchronous( 'content_updates', ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( service_key, content_update ) )
-                    
+                CG.client_controller.WriteSynchronous( 'content_updates', ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY, content_update ) )
                 
             
         

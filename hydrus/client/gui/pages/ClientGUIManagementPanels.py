@@ -1182,7 +1182,7 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
         super().__init__( parent, page, controller, management_controller )
         
         self._last_time_imports_changed = 0
-        self._next_update_time = 0
+        self._next_update_time = 0.0
         
         self._multiple_gallery_import = self._management_controller.GetVariable( 'multiple_gallery_import' )
         
@@ -2149,13 +2149,26 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
     
     def _UpdateImportStatus( self ):
         
-        if HydrusTime.TimeHasPassed( self._next_update_time ):
+        # TODO: Surely this can be optimised, especially with our new multi-column list tech
+        # perhaps break any sort to a ten second timer or something
+        
+        if HydrusTime.TimeHasPassedFloat( self._next_update_time ):
             
             num_items = len( self._gallery_importers_listctrl.GetData() )
             
-            update_period = max( 1, int( ( num_items / 10 ) ** 0.33 ) )
+            min_time = CG.client_controller.new_options.GetInteger( 'gallery_page_status_update_time_minimum_ms' ) / 1000
+            denominator = CG.client_controller.new_options.GetInteger( 'gallery_page_status_update_time_ratio_denominator' )
             
-            self._next_update_time = HydrusTime.GetNow() + update_period
+            try:
+                
+                update_period = max( min_time, num_items / denominator )
+                
+            except:
+                
+                update_period = 1.0
+                
+            
+            self._next_update_time = HydrusTime.GetNowFloat() + update_period
             
             #
             
@@ -2213,7 +2226,7 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
     
     def _UpdateImportStatusNow( self ):
         
-        self._next_update_time = 0
+        self._next_update_time = 0.0
         
         self._UpdateImportStatus()
         
@@ -2270,7 +2283,7 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
         super().__init__( parent, page, controller, management_controller )
         
         self._last_time_watchers_changed = 0
-        self._next_update_time = 0
+        self._next_update_time = 0.0
         
         self._multiple_watcher_import = self._management_controller.GetVariable( 'multiple_watcher_import' )
         
@@ -3297,13 +3310,26 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
     
     def _UpdateImportStatus( self ):
         
-        if HydrusTime.TimeHasPassed( self._next_update_time ):
+        # TODO: Surely this can be optimised, especially with our new multi-column list tech
+        # perhaps break any sort to a ten second timer or something
+        
+        if HydrusTime.TimeHasPassedFloat( self._next_update_time ):
             
             num_items = len( self._watchers_listctrl.GetData() )
             
-            update_period = max( 1, int( ( num_items / 10 ) ** 0.33 ) )
+            min_time = CG.client_controller.new_options.GetInteger( 'watcher_page_status_update_time_minimum_ms' ) / 1000
+            denominator = CG.client_controller.new_options.GetInteger( 'watcher_page_status_update_time_ratio_denominator' )
             
-            self._next_update_time = HydrusTime.GetNow() + update_period
+            try:
+                
+                update_period = max( min_time, num_items / denominator )
+                
+            except:
+                
+                update_period = 1.0
+                
+            
+            self._next_update_time = HydrusTime.GetNowFloat() + update_period
             
             #
             
@@ -3371,7 +3397,7 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
     
     def _UpdateImportStatusNow( self ):
         
-        self._next_update_time = 0
+        self._next_update_time = 0.0
         
         self._UpdateImportStatus()
         

@@ -1285,10 +1285,10 @@ class AnimationBar( QW.QWidget ):
         
         if duration is None and isinstance(media_window, Animation):
             
-             duration = media_window.GetDuration()
+            duration = media_window.GetDuration()
+            
         
         self._duration_ms = max( duration, 1 )
-            
         
         self._currently_in_a_drag = False
         self._it_was_playing_before_drag = False
@@ -1610,6 +1610,8 @@ class MediaContainer( QW.QWidget ):
             self._animation_bar.ClearMedia()
             
         
+        self._ShowHideControlBar()
+        
         media_window_changed = old_media_window != self._media_window
         
         # this has to go after setcanvastype on the mpv window so the filters are in the correct order
@@ -1663,6 +1665,91 @@ class MediaContainer( QW.QWidget ):
             
         
         self.zoomChanged.emit( self._current_zoom )
+        
+    
+    def _ShowHideControlBar( self ):
+        
+        is_near = False
+        show_small_instead_of_hiding = None
+        force_show = False
+        
+        if not ShouldHaveAnimationBar( self._media, self._show_action ):
+            
+            should_show_controls = False
+            
+        else:
+            
+            is_near = self.MouseIsNearAnimationBar()
+            show_small_instead_of_hiding = CG.client_controller.new_options.GetNoneableInteger( 'animated_scanbar_hide_height' ) is not None
+            force_show = self._volume_control.PopupIsVisible() or self._animation_bar.DoingADrag() or CG.client_controller.new_options.GetBoolean( 'force_animation_scanbar_show' )
+            
+            should_show_controls = is_near or show_small_instead_of_hiding or force_show
+            
+        
+        if should_show_controls:
+            
+            should_show_full = is_near or force_show
+            
+            if should_show_full != self._controls_bar_show_full:
+                
+                self._controls_bar_show_full = should_show_full
+                
+                self._animation_bar.SetShowText( self._controls_bar_show_full )
+                
+                self._volume_control.setEnabled( self._controls_bar_show_full )
+                
+                self._SizeAndPositionChildren()
+                
+                # TODO: investigate this
+                # ok we do seem to have a flicker here, most obvious when going from small to full size on a quick animation. we get a frame of where the top half was before. some bitmap memory issue I guess
+                # a forced repaint of the animation bar here does not fix it, so I suspect this is related to the disconnected layout nonsense I am doing
+                # TODO: if and when fixed, investigate if setGubbinsVisible is still a useful thing
+                
+            
+            do_layout = False
+            
+            if self._controls_bar.isHidden():
+                
+                self._controls_bar.setVisible( True )
+                self._controls_bar.raise_()
+                
+                self._animation_bar.setGubbinsVisible( True )
+                self._animation_bar.repaint() # this is probably not needed
+                
+                do_layout = True
+                
+            
+            should_show_volume = self.ShouldHaveVolumeControl()
+            
+            volume_currently_visible = not self._volume_control.isHidden()
+            
+            if volume_currently_visible != should_show_volume:
+                
+                self._volume_control.setVisible( should_show_volume )
+                
+                do_layout = True
+                
+            
+            self._controls_bar.layout()
+            
+        else:
+            
+            if not self._controls_bar.isHidden():
+                
+                # ok, repaint here forces a clear paint event NOW, before we hide.
+                # this ensures that when we show again, we won't have the nub in the wrong place for a frame before it repaints
+                # we'll have no nub, but this is less noticeable
+                
+                self._animation_bar.setGubbinsVisible( False )
+                self._animation_bar.repaint() # this is probably not needed
+                
+                self._controls_bar.setVisible( False )
+                
+                self._volume_control.setVisible( False )
+                
+                self._controls_bar.layout() # this is probably not needed
+                
+            
         
     
     def _SizeAndPositionChildren( self ):
@@ -2633,74 +2720,10 @@ class MediaContainer( QW.QWidget ):
     
     def TIMERUIUpdate( self ):
         
-        is_near = False
-        show_small_instead_of_hiding = None
-        force_show = False
-        
-        if not ShouldHaveAnimationBar( self._media, self._show_action ):
-            
-            should_show_controls = False
-            
-        else:
-            
-            is_near = self.MouseIsNearAnimationBar()
-            show_small_instead_of_hiding = CG.client_controller.new_options.GetNoneableInteger( 'animated_scanbar_hide_height' ) is not None
-            force_show = self._volume_control.PopupIsVisible() or self._animation_bar.DoingADrag() or CG.client_controller.new_options.GetBoolean( 'force_animation_scanbar_show' )
-            
-            should_show_controls = is_near or show_small_instead_of_hiding or force_show
-            
-        
-        if should_show_controls:
-            
-            should_show_full = is_near or force_show
-            
-            if should_show_full != self._controls_bar_show_full:
-                
-                self._controls_bar_show_full = should_show_full
-                
-                self._animation_bar.SetShowText( self._controls_bar_show_full )
-                
-                self._volume_control.setEnabled( self._controls_bar_show_full )
-                
-                self._SizeAndPositionChildren()
-                
-            
-            if not self._controls_bar.isVisible():
-                
-                self._controls_bar.show()
-                self._controls_bar.raise_()
-                
-                self._animation_bar.setGubbinsVisible( True )
-                self._animation_bar.repaint()
-                
-            
-            should_show_volume = self.ShouldHaveVolumeControl()
-            
-            if self._volume_control.isVisible() != should_show_volume:
-                
-                self._volume_control.setVisible( should_show_volume )
-                
-                self._controls_bar.layout()
-                
-            
-        else:
-            
-            if self._controls_bar.isVisible():
-                
-                # ok, repaint here forces a clear paint event NOW, before we hide.
-                # this ensures that when we show again, we won't have the nub in the wrong place for a frame before it repaints
-                # we'll have no nub, but this is less noticeable
-                
-                self._animation_bar.setGubbinsVisible( False )
-                self._animation_bar.repaint()
-                
-                self._controls_bar.hide()
-                
-                self._controls_bar.layout()
-                
-            
+        self._ShowHideControlBar()
         
     
+
 class EmbedButton( QW.QWidget ):
     
     def __init__( self, parent, background_colour_generator ):

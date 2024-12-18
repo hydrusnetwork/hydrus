@@ -244,6 +244,10 @@ class ClientDBMappingsCacheCombinedFilesDisplay( ClientDBModule.ClientDBModule )
             without_tag_ids = pending_without_tag_ids
             without_tag_ids_weight = pending_without_tag_ids_weight
             
+        else:
+            
+            raise NotImplementedError( f'Unknown status "{status}"!' )
+            
         
         if with_tag_ids_weight == 0:
             

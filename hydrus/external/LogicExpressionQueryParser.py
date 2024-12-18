@@ -96,9 +96,17 @@ def precedence(token):
 
 #A simple class representing a node in a logical expression tree
 class Node:
-    def __init__(self, op, children = []):
+    def __init__(self, op, children = None):
+        
+        if children is None:
+            
+            children = []
+            
+        
         self.op = op
         self.children = children[:]
+        
+    
     def __str__(self): #pretty string form, for debug purposes
         if self.op == "not":
             return "not ({})".format(str(self.children[0]) if type(self.children[0]) != str else self.children[0])

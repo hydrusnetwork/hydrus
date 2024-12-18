@@ -213,10 +213,19 @@ Then run the 'setup_help' script to build the help. This isn't necessary, but it
 
     !!! note "Qt compatibility"
         
-        If you run into trouble running newer versions of Qt6, some users have fixed it by installing the packages `libicu-dev` and `libxcb-cursor-dev`. With `apt` that will be:
+        If you run into trouble running newer versions of Qt6, some users have fixed it by installing one or more of these additional packages:
+        
+        * `libicu-dev`
+        * `libxcb-cursor-dev`
+        * `libgthread`
+        
+        With `apt` that will be:
         
         * `sudo apt-get install libicu-dev`
         * `sudo apt-get install libxcb-cursor-dev`
+        * `sudo apt-get install libgthread2.0-0`
+        
+        Or check your OS's package manager.
         
         If you still have trouble with the default Qt6 version, try running setup_venv again and choose a different version. There are several to choose from, including (w)riting a custom version. Check the advanced requirements.txts files in `install_dir/static/requirements/advanced` for more info, and you can also work off this list: [PySide6](https://pypi.org/project/PySide6/#history)
         
@@ -337,8 +346,19 @@ If you want to set QT_API in a batch file, do this:
     
     If you run into trouble running newer versions of Qt6 on Linux, often with an XCB-related error such as `qt.qpa.plugin: Could not load the Qt platform plugin "xcb" in "" even though it was found.`, try installing the packages `libicu-dev` and `libxcb-cursor-dev`. With `apt` that will be:
     
+    If you run into trouble running newer versions of Qt6, some users have fixed it by installing one or more of these additional packages:
+    
+    * `libicu-dev`
+    * `libxcb-cursor-dev`
+    * `libgthread`
+    
+    With `apt` that will be:
+    
     * `sudo apt-get install libicu-dev`
     * `sudo apt-get install libxcb-cursor-dev`
+    * `sudo apt-get install libgthread2.0-0`
+    
+    Or check your OS's package manager.
     
     If you still have trouble with the default Qt6 version, check the advanced requirements.txts in `install_dir/static/requirements/advanced`. There should be several older version examples you can explore, and you can also work off these lists: [PySide6](https://pypi.org/project/PySide6/#history) [PyQt6](https://pypi.org/project/PyQt6/#history)
     

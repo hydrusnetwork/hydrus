@@ -1,8 +1,6 @@
 import sqlite3
 import typing
 
-from hydrus.core import HydrusConstants as HC
-
 from hydrus.client import ClientGlobals as CG
 from hydrus.client.db import ClientDBFilesInbox
 from hydrus.client.db import ClientDBModule
@@ -18,18 +16,20 @@ class ClientDBFileDeleteLock( ClientDBModule.ClientDBModule ):
         super().__init__( 'client file delete lock', cursor )
         
     
-    def FilterForFileDeleteLock( self, service_id, hash_ids ):
+    def FilterForPhysicalFileDeleteLock( self, hash_ids: typing.Collection[ int ] ):
         
         # TODO: like in the MediaSingleton object, eventually extend this to the metadata conditional object
+        # however the trash clearance method uses this guy, so we probably don't want to load up media results over and over bro
+        # probably figure out a table cache or something at that point
         
         if CG.client_controller.new_options.GetBoolean( 'delete_lock_for_archived_files' ):
             
-            service = self.modules_services.GetService( service_id )
+            if not isinstance( hash_ids, set ):
+                
+                hash_ids = set( hash_ids )
+                
             
-            if service.GetServiceType() in HC.LOCAL_FILE_SERVICES:
-                
-                hash_ids = set( hash_ids ).intersection( self.modules_files_inbox.inbox_hash_ids )
-                
+            hash_ids = hash_ids.intersection( self.modules_files_inbox.inbox_hash_ids )
             
         
         return hash_ids
