@@ -35,6 +35,52 @@
             <h1 id="changelog"><a href="#changelog">changelog</a></h1>
             <ul>
                 <li>
+                    <h2 id="version_603"><a href="#version_603">version 603</a></h2>
+                    <ul>
+                        <li><h3>misc</h3></li>
+                        <li>fixed a typo that caused the 'sort files by' menu to (ironically) sort by crazy means</li>
+                        <li>fixed a bug with the time delta widget where the ms would not set to 0 when it initialised with a value that has no milliseconds component but the minimum allowed value had a milliseconds component</li>
+                        <li>the 'force metadata refetch' thumbnail submenu now shows actions for just the focused file, and in the media viewer it now shows these actions for the current file (previously this submenu was accidentally a stub in the media viewer since there is no concept of a 'multi-file selection' up there)</li>
+                        <li>the 'review bandwidth usage' panel now initialises its widgets immediately after it opens, not half a second later</li>
+                        <li>added some safety code to ensure file re-imports (and probably some other weird file import situations) integrate correctly into the similar files system</li>
+                        <li>added some EXPERIMENTAL options just for me to `options-&gt;speed and memory`</li>
+                        <li><h3>archived file delete lock</h3></li>
+                        <li>I have had a think about the delete lock in hydrus. I have never liked this system because it interacts with some complicated file service logic and inserts awkward logical workflow exceptions. furthermore, my initial implementation has not played well with multiple local file services. it was also imperfect, since certain signals to 'delete from all local services' or some odd variants of 'delete from trash' could skip the lock, and it disallowed removal of a file from one local file service even when the file was in others. several users have asked for various exceptions, either on an ad-hoc basis of for duplicate filtering. I played around with trying to fix and implement some of this stuff this week and realised I was digging an even worse hole for myself. I have decided to KISS and scale back what the lock does down to the simple emergency case of not wanting to lose nice things. **therefore: the archive-delete lock, henceforth, will only test for deleting files from the trash, i.e. a physical delete**</li>
+                        <li>the option UI is updated to say this, and I cleaned up and updated a bunch of hellish hacky code all around here</li>
+                        <li>the normal manual delete files dialog now filters the 'delete physically' and 'delete physically/no record' options according to the delete-lock, no moaning or popups</li>
+                        <li>this is obviously a workflow switch, and I apologise for the inconvenience. I know the guys who care about this do care about it. I should not have tried to make it complicated in the first place. let me know what works and what doesn't, but I will insist on keeping this whole thing KISS going forward. if you use the trash for storage, please consider making a new local file service and putting your unusual 'maybe I'll delete it' files there</li>
+                        <li><h3>trash deletion rules</h3></li>
+                        <li>while I was poking around the archived file delete lock stuff above, I saw some hacky delete logic. in several semi-automatic systems I saw code that would say 'send the file to trash, unless it is already in the trash, in which case "upgrade" to physically delete it'. I am making the formal choice to no longer do this, and this code is now amended to say just 'send the file to trash if it isn't already there. specifically--</li>
+                        <li>the duplicates filter page will no longer allow you to set a search domain in 'trash' or 'all local files' or 'all deleted files' (or, for advanced users, 'repository updates' lol). if it is somehow given a trashed file to process and receives a duplicate action that includes a file delete (like 'this is better, and delete the other'), it no longer tries to physically delete it; it just leaves it in the trash</li>
+                        <li>the Client API `/manage_file_relationships/set_file_relationships` call is the same; when you say to `delete_a/b`, it'll now ensure the file goes to the trash and that's it</li>
+                        <li>the archive/delete filter has long not allowed trashed files, but it too now no longer has any special logic for trashed files that it happens to encounter (e.g. the file is trashed by other means after the filter is created); it will now never provide a 'delete from hard disk' option in the final commit dialog. the top 'delete from' item in the commit choice, which is usually the current location context, is also filtered and selected more carefully for users who use multi-location search domains</li>
+                        <li>the manual export and export folders now explicitly, when set to delete files, now send to trash; they never delete from the trash</li>
+                        <li>I expect I've missed some clever situation, but typically, now, files are going to be physically deleted only if the `options-&gt;files and trash` settings kick in or you the user force it manually, and of course the new archived-file delete-lock prohibits this final step no matter the source</li>
+                        <li><h3>media viewer</h3></li>
+                        <li>fixed a bug where the top-right hover window was, when the mouse is over it and the media changes from one with no URLs to one with URLs, not be able to immediately figure out how tall the URLs list should be and was giving you a height-truncated window</li>
+                        <li>I also, after some head banging and dark art, seem to have finally and properly fixed the annoying adjust-flicker that can happen to top-right hovers with urls or note hovers where a moment after showing it may grow three pixels taller etc... the top-right and center-right hovers now appear to size perfectly every single time; at least on Windows, I cannot break them even if I try. to keep things clean, I have removed some old hacks we built up over the years, but perhaps some of these are still relevent, so let me know how things appear on different OSes</li>
+                        <li>I improved the (re)layout after you hide/show a note with middle/right-click. it _should_ recalculate its new size immediately</li>
+                        <li>the notes that are drawn in the background of the media viewer are now always as wide as the hover window that pops up over them. I improved the padding calculations, so they are more closely aligned with the hover, but it isn't perfect yet--however I think I will be able to make it so in future</li>
+                        <li>fixed a variety of issues with the media viewer volume button and its slider flyout. it could stay open on media change and in some cases open up if the mouse was over where the flyout should be on a media change, or flickering into just slightly the wrong overlapping location if the mouse comes in at the wrong angle. there's still a couple weird ways you can break it (e.g. sending a 'move media' keyboard shortcut while the mouse is over the slider), but I'll leave that for another day</li>
+                        <li>fixed an issue with the media viewer's top hover window disappearing while your mouse was over the volume slider</li>
+                        <li>reduced some change-media flicker with the seek bar in the media viewer</li>
+                        <li><h3>misc cleanup</h3></li>
+                        <li>I replaced a bunch of `isVisible` with `not isHidden` in Qt. I was using the former for some widget and panel hide/show situations, but they are not quite the same: `isVisible` tests up the ancestor heirarchy; `isHidden` tests only the given widget's visibility bool</li>
+                        <li>reworded the 'blacklist' explanation a bit in 'getting started with downloaders' and added a screenshot</li>
+                        <li>updated the Linux running from source help to talk about `libgthread`, the lack of which may stop Qt6 from booting</li>
+                        <li>I cleaned up the `/manage_file_relationships/set_relationships` Client API call a little, including fixing a slightly incorrect object type that was missed in a recent rewrite of the duplicates content pipeline. I am not sure if this was causing any bugs, but it is better now</li>
+                        <li>brushed up some of the labels/tooltips in the `options-&gt;file viewing statistics` page (issue #1644)</li>
+                        <li>stopped the logging of a 'custom' `REQUESTS_CA_BUNDLE` with the new `options-&gt;connection` debug checkbox if it is what we would have set anyway (this was occuring if you went `file-&gt;restart`, since the new instance shares the same process/env)</li>
+                        <li>fixed some unit tests for the new duplicate merge delete rules</li>
+                        <li>did some misc linting</li>
+                        <li><h3>fixed up tag filter UI</h3></li>
+                        <li>everything is in layout boxes now, some collapsible</li>
+                        <li>fixed up some layout flags so things are aligned or expand better, and the global namespaces list shouldn't have a scrollbar any more</li>
+                        <li><h3>macOS build</h3></li>
+                        <li>updated the macOS build script to retry the hdiutil dmg-building step multiple times in the very frequent case of it, seemingly, getting lock-kekked by XProtectBehaviorService (https://github.com/actions/runner-images/issues/7522)</li>
+                    </ul>
+                </li>
+                <li>
                     <h2 id="version_602"><a href="#version_602">version 602</a></h2>
                     <ul>
                         <li><h3>media viewer top hover file info line</h3></li>
