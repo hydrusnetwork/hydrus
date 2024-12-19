@@ -252,24 +252,22 @@ class MediaResultsPanelThumbnails( ClientGUIMediaResultsPanel.MediaResultsPanel 
             bg_colour = ClientGUIFunctions.GetLighterDarkerColour( bg_colour )
             
         
+        comp_mode = painter.compositionMode()
+        
+        painter.setCompositionMode( QG.QPainter.CompositionMode_Source )
+        
         if new_options.GetNoneableString( 'media_background_bmp_path' ) is not None:
             
-            comp_mode = painter.compositionMode()
-            
-            painter.setCompositionMode( QG.QPainter.CompositionMode_Source )
-            
             painter.setBackground( QG.QBrush( QC.Qt.GlobalColor.transparent ) )
-            
-            painter.eraseRect( painter.viewport() )
-            
-            painter.setCompositionMode( comp_mode )
             
         else: 
             
             painter.setBackground( QG.QBrush( bg_colour ) )
             
-            painter.eraseRect( painter.viewport() )
-            
+        
+        painter.eraseRect( painter.viewport() )
+        
+        painter.setCompositionMode( comp_mode )
         
         #
         
