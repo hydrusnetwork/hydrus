@@ -1314,6 +1314,8 @@ class EditServiceRatingsSubPanel( ClientGUICommon.StaticBox ):
             
             self._colour_ctrls[ colour_type ] = ( border_ctrl, fill_ctrl )
             
+        self._show_in_thumbnail = QW.QCheckBox( self )
+
         
         #
         
@@ -1323,7 +1325,8 @@ class EditServiceRatingsSubPanel( ClientGUICommon.StaticBox ):
             
             border_ctrl.SetColour( QG.QColor( *border_rgb ) )
             fill_ctrl.SetColour( QG.QColor( *fill_rgb ) )
-            
+
+        self._show_in_thumbnail.setChecked( dictionary[ 'show_in_thumbnail' ] )
         
         #
         
@@ -1371,8 +1374,10 @@ class EditServiceRatingsSubPanel( ClientGUICommon.StaticBox ):
                 
             
             rows.append( ( 'border/fill for ' + colour_text + ': ', hbox ) )
-            
-        
+
+        rows.append( ( 'show in gallery thumbnail', self._show_in_thumbnail ) )
+
+
         gridbox = ClientGUICommon.WrapInGrid( self, rows )
         
         self.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
@@ -1395,6 +1400,8 @@ class EditServiceRatingsSubPanel( ClientGUICommon.StaticBox ):
             fill_rgb = ( fill_colour.red(), fill_colour.green(), fill_colour.blue() )
             
             dictionary_part[ 'colours' ][ colour_type ] = ( border_rgb, fill_rgb )
+
+        dictionary_part[ 'show_in_thumbnail' ] = self._show_in_thumbnail.isChecked()
             
         
         return dictionary_part

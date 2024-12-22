@@ -22,6 +22,7 @@ from hydrus.client.gui import ClientGUIDragDrop
 from hydrus.client.gui import ClientGUICore as CGC
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIMenus
+from hydrus.client.gui import ClientGUIRatings
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.media import ClientGUIMediaSimpleActions
 from hydrus.client.gui.media import ClientGUIMediaModalActions
@@ -33,6 +34,7 @@ from hydrus.client.media import ClientMedia
 from hydrus.client.media import ClientMediaFileFilter
 from hydrus.client.media import ClientMediaResultPrettyInfo
 from hydrus.client.metadata import ClientTags
+from hydrus.client.metadata import ClientRatings
 
 FRAME_DURATION_60FPS = 1.0 / 60
 
@@ -2375,7 +2377,98 @@ class Thumbnail( Selectable ):
         ICON_MARGIN = 1
         
         locations_manager = media.GetLocationsManager()
-        
+
+        # ratings
+
+        current_y = thumbnail_border
+
+        added = False
+
+        services_manager = CG.client_controller.services_manager
+
+        like_services = services_manager.GetServices( ( HC.LOCAL_RATING_LIKE, ) )
+
+        like_services.reverse()
+
+        like_rating_current_x = width - 16 - 2 # -2 to line up exactly with the floating panel
+
+        for like_service in like_services:
+
+            service_key = like_service.GetServiceKey()
+
+            if ClientRatings.GetShowInThumbnail( service_key ):
+
+                rating_state = ClientRatings.GetLikeStateFromMedia( ( media, ), service_key )
+
+                if rating_state is ClientRatings.LIKE or rating_state is ClientRatings.DISLIKE:
+
+                    added = True
+
+                    ClientGUIRatings.DrawLike( painter, like_rating_current_x, current_y, service_key, rating_state )
+
+                    like_rating_current_x -= 16
+
+
+        if len( like_services ) > 0 and added:
+
+            current_y += 18
+
+        added = False
+
+        numerical_services = services_manager.GetServices( ( HC.LOCAL_RATING_NUMERICAL, ) )
+
+        for numerical_service in numerical_services:
+
+            service_key = numerical_service.GetServiceKey()
+
+            if ClientRatings.GetShowInThumbnail( service_key ):
+
+                ( rating_state, rating ) = ClientRatings.GetNumericalStateFromMedia( ( media, ), service_key )
+
+                if rating_state is ClientRatings.SET:
+
+                    added = True
+
+                    numerical_width = ClientGUIRatings.GetNumericalWidth( service_key )
+
+                    ClientGUIRatings.DrawNumerical( painter, width - numerical_width - 2, current_y, service_key, rating_state, rating )
+
+                    current_y += 18
+
+
+        added = False
+
+        incdec_services = services_manager.GetServices( ( HC.LOCAL_RATING_INCDEC, ) )
+
+        incdec_services.reverse()
+
+        control_width = ClientGUIRatings.INCDEC_SIZE.width()
+
+        incdec_rating_current_x = width - control_width - 2 # -2 to line up exactly with the floating panel
+
+        for incdec_service in incdec_services:
+
+            service_key = incdec_service.GetServiceKey()
+
+            if ClientRatings.GetShowInThumbnail( service_key ):
+
+                ( rating_state, rating ) = ClientRatings.GetIncDecStateFromMedia( ( media, ), service_key )
+
+                if rating_state is ClientRatings.SET and rating != 0:
+
+                    added = True
+
+                    ClientGUIRatings.DrawIncDec( painter, incdec_rating_current_x, current_y, service_key, rating_state, rating )
+
+                    incdec_rating_current_x -= control_width
+
+
+        if len( incdec_services ) > 0 and added:
+
+            current_y += 18
+
+        # icons
+
         icons_to_draw = []
         
         if locations_manager.IsDownloading():
@@ -2406,18 +2499,17 @@ class Thumbnail( Selectable ):
                 
                 icon_x -= icon.width()
                 
-                painter.drawPixmap( width + icon_x, thumbnail_border, icon )
+                painter.drawPixmap( width + icon_x, current_y, icon )
                 
                 icon_x -= 2 * ICON_MARGIN
-                
-            
+
         
         if media.IsCollection():
             
             icon = CC.global_pixmaps().collection
             
             icon_x = thumbnail_border + ICON_MARGIN
-            icon_y = ( height - 1 ) - thumbnail_border - ICON_MARGIN - icon.height()
+            icon_y = ( height - 1 ) - current_y - ICON_MARGIN - icon.height()
             
             painter.drawPixmap( icon_x, icon_y, icon )
             
