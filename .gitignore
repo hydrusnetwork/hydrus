@@ -84,3 +84,6 @@ venv.bak/
 /help/
 
 .DS_Store
+
+.cache
+shell.nix
