@@ -1,5 +1,4 @@
 from hydrus.core import HydrusData
-from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusTime
 
 from hydrus.client import ClientDaemons
@@ -9,7 +8,7 @@ class DatabaseMaintenanceManager( ClientDaemons.ManagerWithMainLoop ):
     
     def __init__( self, controller: "CG.ClientController.Controller" ):
         
-        super().__init__( controller )
+        super().__init__( controller, 15 )
         
         self._is_working_hard = False
         
@@ -113,88 +112,65 @@ class DatabaseMaintenanceManager( ClientDaemons.ManagerWithMainLoop ):
             
         
     
-    def MainLoop( self ):
+    def _DoMainLoop( self ):
         
-        try:
+        while True:
             
-            time_to_start = HydrusTime.GetNow() + 15
+            still_work_to_do = False
             
-            while not HydrusTime.TimeHasPassed( time_to_start ):
+            with self._lock:
                 
-                with self._lock:
-                    
-                    self._CheckShutdown()
-                    
-                
-                self._wake_event.wait( 1 )
+                self._CheckShutdown()
                 
             
-            while True:
+            self._controller.WaitUntilViewFree()
+            
+            with self._lock:
                 
-                still_work_to_do = False
-                
-                with self._lock:
-                    
-                    self._CheckShutdown()
-                    
-                
-                self._controller.WaitUntilViewFree()
-                
-                with self._lock:
-                    
-                    able_to_work = self._AbleToDoBackgroundMaintenance()
-                    work_period = self._GetWorkPeriod()
-                    
-                
-                time_it_took = 1.0
-                
-                if able_to_work:
-                    
-                    time_to_stop = HydrusTime.GetNowFloat() + work_period
-                    
-                    start_time = HydrusTime.GetNowFloat()
-                    
-                    try:
-                        
-                        still_work_to_do = CG.client_controller.WriteSynchronous( 'do_deferred_table_delete_work', time_to_stop )
-                        
-                    except Exception as e:
-                        
-                        self._serious_error_encountered = True
-                        
-                        HydrusData.PrintException( e )
-                        
-                        message = 'There was an unexpected problem during deferred table delete database maintenance work! This maintenance system will not run again this boot. A full traceback of this error should be written to the log.'
-                        message += '\n' * 2
-                        message += str( e )
-                        
-                        HydrusData.ShowText( message )
-                        
-                    finally:
-                        
-                        self._controller.pub( 'notify_deferred_delete_database_maintenance_work_complete' )
-                        
-                    
-                    time_it_took = HydrusTime.GetNowFloat() - start_time
-                    
-                
-                with self._lock:
-                    
-                    wait_period = self._GetWaitPeriod( work_period, time_it_took, still_work_to_do )
-                    
-                
-                self._wake_event.wait( wait_period )
-                
-                self._wake_event.clear()
+                able_to_work = self._AbleToDoBackgroundMaintenance()
+                work_period = self._GetWorkPeriod()
                 
             
-        except HydrusExceptions.ShutdownException:
+            time_it_took = 1.0
             
-            pass
+            if able_to_work:
+                
+                time_to_stop = HydrusTime.GetNowFloat() + work_period
+                
+                start_time = HydrusTime.GetNowFloat()
+                
+                try:
+                    
+                    still_work_to_do = CG.client_controller.WriteSynchronous( 'do_deferred_table_delete_work', time_to_stop )
+                    
+                except Exception as e:
+                    
+                    self._serious_error_encountered = True
+                    
+                    HydrusData.PrintException( e )
+                    
+                    message = 'There was an unexpected problem during deferred table delete database maintenance work! This maintenance system will not run again this boot. A full traceback of this error should be written to the log.'
+                    message += '\n' * 2
+                    message += str( e )
+                    
+                    HydrusData.ShowText( message )
+                    
+                finally:
+                    
+                    self._controller.pub( 'notify_deferred_delete_database_maintenance_work_complete' )
+                    
+                
+                time_it_took = HydrusTime.GetNowFloat() - start_time
+                
             
-        finally:
+            with self._lock:
+                
+                wait_period = self._GetWaitPeriod( work_period, time_it_took, still_work_to_do )
+                
             
-            self._mainloop_is_finished = True
+            self._wake_event.wait( wait_period )
+            
+            self._wake_event.clear()
             
         
     

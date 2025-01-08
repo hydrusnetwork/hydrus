@@ -159,7 +159,7 @@ class CanvasFrame( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindow
         return QC.QSize( 240, 180 )
         
     
-    def SetCanvas( self, canvas_window: ClientGUICanvas.CanvasWithDetails ):
+    def SetCanvas( self, canvas_window: ClientGUICanvas.CanvasWithHovers ):
         
         self._canvas_window = canvas_window
         

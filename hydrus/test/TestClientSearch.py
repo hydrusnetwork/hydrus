@@ -20,7 +20,7 @@ class TestPredicates( unittest.TestCase ):
         # presumably this will not be false one day
         system_predicate = ClientSearchPredicate.SYSTEM_PREDICATE_INBOX
         
-        self.assertFalse( system_predicate.CanTestMediaResult() )
+        self.assertTrue( system_predicate.CanTestMediaResult() )
         
         # filetypes
         
@@ -34,6 +34,13 @@ class TestPredicates( unittest.TestCase ):
         fake_media_result = HelperFunctions.GetFakeMediaResult( HydrusData.GenerateKey(), mime = HC.IMAGE_JPEG )
         
         self.assertTrue( system_predicate.TestMediaResult( fake_media_result ) )
+        
+        #
+        
+        system_predicate = ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_MIME, value = { HC.IMAGE_JPEG }, inclusive = False )
+        fake_media_result = HelperFunctions.GetFakeMediaResult( HydrusData.GenerateKey(), mime = HC.IMAGE_JPEG )
+        
+        self.assertFalse( system_predicate.TestMediaResult( fake_media_result ) )
         
         #
         
@@ -1748,6 +1755,7 @@ class TestAutocompletePredGubbins( unittest.TestCase ):
             ( 'system:limit is 5,000', "system:limit is 5000" ),
             ( 'system:limit is 100', "system:limit = 100" ),
             ( 'system:filetype is jpeg', "system:filetype is jpeg" ),
+            ( 'system:filetype is not jpeg', "system:filetype is not jpeg" ),
             ( 'system:filetype is apng, jpeg, png', "system:filetype =   image/jpg, image/png, apng" ),
             ( 'system:filetype is image', "system:filetype is image" ),
             ( 'system:filetype is animated gif, static gif, jpeg', "system:filetype =   static gif, animated gif, jpeg" ),

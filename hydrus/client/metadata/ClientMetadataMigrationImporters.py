@@ -33,6 +33,18 @@ class SingleFileMetadataImporter( ClientMetadataMigrationCore.ImporterExporterNo
     
     def Import( self, *args, **kwargs ) -> typing.Collection[ str ]:
         
+        rows = self.ImportSansStringProcessing( *args, **kwargs )
+        
+        if self._string_processor.MakesChanges():
+            
+            rows = self._string_processor.ProcessStrings( rows )
+            
+        
+        return rows
+        
+    
+    def ImportSansStringProcessing( self, *args, **kwargs ) -> typing.Collection[ str ]:
+        
         raise NotImplementedError()
         
     
@@ -46,7 +58,12 @@ class SingleFileMetadataImporterMedia( SingleFileMetadataImporter ):
     
     def Import( self, media_result: ClientMediaResult.MediaResult ) -> typing.Collection[ str ]:
         
-        raise NotImplementedError()
+        return super().Import( media_result )
+        
+    
+    def ImportSansStringProcessing( self, media_result: ClientMediaResult.MediaResult ) -> typing.Collection[ str ]:
+        
+        return super().ImportSansStringProcessing( media_result )
         
     
     def ToString( self ) -> str:
@@ -95,16 +112,11 @@ class SingleFileMetadataImporterMediaNotes( SingleFileMetadataImporterMedia, Hyd
         return examples
         
     
-    def Import( self, media_result: ClientMediaResult.MediaResult ):
+    def ImportSansStringProcessing( self, media_result: ClientMediaResult.MediaResult ):
         
         names_to_notes = media_result.GetNotesManager().GetNamesToNotes()
         
         rows = [ '{}{}{}'.format( name.replace( ClientMetadataMigrationCore.NOTE_CONNECTOR_STRING, ClientMetadataMigrationCore.NOTE_NAME_ESCAPE_STRING ), ClientMetadataMigrationCore.NOTE_CONNECTOR_STRING, text ) for ( name, text ) in names_to_notes.items() ]
-        
-        if self._string_processor.MakesChanges():
-            
-            rows = self._string_processor.ProcessStrings( rows )
-            
         
         return rows
         
@@ -164,7 +176,7 @@ class SingleFileMetadataImporterMediaTags( SingleFileMetadataImporterMedia, Hydr
         
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
-    
+        
         ( serialisable_string_processor, serialisable_service_key, self._tag_display_type ) = serialisable_info
         
         self._string_processor = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_string_processor )
@@ -226,17 +238,12 @@ class SingleFileMetadataImporterMediaTags( SingleFileMetadataImporterMedia, Hydr
         return self._tag_display_type
         
     
-    def Import( self, media_result: ClientMediaResult.MediaResult ):
+    def ImportSansStringProcessing( self, media_result: ClientMediaResult.MediaResult ):
         
         tags = media_result.GetTagsManager().GetCurrent( self._service_key, self._tag_display_type )
         
         # turning ::) into :)
         tags = { HydrusText.re_leading_double_colon.sub( ':', tag ) for tag in tags }
-        
-        if self._string_processor.MakesChanges():
-            
-            tags = self._string_processor.ProcessStrings( tags )
-            
         
         return tags
         
@@ -325,7 +332,7 @@ class SingleFileMetadataImporterMediaTimestamps( SingleFileMetadataImporterMedia
         return self._timestamp_data_stub
         
     
-    def Import( self, media_result: ClientMediaResult.MediaResult ):
+    def ImportSansStringProcessing( self, media_result: ClientMediaResult.MediaResult ):
         
         rows = []
         
@@ -334,11 +341,6 @@ class SingleFileMetadataImporterMediaTimestamps( SingleFileMetadataImporterMedia
         if timestamp is not None:
             
             rows.append( str( timestamp ) )
-            
-        
-        if self._string_processor.MakesChanges():
-            
-            rows = self._string_processor.ProcessStrings( rows )
             
         
         return rows
@@ -422,14 +424,9 @@ class SingleFileMetadataImporterMediaURLs( SingleFileMetadataImporterMedia, Hydr
         return examples
         
     
-    def Import( self, media_result: ClientMediaResult.MediaResult ):
+    def ImportSansStringProcessing( self, media_result: ClientMediaResult.MediaResult ):
         
         urls = media_result.GetLocationsManager().GetURLs()
-        
-        if self._string_processor.MakesChanges():
-            
-            urls = self._string_processor.ProcessStrings( urls )
-            
         
         return urls
         
@@ -480,7 +477,12 @@ class SingleFileMetadataImporterSidecar( SingleFileMetadataImporter, ClientMetad
     
     def Import( self, actual_file_path: str ) -> typing.Collection[ str ]:
         
-        raise NotImplementedError()
+        return super().Import( actual_file_path )
+        
+    
+    def ImportSansStringProcessing( self, actual_file_path: str ) -> typing.Collection[ str ]:
+        
+        return super().ImportSansStringProcessing( actual_file_path )
         
     
     def ToString( self ) -> str:
@@ -590,7 +592,7 @@ class SingleFileMetadataImporterJSON( SingleFileMetadataImporterSidecar, HydrusS
         return self._json_parsing_formula
         
     
-    def Import( self, actual_file_path: str ) -> typing.Collection[ str ]:
+    def ImportSansStringProcessing( self, actual_file_path: str ) -> typing.Collection[ str ]:
         
         path = self.GetSidecarPath( actual_file_path )
         
@@ -615,11 +617,6 @@ class SingleFileMetadataImporterJSON( SingleFileMetadataImporterSidecar, HydrusS
         collapse_newlines = False
         
         rows = self._json_parsing_formula.Parse( parsing_context, read_raw_json, collapse_newlines )
-        
-        if self._string_processor.MakesChanges():
-            
-            rows = self._string_processor.ProcessStrings( rows )
-            
         
         return rows
         
@@ -754,7 +751,7 @@ class SingleFileMetadataImporterTXT( SingleFileMetadataImporterSidecar, HydrusSe
         return self._separator
         
     
-    def Import( self, actual_file_path: str ) -> typing.Collection[ str ]:
+    def ImportSansStringProcessing( self, actual_file_path: str ) -> typing.Collection[ str ]:
         
         path = self.GetSidecarPath( actual_file_path )
         
@@ -784,11 +781,6 @@ class SingleFileMetadataImporterTXT( SingleFileMetadataImporterSidecar, HydrusSe
         else:
             
             rows = raw_text.split( self._separator )
-            
-        
-        if self._string_processor.MakesChanges():
-            
-            rows = self._string_processor.ProcessStrings( rows )
             
         
         return rows

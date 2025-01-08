@@ -33,6 +33,8 @@ class EditSidecarDetailsPanel( ClientGUICommon.StaticBox ):
         self._example_output = QW.QLineEdit( self )
         self._example_output.setReadOnly( True )
         
+        self._example_output.setToolTip( ClientGUIFunctions.WrapToolTip( 'If you only have one sidecar for multiple files, and thus you have some regex that is doing ".*" -> "info.txt" kind of thing, you must not set any accompanying file imports to be deleted or moved after import! The sidecar will be deleted/moved too, and then the next file will not have the sidecar to look at!' ) )
+        
         rows = []
         
         rows.append( ( 'remove file .ext?: ', self._remove_actual_filename_ext ) )

@@ -703,6 +703,19 @@ class NetworkLoginManager( HydrusSerialisable.SerialisableBase ):
                             
                             if old_login_script_key_and_name[1] == login_script_key_and_name[1]:
                                 
+                                # this is probably a newly overwritten script
+                                if auto_link or login_script.GetName() in auto_link_these_names:
+                                    
+                                    if validity == VALIDITY_INVALID:
+                                        
+                                        validity = VALIDITY_UNTESTED
+                                        validity_error_text = ''
+                                        
+                                        no_work_until = 0
+                                        no_work_until_reason = ''
+                                        
+                                    
+                                
                                 self._domains_to_login_info[ login_domain ] = ( login_script_key_and_name, credentials, login_access_type, login_access_text, active, validity, validity_error_text, no_work_until, no_work_until_reason )
                                 
                             

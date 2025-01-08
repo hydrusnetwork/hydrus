@@ -133,7 +133,7 @@ class EditNodes( QW.QWidget ):
                 
                 node = obj
                 
-                self._nodes.AddDatas( [ node ] )
+                self._nodes.AddData( node )
                 
             else:
                 
@@ -186,7 +186,7 @@ class EditNodes( QW.QWidget ):
                 
                 new_node = panel.GetValue()
                 
-                self._nodes.AddDatas( [ new_node ] )
+                self._nodes.AddDatas( new_node )
                 
             
         
@@ -223,7 +223,7 @@ class EditNodes( QW.QWidget ):
             
             dupe_node = node.Duplicate()
             
-            self._nodes.AddDatas( [ dupe_node ] )
+            self._nodes.AddDatas( dupe_node )
             
         
     
@@ -911,10 +911,7 @@ class ManageParsingScriptsPanel( ClientGUIScrolledPanels.ManagePanel ):
             scripts.extend( CG.client_controller.Read( 'serialisable_named', script_type ) )
             
         
-        for script in scripts:
-            
-            self._scripts.AddDatas( ( script, ) )
-            
+        self._scripts.SetData( scripts )
         
         #
         
@@ -982,7 +979,7 @@ class ManageParsingScriptsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 self._scripts.SetNonDupeName( script )
                 
-                self._scripts.AddDatas( ( script, ) )
+                self._scripts.AddData( script )
                 
             else:
                 
@@ -1025,7 +1022,7 @@ class ManageParsingScriptsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 self._scripts.SetNonDupeName( new_script )
                 
-                self._scripts.AddDatas( ( new_script, ) )
+                self._scripts.AddData( new_script )
                 
             
         
@@ -1059,7 +1056,7 @@ class ManageParsingScriptsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._scripts.SetNonDupeName( dupe_script )
             
-            self._scripts.AddDatas( ( dupe_script, ) )
+            self._scripts.AddData( dupe_script )
             
         
     

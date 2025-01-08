@@ -15,30 +15,22 @@ It also takes a decent whack of CPU to import a file. You'll usually never notic
 
 ## Downloader types
 
-There are a number of different downloader types, each with its own purpose:  
-
-**URL download**
-:    Intended for single posts or images. (Works with the [API](client_api.md))
+There are several different downloader types, each with its own purpose:  
 
 **Gallery**
-:    For big download jobs such as an artist's catalogue, everything with a given tag on a booru.
+:    The normal booru-style search interface. You enter tags, and the downloader walks through one or more gallery pages, queueing up many post/file results. Good for big download jobs such as an artist's entire catalogue.
 
 **Subscriptions**
-:    Repeated gallery jobs, for keeping up to date with an artist or tag. Use gallery downloader to get everything and a subscription to keep updated.
+:    Automatic, repeating gallery jobs, for keeping up to date with an artist or tag. **Use the gallery downloader to get everything first** and then set up a subscription to keep updated.
 
 **Watcher**
-:    Imageboard thread downloader, such as 4chan, 8chan, and what else exists. (Works with the [API](client_api.md))
+:    For watching imageboard (e.g. 4chan) threads. It checks and rechecks regularly to keep up with new posts. (The [API](client_api.md) can send URLs to this)
+
+**URL download**
+:    You paste or drag-and-drop gallery and post/file URLs into this, and if hydrus understands it, it will import it. Does not do multi-page searching. Useful for one-off jobs. (The [API](client_api.md) can send URLs to this)
 
 **Simple downloader**
-:    Intended for simple one-off jobs like grabbing all linked images in a page.
-
-### URL download
-The **url downloader** works like the gallery downloader but does not do searches. You can paste downloadable URLs to it, and it will work through them as one list. Dragging and dropping recognisable URLs onto the client (e.g. from your web browser) will also spawn and use this downloader.
-
-The button next to the input field lets you paste multiple URLs at once such as if you've copied from a document or browser bookmarks. The URLs need to be newline separated.
-
-#### API
-If you use [API-connected](client_api.md) programs such as the Hydrus Companion, then any [non-watchable](downloader_url_classes.md#url_types) URLs sent to Hydrus through them will end up in an URL downloader page, the specifics depending on the program's settings. You can't use this to force Hydrus to download paged galleries since the URL downloader page doesn't support traversing to the next page, use the gallery downloader for this.
+:    Intended for simple one-off jobs with a single simple parsing rule, like 'get all the linked images from this page'.
 
 ### Gallery download
 ![](images/downloader_page.png)
@@ -64,16 +56,22 @@ _Note that some sites only serve 25 or 50 pages of results, despite their indice
 **In general, particularly when starting out, artist searches are best.** They are usually fewer than a thousand files and have fairly uniform quality throughout.
 
 ### Subscriptions { id="subscriptions" }
-Let's say you found an artist you like. You downloaded everything of theirs from some site, but every week, one or two new pieces is posted. You'd like to keep up with the new stuff, but you don't want to manually make a new download job every week for every single artist you like.
+Let's say you found an artist you like. You downloaded everything of theirs from some site using a Gallery Downloader, but every week, one or two new pieces is posted. You'd like to keep up with the new stuff, but you don't want to manually make a new download job every week for every single artist you like.
 
 Subscriptions are a way to automatically recheck a good query in future, to keep up with new files. Many users come to use them. You set up a number of saved queries, and the client will 'sync' with the latest files in the gallery and download anything new, just as if you were running the download yourself.
 
-Subscriptions only work for booru-like galleries that put the newest files first, and they only keep up with new content--once they have done their first sync, which usually gets the most recent hundred files or so, they will never reach further into the past. Getting older files, as you will see later, is a job best done with a normal download page.
+!!! info "Sync Mechanics"
+    Because they are automatic, subscriptions are designed to be reliable, simple, and fail-safe. They build up an initial list of URLs (usually one hundred) for their search, and then on every normal sync they will re-run the search and stop looking once they hit a list of files they recognise.
+    
+    Once subscriptions establish a log of recent URLs, they will not go 'beyond' that, to older URLs. They will always get whatever is newest, stop when they catch up to what they have seen before, and integrate those newer URLs into their URL log for the next check.
+    
+    If you need to get older files and fill in that 'gap', use a one-time Gallery Downloader page.
+    
+    Subscriptions change how frequently they check based on what they see. If it looks like there are four new files every week, they will typically try to check once a week. A faster or slower 'file velocity' will cause them to automatically throttle up or down. If a source does not post any new files within a long time (usually 180 days), the subscription will be considered DEAD and will stop checking.
+    
+    **The entire subscription system assumes the source is a typical 'newest first' booru-style search. If you dick around with some order_by:rating/random metatag, it will not work reliably!**
 
-!!! note
-    The entire subscription system assumes the source is a typical 'newest first' booru-style search. If you dick around with some order_by:rating/random metatag, it will not work reliably.
-
-It is important to note that while subscriptions can have multiple queries (even hundreds!), they _generally_ only work on one site. Expect to create one subscription for safebooru, one for artstation, one for paheal, and so on for every site you care about. Advanced users may be able to think of ways to get around this, but I recommend against it as it throws off some of the internal check timing calculations.
+While subscriptions can have multiple queries (even hundreds!), they _generally_ only work on one site. Expect to create one subscription for site x, another for site y, site z, and so on for every source you care about. Advanced users may be able to think of ways to get around this, but I recommend against it as it throws off some of the internal check timing calculations.
 
 #### Setting up subscriptions
 
@@ -88,14 +86,12 @@ Before we trip over the advanced buttons here, let's zoom in on the actual subsc
 ![](images/subscriptions_edit_subscription.png)
 
 !!! danger
-    **Do not change the max number of new files options until you know _exactly_ what they do and have a good reason to alter them!**
+    **Do not change the max number of new files or checker options until you know _exactly_ what they do and have a good reason to alter them!**
 
-This is a big and powerful panel! I recommend you open the screenshot up in a new browser tab, or in the actual client, so you can refer to it.
-
-Despite all the controls, the basic idea is simple: Up top, I have selected the 'safebooru tag search' download source, and then I have added two artists--"hong_soon-jae" and "houtengeki". These two queries have their own panels for reviewing what URLs they have worked on and further customising their behaviour, but all they _really_ are is little bits of search text. When the subscription runs, it will put the given search text into the given download source just as if you were running the regular downloader.
+Subscriptions have rich and powerful UI. Despite all the controls, the basic idea is simple: Up top, I have selected the 'safebooru tag search' download source, and then I have added two artists--"hong_soon-jae" and "houtengeki". When the subscription runs, it will put the given search text into the given download source just as if you were running the regular downloader.
 
 !!! warning
-    Subscriptions syncs are somewhat fragile. Do not try to play with the limits or checker options to download a whole 5,000 file query in one go--if you want everything for a query, run it in the manual downloader and get everything, then set up a normal sub for new stuff. There is no benefit to having a 'large' subscription, and it will trim itself down in time anyway.
+    Subscriptions syncs are somewhat fragile, and they work best in the small ~100 file range. Do not try to play with the limits or checker options to download a whole 5,000 file query in one go--**if you want everything for a query, run it in the manual gallery downloader first**, then set up a normal sub for new stuff. A super-large subscription gives no benefit and can run into several problems.
 
 You might want to put subscriptions off until you are more comfortable with galleries. There is more help [here](getting_started_subscriptions.md).
 
@@ -110,6 +106,14 @@ In general, you can leave the checker options alone, but you might like to revis
 
 #### API
 If you use [API-connected](client_api.md) programs such as the Hydrus Companion, then any [watchable](downloader_url_classes.md#url_types) URLs sent to Hydrus through them will end up in a watcher page, the specifics depending on the program's settings.
+
+### URL download
+The **url downloader** works like the gallery downloader but does not do searches. You can paste downloadable URLs to it, and it will work through them as one list. Dragging and dropping recognisable URLs onto the client (e.g. from your web browser) will also spawn and use this downloader.
+
+The button next to the input field lets you paste multiple URLs at once such as if you've copied from a document or browser bookmarks. The URLs need to be newline separated.
+
+#### API
+If you use [API-connected](client_api.md) programs such as the Hydrus Companion, then any [non-watchable](downloader_url_classes.md#url_types) URLs sent to Hydrus through them will end up in an URL downloader page, the specifics depending on the program's settings. You can't use this to force Hydrus to download paged galleries since the URL downloader page doesn't support traversing to the next page, use the gallery downloader for this.
 
 ### Simple downloader
 The **simple downloader** will do very simple parsing for unusual jobs. If you want to download all the images in a page, or all the image link destinations, this is the one to use. There are several default parsing rules to choose from, and if you learn the downloader system yourself, it will be easy to make more.
@@ -176,17 +180,35 @@ Most of the controls here ensure that successive parses do not duplicate existin
 
 ## Bandwidth
 
-It will not be too long until you see a "bandwidth free in xxxxx..." message. As a long-term storage solution, hydrus is designed to be polite in its downloading--both to the source server and your computer. The client's default bandwidth rules have some caps to stop big mistakes, spread out larger jobs, and at a bare minimum, no domain will be hit more than once a second.
+**Hydrus deals with very large numbers of files, and its file store is expected to last many years. Its downloaders are designed to run a marathon, not a sprint.**
 
-All the bandwidth rules are completely customisable and are found in `network > data > review bandwidth usage and edit rules`. They can get quite complicated. I **strongly** recommend you not look for them until you have more experience. I **especially strongly** recommend you not ever turn them all off, thinking that will improve something, as you'll probably render the client too laggy to function and get yourself an IP ban from the next server you pull from.
+It will not be too long until you see a "bandwidth free in xxxxx..." message. As a long-term storage solution, hydrus is designed to be polite in its downloading--both to the source server and your computer. It has complicated bandwidth rules that can operate in several different domains, and the default rules are capped conservatively to stop big mistakes and spread out larger jobs. For instance, at a bare minimum, no domain will be hit more than once a second.
 
 If you want to download 10,000 files, set up the queue and let it work. The client will take breaks, likely even to the next day, but it will get there in time. Many users like to leave their clients on all the time, just running in the background, which makes these sorts of downloads a breeze--you check back in the evening and discover your download queues, watchers, and subscriptions have given you another thousand things to deal with.
+
+That said, all the bandwidth rules are completely customisable and are found in `network > data > review bandwidth usage and edit rules`. They can get quite complicated.
+
+![](images/review_bandwidth.png)
+
+This is the main 'review' panel. It shows where you have been downloading from. It also displays current usage and if a particular domain is currently blocked due to the rules.
+
+When a new network job appears, it will belong to multiple 'contexts'--usually, it will be 'global', any domain and subdomains, and then 'downloader page', 'subscription', or 'watcher page' (which are special contexts that attach to the particular downloader)--and all of these have to pass in order for the job to start. If 'site a' is blocked but 'global' is ok, then a request to 'site b' will start immediately; if 'global' is blocked, then nothing will work.
+
+You can double-click any row to see more detail:
+
+![](images/review_bandwidth_single_context.png)
+
+A context will start using the 'default' rules, but if you like you can set specific rules for one you want to be careful or aggressive with. To edit the default rules, go back to the main 'review' panel. If you find your network jobs are halting too much, you probably want to relax the daily rules for 'web domain' default and then the 'global' context specifically.
+
+I **strongly** recommend you not poke around here until you have more experience. I **especially strongly** recommend you not ever turn them all off, thinking that will improve something, as you'll probably render the client too laggy to function and get yourself an IP ban from the next server you pull from.
 
 Again: the real problem with downloading is not finding new things, it is keeping up with what you get. Start slow and figure out what is important to your bandwidth budget, hard drive budget, and free time budget. <span class="spoiler">Almost everyone fails at this.</span>
 
 ## Logins
 
-The client now supports a flexible (but slightly prototype and ugly) login system. It can handle simple sites and is as [completely user-customisable as the downloader system](downloader_login.md). The client starts with multiple login scripts by default, which you can review under _network->logins->manage logins_:
+**This system often breaks and is sometimes a hassle deal with! If you need to log in to anything more clever than a booru, use Hydrus Companion or similar to copy your cookies across!**
+
+The client supports a very basic and ugly login system. It can handle simple sites and is as [completely user-customisable as the downloader system](downloader_login.md). The client starts with multiple login scripts by default, which you can review under _network->logins->manage logins_:
 
 ![](images/manage_logins.png)
 
@@ -203,8 +225,8 @@ The login system is not very clever. Don't try to pull off anything too weird wi
 
 If you would like to login to a site that is not yet supported by hydrus (usually ones with a Captcha in the login page), you have two options:
 
-1. Get a web browser add-on that lets you export a cookies.txt (either for the whole browser or just for that domain) and then drag and drop that cookies.txt file onto the hydrus _network->data->review session cookies_ dialog. This sometimes does not work if your add-on's export formatting is unusual. If it does work, hydrus will import and use those cookies, which skips the login by making your hydrus pretend to be your browser directly. This is obviously advanced and hacky, so if you need to do it, let me know how you get on and what tools you find work best!
-2. Use [Hydrus Companion](https://gitgud.io/prkc/hydrus-companion) browser add-on to do the same basic thing automatically.
+1. Get a web browser add-on that lets you export a cookies.txt (either for the whole browser or just for that domain) from a browser that is logged in, and then drag and drop that cookies.txt file onto the hydrus _network->data->review session cookies_ dialog. This sometimes does not work if your add-on's export formatting is unusual. If it does work, hydrus will import and use those cookies, which skips the login by making your hydrus pretend to be your browser directly. This is obviously advanced and hacky, so if you need to do it, let me know how you get on and what tools you find work best!
+2. Use [Hydrus Companion](https://gitgud.io/prkc/hydrus-companion) browser add-on to do the same basic thing automatically. This also gives hydrus the browser's `User-Agent` header, which some logins or CDN gateways sync to their cookie record.
 
 ## Difficult Sites
 

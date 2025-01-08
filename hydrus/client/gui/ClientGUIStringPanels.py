@@ -315,6 +315,9 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_STRING_CONVERTER_CONVERSIONS.ID, self._ConvertConversionToDisplayTuple, self._ConvertConversionToSortTuple )
         
+        # TODO: this thing seems crazy and probably should be a queuelistbox or whatever instead of a multi-column list!!
+        # I'm doing all sorts of moveup/down and other adjustments to our # here, but who cares about displaying and maintaining that--there is only one appropriate sort
+        
         # TODO: Yo, if I converted the conversion steps to their own serialisable object, this guy could have import/export/duplicate buttons nice and easy
         self._conversions = ClientGUIListCtrl.BetterListCtrlTreeView( conversions_panel, 7, model, delete_key_callback = self._DeleteConversion, activation_callback = self._EditConversion )
         
@@ -416,7 +419,7 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 enumerated_conversion = ( number, conversion_type, data )
                 
-                self._conversions.AddDatas( ( enumerated_conversion, ), select_sort_and_scroll = True )
+                self._conversions.AddData( enumerated_conversion, select_sort_and_scroll = True )
                 
             
         
@@ -501,6 +504,8 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         # now we need to shuffle up any missing numbers
         
+        # aieeeeeee this is weird and bad--convert to a queuelistbox and delete this nonsense!
+        
         num_rows = self._conversions.count()
         
         i = 1
@@ -510,17 +515,15 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
             
             try:
                 
-                conversion = self._GetConversion( search_i )
+                old_conversion = self._GetConversion( search_i )
                 
                 if search_i != i:
                     
-                    self._conversions.DeleteDatas( ( conversion, ) )
+                    ( search_i, conversion_type, data ) = old_conversion
                     
-                    ( search_i, conversion_type, data ) = conversion
+                    new_conversion = ( i, conversion_type, data )
                     
-                    conversion = ( i, conversion_type, data )
-                    
-                    self._conversions.AddDatas( ( conversion, ) )
+                    self._conversions.ReplaceData( old_conversion, new_conversion )
                     
                 
                 i += 1

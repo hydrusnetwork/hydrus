@@ -1971,48 +1971,48 @@ QMenuBar::item { padding: 2px 8px; margin: 0px; }'''
         
         def do_it_scan_step( job_status ):
             
-            we_are_missing_legacy = self._controller.Read( 'missing_archive_timestamps_legacy_test', job_status )
+            num_missing_legacy = self._controller.Read( 'missing_archive_timestamps_legacy_count', job_status )
             
             if job_status.IsCancelled():
                 
                 return
                 
             
-            we_are_missing_import = self._controller.Read( 'missing_archive_timestamps_import_test', job_status )
+            num_missing_import = self._controller.Read( 'missing_archive_timestamps_import_count', job_status )
             
             if job_status.IsCancelled():
                 
                 return
                 
             
-            CG.client_controller.CallAfterQtSafe( self, 'missing archive times reporter', qt_present_results, job_status, we_are_missing_legacy, we_are_missing_import )
+            CG.client_controller.CallAfterQtSafe( self, 'missing archive times reporter', qt_present_results, job_status, num_missing_legacy, num_missing_import )
             
         
-        def qt_present_results( job_status, we_are_missing_legacy, we_are_missing_import ):
+        def qt_present_results( job_status, num_missing_legacy, num_missing_import ):
             
-            if we_are_missing_legacy or we_are_missing_import:
+            if num_missing_legacy > 0 or num_missing_import > 0:
                 
                 message = 'It looks like there are some missing archive times. You have:'
                 
                 yes_tuples = []
                 
-                if we_are_missing_legacy:
+                if num_missing_legacy > 0:
                     
-                    message += '\n\n--Missing Legacy Times--'
+                    message += f'\n\n--{HydrusNumbers.ToHumanInt( num_missing_legacy )} Missing Legacy Times--'
                     message += '\n\nThese are files that were archived before hydrus started tracking archive time (2022-02). If you select to fill these in, hydrus will insert a synthetic time that is import time + 20% of the time to 2022-02 or any file deletion time.'
                     
                     yes_tuples.append( ( 'do legacy times', [ 'legacy' ] ) )
                     
                 
-                if we_are_missing_import:
+                if num_missing_import > 0:
                     
-                    message += '\n\n--Missing Import Times--'
+                    message += f'\n\n--{HydrusNumbers.ToHumanInt( num_missing_import )} Missing Import Times--'
                     message += '\n\nThese are most likely files that were imported with "automatically archive", which for some period until 2024-12 were not recording archive times due to a bug. It may include a few other instances of missing archived files (e.g. you manually deleted one). If you select to fill these in, hydrus will insert a synthetic time that is the same as the import time.'
                     
                     yes_tuples.append( ( 'do import times', [ 'import' ] ) )
                     
                 
-                if we_are_missing_legacy and we_are_missing_import:
+                if num_missing_legacy > 0 and num_missing_import > 0:
                     
                     yes_tuples.append( ( 'do both', [ 'legacy', 'import' ] ) )
                     

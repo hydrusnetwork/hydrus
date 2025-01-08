@@ -18,9 +18,8 @@ class ClientDBFileDeleteLock( ClientDBModule.ClientDBModule ):
     
     def FilterForPhysicalFileDeleteLock( self, hash_ids: typing.Collection[ int ] ):
         
-        # TODO: like in the MediaSingleton object, eventually extend this to the metadata conditional object
-        # however the trash clearance method uses this guy, so we probably don't want to load up media results over and over bro
-        # probably figure out a table cache or something at that point
+        # IN ORDER TO KISS, WE MUST NEVER MAKE THIS TOO COMPLICATED BRO
+        # If we introduce the Metadata Conditional to the delete file lock, it must be a subset of MCs that support instant quick database lookup predicate generation 
         
         if CG.client_controller.new_options.GetBoolean( 'delete_lock_for_archived_files' ):
             
@@ -33,6 +32,23 @@ class ClientDBFileDeleteLock( ClientDBModule.ClientDBModule ):
             
         
         return hash_ids
+        
+    
+    def GetPhysicalFileDeleteLockSQLitePredicates( self, hash_ids_column_name: str ):
+        
+        # trying to maintain an air of generalisability here, although if we end up going full metadata conditional this will probably need to get much more complicated and maybe we are talking a table cache
+        
+        # IN ORDER TO KISS, WE MUST NEVER MAKE THIS TOO COMPLICATED BRO
+        # If we introduce the Metadata Conditional to the delete file lock, it must be a subset of MCs that support instant quick database lookup predicate generation 
+        
+        predicates = []
+        
+        if CG.client_controller.new_options.GetBoolean( 'delete_lock_for_archived_files' ):
+            
+            predicates.append( f'EXISTS ( SELECT 1 FROM file_inbox WHERE {hash_ids_column_name} = file_inbox.hash_id )' )
+            
+        
+        return predicates
         
     
     def GetTablesAndColumnsThatUseDefinitions( self, content_type: int ) -> typing.List[ typing.Tuple[ str, str ] ]:

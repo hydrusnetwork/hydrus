@@ -11,13 +11,13 @@ from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.search import ClientGUIACDropdown
 from hydrus.client.gui.widgets import ClientGUICommon
 
-class EditPotentialDuplicatesSearchContextPanel( QW.QWidget ):
+class EditPotentialDuplicatesSearchContextPanel( ClientGUICommon.StaticBox ):
     
     valueChanged = QC.Signal()
     
     def __init__( self, parent: QW.QWidget, potential_duplicates_search_context: ClientPotentialDuplicatesSearchContext.PotentialDuplicatesSearchContext, synchronised = True, page_key = None, put_searches_side_by_side = False ):
         
-        super().__init__( parent )
+        super().__init__( parent, 'potential duplicate pairs search' )
         
         #
         
@@ -63,9 +63,7 @@ class EditPotentialDuplicatesSearchContextPanel( QW.QWidget ):
         
         #
         
-        vbox = QP.VBoxLayout()
-        
-        QP.AddToLayout( vbox, self._dupe_search_type, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self.Add( self._dupe_search_type, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         if put_searches_side_by_side:
             
@@ -74,12 +72,12 @@ class EditPotentialDuplicatesSearchContextPanel( QW.QWidget ):
             QP.AddToLayout( hbox, self._tag_autocomplete_1, CC.FLAGS_EXPAND_BOTH_WAYS )
             QP.AddToLayout( hbox, self._tag_autocomplete_2, CC.FLAGS_EXPAND_BOTH_WAYS )
             
-            QP.AddToLayout( vbox, hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+            self.Add( hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
             
         else:
             
-            QP.AddToLayout( vbox, self._tag_autocomplete_1, CC.FLAGS_EXPAND_PERPENDICULAR )
-            QP.AddToLayout( vbox, self._tag_autocomplete_2, CC.FLAGS_EXPAND_PERPENDICULAR )
+            self.Add( self._tag_autocomplete_1, CC.FLAGS_EXPAND_PERPENDICULAR )
+            self.Add( self._tag_autocomplete_2, CC.FLAGS_EXPAND_PERPENDICULAR )
             
         
         rows = []
@@ -88,10 +86,8 @@ class EditPotentialDuplicatesSearchContextPanel( QW.QWidget ):
         
         gridbox = ClientGUICommon.WrapInGrid( self, rows )
         
-        QP.AddToLayout( vbox, gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        QP.AddToLayout( vbox, self._pixel_dupes_preference, CC.FLAGS_EXPAND_PERPENDICULAR )
-        
-        self.setLayout( vbox )
+        self.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        self.Add( self._pixel_dupes_preference, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         self._tag_autocomplete_1.searchChanged.connect( self.Search1Changed )
         self._tag_autocomplete_2.searchChanged.connect( self.Search2Changed )

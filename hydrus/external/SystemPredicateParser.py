@@ -269,7 +269,7 @@ SYSTEM_PREDICATES = {
     'similar to(?! data)( files)?': (Predicate.SIMILAR_TO_FILES, None, Value.SHA256_HASHLIST_WITH_DISTANCE, None),
     'similar to data': (Predicate.SIMILAR_TO_DATA, None, Value.SIMILAR_TO_HASHLIST_WITH_DISTANCE, None),
     'limit': (Predicate.LIMIT, Operators.ONLY_EQUAL, Value.NATURAL, None),
-    'file ?type': (Predicate.FILETYPE, Operators.ONLY_EQUAL, Value.FILETYPE_LIST, None),
+    'file ?type': (Predicate.FILETYPE, Operators.EQUAL, Value.FILETYPE_LIST, None),
     'hash': (Predicate.HASH, Operators.EQUAL_NOT_CONSUMING, Value.HASHLIST_WITH_ALGORITHM, None),
     'archived? (date|time)|(date|time) archived|archived.': (Predicate.ARCHIVED_DATE, Operators.RELATIONAL_TIME, Value.DATE_OR_TIME_INTERVAL, None),
     'modified (date|time)|(date|time) modified|modified': (Predicate.MOD_DATE, Operators.RELATIONAL_TIME, Value.DATE_OR_TIME_INTERVAL, None),

@@ -379,7 +379,7 @@ class StringMatchToStringMatchDictControl( QW.QWidget ):
                 
                 data = ( key_string_match, value_string_match )
                 
-                self._listctrl.AddDatas( ( data, ), select_sort_and_scroll = True )
+                self._listctrl.AddData( data, select_sort_and_scroll = True )
                 
             
         
@@ -560,7 +560,7 @@ class StringToStringDictControl( QW.QWidget ):
                         
                         data = ( key, value )
                         
-                        self._listctrl.AddDatas( ( data, ), select_sort_and_scroll = True )
+                        self._listctrl.AddData( data, select_sort_and_scroll = True )
                         
                     
                 
@@ -728,7 +728,7 @@ class StringToStringMatchDictControl( QW.QWidget ):
                         
                         data = ( key, string_match )
                         
-                        self._listctrl.AddDatas( ( data, ), select_sort_and_scroll = True )
+                        self._listctrl.AddData( data, select_sort_and_scroll = True )
                         
                     
                 

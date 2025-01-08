@@ -137,7 +137,7 @@ class EditExportFoldersPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 export_folder.SetNonDupeName( self._GetExistingNames() )
                 
-                self._export_folders.AddDatas( ( export_folder, ), select_sort_and_scroll = True )
+                self._export_folders.AddData( export_folder, select_sort_and_scroll = True )
                 
             
         

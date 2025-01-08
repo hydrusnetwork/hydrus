@@ -351,6 +351,64 @@ class ClientDBFilesInbox( ClientDBModule.ClientDBModule ):
             
         
     
+    def NumMissingImportArchiveTimestamps( self, job_status: typing.Optional[ ClientThreading.JobStatus ] = None ) -> int:
+        
+        if job_status is not None:
+            
+            job_status.SetStatusText( 'scanning for missing import archive timestamps' )
+            
+        
+        try:
+            
+            num = 0
+            
+            import_lambda = lambda timestamp: timestamp > TIMESTAMP_MS_WHEN_WE_STARTED_TRACKING_ARCHIVED_TIMES
+            
+            for item in self._IterateMissingArchiveTimestampData( import_lambda, job_status = job_status ):
+                
+                num += 1
+                
+            
+            return num
+            
+        finally:
+            
+            if job_status is not None:
+                
+                job_status.DeleteStatusText()
+                
+            
+        
+    
+    def NumMissingLegacyArchiveTimestamps( self, job_status: typing.Optional[ ClientThreading.JobStatus ] = None ) -> int:
+        
+        if job_status is not None:
+            
+            job_status.SetStatusText( 'scanning for missing legacy archive timestamps' )
+            
+        
+        try:
+            
+            num = 0
+            
+            legacy_lambda = lambda timestamp: timestamp < TIMESTAMP_MS_WHEN_WE_STARTED_TRACKING_ARCHIVED_TIMES
+            
+            for item in self._IterateMissingArchiveTimestampData( legacy_lambda, job_status = job_status ):
+                
+                num += 1
+                
+            
+            return num
+            
+        finally:
+            
+            if job_status is not None:
+                
+                job_status.DeleteStatusText()
+                
+            
+        
+    
     def WeHaveMissingImportArchiveTimestamps( self, job_status: typing.Optional[ ClientThreading.JobStatus ] = None ) -> bool:
         
         if job_status is not None:

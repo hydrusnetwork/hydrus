@@ -502,7 +502,7 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
                     return
                     
                 
-                self._query_headers.AddDatas( ( query_header, ), select_sort_and_scroll = True )
+                self._query_headers.AddData( query_header, select_sort_and_scroll = True )
                 
                 self._names_to_edited_query_log_containers[ query_log_container.GetName() ] = query_log_container
                 
@@ -1584,7 +1584,7 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         subscription.SetNonDupeName( self._GetExistingNames() )
         
-        self._subscriptions.AddDatas( ( subscription, ), select_sort_and_scroll = True )
+        self._subscriptions.AddData( subscription, select_sort_and_scroll = True )
         
         self._RegenDupeData()
         

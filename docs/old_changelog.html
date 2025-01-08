@@ -35,6 +35,59 @@
             <h1 id="changelog"><a href="#changelog">changelog</a></h1>
             <ul>
                 <li>
+                    <h2 id="version_604"><a href="#version_604">version 604</a></h2>
+                    <ul>
+                        <li><h3>misc</h3></li>
+                        <li>fixed an odd and fairly recent bug where if you had an mpv window loaded in the preview panel--but it was paused--and then you changed pages back and forth, the mpv would not re-initialise itself with the previously paused media (nor really any media) unless you did some weird stuff where you clicked on another media and then changed pages again</li>
+                        <li>system:filetype now supports exclusion (i.e. `system:filetype is not video`). also, the search system now allows multiple system:filetype predicates--it figures out the correct intersection (previously it just pseudorandomly selected one of them). the system predicate text parser can handle the new 'is not' operator, and I added a unit test to make sure it sticks</li>
+                        <li>if you paste hashes with hash_type prefixes (e.g. `md5:775858135a6006db32f8ef0e5fa3102c`) into 'system:hash', it now auto-strips the prefix and sets the choice for you</li>
+                        <li>the new 'fix missing file archived times' dialog pre-job now counts up and says the number of missing timestamps of each type it discovers. this thing seems to run at 100,000s of rows per second, so it turns out no worries</li>
+                        <li>export folders should run a little bit faster now, especially to disks with higher latency (HDD or NAS, rather than a local SSD)</li>
+                        <li>export folders now only do their sidecar exports if the respective file was actually copied this run (previously it looks like they were updating to the latest data on every run, aieeeeee!)</li>
+                        <li>I've reworked the routine that draws the hover window into the background of the media viewer to more natively emulate out its layout and margin/spacer/etc.. sizes. the notes position still has some trouble, especially with difficult unicode, but it is better and now has justified text that properly expands to fill all the available space. this is now generally pixel perfect on my dev machine. while I am confident _some_ of it will survive janked QSS styles, some may not, so let me know what you see</li>
+                        <li>the tags list in the background is now also pixel-perfect-positioned with its hover!</li>
+                        <li>fixed the 'incdec' rating widget looking fuzzy in some places</li>
+                        <li>the Edit Tag Filter Panel text inputs (and their paste buttons) are now add-only. previously, it would silently do add/remove logic on each item depending on whether it was already in the list, which is not helpful now we have big lists here. so, you can paste a big list of a hundred things and now it won't remove any stuff that was already in there</li>
+                        <li>added `show file trash times/reason in top hover summary` checkboxes to `options-&gt;media viewer`, which expands the recent top hover summary stuff (issue #1652)</li>
+                        <li>rejiggered some layout in the duplicates filter page sidebar panel. the search is its own box now, as is the options</li>
+                        <li><h3>sidecars</h3></li>
+                        <li>the import folder system now moves all possible sidecars when you have it set to 'move the source file'. it was previously still on the old system of just supporting a single 'filename.txt' sidecar format--now it does anything you have set up, live</li>
+                        <li>the import folder UI has a couple new tooltips saying 'hey bro, delete and move actions will delete/move sidecars too, so if you have one sidecar for multiple files, make sure not to set the action to delete or move, or the next file will not have a sidecar to see'</li>
+                        <li>hooked up/improved the edit sidecar panel test UI: the string processor button on the main sidecar 'metadata router' panel now loads up example strings from your actual importers and file paths; the string processor button on the edit single sidecar importer panel now loads up example strings from your actual file paths; the process that loads up expected result strings for the multi-column test panel is more tolerant to failure; the process that provides example test data to the sidecar importer panel is more tolerant to failure; and the importer panel's test no longer spams JSON garbage into the test context, what was I thinking. I also just cleaned some of this code</li>
+                        <li><h3>downloaders and network</h3></li>
+                        <li>thanks to a user, the e621 login script is fixed! if you have had errors with this recently, then the update _should_ just reset any error state and allow it to try again immediately, but if not, check `network-&gt;logins-&gt;manage logins` and make sure the `active` is set and hit `scrub invalidity/delays` if you need to (issue #1655)</li>
+                        <li>updated the simple-tag shimmie file page parser to not grab 'popular tags' when those appear</li>
+                        <li>I am removing the old deviant art file page parsers from the defaults. we removed the search a while ago, but there was limited drag and drop support until seemingly just recently. it looks like the whole site got a revamp. I had a very quick look at their new format, and while it may be possible to write a new parser, I will leave this to the user-run repo to handle if they wish. I understand the whole site is mostly wrapped up in OAuth stuff now, so I think imgbrd-grabber is probably a much better solution here going forward</li>
+                        <li>the 'review bandwidth' panel gets a pass: its multi-column list ctrl is now wrapped in a nicer panel that has live buttons for edit/delete; the 'edit defailt rules' button now lists the 'global' rules; there's a little help label; and the 'search distance' column now shows your all-time total bandwidth use if you have 'show all' set. the individual network context bandwidth review panel (the one with the bar chart) also now shows your all-time usage. let's see what our all-time globals are lol</li>
+                        <li>brushed up the 'getting started with downloaders/subscriptions' help a little bit</li>
+                        <li>also expanded the 'bandwidth' section of this help and added a couple screenshots</li>
+                        <li><h3>old mpv dll</h3></li>
+                        <li>I am rolling back the Windows build's recent mpv update, back to the 2023-08 mpv dll. the 2024-10 dll caused stutter and slowdown with several users in the wider test, particularly Windows 10 guys. we'll revisit the topic in a future update round and see if we can select a better test candidate</li>
+                        <li>for those source users who are still on the new dll (myself included), if your client does run into an APNG or webm/mkv that trips 100% CPU (it is some bananas silent logspam outputting too fast to process), this is now recognised after a couple seconds in the hydrus error handling and the file should unload itself with the "Sorry, this media appears to have a serious problem!" error dump-out</li>
+                        <li><h3>boring technical stuff</h3></li>
+                        <li>the archived-file delete-lock now plays with normal trash maintenance better. the 'do we have any trash files to delete?' method now works more flexibly and it can find stuff to delete even if the oldest 256 items are locked (previously it couldn't!)</li>
+                        <li>on db update, everyone is going to get a file maintenance job queued up to check their images are all in the similar files system as desired. a recent bug caused some files not to re-register with the similar files system if they were re-imports. this job isn't super heavy on CPU or anything, so no worries, it'll just do its thing in the background and maybe fix up some holes</li>
+                        <li>under `file-&gt;shortcuts`, the custom shortcuts list now forces unique names on adds and edits</li>
+                        <li>the 'network report mode' in the `help-&gt;debug` menu now spams the Request and Response headers of each job. I also clarified, made error-safe, and added newlines to some of the other popups here to make things clearer when URLs are being transformed and so on</li>
+                        <li>the `setup_desktop.sh` script now wraps the Exec line value in quotes, so this should now work if your hydrus install folder includes whitespace</li>
+                        <li><h3>boring code cleanup</h3></li>
+                        <li>harmonised my various daemons more into the parent `ManagerWithMainLoop` class, which now takes responsibility for the mainloop status tracking and pre-loop startup wait. the way these guys now do their pre-work wait is a little smarter and will react to early program shutdown and so on more cleanly and in the same reliable way</li>
+                        <li>moved more old multi-column list calls to the newer methods that do cleaner post-edit select, scroll, and sort. this includes some stuff in parsing UI and manage services, so hopefully these lists will be just nicer to work with</li>
+                        <li>made the newer multi-column list code even simpler when just adding one item</li>
+                        <li>fixed up some more static superclass calls to `super()` in the autocomplete code</li>
+                        <li>merged `CanvasWithDetails` and `CanvasWithHovers` so I'd be able to interrogate the hovers when figuring out the details layout gubbins</li>
+                        <li>moved the 'open the media viewer from the preview panel' action from my old pubsub to a nicer Qt signal</li>
+                        <li>fixed some crazy sizing in my 'select stuff from a list' quick dialog</li>
+                        <li><h3>duplicates auto-resolution</h3></li>
+                        <li>updated the Metadata Conditional objects to work on full file search contexts instead of single predicates</li>
+                        <li>added inbox and archive support to the Metadata Conditional system</li>
+                        <li>wrote edit UI for my 'pair selector/comparator' objects</li>
+                        <li>refactored and decoupled my autocomplete dropdown classes in a couple little ways and wrote a new stripped-down autocomplete dropdown for the metadata conditional edit UI</li>
+                        <li>wrote that first 'Edit Metadata Conditional' panel</li>
+                        <li>the first version of the 'comparison' tab of the new duplicates auto-resolution UI is thus complete, and with that, I immediately disabled it like the 'search' tab, hahaha</li>
+                    </ul>
+                </li>
+                <li>
                     <h2 id="version_603"><a href="#version_603">version 603</a></h2>
                     <ul>
                         <li><h3>misc</h3></li>

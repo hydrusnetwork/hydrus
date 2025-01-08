@@ -119,15 +119,6 @@ def file_service_pred_generator( o, v, u ):
     return ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_FILE_SERVICE, ( is_in, status, service_key ) )
     
 
-def filetype_pred_generator( v ):
-    
-    # v is a list of non-hydrus-standard filetype strings
-    
-    mimes = ( 1, )
-    
-    return ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_MIME, mimes )
-    
-
 def num_file_relationships_pred_generator( o, v, u ):
     
     u_dict = {
@@ -235,7 +226,7 @@ pred_generators = {
     SystemPredicateParser.Predicate.HAS_FORCED_FILETYPE : lambda o, v, u: ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HAS_FORCED_FILETYPE, True ),
     SystemPredicateParser.Predicate.NO_FORCED_FILETYPE : lambda o, v, u: ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HAS_FORCED_FILETYPE, False ),
     SystemPredicateParser.Predicate.LIMIT : lambda o, v, u: ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_LIMIT, v ),
-    SystemPredicateParser.Predicate.FILETYPE : lambda o, v, u: ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_MIME, tuple( v ) ),
+    SystemPredicateParser.Predicate.FILETYPE : lambda o, v, u: ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_MIME, tuple( v ), inclusive = o == '=' ),
     SystemPredicateParser.Predicate.HAS_DURATION : lambda o, v, u: ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_DURATION, ClientNumberTest.NumberTest.STATICCreateFromCharacters( '>', 0 ) ),
     SystemPredicateParser.Predicate.NO_DURATION : lambda o, v, u: ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_DURATION, ClientNumberTest.NumberTest.STATICCreateFromCharacters( '=', 0 ) ),
     SystemPredicateParser.Predicate.HAS_FRAMERATE : lambda o, v, u: ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_FRAMERATE, ClientNumberTest.NumberTest.STATICCreateFromCharacters( '>', 0 ) ),

@@ -7,14 +7,39 @@ HOW_MANY_EXAMPLE_OBJECTS_TO_USE = 25
 
 class MigrationTestContextFactory( object ):
     
-    def GetExampleTestStrings( self, importer: ClientMetadataMigrationImporters.SingleFileMetadataImporter, test_object: object ):
+    def GetExampleTestStrings( self, importer: ClientMetadataMigrationImporters.SingleFileMetadataImporter, sans_string_processing = False ):
         
-        raise NotImplementedError()
+        test_objects = self.GetTestObjects()
+        
+        if len( test_objects ) > 0:
+            
+            first_test_object = list( test_objects )[0]
+            
+            return self.GetExampleTestStringsForTestObject( importer, first_test_object, sans_string_processing = sans_string_processing )
+            
+        else:
+            
+            return []
+            
         
     
-    def GetExampleTestStringGroups( self, importer: ClientMetadataMigrationImporters.SingleFileMetadataImporter ) -> typing.Collection[ typing.Tuple[ str, typing.Collection[ str ] ] ]:
+    def GetExampleTestStringsForTestObject( self, importer: ClientMetadataMigrationImporters.SingleFileMetadataImporter, test_object: object, sans_string_processing = False ):
         
-        raise NotImplementedError()
+        try:
+            
+            if sans_string_processing:
+                
+                return importer.ImportSansStringProcessing( test_object )
+                
+            else:
+                
+                return importer.Import( test_object )
+                
+            
+        except Exception as e:
+            
+            return [ str( e ) ]
+            
         
     
     def GetTestObjects( self ) -> typing.Collection[ object ]:
@@ -42,9 +67,9 @@ class MigrationTestContextFactorySidecar( MigrationTestContextFactory ):
         return list( self._example_file_paths )
         
     
-    def GetExampleTestStrings( self, importer: ClientMetadataMigrationImporters.SingleFileMetadataImporterSidecar, test_object: str ):
+    def GetExampleTestStringsForTestObject( self, importer: ClientMetadataMigrationImporters.SingleFileMetadataImporterSidecar, test_object: str, sans_string_processing = False ):
         
-        return importer.Import( test_object )
+        return super().GetExampleTestStringsForTestObject( importer, test_object, sans_string_processing = sans_string_processing )
         
     
     def GetTestObjects( self ) -> typing.Collection[ str ]:
@@ -72,9 +97,9 @@ class MigrationTestContextFactoryMedia( MigrationTestContextFactory ):
         self._example_media_results = example_media_results
         
     
-    def GetExampleTestStrings( self, importer: ClientMetadataMigrationImporters.SingleFileMetadataImporterMedia, test_object: ClientMediaResult.MediaResult ):
+    def GetExampleTestStringsForTestObject( self, importer: ClientMetadataMigrationImporters.SingleFileMetadataImporterMedia, test_object: ClientMediaResult.MediaResult, sans_string_processing = False ):
         
-        return importer.Import( test_object )
+        return super().GetExampleTestStringsForTestObject( importer, test_object, sans_string_processing = sans_string_processing )
         
     
     def GetTestObjects( self ) -> typing.Collection[ ClientMediaResult.MediaResult ]:

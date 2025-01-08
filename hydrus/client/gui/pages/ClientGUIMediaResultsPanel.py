@@ -117,7 +117,6 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.Liste
         CG.client_controller.sub( self, 'RemoveMedia', 'remove_media' )
         CG.client_controller.sub( self, '_UpdateBackgroundColour', 'notify_new_colourset' )
         CG.client_controller.sub( self, 'SelectByTags', 'select_files_with_tags' )
-        CG.client_controller.sub( self, 'LaunchMediaViewerOnFocus', 'launch_media_viewer' )
         
         self._had_changes_to_tag_presentation_while_hidden = False
         
@@ -827,6 +826,16 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.Liste
         media_results = self.GenerateMediaResults( discriminant = CC.DISCRIMINANT_LOCAL, for_media_viewer = True )
         
         if len( media_results ) > 0:
+            
+            if first_media is not None:
+                
+                first_media_result = first_media.GetMediaResult()
+                
+                if first_media_result not in media_results:
+                    
+                    first_media = None
+                    
+                
             
             if first_media is None and self._focused_media is not None:
                 
@@ -1863,12 +1872,9 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.Liste
         return 0
         
     
-    def LaunchMediaViewerOnFocus( self, page_key ):
+    def LaunchMediaViewerOn( self, media ):
         
-        if page_key == self._page_key:
-            
-            self._LaunchMediaViewer()
-            
+        self._LaunchMediaViewer( media )
         
     
     def PageHidden( self ):

@@ -7,6 +7,7 @@ from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusThreading
+from hydrus.core import HydrusTime
 
 from hydrus.client.metadata import ClientContentUpdates
 
@@ -126,9 +127,11 @@ def DAEMONMaintainTrash():
 
 class ManagerWithMainLoop( object ):
     
-    def __init__( self, controller: "CG.ClientController.Controller" ):
+    def __init__( self, controller: "CG.ClientController.Controller", pre_loop_wait_time: int ):
         
         self._controller = controller
+        
+        self._pre_loop_wait_time = pre_loop_wait_time
         
         self._lock = threading.Lock()
         
@@ -149,6 +152,36 @@ class ManagerWithMainLoop( object ):
             
         
     
+    def _DoMainLoop( self ):
+        
+        # temporary method for while I harmonise the different mainloops into this class
+        
+        raise NotImplementedError()
+        
+    
+    def DoPreMainLoopWait( self ):
+        
+        with self._lock:
+            
+            time_to_start = HydrusTime.GetNowFloat() + self._pre_loop_wait_time
+            
+        
+        while not HydrusTime.TimeHasPassedFloat( time_to_start ):
+            
+            with self._lock:
+                
+                self._CheckShutdown()
+                
+            
+            self._wake_event.wait( 1 )
+            
+            if self._wake_event.is_set():
+                
+                break
+                
+            
+        
+    
     def GetName( self ) -> str:
         
         raise NotImplementedError()
@@ -156,7 +189,28 @@ class ManagerWithMainLoop( object ):
     
     def MainLoop( self ):
         
-        raise NotImplementedError()
+        try:
+            
+            self.DoPreMainLoopWait()
+            
+            self._DoMainLoop()
+            
+            # we want to push towards:
+            # have work to do?
+            # can work?
+            # still work to do = do work()
+            # if shutting down, dump out
+            # get a wait period( still work to do )
+            # do a wait
+            
+        except HydrusExceptions.ShutdownException:
+            
+            pass
+            
+        finally:
+            
+            self._mainloop_is_finished = True
+            
         
     
     def IsShutdown( self ):

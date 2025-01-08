@@ -507,7 +507,7 @@ class EditNGUGPanel( ClientGUIScrolledPanels.EditPanel ):
         
         gug_key_and_name = gug.GetGUGKeyAndName()
         
-        self._gug_list_ctrl.AddDatas( ( gug_key_and_name, ), select_sort_and_scroll = True )
+        self._gug_list_ctrl.AddData( gug_key_and_name, select_sort_and_scroll = True )
         
     
     def _AddGUGButtonClick( self ):
@@ -719,7 +719,7 @@ class EditGUGsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         gug.RegenerateGUGKey()
         
-        self._gug_list_ctrl.AddDatas( ( gug, ), select_sort_and_scroll = select_sort_and_scroll )
+        self._gug_list_ctrl.AddData( gug, select_sort_and_scroll = select_sort_and_scroll )
         
     
     def _AddNGUG( self, ngug, select_sort_and_scroll = False ):
@@ -728,7 +728,7 @@ class EditGUGsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         ngug.RegenerateGUGKey()
         
-        self._ngug_list_ctrl.AddDatas( ( ngug, ), select_sort_and_scroll = select_sort_and_scroll )
+        self._ngug_list_ctrl.AddData( ngug, select_sort_and_scroll = select_sort_and_scroll )
         
     
     def _ConvertGUGToDisplayTuple( self, gug ):
@@ -1771,7 +1771,7 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 parameter = panel.GetValue()
                 
-                self._parameters.AddDatas( ( parameter, ), select_sort_and_scroll = True )
+                self._parameters.AddData( parameter, select_sort_and_scroll = True )
                 
                 self._UpdateControls()
                 
@@ -2392,7 +2392,7 @@ class EditURLClassesPanel( ClientGUIScrolledPanels.EditPanel ):
         
         url_class.RegenerateClassKey()
         
-        self._list_ctrl.AddDatas( ( url_class, ), select_sort_and_scroll = select_sort_and_scroll )
+        self._list_ctrl.AddData( url_class, select_sort_and_scroll = select_sort_and_scroll )
         
         self._changes_made = True
         

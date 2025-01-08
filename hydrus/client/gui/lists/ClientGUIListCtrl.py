@@ -827,6 +827,11 @@ class BetterListCtrlTreeView( QW.QTreeView ):
         CGC.core().PopupMenu( self, menu )
         
     
+    def AddData( self, data: object, select_sort_and_scroll = False ):
+        
+        self.AddDatas( ( data, ), select_sort_and_scroll = select_sort_and_scroll )
+        
+    
     def AddDatas( self, datas: typing.Iterable[ object ], select_sort_and_scroll = False ):
         
         datas = list( datas )

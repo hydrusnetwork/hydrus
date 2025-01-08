@@ -8,6 +8,7 @@ from qtpy import QtWidgets as QW
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusText
 from hydrus.core.files import HydrusFileHandling
 from hydrus.core.files.images import HydrusImageHandling
 
@@ -1191,6 +1192,63 @@ class PanelPredicateSystemHash( PanelPredicateSystemSingle ):
         
         self.setFocusProxy( self._sign )
         
+        self._hashes.textChanged.connect( self._StripOffPrefixes )
+        
+    
+    def _StripOffPrefixes( self ):
+        
+        # it would be nice to generalise this into a 'hashes' widget that had the hash type and provided an ongoing (red text) commentary into the validity of the hashes entered
+        
+        hashes_text = self._hashes.toPlainText()
+        
+        hashes_lines = HydrusText.DeserialiseNewlinedTexts( hashes_text )
+        
+        seen_prefixes = set()
+        stripped_hashes = []
+        
+        we_split_some = False
+        
+        for line in hashes_lines:
+            
+            if ':' in line:
+                
+                ( prefix, hash ) = line.split( ':', 1 )
+                
+                if prefix in [ 'sha256', 'md5', 'sha1', 'sha512' ]:
+                    
+                    seen_prefixes.add( prefix )
+                    
+                    if len( seen_prefixes ) == 2:
+                        
+                        return
+                        
+                    
+                else:
+                    
+                    return
+                    
+                
+                stripped_hashes.append( hash )
+                
+                we_split_some = True
+                
+            
+        
+        if we_split_some and len( seen_prefixes ) == 1:
+            
+            self._hashes.setPlainText( '\n'.join( stripped_hashes ) )
+            
+            if len( seen_prefixes ) == 1:
+                
+                prefix = list( seen_prefixes )[0]
+                
+                if prefix in [ 'sha256', 'md5', 'sha1', 'sha512' ]:
+                    
+                    self._hash_type.SetValue( prefix )
+                    
+                
+            
+        
     
     def GetDefaultPredicate( self ):
         
@@ -1694,6 +1752,13 @@ class PanelPredicateSystemMime( PanelPredicateSystemSingle ):
         
         predicate = self._GetPredicateToInitialisePanelWith( predicate )
         
+        choice_tuples = [
+            ( 'is', True ),
+            ( 'is not', False )
+        ]
+        
+        self._inclusive = ClientGUICommon.BetterRadioBox( self, choice_tuples, vertical = True )
+        
         summary_mimes = predicate.GetValue()
         
         if isinstance( summary_mimes, int ):
@@ -1705,11 +1770,14 @@ class PanelPredicateSystemMime( PanelPredicateSystemSingle ):
         
         self._mimes.SetValue( specific_mimes )
         
+        self._inclusive.SetValue( predicate.IsInclusive() )
+        
         #
         
         hbox = QP.HBoxLayout()
         
         QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText( self, 'system:filetype' ), CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._inclusive, CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( hbox, self._mimes, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         self.setLayout( hbox )
@@ -1728,7 +1796,7 @@ class PanelPredicateSystemMime( PanelPredicateSystemSingle ):
         
         specific_mimes = self._mimes.GetValue()
         
-        predicates = ( ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_MIME, specific_mimes ), )
+        predicates = ( ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_MIME, specific_mimes, inclusive = self._inclusive.GetValue() ), )
         
         return predicates
         
@@ -2816,6 +2884,8 @@ class PanelPredicateSystemSimilarToFiles( PanelPredicateSystemSingle ):
     def __init__( self, parent, predicate ):
         
         super().__init__( parent )
+        
+        # TODO: it would be nice if this guy supported any hash type, like system:hash, and then it would be nice to generalise a 'hashes' widget that has the hash_type selector and prefix stripping stuff
         
         self._hashes = QW.QPlainTextEdit( self )
         

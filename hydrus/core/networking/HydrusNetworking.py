@@ -517,6 +517,18 @@ class BandwidthTracker( HydrusSerialisable.SerialisableBase ):
         return ( month_time, day_time, hour_time, minute_time, second_time )
         
     
+    def _GetAllUsage( self, bandwidth_type: int ) -> int:
+        
+        if bandwidth_type == HC.BANDWIDTH_TYPE_DATA:
+            
+            return sum( self._months_bytes.values() )
+            
+        elif bandwidth_type == HC.BANDWIDTH_TYPE_REQUESTS:
+            
+            return sum( self._months_requests.values() )
+            
+        
+    
     def _GetUsage( self, bandwidth_type, time_delta, for_user ) -> int:
         
         if for_user and time_delta is not None and bandwidth_type == HC.BANDWIDTH_TYPE_DATA and time_delta <= self.MIN_TIME_DELTA_FOR_USER:
@@ -628,6 +640,14 @@ class BandwidthTracker( HydrusSerialisable.SerialisableBase ):
             result.sort()
             
             return result
+            
+        
+    
+    def GetAllUsage( self, bandwidth_type ):
+        
+        with self._lock:
+            
+            return self._GetAllUsage( bandwidth_type )
             
         
     

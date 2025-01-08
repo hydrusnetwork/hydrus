@@ -1082,9 +1082,7 @@ class EditContentParsersPanel( ClientGUICommon.StaticBox ):
         
         HydrusSerialisable.SetNonDupeName( content_parser, self._GetExistingNames() )
         
-        self._content_parsers.AddDatas( ( content_parser, ) )
-        
-        self._content_parsers.Sort()
+        self._content_parsers.AddData( content_parser, select_sort_and_scroll = True )
         
     
     def _ConvertContentParserToDisplayTuple( self, content_parser ):
@@ -1104,42 +1102,36 @@ class EditContentParsersPanel( ClientGUICommon.StaticBox ):
     
     def _Edit( self ):
         
-        edited_datas = []
+        content_parser = self._content_parsers.GetTopSelectedData()
         
-        content_parsers = self._content_parsers.GetData( only_selected = True )
-        
-        for content_parser in content_parsers:
+        if content_parser is None:
             
-            with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit content parser', frame_key = 'deeply_nested_dialog' ) as dlg:
-                
-                test_data = self._test_data_callable()
-                
-                panel = EditContentParserPanel( dlg, content_parser, test_data, self._permitted_content_types )
-                
-                dlg.SetPanel( panel )
-                
-                if dlg.exec() == QW.QDialog.DialogCode.Accepted:
-                    
-                    edited_content_parser = panel.GetValue()
-                    
-                    self._content_parsers.DeleteDatas( ( content_parser, ) )
-                    
-                    HydrusSerialisable.SetNonDupeName( edited_content_parser, self._GetExistingNames() )
-                    
-                    self._content_parsers.AddDatas( ( edited_content_parser, ) )
-                    
-                    edited_datas.append( edited_content_parser )
-                    
-                else:
-                    
-                    break
-                    
-                
+            return
             
         
-        self._content_parsers.SelectDatas( edited_datas )
-        
-        self._content_parsers.Sort()
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit content parser', frame_key = 'deeply_nested_dialog' ) as dlg:
+            
+            test_data = self._test_data_callable()
+            
+            panel = EditContentParserPanel( dlg, content_parser, test_data, self._permitted_content_types )
+            
+            dlg.SetPanel( panel )
+            
+            if dlg.exec() == QW.QDialog.DialogCode.Accepted:
+                
+                edited_content_parser = panel.GetValue()
+                
+                existing_names = self._GetExistingNames()
+                
+                existing_names.discard( content_parser.GetName() )
+                
+                non_dupe_name = HydrusData.GetNonDupeName( edited_content_parser.GetName(), existing_names )
+                
+                edited_content_parser.SetName( non_dupe_name )
+                
+                self._content_parsers.ReplaceData( content_parser, edited_content_parser, sort_and_scroll = True )
+                
+            
         
     
     def _GetExistingNames( self ):
@@ -1435,7 +1427,7 @@ class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 new_sub_page_parser = ClientParsing.SubsidiaryPageParser( formula = new_formula, page_parser = new_page_parser )
                 
-                self._sub_page_parsers.AddDatas( ( new_sub_page_parser, ), select_sort_and_scroll = True )
+                self._sub_page_parsers.AddData( new_sub_page_parser, select_sort_and_scroll = True )
                 
             
         
@@ -1478,45 +1470,33 @@ class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _EditSubPageParser( self ):
         
-        edited_datas = []
+        sub_page_parser = self._sub_page_parsers.GetTopSelectedData()
         
-        selected_data = self._sub_page_parsers.GetData( only_selected = True )
-        
-        for sub_page_parser in selected_data:
+        if sub_page_parser is None:
             
-            formula = sub_page_parser.GetFormula()
-            page_parser = sub_page_parser.GetPageParser()
-            
-            with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit sub page parser', frame_key = 'deeply_nested_dialog' ) as dlg:
-                
-                panel = EditPageParserPanel( dlg, page_parser, formula = formula, test_data = self._test_panel.GetTestDataForChild() )
-                
-                dlg.SetPanel( panel )
-                
-                if dlg.exec() == QW.QDialog.DialogCode.Accepted:
-                    
-                    self._sub_page_parsers.DeleteDatas( ( sub_page_parser, ) )
-                    
-                    new_page_parser = panel.GetValue()
-                    
-                    new_formula = panel.GetFormula()
-                    
-                    new_sub_page_parser = ClientParsing.SubsidiaryPageParser( formula = new_formula, page_parser = new_page_parser )
-                    
-                    self._sub_page_parsers.AddDatas( ( new_sub_page_parser, ) )
-                    
-                    edited_datas.append( new_sub_page_parser )
-                    
-                else:
-                    
-                    break
-                    
-                
+            return
             
         
-        self._sub_page_parsers.SelectDatas( edited_datas )
+        formula = sub_page_parser.GetFormula()
+        page_parser = sub_page_parser.GetPageParser()
         
-        self._sub_page_parsers.Sort()
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit sub page parser', frame_key = 'deeply_nested_dialog' ) as dlg:
+            
+            panel = EditPageParserPanel( dlg, page_parser, formula = formula, test_data = self._test_panel.GetTestDataForChild() )
+            
+            dlg.SetPanel( panel )
+            
+            if dlg.exec() == QW.QDialog.DialogCode.Accepted:
+                
+                new_formula = panel.GetFormula()
+                
+                new_page_parser = panel.GetValue()
+                
+                new_sub_page_parser = ClientParsing.SubsidiaryPageParser( formula = new_formula, page_parser = new_page_parser )
+                
+                self._sub_page_parsers.ReplaceData( sub_page_parser, new_sub_page_parser, sort_and_scroll = True )
+                
+            
         
     
     def _FetchExampleData( self ):
@@ -1605,7 +1585,7 @@ class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _ImportAddSubsidiaryPageParser( self, subsidiary_page_parser: ClientParsing.SubsidiaryPageParser ):
         
-        self._sub_page_parsers.AddDatas( ( subsidiary_page_parser, ), select_sort_and_scroll = True )
+        self._sub_page_parsers.AddData( subsidiary_page_parser, select_sort_and_scroll = True )
         
     
     def GetFormula( self ):
@@ -1718,7 +1698,7 @@ class EditParsersPanel( ClientGUIScrolledPanels.EditPanel ):
         
         parser.RegenerateParserKey()
         
-        self._parsers.AddDatas( ( parser, ), select_sort_and_scroll = select_sort_and_scroll )
+        self._parsers.AddData( parser, select_sort_and_scroll = select_sort_and_scroll )
         
     
     def _ConvertParserToListCtrlTuples( self, parser ):

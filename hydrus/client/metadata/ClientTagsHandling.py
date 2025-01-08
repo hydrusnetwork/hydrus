@@ -351,7 +351,7 @@ class TagDisplayMaintenanceManager( ClientDaemons.ManagerWithMainLoop ):
     
     def __init__( self, controller ):
         
-        super().__init__( controller )
+        super().__init__( controller, 60 )
         
         self._service_keys_to_needs_work = {}
         
@@ -549,89 +549,75 @@ class TagDisplayMaintenanceManager( ClientDaemons.ManagerWithMainLoop ):
         return 'tag display sync'
         
     
-    def MainLoop( self ):
+    def _DoMainLoop( self ):
         
-        try:
+        while True:
             
-            INIT_WAIT = 60
-            
-            self._wake_event.wait( INIT_WAIT )
-            
-            while True:
+            with self._lock:
                 
-                with self._lock:
-                    
-                    self._CheckShutdown()
-                    
-                
-                self._controller.WaitUntilViewFree()
-                
-                if self._WorkPermitted() and self._WorkToDo():
-                    
-                    try:
-                        
-                        service_key = self._GetServiceKeyToWorkOn()
-                        
-                    except HydrusExceptions.NotFoundException:
-                        
-                        self._wake_event.wait( 5 )
-                        
-                        self._wake_event.clear()
-                        
-                        continue
-                        
-                    
-                    work_time = self._GetWorkTime( service_key )
-                    
-                    start_time = HydrusTime.GetNowPrecise()
-                    
-                    still_needs_work = self._controller.WriteSynchronous( 'sync_tag_display_maintenance', service_key, work_time )
-                    
-                    finish_time = HydrusTime.GetNowPrecise()
-                    
-                    total_time_took = finish_time - start_time
-                    
-                    self._service_keys_to_needs_work[ service_key ] = still_needs_work
-                    
-                    wait_time = self._GetRestTime( service_key, work_time, total_time_took )
-                    
-                    self._last_loop_work_time = work_time
-                    
-                else:
-                    
-                    wait_time = 10
-                    
-                
-                with self._lock:
-                    
-                    self._CheckShutdown()
-                    
-                
-                self._wake_event.wait( wait_time )
-                
-                self._wake_event.clear()
-                
-                if self._new_data_event.is_set():
-                    
-                    time.sleep( 1 )
-                    
-                    self._last_last_new_data_event_time = self._last_new_data_event_time
-                    self._last_new_data_event_time = HydrusTime.GetNow()
-                    
-                    self._service_keys_to_needs_work = {}
-                    
-                    self._new_data_event.clear()
-                    
+                self._CheckShutdown()
                 
             
-        except HydrusExceptions.ShutdownException:
+            self._controller.WaitUntilViewFree()
             
-            pass
+            if self._WorkPermitted() and self._WorkToDo():
+                
+                try:
+                    
+                    service_key = self._GetServiceKeyToWorkOn()
+                    
+                except HydrusExceptions.NotFoundException:
+                    
+                    self._wake_event.wait( 5 )
+                    
+                    self._wake_event.clear()
+                    
+                    continue
+                    
+                
+                work_time = self._GetWorkTime( service_key )
+                
+                start_time = HydrusTime.GetNowPrecise()
+                
+                still_needs_work = self._controller.WriteSynchronous( 'sync_tag_display_maintenance', service_key, work_time )
+                
+                finish_time = HydrusTime.GetNowPrecise()
+                
+                total_time_took = finish_time - start_time
+                
+                self._service_keys_to_needs_work[ service_key ] = still_needs_work
+                
+                wait_time = self._GetRestTime( service_key, work_time, total_time_took )
+                
+                self._last_loop_work_time = work_time
+                
+            else:
+                
+                wait_time = 10
+                
             
-        finally:
+            with self._lock:
+                
+                self._CheckShutdown()
+                
             
-            self._mainloop_is_finished = True
+            self._wake_event.wait( wait_time )
             
+            self._wake_event.clear()
+            
+            if self._new_data_event.is_set():
+                
+                time.sleep( 1 )
+                
+                self._last_last_new_data_event_time = self._last_new_data_event_time
+                self._last_new_data_event_time = HydrusTime.GetNow()
+                
+                self._service_keys_to_needs_work = {}
+                
+                self._new_data_event.clear()
+                
+            
+        
         
     
     def NotifyNewDisplayData( self ):

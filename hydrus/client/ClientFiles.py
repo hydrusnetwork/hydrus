@@ -2082,7 +2082,7 @@ class FilesMaintenanceManager( ClientDaemons.ManagerWithMainLoop ):
     
     def __init__( self, controller ):
         
-        super().__init__( controller )
+        super().__init__( controller, 15 )
         
         self._pubbed_message_about_bad_file_record_delete = False
         self._pubbed_message_about_invalid_file_export = False
@@ -3174,7 +3174,7 @@ class FilesMaintenanceManager( ClientDaemons.ManagerWithMainLoop ):
         return 'file maintenance'
         
     
-    def MainLoop( self ):
+    def _DoMainLoop( self ):
         
         # TODO: locking on CheckShutdown is lax, let's be good and smooth it all out
         
@@ -3207,96 +3207,76 @@ class FilesMaintenanceManager( ClientDaemons.ManagerWithMainLoop ):
                 
             
         
-        try:
+        while True:
             
-            time_to_start = HydrusTime.GetNow() + 15
+            self._CheckShutdown()
             
-            while not HydrusTime.TimeHasPassed( time_to_start ):
-                
-                self._CheckShutdown()
-                
-                self._wake_event.wait( 1 )
-                
+            did_work = False
             
-            while True:
+            with self._maintenance_lock:
                 
-                self._CheckShutdown()
+                hashes_to_job_types = self._controller.Read( 'file_maintenance_get_jobs' )
                 
-                did_work = False
-                
-                with self._maintenance_lock:
+                if len( hashes_to_job_types ) > 0:
                     
-                    hashes_to_job_types = self._controller.Read( 'file_maintenance_get_jobs' )
+                    did_work = True
                     
-                    if len( hashes_to_job_types ) > 0:
+                    job_status = ClientThreading.JobStatus()
+                    
+                    i = 0
+                    
+                    try:
                         
-                        did_work = True
+                        hashes = set( hashes_to_job_types.keys() )
                         
-                        job_status = ClientThreading.JobStatus()
+                        media_results = self._controller.Read( 'media_results', hashes )
                         
-                        i = 0
+                        hashes_to_media_results = { media_result.GetHash() : media_result for media_result in media_results }
                         
-                        try:
+                        media_results_to_job_types = { hashes_to_media_results[ hash ] : job_types for ( hash, job_types ) in hashes_to_job_types.items() }
+                        
+                        for ( media_result, job_types ) in media_results_to_job_types.items():
                             
-                            hashes = set( hashes_to_job_types.keys() )
+                            wait_on_maintenance()
                             
-                            media_results = self._controller.Read( 'media_results', hashes )
-                            
-                            hashes_to_media_results = { media_result.GetHash() : media_result for media_result in media_results }
-                            
-                            media_results_to_job_types = { hashes_to_media_results[ hash ] : job_types for ( hash, job_types ) in hashes_to_job_types.items() }
-                            
-                            for ( media_result, job_types ) in media_results_to_job_types.items():
+                            if should_reset():
                                 
-                                wait_on_maintenance()
-                                
-                                if should_reset():
-                                    
-                                    break
-                                    
-                                
-                                with self._lock:
-                                    
-                                    self._RunJob( { media_result : job_types }, job_status )
-                                    
+                                break
                                 
                             
-                            time.sleep( 0.0001 )
-                            
-                            i += 1
-                            
-                            if i % 100 == 0:
+                            with self._lock:
                                 
-                                self._controller.pub( 'notify_files_maintenance_done' )
+                                self._RunJob( { media_result : job_types }, job_status )
                                 
                             
-                            self._CheckShutdown()
-                            
-                        finally:
+                        
+                        time.sleep( 0.0001 )
+                        
+                        i += 1
+                        
+                        if i % 100 == 0:
                             
                             self._controller.pub( 'notify_files_maintenance_done' )
                             
                         
+                        self._CheckShutdown()
+                        
+                    finally:
+                        
+                        self._controller.pub( 'notify_files_maintenance_done' )
+                        
                     
                 
-                if not did_work:
-                    
-                    self._wake_event.wait( 600 )
-                    
-                    self._wake_event.clear()
-                    
+            
+            if not did_work:
                 
-                # a small delay here is helpful for the forcemaintenance guy to have a chance to step in on reset
-                time.sleep( 1 )
+                self._wake_event.wait( 600 )
+                
+                self._wake_event.clear()
                 
             
-        except HydrusExceptions.ShutdownException:
-            
-            pass
-            
-        finally:
-            
-            self._mainloop_is_finished = True
+            # a small delay here is helpful for the forcemaintenance guy to have a chance to step in on reset
+            time.sleep( 1 )
             
         
     

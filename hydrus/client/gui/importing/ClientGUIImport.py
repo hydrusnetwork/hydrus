@@ -372,42 +372,36 @@ class FilenameTaggingOptionsPanel( QW.QWidget ):
                     
                     data = ( namespace, regex )
                     
-                    self._quick_namespaces_list.AddDatas( ( data, ) )
+                    self._quick_namespaces_list.AddData( data, select_sort_and_scroll = True )
                     
                 
             
         
         def EditQuickNamespaces( self ):
             
-            edited_datas = []
+            old_data = self._quick_namespaces_list.GetTopSelectedData()
             
-            data_to_edit = self._quick_namespaces_list.GetData( only_selected = True )
+            if old_data is None:
+                
+                return
+                
             
-            for old_data in data_to_edit:
+            ( namespace, regex ) = old_data
+            
+            with ClientGUIDialogs.DialogInputNamespaceRegex( self, namespace = namespace, regex = regex ) as dlg:
                 
-                ( namespace, regex ) = old_data
-                
-                with ClientGUIDialogs.DialogInputNamespaceRegex( self, namespace = namespace, regex = regex ) as dlg:
+                if dlg.exec() == QW.QDialog.DialogCode.Accepted:
                     
-                    if dlg.exec() == QW.QDialog.DialogCode.Accepted:
+                    ( new_namespace, new_regex ) = dlg.GetInfo()
+                    
+                    new_data = ( new_namespace, new_regex )
+                    
+                    if new_data != old_data:
                         
-                        ( new_namespace, new_regex ) = dlg.GetInfo()
-                        
-                        new_data = ( new_namespace, new_regex )
-                        
-                        if new_data != old_data:
-                            
-                            self._quick_namespaces_list.DeleteDatas( ( old_data, ) )
-                            
-                            self._quick_namespaces_list.AddDatas( ( new_data, ) )
-                            
-                            edited_datas.append( new_data )
-                            
+                        self._quick_namespaces_list.ReplaceData( old_data, new_data, sort_and_scroll = True )
                         
                     
                 
-            
-            self._quick_namespaces_list.SelectDatas( edited_datas )
             
         
         def AddRegex( self ):

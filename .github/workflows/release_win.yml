@@ -28,7 +28,7 @@ jobs:
         working-directory: hydrus
       -
         name: Download mpv-dev
-        run: Invoke-WebRequest -Uri "https://sourceforge.net/projects/mpv-player-windows/files/libmpv/mpv-dev-x86_64-20241020-git-37159a8.7z" -OutFile "mpv-dev-x86_64.7z" -Headers @{ "User-Agent" = "LetMeIn" }
+        run: Invoke-WebRequest -Uri "https://sourceforge.net/projects/mpv-player-windows/files/libmpv/mpv-dev-x86_64-20230820-git-19384e0.7z" -OutFile "mpv-dev-x86_64.7z" -Headers @{ "User-Agent" = "LetMeIn" }
       -
         name: Process mpv-dev
         run: |

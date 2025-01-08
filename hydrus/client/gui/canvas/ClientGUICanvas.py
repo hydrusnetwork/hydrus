@@ -732,6 +732,11 @@ class Canvas( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
             
         
     
+    def GetMedia( self ):
+        
+        return self._current_media
+        
+    
     def ManageNotes( self, canvas_key, name_to_start_on = None ):
         
         if canvas_key == self._canvas_key:
@@ -1279,7 +1284,7 @@ class Canvas( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
         self._location_context = location_context
         
     
-    def SetMedia( self, media: typing.Optional[ ClientMedia.MediaSingleton ] ):
+    def SetMedia( self, media: typing.Optional[ ClientMedia.MediaSingleton ], start_paused = None ):
         
         if media is not None and not self.isVisible():
             
@@ -1332,7 +1337,7 @@ class Canvas( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
 
                 if self._current_media.GetLocationsManager().IsLocal():
                     
-                    self._media_container.SetMedia( self._current_media, maintain_zoom, maintain_pan )
+                    self._media_container.SetMedia( self._current_media, maintain_zoom, maintain_pan, start_paused = start_paused )
                     
                 else:
                     
@@ -1449,6 +1454,8 @@ class MediaContainerDragClickReportingFilter( QC.QObject ):
     
 class CanvasPanel( Canvas ):
     
+    launchMediaViewer = QC.Signal()
+    
     CANVAS_TYPE = CC.CANVAS_PREVIEW
     
     def __init__( self, parent, page_key, location_context: ClientLocation.LocationContext ):
@@ -1462,7 +1469,7 @@ class CanvasPanel( Canvas ):
         
         self._is_splitter_hidden = False
         
-        self._media_container.launchMediaViewer.connect( self.LaunchMediaViewer )
+        self._media_container.launchMediaViewer.connect( self.launchMediaViewer )
         
         CG.client_controller.sub( self, 'ProcessContentUpdatePackage', 'content_updates_gui' )
         
@@ -1510,14 +1517,9 @@ class CanvasPanel( Canvas ):
     
     def PageShown( self ):
         
-        self.SetMedia( self._hidden_page_current_media )
+        self.SetMedia( self._hidden_page_current_media, start_paused = self._hidden_page_paused_status )
         
         self._hidden_page_current_media = None
-        
-        if self._media_container.IsPaused() != self._hidden_page_paused_status:
-            
-            self._media_container.PausePlay()
-            
         
     
     def ShowMenu( self ):
@@ -1633,11 +1635,6 @@ class CanvasPanel( Canvas ):
         CGC.core().PopupMenu( self, menu )
         
     
-    def LaunchMediaViewer( self ):
-        
-        CG.client_controller.pub( 'launch_media_viewer', self._page_key )
-        
-    
     def MediaFocusWentToExternalProgram( self, page_key ):
         
         if page_key == self._page_key:
@@ -1671,17 +1668,20 @@ class CanvasPanel( Canvas ):
             
         
     
-    def SetMedia( self, media ):
+    def SetMedia( self, media, start_paused = None ):
         
-        if HC.options[ 'hide_preview' ] or self._hidden_page_paused_status or self._is_splitter_hidden:
+        if HC.options[ 'hide_preview' ] or self._is_splitter_hidden or ( media is not None and not self.isVisible() ):
             
             return
             
         
-        Canvas.SetMedia( self, media )
+        Canvas.SetMedia( self, media, start_paused = start_paused )
         
     
     def SetSplitterHiddenStatus( self, is_hidden ):
+        
+        # TODO: this is whack. I should fold all this into the pagehidden/shown system, I think?
+        # rather than saving that status, I should have a freeze/restore stack or similar, and it should probably be handled at the media container level, not the canvas bruh
         
         if is_hidden and not self._is_splitter_hidden:
             
@@ -1700,13 +1700,80 @@ class CanvasPanel( Canvas ):
         
     
 
-class CanvasWithDetails( Canvas ):
+class CanvasWithHovers( Canvas ):
     
     def __init__( self, parent, location_context ):
         
         super().__init__( parent, location_context )
         
+        self._hovers = []
+        
+        top_hover = self._GenerateHoverTopFrame()
+        
+        self.mediaChanged.connect( top_hover.SetMedia )
+        self.mediaCleared.connect( top_hover.ClearMedia )
+        
+        top_hover.sendApplicationCommand.connect( self.ProcessApplicationCommand )
+        
+        self._media_container.zoomChanged.connect( top_hover.SetCurrentZoom )
+        
+        self._hovers.append( top_hover )
+        
+        self._my_shortcuts_handler.AddWindowToFilter( top_hover )
+        
+        self._tags_hover = ClientGUICanvasHoverFrames.CanvasHoverFrameTags( self, self, top_hover, self._canvas_key, self._location_context )
+        
+        self.mediaChanged.connect( self._tags_hover.SetMedia )
+        self.mediaCleared.connect( self._tags_hover.ClearMedia )
+        
+        self._tags_hover.sendApplicationCommand.connect( self.ProcessApplicationCommand )
+        
+        self._hovers.append( self._tags_hover )
+        
+        self._my_shortcuts_handler.AddWindowToFilter( self._tags_hover )
+        
+        self._top_right_hover = ClientGUICanvasHoverFrames.CanvasHoverFrameTopRight( self, self, top_hover, self._canvas_key )
+        
+        self.mediaChanged.connect( self._top_right_hover.SetMedia )
+        self.mediaCleared.connect( self._top_right_hover.ClearMedia )
+        
+        self._top_right_hover.sendApplicationCommand.connect( self.ProcessApplicationCommand )
+        
+        self._hovers.append( self._top_right_hover )
+        
+        self._my_shortcuts_handler.AddWindowToFilter( self._top_right_hover )
+        
+        self._right_notes_hover = ClientGUICanvasHoverFrames.CanvasHoverFrameRightNotes( self, self, self._top_right_hover, self._canvas_key )
+        
+        self.mediaChanged.connect( self._right_notes_hover.SetMedia )
+        self.mediaCleared.connect( self._right_notes_hover.ClearMedia )
+        
+        self._right_notes_hover.sendApplicationCommand.connect( self.ProcessApplicationCommand )
+        
+        self._hovers.append( self._right_notes_hover )
+        
+        self._my_shortcuts_handler.AddWindowToFilter( self._right_notes_hover )
+        
+        for name in self._new_options.GetStringList( 'default_media_viewer_custom_shortcuts' ):
+            
+            self._my_shortcuts_handler.AddShortcuts( name )
+            
+        
+        #
+        
+        self._timer_cursor_hide_job = None
+        self._last_cursor_autohide_touch_time = HydrusTime.GetNowFloat()
+        
+        # need this as we need un-button-pressed move events for cursor hide
+        self.setMouseTracking( True )
+        
+        self._RestartCursorHideWait()
+        
         CG.client_controller.sub( self, 'RedrawDetails', 'refresh_all_tag_presentation_gui' )
+        CG.client_controller.sub( self, 'CloseFromHover', 'canvas_close' )
+        CG.client_controller.sub( self, 'FullscreenSwitch', 'canvas_fullscreen_switch' )
+        
+        CG.client_controller.gui.RegisterUIUpdateWindow( self )
         
     
     def _DrawAdditionalTopMiddleInfo( self, painter: QG.QPainter, current_y ):
@@ -1807,11 +1874,19 @@ class CanvasWithDetails( Canvas ):
         my_width = my_size.width()
         my_height = my_size.height()
         
-        # TODO: this sucks and it is also wrong, we actually want like half this padding in later points.
-        # maybe we'll want to merge the details canvas with the hovers one and then we can talk to the hovers directly to get framewidth and margin/padding/whatever
-        PADDING = 4
+        try:
+            
+            QFRAME_PADDING = self._right_notes_hover.frameWidth()
+            
+            ( NOTE_SPACING, NOTE_MARGIN ) = self._right_notes_hover.GetNoteSpacingAndMargin()
+            
+        except:
+            
+            QFRAME_PADDING = 2
+            ( NOTE_SPACING, NOTE_MARGIN ) = ( 2, 2 )
+            
         
-        notes_width = int( my_width * ClientGUICanvasHoverFrames.SIDE_HOVER_PROPORTIONS ) - ( PADDING * 2 )
+        notes_width = int( my_width * ClientGUICanvasHoverFrames.SIDE_HOVER_PROPORTIONS ) - ( ( QFRAME_PADDING + NOTE_MARGIN ) * 2 )
         
         original_font = painter.font()
         
@@ -1846,9 +1921,9 @@ class CanvasWithDetails( Canvas ):
             
         '''
         
-        left_x = my_width - ( notes_width + PADDING )
+        left_x = my_width - ( notes_width + QFRAME_PADDING + NOTE_MARGIN )
         
-        current_y += PADDING * 3
+        current_y += QFRAME_PADDING + NOTE_MARGIN
         
         draw_a_test_rect = False
         
@@ -1862,13 +1937,15 @@ class CanvasWithDetails( Canvas ):
         
         for name in sorted( names_to_notes.keys() ):
             
+            current_y += NOTE_MARGIN
+            
             painter.setFont( name_font )
             
             text_rect = painter.fontMetrics().boundingRect( left_x, current_y, notes_width, 100, QC.Qt.AlignmentFlag.AlignHCenter | QC.Qt.TextFlag.TextWordWrap, name )
             
             painter.drawText( text_rect, QC.Qt.AlignmentFlag.AlignHCenter | QC.Qt.TextFlag.TextWordWrap, name )
             
-            current_y += text_rect.height() + PADDING
+            current_y += text_rect.height() + NOTE_SPACING
             
             #
             
@@ -1878,9 +1955,14 @@ class CanvasWithDetails( Canvas ):
             
             text_rect = painter.fontMetrics().boundingRect( left_x, current_y, notes_width, 100, QC.Qt.AlignmentFlag.AlignJustify | QC.Qt.TextFlag.TextWordWrap, note )
             
+            # this is important to make sure the justify does fill the available space, rather than the above bounding rect, which is the minimum width using justify
+            text_rect.setWidth( notes_width )
+            
             painter.drawText( text_rect, QC.Qt.AlignmentFlag.AlignJustify | QC.Qt.TextFlag.TextWordWrap, note )
             
-            current_y += text_rect.height() + PADDING
+            current_y += text_rect.height()
+            
+            current_y += NOTE_MARGIN
             
             if current_y >= my_height:
                 
@@ -1915,9 +1997,20 @@ class CanvasWithDetails( Canvas ):
         
         ClientTagSorting.SortTags( tag_sort, tags_i_want_to_display )
         
-        current_y = 3
-        
         namespace_colours = HC.options[ 'namespace_colours' ]
+        
+        try:
+            
+            QFRAME_PADDING = self._right_notes_hover.frameWidth()
+            
+        except:
+            
+            QFRAME_PADDING = 2
+            
+        
+        current_y = QFRAME_PADDING + 3
+        
+        x = QFRAME_PADDING + 5
         
         for tag in tags_i_want_to_display:
             
@@ -1948,7 +2041,7 @@ class CanvasWithDetails( Canvas ):
             
             ( text_size, display_string ) = ClientGUIFunctions.GetTextSizeFromPainter( painter, display_string )
             
-            ClientGUIFunctions.DrawText( painter, 5, current_y, display_string )
+            ClientGUIFunctions.DrawText( painter, x, current_y, display_string )
             
             current_y += text_size.height()
             
@@ -2000,7 +2093,19 @@ class CanvasWithDetails( Canvas ):
         my_width = my_size.width()
         my_height = my_size.height()
         
-        current_y = 2
+        try:
+            
+            QFRAME_PADDING = self._top_right_hover.frameWidth()
+            
+            ( VBOX_SPACING, VBOX_MARGIN ) = self._top_right_hover.GetVboxSpacingAndMargin()
+            
+        except:
+            
+            QFRAME_PADDING = 2
+            ( VBOX_SPACING, VBOX_MARGIN ) = ( 2, 2 )
+            
+        
+        current_y = QFRAME_PADDING + VBOX_MARGIN
         
         # ratings
         
@@ -2010,7 +2115,7 @@ class CanvasWithDetails( Canvas ):
         
         like_services.reverse()
         
-        like_rating_current_x = my_width - 16 - 2 # -2 to line up exactly with the floating panel
+        like_rating_current_x = my_width - 16 - ( QFRAME_PADDING + VBOX_MARGIN )
         
         for like_service in like_services:
             
@@ -2025,7 +2130,7 @@ class CanvasWithDetails( Canvas ):
         
         if len( like_services ) > 0:
             
-            current_y += 18
+            current_y += 16 + VBOX_SPACING
             
         
         numerical_services = services_manager.GetServices( ( HC.LOCAL_RATING_NUMERICAL, ) )
@@ -2038,9 +2143,9 @@ class CanvasWithDetails( Canvas ):
             
             numerical_width = ClientGUIRatings.GetNumericalWidth( service_key )
             
-            ClientGUIRatings.DrawNumerical( painter, my_width - numerical_width - 2, current_y, service_key, rating_state, rating ) # -2 to line up exactly with the floating panel
+            ClientGUIRatings.DrawNumerical( painter, my_width - numerical_width - ( QFRAME_PADDING + VBOX_MARGIN ), current_y, service_key, rating_state, rating ) # -2 to line up exactly with the floating panel
             
-            current_y += 18
+            current_y += 16 + VBOX_SPACING
             
         
         incdec_services = services_manager.GetServices( ( HC.LOCAL_RATING_INCDEC, ) )
@@ -2049,7 +2154,7 @@ class CanvasWithDetails( Canvas ):
         
         control_width = ClientGUIRatings.INCDEC_SIZE.width()
         
-        incdec_rating_current_x = my_width - control_width - 2 # -2 to line up exactly with the floating panel
+        incdec_rating_current_x = my_width - control_width - ( QFRAME_PADDING + VBOX_MARGIN )
         
         for incdec_service in incdec_services:
             
@@ -2064,7 +2169,7 @@ class CanvasWithDetails( Canvas ):
         
         if len( incdec_services ) > 0:
             
-            current_y += 18
+            current_y += 16 + VBOX_SPACING
             
         
         # icons
@@ -2083,16 +2188,22 @@ class CanvasWithDetails( Canvas ):
         
         if len( icons_to_show ) > 0:
             
-            icon_x = 0
+            current_y += VBOX_MARGIN
+            
+            icon_x = - ( QFRAME_PADDING + VBOX_MARGIN )
             
             for icon in icons_to_show:
                 
-                painter.drawPixmap( my_width + icon_x - 18, current_y, icon )
+                painter.drawPixmap( my_width + icon_x - ( 16 + VBOX_SPACING ), current_y, icon )
                 
-                icon_x -= 18
+                icon_x -= 16 + VBOX_SPACING
                 
             
-            current_y += 18
+            # this appears to be correct for the wrong reasons
+            
+            current_y += 16 + VBOX_SPACING
+            
+            current_y += VBOX_MARGIN
             
         
         pen_colour = self.GetColour( CC.COLOUR_MEDIA_TEXT )
@@ -2107,7 +2218,7 @@ class CanvasWithDetails( Canvas ):
             
             ( text_size, location_string ) = ClientGUIFunctions.GetTextSizeFromPainter( painter, location_string )
             
-            ClientGUIFunctions.DrawText( painter, my_width - text_size.width() - 3, current_y, location_string )
+            ClientGUIFunctions.DrawText( painter, my_width - ( text_size.width() + QFRAME_PADDING + VBOX_MARGIN ), current_y, location_string )
             
             current_y += text_size.height()
             
@@ -2118,16 +2229,33 @@ class CanvasWithDetails( Canvas ):
         
         url_tuples = CG.client_controller.network_engine.domain_manager.ConvertURLsToMediaViewerTuples( urls )
         
-        for ( display_string, url ) in url_tuples:
+        if len( url_tuples ) > 0:
             
-            ( text_size, display_string ) = ClientGUIFunctions.GetTextSizeFromPainter( painter, display_string )
+            current_y += VBOX_MARGIN
             
-            ClientGUIFunctions.DrawText( painter, my_width - text_size.width() - 3, current_y, display_string )
+            for ( display_string, url ) in url_tuples:
+                
+                ( text_size, display_string ) = ClientGUIFunctions.GetTextSizeFromPainter( painter, display_string )
+                
+                ClientGUIFunctions.DrawText( painter, my_width - ( text_size.width() + QFRAME_PADDING + VBOX_MARGIN ), current_y, display_string )
+                
+                current_y += text_size.height() + VBOX_SPACING
+                
             
-            current_y += text_size.height() + 2
+            # again this appears to be correct but for the wrong reasons
+            # flying completely by my pants here
+            
+            current_y -= VBOX_MARGIN
             
         
+        current_y += VBOX_MARGIN + QFRAME_PADDING
+        
         return current_y
+        
+    
+    def _GenerateHoverTopFrame( self ):
+        
+        raise NotImplementedError()
         
     
     def _GetInfoString( self ):
@@ -2148,98 +2276,6 @@ class CanvasWithDetails( Canvas ):
     def _GetNoMediaText( self ):
         
         return 'No media to display'
-        
-    
-    def RedrawDetails( self ):
-        
-        self.update()
-        
-    
-    def TryToDoPreClose( self ):
-        
-        can_close = True
-        
-        return can_close
-        
-    
-class CanvasWithHovers( CanvasWithDetails ):
-    
-    def __init__( self, parent, location_context ):
-        
-        super().__init__( parent, location_context )
-        
-        self._hovers = []
-        
-        top_hover = self._GenerateHoverTopFrame()
-        
-        self.mediaChanged.connect( top_hover.SetMedia )
-        self.mediaCleared.connect( top_hover.ClearMedia )
-        
-        top_hover.sendApplicationCommand.connect( self.ProcessApplicationCommand )
-        
-        self._media_container.zoomChanged.connect( top_hover.SetCurrentZoom )
-        
-        self._hovers.append( top_hover )
-        
-        self._my_shortcuts_handler.AddWindowToFilter( top_hover )
-        
-        tags_hover = ClientGUICanvasHoverFrames.CanvasHoverFrameTags( self, self, top_hover, self._canvas_key, self._location_context )
-        
-        self.mediaChanged.connect( tags_hover.SetMedia )
-        self.mediaCleared.connect( tags_hover.ClearMedia )
-        
-        tags_hover.sendApplicationCommand.connect( self.ProcessApplicationCommand )
-        
-        self._hovers.append( tags_hover )
-        
-        self._my_shortcuts_handler.AddWindowToFilter( tags_hover )
-        
-        top_right_hover = ClientGUICanvasHoverFrames.CanvasHoverFrameTopRight( self, self, top_hover, self._canvas_key )
-        
-        self.mediaChanged.connect( top_right_hover.SetMedia )
-        self.mediaCleared.connect( top_right_hover.ClearMedia )
-        
-        top_right_hover.sendApplicationCommand.connect( self.ProcessApplicationCommand )
-        
-        self._hovers.append( top_right_hover )
-        
-        self._my_shortcuts_handler.AddWindowToFilter( top_right_hover )
-        
-        self._right_notes_hover = ClientGUICanvasHoverFrames.CanvasHoverFrameRightNotes( self, self, top_right_hover, self._canvas_key )
-        
-        self.mediaChanged.connect( self._right_notes_hover.SetMedia )
-        self.mediaCleared.connect( self._right_notes_hover.ClearMedia )
-        
-        self._right_notes_hover.sendApplicationCommand.connect( self.ProcessApplicationCommand )
-        
-        self._hovers.append( self._right_notes_hover )
-        
-        self._my_shortcuts_handler.AddWindowToFilter( self._right_notes_hover )
-        
-        for name in self._new_options.GetStringList( 'default_media_viewer_custom_shortcuts' ):
-            
-            self._my_shortcuts_handler.AddShortcuts( name )
-            
-        
-        #
-        
-        self._timer_cursor_hide_job = None
-        self._last_cursor_autohide_touch_time = HydrusTime.GetNowFloat()
-        
-        # need this as we need un-button-pressed move events for cursor hide
-        self.setMouseTracking( True )
-        
-        self._RestartCursorHideWait()
-        
-        CG.client_controller.sub( self, 'CloseFromHover', 'canvas_close' )
-        CG.client_controller.sub( self, 'FullscreenSwitch', 'canvas_fullscreen_switch' )
-        
-        CG.client_controller.gui.RegisterUIUpdateWindow( self )
-        
-    
-    def _GenerateHoverTopFrame( self ):
-        
-        raise NotImplementedError()
         
     
     def _HideCursorCheck( self ):
@@ -2462,6 +2498,18 @@ class CanvasWithHovers( CanvasWithDetails ):
             
         
         return command_processed
+        
+    
+    def RedrawDetails( self ):
+        
+        self.update()
+        
+    
+    def TryToDoPreClose( self ):
+        
+        can_close = True
+        
+        return can_close
         
     
     def TIMERUIUpdate( self ):

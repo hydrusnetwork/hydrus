@@ -1033,6 +1033,9 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
             
             results = CG.client_controller.Read( 'url_statuses', lookup_url )
             
+            # I was tempted to write a duplicate-merge system here that would discount lesser quality dupes, but what metadata to assign is a tricky question!!
+            # better solved with an ongoing duplicate content sync than retroactive metadata refetch gubbins
+            
             if len( results ) == 0: # if no match found, this is a new URL, no useful data discovered
                 
                 continue

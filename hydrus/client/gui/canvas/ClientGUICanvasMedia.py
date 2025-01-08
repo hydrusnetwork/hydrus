@@ -2267,13 +2267,18 @@ class MediaContainer( QW.QWidget ):
         self._static_image_window.SetBackgroundColourGenerator( self._background_colour_generator )
         
     
-    def SetMedia( self, media: ClientMedia.MediaSingleton, maintain_zoom, maintain_pan ):
+    def SetMedia( self, media: ClientMedia.MediaSingleton, maintain_zoom, maintain_pan, start_paused = None ):
         
         previous_media = self._media
         
         self._media = media
         
         ( self._show_action, self._start_paused, self._start_with_embed ) = ClientMedia.GetShowAction( self._media, self._canvas_type )
+        
+        if start_paused is not None:
+            
+            self._start_paused = start_paused
+            
         
         if self._show_action in ( CC.MEDIA_VIEWER_ACTION_DO_NOT_SHOW_ON_ACTIVATION_OPEN_EXTERNALLY, CC.MEDIA_VIEWER_ACTION_DO_NOT_SHOW ):
             

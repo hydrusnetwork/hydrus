@@ -6,6 +6,7 @@ from qtpy import QtWidgets as QW
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusTime
+from hydrus.core.files import HydrusFileHandling
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
@@ -88,7 +89,7 @@ class EditImportFoldersPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 import_folder.SetNonDupeName( self._GetExistingNames() )
                 
-                self._import_folders.AddDatas( ( import_folder, ), select_sort_and_scroll = True )
+                self._import_folders.AddData( import_folder, select_sort_and_scroll = True )
                 
             
         
@@ -244,6 +245,8 @@ class EditImportFolderPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 choice.addItem( CC.import_folder_string_lookup[ if_id], if_id )
                 
+            
+            choice.setToolTip( ClientGUIFunctions.WrapToolTip( 'If you set this to delete or move, any sidecars will be deleted or moved also. If you are using the same sidecar for multiple files, you must not set delete/move or the sidecar will disappear for the next file import!' ) )
             
             choice.currentIndexChanged.connect( self._CheckLocations )
             
@@ -447,7 +450,9 @@ class EditImportFolderPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 filename_tagging_options = panel.GetValue()
                 
-                self._filename_tagging_options.AddDatas( [ ( service_key, filename_tagging_options ) ], select_sort_and_scroll = True )
+                data = ( service_key, filename_tagging_options )
+                
+                self._filename_tagging_options.AddData( data, select_sort_and_scroll = True )
                 
             
         
@@ -649,7 +654,7 @@ class EditImportFolderPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 filenames = list( os.listdir( path ) )[:ClientGUIMetadataMigrationTest.HOW_MANY_EXAMPLE_OBJECTS_TO_USE]
                 
-                example_paths = [ f for f in [ os.path.join( path, filename ) for filename in filenames ] if os.path.isfile( f ) ]
+                example_paths = [ f for f in [ os.path.join( path, filename ) for filename in filenames ] if os.path.isfile( f ) and HydrusFileHandling.GetMime( f ) in HC.ALLOWED_MIMES ]
                 
                 self._sidecar_test_context_factory.SetExampleFilePaths( example_paths )
                 

@@ -476,7 +476,7 @@ class EditLoginsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         domain_and_login_info = ( login_domain, login_script_key_and_name, credentials_tuple, login_access_type, login_access_text, active, validity, validity_error_text, no_work_until, no_work_until_reason )
         
-        self._domains_and_login_info.AddDatas( ( domain_and_login_info, ), select_sort_and_scroll = True )
+        self._domains_and_login_info.AddData( domain_and_login_info, select_sort_and_scroll = True )
         
     
     def _CanDoLogin( self ):
@@ -527,7 +527,7 @@ class EditLoginsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         if data is None:
             
-            return
+            return False
             
         
         domain_and_login_info = data
@@ -1428,7 +1428,7 @@ class EditLoginScriptPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 HydrusSerialisable.SetNonDupeName( new_credential_definition, self._GetExistingCredentialDefinitionNames() )
                 
-                self._credential_definitions.AddDatas( ( new_credential_definition, ), select_sort_and_scroll = True )
+                self._credential_definitions.AddData( new_credential_definition, select_sort_and_scroll = True )
                 
             
         
@@ -1492,7 +1492,7 @@ class EditLoginScriptPanel( ClientGUIScrolledPanels.EditPanel ):
         
         example_domain_info = ( domain, access_type, access_text )
         
-        self._example_domains_info.AddDatas( ( example_domain_info, ), select_sort_and_scroll = True )
+        self._example_domains_info.AddData( example_domain_info, select_sort_and_scroll = True )
         
     
     def _AddLoginStep( self ):
@@ -1601,12 +1601,7 @@ class EditLoginScriptPanel( ClientGUIScrolledPanels.EditPanel ):
                 return
                 
             
-            self._test_listctrl.AddDatas( ( test_result, ) )
-            
-        
-        def receive_result( test_result ):
-            
-            QP.CallAfter( qt_add_result, test_result )
+            self._test_listctrl.AddData( test_result )
             
         
         def clean_up( final_result ):
@@ -1957,7 +1952,7 @@ class EditLoginScriptsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         login_script.RegenerateLoginScriptKey()
         
-        self._login_scripts.AddDatas( ( login_script, ), select_sort_and_scroll = True )
+        self._login_scripts.AddData( login_script, select_sort_and_scroll = True )
         
     
     def _ConvertLoginScriptToListCtrlTuples( self, login_script ):

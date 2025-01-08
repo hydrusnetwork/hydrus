@@ -3379,7 +3379,7 @@ class ReviewLocalFileImports( ClientGUIScrolledPanels.ReviewPanel ):
                 
             else:
                 
-                HydrusData.Print( 'Unparsable file: ' + path )
+                HydrusData.Print( 'During file import scan, unparsable file: ' + path )
                 
                 num_unimportable_mime_files += 1
                 

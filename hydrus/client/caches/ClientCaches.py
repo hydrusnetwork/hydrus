@@ -814,6 +814,8 @@ class ThumbnailCache( object ):
     
     def MainLoop( self ):
         
+        # TODO: Wangle this guy to a ManagerWithMainLoop
+        
         while not HydrusThreading.IsThreadShuttingDown():
             
             time.sleep( 0.00001 )

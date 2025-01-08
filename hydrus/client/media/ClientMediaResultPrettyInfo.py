@@ -208,26 +208,36 @@ def GetPrettyMediaResultInfoLines( media_result: ClientMediaResult.MediaResult, 
             
             tooltip = f'removed from {local_file_service.GetName()} {HydrusTime.TimestampToPrettyTimeDelta( HydrusTime.SecondiseMS( timestamp_ms ), reverse_iso_delta_setting = True )}'
             
-            if len( deleted_local_file_services ) == 1:
-                
-                line = f'{line} ({local_file_deletion_reason})'
-                tooltip = f'{tooltip} ({local_file_deletion_reason})'
-                
-            
             line_is_interesting = False
             
             pretty_info_lines.append( ClientMediaResultPrettyInfoObjects.PrettyMediaResultInfoLine( line, line_is_interesting, tooltip = tooltip ) )
             
         
-        if len( deleted_local_file_services ) > 1:
-            
-            pretty_info_lines.append( ClientMediaResultPrettyInfoObjects.PrettyMediaResultInfoLine( 'Deletion reason: {}'.format( local_file_deletion_reason ), False ) )
-            
-        
     
     if locations_manager.IsTrashed():
         
-        pretty_info_lines.append( ClientMediaResultPrettyInfoObjects.PrettyMediaResultInfoLine( 'in the trash', True ) )
+        state_trash_timestamp = not only_interesting_lines or CG.client_controller.new_options.GetBoolean( 'file_info_line_consider_trash_time_interesting' )
+        
+        if state_trash_timestamp:
+            
+            line = f'sent to trash {HydrusTime.TimestampToPrettyTimeDelta( HydrusTime.SecondiseMS( timestamp_ms ) )}'
+            tooltip = f'sent to trash {HydrusTime.TimestampToPrettyTimeDelta( HydrusTime.SecondiseMS( timestamp_ms ), reverse_iso_delta_setting = True )}'
+            
+        else:
+            
+            line = 'in the trash'
+            tooltip = 'in the trash'
+            
+        
+        state_deletion_reason = not only_interesting_lines or CG.client_controller.new_options.GetBoolean( 'file_info_line_consider_trash_reason_interesting' )
+        
+        if state_deletion_reason:
+            
+            line = f'{line} ({local_file_deletion_reason})'
+            tooltip = f'{tooltip} ({local_file_deletion_reason})'
+            
+        
+        pretty_info_lines.append( ClientMediaResultPrettyInfoObjects.PrettyMediaResultInfoLine( line, True, tooltip = tooltip ) )
         
     
     #

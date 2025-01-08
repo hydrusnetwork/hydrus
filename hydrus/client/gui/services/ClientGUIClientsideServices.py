@@ -68,6 +68,8 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
             menu_items.append( ( 'normal', service_string, 'Add a new {}.'.format( service_string ), HydrusData.Call( self._Add, service_type ) ) )
             
         
+        # TODO: wrap this list in a panel and improve these buttons' "enabled logic"
+        
         self._add_button = ClientGUIMenuButton.MenuButton( self, 'add', menu_items = menu_items )
         self._edit_button = ClientGUICommon.BetterButton( self, 'edit', self._Edit )
         self._delete_button = ClientGUICommon.BetterButton( self, 'delete', self._Delete )
@@ -120,9 +122,7 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 HydrusSerialisable.SetNonDupeName( new_service, self._GetExistingNames() )
                 
-                self._listctrl.AddDatas( ( new_service, ) )
-                
-                self._listctrl.Sort()
+                self._listctrl.AddData( new_service, select_sort_and_scroll = True )
                 
             
         
@@ -238,45 +238,34 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
             
         else:
             
-            selected_services = [ service for service in self._listctrl.GetData( only_selected = False ) if service.GetServiceKey() == auto_account_creation_service_key ]
+            selected_services = [ service for service in self._listctrl.GetData() if service.GetServiceKey() == auto_account_creation_service_key ]
             
         
-        try:
+        if len( selected_services ) == 0:
             
-            edited_datas = []
+            return
             
-            for service in selected_services:
+        
+        service = selected_services[0]
+        
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit service' ) as dlg:
+            
+            panel = EditClientServicePanel( dlg, service, auto_account_creation_service_key = auto_account_creation_service_key )
+            
+            dlg.SetPanel( panel )
+            
+            if dlg.exec() == QW.QDialog.DialogCode.Accepted:
                 
-                with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit service' ) as dlg:
-                    
-                    panel = EditClientServicePanel( dlg, service, auto_account_creation_service_key = auto_account_creation_service_key )
-                    
-                    dlg.SetPanel( panel )
-                    
-                    if dlg.exec() == QW.QDialog.DialogCode.Accepted:
-                        
-                        self._listctrl.DeleteDatas( ( service, ) )
-                        
-                        edited_service = panel.GetValue()
-                        
-                        HydrusSerialisable.SetNonDupeName( edited_service, self._GetExistingNames() )
-                        
-                        self._listctrl.AddDatas( ( edited_service, ) )
-                        
-                        edited_datas.append( edited_service )
-                        
-                    else:
-                        
-                        return
-                        
-                    
+                edited_service = panel.GetValue()
                 
-            
-            self._listctrl.SelectDatas( edited_datas )
-            
-        finally:
-            
-            self._listctrl.Sort()
+                existing_names = self._GetExistingNames()
+                
+                existing_names.discard( service.GetName() )
+                
+                HydrusSerialisable.SetNonDupeName( edited_service, existing_names )
+                
+                self._listctrl.ReplaceData( service, edited_service, sort_and_scroll = True )
+                
             
         
     

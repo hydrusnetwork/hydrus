@@ -276,6 +276,8 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             'file_info_line_consider_archived_time_interesting' : True,
             'file_info_line_consider_file_services_interesting' : False,
             'file_info_line_consider_file_services_import_times_interesting' : False,
+            'file_info_line_consider_trash_time_interesting' : False,
+            'file_info_line_consider_trash_reason_interesting' : False,
             'set_requests_ca_bundle_env' : False
         }
         

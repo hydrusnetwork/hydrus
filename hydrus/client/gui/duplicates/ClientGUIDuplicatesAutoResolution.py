@@ -1,5 +1,6 @@
 import typing
 
+from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
 
 from hydrus.core import HydrusConstants as HC
@@ -10,11 +11,14 @@ from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
 from hydrus.client.duplicates import ClientDuplicatesAutoResolution
 from hydrus.client.gui import ClientGUIDialogsQuick
+from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.duplicates import ClientGUIPotentialDuplicatesSearchContext
 from hydrus.client.gui.lists import ClientGUIListConstants as CGLC
 from hydrus.client.gui.lists import ClientGUIListCtrl
+from hydrus.client.gui.lists import ClientGUIListBoxes
+from hydrus.client.gui.metadata import ClientGUIMetadataConditional
 from hydrus.client.gui.panels import ClientGUIScrolledPanels
 from hydrus.client.gui.widgets import ClientGUICommon
 from hydrus.client.gui.widgets import ClientGUIMenuButton
@@ -92,7 +96,7 @@ class EditDuplicatesAutoResolutionRulesPanel( ClientGUIScrolledPanels.EditPanel 
                 
                 duplicates_auto_resolution_rule.SetNonDupeName( self._GetExistingNames() )
                 
-                self._duplicates_auto_resolution_rules.AddDatas( ( duplicates_auto_resolution_rule, ), select_sort_and_scroll = True )
+                self._duplicates_auto_resolution_rules.AddData( duplicates_auto_resolution_rule, select_sort_and_scroll = True )
                 
             
         
@@ -119,14 +123,14 @@ class EditDuplicatesAutoResolutionRulesPanel( ClientGUIScrolledPanels.EditPanel 
         
         name = duplicates_auto_resolution_rule.GetName()
         rule_summary = duplicates_auto_resolution_rule.GetRuleSummary()
-        comparator_summary = duplicates_auto_resolution_rule.GetComparatorSummary()
+        pair_selector_summary = duplicates_auto_resolution_rule.GetPairSelectorSummary()
         action_summary = duplicates_auto_resolution_rule.GetActionSummary()
         search_status = duplicates_auto_resolution_rule.GetSearchSummary()
         paused = duplicates_auto_resolution_rule.IsPaused()
         
         pretty_paused = 'yes' if paused else ''
         
-        return ( name, rule_summary, comparator_summary, action_summary, search_status, pretty_paused )
+        return ( name, rule_summary, pair_selector_summary, action_summary, search_status, pretty_paused )
         
     
     _ConvertRuleToSortTuple = _ConvertRuleToDisplayTuple
@@ -173,7 +177,7 @@ class EditDuplicatesAutoResolutionRulesPanel( ClientGUIScrolledPanels.EditPanel 
         
         duplicates_auto_resolution_rule.SetNonDupeName( self._GetExistingNames() )
         
-        self._duplicates_auto_resolution_rules.AddDatas( ( duplicates_auto_resolution_rule, ), select_sort_and_scroll = True )
+        self._duplicates_auto_resolution_rules.AddData( duplicates_auto_resolution_rule, select_sort_and_scroll = True )
         
     
     def GetValue( self ) -> typing.List[ ClientDuplicatesAutoResolution.DuplicatesAutoResolutionRule ]:
@@ -212,6 +216,12 @@ class EditDuplicatesAutoResolutionRulePanel( ClientGUIScrolledPanels.EditPanel )
         
         self._selector_panel = QW.QWidget( self._main_notebook )
         
+        pair_selector = duplicates_auto_resolution_rule.GetPairSelector()
+        
+        self._pair_selector = EditPairSelectorWidget( self._selector_panel, pair_selector )
+        
+        self._pair_selector.setEnabled( False )
+        
         #
         
         self._action_panel = QW.QWidget( self._main_notebook )
@@ -227,11 +237,12 @@ class EditDuplicatesAutoResolutionRulePanel( ClientGUIScrolledPanels.EditPanel )
         
         #
         
-        label = 'Set which potential duplicates pairs you wish to test. This can be system:everything if you like, but it is best to narrow it down if you can.'
+        label = 'First we have to find some duplicate pairs to test. This can be system:everything if you like, but it is best to narrow it down if you can.'
         
         st = ClientGUICommon.BetterStaticText( self._search_panel, label = label )
         
         st.setWordWrap( True )
+        st.setAlignment( QC.Qt.AlignmentFlag.AlignCenter )
         
         vbox = QP.VBoxLayout()
         
@@ -242,15 +253,20 @@ class EditDuplicatesAutoResolutionRulePanel( ClientGUIScrolledPanels.EditPanel )
         
         #
         
-        label = 'In future, this panel will edit the test that determines when we should commit our action and which file should be A or B.\n\nAdd/Remove Single Column list of Comparator objects'
-        
-        st = ClientGUICommon.BetterStaticText( self._selector_panel, label = label )
-        
-        st.setWordWrap( True )
         
         vbox = QP.VBoxLayout()
         
-        QP.AddToLayout( vbox, st, CC.FLAGS_EXPAND_BOTH_WAYS )
+        label = 'Now that we have searched some pairs, we next need to look at their differences and see if we are confident enough to make an automatic decision. We also need to determine which would be the "better" and "worse".'
+        label += '\n\n'
+        label += 'The client will test the pair both ways around ("A is better/B is worse" or "B is better/A is worse") against these rules, and if they fit either way, the decision is there applied. If the pair will not pass the rules either way around, no changes will be made.'
+        
+        st = ClientGUICommon.BetterStaticText( self._selector_panel, label )
+        
+        st.setWordWrap( True )
+        st.setAlignment( QC.Qt.AlignmentFlag.AlignCenter )
+        
+        QP.AddToLayout( vbox, st, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._pair_selector, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         self._selector_panel.setLayout( vbox )
         
@@ -325,13 +341,140 @@ class EditDuplicatesAutoResolutionRulePanel( ClientGUIScrolledPanels.EditPanel )
         
         duplicates_auto_resolution_rule.SetPotentialDuplicatesSearchContext( self._potential_duplicates_search_context.GetValue() )
         
-        # everything else
+        #
+        
+        pair_selector = self._pair_selector.GetValue()
+        
+        duplicates_auto_resolution_rule.SetPairSelector( pair_selector )
+        
+        #
+        
+        # action
+        
+        #
         
         duplicates_auto_resolution_rule.SetId( self._duplicates_auto_resolution_rule.GetId() )
         
         # TODO: transfer any cached search data, including what we may have re-fetched in this panel's work, to the new rule
         
         return duplicates_auto_resolution_rule
+        
+    
+
+class EditPairComparatorOneFilePanel( ClientGUIScrolledPanels.EditPanel ):
+    
+    def __init__( self, parent, pair_comparator: ClientDuplicatesAutoResolution.PairComparatorOneFile ):
+        
+        super().__init__( parent )
+        
+        self._looking_at = ClientGUICommon.BetterChoice( self )
+        
+        self._looking_at.addItem( 'a better file will pass these', ClientDuplicatesAutoResolution.LOOKING_AT_BETTER_CANDIDATE )
+        self._looking_at.addItem( 'a worse file will pass these', ClientDuplicatesAutoResolution.LOOKING_AT_WORSE_CANDIDATE )
+        
+        self._metadata_conditional = ClientGUIMetadataConditional.EditMetadataConditionalPanel( self, pair_comparator.GetMetadataConditional() )
+        
+        width = ClientGUIFunctions.ConvertTextToPixelWidth( self._metadata_conditional, 64 )
+        
+        self._metadata_conditional.setMinimumWidth( width )
+        
+        #
+        
+        self._looking_at.SetValue( pair_comparator.GetLookingAt() )
+        
+        #
+        
+        vbox = QP.VBoxLayout()
+        
+        QP.AddToLayout( vbox, self._looking_at, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._metadata_conditional, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        vbox.addStretch( 1 )
+        
+        self.widget().setLayout( vbox )
+        
+    
+    def GetValue( self ):
+        
+        looking_at = self._looking_at.GetValue()
+        metadata_conditional = self._metadata_conditional.GetValue()
+        
+        pair_comparator = ClientDuplicatesAutoResolution.PairComparatorOneFile()
+        
+        pair_comparator.SetLookingAt( looking_at )
+        pair_comparator.SetMetadataConditional( metadata_conditional )
+        
+        return pair_comparator
+        
+    
+
+class EditPairSelectorWidget( ClientGUICommon.StaticBox ):
+    
+    def __init__( self, parent, pair_selector: ClientDuplicatesAutoResolution.PairSelector ):
+        
+        super().__init__( parent, 'pair comparison and selection' )
+        
+        self._original_pair_selector = pair_selector
+        
+        self._comparators = ClientGUIListBoxes.AddEditDeleteListBox( self, 8, self._PairComparatorToPretty, self._Add, self._Edit )
+        
+        self._comparators.AddDatas( self._original_pair_selector.GetComparators() )
+        
+        self.Add( self._comparators, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+    
+    def _Add( self ):
+        
+        # presumably we could ask for the type of comparator here
+        
+        pair_comparator = ClientDuplicatesAutoResolution.PairComparatorOneFile()
+        
+        return self._Edit( pair_comparator )
+        
+    
+    def _Edit( self, comparator: ClientDuplicatesAutoResolution.PairComparator ):
+        
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit comparator' ) as dlg:
+            
+            if isinstance( comparator, ClientDuplicatesAutoResolution.PairComparatorOneFile ):
+                
+                panel = EditPairComparatorOneFilePanel( dlg, comparator )
+                
+            
+            dlg.SetPanel( panel )
+            
+            if dlg.exec() == QW.QDialog.DialogCode.Accepted:
+                
+                edited_comparator = panel.GetValue()
+                
+                return edited_comparator
+                
+            else:
+                
+                raise HydrusExceptions.VetoException()
+                
+            
+        
+    
+    def _PairComparatorToPretty( self, pair_comparator: ClientDuplicatesAutoResolution.PairComparator ):
+        
+        return pair_comparator.GetSummary()
+        
+    
+    def GetValue( self ) -> ClientDuplicatesAutoResolution.PairSelector:
+        
+        pair_selector = ClientDuplicatesAutoResolution.PairSelector()
+        
+        comparators = self._comparators.GetData()
+        
+        if len( comparators ) == 0:
+            
+            raise HydrusExceptions.VetoException( 'Sorry, you need at least one rule in your pair selector/comparator! We need to figure out which of the AB pair would be the better/worse.' )
+            
+        
+        pair_selector.SetComparators( comparators )
+        
+        return pair_selector
         
     
 

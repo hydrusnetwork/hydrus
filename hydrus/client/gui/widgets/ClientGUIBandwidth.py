@@ -99,9 +99,7 @@ class BandwidthRulesCtrl( ClientGUICommon.StaticBox ):
                 
                 new_rule = panel.GetValue()
                 
-                self._listctrl.AddDatas( ( new_rule, ) )
-                
-                self._listctrl.Sort()
+                self._listctrl.AddData( new_rule, select_sort_and_scroll = True )
                 
             
         
@@ -131,38 +129,26 @@ class BandwidthRulesCtrl( ClientGUICommon.StaticBox ):
     
     def _Edit( self ):
         
-        selected_rules = self._listctrl.GetData( only_selected = True )
+        rule = self._listctrl.GetTopSelectedData()
         
-        edited_datas = []
-        
-        for rule in selected_rules:
+        if rule is None:
             
-            with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit rule' ) as dlg:
-                
-                panel = self._EditPanel( dlg, rule )
-                
-                dlg.SetPanel( panel )
-                
-                if dlg.exec() == QW.QDialog.DialogCode.Accepted:
-                    
-                    edited_rule = panel.GetValue()
-                    
-                    self._listctrl.DeleteDatas( ( rule, ) )
-                    
-                    self._listctrl.AddDatas( ( edited_rule, ) )
-                    
-                    edited_datas.append( edited_rule )
-                    
-                else:
-                    
-                    break
-                    
-                
+            return
             
         
-        self._listctrl.SelectDatas( edited_datas )
-        
-        self._listctrl.Sort()
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit rule' ) as dlg:
+            
+            panel = self._EditPanel( dlg, rule )
+            
+            dlg.SetPanel( panel )
+            
+            if dlg.exec() == QW.QDialog.DialogCode.Accepted:
+                
+                edited_rule = panel.GetValue()
+                
+                self._listctrl.ReplaceData( rule, edited_rule, sort_and_scroll = True )
+                
+            
         
     
     def GetValue( self ):

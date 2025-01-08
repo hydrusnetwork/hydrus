@@ -336,7 +336,7 @@ class ManageServerServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 self._SetNonDupePort( new_service )
                 
-                self._services_listctrl.AddDatas( ( new_service, ), select_sort_and_scroll = True )
+                self._services_listctrl.AddData( new_service, select_sort_and_scroll = True )
                 
             
         

@@ -3,7 +3,6 @@ import typing
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
-from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTime
 
@@ -95,11 +94,11 @@ class PairComparatorOneFile( PairComparator ):
         
         if self._looking_at == LOOKING_AT_BETTER_CANDIDATE:
             
-            return f'A: {self._metadata_conditional.GetSummary()}'
+            return f'better file will pass: {self._metadata_conditional.GetSummary()}'
             
         else:
             
-            return f'B: {self._metadata_conditional.GetSummary()}'
+            return f'worse file will pass: {self._metadata_conditional.GetSummary()}'
             
         
     
@@ -206,11 +205,6 @@ class PairSelector( HydrusSerialisable.SerialisableBase ):
         self._comparators = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_comparators )
         
     
-    def AddComparator( self, comparator: PairComparator ):
-        
-        self._comparators.append( comparator )
-        
-    
     def GetComparators( self ):
         
         return self._comparators
@@ -244,6 +238,11 @@ class PairSelector( HydrusSerialisable.SerialisableBase ):
         comparator_strings = sorted( [ comparator.GetSummary() for comparator in self._comparators ] )
         
         return ', '.join( comparator_strings )
+        
+    
+    def SetComparators( self, comparators: typing.Collection[ PairComparator ] ):
+        
+        self._comparators = list( comparators )
         
     
 
@@ -299,7 +298,13 @@ class DuplicatesAutoResolutionRule( HydrusSerialisable.SerialisableBaseNamed ):
         return 'set A as better, delete worse'
         
     
-    def GetComparatorSummary( self ) -> str:
+    
+    def GetPairSelector( self ) -> PairSelector:
+        
+        return self._pair_selector
+        
+    
+    def GetPairSelectorSummary( self ) -> str:
         
         return self._pair_selector.GetSummary()
         
@@ -422,13 +427,17 @@ def GetDefaultRuleSuggestions() -> typing.List[ DuplicatesAutoResolutionRule ]:
     
     comparator.SetLookingAt( LOOKING_AT_BETTER_CANDIDATE )
     
-    mc = ClientMetadataConditional.MetadataConditional()
+    file_search_context_mc = ClientSearchFileSearchContext.FileSearchContext(
+        predicates = [ ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_MIME, value = ( HC.IMAGE_JPEG, ) ) ]
+    )
     
-    mc.SetPredicate( ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_MIME, value = ( HC.IMAGE_JPEG, ) ) )
+    metadata_conditional = ClientMetadataConditional.MetadataConditional()
     
-    comparator.SetMetadataConditional( mc )
+    metadata_conditional.SetFileSearchContext( file_search_context_mc )
     
-    selector.AddComparator( comparator )
+    comparator.SetMetadataConditional( metadata_conditional )
+    
+    selector.SetComparators( [ comparator ] )
     
     duplicates_auto_resolution_rule.SetPairSelector( selector )
     
@@ -450,7 +459,7 @@ class DuplicatesAutoResolutionManager( ClientDaemons.ManagerWithMainLoop ):
         Needs some careful locking for when the edit dialog is open, like import folders manager etc..
         """
         
-        super().__init__( controller )
+        super().__init__( controller, 15 )
         
         self._ids_to_rules = {}
         
@@ -498,81 +507,58 @@ class DuplicatesAutoResolutionManager( ClientDaemons.ManagerWithMainLoop ):
         return 'idle'
         
     
-    def MainLoop( self ):
+    def _DoMainLoop( self ):
         
-        try:
+        while True:
             
-            time_to_start = HydrusTime.GetNow() + 15
-            
-            while not HydrusTime.TimeHasPassed( time_to_start ):
+            with self._lock:
                 
-                with self._lock:
-                    
-                    self._CheckShutdown()
-                    
+                self._CheckShutdown()
                 
-                self._wake_event.wait( 1 )
+                able_to_work = self._AbleToWork()
                 
             
-            while True:
+            still_work_to_do = False
+            
+            work_period = 0.25
+            time_it_took = 1.0
+            
+            if able_to_work:
                 
-                with self._lock:
-                    
-                    self._CheckShutdown()
-                    
-                    able_to_work = self._AbleToWork()
-                    
+                CG.client_controller.WaitUntilViewFree()
                 
-                still_work_to_do = False
+                start_time = HydrusTime.GetNowFloat()
                 
-                work_period = 0.25
-                time_it_took = 1.0
-                
-                if able_to_work:
+                try:
                     
-                    CG.client_controller.WaitUntilViewFree()
+                    pass # get some work, do some work
+                    still_work_to_do = False
                     
-                    start_time = HydrusTime.GetNowFloat()
+                except Exception as e:
                     
-                    try:
-                        
-                        pass # get some work, do some work
-                        still_work_to_do = False
-                        
-                    except Exception as e:
-                        
-                        self._serious_error_encountered = True
-                        
-                        HydrusData.PrintException( e )
-                        
-                        message = 'There was an unexpected problem during duplicates auto-resolution work! This system will not run again this boot. A full traceback of this error should be written to the log.'
-                        message += '\n' * 2
-                        message += str( e )
-                        
-                        HydrusData.ShowText( message )
-                        
-                    finally:
-                        
-                        CG.client_controller.pub( 'notify_duplicates_auto_resolution_work_complete' )
-                        
+                    self._serious_error_encountered = True
                     
-                    time_it_took = HydrusTime.GetNowFloat() - start_time
+                    HydrusData.PrintException( e )
+                    
+                    message = 'There was an unexpected problem during duplicates auto-resolution work! This system will not run again this boot. A full traceback of this error should be written to the log.'
+                    message += '\n' * 2
+                    message += str( e )
+                    
+                    HydrusData.ShowText( message )
+                    
+                finally:
+                    
+                    CG.client_controller.pub( 'notify_duplicates_auto_resolution_work_complete' )
                     
                 
-                wait_period = self._GetWaitPeriod( work_period, time_it_took, still_work_to_do )
-                
-                self._wake_event.wait( wait_period )
-                
-                self._wake_event.clear()
+                time_it_took = HydrusTime.GetNowFloat() - start_time
                 
             
-        except HydrusExceptions.ShutdownException:
+            wait_period = self._GetWaitPeriod( work_period, time_it_took, still_work_to_do )
             
-            pass
+            self._wake_event.wait( wait_period )
             
-        finally:
-            
-            self._mainloop_is_finished = True
+            self._wake_event.clear()
             
         
     

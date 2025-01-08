@@ -152,6 +152,8 @@ class Page( QW.QWidget ):
         
         self._search_preview_split.splitterMoved.connect( self._PreviewSplitterMoved )
         
+        self._preview_canvas.launchMediaViewer.connect( self._PreviewCanvasWantsToLaunchMediaViewer )
+        
     
     def _ConnectMediaResultsPanelSignals( self ):
         
@@ -171,6 +173,16 @@ class Page( QW.QWidget ):
         hashlist_hashable = tuple( hashlist )
         
         return hash( hashlist_hashable )
+        
+    
+    def _PreviewCanvasWantsToLaunchMediaViewer( self ):
+        
+        media = self._preview_canvas.GetMedia()
+        
+        if media is not None:
+            
+            self._media_panel.LaunchMediaViewerOn( media )
+            
         
     
     def _PreviewSplitterMoved( self ):

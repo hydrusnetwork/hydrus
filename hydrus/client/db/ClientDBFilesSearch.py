@@ -76,12 +76,12 @@ def GetFilesInfoPredicates( system_predicates: ClientSearchFileSearchContext.Fil
         files_info_predicates.append( 'size < ' + str( simple_preds[ 'max_size' ] ) )
         
     
-    if 'mimes' in simple_preds:
+    if system_predicates.HasAllowedFiletypes():
         
         # Note, I worked on this way longer than I needed to, vacillating on how to structure this forced data properly and rewriting things four times
         # NOT EXISTS is a blessing, do not try to screw around too much!
         
-        mimes = simple_preds[ 'mimes' ]
+        mimes = system_predicates.GetAllowedFiletypes()
         
         if len( mimes ) == 1:
             

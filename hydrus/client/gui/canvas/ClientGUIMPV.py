@@ -82,27 +82,39 @@ def EmergencyDumpOutGlobal( probably_crashy, reason ):
     MPVHellBasket.instance().emergencyDumpOut.emit( probably_crashy, reason )
     
 
+def log_message_is_fine_bro( message ):
+    
+    return True in (
+        'rescan-external-files' in message,
+        'LZW decode failed' in message # borked gif headers
+    )
+    
+
 def log_handler( loglevel, component, message ):
     
     # ok important bug dude, if you have multiple mpv windows and hence log handlers, then somehow the mpv dll or python-mpv wrapper is delivering at least some log events to the wrong player's event loop
     # so my mapping here to preserve the mpv widget for a particular log message and then dump out the player in emergency is only going to work half the time
     
-    nah_it_is_fine_bro_tests = [
-        'rescan-external-files' in message,
-        'LZW decode failed' in message # borked gif headers
-    ]
-    
-    if True in nah_it_is_fine_bro_tests and not HG.mpv_report_mode:
+    if log_message_is_fine_bro( message ) and not HG.mpv_report_mode:
         
         return
         
     
-    if loglevel == 'error' and 'ffmpeg' in component:
+    if loglevel == 'error':
         
-        probably_crashy_tests = [
-            'Invalid NAL unit size' in message,
-            'Error splitting the input' in message
-        ]
+        if 'ffmpeg' in component:
+            
+            probably_crashy_tests = [
+                'Invalid NAL unit size' in message,
+                'Error splitting the input' in message
+            ]
+            
+        else:
+            
+            probably_crashy_tests = [
+                'Too many events queued' in message
+            ]
+            
         
         CG.client_controller.CallBlockingToQt( CG.client_controller.gui, EmergencyDumpOutGlobal, True in probably_crashy_tests, f'{component}: {message}' )
         
@@ -129,7 +141,7 @@ class MPVFileLoadedEvent( QC.QEvent ):
         super().__init__( MPVFileLoadedEventType )
         
     
-'''
+
 MPVLogEventType = QP.registerEventType()
 
 class MPVLogEvent( QC.QEvent ):
@@ -142,7 +154,7 @@ class MPVLogEvent( QC.QEvent ):
         self.event = event
         
     
-'''
+
 MPVFileSeekedEventType = QP.registerEventType()
 
 class MPVFileSeekedEvent( QC.QEvent ):
@@ -370,7 +382,6 @@ class MPVWidget( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
                 app.postEvent( self, MPVShutdownEvent() )
                 
             
-        
         '''
         @player.event_callback( mpv.MpvEventID.LOG_MESSAGE )
         def log_event( event ):
@@ -976,6 +987,8 @@ class MPVWidget( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
                     self._player.volume = ClientGUIMediaVolume.GetCorrectCurrentVolume( self._canvas_type )
                     self._player.mute = mute_override or ClientGUIMediaVolume.GetCorrectCurrentMute( self._canvas_type )
                     self._player.pause = start_paused
+                    
+                    self.update()
                     
                 
                 def errback_ui_cleanup_callable():

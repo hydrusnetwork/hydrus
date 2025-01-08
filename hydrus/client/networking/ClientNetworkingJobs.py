@@ -825,6 +825,27 @@ class NetworkJob( object ):
         
         ( connect_timeout, read_timeout ) = self._GetTimeouts()
         
+        if HG.network_report_mode:
+            
+            if len( headers ) > 0:
+                
+                message = f'Request Headers set by the network domain manager: ' + ', '.join( sorted( headers.keys() ) )
+                
+            else:
+                
+                message = 'No custom headers set by the network domain manager.'
+                
+            
+            if HG.network_report_mode_silent:
+                
+                HydrusData.Print( message )
+                
+            else:
+                
+                HydrusData.ShowText( message )
+                
+            
+        
         if self._file_body_path is not None:
             
             with open( self._file_body_path, 'rb' ) as f:
@@ -835,6 +856,24 @@ class NetworkJob( object ):
         else:
             
             response = session.request( method, url, data = data, files = files, headers = headers, stream = True, timeout = ( connect_timeout, read_timeout ) )
+            
+        
+        if HG.network_report_mode:
+            
+            message = 'Request Headers:\n'
+            message += '\n'.join( [ f'{key}: {value}' for ( key, value ) in sorted( response.request.headers.items() ) ] )
+            message += '\n\n'
+            message += 'Response Headers:\n'
+            message += '\n'.join( [ f'{key}: {value}' for ( key, value ) in sorted( response.headers.items() ) ] )
+            
+            if HG.network_report_mode_silent:
+                
+                HydrusData.Print( message )
+                
+            else:
+                
+                HydrusData.ShowText( message )
+                
             
         
         with self._lock:

@@ -1792,7 +1792,7 @@ class SubscriptionsManager( ClientDaemons.ManagerWithMainLoop ):
     
     def __init__( self, controller, subscriptions: typing.List[ Subscription ] ):
         
-        super().__init__( controller )
+        super().__init__( controller, 10 )
         
         self._names_to_subscriptions = { subscription.GetName() : subscription for subscription in subscriptions }
         self._names_to_running_subscription_info = {}
@@ -1960,11 +1960,9 @@ class SubscriptionsManager( ClientDaemons.ManagerWithMainLoop ):
             
         
     
-    def MainLoop( self ):
+    def _DoMainLoop( self ):
         
         try:
-            
-            self._wake_event.wait( 3 )
             
             while True:
                 
@@ -1995,10 +1993,6 @@ class SubscriptionsManager( ClientDaemons.ManagerWithMainLoop ):
                 self._wake_event.clear()
                 
             
-        except HydrusExceptions.ShutdownException:
-            
-            pass
-            
         finally:
             
             self.PauseSubscriptionsForEditing()
@@ -2025,8 +2019,6 @@ class SubscriptionsManager( ClientDaemons.ManagerWithMainLoop ):
                     time.sleep( 0.1 )
                     
                 
-            
-            self._mainloop_is_finished = True
             
         
     

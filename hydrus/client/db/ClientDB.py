@@ -4834,27 +4834,41 @@ class DB( HydrusDB.HydrusDB ):
             
         else:
             
-            limit_phrase = ' LIMIT ' + str( limit )
+            limit_phrase = f'LIMIT {limit}'
             
         
         timestamp_cutoff = 0
         
+        predicates = []
+        order_phrase = ''
+        
         if minimum_age is None:
             
-            age_phrase = ' ORDER BY timestamp_ms ASC' # when deleting until trash is small enough, let's delete oldest first
+            order_phrase = 'ORDER BY timestamp_ms ASC' # when deleting until trash is small enough, let's delete oldest first
             
         else:
             
             timestamp_cutoff = HydrusTime.GetNow() - minimum_age
             
-            age_phrase = ' WHERE timestamp_ms < ' + str( timestamp_cutoff * 1000 )
+            predicates.append( f'timestamp_ms < {timestamp_cutoff * 1000}' )
             
         
         current_files_table_name = ClientDBFilesStorage.GenerateFilesTableName( self.modules_services.trash_service_id, HC.CONTENT_STATUS_CURRENT )
         
-        hash_ids = self._STS( self._Execute( 'SELECT hash_id FROM {}{}{};'.format( current_files_table_name, age_phrase, limit_phrase ) ) )
+        lock_predicates = self.modules_file_delete_lock.GetPhysicalFileDeleteLockSQLitePredicates( f'{current_files_table_name}.hash_id' )
         
-        hash_ids = self.modules_file_delete_lock.FilterForPhysicalFileDeleteLock( hash_ids )
+        predicates.extend( lock_predicates )
+        
+        if len( predicates ) > 0:
+            
+            predicates_phrase = 'WHERE ' + ' AND '.join( predicates )
+            
+        else:
+            
+            predicates_phrase = ''
+            
+        
+        hash_ids = self._STS( self._Execute( f'SELECT hash_id FROM {current_files_table_name} {predicates_phrase} {order_phrase} {limit_phrase};' ) )
         
         if HG.db_report_mode:
             
@@ -5137,6 +5151,8 @@ class DB( HydrusDB.HydrusDB ):
                 'ideal_client_files_locations' : self.modules_files_physical_storage.GetIdealClientFilesLocations,
                 'last_shutdown_work_time' : self.modules_db_maintenance.GetLastShutdownWorkTime,
                 'media_predicates' : self.modules_tag_display.GetMediaPredicates,
+                'missing_archive_timestamps_import_count' : self.modules_files_inbox.NumMissingImportArchiveTimestamps,
+                'missing_archive_timestamps_legacy_count' : self.modules_files_inbox.NumMissingLegacyArchiveTimestamps,
                 'missing_archive_timestamps_import_test' : self.modules_files_inbox.WeHaveMissingImportArchiveTimestamps,
                 'missing_archive_timestamps_legacy_test' : self.modules_files_inbox.WeHaveMissingLegacyArchiveTimestamps,
                 'missing_repository_update_hashes' : self.modules_repositories.GetRepositoryUpdateHashesIDoNotHave,
@@ -11437,6 +11453,80 @@ class DB( HydrusDB.HydrusDB ):
                 HydrusData.PrintException( e )
                 
                 message = 'Trying to check for archived time gaps failed! Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
+                
+            
+        
+        if version == 603:
+            
+            try:
+                
+                domain_manager: ClientNetworkingDomain.NetworkDomainManager = self.modules_serialisable.GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
+                
+                domain_manager.Initialise()
+                
+                #
+                
+                domain_manager.OverwriteDefaultParsers( [
+                    'shimmie file page parser - simple tags'
+                ] )
+                
+                #
+                
+                domain_manager.TryToLinkURLClassesAndParsers()
+                
+                #
+                
+                self.modules_serialisable.SetJSONDump( domain_manager )
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to update some downloader objects failed! Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
+                
+            
+            try:
+                
+                login_manager: ClientNetworkingLogin.NetworkLoginManager = self.modules_serialisable.GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_LOGIN_MANAGER )
+                
+                login_manager.Initialise()
+                
+                login_manager.OverwriteDefaultLoginScripts( [
+                    'e621.net login'
+                ] )
+                
+                #
+                
+                self.modules_serialisable.SetJSONDump( login_manager )
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to update some login stuff failed! Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
+                
+            
+            try:
+                
+                all_local_hash_ids = self.modules_files_storage.GetCurrentHashIdsList( self.modules_services.combined_local_file_service_id )
+                
+                with self._MakeTemporaryIntegerTable( all_local_hash_ids, 'hash_id' ) as temp_hash_ids_table_name:
+                    
+                    hash_ids = self._STS( self._Execute( 'SELECT hash_id FROM {} CROSS JOIN files_info USING ( hash_id ) WHERE mime IN {};'.format( temp_hash_ids_table_name, HydrusData.SplayListForDB( HC.FILES_THAT_HAVE_PERCEPTUAL_HASH ) ) ) )
+                    self.modules_files_maintenance_queue.AddJobs( hash_ids, ClientFiles.REGENERATE_FILE_DATA_JOB_CHECK_SIMILAR_FILES_MEMBERSHIP )
+                    
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'A file maintenance job failed to schedule! This is not super important, but hydev would be interested in seeing the error that was printed to the log.'
                 
                 self.pub_initial_message( message )
                 

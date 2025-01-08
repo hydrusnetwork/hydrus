@@ -1433,8 +1433,14 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
             
             if HG.network_report_mode:
                 
-                message = f'request for URL to fetch: {url} -> {url_to_fetch}'
-                
+                if url_to_fetch != url:
+                    
+                    message = f'Request for URL to fetch:\n{url}\n->\n{url_to_fetch}'
+                    
+                else:
+                    
+                    message = f'Request for URL to fetch:\n{url}\n->\n(no transformation)'
+                    
                 if HG.network_report_mode_silent:
                     
                     HydrusData.Print( message )
@@ -1457,17 +1463,38 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
             
             if HG.network_report_mode:
                 
-                ( url_to_fetch, parser ) = result
-                
                 url_class = self._GetURLClass( url )
                 
-                url_name = url_class.GetName()
+                if url_class is None:
+                    
+                    url_name = 'unknown url type'
+                    
+                else:
+                    
+                    url_name = url_class.GetName()
+                    
                 
-                url_to_fetch_match = self._GetURLClass( url_to_fetch )
+                ( url_to_fetch, parser ) = result
                 
-                url_to_fetch_name = url_to_fetch_match.GetName()
-                
-                message = f'request for URL to fetch and parser: {url} ({url_name}) -> {url_to_fetch} ({url_to_fetch_name}): {parser.GetName()}'
+                if url_to_fetch != url:
+                    
+                    url_to_fetch_match = self._GetURLClass( url_to_fetch )
+                    
+                    if url_to_fetch_match is None:
+                        
+                        url_to_fetch_name = 'unknown url type'
+                        
+                    else:
+                        
+                        url_to_fetch_name = url_to_fetch_match.GetName()
+                        
+                    
+                    message = f'Request for URL to fetch and parser:\n{url} ({url_name})\n->\n{url_to_fetch} ({url_to_fetch_name}): {parser.GetName()}'
+                    
+                else:
+                    
+                    message = f'Request for URL to fetch and parser:\n{url} ({url_name})\n->\n(no transformation): {parser.GetName()}'
+                    
                 
                 if HG.network_report_mode_silent:
                     

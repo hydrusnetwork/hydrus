@@ -355,6 +355,9 @@ EDIT_PRED_TYPES = {
     PREDICATE_TYPE_TAG
 }
 
+# this has useful order
+PREDICATE_TYPES_WE_CAN_TEST_ON_MEDIA_RESULTS = [ PREDICATE_TYPE_SYSTEM_INBOX, PREDICATE_TYPE_SYSTEM_ARCHIVE, PREDICATE_TYPE_SYSTEM_MIME, PREDICATE_TYPE_SYSTEM_WIDTH, PREDICATE_TYPE_SYSTEM_HEIGHT ]
+
 class Predicate( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_PREDICATE
@@ -786,7 +789,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
     
     def CanTestMediaResult( self ) -> bool:
         
-        return self._predicate_type in { PREDICATE_TYPE_SYSTEM_MIME, PREDICATE_TYPE_SYSTEM_HEIGHT, PREDICATE_TYPE_SYSTEM_WIDTH }
+        return self._predicate_type in PREDICATE_TYPES_WE_CAN_TEST_ON_MEDIA_RESULTS
         
     
     def GetCopy( self ):
@@ -1174,11 +1177,26 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
     
     def TestMediaResult( self, media_result: ClientMediaResult.MediaResult ) -> bool:
         
+        if self._predicate_type == PREDICATE_TYPE_SYSTEM_INBOX:
+            
+            return media_result.GetLocationsManager().inbox
+            
+        elif self._predicate_type == PREDICATE_TYPE_SYSTEM_ARCHIVE:
+            
+            return not media_result.GetLocationsManager().inbox
+            
         if self._predicate_type == PREDICATE_TYPE_SYSTEM_MIME:
             
             mimes = ConvertSummaryFiletypesToSpecific( self._value )
             
-            return media_result.GetMime() in mimes
+            if self._inclusive:
+                
+                return media_result.GetMime() in mimes
+                
+            else:
+                
+                return media_result.GetMime() not in mimes
+                
             
         elif self._predicate_type == PREDICATE_TYPE_SYSTEM_HEIGHT:
             
@@ -1192,8 +1210,10 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
             
             return number_test.Test( media_result.GetFileInfoManager().width )
             
-        
-        return False
+        else:
+            
+            raise NotImplementedError( f'The given predicate, "{self.ToString()}", cannot test a media result! You should not be able to get into this situation, so please contact hydev with details.' )
+            
         
     
     def ToString( self, with_count: bool = True, render_for_user: bool = False, or_under_construction: bool = False, for_parsable_export: bool = False ) -> str:
@@ -1681,7 +1701,9 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                     
                     mime_text = ConvertSummaryFiletypesToString( summary_mimes )
                     
-                    base += ' is ' + mime_text
+                    connector = ' is ' if self._inclusive else ' is not '
+                    
+                    base += connector + mime_text
                     
                 
             elif self._predicate_type == PREDICATE_TYPE_SYSTEM_RATING:

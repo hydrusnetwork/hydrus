@@ -1,7 +1,7 @@
 from hydrus.core import HydrusSerialisable
 
 from hydrus.client.media import ClientMediaResult
-from hydrus.client.search import ClientSearchPredicate
+from hydrus.client.search import ClientSearchFileSearchContext
 
 class MetadataConditional( HydrusSerialisable.SerialisableBase ):
     
@@ -13,49 +13,49 @@ class MetadataConditional( HydrusSerialisable.SerialisableBase ):
         
         super().__init__()
         
-        # starting this guy out nice and simple, just a wrapper for a system pred
-        # future versions of this object could hold multiple system preds or whatever
-        
-        self._predicate = ClientSearchPredicate.SYSTEM_PREDICATE_INBOX
+        self._file_search_context = ClientSearchFileSearchContext.FileSearchContext( predicates = [] )
         
     
     def _GetSerialisableInfo( self ):
         
-        serialisable_predicate = self._predicate.GetSerialisableTuple()
+        serialisable_file_search_context = self._file_search_context.GetSerialisableTuple()
         
-        return serialisable_predicate
+        return serialisable_file_search_context
         
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
-        serialisable_predicate = serialisable_info
+        serialisable_file_search_context = serialisable_info
         
-        self._predicate = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_predicate )
+        self._file_search_context = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_file_search_context )
         
     
-    def GetPredicate( self ) -> ClientSearchPredicate.Predicate:
+    def GetFileSearchContext( self ) -> ClientSearchFileSearchContext.FileSearchContext:
         
-        return self._predicate
+        return self._file_search_context
         
     
     def GetSummary( self ):
         
-        return self._predicate.ToString()
+        return self._file_search_context.GetSummary()
         
     
-    def SetPredicate( self, predicate: ClientSearchPredicate.Predicate ):
+    def SetFileSearchContext( self, file_search_context: ClientSearchFileSearchContext.FileSearchContext ):
         
-        self._predicate = predicate
+        file_search_context = file_search_context.Duplicate()
+        
+        predicates = file_search_context.GetPredicates()
+        
+        predicates = [ predicate for predicate in predicates if predicate.CanTestMediaResult() ]
+        
+        file_search_context.SetPredicates( predicates )
+        
+        self._file_search_context = file_search_context
         
     
     def Test( self, media_result: ClientMediaResult.MediaResult ) -> bool:
         
-        if self._predicate.CanTestMediaResult():
-            
-            return self._predicate.TestMediaResult( media_result )
-            
-        
-        raise NotImplementedError( f'The given predicate, "{self._predicate.ToString()}", cannot test a media result! You should not be able to this situation, so please contact hydev with details.' )
+        return self._file_search_context.TestMediaResult( media_result )
         
     
 

@@ -280,7 +280,7 @@ class EditShortcutSetPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 data = ( shortcut, command )
                 
-                self._shortcuts.AddDatas( ( data, ), select_sort_and_scroll = True )
+                self._shortcuts.AddData( data, select_sort_and_scroll = True )
                 
             
         
@@ -416,18 +416,13 @@ class EditShortcutsPanel( ClientGUIScrolledPanels.EditPanel ):
         reserved_shortcuts = [ shortcuts for shortcuts in all_shortcuts if shortcuts.GetName() in ClientGUIShortcuts.SHORTCUTS_RESERVED_NAMES ]
         custom_shortcuts = [ shortcuts for shortcuts in all_shortcuts if shortcuts.GetName() not in ClientGUIShortcuts.SHORTCUTS_RESERVED_NAMES ]
         
-        self._reserved_shortcuts.AddDatas( reserved_shortcuts )
+        self._reserved_shortcuts.SetData( reserved_shortcuts )
         
         self._reserved_shortcuts.Sort()
         
-        self._original_custom_names = set()
+        self._original_custom_names = { shortcuts.GetName() for shortcuts in custom_shortcuts }
         
-        for shortcuts in custom_shortcuts:
-            
-            self._custom_shortcuts.AddDatas( ( shortcuts, ) )
-            
-            self._original_custom_names.add( shortcuts.GetName() )
-            
+        self._custom_shortcuts.SetData( custom_shortcuts )
         
         self._custom_shortcuts.Sort()
         
@@ -496,7 +491,11 @@ class EditShortcutsPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 new_shortcuts = panel.GetValue()
                 
-                self._custom_shortcuts.AddDatas( ( new_shortcuts, ), select_sort_and_scroll = True )
+                existing_names = self._GetExistingCustomShortcutNames()
+                
+                new_shortcuts.SetNonDupeName( existing_names )
+                
+                self._custom_shortcuts.AddData( new_shortcuts, select_sort_and_scroll = True )
                 
             
         
@@ -531,6 +530,12 @@ class EditShortcutsPanel( ClientGUIScrolledPanels.EditPanel ):
             if dlg.exec() == QW.QDialog.DialogCode.Accepted:
                 
                 edited_shortcuts = panel.GetValue()
+                
+                existing_names = self._GetExistingCustomShortcutNames()
+                
+                existing_names.discard( shortcuts.GetName() )
+                
+                edited_shortcuts.SetNonDupeName( existing_names )
                 
                 self._custom_shortcuts.ReplaceData( shortcuts, edited_shortcuts, sort_and_scroll = True )
                 
@@ -579,6 +584,11 @@ class EditShortcutsPanel( ClientGUIScrolledPanels.EditPanel ):
         size = len( shortcuts )
         
         return ( pretty_name, HydrusNumbers.ToHumanInt( size ) )
+        
+    
+    def _GetExistingCustomShortcutNames( self ):
+        
+        return { shortcuts.GetName() for shortcuts in self._custom_shortcuts.GetData() }
         
     
     def _GetSortTuple( self, shortcuts ):
@@ -636,7 +646,7 @@ class EditShortcutsPanel( ClientGUIScrolledPanels.EditPanel ):
             
             ClientGUIDialogsMessage.ShowInformation( self, 'It looks like your client was missing the "{}" shortcut set! It will now be restored.'.format( name ) )
             
-            self._reserved_shortcuts.AddDatas( ( new_data, ), select_sort_and_scroll = True )
+            self._reserved_shortcuts.AddData( new_data, select_sort_and_scroll = True )
             
         else:
             

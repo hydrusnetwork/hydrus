@@ -64,8 +64,6 @@ INCDEC_SIZE = QC.QSize( 32, 16 )
 
 def DrawIncDec( painter: QG.QPainter, x, y, service_key, rating_state, rating ):
     
-    painter.setRenderHint( QG.QPainter.Antialiasing, True )
-    
     if rating is None:
         
         rating = 0
@@ -97,7 +95,11 @@ def DrawIncDec( painter: QG.QPainter, x, y, service_key, rating_state, rating ):
     painter.setPen( pen_colour )
     painter.setBrush( brush_colour )
     
-    painter.drawRect( x, y, INCDEC_SIZE.width(), INCDEC_SIZE.height() )
+    painter.setRenderHint( QG.QPainter.Antialiasing, False )
+    
+    painter.drawRect( x, y, INCDEC_SIZE.width() - 1, INCDEC_SIZE.height() - 1 )
+    
+    painter.setRenderHint( QG.QPainter.Antialiasing, True )
     
     text_rect = QC.QRect( QC.QPoint( x + 1, y + 1 ), INCDEC_SIZE - QC.QSize( 4, 4 ) )
     

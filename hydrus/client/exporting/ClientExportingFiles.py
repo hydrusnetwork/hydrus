@@ -1,4 +1,3 @@
-import collections
 import os
 import re
 import typing
@@ -548,6 +547,8 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
         
         num_actually_copied = 0
         
+        dirs_we_checked_exist = set()
+        
         for ( i, media_result ) in enumerate( media_results ):
             
             job_status.SetStatusText( 'exporting: {}'.format( HydrusNumbers.ValueRangeToPrettyString( i + 1, len( media_results ) ) ) )
@@ -594,7 +595,12 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
             
             dest_path_dir = os.path.dirname( dest_path )
             
-            HydrusPaths.MakeSureDirectoryExists( dest_path_dir )
+            if dest_path_dir not in dirs_we_checked_exist:
+                
+                HydrusPaths.MakeSureDirectoryExists( dest_path_dir )
+                
+                dirs_we_checked_exist.add( dest_path_dir )
+                
             
             if dest_path not in sync_paths:
                 
@@ -629,18 +635,21 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
                     
                     actually_copied = HydrusPaths.MirrorFile( source_path, dest_path )
                     
+                    if actually_copied:
+                        
+                        HydrusPaths.TryToGiveFileNicePermissionBits( dest_path )
+                        
+                    
                 
                 if actually_copied:
                     
                     num_actually_copied += 1
                     
-                    HydrusPaths.TryToGiveFileNicePermissionBits( dest_path )
+                    for metadata_router in self._metadata_routers:
+                        
+                        metadata_router.Work( media_result, dest_path )
+                        
                     
-                
-            
-            for metadata_router in self._metadata_routers:
-                
-                metadata_router.Work( media_result, dest_path )
                 
             
             sync_paths.add( dest_path )

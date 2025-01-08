@@ -548,6 +548,8 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         
         #
         
+        self._options_panel = ClientGUICommon.StaticBox( self._main_right_panel, 'merge options' )
+        
         menu_items = []
         
         menu_items.append( ( 'normal', 'edit duplicate metadata merge options for \'this is better\'', 'edit what content is merged when you filter files', HydrusData.Call( self._EditMergeOptions, HC.DUPLICATE_BETTER ) ) )
@@ -558,11 +560,9 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
             menu_items.append( ( 'normal', 'edit duplicate metadata merge options for \'alternates\' (advanced!)', 'edit what content is merged when you filter files', HydrusData.Call( self._EditMergeOptions, HC.DUPLICATE_ALTERNATE ) ) )
             
         
-        self._edit_merge_options = ClientGUIMenuButton.MenuButton( self._main_right_panel, 'edit default duplicate metadata merge options', menu_items )
+        self._edit_merge_options = ClientGUIMenuButton.MenuButton( self._options_panel, 'edit default duplicate metadata merge options', menu_items )
         
         #
-        
-        self._filtering_panel = ClientGUICommon.StaticBox( self._main_right_panel, 'duplicate filter' )
         
         potential_duplicates_search_context = management_controller.GetVariable( 'potential_duplicates_search_context' )
         
@@ -575,10 +575,15 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
             synchronised = True
             
         
-        self._potential_duplicates_search_context = ClientGUIPotentialDuplicatesSearchContext.EditPotentialDuplicatesSearchContextPanel( self._filtering_panel, potential_duplicates_search_context, synchronised = synchronised, page_key = self._page_key )
+        self._potential_duplicates_search_context = ClientGUIPotentialDuplicatesSearchContext.EditPotentialDuplicatesSearchContextPanel( self, potential_duplicates_search_context, synchronised = synchronised, page_key = self._page_key )
         
         self._potential_duplicates_search_context.valueChanged.connect( self._PotentialDuplicatesSearchContextChanged )
         
+        #
+        
+        self._filtering_panel = ClientGUICommon.StaticBox( self._main_right_panel, 'duplicate filter' )
+        
+        # move these guys to the search context panel!!
         self._num_potential_duplicates = ClientGUICommon.BetterStaticText( self._filtering_panel, ellipsize_end = True )
         self._refresh_dupe_counts_button = ClientGUICommon.BetterBitmapButton( self._filtering_panel, CC.global_pixmaps().refresh, self.RefreshDuplicateNumbers )
         
@@ -650,12 +655,13 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         
         #
         
+        self._options_panel.Add( self._edit_merge_options, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
         text_and_button_hbox = QP.HBoxLayout()
         
         QP.AddToLayout( text_and_button_hbox, self._num_potential_duplicates, CC.FLAGS_CENTER_PERPENDICULAR_EXPAND_DEPTH )
         QP.AddToLayout( text_and_button_hbox, self._refresh_dupe_counts_button, CC.FLAGS_CENTER_PERPENDICULAR )
         
-        self._filtering_panel.Add( self._potential_duplicates_search_context, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._filtering_panel.Add( text_and_button_hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._filtering_panel.Add( self._launch_filter, CC.FLAGS_EXPAND_PERPENDICULAR )
         
@@ -666,7 +672,8 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         
         vbox = QP.VBoxLayout()
         
-        QP.AddToLayout( vbox, self._edit_merge_options, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._options_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._potential_duplicates_search_context, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, self._filtering_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, random_filtering_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._MakeCurrentSelectionTagsBox( vbox )

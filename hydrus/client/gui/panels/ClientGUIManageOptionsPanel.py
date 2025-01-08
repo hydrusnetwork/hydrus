@@ -1101,7 +1101,9 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 launch_path = self._new_options.GetMimeLaunch( mime )
                 
-                self._mime_launch_listctrl.AddDatas( [ ( mime, launch_path ) ] )
+                row = ( mime, launch_path )
+                
+                self._mime_launch_listctrl.AddData( row )
                 
             
             self._mime_launch_listctrl.Sort()
@@ -1666,9 +1668,9 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             for ( name, info ) in self._new_options.GetFrameLocations():
                 
-                listctrl_list = QP.ListsToTuples( [ name ] + list( info ) )
+                listctrl_data = QP.ListsToTuples( [ name ] + list( info ) )
                 
-                self._frame_locations.AddDatas( ( listctrl_list, ) )
+                self._frame_locations.AddData( listctrl_data )
                 
             
             self._frame_locations.Sort()
@@ -2843,6 +2845,12 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._file_info_line_consider_file_services_import_times_interesting = QW.QCheckBox( media_canvas_panel )
             self._file_info_line_consider_file_services_import_times_interesting.setToolTip( ClientGUIFunctions.WrapToolTip( 'If we show the file services, should we show when they were added?' ) )
             
+            self._file_info_line_consider_trash_time_interesting = QW.QCheckBox( media_canvas_panel )
+            self._file_info_line_consider_trash_time_interesting.setToolTip( ClientGUIFunctions.WrapToolTip( 'Should we show the time a file is trashed in the top hover file info summary?' ) )
+            
+            self._file_info_line_consider_trash_reason_interesting = QW.QCheckBox( media_canvas_panel )
+            self._file_info_line_consider_trash_reason_interesting.setToolTip( ClientGUIFunctions.WrapToolTip( 'Should we show the reason a file is trashed in the top hover file info summary?' ) )
+            
             self._hide_uninteresting_modified_time = QW.QCheckBox( media_canvas_panel )
             self._hide_uninteresting_modified_time.setToolTip( ClientGUIFunctions.WrapToolTip( 'If the file has a modified time similar to its import time (specifically, the number of seconds since both events differs by less than 10%), hide the modified time in the top hover file info summary.' ) )
             
@@ -2893,6 +2901,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._file_info_line_consider_archived_time_interesting.setChecked( self._new_options.GetBoolean( 'file_info_line_consider_archived_time_interesting' ) )
             self._file_info_line_consider_file_services_interesting.setChecked( self._new_options.GetBoolean( 'file_info_line_consider_file_services_interesting' ) )
             self._file_info_line_consider_file_services_import_times_interesting.setChecked( self._new_options.GetBoolean( 'file_info_line_consider_file_services_import_times_interesting' ) )
+            self._file_info_line_consider_trash_time_interesting.setChecked( self._new_options.GetBoolean( 'file_info_line_consider_trash_time_interesting' ) )
+            self._file_info_line_consider_trash_reason_interesting.setChecked( self._new_options.GetBoolean( 'file_info_line_consider_trash_reason_interesting' ) )
             self._hide_uninteresting_modified_time.setChecked( self._new_options.GetBoolean( 'hide_uninteresting_modified_time' ) )
             
             self._media_viewer_cursor_autohide_time_ms.SetValue( self._new_options.GetNoneableInteger( 'media_viewer_cursor_autohide_time_ms' ) )
@@ -2938,6 +2948,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows.append( ( 'Show archived time in top hover summary', self._file_info_line_consider_archived_time_interesting ) )
             rows.append( ( 'Show file services in top hover summary', self._file_info_line_consider_file_services_interesting ) )
             rows.append( ( 'Show file service add times in top hover summary', self._file_info_line_consider_file_services_import_times_interesting ) )
+            rows.append( ( 'Show file trash times in top hover summary', self._file_info_line_consider_trash_time_interesting ) )
+            rows.append( ( 'Show file trash reasons in top hover summary', self._file_info_line_consider_trash_reason_interesting ) )
             rows.append( ( 'Hide uninteresting modified times in top hover summary:', self._hide_uninteresting_modified_time ) )
             
             media_canvas_gridbox = ClientGUICommon.WrapInGrid( media_canvas_panel, rows )
@@ -3016,6 +3028,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._new_options.SetBoolean( 'file_info_line_consider_archived_time_interesting', self._file_info_line_consider_archived_time_interesting.isChecked() )
             self._new_options.SetBoolean( 'file_info_line_consider_file_services_interesting', self._file_info_line_consider_file_services_interesting.isChecked() )
             self._new_options.SetBoolean( 'file_info_line_consider_file_services_import_times_interesting', self._file_info_line_consider_file_services_import_times_interesting.isChecked() )
+            self._new_options.SetBoolean( 'file_info_line_consider_trash_time_interesting', self._file_info_line_consider_trash_time_interesting.isChecked() )
+            self._new_options.SetBoolean( 'file_info_line_consider_trash_reason_interesting', self._file_info_line_consider_trash_reason_interesting.isChecked() )
             self._new_options.SetBoolean( 'hide_uninteresting_modified_time', self._hide_uninteresting_modified_time.isChecked() )
             
             self._new_options.SetBoolean( 'disallow_media_drags_on_duration_media', self._disallow_media_drags_on_duration_media.isChecked() )
@@ -3147,7 +3161,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 data = QP.ListsToTuples( [ mime ] + list( view_options ) )
                 
-                self._filetype_handling_listctrl.AddDatas( ( data, ) )
+                self._filetype_handling_listctrl.AddData( data )
                 
             
             self._filetype_handling_listctrl.Sort()
@@ -3349,7 +3363,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                     
                     new_data = panel.GetValue()
                     
-                    self._filetype_handling_listctrl.AddDatas( ( new_data, ) )
+                    self._filetype_handling_listctrl.AddData( new_data, select_sort_and_scroll = True )
                     
                 
             
@@ -5454,7 +5468,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                             
                             new_data = ( tag_slice, weight )
                             
-                            list_ctrl.AddDatas( [ new_data ], select_sort_and_scroll = True )
+                            list_ctrl.AddData( new_data, select_sort_and_scroll = True )
                             
                         
                     

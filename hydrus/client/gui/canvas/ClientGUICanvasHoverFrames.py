@@ -1309,7 +1309,10 @@ class CanvasHoverFrameTopRight( CanvasHoverFrame ):
         
         self._top_hover = top_hover
         
-        vbox = QP.VBoxLayout()
+        self._spacing = 2
+        self._margin = 2
+        
+        vbox = QP.VBoxLayout( spacing = self._spacing, margin = self._margin )
         
         self._icon_panel = QW.QWidget( self )
         
@@ -1569,6 +1572,11 @@ class CanvasHoverFrameTopRight( CanvasHoverFrame ):
         self._SizeAndPosition()
         
     
+    def GetVboxSpacingAndMargin( self ):
+        
+        return ( self._spacing, self._margin )
+        
+    
     def ProcessContentUpdatePackage( self, content_update_package: ClientContentUpdates.ContentUpdatePackage ):
         
         if self._current_media is not None:
@@ -1744,7 +1752,10 @@ class CanvasHoverFrameRightNotes( CanvasHoverFrame ):
         
         self._top_right_hover = top_right_hover
         
-        self._vbox = QP.VBoxLayout( spacing = 2, margin = 2 )
+        self._margin = 2
+        self._spacing = 2
+        
+        self._vbox = QP.VBoxLayout( spacing = self._spacing, margin = self._margin )
         self._names_to_note_panels = {}
         
         self.setSizePolicy( QW.QSizePolicy.Policy.Fixed, QW.QSizePolicy.Policy.Expanding )
@@ -1895,6 +1906,11 @@ class CanvasHoverFrameRightNotes( CanvasHoverFrame ):
         note_panel_width = self.width() - ( self.frameWidth() + self.layout().contentsMargins().left() ) * 2
         
         return note_panel_width
+        
+    
+    def GetNoteSpacingAndMargin( self ):
+        
+        return ( self._spacing, self._margin )
         
     
     def ProcessContentUpdatePackage( self, content_update_package: ClientContentUpdates.ContentUpdatePackage ):

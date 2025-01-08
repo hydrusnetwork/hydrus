@@ -242,9 +242,7 @@ class EditFavouriteSearchesPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 self._DeleteRow( row[0], row[1] )
                 
-                self._favourite_searches.AddDatas( ( row, ) )
-                
-                self._favourite_searches.Sort()
+                self._favourite_searches.AddData( row, select_sort_and_scroll = True )
                 
             
         
@@ -317,13 +315,15 @@ class EditFavouriteSearchesPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 if dlg.exec() == QW.QDialog.DialogCode.Accepted:
                     
+                    # this is all strange. replace with replacedatas perhaps, or perhaps this will be overhauled to a nested tree view or whatever!
+                    
                     self._DeleteRow( foldername, name )
                     
                     edited_row = panel.GetValue()
                     
                     self._DeleteRow( edited_row[0], edited_row[1] )
                     
-                    self._favourite_searches.AddDatas( ( edited_row, ) )
+                    self._favourite_searches.AddData( edited_row, select_sort_and_scroll = True )
                     
                 else:
                     

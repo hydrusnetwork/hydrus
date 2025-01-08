@@ -341,15 +341,19 @@ class EditNetworkContextCustomHeadersPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
+        datas = []
+        
         for ( network_context, custom_header_dict ) in list(network_contexts_to_custom_header_dicts.items()):
             
             for ( key, ( value, approved, reason ) ) in list(custom_header_dict.items()):
                 
                 data = ( network_context, ( key, value ), approved, reason )
                 
-                self._list_ctrl.AddDatas( ( data, ) )
+                datas.append( data )
                 
             
+        
+        self._list_ctrl.SetData( datas )
         
         self._list_ctrl.Sort()
         
@@ -382,7 +386,7 @@ class EditNetworkContextCustomHeadersPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 data = ( network_context, ( key, value ), approved, reason )
                 
-                self._list_ctrl.AddDatas( ( data, ) )
+                self._list_ctrl.AddData( data, select_sort_and_scroll = True )
                 
             
         
@@ -594,18 +598,22 @@ class ReviewAllBandwidthPanel( ClientGUIScrolledPanels.ReviewPanel ):
         self._history_time_delta_none = QW.QCheckBox( 'show all', self )
         self._history_time_delta_none.clicked.connect( self.EventTimeDeltaChanged )
         
+        self._bandwidths_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
+        
         model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_BANDWIDTH_REVIEW.ID, self._ConvertNetworkContextsToListCtrlTuples )
         
-        self._bandwidths = ClientGUIListCtrl.BetterListCtrlTreeView( self, 20, model, activation_callback = self.ShowNetworkContext )
+        self._bandwidths = ClientGUIListCtrl.BetterListCtrlTreeView( self._bandwidths_panel, 20, model, activation_callback = self.ShowNetworkContext )
         
-        self._edit_default_bandwidth_rules_button = ClientGUICommon.BetterButton( self, 'edit default bandwidth rules', self._EditDefaultBandwidthRules )
+        self._bandwidths_panel.SetListCtrl( self._bandwidths )
         
-        self._reset_default_bandwidth_rules_button = ClientGUICommon.BetterButton( self, 'reset default bandwidth rules', self._ResetDefaultBandwidthRules )
+        self._bandwidths_panel.AddButton( 'see more detail', self.ShowNetworkContext, enabled_only_on_selection = True )
+        self._bandwidths_panel.AddButton( 'delete selected history', self._DeleteNetworkContexts, enabled_only_on_selection = True )
         
-        default_rules_help_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().help, self._ShowDefaultRulesHelp )
-        default_rules_help_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'Show help regarding default bandwidth rules.' ) )
+        self._bandwidths_panel.NewButtonRow()
         
-        self._delete_record_button = ClientGUICommon.BetterButton( self, 'delete selected history', self._DeleteNetworkContexts )
+        self._bandwidths_panel.AddButton( 'edit default bandwidth rules', self._EditDefaultBandwidthRules )
+        self._bandwidths_panel.AddButton( 'reset default bandwidth rules', self._ResetDefaultBandwidthRules )
+        self._bandwidths_panel.AddBitmapButton( CC.global_pixmaps().help, self._ShowDefaultRulesHelp )
         
         #
         
@@ -637,16 +645,15 @@ class ReviewAllBandwidthPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         vbox = QP.VBoxLayout()
         
-        button_hbox = QP.HBoxLayout()
+        label = 'Every context normally relies on the respective default bandwidth rules for its type. Double-click any row to see more detail or override the defaults with specific rules.'
         
-        QP.AddToLayout( button_hbox, self._edit_default_bandwidth_rules_button, CC.FLAGS_CENTER_PERPENDICULAR )
-        QP.AddToLayout( button_hbox, self._reset_default_bandwidth_rules_button, CC.FLAGS_CENTER_PERPENDICULAR )
-        QP.AddToLayout( button_hbox, default_rules_help_button, CC.FLAGS_CENTER_PERPENDICULAR )
-        QP.AddToLayout( button_hbox, self._delete_record_button, CC.FLAGS_CENTER_PERPENDICULAR )
+        st = ClientGUICommon.BetterStaticText( self, label )
         
+        st.setWordWrap( True )
+        
+        QP.AddToLayout( vbox, st, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        QP.AddToLayout( vbox, self._bandwidths, CC.FLAGS_EXPAND_BOTH_WAYS )
-        QP.AddToLayout( vbox, button_hbox, CC.FLAGS_ON_RIGHT )
+        QP.AddToLayout( vbox, self._bandwidths_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         self.widget().setLayout( vbox )
         
@@ -673,8 +680,8 @@ class ReviewAllBandwidthPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         if self._history_time_delta_none.isChecked():
             
-            search_usage = 0
-            pretty_search_usage = ''
+            search_usage_requests = bandwidth_tracker.GetAllUsage( HC.BANDWIDTH_TYPE_REQUESTS )
+            search_usage_data = bandwidth_tracker.GetAllUsage( HC.BANDWIDTH_TYPE_DATA )
             
         else:
             
@@ -683,10 +690,10 @@ class ReviewAllBandwidthPanel( ClientGUIScrolledPanels.ReviewPanel ):
             search_usage_requests = bandwidth_tracker.GetUsage( HC.BANDWIDTH_TYPE_REQUESTS, search_delta )
             search_usage_data = bandwidth_tracker.GetUsage( HC.BANDWIDTH_TYPE_DATA, search_delta )
             
-            search_usage = ( search_usage_data, search_usage_requests )
-            
-            pretty_search_usage = HydrusData.ToHumanBytes( search_usage_data ) + ' in ' + HydrusNumbers.ToHumanInt( search_usage_requests ) + ' requests'
-            
+        
+        search_usage = ( search_usage_data, search_usage_requests )
+        
+        pretty_search_usage = HydrusData.ToHumanBytes( search_usage_data ) + ' in ' + HydrusNumbers.ToHumanInt( search_usage_requests ) + ' requests'
         
         pretty_network_context = network_context.ToString()
         pretty_context_type = CC.network_context_type_string_lookup[ network_context.context_type ]
@@ -754,7 +761,9 @@ class ReviewAllBandwidthPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         network_contexts_and_bandwidth_rules = self._controller.network_engine.bandwidth_manager.GetDefaultRules()
         
-        choice_tuples = [ ( network_context.ToString() + ' (' + str( len( bandwidth_rules.GetRules() ) ) + ' rules)', ( network_context, bandwidth_rules ) ) for ( network_context, bandwidth_rules ) in network_contexts_and_bandwidth_rules ]
+        choice_tuples = [ ( 'global', ( ClientNetworkingContexts.GLOBAL_NETWORK_CONTEXT, self._controller.network_engine.bandwidth_manager.GetRules( ClientNetworkingContexts.GLOBAL_NETWORK_CONTEXT ) ) ) ]
+        
+        choice_tuples.extend( [ ( network_context.ToString() + ' (' + str( len( bandwidth_rules.GetRules() ) ) + ' rules)', ( network_context, bandwidth_rules ) ) for ( network_context, bandwidth_rules ) in network_contexts_and_bandwidth_rules ] )
         
         try:
             
@@ -889,6 +898,8 @@ class ReviewNetworkContextBandwidthPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         self._current_usage_st = ClientGUICommon.BetterStaticText( usage_panel )
         
+        self._all_time_usage = ClientGUICommon.BetterStaticText( usage_panel )
+        
         self._time_delta_usage_bandwidth_type = ClientGUICommon.BetterChoice( usage_panel )
         self._time_delta_usage_time_delta = ClientGUITime.TimeDeltaButton( usage_panel, days = True, hours = True, minutes = True, seconds = True )
         self._time_delta_usage_st = ClientGUICommon.BetterStaticText( usage_panel )
@@ -958,6 +969,7 @@ class ReviewNetworkContextBandwidthPanel( ClientGUIScrolledPanels.ReviewPanel ):
         QP.AddToLayout( hbox, self._time_delta_usage_st, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         usage_panel.Add( self._current_usage_st, CC.FLAGS_EXPAND_PERPENDICULAR )
+        usage_panel.Add( self._all_time_usage, CC.FLAGS_EXPAND_PERPENDICULAR )
         usage_panel.Add( hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
         usage_panel.Add( self._barchart_canvas, CC.FLAGS_EXPAND_BOTH_WAYS )
         
@@ -1014,9 +1026,18 @@ class ReviewNetworkContextBandwidthPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         current_usage = self._bandwidth_tracker.GetUsage( HC.BANDWIDTH_TYPE_DATA, 1, for_user = True )
         
-        pretty_current_usage = 'current usage: ' + HydrusData.ToHumanBytes( current_usage ) + '/s'
+        pretty_current_usage = 'Current usage: ' + HydrusData.ToHumanBytes( current_usage ) + '/s'
         
         self._current_usage_st.setText( pretty_current_usage )
+        
+        #
+        
+        search_usage_requests = self._bandwidth_tracker.GetAllUsage( HC.BANDWIDTH_TYPE_REQUESTS )
+        search_usage_data = self._bandwidth_tracker.GetAllUsage( HC.BANDWIDTH_TYPE_DATA )
+        
+        all_time_pretty_search_usage = f'All time usage: {HydrusData.ToHumanBytes( search_usage_data )} in {HydrusNumbers.ToHumanInt( search_usage_requests )} requests'
+        
+        self._all_time_usage.setText( all_time_pretty_search_usage )
         
         #
         

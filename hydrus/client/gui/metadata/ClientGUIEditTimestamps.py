@@ -450,9 +450,7 @@ class EditFileTimestampsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUISc
                         
                         self._domain_modified_list_ctrl_data_dict[ domain ] = ( hashes, new_datetime_value_range, user_has_edited )
                         
-                        self._domain_modified_list_ctrl.AddDatas( ( domain, ) )
-                        
-                        self._domain_modified_list_ctrl.Sort()
+                        self._domain_modified_list_ctrl.AddData( domain, select_sort_and_scroll = True )
                         
                     
                 
@@ -460,6 +458,8 @@ class EditFileTimestampsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUISc
         
     
     def _EditDomainModifiedTimestamp( self ):
+        
+        # We intentionally allow multiple domains here, rather than GetTopSelectedData stuff
         
         selected_domains = self._domain_modified_list_ctrl.GetData( only_selected = True )
         
@@ -536,6 +536,8 @@ class EditFileTimestampsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUISc
         
     
     def _EditFileServiceTimestamp( self ):
+        
+        # We intentionally allow multiple domains here, rather than GetTopSelectedData stuff
         
         selected_file_service_keys_and_timestamp_types = self._file_services_list_ctrl.GetData( only_selected = True )
         

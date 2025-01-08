@@ -102,8 +102,8 @@ There are three special external libraries. You just have to get them and put th
     1. mpv  
         
         1. If you are on Windows 8.1 or older, [2021-02-28](https://sourceforge.net/projects/mpv-player-windows/files/libmpv/mpv-dev-x86_64-20210228-git-d1be8bb.7z) is known safe.
-        2. If you are on Windows 10 or newer but need the safe answer (e.g. your Windows is under-updated), try [2023-08-20](https://sourceforge.net/projects/mpv-player-windows/files/libmpv/mpv-dev-x86_64-20230820-git-19384e0.7z).
-        3. Otherwise, if you are just normal, use [2024-10-20](https://sourceforge.net/projects/mpv-player-windows/files/libmpv/mpv-dev-x86_64-20241020-git-37159a8.7z).
+        2. If you are on Windows 10 or need the safe answer (e.g. your Windows is under-updated), try [2023-08-20](https://sourceforge.net/projects/mpv-player-windows/files/libmpv/mpv-dev-x86_64-20230820-git-19384e0.7z).
+        3. Otherwise, if you are just normal Win 11, use [2024-10-20](https://sourceforge.net/projects/mpv-player-windows/files/libmpv/mpv-dev-x86_64-20241020-git-37159a8.7z).
         
         Then open that archive and place the 'mpv-1.dll'/'mpv-2.dll'/'libmpv-2.dll' into `install_dir`.
         
@@ -168,6 +168,8 @@ There are three special external libraries. You just have to get them and put th
 === "Linux"
 
     
+    _You do not need to run this as sudo, and doing so may cause some things not to work. Just regular you in a normal terminal._
+    
     The file is `setup_venv.sh`. You may be able to double-click it. If not, open a terminal in the folder and type:  
     
     `./setup_venv.sh`
@@ -185,6 +187,8 @@ There are three special external libraries. You just have to get them and put th
 
 === "macOS"
 
+    
+    _You do not need to run this as sudo, and doing so may cause some things not to work. Just regular you in a normal terminal._
     
     Double-click `setup_venv.command`.
     

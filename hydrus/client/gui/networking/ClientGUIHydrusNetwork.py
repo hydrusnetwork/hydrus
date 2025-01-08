@@ -261,7 +261,7 @@ class EditAccountTypesPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 new_account_type = panel.GetValue()
                 
-                self._account_types_listctrl.AddDatas( ( new_account_type, ), select_sort_and_scroll = True )
+                self._account_types_listctrl.AddData( new_account_type, select_sort_and_scroll = True )
                 
             
         

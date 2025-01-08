@@ -10,6 +10,7 @@ from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientLocation
 from hydrus.client import ClientTime
+from hydrus.client.media import ClientMediaResult
 from hydrus.client.search import ClientNumberTest
 from hydrus.client.search import ClientSearchPredicate
 from hydrus.client.search import ClientSearchTagContext
@@ -30,6 +31,8 @@ class FileSystemPredicates( object ):
         
         self._common_info = {}
         self._system_pred_types_to_timestamp_ranges_ms = collections.defaultdict( dict )
+        
+        self._allowed_filetypes = None
         
         self._limit = None
         self._similar_to_files = None
@@ -237,7 +240,20 @@ class FileSystemPredicates( object ):
                     summary_mimes = ( summary_mimes, )
                     
                 
-                self._common_info[ 'mimes' ] = ClientSearchPredicate.ConvertSummaryFiletypesToSpecific( summary_mimes )
+                specific_mimes = ClientSearchPredicate.ConvertSummaryFiletypesToSpecific( summary_mimes )
+                
+                # this is a bit unusual, but at the DB end things are easier if we keep things inclusive so this is KISS
+                if not predicate.IsInclusive():
+                    
+                    specific_mimes = set( HC.SEARCHABLE_MIMES ).difference( specific_mimes )
+                    
+                
+                if self._allowed_filetypes is None:
+                    
+                    self._allowed_filetypes = set( HC.SEARCHABLE_MIMES )
+                    
+                
+                self._allowed_filetypes.intersection_update( specific_mimes )
                 
             
             if predicate_type == ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_NUM_TAGS:
@@ -409,6 +425,11 @@ class FileSystemPredicates( object ):
             
         
     
+    def GetAllowedFiletypes( self ):
+        
+        return self._allowed_filetypes
+        
+    
     def GetDuplicateRelationshipCountPredicates( self ):
         
         return self._duplicate_count_predicates
@@ -480,6 +501,11 @@ class FileSystemPredicates( object ):
     def GetTimestampRangesMS( self ):
         
         return self._system_pred_types_to_timestamp_ranges_ms
+        
+    
+    def HasAllowedFiletypes( self ):
+        
+        return self._allowed_filetypes is not None
         
     
     def HasSimilarToData( self ):
@@ -691,6 +717,11 @@ class FileSearchContext( HydrusSerialisable.SerialisableBase ):
     
     def GetSummary( self ):
         
+        if len( self._predicates ) == 0:
+            
+            return 'allows all files'
+            
+        
         pred_strings = sorted( [ pred.ToString() for pred in self._predicates ] )
         
         if len( pred_strings ) > 3:
@@ -764,6 +795,13 @@ class FileSearchContext( HydrusSerialisable.SerialisableBase ):
         
         self._tag_context.service_key = tag_service_key
         self._tag_context.display_service_key = tag_service_key
+        
+    
+    def TestMediaResult( self, media_result: ClientMediaResult.MediaResult ):
+        
+        # note that TestMediaResult may well get a file and tag context, in which case I guess the predicate will get those here
+        
+        return False not in ( predicate.TestMediaResult( media_result ) for predicate in self._predicates )
         
     
 

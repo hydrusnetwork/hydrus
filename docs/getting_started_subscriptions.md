@@ -36,7 +36,7 @@ If you end up subscribing to eight hundred things and get ten thousand new files
 
 It is a good idea to run a 'full' download for a search before you set up a subscription. As well as making sure you have the exact right query text and that you have everything ever posted (beyond the 100 files deep a sub will typically look), it saves the bulk of the work (and waiting on bandwidth) for the manual downloader, where it belongs. When a new subscription picks up off a freshly completed download queue, its initial subscription sync only takes thirty seconds since its initial URLs are those that were already processed by the manual downloader. I recommend you stack artist searches up in the manual downloader using 'no limit' file limit, and when they are all finished, select them in the list and _right-click->copy queries_, which will put the search texts in your clipboard, newline-separated. This list can be pasted into the subscription dialog in one go with the 'paste queries' button again!
 
-## images/how often do subscriptions check? { id="checking" }
+## how often do subscriptions check? { id="checking" }
 
 Hydrus subscriptions use the same variable-rate checking system as its thread watchers, just on a larger timescale. If you subscribe to a busy feed, it might check for new files once a day, but if you enter an artist who rarely posts, it might only check once every month. You don't have to do anything. The fine details of this are governed by the 'checker options' button. **This is one of the things you should not mess with as you start out.**
 
@@ -81,14 +81,14 @@ In practice, most subs only need to check the first page of a gallery since only
 
 ## periodic file limit exceeded { id="periodic_file_limit" }
 
-If, during a regular sync, the sub keeps finding new URLs, never hitting a block of already-seen URLs, it will stop upon hitting its 'periodic file limit', which is also usually 100. When it happens, you will get a popup message notification. There are two typical reasons for this:
+If, during a regular sync, the sub keeps finding new URLs, never hitting a block of already-seen URLs, it will stop upon hitting its 'periodic file limit', which is also usually 100. When it happens, you will get a popup message notification explaining the situation. There are two typical causes:
 
 *   A user suddenly posted a large number of files to the site for that query. This sometimes happens with CG gallery spam.
 *   The website changed their URL format.
 
-The first case is a natural accident of statistics. The subscription now has a 'gap' in its sync. If you want to get what you missed, you can try to fill in the gap with a manual downloader page. Just download to 200 files or so, and the downloader will work quickly to one-time work through the URLs in the gap.
+The first case is a natural accident of statistics. The subscription now has a 'gap' in its sync. The popup should have a button that will spawn a new one-time gallery downloader page (with a 5x file limit) that should automatically fill the gap in.
 
-The second case is a safety stopgap for hydrus. If a site decides to have `/post/123456` style URLs instead of `post.php?id=123456` style, hydrus will suddenly see those as entirely 'new' URLs. It could also be because of an updated downloader, which pulls URLs in API format or similar. This is again thankfully quite rare, but it triggers several problems--the associated downloader usually breaks, as it does not yet recognise those new URLs, and all your subs for that site will parse through and hit the periodic limit for every query. When this happens, you'll usually get several periodic limit popups at once, and you may need to update your downloader. If you know the person who wrote the original downloader, they'll likely want to know about the problem, or may already have a fix sorted. It is often a good idea to pause the affected subs until you have it figured out and working in a normal gallery downloader page.
+The second case is a safety stopgap for hydrus. If a site decides to have `/post/123456` style URLs instead of `post.php?id=123456` style, hydrus will suddenly see those as entirely 'new' URLs. It could also be because of an updated downloader, which pulls URLs in API format or similar. This is again thankfully quite rare, but it triggers several problems--the associated downloader usually breaks, as it does not yet recognise those new URLs, and all your subs for that site will parse through and hit the periodic limit for every query. When this happens, you'll usually get several periodic limit popups at once, and you may need to update your downloader. If you know the person who wrote the original downloader, they'll likely want to know about the problem, or may already have a fix sorted. It is often a good idea to pause the affected subs until you have it figured out and working again in a normal gallery downloader page.
 
 ## I put character queries in my artist sub, and now things are all mixed up { id="merging_and_separating" }
 

@@ -1402,9 +1402,7 @@ class EditDuplicateContentMergeOptionsPanel( ClientGUIScrolledPanels.EditPanel )
             
             self._service_keys_to_rating_options[ service_key ] = action
             
-            self._rating_service_actions.AddDatas( ( service_key, ) )
-            
-            self._rating_service_actions.Sort()
+            self._rating_service_actions.AddData( service_key, select_sort_and_scroll = True )
             
         
     
@@ -1486,9 +1484,7 @@ class EditDuplicateContentMergeOptionsPanel( ClientGUIScrolledPanels.EditPanel )
                     
                     self._service_keys_to_tag_options[ service_key ] = ( action, tag_filter )
                     
-                    self._tag_service_actions.AddDatas( ( service_key, ) )
-                    
-                    self._tag_service_actions.Sort()
+                    self._tag_service_actions.AddData( service_key, select_sort_and_scroll = True )
                     
                 
             
@@ -1602,107 +1598,107 @@ class EditDuplicateContentMergeOptionsPanel( ClientGUIScrolledPanels.EditPanel )
     
     def _EditRating( self ):
         
-        service_keys = self._rating_service_actions.GetData( only_selected = True )
+        service_key = self._rating_service_actions.GetTopSelectedData()
         
-        for service_key in service_keys:
+        if service_key is None:
             
-            action = self._service_keys_to_rating_options[ service_key ]
+            return
             
-            if self._duplicate_action == HC.DUPLICATE_BETTER:
+        
+        action = self._service_keys_to_rating_options[ service_key ]
+        
+        if self._duplicate_action == HC.DUPLICATE_BETTER:
+            
+            service = CG.client_controller.services_manager.GetService( service_key )
+            
+            service_type = service.GetServiceType()
+            
+            if service_type == HC.LOCAL_RATING_INCDEC:
                 
-                service = CG.client_controller.services_manager.GetService( service_key )
+                str_lookup_dict = HC.content_number_merge_string_lookup
                 
-                service_type = service.GetServiceType()
+            elif service_type in HC.STAR_RATINGS_SERVICES:
                 
-                if service_type == HC.LOCAL_RATING_INCDEC:
-                    
-                    str_lookup_dict = HC.content_number_merge_string_lookup
-                    
-                elif service_type in HC.STAR_RATINGS_SERVICES:
-                    
-                    str_lookup_dict = HC.content_merge_string_lookup
-                    
-                else:
-                    
-                    return
-                    
+                str_lookup_dict = HC.content_merge_string_lookup
                 
-                possible_actions = [ HC.CONTENT_MERGE_ACTION_COPY, HC.CONTENT_MERGE_ACTION_MOVE, HC.CONTENT_MERGE_ACTION_TWO_WAY_MERGE ]
+            else:
                 
-                choice_tuples = [ ( str_lookup_dict[ action ], action ) for action in possible_actions ]
-                
-                try:
-                    
-                    action = ClientGUIDialogsQuick.SelectFromList( self, 'select action', choice_tuples, value_to_select = action )
-                    
-                except HydrusExceptions.CancelledException:
-                    
-                    break
-                    
-                
-            else: # This shouldn't get fired because the edit button is hidden, but w/e
-                
-                action = HC.CONTENT_MERGE_ACTION_TWO_WAY_MERGE
+                return
                 
             
-            self._service_keys_to_rating_options[ service_key ] = action
+            possible_actions = [ HC.CONTENT_MERGE_ACTION_COPY, HC.CONTENT_MERGE_ACTION_MOVE, HC.CONTENT_MERGE_ACTION_TWO_WAY_MERGE ]
             
-            self._rating_service_actions.UpdateDatas( ( service_key, ) )
+            choice_tuples = [ ( str_lookup_dict[ action ], action ) for action in possible_actions ]
             
-            self._rating_service_actions.Sort()
+            try:
+                
+                action = ClientGUIDialogsQuick.SelectFromList( self, 'select action', choice_tuples, value_to_select = action )
+                
+            except HydrusExceptions.CancelledException:
+                
+                return
+                
             
+        else: # This shouldn't get fired because the edit button is hidden, but w/e
+            
+            action = HC.CONTENT_MERGE_ACTION_TWO_WAY_MERGE
+            
+        
+        self._service_keys_to_rating_options[ service_key ] = action
+        
+        self._rating_service_actions.UpdateDatas( ( service_key, ) )
+        
+        self._rating_service_actions.Sort()
         
     
     def _EditTag( self ):
         
-        service_keys = self._tag_service_actions.GetData( only_selected = True )
+        service_key = self._tag_service_actions.GetTopSelectedData()
         
-        for service_key in service_keys:
+        if service_key is None:
             
-            ( action, tag_filter ) = self._service_keys_to_tag_options[ service_key ]
+            return
             
-            if self._duplicate_action == HC.DUPLICATE_BETTER:
+        
+        ( action, tag_filter ) = self._service_keys_to_tag_options[ service_key ]
+        
+        if self._duplicate_action == HC.DUPLICATE_BETTER:
+            
+            possible_actions = [ HC.CONTENT_MERGE_ACTION_COPY, HC.CONTENT_MERGE_ACTION_MOVE, HC.CONTENT_MERGE_ACTION_TWO_WAY_MERGE ]
+            
+            choice_tuples = [ ( HC.content_merge_string_lookup[ action ], action ) for action in possible_actions ]
+            
+            try:
                 
-                possible_actions = [ HC.CONTENT_MERGE_ACTION_COPY, HC.CONTENT_MERGE_ACTION_MOVE, HC.CONTENT_MERGE_ACTION_TWO_WAY_MERGE ]
+                action = ClientGUIDialogsQuick.SelectFromList( self, 'select action', choice_tuples, value_to_select = action )
                 
-                choice_tuples = [ ( HC.content_merge_string_lookup[ action ], action ) for action in possible_actions ]
+            except HydrusExceptions.CancelledException:
                 
-                try:
-                    
-                    action = ClientGUIDialogsQuick.SelectFromList( self, 'select action', choice_tuples, value_to_select = action )
-                    
-                except HydrusExceptions.CancelledException:
-                    
-                    break
-                    
-                
-            else:
-                
-                action = HC.CONTENT_MERGE_ACTION_TWO_WAY_MERGE
+                return
                 
             
-            with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit which tags will be merged' ) as dlg_3:
+        else:
+            
+            action = HC.CONTENT_MERGE_ACTION_TWO_WAY_MERGE
+            
+        
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit which tags will be merged' ) as dlg_3:
+            
+            namespaces = CG.client_controller.network_engine.domain_manager.GetParserNamespaces()
+            
+            panel = ClientGUITags.EditTagFilterPanel( dlg_3, tag_filter, namespaces = namespaces )
+            
+            dlg_3.SetPanel( panel )
+            
+            if dlg_3.exec() == QW.QDialog.DialogCode.Accepted:
                 
-                namespaces = CG.client_controller.network_engine.domain_manager.GetParserNamespaces()
+                tag_filter = panel.GetValue()
                 
-                panel = ClientGUITags.EditTagFilterPanel( dlg_3, tag_filter, namespaces = namespaces )
+                self._service_keys_to_tag_options[ service_key ] = ( action, tag_filter )
                 
-                dlg_3.SetPanel( panel )
+                self._tag_service_actions.UpdateDatas( ( service_key, ) )
                 
-                if dlg_3.exec() == QW.QDialog.DialogCode.Accepted:
-                    
-                    tag_filter = panel.GetValue()
-                    
-                    self._service_keys_to_tag_options[ service_key ] = ( action, tag_filter )
-                    
-                    self._tag_service_actions.UpdateDatas( ( service_key, ) )
-                    
-                    self._tag_service_actions.Sort()
-                    
-                else:
-                    
-                    break
-                    
+                self._tag_service_actions.Sort()
                 
             
         
@@ -2691,7 +2687,7 @@ class EditRegexFavourites( ClientGUIScrolledPanels.EditPanel ):
                             return
                             
                         
-                        self._regexes.AddDatas( ( row, ) )
+                        self._regexes.AddData( row, select_sort_and_scroll = True )
                         
                     
                 
@@ -2711,60 +2707,47 @@ class EditRegexFavourites( ClientGUIScrolledPanels.EditPanel ):
     
     def _Edit( self ):
         
-        edited_datas = []
+        data = self._regexes.GetTopSelectedData()
         
-        rows = self._regexes.GetData( only_selected = True )
+        if data is None:
+            
+            return
+            
         
-        for row in rows:
+        row = data
+        
+        ( regex_phrase, description ) = row
+        
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit regex' ) as dlg:
             
-            ( regex_phrase, description ) = row
+            panel = ClientGUIScrolledPanels.EditSingleCtrlPanel( dlg )
             
-            with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit regex' ) as dlg:
+            control = ClientGUIRegex.RegexInput( panel )
+            
+            control.SetValue( regex_phrase )
+            
+            panel.SetControl( control, perpendicular = True )
+            
+            dlg.SetPanel( panel )
+            
+            if dlg.exec() == QW.QDialog.DialogCode.Accepted:
                 
-                panel = ClientGUIScrolledPanels.EditSingleCtrlPanel( dlg )
+                regex_phrase = control.GetValue()
                 
-                control = ClientGUIRegex.RegexInput( panel )
-                
-                control.SetValue( regex_phrase )
-                
-                panel.SetControl( control, perpendicular = True )
-                
-                dlg.SetPanel( panel )
-                
-                if dlg.exec() == QW.QDialog.DialogCode.Accepted:
+                with ClientGUIDialogs.DialogTextEntry( self, 'Update description.', default = description ) as dlg_2:
                     
-                    regex_phrase = control.GetValue()
-                    
-                    with ClientGUIDialogs.DialogTextEntry( self, 'Update description.', default = description ) as dlg_2:
+                    if dlg_2.exec() == QW.QDialog.DialogCode.Accepted:
                         
-                        if dlg_2.exec() == QW.QDialog.DialogCode.Accepted:
-                            
-                            description = dlg_2.GetValue()
-                            
-                            edited_row = ( regex_phrase, description )
-                            
-                            self._regexes.DeleteDatas( ( row, ) )
-                            
-                            self._regexes.AddDatas( ( edited_row, ) )
-                            
-                            edited_datas.append( edited_row )
-                            
-                        else:
-                            
-                            break
-                            
+                        description = dlg_2.GetValue()
+                        
+                        edited_row = ( regex_phrase, description )
+                        
+                        self._regexes.ReplaceData( row, edited_row, sort_and_scroll = True )
                         
                     
-                else:
-                    
-                    break
-                    
                 
             
         
-        self._regexes.SelectDatas( edited_datas )
-        
-        self._regexes.Sort()
         
     
     def GetValue( self ):

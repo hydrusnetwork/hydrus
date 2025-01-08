@@ -376,7 +376,7 @@ class NetworkBandwidthManager( HydrusSerialisable.SerialisableBase ):
             
             result = []
             
-            for ( network_context, bandwidth_rules ) in list(self._network_contexts_to_bandwidth_rules.items()):
+            for ( network_context, bandwidth_rules ) in self._network_contexts_to_bandwidth_rules.items():
                 
                 if network_context.IsDefault():
                     

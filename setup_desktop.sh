@@ -37,7 +37,7 @@ else
     exit 1
 fi
 
-sed -e "s#Exec=.*#Exec=${INSTALL_DIR}/hydrus_client.sh#" -e "s#Icon=.*#Icon=${INSTALL_DIR}/static/hydrus.png#" "$DESKTOP_SOURCE_PATH" > "$DESKTOP_DEST_PATH"
+sed -e "s#Exec=.*#Exec=\"${INSTALL_DIR}/hydrus_client.sh\"#" -e "s#Icon=.*#Icon=\"${INSTALL_DIR}/static/hydrus.png\"#" "$DESKTOP_SOURCE_PATH" > "$DESKTOP_DEST_PATH"
 
 echo "Done!"
 
