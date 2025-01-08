@@ -671,30 +671,6 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#url_download" class="md-nav__link">
-    <span class="md-ellipsis">
-      URL download
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="URL download">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#api" class="md-nav__link">
-    <span class="md-ellipsis">
-      API
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-          <li class="md-nav__item">
   <a href="#gallery_download" class="md-nav__link">
     <span class="md-ellipsis">
       Gallery download
@@ -735,6 +711,30 @@
   </a>
   
     <nav class="md-nav" aria-label="Watchers">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#api" class="md-nav__link">
+    <span class="md-ellipsis">
+      API
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#url_download" class="md-nav__link">
+    <span class="md-ellipsis">
+      URL download
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="URL download">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -2246,30 +2246,6 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#url_download" class="md-nav__link">
-    <span class="md-ellipsis">
-      URL download
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="URL download">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#api" class="md-nav__link">
-    <span class="md-ellipsis">
-      API
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-          <li class="md-nav__item">
   <a href="#gallery_download" class="md-nav__link">
     <span class="md-ellipsis">
       Gallery download
@@ -2310,6 +2286,30 @@
   </a>
   
     <nav class="md-nav" aria-label="Watchers">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#api" class="md-nav__link">
+    <span class="md-ellipsis">
+      API
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#url_download" class="md-nav__link">
+    <span class="md-ellipsis">
+      URL download
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="URL download">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -2456,24 +2456,19 @@
 </div>
 <p>It also takes a decent whack of CPU to import a file. You'll usually never notice this with just one hard drive import going, but if you have twenty different download queues all competing for database access and individual 0.1-second hits of heavy CPU work, you will discover your client starts to judder and lag. Keep it in mind, and you'll figure out what your computer is happy with. I also recommend you try to keep your total loaded files/urls to be under 20,000 to keep things snappy. Remember that you can pause your import queues, if you need to calm things down a bit.</p>
 <h2 id="downloader_types">Downloader types<a class="headerlink" href="#downloader_types" title="Permanent link">&para;</a></h2>
-<p>There are a number of different downloader types, each with its own purpose:  </p>
+<p>There are several different downloader types, each with its own purpose:  </p>
 <dl>
-<dt><strong>URL download</strong></dt>
-<dd>Intended for single posts or images. (Works with the <a href="client_api.html">API</a>)</dd>
 <dt><strong>Gallery</strong></dt>
-<dd>For big download jobs such as an artist's catalogue, everything with a given tag on a booru.</dd>
+<dd>The normal booru-style search interface. You enter tags, and the downloader walks through one or more gallery pages, queueing up many post/file results. Good for big download jobs such as an artist's entire catalogue.</dd>
 <dt><strong>Subscriptions</strong></dt>
-<dd>Repeated gallery jobs, for keeping up to date with an artist or tag. Use gallery downloader to get everything and a subscription to keep updated.</dd>
+<dd>Automatic, repeating gallery jobs, for keeping up to date with an artist or tag. <strong>Use the gallery downloader to get everything first</strong> and then set up a subscription to keep updated.</dd>
 <dt><strong>Watcher</strong></dt>
-<dd>Imageboard thread downloader, such as 4chan, 8chan, and what else exists. (Works with the <a href="client_api.html">API</a>)</dd>
+<dd>For watching imageboard (e.g. 4chan) threads. It checks and rechecks regularly to keep up with new posts. (The <a href="client_api.html">API</a> can send URLs to this)</dd>
+<dt><strong>URL download</strong></dt>
+<dd>You paste or drag-and-drop gallery and post/file URLs into this, and if hydrus understands it, it will import it. Does not do multi-page searching. Useful for one-off jobs. (The <a href="client_api.html">API</a> can send URLs to this)</dd>
 <dt><strong>Simple downloader</strong></dt>
-<dd>Intended for simple one-off jobs like grabbing all linked images in a page.</dd>
+<dd>Intended for simple one-off jobs with a single simple parsing rule, like 'get all the linked images from this page'.</dd>
 </dl>
-<h3 id="url_download">URL download<a class="headerlink" href="#url_download" title="Permanent link">&para;</a></h3>
-<p>The <strong>url downloader</strong> works like the gallery downloader but does not do searches. You can paste downloadable URLs to it, and it will work through them as one list. Dragging and dropping recognisable URLs onto the client (e.g. from your web browser) will also spawn and use this downloader.</p>
-<p>The button next to the input field lets you paste multiple URLs at once such as if you've copied from a document or browser bookmarks. The URLs need to be newline separated.</p>
-<h4 id="api">API<a class="headerlink" href="#api" title="Permanent link">&para;</a></h4>
-<p>If you use <a href="client_api.html">API-connected</a> programs such as the Hydrus Companion, then any <a href="downloader_url_classes.html#url_types">non-watchable</a> URLs sent to Hydrus through them will end up in an URL downloader page, the specifics depending on the program's settings. You can't use this to force Hydrus to download paged galleries since the URL downloader page doesn't support traversing to the next page, use the gallery downloader for this.</p>
 <h3 id="gallery_download">Gallery download<a class="headerlink" href="#gallery_download" title="Permanent link">&para;</a></h3>
 <p><img alt="" src="images/downloader_page.png" /></p>
 <p>The gallery page can download from multiple sources at the same time. Each entry in the list represents a basic combination of two things:</p>
@@ -2490,14 +2485,17 @@
 <p><em>Note that some sites only serve 25 or 50 pages of results, despite their indices suggesting hundreds. If you notice that one site always bombs out at, say, 500 results, it may be due to a decision on their end. You can usually test this by visiting the pages hydrus tried in your web browser.</em></p>
 <p><strong>In general, particularly when starting out, artist searches are best.</strong> They are usually fewer than a thousand files and have fairly uniform quality throughout.</p>
 <h3 id="subscriptions">Subscriptions<a class="headerlink" href="#subscriptions" title="Permanent link">&para;</a></h3>
-<p>Let's say you found an artist you like. You downloaded everything of theirs from some site, but every week, one or two new pieces is posted. You'd like to keep up with the new stuff, but you don't want to manually make a new download job every week for every single artist you like.</p>
+<p>Let's say you found an artist you like. You downloaded everything of theirs from some site using a Gallery Downloader, but every week, one or two new pieces is posted. You'd like to keep up with the new stuff, but you don't want to manually make a new download job every week for every single artist you like.</p>
 <p>Subscriptions are a way to automatically recheck a good query in future, to keep up with new files. Many users come to use them. You set up a number of saved queries, and the client will 'sync' with the latest files in the gallery and download anything new, just as if you were running the download yourself.</p>
-<p>Subscriptions only work for booru-like galleries that put the newest files first, and they only keep up with new content--once they have done their first sync, which usually gets the most recent hundred files or so, they will never reach further into the past. Getting older files, as you will see later, is a job best done with a normal download page.</p>
-<div class="admonition note">
-<p class="admonition-title">Note</p>
-<p>The entire subscription system assumes the source is a typical 'newest first' booru-style search. If you dick around with some order_by:rating/random metatag, it will not work reliably.</p>
+<div class="admonition info">
+<p class="admonition-title">Sync Mechanics</p>
+<p>Because they are automatic, subscriptions are designed to be reliable, simple, and fail-safe. They build up an initial list of URLs (usually one hundred) for their search, and then on every normal sync they will re-run the search and stop looking once they hit a list of files they recognise.</p>
+<p>Once subscriptions establish a log of recent URLs, they will not go 'beyond' that, to older URLs. They will always get whatever is newest, stop when they catch up to what they have seen before, and integrate those newer URLs into their URL log for the next check.</p>
+<p>If you need to get older files and fill in that 'gap', use a one-time Gallery Downloader page.</p>
+<p>Subscriptions change how frequently they check based on what they see. If it looks like there are four new files every week, they will typically try to check once a week. A faster or slower 'file velocity' will cause them to automatically throttle up or down. If a source does not post any new files within a long time (usually 180 days), the subscription will be considered DEAD and will stop checking.</p>
+<p><strong>The entire subscription system assumes the source is a typical 'newest first' booru-style search. If you dick around with some order_by:rating/random metatag, it will not work reliably!</strong></p>
 </div>
-<p>It is important to note that while subscriptions can have multiple queries (even hundreds!), they <em>generally</em> only work on one site. Expect to create one subscription for safebooru, one for artstation, one for paheal, and so on for every site you care about. Advanced users may be able to think of ways to get around this, but I recommend against it as it throws off some of the internal check timing calculations.</p>
+<p>While subscriptions can have multiple queries (even hundreds!), they <em>generally</em> only work on one site. Expect to create one subscription for site x, another for site y, site z, and so on for every source you care about. Advanced users may be able to think of ways to get around this, but I recommend against it as it throws off some of the internal check timing calculations.</p>
 <h4 id="setting_up_subscriptions">Setting up subscriptions<a class="headerlink" href="#setting_up_subscriptions" title="Permanent link">&para;</a></h4>
 <p>Here's the dialog, which is under <em>network-&gt;manage subscriptions</em>:</p>
 <p><img alt="" src="images/subscriptions_edit_subscriptions.png" /></p>
@@ -2506,13 +2504,12 @@
 <p><img alt="" src="images/subscriptions_edit_subscription.png" /></p>
 <div class="admonition danger">
 <p class="admonition-title">Danger</p>
-<p><strong>Do not change the max number of new files options until you know <em>exactly</em> what they do and have a good reason to alter them!</strong></p>
+<p><strong>Do not change the max number of new files or checker options until you know <em>exactly</em> what they do and have a good reason to alter them!</strong></p>
 </div>
-<p>This is a big and powerful panel! I recommend you open the screenshot up in a new browser tab, or in the actual client, so you can refer to it.</p>
-<p>Despite all the controls, the basic idea is simple: Up top, I have selected the 'safebooru tag search' download source, and then I have added two artists--"hong_soon-jae" and "houtengeki". These two queries have their own panels for reviewing what URLs they have worked on and further customising their behaviour, but all they <em>really</em> are is little bits of search text. When the subscription runs, it will put the given search text into the given download source just as if you were running the regular downloader.</p>
+<p>Subscriptions have rich and powerful UI. Despite all the controls, the basic idea is simple: Up top, I have selected the 'safebooru tag search' download source, and then I have added two artists--"hong_soon-jae" and "houtengeki". When the subscription runs, it will put the given search text into the given download source just as if you were running the regular downloader.</p>
 <div class="admonition warning">
 <p class="admonition-title">Warning</p>
-<p>Subscriptions syncs are somewhat fragile. Do not try to play with the limits or checker options to download a whole 5,000 file query in one go--if you want everything for a query, run it in the manual downloader and get everything, then set up a normal sub for new stuff. There is no benefit to having a 'large' subscription, and it will trim itself down in time anyway.</p>
+<p>Subscriptions syncs are somewhat fragile, and they work best in the small ~100 file range. Do not try to play with the limits or checker options to download a whole 5,000 file query in one go--<strong>if you want everything for a query, run it in the manual gallery downloader first</strong>, then set up a normal sub for new stuff. A super-large subscription gives no benefit and can run into several problems.</p>
 </div>
 <p>You might want to put subscriptions off until you are more comfortable with galleries. There is more help <a href="getting_started_subscriptions.html">here</a>.</p>
 <h3 id="watchers">Watchers<a class="headerlink" href="#watchers" title="Permanent link">&para;</a></h3>
@@ -2520,8 +2517,13 @@
 <p><img alt="" src="images/watcher_page.png" /></p>
 <p>With only one URL to check, watchers are a little simpler than gallery searches, but as that page is likely receiving frequent updates, it checks it over and over until it dies. By default, the watcher's 'checker options' will regulate how quickly it checks based on the speed at which new files are coming in--if a thread is fast, it will check frequently; if it is running slow, it may only check once per day. When a thread falls below a critical posting velocity or 404s, checking stops.</p>
 <p>In general, you can leave the checker options alone, but you might like to revisit them if you are always visiting faster or slower boards and find you are missing files or getting DEAD too early.</p>
-<h4 id="api_1">API<a class="headerlink" href="#api_1" title="Permanent link">&para;</a></h4>
+<h4 id="api">API<a class="headerlink" href="#api" title="Permanent link">&para;</a></h4>
 <p>If you use <a href="client_api.html">API-connected</a> programs such as the Hydrus Companion, then any <a href="downloader_url_classes.html#url_types">watchable</a> URLs sent to Hydrus through them will end up in a watcher page, the specifics depending on the program's settings.</p>
+<h3 id="url_download">URL download<a class="headerlink" href="#url_download" title="Permanent link">&para;</a></h3>
+<p>The <strong>url downloader</strong> works like the gallery downloader but does not do searches. You can paste downloadable URLs to it, and it will work through them as one list. Dragging and dropping recognisable URLs onto the client (e.g. from your web browser) will also spawn and use this downloader.</p>
+<p>The button next to the input field lets you paste multiple URLs at once such as if you've copied from a document or browser bookmarks. The URLs need to be newline separated.</p>
+<h4 id="api_1">API<a class="headerlink" href="#api_1" title="Permanent link">&para;</a></h4>
+<p>If you use <a href="client_api.html">API-connected</a> programs such as the Hydrus Companion, then any <a href="downloader_url_classes.html#url_types">non-watchable</a> URLs sent to Hydrus through them will end up in an URL downloader page, the specifics depending on the program's settings. You can't use this to force Hydrus to download paged galleries since the URL downloader page doesn't support traversing to the next page, use the gallery downloader for this.</p>
 <h3 id="simple_downloader">Simple downloader<a class="headerlink" href="#simple_downloader" title="Permanent link">&para;</a></h3>
 <p>The <strong>simple downloader</strong> will do very simple parsing for unusual jobs. If you want to download all the images in a page, or all the image link destinations, this is the one to use. There are several default parsing rules to choose from, and if you learn the downloader system yourself, it will be easy to make more.</p>
 <h2 id="import_options">Import options<a class="headerlink" href="#import_options" title="Permanent link">&para;</a></h2>
@@ -2563,12 +2565,21 @@ A few of the options have more information if you hover over them.</dd>
 <p><img alt="" src="images/note_import_options_normal.png" /></p>
 <p>Most of the controls here ensure that successive parses do not duplicate existing notes. The default settings are fine for all normal purposes, and you can leave them alone unless you know you want something special (e.g. turning note parsing off completely).</p>
 <h2 id="bandwidth">Bandwidth<a class="headerlink" href="#bandwidth" title="Permanent link">&para;</a></h2>
-<p>It will not be too long until you see a "bandwidth free in xxxxx..." message. As a long-term storage solution, hydrus is designed to be polite in its downloading--both to the source server and your computer. The client's default bandwidth rules have some caps to stop big mistakes, spread out larger jobs, and at a bare minimum, no domain will be hit more than once a second.</p>
-<p>All the bandwidth rules are completely customisable and are found in <code>network &gt; data &gt; review bandwidth usage and edit rules</code>. They can get quite complicated. I <strong>strongly</strong> recommend you not look for them until you have more experience. I <strong>especially strongly</strong> recommend you not ever turn them all off, thinking that will improve something, as you'll probably render the client too laggy to function and get yourself an IP ban from the next server you pull from.</p>
+<p><strong>Hydrus deals with very large numbers of files, and its file store is expected to last many years. Its downloaders are designed to run a marathon, not a sprint.</strong></p>
+<p>It will not be too long until you see a "bandwidth free in xxxxx..." message. As a long-term storage solution, hydrus is designed to be polite in its downloading--both to the source server and your computer. It has complicated bandwidth rules that can operate in several different domains, and the default rules are capped conservatively to stop big mistakes and spread out larger jobs. For instance, at a bare minimum, no domain will be hit more than once a second.</p>
 <p>If you want to download 10,000 files, set up the queue and let it work. The client will take breaks, likely even to the next day, but it will get there in time. Many users like to leave their clients on all the time, just running in the background, which makes these sorts of downloads a breeze--you check back in the evening and discover your download queues, watchers, and subscriptions have given you another thousand things to deal with.</p>
+<p>That said, all the bandwidth rules are completely customisable and are found in <code>network &gt; data &gt; review bandwidth usage and edit rules</code>. They can get quite complicated.</p>
+<p><img alt="" src="images/review_bandwidth.png" /></p>
+<p>This is the main 'review' panel. It shows where you have been downloading from. It also displays current usage and if a particular domain is currently blocked due to the rules.</p>
+<p>When a new network job appears, it will belong to multiple 'contexts'--usually, it will be 'global', any domain and subdomains, and then 'downloader page', 'subscription', or 'watcher page' (which are special contexts that attach to the particular downloader)--and all of these have to pass in order for the job to start. If 'site a' is blocked but 'global' is ok, then a request to 'site b' will start immediately; if 'global' is blocked, then nothing will work.</p>
+<p>You can double-click any row to see more detail:</p>
+<p><img alt="" src="images/review_bandwidth_single_context.png" /></p>
+<p>A context will start using the 'default' rules, but if you like you can set specific rules for one you want to be careful or aggressive with. To edit the default rules, go back to the main 'review' panel. If you find your network jobs are halting too much, you probably want to relax the daily rules for 'web domain' default and then the 'global' context specifically.</p>
+<p>I <strong>strongly</strong> recommend you not poke around here until you have more experience. I <strong>especially strongly</strong> recommend you not ever turn them all off, thinking that will improve something, as you'll probably render the client too laggy to function and get yourself an IP ban from the next server you pull from.</p>
 <p>Again: the real problem with downloading is not finding new things, it is keeping up with what you get. Start slow and figure out what is important to your bandwidth budget, hard drive budget, and free time budget. <span class="spoiler">Almost everyone fails at this.</span></p>
 <h2 id="logins">Logins<a class="headerlink" href="#logins" title="Permanent link">&para;</a></h2>
-<p>The client now supports a flexible (but slightly prototype and ugly) login system. It can handle simple sites and is as <a href="downloader_login.html">completely user-customisable as the downloader system</a>. The client starts with multiple login scripts by default, which you can review under <em>network-&gt;logins-&gt;manage logins</em>:</p>
+<p><strong>This system often breaks and is sometimes a hassle deal with! If you need to log in to anything more clever than a booru, use Hydrus Companion or similar to copy your cookies across!</strong></p>
+<p>The client supports a very basic and ugly login system. It can handle simple sites and is as <a href="downloader_login.html">completely user-customisable as the downloader system</a>. The client starts with multiple login scripts by default, which you can review under <em>network-&gt;logins-&gt;manage logins</em>:</p>
 <p><img alt="" src="images/manage_logins.png" /></p>
 <p>Many sites grant all their content without you having to log in at all, but others require it for NSFW or special content, or you may wish to take advantage of site-side user preferences like personal blacklists. If you wish, you can give hydrus some login details here, and it will try to login--just as a browser would--before it downloads anything from that domain.</p>
 <div class="admonition warning">
@@ -2580,8 +2591,8 @@ A few of the options have more information if you hover over them.</dd>
 <p>The login system is not very clever. Don't try to pull off anything too weird with it! If anything goes wrong, it will likely delay the script (and hence the whole domain) from working for a while, or invalidate it entirely. If the error is something simple, like a password typo or current server maintenance, go back to this dialog to fix and scrub the error and try again. If the site just changed its layout, you may need to update the login script. If it is more complicated, please contact me, hydrus_dev, with the details!</p>
 <p>If you would like to login to a site that is not yet supported by hydrus (usually ones with a Captcha in the login page), you have two options:</p>
 <ol>
-<li>Get a web browser add-on that lets you export a cookies.txt (either for the whole browser or just for that domain) and then drag and drop that cookies.txt file onto the hydrus <em>network-&gt;data-&gt;review session cookies</em> dialog. This sometimes does not work if your add-on's export formatting is unusual. If it does work, hydrus will import and use those cookies, which skips the login by making your hydrus pretend to be your browser directly. This is obviously advanced and hacky, so if you need to do it, let me know how you get on and what tools you find work best!</li>
-<li>Use <a href="https://gitgud.io/prkc/hydrus-companion">Hydrus Companion</a> browser add-on to do the same basic thing automatically.</li>
+<li>Get a web browser add-on that lets you export a cookies.txt (either for the whole browser or just for that domain) from a browser that is logged in, and then drag and drop that cookies.txt file onto the hydrus <em>network-&gt;data-&gt;review session cookies</em> dialog. This sometimes does not work if your add-on's export formatting is unusual. If it does work, hydrus will import and use those cookies, which skips the login by making your hydrus pretend to be your browser directly. This is obviously advanced and hacky, so if you need to do it, let me know how you get on and what tools you find work best!</li>
+<li>Use <a href="https://gitgud.io/prkc/hydrus-companion">Hydrus Companion</a> browser add-on to do the same basic thing automatically. This also gives hydrus the browser's <code>User-Agent</code> header, which some logins or CDN gateways sync to their cookie record.</li>
 </ol>
 <h2 id="difficult_sites">Difficult Sites<a class="headerlink" href="#difficult_sites" title="Permanent link">&para;</a></h2>
 <p>Boorus are usually easy to parse from, and there are many hydrus downloaders available that work well. Other sites are less easy to download from. Some will purposefully disguise access behind captchas or difficult login tokens that the hydrus downloader just isn't clever enough to handle. In these cases, it can be best just to go to an external downloader program that is specially tuned for these complex sites.</p>
@@ -2613,7 +2624,7 @@ A few of the options have more information if you hover over them.</dd>
     <span class="md-icon" title="Last update">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 13.1c-.1 0-.3.1-.4.2l-1 1 2.1 2.1 1-1c.2-.2.2-.6 0-.8l-1.3-1.3c-.1-.1-.2-.2-.4-.2m-1.9 1.8-6.1 6V23h2.1l6.1-6.1zM12.5 7v5.2l4 2.4-1 1L11 13V7zM11 21.9c-5.1-.5-9-4.8-9-9.9C2 6.5 6.5 2 12 2c5.3 0 9.6 4.1 10 9.3-.3-.1-.6-.2-1-.2s-.7.1-1 .2C19.6 7.2 16.2 4 12 4c-4.4 0-8 3.6-8 8 0 4.1 3.1 7.5 7.1 7.9l-.1.2z"/></svg>
     </span>
-    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">December 18, 2024</span>
+    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">January 8, 2025</span>
   </span>
 
     

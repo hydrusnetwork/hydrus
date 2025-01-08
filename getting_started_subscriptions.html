@@ -903,7 +903,7 @@
         <li class="md-nav__item">
   <a href="#checking" class="md-nav__link">
     <span class="md-ellipsis">
-      images/how often do subscriptions check?
+      how often do subscriptions check?
     </span>
   </a>
   
@@ -2132,7 +2132,7 @@
         <li class="md-nav__item">
   <a href="#checking" class="md-nav__link">
     <span class="md-ellipsis">
-      images/how often do subscriptions check?
+      how often do subscriptions check?
     </span>
   </a>
   
@@ -2214,7 +2214,7 @@
 <p>Attribute subscriptions like 'blue_eyes' or 'smile' make for terrible subs as the quality is all over the place and you will be inundated by too much content. The only exceptions are for specific, low-count searches that really matter to you, like 'contrapposto' or 'gothic trap thighhighs'.</p>
 <p>If you end up subscribing to eight hundred things and get ten thousand new files a week, you made a mistake. Subscriptions are for <em>keeping up</em> with things you like. If you let them overwhelm you, you'll resent them.</p>
 <p>It is a good idea to run a 'full' download for a search before you set up a subscription. As well as making sure you have the exact right query text and that you have everything ever posted (beyond the 100 files deep a sub will typically look), it saves the bulk of the work (and waiting on bandwidth) for the manual downloader, where it belongs. When a new subscription picks up off a freshly completed download queue, its initial subscription sync only takes thirty seconds since its initial URLs are those that were already processed by the manual downloader. I recommend you stack artist searches up in the manual downloader using 'no limit' file limit, and when they are all finished, select them in the list and <em>right-click-&gt;copy queries</em>, which will put the search texts in your clipboard, newline-separated. This list can be pasted into the subscription dialog in one go with the 'paste queries' button again!</p>
-<h2 id="checking">images/how often do subscriptions check?<a class="headerlink" href="#checking" title="Permanent link">&para;</a></h2>
+<h2 id="checking">how often do subscriptions check?<a class="headerlink" href="#checking" title="Permanent link">&para;</a></h2>
 <p>Hydrus subscriptions use the same variable-rate checking system as its thread watchers, just on a larger timescale. If you subscribe to a busy feed, it might check for new files once a day, but if you enter an artist who rarely posts, it might only check once every month. You don't have to do anything. The fine details of this are governed by the 'checker options' button. <strong>This is one of the things you should not mess with as you start out.</strong></p>
 <p>If a query goes too 'slow' (typically, this means no new files for 180 days), it will be marked DEAD in the same way a thread will, and it will not be checked again. You will get a little popup when this happens. This is all editable as you get a better feel for the system--if you wish, it is completely possible to set up a sub that never dies and only checks once a year.</p>
 <p>I do not recommend setting up a sub that needs to check more than once a day. Any search that is producing that many files is probably a bad fit for a subscription. <strong>Subscriptions are for lightweight searches that are updated every now and then.</strong></p>
@@ -2239,13 +2239,13 @@
 <p>Remember that subscriptions only keep up with new content. They cannot search backwards in time in order to 'fill out' a search, nor can they fill in gaps. <strong>Do not change the file limits or check times to try to make this happen.</strong> If you want to ensure complete sync with all existing content for a particular search, use the manual downloader.</p>
 <p>In practice, most subs only need to check the first page of a gallery since only the first two or three urls are new.</p>
 <h2 id="periodic_file_limit">periodic file limit exceeded<a class="headerlink" href="#periodic_file_limit" title="Permanent link">&para;</a></h2>
-<p>If, during a regular sync, the sub keeps finding new URLs, never hitting a block of already-seen URLs, it will stop upon hitting its 'periodic file limit', which is also usually 100. When it happens, you will get a popup message notification. There are two typical reasons for this:</p>
+<p>If, during a regular sync, the sub keeps finding new URLs, never hitting a block of already-seen URLs, it will stop upon hitting its 'periodic file limit', which is also usually 100. When it happens, you will get a popup message notification explaining the situation. There are two typical causes:</p>
 <ul>
 <li>A user suddenly posted a large number of files to the site for that query. This sometimes happens with CG gallery spam.</li>
 <li>The website changed their URL format.</li>
 </ul>
-<p>The first case is a natural accident of statistics. The subscription now has a 'gap' in its sync. If you want to get what you missed, you can try to fill in the gap with a manual downloader page. Just download to 200 files or so, and the downloader will work quickly to one-time work through the URLs in the gap.</p>
-<p>The second case is a safety stopgap for hydrus. If a site decides to have <code>/post/123456</code> style URLs instead of <code>post.php?id=123456</code> style, hydrus will suddenly see those as entirely 'new' URLs. It could also be because of an updated downloader, which pulls URLs in API format or similar. This is again thankfully quite rare, but it triggers several problems--the associated downloader usually breaks, as it does not yet recognise those new URLs, and all your subs for that site will parse through and hit the periodic limit for every query. When this happens, you'll usually get several periodic limit popups at once, and you may need to update your downloader. If you know the person who wrote the original downloader, they'll likely want to know about the problem, or may already have a fix sorted. It is often a good idea to pause the affected subs until you have it figured out and working in a normal gallery downloader page.</p>
+<p>The first case is a natural accident of statistics. The subscription now has a 'gap' in its sync. The popup should have a button that will spawn a new one-time gallery downloader page (with a 5x file limit) that should automatically fill the gap in.</p>
+<p>The second case is a safety stopgap for hydrus. If a site decides to have <code>/post/123456</code> style URLs instead of <code>post.php?id=123456</code> style, hydrus will suddenly see those as entirely 'new' URLs. It could also be because of an updated downloader, which pulls URLs in API format or similar. This is again thankfully quite rare, but it triggers several problems--the associated downloader usually breaks, as it does not yet recognise those new URLs, and all your subs for that site will parse through and hit the periodic limit for every query. When this happens, you'll usually get several periodic limit popups at once, and you may need to update your downloader. If you know the person who wrote the original downloader, they'll likely want to know about the problem, or may already have a fix sorted. It is often a good idea to pause the affected subs until you have it figured out and working again in a normal gallery downloader page.</p>
 <h2 id="merging_and_separating">I put character queries in my artist sub, and now things are all mixed up<a class="headerlink" href="#merging_and_separating" title="Permanent link">&para;</a></h2>
 <p>On the main subscription dialog, there are 'merge' and 'separate' buttons. These are powerful, but they will walk you through the process of pulling queries out of a sub and merging them back into a different one. Only subs that use the same download source can be merged. Give them a go, and if it all goes wrong, just hit the cancel button on the dialog.</p>
 
@@ -2268,7 +2268,7 @@
     <span class="md-icon" title="Last update">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 13.1c-.1 0-.3.1-.4.2l-1 1 2.1 2.1 1-1c.2-.2.2-.6 0-.8l-1.3-1.3c-.1-.1-.2-.2-.4-.2m-1.9 1.8-6.1 6V23h2.1l6.1-6.1zM12.5 7v5.2l4 2.4-1 1L11 13V7zM11 21.9c-5.1-.5-9-4.8-9-9.9C2 6.5 6.5 2 12 2c5.3 0 9.6 4.1 10 9.3-.3-.1-.6-.2-1-.2s-.7.1-1 .2C19.6 7.2 16.2 4 12 4c-4.4 0-8 3.6-8 8 0 4.1 3.1 7.5 7.1 7.9l-.1.2z"/></svg>
     </span>
-    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">November 1, 2023</span>
+    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">January 8, 2025</span>
   </span>
 
     
