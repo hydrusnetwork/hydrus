@@ -829,6 +829,8 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.Liste
             
             if first_media is not None:
                 
+                first_media = first_media.GetDisplayMedia()
+                
                 first_media_result = first_media.GetMediaResult()
                 
                 if first_media_result not in media_results:
