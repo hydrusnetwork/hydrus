@@ -1,6 +1,6 @@
 /*******************************************************************************
 An e621.net-inspired style/theme for Hydrus.
-Created by IchHabs in February 2024.
+Created by IchHabs in February 2024 / Tweaked by scoreunder in December 2024
 
 If you want to change your tag namespace colors as well, try these:
 - Character:    #00aa00
@@ -37,12 +37,7 @@ Development Notes:
 /* Pretty much everything is a widget. */
 QWidget {
 	color: #ffffff;
-	background: #020f23;
-}
-.QWidget {
-	background-image: url("static/qss/e621/bg.svg");
-	background-position: center;
-	background-repeat: repeat-xy;
+	background: transparent;
 }
 QWidget:disabled {
 	color: #767676;
@@ -81,8 +76,6 @@ QFrame {
 
 /* The bar at the top of the main window, with stuff like 'file' and 'help'. */
 QMenuBar {
-	color: #ffffff;
-	background: #020f23;
 	spacing: 0;
 }
 QMenuBar::item {
@@ -127,7 +120,6 @@ QMenu::separator {
 
 /* Table/List rows. */
 QAbstractItemView {
-	background: #152f56;
 	alternate-background-color: #40020f23;
 }
 QAbstractItemView::item {
@@ -150,12 +142,6 @@ QHeaderView::section {
 QHeaderView::section:hover {
 	color: #e9f2fa;
 }
-QHeaderView::section:selected {
-	color: #ffffff;
-}
-QHeaderView::section:pressed {
-	color: #e8c446;
-}
 
 /* Intended for expandable folder UI. Used for tables instead. */
 QTreeWidget, QTreeWidget::item {
@@ -171,20 +157,17 @@ QListView, QListView::item {
 
 QWidget#HydrusMediaList
 {
-	qproperty-hmrp_background: #020f23;
-	qproperty-hmrp_thumbnail_local_background_normal: #152f56;
-	qproperty-hmrp_thumbnail_local_border_normal: #152f56;
-	qproperty-hmrp_thumbnail_local_background_selected: #25477b;
+	/* Override background drawing; use our own image and colour from the QSplitter parent */
+	qproperty-hmrp_background: transparent;
+
+	qproperty-hmrp_thumbnail_local_background_normal: #25477b;
+	qproperty-hmrp_thumbnail_local_border_normal: #25477b;
+	qproperty-hmrp_thumbnail_local_background_selected: #2b538e;
 	qproperty-hmrp_thumbnail_local_border_selected: #b4c7d9;
 	qproperty-hmrp_thumbnail_not_local_background_normal: #a0522d;
 	qproperty-hmrp_thumbnail_not_local_border_normal: #a0522d;
 	qproperty-hmrp_thumbnail_not_local_background_selected: #ed5d1f;
 	qproperty-hmrp_thumbnail_not_local_border_selected: #b4c7d9;
-}
-
-QWidget#HydrusTagList
-{
-	qproperty-htl_background: #152f56;
 }
 
 
@@ -214,6 +197,10 @@ QComboBox:on {
 	border: 2px solid #e59700;
 	padding: 0 1px 0 3px;
 	padding-top: 2px;
+}
+
+QComboBox QAbstractItemView {
+	background: #1f3c67;
 }
 
 /* Drop-down arrow icon. */
@@ -602,22 +589,10 @@ QProgressBar::chunk {
 
 /* Areas with multiple tabs, like pages and tagging. */
 
-/* QTabWidget: The area of a tab. */
-QTabWidget::pane {
-	color: #ffffff;
-	background: #020f23;
-	border: none;
-	border: 3px solid #152f56;
-	border-radius: 3px;
-}
-QTabWidget::tab-bar {
-	left: 3px;
-}
-
 /* QTabBar: The clickable tab labels. */
 QTabBar {
+	qproperty-drawBase: 0;
 	color: #b4c7d9;
-	background: #020f23;
 	border: none;
 }
 QTabBar::tab {
@@ -679,6 +654,128 @@ QLocatorResultWidget#selectedLocatorResult {
 
 QWidget#HydrusMediaViewer
 {
-	qproperty-hmv_background: #020f23;
+	qproperty-hmv_background: transparent;
 	qproperty-hmv_text: #b4c7d9;
+}
+
+/***************************** Positional stylings ****************************/
+
+/* Windows */
+QDialog, QMainWindow, Frame {
+	background-color: #020f23; /* e621 color-background */
+	background-image: url("static/qss/e621/bg.svg");
+	background-position: top left;
+	background-repeat: repeat-xy;
+}
+
+/* QTabWidget: The area of a tab. */
+QTabWidget::pane {
+	border: none;
+	padding: 0 1em;
+}
+
+QTabWidget::tab-bar {
+	left: 1.5em;
+}
+
+Page > QSplitter {
+	background-color: #152f56;
+	background-image: url("static/qss/e621/bg-small.svg");
+	background-position: top left;
+	background-repeat: repeat-x;
+	background-attachment: fixed;
+	border-radius: 6px;
+}
+
+/* Deeper nested tabs need lighter colours */
+QTabWidget Frame QTabWidget QTabWidget QTabBar::tab:selected,
+Frame QTabWidget QTabWidget QTabBar::tab:selected,
+QTabWidget QDialog QTabWidget QTabWidget QTabBar::tab:selected,
+QDialog QTabWidget QTabWidget QTabBar::tab:selected,
+QTabWidget QTabWidget QTabBar::tab:selected {
+	color: #ffffff;
+	background: #1f3c67;
+}
+
+QTabWidget Frame QTabWidget QTabWidget QTabBar::tab:pressed,
+Frame QTabWidget QTabWidget QTabBar::tab:pressed,
+QTabWidget QDialog QTabWidget QTabWidget QTabBar::tab:pressed,
+QDialog QTabWidget QTabWidget QTabBar::tab:pressed,
+QTabWidget QTabWidget QTabBar::tab:pressed {
+	color: #e8c446;
+	background: #1f3c67;
+}
+
+QTabWidget Frame QTabWidget QTabBar::tab:selected,
+Frame QTabWidget QTabBar::tab:selected,
+QTabWidget QDialog QTabWidget QTabBar::tab:selected,
+QDialog QTabWidget QTabBar::tab:selected,
+QTabBar::tab:selected {
+	color: #ffffff;
+	background: #152f56;
+}
+
+QTabWidget Frame QTabWidget QTabWidget QTabBar::tab:pressed,
+Frame QTabWidget QTabWidget QTabBar::tab:pressed,
+QTabWidget QDialog QTabWidget QTabWidget QTabBar::tab:pressed,
+QDialog QTabWidget QTabWidget QTabBar::tab:pressed,
+QTabBar::tab:pressed {
+	color: #e8c446;
+	background: #152f56;
+}
+
+QTabWidget QDialog QTabWidget QStackedWidget,
+QDialog QTabWidget QStackedWidget,
+QTabWidget Frame QTabWidget QStackedWidget,
+Frame QTabWidget QStackedWidget,
+QTabWidget QStackedWidget {
+	background: #152f56;
+}
+
+QTabWidget QDialog QTabWidget QTabWidget QStackedWidget,
+QDialog QTabWidget QTabWidget QStackedWidget,
+QTabWidget Frame QTabWidget QTabWidget QStackedWidget,
+Frame QTabWidget QTabWidget QStackedWidget,
+QTabWidget QTabWidget QStackedWidget {
+	background: #1f3c67;
+}
+
+QTabWidget QStackedWidget {
+	background: #152f56;
+	border-radius: 6px;
+}
+
+Page QSplitter::handle {
+	padding: 4px;
+	background: transparent;
+}
+
+CanvasFrame CanvasHoverFrame,
+ManageOptionsPanel {
+	background: #152f56; /* e621 color-foreground */
+	border-radius: 6px;
+}
+
+PopupWindow {
+	padding: 0.5em;
+	background: #1f3c67;
+	border-radius: 6px;
+}
+
+Page > .QFrame /* <- dropdowns, which get reparented and have no unique class or name so are hard to catch */ {
+	padding: 0.5em;
+	background: #152f56;
+	border: 3px solid #1f3c67;
+	border-radius: 6px;
+}
+
+QWidget#HydrusTagList
+{
+	qproperty-htl_background: #152f56;
+	qproperty-draw_background: 0;
+}
+
+QTabWidget QTabWidget QStackedWidget QWidget#HydrusTagList
+{
+	qproperty-htl_background: #1f3c67;
 }
