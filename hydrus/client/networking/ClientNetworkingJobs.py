@@ -846,16 +846,18 @@ class NetworkJob( object ):
                 
             
         
+        # note we do verify=session.verify here since it is an implicit inheritance and can be overwritten by internal requests ENV gubbins unless explicitly stated
+        
         if self._file_body_path is not None:
             
             with open( self._file_body_path, 'rb' ) as f:
                 
-                response = session.request( method, url, data = f, headers = headers, stream = True, timeout = ( connect_timeout, read_timeout ) )
+                response = session.request( method, url, data = f, headers = headers, stream = True, timeout = ( connect_timeout, read_timeout ), verify = session.verify )
                 
             
         else:
             
-            response = session.request( method, url, data = data, files = files, headers = headers, stream = True, timeout = ( connect_timeout, read_timeout ) )
+            response = session.request( method, url, data = data, files = files, headers = headers, stream = True, timeout = ( connect_timeout, read_timeout ), verify = session.verify )
             
         
         if HG.network_report_mode:
@@ -2286,6 +2288,7 @@ class NetworkJobHydrus( NetworkJob ):
             
         
     
+
 class NetworkJobIPFS( NetworkJob ):
     
     IS_IPFS_SERVICE = True

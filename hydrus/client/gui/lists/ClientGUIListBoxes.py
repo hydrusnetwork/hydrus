@@ -604,7 +604,7 @@ class AddEditDeleteListBox( QW.QWidget ):
     
     def _ImportFromPNG( self ):
         
-        with QP.FileDialog( self, 'select the png or pngs with the encoded data', acceptMode = QW.QFileDialog.AcceptMode.AcceptOpen, fileMode = QW.QFileDialog.FileMode.ExistingFiles, wildcard = 'PNG (*.png)|*.png' ) as dlg:
+        with QP.FileDialog( self, 'select the png or pngs with the encoded data', acceptMode = QW.QFileDialog.AcceptMode.AcceptOpen, fileMode = QW.QFileDialog.FileMode.ExistingFiles, wildcard = 'PNG (*.png)' ) as dlg:
             
             if dlg.exec() == QW.QDialog.DialogCode.Accepted:
                 
@@ -1145,7 +1145,7 @@ class QueueListBox( QW.QWidget ):
     
     def _ImportFromPNG( self ):
         
-        with QP.FileDialog( self, 'select the png or pngs with the encoded data', acceptMode = QW.QFileDialog.AcceptMode.AcceptOpen, fileMode = QW.QFileDialog.FileMode.ExistingFiles, wildcard = 'PNG (*.png)|*.png' ) as dlg:
+        with QP.FileDialog( self, 'select the png or pngs with the encoded data', acceptMode = QW.QFileDialog.AcceptMode.AcceptOpen, fileMode = QW.QFileDialog.FileMode.ExistingFiles, wildcard = 'PNG (*.png)' ) as dlg:
             
             if dlg.exec() == QW.QDialog.DialogCode.Accepted:
                 
@@ -1398,6 +1398,8 @@ class ListBox( QW.QScrollArea ):
         self._max_height_num_chars = None
         
         self._num_rows_per_page = 0
+        
+        self._draw_background = True
         
         self._show_sibling_decorators = True
         self._show_parent_decorators = True
@@ -2848,8 +2850,6 @@ class ListBoxTags( ListBox ):
             
             self._sibling_connector_namespace = CG.client_controller.new_options.GetNoneableString( 'sibling_connector_custom_namespace_colour' )
             
-        
-        self._draw_background = True
         
         self._UpdateBackgroundColour()
         

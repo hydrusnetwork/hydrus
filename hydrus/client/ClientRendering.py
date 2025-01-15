@@ -312,7 +312,7 @@ class ImageRenderer( ClientCachesBase.CacheableObject ):
         
         ( width, height ) = self._resolution
         
-        qt_image = QG.QImage( width, height, QG.QImage.Format_RGB888 )
+        qt_image = QG.QImage( width, height, QG.QImage.Format.Format_RGB888 )
         
         painter = QG.QPainter( qt_image )
         
@@ -409,7 +409,7 @@ class ImageRenderer( ClientCachesBase.CacheableObject ):
                 # 'hey, Qt, this QImage is in sRGB (I already normalised it), now convert it to xxx, thanks!'
                 
                 qt_image.setColorSpace( self._qt_colourspace )
-                qt_image.convertToColorSpace( QG.QColorSpace.SRgb )
+                qt_image.convertToColorSpace( QG.QColorSpace.NamedColorSpace.SRgb )
                 
             except:
                 
@@ -1122,11 +1122,11 @@ class HydrusBitmap( ClientCachesBase.CacheableObject ):
         
         if self._depth == 3:
             
-            return QG.QImage.Format_RGB888
+            return QG.QImage.Format.Format_RGB888
             
         elif self._depth == 4:
             
-            return QG.QImage.Format_RGBA8888
+            return QG.QImage.Format.Format_RGBA8888
             
         
     

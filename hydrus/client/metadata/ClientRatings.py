@@ -122,6 +122,7 @@ def GetLikeStateFromMedia( media, service_key ):
         return MIXED
         
     
+
 def GetLikeStateFromRating( rating ):
     
     if rating == 1: return LIKE
@@ -197,19 +198,3 @@ def GetShape( service_key ):
     
     return shape
     
-
-
-def GetShowInThumbnail( service_key ):
-
-    try:
-
-        service = CG.client_controller.services_manager.GetService( service_key )
-
-        show_in_thumbnail = service.GetShowInThumbnail()
-
-    except HydrusExceptions.DataMissing:
-
-        show_in_thumbnail = False
-        
-    
-    return show_in_thumbnail

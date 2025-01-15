@@ -2235,6 +2235,16 @@ class DB( HydrusDB.HydrusDB ):
                 self._ProcessContentUpdatePackage( content_update_package )
                 
             
+            if duplicate_type == HC.DUPLICATE_WORSE:
+                
+                # this is probably never going to run, since we are rigorous about doing this higher above, in order to get content_update_package good
+                # but we'll have it for safety!
+                
+                ( hash_a, hash_b ) = ( hash_b, hash_a )
+                
+                duplicate_type = HC.DUPLICATE_BETTER
+                
+            
             hash_id_a = self.modules_hashes_local_cache.GetHashId( hash_a )
             hash_id_b = self.modules_hashes_local_cache.GetHashId( hash_b )
             
@@ -2282,15 +2292,7 @@ class DB( HydrusDB.HydrusDB ):
                     self.modules_files_duplicates.SetAlternates( media_id_a, media_id_b )
                     
                 
-            elif duplicate_type in ( HC.DUPLICATE_BETTER, HC.DUPLICATE_WORSE, HC.DUPLICATE_SAME_QUALITY ):
-                
-                if duplicate_type == HC.DUPLICATE_WORSE:
-                    
-                    ( hash_id_a, hash_id_b ) = ( hash_id_b, hash_id_a )
-                    ( media_id_a, media_id_b ) = ( media_id_b, media_id_a )
-                    
-                    duplicate_type = HC.DUPLICATE_BETTER
-                    
+            elif duplicate_type in ( HC.DUPLICATE_BETTER, HC.DUPLICATE_SAME_QUALITY ):
                 
                 king_hash_id_a = self.modules_files_duplicates.GetKingHashId( media_id_a )
                 king_hash_id_b = self.modules_files_duplicates.GetKingHashId( media_id_b )
@@ -11527,6 +11529,38 @@ class DB( HydrusDB.HydrusDB ):
                 HydrusData.PrintException( e )
                 
                 message = 'A file maintenance job failed to schedule! This is not super important, but hydev would be interested in seeing the error that was printed to the log.'
+                
+                self.pub_initial_message( message )
+                
+            
+        
+        if version == 604:
+            
+            try:
+                
+                domain_manager: ClientNetworkingDomain.NetworkDomainManager = self.modules_serialisable.GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
+                
+                domain_manager.Initialise()
+                
+                #
+                
+                domain_manager.OverwriteDefaultParsers( [
+                    'e621 file page parser with contributor tags'
+                ] )
+                
+                #
+                
+                domain_manager.TryToLinkURLClassesAndParsers()
+                
+                #
+                
+                self.modules_serialisable.SetJSONDump( domain_manager )
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to update some downloader objects failed! Please let hydrus dev know!'
                 
                 self.pub_initial_message( message )
                 

@@ -256,7 +256,7 @@ class MediaResultsPanelThumbnails( ClientGUIMediaResultsPanel.MediaResultsPanel 
         
         comp_mode = painter.compositionMode()
         
-        painter.setCompositionMode( QG.QPainter.CompositionMode_Source )
+        painter.setCompositionMode( QG.QPainter.CompositionMode.CompositionMode_Source )
         
         if new_options.GetNoneableString( 'media_background_bmp_path' ) is not None:
             
@@ -2089,6 +2089,58 @@ class Selectable( object ):
     def Select( self ): self._selected = True
     
 
+def ShouldShowRatingInThumbnail( media: ClientMedia.Media, service_key: bytes ) -> bool:
+    
+    try:
+        
+        service = CG.client_controller.services_manager.GetService( service_key )
+        
+        show_in_thumbnail = service.GetShowInThumbnail()
+        show_in_thumbnail_even_when_null = service.GetShowInThumbnailEvenWhenNull()
+        
+        if not show_in_thumbnail:
+            
+            return False
+            
+        
+        if show_in_thumbnail_even_when_null:
+            
+            return True
+            
+        else:
+            
+            service_type = service.GetServiceType()
+            
+            if service_type == HC.LOCAL_RATING_LIKE:
+                
+                rating_state = ClientRatings.GetLikeStateFromMedia( ( media, ), service_key )
+                
+                return rating_state in ( ClientRatings.LIKE, ClientRatings.DISLIKE )
+                
+            elif service_type == HC.LOCAL_RATING_NUMERICAL:
+                
+                ( rating_state, rating ) = ClientRatings.GetNumericalStateFromMedia( ( media, ), service_key )
+                
+                return rating_state == ClientRatings.SET
+                
+            elif service_type == HC.LOCAL_RATING_INCDEC:
+                
+                ( rating_state, rating ) = ClientRatings.GetIncDecStateFromMedia( ( media, ), service_key )
+                
+                return rating_state == ClientRatings.SET and rating != 0
+                
+            else:
+                
+                raise NotImplementedError( 'Do not understand the rating service!' )
+                
+            
+        
+    except HydrusExceptions.DataMissing:
+        
+        return False
+        
+    
+
 class Thumbnail( Selectable ):
     
     def __init__( self, *args, **kwargs ):
@@ -2174,9 +2226,9 @@ class Thumbnail( Selectable ):
         
         painter = QG.QPainter( qt_image )
         
-        painter.setRenderHint( QG.QPainter.TextAntialiasing, True ) # is true already in tests, is supposed to be 'the way' to fix the ugly text issue
-        painter.setRenderHint( QG.QPainter.Antialiasing, True ) # seems to do nothing, it only affects primitives?
-        painter.setRenderHint( QG.QPainter.SmoothPixmapTransform, True ) # makes the thumb QImage scale up and down prettily when we need it, either because it is too small or DPR gubbins
+        painter.setRenderHint( QG.QPainter.RenderHint.TextAntialiasing, True ) # is true already in tests, is supposed to be 'the way' to fix the ugly text issue
+        painter.setRenderHint( QG.QPainter.RenderHint.Antialiasing, True ) # seems to do nothing, it only affects primitives?
+        painter.setRenderHint( QG.QPainter.RenderHint.SmoothPixmapTransform, True ) # makes the thumb QImage scale up and down prettily when we need it, either because it is too small or DPR gubbins
         
         new_options = CG.client_controller.new_options
         
@@ -2208,7 +2260,7 @@ class Thumbnail( Selectable ):
         f = QG.QFont( CG.client_controller.gui.font() )
         
         # this line magically fixes the bad text, as above
-        f.setStyleStrategy( QG.QFont.PreferAntialias )
+        f.setStyleStrategy( QG.QFont.StyleStrategy.PreferAntialias )
         
         painter.setFont( f )
         
@@ -2241,8 +2293,6 @@ class Thumbnail( Selectable ):
         painter.drawImage( x_offset, y_offset, raw_thumbnail_qt_image )
         
         TEXT_BORDER = 1
-        
-        new_options = CG.client_controller.new_options
         
         tags = media.GetTagsManager().GetCurrentAndPending( CC.COMBINED_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_SINGLE_MEDIA )
         
@@ -2375,96 +2425,91 @@ class Thumbnail( Selectable ):
         ICON_MARGIN = 1
         
         locations_manager = media.GetLocationsManager()
-
+        
         # ratings
-
-        current_y = thumbnail_border
-
-        added = False
-
+        
+        current_y = thumbnail_border + ICON_MARGIN
+        
+        a_like_was_added = False
+        
         services_manager = CG.client_controller.services_manager
-
+        
         like_services = services_manager.GetServices( ( HC.LOCAL_RATING_LIKE, ) )
-
+        
         like_services.reverse()
-
-        like_rating_current_x = width - 16 - 2 # -2 to line up exactly with the floating panel
-
-        for like_service in like_services:
-
+        
+        like_rating_current_x = width - 16 - thumbnail_border - ICON_MARGIN
+        
+        like_services_to_show = [ like_service for like_service in like_services if ShouldShowRatingInThumbnail( media, like_service.GetServiceKey() ) ]
+        
+        icon_backing_colour = QG.QColor( bg_color )
+        
+        for like_service in like_services_to_show:
+            
             service_key = like_service.GetServiceKey()
-
-            if ClientRatings.GetShowInThumbnail( service_key ):
-
-                rating_state = ClientRatings.GetLikeStateFromMedia( ( media, ), service_key )
-
-                if rating_state is ClientRatings.LIKE or rating_state is ClientRatings.DISLIKE:
-
-                    added = True
-
-                    ClientGUIRatings.DrawLike( painter, like_rating_current_x, current_y, service_key, rating_state )
-
-                    like_rating_current_x -= 16
-
-
-        if len( like_services ) > 0 and added:
-
+            
+            rating_state = ClientRatings.GetLikeStateFromMedia( ( media, ), service_key )
+            
+            a_like_was_added = True
+            
+            ClientGUIRatings.DrawLike( painter, like_rating_current_x, current_y, service_key, rating_state, background_colour = icon_backing_colour )
+            
+            like_rating_current_x -= 16
+            
+        
+        if a_like_was_added:
+            
             current_y += 18
-
-        added = False
-
+            
+        
         numerical_services = services_manager.GetServices( ( HC.LOCAL_RATING_NUMERICAL, ) )
-
-        for numerical_service in numerical_services:
-
+        
+        numerical_services_to_show = [ numerical_service for numerical_service in numerical_services if ShouldShowRatingInThumbnail( media, numerical_service.GetServiceKey() ) ]
+        
+        for numerical_service in numerical_services_to_show:
+            
             service_key = numerical_service.GetServiceKey()
-
-            if ClientRatings.GetShowInThumbnail( service_key ):
-
-                ( rating_state, rating ) = ClientRatings.GetNumericalStateFromMedia( ( media, ), service_key )
-
-                if rating_state is ClientRatings.SET:
-
-                    added = True
-
-                    numerical_width = ClientGUIRatings.GetNumericalWidth( service_key )
-
-                    ClientGUIRatings.DrawNumerical( painter, width - numerical_width - 2, current_y, service_key, rating_state, rating )
-
-                    current_y += 18
-
-
-        added = False
-
-        incdec_services = services_manager.GetServices( ( HC.LOCAL_RATING_INCDEC, ) )
-
-        incdec_services.reverse()
-
-        control_width = ClientGUIRatings.INCDEC_SIZE.width()
-
-        incdec_rating_current_x = width - control_width - 2 # -2 to line up exactly with the floating panel
-
-        for incdec_service in incdec_services:
-
-            service_key = incdec_service.GetServiceKey()
-
-            if ClientRatings.GetShowInThumbnail( service_key ):
-
-                ( rating_state, rating ) = ClientRatings.GetIncDecStateFromMedia( ( media, ), service_key )
-
-                if rating_state is ClientRatings.SET and rating != 0:
-
-                    added = True
-
-                    ClientGUIRatings.DrawIncDec( painter, incdec_rating_current_x, current_y, service_key, rating_state, rating )
-
-                    incdec_rating_current_x -= control_width
-
-
-        if len( incdec_services ) > 0 and added:
-
+            
+            ( rating_state, rating ) = ClientRatings.GetNumericalStateFromMedia( ( media, ), service_key )
+            
+            numerical_width = ClientGUIRatings.GetNumericalWidth( service_key )
+            
+            ClientGUIRatings.DrawNumerical( painter, width - numerical_width - 2, current_y, service_key, rating_state, rating, background_colour = icon_backing_colour )
+            
             current_y += 18
-
+            
+        
+        an_incdec_was_added = False
+        
+        incdec_services = services_manager.GetServices( ( HC.LOCAL_RATING_INCDEC, ) )
+        
+        incdec_services.reverse()
+        
+        control_width = ClientGUIRatings.INCDEC_SIZE.width()
+        
+        incdec_rating_current_x = width - control_width - thumbnail_border - ICON_MARGIN
+        
+        for incdec_service in incdec_services:
+            
+            service_key = incdec_service.GetServiceKey()
+            
+            if ShouldShowRatingInThumbnail( media, service_key ):
+                
+                ( rating_state, rating ) = ClientRatings.GetIncDecStateFromMedia( ( media, ), service_key )
+                
+                an_incdec_was_added = True
+                
+                ClientGUIRatings.DrawIncDec( painter, incdec_rating_current_x, current_y, service_key, rating_state, rating )
+                
+                incdec_rating_current_x -= control_width
+                
+            
+        
+        if len( incdec_services ) > 0 and an_incdec_was_added:
+            
+            current_y += 18
+            
+        
         # icons
 
         icons_to_draw = []
@@ -2500,7 +2545,8 @@ class Thumbnail( Selectable ):
                 painter.drawPixmap( width + icon_x, current_y, icon )
                 
                 icon_x -= 2 * ICON_MARGIN
-
+                
+            
         
         if media.IsCollection():
             

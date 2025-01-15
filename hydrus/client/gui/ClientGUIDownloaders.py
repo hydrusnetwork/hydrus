@@ -121,7 +121,7 @@ class EditDownloaderDisplayPanel( ClientGUIScrolledPanels.EditPanel ):
         gridbox = ClientGUICommon.WrapInGrid( media_viewer_urls_panel, rows )
         
         QP.AddToLayout( vbox, self._url_display_list_ctrl_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
-        QP.AddToLayout( vbox, gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
         media_viewer_urls_panel.setLayout( vbox )
         
@@ -352,6 +352,7 @@ class EditGUGPanel( ClientGUIScrolledPanels.EditPanel ):
         vbox = QP.VBoxLayout()
         
         QP.AddToLayout( vbox, gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        vbox.addStretch( 0 )
         
         self.widget().setLayout( vbox )
         
@@ -462,7 +463,7 @@ class EditNGUGPanel( ClientGUIScrolledPanels.EditPanel ):
         
         model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_NGUG_GUGS.ID, self._ConvertGUGDataToDisplayTuple, self._ConvertGUGDataToSortTuple )
         
-        self._gug_list_ctrl = ClientGUIListCtrl.BetterListCtrlTreeView( self._gug_list_ctrl_panel, 30, model, use_simple_delete = True )
+        self._gug_list_ctrl = ClientGUIListCtrl.BetterListCtrlTreeView( self._gug_list_ctrl_panel, 8, model, use_simple_delete = True )
         
         self._gug_list_ctrl_panel.SetListCtrl( self._gug_list_ctrl )
         
@@ -951,6 +952,8 @@ class EditURLClassComponentPanel( ClientGUIScrolledPanels.EditPanel ):
         
         string_match_panel = ClientGUICommon.StaticBox( self, 'value test' )
         
+        # TODO: this guy sizes crazy because he is a scrolling panel not a normal widget
+        # the layout of this panel was whack, better now but revisit it (add a vbox.addStretch( 0 )?) once this guy is a widget
         self._string_match = ClientGUIStringPanels.EditStringMatchPanel( string_match_panel, string_match )
         self._string_match.setToolTip( ClientGUIFunctions.WrapToolTip( 'If the encoded value of the component matches this, the URL Class matches!' ) )
         
@@ -974,15 +977,15 @@ class EditURLClassComponentPanel( ClientGUIScrolledPanels.EditPanel ):
         
         rows = []
         
-        rows.append( string_match_panel )
         rows.append( ( 'default value: ', self._pretty_default_value ) )
         rows.append( ( 'default value, %-encoded: ', self._default_value ) )
         
-        gridbox = ClientGUICommon.WrapInGrid( self, rows, add_stretch_at_end = False, expand_single_widgets = True )
+        gridbox = ClientGUICommon.WrapInGrid( self, rows )
         
         vbox = QP.VBoxLayout()
         
-        QP.AddToLayout( vbox, gridbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        QP.AddToLayout( vbox, string_match_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( vbox, gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
         self.widget().setLayout( vbox )
         
@@ -1127,11 +1130,13 @@ class EditURLClassParameterFixedNamePanel( ClientGUIScrolledPanels.EditPanel ):
         rows.append( ( 'default value, %-encoded: ', self._default_value ) )
         rows.append( ( 'default value string processor: ', self._default_value_string_processor ) )
         
-        gridbox = ClientGUICommon.WrapInGrid( self, rows, add_stretch_at_end = False, expand_single_widgets = True )
+        gridbox = ClientGUICommon.WrapInGrid( self, rows, expand_single_widgets = True )
         
         vbox = QP.VBoxLayout()
         
+        # TODO: set this to perpendicular and the addstretch when stringmatch is not a panel
         QP.AddToLayout( vbox, gridbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        #vbox.addStretch( 0 )
         
         self.widget().setLayout( vbox )
         
@@ -1644,10 +1649,10 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
         
         gridbox_2 = ClientGUICommon.WrapInGrid( self._matching_panel, rows )
         
-        self._matching_panel.Add( gridbox_1, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._matching_panel.Add( gridbox_1, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         self._matching_panel.Add( path_components_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         self._matching_panel.Add( parameters_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
-        self._matching_panel.Add( gridbox_2, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._matching_panel.Add( gridbox_2, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
         #
         
@@ -1697,7 +1702,7 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
         
         gridbox = ClientGUICommon.WrapInGrid( self._options_panel, rows )
         
-        self._options_panel.Add( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._options_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         self._options_panel.Add( self._api_url_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._options_panel.Add( self._referral_url_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._options_panel.Add( self._next_gallery_page_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -1710,7 +1715,7 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
         rows.append( ( 'name: ', self._name ) )
         rows.append( ( 'url type: ', self._url_type ) )
         
-        gridbox_1 = ClientGUICommon.WrapInGrid( self._matching_panel, rows )
+        gridbox_1 = ClientGUICommon.WrapInGrid( self, rows )
         
         rows = []
         
@@ -1722,10 +1727,10 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
         
         vbox = QP.VBoxLayout()
         
-        QP.AddToLayout( vbox, gridbox_1, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, gridbox_1, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         QP.AddToLayout( vbox, self._notebook, CC.FLAGS_EXPAND_BOTH_WAYS )
         QP.AddToLayout( vbox, self._example_url_classes, CC.FLAGS_EXPAND_PERPENDICULAR )
-        QP.AddToLayout( vbox, gridbox_2, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, gridbox_2, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
         self.widget().setLayout( vbox )
         

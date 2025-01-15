@@ -80,15 +80,20 @@ class EditLoginCredentialsPanel( ClientGUIScrolledPanels.EditPanel ):
             
             hbox = QP.HBoxLayout()
             
-            QP.AddToLayout( hbox, control, CC.FLAGS_EXPAND_BOTH_WAYS )
+            QP.AddToLayout( hbox, control, CC.FLAGS_CENTER_PERPENDICULAR_EXPAND_DEPTH )
             QP.AddToLayout( hbox, control_st, CC.FLAGS_CENTER_PERPENDICULAR )
             
             rows.append( ( credential_definition.GetName() + ': ', hbox ) )
             
         
-        gridbox = ClientGUICommon.WrapInGrid( self, rows, add_stretch_at_end = False )
+        gridbox = ClientGUICommon.WrapInGrid( self, rows )
         
-        self.widget().setLayout( gridbox )
+        vbox = QP.VBoxLayout()
+        
+        QP.AddToLayout( vbox, gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        vbox.addStretch( 0 )
+        
+        self.widget().setLayout( vbox )
         
         self._UpdateSts()
         
@@ -232,7 +237,12 @@ class EditLoginCredentialDefinitionPanel( ClientGUIScrolledPanels.EditPanel ):
         
         gridbox = ClientGUICommon.WrapInGrid( self, rows )
         
-        self.widget().setLayout( gridbox )
+        vbox = QP.VBoxLayout()
+        
+        QP.AddToLayout( vbox, gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        vbox.addStretch( 0 )
+        
+        self.widget().setLayout( vbox )
         
     
     def GetValue( self ):
@@ -1263,7 +1273,12 @@ class ReviewTestResultPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         gridbox = ClientGUICommon.WrapInGrid( self, rows )
         
-        self.widget().setLayout( gridbox )
+        vbox = QP.VBoxLayout()
+        
+        QP.AddToLayout( vbox, gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        vbox.addStretch( 0 )
+        
+        self.widget().setLayout( vbox )
         
     
     def _CopyData( self ):

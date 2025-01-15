@@ -77,7 +77,7 @@ def DrawIncDec( painter: QG.QPainter, x, y, service_key, rating_state, rating ):
     
     incdec_font.setPixelSize( 11 )
     
-    incdec_font.setStyleHint( QG.QFont.Monospace )
+    incdec_font.setStyleHint( QG.QFont.StyleHint.Monospace )
     
     painter.setFont( incdec_font )
     
@@ -95,11 +95,11 @@ def DrawIncDec( painter: QG.QPainter, x, y, service_key, rating_state, rating ):
     painter.setPen( pen_colour )
     painter.setBrush( brush_colour )
     
-    painter.setRenderHint( QG.QPainter.Antialiasing, False )
+    painter.setRenderHint( QG.QPainter.RenderHint.Antialiasing, False )
     
     painter.drawRect( x, y, INCDEC_SIZE.width() - 1, INCDEC_SIZE.height() - 1 )
     
-    painter.setRenderHint( QG.QPainter.Antialiasing, True )
+    painter.setRenderHint( QG.QPainter.RenderHint.Antialiasing, True )
     
     text_rect = QC.QRect( QC.QPoint( x + 1, y + 1 ), INCDEC_SIZE - QC.QSize( 4, 4 ) )
     
@@ -108,32 +108,81 @@ def DrawIncDec( painter: QG.QPainter, x, y, service_key, rating_state, rating ):
     painter.setFont( original_font )
     
 
-def DrawLike( painter: QG.QPainter, x, y, service_key, rating_state ):
+def DrawLike( painter: QG.QPainter, x, y, service_key, rating_state, background_colour = None ):
     
-    painter.setRenderHint( QG.QPainter.Antialiasing, True )
+    # TODO: this draw background stuff is horrible, we really need an svg solution or a nice call like 'draw a fuzzy line around this guy'
+    
+    painter.setRenderHint( QG.QPainter.RenderHint.Antialiasing, True )
     
     shape = ClientRatings.GetShape( service_key )
     
     ( pen_colour, brush_colour ) = GetPenAndBrushColours( service_key, rating_state )
     
-    painter.setPen( QG.QPen( pen_colour ) )
-    painter.setBrush( QG.QBrush( brush_colour ) )
-    
     if shape == ClientRatings.CIRCLE:
         
-        painter.drawEllipse( QC.QPointF( x+7, y+7 ), 6, 6 )
+        if background_colour is not None:
+            
+            background_colour = QG.QColor( background_colour )
+            background_colour.setAlpha( 64 )
+            
+            painter.setBrush( QG.QBrush( background_colour ) )
+            painter.setPen( QG.QPen( background_colour ) )
+            
+            painter.drawEllipse( QC.QPointF( x+8, y+8 ), 7, 7 )
+            
+        
+        painter.setPen( QG.QPen( pen_colour ) )
+        painter.setBrush( QG.QBrush( brush_colour ) )
+        
+        painter.drawEllipse( QC.QPointF( x+8, y+8 ), 6, 6 )
         
     elif shape == ClientRatings.SQUARE:
         
-        painter.drawRect( x+2, y+2, 12, 12 )
+        if background_colour is not None:
+            
+            background_colour = QG.QColor( background_colour )
+            background_colour.setAlpha( 64 )
+            
+            painter.setBrush( QG.QBrush( background_colour ) )
+            painter.setPen( QG.QPen( background_colour ) )
+            
+            painter.drawRect( QC.QRectF( x+1, y+1, 14, 14 ) )
+            
+        
+        painter.setPen( QG.QPen( pen_colour ) )
+        painter.setBrush( QG.QBrush( brush_colour ) )
+        
+        painter.drawRect( QC.QRectF( x+2, y+2, 12, 12 ) )
         
     elif shape in ( ClientRatings.FAT_STAR, ClientRatings.PENTAGRAM_STAR ):
         
-        offset = QC.QPoint( x + 1, y + 1 )
+        coords = FAT_STAR_COORDS if shape == ClientRatings.FAT_STAR else PENTAGRAM_STAR_COORDS
+        
+        if background_colour is not None:
+            
+            background_colour = QG.QColor( background_colour )
+            background_colour.setAlpha( 32 )
+            
+            painter.setBrush( QG.QBrush( background_colour ) )
+            painter.setPen( QG.QPen( background_colour ) )
+            
+            background_coords = [ point * ( 16 / 12 ) for point in coords ]
+            
+            offset = QC.QPointF( x, y )
+            
+            painter.translate( offset )
+            
+            painter.drawPolygon( QG.QPolygonF( background_coords ) )
+            
+            painter.translate( -offset )
+            
+        
+        painter.setPen( QG.QPen( pen_colour ) )
+        painter.setBrush( QG.QBrush( brush_colour ) )
+        
+        offset = QC.QPointF( x + 2, y + 2 )
         
         painter.translate( offset )
-        
-        coords = FAT_STAR_COORDS if shape == ClientRatings.FAT_STAR else PENTAGRAM_STAR_COORDS
         
         painter.drawPolygon( QG.QPolygonF( coords ) )
         
@@ -141,11 +190,68 @@ def DrawLike( painter: QG.QPainter, x, y, service_key, rating_state ):
         
     
 
-def DrawNumerical( painter: QG.QPainter, x, y, service_key, rating_state, rating ):
+def DrawNumerical( painter: QG.QPainter, x, y, service_key, rating_state, rating, background_colour = None ):
     
-    painter.setRenderHint( QG.QPainter.Antialiasing, True )
+    # TODO: this draw background stuff is horrible, we really need an svg solution or a nice call like 'draw a fuzzy line around this guy'
+    
+    painter.setRenderHint( QG.QPainter.RenderHint.Antialiasing, True )
     
     ( shape, stars ) = GetStars( service_key, rating_state, rating )
+    
+    if background_colour is not None:
+        
+        x_delta = 0
+        x_step = 12
+        
+        background_colour = QG.QColor( background_colour )
+        
+        if shape == ClientRatings.CIRCLE:
+            
+            background_colour.setAlpha( 64 )
+            
+        elif shape == ClientRatings.SQUARE:
+            
+            background_colour.setAlpha( 64 )
+            
+        elif shape in ( ClientRatings.FAT_STAR, ClientRatings.PENTAGRAM_STAR ):
+            
+            background_colour.setAlpha( 32 )
+            
+        
+        painter.setBrush( QG.QBrush( background_colour ) )
+        painter.setPen( QG.QPen( background_colour ) )
+        
+        for ( num_stars, pen_colour, brush_colour ) in stars:
+            
+            for i in range( num_stars ):
+                
+                if shape == ClientRatings.CIRCLE:
+                    
+                    painter.drawEllipse( QC.QPointF( x + 8 + x_delta, y + 8 ), 7, 7 )
+                    
+                elif shape == ClientRatings.SQUARE:
+                    
+                    painter.drawRect( x + 1 + x_delta, y + 1, 14, 14 )
+                    
+                elif shape in ( ClientRatings.FAT_STAR, ClientRatings.PENTAGRAM_STAR ):
+                    
+                    coords = FAT_STAR_COORDS if shape == ClientRatings.FAT_STAR else PENTAGRAM_STAR_COORDS
+                    
+                    background_coords = [ point * ( 16 / 12 ) for point in coords ]
+                    
+                    offset = QC.QPoint( x + x_delta, y )
+                    
+                    painter.translate( offset )
+                    
+                    painter.drawPolygon( QG.QPolygonF( background_coords ) )
+                    
+                    painter.translate( -offset )
+                    
+                
+                x_delta += x_step
+                
+            
+        
     
     x_delta = 0
     x_step = 12
@@ -159,7 +265,7 @@ def DrawNumerical( painter: QG.QPainter, x, y, service_key, rating_state, rating
             
             if shape == ClientRatings.CIRCLE:
                 
-                painter.drawEllipse( QC.QPointF( x + 7 + x_delta, y + 7 ), 6, 6 )
+                painter.drawEllipse( QC.QPointF( x + 8 + x_delta, y + 8 ), 6, 6 )
                 
             elif shape == ClientRatings.SQUARE:
                 
@@ -167,7 +273,7 @@ def DrawNumerical( painter: QG.QPainter, x, y, service_key, rating_state, rating
                 
             elif shape in ( ClientRatings.FAT_STAR, ClientRatings.PENTAGRAM_STAR ):
                 
-                offset = QC.QPoint( x + 1 + x_delta, y + 1 )
+                offset = QC.QPoint( x + 2 + x_delta, y + 2 )
                 
                 painter.translate( offset )
                 

@@ -105,8 +105,8 @@ options = {}
 # Misc
 
 NETWORK_VERSION = 20
-SOFTWARE_VERSION = 604
-CLIENT_API_VERSION = 76
+SOFTWARE_VERSION = 605
+CLIENT_API_VERSION = 77
 
 SERVER_THUMBNAIL_DIMENSIONS = ( 200, 200 )
 
@@ -266,11 +266,12 @@ content_update_string_lookup = {
 DEFINITIONS_TYPE_HASHES = 0
 DEFINITIONS_TYPE_TAGS = 1
 
+# TODO: I should probably split this into status and action, but keeping the same enum stuff; this is confusing
 DUPLICATE_POTENTIAL = 0
 DUPLICATE_FALSE_POSITIVE = 1
 DUPLICATE_SAME_QUALITY = 2
 DUPLICATE_ALTERNATE = 3
-DUPLICATE_BETTER = 4
+DUPLICATE_BETTER = 4 # TODO: as part of this, rename BETTER/WORSE to A IS BETTER and B IS BETTER
 DUPLICATE_SMALLER_BETTER = 5
 DUPLICATE_LARGER_BETTER = 6
 DUPLICATE_WORSE = 7
@@ -283,13 +284,21 @@ duplicate_type_string_lookup = {
     DUPLICATE_FALSE_POSITIVE : 'not related/false positive',
     DUPLICATE_SAME_QUALITY : 'same quality',
     DUPLICATE_ALTERNATE : 'alternates',
-    DUPLICATE_BETTER : 'this is better',
-    DUPLICATE_SMALLER_BETTER : 'smaller hash_id is better',
-    DUPLICATE_LARGER_BETTER : 'larger hash_id is better',
-    DUPLICATE_WORSE : 'this is worse',
+    DUPLICATE_BETTER : 'this is a better duplicate',
+    DUPLICATE_SMALLER_BETTER : 'smaller hash_id is a better duplicate',
+    DUPLICATE_LARGER_BETTER : 'larger hash_id is a better duplicate',
+    DUPLICATE_WORSE : 'this is a worse duplicate',
     DUPLICATE_MEMBER : 'duplicates',
     DUPLICATE_KING : 'the best quality duplicate',
     DUPLICATE_CONFIRMED_ALTERNATE : 'confirmed alternates'
+}
+
+duplicate_type_auto_resolution_action_description_lookup = {
+    DUPLICATE_FALSE_POSITIVE : 'set as not related/false positive',
+    DUPLICATE_SAME_QUALITY : 'set as same quality',
+    DUPLICATE_ALTERNATE : 'set as alternates',
+    DUPLICATE_BETTER : 'set as duplicates--A better',
+    DUPLICATE_WORSE : 'set as duplicates--B better'
 }
 
 ENCODING_RAW = 0

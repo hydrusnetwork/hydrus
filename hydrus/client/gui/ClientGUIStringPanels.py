@@ -363,6 +363,7 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         QP.AddToLayout( vbox, conversions_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         QP.AddToLayout( vbox, gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        vbox.addStretch( 0 )
         
         self.widget().setLayout( vbox )
         
@@ -870,7 +871,7 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
             
             self._control_gridbox = ClientGUICommon.WrapInGrid( self._control_panel, rows )
             
-            self._control_panel.Add( self._control_gridbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+            self._control_panel.Add( self._control_gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             self._control_panel.Add( self._data_dateparser_label, CC.FLAGS_EXPAND_PERPENDICULAR )
             
             #
@@ -882,7 +883,7 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
             
             self._example_gridbox = ClientGUICommon.WrapInGrid( self._example_panel, rows )
             
-            self._example_panel.Add( self._example_gridbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+            self._example_panel.Add( self._example_gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
             #
             
@@ -890,7 +891,7 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
             
             QP.AddToLayout( vbox, self._control_panel, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             QP.AddToLayout( vbox, self._example_panel, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-            vbox.addStretch( 1 )
+            vbox.addStretch( 0 )
             
             self.widget().setLayout( vbox )
             
@@ -1235,7 +1236,7 @@ class EditStringJoinerPanel( ClientGUIScrolledPanels.EditPanel ):
         
         gridbox = ClientGUICommon.WrapInGrid( self._controls_panel, rows )
         
-        self._controls_panel.Add( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._controls_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         self._controls_panel.Add( self._summary_st, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         hbox = QP.HBoxLayout()
@@ -1322,6 +1323,9 @@ class EditStringMatchPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def __init__( self, parent: QW.QWidget, string_match: ClientStrings.StringMatch, test_data = typing.Optional[ ClientParsing.ParsingTestData ] ):
         
+        # TODO: make this a widget so I can embed it in other places without scrollbar fun
+        # search all instances afterwards and fix whack layout flags. shouldn't have to expand since scrollbar is no longer in the way of min size calcs
+        
         super().__init__( parent )
         
         self._match_type = ClientGUICommon.BetterChoice( self )
@@ -1378,6 +1382,7 @@ class EditStringMatchPanel( ClientGUIScrolledPanels.EditPanel ):
         
         QP.AddToLayout( vbox, gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         QP.AddToLayout( vbox, self._example_string_matches, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.addStretch( 0 )
         
         self.widget().setLayout( vbox )
         
@@ -2101,6 +2106,7 @@ class EditStringTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         QP.AddToLayout( vbox, gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         QP.AddToLayout( vbox, self._example_string_matches, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.addStretch( 0 )
         
         self.widget().setLayout( vbox )
         

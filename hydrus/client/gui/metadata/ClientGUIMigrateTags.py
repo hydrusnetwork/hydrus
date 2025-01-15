@@ -190,32 +190,32 @@ class MigrateTagsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         file_left_vbox = QP.VBoxLayout()
         
-        QP.AddToLayout( file_left_vbox, self._migration_source_file_filtering_type, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( file_left_vbox, self._migration_source_file_filtering_type, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( file_left_vbox, self._migration_source_location_context_button, CC.FLAGS_EXPAND_PERPENDICULAR )
-        QP.AddToLayout( file_left_vbox, self._migration_source_left_tag_pair_filter, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( file_left_vbox, self._migration_source_left_tag_pair_filter, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         have_count_vbox = QP.VBoxLayout()
         
-        QP.AddToLayout( have_count_vbox, self._migration_source_child_must_have_count, CC.FLAGS_EXPAND_BOTH_WAYS )
-        QP.AddToLayout( have_count_vbox, self._migration_source_worse_must_have_count, CC.FLAGS_EXPAND_BOTH_WAYS )
-        QP.AddToLayout( have_count_vbox, self._migration_source_parent_must_have_count, CC.FLAGS_EXPAND_BOTH_WAYS )
-        QP.AddToLayout( have_count_vbox, self._migration_source_ideal_must_have_count, CC.FLAGS_EXPAND_BOTH_WAYS )
-        QP.AddToLayout( have_count_vbox, self._migration_source_child_or_parent_must_have_count, CC.FLAGS_EXPAND_BOTH_WAYS )
-        QP.AddToLayout( have_count_vbox, self._migration_source_worse_or_ideal_must_have_count, CC.FLAGS_EXPAND_BOTH_WAYS )
-        QP.AddToLayout( have_count_vbox, ClientGUICommon.WrapInText( self._migration_source_have_count_service, self._pair_have_count_panel, 'in service: ' ), CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( have_count_vbox, self._migration_source_child_must_have_count, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( have_count_vbox, self._migration_source_worse_must_have_count, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( have_count_vbox, self._migration_source_parent_must_have_count, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( have_count_vbox, self._migration_source_ideal_must_have_count, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( have_count_vbox, self._migration_source_child_or_parent_must_have_count, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( have_count_vbox, self._migration_source_worse_or_ideal_must_have_count, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( have_count_vbox, ClientGUICommon.WrapInText( self._migration_source_have_count_service, self._pair_have_count_panel, 'in service: ' ), CC.FLAGS_EXPAND_PERPENDICULAR )
         
         self._pair_have_count_panel.setLayout( have_count_vbox )
         
         tag_right_vbox = QP.VBoxLayout()
         
-        QP.AddToLayout( tag_right_vbox, self._migration_source_tag_filter, CC.FLAGS_EXPAND_BOTH_WAYS )
-        QP.AddToLayout( tag_right_vbox, self._migration_source_right_tag_pair_filter, CC.FLAGS_EXPAND_BOTH_WAYS )
-        QP.AddToLayout( tag_right_vbox, self._pair_have_count_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( tag_right_vbox, self._migration_source_tag_filter, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( tag_right_vbox, self._migration_source_right_tag_pair_filter, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( tag_right_vbox, self._pair_have_count_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         dest_hash_type_hbox = QP.HBoxLayout()
         
         QP.AddToLayout( dest_hash_type_hbox, self._migration_destination_hash_type_choice_st, CC.FLAGS_CENTER_PERPENDICULAR )
-        QP.AddToLayout( dest_hash_type_hbox, self._migration_destination_hash_type_choice, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( dest_hash_type_hbox, self._migration_destination_hash_type_choice, CC.FLAGS_CENTER_PERPENDICULAR_EXPAND_DEPTH )
         
         #
         
@@ -233,28 +233,28 @@ class MigrateTagsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         QP.AddToLayout( gridbox, ClientGUICommon.BetterStaticText( self._migration_panel, 'destination' ), CC.FLAGS_CENTER )
         ClientGUICommon.AddGridboxStretchSpacer( self._migration_panel, gridbox )
         
-        QP.AddToLayout( gridbox, self._migration_content_type, CC.FLAGS_EXPAND_BOTH_WAYS )
-        QP.AddToLayout( gridbox, self._migration_source, CC.FLAGS_EXPAND_BOTH_WAYS )
-        QP.AddToLayout( gridbox, self._migration_source_content_status_filter, CC.FLAGS_EXPAND_BOTH_WAYS )
-        QP.AddToLayout( gridbox, self._migration_action, CC.FLAGS_EXPAND_BOTH_WAYS )
-        QP.AddToLayout( gridbox, self._migration_destination, CC.FLAGS_EXPAND_BOTH_WAYS )
-        QP.AddToLayout( gridbox, self._migration_go, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( gridbox, self._migration_content_type, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( gridbox, self._migration_source, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( gridbox, self._migration_source_content_status_filter, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( gridbox, self._migration_action, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( gridbox, self._migration_destination, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( gridbox, self._migration_go, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         ClientGUICommon.AddGridboxStretchSpacer( self._migration_panel, gridbox )
-        QP.AddToLayout( gridbox, self._migration_source_archive_path_button, CC.FLAGS_EXPAND_BOTH_WAYS )
-        QP.AddToLayout( gridbox, file_left_vbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        QP.AddToLayout( gridbox, self._migration_source_archive_path_button, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( gridbox, file_left_vbox, CC.FLAGS_EXPAND_PERPENDICULAR )
         ClientGUICommon.AddGridboxStretchSpacer( self._migration_panel, gridbox )
-        QP.AddToLayout( gridbox, self._migration_destination_archive_path_button, CC.FLAGS_EXPAND_BOTH_WAYS )
-        ClientGUICommon.AddGridboxStretchSpacer( self._migration_panel, gridbox )
-        
-        ClientGUICommon.AddGridboxStretchSpacer( self._migration_panel, gridbox )
-        QP.AddToLayout( gridbox, self._migration_source_hash_type_st, CC.FLAGS_CENTER_PERPENDICULAR )
-        QP.AddToLayout( gridbox, tag_right_vbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
-        ClientGUICommon.AddGridboxStretchSpacer( self._migration_panel, gridbox )
-        QP.AddToLayout( gridbox, dest_hash_type_hbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        QP.AddToLayout( gridbox, self._migration_destination_archive_path_button, CC.FLAGS_EXPAND_PERPENDICULAR )
         ClientGUICommon.AddGridboxStretchSpacer( self._migration_panel, gridbox )
         
-        self._migration_panel.Add( gridbox )
+        ClientGUICommon.AddGridboxStretchSpacer( self._migration_panel, gridbox )
+        QP.AddToLayout( gridbox, self._migration_source_hash_type_st, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( gridbox, tag_right_vbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+        ClientGUICommon.AddGridboxStretchSpacer( self._migration_panel, gridbox )
+        QP.AddToLayout( gridbox, dest_hash_type_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        ClientGUICommon.AddGridboxStretchSpacer( self._migration_panel, gridbox )
+        
+        self._migration_panel.Add( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         #
         
@@ -271,10 +271,11 @@ class MigrateTagsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         vbox = QP.VBoxLayout()
         
-        QP.AddToLayout( vbox, st, CC.FLAGS_EXPAND_BOTH_WAYS )
-        QP.AddToLayout( vbox, self._migration_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        # TODO: I cleaned up the flags and ugly grid, but something is still wrong with the layout here. the dialog has some spare space on the bottom
         
-        #vbox.addStretch( 1 )
+        QP.AddToLayout( vbox, st, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._migration_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.addStretch( 0 )
         
         self.widget().setLayout( vbox )
         

@@ -33,7 +33,7 @@ class AlphaColourControl( QW.QWidget ):
         QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'alpha:'), CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( hbox, self._alpha_selector, CC.FLAGS_CENTER_PERPENDICULAR )
         
-        hbox.addStretch( 1 )
+        hbox.addStretch( 0 )
         
         self.setLayout( hbox )
         
@@ -253,7 +253,7 @@ class ColourPickerButton( QW.QPushButton ):
         
         menu = ClientGUIMenus.GenerateMenu( self )
         
-        hex_string = self.GetColour().name( QG.QColor.HexRgb )
+        hex_string = self.GetColour().name( QG.QColor.NameFormat.HexRgb )
         
         ClientGUIMenus.AppendMenuItem( menu, 'copy ' + hex_string + ' to the clipboard', 'Copy the current colour to the clipboard.', CG.client_controller.pub, 'clipboard', 'text', hex_string )
         ClientGUIMenus.AppendMenuItem( menu, 'import a hex colour from the clipboard', 'Look at the clipboard for a colour in the format #FF0000, and set the colour.', self._ImportHexFromClipboard )

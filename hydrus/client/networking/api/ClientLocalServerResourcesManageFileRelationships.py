@@ -169,14 +169,14 @@ class HydrusResourceClientAPIRestrictedManageFileRelationshipsSetRelationships( 
         # variable type testing
         for row in raw_rows:
             
-            ( duplicate_type, hash_a_hex, hash_b_hex, do_default_content_merge, delete_first, delete_second ) = row
+            ( duplicate_type, hash_a_hex, hash_b_hex, do_default_content_merge, delete_a, delete_b ) = row
             
             HydrusNetworkVariableHandling.TestVariableType( 'relationship', duplicate_type, int, allowed_values = allowed_duplicate_types )
             HydrusNetworkVariableHandling.TestVariableType( 'hash_a', hash_a_hex, str )
             HydrusNetworkVariableHandling.TestVariableType( 'hash_b', hash_b_hex, str )
             HydrusNetworkVariableHandling.TestVariableType( 'do_default_content_merge', do_default_content_merge, bool )
-            HydrusNetworkVariableHandling.TestVariableType( 'delete_first', delete_first, bool )
-            HydrusNetworkVariableHandling.TestVariableType( 'delete_second', delete_second, bool )
+            HydrusNetworkVariableHandling.TestVariableType( 'delete_a', delete_a, bool )
+            HydrusNetworkVariableHandling.TestVariableType( 'delete_b', delete_b, bool )
             
             try:
                 
@@ -199,15 +199,23 @@ class HydrusResourceClientAPIRestrictedManageFileRelationshipsSetRelationships( 
         
         for row in raw_rows:
             
-            ( duplicate_type, hash_a_hex, hash_b_hex, do_default_content_merge, delete_first, delete_second ) = row
+            ( duplicate_type, hash_a_hex, hash_b_hex, do_default_content_merge, delete_a, delete_b ) = row
+            
+            if duplicate_type == HC.DUPLICATE_WORSE:
+                
+                duplicate_type = HC.DUPLICATE_BETTER
+                
+                ( hash_a_hex, hash_b_hex ) = ( hash_b_hex, hash_a_hex )
+                ( delete_a, delete_b ) = ( delete_b, delete_a )
+                
             
             hash_a = bytes.fromhex( hash_a_hex )
             hash_b = bytes.fromhex( hash_b_hex )
             
             content_update_packages = []
             
-            first_media_result = hashes_to_media_results[ hash_a ]
-            second_media_result = hashes_to_media_results[ hash_b ]
+            media_result_a = hashes_to_media_results[ hash_a ]
+            media_result_b = hashes_to_media_results[ hash_b ]
             
             file_deletion_reason = 'From Client API (duplicates processing).'
             
@@ -215,22 +223,22 @@ class HydrusResourceClientAPIRestrictedManageFileRelationshipsSetRelationships( 
                 
                 duplicate_content_merge_options = CG.client_controller.new_options.GetDuplicateContentMergeOptions( duplicate_type )
                 
-                content_update_packages.append( duplicate_content_merge_options.ProcessPairIntoContentUpdatePackage( first_media_result, second_media_result, file_deletion_reason = file_deletion_reason, delete_first = delete_first, delete_second = delete_second ) )
+                content_update_packages.append( duplicate_content_merge_options.ProcessPairIntoContentUpdatePackage( media_result_a, media_result_b, file_deletion_reason = file_deletion_reason, delete_a = delete_a, delete_b = delete_b ) )
                 
-            elif delete_first or delete_second:
+            elif delete_a or delete_b:
                 
                 content_update_package = ClientContentUpdates.ContentUpdatePackage()
                 
                 deletee_media_results = set()
                 
-                if delete_first:
+                if delete_a:
                     
-                    deletee_media_results.add( first_media_result )
+                    deletee_media_results.add( media_result_a )
                     
                 
-                if delete_second:
+                if delete_b:
                     
-                    deletee_media_results.add( second_media_result )
+                    deletee_media_results.add( media_result_b )
                     
                 
                 for media_result in deletee_media_results:

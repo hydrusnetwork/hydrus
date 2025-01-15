@@ -87,7 +87,7 @@ def GenerateThumbnailNumPyFromPDFPath( path: str, target_resolution: typing.Tupl
         qt_image = document.render(0, resolution)
         
         # ClientGUIFunctions.ConvertQtImageToNumPy doesn't handle other formats well
-        qt_image.convertToFormat( QG.QImage.Format_RGBA8888 )
+        qt_image.convertToFormat( QG.QImage.Format.Format_RGBA8888 )
         
         numpy_image = ClientGUIFunctions.ConvertQtImageToNumPy( qt_image )
         

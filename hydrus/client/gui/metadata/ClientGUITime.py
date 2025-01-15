@@ -173,7 +173,7 @@ class EditCheckerOptions( ClientGUIScrolledPanels.EditPanel ):
         
         vbox = QP.VBoxLayout()
         
-        QP.AddToLayout( vbox, help_hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, help_hbox, CC.FLAGS_ON_RIGHT )
         
         label = 'If you do not understand this panel, use the buttons! The defaults are fine for most purposes!'
         
@@ -200,8 +200,7 @@ class EditCheckerOptions( ClientGUIScrolledPanels.EditPanel ):
         
         QP.AddToLayout( vbox, self._reactive_check_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, self._static_check_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-        
-        vbox.addStretch( 1 )
+        vbox.addStretch( 0 )
         
         self.widget().setLayout( vbox )
         
@@ -780,7 +779,7 @@ class DateTimesCtrl( QW.QWidget ):
         
         QP.AddToLayout( vbox, button_hbox, CC.FLAGS_ON_RIGHT )
         
-        vbox.addStretch( 1 )
+        vbox.addStretch( 0 )
         
         self.setLayout( vbox )
         
@@ -1437,8 +1436,7 @@ class TimestampDataStubCtrl( QW.QWidget ):
         QP.AddToLayout( vbox, self._deleted_file_service, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, self._canvas_type, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, self._domain_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-        
-        vbox.addStretch( 1 )
+        vbox.addStretch( 0 )
         
         self.setLayout( vbox )
         

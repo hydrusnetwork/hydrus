@@ -23,10 +23,10 @@ def AddGridboxStretchSpacer( win: QW.QWidget, layout: QW.QGridLayout ):
     
     widget = QW.QWidget( win )
     
-    QP.AddToLayout( layout, widget, CC.FLAGS_CENTER_PERPENDICULAR_EXPAND_DEPTH )
+    QP.AddToLayout( layout, widget, CC.FLAGS_EXPAND_PERPENDICULAR )
     
 
-def WrapInGrid( parent, rows, expand_text = False, add_stretch_at_end = True, expand_single_widgets = False ):
+def WrapInGrid( parent, rows, expand_text = False, expand_single_widgets = False ):
     
     gridbox = QP.GridLayout( cols = 2 )
     
@@ -43,8 +43,8 @@ def WrapInGrid( parent, rows, expand_text = False, add_stretch_at_end = True, ex
         gridbox.setColumnStretch( 1, 1 )
         
         text_flags = CC.FLAGS_ON_LEFT
-        control_flags = CC.FLAGS_NONE
-        sizer_flags = CC.FLAGS_EXPAND_SIZER_BOTH_WAYS
+        control_flags = CC.FLAGS_CENTER_PERPENDICULAR_EXPAND_DEPTH
+        sizer_flags = CC.FLAGS_EXPAND_SIZER_PERPENDICULAR
         
     
     for row in rows:
@@ -128,14 +128,9 @@ def WrapInGrid( parent, rows, expand_text = False, add_stretch_at_end = True, ex
             
             if expand_single_widgets:
                 
-                gridbox.setRowStretch( gridbox.rowCount() - 1, 1 )
+                gridbox.setRowStretch( gridbox.rowCount() - 1, 0 )
                 
             
-        
-    
-    if add_stretch_at_end:
-        
-        gridbox.setRowStretch( gridbox.rowCount(), 1 )
         
     
     return gridbox
@@ -152,8 +147,14 @@ def WrapInText( control, parent, text, object_name = None ):
         st.setObjectName( object_name )
         
     
-    QP.AddToLayout( hbox, st, CC.FLAGS_CENTER_PERPENDICULAR )
-    QP.AddToLayout( hbox, control, CC.FLAGS_EXPAND_BOTH_WAYS )
+    st.setAlignment( QC.Qt.AlignmentFlag.AlignRight | QC.Qt.AlignmentFlag.AlignVCenter )
+    h_policy = QW.QSizePolicy.Policy.Expanding
+    v_policy = QW.QSizePolicy.Policy.Fixed
+    
+    st.setSizePolicy( h_policy, v_policy )
+    
+    QP.AddToLayout( hbox, st, CC.FLAGS_NONE )
+    QP.AddToLayout( hbox, control, CC.FLAGS_CENTER )
     
     return hbox
     
@@ -899,7 +900,7 @@ class BufferedWindowIcon( BufferedWindow ):
         
         painter.eraseRect( painter.viewport() )
         
-        painter.setRenderHint( QG.QPainter.SmoothPixmapTransform, True ) # makes any scaling here due to jank thumbs look good
+        painter.setRenderHint( QG.QPainter.RenderHint.SmoothPixmapTransform, True ) # makes any scaling here due to jank thumbs look good
         
         device_independant_pixmap_size = self._pixmap.size() / self._pixmap.devicePixelRatio()
         
@@ -1331,7 +1332,7 @@ class NoneableDoubleSpinCtrl( QW.QWidget ):
         
         QP.AddToLayout( hbox, self._checkbox, CC.FLAGS_CENTER_PERPENDICULAR )
         
-        hbox.addStretch( 1 )
+        hbox.addStretch( 0 )
         
         self.setLayout( hbox )
         
@@ -1603,7 +1604,7 @@ class StaticBox( QW.QFrame ):
         normal_font_size = normal_font.pointSize()
         normal_font_family = normal_font.family()
         
-        title_font = QG.QFont( normal_font_family, int( normal_font_size ), QG.QFont.Bold )
+        title_font = QG.QFont( normal_font_family, int( normal_font_size ), QG.QFont.Weight.Bold )
         
         self._title_st = BetterStaticText( self, label = title )
         self._title_st.setFont( title_font )
@@ -1675,6 +1676,11 @@ class StaticBox( QW.QFrame ):
         self._expanded = not self._expanded
         
         self._content_panel.setVisible( self._expanded )
+        
+    
+    def IsExpanded( self ):
+        
+        return self._expanded
         
     
     def SetTitle( self, title ):

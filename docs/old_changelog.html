@@ -35,6 +35,58 @@
             <h1 id="changelog"><a href="#changelog">changelog</a></h1>
             <ul>
                 <li>
+                    <h2 id="version_605"><a href="#version_605">version 605</a></h2>
+                    <ul>
+                        <li><h3>ratings on thumbnails</h3></li>
+                        <li>thanks to a user, ratings are now displayable in thumbnails! hit the new 'show in thumbnails' service checkbox in _services-&gt;manage services_ and that service's ratings will show</li>
+                        <li>I updated this a bit and added a second option for 'show even when there is no rating value'</li>
+                        <li>I played around with different backing colours to make these new ratings stand out more. in the end, my best solution was very hacky and isn't amazing--the stars in particular can get washed by a banner or busy thumb underneath. I tried a block of backing colour but it all looked worse. we may be approaching a 'just do it with svgs' moment for ratings rather than my decade-old painter primitives and coordinate lists. have a play with it and let me know what you think</li>
+                        <li>I improved some rating drawing positioning, too--some stuff was off by half a pixel etc..</li>
+                        <li>thumbnails now refresh when after a _manage services_ ok</li>
+                        <li><h3>misc</h3></li>
+                        <li>did a hotfix a couple hours after v604 release, v604a, to fix an issue with double/middle-clicking collection thumbnails to launch the media viewer</li>
+                        <li>I deleted the Endchan /hydrus/ board and removed the links from the client and help. the board was intended as a bunker and never got much traffic, but the whole site being spammed this week reminded me that I don't want to own a board any more. if we ever need a bunker again, I'll revisit the issue</li>
+                        <li>fixed some file-picker dialogs' name filters, which were not filtering to PNG or JSON correctly. all file dialogs that filter files this way now also offer `Any files (*)` as a second option</li>
+                        <li>the Lain import downloaders dialog now filters the file-picker to .png files</li>
+                        <li>I reworked the 'top hover file summary' settings under `options-&gt;media viewer` to their own box with a bit of extra text, and I renamed the complementary setting under `options-&gt;thumbnails` to the clearer "Show the media viewer's top hover file text in the status bar when a single thumbnail is selected"</li>
+                        <li>I did a bunch of layout work this week, cleaning up how things position and expand to fill available screen space. there were several hundred things impacted and I did not have time to check everything that might have been changed. please let me know if some dialog has a help button that's weirdly aligned etc.., thank you!</li>
+                        <li>cleaned up the reason-initialisation of the advanced file deletion dialog. the list of reasons is now much more item-position-stable and will not create duplicates when intersecting options clash. the selection rules are now simple: if all the file(s) have existing deletion reasons, this reason is listed, marked as the existing reason, and selected; otherwise, if the dialog is set to remember the previous deletion reason, this is listed and selected; otherwise, the "default" reason the dialog launches with is listed and selected. items have a more stable position as the list now always follows an order of (optional unique default shared reason, list of pre-defined reasons, optional unique shared existing reason, optional do-not-alter existing reason, custom reason), and items are marked in-place if they are interesting (issue #1653)</li>
+                        <li>fixed 'do not verify https' network jobs for clients with a CA bundle set in their envs</li>
+                        <li><h3>duplicates</h3></li>
+                        <li>in a terminology change that matters in other places, the duplicate filter, for the current file index, no longer says 'A' or 'B': but now 'File One/File Two'</li>
+                        <li>the comparison scores list in the mid-right duplicates hover window now says the total score difference as an actual number. let's see if the IRL scores are helpful as we move into making these rules more user-customisable</li>
+                        <li><h3>default downloaders</h3></li>
+                        <li>the e621 site has 'contributor' tags now, to distinguish VA talent or model makers from the primary artist. I was going to fold this into the normal default e621 parser as just another 'creator' tag, but the examples I found were pretty spammy so I'm not sure it is so useful, at least out of the box for normal users. if you are super interested in this, you might like to check out the new 'e621 file page parser with contributor tags' under `network-&gt;downloader components-&gt;manage url class links` for the `e621 file page` url class. the tags all seem to have `_(va)` kind of thing after them, so they wouldn't _confuse_ our existing creator tags, but it does seem like a lot of incidental spam and maybe it muddies things and should indeed be its own namespace in hydrus or just be ignored, idk, let me know what you think</li>
+                        <li><h3>style</h3></li>
+                        <li>thanks to a user, the e621 stylesheet gets some tweaks and better darkmode colours. check the new 'e621_redux' QSS. there's some some interesting new transparency tech on taglists</li>
+                        <li><h3>client api</h3></li>
+                        <li>fixed an issue with the `/manage_file_relationships/set_file_relationships` call and the 'set B as better' duplicate action (seen at times in other areas of the client, very rarely, as "set as worse" or "this is a worse duplicate") with `do_default_content_merge`--it was doing nothing, since there is no default for this action. now it fetches the normal 'set A as better' default options (also making sure to apply them the correct way around ha ha)</li>
+                        <li>client api version is now 77</li>
+                        <li><h3>boring code cleanup</h3></li>
+                        <li>across the duplicates system, I've reworked a tangle of references to 'first' and 'second' or '1' and '2' to a unified 'A' and 'B' for our pair processing. in code and duplicates action settings, the A is the first file in the pair being actioned and B is the second. in a few places where we have yet determined AB, I now specifically use 1/2. it is arbitrary, but at least it is now clear</li>
+                        <li>refactored the 'edit duplicate content merge options' panel to its own file and converted it to a non-scrolling widget so I can embed it in panels easier. it can also take SetValue calls after init and will reconfigure itself for different duplicate action types</li>
+                        <li>did some more Qt Enum updates since my linter found a bunch more: `QPainter.RenderHint`, `QPainter.CompositionMode`, `QPalette.ColorRole`, `QColor.NameFormat`, `QFont.Weight`, `QFont.StyleHint`, `QFont.StyleStrategy`, `QImage.Format`, `QTextCursor.MoveOperation`, `QColorSpace.NamedColorSpace`, `QTextOption.WrapMode`</li>
+                        <li>boring layout cleanup</li>
+                        <li>I did some Qt research and fixed a jank expanding layout technique I use in ~90 different places. a bunch of panels should eat up extra pixels a little more reliably, with fewer cases of the invididual widgets all experiencing cosmological redshift or mysterious magical growing lower buffer space if the dialog grows</li>
+                        <li>also fixed a bunch of bad sizer flags and stretch stuff used on my text&widget gridsizer that I use in ~190 places</li>
+                        <li>fixed some crazy flags and layout used inside my text&widget gridsizer</li>
+                        <li>fixed up some crazy layout in manage siblings</li>
+                        <li>fixed some crazy popup toaster layout</li>
+                        <li>fixed crazy layout in the login credentials edit panel</li>
+                        <li>fixed some crazy layout in the shortcut action editing UI</li>
+                        <li>fixed some crazy layout in the new duplicate pairs search context panel. it now expands to fill available space properly</li>
+                        <li>fixed several options pages that didn't know what to do with extra space</li>
+                        <li>the system:hash panel list now expands vertically</li>
+                        <li>reworked the view options dialog under the `options-&gt;media playback` file list into one clean and lined-up gridbox</li>
+                        <li><h3>duplicates auto-resolution</h3></li>
+                        <li>finished the 'action' tab, which governs the duplicate type to apply to the pair, whether to delete A or B, and any custom duplicate content merge options</li>
+                        <li>gave the rule dialog workflow a slight pass, particularly making the 'comparator' step define 'A' and 'B' rather than 'better' and 'worse'. my head was too into setting better/worse duplicates, which made things things awkward for same quality, alternates, or false positive actions. similarly, the 'action' step is now orienting towards position-specific 'A is better' verbs rather than 'yeah I guess set the better as better bro'. also, as before, as soon as this panel was finished, I immediately disabled it for the first test, ha ha</li>
+                        <li>the one-file comparator can now do 'either A or B has property x' tests</li>
+                        <li>added some safety code to the rule dialog</li>
+                        <li>work still to do is: the master database search and caching code, the preview panel, which will load up some example pairs and show them in a nice way (⊙ _ ⊙ ), tying all the objects finally together and saving them to db, and then the daemon that'll work rules on demand and in the background. I feel ok about most of it, but the db stuff may be a nightmare, and the preview code, which will need thumbnails and media viewer tech from a dialog to be worth something, will definitely be one. it'll be great to finally have 'thumbs anywhere' tech though, so lfg</li>
+                    </ul>
+                </li>
+                <li>
                     <h2 id="version_604"><a href="#version_604">version 604</a></h2>
                     <ul>
                         <li><h3>misc</h3></li>

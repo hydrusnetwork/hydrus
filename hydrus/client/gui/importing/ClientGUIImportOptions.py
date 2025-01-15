@@ -295,7 +295,7 @@ class EditFileImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         specific_vbox = QP.VBoxLayout()
         
-        QP.AddToLayout( specific_vbox, pre_import_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( specific_vbox, pre_import_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( specific_vbox, destination_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( specific_vbox, post_import_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( specific_vbox, presentation_static_box, CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -309,9 +309,8 @@ class EditFileImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         QP.AddToLayout( vbox, help_hbox, CC.FLAGS_ON_RIGHT )
         QP.AddToLayout( vbox, default_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, self._load_default_options, CC.FLAGS_EXPAND_PERPENDICULAR )
-        QP.AddToLayout( vbox, self._specific_options_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
-        
-        vbox.addStretch( 1 )
+        QP.AddToLayout( vbox, self._specific_options_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.addStretch( 0 )
         
         self.widget().setLayout( vbox )
         
@@ -687,14 +686,14 @@ class EditNoteImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             
         else:
             
+            help_hbox = ClientGUICommon.WrapInText( help_button, self, 'help for this panel -->', object_name = 'HydrusIndeterminate' )
+            
             rows.append( ( 'get notes: ', self._get_notes ) )
             rows.append( ( 'if possible, extend existing notes: ', self._extend_existing_note_if_possible ) )
             rows.append( ( 'if existing note conflict, what to do: ', self._conflict_resolution ) )
             rows.append( ( 'only allow these note names' + '\n' + '(leave blank for \'get all\'): ', self._name_whitelist ) )
             rows.append( ( 'rename these notes as they come in: ', self._names_to_name_overrides ) )
             rows.append( ( 'rename spare note(s) to this: ', self._all_name_override ) )
-            
-            help_hbox = ClientGUICommon.WrapInText( help_button, self, 'help for this panel -->', object_name = 'HydrusIndeterminate' )
             
         
         gridbox = ClientGUICommon.WrapInGrid( self._specific_options_panel, rows )
@@ -709,9 +708,8 @@ class EditNoteImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         QP.AddToLayout( vbox, help_hbox, CC.FLAGS_ON_RIGHT )
         QP.AddToLayout( vbox, default_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, self._load_default_options, CC.FLAGS_EXPAND_PERPENDICULAR )
-        QP.AddToLayout( vbox, self._specific_options_panel, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        
-        vbox.addStretch( 1 )
+        QP.AddToLayout( vbox, self._specific_options_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.addStretch( 0 )
         
         self.widget().setLayout( vbox )
         
@@ -884,6 +882,8 @@ class EditPresentationImportOptions( ClientGUIScrolledPanels.EditPanel ):
     
     def __init__( self, parent: QW.QWidget, presentation_import_options: PresentationImportOptions.PresentationImportOptions ):
         
+        # TODO: Make this guy a widget not a scrolling panel
+        
         super().__init__( parent )
         
         #
@@ -947,10 +947,9 @@ class EditPresentationImportOptions( ClientGUIScrolledPanels.EditPanel ):
         
         QP.AddToLayout( vbox, st, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.addStretch( 0 )
         
         self.widget().setLayout( vbox )
-        
-        vbox.addStretch( 1 )
         
         #
         
@@ -1398,7 +1397,7 @@ class EditTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         QP.AddToLayout( vbox, default_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, self._load_default_options, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, self._specific_options_panel, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        vbox.addStretch( 1 )
+        vbox.addStretch( 0 )
         
         self.widget().setLayout( vbox )
         

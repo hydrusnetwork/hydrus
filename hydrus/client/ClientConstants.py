@@ -117,7 +117,7 @@ FLAGS_EXPAND_SIZER_BOTH_WAYS = 11
 FLAGS_ON_LEFT = 12
 FLAGS_ON_RIGHT = 13
 
-FLAGS_CENTER_PERPENDICULAR = 15
+FLAGS_CENTER_PERPENDICULAR = 15 # TODO: Collapse all this into something meaningful. We use this guy like 260+ times and it is basically a useless stub let's go
 FLAGS_SIZER_CENTER = 16
 FLAGS_CENTER_PERPENDICULAR_EXPAND_DEPTH = 17
 

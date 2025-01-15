@@ -134,7 +134,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             gridbox = ClientGUICommon.WrapInGrid( self, rows )
             
-            QP.AddToLayout( vbox, gridbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+            QP.AddToLayout( vbox, gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            vbox.addStretch( 0 )
             
             self.setLayout( vbox )
             
@@ -185,7 +186,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             gridbox = ClientGUICommon.WrapInGrid( self, rows )
             
             QP.AddToLayout( vbox, gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
-            vbox.addStretch( 1 )
+            vbox.addStretch( 0 )
             
             self.setLayout( vbox )
             
@@ -219,12 +220,12 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._override_stylesheet_colours = QW.QCheckBox( self )
             
-            self._coloursets_panel = ClientGUICommon.StaticBox( self, 'coloursets' )
-            
-            self._current_colourset = ClientGUICommon.BetterChoice( self._coloursets_panel )
+            self._current_colourset = ClientGUICommon.BetterChoice( self )
             
             self._current_colourset.addItem( 'default', 'default' )
             self._current_colourset.addItem( 'darkmode', 'darkmode' )
+            
+            self._coloursets_panel = ClientGUICommon.StaticBox( self, 'coloursets' )
             
             self._notebook = QW.QTabWidget( self._coloursets_panel )
             
@@ -311,19 +312,18 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows = []
             
             rows.append( ( 'override what is set in the stylesheet with the colours on this page: ', self._override_stylesheet_colours ) )
+            rows.append( ( 'current colourset: ', self._current_colourset ) )
             
             gridbox = ClientGUICommon.WrapInGrid( self, rows )
             
-            self._coloursets_panel.Add( ClientGUICommon.WrapInText( self._current_colourset, self._coloursets_panel, 'current colourset: ' ), CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-            self._coloursets_panel.Add( self._notebook, CC.FLAGS_EXPAND_BOTH_WAYS )
+            self._coloursets_panel.Add( self._notebook, CC.FLAGS_EXPAND_PERPENDICULAR )
             
             vbox = QP.VBoxLayout()
             
             QP.AddToLayout( vbox, self._help_label, CC.FLAGS_EXPAND_PERPENDICULAR )
-            QP.AddToLayout( vbox, gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+            QP.AddToLayout( vbox, gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             QP.AddToLayout( vbox, self._coloursets_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-            
-            vbox.addStretch( 1 )
+            vbox.addStretch( 0 )
             
             self.setLayout( vbox )
             
@@ -411,7 +411,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._max_network_jobs_per_domain = ClientGUICommon.BetterSpinBox( general, min = 1, max = max_network_jobs_per_domain_max )
             
             self._set_requests_ca_bundle_env = QW.QCheckBox( general )
-            self._set_requests_ca_bundle_env.setToolTip( ClientGUIFunctions.WrapToolTip( 'Just testing something here; ignore unless hydev asks you to use it please. Requires restart.' ) )
+            self._set_requests_ca_bundle_env.setToolTip( ClientGUIFunctions.WrapToolTip( 'Just testing something here; ignore unless hydev asks you to use it please. Requires restart. Note: this breaks the self-signed certificates of hydrus services.' ) )
             
             self._verify_regular_https = QW.QCheckBox( general )
             
@@ -526,7 +526,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             QP.AddToLayout( vbox, general, CC.FLAGS_EXPAND_PERPENDICULAR )
             QP.AddToLayout( vbox, proxy_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-            vbox.addStretch( 1 )
+            vbox.addStretch( 0 )
             
             self.setLayout( vbox )
             
@@ -731,7 +731,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             QP.AddToLayout( vbox, subscriptions, CC.FLAGS_EXPAND_PERPENDICULAR )
             QP.AddToLayout( vbox, watchers, CC.FLAGS_EXPAND_PERPENDICULAR )
             QP.AddToLayout( vbox, misc, CC.FLAGS_EXPAND_PERPENDICULAR )
-            vbox.addStretch( 1 )
+            vbox.addStretch( 0 )
             
             self.setLayout( vbox )
             
@@ -909,7 +909,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows.append( ( 'background light/dark switch intensity for B:', self._duplicate_background_switch_intensity_b ) )
             rows.append( ( 'draw image transparency as checkerboard in the duplicate filter:', self._draw_transparency_checkerboard_media_canvas_duplicates ) )
             
-            gridbox = ClientGUICommon.WrapInGrid( batches_panel, rows )
+            gridbox = ClientGUICommon.WrapInGrid( colours_panel, rows )
             
             colours_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
@@ -922,8 +922,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             QP.AddToLayout( vbox, batches_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
             QP.AddToLayout( vbox, weights_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
             QP.AddToLayout( vbox, colours_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-            
-            vbox.addStretch( 1 )
+            vbox.addStretch( 0 )
             
             self.setLayout( vbox )
             
@@ -1041,8 +1040,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             QP.AddToLayout( vbox, self._dnd_panel, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             QP.AddToLayout( vbox, self._export_folder_panel, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-            
-            vbox.addStretch( 1 )
+            vbox.addStretch( 0 )
             
             self.setLayout( vbox )
             
@@ -1555,8 +1553,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             gridbox = ClientGUICommon.WrapInGrid( self, rows )
             
             QP.AddToLayout( vbox, gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-            
-            vbox.addStretch( 1 )
+            vbox.addStretch( 0 )
             
             self.setLayout( vbox )
             
@@ -2115,7 +2112,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             QP.AddToLayout( vbox, self._sessions_panel, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             QP.AddToLayout( vbox, self._pages_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
             QP.AddToLayout( vbox, self._controls_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-            vbox.addStretch( 1 )
+            vbox.addStretch( 0 )
             
             self.setLayout( vbox )
             
@@ -2212,7 +2209,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             vbox = QP.VBoxLayout()
             
             QP.AddToLayout( vbox, default_fios, CC.FLAGS_EXPAND_PERPENDICULAR )
-            vbox.addStretch( 1 )
+            vbox.addStretch( 0 )
             
             self.setLayout( vbox )
             
@@ -2270,8 +2267,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             vbox = QP.VBoxLayout()
             
             QP.AddToLayout( vbox, self._command_palette_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-            
-            vbox.addStretch( 1 )
+            vbox.addStretch( 0 )
             
             self.setLayout( vbox )
             
@@ -2685,7 +2681,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             QP.AddToLayout( vbox, self._tag_display_processing_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
             QP.AddToLayout( vbox, self._duplicates_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
             QP.AddToLayout( vbox, self._deferred_table_delete_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-            vbox.addStretch( 1 )
+            vbox.addStretch( 0 )
             
             self.setLayout( vbox )
             
@@ -2833,25 +2829,29 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._use_nice_resolution_strings = QW.QCheckBox( media_canvas_panel )
             self._use_nice_resolution_strings.setToolTip( ClientGUIFunctions.WrapToolTip( 'Use "1080p" instead of "1920x1080" for common resolutions.' ) )
             
-            self._file_info_line_consider_archived_interesting = QW.QCheckBox( media_canvas_panel )
+            #
+            
+            top_hover_summary_panel = ClientGUICommon.StaticBox( self, 'top hover file summary' )
+            
+            self._file_info_line_consider_archived_interesting = QW.QCheckBox( top_hover_summary_panel )
             self._file_info_line_consider_archived_interesting.setToolTip( ClientGUIFunctions.WrapToolTip( 'Should we show the fact a file is archived in the top hover file info summary?' ) )
             
-            self._file_info_line_consider_archived_time_interesting = QW.QCheckBox( media_canvas_panel )
+            self._file_info_line_consider_archived_time_interesting = QW.QCheckBox( top_hover_summary_panel )
             self._file_info_line_consider_archived_time_interesting.setToolTip( ClientGUIFunctions.WrapToolTip( 'If we show the archived status, should we show when it happened?' ) )
             
-            self._file_info_line_consider_file_services_interesting = QW.QCheckBox( media_canvas_panel )
+            self._file_info_line_consider_file_services_interesting = QW.QCheckBox( top_hover_summary_panel )
             self._file_info_line_consider_file_services_interesting.setToolTip( ClientGUIFunctions.WrapToolTip( 'Should we show all the file services a file is in in the top hover file info summary?' ) )
             
-            self._file_info_line_consider_file_services_import_times_interesting = QW.QCheckBox( media_canvas_panel )
+            self._file_info_line_consider_file_services_import_times_interesting = QW.QCheckBox( top_hover_summary_panel )
             self._file_info_line_consider_file_services_import_times_interesting.setToolTip( ClientGUIFunctions.WrapToolTip( 'If we show the file services, should we show when they were added?' ) )
             
-            self._file_info_line_consider_trash_time_interesting = QW.QCheckBox( media_canvas_panel )
+            self._file_info_line_consider_trash_time_interesting = QW.QCheckBox( top_hover_summary_panel )
             self._file_info_line_consider_trash_time_interesting.setToolTip( ClientGUIFunctions.WrapToolTip( 'Should we show the time a file is trashed in the top hover file info summary?' ) )
             
-            self._file_info_line_consider_trash_reason_interesting = QW.QCheckBox( media_canvas_panel )
+            self._file_info_line_consider_trash_reason_interesting = QW.QCheckBox( top_hover_summary_panel )
             self._file_info_line_consider_trash_reason_interesting.setToolTip( ClientGUIFunctions.WrapToolTip( 'Should we show the reason a file is trashed in the top hover file info summary?' ) )
             
-            self._hide_uninteresting_modified_time = QW.QCheckBox( media_canvas_panel )
+            self._hide_uninteresting_modified_time = QW.QCheckBox( top_hover_summary_panel )
             self._hide_uninteresting_modified_time.setToolTip( ClientGUIFunctions.WrapToolTip( 'If the file has a modified time similar to its import time (specifically, the number of seconds since both events differs by less than 10%), hide the modified time in the top hover file info summary.' ) )
             
             #
@@ -2944,17 +2944,32 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows.append( ( 'Duplicate notes hover-window information in the background of the viewer:', self._draw_notes_hover_in_media_viewer_background ) )
             rows.append( ( 'Draw bottom-right index text in the background of the viewer:', self._draw_bottom_right_index_in_media_viewer_background ) )
             rows.append( ( 'Swap in common resolution labels:', self._use_nice_resolution_strings ) )
-            rows.append( ( 'Show archived status in top hover summary', self._file_info_line_consider_archived_interesting ) )
-            rows.append( ( 'Show archived time in top hover summary', self._file_info_line_consider_archived_time_interesting ) )
-            rows.append( ( 'Show file services in top hover summary', self._file_info_line_consider_file_services_interesting ) )
-            rows.append( ( 'Show file service add times in top hover summary', self._file_info_line_consider_file_services_import_times_interesting ) )
-            rows.append( ( 'Show file trash times in top hover summary', self._file_info_line_consider_trash_time_interesting ) )
-            rows.append( ( 'Show file trash reasons in top hover summary', self._file_info_line_consider_trash_reason_interesting ) )
-            rows.append( ( 'Hide uninteresting modified times in top hover summary:', self._hide_uninteresting_modified_time ) )
             
             media_canvas_gridbox = ClientGUICommon.WrapInGrid( media_canvas_panel, rows )
             
-            media_canvas_panel.Add( media_canvas_gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+            media_canvas_panel.Add( media_canvas_gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            
+            rows = []
+            
+            rows.append( ( 'Show archived status: ', self._file_info_line_consider_archived_interesting ) )
+            rows.append( ( 'Show archived time: ', self._file_info_line_consider_archived_time_interesting ) )
+            rows.append( ( 'Show file services: ', self._file_info_line_consider_file_services_interesting ) )
+            rows.append( ( 'Show file service add times: ', self._file_info_line_consider_file_services_import_times_interesting ) )
+            rows.append( ( 'Show file trash times: ', self._file_info_line_consider_trash_time_interesting ) )
+            rows.append( ( 'Show file trash reasons: ', self._file_info_line_consider_trash_reason_interesting ) )
+            rows.append( ( 'Hide uninteresting modified times: :', self._hide_uninteresting_modified_time ) )
+            
+            top_hover_summary_gridbox = ClientGUICommon.WrapInGrid( top_hover_summary_panel, rows )
+            
+            label = 'The top hover window shows a text summary of the file, usually the basic file metadata and the time it was imported. You can show more information here.'
+            label += '\n\n'
+            label += 'You set this same text to show in the main window status bar for single thumbnail selections under the "thumbnails" page.'
+            
+            st = ClientGUICommon.BetterStaticText( top_hover_summary_panel, label = label )
+            st.setWordWrap( True )
+            
+            top_hover_summary_panel.Add( st, CC.FLAGS_EXPAND_PERPENDICULAR )
+            top_hover_summary_panel.Add( top_hover_summary_gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
             rows = []
             
@@ -2975,9 +2990,9 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             QP.AddToLayout( vbox, media_viewer_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
             QP.AddToLayout( vbox, media_canvas_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+            QP.AddToLayout( vbox, top_hover_summary_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
             QP.AddToLayout( vbox, slideshow_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-            
-            vbox.addStretch( 1 )
+            vbox.addStretch( 0 )
             
             self.setLayout( vbox )
             
@@ -3496,7 +3511,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             gridbox = ClientGUICommon.WrapInGrid( self, rows )
             
-            QP.AddToLayout( vbox, gridbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+            QP.AddToLayout( vbox, gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            vbox.addStretch( 0 )
             
             self.setLayout( vbox )
             
@@ -3560,7 +3576,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             vbox = QP.VBoxLayout()
             
             QP.AddToLayout( vbox, self._popup_panel, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-            vbox.addStretch( 1 )
+            vbox.addStretch( 0 )
             
             self.setLayout( vbox )
             
@@ -3712,8 +3728,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             QP.AddToLayout( vbox, self._read_autocomplete_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
             QP.AddToLayout( vbox, misc_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-            
-            vbox.addStretch( 1 )
+            vbox.addStretch( 0 )
             
             self.setLayout( vbox )
             
@@ -4194,7 +4209,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             #
             
-            vbox.addStretch( 1 )
+            vbox.addStretch( 0 )
             
             self.setLayout( vbox )
             
@@ -4413,6 +4428,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             gridbox = ClientGUICommon.WrapInGrid( self, rows )
             
             QP.AddToLayout( vbox, gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            vbox.addStretch( 0 )
             
             self.setLayout( vbox )
             
@@ -4520,7 +4536,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             vbox = QP.VBoxLayout()
             
             QP.AddToLayout( vbox, sleep_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-            vbox.addStretch( 1 )
+            vbox.addStretch( 0 )
             
             self.setLayout( vbox )
             
@@ -4596,8 +4612,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 QP.AddToLayout( vbox, ClientGUICommon.BetterStaticText( self, label ), CC.FLAGS_EXPAND_PERPENDICULAR )
                 
             
-            QP.AddToLayout( vbox, gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
-            vbox.addStretch( 1 )
+            QP.AddToLayout( vbox, gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            vbox.addStretch( 0 )
             
             self.setLayout( vbox )
             
@@ -4824,8 +4840,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             QP.AddToLayout( vbox, self._tag_services_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
             QP.AddToLayout( vbox, self._write_autocomplete_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-            
-            vbox.addStretch( 1 )
+            vbox.addStretch( 0 )
             
             self.setLayout( vbox )
             
@@ -5299,7 +5314,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             rows.append( ( 'Tag service: ', self._suggested_favourites_services ) )
             
-            gridbox = ClientGUICommon.WrapInGrid( suggested_tags_related_panel, rows )
+            gridbox = ClientGUICommon.WrapInGrid( suggested_tags_favourites_panel, rows )
             
             QP.AddToLayout( panel_vbox, gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             QP.AddToLayout( panel_vbox, self._suggested_favourites, CC.FLAGS_EXPAND_BOTH_WAYS )
@@ -5353,6 +5368,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             QP.AddToLayout( panel_vbox, st, CC.FLAGS_EXPAND_PERPENDICULAR )
             QP.AddToLayout( panel_vbox, gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            panel_vbox.addStretch( 0 )
             
             suggested_tags_file_lookup_script_panel.setLayout( panel_vbox )
             
@@ -5366,8 +5382,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             QP.AddToLayout( panel_vbox, st, CC.FLAGS_EXPAND_PERPENDICULAR )
             QP.AddToLayout( panel_vbox, self._num_recent_tags, CC.FLAGS_EXPAND_PERPENDICULAR )
-            
-            panel_vbox.addStretch( 1 )
+            panel_vbox.addStretch( 0 )
             
             suggested_tags_recent_panel.setLayout( panel_vbox )
             
@@ -5680,7 +5695,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._media_background_bmp_path = QP.FilePickerCtrl( self )
             
             self._show_extended_single_file_info_in_status_bar = QW.QCheckBox( self )
-            tt = 'This will show, any time you have a single thumbnail selected, the file info summary you see in the top hover window of the media viewer in the main gui status bar. Check the "media viewer" options panel to edit this summary more.'
+            tt = 'This will show, any time you have a single thumbnail selected, the file info summary you normally see in the top hover window of the media viewer in the main gui status bar. Check the "media viewer" options panel to edit what this summary includes.'
             self._show_extended_single_file_info_in_status_bar.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
             
             #
@@ -5738,7 +5753,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows.append( ( 'Use blurhash missing thumbnail fallback: ', self._allow_blurhash_fallback ) )
             rows.append( ( 'Fade thumbnails: ', self._fade_thumbnails ) )
             rows.append( ( 'Do not scroll down on key navigation if thumbnail at least this % visible: ', self._thumbnail_visibility_scroll_percent ) )
-            rows.append( ( 'Show additional status bar text when a single thumbnail is selected: ', self._show_extended_single_file_info_in_status_bar ) )
+            rows.append( ( 'Show the media viewer\'s top hover file text in the status bar when a single thumbnail is selected: ', self._show_extended_single_file_info_in_status_bar ) )
             rows.append( ( 'EXPERIMENTAL: Scroll thumbnails at this rate per scroll tick: ', self._thumbnail_scroll_rate ) )
             rows.append( ( 'EXPERIMENTAL: Image path for thumbnail panel background image (set blank to clear): ', self._media_background_bmp_path ) )
             
@@ -5747,6 +5762,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             vbox = QP.VBoxLayout()
             
             QP.AddToLayout( vbox, gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            vbox.addStretch( 0 )
             
             self.setLayout( vbox )
             

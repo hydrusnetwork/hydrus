@@ -216,8 +216,8 @@ class EditTagAutocompleteOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         st = ClientGUICommon.BetterStaticText( self, label = label )
         
         QP.AddToLayout( vbox, st, CC.FLAGS_EXPAND_PERPENDICULAR )
-        QP.AddToLayout( vbox, gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.addStretch( 1 )
+        QP.AddToLayout( vbox, gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        vbox.addStretch( 0 )
         
         self.widget().setLayout( vbox )
         
@@ -648,7 +648,7 @@ class EditTagDisplayManagerPanel( ClientGUIScrolledPanels.EditPanel ):
             
             gridbox = ClientGUICommon.WrapInGrid( self._display_box, rows )
             
-            self._display_box.Add( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+            self._display_box.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
             #
             
@@ -678,7 +678,7 @@ class EditTagDisplayManagerPanel( ClientGUIScrolledPanels.EditPanel ):
             
             QP.AddToLayout( vbox, self._display_box, CC.FLAGS_EXPAND_PERPENDICULAR )
             QP.AddToLayout( vbox, self._tao_box, CC.FLAGS_EXPAND_PERPENDICULAR )
-            vbox.addStretch( 1 )
+            vbox.addStretch( 0 )
             
             self.setLayout( vbox )
             
@@ -2087,7 +2087,8 @@ class IncrementalTaggingPanel( ClientGUIScrolledPanels.EditPanel ):
         
         QP.AddToLayout( vbox, self._top_st, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        QP.AddToLayout( vbox, self._summary_st, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( vbox, self._summary_st, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.addStretch( 0 )
         
         self.widget().setLayout( vbox )
         
@@ -4421,6 +4422,7 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
             # leave up here since other things have updates based on them
             self._old_siblings = ClientGUIListBoxes.ListBoxTagsStringsAddRemove( self, self._service_key, tag_display_type = ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, height_num_chars = 4 )
             self._new_sibling = ClientGUICommon.BetterStaticText( self )
+            self._new_sibling.setAlignment( QC.Qt.AlignmentFlag.AlignCenter )
             
             self._listctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
             
@@ -4480,9 +4482,7 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
             new_sibling_box = QP.VBoxLayout()
             
             QP.AddToLayout( new_sibling_box, ClientGUICommon.BetterStaticText( self, label = 'set new ideal tag' ), CC.FLAGS_CENTER )
-            new_sibling_box.addStretch( 1 )
-            QP.AddToLayout( new_sibling_box, self._new_sibling, CC.FLAGS_EXPAND_PERPENDICULAR )
-            new_sibling_box.addStretch( 1 )
+            QP.AddToLayout( new_sibling_box, self._new_sibling, CC.FLAGS_EXPAND_BOTH_WAYS )
             
             text_box = QP.HBoxLayout()
             
@@ -5222,7 +5222,7 @@ class ReviewTagDisplayMaintenancePanel( ClientGUIScrolledPanels.ReviewPanel ):
             QP.AddToLayout( vbox, self._siblings_and_parents_st, CC.FLAGS_EXPAND_PERPENDICULAR )
             QP.AddToLayout( vbox, self._progress, CC.FLAGS_EXPAND_PERPENDICULAR )
             QP.AddToLayout( vbox, button_hbox, CC.FLAGS_ON_RIGHT )
-            vbox.addStretch( 1 )
+            vbox.addStretch( 0 )
             
             self.setLayout( vbox )
             

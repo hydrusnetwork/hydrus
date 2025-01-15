@@ -157,8 +157,7 @@ class EditSingleFileMetadataImporterPanel( ClientGUIScrolledPanels.EditPanel ):
         QP.AddToLayout( vbox, self._txt_separator_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, self._sidecar_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, self._string_processor_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-        
-        vbox.addStretch( 1 )
+        vbox.addStretch( 0 )
         
         self.widget().setLayout( vbox )
         

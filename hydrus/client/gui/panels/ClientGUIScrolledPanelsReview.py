@@ -1503,7 +1503,7 @@ class ReviewDownloaderImport( ClientGUIScrolledPanels.ReviewPanel ):
     
     def EventLainClick( self, event ):
         
-        with QP.FileDialog( self, 'Select the pngs to add.', acceptMode = QW.QFileDialog.AcceptMode.AcceptOpen, fileMode = QW.QFileDialog.FileMode.ExistingFiles ) as dlg:
+        with QP.FileDialog( self, 'Select the pngs to add.', acceptMode = QW.QFileDialog.AcceptMode.AcceptOpen, fileMode = QW.QFileDialog.FileMode.ExistingFiles, wildcard = 'PNG (*.png)' ) as dlg:
             
             if dlg.exec() == QW.QDialog.DialogCode.Accepted:
                 
@@ -1567,7 +1567,7 @@ class ReviewFileEmbeddedMetadata( ClientGUIScrolledPanels.ReviewPanel ):
         
         gridbox = ClientGUICommon.WrapInGrid( self, rows )
         
-        extra_rows_panel.Add( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+        extra_rows_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
         #
         
@@ -1726,14 +1726,12 @@ class ReviewFileHistory( ClientGUIScrolledPanels.ReviewPanel ):
         
         hbox = QP.HBoxLayout()
         
-        QP.AddToLayout( hbox, self._loading_text, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( hbox, self._loading_text, CC.FLAGS_CENTER_PERPENDICULAR_EXPAND_DEPTH )
         QP.AddToLayout( hbox, self._cancel_button, CC.FLAGS_CENTER )
         QP.AddToLayout( hbox, self._refresh_button, CC.FLAGS_CENTER )
         
         QP.AddToLayout( panel_vbox, self._tag_autocomplete, CC.FLAGS_EXPAND_BOTH_WAYS )
         QP.AddToLayout( panel_vbox, hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        
-        panel_vbox.addStretch( 1 )
         
         self._search_panel.setLayout( panel_vbox )
         
@@ -2359,7 +2357,7 @@ class ReviewHowBonedAmI( ClientGUIScrolledPanels.ReviewPanel ):
         QP.AddToLayout( panel_vbox, self._media_views_st, CC.FLAGS_CENTER )
         QP.AddToLayout( panel_vbox, self._preview_views_st, CC.FLAGS_CENTER )
         
-        panel_vbox.addStretch( 1 )
+        panel_vbox.addStretch( 0 )
         
         self._views_panel.setLayout( panel_vbox )
         
@@ -2375,7 +2373,7 @@ class ReviewHowBonedAmI( ClientGUIScrolledPanels.ReviewPanel ):
         QP.AddToLayout( panel_vbox, self._duplicates_st, CC.FLAGS_CENTER )
         QP.AddToLayout( panel_vbox, self._alternates_st, CC.FLAGS_CENTER )
         
-        panel_vbox.addStretch( 1 )
+        panel_vbox.addStretch( 0 )
         
         self._duplicates_panel.setLayout( panel_vbox )
         
@@ -2412,8 +2410,6 @@ class ReviewHowBonedAmI( ClientGUIScrolledPanels.ReviewPanel ):
         
         QP.AddToLayout( panel_vbox, self._tag_autocomplete, CC.FLAGS_EXPAND_BOTH_WAYS )
         QP.AddToLayout( panel_vbox, hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        
-        panel_vbox.addStretch( 1 )
         
         self._search_panel.setLayout( panel_vbox )
         
@@ -2748,7 +2744,7 @@ class ReviewHowBonedAmI( ClientGUIScrolledPanels.ReviewPanel ):
                 
             
         
-        panel_vbox.addStretch( 1 )
+        panel_vbox.addStretch( 0 )
         
         self._files_content_panel.setLayout( panel_vbox )
         

@@ -449,7 +449,7 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         
         gridbox = ClientGUICommon.WrapInGrid( self._control_panel, rows )
         
-        self._control_panel.Add( gridbox, CC.FLAGS_ON_RIGHT )
+        self._control_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
         #
         
@@ -1369,8 +1369,7 @@ class EditSubscriptionQueryPanel( ClientGUIScrolledPanels.EditPanel ):
         
         QP.AddToLayout( vbox, st, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, self._import_options_button, CC.FLAGS_EXPAND_PERPENDICULAR )
-        
-        vbox.addStretch( 1 )
+        vbox.addStretch( 0 )
         
         self.widget().setLayout( vbox )
         

@@ -434,7 +434,7 @@ class SimpleSubPanel( QW.QWidget ):
         
         vbox = QP.VBoxLayout()
         
-        QP.AddToLayout( vbox, self._duplicate_type, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( vbox, self._duplicate_type, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         self._duplicates_type_panel.setLayout( vbox )
         
@@ -457,7 +457,7 @@ class SimpleSubPanel( QW.QWidget ):
         
         vbox = QP.VBoxLayout()
         
-        QP.AddToLayout( vbox, self._thumbnail_rearrange_type, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( vbox, self._thumbnail_rearrange_type, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         self._thumbnail_rearrange_panel.setLayout( vbox )
         
@@ -482,7 +482,7 @@ class SimpleSubPanel( QW.QWidget ):
         
         hbox = QP.HBoxLayout()
         
-        QP.AddToLayout( hbox, self._seek_direction, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( hbox, self._seek_direction, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( hbox, self._seek_duration_s, CC.FLAGS_CENTER )
         QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText( self._seek_panel, label = 's' ), CC.FLAGS_CENTER )
         QP.AddToLayout( hbox, self._seek_duration_ms, CC.FLAGS_CENTER )
@@ -534,7 +534,7 @@ class SimpleSubPanel( QW.QWidget ):
         
         hbox = QP.HBoxLayout()
         
-        QP.AddToLayout( hbox, self._file_filter, CC.FLAGS_CENTER )
+        QP.AddToLayout( hbox, self._file_filter, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         self._file_filter_panel.setLayout( hbox )
         
@@ -652,17 +652,19 @@ class SimpleSubPanel( QW.QWidget ):
         
         vbox = QP.VBoxLayout()
         
-        QP.AddToLayout( vbox, self._simple_actions, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
-        QP.AddToLayout( vbox, self._duplicates_type_panel, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
-        QP.AddToLayout( vbox, self._seek_panel, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
-        QP.AddToLayout( vbox, self._thumbnail_move_panel, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
-        QP.AddToLayout( vbox, self._file_filter_panel, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
-        QP.AddToLayout( vbox, self._hamming_distance_panel, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
-        QP.AddToLayout( vbox, self._thumbnail_rearrange_panel, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
-        QP.AddToLayout( vbox, self._file_command_target_panel, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
-        QP.AddToLayout( vbox, self._bitmap_type_panel, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
-        QP.AddToLayout( vbox, self._hash_type_panel, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
-        QP.AddToLayout( vbox, self._ipfs_service_panel, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        QP.AddToLayout( vbox, self._simple_actions, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._duplicates_type_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._seek_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._thumbnail_move_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._file_filter_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._hamming_distance_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._thumbnail_rearrange_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._file_command_target_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._bitmap_type_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._hash_type_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._ipfs_service_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        vbox.addStretch( 0 )
         
         self.setLayout( vbox )
         
@@ -1106,7 +1108,7 @@ class ApplicationCommandWidget( ClientGUIScrolledPanels.EditPanel ):
         QP.AddToLayout( vbox, self._rating_like_sub_panel, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         QP.AddToLayout( vbox, self._rating_numerical_sub_panel, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         QP.AddToLayout( vbox, self._rating_inc_dec_sub_panel, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        vbox.addStretch( 1 )
+        vbox.addStretch( 0 )
         
         self.widget().setLayout( vbox )
         

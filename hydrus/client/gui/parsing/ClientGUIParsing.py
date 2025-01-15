@@ -822,15 +822,15 @@ class EditContentParserPanel( ClientGUIScrolledPanels.EditPanel ):
         gridbox = ClientGUICommon.WrapInGrid( self._content_panel, rows )
         
         self._content_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        self._content_panel.Add( self._urls_panel, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        self._content_panel.Add( self._mappings_panel, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        self._content_panel.Add( self._notes_panel, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        self._content_panel.Add( self._hash_panel, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        self._content_panel.Add( self._timestamp_panel, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        self._content_panel.Add( self._title_panel, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        self._content_panel.Add( self._header_panel, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        self._content_panel.Add( self._veto_panel, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        self._content_panel.Add( self._temp_variable_panel, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        self._content_panel.Add( self._urls_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._content_panel.Add( self._mappings_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._content_panel.Add( self._notes_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._content_panel.Add( self._hash_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._content_panel.Add( self._timestamp_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._content_panel.Add( self._title_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._content_panel.Add( self._header_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._content_panel.Add( self._veto_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._content_panel.Add( self._temp_variable_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         #
         

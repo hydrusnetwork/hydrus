@@ -10,10 +10,12 @@ from hydrus.core import HydrusExceptions
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
 from hydrus.client.duplicates import ClientDuplicatesAutoResolution
+from hydrus.client.duplicates import ClientDuplicates
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
+from hydrus.client.gui.duplicates import ClientGUIDuplicatesContentMergeOptions
 from hydrus.client.gui.duplicates import ClientGUIPotentialDuplicatesSearchContext
 from hydrus.client.gui.lists import ClientGUIListConstants as CGLC
 from hydrus.client.gui.lists import ClientGUIListCtrl
@@ -224,7 +226,15 @@ class EditDuplicatesAutoResolutionRulePanel( ClientGUIScrolledPanels.EditPanel )
         
         #
         
-        self._action_panel = QW.QWidget( self._main_notebook )
+        self._actions_panel = QW.QWidget( self._main_notebook )
+        
+        action = duplicates_auto_resolution_rule.GetAction()
+        ( delete_a, delete_b ) = duplicates_auto_resolution_rule.GetDeleteInfo()
+        duplicates_content_merge_options = duplicates_auto_resolution_rule.GetDuplicateContentMergeOptions()
+        
+        self._edit_actions_panel = EditPairActionsWidget( self._actions_panel, action, delete_a, delete_b, duplicates_content_merge_options )
+        
+        self._edit_actions_panel.setEnabled( False )
         
         #
         
@@ -256,9 +266,9 @@ class EditDuplicatesAutoResolutionRulePanel( ClientGUIScrolledPanels.EditPanel )
         
         vbox = QP.VBoxLayout()
         
-        label = 'Now that we have searched some pairs, we next need to look at their differences and see if we are confident enough to make an automatic decision. We also need to determine which would be the "better" and "worse".'
+        label = 'Now we have some pairs, we need to determine if we are confident enough to make an automatic decision. If we are setting one file to be a better duplicate of the other, we also need to arrange which is the A (usually the better) and the B (the worse).'
         label += '\n\n'
-        label += 'The client will test the pair both ways around ("A is better/B is worse" or "B is better/A is worse") against these rules, and if they fit either way, the decision is there applied. If the pair will not pass the rules either way around, no changes will be made.'
+        label += 'The client will test the incoming pair both ways around against these rules, and if they fit either way, that "AB" is set and the action is applied. If the pair fails the rules both ways around, no changes will be made. If there are no rules, all pairs will be actioned--but you need at least one A- or B-defining rule for a "better/worse duplicates" action'
         
         st = ClientGUICommon.BetterStaticText( self._selector_panel, label )
         
@@ -272,17 +282,19 @@ class EditDuplicatesAutoResolutionRulePanel( ClientGUIScrolledPanels.EditPanel )
         
         #
         
-        label = 'In future, this panel will edit the action and content updates/merge for pairs that pass the test.\n\nduplicate action\n\ndelete A, delete B\n\nNoneable custom content merge options'
+        label = 'And now we have pairs to action, what should we do?'
         
-        st = ClientGUICommon.BetterStaticText( self._action_panel, label = label )
+        st = ClientGUICommon.BetterStaticText( self._actions_panel, label = label )
         
         st.setWordWrap( True )
         
         vbox = QP.VBoxLayout()
         
-        QP.AddToLayout( vbox, st, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( vbox, st, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._edit_actions_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.addStretch( 0 )
         
-        self._action_panel.setLayout( vbox )
+        self._actions_panel.setLayout( vbox )
         
         #
         
@@ -302,7 +314,7 @@ class EditDuplicatesAutoResolutionRulePanel( ClientGUIScrolledPanels.EditPanel )
         
         self._main_notebook.addTab( self._search_panel, 'search' )
         self._main_notebook.addTab( self._selector_panel, 'comparison' )
-        self._main_notebook.addTab( self._action_panel, 'action' )
+        self._main_notebook.addTab( self._actions_panel, 'action' )
         self._main_notebook.addTab( self._preview_panel, 'preview' )
         
         #
@@ -315,7 +327,7 @@ class EditDuplicatesAutoResolutionRulePanel( ClientGUIScrolledPanels.EditPanel )
         gridbox = ClientGUICommon.WrapInGrid( self._rule_panel, rows )
         
         self._rule_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        self._rule_panel.Add( self._main_notebook, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._rule_panel.Add( self._main_notebook, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         #
         
@@ -325,8 +337,7 @@ class EditDuplicatesAutoResolutionRulePanel( ClientGUIScrolledPanels.EditPanel )
         st.setWordWrap( True )
         QP.AddToLayout( vbox, st, CC.FLAGS_EXPAND_PERPENDICULAR )
         
-        QP.AddToLayout( vbox, self._rule_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.addStretch( 1 )
+        QP.AddToLayout( vbox, self._rule_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         self.widget().setLayout( vbox )
         
@@ -351,6 +362,17 @@ class EditDuplicatesAutoResolutionRulePanel( ClientGUIScrolledPanels.EditPanel )
         
         # action
         
+        ( action, delete_a, delete_b, duplicate_content_merge_options ) = self._edit_actions_panel.GetValue()
+        
+        if action in ( HC.DUPLICATE_BETTER, HC.DUPLICATE_WORSE ) and not pair_selector.CanDetermineBetter():
+            
+            raise HydrusExceptions.VetoException( 'Hey, you have the action set to "better/worse duplicate" but the comparison step has no way to figure out A or B! You need to add at least one step that specifies either A or B so the rule knows which way around to apply the action. If there is no easy determination, perhaps "set as same quality" is more appropriate?' )
+            
+        
+        duplicates_auto_resolution_rule.SetAction( action )
+        duplicates_auto_resolution_rule.SetDeleteInfo( delete_a, delete_b )
+        duplicates_auto_resolution_rule.SetDuplicateContentMergeOptions( duplicate_content_merge_options )
+        
         #
         
         duplicates_auto_resolution_rule.SetId( self._duplicates_auto_resolution_rule.GetId() )
@@ -358,6 +380,138 @@ class EditDuplicatesAutoResolutionRulePanel( ClientGUIScrolledPanels.EditPanel )
         # TODO: transfer any cached search data, including what we may have re-fetched in this panel's work, to the new rule
         
         return duplicates_auto_resolution_rule
+        
+    
+
+class EditPairActionsWidget( ClientGUICommon.StaticBox ):
+    
+    def __init__( self, parent, action: int, delete_a: bool, delete_b: bool, duplicates_content_merge_options: typing.Optional[ ClientDuplicates.DuplicateContentMergeOptions ] ):
+        
+        super().__init__( parent, 'pair actions' )
+        
+        self._action = ClientGUICommon.BetterChoice( self )
+        
+        for duplicate_type in [
+            HC.DUPLICATE_BETTER,
+            HC.DUPLICATE_WORSE,
+            HC.DUPLICATE_SAME_QUALITY,
+            HC.DUPLICATE_ALTERNATE,
+            HC.DUPLICATE_FALSE_POSITIVE
+        ]:
+            
+            self._action.addItem( HC.duplicate_type_auto_resolution_action_description_lookup[ duplicate_type ], duplicate_type )
+            
+        
+        self._delete_a = QW.QCheckBox( self )
+        self._delete_b = QW.QCheckBox( self )
+        
+        self._use_default_duplicates_content_merge_options = QW.QCheckBox( self )
+        
+        self._custom_duplicate_content_merge_options = ClientGUIDuplicatesContentMergeOptions.EditDuplicateContentMergeOptionsWidget( self, HC.DUPLICATE_BETTER, ClientDuplicates.DuplicateContentMergeOptions(), can_expand = True, start_expanded = False )
+        
+        # TODO: a lovely panel that handles merge options lad
+        
+        # I really want this to be a live in-place widget, which means we'll have to dynamically update this guy with action as we switch things!!
+        # also, we'll want to disable/enable with the checkbox
+        # also, we'll want a favourites system, which the new staticbox could do
+        
+        #
+        
+        self._action.SetValue( action )
+        self._delete_a.setChecked( delete_a )
+        self._delete_b.setChecked( delete_b )
+        self._use_default_duplicates_content_merge_options.setChecked( duplicates_content_merge_options is None )
+        
+        action_to_set = action
+        
+        if action_to_set == HC.DUPLICATE_WORSE:
+            
+            action_to_set = HC.DUPLICATE_BETTER
+            
+        
+        if duplicates_content_merge_options is None:
+            
+            duplicates_content_merge_options = CG.client_controller.new_options.GetDuplicateContentMergeOptions( action_to_set )
+            
+        else:
+            
+            self._custom_duplicate_content_merge_options.ExpandCollapse()
+            
+        
+        self._custom_duplicate_content_merge_options.SetValue( action_to_set, duplicates_content_merge_options )
+        
+        #
+        
+        rows = []
+        
+        rows.append( ( 'action: ', self._action ) )
+        rows.append( ( 'delete A: ', self._delete_a ) )
+        rows.append( ( 'delete B: ', self._delete_b ) )
+        rows.append( ( 'use default content merge options for action: ', self._use_default_duplicates_content_merge_options ) )
+        
+        gridbox = ClientGUICommon.WrapInGrid( self, rows )
+        
+        self.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        self.Add( self._custom_duplicate_content_merge_options, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        self._use_default_duplicates_content_merge_options.clicked.connect( self._UpdateMergeWidgetEnabled )
+        self._action.currentIndexChanged.connect( self._UpdateActionControls )
+        
+        self._UpdateMergeWidgetEnabled()
+        
+    
+    def _UpdateActionControls( self ):
+        
+        action_to_set = self._action.GetValue()
+        
+        if action_to_set == HC.DUPLICATE_WORSE:
+            
+            action_to_set = HC.DUPLICATE_BETTER
+            
+        
+        current_action = self._custom_duplicate_content_merge_options.GetDuplicateAction()
+        
+        if current_action != action_to_set:
+            
+            duplicates_content_merge_options = CG.client_controller.new_options.GetDuplicateContentMergeOptions( action_to_set )
+            
+            self._custom_duplicate_content_merge_options.SetValue( action_to_set, duplicates_content_merge_options )
+            
+        
+    
+    def _UpdateMergeWidgetEnabled( self ):
+        
+        we_can_edit_it = not self._use_default_duplicates_content_merge_options.isChecked()
+        
+        self._custom_duplicate_content_merge_options.setEnabled( we_can_edit_it )
+        
+        if we_can_edit_it:
+            
+            self._UpdateActionControls()
+            
+            if not self._custom_duplicate_content_merge_options.IsExpanded():
+                
+                self._custom_duplicate_content_merge_options.ExpandCollapse()
+                
+            
+        
+    
+    def GetValue( self ):
+        
+        action = self._action.GetValue()
+        delete_a = self._delete_a.isChecked()
+        delete_b = self._delete_b.isChecked()
+        
+        if self._use_default_duplicates_content_merge_options.isChecked():
+            
+            duplicate_content_merge_options = None
+            
+        else:
+            
+            duplicate_content_merge_options = self._custom_duplicate_content_merge_options.GetValue()
+            
+        
+        return ( action, delete_a, delete_b, duplicate_content_merge_options )
         
     
 
@@ -369,8 +523,9 @@ class EditPairComparatorOneFilePanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._looking_at = ClientGUICommon.BetterChoice( self )
         
-        self._looking_at.addItem( 'a better file will pass these', ClientDuplicatesAutoResolution.LOOKING_AT_BETTER_CANDIDATE )
-        self._looking_at.addItem( 'a worse file will pass these', ClientDuplicatesAutoResolution.LOOKING_AT_WORSE_CANDIDATE )
+        self._looking_at.addItem( 'A will pass these', ClientDuplicatesAutoResolution.LOOKING_AT_A )
+        self._looking_at.addItem( 'B will pass these', ClientDuplicatesAutoResolution.LOOKING_AT_B )
+        self._looking_at.addItem( 'either will pass these', ClientDuplicatesAutoResolution.LOOKING_AT_EITHER )
         
         self._metadata_conditional = ClientGUIMetadataConditional.EditMetadataConditionalPanel( self, pair_comparator.GetMetadataConditional() )
         
@@ -388,8 +543,6 @@ class EditPairComparatorOneFilePanel( ClientGUIScrolledPanels.EditPanel ):
         
         QP.AddToLayout( vbox, self._looking_at, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, self._metadata_conditional, CC.FLAGS_EXPAND_BOTH_WAYS )
-        
-        vbox.addStretch( 1 )
         
         self.widget().setLayout( vbox )
         
@@ -467,11 +620,6 @@ class EditPairSelectorWidget( ClientGUICommon.StaticBox ):
         
         comparators = self._comparators.GetData()
         
-        if len( comparators ) == 0:
-            
-            raise HydrusExceptions.VetoException( 'Sorry, you need at least one rule in your pair selector/comparator! We need to figure out which of the AB pair would be the better/worse.' )
-            
-        
         pair_selector.SetComparators( comparators )
         
         return pair_selector
@@ -519,10 +667,10 @@ class ReviewDuplicatesAutoResolutionPanel( QW.QWidget ):
         
         st = ClientGUICommon.BetterStaticText( self, 'Hey, this system does not work yet! This UI is just a placeholder!' )
         st.setWordWrap( True )
-        QP.AddToLayout( vbox, st, CC.FLAGS_EXPAND_PERPENDICULAR )
         
+        QP.AddToLayout( vbox, st, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, self._duplicates_auto_resolution_rules_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.addStretch( 1 )
+        vbox.addStretch( 0 )
         
         self.setLayout( vbox )
         

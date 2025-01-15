@@ -228,7 +228,7 @@ class CollectComboCtrl( QW.QComboBox ):
     def paintEvent( self, e ):
         
         painter = QW.QStylePainter( self )
-        painter.setPen( self.palette().color( QG.QPalette.Text ) )
+        painter.setPen( self.palette().color( QG.QPalette.ColorRole.Text ) )
 
         opt = QW.QStyleOptionComboBox()
         self.initStyleOption( opt )

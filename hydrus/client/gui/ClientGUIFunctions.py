@@ -91,16 +91,16 @@ def ConvertQtImageToNumPy( qt_image: QG.QImage, strip_useless_alpha = True ):
     
     if qt_image.hasAlphaChannel():
         
-        if qt_image.format() != QG.QImage.Format_RGBA8888:
+        if qt_image.format() != QG.QImage.Format.Format_RGBA8888:
             
-            qt_image.convertTo( QG.QImage.Format_RGBA8888 )
+            qt_image.convertTo( QG.QImage.Format.Format_RGBA8888 )
             
         
     else:
         
-        if qt_image.format() != QG.QImage.Format_RGB888:
+        if qt_image.format() != QG.QImage.Format.Format_RGB888:
             
-            qt_image.convertTo( QG.QImage.Format_RGB888 )
+            qt_image.convertTo( QG.QImage.Format.Format_RGB888 )
             
         
     

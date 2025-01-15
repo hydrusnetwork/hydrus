@@ -27,6 +27,11 @@ DUPLICATE_STATUS_NOT_SEARCHED = 4 # assign this to new pairs that are added, by 
 
 class PairComparator( HydrusSerialisable.SerialisableBase ):
     
+    def CanDetermineBetter( self ) -> bool:
+        
+        raise NotImplementedError()
+        
+    
     def GetSummary( self ) -> str:
         
         raise NotImplementedError()
@@ -38,8 +43,9 @@ class PairComparator( HydrusSerialisable.SerialisableBase ):
         
     
 
-LOOKING_AT_BETTER_CANDIDATE = 0
-LOOKING_AT_WORSE_CANDIDATE = 1
+LOOKING_AT_A = 0
+LOOKING_AT_B = 1
+LOOKING_AT_EITHER = 2
 
 class PairComparatorOneFile( PairComparator ):
     
@@ -54,14 +60,14 @@ class PairComparatorOneFile( PairComparator ):
         
         super().__init__()
         
-        # this guy tests the better or the worse for a single property
+        # this guy tests the A or the B for a single property
         # user could set up multiple on either side of the equation
         # what are we testing?
-            # better file mime is jpeg (& worse file is png)
-            # better file has icc profile
-            # worse file filesize < 200KB
+            # A: mime is jpeg (& worse file is png)
+            # B: has icc profile
+            # EITHER: filesize < 200KB
         
-        self._looking_at = LOOKING_AT_BETTER_CANDIDATE
+        self._looking_at = LOOKING_AT_A
         
         self._metadata_conditional = ClientMetadataConditional.MetadataConditional()
         
@@ -80,6 +86,11 @@ class PairComparatorOneFile( PairComparator ):
         self._metadata_conditional = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_metadata_conditional )
         
     
+    def CanDetermineBetter( self ) -> bool:
+        
+        return self._looking_at in ( LOOKING_AT_A, LOOKING_AT_B )
+        
+    
     def GetLookingAt( self ) -> int:
         
         return self._looking_at
@@ -92,13 +103,21 @@ class PairComparatorOneFile( PairComparator ):
     
     def GetSummary( self ):
         
-        if self._looking_at == LOOKING_AT_BETTER_CANDIDATE:
+        if self._looking_at == LOOKING_AT_A:
             
-            return f'better file will pass: {self._metadata_conditional.GetSummary()}'
+            return f'A will pass: {self._metadata_conditional.GetSummary()}'
+            
+        elif self._looking_at == LOOKING_AT_B:
+            
+            return f'B will pass: {self._metadata_conditional.GetSummary()}'
+            
+        elif self._looking_at == LOOKING_AT_EITHER:
+            
+            return f'either will pass: {self._metadata_conditional.GetSummary()}'
             
         else:
             
-            return f'worse file will pass: {self._metadata_conditional.GetSummary()}'
+            return 'unknown comparator rule!'
             
         
     
@@ -112,15 +131,19 @@ class PairComparatorOneFile( PairComparator ):
         self._metadata_conditional = metadata_conditional
         
     
-    def Test( self, media_result_better: ClientMediaResult.MediaResult, media_result_worse: ClientMediaResult.MediaResult ) -> bool:
+    def Test( self, media_result_a: ClientMediaResult.MediaResult, media_result_b: ClientMediaResult.MediaResult ) -> bool:
         
-        if self._looking_at == LOOKING_AT_BETTER_CANDIDATE:
+        if self._looking_at == LOOKING_AT_A:
             
-            return self._metadata_conditional.Test( media_result_better )
+            return self._metadata_conditional.Test( media_result_a )
             
-        else:
+        elif self._looking_at == LOOKING_AT_B:
             
-            return self._metadata_conditional.Test( media_result_worse )
+            return self._metadata_conditional.Test( media_result_b )
+            
+        elif self._looking_at == LOOKING_AT_EITHER:
+            
+            return self._metadata_conditional.Test( media_result_a ) or self._metadata_conditional.Test( media_result_b )
             
         
     
@@ -157,6 +180,11 @@ class PairComparatorRelative( PairComparator ):
             # is at least x absolute value larger?
         
     
+    def CanDetermineBetter( self ) -> bool:
+        
+        return True
+        
+    
     # serialisable gubbins
     # get/set
     
@@ -165,7 +193,7 @@ class PairComparatorRelative( PairComparator ):
         return 'A has 4x pixel count of B'
         
     
-    def Test( self, media_result_better: ClientMediaResult.MediaResult, media_result_worse: ClientMediaResult.MediaResult ) -> bool:
+    def Test( self, media_result_a: ClientMediaResult.MediaResult, media_result_b: ClientMediaResult.MediaResult ) -> bool:
         
         return False
         
@@ -205,12 +233,19 @@ class PairSelector( HydrusSerialisable.SerialisableBase ):
         self._comparators = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_comparators )
         
     
+    def CanDetermineBetter( self ):
+        
+        # note this is correctly false if no comparators
+        
+        return True in ( comparator.CanDetermineBetter() for comparator in self._comparators )
+        
+    
     def GetComparators( self ):
         
         return self._comparators
         
     
-    def GetMatchingMedia( self, media_result_1: ClientMediaResult.MediaResult, media_result_2: ClientMediaResult.MediaResult ):
+    def GetMatchingAB( self, media_result_1: ClientMediaResult.MediaResult, media_result_2: ClientMediaResult.MediaResult ) -> typing.Optional[ typing.Tuple[ ClientMediaResult.MediaResult, ClientMediaResult.MediaResult ] ]:
         
         pair = [ media_result_1, media_result_2 ]
         
@@ -219,13 +254,19 @@ class PairSelector( HydrusSerialisable.SerialisableBase ):
         
         ( media_result_1, media_result_2 ) = pair
         
+        if len( self._comparators ) == 0:
+            
+            # no testing, just return whatever. let's hope this is an alternates thing
+            return ( media_result_1, media_result_2 )
+            
+        
         if False not in ( comparator.Test( media_result_1, media_result_2 ) for comparator in self._comparators ):
             
-            return media_result_1
+            return ( media_result_1, media_result_2 )
             
         elif False not in ( comparator.Test( media_result_2, media_result_1 ) for comparator in self._comparators ):
             
-            return media_result_2
+            return ( media_result_2, media_result_1 )
             
         else:
             
@@ -272,8 +313,8 @@ class DuplicatesAutoResolutionRule( HydrusSerialisable.SerialisableBaseNamed ):
         
         self._action = HC.DUPLICATE_BETTER
         
-        self._delete_first = False
-        self._delete_second = False
+        self._delete_a = False
+        self._delete_b = False
         
         self._custom_duplicate_content_merge_options: typing.Optional[ ClientDuplicates.DuplicateContentMergeOptions ] = None
         
@@ -288,16 +329,51 @@ class DuplicatesAutoResolutionRule( HydrusSerialisable.SerialisableBaseNamed ):
     # get/set
     # 'here's a pair of media results, pass/fail?'
     
-    def GetId( self ) -> int:
+    def GetAction( self ) -> int:
         
-        return self._id
+        return self._action
         
     
     def GetActionSummary( self ) -> str:
         
-        return 'set A as better, delete worse'
+        s = HC.duplicate_type_auto_resolution_action_description_lookup[ self._action ]
+        
+        if self._delete_a:
+            
+            s += ', delete A'
+            
+        
+        if self._delete_b:
+            
+            s += ', delete B'
+            
+        
+        if self._custom_duplicate_content_merge_options is None:
+            
+            s += ', default merge options'
+            
+        else:
+            
+            s += ', custom merge options'
+            
+        
+        return s
         
     
+    def GetDeleteInfo( self ) -> typing.Tuple[ bool, bool ]:
+        
+        return ( self._delete_a, self._delete_b )
+        
+    
+    def GetDuplicateContentMergeOptions( self ) -> typing.Optional[ ClientDuplicates.DuplicateContentMergeOptions ]:
+        
+        return self._custom_duplicate_content_merge_options
+        
+    
+    def GetId( self ) -> int:
+        
+        return self._id
+        
     
     def GetPairSelector( self ) -> PairSelector:
         
@@ -331,29 +407,60 @@ class DuplicatesAutoResolutionRule( HydrusSerialisable.SerialisableBaseNamed ):
     
     def TestPair( self, media_result_1: ClientMediaResult.MediaResult, media_result_2: ClientMediaResult.MediaResult ):
         
-        result = self._pair_selector.GetMatchingMedia( media_result_1, media_result_2 )
+        result = self._pair_selector.GetMatchingAB( media_result_1, media_result_2 )
         
         if result is None:
             
             return None
             
-        elif result == media_result_1:
+        else:
             
-            better_media_result = media_result_1
-            worse_media_result = media_result_2
+            ( media_result_a, media_result_b ) = result
+            
+        
+        action = self._action
+        delete_a = self._delete_a
+        delete_b = self._delete_b
+        
+        if action == HC.DUPLICATE_WORSE:
+            
+            action = HC.DUPLICATE_BETTER
+            
+            ( media_result_a, media_result_b ) = ( media_result_b, media_result_a )
+            ( delete_a, delete_b ) = ( delete_b, delete_a )
+            
+        
+        if self._custom_duplicate_content_merge_options is None:
+            
+            duplicate_content_merge_options = CG.client_controller.new_options.GetDuplicateContentMergeOptions( action )
             
         else:
             
-            better_media_result = media_result_2
-            worse_media_result = media_result_1
+            duplicate_content_merge_options = self._custom_duplicate_content_merge_options
             
         
-        first_hash = better_media_result.GetHash()
-        second_hash = worse_media_result.GetHash()
+        hash_a = media_result_a.GetHash()
+        hash_b = media_result_b.GetHash()
         
-        content_update_packages = [ self._custom_duplicate_content_merge_options.ProcessPairIntoContentUpdatePackage( better_media_result, worse_media_result, delete_first = self._delete_first, delete_second = self._delete_second, file_deletion_reason = f'duplicates auto-resolution ({self._name})' ) ]
+        content_update_packages = [ duplicate_content_merge_options.ProcessPairIntoContentUpdatePackage( media_result_a, media_result_b, delete_a = delete_a, delete_b = delete_b, file_deletion_reason = f'duplicates auto-resolution ({self._name})' ) ]
         
-        return ( self._action, first_hash, second_hash, content_update_packages )
+        return ( action, hash_a, hash_b, content_update_packages )
+        
+    
+    def SetAction( self, action: int ):
+        
+        self._action = action
+        
+    
+    def SetDeleteInfo( self, delete_a: bool, delete_b: bool ):
+        
+        self._delete_a = delete_a
+        self._delete_b = delete_b
+        
+    
+    def SetDuplicateContentMergeOptions( self, duplicate_content_merge_options: typing.Optional[ ClientDuplicates.DuplicateContentMergeOptions ] ):
+        
+        self._custom_duplicate_content_merge_options = duplicate_content_merge_options
         
     
     def SetId( self, value: int ):
@@ -425,7 +532,7 @@ def GetDefaultRuleSuggestions() -> typing.List[ DuplicatesAutoResolutionRule ]:
     
     comparator = PairComparatorOneFile()
     
-    comparator.SetLookingAt( LOOKING_AT_BETTER_CANDIDATE )
+    comparator.SetLookingAt( LOOKING_AT_A )
     
     file_search_context_mc = ClientSearchFileSearchContext.FileSearchContext(
         predicates = [ ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_MIME, value = ( HC.IMAGE_JPEG, ) ) ]
@@ -440,6 +547,11 @@ def GetDefaultRuleSuggestions() -> typing.List[ DuplicatesAutoResolutionRule ]:
     selector.SetComparators( [ comparator ] )
     
     duplicates_auto_resolution_rule.SetPairSelector( selector )
+    
+    #
+    
+    duplicates_auto_resolution_rule.SetAction( HC.DUPLICATE_BETTER )
+    duplicates_auto_resolution_rule.SetDeleteInfo( False, True )
     
     #
     

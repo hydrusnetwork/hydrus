@@ -6,6 +6,7 @@ from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusLists
+from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusSerialisable
 
 from hydrus.client import ClientApplicationCommand as CAC
@@ -24,11 +25,11 @@ from hydrus.client.gui import ClientGUIShortcutControls
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.canvas import ClientGUIMPV
+from hydrus.client.gui.duplicates import ClientGUIDuplicatesContentMergeOptions
 from hydrus.client.gui.lists import ClientGUIListBoxes
 from hydrus.client.gui.media import ClientGUIMediaModalActions
 from hydrus.client.gui.media import ClientGUIMediaControls
 from hydrus.client.gui.panels import ClientGUIScrolledPanels
-from hydrus.client.gui.panels import ClientGUIScrolledPanelsEdit
 from hydrus.client.gui.widgets import ClientGUICommon
 from hydrus.client.gui.widgets import ClientGUIMenuButton
 from hydrus.client.media import ClientMedia
@@ -1321,7 +1322,7 @@ class CanvasHoverFrameTopRight( CanvasHoverFrame ):
         
         icon_hbox = QP.HBoxLayout( spacing = 0 )
         
-        icon_hbox.addStretch( 1 )
+        icon_hbox.addStretch( 0 )
         
         QP.AddToLayout( icon_hbox, self._inbox_icon, CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( icon_hbox, self._trash_icon, CC.FLAGS_CENTER_PERPENDICULAR )
@@ -1347,7 +1348,7 @@ class CanvasHoverFrameTopRight( CanvasHoverFrame ):
         
         if len( like_services ) > 0:
             
-            like_hbox.addStretch( 1 )
+            like_hbox.addStretch( 0 )
             
         
         for service in like_services:
@@ -1390,7 +1391,7 @@ class CanvasHoverFrameTopRight( CanvasHoverFrame ):
         
         if len( incdec_services ) > 0:
             
-            incdec_hbox.addStretch( 1 )
+            incdec_hbox.addStretch( 0 )
             
         
         for service in incdec_services:
@@ -2051,6 +2052,11 @@ class CanvasHoverFrameRightDuplicates( CanvasHoverFrame ):
         
         self._comparison_statements_vbox = QP.VBoxLayout()
         
+        self._comparison_statement_score_summary = ClientGUICommon.BetterStaticText( self )
+        self._comparison_statement_score_summary.setAlignment( QC.Qt.AlignmentFlag.AlignCenter )
+        
+        QP.AddToLayout( self._comparison_statements_vbox, self._comparison_statement_score_summary, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
         self._comparison_statement_names = [ 'filesize', 'resolution', 'ratio', 'mime', 'num_tags', 'time_imported', 'jpeg_quality', 'pixel_duplicates', 'has_transparency', 'exif_data', 'embedded_metadata', 'icc_profile', 'has_audio' ]
         
         self._comparison_statements_sts = {}
@@ -2153,13 +2159,17 @@ class CanvasHoverFrameRightDuplicates( CanvasHoverFrame ):
         
         with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit duplicate merge options' ) as dlg:
             
-            panel = ClientGUIScrolledPanelsEdit.EditDuplicateContentMergeOptionsPanel( dlg, duplicate_type, duplicate_content_merge_options )
+            panel = ClientGUIScrolledPanels.EditSingleCtrlPanel( dlg )
+            
+            ctrl = ClientGUIDuplicatesContentMergeOptions.EditDuplicateContentMergeOptionsWidget( panel, duplicate_type, duplicate_content_merge_options )
+            
+            panel.SetControl( ctrl )
             
             dlg.SetPanel( panel )
             
             if dlg.exec() == QW.QDialog.DialogCode.Accepted:
                 
-                duplicate_content_merge_options = panel.GetValue()
+                duplicate_content_merge_options = ctrl.GetValue()
                 
                 new_options.SetDuplicateContentMergeOptions( duplicate_type, duplicate_content_merge_options )
                 
@@ -2202,6 +2212,30 @@ class CanvasHoverFrameRightDuplicates( CanvasHoverFrame ):
     def _ResetComparisonStatements( self ):
         
         statements_and_scores = ClientDuplicates.GetDuplicateComparisonStatements( self._current_media, self._comparison_media )
+        
+        total_score = sum( ( score for ( statement, score ) in statements_and_scores.values() ) )
+        
+        if total_score > 0:
+            
+            text = 'score: +' + HydrusNumbers.ToHumanInt( total_score )
+            object_name = 'HydrusValid'
+            
+        elif total_score < 0:
+            
+            text = 'score: ' + HydrusNumbers.ToHumanInt( total_score )
+            object_name = 'HydrusInvalid'
+            
+        else:
+            
+            text = 'no score difference'
+            object_name = 'HydrusIndeterminate'
+            
+        
+        self._comparison_statement_score_summary.setText( text )
+        
+        self._comparison_statement_score_summary.setObjectName( object_name )
+        
+        self._comparison_statement_score_summary.style().polish( self._comparison_statement_score_summary )
         
         for name in self._comparison_statement_names:
             
