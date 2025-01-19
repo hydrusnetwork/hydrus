@@ -50,7 +50,7 @@ if [ -d "venv" ]; then
 fi
 
 echo "--------"
-echo "Users on older OSes need the advanced install. The very new Python 3.13 will probably not work with this setup."
+echo "Users on older OSes need the advanced install. Python 3.13 will need the advanced install for newer '(t)est' Qt."
 echo
 echo "Your Python version is:"
 $py_command --version

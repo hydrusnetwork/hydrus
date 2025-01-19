@@ -88,7 +88,7 @@ IF EXIST "%venv_location%\" (
 :questions
 
 ECHO --------
-ECHO Users on older Windows need the advanced install. The very new Python 3.13 will probably not work with this setup.
+ECHO Users on older Windows need the advanced install. Python 3.13 will need the advanced install for newer '(t)est' Qt.
 ECHO:
 ECHO Your Python version is:
 %python_bin% --version
