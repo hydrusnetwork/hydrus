@@ -1,28 +1,5 @@
-# noinspection PyUnresolvedReferences
-import numpy
-# noinspection PyUnresolvedReferences
-import numpy.core.multiarray # important this comes before cv!
-
-# noinspection PyUnresolvedReferences
-import cv2
 from PIL import Image as PILImage
 import warnings
-
-try:
-    
-    # more hidden imports for pyinstaller
-    
-    # noinspection PyUnresolvedReferences
-    import numpy.random.common  # pylint: disable=E0401
-    # noinspection PyUnresolvedReferences
-    import numpy.random.bounded_integers  # pylint: disable=E0401
-    # noinspection PyUnresolvedReferences
-    import numpy.random.entropy  # pylint: disable=E0401
-    
-except:
-    
-    pass # old version of numpy, screw it
-    
 
 if not hasattr( PILImage, 'DecompressionBombError' ):
     
