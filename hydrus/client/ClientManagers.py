@@ -138,11 +138,11 @@ class BitmapManager( object ):
         
         if depth == 24:
             
-            return QG.QImage.Format_RGB888
+            return QG.QImage.Format.Format_RGB888
             
         elif depth == 32:
 
-            return QG.QImage.Format_RGBA8888
+            return QG.QImage.Format.Format_RGBA8888
             
         
     

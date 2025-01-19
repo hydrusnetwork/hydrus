@@ -100,6 +100,8 @@ class DialogManageRatings( CAC.ApplicationCommandProcessorMixin, ClientGUIDialog
         QP.AddToLayout( buttonbox, self._apply, CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( buttonbox, self._cancel, CC.FLAGS_CENTER_PERPENDICULAR )
         
+        vbox.addStretch( 0 )
+        
         QP.AddToLayout( vbox, buttonbox, CC.FLAGS_ON_RIGHT )
         
         self.setLayout( vbox )

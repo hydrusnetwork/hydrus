@@ -139,8 +139,7 @@ class EditSingleFileMetadataExporterWidget( QW.QWidget ):
         QP.AddToLayout( vbox, self._nested_object_names_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         QP.AddToLayout( vbox, self._txt_separator_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, self._sidecar_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-        
-        vbox.addStretch( 1 )
+        vbox.addStretch( 0 )
         
         self.setLayout( vbox )
         

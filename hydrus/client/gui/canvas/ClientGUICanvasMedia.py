@@ -463,7 +463,7 @@ class Animation( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
         
         current_frame_image = current_frame.GetQtImage()
         
-        painter.setRenderHint( QG.QPainter.SmoothPixmapTransform, True )
+        painter.setRenderHint( QG.QPainter.RenderHint.SmoothPixmapTransform, True )
 
         # note we draw to self.rect(), which is in DPR coordinates. the pixmap needs to be DPR'd by here mate, this caught us up before
         painter.drawImage( self.rect(), current_frame_image )
@@ -2776,11 +2776,11 @@ class EmbedButton( QW.QWidget ):
             painter.setTransform( QG.QTransform().scale( 1.0, 1.0 ) )
             
         
-        painter.setBrush( QG.QBrush( QG.QPalette().color( QG.QPalette.Button ) ) )
+        painter.setBrush( QG.QBrush( QG.QPalette().color( QG.QPalette.ColorRole.Button ) ) )
         
         painter.drawEllipse( QC.QPointF( center_x, center_y ), radius, radius )
         
-        painter.setBrush( QG.QBrush( QG.QPalette().color( QG.QPalette.Window ) ) )
+        painter.setBrush( QG.QBrush( QG.QPalette().color( QG.QPalette.ColorRole.Window ) ) )
         
         # play symbol is a an equilateral triangle
         
@@ -2804,7 +2804,7 @@ class EmbedButton( QW.QWidget ):
         
         #
         
-        painter.setPen( QG.QPen( QG.QPalette().color( QG.QPalette.Shadow ) ) )
+        painter.setPen( QG.QPen( QG.QPalette().color( QG.QPalette.ColorRole.Shadow ) ) )
 
         painter.setBrush( QC.Qt.BrushStyle.NoBrush )
         

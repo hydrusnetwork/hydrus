@@ -72,12 +72,12 @@ class EditPotentialDuplicatesSearchContextPanel( ClientGUICommon.StaticBox ):
             QP.AddToLayout( hbox, self._tag_autocomplete_1, CC.FLAGS_EXPAND_BOTH_WAYS )
             QP.AddToLayout( hbox, self._tag_autocomplete_2, CC.FLAGS_EXPAND_BOTH_WAYS )
             
-            self.Add( hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+            self.Add( hbox, CC.FLAGS_EXPAND_BOTH_WAYS )
             
         else:
             
-            self.Add( self._tag_autocomplete_1, CC.FLAGS_EXPAND_PERPENDICULAR )
-            self.Add( self._tag_autocomplete_2, CC.FLAGS_EXPAND_PERPENDICULAR )
+            self.Add( self._tag_autocomplete_1, CC.FLAGS_EXPAND_BOTH_WAYS )
+            self.Add( self._tag_autocomplete_2, CC.FLAGS_EXPAND_BOTH_WAYS )
             
         
         rows = []

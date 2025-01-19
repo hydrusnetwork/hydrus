@@ -24,7 +24,7 @@ import re
 def elideRichText(richText: str, maxWidth: int, widget, elideFromLeft: bool):
     doc = QG.QTextDocument()
     opt = QG.QTextOption()
-    opt.setWrapMode(QG.QTextOption.NoWrap)
+    opt.setWrapMode(QG.QTextOption.WrapMode.NoWrap)
     doc.setDefaultTextOption(opt)
     doc.setDocumentMargin(0)
     doc.setHtml(richText)
@@ -33,9 +33,9 @@ def elideRichText(richText: str, maxWidth: int, widget, elideFromLeft: bool):
     if doc.size().width() > maxWidth:
         cursor = QG.QTextCursor (doc)
         if elideFromLeft:
-            cursor.movePosition(QG.QTextCursor.Start)
+            cursor.movePosition(QG.QTextCursor.MoveOperation.Start)
         else:
-            cursor.movePosition(QG.QTextCursor.End)
+            cursor.movePosition(QG.QTextCursor.MoveOperation.End)
         elidedPostfix = "…"
         metric = QG.QFontMetrics(widget.font())
         postfixWidth = metric.horizontalAdvance(elidedPostfix)
@@ -163,8 +163,8 @@ class QLocatorResultWidget(QW.QWidget):
         self.downShortcut.setContext(QC.Qt.ShortcutContext.WidgetShortcut)
 
         self.selectedPalette = self.palette()
-        self.selectedPalette.setColor(QG.QPalette.Window, QG.QPalette().color(QG.QPalette.WindowText))
-        self.selectedPalette.setColor(QG.QPalette.WindowText, QG.QPalette().color(QG.QPalette.Window))
+        self.selectedPalette.setColor(QG.QPalette.ColorRole.Window, QG.QPalette().color(QG.QPalette.ColorRole.WindowText))
+        self.selectedPalette.setColor(QG.QPalette.ColorRole.WindowText, QG.QPalette().color(QG.QPalette.ColorRole.Window))
 
         self.id = -1
         self.providerIndex = -1

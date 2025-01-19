@@ -6,6 +6,7 @@ from hydrus.core import HydrusData
 from hydrus.core import HydrusPaths
 from hydrus.core import HydrusSerialisable
 
+from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientSerialisable
 from hydrus.client.gui import ClientGUIFunctions
@@ -105,7 +106,12 @@ class PNGExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         gridbox = ClientGUICommon.WrapInGrid( self, rows )
         
-        self.widget().setLayout( gridbox )
+        vbox = QP.VBoxLayout()
+        
+        QP.AddToLayout( vbox, gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        vbox.addStretch( 0 )
+        
+        self.widget().setLayout( vbox )
         
         self._filepicker.filePickerChanged.connect( self._Update )
         self._title.textChanged.connect( self._Update )
@@ -217,7 +223,12 @@ class PNGsExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         gridbox = ClientGUICommon.WrapInGrid( self, rows )
         
-        self.widget().setLayout( gridbox )
+        vbox = QP.VBoxLayout()
+        
+        QP.AddToLayout( vbox, gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        vbox.addStretch( 0 )
+        
+        self.widget().setLayout( vbox )
         
         self._directory_picker.dirPickerChanged.connect( self._Update )
         

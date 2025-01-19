@@ -275,6 +275,8 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         CG.client_controller.SetServices( services )
         
+        CG.client_controller.pub( 'clear_thumbnail_cache' )
+        
     
     def UserIsOKToOK( self ):
         
@@ -378,6 +380,8 @@ class EditClientServicePanel( ClientGUIScrolledPanels.EditPanel ):
             
             QP.AddToLayout( vbox, panel, CC.FLAGS_EXPAND_PERPENDICULAR )
             
+        
+        vbox.addStretch( 0 )
         
         self.widget().setLayout( vbox )
         
@@ -1191,7 +1195,7 @@ class EditServiceClientServerSubPanel( ClientGUICommon.StaticBox ):
         
         gridbox = ClientGUICommon.WrapInGrid( self, rows )
         
-        self._client_server_options_panel.Add( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._client_server_options_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         self._client_server_options_panel.Add( self._bandwidth_rules, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         self.Add( self._client_server_options_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
@@ -1289,7 +1293,7 @@ class EditServiceRatingsSubPanel( ClientGUICommon.StaticBox ):
     
     def __init__( self, parent, service_type, dictionary ):
         
-        super().__init__( parent, 'rating colours' )
+        super().__init__( parent, 'rating display' )
         
         self._colour_ctrls = {}
         
@@ -1303,8 +1307,9 @@ class EditServiceRatingsSubPanel( ClientGUICommon.StaticBox ):
             
             self._colour_ctrls[ colour_type ] = ( border_ctrl, fill_ctrl )
             
+        
         self._show_in_thumbnail = QW.QCheckBox( self )
-
+        self._show_in_thumbnail_even_when_null = QW.QCheckBox( self )
         
         #
         
@@ -1314,8 +1319,10 @@ class EditServiceRatingsSubPanel( ClientGUICommon.StaticBox ):
             
             border_ctrl.SetColour( QG.QColor( *border_rgb ) )
             fill_ctrl.SetColour( QG.QColor( *fill_rgb ) )
-
+            
+        
         self._show_in_thumbnail.setChecked( dictionary[ 'show_in_thumbnail' ] )
+        self._show_in_thumbnail_even_when_null.setChecked( dictionary[ 'show_in_thumbnail_even_when_null' ] )
         
         #
         
@@ -1363,13 +1370,23 @@ class EditServiceRatingsSubPanel( ClientGUICommon.StaticBox ):
                 
             
             rows.append( ( 'border/fill for ' + colour_text + ': ', hbox ) )
-
-        rows.append( ( 'show in gallery thumbnail', self._show_in_thumbnail ) )
-
-
+            
+        
+        rows.append( ( 'show in thumbnails', self._show_in_thumbnail ) )
+        rows.append( ( '\u2514 even when file has no rating value', self._show_in_thumbnail_even_when_null ) )
+        
         gridbox = ClientGUICommon.WrapInGrid( self, rows )
         
         self.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        
+        self._show_in_thumbnail.clicked.connect( self._UpdateControls )
+        
+        self._UpdateControls()
+        
+    
+    def _UpdateControls( self ):
+        
+        self._show_in_thumbnail_even_when_null.setEnabled( self._show_in_thumbnail.isChecked() )
         
     
     def GetValue( self ):
@@ -1389,9 +1406,10 @@ class EditServiceRatingsSubPanel( ClientGUICommon.StaticBox ):
             fill_rgb = ( fill_colour.red(), fill_colour.green(), fill_colour.blue() )
             
             dictionary_part[ 'colours' ][ colour_type ] = ( border_rgb, fill_rgb )
-
-        dictionary_part[ 'show_in_thumbnail' ] = self._show_in_thumbnail.isChecked()
             
+        
+        dictionary_part[ 'show_in_thumbnail' ] = self._show_in_thumbnail.isChecked()
+        dictionary_part[ 'show_in_thumbnail_even_when_null' ] = self._show_in_thumbnail_even_when_null.isChecked()
         
         return dictionary_part
         
@@ -1708,22 +1726,12 @@ class ReviewServicePanel( QW.QWidget ):
         
         QP.AddToLayout( vbox, hbox, CC.FLAGS_ON_RIGHT )
         
-        saw_both_ways = False
-        
         for ( panel, flags ) in subpanels:
-            
-            if flags == CC.FLAGS_EXPAND_BOTH_WAYS:
-                
-                saw_both_ways = True
-                
             
             QP.AddToLayout( vbox, panel, flags )
             
         
-        if not saw_both_ways:
-            
-            vbox.addStretch( 1 )
-            
+        vbox.addStretch( 0 )
         
         self.setLayout( vbox )
         

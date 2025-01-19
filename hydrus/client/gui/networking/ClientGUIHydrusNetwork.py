@@ -127,7 +127,7 @@ class EditAccountTypePanel( ClientGUIScrolledPanels.EditPanel ):
         
         QP.AddToLayout( vbox, t_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         QP.AddToLayout( vbox, self._permissions_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-        QP.AddToLayout( vbox, self._bandwidth_rules_control, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._bandwidth_rules_control, CC.FLAGS_EXPAND_BOTH_WAYS )
         QP.AddToLayout( vbox, self._auto_creation_box, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         self.widget().setLayout( vbox )

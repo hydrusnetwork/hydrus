@@ -6,7 +6,7 @@ title: Contact and Links
 
 I welcome all your bug reports, questions, ideas, and comments. It is always interesting to see how other people are using my software and what they generally think of it. Most of the changes every week are suggested by users.
 
-You can contact me by email, twitter, discord, or the release threads on 8chan or Endchan--I do not mind which. Please know that I have difficulty with social media, and while I try to reply to all messages, it sometimes takes me a while to catch up.
+You can contact me by email, twitter, discord, or the thread on 8chan--I do not mind which. Please know that I have difficulty with social media, and while I try to reply to all messages, it sometimes takes me a while to catch up.
 
 If you need it, [here's](assets/hydev_key/Hydrus%20Network%20Developer_76249F053212133C_public.asc) my public GPG key.
 
@@ -25,7 +25,7 @@ That said:
 *   [homepage](https://hydrusnetwork.github.io/hydrus/)
 *   [github](https://github.com/hydrusnetwork/hydrus) ([latest build](https://github.com/hydrusnetwork/hydrus/releases/latest))
 *   [issue tracker](https://github.com/hydrusnetwork/hydrus/issues)
-*   [8chan.moe /t/ (Hydrus Network General)](https://8chan.moe/t/catalog.html) ([endchan bunker](https://endchan.net/hydrus/) ([.org](https://endchan.org/hydrus/)))
+*   [8chan.moe /t/ (Hydrus Network General)](https://8chan.moe/t/catalog.html)
 *   [tumblr](https://hydrus.tumblr.com) ([rss](http://hydrus.tumblr.com/rss))
 *   [new downloads](https://github.com/hydrusnetwork/hydrus/releases)
 *   [old downloads](https://www.mediafire.com/hydrus)

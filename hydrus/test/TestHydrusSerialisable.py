@@ -305,7 +305,7 @@ class TestSerialisables( unittest.TestCase ):
         
         #
         
-        result = duplicate_content_merge_options_delete_and_move.ProcessPairIntoContentUpdatePackage( local_media_result_has_values, local_media_result_empty, delete_second = True, file_deletion_reason = file_deletion_reason )
+        result = duplicate_content_merge_options_delete_and_move.ProcessPairIntoContentUpdatePackage( local_media_result_has_values, local_media_result_empty, delete_b = True, file_deletion_reason = file_deletion_reason )
         
         content_update_package = ClientContentUpdates.ContentUpdatePackage()
         
@@ -315,7 +315,7 @@ class TestSerialisables( unittest.TestCase ):
         
         #
         
-        result = duplicate_content_merge_options_delete_and_move.ProcessPairIntoContentUpdatePackage( local_media_result_has_values, trashed_media_result_empty, delete_second = True, file_deletion_reason = file_deletion_reason )
+        result = duplicate_content_merge_options_delete_and_move.ProcessPairIntoContentUpdatePackage( local_media_result_has_values, trashed_media_result_empty, delete_b = True, file_deletion_reason = file_deletion_reason )
         
         content_update_package = ClientContentUpdates.ContentUpdatePackage()
         
@@ -323,7 +323,7 @@ class TestSerialisables( unittest.TestCase ):
         
         #
         
-        result = duplicate_content_merge_options_delete_and_move.ProcessPairIntoContentUpdatePackage( local_media_result_has_values, deleted_media_result_empty, delete_second = True, file_deletion_reason = file_deletion_reason )
+        result = duplicate_content_merge_options_delete_and_move.ProcessPairIntoContentUpdatePackage( local_media_result_has_values, deleted_media_result_empty, delete_b = True, file_deletion_reason = file_deletion_reason )
         
         content_update_package = ClientContentUpdates.ContentUpdatePackage()
         
@@ -331,7 +331,7 @@ class TestSerialisables( unittest.TestCase ):
         
         #
         
-        result = duplicate_content_merge_options_delete_and_move.ProcessPairIntoContentUpdatePackage( local_media_result_has_values, other_local_media_result_has_values, delete_second = True, file_deletion_reason = file_deletion_reason )
+        result = duplicate_content_merge_options_delete_and_move.ProcessPairIntoContentUpdatePackage( local_media_result_has_values, other_local_media_result_has_values, delete_b = True, file_deletion_reason = file_deletion_reason )
         
         content_update_package = ClientContentUpdates.ContentUpdatePackage()
         
@@ -345,7 +345,7 @@ class TestSerialisables( unittest.TestCase ):
         
         #
         
-        result = duplicate_content_merge_options_delete_and_move.ProcessPairIntoContentUpdatePackage( local_media_result_empty, other_local_media_result_has_values, delete_second = True, file_deletion_reason = file_deletion_reason )
+        result = duplicate_content_merge_options_delete_and_move.ProcessPairIntoContentUpdatePackage( local_media_result_empty, other_local_media_result_has_values, delete_b = True, file_deletion_reason = file_deletion_reason )
         
         content_update_package = ClientContentUpdates.ContentUpdatePackage()
         

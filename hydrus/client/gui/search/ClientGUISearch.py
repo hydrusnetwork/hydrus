@@ -466,15 +466,11 @@ class EditPredicatesPanel( ClientGUIScrolledPanels.EditPanel ):
             QP.AddToLayout( vbox, button, CC.FLAGS_EXPAND_PERPENDICULAR )
             
         
-        stretch_needed = True
-        
         for panel in self._editable_pred_panels:
             
-            if isinstance( panel, ( ClientGUIPredicatesOR.ORPredicateControl, ClientGUIPredicatesSingle.PanelPredicateSystemMime ) ):
+            if isinstance( panel, ( ClientGUIPredicatesOR.ORPredicateControl, ClientGUIPredicatesSingle.PanelPredicateSystemMime, ClientGUIPredicatesSingle.PanelPredicateSystemHash ) ):
                 
                 flags = CC.FLAGS_EXPAND_BOTH_WAYS
-                
-                stretch_needed = False
                 
             else:
                 
@@ -484,10 +480,7 @@ class EditPredicatesPanel( ClientGUIScrolledPanels.EditPanel ):
             QP.AddToLayout( vbox, panel, flags )
             
         
-        if stretch_needed:
-            
-            vbox.addStretch( 1 )
-            
+        vbox.addStretch( 0 )
         
         self.widget().setLayout( vbox )
         
@@ -943,8 +936,6 @@ class FleshOutPredicatePanel( ClientGUIScrolledPanels.EditPanel ):
                 button.predicatesRemoved.connect( self.StaticRemoveButtonClicked )
                 
             
-            stretch_needed = True
-            
             for panel in editable_pred_panels:
                 
                 if first_editable_pred_panel is None:
@@ -952,11 +943,9 @@ class FleshOutPredicatePanel( ClientGUIScrolledPanels.EditPanel ):
                     first_editable_pred_panel = panel
                     
                 
-                if isinstance( panel, self._PredOKPanel ) and isinstance( panel.GetPredicatePanel(), ClientGUIPredicatesSingle.PanelPredicateSystemMime ):
+                if isinstance( panel, self._PredOKPanel ) and isinstance( panel.GetPredicatePanel(), ( ClientGUIPredicatesSingle.PanelPredicateSystemMime, ClientGUIPredicatesSingle.PanelPredicateSystemHash ) ):
                     
                     flags = CC.FLAGS_EXPAND_BOTH_WAYS
-                    
-                    stretch_needed = False
                     
                 else:
                     
@@ -966,10 +955,7 @@ class FleshOutPredicatePanel( ClientGUIScrolledPanels.EditPanel ):
                 QP.AddToLayout( page_vbox, panel, flags )
                 
             
-            if stretch_needed:
-                
-                page_vbox.addStretch( 1 )
-                
+            page_vbox.addStretch( 0 )
             
             page_panel.setLayout( page_vbox )
             

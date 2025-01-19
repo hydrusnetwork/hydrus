@@ -299,8 +299,6 @@ class EditFileTimestampsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUISc
         QP.AddToLayout( vbox, file_services_box, CC.FLAGS_EXPAND_BOTH_WAYS )
         QP.AddToLayout( vbox, button_hbox, CC.FLAGS_ON_RIGHT )
         
-        vbox.addStretch( 1 )
-        
         self.widget().setLayout( vbox )
         
         self._my_shortcut_handler = ClientGUIShortcuts.ShortcutsHandler( self, self, [ 'global', 'media' ] )

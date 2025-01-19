@@ -491,8 +491,9 @@ class DialogInputUPnPMapping( Dialog ):
         
         vbox = QP.VBoxLayout()
         
-        QP.AddToLayout( vbox, gridbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        QP.AddToLayout( vbox, gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         QP.AddToLayout( vbox, b_box, CC.FLAGS_ON_RIGHT )
+        vbox.addStretch( 0 )
         
         self.setLayout( vbox )
         

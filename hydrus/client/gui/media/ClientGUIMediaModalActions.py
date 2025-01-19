@@ -25,9 +25,11 @@ from hydrus.client.gui import ClientGUIAsync
 from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
+from hydrus.client.gui.duplicates import ClientGUIDuplicatesContentMergeOptions
 from hydrus.client.gui.exporting import ClientGUIExport
 from hydrus.client.gui.media import ClientGUIMediaSimpleActions
 from hydrus.client.gui.metadata import ClientGUIEditTimestamps
+from hydrus.client.gui.panels import ClientGUIScrolledPanels
 from hydrus.client.gui.panels import ClientGUIScrolledPanelsEdit
 from hydrus.client.gui.panels import ClientGUIScrolledPanelsReview
 from hydrus.client.media import ClientMedia
@@ -356,13 +358,17 @@ def EditDuplicateContentMergeOptions( win: QW.QWidget, duplicate_type: int ):
     
     with ClientGUITopLevelWindowsPanels.DialogEdit( win, 'edit duplicate merge options' ) as dlg:
         
-        panel = ClientGUIScrolledPanelsEdit.EditDuplicateContentMergeOptionsPanel( dlg, duplicate_type, duplicate_content_merge_options )
+        panel = ClientGUIScrolledPanels.EditSingleCtrlPanel( dlg )
+        
+        ctrl = ClientGUIDuplicatesContentMergeOptions.EditDuplicateContentMergeOptionsWidget( panel, duplicate_type, duplicate_content_merge_options )
+        
+        panel.SetControl( ctrl )
         
         dlg.SetPanel( panel )
         
         if dlg.exec() == QW.QDialog.DialogCode.Accepted:
             
-            duplicate_content_merge_options = panel.GetValue()
+            duplicate_content_merge_options = ctrl.GetValue()
             
             new_options.SetDuplicateContentMergeOptions( duplicate_type, duplicate_content_merge_options )
             

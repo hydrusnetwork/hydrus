@@ -1024,6 +1024,9 @@ class GridLayout( QW.QGridLayout ):
 def AddToLayout( layout, item, flag = None, alignment = None ):
     
     # TODO: yo, this whole thing could do with a pass to clear out stuff that isn't doing what I expect and cut down to essentials
+    # I think replace the whole thing with a new call and migrate everything over. separate our flags into separate enums for expand, alignment, spacing/whatever
+    # figure out a better way to navigate layouts and expand gubbins and anything else with spotty support
+    # another thing to think about is (as Qt wants) having widgets saying how they want to size on their own and just simplifying the 'addWidget' stuff a whole lot
     
     if isinstance( layout, GridLayout ):
         
@@ -1113,7 +1116,7 @@ def AddToLayout( layout, item, flag = None, alignment = None ):
             
         elif flag in ( CC.FLAGS_CENTER_PERPENDICULAR, CC.FLAGS_CENTER_PERPENDICULAR_EXPAND_DEPTH ):
             
-            if isinstance( layout, QW.QHBoxLayout ):
+            if isinstance( layout, ( QW.QHBoxLayout, QW.QGridLayout ) ):
                 
                 alignment = QC.Qt.AlignmentFlag.AlignVCenter
                 
@@ -1138,7 +1141,7 @@ def AddToLayout( layout, item, flag = None, alignment = None ):
             zero_border = True
             
         
-    elif flag in ( CC.FLAGS_EXPAND_PERPENDICULAR, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR ):
+    elif flag in ( CC.FLAGS_EXPAND_PERPENDICULAR, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR, CC.FLAGS_ON_RIGHT ):
         
         if flag == CC.FLAGS_EXPAND_SIZER_PERPENDICULAR:
             
@@ -1227,7 +1230,7 @@ def ScrollAreaVisibleRect( scroll_area ):
 
 def AdjustOpacity( image: QG.QImage, opacity_factor ):
     
-    new_image = QG.QImage( image.width(), image.height(), QG.QImage.Format_RGBA8888 )
+    new_image = QG.QImage( image.width(), image.height(), QG.QImage.Format.Format_RGBA8888 )
     
     new_image.setDevicePixelRatio( image.devicePixelRatio() )
     
@@ -1284,8 +1287,8 @@ def AddShortcut( widget, modifier, key, func: typing.Callable, *args ):
 
 def GetBackgroundColour( widget ):
     
-    return widget.palette().color( QG.QPalette.Window )
-
+    return widget.palette().color( QG.QPalette.ColorRole.Window )
+    
 
 CallAfterEventType = registerEventType()
 
@@ -1902,7 +1905,7 @@ class FileDialog( QW.QFileDialog ):
         
         if wildcard:
             
-            self.setNameFilter( wildcard )
+            self.setNameFilters( [ wildcard, 'Any files (*)' ] )
             
         
         if CG.client_controller.new_options.GetBoolean( 'use_qt_file_dialogs' ):

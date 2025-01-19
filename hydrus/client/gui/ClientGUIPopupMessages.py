@@ -1480,13 +1480,13 @@ class PopupMessageSummaryBar( QW.QFrame ):
         hbox = QP.HBoxLayout()
         
         self._text = ClientGUICommon.BetterStaticText( self )
+        self._text.setAlignment( QC.Qt.AlignmentFlag.AlignLeft | QC.Qt.AlignmentFlag.AlignVCenter )
         
         self._expand_collapse = ClientGUICommon.BetterButton( self, '\u25bc', self.ExpandCollapse )
         
         dismiss_all = ClientGUICommon.BetterButton( self, 'dismiss all', self.dismissAll.emit )
         
-        QP.AddToLayout( hbox, self._text, CC.FLAGS_CENTER_PERPENDICULAR )
-        hbox.addStretch( 1 )
+        QP.AddToLayout( hbox, self._text, CC.FLAGS_EXPAND_BOTH_WAYS )
         QP.AddToLayout( hbox, dismiss_all, CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( hbox, self._expand_collapse, CC.FLAGS_CENTER_PERPENDICULAR )
         

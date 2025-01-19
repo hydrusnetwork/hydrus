@@ -120,6 +120,7 @@ def GenerateDefaultServiceDictionary( service_type ):
         
         dictionary[ 'colours' ] = []
         dictionary[ 'show_in_thumbnail' ] = False
+        dictionary[ 'show_in_thumbnail_even_when_null' ] = False
         
         if service_type in HC.STAR_RATINGS_SERVICES:
             
@@ -519,7 +520,7 @@ class ServiceLocalRating( Service ):
         
         dictionary[ 'colours' ] = list(self._colours.items())
         dictionary[ 'show_in_thumbnail' ] = self._show_in_thumbnail
-        
+        dictionary[ 'show_in_thumbnail_even_when_null' ] = self._show_in_thumbnail_even_when_null        
         return dictionary
         
     
@@ -529,20 +530,30 @@ class ServiceLocalRating( Service ):
         
         self._colours = dict( dictionary[ 'colours' ] )
         self._show_in_thumbnail = dictionary[ 'show_in_thumbnail' ]
-
+        self._show_in_thumbnail_even_when_null = dictionary[ 'show_in_thumbnail_even_when_null' ]
+        
     
     def GetColour( self, rating_state ):
         
         with self._lock:
             
             return self._colours[ rating_state ]
-
+            
+        
 
     def GetShowInThumbnail( self ):
-
+        
         with self._lock:
-
+            
             return self._show_in_thumbnail
+            
+        
+    
+    def GetShowInThumbnailEvenWhenNull( self ):
+        
+        with self._lock:
+            
+            return self._show_in_thumbnail_even_when_null
             
         
     

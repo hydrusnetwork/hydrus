@@ -396,8 +396,7 @@ class PanelPredicateSystemDate( PanelPredicateSystemSingle ):
         QP.AddToLayout( hbox, self._sign, CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( hbox, self._date, CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( hbox, self._time, CC.FLAGS_CENTER_PERPENDICULAR )
-        
-        hbox.addStretch( 1 )
+        hbox.addStretch( 0 )
         
         self.setLayout( hbox )
         
@@ -564,7 +563,7 @@ class PanelPredicateSystemAgeDelta( PanelPredicateSystemSingle ):
         QP.AddToLayout( hbox, self._hours, CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'hours ago'), CC.FLAGS_CENTER_PERPENDICULAR )
         
-        hbox.addStretch( 1 )
+        hbox.addStretch( 0 )
         
         self.setLayout( hbox )
         
@@ -626,7 +625,7 @@ class PanelPredicateSystemLastViewedDelta( PanelPredicateSystemSingle ):
         QP.AddToLayout( hbox, self._hours, CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'hours ago'), CC.FLAGS_CENTER_PERPENDICULAR )
         
-        hbox.addStretch( 1 )
+        hbox.addStretch( 0 )
         
         self.setLayout( hbox )
         
@@ -685,7 +684,7 @@ class PanelPredicateSystemArchivedDelta( PanelPredicateSystemSingle ):
         QP.AddToLayout( hbox, self._hours, CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'hours ago'), CC.FLAGS_CENTER_PERPENDICULAR )
         
-        hbox.addStretch( 1 )
+        hbox.addStretch( 0 )
         
         self.setLayout( hbox )
         
@@ -744,7 +743,7 @@ class PanelPredicateSystemModifiedDelta( PanelPredicateSystemSingle ):
         QP.AddToLayout( hbox, self._hours, CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'hours ago'), CC.FLAGS_CENTER_PERPENDICULAR )
         
-        hbox.addStretch( 1 )
+        hbox.addStretch( 0 )
         
         self.setLayout( hbox )
         
@@ -796,7 +795,7 @@ class PanelPredicateSystemDuplicateRelationships( PanelPredicateSystemSingle ):
         QP.AddToLayout( hbox, self._num, CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( hbox, self._dupe_type, CC.FLAGS_CENTER_PERPENDICULAR )
         
-        hbox.addStretch( 1 )
+        hbox.addStretch( 0 )
         
         self.setLayout( hbox )
         
@@ -849,7 +848,7 @@ class PanelPredicateSystemDuration( PanelPredicateSystemSingle ):
         QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'system:duration'), CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( hbox, self._number_test, CC.FLAGS_CENTER_PERPENDICULAR )
         
-        hbox.addStretch( 1 )
+        hbox.addStretch( 0 )
         
         self.setLayout( hbox )
         
@@ -915,7 +914,7 @@ class PanelPredicateSystemFileService( PanelPredicateSystemSingle ):
         QP.AddToLayout( hbox, self._status, CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( hbox, self._file_service_key, CC.FLAGS_CENTER_PERPENDICULAR )
         
-        hbox.addStretch( 1 )
+        hbox.addStretch( 0 )
         
         self.setLayout( hbox )
         
@@ -980,7 +979,7 @@ class PanelPredicateSystemFileViewingStatsViews( PanelPredicateSystemSingle ):
         QP.AddToLayout( hbox, self._sign, CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( hbox, self._num, CC.FLAGS_CENTER_PERPENDICULAR )
         
-        hbox.addStretch( 1 )
+        hbox.addStretch( 0 )
         
         self.setLayout( hbox )
         
@@ -1056,7 +1055,7 @@ class PanelPredicateSystemFileViewingStatsViewtime( PanelPredicateSystemSingle )
         QP.AddToLayout( hbox, self._sign, CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( hbox, self._time_delta, CC.FLAGS_CENTER_PERPENDICULAR )
         
-        hbox.addStretch( 1 )
+        hbox.addStretch( 0 )
         
         self.setLayout( hbox )
         
@@ -1120,7 +1119,7 @@ class PanelPredicateSystemFramerate( PanelPredicateSystemSingle ):
         QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText( self, 'system:framerate' ), CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( hbox, self._number_test, CC.FLAGS_CENTER_PERPENDICULAR )
         
-        hbox.addStretch( 1 )
+        hbox.addStretch( 0 )
         
         self.setLayout( hbox )
         
@@ -1186,7 +1185,7 @@ class PanelPredicateSystemHash( PanelPredicateSystemSingle ):
         QP.AddToLayout( hbox, self._hashes, CC.FLAGS_EXPAND_BOTH_WAYS )
         QP.AddToLayout( hbox, self._hash_type, CC.FLAGS_CENTER_PERPENDICULAR )
         
-        hbox.addStretch( 1 )
+        hbox.addStretch( 0 )
         
         self.setLayout( hbox )
         
@@ -1303,7 +1302,7 @@ class PanelPredicateSystemHasNoteName( PanelPredicateSystemSingle ):
         QP.AddToLayout( hbox, self._operator, CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( hbox, self._name, CC.FLAGS_CENTER_PERPENDICULAR )
         
-        hbox.addStretch( 1 )
+        hbox.addStretch( 0 )
         
         self.setLayout( hbox )
         
@@ -1364,7 +1363,7 @@ class PanelPredicateSystemHeight( PanelPredicateSystemSingle ):
         QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'system:height'), CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( hbox, self._number_test, CC.FLAGS_CENTER_PERPENDICULAR )
         
-        hbox.addStretch( 1 )
+        hbox.addStretch( 0 )
         
         self.setLayout( hbox )
         
@@ -1719,7 +1718,7 @@ class PanelPredicateSystemLimit( PanelPredicateSystemSingle ):
         QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'system:limit='), CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( hbox, self._limit, CC.FLAGS_CENTER_PERPENDICULAR )
         
-        hbox.addStretch( 1 )
+        hbox.addStretch( 0 )
         
         self.setLayout( hbox )
         
@@ -1838,7 +1837,7 @@ class PanelPredicateSystemNumPixels( PanelPredicateSystemSingle ):
         QP.AddToLayout( hbox, self._num_pixels, CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( hbox, self._unit, CC.FLAGS_CENTER_PERPENDICULAR )
         
-        hbox.addStretch( 1 )
+        hbox.addStretch( 0 )
         
         self.setLayout( hbox )
         
@@ -1893,7 +1892,7 @@ class PanelPredicateSystemNumFrames( PanelPredicateSystemSingle ):
         QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText( self, 'system:number of frames' ), CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( hbox, self._number_test, CC.FLAGS_CENTER_PERPENDICULAR )
         
-        hbox.addStretch( 1 )
+        hbox.addStretch( 0 )
         
         self.setLayout( hbox )
         
@@ -1958,7 +1957,7 @@ class PanelPredicateSystemNumTags( PanelPredicateSystemSingle ):
         QP.AddToLayout( hbox, self._sign, CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( hbox, self._num_tags, CC.FLAGS_CENTER_PERPENDICULAR )
         
-        hbox.addStretch( 1 )
+        hbox.addStretch( 0 )
         
         self.setLayout( hbox )
         
@@ -2035,7 +2034,7 @@ class PanelPredicateSystemNumNotes( PanelPredicateSystemSingle ):
         QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText( self,'system:number of notes' ), CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( hbox, self._number_test, CC.FLAGS_CENTER_PERPENDICULAR )
         
-        hbox.addStretch( 1 )
+        hbox.addStretch( 0 )
         
         self.setLayout( hbox )
         
@@ -2089,7 +2088,7 @@ class PanelPredicateSystemNumURLs( PanelPredicateSystemSingle ):
         QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText( self,'system:number of urls' ), CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( hbox, self._number_test, CC.FLAGS_CENTER_PERPENDICULAR )
         
-        hbox.addStretch( 1 )
+        hbox.addStretch( 0 )
         
         self.setLayout( hbox )
         
@@ -2145,7 +2144,7 @@ class PanelPredicateSystemNumWords( PanelPredicateSystemSingle ):
         QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'system:number of words'), CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( hbox, self._number_test, CC.FLAGS_CENTER_PERPENDICULAR )
         
-        hbox.addStretch( 1 )
+        hbox.addStretch( 0 )
         
         self.setLayout( hbox )
         
@@ -2633,7 +2632,7 @@ class PanelPredicateSystemRatio( PanelPredicateSystemSingle ):
         QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,':'), CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( hbox, self._height, CC.FLAGS_CENTER_PERPENDICULAR )
         
-        hbox.addStretch( 1 )
+        hbox.addStretch( 0 )
         
         self.setLayout( hbox )
         
@@ -2734,7 +2733,7 @@ class PanelPredicateSystemSimilarToData( PanelPredicateSystemSingle ):
         QP.AddToLayout( big_vbox, button_hbox, CC.FLAGS_CENTER )
         QP.AddToLayout( big_vbox, hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
-        big_vbox.addStretch( 1 )
+        big_vbox.addStretch( 0 )
         
         self.setLayout( big_vbox )
         
@@ -2919,7 +2918,7 @@ class PanelPredicateSystemSimilarToFiles( PanelPredicateSystemSingle ):
         QP.AddToLayout( hbox, QW.QLabel( HC.UNICODE_APPROX_EQUAL, self ), CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( hbox, self._max_hamming, CC.FLAGS_CENTER_PERPENDICULAR )
         
-        hbox.addStretch( 1 )
+        hbox.addStretch( 0 )
         
         st = ClientGUICommon.BetterStaticText( self, label = 'This searches for files that look like each other within your database, just like in the duplicates system. It uses the SHA256 hash. Paste the files\' hash(es) here, and the results will look like any of them.' )
         
@@ -2929,9 +2928,7 @@ class PanelPredicateSystemSimilarToFiles( PanelPredicateSystemSingle ):
         vbox = QP.VBoxLayout()
         
         QP.AddToLayout( vbox, st, CC.FLAGS_EXPAND_PERPENDICULAR )
-        QP.AddToLayout( vbox, hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        
-        vbox.addStretch( 1 )
+        QP.AddToLayout( vbox, hbox, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         self.setLayout( vbox )
         
@@ -2988,7 +2985,7 @@ class PanelPredicateSystemSize( PanelPredicateSystemSingle ):
         QP.AddToLayout( hbox, self._sign, CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( hbox, self._bytes, CC.FLAGS_CENTER_PERPENDICULAR )
         
-        hbox.addStretch( 1 )
+        hbox.addStretch( 0 )
         
         self.setLayout( hbox )
         
@@ -3104,7 +3101,7 @@ class PanelPredicateSystemWidth( PanelPredicateSystemSingle ):
         QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'system:width'), CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( hbox, self._number_test, CC.FLAGS_CENTER_PERPENDICULAR )
         
-        hbox.addStretch( 1 )
+        hbox.addStretch( 0 )
         
         self.setLayout( hbox )
         

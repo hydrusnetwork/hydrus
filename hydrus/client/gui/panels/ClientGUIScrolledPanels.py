@@ -292,7 +292,7 @@ class EditSingleCtrlPanel( CAC.ApplicationCommandProcessorMixin, EditPanel ):
         
         if perpendicular:
             
-            self._vbox.addStretch( 1 )
+            self._vbox.addStretch( 0 )
             
         
     

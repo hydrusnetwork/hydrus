@@ -43,7 +43,7 @@ def GenerateThumbnailNumPyFromSVGPath( path: str, target_resolution: typing.Tupl
         
         ( target_width, target_height ) = target_resolution
         
-        qt_image = QG.QImage( target_width, target_height, QG.QImage.Format_RGBA8888 )
+        qt_image = QG.QImage( target_width, target_height, QG.QImage.Format.Format_RGBA8888 )
         
         qt_image.fill( QC.Qt.GlobalColor.transparent )
         
