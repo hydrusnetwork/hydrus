@@ -958,36 +958,31 @@ class CanvasHoverFrameTop( CanvasHoverFrame ):
             has_human_readable_embedded_metadata = self._current_media.GetMediaResult().GetFileInfoManager().has_human_readable_embedded_metadata
             has_extra_rows = self._current_media.GetMime() == HC.IMAGE_JPEG
             
-            stuff_to_show = has_exif or has_human_readable_embedded_metadata or has_extra_rows
+            tt = 'show detailed file metadata'
             
-            if stuff_to_show:
+            tt_components = []
+            
+            if has_exif:
                 
-                tt_components = []
+                tt_components.append( 'exif' )
                 
-                if has_exif:
-                    
-                    tt_components.append( 'exif' )
-                    
+            
+            if has_human_readable_embedded_metadata:
                 
-                if has_human_readable_embedded_metadata:
-                    
-                    tt_components.append( 'non-exif embedded metadata' )
-                    
+                tt_components.append( 'non-exif embedded metadata' )
                 
-                if has_extra_rows:
-                    
-                    tt_components.append( 'extra info' )
-                    
+            
+            if has_extra_rows:
                 
-                tt = 'show detailed file metadata'
+                tt_components.append( 'extra info' )
                 
-                if len( tt_components ) > 0:
-                    
-                    tt += ', including {}'.format( ' and '.join( tt_components ) )
-                    
+            
+            if len( tt_components ) > 0:
                 
-                self._show_embedded_metadata_button.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
+                tt += ', including {}'.format( ' and '.join( tt_components ) )
                 
+            
+            self._show_embedded_metadata_button.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
             
         
     

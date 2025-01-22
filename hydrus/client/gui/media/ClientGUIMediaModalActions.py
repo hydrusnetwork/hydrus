@@ -1139,7 +1139,7 @@ def ShowFileEmbeddedMetadata( win: QW.QWidget, media: ClientMedia.MediaSingleton
         file_text = 'This file is not local to this computer!'
         
     
-    frame = ClientGUITopLevelWindowsPanels.FrameThatTakesScrollablePanel( win, 'Embedded Metadata' )
+    frame = ClientGUITopLevelWindowsPanels.FrameThatTakesScrollablePanel( win, 'Detailed File Metadata' )
     
     panel = ClientGUIScrolledPanelsReview.ReviewFileEmbeddedMetadata( frame, mime, top_line_text, exif_dict, file_text, extra_rows )
     
