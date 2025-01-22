@@ -826,10 +826,14 @@ class CanvasHoverFrameTop( CanvasHoverFrame ):
         self._undelete_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'undelete' ) )
         self._undelete_button.setFocusPolicy( QC.Qt.FocusPolicy.TabFocus )
         
+        self._show_embedded_metadata_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().page_with_text, self._ShowFileEmbeddedMetadata )
+        self._show_embedded_metadata_button.setFocusPolicy( QC.Qt.FocusPolicy.TabFocus )
+        
         QP.AddToLayout( self._top_center_hbox, self._archive_button, CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( self._top_center_hbox, self._trash_button, CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( self._top_center_hbox, self._delete_button, CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( self._top_center_hbox, self._undelete_button, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( self._top_center_hbox, self._show_embedded_metadata_button, CC.FLAGS_CENTER_PERPENDICULAR )
         
     
     def _PopulateLeftButtons( self ):
@@ -866,9 +870,6 @@ class CanvasHoverFrameTop( CanvasHoverFrame ):
         shortcuts.setToolTip( ClientGUIFunctions.WrapToolTip( 'shortcuts' ) )
         shortcuts.setFocusPolicy( QC.Qt.FocusPolicy.TabFocus )
         
-        self._show_embedded_metadata_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().listctrl, self._ShowFileEmbeddedMetadata )
-        self._show_embedded_metadata_button.setFocusPolicy( QC.Qt.FocusPolicy.TabFocus )
-        
         view_options = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().eye, self._ShowViewOptionsMenu )
         view_options.setToolTip( ClientGUIFunctions.WrapToolTip( 'view options' ) )
         view_options.setFocusPolicy( QC.Qt.FocusPolicy.TabFocus )
@@ -903,7 +904,6 @@ class CanvasHoverFrameTop( CanvasHoverFrame ):
         QP.AddToLayout( self._top_right_hbox, zoom_switch, CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( self._top_right_hbox, self._volume_control, CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( self._top_right_hbox, shortcuts, CC.FLAGS_CENTER_PERPENDICULAR )
-        QP.AddToLayout( self._top_right_hbox, self._show_embedded_metadata_button, CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( self._top_right_hbox, view_options, CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( self._top_right_hbox, fullscreen_switch, CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( self._top_right_hbox, open_externally, CC.FLAGS_CENTER_PERPENDICULAR )
@@ -979,13 +979,15 @@ class CanvasHoverFrameTop( CanvasHoverFrame ):
                     tt_components.append( 'extra info' )
                     
                 
-                tt = 'show {}'.format( ' and '.join( tt_components ) )
+                tt = 'show detailed file metadata'
+                
+                if len( tt_components ) > 0:
+                    
+                    tt += ', including {}'.format( ' and '.join( tt_components ) )
+                    
                 
                 self._show_embedded_metadata_button.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
                 
-            
-            # enabled, not visible, so it doesn't bounce the others around on scroll
-            self._show_embedded_metadata_button.setEnabled( stuff_to_show )
             
         
     

@@ -854,7 +854,7 @@ class TestClientDB( unittest.TestCase ):
         self.assertFalse( CC.TRASH_SERVICE_KEY in locations_manager.GetCurrent() )
         self.assertFalse( CC.TRASH_SERVICE_KEY in locations_manager.GetDeleted() )
         
-        self._db._weakref_media_result_cache.DropMediaResult( hash_id, hash )
+        self._db.modules_media_results._weakref_media_result_cache.DropMediaResult( hash_id, hash )
         
         #
         
@@ -881,7 +881,7 @@ class TestClientDB( unittest.TestCase ):
         self.assertFalse( CC.TRASH_SERVICE_KEY in locations_manager.GetCurrent() )
         self.assertFalse( CC.TRASH_SERVICE_KEY in locations_manager.GetDeleted() )
         
-        self._db._weakref_media_result_cache.DropMediaResult( hash_id, hash )
+        self._db.modules_media_results._weakref_media_result_cache.DropMediaResult( hash_id, hash )
         
         #
         
@@ -903,7 +903,7 @@ class TestClientDB( unittest.TestCase ):
         self.assertTrue( CC.TRASH_SERVICE_KEY in locations_manager.GetCurrent() )
         self.assertFalse( CC.TRASH_SERVICE_KEY in locations_manager.GetDeleted() )
         
-        self._db._weakref_media_result_cache.DropMediaResult( hash_id, hash )
+        self._db.modules_media_results._weakref_media_result_cache.DropMediaResult( hash_id, hash )
         
         #
         
@@ -925,7 +925,7 @@ class TestClientDB( unittest.TestCase ):
         self.assertFalse( CC.TRASH_SERVICE_KEY in locations_manager.GetCurrent() )
         self.assertFalse( CC.TRASH_SERVICE_KEY in locations_manager.GetDeleted() )
         
-        self._db._weakref_media_result_cache.DropMediaResult( hash_id, hash )
+        self._db.modules_media_results._weakref_media_result_cache.DropMediaResult( hash_id, hash )
         
         #
         
@@ -947,7 +947,7 @@ class TestClientDB( unittest.TestCase ):
         self.assertFalse( CC.TRASH_SERVICE_KEY in locations_manager.GetCurrent() )
         self.assertFalse( CC.TRASH_SERVICE_KEY in locations_manager.GetDeleted() )
         
-        self._db._weakref_media_result_cache.DropMediaResult( hash_id, hash )
+        self._db.modules_media_results._weakref_media_result_cache.DropMediaResult( hash_id, hash )
         
         #
         
@@ -963,7 +963,7 @@ class TestClientDB( unittest.TestCase ):
         
         hash_id = media_result.GetHashId()
         
-        self._db._weakref_media_result_cache.DropMediaResult( hash_id, hash )
+        self._db.modules_media_results._weakref_media_result_cache.DropMediaResult( hash_id, hash )
         
         #
         
@@ -1004,7 +1004,7 @@ class TestClientDB( unittest.TestCase ):
         self.assertFalse( CC.TRASH_SERVICE_KEY in locations_manager.GetCurrent() )
         self.assertFalse( CC.TRASH_SERVICE_KEY in locations_manager.GetDeleted() )
         
-        self._db._weakref_media_result_cache.DropMediaResult( hash_id, hash )
+        self._db.modules_media_results._weakref_media_result_cache.DropMediaResult( hash_id, hash )
         
     
     def test_filter_existing_tags( self ):

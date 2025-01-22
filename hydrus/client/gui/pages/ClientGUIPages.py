@@ -2909,7 +2909,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         
         if not ctrl_down:
             
-            source_page.GetMediaResultsPanel().RemoveMedia( source_page.GetPageKey(), hashes )
+            source_page.GetMediaResultsPanel().RemoveMedia( hashes )
             
         
     

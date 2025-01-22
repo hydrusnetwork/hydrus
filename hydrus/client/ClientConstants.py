@@ -24,14 +24,6 @@ canvas_type_str_lookup = {
     CANVAS_MEDIA_VIEWER_ARCHIVE_DELETE : 'archive/delete filter'
 }
 
-# Hue is generally 200, Sat and Lum changes based on need
-COLOUR_LIGHT_SELECTED = QG.QColor( 235, 248, 255 )
-COLOUR_SELECTED = QG.QColor( 217, 242, 255 )
-COLOUR_SELECTED_DARK = QG.QColor( 1, 17, 26 )
-COLOUR_UNSELECTED = QG.QColor( 223, 227, 230 )
-
-COLOUR_MESSAGE = QG.QColor( 230, 246, 255 )
-
 COLOUR_THUMB_BACKGROUND = 0
 COLOUR_THUMB_BACKGROUND_SELECTED = 1
 COLOUR_THUMB_BACKGROUND_REMOTE = 2
@@ -616,7 +608,9 @@ class GlobalPixmaps( object ):
         
         self.star = QG.QPixmap( os.path.join( HC.STATIC_DIR, 'star.png' ) )
         
-        self.listctrl = QG.QPixmap( os.path.join( HC.STATIC_DIR, 'listctrl.png' ) )
+        #self.listctrl = QG.QPixmap( os.path.join( HC.STATIC_DIR, 'listctrl.png' ) )
+        
+        self.page_with_text = QG.QPixmap( os.path.join( HC.STATIC_DIR, 'page_with_text.png' ) )
         
         self.copy = QG.QPixmap( os.path.join( HC.STATIC_DIR, 'copy.png' ) )
         self.paste = QG.QPixmap( os.path.join( HC.STATIC_DIR, 'paste.png' ) )

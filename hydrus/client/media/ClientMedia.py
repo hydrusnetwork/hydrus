@@ -1099,9 +1099,9 @@ class MediaList( object ):
         return self._GetLast()
         
     
-    def GetMediaIndex( self, media ):
+    def GetMediaByHashes( self, hashes ):
         
-        return self._sorted_media.index( media )
+        return self._GetMedia( hashes )
         
     
     def GetNext( self, media ) -> Media:
@@ -1180,6 +1180,11 @@ class MediaList( object ):
     def HasNoMedia( self ):
         
         return len( self._sorted_media ) == 0
+        
+    
+    def IndexOf( self, media: Media ):
+        
+        return self._sorted_media.index( media )
         
     
     def MoveMedia( self, medias: typing.List[ Media ], insertion_index: int ):
@@ -1304,6 +1309,11 @@ class MediaList( object ):
                     
                 
             
+        
+    
+    def RemoveMediaDirectly( self, singleton_media, collected_media ):
+        
+        self._RemoveMediaDirectly( singleton_media, collected_media )
         
     
     def ResetService( self, service_key ):

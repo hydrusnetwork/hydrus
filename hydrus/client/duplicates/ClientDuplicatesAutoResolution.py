@@ -23,7 +23,7 @@ DUPLICATE_STATUS_DOES_NOT_MATCH_SEARCH = 0
 DUPLICATE_STATUS_MATCHES_SEARCH_BUT_NOT_TESTED = 1
 DUPLICATE_STATUS_MATCHES_SEARCH_FAILED_TEST = 2
 DUPLICATE_STATUS_MATCHES_SEARCH_PASSED_TEST = 3 # presumably this will not be needed much since we'll delete the duplicate pair soon after, but we may as well be careful
-DUPLICATE_STATUS_NOT_SEARCHED = 4 # assign this to new pairs that are added, by default??? then re-do the search with system:hash tacked on maybe, regularly
+DUPLICATE_STATUS_NOT_SEARCHED = 4 # assign this to new pairs that are added, by default
 
 class PairComparator( HydrusSerialisable.SerialisableBase ):
     

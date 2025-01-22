@@ -456,7 +456,14 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         vbox = QP.VBoxLayout()
         
         QP.AddToLayout( vbox, help_hbox, CC.FLAGS_ON_RIGHT )
-        QP.AddToLayout( vbox, ClientGUICommon.WrapInText(self._name,self,'name: '), CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        
+        rows = []
+        
+        rows.append( ( 'name: ', self._name ) )
+        
+        gridbox = ClientGUICommon.WrapInGrid( self._control_panel, rows )
+        
+        QP.AddToLayout( vbox, gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         QP.AddToLayout( vbox, self._delay_st, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, self._query_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         QP.AddToLayout( vbox, self._control_panel, CC.FLAGS_EXPAND_PERPENDICULAR )

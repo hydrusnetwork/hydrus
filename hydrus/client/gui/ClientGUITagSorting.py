@@ -3,6 +3,7 @@ from qtpy import QtWidgets as QW
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client.gui import QtPorting as QP
+from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.metadata import ClientTagSorting
 from hydrus.client.gui.widgets import ClientGUIMenuButton
 
@@ -41,12 +42,19 @@ class TagSortControl( QW.QWidget ):
         
         self._use_siblings = ClientGUIMenuButton.MenuChoiceButton( self, choice_tuples )
         
+        tt = 'Should we sort by the value of the tag or any sibling?'
+        
+        self._use_siblings.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
+        
         choice_tuples = [
-            ( 'no grouping', ClientTagSorting.GROUP_BY_NOTHING ),
-            ( 'group namespace', ClientTagSorting.GROUP_BY_NAMESPACE )
+            ( ClientTagSorting.group_by_str_lookup[ group_by_type ], group_by_type ) for group_by_type in [ ClientTagSorting.GROUP_BY_NOTHING, ClientTagSorting.GROUP_BY_NAMESPACE_AZ, ClientTagSorting.GROUP_BY_NAMESPACE_USER ] 
         ]
         
         self._group_by = ClientGUIMenuButton.MenuChoiceButton( self, choice_tuples )
+        
+        tt = 'Should we group our sort according to namespace?'
+        
+        self._group_by.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
         
         #
         

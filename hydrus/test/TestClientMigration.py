@@ -625,7 +625,7 @@ class TestMigration( unittest.TestCase ):
             
             job.Run()
             
-            self._db._weakref_media_result_cache = ClientMediaResultCache.MediaResultCache()
+            self._db.modules_media_results._weakref_media_result_cache = ClientMediaResultCache.MediaResultCache()
             
             hashes_to_media_results = { media_result.GetHash() : media_result for media_result in self.Read( 'media_results', list( self._hashes_to_current_tags.keys() ) ) }
             

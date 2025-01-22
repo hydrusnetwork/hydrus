@@ -89,6 +89,11 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.Liste
         self._page_key = page_key
         self._management_controller = management_controller
         
+        # TODO: Assuming the canvas listeningmedialist refactoring went well, this guy is next
+        # take out the class inheritance, instead create a (non-listening) self._media_list, and fix all method calls to self._GetFirst and so on to instead point at that
+        # rewrite process(content/service)updates to update the list as needed
+        # delete the listeningmedialist class def
+        
         # TODO: BRUH REWRITE THIS GARBAGE
         # we don't really want to be messing around with *args, **kwargs in __init__/super() gubbins, and this is highlighted as we move to super() and see this is all a mess!!
         # obviously decouple the list from the panel here so we aren't trying to do everything in one class
@@ -116,7 +121,6 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.Liste
         self._empty_page_status_override = None
         
         CG.client_controller.sub( self, 'AddMediaResults', 'add_media_results' )
-        CG.client_controller.sub( self, 'RemoveMedia', 'remove_media' )
         CG.client_controller.sub( self, '_UpdateBackgroundColour', 'notify_new_colourset' )
         CG.client_controller.sub( self, 'SelectByTags', 'select_files_with_tags' )
         
@@ -180,6 +184,7 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.Liste
             canvas_frame.SetCanvas( canvas_window )
             
             canvas_window.exitFocusMedia.connect( self.SetFocusedMedia )
+            canvas_window.userRemovedMedia.connect( self.RemoveMedia )
             
         
     
@@ -868,6 +873,7 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.Liste
             
             canvas_frame.SetCanvas( canvas_window )
             
+            canvas_window.userRemovedMedia.connect( self.RemoveMedia )
             canvas_window.exitFocusMedia.connect( self.SetFocusedMedia )
             
         
@@ -2485,12 +2491,9 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.Liste
         self._PublishSelectionChange()
         
     
-    def RemoveMedia( self, page_key, hashes ):
+    def RemoveMedia( self, hashes ):
         
-        if page_key == self._page_key:
-            
-            self._RemoveMediaByHashes( hashes )
-            
+        self._RemoveMediaByHashes( hashes )
         
     
     def SelectByTags( self, page_key, tag_service_key, and_or_or, tags ):
