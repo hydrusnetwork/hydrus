@@ -13,6 +13,34 @@ from hydrus.client import ClientUgoiraHandling
 from hydrus.client.media import ClientMediaResult
 from hydrus.client.media import ClientMediaResultPrettyInfoObjects
 
+def ConvertInfoLinesToTextBlock( info_lines: typing.Collection[ ClientMediaResultPrettyInfoObjects.PrettyMediaResultInfoLine ] ) -> str:
+    
+    def convert_to_block_lines( lines, indent = '' ) -> typing.List[ str ]:
+        
+        my_lines = []
+        
+        for line in lines:
+            
+            if isinstance( line, ClientMediaResultPrettyInfoObjects.PrettyMediaResultInfoLinesSubmenu ):
+                
+                my_lines.append( indent + line.text + ':' )
+                
+                my_lines.extend( convert_to_block_lines( line.sublines, indent = indent + '  ' ) )
+                
+            else:
+                
+                my_lines.append( indent + line.text )
+                
+            
+        
+        return my_lines
+        
+    
+    block_lines = convert_to_block_lines( info_lines )
+    
+    return '\n'.join( block_lines )
+    
+
 def GetPrettyMediaResultInfoLines( media_result: ClientMediaResult.MediaResult, only_interesting_lines = False ) -> typing.List[ ClientMediaResultPrettyInfoObjects.PrettyMediaResultInfoLine ]:
     
     def timestamp_ms_is_interesting( timestamp_ms_1, timestamp_ms_2 ):
@@ -119,6 +147,11 @@ def GetPrettyMediaResultInfoLines( media_result: ClientMediaResult.MediaResult, 
         
     
     pretty_info_lines.append( ClientMediaResultPrettyInfoObjects.PrettyMediaResultInfoLine( info_string, True ) )
+    
+    if file_info_manager.size is not None:
+        
+        pretty_info_lines.append( ClientMediaResultPrettyInfoObjects.PrettyMediaResultInfoLine( f'{HydrusNumbers.ToHumanInt( file_info_manager.size )} bytes', False ) )
+        
     
     if file_info_manager.FiletypeIsForced():
         

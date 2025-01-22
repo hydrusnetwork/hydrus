@@ -70,11 +70,14 @@ try:
     
     class FileHistory( QCh.QtCharts.QChartView ):
         
-        def __init__( self, parent, file_history: dict, show_deleted: bool ):
+        def __init__( self, parent, file_history: dict, show_current: bool, show_inbox: bool, show_archive: bool, show_deleted: bool ):
             
             super().__init__( parent )
             
             self._file_history = file_history
+            self._show_current = show_current
+            self._show_inbox = show_inbox
+            self._show_archive = show_archive
             self._show_deleted = show_deleted
             
             # this lad takes ms timestamp, not s, so * 1000
@@ -82,7 +85,7 @@ try:
             
             self._current_files_series = QCh.QtCharts.QLineSeries()
             
-            self._current_files_series.setName( 'all my files' )
+            self._current_files_series.setName( 'all files' )
             
             self._max_num_files_current = 0
             
@@ -152,17 +155,13 @@ try:
             
             self._chart = QCh.QtCharts.QChart()
             
+            self._chart.addAxis( self._x_datetime_axis, QC.Qt.AlignmentFlag.AlignBottom )
+            self._chart.addAxis( self._y_value_axis, QC.Qt.AlignmentFlag.AlignLeft )
+            
             self._chart.addSeries( self._current_files_series )
             self._chart.addSeries( self._inbox_files_series )
             self._chart.addSeries( self._archive_files_series )
-            
-            if self._show_deleted:
-                
-                self._chart.addSeries( self._deleted_files_series )
-                
-            
-            self._chart.addAxis( self._x_datetime_axis, QC.Qt.AlignmentFlag.AlignBottom )
-            self._chart.addAxis( self._y_value_axis, QC.Qt.AlignmentFlag.AlignLeft )
+            self._chart.addSeries( self._deleted_files_series )
             
             self._current_files_series.attachAxis( self._x_datetime_axis )
             self._current_files_series.attachAxis( self._y_value_axis )
@@ -173,50 +172,79 @@ try:
             self._archive_files_series.attachAxis( self._x_datetime_axis )
             self._archive_files_series.attachAxis( self._y_value_axis )
             
-            if self._show_deleted:
-                
-                self._deleted_files_series.attachAxis( self._x_datetime_axis )
-                self._deleted_files_series.attachAxis( self._y_value_axis )
-                
+            self._deleted_files_series.attachAxis( self._x_datetime_axis )
+            self._deleted_files_series.attachAxis( self._y_value_axis )
             
-            self._CalculateYRange()
+            self._RedrawLines()
             
             self.setChart( self._chart )
             
         
         def _CalculateYRange( self ):
             
-            max_num_files = max( self._max_num_files_current, self._max_num_files_inbox, self._max_num_files_archive )
+            max_num_files = 1
+            
+            if self._show_current:
+                
+                max_num_files = max( self._max_num_files_current, max_num_files )
+                
+            
+            if self._show_inbox:
+                
+                max_num_files = max( self._max_num_files_inbox, max_num_files )
+                
+            
+            if self._show_archive:
+                
+                max_num_files = max( self._max_num_files_archive, max_num_files )
+                
             
             if self._show_deleted:
                 
                 max_num_files = max( self._max_num_files_deleted, max_num_files )
                 
             
-            max_num_files = max( max_num_files, 1 )
-            
             self._y_value_axis.setRange( 0, max_num_files )
             
             self._y_value_axis.applyNiceNumbers()
+            
+        
+        def _RedrawLines( self ):
+            
+            self._current_files_series.setVisible( self._show_current )
+            self._inbox_files_series.setVisible( self._show_inbox )
+            self._archive_files_series.setVisible( self._show_archive )
+            self._deleted_files_series.setVisible( self._show_deleted )
+            
+            self._CalculateYRange()
+            
+        
+        def FlipAllVisible( self ):
+            
+            self._show_current = not self._show_current
+            
+            self._RedrawLines()
+            
+        
+        def FlipArchiveVisible( self ):
+            
+            self._show_archive = not self._show_archive
+            
+            self._RedrawLines()
             
         
         def FlipDeletedVisible( self ):
             
             self._show_deleted = not self._show_deleted
             
-            if self._show_deleted:
-                
-                self._chart.addSeries( self._deleted_files_series )
-                
-                self._deleted_files_series.attachAxis( self._x_datetime_axis )
-                self._deleted_files_series.attachAxis( self._y_value_axis )
-                
-            else:
-                
-                self._chart.removeSeries( self._deleted_files_series )
-                
+            self._RedrawLines()
             
-            self._CalculateYRange()
+        
+        def FlipInboxVisible( self ):
+            
+            self._show_inbox = not self._show_inbox
+            
+            self._RedrawLines()
             
         
     

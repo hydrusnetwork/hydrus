@@ -3795,15 +3795,34 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._default_media_collect = ClientGUIMediaResultsPanelSortCollect.MediaCollectControl( self._file_sort_panel )
             
-            namespace_sorting_box = ClientGUICommon.StaticBox( self._file_sort_panel, 'namespace file sorting' )
+            #
             
-            self._namespace_sort_by = ClientGUIListBoxes.QueueListBox( namespace_sorting_box, 8, self._ConvertNamespaceTupleToSortString, self._AddNamespaceSort, self._EditNamespaceSort )
+            user_namespace_group_by_sort_box = ClientGUICommon.StaticBox( self._file_sort_panel, 'namespace grouping sort' )
+            
+            self._user_namespace_group_by_sort = ClientGUIListBoxes.QueueListBox( user_namespace_group_by_sort_box, 8, ClientTags.RenderNamespaceForUser, self._AddNamespaceGroupBySort, self._EditNamespaceGroupBySort )
             
             #
             
-            self._namespace_sort_by.AddDatas( [ media_sort.sort_type[1] for media_sort in CG.client_controller.new_options.GetDefaultNamespaceSorts() ] )
+            namespace_file_sorting_box = ClientGUICommon.StaticBox( self._file_sort_panel, 'namespace file sorting' )
+            
+            self._namespace_file_sort_by = ClientGUIListBoxes.QueueListBox( namespace_file_sorting_box, 8, self._ConvertNamespaceTupleToSortString, self._AddNamespaceSort, self._EditNamespaceSort )
+            
+            #
+            
+            self._user_namespace_group_by_sort.AddDatas( CG.client_controller.new_options.GetStringList( 'user_namespace_group_by_sort' ) )
+            
+            self._namespace_file_sort_by.AddDatas( [ media_sort.sort_type[1] for media_sort in CG.client_controller.new_options.GetDefaultNamespaceSorts() ] )
             
             self._save_page_sort_on_change.setChecked( self._new_options.GetBoolean( 'save_page_sort_on_change' ) )
+            
+            #
+            
+            group_by_sort_text = 'You can manage the custom "(user)" namespace grouping sort here. This lets you put, say, "creator" tags above any other namespace in a tag sort.'
+            group_by_sort_text += '\n'
+            group_by_sort_text += 'Any namespaces not listed here will be listed afterwards in a-z format, with unnamespaced following, just like the normal (a-z) namespace grouping.'
+            
+            user_namespace_group_by_sort_box.Add( ClientGUICommon.BetterStaticText( user_namespace_group_by_sort_box, group_by_sort_text ), CC.FLAGS_EXPAND_PERPENDICULAR )
+            user_namespace_group_by_sort_box.Add( self._user_namespace_group_by_sort, CC.FLAGS_EXPAND_BOTH_WAYS )
             
             #
             
@@ -3813,8 +3832,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             sort_by_text += '\n'
             sort_by_text += 'Any namespaces here will also appear in your collect-by dropdowns.'
             
-            namespace_sorting_box.Add( ClientGUICommon.BetterStaticText( namespace_sorting_box, sort_by_text ), CC.FLAGS_EXPAND_PERPENDICULAR )
-            namespace_sorting_box.Add( self._namespace_sort_by, CC.FLAGS_EXPAND_BOTH_WAYS )
+            namespace_file_sorting_box.Add( ClientGUICommon.BetterStaticText( namespace_file_sorting_box, sort_by_text ), CC.FLAGS_EXPAND_PERPENDICULAR )
+            namespace_file_sorting_box.Add( self._namespace_file_sort_by, CC.FLAGS_EXPAND_BOTH_WAYS )
             
             #
             
@@ -3841,7 +3860,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             gridbox = ClientGUICommon.WrapInGrid( self, rows )
             
             self._file_sort_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-            self._file_sort_panel.Add( namespace_sorting_box, CC.FLAGS_EXPAND_BOTH_WAYS )
+            self._file_sort_panel.Add( user_namespace_group_by_sort_box, CC.FLAGS_EXPAND_BOTH_WAYS )
+            self._file_sort_panel.Add( namespace_file_sorting_box, CC.FLAGS_EXPAND_BOTH_WAYS )
             
             vbox = QP.VBoxLayout()
             
@@ -3849,6 +3869,13 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             QP.AddToLayout( vbox, self._file_sort_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
             
             self.setLayout( vbox )
+            
+        
+        def _AddNamespaceGroupBySort( self ):
+            
+            default = 'namespace'
+            
+            return self._EditNamespaceGroupBySort( default )
             
         
         def _AddNamespaceSort( self ):
@@ -3863,6 +3890,25 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             ( namespaces, tag_display_type ) = sort_data
             
             return '-'.join( namespaces )
+            
+        
+        def _EditNamespaceGroupBySort( self, namespace ):
+            
+            message = 'Enter the namespace. Leave blank for unnamespaced tags.'
+            
+            with ClientGUIDialogs.DialogTextEntry( self, message, allow_blank = True, default = namespace ) as dlg:
+                
+                if dlg.exec() == QW.QDialog.DialogCode.Accepted:
+                    
+                    edited_namespace = dlg.GetValue()
+                    
+                    return edited_namespace
+                    
+                else:
+                    
+                    raise HydrusExceptions.VetoException()
+                    
+                
             
         
         def _EditNamespaceSort( self, sort_data ):
@@ -3882,7 +3928,11 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._new_options.SetBoolean( 'save_page_sort_on_change', self._save_page_sort_on_change.isChecked() )
             self._new_options.SetDefaultCollect( self._default_media_collect.GetValue() )
             
-            namespace_sorts = [ ClientMedia.MediaSort( sort_type = ( 'namespaces', sort_data ) ) for sort_data in self._namespace_sort_by.GetData() ]
+            user_namespace_group_by_sort = self._user_namespace_group_by_sort.GetData()
+            
+            self._new_options.SetStringList( 'user_namespace_group_by_sort', user_namespace_group_by_sort )
+            
+            namespace_sorts = [ ClientMedia.MediaSort( sort_type = ( 'namespaces', sort_data ) ) for sort_data in self._namespace_file_sort_by.GetData() ]
             
             self._new_options.SetDefaultNamespaceSorts( namespace_sorts )
             

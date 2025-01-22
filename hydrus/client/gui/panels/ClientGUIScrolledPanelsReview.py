@@ -1522,9 +1522,17 @@ class ReviewDownloaderImport( ClientGUIScrolledPanels.ReviewPanel ):
 
 class ReviewFileEmbeddedMetadata( ClientGUIScrolledPanels.ReviewPanel ):
     
-    def __init__( self, parent, mime: int, exif_dict: typing.Optional[ dict ], file_text: typing.Optional[ str ], extra_rows: typing.List[ typing.Tuple[ str, str ] ] ):
+    def __init__( self, parent, mime: int, top_line_text: str, exif_dict: typing.Optional[ dict ], file_text: typing.Optional[ str ], extra_rows: typing.List[ typing.Tuple[ str, str ] ] ):
         
         super().__init__( parent )
+        
+        #
+        
+        top_line_panel = ClientGUICommon.StaticBox( self, 'basics' )
+        
+        self._top_line_str = ClientGUICommon.BetterStaticText( top_line_panel, top_line_text )
+        
+        top_line_panel.Add( self._top_line_str, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         #
         
@@ -1612,6 +1620,7 @@ class ReviewFileEmbeddedMetadata( ClientGUIScrolledPanels.ReviewPanel ):
         
         vbox = QP.VBoxLayout()
         
+        QP.AddToLayout( vbox, top_line_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, exif_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         QP.AddToLayout( vbox, text_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         QP.AddToLayout( vbox, extra_rows_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -1743,14 +1752,27 @@ class ReviewFileHistory( ClientGUIScrolledPanels.ReviewPanel ):
         
         self._status_st = ClientGUICommon.BetterStaticText( self._file_history_chart_panel, label = f'loading{HC.UNICODE_ELLIPSIS}' )
         
-        self._flip_deleted = QW.QCheckBox( 'show deleted', self._file_history_chart_panel )
+        self._show_current = QW.QCheckBox( 'show all', self._file_history_chart_panel )
+        self._show_inbox = QW.QCheckBox( 'show inbox', self._file_history_chart_panel )
+        self._show_archive = QW.QCheckBox( 'show archive', self._file_history_chart_panel )
+        self._show_deleted = QW.QCheckBox( 'show deleted', self._file_history_chart_panel )
         
-        self._flip_deleted.setChecked( True )
+        self._show_current.setChecked( True )
+        self._show_inbox.setChecked( True )
+        self._show_archive.setChecked( True )
+        self._show_deleted.setChecked( True )
+        
+        button_hbox = QP.HBoxLayout()
+        
+        QP.AddToLayout( button_hbox, self._show_current, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( button_hbox, self._show_inbox, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( button_hbox, self._show_archive, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( button_hbox, self._show_deleted, CC.FLAGS_CENTER_PERPENDICULAR )
         
         self._file_history_chart = QW.QWidget( self._file_history_chart_panel )
         
         QP.AddToLayout( self._file_history_vbox, self._status_st, CC.FLAGS_EXPAND_PERPENDICULAR )
-        QP.AddToLayout( self._file_history_vbox, self._flip_deleted, CC.FLAGS_CENTER )
+        QP.AddToLayout( self._file_history_vbox, button_hbox, CC.FLAGS_CENTER )
         QP.AddToLayout( self._file_history_vbox, self._file_history_chart, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         self._file_history_chart_panel.setLayout( self._file_history_vbox )
@@ -1816,19 +1838,30 @@ class ReviewFileHistory( ClientGUIScrolledPanels.ReviewPanel ):
                 
                 self._file_history_vbox.removeWidget( self._file_history_chart )
                 
-                show_deleted = self._flip_deleted.isChecked()
+                self._file_history_chart.deleteLater()
+                
+                show_current = self._show_current.isChecked()
+                show_inbox = self._show_inbox.isChecked()
+                show_archive = self._show_archive.isChecked()
+                show_deleted = self._show_deleted.isChecked()
                 
                 # TODO: presumably the thing here is to have SetValue on this widget so we can simply clear/set it rather than the mickey-mouse replace
-                self._file_history_chart = ClientGUICharts.FileHistory( self._file_history_chart_panel, file_history, show_deleted )
+                self._file_history_chart = ClientGUICharts.FileHistory( self._file_history_chart_panel, file_history, show_current, show_inbox, show_archive, show_deleted )
                 
                 self._file_history_chart.setMinimumSize( 720, 480 )
                 
-                self._flip_deleted.clicked.connect( self._file_history_chart.FlipDeletedVisible )
+                self._show_current.clicked.connect( self._file_history_chart.FlipAllVisible )
+                self._show_inbox.clicked.connect( self._file_history_chart.FlipInboxVisible )
+                self._show_archive.clicked.connect( self._file_history_chart.FlipArchiveVisible )
+                self._show_deleted.clicked.connect( self._file_history_chart.FlipDeletedVisible )
                 
                 QP.AddToLayout( self._file_history_vbox, self._file_history_chart, CC.FLAGS_EXPAND_BOTH_WAYS )
                 
                 self._status_st.setVisible( False )
-                self._flip_deleted.setVisible( True )
+                self._show_current.setVisible( True )
+                self._show_inbox.setVisible( True )
+                self._show_archive.setVisible( True )
+                self._show_deleted.setVisible( True )
                 
             finally:
                 
@@ -1854,7 +1887,10 @@ class ReviewFileHistory( ClientGUIScrolledPanels.ReviewPanel ):
         self._status_st.setText( 'loading' + HC.UNICODE_ELLIPSIS )
         self._status_st.setVisible( True )
         
-        self._flip_deleted.setVisible( False )
+        self._show_current.setVisible( False )
+        self._show_inbox.setVisible( False )
+        self._show_archive.setVisible( False )
+        self._show_deleted.setVisible( False )
         self._file_history_chart.setVisible( False )
         
         self._job_status.Cancel()

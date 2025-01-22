@@ -7,6 +7,59 @@ title: Changelog
 !!! note
     This is the new changelog, only the most recent builds. For all versions, see the [old changelog](old_changelog.html).
 
+## [Version 606](https://github.com/hydrusnetwork/hydrus/releases/tag/v606)
+
+### tag sort
+
+* when you group sorted tags by namespace, you can now force the order of the namespaces! this means you can have all the creator tags first, then the series, then the character, etc..., in any order you want. specifically, tag sorts in 'tag' or 'count' mode have a new 'group by namespace (user)' option that applies the sort override. you can set the namespaces you prefer under a new list in `options->sort/collect`, and the default is `[ creator, series, character, species, unnamespaced, meta ]`. any namespaces that do not fit will be grouped (a-z) underneath, just as before
+* sorry for taking so long to get to this. thankfully it worked out well, enough that I have set 'group by namespace (user)' the default for new clients; I recommend everyone who is familiar with normal booru namespace sort set this too under their `sort/collect` page
+* tag sort will handle some unusual unicode character comparisons (e.g. 'ß' vs 'ss') better
+* tag sort will now reliably sort non-ascii namespaces above unnamespaced tags when grouping by namespace
+
+### misc
+
+* the `database->view file history` chart now has checkboxes for all four lines. its code is cleaner and it now updates itself faster and nicer, and charts from old searches are now deleted promptly
+* fixed the position of the 'collection' thumbnail icon when you have the new 'show ratings on thumbs' set. also, the backing colour on the collection count now covers the icon; the colour of the backing panel and texts now feed off your current stylesheet; and I generally cleaned up how the icon and text position themselves
+* after last week's not-excellent background highlighting for ratings on thumbnails, I bit the bullet and just did a flat background with your normal qss window panel colour. inc/decs get a background too. it looks _fine_ and thumbnail ratings are now clear in all situations--it basically looks like the top-right hover now
+* the file right-click menu's top row flyout metadata submenu, which shows details like file modified time, now includes the exact file size in bytes
+* the top hover window's 'EXIF and other stuff' button is moved to the center button row, has a new 'page with text' icon, and is always available since it now will always show the contents of the flyout metadata submenu. you can thus now see the data in this menu from the archive/delete or duplicate filters
+
+### boring code cleanup
+
+* in bad-idea-cleanup twelve years in the making, refactored the 'listening media list' out of the navigable canvas subclasses. the underlying list is now handled inside the object rather than being the UI panel itself
+* the duplicate filter also gets some 'listening media list' cleanup. it handles its own content updates and the handling of what to do after deleting a file in the pair is now more safely wrapped inside the same atomic event
+* updated up an old 'remove media' pubsub, from the browser media viewer to the underlying thumbnail grid, to be a nicer Qt signal
+* updated the same thing from the archive/delete filter's commit, which can have special remove logic when the filter is complete, and replaced a hacky second-remove, which tries to catch users who hit F5 very quickly after an archive/delete is complete, with a popup that appears after two seconds to show slow commits actually happening--we'll see how it does IRL
+* fixed some recent 'woah that text-and-thing went to the right' bad layout in the 'edit shortcuts set' and 'edit subscription' panel--thank you for the reports
+* optimised some media result load
+* cleaned up some media result caching sync around the database repair code
+* deleted some static old colour defs that I missed in previous sweeps. now I updated the colours in the thumbnail collection stuff, none of them are used any more
+* reworked more garbage thumbnail ratings layout code
+* did some tag sorting KISS refactoring
+
+### duplicates auto-resolution
+
+* broke the new database module into two--one for the clever search side, the other for the simple storage side. the main (duplicates) db module will now see the storage and keep it updated on new/dissolved potential duplicate pairs
+* merged the rule-setting gubbins together into one 'set rules' command and added search-resetting code on search updates
+* wrote a status-count cache for quick review of rule progress
+* brushed up maintenance code for orphan rules and pairs
+* fleshed out the 'let's see if these unsearched pairs match our search' tech and the 'let's see if these search-matching pairs pass our auto-dupe rules, and if so, set the action' tech
+* refactored the media results generation and caching code from the monolithic `ClientDB` to a new module. the duplicates auto-resolution search module now talks to this guy
+* I still have to refactor a couple more things so I can wire this all up, but this should be simple work. all the difficult parts of the duplicates auto-resolution db stuff, except for one bit of incremental search I need to figure out, feel like they are fixed. only one big difficult hurdle (the rule preview UI) remaining!
+
+### future build
+
+* I am making a 'future' test build today--it should be in a post beside the normal build. it is the same as the normal build except it has jpeg-xl support and a number of libraries are updated to new versions. I would like advanced users to try it out and give me feedback on any boot problems. instructions are in the release post
+* build details--
+* PySide6 (Qt) is updated from `6.6.3.1` to `6.7.3` (test version is now `6.8.1.1`, which source users on Python 3.13 can run)
+* on macOS, PyQt6 (Qt) is updated from `6.6.0` to `6.7.1`
+* OpenCV (image stuff) is updated from `4.8.1.78` to `4.10.0.84`, which lets us update numpy (test version is now `4.11.0.86`)
+* numpy is switched from `<2.0.0` to `>=2.0.0`. this adds Python 3.13 support to hydrus for source users
+* pillow-jxl-plugin is added, and thereby we have Jpeg-XL support (thanks to some users for navigating this!)
+* the python mpv package is updated from `1.0.6` to `1.0.7` (test verison stays at `1.0.7`; there is nothing new)
+* twisted (the networking engine that runs the hydrus server and client api) now includes better TLS and http2 support
+* some import hacks that helped old PyInstaller navigate numpy and OpenCV bundling are removed
+
 ## [Version 605](https://github.com/hydrusnetwork/hydrus/releases/tag/v605)
 
 ### ratings on thumbnails
@@ -532,54 +585,3 @@ title: Changelog
 ### duplicates auto-resolution
 
 * I pushed this forward in a bunch of ways. nothing actually works yet, still, but if you poke around in the advanced placeholder UI, you'll see the new potential duplicates search context UI, now with side-by-side file search context panels, for the fleshed-out pixel-perfect jpeg/png default
-
-## [Version 596](https://github.com/hydrusnetwork/hydrus/releases/tag/v596)
-
-### misc
-
-* due to an ill-planned parsing update, several downloaders' hash lookups (which allow the client to quickly determine 'already in db'/'previously deleted' sometimes) broke last week. they are fixed today, sorry for the trouble!
-* the fps number on the file info line, which was previously rounded always to the nearest integer, is now reported to two sig figs when small. it'll say 1.2fps and 0.50fps
-* I hacked in some collapse/expand tech into my static box layout that I use all over the place and tentatively turned it on, and defaulting to collapsed, in the bigger _review services_ sub-panels. the giganto-tall repository panel is now much shorter by default, making the rest of the pages more normal sized on first open. let's see how it goes, and I expect I'll put it elsewhere too and add collapse memory and stuff if that makes sense
-* the 'copy service key' on _review services_ panels is now hidden behind advanced mode
-* tweaked some layout sizers for some spinboxes (the number controls that have an up/down arrow on the side) and my 'noneable' spinboxes so they aren't so width-hesitant. they were not showing their numbers fully on some styles where the arrows were particularly wide. they mostly size stupidly wide now, but at least that lines up with pretty much everything else so the number of stupid layout problems we are dealing with has reduced by one
-* the frame locations list under `options->gui` has four new buttons to mass-set 'remember size/position' and 'reset last size/position' to all selected
-* max implicit system:limit in `options->search` is raised from 100 thousand to 100 million
-* if there is a critical drive problem when adding a file to the file structure, the exact error is now spammed to a popup and log. previously, it was just propagated up to the caller
-
-### advanced parsing
-
-* I messed up the 'hex' and 'base64' decode stuff last week. we used to have hex and base64 decode back in python 2 to do some hash conversion stuff, but it was overhauled into the content parser hash type dropdown and the explict conversion was deprecated to a no-op. last week, I foolishly re-used the same ids when I revived the decoding functionality, which caused a bunch of old parsers like gelbooru 0.2.5, e621, 4chan, and likely others, which still had the no-op, to suddenly hex- or base-64-afy their parsed hashes, breaking the parse and lookup
-* this week I redefined the hacky enums and generally cleaned this code, and **I am deleting all hex and base64 string conversion decodes from all pre-596 parsers**. this fixes all the old downloaders by explicitly deleting the no-op so it won't trouble us again
-* if you made a string converter in v595 that decodes hex or base64, that encoding step will be deleted, sorry! I have to ask you to re-make it
-
-### advanced db maintenance
-
-* added a 'connect.bat' (and .sql file) to the db dir to make it easy to load up the whole database with 'correct' ATTACHED schema names in the sqlite3 terminal
-* added `database->db maintenance->get tables using definitions`, which uses the long-planned database module rewrite maintenance tech ( basically a faux foreign key) to fetch every table that uses hash_ids or tag_ids along with the specific column name that uses the id. this will help with various advanced maintenance jobs where we need to clear off a particular master definition to, as for instance happened this week, reset a super-huge autoincrement value on the master hashes table. this same feature will eventually trim client.master.db by discovering which master definitions are no longer used anywhere (e.g. after PTR delete)
-
-### client api
-
-* thanks to the continuing efforts of the user making Ugoira improvements, the Client API's `/get_files/render` call will now render an Ugoira to apng or animated webp. note the apng conversion appears to take a while, so make sure you try both formats to see what you prefer
-* fixed a critical bug in the Client API where if you used the `file_id(s)` request parameter, and gave novel ids, the database was hitting emergency repair code and filling in the ids with pseudorandom recovery hashes. this wasn't such a huge deal, but if you put a very high number in, the autoincrement `hash_id` of the hashes table would then move up to there, and if the number was sufficiently high, SQLite would have trouble because of max integer limits and all kinds of stuff blew up. asking about a non-existent `file_id` will now raise a 404, as originally intended
-* refactored the note set/delete calls, which were doing their own thing, to use the unified hash-parsing routine with the new safety code
-* if the Client API is ever asked about a hash_id that is negative or over a ~quadrillion (1024^5), it now throws a special error
-* as a backup, if the Client DB is ever asked about a novel hash_id that is negative or over a ~quadrillion (1024^5), it now throws a special error rather than trigger the pseudorandom hash recovery code
-* the Client API version is now 74
-
-### boring duplicates auto-resolution stuff
-
-* fleshed out the duplicates auto-resolution manager and plugged it into the main controller. the mainloop boots and exits now, but it doesn't do anything yet
-
-### boring cleanup
-
-* updated the multiple-file warning in the edit file urls dialog
-* gave the Client API _review services_ panel a very small user-friendliness pass
-* I converted more old multi-column list display/sort generation code from the old bridge to the newer, more efficient separated calls for 10 of the remaining 43 lists to do
-* via some beardy-but-I-think-it-is-ok typedefs, all the managers and stuff that take the controller as a param now use the new 'only import when linting' `ClientGlobals` Controller type, all unified through that one place, and in a way that should be failsafe, making for much better linting in any decent IDE. I didn't want to spam the 'only import when linting' blocks everywhere, so this was the compromise
-* deleted the `interface` modules with the Controller interface gubbins. this was an _ok_ start of an idea, but the new Globals import trick makes it redundant
-* pulled and unified a bunch of the common `ManagerWithMainLoop` code up to the superclass and cleaned up all the different managers a bit
-* deleted `ClientMaintenance.py`, which was an old attempt to unify some global maintenance daemons that never got off the ground and I had honestly forgotten about
-* moved responsibility for the `remote_thumbnails` table to the Client Repositories DB module; it is also now plugged into the newer content type maintenance system
-* moved responsibility for the `service_info` table to the Client Services DB module
-* the only CREATE TABLE stuff still in the old Client DB creation method is the version table and the old YAML options structure, so we are essentially all moved to the new modules now
-* fixed some bugs/holes in the table definition reporting system after playing with the new table export tool (some bad sibling/parent tables, wrongly reported deferred tables, missing notes_map and url_map due to a bad content type def, and the primary master definition tables, which I decided to include). I'm sure there are some more out there, but we are moving forward on a long-term job here and it seems to work

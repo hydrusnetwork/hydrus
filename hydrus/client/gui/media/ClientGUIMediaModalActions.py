@@ -33,6 +33,7 @@ from hydrus.client.gui.panels import ClientGUIScrolledPanels
 from hydrus.client.gui.panels import ClientGUIScrolledPanelsEdit
 from hydrus.client.gui.panels import ClientGUIScrolledPanelsReview
 from hydrus.client.media import ClientMedia
+from hydrus.client.media import ClientMediaResultPrettyInfo
 from hydrus.client.metadata import ClientContentUpdates
 from hydrus.client.metadata import ClientFileMigration
 from hydrus.client.metadata import ClientTags
@@ -1084,66 +1085,63 @@ def SetFilesForcedFiletypes( win: QW.QWidget, medias: typing.Collection[ ClientM
 
 def ShowFileEmbeddedMetadata( win: QW.QWidget, media: ClientMedia.MediaSingleton ):
     
-    if not media.GetLocationsManager().IsLocal():
-        
-        ClientGUIDialogsMessage.ShowWarning( win, 'The file is not local to this computer!' )
-        
-        return
-        
+    info_lines = ClientMediaResultPrettyInfo.GetPrettyMediaResultInfoLines( media.GetMediaResult() )
     
+    mime = media.GetMime()
+    top_line_text = ClientMediaResultPrettyInfo.ConvertInfoLinesToTextBlock( info_lines )
     exif_dict = None
     file_text = None
-    
     extra_rows = []
     
-    hash = media.GetHash()
-    mime = media.GetMime()
-    
-    path = CG.client_controller.client_files_manager.GetFilePath( hash, mime )
-    
-    if mime == HC.APPLICATION_PDF:
+    if media.GetLocationsManager().IsLocal():
         
-        try:
+        hash = media.GetHash()
+        
+        if mime == HC.APPLICATION_PDF:
             
-            file_text = ClientPDFHandling.GetHumanReadableEmbeddedMetadata( path )
+            path = CG.client_controller.client_files_manager.GetFilePath( hash, mime )
             
-        except HydrusExceptions.LimitedSupportFileException:
+            try:
+                
+                file_text = ClientPDFHandling.GetHumanReadableEmbeddedMetadata( path )
+                
+            except HydrusExceptions.LimitedSupportFileException:
+                
+                file_text = 'Could not read PDF metadata!'
+                
             
-            file_text = 'Could not read PDF metadata!'
+        elif mime in HC.FILES_THAT_CAN_HAVE_EXIF or mime in HC.FILES_THAT_CAN_HAVE_HUMAN_READABLE_EMBEDDED_METADATA:
+            
+            path = CG.client_controller.client_files_manager.GetFilePath( hash, mime )
+            
+            raw_pil_image = HydrusImageOpening.RawOpenPILImage( path )
+            
+            if mime in HC.FILES_THAT_CAN_HAVE_EXIF:
+                
+                exif_dict = HydrusImageMetadata.GetEXIFDict( raw_pil_image )
+                
+            
+            if mime in HC.FILES_THAT_CAN_HAVE_HUMAN_READABLE_EMBEDDED_METADATA:
+                
+                file_text = HydrusImageMetadata.GetEmbeddedFileText( raw_pil_image )
+                
+            
+            if mime == HC.IMAGE_JPEG:
+                
+                extra_rows.append( ( 'progressive', 'yes' if 'progression' in raw_pil_image.info else 'no' ) )
+                
+                extra_rows.append( ( 'subsampling', HydrusImageMetadata.GetJpegSubsampling( raw_pil_image ) ) )
+                
             
         
     else:
         
-        raw_pil_image = HydrusImageOpening.RawOpenPILImage( path )
-        
-        if mime in HC.FILES_THAT_CAN_HAVE_EXIF:
-            
-            exif_dict = HydrusImageMetadata.GetEXIFDict( raw_pil_image )
-            
-        
-        if mime in HC.FILES_THAT_CAN_HAVE_HUMAN_READABLE_EMBEDDED_METADATA:
-            
-            file_text = HydrusImageMetadata.GetEmbeddedFileText( raw_pil_image )
-            
-        
-        if mime == HC.IMAGE_JPEG:
-            
-            extra_rows.append( ( 'progressive', 'yes' if 'progression' in raw_pil_image.info else 'no' ) )
-            
-            extra_rows.append( ( 'subsampling', HydrusImageMetadata.GetJpegSubsampling( raw_pil_image )) )
-            
+        file_text = 'This file is not local to this computer!'
         
     
-    if exif_dict is None and file_text is None and len( extra_rows ) == 0:
-        
-        ClientGUIDialogsMessage.ShowWarning( win, 'Sorry, could not see any human-readable information inside this file! Hydrus should have known this, so if this keeps happening, you may need to schedule a rescan of this info in file maintenance.' )
-        
-        return
-        
+    frame = ClientGUITopLevelWindowsPanels.FrameThatTakesScrollablePanel( win, 'Detailed File Metadata' )
     
-    frame = ClientGUITopLevelWindowsPanels.FrameThatTakesScrollablePanel( win, 'Embedded Metadata' )
-    
-    panel = ClientGUIScrolledPanelsReview.ReviewFileEmbeddedMetadata( frame, mime, exif_dict, file_text, extra_rows )
+    panel = ClientGUIScrolledPanelsReview.ReviewFileEmbeddedMetadata( frame, mime, top_line_text, exif_dict, file_text, extra_rows )
     
     frame.SetPanel( panel )
     

@@ -168,7 +168,13 @@ class EditShortcutSetPanel( ClientGUIScrolledPanels.EditPanel ):
         
         QP.AddToLayout( vbox, st, CC.FLAGS_EXPAND_PERPENDICULAR )
         
-        QP.AddToLayout( vbox, ClientGUICommon.WrapInText( self._name, self, 'name: ' ), CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        rows = []
+        
+        rows.append( ( 'name: ', self._name ) )
+        
+        gridbox = ClientGUICommon.WrapInGrid( self, rows )
+        
+        QP.AddToLayout( vbox, gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
         if name in ClientGUIShortcuts.shortcut_names_to_descriptions:
             

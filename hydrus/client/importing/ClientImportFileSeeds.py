@@ -1358,6 +1358,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
             
             media_result = CG.client_controller.Read( 'media_result', hash )
             
+            # TODO: rewangle this to a GUI-level overseer that'll do Qt signals or whatever. page_key is probably unavoidable
             CG.client_controller.pub( 'add_media_results', page_key, ( media_result, ) )
             
         

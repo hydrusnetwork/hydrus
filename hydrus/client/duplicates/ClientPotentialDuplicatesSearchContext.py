@@ -44,6 +44,16 @@ class PotentialDuplicatesSearchContext( HydrusSerialisable.SerialisableBase ):
         self._max_hamming_distance = 4
         
     
+    def __eq__( self, other ):
+        
+        if isinstance( other, PotentialDuplicatesSearchContext ):
+            
+            return self.GetSerialisableTuple() == other.GetSerialisableTuple()
+            
+        
+        return NotImplemented
+        
+    
     def _GetSerialisableInfo( self ):
         
         serialisable_file_search_context_1 = self._file_search_context_1.GetSerialisableTuple()

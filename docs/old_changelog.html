@@ -35,6 +35,52 @@
             <h1 id="changelog"><a href="#changelog">changelog</a></h1>
             <ul>
                 <li>
+                    <h2 id="version_606"><a href="#version_606">version 606</a></h2>
+                    <ul>
+                        <li><h3>tag sort</h3></li>
+                        <li>when you group sorted tags by namespace, you can now force the order of the namespaces! this means you can have all the creator tags first, then the series, then the character, etc..., in any order you want. specifically, tag sorts in 'tag' or 'count' mode have a new 'group by namespace (user)' option that applies the sort override. you can set the namespaces you prefer under a new list in `options-&gt;sort/collect`, and the default is `[ creator, series, character, species, unnamespaced, meta ]`. any namespaces that do not fit will be grouped (a-z) underneath, just as before</li>
+                        <li>sorry for taking so long to get to this. thankfully it worked out well, enough that I have set 'group by namespace (user)' the default for new clients; I recommend everyone who is familiar with normal booru namespace sort set this too under their `sort/collect` page</li>
+                        <li>tag sort will handle some unusual unicode character comparisons (e.g. 'ß' vs 'ss') better</li>
+                        <li>tag sort will now reliably sort non-ascii namespaces above unnamespaced tags when grouping by namespace</li>
+                        <li><h3>misc</h3></li>
+                        <li>the `database-&gt;view file history` chart now has checkboxes for all four lines. its code is cleaner and it now updates itself faster and nicer, and charts from old searches are now deleted promptly</li>
+                        <li>fixed the position of the 'collection' thumbnail icon when you have the new 'show ratings on thumbs' set. also, the backing colour on the collection count now covers the icon; the colour of the backing panel and texts now feed off your current stylesheet; and I generally cleaned up how the icon and text position themselves</li>
+                        <li>after last week's not-excellent background highlighting for ratings on thumbnails, I bit the bullet and just did a flat background with your normal qss window panel colour. inc/decs get a background too. it looks _fine_ and thumbnail ratings are now clear in all situations--it basically looks like the top-right hover now</li>
+                        <li>the file right-click menu's top row flyout metadata submenu, which shows details like file modified time, now includes the exact file size in bytes</li>
+                        <li>the top hover window's 'EXIF and other stuff' button is moved to the center button row, has a new 'page with text' icon, and is always available since it now will always show the contents of the flyout metadata submenu. you can thus now see the data in this menu from the archive/delete or duplicate filters</li>
+                        <li><h3>boring code cleanup</h3></li>
+                        <li>in bad-idea-cleanup twelve years in the making, refactored the 'listening media list' out of the navigable canvas subclasses. the underlying list is now handled inside the object rather than being the UI panel itself</li>
+                        <li>the duplicate filter also gets some 'listening media list' cleanup. it handles its own content updates and the handling of what to do after deleting a file in the pair is now more safely wrapped inside the same atomic event</li>
+                        <li>updated up an old 'remove media' pubsub, from the browser media viewer to the underlying thumbnail grid, to be a nicer Qt signal</li>
+                        <li>updated the same thing from the archive/delete filter's commit, which can have special remove logic when the filter is complete, and replaced a hacky second-remove, which tries to catch users who hit F5 very quickly after an archive/delete is complete, with a popup that appears after two seconds to show slow commits actually happening--we'll see how it does IRL</li>
+                        <li>fixed some recent 'woah that text-and-thing went to the right' bad layout in the 'edit shortcuts set' and 'edit subscription' panel--thank you for the reports</li>
+                        <li>optimised some media result load</li>
+                        <li>cleaned up some media result caching sync around the database repair code</li>
+                        <li>deleted some static old colour defs that I missed in previous sweeps. now I updated the colours in the thumbnail collection stuff, none of them are used any more</li>
+                        <li>reworked more garbage thumbnail ratings layout code</li>
+                        <li>did some tag sorting KISS refactoring</li>
+                        <li><h3>duplicates auto-resolution</h3></li>
+                        <li>broke the new database module into two--one for the clever search side, the other for the simple storage side. the main (duplicates) db module will now see the storage and keep it updated on new/dissolved potential duplicate pairs</li>
+                        <li>merged the rule-setting gubbins together into one 'set rules' command and added search-resetting code on search updates</li>
+                        <li>wrote a status-count cache for quick review of rule progress</li>
+                        <li>brushed up maintenance code for orphan rules and pairs</li>
+                        <li>fleshed out the 'let's see if these unsearched pairs match our search' tech and the 'let's see if these search-matching pairs pass our auto-dupe rules, and if so, set the action' tech</li>
+                        <li>refactored the media results generation and caching code from the monolithic `ClientDB` to a new module. the duplicates auto-resolution search module now talks to this guy</li>
+                        <li>I still have to refactor a couple more things so I can wire this all up, but this should be simple work. all the difficult parts of the duplicates auto-resolution db stuff, except for one bit of incremental search I need to figure out, feel like they are fixed. only one big difficult hurdle (the rule preview UI) remaining!</li>
+                        <li><h3>future build</h3></li>
+                        <li>I am making a 'future' test build today--it should be in a post beside the normal build. it is the same as the normal build except it has jpeg-xl support and a number of libraries are updated to new versions. I would like advanced users to try it out and give me feedback on any boot problems. instructions are in the release post</li>
+                        <li>build details--</li>
+                        <li>PySide6 (Qt) is updated from `6.6.3.1` to `6.7.3` (test version is now `6.8.1.1`, which source users on Python 3.13 can run)</li>
+                        <li>on macOS, PyQt6 (Qt) is updated from `6.6.0` to `6.7.1`</li>
+                        <li>OpenCV (image stuff) is updated from `4.8.1.78` to `4.10.0.84`, which lets us update numpy (test version is now `4.11.0.86`)</li>
+                        <li>numpy is switched from `&lt;2.0.0` to `&gt;=2.0.0`. this adds Python 3.13 support to hydrus for source users</li>
+                        <li>pillow-jxl-plugin is added, and thereby we have Jpeg-XL support (thanks to some users for navigating this!)</li>
+                        <li>the python mpv package is updated from `1.0.6` to `1.0.7` (test verison stays at `1.0.7`; there is nothing new)</li>
+                        <li>twisted (the networking engine that runs the hydrus server and client api) now includes better TLS and http2 support</li>
+                        <li>some import hacks that helped old PyInstaller navigate numpy and OpenCV bundling are removed</li>
+                    </ul>
+                </li>
+                <li>
                     <h2 id="version_605"><a href="#version_605">version 605</a></h2>
                     <ul>
                         <li><h3>ratings on thumbnails</h3></li>

@@ -9,12 +9,12 @@ from hydrus.client import ClientTime
 from hydrus.client.db import ClientDBDefinitionsCache
 from hydrus.client.db import ClientDBFilesMaintenanceQueue
 from hydrus.client.db import ClientDBFilesMetadataBasic
+from hydrus.client.db import ClientDBMediaResults
 from hydrus.client.db import ClientDBMaster
 from hydrus.client.db import ClientDBModule
 from hydrus.client.db import ClientDBRepositories
 from hydrus.client.db import ClientDBSimilarFiles
 from hydrus.client.db import ClientDBFilesTimestamps
-from hydrus.client.media import ClientMediaResultCache
 
 class ClientDBFilesMaintenance( ClientDBModule.ClientDBModule ):
     
@@ -28,7 +28,7 @@ class ClientDBFilesMaintenance( ClientDBModule.ClientDBModule ):
         modules_files_timestamps: ClientDBFilesTimestamps.ClientDBFilesTimestamps,
         modules_similar_files: ClientDBSimilarFiles.ClientDBSimilarFiles,
         modules_repositories: ClientDBRepositories.ClientDBRepositories,
-        weakref_media_result_cache: ClientMediaResultCache.MediaResultCache
+        modules_media_results: ClientDBMediaResults.ClientDBMediaResults
         ):
         
         super().__init__( 'client files maintenance', cursor )
@@ -40,7 +40,7 @@ class ClientDBFilesMaintenance( ClientDBModule.ClientDBModule ):
         self.modules_files_timestamps = modules_files_timestamps
         self.modules_similar_files = modules_similar_files
         self.modules_repositories = modules_repositories
-        self._weakref_media_result_cache = weakref_media_result_cache
+        self.modules_media_results = modules_media_results
         
     
     def ClearJobs( self, cleared_job_tuples ):
@@ -244,17 +244,7 @@ class ClientDBFilesMaintenance( ClientDBModule.ClientDBModule ):
         
         if len( new_file_info ) > 0:
             
-            hashes_that_need_refresh = set()
-            
-            for ( hash_id, hash ) in new_file_info:
-                
-                if self._weakref_media_result_cache.HasFile( hash_id ):
-                    
-                    self._weakref_media_result_cache.DropMediaResult( hash_id, hash )
-                    
-                    hashes_that_need_refresh.add( hash )
-                    
-                
+            hashes_that_need_refresh = self.modules_media_results.DropMediaResults( dict( new_file_info ) )
             
             if len( hashes_that_need_refresh ) > 0:
                 

@@ -4,13 +4,21 @@ from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTags
 
 from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientGlobals as CG
 
 SORT_BY_HUMAN_TAG = 0
 SORT_BY_HUMAN_SUBTAG = 1
 SORT_BY_COUNT = 2
 
 GROUP_BY_NOTHING = 0
-GROUP_BY_NAMESPACE = 1
+GROUP_BY_NAMESPACE_AZ = 1
+GROUP_BY_NAMESPACE_USER = 2
+
+group_by_str_lookup = {
+    GROUP_BY_NOTHING : 'no grouping',
+    GROUP_BY_NAMESPACE_AZ : 'namespace (a-z)',
+    GROUP_BY_NAMESPACE_USER : 'namespace (user)'
+}
 
 sort_type_str_lookup = {
     SORT_BY_HUMAN_TAG : 'sort by tag',
@@ -69,10 +77,19 @@ class TagSort( HydrusSerialisable.SerialisableBase ):
     
     def ToString( self ):
         
+        if self.group_by == GROUP_BY_NOTHING:
+            
+            gp_str = ''
+            
+        else:
+            
+            gp_str = f' {group_by_str_lookup[ self.group_by ]}'
+            
+        
         return '{} {}{}'.format(
             sort_type_str_lookup[ self.sort_type ],
             'asc' if self.sort_order == CC.SORT_ASC else 'desc',
-            ' namespace' if self.group_by == GROUP_BY_NAMESPACE else ''
+            gp_str
         )
         
     
@@ -97,13 +114,24 @@ class TagSort( HydrusSerialisable.SerialisableBase ):
         )
         
     
+    @staticmethod
+    def STATICGetTextASCUserGroupedDefault() -> "TagSort":
+        
+        return TagSort(
+            sort_type = SORT_BY_HUMAN_TAG,
+            sort_order = CC.SORT_ASC,
+            use_siblings = True,
+            group_by = GROUP_BY_NAMESPACE_USER
+        )
+        
+    
+
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_TAG_SORT ] = TagSort
 
 def lexicographic_key( tag ):
     
     ( namespace, subtag ) = HydrusTags.SplitTag( tag )
     
-    comparable_namespace = HydrusTags.ConvertTagToSortable( namespace )
     comparable_subtag = HydrusTags.ConvertTagToSortable( subtag )
     
     if namespace == '':
@@ -111,6 +139,8 @@ def lexicographic_key( tag ):
         return ( comparable_subtag, comparable_subtag )
         
     else:
+        
+        comparable_namespace = HydrusTags.ConvertTagToSortable( namespace )
         
         return ( comparable_namespace, comparable_subtag )
         
@@ -125,32 +155,56 @@ def subtag_lexicographic_key( tag ):
     return comparable_subtag
     
 
-def namespace_key( tag ):
+def namespace_az_key( tag ):
     
     ( namespace, subtag ) = HydrusTags.SplitTag( tag )
     
     if namespace == '':
         
-        namespace = '{' # '{' is above 'z' in ascii, so this works for most situations
-        
-    
-    return namespace
-    
-
-def namespace_lexicographic_key( tag ):
-    
-    # '{' is above 'z' in ascii, so this works for most situations
-    
-    ( namespace, subtag ) = HydrusTags.SplitTag( tag )
-    
-    if namespace == '':
-        
-        return ( '{', HydrusTags.ConvertTagToSortable( subtag ) )
+        return ( 1, )
         
     else:
         
-        return ( namespace, HydrusTags.ConvertTagToSortable( subtag ) )
+        comparable_namespace = HydrusTags.ConvertTagToSortable( namespace )
         
+        return ( 0, comparable_namespace )
+        
+    
+
+def namespace_user_key_factory():
+    
+    namespace_list = CG.client_controller.new_options.GetStringList( 'user_namespace_group_by_sort' )
+    namespace_list_fast = set( namespace_list )
+    
+    no_match_index = len( namespace_list )
+    no_namespace_index = no_match_index + 1
+    
+    def namespace_user_key( tag ):
+        
+        ( namespace, subtag ) = HydrusTags.SplitTag( tag )
+        
+        if namespace in namespace_list_fast:
+            
+            index = namespace_list.index( namespace )
+            
+            return ( index, )
+            
+        else:
+            
+            if namespace == '':
+                
+                return ( no_namespace_index, )
+                
+            else:
+                
+                comparable_namespace = HydrusTags.ConvertTagToSortable( namespace )
+                
+                return ( no_match_index, comparable_namespace )
+                
+            
+        
+    
+    return namespace_user_key
     
 
 def SortTags( tag_sort: TagSort, list_of_tag_items: typing.List, tag_items_to_count = None, item_to_tag_key_wrapper = None, item_to_sibling_key_wrapper = None ):
@@ -171,48 +225,18 @@ def SortTags( tag_sort: TagSort, list_of_tag_items: typing.List, tag_items_to_co
     
     if tag_sort.sort_type == SORT_BY_COUNT:
         
+        reverse = tag_sort.sort_order == CC.SORT_DESC
+        lexicographic_complement_reverse = not reverse
+        
         # let's establish a-z here for equal incidence values later
-        if tag_sort.sort_order == CC.SORT_ASC:
-            
-            sorts_to_do.append( ( lexicographic_key, True ) )
-            
-            reverse = False
-            
-        else:
-            
-            sorts_to_do.append( ( lexicographic_key, False ) )
-            
-            reverse = True
-            
+        sorts_to_do.append( ( lexicographic_key, lexicographic_complement_reverse ) )
         
         sorts_to_do.append( ( incidence_key, reverse ) )
         
-        if tag_sort.group_by == GROUP_BY_NAMESPACE:
-            
-            # python list sort is stable, so lets now sort again
-            
-            if tag_sort.sort_order == CC.SORT_ASC:
-                
-                reverse = True
-                
-            else:
-                
-                reverse = False
-                
-            
-            sorts_to_do.append( ( namespace_key, reverse ) )
-            
-        
     else:
         
-        if tag_sort.sort_order == CC.SORT_ASC:
-            
-            reverse = False
-            
-        else:
-            
-            reverse = True
-            
+        reverse = tag_sort.sort_order == CC.SORT_DESC
+        lexicographic_complement_reverse = reverse
         
         if tag_sort.sort_type == SORT_BY_HUMAN_SUBTAG:
             
@@ -220,17 +244,22 @@ def SortTags( tag_sort: TagSort, list_of_tag_items: typing.List, tag_items_to_co
             
         else:
             
-            if tag_sort.group_by == GROUP_BY_NAMESPACE:
-                
-                key = namespace_lexicographic_key
-                
-            else:
-                
-                key = lexicographic_key
-                
+            key = lexicographic_key
             
         
         sorts_to_do.append( ( key, reverse ) )
+        
+    
+    if tag_sort.sort_type in ( SORT_BY_COUNT, SORT_BY_HUMAN_TAG ):
+        
+        if tag_sort.group_by == GROUP_BY_NAMESPACE_AZ:
+            
+            sorts_to_do.append( ( namespace_az_key, lexicographic_complement_reverse ) )
+            
+        elif tag_sort.group_by == GROUP_BY_NAMESPACE_USER:
+            
+            sorts_to_do.append( ( namespace_user_key_factory(), lexicographic_complement_reverse ) )
+            
         
     
     for ( key, reverse ) in sorts_to_do:

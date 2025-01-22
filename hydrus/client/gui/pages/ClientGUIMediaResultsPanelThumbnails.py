@@ -2264,9 +2264,12 @@ class Thumbnail( Selectable ):
         
         painter.setFont( f )
         
-        bg_color = media_panel.GetColour( background_colour_type )
+        qss_window_colour = media_panel.palette().color( QG.QPalette.ColorRole.Window )
+        qss_text_colour = media_panel.palette().color( QG.QPalette.ColorRole.WindowText )
         
-        painter.fillRect( thumbnail_border, thumbnail_border, width - ( thumbnail_border * 2 ), height - ( thumbnail_border * 2 ), bg_color )
+        media_panel_background_colour = media_panel.GetColour( background_colour_type )
+        
+        painter.fillRect( thumbnail_border, thumbnail_border, width - ( thumbnail_border * 2 ), height - ( thumbnail_border * 2 ), media_panel_background_colour )
         
         raw_thumbnail_qt_image = thumbnail_hydrus_bmp.GetQtImage()
         
@@ -2428,38 +2431,41 @@ class Thumbnail( Selectable ):
         
         # ratings
         
-        current_y = thumbnail_border + ICON_MARGIN
-        
-        a_like_was_added = False
+        current_top_right_y = thumbnail_border
         
         services_manager = CG.client_controller.services_manager
         
         like_services = services_manager.GetServices( ( HC.LOCAL_RATING_LIKE, ) )
         
-        like_services.reverse()
-        
-        like_rating_current_x = width - 16 - thumbnail_border - ICON_MARGIN
-        
         like_services_to_show = [ like_service for like_service in like_services if ShouldShowRatingInThumbnail( media, like_service.GetServiceKey() ) ]
         
-        icon_backing_colour = QG.QColor( bg_color )
+        num_to_show = len( like_services_to_show )
         
-        for like_service in like_services_to_show:
+        if num_to_show > 0:
             
-            service_key = like_service.GetServiceKey()
+            rect_width = ( 16 * num_to_show ) + ( ICON_MARGIN * 2 )
+            rect_height = 16 + ( ICON_MARGIN * 2 )
             
-            rating_state = ClientRatings.GetLikeStateFromMedia( ( media, ), service_key )
+            rect_x = width - thumbnail_border - rect_width
+            rect_y = current_top_right_y
             
-            a_like_was_added = True
+            painter.fillRect( rect_x, rect_y, rect_width, rect_height, qss_window_colour )
             
-            ClientGUIRatings.DrawLike( painter, like_rating_current_x, current_y, service_key, rating_state, background_colour = icon_backing_colour )
+            like_rating_current_x = rect_x + ICON_MARGIN
+            like_rating_current_y = rect_y + ICON_MARGIN
             
-            like_rating_current_x -= 16
+            for like_service in like_services_to_show:
+                
+                service_key = like_service.GetServiceKey()
+                
+                rating_state = ClientRatings.GetLikeStateFromMedia( ( media, ), service_key )
+                
+                ClientGUIRatings.DrawLike( painter, like_rating_current_x, like_rating_current_y, service_key, rating_state )
+                
+                like_rating_current_x += 16
+                
             
-        
-        if a_like_was_added:
-            
-            current_y += 18
+            current_top_right_y += rect_height
             
         
         numerical_services = services_manager.GetServices( ( HC.LOCAL_RATING_NUMERICAL, ) )
@@ -2474,40 +2480,56 @@ class Thumbnail( Selectable ):
             
             numerical_width = ClientGUIRatings.GetNumericalWidth( service_key )
             
-            ClientGUIRatings.DrawNumerical( painter, width - numerical_width - 2, current_y, service_key, rating_state, rating, background_colour = icon_backing_colour )
+            rect_width = numerical_width + ( ICON_MARGIN * 2 )
+            rect_height = 16 + ( ICON_MARGIN * 2 )
             
-            current_y += 18
+            rect_x = width - thumbnail_border - rect_width
+            rect_y = current_top_right_y
             
-        
-        an_incdec_was_added = False
+            painter.fillRect( rect_x, rect_y, rect_width, rect_height, qss_window_colour )
+            
+            numerical_rating_current_x = rect_x + ICON_MARGIN
+            numerical_rating_current_y = rect_y + ICON_MARGIN
+            
+            ClientGUIRatings.DrawNumerical( painter, numerical_rating_current_x, numerical_rating_current_y, service_key, rating_state, rating )
+            
+            current_top_right_y += rect_height
+            
         
         incdec_services = services_manager.GetServices( ( HC.LOCAL_RATING_INCDEC, ) )
         
-        incdec_services.reverse()
+        incdec_services_to_show = [ incdec_service for incdec_service in incdec_services if ShouldShowRatingInThumbnail( media, incdec_service.GetServiceKey() ) ]
         
-        control_width = ClientGUIRatings.INCDEC_SIZE.width()
+        num_to_show = len( incdec_services_to_show )
         
-        incdec_rating_current_x = width - control_width - thumbnail_border - ICON_MARGIN
-        
-        for incdec_service in incdec_services:
+        if num_to_show > 0:
             
-            service_key = incdec_service.GetServiceKey()
+            control_width = ClientGUIRatings.INCDEC_SIZE.width()
+            control_height = ClientGUIRatings.INCDEC_SIZE.height()
             
-            if ShouldShowRatingInThumbnail( media, service_key ):
+            rect_width = ( control_width * num_to_show ) + ( ICON_MARGIN * 2 )
+            rect_height = control_height + ( ICON_MARGIN * 2 )
+            
+            rect_x = width - thumbnail_border - rect_width
+            rect_y = current_top_right_y
+            
+            painter.fillRect( rect_x, rect_y, rect_width, rect_height, qss_window_colour )
+            
+            incdec_rating_current_x = rect_x + ICON_MARGIN
+            incdec_rating_current_y = rect_y + ICON_MARGIN
+            
+            for incdec_service in incdec_services_to_show:
+                
+                service_key = incdec_service.GetServiceKey()
                 
                 ( rating_state, rating ) = ClientRatings.GetIncDecStateFromMedia( ( media, ), service_key )
                 
-                an_incdec_was_added = True
+                ClientGUIRatings.DrawIncDec( painter, incdec_rating_current_x, incdec_rating_current_y, service_key, rating_state, rating )
                 
-                ClientGUIRatings.DrawIncDec( painter, incdec_rating_current_x, current_y, service_key, rating_state, rating )
-                
-                incdec_rating_current_x -= control_width
+                incdec_rating_current_x += control_width
                 
             
-        
-        if len( incdec_services ) > 0 and an_incdec_was_added:
-            
-            current_y += 18
+            current_top_right_y += rect_height
             
         
         # icons
@@ -2542,7 +2564,7 @@ class Thumbnail( Selectable ):
                 
                 icon_x -= icon.width()
                 
-                painter.drawPixmap( width + icon_x, current_y, icon )
+                painter.drawPixmap( width + icon_x, current_top_right_y, icon )
                 
                 icon_x -= 2 * ICON_MARGIN
                 
@@ -2552,11 +2574,6 @@ class Thumbnail( Selectable ):
             
             icon = CC.global_pixmaps().collection
             
-            icon_x = thumbnail_border + ICON_MARGIN
-            icon_y = ( height - 1 ) - current_y - ICON_MARGIN - icon.height()
-            
-            painter.drawPixmap( icon_x, icon_y, icon )
-            
             num_files_str = HydrusNumbers.ToHumanInt( media.GetNumFiles() )
             
             ( text_size, num_files_str ) = ClientGUIFunctions.GetTextSizeFromPainter( painter, num_files_str )
@@ -2564,16 +2581,22 @@ class Thumbnail( Selectable ):
             text_width = text_size.width()
             text_height = text_size.height()
             
-            box_width = text_width + ( ICON_MARGIN * 2 )
-            box_x = icon_x + icon.width() + ICON_MARGIN
-            box_height = text_height + ( ICON_MARGIN * 2 )
-            box_y = ( height - 1 ) - box_height
+            box_width = icon.width() + text_width + ( ICON_MARGIN * 3 )
+            box_height = max( icon.height(), text_height ) + ( ICON_MARGIN * 2 )
             
-            painter.fillRect( box_x, height - text_height - 3, box_width, box_height, CC.COLOUR_UNSELECTED )
+            box_x = thumbnail_border
+            box_y = height - thumbnail_border - box_height
             
-            painter.setPen( QG.QPen( CC.COLOUR_SELECTED_DARK ) )
+            painter.fillRect( box_x, box_y, box_width, box_height, qss_window_colour )
             
-            text_x = box_x + ICON_MARGIN
+            icon_x = box_x + ICON_MARGIN
+            icon_y = ( box_y + box_height ) - ICON_MARGIN - icon.height()
+            
+            painter.drawPixmap( icon_x, icon_y, icon )
+            
+            painter.setPen( QG.QPen( qss_text_colour ) )
+            
+            text_x = icon_x + icon.width() + ICON_MARGIN
             text_y = box_y + ICON_MARGIN
             
             ClientGUIFunctions.DrawText( painter, text_x, text_y, num_files_str )

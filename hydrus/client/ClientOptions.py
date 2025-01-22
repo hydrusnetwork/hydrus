@@ -566,7 +566,8 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         self._dictionary[ 'string_list' ] = {
             'default_media_viewer_custom_shortcuts' : [],
             'favourite_tags' : [],
-            'advanced_file_deletion_reasons' : [ 'I do not like it.', 'It is bad quality.', 'It is not appropriate for this client.', 'Temporary delete--I want to bring it back later.' ]
+            'advanced_file_deletion_reasons' : [ 'I do not like it.', 'It is bad quality.', 'It is not appropriate for this client.', 'Temporary delete--I want to bring it back later.' ],
+            'user_namespace_group_by_sort' : [ 'creator', 'series', 'character', 'species', '', 'meta' ]
         }
         
         #
@@ -797,10 +798,10 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         self._dictionary[ 'default_tag_sorts' ] = HydrusSerialisable.SerialisableDictionary()
         
-        self._dictionary[ 'default_tag_sorts' ][ CC.TAG_PRESENTATION_SEARCH_PAGE ] = ClientTagSorting.TagSort.STATICGetTextASCDefault()
-        self._dictionary[ 'default_tag_sorts' ][ CC.TAG_PRESENTATION_SEARCH_PAGE_MANAGE_TAGS ] = ClientTagSorting.TagSort.STATICGetTextASCDefault()
-        self._dictionary[ 'default_tag_sorts' ][ CC.TAG_PRESENTATION_MEDIA_VIEWER ] = ClientTagSorting.TagSort.STATICGetTextASCDefault()
-        self._dictionary[ 'default_tag_sorts' ][ CC.TAG_PRESENTATION_MEDIA_VIEWER_MANAGE_TAGS ] = ClientTagSorting.TagSort.STATICGetTextASCDefault()
+        self._dictionary[ 'default_tag_sorts' ][ CC.TAG_PRESENTATION_SEARCH_PAGE ] = ClientTagSorting.TagSort.STATICGetTextASCUserGroupedDefault()
+        self._dictionary[ 'default_tag_sorts' ][ CC.TAG_PRESENTATION_SEARCH_PAGE_MANAGE_TAGS ] = ClientTagSorting.TagSort.STATICGetTextASCUserGroupedDefault()
+        self._dictionary[ 'default_tag_sorts' ][ CC.TAG_PRESENTATION_MEDIA_VIEWER ] = ClientTagSorting.TagSort.STATICGetTextASCUserGroupedDefault()
+        self._dictionary[ 'default_tag_sorts' ][ CC.TAG_PRESENTATION_MEDIA_VIEWER_MANAGE_TAGS ] = ClientTagSorting.TagSort.STATICGetTextASCUserGroupedDefault()
         
         #
         
@@ -1019,9 +1020,9 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
                 loaded_dictionary[ 'default_tag_sorts' ] = HydrusSerialisable.SerialisableDictionary()
                 
                 loaded_dictionary[ 'default_tag_sorts' ][ CC.TAG_PRESENTATION_SEARCH_PAGE ] = loaded_dictionary[ 'default_tag_sort' ]
-                loaded_dictionary[ 'default_tag_sorts' ][ CC.TAG_PRESENTATION_SEARCH_PAGE_MANAGE_TAGS ] = ClientTagSorting.TagSort.STATICGetTextASCDefault()
-                loaded_dictionary[ 'default_tag_sorts' ][ CC.TAG_PRESENTATION_MEDIA_VIEWER ] = ClientTagSorting.TagSort.STATICGetTextASCDefault()
-                loaded_dictionary[ 'default_tag_sorts' ][ CC.TAG_PRESENTATION_MEDIA_VIEWER_MANAGE_TAGS ] = ClientTagSorting.TagSort.STATICGetTextASCDefault()
+                loaded_dictionary[ 'default_tag_sorts' ][ CC.TAG_PRESENTATION_SEARCH_PAGE_MANAGE_TAGS ] = ClientTagSorting.TagSort.STATICGetTextASCUserGroupedDefault()
+                loaded_dictionary[ 'default_tag_sorts' ][ CC.TAG_PRESENTATION_MEDIA_VIEWER ] = ClientTagSorting.TagSort.STATICGetTextASCUserGroupedDefault()
+                loaded_dictionary[ 'default_tag_sorts' ][ CC.TAG_PRESENTATION_MEDIA_VIEWER_MANAGE_TAGS ] = ClientTagSorting.TagSort.STATICGetTextASCUserGroupedDefault()
                 
                 del loaded_dictionary[ 'default_tag_sort' ]
                 
