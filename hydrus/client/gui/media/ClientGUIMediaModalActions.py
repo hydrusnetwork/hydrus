@@ -1097,9 +1097,9 @@ def ShowFileEmbeddedMetadata( win: QW.QWidget, media: ClientMedia.MediaSingleton
         
         hash = media.GetHash()
         
-        path = CG.client_controller.client_files_manager.GetFilePath( hash, mime )
-        
         if mime == HC.APPLICATION_PDF:
+            
+            path = CG.client_controller.client_files_manager.GetFilePath( hash, mime )
             
             try:
                 
@@ -1110,7 +1110,9 @@ def ShowFileEmbeddedMetadata( win: QW.QWidget, media: ClientMedia.MediaSingleton
                 file_text = 'Could not read PDF metadata!'
                 
             
-        else:
+        elif mime in HC.FILES_THAT_CAN_HAVE_EXIF or mime in HC.FILES_THAT_CAN_HAVE_HUMAN_READABLE_EMBEDDED_METADATA:
+            
+            path = CG.client_controller.client_files_manager.GetFilePath( hash, mime )
             
             raw_pil_image = HydrusImageOpening.RawOpenPILImage( path )
             
@@ -1128,7 +1130,7 @@ def ShowFileEmbeddedMetadata( win: QW.QWidget, media: ClientMedia.MediaSingleton
                 
                 extra_rows.append( ( 'progressive', 'yes' if 'progression' in raw_pil_image.info else 'no' ) )
                 
-                extra_rows.append( ( 'subsampling', HydrusImageMetadata.GetJpegSubsampling( raw_pil_image )) )
+                extra_rows.append( ( 'subsampling', HydrusImageMetadata.GetJpegSubsampling( raw_pil_image ) ) )
                 
             
         
