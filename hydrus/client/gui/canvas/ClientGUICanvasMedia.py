@@ -470,7 +470,7 @@ class Animation( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
         
         self._current_frame_drawn = True
         
-        next_frame_time_s = self._video_container.GetDurationMS( self._current_frame_index ) / 1000.0
+        next_frame_time_s = HydrusTime.SecondiseMSFloat( self._video_container.GetDurationMS( self._current_frame_index ) )
         
         next_frame_ideally_due = self._next_frame_due_at + next_frame_time_s
         

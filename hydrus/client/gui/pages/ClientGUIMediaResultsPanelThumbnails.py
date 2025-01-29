@@ -2431,6 +2431,8 @@ class Thumbnail( Selectable ):
         
         # ratings
         
+        draw_thumbnail_rating_background = CG.client_controller.new_options.GetBoolean( 'draw_thumbnail_rating_background' )
+        
         current_top_right_y = thumbnail_border
         
         services_manager = CG.client_controller.services_manager
@@ -2449,7 +2451,10 @@ class Thumbnail( Selectable ):
             rect_x = width - thumbnail_border - rect_width
             rect_y = current_top_right_y
             
-            painter.fillRect( rect_x, rect_y, rect_width, rect_height, qss_window_colour )
+            if draw_thumbnail_rating_background:
+                
+                painter.fillRect( rect_x, rect_y, rect_width, rect_height, qss_window_colour )
+                
             
             like_rating_current_x = rect_x + ICON_MARGIN
             like_rating_current_y = rect_y + ICON_MARGIN
@@ -2486,7 +2491,10 @@ class Thumbnail( Selectable ):
             rect_x = width - thumbnail_border - rect_width
             rect_y = current_top_right_y
             
-            painter.fillRect( rect_x, rect_y, rect_width, rect_height, qss_window_colour )
+            if draw_thumbnail_rating_background:
+                
+                painter.fillRect( rect_x, rect_y, rect_width, rect_height, qss_window_colour )
+                
             
             numerical_rating_current_x = rect_x + ICON_MARGIN
             numerical_rating_current_y = rect_y + ICON_MARGIN
@@ -2513,7 +2521,10 @@ class Thumbnail( Selectable ):
             rect_x = width - thumbnail_border - rect_width
             rect_y = current_top_right_y
             
-            painter.fillRect( rect_x, rect_y, rect_width, rect_height, qss_window_colour )
+            if draw_thumbnail_rating_background:
+                
+                painter.fillRect( rect_x, rect_y, rect_width, rect_height, qss_window_colour )
+                
             
             incdec_rating_current_x = rect_x + ICON_MARGIN
             incdec_rating_current_y = rect_y + ICON_MARGIN

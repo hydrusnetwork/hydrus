@@ -163,7 +163,13 @@ class ContentUpdate( object ):
             
             if self._action == HC.CONTENT_UPDATE_ADD:
                 
-                ( hash, canvas_type, view_timestamp_ms, views_delta, viewtime_delta ) = self._row
+                ( hash, canvas_type, view_timestamp_ms, views_delta, viewtime_delta_ms ) = self._row
+                
+                hashes = { hash }
+                
+            elif self._action == HC.CONTENT_UPDATE_SET:
+                
+                ( hash, canvas_type, view_timestamp_ms, views, viewtime_ms ) = self._row
                 
                 hashes = { hash }
                 

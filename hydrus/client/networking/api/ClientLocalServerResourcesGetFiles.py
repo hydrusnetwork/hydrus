@@ -435,7 +435,7 @@ class HydrusResourceClientAPIRestrictedGetFilesFileMetadata( HydrusResourceClien
         
         if include_milliseconds:
             
-            time_converter = lambda t: t / 1000 if t is not None else None
+            time_converter = HydrusTime.SecondiseMSFloat
             
         else:
             
@@ -742,6 +742,35 @@ class HydrusResourceClientAPIRestrictedGetFilesFileMetadata( HydrusResourceClien
                         
                     
                     metadata_row[ 'tags' ] = tags_dict
+                    
+                    #
+                    
+                    file_viewing_stats_list = []
+                    
+                    fvsm = media_result.GetFileViewingStatsManager()
+                    
+                    for canvas_type in [
+                        CC.CANVAS_MEDIA_VIEWER,
+                        CC.CANVAS_PREVIEW,
+                        CC.CANVAS_CLIENT_API
+                    ]:
+                        
+                        views = fvsm.GetViews( canvas_type )
+                        viewtime = HydrusTime.SecondiseMSFloat( fvsm.GetViewtimeMS( canvas_type ) )
+                        last_viewed_timestamp = HydrusTime.SecondiseMSFloat( times_manager.GetLastViewedTimestampMS( canvas_type ) )
+                        
+                        json_object = {
+                            'canvas_type' : canvas_type,
+                            'canvas_type_pretty' : CC.canvas_type_str_lookup[ canvas_type ],
+                            'views' : views,
+                            'viewtime' : viewtime,
+                            'last_viewed_timestamp' : last_viewed_timestamp
+                        }
+                        
+                        file_viewing_stats_list.append( json_object )
+                        
+                    
+                    metadata_row[ 'file_viewing_statistics' ] = file_viewing_stats_list
                     
                     # Old stuff starts here
                     

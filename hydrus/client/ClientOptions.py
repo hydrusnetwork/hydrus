@@ -270,7 +270,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             'use_nice_resolution_strings' : True,
             'use_listbook_for_tag_service_panels' : False,
             'open_files_to_duplicate_filter_uses_all_my_files' : True,
-            'show_extended_single_file_info_in_status_bar' : False,
+            'show_extended_single_file_info_in_status_bar' : True,
             'hide_duplicates_needs_work_message_when_reasonably_caught_up' : True,
             'file_info_line_consider_archived_interesting' : True,
             'file_info_line_consider_archived_time_interesting' : True,
@@ -278,7 +278,11 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             'file_info_line_consider_file_services_import_times_interesting' : False,
             'file_info_line_consider_trash_time_interesting' : False,
             'file_info_line_consider_trash_reason_interesting' : False,
-            'set_requests_ca_bundle_env' : False
+            'set_requests_ca_bundle_env' : False,
+            'mpv_loop_playlist_instead_of_file' : False,
+            'mpv_allow_too_many_events_queued' : False,
+            'draw_thumbnail_rating_background' : True,
+            'show_destination_page_when_dnd_url' : True,
         }
         
         #
@@ -500,10 +504,10 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             'duplicate_background_switch_intensity_a' : 0,
             'duplicate_background_switch_intensity_b' : 3,
             'last_review_bandwidth_search_distance' : 7 * 86400,
-            'file_viewing_statistics_media_min_time' : 2,
-            'file_viewing_statistics_media_max_time' : 600,
-            'file_viewing_statistics_preview_min_time' : 5,
-            'file_viewing_statistics_preview_max_time' : 60,
+            'file_viewing_statistics_media_min_time_ms' : 2 * 1000,
+            'file_viewing_statistics_media_max_time_ms' : 600 * 1000,
+            'file_viewing_statistics_preview_min_time_ms' : 5 * 1000,
+            'file_viewing_statistics_preview_max_time_ms' : 60 * 1000,
             'subscription_file_error_cancel_threshold' : 5,
             'media_viewer_cursor_autohide_time_ms' : 700,
             'idle_mode_client_api_timeout' : None,

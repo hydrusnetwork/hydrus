@@ -11,6 +11,7 @@ from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusTime
 from hydrus.core.files import HydrusAnimationHandling
 from hydrus.core.files import HydrusVideoHandling
 from hydrus.core.files.images import HydrusImageHandling
@@ -1063,7 +1064,7 @@ class RasterContainerVideo( RasterContainer ):
                     
                 else:
                     
-                    half_a_frame = ( self._average_frame_duration / 1000.0 ) * 0.5
+                    half_a_frame = ( HydrusTime.SecondiseMSFloat( self._average_frame_duration ) ) * 0.5
                     
                     sleep_duration = min( 0.1, half_a_frame ) # for 10s-long 3-frame gifs, wew
                     

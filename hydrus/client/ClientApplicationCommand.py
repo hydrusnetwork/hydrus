@@ -929,7 +929,7 @@ class ApplicationCommand( HydrusSerialisable.SerialisableBase ):
                     
                     direction_s = 'back' if direction == -1 else 'forwards'
                     
-                    ms_s = HydrusTime.TimeDeltaToPrettyTimeDelta( ms / 1000 )
+                    ms_s = HydrusTime.TimeDeltaToPrettyTimeDelta( HydrusTime.SecondiseMSFloat( ms ) )
                     
                     s = f'{s} ({direction_s} {ms_s})'
                     

@@ -9,7 +9,7 @@ from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
-from hydrus.client.media import ClientMedia
+from hydrus.client.media import ClientMediaResult
 from hydrus.client.metadata import ClientContentUpdates
 
 # now let's fill out grandparents
@@ -225,6 +225,11 @@ class BitmapManager( object ):
         
         pixmap_path = self._controller.new_options.GetNoneableString( 'media_background_bmp_path' )
         
+        if pixmap_path is None:
+            
+            return None
+            
+        
         if pixmap_path != self._media_background_pixmap_path:
             
             self._media_background_pixmap_path = pixmap_path
@@ -264,27 +269,27 @@ class FileViewingStatsManager( object ):
         self._my_flush_job = self._controller.CallRepeating( 5, 60, self.REPEATINGFlush )
         
     
-    def _GenerateViewsRow( self, media: ClientMedia.MediaSingleton, canvas_type: int, view_timestamp_ms: int, viewtime_delta: int ):
+    def _GenerateViewsRow( self, media_result: ClientMediaResult.MediaResult, canvas_type: int, view_timestamp_ms: int, viewtime_delta_ms: int ):
         
         new_options = CG.client_controller.new_options
         
-        viewtime_min = None
-        viewtime_max = None
+        viewtime_min_ms = None
+        viewtime_max_ms = None
         
         result_views_delta = 0
-        result_viewtime_delta = 0
+        result_viewtime_delta_ms = 0
         
         do_it = True
         
         if canvas_type == CC.CANVAS_PREVIEW:
             
-            viewtime_min = new_options.GetNoneableInteger( 'file_viewing_statistics_preview_min_time' )
-            viewtime_max = new_options.GetNoneableInteger( 'file_viewing_statistics_preview_max_time' )
+            viewtime_min_ms = new_options.GetNoneableInteger( 'file_viewing_statistics_preview_min_time_ms' )
+            viewtime_max_ms = new_options.GetNoneableInteger( 'file_viewing_statistics_preview_max_time_ms' )
             
         elif canvas_type in CC.CANVAS_MEDIA_VIEWER_TYPES:
             
-            viewtime_min = new_options.GetNoneableInteger( 'file_viewing_statistics_media_min_time' )
-            viewtime_max = new_options.GetNoneableInteger( 'file_viewing_statistics_media_max_time' )
+            viewtime_min_ms = new_options.GetNoneableInteger( 'file_viewing_statistics_media_min_time_ms' )
+            viewtime_max_ms = new_options.GetNoneableInteger( 'file_viewing_statistics_media_max_time_ms' )
             
             if canvas_type == CC.CANVAS_MEDIA_VIEWER_DUPLICATES and not new_options.GetBoolean( 'file_viewing_statistics_active_on_dupe_filter' ):
                 
@@ -298,43 +303,43 @@ class FileViewingStatsManager( object ):
             canvas_type = CC.CANVAS_MEDIA_VIEWER
             
         
-        if media.HasDuration() and viewtime_max is not None:
+        if media_result.HasDuration() and viewtime_max_ms is not None:
             
             # if user is watching a long vid, save that whole time mate
-            viewtime_max = max( viewtime_max, ( media.GetMediaResult().GetDuration() ) * 5 )
+            viewtime_max_ms = max( viewtime_max_ms, ( media_result.GetDurationMS() ) * 5 )
             
         
         if do_it:
             
             # if a cap on max viewtime, cap it
-            if viewtime_max is not None:
+            if viewtime_max_ms is not None:
                 
-                viewtime_delta = min( viewtime_delta, viewtime_max )
+                viewtime_delta_ms = min( viewtime_delta_ms, viewtime_max_ms )
                 
             
             # if a min on viewtime, then maybe don't do anything
-            if viewtime_min is None or viewtime_delta >= viewtime_min:
+            if viewtime_min_ms is None or viewtime_delta_ms >= viewtime_min_ms:
                 
                 result_views_delta = 1
-                result_viewtime_delta = viewtime_delta
+                result_viewtime_delta_ms = viewtime_delta_ms
                 
             
         
-        return ( canvas_type, ( view_timestamp_ms, result_views_delta, result_viewtime_delta ) )
+        return ( canvas_type, ( view_timestamp_ms, result_views_delta, result_viewtime_delta_ms ) )
         
     
     def _RowMakesChanges( self, row ):
         
-        ( view_timestamp_ms, views_delta, viewtime_delta ) = row
+        ( view_timestamp_ms, views_delta, viewtime_delta_ms ) = row
         
-        return views_delta != 0 or viewtime_delta != 0
+        return views_delta != 0 or viewtime_delta_ms != 0
         
     
     def _PubSubRow( self, hash, canvas_type, row ):
         
-        ( view_timestamp_ms, views_delta, viewtime_delta ) = row
+        ( view_timestamp_ms, views_delta, viewtime_delta_ms ) = row
         
-        pubsub_row = ( hash, canvas_type, view_timestamp_ms, views_delta, viewtime_delta )
+        pubsub_row = ( hash, canvas_type, view_timestamp_ms, views_delta, viewtime_delta_ms )
         
         content_update = ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILE_VIEWING_STATS, HC.CONTENT_UPDATE_ADD, pubsub_row )
         
@@ -352,9 +357,9 @@ class FileViewingStatsManager( object ):
                 
                 content_updates = []
                 
-                for ( ( hash, canvas_type ), ( view_timestamp_ms, views_delta, viewtime_delta ) ) in self._pending_updates.items():
+                for ( ( hash, canvas_type ), ( view_timestamp_ms, views_delta, viewtime_delta_ms ) ) in self._pending_updates.items():
                     
-                    row = ( hash, canvas_type, view_timestamp_ms, views_delta, viewtime_delta )
+                    row = ( hash, canvas_type, view_timestamp_ms, views_delta, viewtime_delta_ms )
                     
                     content_update = ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILE_VIEWING_STATS, HC.CONTENT_UPDATE_ADD, row )
                     
@@ -371,18 +376,18 @@ class FileViewingStatsManager( object ):
             
         
     
-    def FinishViewing( self, media: ClientMedia.MediaSingleton, canvas_type, view_timestamp_ms, viewtime_delta ):
+    def FinishViewing( self, media_result: ClientMediaResult.MediaResult, canvas_type, view_timestamp_ms, viewtime_delta_ms ):
         
         if not CG.client_controller.new_options.GetBoolean( 'file_viewing_statistics_active' ):
             
             return
             
         
-        hash = media.GetHash()
+        hash = media_result.GetHash()
         
         with self._lock:
             
-            ( canvas_type, row ) = self._GenerateViewsRow( media, canvas_type, view_timestamp_ms, viewtime_delta )
+            ( canvas_type, row ) = self._GenerateViewsRow( media_result, canvas_type, view_timestamp_ms, viewtime_delta_ms )
             
             if not self._RowMakesChanges( row ):
                 
@@ -397,11 +402,11 @@ class FileViewingStatsManager( object ):
                 
             else:
                 
-                ( view_timestamp_ms, views_delta, viewtime_delta ) = row
+                ( view_timestamp_ms, views_delta, viewtime_delta_ms ) = row
                 
-                ( existing_view_timestamp_ms, existing_views_delta, existing_viewtime_delta ) = self._pending_updates[ key ]
+                ( existing_view_timestamp_ms, existing_views_delta, existing_viewtime_delta_ms ) = self._pending_updates[ key ]
                 
-                self._pending_updates[ key ] = ( max( view_timestamp_ms, existing_view_timestamp_ms ), existing_views_delta + views_delta, existing_viewtime_delta + viewtime_delta )
+                self._pending_updates[ key ] = ( max( view_timestamp_ms, existing_view_timestamp_ms ), existing_views_delta + views_delta, existing_viewtime_delta_ms + viewtime_delta_ms )
                 
             
         

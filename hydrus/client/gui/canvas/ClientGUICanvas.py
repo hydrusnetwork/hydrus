@@ -618,7 +618,7 @@ class Canvas( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
         
         view_timestamp_ms = self._current_media_start_time_ms
         
-        viewtime_delta = ( now_ms - self._current_media_start_time_ms ) // 1000
+        viewtime_delta_ms = now_ms - self._current_media_start_time_ms
         
         self._current_media_start_time_ms = now_ms
         
@@ -627,9 +627,7 @@ class Canvas( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
             return
             
         
-        hash = self._current_media.GetHash()
-        
-        CG.client_controller.file_viewing_stats_manager.FinishViewing( self._current_media, self.CANVAS_TYPE, view_timestamp_ms, viewtime_delta )
+        CG.client_controller.file_viewing_stats_manager.FinishViewing( self._current_media.GetMediaResult(), self.CANVAS_TYPE, view_timestamp_ms, viewtime_delta_ms )
         
     
     def _SeekDeltaCurrentMedia( self, direction, duration_ms ):
@@ -2290,7 +2288,7 @@ class CanvasWithHovers( Canvas ):
             return
             
         
-        hide_time = hide_time_ms / 1000
+        hide_time = HydrusTime.SecondiseMSFloat( hide_time_ms )
         
         can_hide = HydrusTime.TimeHasPassedFloat( self._last_cursor_autohide_touch_time + hide_time )
         
@@ -3142,10 +3140,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
         
         ( media_result_1, media_result_2 ) = self._batch_of_pairs_to_process[ self._current_pair_index ]
         
-        media_1 = ClientMedia.MediaSingleton( media_result_1 )
-        media_2 = ClientMedia.MediaSingleton( media_result_2 )
-        
-        self._current_pair_score = ClientDuplicates.GetDuplicateComparisonScore( media_1, media_2 )
+        self._current_pair_score = ClientDuplicates.GetDuplicateComparisonScore( media_result_1, media_result_2 )
         
         if self._current_pair_score > 0:
             
@@ -3671,7 +3666,7 @@ class CanvasMediaList( CanvasWithHovers ):
         previous = self._current_media
         next = self._current_media
         
-        delay_base = CG.client_controller.new_options.GetInteger( 'media_viewer_prefetch_delay_base_ms' ) / 1000
+        delay_base = HydrusTime.SecondiseMSFloat( CG.client_controller.new_options.GetInteger( 'media_viewer_prefetch_delay_base_ms' ) )
         
         num_to_go_back = CG.client_controller.new_options.GetInteger( 'media_viewer_prefetch_num_previous' )
         num_to_go_forward = CG.client_controller.new_options.GetInteger( 'media_viewer_prefetch_num_next' )

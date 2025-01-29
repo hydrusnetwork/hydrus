@@ -106,17 +106,17 @@ class EditCheckerOptions( ClientGUIScrolledPanels.EditPanel ):
         self._intended_files_per_check = ClientGUICommon.BetterSpinBox( self._reactive_check_panel, min=1, max=1000 )
         self._intended_files_per_check.setToolTip( ClientGUIFunctions.WrapToolTip( 'How many new files you want the checker to find on each check. If a source is producing about 2 files a day, and this is set to 6, you will probably get a check every three days. You probably want this to be a low number, like 1-4.' ) )
         
-        self._never_faster_than = TimeDeltaCtrl( self._reactive_check_panel, min = never_faster_than_min, days = True, hours = True, minutes = True, seconds = True )
+        self._never_faster_than = TimeDeltaWidget( self._reactive_check_panel, min = never_faster_than_min, days = True, hours = True, minutes = True, seconds = True )
         self._never_faster_than.setToolTip( ClientGUIFunctions.WrapToolTip( 'Even if the download source produces many new files, the checker will never ask for a check more often than this. This is a safety measure.' ) )
         
-        self._never_slower_than = TimeDeltaCtrl( self._reactive_check_panel, min = never_slower_than_min, days = True, hours = True, minutes = True, seconds = True )
+        self._never_slower_than = TimeDeltaWidget( self._reactive_check_panel, min = never_slower_than_min, days = True, hours = True, minutes = True, seconds = True )
         self._never_slower_than.setToolTip( ClientGUIFunctions.WrapToolTip( 'Even if the download source slows down significantly, the checker will make sure it checks at least this often anyway, just to catch a future wave in time.' ) )
         
         #
         
         self._static_check_panel = ClientGUICommon.StaticBox( self, 'static checking' )
         
-        self._flat_check_period = TimeDeltaCtrl( self._static_check_panel, min = flat_check_period_min, days = True, hours = True, minutes = True, seconds = True )
+        self._flat_check_period = TimeDeltaWidget( self._static_check_panel, min = flat_check_period_min, days = True, hours = True, minutes = True, seconds = True )
         self._flat_check_period.setToolTip( ClientGUIFunctions.WrapToolTip( 'Always use the same check delay. It is based on the time the last check completed, not the time the last check was due. If you want once a day with no skips, try setting this to 23 hours.' ) )
         
         #
@@ -575,7 +575,7 @@ class DateTimeWidgetValueRange( object ):
         
         if self._step_ms != 0:
             
-            s += f', with step {HydrusTime.TimeDeltaToPrettyTimeDelta( self._step_ms / 1000 )}'
+            s += f', with step {HydrusTime.TimeDeltaToPrettyTimeDelta( HydrusTime.SecondiseMSFloat( self._step_ms ) )}'
             
         
         return s
@@ -700,7 +700,7 @@ class DateTimesCtrl( QW.QWidget ):
         
         self._step_box = ClientGUICommon.StaticBox( self, 'Cascading Step' )
         
-        self._step = TimeDeltaCtrl( self._step_box, min = -86399, days = False, hours = True, minutes = True, seconds = True, milliseconds = True, negative_allowed = True )
+        self._step = TimeDeltaWidget( self._step_box, min = -86399, days = False, hours = True, minutes = True, seconds = True, milliseconds = True, negative_allowed = True )
         tt = 'You can set here that each successive file (in the order of the selection that launched this dialog) be set a little later than the last, forcing a particular sort according to that time type.'
         tt += '\n' * 2
         tt += 'For instance, if you have a manga chapter in order in a search page, but their import times are scattered, set this to 5 milliseconds and their import times will be set to cascade nicely.'
@@ -720,7 +720,7 @@ class DateTimesCtrl( QW.QWidget ):
         
         self._date.setSelectedDate( qt_now.date() )
         self._time.setTime( qt_now.time() )
-        self._step.SetValue( datetime_value_range.GetStepMS() / 1000 )
+        self._step.SetValue( HydrusTime.SecondiseMSFloat( datetime_value_range.GetStepMS() ) )
         
         vbox = QP.VBoxLayout()
         
@@ -802,7 +802,7 @@ class DateTimesCtrl( QW.QWidget ):
             
         else:
             
-            timestamp = best_qt_datetime.toMSecsSinceEpoch() / 1000
+            timestamp = HydrusTime.SecondiseMSFloat( best_qt_datetime.toMSecsSinceEpoch() )
             
         
         text = json.dumps( timestamp )
@@ -994,7 +994,7 @@ class DateTimesCtrl( QW.QWidget ):
             self._time.setTime( value_to_set_visually.time() )
             
         
-        self._step.SetValue( datetime_value_range.GetStepMS() / 1000 )
+        self._step.SetValue( HydrusTime.SecondiseMSFloat( datetime_value_range.GetStepMS() ) )
         
         self._NoneClicked()
         
@@ -1048,7 +1048,7 @@ class TimeDeltaButton( QW.QPushButton ):
             
             panel = ClientGUIScrolledPanels.EditSingleCtrlPanel( dlg )
             
-            control = TimeDeltaCtrl( panel, min = self._min, days = self._show_days, hours = self._show_hours, minutes = self._show_minutes, seconds = self._show_seconds, monthly_allowed = self._monthly_allowed )
+            control = TimeDeltaWidget( panel, min = self._min, days = self._show_days, hours = self._show_hours, minutes = self._show_minutes, seconds = self._show_seconds, monthly_allowed = self._monthly_allowed )
             
             control.SetValue( self._value )
             
@@ -1081,7 +1081,7 @@ class TimeDeltaButton( QW.QPushButton ):
         
     
 
-class TimeDeltaCtrl( QW.QWidget ):
+class TimeDeltaWidget( QW.QWidget ):
     
     timeDeltaChanged = QC.Signal()
     
@@ -1097,6 +1097,8 @@ class TimeDeltaCtrl( QW.QWidget ):
         self._show_milliseconds = milliseconds
         self._monthly_allowed = monthly_allowed
         
+        first_expando_guy_set = False
+        
         hbox = QP.HBoxLayout( margin = 0 )
         
         if self._show_days:
@@ -1110,7 +1112,18 @@ class TimeDeltaCtrl( QW.QWidget ):
                 self._days.setMinimum( - self._days.maximum() )
                 
             
-            QP.AddToLayout( hbox, self._days, CC.FLAGS_CENTER_PERPENDICULAR )
+            if first_expando_guy_set:
+                
+                flags = CC.FLAGS_CENTER_PERPENDICULAR
+                
+            else:
+                
+                flags = CC.FLAGS_EXPAND_BOTH_WAYS
+                
+                first_expando_guy_set = True
+                
+            
+            QP.AddToLayout( hbox, self._days, flags )
             QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'days'), CC.FLAGS_CENTER_PERPENDICULAR )
             
         
@@ -1125,7 +1138,18 @@ class TimeDeltaCtrl( QW.QWidget ):
                 self._hours.setMinimum( - self._hours.maximum() )
                 
             
-            QP.AddToLayout( hbox, self._hours, CC.FLAGS_CENTER_PERPENDICULAR )
+            if first_expando_guy_set:
+                
+                flags = CC.FLAGS_CENTER_PERPENDICULAR
+                
+            else:
+                
+                flags = CC.FLAGS_EXPAND_BOTH_WAYS
+                
+                first_expando_guy_set = True
+                
+            
+            QP.AddToLayout( hbox, self._hours, flags )
             QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'hours'), CC.FLAGS_CENTER_PERPENDICULAR )
             
         
@@ -1140,7 +1164,18 @@ class TimeDeltaCtrl( QW.QWidget ):
                 self._minutes.setMinimum( - self._minutes.maximum() )
                 
             
-            QP.AddToLayout( hbox, self._minutes, CC.FLAGS_CENTER_PERPENDICULAR )
+            if first_expando_guy_set:
+                
+                flags = CC.FLAGS_CENTER_PERPENDICULAR
+                
+            else:
+                
+                flags = CC.FLAGS_EXPAND_BOTH_WAYS
+                
+                first_expando_guy_set = True
+                
+            
+            QP.AddToLayout( hbox, self._minutes, flags )
             QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'minutes'), CC.FLAGS_CENTER_PERPENDICULAR )
             
         
@@ -1155,7 +1190,18 @@ class TimeDeltaCtrl( QW.QWidget ):
                 self._seconds.setMinimum( - self._seconds.maximum() )
                 
             
-            QP.AddToLayout( hbox, self._seconds, CC.FLAGS_CENTER_PERPENDICULAR )
+            if first_expando_guy_set:
+                
+                flags = CC.FLAGS_CENTER_PERPENDICULAR
+                
+            else:
+                
+                flags = CC.FLAGS_EXPAND_BOTH_WAYS
+                
+                first_expando_guy_set = True
+                
+            
+            QP.AddToLayout( hbox, self._seconds, flags )
             QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'seconds'), CC.FLAGS_CENTER_PERPENDICULAR )
             
         
@@ -1170,7 +1216,18 @@ class TimeDeltaCtrl( QW.QWidget ):
                 self._milliseconds.setMinimum( - self._milliseconds.maximum() )
                 
             
-            QP.AddToLayout( hbox, self._milliseconds, CC.FLAGS_CENTER_PERPENDICULAR )
+            if first_expando_guy_set:
+                
+                flags = CC.FLAGS_CENTER_PERPENDICULAR
+                
+            else:
+                
+                flags = CC.FLAGS_EXPAND_BOTH_WAYS
+                
+                first_expando_guy_set = True
+                
+            
+            QP.AddToLayout( hbox, self._milliseconds, flags )
             QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'ms'), CC.FLAGS_CENTER_PERPENDICULAR )
             
         
@@ -1256,7 +1313,7 @@ class TimeDeltaCtrl( QW.QWidget ):
         self.timeDeltaChanged.emit()
         
     
-    def GetValue( self ):
+    def GetValue( self ) -> typing.Optional[ float ]:
         
         if self._monthly_allowed and self._monthly.isChecked():
             
@@ -1287,7 +1344,7 @@ class TimeDeltaCtrl( QW.QWidget ):
         
         if self._show_milliseconds:
             
-            value += self._milliseconds.value() / 1000
+            value += HydrusTime.SecondiseMSFloat( self._milliseconds.value() )
             
         
         return value
@@ -1359,6 +1416,96 @@ class TimeDeltaCtrl( QW.QWidget ):
             
         
         self._UpdateEnables()
+        
+    
+
+class NoneableTimeDeltaWidget( QW.QWidget ):
+    
+    timeDeltaChanged = QC.Signal()
+    
+    def __init__( self, parent: QW.QWidget, default_value: float, message = '', none_phrase = 'no limit', min = 1, days = False, hours = False, minutes = False, seconds = False, milliseconds = False, negative_allowed = False ):
+        
+        super().__init__( parent )
+        
+        self._checkbox = QW.QCheckBox( self )
+        self._checkbox.stateChanged.connect( self._UpdateWidgetsEnabled )
+        self._checkbox.setText( none_phrase )
+        
+        self._time_delta_widget = TimeDeltaWidget( self, min = min, days = days, hours = hours, minutes = minutes, seconds = seconds, milliseconds = milliseconds, monthly_allowed = False, negative_allowed = negative_allowed )
+        
+        self.SetValue( default_value )
+        
+        hbox = QP.HBoxLayout( margin = 0 )
+        
+        if len( message ) > 0:
+            
+            QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText( self, message + ': '), CC.FLAGS_CENTER_PERPENDICULAR )
+            
+        
+        QP.AddToLayout( hbox, self._time_delta_widget, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText( self, '  ' ), CC.FLAGS_CENTER_PERPENDICULAR ) # some would say this is crazy
+        QP.AddToLayout( hbox, self._checkbox, CC.FLAGS_CENTER_PERPENDICULAR )
+        hbox.addStretch( 0 )
+        
+        self.setLayout( hbox )
+        
+        self._time_delta_widget.timeDeltaChanged.connect( self._HandleValueChanged )
+        self._checkbox.stateChanged.connect( self._HandleValueChanged )
+        
+        
+    def _HandleValueChanged( self ):
+        
+        self.timeDeltaChanged.emit()
+        
+    
+    def _UpdateWidgetsEnabled( self ):
+        
+        controls_interactable = not self._checkbox.isChecked()
+        
+        self._time_delta_widget.setEnabled( controls_interactable )
+        
+    
+    def GetValue( self ) -> typing.Optional[ float ]:
+        
+        if self._checkbox.isChecked():
+            
+            return None
+            
+        else:
+            
+            return self._time_delta_widget.GetValue()
+            
+        
+    
+    def setToolTip( self, text ):
+        
+        QW.QWidget.setToolTip( self, text )
+        
+        for c in self.children():
+            
+            if isinstance( c, QW.QWidget ):
+                
+                c.setToolTip( text )
+                
+            
+        
+    
+    def SetValue( self, value ):
+        
+        if value is None:
+            
+            self._checkbox.setChecked( True )
+            
+            self._time_delta_widget.setEnabled( False )
+            
+        else:
+            
+            self._checkbox.setChecked( False )
+            
+            self._time_delta_widget.setEnabled( True )
+            
+            self._time_delta_widget.SetValue( value )
+            
         
     
 
@@ -1561,12 +1708,12 @@ class NumberTestWidgetDuration( ClientGUINumberTest.NumberTestWidget ):
     
     def _GenerateAbsoluteValueWidget( self, max: int ):
         
-        return TimeDeltaCtrl( self, min = 0, minutes = True, seconds = True, milliseconds = True )
+        return TimeDeltaWidget( self, min = 0, minutes = True, seconds = True, milliseconds = True )
         
     
     def _GenerateValueWidget( self, max: int ):
         
-        return TimeDeltaCtrl( self, min = 0, days = False, hours = True, minutes = True, seconds = True, milliseconds = True )
+        return TimeDeltaWidget( self, min = 0, days = False, hours = True, minutes = True, seconds = True, milliseconds = True )
         
     
     def _GetAbsoluteValue( self ):
@@ -1576,7 +1723,7 @@ class NumberTestWidgetDuration( ClientGUINumberTest.NumberTestWidget ):
     
     def _SetAbsoluteValue( self, value_ms ):
         
-        return self._absolute_plus_or_minus.SetValue( value_ms / 1000 )
+        return self._absolute_plus_or_minus.SetValue( HydrusTime.SecondiseMSFloat( value_ms ) )
         
     
     def _GetSubValue( self ) -> int:
@@ -1586,7 +1733,7 @@ class NumberTestWidgetDuration( ClientGUINumberTest.NumberTestWidget ):
     
     def _SetSubValue( self, value_ms ):
         
-        return self._value.SetValue( value_ms / 1000 )
+        return self._value.SetValue( HydrusTime.SecondiseMSFloat( value_ms ) )
         
     
 
@@ -1600,7 +1747,7 @@ class VelocityCtrl( QW.QWidget ):
         
         self._num = ClientGUICommon.BetterSpinBox( self, min=min_unit_value, max=max_unit_value, width = 60 )
         
-        self._times = TimeDeltaCtrl( self, min = min_time_delta, days = days, hours = hours, minutes = minutes, seconds = seconds )
+        self._times = TimeDeltaWidget( self, min = min_time_delta, days = days, hours = hours, minutes = minutes, seconds = seconds )
         
         #
         

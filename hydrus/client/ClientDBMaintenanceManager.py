@@ -75,15 +75,15 @@ class DatabaseMaintenanceManager( ClientDaemons.ManagerWithMainLoop ):
         
         if self._is_working_hard:
             
-            return CG.client_controller.new_options.GetInteger( 'deferred_table_delete_work_time_ms_work_hard' ) / 1000
+            return HydrusTime.SecondiseMSFloat( CG.client_controller.new_options.GetInteger( 'deferred_table_delete_work_time_ms_work_hard' ) )
             
         elif CG.client_controller.CurrentlyIdle():
             
-            return CG.client_controller.new_options.GetInteger( 'deferred_table_delete_work_time_ms_idle' ) / 1000
+            return HydrusTime.SecondiseMSFloat( CG.client_controller.new_options.GetInteger( 'deferred_table_delete_work_time_ms_idle' ) )
             
         else:
             
-            return CG.client_controller.new_options.GetInteger( 'deferred_table_delete_work_time_ms_normal' ) / 1000
+            return HydrusTime.SecondiseMSFloat( CG.client_controller.new_options.GetInteger( 'deferred_table_delete_work_time_ms_normal' ) )
             
         
     

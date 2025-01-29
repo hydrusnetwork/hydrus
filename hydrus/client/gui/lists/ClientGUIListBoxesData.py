@@ -38,7 +38,7 @@ class ListBoxItem( object ):
         return False
         
     
-    def GetCopyableTexts( self, with_counts: bool = False, include_parents = False ) -> typing.List[ str ]:
+    def GetCopyableTexts( self, with_counts: bool = False, include_parents = False, collapse_ors = False ) -> typing.List[ str ]:
         
         raise NotImplementedError()
         
@@ -82,7 +82,7 @@ class ListBoxItemTagSlice( ListBoxItem ):
         return self._tag_slice.__hash__()
         
     
-    def GetCopyableTexts( self, with_counts: bool = False, include_parents = False ) -> typing.List[ str ]:
+    def GetCopyableTexts( self, with_counts: bool = False, include_parents = False, collapse_ors = False ) -> typing.List[ str ]:
         
         return [ self._tag_slice ]
         
@@ -134,7 +134,7 @@ class ListBoxItemNamespaceColour( ListBoxItem ):
         return self._namespace.__hash__()
         
     
-    def GetCopyableTexts( self, with_counts: bool = False, include_parents = False ) -> typing.List[ str ]:
+    def GetCopyableTexts( self, with_counts: bool = False, include_parents = False, collapse_ors = False ) -> typing.List[ str ]:
         
         if self._namespace is None:
             
@@ -247,7 +247,7 @@ class ListBoxItemTextTag( ListBoxItem ):
         return self._ideal_tag
         
     
-    def GetCopyableTexts( self, with_counts: bool = False, include_parents = False ) -> typing.List[ str ]:
+    def GetCopyableTexts( self, with_counts: bool = False, include_parents = False, collapse_ors = False ) -> typing.List[ str ]:
         
         rows = [ self._tag ]
         
@@ -364,7 +364,7 @@ class ListBoxItemTextTagWithCounts( ListBoxItemTextTag ):
         return NotImplemented
         
     
-    def GetCopyableTexts( self, with_counts: bool = False, include_parents = False ) -> typing.List[ str ]:
+    def GetCopyableTexts( self, with_counts: bool = False, include_parents = False, collapse_ors = False ) -> typing.List[ str ]:
         
         if with_counts:
             
@@ -511,11 +511,18 @@ class ListBoxItemPredicate( ListBoxItem ):
         return not self._predicate.IsORPredicate()
         
     
-    def GetCopyableTexts( self, with_counts: bool = False, include_parents = False ) -> typing.List[ str ]:
+    def GetCopyableTexts( self, with_counts: bool = False, include_parents = False, collapse_ors = False ) -> typing.List[ str ]:
         
         if self._predicate.IsORPredicate():
             
-            texts = [ sub_pred.ToString() for sub_pred in self._predicate.GetValue() ]
+            if collapse_ors:
+                
+                texts = [ self._predicate.ToString( for_parsable_export = True ) ]
+                
+            else:
+                
+                texts = [ sub_pred.ToString() for sub_pred in self._predicate.GetValue() ]
+                
             
         elif self._predicate.GetType() == ClientSearchPredicate.PREDICATE_TYPE_NAMESPACE:
             

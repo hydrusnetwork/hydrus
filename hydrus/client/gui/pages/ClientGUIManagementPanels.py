@@ -2167,7 +2167,7 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
             
             num_items = len( self._gallery_importers_listctrl.GetData() )
             
-            min_time = CG.client_controller.new_options.GetInteger( 'gallery_page_status_update_time_minimum_ms' ) / 1000
+            min_time = HydrusTime.SecondiseMSFloat( CG.client_controller.new_options.GetInteger( 'gallery_page_status_update_time_minimum_ms' ) )
             denominator = CG.client_controller.new_options.GetInteger( 'gallery_page_status_update_time_ratio_denominator' )
             
             try:
@@ -3328,7 +3328,7 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
             
             num_items = len( self._watchers_listctrl.GetData() )
             
-            min_time = CG.client_controller.new_options.GetInteger( 'watcher_page_status_update_time_minimum_ms' ) / 1000
+            min_time = HydrusTime.SecondiseMSFloat( CG.client_controller.new_options.GetInteger( 'watcher_page_status_update_time_minimum_ms' ) )
             denominator = CG.client_controller.new_options.GetInteger( 'watcher_page_status_update_time_ratio_denominator' )
             
             try:

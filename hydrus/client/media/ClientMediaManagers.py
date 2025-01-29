@@ -543,9 +543,9 @@ class FileViewingStatsManager( object ):
         self._times_manager = times_manager
         
         self.views = collections.Counter()
-        self.viewtimes = collections.Counter()
+        self.viewtimes_ms = collections.Counter()
         
-        for ( canvas_type, last_viewed_timestamp_ms, views, viewtime ) in view_rows:
+        for ( canvas_type, last_viewed_timestamp_ms, views, viewtime_ms ) in view_rows:
             
             if last_viewed_timestamp_ms is not None:
                 
@@ -557,9 +557,9 @@ class FileViewingStatsManager( object ):
                 self.views[ canvas_type ] = views
                 
             
-            if viewtime != 0:
+            if viewtime_ms != 0:
                 
-                self.viewtimes[ canvas_type ] = viewtime
+                self.viewtimes_ms[ canvas_type ] = viewtime_ms
                 
             
         
@@ -568,14 +568,14 @@ class FileViewingStatsManager( object ):
         
         view_rows = []
         
-        for canvas_type in ( CC.CANVAS_MEDIA_VIEWER, CC.CANVAS_PREVIEW ):
+        for canvas_type in ( CC.CANVAS_MEDIA_VIEWER, CC.CANVAS_PREVIEW, CC.CANVAS_CLIENT_API ):
             
             last_viewed_timestamp_ms = self._times_manager.GetLastViewedTimestampMS( canvas_type )
             
             views = self.views[ canvas_type ]
-            viewtime = self.viewtimes[ canvas_type ]
+            viewtime_ms = self.viewtimes_ms[ canvas_type ]
             
-            view_rows.append( ( canvas_type, last_viewed_timestamp_ms, views, viewtime ) )
+            view_rows.append( ( canvas_type, last_viewed_timestamp_ms, views, viewtime_ms ) )
             
         
         return FileViewingStatsManager( pre_duped_times_manager, view_rows )
@@ -583,6 +583,7 @@ class FileViewingStatsManager( object ):
     
     def GetPrettyViewsLine( self, canvas_types: typing.Collection[ int ] ) -> str:
         
+        # TODO: update this and callers to handle client api canvas
         if len( canvas_types ) == 2:
             
             info_string = ''
@@ -597,7 +598,7 @@ class FileViewingStatsManager( object ):
             
         
         views_total = sum( ( self.views[ canvas_type ] for canvas_type in canvas_types ) )
-        viewtime_total = sum( ( self.viewtimes[ canvas_type ] for canvas_type in canvas_types ) )
+        viewtime_ms_total = sum( ( self.viewtimes_ms[ canvas_type ] for canvas_type in canvas_types ) )
         
         if views_total == 0:
             
@@ -625,7 +626,7 @@ class FileViewingStatsManager( object ):
             last_viewed_string = 'last {}'.format( HydrusTime.TimestampToPrettyTimeDelta( HydrusTime.SecondiseMS( max( last_viewed_times_ms ) ) ) )
             
         
-        return 'viewed {} times{}, totalling {}, {}'.format( HydrusNumbers.ToHumanInt( views_total ), info_string, HydrusTime.TimeDeltaToPrettyTimeDelta( viewtime_total ), last_viewed_string )
+        return 'viewed {} times{}, totalling {}, {}'.format( HydrusNumbers.ToHumanInt( views_total ), info_string, HydrusTime.TimeDeltaToPrettyTimeDelta( HydrusTime.SecondiseMSFloat( viewtime_ms_total ) ), last_viewed_string )
         
     
     def GetTimesManager( self ) -> TimesManager:
@@ -638,14 +639,14 @@ class FileViewingStatsManager( object ):
         return self.views[ canvas_type ]
         
     
-    def GetViewtime( self, canvas_type: int ) -> int:
+    def GetViewtimeMS( self, canvas_type: int ) -> int:
         
-        return self.viewtimes[ canvas_type ]
+        return self.viewtimes_ms[ canvas_type ]
         
     
     def MergeCounts( self, file_viewing_stats_manager: "FileViewingStatsManager" ):
         
-        for canvas_type in ( CC.CANVAS_MEDIA_VIEWER, CC.CANVAS_PREVIEW ):
+        for canvas_type in ( CC.CANVAS_MEDIA_VIEWER, CC.CANVAS_PREVIEW, CC.CANVAS_CLIENT_API ):
             
             timestamps_ms = { self._times_manager.GetLastViewedTimestampMS( canvas_type ), file_viewing_stats_manager.GetTimesManager().GetLastViewedTimestampMS( canvas_type ) }
             
@@ -660,7 +661,7 @@ class FileViewingStatsManager( object ):
             
         
         self.views.update( file_viewing_stats_manager.views )
-        self.viewtimes.update( file_viewing_stats_manager.viewtimes )
+        self.viewtimes_ms.update( file_viewing_stats_manager.viewtimes_ms )
         
     
     def ProcessContentUpdate( self, content_update ):
@@ -669,7 +670,7 @@ class FileViewingStatsManager( object ):
         
         if action == HC.CONTENT_UPDATE_ADD:
             
-            ( hash, canvas_type, view_timestamp_ms, views_delta, viewtime_delta ) = row
+            ( hash, canvas_type, view_timestamp_ms, views_delta, viewtime_delta_ms ) = row
             
             if view_timestamp_ms is not None:
                 
@@ -677,15 +678,28 @@ class FileViewingStatsManager( object ):
                 
             
             self.views[ canvas_type ] += views_delta
-            self.viewtimes[ canvas_type ] += viewtime_delta
+            self.viewtimes_ms[ canvas_type ] += viewtime_delta_ms
+            
+        elif action == HC.CONTENT_UPDATE_SET:
+            
+            ( hash, canvas_type, view_timestamp_ms, views, viewtime_ms ) = row
+            
+            if view_timestamp_ms is not None:
+                
+                self._times_manager.SetLastViewedTimestampMS( canvas_type, view_timestamp_ms )
+                
+            
+            self.views[ canvas_type ] = views
+            self.viewtimes_ms[ canvas_type ] = viewtime_ms
             
         elif action == HC.CONTENT_UPDATE_DELETE:
             
             self._times_manager.ClearLastViewedTime( CC.CANVAS_MEDIA_VIEWER )
             self._times_manager.ClearLastViewedTime( CC.CANVAS_PREVIEW )
+            self._times_manager.ClearLastViewedTime( CC.CANVAS_CLIENT_API )
             
             self.views = collections.Counter()
-            self.viewtimes = collections.Counter()
+            self.viewtimes_ms = collections.Counter()
             
         
     

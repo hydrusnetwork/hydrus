@@ -1,5 +1,6 @@
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusTime
 
 from hydrus.client import ClientGlobals as CG
 from hydrus.client.media import ClientMediaManagers
@@ -64,7 +65,7 @@ class MediaResult( object ):
     
     def GetDuration( self ):
         
-        return self._file_info_manager.duration / 1000
+        return HydrusTime.SecondiseMSFloat( self._file_info_manager.duration )
         
     
     def GetDurationMS( self ):
@@ -150,6 +151,13 @@ class MediaResult( object ):
     def HasAudio( self ):
         
         return self._file_info_manager.has_audio is True
+        
+    
+    def HasDuration( self ):
+        
+        duration_ms = self._file_info_manager.duration
+        
+        return duration_ms is not None and duration_ms > 0
         
     
     def HasNotes( self ):

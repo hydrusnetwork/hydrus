@@ -35,6 +35,61 @@
             <h1 id="changelog"><a href="#changelog">changelog</a></h1>
             <ul>
                 <li>
+                    <h2 id="version_607"><a href="#version_607">version 607</a></h2>
+                    <ul>
+                        <li><h3>misc</h3></li>
+                        <li>jpeg-xl images are now fully supported! jpeg-xl is one of the contenders for 'what format do we use next?', and I think a pretty good one. it is basically jpeg but it can handle more colour depth/HDR, transparency, and optional lossless encoding, all while saving about 40% equivalent filesize to a jpeg/png. I understand it can also do animation (although we don't add that today), making it a potential 'capabilities superset' of gif as well. jpeg-xl is not well supported yet, but I hope that as more programs add support we'll see that change, and hydrus does its part today. thanks to the users who navigated this</li>
+                        <li>added some boxes to `options-&gt;thumbnails` to give it some better layout and grouping</li>
+                        <li>the 'show the media viewer top hover text in the status bar when one thumb is selected' option now defaults to True. it was a mistake to turn this off by default, and all users will be switched to True on update. the checkbox remains in `options-&gt;thumbnails` if you want to turn it off</li>
+                        <li>added 'Give thumbnail ratings a flat background' to `options-&gt;thumbnails` to turn off if you prefer to just have the ratings without the rectangle backing I added last week</li>
+                        <li>the new 'namespace grouping sort' sorted text list in `options-&gt;sort/collect` now has a paste button if you need to enter a ton of them</li>
+                        <li>a new checkbox under `options-&gt;importing` let's you stop the program switching to the destination download page whenever you drag and drop a URL on the program. this was personally driving me nuts</li>
+                        <li>when you right-click a selection of predicates that includes OR preds, the 'copy' submenu now includes an option to copy texts with collapse ORs, which renders them like "a OR b OR c" in one line, rather than the separate rows</li>
+                        <li>the duplicate filter's "comparison statements" in the mid-right hover now show if one or both files have duration. I hacked this in simply for guys who are using external tools to get videos into the potential duplicate pairs queue, and I still want to completely rewrite this thing to a fully user-editable system once I have the tools matured in the duplicates auto-resolution work</li>
+                        <li>a safety limit that would force the status bar to stick to 'x files' instead of the more interesting and cpu-intensive 'x images/collections/whatever' is raised from 1,000 files to 100,000. let's see how it goes</li>
+                        <li>fixed a sometimes-error when showing different file presentations of watchers/gallery downloaders (when you right-click some and say `show files-&gt;blah`)</li>
+                        <li>the complicated pre-download file status logic that determines if a URL-mapping has untrustworthy neighbours now prints a little log message of what it discovered when it hits a positive. this thing runs a little quiet and I want to see if it is firing too often or is not quite checking what we want in difficult cases</li>
+                        <li>fixed a weird typo when unsetting the EXPERIMENTAL media viewer background bitmap thing in `options-&gt;thumbnails`</li>
+                        <li><h3>MPV</h3></li>
+                        <li>I did some work trying to handle the 'too many events queued' problems we've seen with mpv recently. I cleaned some code and reduced the overhead of my custom event handling, but I am generally convinced that some of the problems we've seen are due to 100% CPU bugs in various libmpv versions, particularly because I can set the 'loglevel' of mpv to 'no', for 'nothing at all', but the error still happens, suggesting there is probably no log-processing speed I can do on my end to fix this. I am leaving the emergency-dump-out code in place, but for this specific 'too many events queued' error it no longer adds that file to the 'never load again this boot' list--you can deselect the file and then reselect to try again (although it seems like the mpv player's event loop can be poisoned by the situation and lags a bit on next load). I have also seen the error occur at I believe the start of playback, but then I could load the file fine another time with the same dll, which suggests the log stuff can pile up due to a brief busy period in thread scheduling or whatever. so, there is more to do here--perhaps a 'if we get the error persisting for more than two seconds' or something</li>
+                        <li>I did discover a different loop flag I could set for mpv that fixes one of the reliable problems--setting 'loop-playlist' rather than 'loop-file', which seems to force the file to reload and avoids the EOF rewind bug that mpv is running into. if you get the error on the first loop of a file, try hitting the new checkbox under `options-&gt;media playback` and we'll see how it all goes</li>
+                        <li>I also just bit the bullet and added a DEBUG option, also to `options-&gt;media playback`, to disable the new 'too many events queued' dump-out hook. if you hit many false-positives and are feeling brave, try turning it off, but you may have to deal with some 100% CPU situations</li>
+                        <li><h3>viewtimes are now in ms</h3></li>
+                        <li>the filetime viewing stats system now records total viewtime in ms (previously it only had 'second' resolution). this doesn't matter all that much, but all the little deltas it adds are now 'viewed file for 3.2 seconds' rather than always rounding to the nearest integer</li>
+                        <li>the settings under `options-&gt;file viewing statistics` are now full 'time delta' widgets that support ms, so you can say 'viewing a file for at least 2.5 seconds counts as a view' rather, again, than having to deal with full integers all the time</li>
+                        <li>system:viewtime now supports milliseconds input for viewtime ranges</li>
+                        <li>mr bones now reports a ms-precise (float) total viewtime (e.g. 3.456s) for the current search</li>
+                        <li><h3>client api</h3></li>
+                        <li>the client api can now see and edit file viewtime statistics!</li>
+                        <li>`/get_files/file_metadata` now states the file viewtime statistics (last viewed time, total views, total viewtime for the different viewer types) for each file</li>
+                        <li>file viewtime statistics has a new 'client api viewer' enum, separate from the existing 'media viewer' and 'preview viewer' record, if you'd like to do your own thing. I've hacked this a bit, and it doesn't show in the normal Client UI yet, nor can you search on it via `system:file viewing statistics`. the current options on how to show viewtime (`options-&gt;file viewing statistics`) are frankly crazy, so I think probably we'll want to go to a list of simpler checkboxes or something and stop trying to be clever</li>
+                        <li>the new `/edit_times/increment_file_viewtime`, which needs the existing 'edit times' permission, lets you add views and viewtime and set the latest view timestamp</li>
+                        <li>the new `/edit_times/set_file_viewtime`, which needs the existing 'edit times' permission, lets you set fixed values (i.e. if you are migrating from one client to another)</li>
+                        <li>I have not added a delete/clear call here yet. if you would like to do this, let me know what you would like. the client only has 'clear everything for this file' and 'clear all records completely', but I expect we'd want the ability to clear by view type?</li>
+                        <li>wrote help for this</li>
+                        <li>wrote unit tests for this</li>
+                        <li>client api version is now 78</li>
+                        <li>the rich version of `/get_files/file_metadata` is now providing a lot of personal user metadata like inbox, ratings, local tags, and now viewtime statistics, making the 'just share some files with a friend' scenario less attractive. I was considering adding a new 'edit file viewtimes' permission today that would allow the edit and also dynamically show/hide the new viewtimes, but I think it would be better if I make a _read_ permission in the _ouvre_ of 'can see user file metadata', which, if absent, will mean callers can only ask for the basic file information. this permission may apply in other places, and the whole client api permissions system could do with a pass and likely some KISS. let me know what you think!</li>
+                        <li><h3>boring cleanup</h3></li>
+                        <li>cleaned up how some thumbnail-focus-delegation happens on new file focuses</li>
+                        <li>cleaned some viewtime pipeline code generally</li>
+                        <li>fixed the API help json example requests for `set_time`, which didn't have `file_id` stuff</li>
+                        <li>replaced all my 'convert ms time to s time, but a float, oh except I guess when it is null, don't forget bro' code with a single and safer unified call across the program</li>
+                        <li>cleaned up some agnostic 's or ms' duration calls, but there's plenty more to do</li>
+                        <li><h3>build updates</h3></li>
+                        <li>last week's 'future build' went well, so I am folding the changes into the normal build. users who run from source may like to run their `setup_venv` script again today, and users who would like to run from source but only have python 3.13 now have a route to run hydrus</li>
+                        <li>details--</li>
+                        <li>PySide6 (Qt) is updated from `6.6.3.1` to `6.7.3` (test version is now `6.8.1.1`, which source users on Python 3.13 can run)</li>
+                        <li>on macOS, PyQt6 (Qt) is updated from `6.6.0` to `6.7.1`</li>
+                        <li>OpenCV (image stuff) is updated from `4.8.1.78` to `4.10.0.84`, which lets us update numpy (test version is now `4.11.0.86`)</li>
+                        <li>numpy is switched from `&lt;2.0.0` to `&gt;=2.0.0`. this adds Python 3.13 support to hydrus for source users</li>
+                        <li>pillow-jxl-plugin is added, and thereby we have Jpeg-XL support (thanks to some users for navigating this!)</li>
+                        <li>the python mpv package is updated from `1.0.6` to `1.0.7` (test verison stays at `1.0.7`; there is nothing new)</li>
+                        <li>twisted (the networking engine that runs the hydrus server and client api) now includes better TLS and http2 support</li>
+                        <li>some import hacks that helped old PyInstaller navigate numpy and OpenCV bundling are removed</li>
+                    </ul>
+                </li>
+                <li>
                     <h2 id="version_606"><a href="#version_606">version 606</a></h2>
                     <ul>
                         <li><h3>tag sort</h3></li>

@@ -528,21 +528,21 @@ class RelatedTagsPanel( QW.QWidget ):
     
     def RefreshQuick( self ):
         
-        max_time_to_take = self._new_options.GetInteger( 'related_tags_search_1_duration_ms' ) / 1000.0
+        max_time_to_take = HydrusTime.SecondiseMSFloat( self._new_options.GetInteger( 'related_tags_search_1_duration_ms' ) )
         
         self._FetchRelatedTagsNew( max_time_to_take )
         
     
     def RefreshMedium( self ):
         
-        max_time_to_take = self._new_options.GetInteger( 'related_tags_search_2_duration_ms' ) / 1000.0
+        max_time_to_take = HydrusTime.SecondiseMSFloat( self._new_options.GetInteger( 'related_tags_search_2_duration_ms' ) )
         
         self._FetchRelatedTagsNew( max_time_to_take )
         
     
     def RefreshThorough( self ):
         
-        max_time_to_take = self._new_options.GetInteger( 'related_tags_search_3_duration_ms' ) / 1000.0
+        max_time_to_take = HydrusTime.SecondiseMSFloat( self._new_options.GetInteger( 'related_tags_search_3_duration_ms' ) )
         
         self._FetchRelatedTagsNew( max_time_to_take )
         

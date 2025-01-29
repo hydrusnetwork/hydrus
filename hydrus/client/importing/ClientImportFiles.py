@@ -345,7 +345,6 @@ class FileImportJob( object ):
                 pass
                 
             
-
         
         if mime in HC.FILES_THAT_HAVE_PERCEPTUAL_HASH:
             
@@ -381,7 +380,7 @@ class FileImportJob( object ):
         
         #
         
-        self._has_transparency = ClientFiles.HasTransparency( self._temp_path, mime, duration = duration, num_frames = num_frames, resolution = ( width, height ) )
+        self._has_transparency = ClientFiles.HasTransparency( self._temp_path, mime, duration_ms = duration, num_frames = num_frames, resolution = ( width, height ) )
         
         has_exif = False
         

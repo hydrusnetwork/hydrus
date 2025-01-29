@@ -2054,7 +2054,7 @@ class CanvasHoverFrameRightDuplicates( CanvasHoverFrame ):
         
         QP.AddToLayout( self._comparison_statements_vbox, self._comparison_statement_score_summary, CC.FLAGS_EXPAND_PERPENDICULAR )
         
-        self._comparison_statement_names = [ 'filesize', 'resolution', 'ratio', 'mime', 'num_tags', 'time_imported', 'jpeg_quality', 'pixel_duplicates', 'has_transparency', 'exif_data', 'embedded_metadata', 'icc_profile', 'has_audio' ]
+        self._comparison_statement_names = [ 'filesize', 'resolution', 'ratio', 'mime', 'num_tags', 'time_imported', 'jpeg_quality', 'pixel_duplicates', 'has_transparency', 'exif_data', 'embedded_metadata', 'icc_profile', 'has_audio', 'duration' ]
         
         self._comparison_statements_sts = {}
         
@@ -2208,7 +2208,7 @@ class CanvasHoverFrameRightDuplicates( CanvasHoverFrame ):
     
     def _ResetComparisonStatements( self ):
         
-        statements_and_scores = ClientDuplicates.GetDuplicateComparisonStatements( self._current_media, self._comparison_media )
+        statements_and_scores = ClientDuplicates.GetDuplicateComparisonStatements( self._current_media.GetMediaResult(), self._comparison_media.GetMediaResult() )
         
         total_score = sum( ( score for ( statement, score ) in statements_and_scores.values() ) )
         

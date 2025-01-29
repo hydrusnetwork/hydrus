@@ -1709,31 +1709,42 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.Liste
     
     def _SetFocusedMedia( self, media ):
         
-        if media is None and self._focused_media is not None:
+        self._next_best_media_if_focuses_removed = None
+        
+        for m in [ media, self._focused_media ]:
             
-            next_best_media = self._focused_media
-            
-            i = self._sorted_media.index( next_best_media )
-            
-            while next_best_media in self._selected_media:
+            if m is None:
                 
-                if i == 0:
+                continue
+                
+            
+            if m in self._sorted_media:
+                
+                next_best_media = m
+                
+                i = self._sorted_media.index( next_best_media )
+                
+                while next_best_media in self._selected_media:
                     
-                    next_best_media = None
+                    if i == 0:
+                        
+                        next_best_media = None
+                        
+                        break
+                        
+                    
+                    i -= 1
+                    
+                    next_best_media = self._sorted_media[ i ]
+                    
+                
+                if next_best_media is not None:
+                    
+                    self._next_best_media_if_focuses_removed = next_best_media
                     
                     break
                     
                 
-                i -= 1
-                
-                next_best_media = self._sorted_media[ i ]
-                
-            
-            self._next_best_media_if_focuses_removed = next_best_media
-            
-        else:
-            
-            self._next_best_media_if_focuses_removed = None
             
         
         publish_media = None

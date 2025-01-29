@@ -1992,6 +1992,10 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                         
                         value_string = HydrusTime.TimeDeltaToPrettyTimeDelta( viewing_value )
                         
+                    else:
+                        
+                        value_string = 'Unknown view type!'
+                        
                     
                     base = '{} {} {} {}'.format( domain, view_type, operator, value_string )
                     

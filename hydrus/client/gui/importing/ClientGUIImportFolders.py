@@ -285,6 +285,7 @@ class EditImportFolderPanel( ClientGUIScrolledPanels.EditPanel ):
         allowed_importer_classes = [ ClientMetadataMigrationImporters.SingleFileMetadataImporterTXT, ClientMetadataMigrationImporters.SingleFileMetadataImporterJSON ]
         allowed_exporter_classes = [ ClientMetadataMigrationExporters.SingleFileMetadataExporterMediaTags, ClientMetadataMigrationExporters.SingleFileMetadataExporterMediaNotes, ClientMetadataMigrationExporters.SingleFileMetadataExporterMediaURLs, ClientMetadataMigrationExporters.SingleFileMetadataExporterMediaTimestamps ]
         
+        # example paths are set to this guy later, no worries
         self._sidecar_test_context_factory = ClientGUIMetadataMigrationTest.MigrationTestContextFactorySidecar( [] )
         
         self._metadata_routers_button = ClientGUIMetadataMigration.SingleFileMetadataRoutersButton( self, metadata_routers, allowed_importer_classes, allowed_exporter_classes, self._sidecar_test_context_factory )

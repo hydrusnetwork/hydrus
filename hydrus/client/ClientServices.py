@@ -2031,17 +2031,17 @@ class ServiceRepository( ServiceRestricted ):
                         
                         if CG.client_controller.CurrentlyVeryIdle():
                             
-                            work_time = CG.client_controller.new_options.GetInteger( 'repository_processing_work_time_ms_very_idle' ) / 1000
+                            work_time = HydrusTime.SecondiseMSFloat( CG.client_controller.new_options.GetInteger( 'repository_processing_work_time_ms_very_idle' ) )
                             rest_ratio = CG.client_controller.new_options.GetInteger( 'repository_processing_rest_percentage_very_idle' ) / 100
                             
                         elif CG.client_controller.CurrentlyIdle():
                             
-                            work_time = CG.client_controller.new_options.GetInteger( 'repository_processing_work_time_ms_idle' ) / 1000
+                            work_time = HydrusTime.SecondiseMSFloat( CG.client_controller.new_options.GetInteger( 'repository_processing_work_time_ms_idle' ) )
                             rest_ratio = CG.client_controller.new_options.GetInteger( 'repository_processing_rest_percentage_idle' ) / 100
                             
                         else:
                             
-                            work_time = CG.client_controller.new_options.GetInteger( 'repository_processing_work_time_ms_normal' ) / 1000
+                            work_time = HydrusTime.SecondiseMSFloat( CG.client_controller.new_options.GetInteger( 'repository_processing_work_time_ms_normal' ) )
                             rest_ratio = CG.client_controller.new_options.GetInteger( 'repository_processing_rest_percentage_normal' ) / 100
                             
                         
@@ -2181,17 +2181,17 @@ class ServiceRepository( ServiceRestricted ):
                         
                         if CG.client_controller.CurrentlyVeryIdle():
                             
-                            work_time = CG.client_controller.new_options.GetInteger( 'repository_processing_work_time_ms_very_idle' ) / 1000
+                            work_time = HydrusTime.SecondiseMSFloat( CG.client_controller.new_options.GetInteger( 'repository_processing_work_time_ms_very_idle' ) )
                             rest_ratio = CG.client_controller.new_options.GetInteger( 'repository_processing_rest_percentage_very_idle' ) / 100
                             
                         elif CG.client_controller.CurrentlyIdle():
                             
-                            work_time = CG.client_controller.new_options.GetInteger( 'repository_processing_work_time_ms_idle' ) / 1000
+                            work_time = HydrusTime.SecondiseMSFloat( CG.client_controller.new_options.GetInteger( 'repository_processing_work_time_ms_idle' ) )
                             rest_ratio = CG.client_controller.new_options.GetInteger( 'repository_processing_rest_percentage_idle' ) / 100
                             
                         else:
                             
-                            work_time = CG.client_controller.new_options.GetInteger( 'repository_processing_work_time_ms_normal' ) / 1000
+                            work_time = HydrusTime.SecondiseMSFloat( CG.client_controller.new_options.GetInteger( 'repository_processing_work_time_ms_normal' ) )
                             rest_ratio = CG.client_controller.new_options.GetInteger( 'repository_processing_rest_percentage_normal' ) / 100
                             
                         

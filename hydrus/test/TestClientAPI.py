@@ -1970,6 +1970,361 @@ class TestClientAPI( unittest.TestCase ):
         HF.compare_content_update_packages( self, content_update_package, expected_content_update_package )
         
     
+    def _test_edit_file_viewing_statistics( self, connection, set_up_permissions ):
+        
+        hash = os.urandom( 32 )
+        hash_hex = hash.hex()
+        
+        #
+        
+        api_permissions = set_up_permissions[ 'everything' ]
+        
+        access_key_hex = api_permissions.GetAccessKey().hex()
+        
+        headers = { 'Hydrus-Client-API-Access-Key' : access_key_hex, 'Content-Type' : HC.mime_mimetype_string_lookup[ HC.APPLICATION_JSON ] }
+        
+        # increment
+        
+        jobs = []
+        
+        request_args = {
+            'canvas_type' : CC.CANVAS_MEDIA_VIEWER,
+            'viewtime' : 3.800
+        }
+        
+        media_result = HF.GetFakeMediaResult( hash )
+        
+        jobs.append( ( request_args, media_result, CC.CANVAS_MEDIA_VIEWER, None, 1, 3800 ) )
+        
+        #
+        
+        request_args = {
+            'canvas_type' : CC.CANVAS_PREVIEW,
+            'views' : 3,
+            'viewtime' : 3.900
+        }
+        
+        media_result = HF.GetFakeMediaResult( hash )
+        
+        jobs.append( ( request_args, media_result, CC.CANVAS_PREVIEW, None, 3, 3900 ) )
+        
+        #
+        
+        timestamp_ms = HydrusTime.GetNowMS() - 50000
+        
+        request_args = {
+            'canvas_type' : CC.CANVAS_CLIENT_API,
+            'timestamp_ms' : timestamp_ms,
+            'viewtime' : 3.950
+        }
+        
+        media_result = HF.GetFakeMediaResult( hash )
+        
+        jobs.append( ( request_args, media_result, CC.CANVAS_CLIENT_API, timestamp_ms, 1, 3950 ) )
+        
+        #
+        
+        magic_now = 123456789
+        
+        with patch.object( HydrusTime, 'GetNowMS', return_value = magic_now ):
+            
+            for ( request_args, media_result, canvas_type, new_timestamp_ms, new_views, new_viewtime ) in jobs:
+                
+                media_result = typing.cast( ClientMediaResult.MediaResult, media_result )
+                
+                TG.test_controller.ClearWrites( 'content_updates' )
+                
+                path = '/edit_times/increment_file_viewtime'
+                
+                body_dict = { 'hash' : hash_hex }
+                body_dict.update( request_args )
+                
+                body = json.dumps( body_dict )
+                
+                connection.request( 'POST', path, body = body, headers = headers )
+                
+                response = connection.getresponse()
+                
+                data = response.read()
+                
+                self.assertEqual( response.status, 200 )
+                
+                content_update_package = ClientContentUpdates.ContentUpdatePackage()
+                
+                timestamp_we_expect = magic_now if new_timestamp_ms is None else new_timestamp_ms
+                
+                content_update_row = ( hash, canvas_type, timestamp_we_expect, new_views, new_viewtime )
+                
+                expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates(
+                    CC.COMBINED_LOCAL_FILE_SERVICE_KEY,
+                    [
+                        ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILE_VIEWING_STATS, HC.CONTENT_UPDATE_ADD, content_update_row )
+                    ]
+                )
+                
+                [ ( ( content_update_package, ), kwargs ) ] = TG.test_controller.GetWrite( 'content_updates' )
+                
+                HF.compare_content_update_packages( self, content_update_package, expected_content_update_package )
+                
+            
+        
+        #
+        
+        problem_jobs = []
+        
+        request_args = {
+            'canvas_type' : CC.CANVAS_MEDIA_VIEWER
+        }
+        
+        problem_jobs.append( ( request_args, 400 ) )
+        
+        #
+        
+        request_args = {
+            'viewtime' : 123456
+        }
+        
+        problem_jobs.append( ( request_args, 400 ) )
+        
+        #
+        
+        request_args = {
+            'canvas_type' : CC.CANVAS_MEDIA_VIEWER_ARCHIVE_DELETE,
+            'viewtime' : 123456
+        }
+        
+        problem_jobs.append( ( request_args, 400 ) )
+        
+        #
+        
+        request_args = {
+            'canvas_type' : CC.CANVAS_MEDIA_VIEWER,
+            'viewtime' : -123456
+        }
+        
+        problem_jobs.append( ( request_args, 400 ) )
+        
+        #
+        
+        request_args = {
+            'canvas_type' : CC.CANVAS_MEDIA_VIEWER,
+            'views' : -5,
+            'viewtime' : 123456
+        }
+        
+        problem_jobs.append( ( request_args, 400 ) )
+        
+        #
+        
+        for ( request_args, expected_status ) in problem_jobs:
+            
+            media_result = HF.GetFakeMediaResult( hash )
+            
+            TG.test_controller.SetRead( 'media_results', [ media_result ] )
+            
+            TG.test_controller.ClearWrites( 'content_updates' )
+            
+            path = '/edit_times/increment_file_viewtime'
+            
+            body_dict = { 'hash' : hash_hex }
+            body_dict.update( request_args )
+            
+            body = json.dumps( body_dict )
+            
+            connection.request( 'POST', path, body = body, headers = headers )
+            
+            response = connection.getresponse()
+            
+            data = response.read()
+            
+            self.assertEqual( response.status, expected_status )
+            
+        
+        # set
+        
+        hash = os.urandom( 32 )
+        hash_hex = hash.hex()
+        
+        #
+        
+        api_permissions = set_up_permissions[ 'everything' ]
+        
+        access_key_hex = api_permissions.GetAccessKey().hex()
+        
+        headers = { 'Hydrus-Client-API-Access-Key' : access_key_hex, 'Content-Type' : HC.mime_mimetype_string_lookup[ HC.APPLICATION_JSON ] }
+        
+        # set up jobs
+        
+        jobs = []
+        
+        request_args = {
+            'canvas_type' : CC.CANVAS_MEDIA_VIEWER,
+            'views' : 1,
+            'viewtime' : 3.800
+        }
+        
+        media_result = HF.GetFakeMediaResult( hash )
+        
+        jobs.append( ( request_args, media_result, CC.CANVAS_MEDIA_VIEWER, None, 1, 3800 ) )
+        
+        #
+        
+        request_args = {
+            'canvas_type' : CC.CANVAS_PREVIEW,
+            'views' : 3,
+            'viewtime' : 3.900
+        }
+        
+        media_result = HF.GetFakeMediaResult( hash )
+        
+        jobs.append( ( request_args, media_result, CC.CANVAS_PREVIEW, None, 3, 3900 ) )
+        
+        #
+        
+        timestamp_ms = HydrusTime.GetNowMS() - 50000
+        
+        request_args = {
+            'canvas_type' : CC.CANVAS_CLIENT_API,
+            'timestamp_ms' : timestamp_ms,
+            'views' : 16,
+            'viewtime' : 13.950
+        }
+        
+        media_result = HF.GetFakeMediaResult( hash )
+        
+        jobs.append( ( request_args, media_result, CC.CANVAS_CLIENT_API, timestamp_ms, 16, 13950 ) )
+        
+        #
+        
+        magic_now = 123456789
+        
+        with patch.object( HydrusTime, 'GetNowMS', return_value = magic_now ):
+            
+            for ( request_args, media_result, canvas_type, new_timestamp_ms, new_views, new_viewtime ) in jobs:
+                
+                media_result = typing.cast( ClientMediaResult.MediaResult, media_result )
+                
+                TG.test_controller.ClearWrites( 'content_updates' )
+                
+                path = '/edit_times/set_file_viewtime'
+                
+                body_dict = { 'hash' : hash_hex }
+                body_dict.update( request_args )
+                
+                body = json.dumps( body_dict )
+                
+                connection.request( 'POST', path, body = body, headers = headers )
+                
+                response = connection.getresponse()
+                
+                data = response.read()
+                
+                self.assertEqual( response.status, 200 )
+                
+                content_update_package = ClientContentUpdates.ContentUpdatePackage()
+                
+                # if not set, new_timestamp_ms will be None
+                content_update_row = ( hash, canvas_type, new_timestamp_ms, new_views, new_viewtime )
+                
+                expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates(
+                    CC.COMBINED_LOCAL_FILE_SERVICE_KEY,
+                    [
+                        ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILE_VIEWING_STATS, HC.CONTENT_UPDATE_SET, content_update_row )
+                    ]
+                )
+                
+                [ ( ( content_update_package, ), kwargs ) ] = TG.test_controller.GetWrite( 'content_updates' )
+                
+                HF.compare_content_update_packages( self, content_update_package, expected_content_update_package )
+                
+            
+        
+        #
+        
+        problem_jobs = []
+        
+        request_args = {
+            'canvas_type' : CC.CANVAS_MEDIA_VIEWER,
+            'views' : 1
+        }
+        
+        problem_jobs.append( ( request_args, 400 ) )
+        
+        #
+        
+        request_args = {
+            'viewtime' : 123456,
+            'views' : 1
+        }
+        
+        problem_jobs.append( ( request_args, 400 ) )
+        
+        #
+        
+        request_args = {
+            'canvas_type' : CC.CANVAS_MEDIA_VIEWER,
+            'viewtime' : 123456
+        }
+        
+        problem_jobs.append( ( request_args, 400 ) )
+        
+        #
+        
+        request_args = {
+            'canvas_type' : CC.CANVAS_MEDIA_VIEWER_ARCHIVE_DELETE,
+            'views' : 1,
+            'viewtime' : 123456
+        }
+        
+        problem_jobs.append( ( request_args, 400 ) )
+        
+        #
+        
+        request_args = {
+            'canvas_type' : CC.CANVAS_MEDIA_VIEWER,
+            'views' : -1,
+            'viewtime' : 123456
+        }
+        
+        problem_jobs.append( ( request_args, 400 ) )
+        
+        #
+        
+        request_args = {
+            'canvas_type' : CC.CANVAS_MEDIA_VIEWER,
+            'views' : 1,
+            'viewtime' : -123456
+        }
+        
+        problem_jobs.append( ( request_args, 400 ) )
+        
+        #
+        
+        for ( request_args, expected_status ) in problem_jobs:
+            
+            media_result = HF.GetFakeMediaResult( hash )
+            
+            TG.test_controller.SetRead( 'media_results', [ media_result ] )
+            
+            TG.test_controller.ClearWrites( 'content_updates' )
+            
+            path = '/edit_times/set_file_viewtime'
+            
+            body_dict = { 'hash' : hash_hex }
+            body_dict.update( request_args )
+            
+            body = json.dumps( body_dict )
+            
+            connection.request( 'POST', path, body = body, headers = headers )
+            
+            response = connection.getresponse()
+            
+            data = response.read()
+            
+            self.assertEqual( response.status, expected_status )
+            
+        
+    
     def _test_edit_ratings( self, connection, set_up_permissions ):
         
         hash = os.urandom( 32 )
@@ -6074,7 +6429,13 @@ class TestClientAPI( unittest.TestCase ):
             
             ratings_manager = ClientMediaManagers.RatingsManager( {} )
             notes_manager = ClientMediaManagers.NotesManager( { 'note' : 'hello', 'note2' : 'hello2' } )
-            file_viewing_stats_manager = ClientMediaManagers.FileViewingStatsManager.STATICGenerateEmptyManager( times_manager )
+            
+            view_rows = [
+                ( CC.CANVAS_MEDIA_VIEWER, HydrusTime.GetNowMS() - 50000, 5, 310567 ),
+                ( CC.CANVAS_PREVIEW, HydrusTime.GetNowMS() - 60000, 17, 662567 )
+            ]
+            
+            file_viewing_stats_manager = ClientMediaManagers.FileViewingStatsManager( times_manager, view_rows )
             
             media_result = ClientMediaResult.MediaResult( file_info_manager, tags_manager, times_manager, locations_manager, ratings_manager, notes_manager, file_viewing_stats_manager )
             
@@ -6233,6 +6594,34 @@ class TestClientAPI( unittest.TestCase ):
                 
             
             metadata_row[ 'tags' ] = tags_dict
+            
+            times_manager = media_result.GetTimesManager()
+            fvsm = media_result.GetFileViewingStatsManager()
+            
+            file_viewing_stats_list = []
+            
+            for canvas_type in [
+                CC.CANVAS_MEDIA_VIEWER,
+                CC.CANVAS_PREVIEW,
+                CC.CANVAS_CLIENT_API
+            ]:
+                
+                views = fvsm.GetViews( canvas_type )
+                viewtime = HydrusTime.SecondiseMSFloat( fvsm.GetViewtimeMS( canvas_type ) )
+                last_viewed_timestamp = HydrusTime.SecondiseMSFloat( times_manager.GetLastViewedTimestampMS( canvas_type ) )
+                
+                json_object = {
+                    'canvas_type' : canvas_type,
+                    'canvas_type_pretty' : CC.canvas_type_str_lookup[ canvas_type ],
+                    'views' : views,
+                    'viewtime' : viewtime,
+                    'last_viewed_timestamp' : last_viewed_timestamp
+                }
+                
+                file_viewing_stats_list.append( json_object )
+                
+            
+            metadata_row[ 'file_viewing_statistics' ] = file_viewing_stats_list
             
             metadata.append( metadata_row )
             
@@ -6510,7 +6899,7 @@ class TestClientAPI( unittest.TestCase ):
         
         for file_row in d[ 'metadata' ]:
             
-            self.assertEqual( file_row[ 'time_modified' ], float( file_modified_timestamp_ms / 1000 ) )
+            self.assertEqual( file_row[ 'time_modified' ], HydrusTime.SecondiseMSFloat( file_modified_timestamp_ms ) )
             
         
         # now from hashes
@@ -7198,6 +7587,7 @@ class TestClientAPI( unittest.TestCase ):
         self._test_add_notes( connection, set_up_permissions )
         self._test_edit_ratings( connection, set_up_permissions )
         self._test_edit_times( connection, set_up_permissions )
+        self._test_edit_file_viewing_statistics( connection, set_up_permissions )
         self._test_add_tags( connection, set_up_permissions )
         self._test_add_tags_search_tags( connection, set_up_permissions )
         self._test_add_tags_get_tag_siblings_and_parents( connection, set_up_permissions )

@@ -7,6 +7,7 @@ from hydrus.client.networking.api import ClientLocalServerResourcesAddFiles
 from hydrus.client.networking.api import ClientLocalServerResourcesAddNotes
 from hydrus.client.networking.api import ClientLocalServerResourcesAddTags
 from hydrus.client.networking.api import ClientLocalServerResourcesAddURLs
+from hydrus.client.networking.api import ClientLocalServerResourcesEditFileViewingStatistics
 from hydrus.client.networking.api import ClientLocalServerResourcesEditRatings
 from hydrus.client.networking.api import ClientLocalServerResourcesEditTimes
 from hydrus.client.networking.api import ClientLocalServerResourcesGetFiles
@@ -71,6 +72,8 @@ class HydrusServiceClientAPI( HydrusClientService ):
         root.putChild( b'edit_times', edit_times )
         
         edit_times.putChild( b'set_time', ClientLocalServerResourcesEditTimes.HydrusResourceClientAPIRestrictedEditTimesSetTime( self._service, self._client_requests_domain ) )
+        edit_times.putChild( b'increment_file_viewtime', ClientLocalServerResourcesEditFileViewingStatistics.HydrusResourceClientAPIRestrictedEditFileViewingStatisticsIncrementFileViewingStatistics( self._service, self._client_requests_domain ) )
+        edit_times.putChild( b'set_file_viewtime', ClientLocalServerResourcesEditFileViewingStatistics.HydrusResourceClientAPIRestrictedEditFileViewingStatisticsSetFileViewingStatistics( self._service, self._client_requests_domain ) )
         
         add_tags = NoResource()
         

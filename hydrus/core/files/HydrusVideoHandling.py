@@ -12,6 +12,7 @@ from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusProcess
 from hydrus.core import HydrusText
 from hydrus.core import HydrusThreading
+from hydrus.core import HydrusTime
 from hydrus.core.files import HydrusAudioHandling
 
 FFMPEG_MISSING_ERROR_PUBBED = False
@@ -25,10 +26,12 @@ else:
     
     FFMPEG_PATH = os.path.join( HC.BIN_DIR, 'ffmpeg' )
     
+
 if not os.path.exists( FFMPEG_PATH ):
     
     FFMPEG_PATH = os.path.basename( FFMPEG_PATH )
     
+
 def CheckFFMPEGError( lines ):
     
     if len( lines ) == 0:
@@ -1006,16 +1009,16 @@ def VideoHasAudio( path, info_lines ) -> bool:
 # This was built from moviepy's FFMPEG_VideoReader
 class VideoRendererFFMPEG( object ):
     
-    def __init__( self, path, mime, duration, num_frames, target_resolution, clip_rect = None, start_pos = None ):
+    def __init__( self, path, mime, duration_ms, num_frames, target_resolution, clip_rect = None, start_pos = None ):
         
-        if duration <= 0 or duration is None:
+        if duration_ms <= 0 or duration_ms is None:
             
-            duration = 100 # 100ms
+            duration_ms = 100 # 100ms
             
         
         self._path = path
         self._mime = mime
-        self._duration = duration / 1000.0
+        self._duration_s = HydrusTime.SecondiseMSFloat( duration_ms )
         self._num_frames = num_frames
         self._target_resolution = target_resolution
         self._clip_rect = clip_rect
@@ -1031,7 +1034,7 @@ class VideoRendererFFMPEG( object ):
         
         self.lastread = None
         
-        self.fps = self._num_frames / self._duration
+        self.fps = self._num_frames / self._duration_s
         
         if self.fps == 0:
             

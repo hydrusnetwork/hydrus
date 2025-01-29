@@ -1028,7 +1028,7 @@ class PanelPredicateSystemFileViewingStatsViewtime( PanelPredicateSystemSingle )
         
         self._sign = ClientGUICommon.BetterRadioBox( self, [ ( c, c ) for c in choices ] )
         
-        self._time_delta = ClientGUITime.TimeDeltaCtrl( self, min = 0, days = True, hours = True, minutes = True, seconds = True )
+        self._time_delta = ClientGUITime.TimeDeltaWidget( self, min = 0, days = True, hours = True, minutes = True, seconds = True, milliseconds = True )
         
         #
         
@@ -1066,7 +1066,7 @@ class PanelPredicateSystemFileViewingStatsViewtime( PanelPredicateSystemSingle )
         
         viewing_locations = ( 'media', )
         sign = '>'
-        time_delta = 600
+        time_delta = 600.0
         
         return ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_FILE_VIEWING_STATS, ( 'viewtime', tuple( viewing_locations ), sign, time_delta ) )
         

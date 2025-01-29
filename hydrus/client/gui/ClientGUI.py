@@ -4759,7 +4759,7 @@ ATTACH "client.mappings.db" as external_mappings;'''
             
             height_num_chars = 20
             
-            control = ClientGUITime.TimeDeltaCtrl( panel, min = HydrusNetwork.MIN_NULLIFICATION_PERIOD, days = True, hours = True, minutes = True, seconds = True )
+            control = ClientGUITime.TimeDeltaWidget( panel, min = HydrusNetwork.MIN_NULLIFICATION_PERIOD, days = True, hours = True, minutes = True, seconds = True )
             
             control.SetValue( nullification_period )
             
@@ -4884,7 +4884,7 @@ ATTACH "client.mappings.db" as external_mappings;'''
             
             height_num_chars = 20
             
-            control = ClientGUITime.TimeDeltaCtrl( panel, min = HydrusNetwork.MIN_UPDATE_PERIOD, days = True, hours = True, minutes = True, seconds = True )
+            control = ClientGUITime.TimeDeltaWidget( panel, min = HydrusNetwork.MIN_UPDATE_PERIOD, days = True, hours = True, minutes = True, seconds = True )
             
             control.SetValue( update_period )
             
@@ -7798,7 +7798,9 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         try:
             
-            self._ImportURL( url )
+            show_destination_page = CG.client_controller.new_options.GetBoolean( 'show_destination_page_when_dnd_url' )
+            
+            self._ImportURL( url, show_destination_page = show_destination_page )
             
         except Exception as e:
             

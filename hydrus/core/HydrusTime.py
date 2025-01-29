@@ -146,6 +146,11 @@ def SecondiseMS( timestamp_ms: typing.Optional[ typing.Union[ int, float ] ] ) -
     return None if timestamp_ms is None else int( timestamp_ms // 1000 )
     
 
+def SecondiseMSFloat( timestamp_ms: typing.Optional[ typing.Union[ int, float ] ] ) -> typing.Optional[ float ]:
+    
+    return None if timestamp_ms is None else timestamp_ms / 1000.0
+    
+
 def TimeHasPassed( timestamp ):
     
     if timestamp is None:
@@ -509,7 +514,7 @@ def MillisecondsDurationToPrettyTime( duration_ms: typing.Optional[ int ], force
     
     if seconds > 0:
         
-        detailed_seconds = seconds + ( duration_ms / 1000 )
+        detailed_seconds = seconds + SecondiseMSFloat( duration_ms )
         
         if int( detailed_seconds ) == detailed_seconds:
             

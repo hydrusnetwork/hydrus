@@ -857,10 +857,11 @@ class QueueListBox( QW.QWidget ):
     
     listBoxChanged = QC.Signal()
     
-    def __init__( self, parent, height_num_chars, data_to_pretty_callable, add_callable = None, edit_callable = None ):
+    def __init__( self, parent, height_num_chars, data_to_pretty_callable, add_callable = None, edit_callable = None, paste_callable = None ):
         
         self._data_to_pretty_callable = data_to_pretty_callable
         self._add_callable = add_callable
+        self._paste_callable = paste_callable
         self._edit_callable = edit_callable
         
         super().__init__( parent )
@@ -877,6 +878,7 @@ class QueueListBox( QW.QWidget ):
         self._down_button = ClientGUICommon.BetterButton( self, '\u2193', self._Down )
         
         self._add_button = ClientGUICommon.BetterButton( self, 'add', self._Add )
+        self._paste_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().paste, self._Paste )
         self._edit_button = ClientGUICommon.BetterButton( self, 'edit', self._Edit )
         
         self._enabled_only_on_selection_buttons = []
@@ -884,6 +886,11 @@ class QueueListBox( QW.QWidget ):
         if self._add_callable is None:
             
             self._add_button.hide()
+            
+        
+        if paste_callable is None:
+            
+            self._paste_button.hide()
             
         
         if self._edit_callable is None:
@@ -909,6 +916,7 @@ class QueueListBox( QW.QWidget ):
         self._buttons_hbox = QP.HBoxLayout()
         
         QP.AddToLayout( self._buttons_hbox, self._add_button, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( self._buttons_hbox, self._paste_button, CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( self._buttons_hbox, self._edit_button, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         QP.AddToLayout( vbox, hbox, CC.FLAGS_EXPAND_BOTH_WAYS )
@@ -1265,6 +1273,25 @@ class QueueListBox( QW.QWidget ):
         self.listBoxChanged.emit()
         
         return ( num_added, bad_object_type_names, other_bad_errors )
+        
+    
+    def _Paste( self ):
+        
+        try:
+            
+            datas = self._paste_callable()
+            
+        except HydrusExceptions.VetoException:
+            
+            return
+            
+        
+        for data in datas:
+            
+            self._AddData( data )
+            
+        
+        self.listBoxChanged.emit()
         
     
     def _Up( self ):
@@ -2858,7 +2885,7 @@ class ListBoxTags( ListBox ):
         CG.client_controller.sub( self, 'NotifyNewOptions', 'notify_new_options' )
         
     
-    def _GetCopyableTagStrings( self, command, include_parents = False ):
+    def _GetCopyableTagStrings( self, command, include_parents = False, collapse_ors = False ):
         
         only_selected = command in ( COPY_SELECTED_TAGS, COPY_SELECTED_TAGS_WITH_COUNTS, COPY_SELECTED_SUBTAGS, COPY_SELECTED_SUBTAGS_WITH_COUNTS )
         with_counts = command in ( COPY_ALL_TAGS_WITH_COUNTS, COPY_ALL_SUBTAGS_WITH_COUNTS, COPY_SELECTED_TAGS_WITH_COUNTS, COPY_SELECTED_SUBTAGS_WITH_COUNTS )
@@ -2882,7 +2909,7 @@ class ListBoxTags( ListBox ):
             terms = self._ordered_terms
             
         
-        copyable_tag_strings = HydrusLists.MassExtend( [ term.GetCopyableTexts( with_counts = with_counts, include_parents = include_parents ) for term in terms ] )
+        copyable_tag_strings = HydrusLists.MassExtend( [ term.GetCopyableTexts( with_counts = with_counts, include_parents = include_parents, collapse_ors = collapse_ors ) for term in terms ] )
         
         if only_subtags:
             
@@ -3020,9 +3047,9 @@ class ListBoxTags( ListBox ):
             
         
     
-    def _ProcessMenuCopyEvent( self, command, include_parents = False ):
+    def _ProcessMenuCopyEvent( self, command, include_parents = False, collapse_ors = False ):
         
-        texts = self._GetCopyableTagStrings( command, include_parents = include_parents )
+        texts = self._GetCopyableTagStrings( command, include_parents = include_parents, collapse_ors = collapse_ors )
         
         if len( texts ) > 0:
             
@@ -3275,6 +3302,7 @@ class ListBoxTags( ListBox ):
         selected_copyable_subtag_strings = self._GetCopyableTagStrings( COPY_SELECTED_SUBTAGS )
         
         selected_copyable_tag_strings_with_parents = self._GetCopyableTagStrings( COPY_SELECTED_TAGS, include_parents = True )
+        selected_copyable_tag_strings_with_collapsed_ors = self._GetCopyableTagStrings( COPY_SELECTED_TAGS, collapse_ors = True )
         
         if len( selected_copyable_tag_strings ) > 0:
             
@@ -3321,6 +3349,24 @@ class ListBoxTags( ListBox ):
                     
                     ClientGUIMenus.AppendMenuItem( copy_menu, '{} with counts'.format( sub_selection_string ), 'Copy the selected subtags, with their counts, to your clipboard.', self._ProcessMenuCopyEvent, COPY_SELECTED_SUBTAGS_WITH_COUNTS )
                     
+                
+            
+            collapsed_ors_occurred = len( selected_copyable_tag_strings_with_collapsed_ors ) < len( selected_copyable_tag_strings )
+            
+            if collapsed_ors_occurred:
+                
+                ClientGUIMenus.AppendSeparator( copy_menu )
+                
+                if len( selected_copyable_tag_strings ) == 1:
+                    
+                    ( selection_string, ) = selected_copyable_tag_strings_with_collapsed_ors
+                    
+                else:
+                    
+                    selection_string = '{} selected, with OR predicates collapsed'.format( HydrusNumbers.ToHumanInt( len( selected_copyable_tag_strings_with_collapsed_ors ) ) )
+                    
+                
+                ClientGUIMenus.AppendMenuItem( copy_menu, selection_string, 'Copy the selected tags to your clipboard, with OR predicates collapsed.', self._ProcessMenuCopyEvent, COPY_SELECTED_TAGS, collapse_ors = True )
                 
             
             num_parents = len( selected_copyable_tag_strings_with_parents ) - len( selected_copyable_tag_strings )

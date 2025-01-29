@@ -2702,23 +2702,23 @@ class DB( HydrusDB.HydrusDB ):
         
         #
         
-        canvas_types_to_total_viewtimes = { canvas_type : ( views, viewtime ) for ( canvas_type, views, viewtime ) in self._Execute( f'SELECT canvas_type, SUM( views ), SUM( viewtime ) FROM {current_files_table_name} CROSS JOIN file_viewing_stats USING ( hash_id ) GROUP BY canvas_type;' ) }
+        canvas_types_to_total_viewtimes_ms = { canvas_type : ( views, viewtime_ms ) for ( canvas_type, views, viewtime_ms ) in self._Execute( f'SELECT canvas_type, SUM( views ), SUM( viewtime_ms ) FROM {current_files_table_name} CROSS JOIN file_viewing_stats USING ( hash_id ) GROUP BY canvas_type;' ) }
         
         if deleted_files_table_name is not None:
             
-            canvas_types_to_total_deleted_viewtimes = { canvas_type : ( views, viewtime ) for ( canvas_type, views, viewtime ) in self._Execute( f'SELECT canvas_type, SUM( views ), SUM( viewtime ) FROM {deleted_files_table_name} CROSS JOIN file_viewing_stats USING ( hash_id ) GROUP BY canvas_type;' ) }
+            canvas_types_to_total_deleted_viewtimes_ms = { canvas_type : ( views, viewtime_ms ) for ( canvas_type, views, viewtime_ms ) in self._Execute( f'SELECT canvas_type, SUM( views ), SUM( viewtime_ms ) FROM {deleted_files_table_name} CROSS JOIN file_viewing_stats USING ( hash_id ) GROUP BY canvas_type;' ) }
             
         else:
             
-            canvas_types_to_total_deleted_viewtimes = {}
+            canvas_types_to_total_deleted_viewtimes_ms = {}
             
         
-        total_media_views = canvas_types_to_total_viewtimes.get( CC.CANVAS_MEDIA_VIEWER, ( 0, 0 ) )[0] + canvas_types_to_total_deleted_viewtimes.get( CC.CANVAS_MEDIA_VIEWER, ( 0, 0 ) )[0]
-        total_media_viewtime = canvas_types_to_total_viewtimes.get( CC.CANVAS_MEDIA_VIEWER, ( 0, 0 ) )[1] + canvas_types_to_total_deleted_viewtimes.get( CC.CANVAS_MEDIA_VIEWER, ( 0, 0 ) )[1]
-        total_preview_views = canvas_types_to_total_viewtimes.get( CC.CANVAS_PREVIEW, ( 0, 0 ) )[0] + canvas_types_to_total_deleted_viewtimes.get( CC.CANVAS_PREVIEW, ( 0, 0 ) )[0]
-        total_preview_viewtime = canvas_types_to_total_viewtimes.get( CC.CANVAS_PREVIEW, ( 0, 0 ) )[1] + canvas_types_to_total_deleted_viewtimes.get( CC.CANVAS_PREVIEW, ( 0, 0 ) )[1]
+        total_media_views = canvas_types_to_total_viewtimes_ms.get( CC.CANVAS_MEDIA_VIEWER, ( 0, 0 ) )[0] + canvas_types_to_total_deleted_viewtimes_ms.get( CC.CANVAS_MEDIA_VIEWER, ( 0, 0 ) )[0]
+        total_media_viewtime_float = HydrusTime.SecondiseMSFloat( canvas_types_to_total_viewtimes_ms.get( CC.CANVAS_MEDIA_VIEWER, ( 0, 0 ) )[1] + canvas_types_to_total_deleted_viewtimes_ms.get( CC.CANVAS_MEDIA_VIEWER, ( 0, 0 ) )[1] )
+        total_preview_views = canvas_types_to_total_viewtimes_ms.get( CC.CANVAS_PREVIEW, ( 0, 0 ) )[0] + canvas_types_to_total_deleted_viewtimes_ms.get( CC.CANVAS_PREVIEW, ( 0, 0 ) )[0]
+        total_preview_viewtime_float = HydrusTime.SecondiseMSFloat( canvas_types_to_total_viewtimes_ms.get( CC.CANVAS_PREVIEW, ( 0, 0 ) )[1] + canvas_types_to_total_deleted_viewtimes_ms.get( CC.CANVAS_PREVIEW, ( 0, 0 ) )[1] )
         
-        total_viewtime = ( total_media_views, total_media_viewtime, total_preview_views, total_preview_viewtime )
+        total_viewtime = ( total_media_views, total_media_viewtime_float, total_preview_views, total_preview_viewtime_float )
         
         boned_stats[ 'total_viewtime' ] = total_viewtime
         
@@ -5117,6 +5117,8 @@ class DB( HydrusDB.HydrusDB ):
         
         self._modules.append( self.modules_files_query )
         
+        # duplicates search/set module(s) would be here since they need the search tech
+        
     
     def _ManageDBError( self, job, e ):
         
@@ -5943,11 +5945,19 @@ class DB( HydrusDB.HydrusDB ):
                             
                         elif action == HC.CONTENT_UPDATE_ADD:
                             
-                            ( hash, canvas_type, view_timestamp_ms, views_delta, viewtime_delta ) = row
+                            ( hash, canvas_type, view_timestamp_ms, views_delta, viewtime_delta_ms ) = row
                             
                             hash_id = self.modules_hashes_local_cache.GetHashId( hash )
                             
-                            self.modules_files_viewing_stats.AddViews( hash_id, canvas_type, view_timestamp_ms, views_delta, viewtime_delta )
+                            self.modules_files_viewing_stats.AddViews( hash_id, canvas_type, view_timestamp_ms, views_delta, viewtime_delta_ms )
+                            
+                        elif action == HC.CONTENT_UPDATE_SET:
+                            
+                            ( hash, canvas_type, view_timestamp_ms, views, viewtime_ms ) = row
+                            
+                            hash_id = self.modules_hashes_local_cache.GetHashId( hash )
+                            
+                            self.modules_files_viewing_stats.SetViews( hash_id, canvas_type, view_timestamp_ms, views, viewtime_ms )
                             
                         elif action == HC.CONTENT_UPDATE_DELETE:
                             
@@ -11128,6 +11138,78 @@ class DB( HydrusDB.HydrusDB ):
                 HydrusData.PrintException( e )
                 
                 message = 'Trying to update some downloader objects failed! Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
+                
+            
+        
+        if version == 606:
+            
+            try:
+                
+                self._Execute( 'SELECT viewtime FROM file_viewing_stats;' ).fetchone()
+                
+                do_it = True
+                
+            except:
+                
+                do_it = False
+                
+            
+            if do_it:
+                
+                try:
+                    
+                    self._controller.frame_splash_status.SetSubtext( 'updating file viewing times to ms' )
+                    
+                    # drop/recreate table to keep index names nice!
+                    self._Execute( 'DROP INDEX IF EXISTS file_viewing_stats_viewtime_index;' )
+                    
+                    self._Execute( 'ALTER TABLE file_viewing_stats RENAME COLUMN viewtime TO viewtime_ms;' )
+                    self._Execute( 'UPDATE file_viewing_stats SET viewtime_ms = viewtime_ms * 1000;' )
+                    
+                    self._CreateIndex( 'main.file_viewing_stats', [ 'viewtime_ms' ] )
+                    
+                except Exception as e:
+                    
+                    raise Exception( f'Could not change viewtimes table to ms! Error: {e}' )
+                    
+                
+            
+            try:
+                
+                new_options = self.modules_serialisable.GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_CLIENT_OPTIONS )
+                
+                new_options.SetBoolean( 'show_extended_single_file_info_in_status_bar', True )
+                
+                for option_name in [
+                    'file_viewing_statistics_media_min_time',
+                    'file_viewing_statistics_media_max_time',
+                    'file_viewing_statistics_preview_min_time',
+                    'file_viewing_statistics_preview_max_time'
+                ]:
+                    
+                    the_time = new_options.GetNoneableInteger( option_name )
+                    
+                    if the_time is None:
+                        
+                        the_time_ms = None
+                        
+                    else:
+                        
+                        the_time_ms = the_time * 1000
+                        
+                    
+                    new_options.SetNoneableInteger( option_name + '_ms', the_time_ms )
+                    
+                
+                self.modules_serialisable.SetJSONDump( new_options )
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to update your options failed! Please let hydrus dev know!'
                 
                 self.pub_initial_message( message )
                 

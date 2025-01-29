@@ -43,22 +43,17 @@ SYNC_ARCHIVE_DO_BOTH_REGARDLESS = 2
 
 hashes_to_jpeg_quality = {}
 
-def GetDuplicateComparisonScore( shown_media, comparison_media ):
+def GetDuplicateComparisonScore( shown_media_result: ClientMediaResult.MediaResult, comparison_media_result: ClientMediaResult.MediaResult ):
     
-    statements_and_scores = GetDuplicateComparisonStatements( shown_media, comparison_media )
+    statements_and_scores = GetDuplicateComparisonStatements( shown_media_result, comparison_media_result )
     
     total_score = sum( ( score for ( statement, score ) in statements_and_scores.values() ) )
     
     return total_score
     
 
-# TODO: ok, let's make an enum here at some point and a DuplicateComparisonSetting serialisable object
-# Then we can attach 'show/hide' boolean and allow editable scores and whatnot in a nice class that will one day evolve the enum to an editable MetadataConditional/MetadataComparison object
-# also have banding so we can have 'at this filesize difference, score 10, at this, score 15'
-# show it in a listctrl or whatever in the options, ditch the hardcoding
-# metadatacomparison needs to handle 'if one is a png and one is a jpeg', and then orient to A/B and give it a score
-
-def GetDuplicateComparisonStatements( shown_media, comparison_media ):
+# TODO: All this will be replaced by tools being developed for the duplicates auto-resolution system
+def GetDuplicateComparisonStatements( shown_media_result: ClientMediaResult.MediaResult, comparison_media_result: ClientMediaResult.MediaResult ):
     
     new_options = CG.client_controller.new_options
     
@@ -77,23 +72,23 @@ def GetDuplicateComparisonStatements( shown_media, comparison_media ):
     
     statements_and_scores = {}
     
-    s_hash = shown_media.GetHash()
-    c_hash = comparison_media.GetHash()
+    s_hash = shown_media_result.GetHash()
+    c_hash = comparison_media_result.GetHash()
     
-    s_mime = shown_media.GetMime()
-    c_mime = comparison_media.GetMime()
+    s_mime = shown_media_result.GetMime()
+    c_mime = comparison_media_result.GetMime()
     
     # size
     
-    s_size = shown_media.GetSize()
-    c_size = comparison_media.GetSize()
+    s_size = shown_media_result.GetSize()
+    c_size = comparison_media_result.GetSize()
     
     is_a_pixel_dupe = False
     
-    if s_mime in HC.FILES_THAT_CAN_HAVE_PIXEL_HASH and c_mime in HC.FILES_THAT_CAN_HAVE_PIXEL_HASH and shown_media.GetResolution() == comparison_media.GetResolution():
+    if s_mime in HC.FILES_THAT_CAN_HAVE_PIXEL_HASH and c_mime in HC.FILES_THAT_CAN_HAVE_PIXEL_HASH and shown_media_result.GetResolution() == comparison_media_result.GetResolution():
         
-        s_pixel_hash = shown_media.GetFileInfoManager().pixel_hash
-        c_pixel_hash = comparison_media.GetFileInfoManager().pixel_hash
+        s_pixel_hash = shown_media_result.GetFileInfoManager().pixel_hash
+        c_pixel_hash = comparison_media_result.GetFileInfoManager().pixel_hash
         
         if s_pixel_hash is None or c_pixel_hash is None:
             
@@ -201,8 +196,8 @@ def GetDuplicateComparisonStatements( shown_media, comparison_media ):
     
     # higher/same res
     
-    s_resolution = shown_media.GetResolution()
-    c_resolution = comparison_media.GetResolution()
+    s_resolution = shown_media_result.GetResolution()
+    c_resolution = comparison_media_result.GetResolution()
     
     if s_resolution != c_resolution:
         
@@ -337,20 +332,21 @@ def GetDuplicateComparisonStatements( shown_media, comparison_media ):
     
     # audio/no audio
     
-    s_has_audio = shown_media.GetMediaResult().HasAudio()
-    c_has_audio = comparison_media.GetMediaResult().HasAudio()
+    s_has_audio = shown_media_result.HasAudio()
+    c_has_audio = comparison_media_result.HasAudio()
     
     if s_has_audio != c_has_audio:
         
         if s_has_audio:
-
+            
             audio_statement = 'this has audio, the other does not'
             score = duplicate_comparison_score_has_audio
-
+            
         else:
             
             audio_statement = 'the other has audio, this does not'
-            score = 0
+            score = - duplicate_comparison_score_has_audio
+            
         
         statement = '{} vs {}'.format( s_has_audio, c_has_audio )
 
@@ -359,8 +355,8 @@ def GetDuplicateComparisonStatements( shown_media, comparison_media ):
 
     # more tags
     
-    s_num_tags = len( shown_media.GetTagsManager().GetCurrentAndPending( CC.COMBINED_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ) )
-    c_num_tags = len( comparison_media.GetTagsManager().GetCurrentAndPending( CC.COMBINED_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ) )
+    s_num_tags = len( shown_media_result.GetTagsManager().GetCurrentAndPending( CC.COMBINED_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ) )
+    c_num_tags = len( comparison_media_result.GetTagsManager().GetCurrentAndPending( CC.COMBINED_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ) )
     
     if s_num_tags != c_num_tags:
         
@@ -395,8 +391,8 @@ def GetDuplicateComparisonStatements( shown_media, comparison_media ):
     
     # older
     
-    s_import_timestamp = HydrusTime.SecondiseMS( shown_media.GetLocationsManager().GetTimesManager().GetImportedTimestampMS( CC.COMBINED_LOCAL_FILE_SERVICE_KEY ) )
-    c_import_timestamp = HydrusTime.SecondiseMS( comparison_media.GetLocationsManager().GetTimesManager().GetImportedTimestampMS( CC.COMBINED_LOCAL_FILE_SERVICE_KEY ) )
+    s_import_timestamp = HydrusTime.SecondiseMS( shown_media_result.GetLocationsManager().GetTimesManager().GetImportedTimestampMS( CC.COMBINED_LOCAL_FILE_SERVICE_KEY ) )
+    c_import_timestamp = HydrusTime.SecondiseMS( comparison_media_result.GetLocationsManager().GetTimesManager().GetImportedTimestampMS( CC.COMBINED_LOCAL_FILE_SERVICE_KEY ) )
     
     one_month = 86400 * 30
     
@@ -488,8 +484,8 @@ def GetDuplicateComparisonStatements( shown_media, comparison_media ):
             
         
     
-    s_has_transparency = shown_media.GetFileInfoManager().has_transparency
-    c_has_transparency = comparison_media.GetFileInfoManager().has_transparency
+    s_has_transparency = shown_media_result.GetFileInfoManager().has_transparency
+    c_has_transparency = comparison_media_result.GetFileInfoManager().has_transparency
     
     if s_has_transparency ^ c_has_transparency:
         
@@ -505,8 +501,8 @@ def GetDuplicateComparisonStatements( shown_media, comparison_media ):
         statements_and_scores[ 'has_transparency' ] = ( transparency_statement, 0 )
         
     
-    s_has_exif = shown_media.GetFileInfoManager().has_exif
-    c_has_exif = comparison_media.GetFileInfoManager().has_exif
+    s_has_exif = shown_media_result.GetFileInfoManager().has_exif
+    c_has_exif = comparison_media_result.GetFileInfoManager().has_exif
     
     if s_has_exif ^ c_has_exif:
         
@@ -522,8 +518,8 @@ def GetDuplicateComparisonStatements( shown_media, comparison_media ):
         statements_and_scores[ 'exif_data' ] = ( exif_statement, 0 )
         
     
-    s_has_human_readable_embedded_metadata = shown_media.GetFileInfoManager().has_human_readable_embedded_metadata
-    c_has_human_readable_embedded_metadata = comparison_media.GetFileInfoManager().has_human_readable_embedded_metadata
+    s_has_human_readable_embedded_metadata = shown_media_result.GetFileInfoManager().has_human_readable_embedded_metadata
+    c_has_human_readable_embedded_metadata = comparison_media_result.GetFileInfoManager().has_human_readable_embedded_metadata
     
     if s_has_human_readable_embedded_metadata ^ c_has_human_readable_embedded_metadata:
         
@@ -539,8 +535,8 @@ def GetDuplicateComparisonStatements( shown_media, comparison_media ):
         statements_and_scores[ 'embedded_metadata' ] = ( embedded_metadata_statement, 0 )
         
     
-    s_has_icc = shown_media.GetMediaResult().GetFileInfoManager().has_icc_profile
-    c_has_icc = comparison_media.GetMediaResult().GetFileInfoManager().has_icc_profile
+    s_has_icc = shown_media_result.GetFileInfoManager().has_icc_profile
+    c_has_icc = comparison_media_result.GetFileInfoManager().has_icc_profile
     
     if s_has_icc ^ c_has_icc:
         
@@ -554,6 +550,53 @@ def GetDuplicateComparisonStatements( shown_media, comparison_media ):
             
         
         statements_and_scores[ 'icc_profile' ] = ( icc_statement, 0 )
+        
+    
+    # hacky, for vid dedupe
+    
+    s_has_duration = shown_media_result.HasDuration()
+    c_has_duration = comparison_media_result.HasDuration()
+    
+    if s_has_duration or c_has_duration:
+        
+        s_duration_s = shown_media_result.GetDuration()
+        c_duration_s = comparison_media_result.GetDuration()
+        
+        if s_has_duration and c_has_duration:
+            
+            if s_duration_s == c_duration_s:
+                
+                statement = 'same duration'
+                score = 0
+                
+            else:
+                
+                if s_duration_s > c_duration_s:
+                    
+                    operator = '>'
+                    score = 50
+                    
+                else:
+                    
+                    operator = '<'
+                    score = -50
+                    
+                
+                statement = f'{HydrusTime.TimeDeltaToPrettyTimeDelta( s_duration_s )} {operator} {HydrusTime.TimeDeltaToPrettyTimeDelta( c_duration_s )}'
+                
+            
+        elif s_has_duration:
+            
+            statement = f'this has duration ({HydrusTime.TimeDeltaToPrettyTimeDelta( s_duration_s )}), the other does not'
+            score = 0
+            
+        else:
+            
+            statement = f'the other has duration ({HydrusTime.TimeDeltaToPrettyTimeDelta( c_duration_s )}), the other does not'
+            score = 0
+            
+        
+        statements_and_scores[ 'duration' ] = ( statement, score )
         
     
     return statements_and_scores
@@ -716,7 +759,7 @@ class DuplicatesManager( object ):
                 
                 work_time_ms = CG.client_controller.new_options.GetInteger( 'potential_duplicates_search_work_time_ms' )
                 
-                work_time = work_time_ms / 1000
+                work_time = HydrusTime.SecondiseMSFloat( work_time_ms )
                 
                 ( still_work_to_do, num_done ) = CG.client_controller.WriteSynchronous( 'maintain_similar_files_search_for_potential_duplicates', search_distance, maintenance_mode = HC.MAINTENANCE_FORCED, job_status = job_status, work_time_float = work_time )
                 

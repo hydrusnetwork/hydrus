@@ -167,7 +167,7 @@ def GetMediasFiletypeSummaryString( medias: typing.Collection[ "Media" ] ):
         
         num_files = sum( [ media.GetNumFiles() for media in medias ] )
         
-        if num_files > 1000:
+        if num_files > 100000:
             
             filetype_summary = 'files'
             
@@ -1985,9 +1985,7 @@ class MediaSingleton( Media ):
     
     def HasDuration( self ):
         
-        duration = self._media_result.GetDurationMS()
-        
-        return duration is not None and duration > 0
+        return self._media_result.HasDuration()
         
     
     def HasStaticImages( self ):
@@ -2560,7 +2558,7 @@ class MediaSort( HydrusSerialisable.SerialisableBase ):
                     
                     # do not do views as a secondary sort here, to allow for user secondary sort to help out
                     
-                    return fvsm.GetViewtime( CC.CANVAS_MEDIA_VIEWER )
+                    return fvsm.GetViewtimeMS( CC.CANVAS_MEDIA_VIEWER )
                     
                 
             

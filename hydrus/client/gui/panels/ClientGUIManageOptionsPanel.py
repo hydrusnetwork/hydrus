@@ -5,6 +5,18 @@ import typing
 from qtpy import QtGui as QG
 from qtpy import QtWidgets as QW
 
+from hydrus.core import HydrusConstants as HC
+from hydrus.core import HydrusData
+from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusNumbers
+from hydrus.core import HydrusPSUtil
+from hydrus.core import HydrusPaths
+from hydrus.core import HydrusSerialisable
+from hydrus.core import HydrusTags
+from hydrus.core import HydrusText
+from hydrus.core import HydrusTime
+from hydrus.core.files.images import HydrusImageHandling
+
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientData
 from hydrus.client import ClientGlobals as CG
@@ -36,15 +48,6 @@ from hydrus.client.importing.options import FileImportOptions
 from hydrus.client.media import ClientMedia
 from hydrus.client.metadata import ClientTags
 from hydrus.client.networking import ClientNetworkingSessions
-from hydrus.core import HydrusConstants as HC
-from hydrus.core import HydrusData
-from hydrus.core import HydrusExceptions
-from hydrus.core import HydrusNumbers
-from hydrus.core import HydrusPSUtil
-from hydrus.core import HydrusPaths
-from hydrus.core import HydrusSerialisable
-from hydrus.core import HydrusTags
-from hydrus.core.files.images import HydrusImageHandling
 
 class OptionsPagePanel( QW.QWidget ):
     
@@ -1503,16 +1506,16 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._file_viewing_statistics_active = QW.QCheckBox( self )
             self._file_viewing_statistics_active_on_archive_delete_filter = QW.QCheckBox( self )
             self._file_viewing_statistics_active_on_dupe_filter = QW.QCheckBox( self )
-            self._file_viewing_statistics_media_min_time = ClientGUICommon.NoneableSpinCtrl( self, 2, none_phrase = 'count every view' )
+            self._file_viewing_statistics_media_min_time = ClientGUITime.NoneableTimeDeltaWidget( self, 2.0, none_phrase = 'count every view', minutes = True, seconds = True, milliseconds = True )
             min_tt = 'If you scroll quickly through many files, you probably do not want to count each of those loads as a view. Set a reasonable minimum here and brief looks will not be counted.'
             self._file_viewing_statistics_media_min_time.setToolTip( ClientGUIFunctions.WrapToolTip( min_tt ) )
-            self._file_viewing_statistics_media_max_time = ClientGUICommon.NoneableSpinCtrl( self, 600 )
+            self._file_viewing_statistics_media_max_time = ClientGUITime.NoneableTimeDeltaWidget( self, 600.0, hours = True, minutes = True, seconds = True, milliseconds = True )
             max_tt = 'If you view a file for a very long time, the recorded viewtime is truncated to this. This stops an outrageous viewtime being saved because you left something open in the background. If the media you view has duration, like a video, the max viewtime is five times its length or this, whichever is larger.'
             self._file_viewing_statistics_media_max_time.setToolTip( ClientGUIFunctions.WrapToolTip( max_tt ) )
             
-            self._file_viewing_statistics_preview_min_time = ClientGUICommon.NoneableSpinCtrl( self, 5, none_phrase = 'count every view' )
+            self._file_viewing_statistics_preview_min_time = ClientGUITime.NoneableTimeDeltaWidget( self, 5.0, none_phrase = 'count every view', minutes = True, seconds = True, milliseconds = True )
             self._file_viewing_statistics_preview_min_time.setToolTip( ClientGUIFunctions.WrapToolTip( min_tt ) )
-            self._file_viewing_statistics_preview_max_time = ClientGUICommon.NoneableSpinCtrl( self, 60 )
+            self._file_viewing_statistics_preview_max_time = ClientGUITime.NoneableTimeDeltaWidget( self, 60.0, hours = True, minutes = True, seconds = True, milliseconds = True )
             self._file_viewing_statistics_preview_max_time.setToolTip( ClientGUIFunctions.WrapToolTip( max_tt ) )
             
             self._file_viewing_stats_menu_display = ClientGUICommon.BetterChoice( self )
@@ -1528,10 +1531,10 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._file_viewing_statistics_active.setChecked( self._new_options.GetBoolean( 'file_viewing_statistics_active' ) )
             self._file_viewing_statistics_active_on_archive_delete_filter.setChecked( self._new_options.GetBoolean( 'file_viewing_statistics_active_on_archive_delete_filter' ) )
             self._file_viewing_statistics_active_on_dupe_filter.setChecked( self._new_options.GetBoolean( 'file_viewing_statistics_active_on_dupe_filter' ) )
-            self._file_viewing_statistics_media_min_time.SetValue( self._new_options.GetNoneableInteger( 'file_viewing_statistics_media_min_time' ) )
-            self._file_viewing_statistics_media_max_time.SetValue( self._new_options.GetNoneableInteger( 'file_viewing_statistics_media_max_time' ) )
-            self._file_viewing_statistics_preview_min_time.SetValue( self._new_options.GetNoneableInteger( 'file_viewing_statistics_preview_min_time' ) )
-            self._file_viewing_statistics_preview_max_time.SetValue( self._new_options.GetNoneableInteger( 'file_viewing_statistics_preview_max_time' ) )
+            self._file_viewing_statistics_media_min_time.SetValue( HydrusTime.SecondiseMSFloat( self._new_options.GetNoneableInteger( 'file_viewing_statistics_media_min_time_ms' ) ) )
+            self._file_viewing_statistics_media_max_time.SetValue( HydrusTime.SecondiseMSFloat( self._new_options.GetNoneableInteger( 'file_viewing_statistics_media_max_time_ms' ) ) )
+            self._file_viewing_statistics_preview_min_time.SetValue( HydrusTime.SecondiseMSFloat( self._new_options.GetNoneableInteger( 'file_viewing_statistics_preview_min_time_ms' ) ) )
+            self._file_viewing_statistics_preview_max_time.SetValue( HydrusTime.SecondiseMSFloat( self._new_options.GetNoneableInteger( 'file_viewing_statistics_preview_max_time_ms' ) ) )
             
             self._file_viewing_stats_menu_display.SetValue( self._new_options.GetInteger( 'file_viewing_stats_menu_display' ) )
             
@@ -1544,10 +1547,10 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows.append( ( 'Enable file viewing statistics tracking?:', self._file_viewing_statistics_active ) )
             rows.append( ( 'Enable file viewing statistics tracking in the archive/delete filter?:', self._file_viewing_statistics_active_on_archive_delete_filter ) )
             rows.append( ( 'Enable file viewing statistics tracking in the duplicate filter?:', self._file_viewing_statistics_active_on_dupe_filter ) )
-            rows.append( ( 'Min time to view on media viewer to count as a view (seconds):', self._file_viewing_statistics_media_min_time ) )
-            rows.append( ( 'Cap any view on the media viewer to this maximum time (seconds):', self._file_viewing_statistics_media_max_time ) )
-            rows.append( ( 'Min time to view on preview viewer to count as a view (seconds):', self._file_viewing_statistics_preview_min_time ) )
-            rows.append( ( 'Cap any view on the preview viewer to this maximum time (seconds):', self._file_viewing_statistics_preview_max_time ) )
+            rows.append( ( 'Min time to view on media viewer to count as a view:', self._file_viewing_statistics_media_min_time ) )
+            rows.append( ( 'Cap any view on the media viewer to this maximum time:', self._file_viewing_statistics_media_max_time ) )
+            rows.append( ( 'Min time to view on preview viewer to count as a view:', self._file_viewing_statistics_preview_min_time ) )
+            rows.append( ( 'Cap any view on the preview viewer to this maximum time:', self._file_viewing_statistics_preview_max_time ) )
             rows.append( ( 'Show media/preview viewing stats on media right-click menus?:', self._file_viewing_stats_menu_display ) )
             
             gridbox = ClientGUICommon.WrapInGrid( self, rows )
@@ -1563,10 +1566,10 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._new_options.SetBoolean( 'file_viewing_statistics_active', self._file_viewing_statistics_active.isChecked() )
             self._new_options.SetBoolean( 'file_viewing_statistics_active_on_archive_delete_filter', self._file_viewing_statistics_active_on_archive_delete_filter.isChecked() )
             self._new_options.SetBoolean( 'file_viewing_statistics_active_on_dupe_filter', self._file_viewing_statistics_active_on_dupe_filter.isChecked() )
-            self._new_options.SetNoneableInteger( 'file_viewing_statistics_media_min_time', self._file_viewing_statistics_media_min_time.GetValue() )
-            self._new_options.SetNoneableInteger( 'file_viewing_statistics_media_max_time', self._file_viewing_statistics_media_max_time.GetValue() )
-            self._new_options.SetNoneableInteger( 'file_viewing_statistics_preview_min_time', self._file_viewing_statistics_preview_min_time.GetValue() )
-            self._new_options.SetNoneableInteger( 'file_viewing_statistics_preview_max_time', self._file_viewing_statistics_preview_max_time.GetValue() )
+            self._new_options.SetNoneableInteger( 'file_viewing_statistics_media_min_time_ms', int( self._file_viewing_statistics_media_min_time.GetValue() * 1000 ) )
+            self._new_options.SetNoneableInteger( 'file_viewing_statistics_media_max_time_ms', int( self._file_viewing_statistics_media_max_time.GetValue() * 1000 ) )
+            self._new_options.SetNoneableInteger( 'file_viewing_statistics_preview_min_time_ms', int( self._file_viewing_statistics_preview_min_time.GetValue() * 1000 ) )
+            self._new_options.SetNoneableInteger( 'file_viewing_statistics_preview_max_time_ms', int( self._file_viewing_statistics_preview_max_time.GetValue() * 1000 ) )
             
             self._new_options.SetInteger( 'file_viewing_stats_menu_display', self._file_viewing_stats_menu_display.GetValue() )
             
@@ -2170,6 +2173,13 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             #
             
+            drag_and_drop = ClientGUICommon.StaticBox( self, 'drag and drop' )
+            
+            self._show_destination_page_when_dnd_url = QW.QCheckBox( drag_and_drop )
+            self._show_destination_page_when_dnd_url.setToolTip( ClientGUIFunctions.WrapToolTip( 'When dropping a URL on the program, should we switch to the destination page?' ) )
+            
+            #
+            
             default_fios = ClientGUICommon.StaticBox( self, 'default file import options' )
             
             quiet_file_import_options = self._new_options.GetDefaultFileImportOptions( FileImportOptions.IMPORT_TYPE_QUIET )
@@ -2186,6 +2196,20 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._loud_fios = ClientGUIImportOptions.ImportOptionsButton( self, show_downloader_options, allow_default_selection )
             
             self._loud_fios.SetFileImportOptions( loud_file_import_options )
+            
+            #
+            
+            self._show_destination_page_when_dnd_url.setChecked( self._new_options.GetBoolean( 'show_destination_page_when_dnd_url' ) )
+            
+            #
+            
+            rows = []
+            
+            rows.append( ( 'When DnDing a URL onto the program, switch to the download page:', self._show_destination_page_when_dnd_url ) )
+            
+            gridbox = ClientGUICommon.WrapInGrid( drag_and_drop, rows )
+            
+            drag_and_drop.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
             #
             
@@ -2209,12 +2233,15 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             vbox = QP.VBoxLayout()
             
             QP.AddToLayout( vbox, default_fios, CC.FLAGS_EXPAND_PERPENDICULAR )
+            QP.AddToLayout( vbox, drag_and_drop, CC.FLAGS_EXPAND_PERPENDICULAR )
             vbox.addStretch( 0 )
             
             self.setLayout( vbox )
             
         
         def UpdateOptions( self ):
+            
+            self._new_options.SetBoolean( 'show_destination_page_when_dnd_url', self._show_destination_page_when_dnd_url.isChecked() )
             
             self._new_options.SetDefaultFileImportOptions( FileImportOptions.IMPORT_TYPE_QUIET, self._quiet_fios.GetFileImportOptions() )
             self._new_options.SetDefaultFileImportOptions( FileImportOptions.IMPORT_TYPE_LOUD, self._loud_fios.GetFileImportOptions() )
@@ -2346,7 +2373,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._repository_processing_panel = ClientGUICommon.StaticBox( self, 'repository processing', can_expand = True, start_expanded = False )
             
-            self._repository_processing_work_time_very_idle = ClientGUITime.TimeDeltaCtrl( self._repository_processing_panel, min = 0.1, seconds = True, milliseconds = True )
+            self._repository_processing_work_time_very_idle = ClientGUITime.TimeDeltaWidget( self._repository_processing_panel, min = 0.1, seconds = True, milliseconds = True )
             tt = 'DO NOT CHANGE UNLESS YOU KNOW WHAT YOU ARE DOING. Repository processing operates on a work-rest cycle. This setting determines how long it should work for in each work packet. Actual work time will normally be a little larger than this. Very Idle is after an hour of idle mode.'
             self._repository_processing_work_time_very_idle.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
             
@@ -2354,7 +2381,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             tt = 'DO NOT CHANGE UNLESS YOU KNOW WHAT YOU ARE DOING. Repository processing operates on a work-rest cycle. This setting determines how long it should wait before starting a new work packet, in multiples of the last work time. Very Idle is after an hour of idle mode.'
             self._repository_processing_rest_percentage_very_idle.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
             
-            self._repository_processing_work_time_idle = ClientGUITime.TimeDeltaCtrl( self._repository_processing_panel, min = 0.1, seconds = True, milliseconds = True )
+            self._repository_processing_work_time_idle = ClientGUITime.TimeDeltaWidget( self._repository_processing_panel, min = 0.1, seconds = True, milliseconds = True )
             tt = 'DO NOT CHANGE UNLESS YOU KNOW WHAT YOU ARE DOING. Repository processing operates on a work-rest cycle. This setting determines how long it should work for in each work packet. Actual work time will normally be a little larger than this. This is for idle mode.'
             self._repository_processing_work_time_idle.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
             
@@ -2362,7 +2389,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             tt = 'DO NOT CHANGE UNLESS YOU KNOW WHAT YOU ARE DOING. Repository processing operates on a work-rest cycle. This setting determines how long it should wait before starting a new work packet, in multiples of the last work time. This is for idle mode.'
             self._repository_processing_rest_percentage_idle.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
             
-            self._repository_processing_work_time_normal = ClientGUITime.TimeDeltaCtrl( self._repository_processing_panel, min = 0.1, seconds = True, milliseconds = True )
+            self._repository_processing_work_time_normal = ClientGUITime.TimeDeltaWidget( self._repository_processing_panel, min = 0.1, seconds = True, milliseconds = True )
             tt = 'DO NOT CHANGE UNLESS YOU KNOW WHAT YOU ARE DOING. Repository processing operates on a work-rest cycle. This setting determines how long it should work for in each work packet. Actual work time will normally be a little larger than this. This is for when you force-start work from review services.'
             self._repository_processing_work_time_normal.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
             
@@ -2379,7 +2406,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             tt = 'This can be a real killer. If you are catching up with the PTR and notice a lot of lag bumps, sometimes several seconds long, try turning this off.'
             self._tag_display_maintenance_during_active.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
             
-            self._tag_display_processing_work_time_idle = ClientGUITime.TimeDeltaCtrl( self._tag_display_processing_panel, min = 0.1, seconds = True, milliseconds = True )
+            self._tag_display_processing_work_time_idle = ClientGUITime.TimeDeltaWidget( self._tag_display_processing_panel, min = 0.1, seconds = True, milliseconds = True )
             tt = 'DO NOT CHANGE UNLESS YOU KNOW WHAT YOU ARE DOING. Sibling/parent sync operates on a work-rest cycle. This setting determines how long it should work for in each work packet. Actual work time will normally be a little larger than this. This is for idle mode.'
             self._tag_display_processing_work_time_idle.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
             
@@ -2387,7 +2414,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             tt = 'DO NOT CHANGE UNLESS YOU KNOW WHAT YOU ARE DOING. Sibling/parent sync operates on a work-rest cycle. This setting determines how long it should wait before starting a new work packet, in multiples of the last work time. This is for idle mode.'
             self._tag_display_processing_rest_percentage_idle.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
             
-            self._tag_display_processing_work_time_normal = ClientGUITime.TimeDeltaCtrl( self._tag_display_processing_panel, min = 0.1, seconds = True, milliseconds = True )
+            self._tag_display_processing_work_time_normal = ClientGUITime.TimeDeltaWidget( self._tag_display_processing_panel, min = 0.1, seconds = True, milliseconds = True )
             tt = 'DO NOT CHANGE UNLESS YOU KNOW WHAT YOU ARE DOING. Sibling/parent sync operates on a work-rest cycle. This setting determines how long it should work for in each work packet. Actual work time will normally be a little larger than this. This is for when you force-start work from review services.'
             self._tag_display_processing_work_time_normal.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
             
@@ -2395,7 +2422,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             tt = 'DO NOT CHANGE UNLESS YOU KNOW WHAT YOU ARE DOING. Sibling/parent sync operates on a work-rest cycle. This setting determines how long it should wait before starting a new work packet, in multiples of the last work time. This is for when you force-start work from review services.'
             self._tag_display_processing_rest_percentage_normal.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
             
-            self._tag_display_processing_work_time_work_hard = ClientGUITime.TimeDeltaCtrl( self._tag_display_processing_panel, min = 0.1, seconds = True, milliseconds = True )
+            self._tag_display_processing_work_time_work_hard = ClientGUITime.TimeDeltaWidget( self._tag_display_processing_panel, min = 0.1, seconds = True, milliseconds = True )
             tt = 'DO NOT CHANGE UNLESS YOU KNOW WHAT YOU ARE DOING. Sibling/parent sync operates on a work-rest cycle. This setting determines how long it should work for in each work packet. Actual work time will normally be a little larger than this. This is for when you force it to work hard through the dialog.'
             self._tag_display_processing_work_time_work_hard.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
             
@@ -2409,7 +2436,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._maintain_similar_files_duplicate_pairs_during_idle = QW.QCheckBox( self._duplicates_panel )
             
-            self._potential_duplicates_search_work_time = ClientGUITime.TimeDeltaCtrl( self._duplicates_panel, min = 0.1, seconds = True, milliseconds = True )
+            self._potential_duplicates_search_work_time = ClientGUITime.TimeDeltaWidget( self._duplicates_panel, min = 0.1, seconds = True, milliseconds = True )
             tt = 'DO NOT CHANGE UNLESS YOU KNOW WHAT YOU ARE DOING. Potential search operates on a work-rest cycle. This setting determines how long it should work for in each work packet. Actual work time will normally be a little larger than this, and on large databases the minimum work time may be upwards of several seconds.'
             self._potential_duplicates_search_work_time.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
             
@@ -2421,7 +2448,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._deferred_table_delete_panel = ClientGUICommon.StaticBox( self, 'deferred table delete', can_expand = True, start_expanded = False )
             
-            self._deferred_table_delete_work_time_idle = ClientGUITime.TimeDeltaCtrl( self._deferred_table_delete_panel, min = 0.1, seconds = True, milliseconds = True )
+            self._deferred_table_delete_work_time_idle = ClientGUITime.TimeDeltaWidget( self._deferred_table_delete_panel, min = 0.1, seconds = True, milliseconds = True )
             tt = 'DO NOT CHANGE UNLESS YOU KNOW WHAT YOU ARE DOING. Deferred table delete operates on a work-rest cycle. This setting determines how long it should work for in each work packet. Actual work time will normally be a little larger than this. This is for idle mode.'
             self._deferred_table_delete_work_time_idle.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
             
@@ -2429,7 +2456,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             tt = 'DO NOT CHANGE UNLESS YOU KNOW WHAT YOU ARE DOING. Deferred table delete operates on a work-rest cycle. This setting determines how long it should wait before starting a new work packet, in multiples of the last work time. This is for idle mode.'
             self._deferred_table_delete_rest_percentage_idle.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
             
-            self._deferred_table_delete_work_time_normal = ClientGUITime.TimeDeltaCtrl( self._deferred_table_delete_panel, min = 0.1, seconds = True, milliseconds = True )
+            self._deferred_table_delete_work_time_normal = ClientGUITime.TimeDeltaWidget( self._deferred_table_delete_panel, min = 0.1, seconds = True, milliseconds = True )
             tt = 'DO NOT CHANGE UNLESS YOU KNOW WHAT YOU ARE DOING. Deferred table delete operates on a work-rest cycle. This setting determines how long it should work for in each work packet. Actual work time will normally be a little larger than this. This is for when you force-start work from review services.'
             self._deferred_table_delete_work_time_normal.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
             
@@ -2437,7 +2464,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             tt = 'DO NOT CHANGE UNLESS YOU KNOW WHAT YOU ARE DOING. Deferred table delete operates on a work-rest cycle. This setting determines how long it should wait before starting a new work packet, in multiples of the last work time. This is for when you force-start work from review services.'
             self._deferred_table_delete_rest_percentage_normal.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
             
-            self._deferred_table_delete_work_time_work_hard = ClientGUITime.TimeDeltaCtrl( self._deferred_table_delete_panel, min = 0.1, seconds = True, milliseconds = True )
+            self._deferred_table_delete_work_time_work_hard = ClientGUITime.TimeDeltaWidget( self._deferred_table_delete_panel, min = 0.1, seconds = True, milliseconds = True )
             tt = 'DO NOT CHANGE UNLESS YOU KNOW WHAT YOU ARE DOING. Deferred table delete operates on a work-rest cycle. This setting determines how long it should work for in each work packet. Actual work time will normally be a little larger than this. This is for when you force it to work hard through the dialog.'
             self._deferred_table_delete_work_time_work_hard.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
             
@@ -2476,38 +2503,38 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._file_maintenance_active_throttle_velocity.SetValue( file_maintenance_active_throttle_velocity )
             
-            self._repository_processing_work_time_very_idle.SetValue( self._new_options.GetInteger( 'repository_processing_work_time_ms_very_idle' ) / 1000 )
+            self._repository_processing_work_time_very_idle.SetValue( HydrusTime.SecondiseMSFloat( self._new_options.GetInteger( 'repository_processing_work_time_ms_very_idle' ) ) )
             self._repository_processing_rest_percentage_very_idle.setValue( self._new_options.GetInteger( 'repository_processing_rest_percentage_very_idle' ) )
             
-            self._repository_processing_work_time_idle.SetValue( self._new_options.GetInteger( 'repository_processing_work_time_ms_idle' ) / 1000 )
+            self._repository_processing_work_time_idle.SetValue( HydrusTime.SecondiseMSFloat( self._new_options.GetInteger( 'repository_processing_work_time_ms_idle' ) ) )
             self._repository_processing_rest_percentage_idle.setValue( self._new_options.GetInteger( 'repository_processing_rest_percentage_idle' ) )
             
-            self._repository_processing_work_time_normal.SetValue( self._new_options.GetInteger( 'repository_processing_work_time_ms_normal' ) / 1000 )
+            self._repository_processing_work_time_normal.SetValue( HydrusTime.SecondiseMSFloat( self._new_options.GetInteger( 'repository_processing_work_time_ms_normal' ) ) )
             self._repository_processing_rest_percentage_normal.setValue( self._new_options.GetInteger( 'repository_processing_rest_percentage_normal' ) )
             
             self._tag_display_maintenance_during_idle.setChecked( self._new_options.GetBoolean( 'tag_display_maintenance_during_idle' ) )
             self._tag_display_maintenance_during_active.setChecked( self._new_options.GetBoolean( 'tag_display_maintenance_during_active' ) )
             
-            self._tag_display_processing_work_time_idle.SetValue( self._new_options.GetInteger( 'tag_display_processing_work_time_ms_idle' ) / 1000 )
+            self._tag_display_processing_work_time_idle.SetValue( HydrusTime.SecondiseMSFloat( self._new_options.GetInteger( 'tag_display_processing_work_time_ms_idle' ) ) )
             self._tag_display_processing_rest_percentage_idle.setValue( self._new_options.GetInteger( 'tag_display_processing_rest_percentage_idle' ) )
             
-            self._tag_display_processing_work_time_normal.SetValue( self._new_options.GetInteger( 'tag_display_processing_work_time_ms_normal' ) / 1000 )
+            self._tag_display_processing_work_time_normal.SetValue( HydrusTime.SecondiseMSFloat( self._new_options.GetInteger( 'tag_display_processing_work_time_ms_normal' ) ) )
             self._tag_display_processing_rest_percentage_normal.setValue( self._new_options.GetInteger( 'tag_display_processing_rest_percentage_normal' ) )
             
-            self._tag_display_processing_work_time_work_hard.SetValue( self._new_options.GetInteger( 'tag_display_processing_work_time_ms_work_hard' ) / 1000 )
+            self._tag_display_processing_work_time_work_hard.SetValue( HydrusTime.SecondiseMSFloat( self._new_options.GetInteger( 'tag_display_processing_work_time_ms_work_hard' ) ) )
             self._tag_display_processing_rest_percentage_work_hard.setValue( self._new_options.GetInteger( 'tag_display_processing_rest_percentage_work_hard' ) )
             
             self._maintain_similar_files_duplicate_pairs_during_idle.setChecked( self._new_options.GetBoolean( 'maintain_similar_files_duplicate_pairs_during_idle' ) )
-            self._potential_duplicates_search_work_time.SetValue( self._new_options.GetInteger( 'potential_duplicates_search_work_time_ms' ) / 1000 )
+            self._potential_duplicates_search_work_time.SetValue( HydrusTime.SecondiseMSFloat( self._new_options.GetInteger( 'potential_duplicates_search_work_time_ms' ) ) )
             self._potential_duplicates_search_rest_percentage.setValue( self._new_options.GetInteger( 'potential_duplicates_search_rest_percentage' ) )
             
-            self._deferred_table_delete_work_time_idle.SetValue( self._new_options.GetInteger( 'deferred_table_delete_work_time_ms_idle' ) / 1000 )
+            self._deferred_table_delete_work_time_idle.SetValue( HydrusTime.SecondiseMSFloat( self._new_options.GetInteger( 'deferred_table_delete_work_time_ms_idle' ) ) )
             self._deferred_table_delete_rest_percentage_idle.setValue( self._new_options.GetInteger( 'deferred_table_delete_rest_percentage_idle' ) )
             
-            self._deferred_table_delete_work_time_normal.SetValue( self._new_options.GetInteger( 'deferred_table_delete_work_time_ms_normal' ) / 1000 )
+            self._deferred_table_delete_work_time_normal.SetValue( HydrusTime.SecondiseMSFloat( self._new_options.GetInteger( 'deferred_table_delete_work_time_ms_normal' ) ) )
             self._deferred_table_delete_rest_percentage_normal.setValue( self._new_options.GetInteger( 'deferred_table_delete_rest_percentage_normal' ) )
             
-            self._deferred_table_delete_work_time_work_hard.SetValue( self._new_options.GetInteger( 'deferred_table_delete_work_time_ms_work_hard' ) / 1000 )
+            self._deferred_table_delete_work_time_work_hard.SetValue( HydrusTime.SecondiseMSFloat( self._new_options.GetInteger( 'deferred_table_delete_work_time_ms_work_hard' ) ) )
             self._deferred_table_delete_rest_percentage_work_hard.setValue( self._new_options.GetInteger( 'deferred_table_delete_rest_percentage_work_hard' ) )
             
             #
@@ -3099,6 +3126,12 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._always_loop_animations = QW.QCheckBox( media_panel )
             self._always_loop_animations.setToolTip( ClientGUIFunctions.WrapToolTip( 'Some GIFS and APNGs have metadata specifying how many times they should be played, usually 1. Uncheck this to obey that number.' ) )
             
+            self._mpv_loop_playlist_instead_of_file = QW.QCheckBox( media_panel )
+            self._mpv_loop_playlist_instead_of_file.setToolTip( ClientGUIFunctions.WrapToolTip( 'Try this if you get "too many events queued" error in mpv.' ) )
+            
+            self._mpv_allow_too_many_events_queued = QW.QCheckBox( media_panel )
+            self._mpv_allow_too_many_events_queued.setToolTip( ClientGUIFunctions.WrapToolTip( 'CAREFUL. This will no longer stop the 100% CPU situations we have seen, but it will also allow the false positives that are caught by the current error-catcher.' ) )
+            
             self._draw_transparency_checkerboard_media_canvas = QW.QCheckBox( media_panel )
             self._draw_transparency_checkerboard_media_canvas.setToolTip( ClientGUIFunctions.WrapToolTip( 'If unchecked, will fill in with the normal background colour. Does not apply to MPV.' ) )
             
@@ -3126,7 +3159,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._mpv_conf_path = QP.FilePickerCtrl( system_panel, starting_directory = os.path.join( HC.STATIC_DIR, 'mpv-conf' ) )
             
             self._use_system_ffmpeg = QW.QCheckBox( system_panel )
-            self._use_system_ffmpeg.setToolTip( ClientGUIFunctions.WrapToolTip( 'FFMPEG is used for file import metadata parsing and the native animation viewer. Check this to always default to the system ffmpeg in your path, rather than using the static ffmpeg in hydrus\'s bin directory. (requires restart)' ) )
+            self._use_system_ffmpeg.setToolTip( ClientGUIFunctions.WrapToolTip( 'FFMPEG is used for file import metadata parsing and the native animation viewer. Check this to always default to the system ffmpeg in your path, rather than using any static ffmpeg in hydrus\'s bin directory. (requires restart)' ) )
             
             self._load_images_with_pil = QW.QCheckBox( system_panel )
             self._load_images_with_pil.setToolTip( ClientGUIFunctions.WrapToolTip( 'We are expecting to drop CV and move to PIL exclusively. This used to be a test option but is now default true and may soon be retired.' ) )
@@ -3157,6 +3190,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._animation_start_position.setValue( int( HC.options['animation_start_position'] * 100.0 ) )
             self._always_loop_animations.setChecked( self._new_options.GetBoolean( 'always_loop_gifs' ) )
+            self._mpv_loop_playlist_instead_of_file.setChecked( self._new_options.GetBoolean( 'mpv_loop_playlist_instead_of_file' ) )
+            self._mpv_allow_too_many_events_queued.setChecked( self._new_options.GetBoolean( 'mpv_allow_too_many_events_queued' ) )
             self._draw_transparency_checkerboard_media_canvas.setChecked( self._new_options.GetBoolean( 'draw_transparency_checkerboard_media_canvas' ) )
             
             media_zooms = self._new_options.GetMediaZooms()
@@ -3197,6 +3232,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows.append( ( 'Media zooms:', self._media_zooms ) )
             rows.append( ( 'Start animations this % in:', self._animation_start_position ) )
             rows.append( ( 'Always Loop Animations:', self._always_loop_animations ) )
+            rows.append( ( 'DEBUG: Loop Playlist instead of Loop File in mpv:', self._mpv_loop_playlist_instead_of_file ) )
+            rows.append( ( 'DEBUG CAREFUL: Allow "too many events queued" files:', self._mpv_allow_too_many_events_queued ) )
             rows.append( ( 'Draw image transparency as checkerboard:', self._draw_transparency_checkerboard_media_canvas ) )
             
             gridbox = ClientGUICommon.WrapInGrid( media_panel, rows )
@@ -3431,6 +3468,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             HC.options[ 'animation_start_position' ] = self._animation_start_position.value() / 100.0
             self._new_options.SetBoolean( 'always_loop_gifs', self._always_loop_animations.isChecked() )
+            self._new_options.SetBoolean( 'mpv_loop_playlist_instead_of_file', self._mpv_loop_playlist_instead_of_file.isChecked() )
+            self._new_options.SetBoolean( 'mpv_allow_too_many_events_queued', self._mpv_allow_too_many_events_queued.isChecked() )
             self._new_options.SetBoolean( 'draw_transparency_checkerboard_media_canvas', self._draw_transparency_checkerboard_media_canvas.isChecked() )
             
             try:
@@ -3799,13 +3838,13 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             user_namespace_group_by_sort_box = ClientGUICommon.StaticBox( self._file_sort_panel, 'namespace grouping sort' )
             
-            self._user_namespace_group_by_sort = ClientGUIListBoxes.QueueListBox( user_namespace_group_by_sort_box, 8, ClientTags.RenderNamespaceForUser, self._AddNamespaceGroupBySort, self._EditNamespaceGroupBySort )
+            self._user_namespace_group_by_sort = ClientGUIListBoxes.QueueListBox( user_namespace_group_by_sort_box, 8, ClientTags.RenderNamespaceForUser, add_callable = self._AddNamespaceGroupBySort, edit_callable = self._EditNamespaceGroupBySort, paste_callable = self._PasteNamespaceGroupBySort )
             
             #
             
             namespace_file_sorting_box = ClientGUICommon.StaticBox( self._file_sort_panel, 'namespace file sorting' )
             
-            self._namespace_file_sort_by = ClientGUIListBoxes.QueueListBox( namespace_file_sorting_box, 8, self._ConvertNamespaceTupleToSortString, self._AddNamespaceSort, self._EditNamespaceSort )
+            self._namespace_file_sort_by = ClientGUIListBoxes.QueueListBox( namespace_file_sorting_box, 8, self._ConvertNamespaceTupleToSortString, add_callable = self._AddNamespaceSort, edit_callable = self._EditNamespaceSort )
             
             #
             
@@ -3914,6 +3953,22 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         def _EditNamespaceSort( self, sort_data ):
             
             return ClientGUITags.EditNamespaceSort( self, sort_data )
+            
+        
+        def _PasteNamespaceGroupBySort( self ):
+            
+            try:
+                
+                text = CG.client_controller.GetClipboardText()
+                
+            except Exception as e:
+                
+                raise HydrusExceptions.VetoException()
+                
+            
+            namespaces = HydrusText.DeserialiseNewlinedTexts( text )
+            
+            return namespaces
             
         
         def UpdateOptions( self ):
@@ -4053,10 +4108,10 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             pages_panel = ClientGUICommon.StaticBox( self, 'download pages update', can_expand = True, start_expanded = False )
             
-            self._gallery_page_status_update_time_minimum = ClientGUITime.TimeDeltaCtrl( pages_panel, min = 0.25, seconds = True, milliseconds = True )
+            self._gallery_page_status_update_time_minimum = ClientGUITime.TimeDeltaWidget( pages_panel, min = 0.25, seconds = True, milliseconds = True )
             self._gallery_page_status_update_time_ratio_denominator = ClientGUICommon.BetterSpinBox( pages_panel, min = 1 )
             
-            self._watcher_page_status_update_time_minimum = ClientGUITime.TimeDeltaCtrl( pages_panel, min = 0.25, seconds = True, milliseconds = True )
+            self._watcher_page_status_update_time_minimum = ClientGUITime.TimeDeltaWidget( pages_panel, min = 0.25, seconds = True, milliseconds = True )
             self._watcher_page_status_update_time_ratio_denominator = ClientGUICommon.BetterSpinBox( pages_panel, min = 1 )
             
             #
@@ -4080,10 +4135,10 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._ideal_tile_dimension.setValue( self._new_options.GetInteger( 'ideal_tile_dimension' ) )
             
-            self._gallery_page_status_update_time_minimum.SetValue( self._new_options.GetInteger( 'gallery_page_status_update_time_minimum_ms' ) / 1000 )
+            self._gallery_page_status_update_time_minimum.SetValue( HydrusTime.SecondiseMSFloat( self._new_options.GetInteger( 'gallery_page_status_update_time_minimum_ms' ) ) )
             self._gallery_page_status_update_time_ratio_denominator.setValue( self._new_options.GetInteger( 'gallery_page_status_update_time_ratio_denominator' ) )
             
-            self._watcher_page_status_update_time_minimum.SetValue( self._new_options.GetInteger( 'watcher_page_status_update_time_minimum_ms' ) / 1000 )
+            self._watcher_page_status_update_time_minimum.SetValue( HydrusTime.SecondiseMSFloat( self._new_options.GetInteger( 'watcher_page_status_update_time_minimum_ms' ) ) )
             self._watcher_page_status_update_time_ratio_denominator.setValue( self._new_options.GetInteger( 'watcher_page_status_update_time_ratio_denominator' ) )
             
             self._video_buffer_size.SetValue( self._new_options.GetInteger( 'video_buffer_size' ) )
@@ -5702,13 +5757,15 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._new_options = new_options
             
-            self._thumbnail_width = ClientGUICommon.BetterSpinBox( self, min=20, max=2048 )
-            self._thumbnail_height = ClientGUICommon.BetterSpinBox( self, min=20, max=2048 )
+            thumbnail_appearance_box = ClientGUICommon.StaticBox( self, 'appearance' )
             
-            self._thumbnail_border = ClientGUICommon.BetterSpinBox( self, min=0, max=20 )
-            self._thumbnail_margin = ClientGUICommon.BetterSpinBox( self, min=0, max=20 )
+            self._thumbnail_width = ClientGUICommon.BetterSpinBox( thumbnail_appearance_box, min=20, max=2048 )
+            self._thumbnail_height = ClientGUICommon.BetterSpinBox( thumbnail_appearance_box, min=20, max=2048 )
             
-            self._thumbnail_scale_type = ClientGUICommon.BetterChoice( self )
+            self._thumbnail_border = ClientGUICommon.BetterSpinBox( thumbnail_appearance_box, min=0, max=20 )
+            self._thumbnail_margin = ClientGUICommon.BetterSpinBox( thumbnail_appearance_box, min=0, max=20 )
+            
+            self._thumbnail_scale_type = ClientGUICommon.BetterChoice( thumbnail_appearance_box )
             
             for t in ( HydrusImageHandling.THUMBNAIL_SCALE_DOWN_ONLY, HydrusImageHandling.THUMBNAIL_SCALE_TO_FIT, HydrusImageHandling.THUMBNAIL_SCALE_TO_FILL ):
                 
@@ -5716,37 +5773,49 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
             
             # I tried <100%, but Qt seems to cap it to 1.0. Sad!
-            self._thumbnail_dpr_percentage = ClientGUICommon.BetterSpinBox( self, min = 100, max = 800 )
+            self._thumbnail_dpr_percentage = ClientGUICommon.BetterSpinBox( thumbnail_appearance_box, min = 100, max = 800 )
             tt = 'If your OS runs at an UI scale greater than 100%, mirror it here and your thumbnails will look crisp. If you have multiple monitors at different UI scales, or you change UI scale regularly, set it to the largest one you use.'
             tt += '\n' * 2
             tt += 'I believe the UI scale on the monitor this dialog opened on was {}'.format( HydrusNumbers.FloatToPercentage( self.devicePixelRatio() ) )
             self._thumbnail_dpr_percentage.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
             
-            self._video_thumbnail_percentage_in = ClientGUICommon.BetterSpinBox( self, min=0, max=100 )
+            self._draw_thumbnail_rating_background = QW.QCheckBox( thumbnail_appearance_box )
+            tt = 'If you show any ratings on your thumbnails (you can set this under _services->manage services_), they can get lost in the noise of the underlying thumb. This draws a plain flat rectangle around them in the normal window panel colour. If you think it is ugly, turn it off here!'
+            self._draw_thumbnail_rating_background.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
             
-            self._thumbnail_visibility_scroll_percent = ClientGUICommon.BetterSpinBox( self, min=1, max=99 )
-            self._thumbnail_visibility_scroll_percent.setToolTip( ClientGUIFunctions.WrapToolTip( 'Lower numbers will cause fewer scrolls, higher numbers more.' ) )
+            self._video_thumbnail_percentage_in = ClientGUICommon.BetterSpinBox( thumbnail_appearance_box, min=0, max=100 )
             
-            self._allow_blurhash_fallback = QW.QCheckBox( self )
-            tt = 'If hydrus does not have a thumbnail for a file (e.g. you are looking at a deleted file, or one unexpectedly missing), but it does know its blurhash, it will generate a blurry thumbnail based off that blurhash. Turning this behaviour off here will make it always show the default "hydrus" thumbnail.'
-            self._allow_blurhash_fallback.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
-            
-            self._fade_thumbnails = QW.QCheckBox( self )
+            self._fade_thumbnails = QW.QCheckBox( thumbnail_appearance_box )
             tt = 'Whenever thumbnails change (appearing on a page, selecting, an icon or tag banner changes), they normally fade from the old to the new. If you would rather they change instantly, in one frame, uncheck this.'
             self._fade_thumbnails.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
             
-            self._focus_preview_on_ctrl_click = QW.QCheckBox( self )
-            self._focus_preview_on_ctrl_click_only_static = QW.QCheckBox( self )
-            self._focus_preview_on_shift_click = QW.QCheckBox( self )
-            self._focus_preview_on_shift_click_only_static = QW.QCheckBox( self )
+            self._allow_blurhash_fallback = QW.QCheckBox( thumbnail_appearance_box )
+            tt = 'If hydrus does not have a thumbnail for a file (e.g. you are looking at a deleted file, or one unexpectedly missing), but it does know its blurhash, it will generate a blurry thumbnail based off that blurhash. Turning this behaviour off here will make it always show the default "hydrus" thumbnail.'
+            self._allow_blurhash_fallback.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
             
-            self._thumbnail_scroll_rate = QW.QLineEdit( self )
+            #
             
-            self._media_background_bmp_path = QP.FilePickerCtrl( self )
+            thumbnail_interaction_box = ClientGUICommon.StaticBox( self, 'interaction' )
             
-            self._show_extended_single_file_info_in_status_bar = QW.QCheckBox( self )
+            self._show_extended_single_file_info_in_status_bar = QW.QCheckBox( thumbnail_interaction_box )
             tt = 'This will show, any time you have a single thumbnail selected, the file info summary you normally see in the top hover window of the media viewer in the main gui status bar. Check the "media viewer" options panel to edit what this summary includes.'
             self._show_extended_single_file_info_in_status_bar.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
+            
+            self._focus_preview_on_ctrl_click = QW.QCheckBox( thumbnail_interaction_box )
+            self._focus_preview_on_ctrl_click_only_static = QW.QCheckBox( thumbnail_interaction_box )
+            self._focus_preview_on_shift_click = QW.QCheckBox( thumbnail_interaction_box )
+            self._focus_preview_on_shift_click_only_static = QW.QCheckBox( thumbnail_interaction_box )
+            
+            self._thumbnail_visibility_scroll_percent = ClientGUICommon.BetterSpinBox( thumbnail_interaction_box, min=1, max=99 )
+            self._thumbnail_visibility_scroll_percent.setToolTip( ClientGUIFunctions.WrapToolTip( 'Lower numbers will cause fewer scrolls, higher numbers more.' ) )
+            
+            self._thumbnail_scroll_rate = QW.QLineEdit( thumbnail_interaction_box )
+            
+            #
+            
+            thumbnail_misc_box = ClientGUICommon.StaticBox( self, 'media background' )
+            
+            self._media_background_bmp_path = QP.FilePickerCtrl( thumbnail_misc_box )
             
             #
             
@@ -5766,6 +5835,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._allow_blurhash_fallback.setChecked( self._new_options.GetBoolean( 'allow_blurhash_fallback' ) )
             
             self._fade_thumbnails.setChecked( self._new_options.GetBoolean( 'fade_thumbnails' ) )
+            self._draw_thumbnail_rating_background.setChecked( self._new_options.GetBoolean( 'draw_thumbnail_rating_background' ) )
             
             self._focus_preview_on_ctrl_click.setChecked( self._new_options.GetBoolean( 'focus_preview_on_ctrl_click' ) )
             self._focus_preview_on_ctrl_click_only_static.setChecked( self._new_options.GetBoolean( 'focus_preview_on_ctrl_click_only_static' ) )
@@ -5795,23 +5865,49 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows.append( ( 'Thumbnail margin: ', self._thumbnail_margin ) )
             rows.append( ( 'Thumbnail scaling: ', self._thumbnail_scale_type ) )
             rows.append( ( 'Thumbnail UI-scale supersampling %: ', self._thumbnail_dpr_percentage ) )
+            rows.append( ( 'Give thumbnail ratings a flat background: ', self._draw_thumbnail_rating_background ) )
+            rows.append( ( 'Generate video thumbnails this % in: ', self._video_thumbnail_percentage_in ) )
+            rows.append( ( 'Fade thumbnails: ', self._fade_thumbnails ) )
+            rows.append( ( 'Use blurhash missing thumbnail fallback: ', self._allow_blurhash_fallback ) )
+            
+            gridbox = ClientGUICommon.WrapInGrid( thumbnail_appearance_box, rows )
+            
+            thumbnail_appearance_box.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            
+            #
+            
+            rows = []
+            
+            rows.append( ( 'When a single thumbnail is selected, show the media viewer\'s normal top hover file text in the status bar: ', self._show_extended_single_file_info_in_status_bar ) )
             rows.append( ( 'On ctrl-click, focus thumbnails in the preview window: ', self._focus_preview_on_ctrl_click ) )
             rows.append( ( '  Only on files with no duration: ', self._focus_preview_on_ctrl_click_only_static ) )
             rows.append( ( 'On shift-click, focus thumbnails in the preview window: ', self._focus_preview_on_shift_click ) )
             rows.append( ( '  Only on files with no duration: ', self._focus_preview_on_shift_click_only_static ) )
-            rows.append( ( 'Generate video thumbnails this % in: ', self._video_thumbnail_percentage_in ) )
-            rows.append( ( 'Use blurhash missing thumbnail fallback: ', self._allow_blurhash_fallback ) )
-            rows.append( ( 'Fade thumbnails: ', self._fade_thumbnails ) )
             rows.append( ( 'Do not scroll down on key navigation if thumbnail at least this % visible: ', self._thumbnail_visibility_scroll_percent ) )
-            rows.append( ( 'Show the media viewer\'s top hover file text in the status bar when a single thumbnail is selected: ', self._show_extended_single_file_info_in_status_bar ) )
             rows.append( ( 'EXPERIMENTAL: Scroll thumbnails at this rate per scroll tick: ', self._thumbnail_scroll_rate ) )
             rows.append( ( 'EXPERIMENTAL: Image path for thumbnail panel background image (set blank to clear): ', self._media_background_bmp_path ) )
             
-            gridbox = ClientGUICommon.WrapInGrid( self, rows )
+            gridbox = ClientGUICommon.WrapInGrid( thumbnail_interaction_box, rows )
+            
+            thumbnail_interaction_box.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            
+            #
+            
+            rows = []
+            
+            rows.append( ( 'EXPERIMENTAL: Image path for thumbnail panel background image (set blank to clear): ', self._media_background_bmp_path ) )
+            
+            gridbox = ClientGUICommon.WrapInGrid( thumbnail_misc_box, rows )
+            
+            thumbnail_misc_box.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            
+            #
             
             vbox = QP.VBoxLayout()
             
-            QP.AddToLayout( vbox, gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            QP.AddToLayout( vbox, thumbnail_appearance_box, CC.FLAGS_EXPAND_PERPENDICULAR )
+            QP.AddToLayout( vbox, thumbnail_interaction_box, CC.FLAGS_EXPAND_PERPENDICULAR )
+            QP.AddToLayout( vbox, thumbnail_misc_box, CC.FLAGS_EXPAND_PERPENDICULAR )
             vbox.addStretch( 0 )
             
             self.setLayout( vbox )
@@ -5847,6 +5943,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._new_options.SetBoolean( 'allow_blurhash_fallback', self._allow_blurhash_fallback.isChecked() )
             
             self._new_options.SetBoolean( 'fade_thumbnails', self._fade_thumbnails.isChecked() )
+            self._new_options.SetBoolean( 'draw_thumbnail_rating_background', self._draw_thumbnail_rating_background.isChecked() )
             
             self._new_options.SetBoolean( 'show_extended_single_file_info_in_status_bar', self._show_extended_single_file_info_in_status_bar.isChecked() )
             

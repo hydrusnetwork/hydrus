@@ -714,7 +714,7 @@ class MoveMediaFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
                     
                     panel = ClientGUIScrolledPanels.EditSingleCtrlPanel( dlg )
                     
-                    control = ClientGUITime.TimeDeltaCtrl( self, min = 60, days = False, hours = True, minutes = True )
+                    control = ClientGUITime.TimeDeltaWidget( self, min = 60, days = False, hours = True, minutes = True )
                     
                     control.SetValue( 7200 )
                     

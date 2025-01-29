@@ -2485,7 +2485,7 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
                     
                 elif sort_data == CC.SORT_FILES_BY_MEDIA_VIEWTIME:
                     
-                    query = 'SELECT hash_id, viewtime FROM {temp_table} CROSS JOIN file_viewing_stats USING ( hash_id ) WHERE canvas_type = {canvas_type};'.format( temp_table = '{temp_table}', canvas_type = CC.CANVAS_MEDIA_VIEWER )
+                    query = 'SELECT hash_id, viewtime_ms FROM {temp_table} CROSS JOIN file_viewing_stats USING ( hash_id ) WHERE canvas_type = {canvas_type};'.format( temp_table = '{temp_table}', canvas_type = CC.CANVAS_MEDIA_VIEWER )
                     
                 elif sort_data == CC.SORT_FILES_BY_APPROX_BITRATE:
                     

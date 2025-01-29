@@ -115,7 +115,7 @@ def GetPrettyMediaResultInfoLines( media_result: ClientMediaResult.MediaResult, 
             
         else:
             
-            fps = num_frames / ( duration / 1000 )
+            fps = num_frames / HydrusTime.SecondiseMSFloat( duration )
             
             if fps < 1:
                 
@@ -127,7 +127,7 @@ def GetPrettyMediaResultInfoLines( media_result: ClientMediaResult.MediaResult, 
                 
             else:
                 
-                framerate_insert = f', {round( num_frames / ( duration / 1000 ) )}fps'
+                framerate_insert = f', {round( fps )}fps'
                 
             
         

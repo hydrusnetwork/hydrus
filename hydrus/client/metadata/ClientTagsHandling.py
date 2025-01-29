@@ -445,17 +445,17 @@ class TagDisplayMaintenanceManager( ClientDaemons.ManagerWithMainLoop ):
             
             if service_key in self._go_faster:
                 
-                return CG.client_controller.new_options.GetInteger( 'tag_display_processing_work_time_ms_work_hard' ) / 1000
+                return HydrusTime.SecondiseMSFloat( CG.client_controller.new_options.GetInteger( 'tag_display_processing_work_time_ms_work_hard' ) )
                 
             
         
         if self._controller.CurrentlyIdle():
             
-            return CG.client_controller.new_options.GetInteger( 'tag_display_processing_work_time_ms_idle' ) / 1000
+            return HydrusTime.SecondiseMSFloat( CG.client_controller.new_options.GetInteger( 'tag_display_processing_work_time_ms_idle' ) )
             
         else:
             
-            return CG.client_controller.new_options.GetInteger( 'tag_display_processing_work_time_ms_normal' ) / 1000
+            return HydrusTime.SecondiseMSFloat( CG.client_controller.new_options.GetInteger( 'tag_display_processing_work_time_ms_normal' ) )
             
         
     
