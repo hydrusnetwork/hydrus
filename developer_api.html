@@ -2249,6 +2249,24 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#edit_times_increment_file_viewtime" class="md-nav__link">
+    <span class="md-ellipsis">
+      POST /edit_times/increment_file_viewtime
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#edit_times_set_file_viewtime" class="md-nav__link">
+    <span class="md-ellipsis">
+      POST /edit_times/set_file_viewtime
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#edit_times_set_time" class="md-nav__link">
     <span class="md-ellipsis">
       POST /edit_times/set_time
@@ -3505,6 +3523,24 @@
   
     <nav class="md-nav" aria-label="Editing File Times">
       <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#edit_times_increment_file_viewtime" class="md-nav__link">
+    <span class="md-ellipsis">
+      POST /edit_times/increment_file_viewtime
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#edit_times_set_file_viewtime" class="md-nav__link">
+    <span class="md-ellipsis">
+      POST /edit_times/set_file_viewtime
+    </span>
+  </a>
+  
+</li>
         
           <li class="md-nav__item">
   <a href="#edit_times_set_time" class="md-nav__link">
@@ -5423,6 +5459,109 @@ Accept: application/json
 <dd>200 and no content.</dd>
 </dl>
 <h2 id="editing_file_times">Editing File Times<a class="headerlink" href="#editing_file_times" title="Permanent link">&para;</a></h2>
+<h3 id="edit_times_increment_file_viewtime"><strong>POST <code>/edit_times/increment_file_viewtime</code></strong><a class="headerlink" href="#edit_times_increment_file_viewtime" title="Permanent link">&para;</a></h3>
+<p><em>Add a file view to the file viewing statistics system.</em></p>
+<dl>
+<dt>Restricted access:</dt>
+<dd>YES. Edit Times permission needed.</dd>
+<dt>Required Headers:</dt>
+<dd>
+<ul>
+<li><code>Content-Type</code>: <code>application/json</code></li>
+</ul>
+</dd>
+<dt>Arguments (in percent-encoded JSON):</dt>
+<dd>
+<ul>
+<li><a href="#parameters_files">files</a></li>
+<li><code>canvas_type</code> : (int, the canvas type you are editing)</li>
+<li><code>timestamp</code> : (optional, selective, float or int of the "last viewed time" in seconds)</li>
+<li><code>timestamp_ms</code> : (optional, selective, int of the "last viewed time" in milliseconds)</li>
+<li><code>views</code> : (optional, int, how many views you are adding, defaults to 1)</li>
+<li><code>viewtime</code> : (float, how long the user viewed the file for)</li>
+</ul>
+</dd>
+</dl>
+<div class="highlight"><span class="filename">Example request body; adding a single view</span><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;file_id&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="mi">123456</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;canvas_type&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;viewtime&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="mf">8.423</span>
+<span class="p">}</span>
+</code></pre></div>
+<div class="highlight"><span class="filename">Example request body; setting the time when the user started viewing the file</span><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;file_id&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="mi">123456</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;canvas_type&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="mi">4</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;timestamp&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="mf">1738010610.073</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;viewtime&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="mf">8.423</span>
+<span class="p">}</span>
+</code></pre></div>
+<div class="highlight"><span class="filename">Example request body; sending a batch of views</span><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;file_id&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="mi">123456</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;canvas_type&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="mi">4</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;timestamp&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="mf">1738010610.073</span><span class="p">,</span><span class="w"> </span>
+<span class="w">  </span><span class="nt">&quot;views&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;viewtime&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="mf">31.245</span>
+<span class="p">}</span>
+</code></pre></div>
+<p>This increments the number of views stored for the file in the file viewing statistics system. This system records "last time the file was viewed", "total number of views", and "total viewtime" for three different <code>canvas_types</code>:</p>
+<ul>
+<li>0 - Media Viewer (the normal viewer in hydrus that is its own window)</li>
+<li>1 - Preview Viewer (the box in the bottom-left corner of the Main GUI window)</li>
+<li>4 - Client API Viewer (something to represent your own access, if you wish)</li>
+</ul>
+<p>It doesn't matter much, but in hydrus the "last time the file was viewed" is considered to be when the user <em>started</em> viewing the file, not ended, so if you wish to track that too, you can send it along. If you do not include a <code>timestamp</code>, the system will use <em>now</em>, which is close enough, assuming you are sending recent rather than deferred data.</p>
+<p>You can send multiple file identifiers, but I imagine you will just be sending one most of the time.</p>
+<p>If the user has disabled file viewing statistics tracking on their client (under the options), this will 403.</p>
+<dl>
+<dt>Response:</dt>
+<dd>200 and no content.</dd>
+</dl>
+<h3 id="edit_times_set_file_viewtime"><strong>POST <code>/edit_times/set_file_viewtime</code></strong><a class="headerlink" href="#edit_times_set_file_viewtime" title="Permanent link">&para;</a></h3>
+<p><em>Set fixed values in the file viewing statistics system.</em></p>
+<dl>
+<dt>Restricted access:</dt>
+<dd>YES. Edit Times permission needed.</dd>
+<dt>Required Headers:</dt>
+<dd>
+<ul>
+<li><code>Content-Type</code>: <code>application/json</code></li>
+</ul>
+</dd>
+<dt>Arguments (in percent-encoded JSON):</dt>
+<dd>
+<ul>
+<li><a href="#parameters_files">files</a></li>
+<li><code>canvas_type</code> : (int, the canvas type you are editing)</li>
+<li><code>timestamp</code> : (optional, selective, float or int of the "last viewed time" in seconds)</li>
+<li><code>timestamp_ms</code> : (optional, selective, int of the "last viewed time" in milliseconds)</li>
+<li><code>views</code> : (int, how many views you are adding)</li>
+<li><code>viewtime</code> : (float, how long the user viewed the file for)</li>
+</ul>
+</dd>
+</dl>
+<div class="highlight"><span class="filename">Example request body</span><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;file_id&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="mi">123456</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;canvas_type&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;timestamp&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="mf">1738010610.073</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;views&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="mi">5</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;viewtime&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="mf">184.423</span>
+<span class="p">}</span>
+</code></pre></div>
+<p>This is an override to set the number of views stored for the file in the file viewing statistics system to fixed values you specify. I recommend you only use this call for unusual maintenance, migration, or reset situations--stick to the <a href="#edit_times_increment_file_viewtime">/edit_times/increment_file_viewtime</a> call for normal use.</p>
+<p>The system records "last time the file was viewed", "total number of views", and "total viewtime" for three different <code>canvas_types</code>:</p>
+<ul>
+<li>0 - Media Viewer (the normal viewer in hydrus that is its own window)</li>
+<li>1 - Preview Viewer (the box in the bottom-left corner of the Main GUI window)</li>
+<li>4 - Client API Viewer (something to represent your own access, if you wish)</li>
+</ul>
+<p>The "Client API" viewer was added so you may record your views separately if you wish. Otherwise you might like to fold them into the normal Media viewer count.</p>
+<p>If you do not include a <code>timestamp</code>, the system will either leave what is currently recorded, or, if the file has no viewing data yet, fill in with <em>now</em>.</p>
+<p>You can send multiple file identifiers, but I imagine you will just be sending one.</p>
+<p>If the user has disabled file viewing statistics tracking on their client (under the options), this will 403.</p>
+<dl>
+<dt>Response:</dt>
+<dd>200 and no content.</dd>
+</dl>
 <h3 id="edit_times_set_time"><strong>POST <code>/edit_times/set_time</code></strong><a class="headerlink" href="#edit_times_set_time" title="Permanent link">&para;</a></h3>
 <p><em>Add or remove timestamps associated with a file.</em></p>
 <dl>
@@ -5448,17 +5587,20 @@ Accept: application/json
 </dd>
 </dl>
 <div class="highlight"><span class="filename">Example request body, simple</span><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;file_id&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="mi">123456</span><span class="p">,</span>
 <span class="w">  </span><span class="nt">&quot;timestamp&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;1641044491&quot;</span><span class="p">,</span>
 <span class="w">  </span><span class="nt">&quot;timestamp_type&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="mi">5</span>
 <span class="p">}</span>
 </code></pre></div>
 <div class="highlight"><span class="filename">Example request body, more complicated</span><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;file_id&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="mi">123456</span><span class="p">,</span>
 <span class="w">  </span><span class="nt">&quot;timestamp&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;1641044491.458&quot;</span><span class="p">,</span>
 <span class="w">  </span><span class="nt">&quot;timestamp_type&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="mi">6</span><span class="p">,</span>
 <span class="w">  </span><span class="nt">&quot;canvas_type&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="mi">1</span>
 <span class="p">}</span>
 </code></pre></div>
 <div class="highlight"><span class="filename">Example request body, deleting</span><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;file_id&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="mi">123456</span><span class="p">,</span>
 <span class="w">  </span><span class="nt">&quot;timestamp_ms&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="p">,</span>
 <span class="w">  </span><span class="nt">&quot;timestamp_type&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
 <span class="w">  </span><span class="nt">&quot;domain&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;blahbooru.org&quot;</span>
@@ -5487,8 +5629,9 @@ Accept: application/json
 <p>If you select 3, 4, or 7, you have to include a <code>file_service_key</code>. The 'previously imported' time is for deleted files only; it records when the file was originally imported so if the user hits 'undo', the database knows what import time to give back to it.</p>
 <p>If you select 6, you have to include a <code>canvas_type</code>, which is:</p>
 <ul>
-<li>0 - Media viewer</li>
-<li>1 - Preview viewer</li>
+<li>0 - Media Viewer (the normal viewer in hydrus that is its own window)</li>
+<li>1 - Preview Viewer (the box in the bottom-left corner of the Main GUI window)</li>
+<li>4 - Client API Viewer (something to represent your own access, if you wish)</li>
 </ul>
 <dl>
 <dt>Response:</dt>
@@ -5893,7 +6036,30 @@ Accept: application/json
 <span class="w">          </span><span class="nt">&quot;storage_tags&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="p">{},</span>
 <span class="w">          </span><span class="nt">&quot;display_tags&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="p">{}</span>
 <span class="w">        </span><span class="p">}</span>
-<span class="w">      </span><span class="p">}</span>
+<span class="w">      </span><span class="p">},</span>
+<span class="w">      </span><span class="nt">&quot;file_viewing_statistics&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">        </span><span class="p">{</span>
+<span class="w">          </span><span class="nt">&quot;canvas_type&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+<span class="w">          </span><span class="nt">&quot;canvas_type_pretty&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;media viewer&quot;</span><span class="p">,</span>
+<span class="w">          </span><span class="nt">&quot;views&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+<span class="w">          </span><span class="nt">&quot;viewtime&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+<span class="w">          </span><span class="nt">&quot;last_viewed_timestamp&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="kc">null</span>
+<span class="w">        </span><span class="p">},</span>
+<span class="w">        </span><span class="p">{</span>
+<span class="w">          </span><span class="nt">&quot;canvas_type&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
+<span class="w">          </span><span class="nt">&quot;canvas_type_pretty&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;preview viewer&quot;</span><span class="p">,</span>
+<span class="w">          </span><span class="nt">&quot;views&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+<span class="w">          </span><span class="nt">&quot;viewtime&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+<span class="w">          </span><span class="nt">&quot;last_viewed_timestamp&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="kc">null</span>
+<span class="w">        </span><span class="p">},</span>
+<span class="w">        </span><span class="p">{</span>
+<span class="w">          </span><span class="nt">&quot;canvas_type&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="mi">4</span><span class="p">,</span>
+<span class="w">          </span><span class="nt">&quot;canvas_type_pretty&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;client api viewer&quot;</span><span class="p">,</span>
+<span class="w">          </span><span class="nt">&quot;views&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+<span class="w">          </span><span class="nt">&quot;viewtime&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+<span class="w">          </span><span class="nt">&quot;last_viewed_timestamp&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="kc">null</span>
+<span class="w">        </span><span class="p">}</span>
+<span class="w">      </span><span class="p">]</span>
 <span class="w">    </span><span class="p">},</span>
 <span class="w">    </span><span class="p">{</span>
 <span class="w">      </span><span class="nt">&quot;file_id&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="mi">4567</span><span class="p">,</span>
@@ -5990,7 +6156,30 @@ Accept: application/json
 <span class="w">            </span><span class="nt">&quot;1&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;bodysuit&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;clothing&quot;</span><span class="p">]</span>
 <span class="w">          </span><span class="p">}</span>
 <span class="w">        </span><span class="p">}</span>
-<span class="w">      </span><span class="p">}</span>
+<span class="w">      </span><span class="p">},</span>
+<span class="w">      </span><span class="nt">&quot;file_viewing_statistics&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">        </span><span class="p">{</span>
+<span class="w">          </span><span class="nt">&quot;canvas_type&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+<span class="w">          </span><span class="nt">&quot;canvas_type_pretty&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;media viewer&quot;</span><span class="p">,</span>
+<span class="w">          </span><span class="nt">&quot;views&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="mi">5</span><span class="p">,</span>
+<span class="w">          </span><span class="nt">&quot;viewtime&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="mf">21.657</span><span class="p">,</span>
+<span class="w">          </span><span class="nt">&quot;last_viewed_timestamp&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="mf">1738010610.073</span>
+<span class="w">        </span><span class="p">},</span>
+<span class="w">        </span><span class="p">{</span>
+<span class="w">          </span><span class="nt">&quot;canvas_type&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
+<span class="w">          </span><span class="nt">&quot;canvas_type_pretty&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;preview viewer&quot;</span><span class="p">,</span>
+<span class="w">          </span><span class="nt">&quot;views&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="mi">8</span><span class="p">,</span>
+<span class="w">          </span><span class="nt">&quot;viewtime&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="mf">48.657</span><span class="p">,</span>
+<span class="w">          </span><span class="nt">&quot;last_viewed_timestamp&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="mf">1738010001.895</span>
+<span class="w">        </span><span class="p">},</span>
+<span class="w">        </span><span class="p">{</span>
+<span class="w">          </span><span class="nt">&quot;canvas_type&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="mi">4</span><span class="p">,</span>
+<span class="w">          </span><span class="nt">&quot;canvas_type_pretty&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;client api viewer&quot;</span><span class="p">,</span>
+<span class="w">          </span><span class="nt">&quot;views&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+<span class="w">          </span><span class="nt">&quot;viewtime&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+<span class="w">          </span><span class="nt">&quot;last_viewed_timestamp&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="kc">null</span>
+<span class="w">        </span><span class="p">}</span>
+<span class="w">      </span><span class="p">]</span>
 <span class="w">    </span><span class="p">}</span>
 <span class="w">  </span><span class="p">]</span>
 <span class="p">}</span>
@@ -7786,7 +7975,7 @@ This request will also return any cookies for subdomains. The session system in 
     <span class="md-icon" title="Last update">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 13.1c-.1 0-.3.1-.4.2l-1 1 2.1 2.1 1-1c.2-.2.2-.6 0-.8l-1.3-1.3c-.1-.1-.2-.2-.4-.2m-1.9 1.8-6.1 6V23h2.1l6.1-6.1zM12.5 7v5.2l4 2.4-1 1L11 13V7zM11 21.9c-5.1-.5-9-4.8-9-9.9C2 6.5 6.5 2 12 2c5.3 0 9.6 4.1 10 9.3-.3-.1-.6-.2-1-.2s-.7.1-1 .2C19.6 7.2 16.2 4 12 4c-4.4 0-8 3.6-8 8 0 4.1 3.1 7.5 7.1 7.9l-.1.2z"/></svg>
     </span>
-    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">December 18, 2024</span>
+    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">January 29, 2025</span>
   </span>
 
     
