@@ -1566,10 +1566,10 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._new_options.SetBoolean( 'file_viewing_statistics_active', self._file_viewing_statistics_active.isChecked() )
             self._new_options.SetBoolean( 'file_viewing_statistics_active_on_archive_delete_filter', self._file_viewing_statistics_active_on_archive_delete_filter.isChecked() )
             self._new_options.SetBoolean( 'file_viewing_statistics_active_on_dupe_filter', self._file_viewing_statistics_active_on_dupe_filter.isChecked() )
-            self._new_options.SetNoneableInteger( 'file_viewing_statistics_media_min_time_ms', int( self._file_viewing_statistics_media_min_time.GetValue() * 1000 ) )
-            self._new_options.SetNoneableInteger( 'file_viewing_statistics_media_max_time_ms', int( self._file_viewing_statistics_media_max_time.GetValue() * 1000 ) )
-            self._new_options.SetNoneableInteger( 'file_viewing_statistics_preview_min_time_ms', int( self._file_viewing_statistics_preview_min_time.GetValue() * 1000 ) )
-            self._new_options.SetNoneableInteger( 'file_viewing_statistics_preview_max_time_ms', int( self._file_viewing_statistics_preview_max_time.GetValue() * 1000 ) )
+            self._new_options.SetNoneableInteger( 'file_viewing_statistics_media_min_time_ms', HydrusTime.MillisecondiseS( self._file_viewing_statistics_media_min_time.GetValue() ) )
+            self._new_options.SetNoneableInteger( 'file_viewing_statistics_media_max_time_ms', HydrusTime.MillisecondiseS( self._file_viewing_statistics_media_max_time.GetValue() ) )
+            self._new_options.SetNoneableInteger( 'file_viewing_statistics_preview_min_time_ms', HydrusTime.MillisecondiseS( self._file_viewing_statistics_preview_min_time.GetValue() ) )
+            self._new_options.SetNoneableInteger( 'file_viewing_statistics_preview_max_time_ms', HydrusTime.MillisecondiseS( self._file_viewing_statistics_preview_max_time.GetValue() ) )
             
             self._new_options.SetInteger( 'file_viewing_stats_menu_display', self._file_viewing_stats_menu_display.GetValue() )
             
