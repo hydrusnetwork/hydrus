@@ -35,6 +35,38 @@
             <h1 id="changelog"><a href="#changelog">changelog</a></h1>
             <ul>
                 <li>
+                    <h2 id="version_608"><a href="#version_608">version 608</a></h2>
+                    <ul>
+                        <li><h3>mpv</h3></li>
+                        <li>my ill-fated mpv-choking error hook, which tries to catch when MPV is having a 100% CPU event and unloads the file in a big fuss, and which has unfortunately caused a whole bunch of false positives, is now flipped on its head. instead of catching all instances of the log output and trying to exclude 'oh that's fine' cases, the hook now precisely targets files that go irrevocably 100% CPU on loop, specifically by recognising files that reload too frequently in one second for their duration (e.g. a normal vid looping twenty times in one second). mpv will be back to being juddery sometimes, but whatever, that's better than what I was doing</li>
+                        <li>the new 'DEBUG CAREFUL: Allow "too many events queued" files' checkbox no longer does anything and is removed</li>
+                        <li>also, the mpv emergency dump-out code is back to being per mpv player. previously it would unload all players the client was managing</li>
+                        <li>my mpv player now uses a little less CPU when mouse-drag-seeking</li>
+                        <li><h3>misc</h3></li>
+                        <li>I am changing the tag sort logic such that if you group by namespace, the namespace order stays as it is, no matter the underling asc/desc order of the actual sort. in simple english, this means that creator tags stay at the top whether you say 'most first' or 'fewest first'. we had success with the 'namespace (user)' just recently, and after talking about it with some guys, I think I agree that doing a full reverse of the whole list is not useful, and it isn't, fundamentally, what grouping is. let's try it like this, see how we like it</li>
+                        <li>the various multi-column lists across the program, which generally set their minimum and initial height by a 'num rows' suggestion, now do so pixel-perfect in most cases, no matter the style (it was previously ok on windowsvista, with a bit of fuzzy padding, but on Fusion it was either too tall or short due to font height estimate stuff). the downloader and watcher lists, which dynamically size according to contents, also do so unerringly. I find this very slightly eerie tbh so I might add a couple pixels of whitespace on the end so your brain knows there isn't more to scroll. let's try it like this for a few weeks and see how it feels</li>
+                        <li>added `--pause_network_traffic` launch parameter to the client, which hits `network-&gt;pause-&gt;all new network traffic` before the network engine initialises, to help debug when pending subscriptions or initial-session downloaders go crazy</li>
+                        <li>in 'manage tag siblings/parents', if you import from a clipboard/txt that includes a `a-&gt;a` loop-pair, the dialog now yells at you</li>
+                        <li>as a little hack, I added ctrl+shift+c to the taglist to say 'copy tags with parents' the default ctrl+c does not include the parents</li>
+                        <li>removed a duplicate and blank entry for 'EXPERIMENTAL: Image path for thumbnail panel...' in `options-&gt;thumbnails`, whoops</li>
+                        <li>I added a little safety code to the import folder, trying to catch a possible infinite loop we have seen. import folders now also take regular short breaks to give other threads like garbage collection a guaranteed moment to step in</li>
+                        <li>fixed a bad buffer truncation calculation in the native video viewer</li>
+                        <li><h3>build/jpeg-xl stuff</h3></li>
+                        <li>in `help-&gt;about`, moved the Jpeg-XL and HEIF(/AVIF) support lines to the second tab, and together</li>
+                        <li>if your client does not have Jpeg-XL support, the import error is now stated when you hit `help-&gt;about`. **if you are on macOS, you probably do not have Jpeg-XL support yet**, and the solution, whether on App or from source, is to run `brew install jpeg-xl` in the terminal, which is now also said in this message (issue #1670)</li>
+                        <li>added a small note to the installing help docs to say Apple Silicon users should consider running from source. the App is Intel for the time being, and running from source will give you a much more pleasant experience all around</li>
+                        <li><h3>boring code cleanup</h3></li>
+                        <li>refactored the `ProcessContentUpdates` megacall and its friends to a new 'content updates' database module</li>
+                        <li>refactored the duplicates file search stuff down to a new database module</li>
+                        <li>and refactored the 'set duplicates' call down to a new database module</li>
+                        <li>about 110KB of code is thus cleared out of the `ClientDB` monolith, which is down to 500KB, and we are ready to plug the duplicates auto-resolution module in as it now has scope on the various calls it needs</li>
+                        <li>fleshed out the duplicates db module's master id definitions</li>
+                        <li>cleaned up how I refer to file duration across the program. all the convenient-to-change duration or frame durations have a unified nomenclature and always say if they are in seconds or milliseconds</li>
+                        <li><h3>duplicates auto-resolution</h3></li>
+                        <li>the final difficult duplicates auto-resolution database problem (fast incremental duplicate pairs search) is solved. outside of at-scale testing and final integration, the database side of this is now complete. now just need to to figure out a daemon and a preview panel</li>
+                    </ul>
+                </li>
+                <li>
                     <h2 id="version_607"><a href="#version_607">version 607</a></h2>
                     <ul>
                         <li><h3>misc</h3></li>
