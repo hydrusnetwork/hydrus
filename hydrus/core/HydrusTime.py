@@ -136,19 +136,19 @@ def GetTimeDeltaUntilTimePrecise( t ):
     return max( time_remaining, 0.0 )
     
 
-def MillisecondiseS( timestamp: typing.Optional[ typing.Union[ int, float ] ] ) -> typing.Optional[ int ]:
+def MillisecondiseS( time_delta_s: typing.Optional[ typing.Union[ int, float ] ] ) -> typing.Optional[ int ]:
     
-    return None if timestamp is None else int( timestamp * 1000 )
-    
-
-def SecondiseMS( timestamp_ms: typing.Optional[ typing.Union[ int, float ] ] ) -> typing.Optional[ int ]:
-    
-    return None if timestamp_ms is None else int( timestamp_ms // 1000 )
+    return None if time_delta_s is None else int( time_delta_s * 1000 )
     
 
-def SecondiseMSFloat( timestamp_ms: typing.Optional[ typing.Union[ int, float ] ] ) -> typing.Optional[ float ]:
+def SecondiseMS( time_delta_ms: typing.Optional[ typing.Union[ int, float ] ] ) -> typing.Optional[ int ]:
     
-    return None if timestamp_ms is None else timestamp_ms / 1000.0
+    return None if time_delta_ms is None else int( time_delta_ms // 1000 )
+    
+
+def SecondiseMSFloat( time_delta_ms: typing.Optional[ typing.Union[ int, float ] ] ) -> typing.Optional[ float ]:
+    
+    return None if time_delta_ms is None else time_delta_ms / 1000.0
     
 
 def TimeHasPassed( timestamp ):
@@ -288,11 +288,11 @@ def TimeDeltaToPrettyTimeDelta( seconds: float, show_seconds = True, no_bigger_t
         
         result_components = []
         
-        for ( time_string, duration ) in lines:
+        for ( time_string, time_delta_s ) in lines:
             
-            time_quantity = seconds // duration
+            time_quantity = seconds // time_delta_s
             
-            seconds %= duration
+            seconds %= time_delta_s
             
             # little rounding thing if you get 364th day with 30 day months
             if time_string == 'month' and time_quantity > 11:

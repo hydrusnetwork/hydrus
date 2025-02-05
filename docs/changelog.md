@@ -7,6 +7,45 @@ title: Changelog
 !!! note
     This is the new changelog, only the most recent builds. For all versions, see the [old changelog](old_changelog.html).
 
+## [Version 608](https://github.com/hydrusnetwork/hydrus/releases/tag/v608)
+
+### mpv
+
+* my ill-fated mpv-choking error hook, which tries to catch when MPV is having a 100% CPU event and unloads the file in a big fuss, and which has unfortunately caused a whole bunch of false positives, is now flipped on its head. instead of catching all instances of the log output and trying to exclude 'oh that's fine' cases, the hook now precisely targets files that go irrevocably 100% CPU on loop, specifically by recognising files that reload too frequently in one second for their duration (e.g. a normal vid looping twenty times in one second). mpv will be back to being juddery sometimes, but whatever, that's better than what I was doing
+* the new 'DEBUG CAREFUL: Allow "too many events queued" files' checkbox no longer does anything and is removed
+* also, the mpv emergency dump-out code is back to being per mpv player. previously it would unload all players the client was managing
+* my mpv player now uses a little less CPU when mouse-drag-seeking
+
+### misc
+
+* I am changing the tag sort logic such that if you group by namespace, the namespace order stays as it is, no matter the underling asc/desc order of the actual sort. in simple english, this means that creator tags stay at the top whether you say 'most first' or 'fewest first'. we had success with the 'namespace (user)' just recently, and after talking about it with some guys, I think I agree that doing a full reverse of the whole list is not useful, and it isn't, fundamentally, what grouping is. let's try it like this, see how we like it
+* the various multi-column lists across the program, which generally set their minimum and initial height by a 'num rows' suggestion, now do so pixel-perfect in most cases, no matter the style (it was previously ok on windowsvista, with a bit of fuzzy padding, but on Fusion it was either too tall or short due to font height estimate stuff). the downloader and watcher lists, which dynamically size according to contents, also do so unerringly. I find this very slightly eerie tbh so I might add a couple pixels of whitespace on the end so your brain knows there isn't more to scroll. let's try it like this for a few weeks and see how it feels
+* added `--pause_network_traffic` launch parameter to the client, which hits `network->pause->all new network traffic` before the network engine initialises, to help debug when pending subscriptions or initial-session downloaders go crazy
+* in 'manage tag siblings/parents', if you import from a clipboard/txt that includes a `a->a` loop-pair, the dialog now yells at you
+* as a little hack, I added ctrl+shift+c to the taglist to say 'copy tags with parents' the default ctrl+c does not include the parents
+* removed a duplicate and blank entry for 'EXPERIMENTAL: Image path for thumbnail panel...' in `options->thumbnails`, whoops
+* I added a little safety code to the import folder, trying to catch a possible infinite loop we have seen. import folders now also take regular short breaks to give other threads like garbage collection a guaranteed moment to step in
+* fixed a bad buffer truncation calculation in the native video viewer
+
+### build/jpeg-xl stuff
+
+* in `help->about`, moved the Jpeg-XL and HEIF(/AVIF) support lines to the second tab, and together
+* if your client does not have Jpeg-XL support, the import error is now stated when you hit `help->about`. **if you are on macOS, you probably do not have Jpeg-XL support yet**, and the solution, whether on App or from source, is to run `brew install jpeg-xl` in the terminal, which is now also said in this message (issue #1670)
+* added a small note to the installing help docs to say Apple Silicon users should consider running from source. the App is Intel for the time being, and running from source will give you a much more pleasant experience all around
+
+### boring code cleanup
+
+* refactored the `ProcessContentUpdates` megacall and its friends to a new 'content updates' database module
+* refactored the duplicates file search stuff down to a new database module
+* and refactored the 'set duplicates' call down to a new database module
+* about 110KB of code is thus cleared out of the `ClientDB` monolith, which is down to 500KB, and we are ready to plug the duplicates auto-resolution module in as it now has scope on the various calls it needs
+* fleshed out the duplicates db module's master id definitions
+* cleaned up how I refer to file duration across the program. all the convenient-to-change duration or frame durations have a unified nomenclature and always say if they are in seconds or milliseconds
+
+### duplicates auto-resolution
+
+* the final difficult duplicates auto-resolution database problem (fast incremental duplicate pairs search) is solved. outside of at-scale testing and final integration, the database side of this is now complete. now just need to to figure out a daemon and a preview panel
+
 ## [Version 607](https://github.com/hydrusnetwork/hydrus/releases/tag/v607)
 
 ### misc
@@ -536,66 +575,3 @@ title: Changelog
 * updated the running from source help to talk about mpv/libmpv on Linux
 * fixed some bad panel/dialog calls into nicer Qt signals
 * added some typedefs to clear out about a hundred more PyUnresolvedReferences that PyCharm found. mostly custom widget calls
-
-## [Version 598](https://github.com/hydrusnetwork/hydrus/releases/tag/v598)
-
-### misc
-
-* I screwed up the import folder deduplication fix last week! it caused import folders that contained duplicated items (and a handful of subscriptions, and even one normal GUI session) to not be able to save back their work. nothing was damaged, _per se_, but progress was not being saved and work was stopping after the respective systems paused out of safety. I am sorry for the trouble and worry here, and I hate it when this kind of error happens. I did made a test to test this thing worked, but it wasn't good enough. I have fixed it now and I am rejigging my test procedures to explicitly check for this specific class of object type problem (issue #1624)
-* fixed the duplicate filter comparison statements to obey the new 'do not use pretty (720p etc..) resolution swap-in strings' option (issue #1621)
-* the 'maintenance and processing' page now has some expand/collapse stuff on its boxes to make the options page not want to be so tall on startup
-* the 'edit filename tagging options' panel under the 'edit import folder' dialog now auto-populates the example filename from the actual folder's current contents. thanks to a user for pointing this out
-* moved a bunch of checkboxes around in the options. `options->tags` is renamed `tag autocomplete tabs` and now just handles children and favourites. `search` is renamed `file search` and handles the 'read' autocomplete and implicit system:limit, and a new page `tag editing` is added to handle the 'write' autocomplete and various 'tag service panel' settings
-* the normal search page 'selection tags' list now only computes the tags for the first n thumbnails (default 4096) on a page when you have no files selected. this saves time on mega pages when you click off a selection and also on giant import pages where new files are continually streaming in at the end. I expect this to reduce CPU and lag significantly on clients that idle looking at big import pages. you can set the n under `options->tag presentation`, including turning it off entirely. I did some misc optimisation here too, but I also found some places I can improve the general tag re-compute in future cleanup work
-* I may have improved some media viewer hover window positioning, sizing, and flicker in layout, particularly on the note window
-* the 'do really heavy sibling and parents calculation work in the background' daemon now waits 60 seconds after boot to start work (previously 10s). since I added the new fast sibling and parent cache (which works quick but takes some extra work to initialise), I've noticed you often get a heap of lag as this guy is initially populated right after boot. so, the primary caller now happens a little later in the boot rush and _should_ smooth out the curve a little
-
-### listbooks
-
-* I rewrote the 'ListBook' the options dialog relies on from ancient and irll-desingned wx code to a nice clean simple Qt panel
-* if you have a ton of tag services, a new 'use listbook instead of tabbed notebook for tag service panels' checkbox under `options->tag editing` now lets you use the new listbook instead of the old notebook/tabbed widget in: manage tags, manage tag siblings, manage tag parents, manage tag display and application, and review tag display sync
-
-### drag and drops
-
-* moved the DnD options out of `options->gui` and to a new `exporting` panel and added a bit of text
-* the BUGFIX 'secret' Discord fix is now formalised into an always-on 'set the DnD to a move flag', with a nice explanatory tooltip. it is now also always safe because it will now only ever run if you are set to export your DnDs to the temp folder
-* the 'DnD temp folder' system is now cleaner and DnD temp folders will now be deleted after six hours (previously they were only cleaned up on client exit)
-* added a note to the 'getting started with files' help to say you can export files with drag and drop m8
-
-### some multi-column list fixes
-
-* fixed a bad list type definition in the new auto-resolution rules UI. it thought it was the export folder dialog's list and was throwing weird errors if that list was sorted in column &gt;=4
-* if a multi-column list fails to sort, it now catches and displays the error and continues with whatever was going on at the time
-* if a multi-column list status is asked for a non-existing column type, the status now reports the error info and attempts its best fallback
-* improved multi-column list initialisation across the board so the above problem cannot happen again (the list type was being set in two different locations, and I missed a ctrl+c/v edit)
-
-### parsing
-
-* behind the scenes, the 'subsidiary page parser' is now one object. it was a janky thing before
-* the subsidiary page parsers list in the parsing edit UI now has import/export/duplicate buttons
-* it doesn't matter outside of file log post order, I don't think, but subsidiary page parsers now always work in alphabetical order
-* they also now name themselves specifically when they cause an error
-* parsers now deduplicate the list when saying what they 'produce/parse' in UI
-
-### boring linting cleanup
-
-* tweaked my linter settings to better catch some stupid errors and put the effort into cleaning up the hundreds of long-time warnings, probably more than a thousand items of Qt Signal false-positive spam, and the actual real bugs. I am hoping to better expose future needles without a haystack of garbage in the way. I am determined to maintain a 0 error count on Unresolved References going forward
-* every single unused import statement is now removed or suppressed. I'm sure there are still tangles and bad ideas generally, but everything is completely lean now
-* fixed some PILImage enum references
-* improved some hydrus serialisable typedefs
-* fixed some exception/warning defs
-* deleted some old defunct 'retry' code from subscriptions
-* fixed some bitmap generation code to handle non-c-contiguous memoryviews properly
-* cleaned up some html parsing to properly navigate weird stuff bs4 might put out
-* fixed a stupid type error in the old HydrusTagArchive namespace code
-* fixed some account type calls in _manage services_ auto-account creation
-* fixed an issue with unusual tab drag and drops
-* deleted the empty `TestClientData.py`
-* deleted the empty `ServerServices.py`
-* fixed a bunch of misc typedefs in general
-
-### boring build/source stuff
-
-* updated my Windows 'running from source' help to now say you need to put the sqlite3.dll in your actual python DLLs dir. as this is more scary than just dropping it in your hydrus install dir, I emphasise this is optional
-* updated my 'requirements_server.txt', which is not used but a reference, to use the new requests and setuptools versions we recently updated to
-* I am dropping support for the ancient OpenCV 2. we've had some enum monkeypatches in place for years and years, but I don't even know if 2 will even run on any modern python; it is gone now

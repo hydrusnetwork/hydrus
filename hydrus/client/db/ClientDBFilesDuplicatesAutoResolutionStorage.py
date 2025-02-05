@@ -305,7 +305,7 @@ class ClientDBFilesDuplicatesAutoResolutionStorage( ClientDBModule.ClientDBModul
             
             if pairs_stored_in_duplicates_proper is None:
                 
-                table_join = '{temp_media_ids_table_name} CROSS JOIN {master_potential_duplicate_pairs_table_name} ON ( {temp_media_ids_table_name}.smaller_media_id = {master_potential_duplicate_pairs_table_name}.smaller_media_id AND {temp_media_ids_table_name}.larger_media_id = {master_potential_duplicate_pairs_table_name}.larger_media_id )'
+                table_join = f'{temp_media_ids_table_name} CROSS JOIN {master_potential_duplicate_pairs_table_name} ON ( {temp_media_ids_table_name}.smaller_media_id = {master_potential_duplicate_pairs_table_name}.smaller_media_id AND {temp_media_ids_table_name}.larger_media_id = {master_potential_duplicate_pairs_table_name}.larger_media_id )'
                 
                 pairs_stored_in_duplicates_proper = self._STS( self._Execute( f'SELECT smaller_media_id, larger_media_id FROM {table_join};' ) )
                 

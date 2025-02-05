@@ -44,9 +44,9 @@ def GetFlashProperties( path ):
             fps = 1
             
         
-        duration = ( 1000 * num_frames ) // fps
+        duration_ms = int( ( num_frames / fps ) * 1000 )
         
-        return ( ( width, height ), duration, num_frames )
+        return ( ( width, height ), duration_ms, num_frames )
         
     
 

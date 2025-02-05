@@ -627,7 +627,7 @@ class ClientFilesManager( object ):
         hash = media.GetHash()
         mime = media.GetMime()
         ( width, height ) = media.GetResolution()
-        duration = media.GetDurationMS()
+        duration_ms = media.GetDurationMS()
         num_frames = media.GetNumFrames()
         
         bounding_dimensions = self._controller.options[ 'thumbnail_dimensions' ]
@@ -640,7 +640,7 @@ class ClientFilesManager( object ):
         
         try:
             
-            thumbnail_bytes = HydrusFileHandling.GenerateThumbnailBytes( file_path, target_resolution, mime, duration, num_frames, percentage_in = percentage_in )
+            thumbnail_bytes = HydrusFileHandling.GenerateThumbnailBytes( file_path, target_resolution, mime, duration_ms, num_frames, percentage_in = percentage_in )
             
         except Exception as e:
             
@@ -2579,9 +2579,9 @@ class FilesMaintenanceManager( ClientDaemons.ManagerWithMainLoop ):
             
             path = self._controller.client_files_manager.GetFilePath( hash, original_mime )
             
-            ( size, mime, width, height, duration, num_frames, has_audio, num_words ) = HydrusFileHandling.GetFileInfo( path, ok_to_look_for_hydrus_updates = True )
+            ( size, mime, width, height, duration_ms, num_frames, has_audio, num_words ) = HydrusFileHandling.GetFileInfo( path, ok_to_look_for_hydrus_updates = True )
             
-            additional_data = ( size, mime, width, height, duration, num_frames, has_audio, num_words )
+            additional_data = ( size, mime, width, height, duration_ms, num_frames, has_audio, num_words )
             
             if mime != original_mime and not media_result.GetFileInfoManager().FiletypeIsForced():
                 
@@ -2714,9 +2714,9 @@ class FilesMaintenanceManager( ClientDaemons.ManagerWithMainLoop ):
             return None
             
         
-        duration = media_result.GetDurationMS()
+        duration_ms = media_result.GetDurationMS()
         
-        if duration is not None:
+        if duration_ms is not None:
             
             return None
             
@@ -2743,6 +2743,7 @@ class FilesMaintenanceManager( ClientDaemons.ManagerWithMainLoop ):
             return None
             
         
+    
     def _RegenBlurhash( self, media ):
         
         if media.GetMime() not in HC.MIMES_WITH_THUMBNAILS:

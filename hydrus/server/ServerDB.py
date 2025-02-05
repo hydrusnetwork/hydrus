@@ -140,8 +140,8 @@ class DB( HydrusDB.HydrusDB ):
             if 'height' in file_dict: height = file_dict[ 'height' ]
             else: height = None
             
-            if 'duration' in file_dict: duration = file_dict[ 'duration' ]
-            else: duration = None
+            if 'duration' in file_dict: duration_ms = file_dict[ 'duration' ]
+            else: duration_ms = None
             
             if 'num_frames' in file_dict: num_frames = file_dict[ 'num_frames' ]
             else: num_frames = None
@@ -149,7 +149,7 @@ class DB( HydrusDB.HydrusDB ):
             if 'num_words' in file_dict: num_words = file_dict[ 'num_words' ]
             else: num_words = None
             
-            self._Execute( 'INSERT OR IGNORE INTO files_info ( master_hash_id, size, mime, width, height, duration, num_frames, num_words ) VALUES ( ?, ?, ?, ?, ?, ?, ?, ? );', ( master_hash_id, size, mime, width, height, duration, num_frames, num_words ) )
+            self._Execute( 'INSERT OR IGNORE INTO files_info ( master_hash_id, size, mime, width, height, duration, num_frames, num_words ) VALUES ( ?, ?, ?, ?, ?, ?, ?, ? );', ( master_hash_id, size, mime, width, height, duration_ms, num_frames, num_words ) )
             
         
         dest_path = ServerFiles.GetExpectedFilePath( hash )
@@ -2562,9 +2562,9 @@ class DB( HydrusDB.HydrusDB ):
         
         table_join = self._RepositoryGetFilesInfoFilesTableJoin( service_id, HC.CONTENT_STATUS_CURRENT )
         
-        for ( service_hash_id, size, mime, timestamp, width, height, duration, num_frames, num_words ) in self._Execute( 'SELECT service_hash_id, size, mime, file_timestamp, width, height, duration, num_frames, num_words FROM ' + table_join + ' WHERE file_timestamp BETWEEN ? AND ?;', ( begin, end ) ):
+        for ( service_hash_id, size, mime, timestamp, width, height, duration_ms, num_frames, num_words ) in self._Execute( 'SELECT service_hash_id, size, mime, file_timestamp, width, height, duration, num_frames, num_words FROM ' + table_join + ' WHERE file_timestamp BETWEEN ? AND ?;', ( begin, end ) ):
             
-            file_row = ( service_hash_id, size, mime, timestamp, width, height, duration, num_frames, num_words )
+            file_row = ( service_hash_id, size, mime, timestamp, width, height, duration_ms, num_frames, num_words )
             
             content_update_builder.AddRow( ( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ADD, file_row ) )
             

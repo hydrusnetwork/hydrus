@@ -3129,9 +3129,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._mpv_loop_playlist_instead_of_file = QW.QCheckBox( media_panel )
             self._mpv_loop_playlist_instead_of_file.setToolTip( ClientGUIFunctions.WrapToolTip( 'Try this if you get "too many events queued" error in mpv.' ) )
             
-            self._mpv_allow_too_many_events_queued = QW.QCheckBox( media_panel )
-            self._mpv_allow_too_many_events_queued.setToolTip( ClientGUIFunctions.WrapToolTip( 'CAREFUL. This will no longer stop the 100% CPU situations we have seen, but it will also allow the false positives that are caught by the current error-catcher.' ) )
-            
             self._draw_transparency_checkerboard_media_canvas = QW.QCheckBox( media_panel )
             self._draw_transparency_checkerboard_media_canvas.setToolTip( ClientGUIFunctions.WrapToolTip( 'If unchecked, will fill in with the normal background colour. Does not apply to MPV.' ) )
             
@@ -3191,7 +3188,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._animation_start_position.setValue( int( HC.options['animation_start_position'] * 100.0 ) )
             self._always_loop_animations.setChecked( self._new_options.GetBoolean( 'always_loop_gifs' ) )
             self._mpv_loop_playlist_instead_of_file.setChecked( self._new_options.GetBoolean( 'mpv_loop_playlist_instead_of_file' ) )
-            self._mpv_allow_too_many_events_queued.setChecked( self._new_options.GetBoolean( 'mpv_allow_too_many_events_queued' ) )
             self._draw_transparency_checkerboard_media_canvas.setChecked( self._new_options.GetBoolean( 'draw_transparency_checkerboard_media_canvas' ) )
             
             media_zooms = self._new_options.GetMediaZooms()
@@ -3233,7 +3229,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows.append( ( 'Start animations this % in:', self._animation_start_position ) )
             rows.append( ( 'Always Loop Animations:', self._always_loop_animations ) )
             rows.append( ( 'DEBUG: Loop Playlist instead of Loop File in mpv:', self._mpv_loop_playlist_instead_of_file ) )
-            rows.append( ( 'DEBUG CAREFUL: Allow "too many events queued" files:', self._mpv_allow_too_many_events_queued ) )
             rows.append( ( 'Draw image transparency as checkerboard:', self._draw_transparency_checkerboard_media_canvas ) )
             
             gridbox = ClientGUICommon.WrapInGrid( media_panel, rows )
@@ -3469,7 +3464,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             HC.options[ 'animation_start_position' ] = self._animation_start_position.value() / 100.0
             self._new_options.SetBoolean( 'always_loop_gifs', self._always_loop_animations.isChecked() )
             self._new_options.SetBoolean( 'mpv_loop_playlist_instead_of_file', self._mpv_loop_playlist_instead_of_file.isChecked() )
-            self._new_options.SetBoolean( 'mpv_allow_too_many_events_queued', self._mpv_allow_too_many_events_queued.isChecked() )
             self._new_options.SetBoolean( 'draw_transparency_checkerboard_media_canvas', self._draw_transparency_checkerboard_media_canvas.isChecked() )
             
             try:
@@ -5885,7 +5879,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows.append( ( '  Only on files with no duration: ', self._focus_preview_on_shift_click_only_static ) )
             rows.append( ( 'Do not scroll down on key navigation if thumbnail at least this % visible: ', self._thumbnail_visibility_scroll_percent ) )
             rows.append( ( 'EXPERIMENTAL: Scroll thumbnails at this rate per scroll tick: ', self._thumbnail_scroll_rate ) )
-            rows.append( ( 'EXPERIMENTAL: Image path for thumbnail panel background image (set blank to clear): ', self._media_background_bmp_path ) )
             
             gridbox = ClientGUICommon.WrapInGrid( thumbnail_interaction_box, rows )
             

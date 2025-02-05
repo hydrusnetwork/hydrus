@@ -280,7 +280,6 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             'file_info_line_consider_trash_reason_interesting' : False,
             'set_requests_ca_bundle_env' : False,
             'mpv_loop_playlist_instead_of_file' : False,
-            'mpv_allow_too_many_events_queued' : False,
             'draw_thumbnail_rating_background' : True,
             'show_destination_page_when_dnd_url' : True,
         }

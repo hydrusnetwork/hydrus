@@ -21,17 +21,17 @@ def GetAnimationProperties( path, mime ):
     
     if mime == HC.ANIMATION_APNG:
         
-        ( duration, num_frames ) = GetAPNGDurationAndNumFrames( path )
+        ( duration_ms, num_frames ) = GetAPNGDurationMSAndNumFrames( path )
         
     else:
         
-        ( durations, times_to_play ) = GetFrameDurationsPILAnimation( path )
+        ( frame_durations_ms, times_to_play ) = GetFrameDurationsMSPILAnimation( path )
         
-        duration = sum( durations )
-        num_frames = len( durations )
+        duration_ms = sum( frame_durations_ms )
+        num_frames = len( frame_durations_ms )
         
     
-    return ( ( width, height ), duration, num_frames )
+    return ( ( width, height ), duration_ms, num_frames )
     
 
 def GetAPNGChunks( file_header_bytes: bytes ) ->list:
@@ -123,16 +123,16 @@ def GetAPNGACTLChunkData( file_header_bytes: bytes ) -> typing.Optional[ bytes ]
         
     
 
-def GetAPNGDuration( apng_bytes: bytes ) -> float:
+def GetAPNGDurationMS( apng_bytes: bytes ) -> float:
     
     frame_control_chunk_name = b'fcTL'
     
     chunks = GetAPNGChunks( apng_bytes )
     
-    total_duration = 0
+    total_duration_s = 0
     
-    CRAZY_FRAME_TIME = 0.1
-    MIN_FRAME_TIME = 0.001
+    CRAZY_FALLBCAK_FRAME_DURATION_S = 0.1
+    MIN_FRAME_DURATION_S = 0.001
     
     for ( chunk_name, chunk_data ) in chunks:
         
@@ -143,18 +143,27 @@ def GetAPNGDuration( apng_bytes: bytes ) -> float:
             
             if delay_denominator == 0:
                 
-                duration = CRAZY_FRAME_TIME
+                duration_s = CRAZY_FALLBCAK_FRAME_DURATION_S
                 
             else:
                 
-                duration = max( delay_numerator / delay_denominator, MIN_FRAME_TIME )
+                duration_s = max( delay_numerator / delay_denominator, MIN_FRAME_DURATION_S )
                 
             
-            total_duration += duration
+            total_duration_s += duration_s
             
         
     
-    return total_duration
+    duration_ms_float = total_duration_s * 1000
+    
+    duration_ms = int( total_duration_s * 1000 )
+    
+    if duration_ms == 0 and duration_ms_float > 0:
+        
+        duration_ms = 1
+        
+    
+    return duration_ms
     
 
 def GetAPNGNumFrames( apng_actl_bytes: bytes ) -> int:
@@ -164,7 +173,7 @@ def GetAPNGNumFrames( apng_actl_bytes: bytes ) -> int:
     return num_frames
     
 
-def GetAPNGDurationAndNumFrames( path ):
+def GetAPNGDurationMSAndNumFrames( path ):
     
     with open( path, 'rb' ) as f:
         
@@ -185,21 +194,12 @@ def GetAPNGDurationAndNumFrames( path ):
         file_bytes = f.read()
         
     
-    duration = GetAPNGDuration( file_bytes )
+    duration_ms = GetAPNGDurationMS( file_bytes )
     
-    duration_in_ms_float = duration * 1000
-    
-    duration_in_ms = int( duration * 1000 )
-    
-    if duration_in_ms == 0 and duration_in_ms_float > 0:
-        
-        duration_in_ms = 1
-        
-    
-    return ( duration_in_ms, num_frames )
+    return ( duration_ms, num_frames )
     
 
-def GetFrameDurationsPILAnimation( path, human_file_description = None ):
+def GetFrameDurationsMSPILAnimation( path, human_file_description = None ):
     
     pil_image = HydrusImageOpening.RawOpenPILImage( path, human_file_description = human_file_description )
     
@@ -214,9 +214,9 @@ def GetFrameDurationsPILAnimation( path, human_file_description = None ):
     
     assumed_num_frames_is_sensible = assumed_num_frames > 0
     
-    fallback_frame_duration = 83 # (83ms -- 1000 / 12) Set a 12 fps default when duration is missing or too funky to extract. most stuff looks ok at this.
+    fallback_frame_duration_ms = 83 # (83ms -- 1000 / 12) Set a 12 fps default when duration is missing or too funky to extract. most stuff looks ok at this.
     
-    frame_durations = []
+    frame_durations_ms = []
     
     i = 0
     
@@ -240,46 +240,46 @@ def GetFrameDurationsPILAnimation( path, human_file_description = None ):
             # seek and fellows can raise OSError on a truncated file lmao
             # trying to keep walking through such a gif using PIL is rife with trouble (although mpv may be ok at a later stage), so let's fudge a solution
             
-            if len( frame_durations ) > 0:
+            if len( frame_durations_ms ) > 0:
                 
-                fill_in_duration = int( sum( frame_durations ) / len( frame_durations ) )
+                fill_in_duration = int( sum( frame_durations_ms ) / len( frame_durations_ms ) )
                 
             else:
                 
-                fill_in_duration = fallback_frame_duration
+                fill_in_duration = fallback_frame_duration_ms
                 
             
             if assumed_num_frames_is_sensible:
                 
-                num_frames_remaining = assumed_num_frames - len( frame_durations )
+                num_frames_remaining = assumed_num_frames - len( frame_durations_ms )
                 
-                frame_durations.extend( [ fill_in_duration for j in range( num_frames_remaining ) ] )
+                frame_durations_ms.extend( [ fill_in_duration for j in range( num_frames_remaining ) ] )
                 
             
-            return ( frame_durations, times_to_play )
+            return ( frame_durations_ms, times_to_play )
             
         
         if 'duration' not in pil_image.info:
             
-            duration = fallback_frame_duration
+            duration_ms = fallback_frame_duration_ms
             
         else:
             
-            duration = pil_image.info[ 'duration' ]
+            duration_ms = pil_image.info[ 'duration' ]
             
             # In the gif frame header, 10 is stored as 1ms. This 1 is commonly as utterly wrong as 0.
-            if duration in ( 0, 10 ):
+            if duration_ms in ( 0, 10 ):
                 
-                duration = fallback_frame_duration
+                duration_ms = fallback_frame_duration_ms
                 
             
         
-        frame_durations.append( duration )
+        frame_durations_ms.append( duration_ms )
         
         i += 1
         
     
-    return ( frame_durations, times_to_play )
+    return ( frame_durations_ms, times_to_play )
     
 
 def GetTimesToPlayAPNG( path: str ) -> int:

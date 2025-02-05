@@ -58,11 +58,11 @@ class ClientDBFilesMaintenance( ClientDBModule.ClientDBModule ):
                     original_resolution = self.modules_files_metadata_basic.GetResolution( hash_id )
                     original_mime = self.modules_files_metadata_basic.GetMime( hash_id )
                     
-                    ( size, mime, width, height, duration, num_frames, has_audio, num_words ) = additional_data
+                    ( size, mime, width, height, duration_ms, num_frames, has_audio, num_words ) = additional_data
                     
                     resolution_changed = original_resolution != ( width, height )
                     
-                    files_rows = [ ( hash_id, size, mime, width, height, duration, num_frames, has_audio, num_words ) ]
+                    files_rows = [ ( hash_id, size, mime, width, height, duration_ms, num_frames, has_audio, num_words ) ]
                     
                     self.modules_files_metadata_basic.AddFilesInfo( files_rows, overwrite = True )
                     

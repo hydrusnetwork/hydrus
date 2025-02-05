@@ -49,10 +49,10 @@ def GetFakeMediaResult( hash: bytes, mime = None ):
     
     width = random.randint( 200, 4096 )
     height = random.randint( 200, 4096 )
-    duration = random.choice( [ 220, 16.66667, None ] )
+    duration_ms = random.choice( [ 220, 16.66667, None ] )
     has_audio = random.choice( [ True, False ] )
     
-    file_info_manager = ClientMediaManagers.FileInfoManager( hash_id, hash, size = size, mime = mime, width = width, height = height, duration = duration, has_audio = has_audio )
+    file_info_manager = ClientMediaManagers.FileInfoManager( hash_id, hash, size = size, mime = mime, width = width, height = height, duration_ms = duration_ms, has_audio = has_audio )
     
     file_info_manager.has_exif = True
     file_info_manager.has_icc_profile = True

@@ -747,13 +747,16 @@ class BetterListCtrlTreeView( QW.QTreeView ):
     
     def _GetRowHeightEstimate( self ):
         
-        # this straight-up returns 0 during dialog init wew, I guess when I ask during init the text isn't initialised or whatever
-        if self.model().rowCount() > 0 and False:
+        if self.model().rowCount() > 0:
             
+            height = self.sizeHintForRow( 0 )
+            
+            # this straight-up returns 0 during dialog init wew, I guess when I ask during init the text isn't initialised or whatever
+            '''
             model_index = self.model().index( 0 )
             
             height = self.rowHeight( model_index )
-            
+            '''
         else:
             
             ( width_gumpf, height ) = ClientGUIFunctions.ConvertTextToPixels( self, ( 20, 1 ) )
@@ -1025,24 +1028,29 @@ class BetterListCtrlTreeView( QW.QTreeView ):
         
         width += self._min_section_width # the last column
         
-        width += self.frameWidth() * 2
+        FRAMEWIDTH_PADDING = self.frameWidth() * 2
+        
+        width += FRAMEWIDTH_PADDING
         
         if self._forced_height_num_chars is None:
             
-            min_num_rows = 4
+            num_rows = 4
             
         else:
             
-            min_num_rows = self._forced_height_num_chars
+            num_rows = self._forced_height_num_chars
             
         
-        header_size = self.header().sizeHint() # this is better than min size hint for some reason ?( 69, 69 )?
+        data_area_height = self._GetRowHeightEstimate() * num_rows
         
-        data_area_height = self._GetRowHeightEstimate() * min_num_rows
+        PADDING = self.header().sizeHint().height() + FRAMEWIDTH_PADDING
         
-        PADDING = 10
+        if self.horizontalScrollBar().isVisible():
+            
+            PADDING + self.horizontalScrollBar().height()
+            
         
-        min_size_hint = QC.QSize( width, header_size.height() + data_area_height + PADDING )
+        min_size_hint = QC.QSize( width, data_area_height + PADDING )
         
         return min_size_hint
         
@@ -1193,7 +1201,9 @@ class BetterListCtrlTreeView( QW.QTreeView ):
         
         width = 0
         
-        width += self.frameWidth() * 2
+        FRAMEWIDTH_PADDING = self.frameWidth() * 2
+        
+        width += FRAMEWIDTH_PADDING
         
         # all but last column
         
@@ -1240,13 +1250,16 @@ class BetterListCtrlTreeView( QW.QTreeView ):
             num_rows = self._forced_height_num_chars
             
         
-        header_size = self.header().sizeHint()
-        
         data_area_height = self._GetRowHeightEstimate() * num_rows
         
-        PADDING = 10
+        PADDING = self.header().sizeHint().height() + FRAMEWIDTH_PADDING
         
-        size_hint = QC.QSize( width, header_size.height() + data_area_height + PADDING )
+        if self.horizontalScrollBar().isVisible():
+            
+            PADDING + self.horizontalScrollBar().height()
+            
+        
+        size_hint = QC.QSize( width, data_area_height + PADDING )
         
         return size_hint
         

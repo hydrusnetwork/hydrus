@@ -242,11 +242,11 @@ def GetFFMPEGVideoProperties( path, force_count_frames_manually = False ):
     ( file_duration_in_s, stream_duration_in_s ) = ParseFFMPEGDuration( lines_for_first_second )
     
     # this will have to be fixed when I add audio, and dynamically accounted for on dual vid/audio rendering
-    duration = stream_duration_in_s
+    duration_s = stream_duration_in_s
     
     ( fps, confident_fps ) = ParseFFMPEGFPS( lines_for_first_second )
     
-    if duration is None and not confident_fps:
+    if duration_s is None and not confident_fps:
         
         # ok default to fall back on
         ( fps, confident_fps ) = ( 24, True )
@@ -257,7 +257,7 @@ def GetFFMPEGVideoProperties( path, force_count_frames_manually = False ):
         fps = 1
         
     
-    if duration is None:
+    if duration_s is None:
         
         force_count_frames_manually = True
         
@@ -265,12 +265,12 @@ def GetFFMPEGVideoProperties( path, force_count_frames_manually = False ):
         
         # if file is big or long, don't try to force a manual count when one not explicitly asked for
         # we don't care about a dropped frame on a 10min vid tbh
-        num_frames_seems_ok_to_count = duration < 30
+        num_frames_seems_ok_to_count = duration_s < 30
         file_is_ok_size = os.path.getsize( path ) < 256 * 1024 * 1024
         
         if num_frames_seems_ok_to_count and file_is_ok_size:
             
-            last_frame_has_unusual_duration = ( duration * fps ) % 1 > 0
+            last_frame_has_unusual_duration = ( duration_s * fps ) % 1 > 0
             
             unusual_video_start = file_duration_in_s != stream_duration_in_s
             
@@ -287,17 +287,17 @@ def GetFFMPEGVideoProperties( path, force_count_frames_manually = False ):
         
         num_frames = ParseFFMPEGNumFramesManually( lines )
         
-        if duration is None:
+        if duration_s is None:
             
-            duration = num_frames / fps
+            duration_s = num_frames / fps
             
         
     else:
         
-        num_frames = int( duration * fps )
+        num_frames = int( duration_s * fps )
         
     
-    duration_in_ms = int( duration * 1000 )
+    duration_in_ms = HydrusTime.MillisecondiseS( duration_s )
     
     has_audio = VideoHasAudio( path, lines_for_first_second )
     
@@ -549,27 +549,27 @@ def ParseFFMPEGDuration( lines ):
         match = re.search("[0-9]+:[0-9][0-9]:[0-9][0-9].[0-9][0-9]", line)
         hms = [ float( float_string ) for float_string in line[match.start():match.end()].split(':') ]
         
-        duration = 0
+        duration_s = 0
         
         if len( hms ) == 1:
             
-            duration = hms[0]
+            duration_s = hms[0]
             
         elif len( hms ) == 2:
             
-            duration = 60 * hms[0] + hms[1]
+            duration_s = 60 * hms[0] + hms[1]
             
         elif len( hms ) == 3:
             
-            duration = 3600 * hms[0] + 60 * hms[1] + hms[2]
+            duration_s = 3600 * hms[0] + 60 * hms[1] + hms[2]
             
         
-        if duration == 0:
+        if duration_s == 0:
             
             return ( None, None )
             
         
-        if start_offset > 0.85 * duration:
+        if start_offset > 0.85 * duration_s:
             
             # as an example, Duration: 127:57:31.25, start: 460633.291000 lmao
             
@@ -582,10 +582,10 @@ def ParseFFMPEGDuration( lines ):
             start_offset = 0
             
         
-        file_duration = duration + start_offset
-        stream_duration = duration
+        file_duration_s = duration_s + start_offset
+        stream_duration_s = duration_s
         
-        return ( file_duration, stream_duration )
+        return ( file_duration_s, stream_duration_s )
         
     except:
         

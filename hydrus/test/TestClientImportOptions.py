@@ -372,10 +372,10 @@ def GetNotesMediaResult( hash, names_to_notes ):
     mime = random.choice( [ HC.IMAGE_JPEG, HC.VIDEO_WEBM, HC.APPLICATION_PDF ] )
     width = random.randint( 200, 4096 )
     height = random.randint( 200, 4096 )
-    duration = random.choice( [ 220, 16.66667, None ] )
+    duration_ms = random.choice( [ 220, 16.66667, None ] )
     has_audio = random.choice( [ True, False ] )
     
-    file_info_manager = ClientMediaManagers.FileInfoManager( file_id, hash, size = size, mime = mime, width = width, height = height, duration = duration, has_audio = has_audio )
+    file_info_manager = ClientMediaManagers.FileInfoManager( file_id, hash, size = size, mime = mime, width = width, height = height, duration_ms = duration_ms, has_audio = has_audio )
     
     service_keys_to_statuses_to_tags = collections.defaultdict( HydrusData.default_dict_set )
     service_keys_to_statuses_to_display_tags = collections.defaultdict( HydrusData.default_dict_set )
@@ -522,10 +522,10 @@ def GetTagsMediaResult( hash, in_inbox, service_key, deleted_tags ):
     mime = random.choice( [ HC.IMAGE_JPEG, HC.VIDEO_WEBM, HC.APPLICATION_PDF ] )
     width = random.randint( 200, 4096 )
     height = random.randint( 200, 4096 )
-    duration = random.choice( [ 220, 16.66667, None ] )
+    duration_ms = random.choice( [ 220, 16.66667, None ] )
     has_audio = random.choice( [ True, False ] )
     
-    file_info_manager = ClientMediaManagers.FileInfoManager( file_id, hash, size = size, mime = mime, width = width, height = height, duration = duration, has_audio = has_audio )
+    file_info_manager = ClientMediaManagers.FileInfoManager( file_id, hash, size = size, mime = mime, width = width, height = height, duration_ms = duration_ms, has_audio = has_audio )
     
     service_keys_to_statuses_to_tags = collections.defaultdict( HydrusData.default_dict_set )
     

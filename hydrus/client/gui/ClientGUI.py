@@ -745,7 +745,6 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         library_version_lines.append( 'OpenCV: {}'.format( cv2.__version__ ) )
         library_version_lines.append( 'openssl: {}'.format( ssl.OPENSSL_VERSION ) )
         library_version_lines.append( 'Pillow: {}'.format( PIL.__version__ ) )
-        library_version_lines.append( 'pillow-jxl-plugin: {}'.format( HydrusImageHandling.JXL_OK ) )
         
         qt_string = 'Qt: Unknown'
         
@@ -831,6 +830,19 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         
         #
         
+        if not HydrusImageHandling.JXL_OK:
+            
+            message = 'Hey, you do not seem to have Jpeg-XL support for our image library Pillow. The error follows:'
+            
+            if HC.PLATFORM_MACOS:
+                
+                message += '\n\nAlso, since you are on macOS, you should know that a common reason for Jpeg-XL not loading is that it is not bundled with their python package on macOS. Your error below probably talks about a missing .dylib or .so file. You can resolve this by opening a terminal and running "brew install jpeg-xl", and then restarting hydrus.'
+                
+            
+            HydrusData.ShowText( message )
+            HydrusData.ShowText( HydrusImageHandling.JXL_ERROR_TEXT )
+            
+        
         availability_lines = []
         
         availability_lines.append( 'QtCharts: {}'.format( ClientGUICharts.QT_CHARTS_OK ) )
@@ -850,8 +862,6 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
                 HydrusData.ShowText( ClientPDFHandling.pdf_failed_reason )
                 
             
-        
-        availability_lines.append( 'Pillow-HEIF: {}'.format( HydrusImageHandling.HEIF_OK ) )
         
         CBOR_AVAILABLE = False
         
@@ -894,6 +904,8 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         availability_lines.append( 'lxml present: {}'.format( ClientParsing.LXML_IS_OK ) )
         availability_lines.append( 'lz4 present: {}'.format( HydrusCompression.LZ4_OK ) )
         availability_lines.append( 'olefile present: {}'.format( HydrusOLEHandling.OLEFILE_OK ) )
+        availability_lines.append( 'Pillow HEIF/AVIF: {}'.format( HydrusImageHandling.HEIF_OK ) )
+        availability_lines.append( 'Pillow JXL: {}'.format( HydrusImageHandling.JXL_OK ) )
         availability_lines.append( 'psutil present: {}'.format( HydrusPSUtil.PSUTIL_OK ) )
         availability_lines.append( 'pympler present: {}'.format( HydrusMemory.PYMPLER_OK ) )
         availability_lines.append( 'pyopenssl present: {}'.format( HydrusEncryption.OPENSSL_OK ) )

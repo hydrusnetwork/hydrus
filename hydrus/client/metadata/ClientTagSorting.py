@@ -254,11 +254,11 @@ def SortTags( tag_sort: TagSort, list_of_tag_items: typing.List, tag_items_to_co
         
         if tag_sort.group_by == GROUP_BY_NAMESPACE_AZ:
             
-            sorts_to_do.append( ( namespace_az_key, lexicographic_complement_reverse ) )
+            sorts_to_do.append( ( namespace_az_key, False ) )
             
         elif tag_sort.group_by == GROUP_BY_NAMESPACE_USER:
             
-            sorts_to_do.append( ( namespace_user_key_factory(), lexicographic_complement_reverse ) )
+            sorts_to_do.append( ( namespace_user_key_factory(), False ) )
             
         
     

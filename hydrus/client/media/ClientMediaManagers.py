@@ -54,7 +54,7 @@ class FileInfoManager( object ):
         mime: typing.Optional[ int ] = None,
         width: typing.Optional[ int ] = None,
         height: typing.Optional[ int ] = None,
-        duration: typing.Optional[ int ] = None,
+        duration_ms: typing.Optional[ int ] = None,
         num_frames: typing.Optional[ int ] = None,
         has_audio: typing.Optional[ bool ] = None,
         num_words: typing.Optional[ int ] = None
@@ -71,7 +71,7 @@ class FileInfoManager( object ):
         self.mime = mime
         self.width = width
         self.height = height
-        self.duration = duration
+        self.duration_ms = duration_ms
         self.num_frames = num_frames
         self.has_audio = has_audio
         self.num_words = num_words
@@ -88,7 +88,7 @@ class FileInfoManager( object ):
     
     def Duplicate( self ):
         
-        fim = FileInfoManager( self.hash_id, self.hash, self.size, self.mime, self.width, self.height, self.duration, self.num_frames, self.has_audio, self.num_words )
+        fim = FileInfoManager( self.hash_id, self.hash, self.size, self.mime, self.width, self.height, self.duration_ms, self.num_frames, self.has_audio, self.num_words )
         
         fim.has_transparency = self.has_transparency
         fim.has_exif = self.has_exif
@@ -119,7 +119,7 @@ class FileInfoManager( object ):
     
     def ToTuple( self ):
         
-        return ( self.hash_id, self.hash, self.size, self.mime, self.width, self.height, self.duration, self.num_frames, self.has_audio, self.num_words )
+        return ( self.hash_id, self.hash, self.size, self.mime, self.width, self.height, self.duration_ms, self.num_frames, self.has_audio, self.num_words )
         
     
 

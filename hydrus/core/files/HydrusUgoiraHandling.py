@@ -218,8 +218,6 @@ def GetUgoiraFrameDataJSON( path: str ) -> typing.Optional[typing.List[UgoiraFra
         
     
 
-
-
 def GetUgoiraPropertiesFromJSON( path ):
     
     frameData = GetUgoiraFrameDataJSON( path )
@@ -229,14 +227,14 @@ def GetUgoiraPropertiesFromJSON( path ):
         raise HydrusExceptions.LimitedSupportFileException( 'Zip file has no animation.json or it cannot be parsed' )
         
     
-    durations = [data['delay'] for data in frameData]
+    frame_durations_ms = [data['delay'] for data in frameData]
     
-    duration = sum( durations )
-    num_frames = len( durations )
+    duration_ms = sum( frame_durations_ms )
+    num_frames = len( frame_durations_ms )
     
     firstFrame = GetUgoiraFramePIL( path, 0 )
     
-    return ( firstFrame.size, duration, num_frames )
+    return ( firstFrame.size, duration_ms, num_frames )
     
 
 # Combined Ugoira functions:

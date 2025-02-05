@@ -67,7 +67,7 @@ class TestSingleFileMetadataRouter( unittest.TestCase ):
         mime = HC.IMAGE_JPEG
         width = 640
         height = 480
-        duration = None
+        duration_ms = None
         num_frames = None
         has_audio = False
         num_words = None
@@ -89,7 +89,7 @@ class TestSingleFileMetadataRouter( unittest.TestCase ):
         
         #
         
-        file_info_manager = ClientMediaManagers.FileInfoManager( 1, hash, size, mime, width, height, duration, num_frames, has_audio, num_words )
+        file_info_manager = ClientMediaManagers.FileInfoManager( 1, hash, size, mime, width, height, duration_ms, num_frames, has_audio, num_words )
         
         media_result = ClientMediaResult.MediaResult( file_info_manager, tags_manager, times_manager, local_locations_manager, ratings_manager, notes_manager, file_viewing_stats_manager )
         
@@ -204,7 +204,7 @@ class TestSingleFileMetadataImporters( unittest.TestCase ):
         mime = HC.IMAGE_JPEG
         width = 640
         height = 480
-        duration = None
+        duration_ms = None
         num_frames = None
         has_audio = False
         num_words = None
@@ -226,7 +226,7 @@ class TestSingleFileMetadataImporters( unittest.TestCase ):
         
         #
         
-        file_info_manager = ClientMediaManagers.FileInfoManager( 1, hash, size, mime, width, height, duration, num_frames, has_audio, num_words )
+        file_info_manager = ClientMediaManagers.FileInfoManager( 1, hash, size, mime, width, height, duration_ms, num_frames, has_audio, num_words )
         
         media_result = ClientMediaResult.MediaResult( file_info_manager, tags_manager, times_manager, local_locations_manager, ratings_manager, notes_manager, file_viewing_stats_manager )
         
@@ -332,7 +332,7 @@ class TestSingleFileMetadataImporters( unittest.TestCase ):
         mime = HC.IMAGE_JPEG
         width = 640
         height = 480
-        duration = None
+        duration_ms = None
         num_frames = None
         has_audio = False
         num_words = None
@@ -358,7 +358,7 @@ class TestSingleFileMetadataImporters( unittest.TestCase ):
         
         #
         
-        file_info_manager = ClientMediaManagers.FileInfoManager( 1, hash, size, mime, width, height, duration, num_frames, has_audio, num_words )
+        file_info_manager = ClientMediaManagers.FileInfoManager( 1, hash, size, mime, width, height, duration_ms, num_frames, has_audio, num_words )
         
         media_result = ClientMediaResult.MediaResult( file_info_manager, tags_manager, times_manager, local_locations_manager, ratings_manager, notes_manager, file_viewing_stats_manager )
         
@@ -399,7 +399,7 @@ class TestSingleFileMetadataImporters( unittest.TestCase ):
         mime = HC.IMAGE_JPEG
         width = 640
         height = 480
-        duration = None
+        duration_ms = None
         num_frames = None
         has_audio = False
         num_words = None
@@ -426,7 +426,7 @@ class TestSingleFileMetadataImporters( unittest.TestCase ):
         
         #
         
-        file_info_manager = ClientMediaManagers.FileInfoManager( 1, hash, size, mime, width, height, duration, num_frames, has_audio, num_words )
+        file_info_manager = ClientMediaManagers.FileInfoManager( 1, hash, size, mime, width, height, duration_ms, num_frames, has_audio, num_words )
         
         media_result = ClientMediaResult.MediaResult( file_info_manager, tags_manager, times_manager, local_locations_manager, ratings_manager, notes_manager, file_viewing_stats_manager )
         

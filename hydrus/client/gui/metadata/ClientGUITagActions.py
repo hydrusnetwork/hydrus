@@ -109,11 +109,19 @@ class TagPairActionContext( object ):
         as_to_bs = HydrusData.BuildKeyToListDict( current_pairs )
         
         pre_existing_loop_strings = []
+        a_to_a_loop_strings = []
         
         # we only want to auto-petition stuff (and give the user dialog warnings) if they are _adding_. if they are removing an existing pair from a loop, great!
         addee_pairs = set( pairs ).difference( current_pairs )
         
         for ( potential_new_a, potential_new_b ) in addee_pairs:
+            
+            if potential_new_a == potential_new_b:
+                
+                a_to_a_loop_strings.append( f'{potential_new_a} -> {potential_new_b}' )
+                
+                continue
+                
             
             tags_to_check = [ ( potential_new_b, set(), [] ) ]
             
@@ -168,6 +176,15 @@ class TagPairActionContext( object ):
                 
                 tags_to_check = next_tags_to_check
                 
+            
+        
+        if len( a_to_a_loop_strings ) > 0:
+            
+            message = 'The pair(s) you mean to add include some self-referencing loops, i.e. "tag->tag"! I will add what you wanted to, but you almost certainly want to undo this. If you are importing from an external source, is there a misplaced line somewhere? In any case, the loops appear to be (take a screenshot/write this down now!):'
+            message += '\n' * 2
+            message += '\n'.join( a_to_a_loop_strings )
+            
+            ClientGUIDialogsMessage.ShowCritical( widget, 'Loop problem!', message )
             
         
         if len( pre_existing_loop_strings ) > 0:

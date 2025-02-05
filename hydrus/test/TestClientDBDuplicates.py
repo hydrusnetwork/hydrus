@@ -102,7 +102,7 @@ class TestClientDBDuplicates( unittest.TestCase ):
         
         # fake-import the files with the perceptual_hash
         
-        ( size, mime, width, height, duration, num_frames, has_audio, num_words ) = ( 65535, HC.IMAGE_JPEG, 640, 480, None, None, False, None )
+        ( size, mime, width, height, duration_ms, num_frames, has_audio, num_words ) = ( 65535, HC.IMAGE_JPEG, 640, 480, None, None, False, None )
         
         file_import_options = FileImportOptions.FileImportOptions()
         file_import_options.SetIsDefault( True )
@@ -112,7 +112,7 @@ class TestClientDBDuplicates( unittest.TestCase ):
             fake_file_import_job = ClientImportFiles.FileImportJob( 'fake path', file_import_options )
             
             fake_file_import_job._pre_import_file_status = ClientImportFiles.FileImportStatus( CC.STATUS_UNKNOWN, hash )
-            fake_file_import_job._file_info = ( size, mime, width, height, duration, num_frames, has_audio, num_words )
+            fake_file_import_job._file_info = ( size, mime, width, height, duration_ms, num_frames, has_audio, num_words )
             fake_file_import_job._extra_hashes = ( b'abcd', b'abcd', b'abcd' )
             fake_file_import_job._perceptual_hashes = [ perceptual_hash ]
             

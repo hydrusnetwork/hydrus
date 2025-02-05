@@ -714,13 +714,17 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
     
     def _ImportFiles( self, job_status ):
         
+        SAVE_PERIOD = 600
+        
         did_work = False
         
-        time_to_save = HydrusTime.GetNow() + 600
+        time_to_save = HydrusTime.GetNow() + SAVE_PERIOD
         
         num_files_imported = 0
         presentation_hashes = []
         presentation_hashes_fast = set()
+        
+        pauser = HydrusThreading.BigJobPauser()
         
         i = 0
         
@@ -728,7 +732,11 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
         # num_to_do is num currently unknown
         num_total = self._file_seed_cache.GetFileSeedCount( CC.STATUS_UNKNOWN )
         
+        file_seed = None
+        
         while True:
+            
+            previous_file_seed = file_seed
             
             file_seed = self._file_seed_cache.GetNextFileSeed( CC.STATUS_UNKNOWN )
             
@@ -741,13 +749,18 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
                 break
                 
             
+            if previous_file_seed is not None and previous_file_seed == file_seed:
+                
+                raise Exception( f'Somehow we did not process the file job: {previous_file_seed.file_seed_data}! Please let hydev know about this.' )
+                
+            
             did_work = True
             
             if HydrusTime.TimeHasPassed( time_to_save ):
                 
                 CG.client_controller.WriteSynchronous( 'serialisable', self )
                 
-                time_to_save = HydrusTime.GetNow() + 600
+                time_to_save = HydrusTime.GetNow() + SAVE_PERIOD
                 
             
             gauge_num_done = num_files_imported + 1
@@ -858,6 +871,8 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
             finally:
                 
                 self._ActionSeed( file_seed )
+                
+                pauser.Pause()
                 
             
         

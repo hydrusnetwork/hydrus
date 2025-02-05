@@ -2323,12 +2323,12 @@ class MediaSort( HydrusSerialisable.SerialisableBase ):
                     # videos > images > pdfs
                     # heavy vids first, heavy images first
                     
-                    duration = x.GetDurationMS()
+                    duration_ms = x.GetDurationMS()
                     num_frames = x.GetNumFrames()
                     size = x.GetSize()
                     resolution = x.GetResolution()
                     
-                    if duration is None or duration == 0:
+                    if duration_ms is None or duration_ms == 0:
                         
                         if size is None or size == 0:
                             
@@ -2369,7 +2369,7 @@ class MediaSort( HydrusSerialisable.SerialisableBase ):
                             
                         else:
                             
-                            duration_bitrate = size / duration
+                            duration_bitrate = size / duration_ms
                             
                             if num_frames is None or num_frames == 0:
                                 
@@ -2410,14 +2410,14 @@ class MediaSort( HydrusSerialisable.SerialisableBase ):
                         return -1
                         
                     
-                    duration = x.GetDurationMS()
+                    duration_ms = x.GetDurationMS()
                     
-                    if duration is None or duration == 0:
+                    if duration_ms is None or duration_ms == 0:
                         
                         return -1
                         
                     
-                    return num_frames / duration
+                    return num_frames / duration_ms
                     
                 
             elif sort_data == CC.SORT_FILES_BY_NUM_COLLECTION_FILES:

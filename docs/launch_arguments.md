@@ -35,7 +35,7 @@ C:\Users\You\AppData\Local\Temp
 ```
 
 But you can also check it in _help->about_. A handful of database operations (PTR tag processing, vacuums) require a lot of free space, so if your system drive is very full, or you have unusual ramdisk-based temp storage limits, you may want to relocate to another location or drive.
-    
+
 ##**`--db_journal_mode {WAL,TRUNCATE,PERSIST,MEMORY}`**
 
 Change the _journal_ mode of the SQLite database. The default is WAL, which works great for almost all SSD drives, but if you have a very old or slow drive, or if you encounter 'disk I/O error' errors on Windows with an NVMe drive, try TRUNCATE. Full docs are [here](https://sqlite.org/pragma.html#pragma_journal_mode).
@@ -48,8 +48,8 @@ Briefly:
 *   MEMORY - Danger mode. Extremely fast, but you had better guarantee a lot of free ram and no unclean exits.
 
 ##**`--db_transaction_commit_period DB_TRANSACTION_COMMIT_PERIOD`**
-    
-Change the regular duration at which any database changes are committed to disk. By default this is 30 (seconds) for the client, and 120 for the server. Minimum value is 10. Typically, if hydrus crashes, it may 'forget' what happened up to this duration on the next boot. Increasing the duration will result in fewer overall 'commit' writes during very heavy work that makes several changes to the same database pages (read up on [WAL](https://sqlite.org/wal.html) mode for more details here), but it will increase commit time and memory/storage needs. Note that changes can only be committed after a job is complete, so if a single job takes longer than this period, changes will not be saved until it is done.
+
+Change the regular duration at which any database changes are committed to disk. By default this is 30 (seconds) for the client and 120 for the server. Minimum value is 10. Typically, if hydrus crashes, it may 'forget' what happened up to this duration on the next boot. Increasing the duration will result in fewer overall 'commit' writes during very heavy work that makes several changes to the same database pages (read up on [WAL](https://sqlite.org/wal.html) mode for more details here), but it will increase commit time and memory/storage needs. Note that changes can only be committed after a job is complete, so if a single job takes longer than this period, changes will not be saved until it is done.
 
 ##**`--db_cache_size DB_CACHE_SIZE`**
 
@@ -73,10 +73,16 @@ Prints additional debug information to the log during the bootup phase of the ap
 
 This starts the program with 'Profile Mode' turned on, which captures the performance of boot functions. This is also a way to get Profile Mode on the server, although support there is very limited.
 
+# client-specific arguments
+
+##**`--pause_network_traffic`**
+
+This starts the program with `network->pause->all new network traffic` on. Useful for debugging a downloader in your boot session that is going crazy or stopping a problem subscription from launching.
+
 ##**`--win_qt_darkmode_test`**
 
-**Windows only, client only:** This starts the program with Qt's 'darkmode' detection enabled, as [here](https://doc.qt.io/qt-6/qguiapplication.html#platform-specific-arguments), set to 1 mode. It will override any existing qt.conf, so it is only for experimentation. We are going to experiment more with the 2 mode, but that locks the style to `windows`, and can't handle switches between light and dark mode.
+**Windows only:** This starts the program with Qt's 'darkmode' detection enabled, as [here](https://doc.qt.io/qt-6/qguiapplication.html#platform-specific-arguments), set to 1 mode. It will override any existing qt.conf, so it is only for experimentation. We are going to experiment more with the 2 mode, but that locks the style to `windows`, and can't handle switches between light and dark mode.
 
-# server arguments
+# server-specific arguments
 
-The server supports the same arguments. It also takes an optional _positional_ argument of 'start' (start the server, the default), 'stop' (stop any existing server), or 'restart' (do a stop, then a start), which should go before any of the above arguments.
+The server also takes an optional _positional_ argument of 'start' (start the server, the default), 'stop' (stop any existing server), or 'restart' (do a stop, then a start), which should go before any of the above arguments.

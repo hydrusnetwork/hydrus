@@ -4451,7 +4451,7 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
             
             stop_after_one_play = False
             
-            duration_s = self._current_media.GetMediaResult().GetDuration()
+            duration_s = self._current_media.GetMediaResult().GetDurationS()
             
             if duration_s is None:
                 

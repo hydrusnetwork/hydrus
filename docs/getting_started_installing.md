@@ -31,7 +31,8 @@ I try to release a new version every Wednesday by 8pm EST and write an accompany
 
     *   Get the .dmg App. Open it, drag it to Applications, and check the readme inside.
     *   macOS users have no mpv support for now, so no audio, and video may be laggy.
-    *   _This release has always been a little buggy. Many macOS users are having better success [running from source](running_from_source.md)._
+    *   _This release has always been a little buggy. Many macOS users have better success [running from source](running_from_source.md)._
+    *   _Also, for difficult technical reasons, the App is currently built for the Intel chipset. If you are on Apple Silicon, we again recommend you [run from source](running_from_source.md)!_
 
 === "Linux"
     

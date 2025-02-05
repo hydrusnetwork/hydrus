@@ -37,12 +37,12 @@ try:
     
     SPEEDCOPY_OK = True
     
-except Exception as e:
+except Exception as speedcopy_e:
     
-    if not isinstance( e, ImportError ):
+    if not isinstance( speedcopy_e, ImportError ):
         
         HydrusData.Print( 'Failed to initialise speedcopy:' )
-        HydrusData.PrintException( e )
+        HydrusData.PrintException( speedcopy_e )
         
     
     SPEEDCOPY_OK = False
@@ -98,14 +98,14 @@ mimes_to_default_thumbnail_paths[ HC.IMAGE_SVG ] = os.path.join( HC.STATIC_DIR, 
 
 def GenerateDefaultThumbnail( mime: int, target_resolution: typing.Tuple[ int, int ] ):
     
-    thumb_path = mimes_to_default_thumbnail_paths[mime]
+    thumb_path = mimes_to_default_thumbnail_paths[ mime ]
     
     return HydrusImageHandling.GenerateDefaultThumbnailNumPyFromPath( thumb_path, target_resolution )
     
 
-def GenerateThumbnailBytes( path, target_resolution, mime, duration, num_frames, percentage_in = 35 ):
+def GenerateThumbnailBytes( path, target_resolution, mime, duration_ms, num_frames, percentage_in = 35 ):
     
-    thumbnail_numpy = GenerateThumbnailNumPy( path, target_resolution, mime, duration, num_frames, percentage_in = percentage_in )
+    thumbnail_numpy = GenerateThumbnailNumPy( path, target_resolution, mime, duration_ms, num_frames, percentage_in = percentage_in )
 
     return HydrusImageHandling.GenerateThumbnailBytesFromNumPy( thumbnail_numpy )
     
@@ -125,7 +125,7 @@ def PrintMoreThumbErrorInfo( e: Exception, message, extra_description: typing.Op
         
     
 
-def GenerateThumbnailNumPy( path, target_resolution, mime, duration, num_frames, percentage_in = 35, extra_description = None ):
+def GenerateThumbnailNumPy( path, target_resolution, mime, duration_ms, num_frames, percentage_in = 35, extra_description = None ):
     
     if mime == HC.APPLICATION_CBZ:
         
@@ -337,7 +337,7 @@ def GenerateThumbnailNumPy( path, target_resolution, mime, duration, num_frames,
         
         try:
             
-            renderer = HydrusVideoHandling.VideoRendererFFMPEG( path, mime, duration, num_frames, target_resolution, start_pos = desired_thumb_frame_index )
+            renderer = HydrusVideoHandling.VideoRendererFFMPEG( path, mime, duration_ms, num_frames, target_resolution, start_pos = desired_thumb_frame_index )
             
             numpy_image = renderer.read_frame()
             
@@ -361,7 +361,7 @@ def GenerateThumbnailNumPy( path, target_resolution, mime, duration, num_frames,
             
             try:
                 
-                renderer = HydrusVideoHandling.VideoRendererFFMPEG( path, mime, duration, num_frames, target_resolution )
+                renderer = HydrusVideoHandling.VideoRendererFFMPEG( path, mime, duration_ms, num_frames, target_resolution )
                 
                 numpy_image = renderer.read_frame()
                 
@@ -452,10 +452,11 @@ def GetFileInfo( path, mime = None, ok_to_look_for_hydrus_updates = False ):
     if mime == HC.IMAGE_JXL and not HydrusImageHandling.JXL_OK:
         
         raise HydrusExceptions.UnsupportedFileException( 'Sorry, you need the pillow-jxl-plugin library to support this filetype ({})! Please rebuild your venv.'.format( HC.mime_string_lookup[ mime ] ) )
+        
     
     width = None
     height = None
-    duration = None
+    duration_ms = None
     num_frames = None
     num_words = None
     
@@ -492,7 +493,7 @@ def GetFileInfo( path, mime = None, ok_to_look_for_hydrus_updates = False ):
         
     elif mime == HC.APPLICATION_CLIP:
         
-        ( ( width, height ), duration, num_frames ) = HydrusClipHandling.GetClipProperties( path )
+        ( ( width, height ), duration_ms, num_frames ) = HydrusClipHandling.GetClipProperties( path )
         
     elif mime == HC.APPLICATION_KRITA:
         
@@ -573,7 +574,7 @@ def GetFileInfo( path, mime = None, ok_to_look_for_hydrus_updates = False ):
         
     elif mime == HC.APPLICATION_FLASH:
         
-        ( ( width, height ), duration, num_frames ) = HydrusFlashHandling.GetFlashProperties( path )
+        ( ( width, height ), duration_ms, num_frames ) = HydrusFlashHandling.GetFlashProperties( path )
         
     elif mime == HC.APPLICATION_PSD:
         
@@ -593,15 +594,15 @@ def GetFileInfo( path, mime = None, ok_to_look_for_hydrus_updates = False ):
     # must be before VIEWABLE_ANIMATIONS
     elif mime == HC.ANIMATION_UGOIRA:
         
-        ( ( width, height ), duration, num_frames ) = HydrusUgoiraHandling.GetUgoiraProperties( path )
+        ( ( width, height ), duration_ms, num_frames ) = HydrusUgoiraHandling.GetUgoiraProperties( path )
         
     elif mime in HC.VIDEO or mime in HC.HEIF_TYPE_SEQUENCES:
         
-        ( ( width, height ), duration, num_frames, has_audio ) = HydrusVideoHandling.GetFFMPEGVideoProperties( path )
+        ( ( width, height ), duration_ms, num_frames, has_audio ) = HydrusVideoHandling.GetFFMPEGVideoProperties( path )
         
     elif mime in HC.VIEWABLE_ANIMATIONS:
         
-        ( ( width, height ), duration, num_frames ) = HydrusAnimationHandling.GetAnimationProperties( path, mime )
+        ( ( width, height ), duration_ms, num_frames ) = HydrusAnimationHandling.GetAnimationProperties( path, mime )
         
     elif mime in HC.IMAGES:
         
@@ -618,7 +619,7 @@ def GetFileInfo( path, mime = None, ok_to_look_for_hydrus_updates = False ):
             raise HydrusExceptions.DamagedOrUnusualFileException( 'Could not determine the duration of this file!' )
             
         
-        duration = int( file_duration_in_s * 1000 )
+        duration_ms = int( file_duration_in_s * 1000 )
         
     
     if width is not None and width < 0:
@@ -631,9 +632,9 @@ def GetFileInfo( path, mime = None, ok_to_look_for_hydrus_updates = False ):
         width *= -1
         
     
-    if duration is not None and duration < 0:
+    if duration_ms is not None and duration_ms < 0:
         
-        duration *= -1
+        duration_ms *= -1
         
     
     if num_frames is not None and num_frames < 0:
@@ -646,7 +647,7 @@ def GetFileInfo( path, mime = None, ok_to_look_for_hydrus_updates = False ):
         num_words *= -1
         
     
-    return ( size, mime, width, height, duration, num_frames, has_audio, num_words )
+    return ( size, mime, width, height, duration_ms, num_frames, has_audio, num_words )
     
 
 def GetFileModifiedTimestampMS( path ) -> int:

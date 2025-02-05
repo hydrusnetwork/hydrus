@@ -143,7 +143,7 @@ class FileImportJob( object ):
             HydrusData.ShowText( 'File import job testing if good to import for file import options' )
             
         
-        ( size, mime, width, height, duration, num_frames, has_audio, num_words ) = self._file_info
+        ( size, mime, width, height, duration_ms, num_frames, has_audio, num_words ) = self._file_info
         
         self._file_import_options.CheckFileIsValid( size, mime, width, height )
         
@@ -176,6 +176,8 @@ class FileImportJob( object ):
                 not_ok_file_import_status.status = CC.STATUS_VETOED
                 not_ok_file_import_status.note = str( e )
                 
+                self._post_import_file_status = not_ok_file_import_status
+                
             
             if ok_to_go:
                 
@@ -197,10 +199,6 @@ class FileImportJob( object ):
                 self._file_import_options.CheckReadyToImport()
                 
                 self._post_import_file_status = CG.client_controller.WriteSynchronous( 'import_file', self )
-                
-            else:
-                
-                self._post_import_file_status = not_ok_file_import_status
                 
             
         else:
@@ -302,7 +300,7 @@ class FileImportJob( object ):
         
         self._file_info = HydrusFileHandling.GetFileInfo( self._temp_path, mime = mime )
         
-        ( size, mime, width, height, duration, num_frames, has_audio, num_words ) = self._file_info
+        ( size, mime, width, height, duration_ms, num_frames, has_audio, num_words ) = self._file_info
         
         if HG.file_import_report_mode:
             
@@ -322,16 +320,16 @@ class FileImportJob( object ):
                 
             
             bounding_dimensions = CG.client_controller.options[ 'thumbnail_dimensions' ]
-            thumbnail_scale_type = CG.client_controller.new_options.GetInteger( 'thumbnail_scale_type' )
-            thumbnail_dpr_percent = CG.client_controller.new_options.GetInteger( 'thumbnail_dpr_percent' )
+            thumbnail_scale_type = new_options.GetInteger( 'thumbnail_scale_type' )
+            thumbnail_dpr_percent = new_options.GetInteger( 'thumbnail_dpr_percent' )
             
             target_resolution = HydrusImageHandling.GetThumbnailResolution( ( width, height ), bounding_dimensions, thumbnail_scale_type, thumbnail_dpr_percent )
             
-            percentage_in = CG.client_controller.new_options.GetInteger( 'video_thumbnail_percentage_in' )
+            percentage_in = new_options.GetInteger( 'video_thumbnail_percentage_in' )
             
             extra_description = f'File with hash "{self.GetHash().hex()}".'
             
-            thumbnail_numpy = HydrusFileHandling.GenerateThumbnailNumPy( self._temp_path, target_resolution, mime, duration, num_frames, percentage_in = percentage_in, extra_description = extra_description )
+            thumbnail_numpy = HydrusFileHandling.GenerateThumbnailNumPy( self._temp_path, target_resolution, mime, duration_ms, num_frames, percentage_in = percentage_in, extra_description = extra_description )
 
             # this guy handles almost all his own exceptions now, so no need for clever catching. if it fails, we are prob talking an I/O failure, which is not a 'thumbnail failed' error
             self._thumbnail_bytes = HydrusImageHandling.GenerateThumbnailBytesFromNumPy( thumbnail_numpy )
@@ -380,7 +378,7 @@ class FileImportJob( object ):
         
         #
         
-        self._has_transparency = ClientFiles.HasTransparency( self._temp_path, mime, duration_ms = duration, num_frames = num_frames, resolution = ( width, height ) )
+        self._has_transparency = ClientFiles.HasTransparency( self._temp_path, mime, duration_ms = duration_ms, num_frames = num_frames, resolution = ( width, height ) )
         
         has_exif = False
         
@@ -437,7 +435,7 @@ class FileImportJob( object ):
         
         #
         
-        if mime in HC.FILES_THAT_CAN_HAVE_PIXEL_HASH and duration is None:
+        if mime in HC.FILES_THAT_CAN_HAVE_PIXEL_HASH and duration_ms is None:
             
             try:
                 

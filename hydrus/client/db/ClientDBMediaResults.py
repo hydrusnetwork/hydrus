@@ -96,7 +96,7 @@ class ClientDBMediaResults( ClientDBModule.ClientDBModule ):
         hash_ids_to_hashes = self.modules_hashes_local_cache.GetHashIdsToHashes( hash_ids = hash_ids )
         
         # temp hashes to metadata
-        hash_ids_to_file_info_managers = { hash_id : ClientMediaManagers.FileInfoManager( hash_id, hash_ids_to_hashes[ hash_id ], size, mime, width, height, duration, num_frames, has_audio, num_words ) for ( hash_id, size, mime, width, height, duration, num_frames, has_audio, num_words ) in self._Execute( 'SELECT * FROM {} CROSS JOIN files_info USING ( hash_id );'.format( hash_ids_table_name ) ) }
+        hash_ids_to_file_info_managers = { hash_id : ClientMediaManagers.FileInfoManager( hash_id, hash_ids_to_hashes[ hash_id ], size, mime, width, height, duration_ms, num_frames, has_audio, num_words ) for ( hash_id, size, mime, width, height, duration_ms, num_frames, has_audio, num_words ) in self._Execute( 'SELECT * FROM {} CROSS JOIN files_info USING ( hash_id );'.format( hash_ids_table_name ) ) }
         
         hash_ids_to_pixel_hashes = self.modules_similar_files.GetHashIdsToPixelHashes( hash_ids_table_name )
         hash_ids_to_blurhashes = self.modules_files_metadata_basic.GetHashIdsToBlurhashes( hash_ids_table_name )

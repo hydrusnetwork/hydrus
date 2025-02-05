@@ -2386,9 +2386,9 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
         return tables_and_columns
         
     
-    def PopulateSearchIntoTempTable( self, file_search_context: ClientSearchFileSearchContext.FileSearchContext, temp_table_name: str ) -> typing.List[ int ]:
+    def PopulateSearchIntoTempTable( self, file_search_context: ClientSearchFileSearchContext.FileSearchContext, temp_table_name: str, query_hash_ids = None ) -> typing.List[ int ]:
         
-        query_hash_ids = self.GetHashIdsFromQuery( file_search_context, apply_implicit_limit = False )
+        query_hash_ids = self.GetHashIdsFromQuery( file_search_context, apply_implicit_limit = False, query_hash_ids = query_hash_ids )
         
         self._ExecuteMany( 'INSERT OR IGNORE INTO {} ( hash_id ) VALUES ( ? );'.format( temp_table_name ), ( ( hash_id, ) for hash_id in query_hash_ids ) )
         
@@ -2547,15 +2547,15 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
                     def key( row ):
                         
                         num_frames = row[1]
-                        duration = row[2]
+                        duration_ms = row[2]
                         
-                        if num_frames is None or duration is None or num_frames == 0 or duration == 0:
+                        if num_frames is None or duration_ms is None or num_frames == 0 or duration_ms == 0:
                             
                             return -1
                             
                         else:
                             
-                            return num_frames / duration
+                            return num_frames / duration_ms
                             
                         
                     
@@ -2580,13 +2580,13 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
                     
                     def key( row ):
                         
-                        duration = row[1]
+                        duration_ms = row[1]
                         num_frames = row[2]
                         size = row[3]
                         width = row[4]
                         height = row[5]
                         
-                        if duration is None or duration == 0:
+                        if duration_ms is None or duration_ms == 0:
                             
                             if size is None or size == 0:
                                 
@@ -2625,7 +2625,7 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
                                 
                             else:
                                 
-                                duration_bitrate = size / duration
+                                duration_bitrate = size / duration_ms
                                 
                                 if num_frames is None or num_frames == 0:
                                     

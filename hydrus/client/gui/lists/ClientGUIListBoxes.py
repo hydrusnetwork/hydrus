@@ -1638,6 +1638,50 @@ class ListBox( QW.QScrollArea ):
         return QG.QColor( 255, 255, 255 )
         
     
+    def _GetCopyableTagStrings( self, command, include_parents = False, collapse_ors = False ):
+        
+        only_selected = command in ( COPY_SELECTED_TAGS, COPY_SELECTED_TAGS_WITH_COUNTS, COPY_SELECTED_SUBTAGS, COPY_SELECTED_SUBTAGS_WITH_COUNTS )
+        with_counts = command in ( COPY_ALL_TAGS_WITH_COUNTS, COPY_ALL_SUBTAGS_WITH_COUNTS, COPY_SELECTED_TAGS_WITH_COUNTS, COPY_SELECTED_SUBTAGS_WITH_COUNTS )
+        only_subtags = command in ( COPY_ALL_SUBTAGS, COPY_ALL_SUBTAGS_WITH_COUNTS, COPY_SELECTED_SUBTAGS, COPY_SELECTED_SUBTAGS_WITH_COUNTS )
+        
+        if only_selected:
+            
+            if len( self._selected_terms ) > 1:
+                
+                # keep order
+                terms = [ term for term in self._ordered_terms if term in self._selected_terms ]
+                
+            else:
+                
+                # nice and fast
+                terms = self._selected_terms
+                
+            
+        else:
+            
+            terms = self._ordered_terms
+            
+        
+        copyable_tag_strings = HydrusLists.MassExtend( [ term.GetCopyableTexts( with_counts = with_counts, include_parents = include_parents, collapse_ors = collapse_ors ) for term in terms ] )
+        
+        if only_subtags:
+            
+            copyable_tag_strings = [ HydrusTags.SplitTag( tag_string )[1] for tag_string in copyable_tag_strings ]
+            
+        
+        if '' in copyable_tag_strings:
+            
+            copyable_tag_strings.remove( '' )
+            
+        
+        if not with_counts:
+            
+            copyable_tag_strings = HydrusData.DedupeList( copyable_tag_strings )
+            
+        
+        return copyable_tag_strings
+        
+    
     def _GetLogicalIndexFromTerm( self, term ):
         
         if term in self._terms_to_logical_indices:
@@ -2116,6 +2160,18 @@ class ListBox( QW.QScrollArea ):
         return term in self._selected_terms
         
     
+    def _ProcessMenuCopyEvent( self, command, include_parents = False, collapse_ors = False ):
+        
+        texts = self._GetCopyableTagStrings( command, include_parents = include_parents, collapse_ors = collapse_ors )
+        
+        if len( texts ) > 0:
+            
+            text = '\n'.join( texts )
+            
+            CG.client_controller.pub( 'clipboard', 'text', text )
+            
+        
+    
     def _Redraw( self, painter ):
         
         bg_colour = self._GetBackgroundColour()
@@ -2456,7 +2512,11 @@ class ListBox( QW.QScrollArea ):
                 
             elif ctrl and key_code in ( ord( 'C' ), ord( 'c' ), QC.Qt.Key.Key_Insert ):
                 
-                self._CopySelectedTexts()
+                command = COPY_SELECTED_TAGS
+                
+                include_parents = shift
+                
+                self._ProcessMenuCopyEvent( command, include_parents = include_parents )
                 
             else:
                 
@@ -2885,50 +2945,6 @@ class ListBoxTags( ListBox ):
         CG.client_controller.sub( self, 'NotifyNewOptions', 'notify_new_options' )
         
     
-    def _GetCopyableTagStrings( self, command, include_parents = False, collapse_ors = False ):
-        
-        only_selected = command in ( COPY_SELECTED_TAGS, COPY_SELECTED_TAGS_WITH_COUNTS, COPY_SELECTED_SUBTAGS, COPY_SELECTED_SUBTAGS_WITH_COUNTS )
-        with_counts = command in ( COPY_ALL_TAGS_WITH_COUNTS, COPY_ALL_SUBTAGS_WITH_COUNTS, COPY_SELECTED_TAGS_WITH_COUNTS, COPY_SELECTED_SUBTAGS_WITH_COUNTS )
-        only_subtags = command in ( COPY_ALL_SUBTAGS, COPY_ALL_SUBTAGS_WITH_COUNTS, COPY_SELECTED_SUBTAGS, COPY_SELECTED_SUBTAGS_WITH_COUNTS )
-        
-        if only_selected:
-            
-            if len( self._selected_terms ) > 1:
-                
-                # keep order
-                terms = [ term for term in self._ordered_terms if term in self._selected_terms ]
-                
-            else:
-                
-                # nice and fast
-                terms = self._selected_terms
-                
-            
-        else:
-            
-            terms = self._ordered_terms
-            
-        
-        copyable_tag_strings = HydrusLists.MassExtend( [ term.GetCopyableTexts( with_counts = with_counts, include_parents = include_parents, collapse_ors = collapse_ors ) for term in terms ] )
-        
-        if only_subtags:
-            
-            copyable_tag_strings = [ HydrusTags.SplitTag( tag_string )[1] for tag_string in copyable_tag_strings ]
-            
-        
-        if '' in copyable_tag_strings:
-            
-            copyable_tag_strings.remove( '' )
-            
-        
-        if not with_counts:
-            
-            copyable_tag_strings = HydrusData.DedupeList( copyable_tag_strings )
-            
-        
-        return copyable_tag_strings
-        
-    
     def _GetCurrentLocationContext( self ):
         
         return ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY )
@@ -3044,18 +3060,6 @@ class ListBoxTags( ListBox ):
             CG.client_controller.pub( 'new_page_query', location_context, initial_predicates = predicates, page_name = page_name, activate_window = activate_window )
             
             activate_window = False
-            
-        
-    
-    def _ProcessMenuCopyEvent( self, command, include_parents = False, collapse_ors = False ):
-        
-        texts = self._GetCopyableTagStrings( command, include_parents = include_parents, collapse_ors = collapse_ors )
-        
-        if len( texts ) > 0:
-            
-            text = '\n'.join( texts )
-            
-            CG.client_controller.pub( 'clipboard', 'text', text )
             
         
     

@@ -61,7 +61,7 @@ def GetPrettyMediaResultInfoLines( media_result: ClientMediaResult.MediaResult, 
     locations_manager = media_result.GetLocationsManager()
     times_manager = locations_manager.GetTimesManager()
     
-    ( hash_id, hash, size, mime, width, height, duration, num_frames, has_audio, num_words ) = file_info_manager.ToTuple()
+    ( hash_id, hash, size, mime, width, height, duration_ms, num_frames, has_audio, num_words ) = file_info_manager.ToTuple()
     
     info_string = f'{HydrusData.ToHumanBytes( size )} {HC.mime_string_lookup[ mime ]}'
     
@@ -70,9 +70,9 @@ def GetPrettyMediaResultInfoLines( media_result: ClientMediaResult.MediaResult, 
         info_string += f' ({ClientData.ResolutionToPrettyString( ( width, height ) )})'
         
     
-    if duration is not None:
+    if duration_ms is not None:
         
-        info_string += f', {HydrusTime.MillisecondsDurationToPrettyTime( duration )}'
+        info_string += f', {HydrusTime.MillisecondsDurationToPrettyTime( duration_ms )}'
         
     elif mime == HC.ANIMATION_UGOIRA:
         
@@ -82,13 +82,13 @@ def GetPrettyMediaResultInfoLines( media_result: ClientMediaResult.MediaResult, 
                 
                 # this is more work than we'd normally want to do, but prettyinfolines is called on a per-file basis so I think we are good. a tiny no-latency json load per human click is fine
                 # we'll see how it goes
-                frame_times = ClientUgoiraHandling.GetFrameTimesFromNote( media_result )
+                frame_durations_ms = ClientUgoiraHandling.GetFrameDurationsMSFromNote( media_result )
                 
-                if frame_times is not None:
+                if frame_durations_ms is not None:
                     
-                    note_duration = sum( frame_times )
+                    note_duration_ms = sum( frame_durations_ms )
                     
-                    info_string += f', {HydrusTime.MillisecondsDurationToPrettyTime( note_duration )} (note-based)'
+                    info_string += f', {HydrusTime.MillisecondsDurationToPrettyTime( note_duration_ms )} (note-based)'
                     
                 
             except:
@@ -100,22 +100,22 @@ def GetPrettyMediaResultInfoLines( media_result: ClientMediaResult.MediaResult, 
             
             if num_frames is not None:
                 
-                simulated_duration = num_frames * ClientUgoiraHandling.UGOIRA_DEFAULT_FRAME_DURATION_MS
+                simulated_duration_ms = num_frames * ClientUgoiraHandling.UGOIRA_DEFAULT_FRAME_DURATION_MS
                 
-                info_string += f', {HydrusTime.MillisecondsDurationToPrettyTime( simulated_duration )} (speculated)'
+                info_string += f', {HydrusTime.MillisecondsDurationToPrettyTime( simulated_duration_ms )} (speculated)'
                 
             
         
     
     if num_frames is not None:
         
-        if duration is None or duration == 0 or num_frames == 0:
+        if duration_ms is None or duration_ms == 0 or num_frames == 0:
             
             framerate_insert = ''
             
         else:
             
-            fps = num_frames / HydrusTime.SecondiseMSFloat( duration )
+            fps = num_frames / HydrusTime.SecondiseMSFloat( duration_ms )
             
             if fps < 1:
                 

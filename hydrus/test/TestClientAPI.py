@@ -1773,9 +1773,9 @@ class TestClientAPI( unittest.TestCase ):
         mime = HC.IMAGE_PNG
         width = 20
         height = 20
-        duration = None
+        duration_ms = None
         
-        file_info_manager = ClientMediaManagers.FileInfoManager( file_id, hash, size = size, mime = mime, width = width, height = height, duration = duration )
+        file_info_manager = ClientMediaManagers.FileInfoManager( file_id, hash, size = size, mime = mime, width = width, height = height, duration_ms = duration_ms )
         
         service_keys_to_statuses_to_tags = { CC.DEFAULT_LOCAL_TAG_SERVICE_KEY : { HC.CONTENT_STATUS_CURRENT : { 'blue_eyes', 'blonde_hair' }, HC.CONTENT_STATUS_PENDING : { 'bodysuit' } } }
         service_keys_to_statuses_to_display_tags =  { CC.DEFAULT_LOCAL_TAG_SERVICE_KEY : { HC.CONTENT_STATUS_CURRENT : { 'blue eyes', 'blonde hair' }, HC.CONTENT_STATUS_PENDING : { 'bodysuit', 'clothing' } } }
@@ -6352,10 +6352,10 @@ class TestClientAPI( unittest.TestCase ):
             mime = random.choice( [ HC.IMAGE_JPEG, HC.VIDEO_WEBM, HC.APPLICATION_PDF ] )
             width = random.randint( 200, 4096 )
             height = random.randint( 200, 4096 )
-            duration = random.choice( [ 220, 16.66667, None ] )
+            duration_ms = random.choice( [ 220, 16.66667, None ] )
             has_audio = random.choice( [ True, False ] )
             
-            file_info_manager = ClientMediaManagers.FileInfoManager( file_id, hash, size = size, mime = mime, width = width, height = height, duration = duration, has_audio = has_audio )
+            file_info_manager = ClientMediaManagers.FileInfoManager( file_id, hash, size = size, mime = mime, width = width, height = height, duration_ms = duration_ms, has_audio = has_audio )
             
             file_info_manager.has_exif = True
             file_info_manager.has_icc_profile = True
@@ -6464,7 +6464,7 @@ class TestClientAPI( unittest.TestCase ):
                 'ext' : HC.mime_ext_lookup[ file_info_manager.mime ],
                 'width' : file_info_manager.width,
                 'height' : file_info_manager.height,
-                'duration' : file_info_manager.duration,
+                'duration' : file_info_manager.duration_ms,
                 'has_audio' : file_info_manager.has_audio,
                 'num_frames' : file_info_manager.num_frames,
                 'num_words' : file_info_manager.num_words
@@ -7166,9 +7166,9 @@ class TestClientAPI( unittest.TestCase ):
         mime = HC.IMAGE_PNG
         width = 20
         height = 20
-        duration = None
+        duration_ms = None
         
-        file_info_manager = ClientMediaManagers.FileInfoManager( file_id, hash, size = size, mime = mime, width = width, height = height, duration = duration )
+        file_info_manager = ClientMediaManagers.FileInfoManager( file_id, hash, size = size, mime = mime, width = width, height = height, duration_ms = duration_ms )
         
         service_keys_to_statuses_to_tags = { CC.DEFAULT_LOCAL_TAG_SERVICE_KEY : { HC.CONTENT_STATUS_CURRENT : [ 'blue_eyes', 'blonde_hair' ], HC.CONTENT_STATUS_PENDING : [ 'bodysuit' ] } }
         service_keys_to_statuses_to_display_tags =  { CC.DEFAULT_LOCAL_TAG_SERVICE_KEY : { HC.CONTENT_STATUS_CURRENT : [ 'blue eyes', 'blonde hair' ], HC.CONTENT_STATUS_PENDING : [ 'bodysuit', 'clothing' ] } }
@@ -7493,7 +7493,7 @@ class TestClientAPI( unittest.TestCase ):
         
         hash_404 = os.urandom( 32 )
         
-        file_info_manager = ClientMediaManagers.FileInfoManager( 123456, hash_404, size = size, mime = mime, width = width, height = height, duration = duration )
+        file_info_manager = ClientMediaManagers.FileInfoManager( 123456, hash_404, size = size, mime = mime, width = width, height = height, duration_ms = duration_ms )
         
         media_result = ClientMediaResult.MediaResult( file_info_manager, tags_manager, times_manager, locations_manager, ratings_manager, notes_manager, file_viewing_stats_manager )
         

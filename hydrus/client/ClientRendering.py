@@ -550,7 +550,7 @@ class RasterContainer( object ):
     
 class RasterContainerVideo( RasterContainer ):
     
-    def __init__( self, media: ClientMedia.MediaSingleton, target_resolution = None, init_position = 0, frame_durations = None ):
+    def __init__( self, media: ClientMedia.MediaSingleton, target_resolution = None, init_position = 0, frame_durations_ms = None ):
         
         super().__init__( media, target_resolution )
         
@@ -561,7 +561,7 @@ class RasterContainerVideo( RasterContainer ):
         self._renderer = None
         
         self._frames = {}
-        self._durations = []
+        self._frame_durations_ms = []
         
         self._buffer_start_index = -1
         self._buffer_end_index = -1
@@ -578,19 +578,20 @@ class RasterContainerVideo( RasterContainer ):
         
         video_buffer_size = new_options.GetInteger( 'video_buffer_size' )
         
-        duration = self._media.GetDurationMS()
+        duration_ms = self._media.GetDurationMS()
         num_frames_in_video = self._media.GetNumFrames()
         
-        if frame_durations is not None:
+        if frame_durations_ms is not None:
             
-            self._durations = frame_durations
+            self._frame_durations_ms = frame_durations_ms
             
-            if duration is None:
+            if duration_ms is None:
                 
-                duration = sum( frame_durations )
+                duration_ms = sum( frame_durations_ms )
+                
             
         
-        if duration is None or duration == 0:
+        if duration_ms is None or duration_ms == 0:
             
             message = 'The file with hash ' + media.GetHash().hex() + ', had an invalid duration.'
             message += '\n' * 2
@@ -598,7 +599,7 @@ class RasterContainerVideo( RasterContainer ):
             
             HydrusData.ShowText( message )
             
-            duration = 1.0
+            duration_ms = 1000
             
         
         if num_frames_in_video is None or num_frames_in_video == 0:
@@ -612,13 +613,13 @@ class RasterContainerVideo( RasterContainer ):
             num_frames_in_video = 1
             
         
-        self._average_frame_duration = duration / num_frames_in_video
+        self._average_frame_duration_ms = duration_ms / num_frames_in_video
         
         frame_buffer_length = video_buffer_size // ( x * y * 3 )
         
-        # if we can't buffer the whole vid, then don't have a clunky massive buffer
+        # if we can't buffer the whole vid, then don't have a clunky massive buffer that's like 80% of the vid
         
-        max_streaming_buffer_size = max( 48, int( num_frames_in_video / ( duration / 3.0 ) ) ) # 48 or 3 seconds
+        max_streaming_buffer_size = max( 48, int( 3000 / self._average_frame_duration_ms ) ) # 48 or 3 seconds
         
         if max_streaming_buffer_size < frame_buffer_length < num_frames_in_video:
             
@@ -682,13 +683,13 @@ class RasterContainerVideo( RasterContainer ):
         
         if self._media.GetMime() == HC.ANIMATION_GIF or self._media.GetMime() == HC.ANIMATION_UGOIRA:
             
-            if 0 <= index <= len( self._durations ) - 1:
+            if 0 <= index <= len( self._frame_durations_ms ) - 1:
                 
-                return self._durations[ index ]
+                return self._frame_durations_ms[ index ]
                 
             
         
-        return self._average_frame_duration
+        return self._average_frame_duration_ms
         
     
     def GetFrame( self, index ):
@@ -816,7 +817,7 @@ class RasterContainerVideo( RasterContainer ):
             
             so_far = 0
             
-            for ( frame_index, duration_ms ) in enumerate( self._durations ):
+            for ( frame_index, duration_ms ) in enumerate( self._frame_durations_ms ):
                 
                 so_far += duration_ms
                 
@@ -839,7 +840,7 @@ class RasterContainerVideo( RasterContainer ):
             
         else:
             
-            return timestamp_ms // self._average_frame_duration
+            return timestamp_ms // self._average_frame_duration_ms
             
         
     
@@ -847,11 +848,11 @@ class RasterContainerVideo( RasterContainer ):
         
         if self._media.GetMime() == HC.ANIMATION_GIF or self._media.GetMime() == HC.ANIMATION_UGOIRA:
             
-            return sum( self._durations[ : frame_index ] )
+            return sum( self._frame_durations_ms[ : frame_index ] )
             
         else:
             
-            return self._average_frame_duration * frame_index
+            return self._average_frame_duration_ms * frame_index
             
         
     
@@ -859,11 +860,11 @@ class RasterContainerVideo( RasterContainer ):
         
         if self._media.GetMime() == HC.ANIMATION_GIF or self._media.GetMime() == HC.ANIMATION_UGOIRA:
             
-            return sum( self._durations )
+            return sum( self._frame_durations_ms )
             
         else:
             
-            return self._average_frame_duration * self.GetNumFrames()
+            return self._average_frame_duration_ms * self.GetNumFrames()
             
         
     
@@ -896,14 +897,14 @@ class RasterContainerVideo( RasterContainer ):
     def THREADRender( self ):
         
         mime = self._media.GetMime()
-        duration = self._media.GetDurationMS()
+        duration_ms = self._media.GetDurationMS()
         num_frames_in_video = self._media.GetNumFrames()
         
         time.sleep( 0.00001 )
         
         if self._media.GetMime() == HC.ANIMATION_APNG:
             
-            self._durations = [] # we only support constant framerate for apng, I think the spec support variable though if PIL ever supports that
+            self._frame_durations_ms = [] # we only support constant framerate for apng, I think the spec support variable though if PIL ever supports that
             self._times_to_play_animation = HydrusAnimationHandling.GetTimesToPlayAPNG( self._path )
             
         elif self._media.GetMime() == HC.ANIMATION_UGOIRA:
@@ -914,11 +915,11 @@ class RasterContainerVideo( RasterContainer ):
             
             try:
                 
-                ( self._durations, self._times_to_play_animation ) = HydrusAnimationHandling.GetFrameDurationsPILAnimation( self._path )
+                ( self._frame_durations_ms, self._times_to_play_animation ) = HydrusAnimationHandling.GetFrameDurationsMSPILAnimation( self._path )
                 
             except:
                 
-                self._durations = []
+                self._frame_durations_ms = []
                 self._times_to_play_animation = 0
                 
             
@@ -934,7 +935,7 @@ class RasterContainerVideo( RasterContainer ):
             
         else:
             
-            self._renderer = HydrusVideoHandling.VideoRendererFFMPEG( self._path, mime, duration, num_frames_in_video, self._target_resolution )
+            self._renderer = HydrusVideoHandling.VideoRendererFFMPEG( self._path, mime, duration_ms, num_frames_in_video, self._target_resolution )
             
         
         # give ui a chance to draw a blank frame rather than hard-charge right into CPUland
@@ -1064,7 +1065,7 @@ class RasterContainerVideo( RasterContainer ):
                     
                 else:
                     
-                    half_a_frame = ( HydrusTime.SecondiseMSFloat( self._average_frame_duration ) ) * 0.5
+                    half_a_frame = ( HydrusTime.SecondiseMSFloat( self._average_frame_duration_ms ) ) * 0.5
                     
                     sleep_duration = min( 0.1, half_a_frame ) # for 10s-long 3-frame gifs, wew
                     

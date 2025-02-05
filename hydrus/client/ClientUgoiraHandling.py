@@ -13,7 +13,7 @@ import typing
 
 UGOIRA_DEFAULT_FRAME_DURATION_MS = 125
 
-def GetFrameDurationsUgoira( media: ClientMediaResult.MediaResult ): 
+def GetFrameDurationsMSUgoira( media: ClientMediaResult.MediaResult ): 
     
     client_files_manager: ClientFiles.ClientFilesManager = CG.client_controller.client_files_manager
     
@@ -25,9 +25,9 @@ def GetFrameDurationsUgoira( media: ClientMediaResult.MediaResult ):
         
         if frameData is not None:
             
-            durations = [data['delay'] for data in frameData]
+            durations_ms = [data['delay'] for data in frameData]
             
-            return durations
+            return durations_ms
             
         
     except:
@@ -37,11 +37,11 @@ def GetFrameDurationsUgoira( media: ClientMediaResult.MediaResult ):
     
     try:
         
-        durations = GetFrameTimesFromNote(media)
+        durations_ms = GetFrameDurationsMSFromNote( media )
         
-        if durations is not None:
+        if durations_ms is not None:
             
-            return durations
+            return durations_ms
             
         
     except:
@@ -54,7 +54,7 @@ def GetFrameDurationsUgoira( media: ClientMediaResult.MediaResult ):
     return [UGOIRA_DEFAULT_FRAME_DURATION_MS] * num_frames
     
 
-def GetFrameTimesFromNote( media: ClientMediaResult.MediaResult ):
+def GetFrameDurationsMSFromNote( media: ClientMediaResult.MediaResult ):
     
     if not media.HasNotes():
         
@@ -80,11 +80,11 @@ def GetFrameTimesFromNote( media: ClientMediaResult.MediaResult ):
                 frameData: typing.List[HydrusUgoiraHandling.UgoiraFrame] = ugoiraJson['frames']
                 
             
-            frames = [data['delay'] for data in frameData]
+            frame_durations_ms = [data['delay'] for data in frameData]
             
-            if len(frames) > 0 and isinstance(frames[0], int):
+            if len(frame_durations_ms) > 0 and isinstance(frame_durations_ms[0], int):
                 
-                return frames 
+                return frame_durations_ms 
                 
             
         except:
@@ -166,7 +166,7 @@ class UgoiraRenderer(object):
 def ConvertUgoiraToBytesForAPI( media: ClientMediaResult.MediaResult, format: int, quality: int ):
     
     client_files_manager: ClientFiles.ClientFilesManager = CG.client_controller.client_files_manager
-        
+    
     path = client_files_manager.GetFilePath( media.GetHash(), media.GetMime() )
     
     frame_paths = HydrusUgoiraHandling.GetFramePathsUgoira( path )
@@ -175,7 +175,7 @@ def ConvertUgoiraToBytesForAPI( media: ClientMediaResult.MediaResult, format: in
     
     frames = [HydrusImageHandling.GeneratePILImage( zip.joinpath(frame_path_from_zip).open('rb') ) for frame_path_from_zip in frame_paths]
     
-    frame_durations = GetFrameDurationsUgoira( media )
+    frame_durations_ms = GetFrameDurationsMSUgoira( media )
     
     file = io.BytesIO()
     
@@ -186,7 +186,7 @@ def ConvertUgoiraToBytesForAPI( media: ClientMediaResult.MediaResult, format: in
             'PNG',
             save_all=True,
             append_images=frames[1:],
-            duration=frame_durations,  # duration of each frame in milliseconds
+            duration=frame_durations_ms,
             loop=0,  # loop forever
             #compress_level = quality # seems to have no effect for APNG
         )
@@ -198,7 +198,7 @@ def ConvertUgoiraToBytesForAPI( media: ClientMediaResult.MediaResult, format: in
             'WEBP',
             save_all=True,
             append_images=frames[1:],
-            duration=frame_durations,  # duration of each frame in milliseconds
+            duration=frame_durations_ms,
             loop=0,  # loop forever
             quality = quality - 100 if quality > 100 else quality,
             lossless = quality > 100

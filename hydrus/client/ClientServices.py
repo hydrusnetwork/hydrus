@@ -784,24 +784,24 @@ class ServiceRemote( Service ):
         self.network_context = ClientNetworkingContexts.NetworkContext( CC.NETWORK_CONTEXT_HYDRUS, self._service_key )
         
     
-    def _DelayFutureRequests( self, reason, duration = None ):
+    def _DelayFutureRequests( self, reason, duration_s = None ):
         
         if reason == '':
             
             reason = 'unknown error'
             
         
-        if duration is None:
+        if duration_s is None:
             
-            duration = self._GetErrorWaitPeriod()
+            duration_s = self._GetErrorWaitPeriod()
             
         
-        next_no_requests_until = HydrusTime.GetNow() + duration
+        next_no_requests_until = HydrusTime.GetNow() + duration_s
         
         if next_no_requests_until > self._no_requests_until:
             
             self._no_requests_reason = reason
-            self._no_requests_until = HydrusTime.GetNow() + duration
+            self._no_requests_until = HydrusTime.GetNow() + duration_s
             
         
         self._SetDirty()
@@ -876,11 +876,11 @@ class ServiceRemote( Service ):
         self._no_requests_until = dictionary[ 'no_requests_until' ]
         
     
-    def DelayFutureRequests( self, reason, duration = None ):
+    def DelayFutureRequests( self, reason, duration_s = None ):
         
         with self._lock:
             
-            self._DelayFutureRequests( reason, duration = None )
+            self._DelayFutureRequests( reason, duration_s = None )
             
         
     
@@ -1315,7 +1315,7 @@ class ServiceRestricted( ServiceRemote ):
                 
                 if isinstance( e, HydrusExceptions.ServerBusyException ):
                     
-                    self._DelayFutureRequests( 'server was busy', 5 * 60 )
+                    self._DelayFutureRequests( 'server was busy', duration_s = 5 * 60 )
                     
                 elif isinstance( e, HydrusExceptions.SessionException ):
                     
@@ -1331,7 +1331,7 @@ class ServiceRestricted( ServiceRemote ):
                     
                 elif isinstance( e, HydrusExceptions.BandwidthException ):
                     
-                    self._DelayFutureRequests( 'service has exceeded bandwidth', ACCOUNT_SYNC_PERIOD )
+                    self._DelayFutureRequests( 'service has exceeded bandwidth', duration_s = ACCOUNT_SYNC_PERIOD )
                     
                 elif isinstance( e, HydrusExceptions.ServerException ):
                     
@@ -1794,7 +1794,7 @@ class ServiceRepository( ServiceRestricted ):
                         
                         with self._lock:
                             
-                            self._DelayFutureRequests( 'download was recently cancelled', 3 * 60 )
+                            self._DelayFutureRequests( 'download was recently cancelled', duration_s = 3 * 60 )
                             
                         
                         return
@@ -2740,7 +2740,7 @@ class ServiceRepository( ServiceRestricted ):
                         
                         with self._lock:
                             
-                            self._DelayFutureRequests( 'download was recently cancelled', 3 * 60 )
+                            self._DelayFutureRequests( 'download was recently cancelled', duration_s = 3 * 60 )
                             
                         
                         return

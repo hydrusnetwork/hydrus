@@ -33,9 +33,15 @@ try:
     
     JXL_OK = True
     
-except:
+    JXL_ERROR_TEXT = 'Jpeg-XL seems fine!'
+    
+except Exception as e:
     
     JXL_OK = False
+    
+    import traceback
+    
+    JXL_ERROR_TEXT = traceback.format_exc()
     
 
 from hydrus.core import HydrusConstants as HC

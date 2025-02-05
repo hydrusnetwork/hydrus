@@ -63,14 +63,14 @@ class MediaResult( object ):
         return MediaResult( file_info_manager, tags_manager, times_manager, locations_manager, ratings_manager, notes_manager, file_viewing_stats_manager )
         
     
-    def GetDuration( self ):
+    def GetDurationS( self ):
         
-        return HydrusTime.SecondiseMSFloat( self._file_info_manager.duration )
+        return HydrusTime.SecondiseMSFloat( self._file_info_manager.duration_ms )
         
     
     def GetDurationMS( self ):
         
-        return self._file_info_manager.duration
+        return self._file_info_manager.duration_ms
         
     
     def GetFileInfoManager( self ):
@@ -155,7 +155,7 @@ class MediaResult( object ):
     
     def HasDuration( self ):
         
-        duration_ms = self._file_info_manager.duration
+        duration_ms = self._file_info_manager.duration_ms
         
         return duration_ms is not None and duration_ms > 0
         

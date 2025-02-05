@@ -497,7 +497,7 @@ class HydrusResourceClientAPIRestrictedGetFilesFileMetadata( HydrusResourceClien
                         'ext' : HC.mime_ext_lookup[ file_info_manager.mime ],
                         'width' : file_info_manager.width,
                         'height' : file_info_manager.height,
-                        'duration' : file_info_manager.duration,
+                        'duration' : file_info_manager.duration_ms,
                         'num_frames' : file_info_manager.num_frames,
                         'num_words' : file_info_manager.num_words,
                         'has_audio' : file_info_manager.has_audio
@@ -577,7 +577,7 @@ class HydrusResourceClientAPIRestrictedGetFilesFileMetadata( HydrusResourceClien
                         'ext' : HC.mime_ext_lookup[ mime ],
                         'width' : width,
                         'height' : height,
-                        'duration' : file_info_manager.duration,
+                        'duration' : file_info_manager.duration_ms,
                         'num_frames' : file_info_manager.num_frames,
                         'num_words' : file_info_manager.num_words,
                         'has_audio' : file_info_manager.has_audio,

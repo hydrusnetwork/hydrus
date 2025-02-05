@@ -1240,7 +1240,7 @@ class Controller( HydrusController.HydrusController ):
             ClientEnvironment.SetRequestsCABundleEnv()
             
         
-        if self.new_options.GetBoolean( 'boot_with_network_traffic_paused' ):
+        if self.new_options.GetBoolean( 'boot_with_network_traffic_paused' ) or HG.boot_with_network_traffic_paused_command_line:
             
             CG.client_controller.new_options.SetBoolean( 'pause_all_new_network_traffic', True )
             

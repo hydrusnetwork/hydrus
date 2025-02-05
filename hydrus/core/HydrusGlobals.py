@@ -41,6 +41,7 @@ db_synchronous = 2
 import_folders_running = False
 export_folders_running = False
 
+boot_with_network_traffic_paused_command_line = False
 profile_mode = False
 
 db_profile_min_job_time_ms = 16

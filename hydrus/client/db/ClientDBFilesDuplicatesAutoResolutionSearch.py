@@ -1,4 +1,3 @@
-import itertools
 import sqlite3
 import typing
 
@@ -6,6 +5,8 @@ from hydrus.core import HydrusTime
 
 from hydrus.client.db import ClientDBFilesDuplicates
 from hydrus.client.db import ClientDBFilesDuplicatesAutoResolutionStorage
+from hydrus.client.db import ClientDBFilesDuplicatesFileSearch
+from hydrus.client.db import ClientDBFilesDuplicatesSetter
 from hydrus.client.db import ClientDBFilesStorage
 from hydrus.client.db import ClientDBMediaResults
 from hydrus.client.db import ClientDBModule
@@ -19,14 +20,17 @@ class ClientDBFilesDuplicatesAutoResolutionSearch( ClientDBModule.ClientDBModule
         modules_files_storage: ClientDBFilesStorage.ClientDBFilesStorage,
         modules_files_duplicates: ClientDBFilesDuplicates.ClientDBFilesDuplicates,
         modules_files_duplicates_auto_resolution_storage: ClientDBFilesDuplicatesAutoResolutionStorage.ClientDBFilesDuplicatesAutoResolutionStorage,
-        modules_media_results: ClientDBMediaResults.ClientDBMediaResults
+        modules_media_results: ClientDBMediaResults.ClientDBMediaResults,
+        modules_files_duplicates_file_query: ClientDBFilesDuplicatesFileSearch.ClientDBFilesDuplicatesFileSearch,
+        modules_files_duplicates_setter: ClientDBFilesDuplicatesSetter.ClientDBFilesDuplicatesSetter
     ):
         
         self.modules_files_storage = modules_files_storage
         self.modules_files_duplicates = modules_files_duplicates
         self.modules_files_duplicates_auto_resolution_storage = modules_files_duplicates_auto_resolution_storage
         self.modules_media_results = modules_media_results
-        # TODO: a module that does duplicate search
+        self.modules_files_duplicates_file_query = modules_files_duplicates_file_query
+        self.modules_files_duplicates_setter = modules_files_duplicates_setter
         
         super().__init__( 'client duplicates auto-resolution search', cursor )
         
@@ -78,10 +82,10 @@ class ClientDBFilesDuplicatesAutoResolutionSearch( ClientDBModule.ClientDBModule
                 continue
                 
             
-            ( action, hash_a, hash_b, content_update_packages ) = result
-            
-            # tell the duplicate searcher module, or a setter module, whichever makes sense, to set the dupe
-            # this will dissolve the potential duplicate pair bro and auto-remove it from the automatic system, hooray
+            # result is ( action, hash_a, hash_b, content_update_packages )
+            self.modules_files_duplicates_setter.SetDuplicatePairStatus(
+                ( result, )
+            )
             
             self.modules_files_duplicates_auto_resolution_storage.IncrementActionedPairCount( rule )
             
@@ -113,26 +117,11 @@ class ClientDBFilesDuplicatesAutoResolutionSearch( ClientDBModule.ClientDBModule
         
         potential_duplicates_search_context = rule.GetPotentialDuplicatesSearchContext()
         
-        time_started = HydrusTime.GetNowFloat()
-        
         unsearched_pairs = self.modules_files_duplicates_auto_resolution_storage.GetUnsearchedPairs( rule )
         
         if len( unsearched_pairs ) > 0:
             
-            # we have an awkward moment here where we need to convert from 'allowed media_ids for our limited search' to 'allowed_hash_ids for the actual file query'
-            # we could just fetch kings, but to be clean we should gather them all, as the normal duplicates search ultimately does
-            all_media_ids = set( itertools.chain.from_iterable( unsearched_pairs ) )
-            
-            #
-            
-            matching_pairs = []
-            
-            # move the duplicates search code in clientdb down to a new module that we can see
-            # we now ask that guy to present us with the pairs that match this search but are limited to x media_ids
-            
-            # that guy will figure this out:
-            # all_hash_ids = self.modules_files_duplicates.GetDuplicatesHashIds( all_media_ids, db_location_context = db_location_context )
-            # and then prep the query_hash_ids or whatever to effect a system:hashes=blah
+            matching_pairs = self.modules_files_duplicates_file_query.GetPotentialDuplicatePairsForAutoResolution( potential_duplicates_search_context, unsearched_pairs )
             
             #
             

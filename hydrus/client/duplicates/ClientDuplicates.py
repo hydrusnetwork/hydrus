@@ -559,8 +559,8 @@ def GetDuplicateComparisonStatements( shown_media_result: ClientMediaResult.Medi
     
     if s_has_duration or c_has_duration:
         
-        s_duration_s = shown_media_result.GetDuration()
-        c_duration_s = comparison_media_result.GetDuration()
+        s_duration_s = shown_media_result.GetDurationS()
+        c_duration_s = comparison_media_result.GetDurationS()
         
         if s_has_duration and c_has_duration:
             
