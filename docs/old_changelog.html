@@ -35,6 +35,53 @@
             <h1 id="changelog"><a href="#changelog">changelog</a></h1>
             <ul>
                 <li>
+                    <h2 id="version_609"><a href="#version_609">version 609</a></h2>
+                    <ul>
+                        <li><h3>macOS app now comes in a zip</h3></li>
+                        <li>the macos-13 runner that we recently moved to has been taking way too long to build the App DMG. under ideal conditions it will take ~6 minutes, but sometimes it will be 45+. this is an unfortunate and widespread issue without an excellent fix</li>
+                        <li>thus, the macOS App is now distributed in a zip (that takes about 30 seconds to build and is the same size as the DMG lol)</li>
+                        <li>unfortunately this means we can't have the Applications shortcut or the ReadMe; you'll be double-clicking the zip to extract the App, and then dragging it to your Applications yourself</li>
+                        <li>I have updated the 'getting started - installing' guide with the 'allow unsigned apps' stuff from the ReadMe</li>
+                        <li>I am increasingly of the mind that macOS users should consider running from source. the App is built for intel chipsets, so if you are on Silicon, you definitely should: https://hydrusnetwork.github.io/hydrus/running_from_source.html</li>
+                        <li><h3>misc</h3></li>
+                        <li>INFO: reducing the 'too many events' mpv error-handling hook worked well. if you saw a bunch of these in the past few weeks, these were almost certainly false-positives. the files were likely not broken, they were just taxing your computer for a bit and the error was firing accidentally. if you set up a special workflow to isolate or deal with these files, please undo it</li>
+                        <li>the new 'group by namespace (user)' list widget under `options-&gt;sort/collect` now accepts `:` to represent 'all other namespaced tags' if you would like to put them somewhere specific</li>
+                        <li>fixed a typo in the new duplicate files 'has duration' comparison strings. it said 'the other has duration, the other does not' when the current file had no duration</li>
+                        <li>the score for duration now scales from 1 to 50 depending on how much longer a vid is than the other on millisecond longer = 1, twice as long = 50 (cap). this is all still just hardcoded stuff I'm playing around with, and I expect it to formalise to something completely user-customisable as the tools from duplicates auto-resolution firm up</li>
+                        <li>added a little section to 'help my db is broke.txt' talking about the sqlite3 terminal and how to get it on non-Windows</li>
+                        <li><h3>colour sorting</h3></li>
+                        <li>after talking with some users, and learning that our blurhash provides the average colour of image thumbnails, I went bananas and added five new 'average colour' file sorts--</li>
+                        <li>`lightness` - sorts light-to-dark in the Lab colourspace</li>
+                        <li>`hue` - sorts the standard red-orange-yellow-green-cyan-blue-purple colourwheel/rainbow in the HSL colourspace</li>
+                        <li>`balance - blue-yellow` - sorts blue-yellow chromaticity in the Lab colourspace</li>
+                        <li>`balance - green-red` - sorts green-red chromaticity in the Lab colourspace</li>
+                        <li>`chromatic magnitude` - sorts the combined chroma value, which is basically 'is it grey or colourful' in the Lab colourspace</li>
+                        <li>this works on any file with a thumbnail!</li>
+                        <li>they all work with system:limit, also!</li>
+                        <li>and the Client API--new `file_sort_type` definitions are in the Client API reference</li>
+                        <li>I am extremely pleased with how this all worked out. there are some weird results because it is average colour, rather, say, than a carefully selected 'primary colour', and I think it could do with some more work, to perhaps, for instance, push remarkably grey images to the bottom of Hue sorts, but this really works and it simply looks cool to do and then scroll through. it is a good base and proof of concept for my original plan to make colour histograms for files and distinguish between images that are muddy all over versus white and red. let me know where this succeeds and fails, and we'll see what improvements we can think of</li>
+                        <li><h3>janitor stuff</h3></li>
+                        <li>in the petition processing page, when you process a petition, either the normal way or via the mass approve/deny buttons, the 'currently highlighted petition' moves to _after_ the current one (or the next available one if you process multiple at once). previously this was resetting to the 0 position on every mass approve/deny. it should ripple down a bit more naturally now</li>
+                        <li>when you set to apply multiple petitions at once, the pertinent list rows now instantly to show 'uploading...' status</li>
+                        <li>I wrote a whack of test code that loads up and processes fake petitions for the petition page, so I can test these workflows much easier now</li>
+                        <li>I fixed the 'modify account that uploaded this tag' for tags that include the '+' character. sorry for the long-time trouble--it was a stupid GET args parsing issue I missed in early code</li>
+                        <li><h3>boring code cleanup</h3></li>
+                        <li>broke up the 'ManagementPanels' monolith, refactoring it to a bunch of smaller files more under the 'Sidebar' name</li>
+                        <li>renamed the ambiguous 'management type' to 'page type', and 'management panel' to 'sidebar', and 'management controller' to 'page manager' across the program</li>
+                        <li>cleaned up some old static superclass calls in here to `super()`</li>
+                        <li>brushed up the code generally around here, ditching some bad ideas and scope design</li>
+                        <li>fixed a small instability trigger in the main file query routine</li>
+                        <li>cleaned up some more inartful controller scope code in page and downloader UI</li>
+                        <li>cleaned some ugly `QLineEdit` initialisations across the program</li>
+                        <li>updated the server requirements.txt, which isn't used for anything but a reference, to use the newer OpenCV; I just forgot to update it a while ago</li>
+                        <li><h3>pyproject.toml</h3></li>
+                        <li>a user made a 'pyproject.toml' file. this is basically a cleverer requirements.txt that allows for better dependency options. I learned a bit about these files this week and I quite like them. pip can handle them too, so this would be one way to simplify my setup_venv scripts to a single call and allow users to set up simple custom automated situations</li>
+                        <li>so, just for now, there's a pyproject.toml in the base directory. if you use `uv`, feel free to play around with it. I will manually keep it updated and version-synced to our requirements txts, and I wouldn't be surprised if I switch to it as the master soon. I'm going to do some other work and research and testing first though</li>
+                        <li><h3>duplicates auto-resolution</h3></li>
+                        <li>I did a little work on the daemon, but I didn't feel great about it tbh. I know roughly the various things it needs to do, but I'm not firm on what should be the correct orientation of everything. I'll keep at it, and I may do more UI so I have better feedback while I am doing final integration here</li>
+                    </ul>
+                </li>
+                <li>
                     <h2 id="version_608"><a href="#version_608">version 608</a></h2>
                     <ul>
                         <li><h3>mpv</h3></li>

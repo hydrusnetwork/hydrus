@@ -214,7 +214,7 @@ class PanelPredicateSimpleTagTypes( QW.QWidget ):
             raise Exception( 'Launched a SimpleTextPredicateControl without a Tag, Namespace, or Wildcard Pred!' )
             
         
-        self._simple_tag_text = QW.QLineEdit()
+        self._simple_tag_text = QW.QLineEdit( self )
         
         inclusive = predicate.IsInclusive()
         

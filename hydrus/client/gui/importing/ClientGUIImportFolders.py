@@ -221,7 +221,7 @@ class EditImportFolderPanel( ClientGUIScrolledPanels.EditPanel ):
         self._publish_files_to_popup_button = QW.QCheckBox( self._folder_box )
         self._publish_files_to_page = QW.QCheckBox( self._folder_box )
         
-        self._file_seed_cache_button = ClientGUIFileSeedCache.FileSeedCacheButton( self._folder_box, CG.client_controller, self._import_folder.GetFileSeedCache, file_seed_cache_set_callable = self._import_folder.SetFileSeedCache )
+        self._file_seed_cache_button = ClientGUIFileSeedCache.FileSeedCacheButton( self._folder_box, self._import_folder.GetFileSeedCache, file_seed_cache_set_callable = self._import_folder.SetFileSeedCache )
         
         #
         

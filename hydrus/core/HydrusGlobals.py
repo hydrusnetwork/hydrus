@@ -85,6 +85,8 @@ pubsub_report_mode = False
 daemon_report_mode = False
 mpv_report_mode = False
 
+fake_petition_mode = False
+
 force_idle_mode = False
 thumbnail_debug_mode = False
 autocomplete_delay_mode = False

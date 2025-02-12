@@ -28,12 +28,13 @@ from hydrus.client.gui import ClientGUIReviewWindowsQuick
 from hydrus.client.gui import QtInit
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.canvas import ClientGUICanvas
-from hydrus.client.gui.pages import ClientGUIManagementController
-from hydrus.client.gui.pages import ClientGUIManagementPanels
+from hydrus.client.gui.pages import ClientGUIPagesCore
+from hydrus.client.gui.pages import ClientGUIPageManager
 from hydrus.client.gui.pages import ClientGUINewPageChooser
 from hydrus.client.gui.pages import ClientGUIMediaResultsPanel
 from hydrus.client.gui.pages import ClientGUIMediaResultsPanelThumbnails
 from hydrus.client.gui.pages import ClientGUISession
+from hydrus.client.gui.pages import ClientGUISidebar
 
 # noinspection PyUnresolvedReferences
 from hydrus.client.gui.pages import ClientGUISessionLegacy # to get serialisable data types loaded
@@ -57,25 +58,23 @@ def ConvertNumSeedsToWeight( num_seeds: int ) -> int:
 
 class Page( QW.QWidget ):
     
-    def __init__( self, parent: QW.QWidget, controller: "CG.ClientController.Controller", management_controller: ClientGUIManagementController.ManagementController, initial_hashes ):
+    def __init__( self, parent: QW.QWidget, page_manager: ClientGUIPageManager.PageManager, initial_hashes ):
         
         super().__init__( parent )
         
         self._parent_notebook = parent
         
-        self._controller = controller
+        self._page_key = CG.client_controller.AcquirePageKey()
         
-        self._page_key = self._controller.AcquirePageKey()
-        
-        self._management_controller = management_controller
+        self._page_manager = page_manager
         
         self._initial_hashes = initial_hashes
         
-        self._management_controller.SetVariable( 'page_key', self._page_key )
+        self._page_manager.SetVariable( 'page_key', self._page_key )
         
         if len( initial_hashes ) > 0:
             
-            self._management_controller.NotifyLoadingWithHashes()
+            self._page_manager.NotifyLoadingWithHashes()
             
         
         self._initialised = len( initial_hashes ) == 0
@@ -91,23 +90,23 @@ class Page( QW.QWidget ):
         
         self._done_split_setups = False
         
-        self._management_panel = ClientGUIManagementPanels.CreateManagementPanel( self._search_preview_split, self, self._controller, self._management_controller )
+        self._sidebar = ClientGUISidebar.CreateSidebar( self._search_preview_split, self, self._page_manager )
         
         self._preview_panel = QW.QFrame( self._search_preview_split )
         self._preview_panel.setFrameStyle( QW.QFrame.Shape.Panel | QW.QFrame.Shadow.Sunken )
         self._preview_panel.setLineWidth( 2 )
         
-        self._preview_canvas = ClientGUICanvas.CanvasPanel( self._preview_panel, self._page_key, self._management_controller.GetLocationContext() )
+        self._preview_canvas = ClientGUICanvas.CanvasPanel( self._preview_panel, self._page_key, self._page_manager.GetLocationContext() )
         
-        self._management_panel.locationChanged.connect( self._preview_canvas.SetLocationContext )
+        self._sidebar.locationChanged.connect( self._preview_canvas.SetLocationContext )
         
         # this is the only place we _do_ want to set the split as the parent of the thumbnail panel. doing it on init avoids init flicker
-        self._media_panel = self._management_panel.GetDefaultEmptyMediaResultsPanel( self._management_media_split )
+        self._media_panel = self._sidebar.GetDefaultEmptyMediaResultsPanel( self._management_media_split )
         
         self._management_media_split.addWidget( self._search_preview_split )
         self._management_media_split.addWidget( self._media_panel )
         
-        self._search_preview_split.addWidget( self._management_panel )
+        self._search_preview_split.addWidget( self._sidebar )
         self._search_preview_split.addWidget( self._preview_panel )
         
         vbox = QP.VBoxLayout( margin = 0 )
@@ -140,7 +139,7 @@ class Page( QW.QWidget ):
         self._search_preview_split._handle_event_filter = QP.WidgetEventFilter( self._search_preview_split.handle( 1 ) )
         self._search_preview_split._handle_event_filter.EVT_LEFT_DCLICK( self.EventPreviewUnsplit )
         
-        self._controller.sub( self, 'SetSplitterPositions', 'set_splitter_positions' )
+        CG.client_controller.sub( self, 'SetSplitterPositions', 'set_splitter_positions' )
         
         self._current_session_page_container = None
         self._current_session_page_container_hashes_hash = self._GetCurrentSessionPageHashesHash()
@@ -163,7 +162,7 @@ class Page( QW.QWidget ):
         self._media_panel.focusMediaPaused.connect( self._preview_canvas.PauseMedia )
         self._media_panel.statusTextChanged.connect( self._SetPrettyStatus )
         
-        self._management_panel.ConnectMediaResultsPanelSignals( self._media_panel )
+        self._sidebar.ConnectMediaResultsPanelSignals( self._media_panel )
         
     
     def _GetCurrentSessionPageHashesHash( self ):
@@ -209,7 +208,7 @@ class Page( QW.QWidget ):
         
         self._pretty_status = status
         
-        self._controller.gui.SetStatusBarDirty()
+        CG.client_controller.gui.SetStatusBarDirty()
         
     
     def _SwapMediaResultsPanel( self, new_panel: ClientGUIMediaResultsPanel.MediaResultsPanel ):
@@ -224,13 +223,13 @@ class Page( QW.QWidget ):
         
         self._media_panel.ClearPageKey()
         
-        media_collect = self._management_panel.GetMediaCollect()
+        media_collect = self._sidebar.GetMediaCollect()
         
         if media_collect.DoesACollect():
             
             new_panel.Collect( media_collect )
             
-            media_sort = self._management_panel.GetMediaSort()
+            media_sort = self._sidebar.GetMediaSort()
             
             new_panel.Sort( media_sort )
             
@@ -274,9 +273,9 @@ class Page( QW.QWidget ):
         
         self._ConnectMediaResultsPanelSignals()
         
-        self._controller.pub( 'refresh_page_name', self._page_key )
+        CG.client_controller.pub( 'refresh_page_name', self._page_key )
         
-        self._controller.pub( 'notify_new_pages_count' )
+        CG.client_controller.pub( 'notify_new_pages_count' )
         
         if had_focus_before:
             
@@ -289,7 +288,7 @@ class Page( QW.QWidget ):
             
             if CGC.core().MenuIsOpen():
                 
-                self._controller.CallLaterQtSafe( self, 0.5, 'menu closed panel swap loop', clean_up_old_panel )
+                CG.client_controller.CallLaterQtSafe( self, 0.5, 'menu closed panel swap loop', clean_up_old_panel )
                 
                 return
                 
@@ -316,25 +315,25 @@ class Page( QW.QWidget ):
     
     def CheckAbleToClose( self ):
         
-        self._management_panel.CheckAbleToClose()
+        self._sidebar.CheckAbleToClose()
         
     
     def CleanBeforeClose( self ):
         
-        self._management_panel.CleanBeforeClose()
+        self._sidebar.CleanBeforeClose()
         
         self._media_panel.SetFocusedMedia( None )
         
     
     def CleanBeforeDestroy( self ):
         
-        self._management_panel.CleanBeforeDestroy()
+        self._sidebar.CleanBeforeDestroy()
         
         self._preview_canvas.CleanBeforeDestroy()
         
         self._media_panel.CleanBeforeDestroy()
         
-        self._controller.ReleasePageKey( self._page_key )
+        CG.client_controller.ReleasePageKey( self._page_key )
         
     
     def EventPreviewUnsplit( self, event ):
@@ -355,13 +354,13 @@ class Page( QW.QWidget ):
         
         d = {}
         
-        d[ 'name' ] = self._management_controller.GetPageName()
+        d[ 'name' ] = self._page_manager.GetPageName()
         d[ 'page_key' ] = self._page_key.hex()
         d[ 'page_state' ] = self.GetPageState()
-        d[ 'page_type' ] = self._management_controller.GetType()
+        d[ 'page_type' ] = self._page_manager.GetType()
         d[ 'is_media_page' ] = True
         
-        management_info = self._management_controller.GetAPIInfoDict( simple )
+        management_info = self._page_manager.GetAPIInfoDict( simple )
         
         d[ 'management' ] = management_info
         
@@ -374,7 +373,7 @@ class Page( QW.QWidget ):
     
     def GetCollect( self ):
         
-        return self._management_panel.GetMediaCollect()
+        return self._sidebar.GetMediaCollect()
         
     
     def GetHashes( self ):
@@ -394,14 +393,14 @@ class Page( QW.QWidget ):
             
         
     
-    def GetManagementController( self ):
+    def GetPageManager( self ):
         
-        return self._management_controller
+        return self._page_manager
         
     
-    def GetManagementPanel( self ):
+    def GetSidebar( self ):
         
-        return self._management_panel
+        return self._sidebar
         
     
     # used by autocomplete
@@ -417,7 +416,7 @@ class Page( QW.QWidget ):
     
     def GetName( self ):
         
-        return self._management_controller.GetPageName()
+        return self._page_manager.GetPageName()
         
     
     def GetNameForMenu( self ) -> str:
@@ -450,7 +449,7 @@ class Page( QW.QWidget ):
             num_files = len( self._initial_hashes )
             
         
-        ( num_value, num_range ) = self._management_controller.GetValueRange()
+        ( num_value, num_range ) = self._page_manager.GetValueRange()
         
         if num_value == num_range:
             
@@ -474,7 +473,7 @@ class Page( QW.QWidget ):
         
         if self._initialised:
             
-            return self._management_panel.GetPageState()
+            return self._sidebar.GetPageState()
             
         else:
             
@@ -505,7 +504,7 @@ class Page( QW.QWidget ):
         
         name = self.GetName()
         
-        page_data = ClientGUISession.GUISessionPageData( self._management_controller, self.GetHashes() )
+        page_data = ClientGUISession.GUISessionPageData( self._page_manager, self.GetHashes() )
         
         # this is the only place this is generated. this will be its key/name/id from now on
         # we won't regen the hash for identifier since it could change due to object updates etc...
@@ -532,7 +531,7 @@ class Page( QW.QWidget ):
         root[ 'name' ] = self.GetName()
         root[ 'page_key' ] = self._page_key.hex()
         root[ 'page_state' ] = self.GetPageState()
-        root[ 'page_type' ] = self._management_controller.GetType()
+        root[ 'page_type' ] = self._page_manager.GetType()
         root[ 'is_media_page' ] = True
         root[ 'selected' ] = is_selected
         
@@ -570,7 +569,7 @@ class Page( QW.QWidget ):
     
     def GetSort( self ):
         
-        return self._management_panel.GetMediaSort()
+        return self._sidebar.GetMediaSort()
         
     
     def GetTotalFileSize( self ):
@@ -588,7 +587,7 @@ class Page( QW.QWidget ):
     def GetTotalNumHashesAndSeeds( self ):
         
         num_hashes = len( self.GetHashes() )
-        num_seeds = self._management_controller.GetNumSeeds()
+        num_seeds = self._page_manager.GetNumSeeds()
         
         return ( num_hashes, num_seeds )
         
@@ -613,18 +612,18 @@ class Page( QW.QWidget ):
                 return True
                 
             
-            return self._management_controller.HasSerialisableChangesSince( self._current_session_page_container_timestamp )
+            return self._page_manager.HasSerialisableChangesSince( self._current_session_page_container_timestamp )
             
         
     
     def IsGalleryDownloaderPage( self ):
         
-        return self._management_controller.GetType() == ClientGUIManagementController.MANAGEMENT_TYPE_IMPORT_MULTIPLE_GALLERY
+        return self._page_manager.GetType() == ClientGUIPagesCore.PAGE_TYPE_IMPORT_MULTIPLE_GALLERY
         
     
     def IsImporter( self ):
         
-        return self._management_controller.IsImporter()
+        return self._page_manager.IsImporter()
         
     
     def IsInitialised( self ):
@@ -634,17 +633,17 @@ class Page( QW.QWidget ):
     
     def IsMultipleWatcherPage( self ):
         
-        return self._management_controller.GetType() == ClientGUIManagementController.MANAGEMENT_TYPE_IMPORT_MULTIPLE_WATCHER
+        return self._page_manager.GetType() == ClientGUIPagesCore.PAGE_TYPE_IMPORT_MULTIPLE_WATCHER
         
     
     def IsURLImportPage( self ):
         
-        return self._management_controller.GetType() == ClientGUIManagementController.MANAGEMENT_TYPE_IMPORT_URLS
+        return self._page_manager.GetType() == ClientGUIPagesCore.PAGE_TYPE_IMPORT_URLS
         
     
     def PageHidden( self ):
         
-        self._management_panel.PageHidden()
+        self._sidebar.PageHidden()
         self._media_panel.PageHidden()
         self._preview_canvas.PageHidden()
         
@@ -658,7 +657,7 @@ class Page( QW.QWidget ):
             self._done_split_setups = True
             
         
-        self._management_panel.PageShown()
+        self._sidebar.PageShown()
         self._media_panel.PageShown()
         self._preview_canvas.PageShown()
         
@@ -667,7 +666,7 @@ class Page( QW.QWidget ):
         
         if self._initialised:
             
-            self._management_panel.RefreshQuery()
+            self._sidebar.RefreshQuery()
             
         
     
@@ -678,7 +677,7 @@ class Page( QW.QWidget ):
     
     def SetName( self, name ):
         
-        return self._management_controller.SetPageName( name )
+        return self._page_manager.SetPageName( name )
         
     
     def SetPageContainerClean( self, page_container: ClientGUISession.GUISessionContainerPageSingle ):
@@ -699,7 +698,7 @@ class Page( QW.QWidget ):
     
     def SetSearchFocus( self ):
         
-        self._management_panel.SetSearchFocus()
+        self._sidebar.SetSearchFocus()
         
     
     def SetSplitterPositions( self, hpos = None, vpos = None ):
@@ -785,7 +784,7 @@ class Page( QW.QWidget ):
                 
             
         
-        controller = self._controller
+        controller = CG.client_controller
         initial_hashes = HydrusData.DedupeList( self._initial_hashes )
         
         def work_callable():
@@ -816,7 +815,7 @@ class Page( QW.QWidget ):
             
             self._SetPrettyStatus( '' )
             
-            media_panel = ClientGUIMediaResultsPanelThumbnails.MediaResultsPanelThumbnails( self, self._page_key, self._management_controller, media_results )
+            media_panel = ClientGUIMediaResultsPanelThumbnails.MediaResultsPanelThumbnails( self, self._page_key, self._page_manager, media_results )
             
             self._SwapMediaResultsPanel( media_panel )
             
@@ -828,7 +827,7 @@ class Page( QW.QWidget ):
                 
             
             # do this 'after' so on a long session setup, it all boots once session loaded
-            CG.client_controller.CallAfterQtSafe( self, 'starting page controller', self._management_panel.Start )
+            CG.client_controller.CallAfterQtSafe( self, 'starting page controller', self._sidebar.Start )
             
             self._initialised = True
             self._initial_hashes = []
@@ -841,7 +840,7 @@ class Page( QW.QWidget ):
     
     def SetSort( self, media_sort, do_sort = True ):
         
-        self._management_panel.SetMediaSort( media_sort, do_sort = do_sort )
+        self._sidebar.SetMediaSort( media_sort, do_sort = do_sort )
         
     
     def Start( self ):
@@ -853,7 +852,7 @@ class Page( QW.QWidget ):
         else:
             
             # do this 'after' so on a long session setup, it all boots once session loaded
-            CG.client_controller.CallAfterQtSafe( self, 'starting page controller', self._management_panel.Start )
+            CG.client_controller.CallAfterQtSafe( self, 'starting page controller', self._sidebar.Start )
             
             self._initialised = True
             
@@ -868,7 +867,7 @@ class Page( QW.QWidget ):
         
         try:
             
-            self._management_panel.CheckAbleToClose()
+            self._sidebar.CheckAbleToClose()
             
         except HydrusExceptions.VetoException as e:
             
@@ -885,7 +884,7 @@ class Page( QW.QWidget ):
     
     def REPEATINGPageUpdate( self ):
         
-        self._management_panel.REPEATINGPageUpdate()
+        self._sidebar.REPEATINGPageUpdate()
         
     
 
@@ -987,19 +986,17 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
     
     freshSessionLoaded = QC.Signal( ClientGUISession.GUISessionContainer )
     
-    def __init__( self, parent: QW.QWidget, controller: "CG.ClientController.Controller", name ):
+    def __init__( self, parent: QW.QWidget, name ):
         
         super().__init__( parent )
         
         self._parent_notebook = parent
         
-        direction = controller.new_options.GetInteger( 'notebook_tab_alignment' )
+        direction = CG.client_controller.new_options.GetInteger( 'notebook_tab_alignment' )
         
         self.setTabPosition( directions_for_notebook_tabs[ direction ] )
         
-        self._controller = controller
-        
-        self._page_key = self._controller.AcquirePageKey()
+        self._page_key = CG.client_controller.AcquirePageKey()
         
         self._name = name
         
@@ -1009,9 +1006,9 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         
         self._closed_pages = []
         
-        self._controller.sub( self, 'RefreshPageName', 'refresh_page_name' )
-        self._controller.sub( self, 'NotifyPageUnclosed', 'notify_page_unclosed' )
-        self._controller.sub( self, '_UpdateOptions', 'notify_new_options' )
+        CG.client_controller.sub( self, 'RefreshPageName', 'refresh_page_name' )
+        CG.client_controller.sub( self, 'NotifyPageUnclosed', 'notify_page_unclosed' )
+        CG.client_controller.sub( self, '_UpdateOptions', 'notify_new_options' )
         
         self.currentChanged.connect( self.pageJustChanged )
         self.pageDragAndDropped.connect( self._RefreshPageNamesAfterDnD )
@@ -1040,14 +1037,14 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         
         if hasattr( page_widget, 'GetPageKey' ):
             
-            self._controller.pub( 'refresh_page_name', page_widget.GetPageKey() )
+            CG.client_controller.pub( 'refresh_page_name', page_widget.GetPageKey() )
             
         
         source_notebook = source_widget.parentWidget()
         
         if hasattr( source_notebook, 'GetPageKey' ):
             
-            self._controller.pub( 'refresh_page_name', source_notebook.GetPageKey() )
+            CG.client_controller.pub( 'refresh_page_name', source_notebook.GetPageKey() )
             
         
     
@@ -1076,7 +1073,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         
         self._next_new_page_index = insertion_index
         
-        with ClientGUINewPageChooser.DialogPageChooser( self, self._controller ) as dlg:
+        with ClientGUINewPageChooser.DialogPageChooser( self, CG.client_controller ) as dlg:
             
             if dlg.exec() == QW.QDialog.DialogCode.Accepted:
                 
@@ -1088,9 +1085,9 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
                     
                 elif page_type == 'page':
                     
-                    management_controller = page_data
+                    page_manager = page_data
                     
-                    self.NewPage( management_controller )
+                    self.NewPage( page_manager )
                     
                 
             
@@ -1133,8 +1130,8 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
     
     def _ClosePage( self, index, polite = True, delete_page = False ):
         
-        self._controller.ResetIdleTimer()
-        self._controller.ResetPageChangeTimer()
+        CG.client_controller.ResetIdleTimer()
+        CG.client_controller.ResetPageChangeTimer()
         
         if index < 0 or index > self.count() - 1:
             
@@ -1165,20 +1162,20 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         
         self.removeTab( index )
         
-        self._controller.pub( 'refresh_page_name', self._page_key )
+        CG.client_controller.pub( 'refresh_page_name', self._page_key )
         
         if delete_page:
             
-            self._controller.pub( 'notify_deleted_page', page )
+            CG.client_controller.pub( 'notify_deleted_page', page )
             
         else:
             
-            self._controller.pub( 'notify_closed_page', page )
+            CG.client_controller.pub( 'notify_closed_page', page )
             
         
         if we_are_closing_the_current_focus:
             
-            focus_goes_to = self._controller.new_options.GetInteger( 'close_page_focus_goes' )
+            focus_goes_to = CG.client_controller.new_options.GetInteger( 'close_page_focus_goes' )
             
             new_page_focus = None
             
@@ -1256,7 +1253,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
     
     def _GetDefaultPageInsertionIndex( self ):
         
-        new_options = self._controller.new_options
+        new_options = CG.client_controller.new_options
         
         new_page_goes = new_options.GetInteger( 'default_new_page_goes' )
         
@@ -1400,7 +1397,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
             
             page.setParent( dest_notebook )
             
-            self._controller.pub( 'refresh_page_name', source_notebook.GetPageKey() )
+            CG.client_controller.pub( 'refresh_page_name', source_notebook.GetPageKey() )
             
         
         insertion_tab_index = min( insertion_tab_index, dest_notebook.count() )
@@ -1414,7 +1411,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
             self.ShowPage( page )
             
         
-        self._controller.pub( 'refresh_page_name', page.GetPageKey() )
+        CG.client_controller.pub( 'refresh_page_name', page.GetPageKey() )
         
     
     def _MovePages( self, pages, dest_notebook ):
@@ -1439,7 +1436,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
             return
             
         
-        new_options = self._controller.new_options
+        new_options = CG.client_controller.new_options
         
         max_page_name_chars = new_options.GetInteger( 'max_page_name_chars' )
         
@@ -1531,7 +1528,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
                 
                 page.SetName( new_name )
                 
-                self._controller.pub( 'refresh_page_name', page.GetPageKey() )
+                CG.client_controller.pub( 'refresh_page_name', page.GetPageKey() )
                 
             
         
@@ -1827,7 +1824,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
                 
             
         
-        existing_session_names = self._controller.Read( 'serialisable_names', HydrusSerialisable.SERIALISABLE_TYPE_GUI_SESSION_CONTAINER )
+        existing_session_names = CG.client_controller.Read( 'serialisable_names', HydrusSerialisable.SERIALISABLE_TYPE_GUI_SESSION_CONTAINER )
         
         if len( existing_session_names ) > 0 or click_over_page_of_pages:
             
@@ -1857,10 +1854,10 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
                     continue
                     
                 
-                ClientGUIMenus.AppendMenuItem( submenu, name, 'Save this page of pages to the session.', self._controller.gui.ProposeSaveGUISession, notebook = page, name = name )
+                ClientGUIMenus.AppendMenuItem( submenu, name, 'Save this page of pages to the session.', CG.client_controller.gui.ProposeSaveGUISession, notebook = page, name = name )
                 
             
-            ClientGUIMenus.AppendMenuItem( submenu, 'create a new session', 'Save this page of pages to the session.', self._controller.gui.ProposeSaveGUISession, notebook = page, suggested_name = page.GetName() )
+            ClientGUIMenus.AppendMenuItem( submenu, 'create a new session', 'Save this page of pages to the session.', CG.client_controller.gui.ProposeSaveGUISession, notebook = page, suggested_name = page.GetName() )
             
             ClientGUIMenus.AppendMenu( menu, submenu, 'save this page of pages to a session' )
             
@@ -1957,7 +1954,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         
         try:
             
-            session = session = self._controller.Read( 'gui_session', name, timestamp_ms )
+            session = session = CG.client_controller.Read( 'gui_session', name, timestamp_ms )
             
         except Exception as e:
             
@@ -1992,7 +1989,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         
         try:
             
-            session = self._controller.Read( 'gui_session', name )
+            session = CG.client_controller.Read( 'gui_session', name )
             
         except Exception as e:
             
@@ -2056,7 +2053,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
             page.CleanBeforeDestroy()
             
         
-        self._controller.ReleasePageKey( self._page_key )
+        CG.client_controller.ReleasePageKey( self._page_key )
         
     
     def CloseCurrentPage( self, polite = True ):
@@ -2179,7 +2176,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
             'name' : self.GetName(),
             'page_key' : self._page_key.hex(),
             'page_state' : self.GetPageState(),
-            'page_type' : ClientGUIManagementController.MANAGEMENT_TYPE_PAGE_OF_PAGES,
+            'page_type' : ClientGUIPagesCore.PAGE_TYPE_PAGE_OF_PAGES,
             'is_media_page' : False
         }
         
@@ -2367,7 +2364,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
             
             for url_import_page in potential_url_import_pages:
                 
-                urls_import = url_import_page.GetManagementController().GetVariable( 'urls_import' )
+                urls_import = url_import_page.GetPageManager().GetVariable( 'urls_import' )
                 
                 file_import_options = urls_import.GetFileImportOptions()
                 
@@ -2386,7 +2383,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
             
             for url_import_page in potential_url_import_pages:
                 
-                urls_import = url_import_page.GetManagementController().GetVariable( 'urls_import' )
+                urls_import = url_import_page.GetPageManager().GetVariable( 'urls_import' )
                 
                 tag_import_options = urls_import.GetTagImportOptions()
                 
@@ -2535,7 +2532,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         root[ 'name' ] = self.GetName()
         root[ 'page_key' ] = self._page_key.hex()
         root[ 'page_state' ] = self.GetPageState()
-        root[ 'page_type' ] = ClientGUIManagementController.MANAGEMENT_TYPE_PAGE_OF_PAGES
+        root[ 'page_type' ] = ClientGUIPagesCore.PAGE_TYPE_PAGE_OF_PAGES
         root[ 'is_media_page' ] = False
         root[ 'selected' ] = is_selected
         root[ 'pages' ] = my_pages_list
@@ -2762,10 +2759,10 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
             return None
             
         
-        management_controller = page_data.GetManagementController()
+        page_manager = page_data.GetPageManager()
         initial_hashes = page_data.GetHashes()
         
-        page = self.NewPage( management_controller, initial_hashes = initial_hashes, forced_insertion_index = forced_insertion_index, select_page = select_page )
+        page = self.NewPage( page_manager, initial_hashes = initial_hashes, forced_insertion_index = forced_insertion_index, select_page = select_page )
         
         if session_is_clean and page is not None:
             
@@ -2814,7 +2811,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
             
             self._CloseAllPages( polite = False, delete_pages = True )
             
-            self._controller.CallLaterQtSafe( self, 1.0, 'append session', self.AppendGUISessionFreshest, name, load_in_a_page_of_pages = False )
+            CG.client_controller.CallLaterQtSafe( self, 1.0, 'append session', self.AppendGUISessionFreshest, name, load_in_a_page_of_pages = False )
             
         else:
             
@@ -2831,9 +2828,9 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
             return
             
         
-        source_management_controller = source_page.GetManagementController()
+        source_page_manager = source_page.GetPageManager()
         
-        location_context = source_management_controller.GetLocationContext()
+        location_context = source_page_manager.GetLocationContext()
         
         screen_position = QG.QCursor.pos()
         
@@ -2895,7 +2892,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         
         if do_add:
             
-            media_results = self._controller.Read( 'media_results', hashes, sorted = True )
+            media_results = CG.client_controller.Read( 'media_results', hashes, sorted = True )
             
             dest_page.AddMediaResults( media_results )
             
@@ -2987,26 +2984,26 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         return True
         
     
-    def NewPage( self, management_controller, initial_hashes = None, forced_insertion_index = None, on_deepest_notebook = False, select_page = True ):
+    def NewPage( self, page_manager, initial_hashes = None, forced_insertion_index = None, on_deepest_notebook = False, select_page = True ):
         
         current_page = self.currentWidget()
         
         if on_deepest_notebook and isinstance( current_page, PagesNotebook ):
             
-            return current_page.NewPage( management_controller, initial_hashes = initial_hashes, forced_insertion_index = forced_insertion_index, on_deepest_notebook = on_deepest_notebook )
+            return current_page.NewPage( page_manager, initial_hashes = initial_hashes, forced_insertion_index = forced_insertion_index, on_deepest_notebook = on_deepest_notebook )
             
         
         # the 'too many pages open' thing used to be here
         
-        self._controller.ResetIdleTimer()
-        self._controller.ResetPageChangeTimer()
+        CG.client_controller.ResetIdleTimer()
+        CG.client_controller.ResetPageChangeTimer()
         
         if initial_hashes is None:
             
             initial_hashes = []
             
         
-        page = Page( self, self._controller, management_controller, initial_hashes )
+        page = Page( self, page_manager, initial_hashes )
         
         if forced_insertion_index is None:
             
@@ -3031,9 +3028,9 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         # in some unusual circumstances, this gets out of whack
         insertion_index = min( insertion_index, self.count() )
         
-        if self._controller.new_options.GetBoolean( 'force_hide_page_signal_on_new_page' ):
+        if CG.client_controller.new_options.GetBoolean( 'force_hide_page_signal_on_new_page' ):
             
-            current_gui_page = self._controller.gui.GetCurrentPage()
+            current_gui_page = CG.client_controller.gui.GetCurrentPage()
             
             if current_gui_page is not None:
                 
@@ -3048,8 +3045,8 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
             self.setCurrentIndex( insertion_index )
             
         
-        self._controller.pub( 'refresh_page_name', page.GetPageKey() )
-        self._controller.pub( 'notify_new_pages' )
+        CG.client_controller.pub( 'refresh_page_name', page.GetPageKey() )
+        CG.client_controller.pub( 'notify_new_pages' )
         
         page.Start()
         
@@ -3059,7 +3056,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
             
             # this is here for now due to the pagechooser having a double-layer dialog on a booru choice, which messes up some focus inheritance
             
-            self._controller.CallLaterQtSafe( self, 0.5, 'set page focus', page.SetSearchFocus )
+            CG.client_controller.CallLaterQtSafe( self, 0.5, 'set page focus', page.SetSearchFocus )
             
         
         return page
@@ -3074,44 +3071,44 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         on_deepest_notebook = False
     ):
         
-        management_controller = ClientGUIManagementController.CreateManagementControllerDuplicateFilter( location_context = location_context, initial_predicates = initial_predicates, page_name = page_name )
+        page_manager = ClientGUIPageManager.CreatePageManagerDuplicateFilter( location_context = location_context, initial_predicates = initial_predicates, page_name = page_name )
         
-        return self.NewPage( management_controller, on_deepest_notebook = on_deepest_notebook, select_page = select_page )
+        return self.NewPage( page_manager, on_deepest_notebook = on_deepest_notebook, select_page = select_page )
         
     
     def NewPageImportGallery( self, page_name = None, on_deepest_notebook = False, select_page = True ):
         
-        management_controller = ClientGUIManagementController.CreateManagementControllerImportGallery( page_name = page_name )
+        page_manager = ClientGUIPageManager.CreatePageManagerImportGallery( page_name = page_name )
         
-        return self.NewPage( management_controller, on_deepest_notebook = on_deepest_notebook, select_page = select_page )
+        return self.NewPage( page_manager, on_deepest_notebook = on_deepest_notebook, select_page = select_page )
         
     
     def NewPageImportSimpleDownloader( self, on_deepest_notebook = False ):
         
-        management_controller = ClientGUIManagementController.CreateManagementControllerImportSimpleDownloader()
+        page_manager = ClientGUIPageManager.CreatePageManagerImportSimpleDownloader()
         
-        return self.NewPage( management_controller, on_deepest_notebook = on_deepest_notebook )
+        return self.NewPage( page_manager, on_deepest_notebook = on_deepest_notebook )
         
     
     def NewPageImportMultipleWatcher( self, page_name = None, url = None, on_deepest_notebook = False, select_page = True ):
         
-        management_controller = ClientGUIManagementController.CreateManagementControllerImportMultipleWatcher( page_name = page_name, url = url )
+        page_manager = ClientGUIPageManager.CreatePageManagerImportMultipleWatcher( page_name = page_name, url = url )
         
-        return self.NewPage( management_controller, on_deepest_notebook = on_deepest_notebook, select_page = select_page )
+        return self.NewPage( page_manager, on_deepest_notebook = on_deepest_notebook, select_page = select_page )
         
     
     def NewPageImportURLs( self, page_name = None, on_deepest_notebook = False, select_page = True, destination_location_context = None, destination_tag_import_options = None ):
         
-        management_controller = ClientGUIManagementController.CreateManagementControllerImportURLs( page_name = page_name, destination_location_context = destination_location_context, destination_tag_import_options = destination_tag_import_options )
+        page_manager = ClientGUIPageManager.CreatePageManagerImportURLs( page_name = page_name, destination_location_context = destination_location_context, destination_tag_import_options = destination_tag_import_options )
         
-        return self.NewPage( management_controller, on_deepest_notebook = on_deepest_notebook, select_page = select_page )
+        return self.NewPage( page_manager, on_deepest_notebook = on_deepest_notebook, select_page = select_page )
         
     
     def NewPagePetitions( self, service_key, on_deepest_notebook = False ):
         
-        management_controller = ClientGUIManagementController.CreateManagementControllerPetitions( service_key )
+        page_manager = ClientGUIPageManager.CreatePageManagerPetitions( service_key )
         
-        return self.NewPage( management_controller, on_deepest_notebook = on_deepest_notebook )
+        return self.NewPage( page_manager, on_deepest_notebook = on_deepest_notebook )
         
     
     def NewPageQuery(
@@ -3152,11 +3149,11 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         search_disabled = len( initial_hashes ) > 0 and len( initial_predicates ) == 0
         search_enabled = not search_disabled
         
-        new_options = self._controller.new_options
+        new_options = CG.client_controller.new_options
         
         tag_service_key = new_options.GetKey( 'default_tag_service_search_page' )
         
-        if not self._controller.services_manager.ServiceExists( tag_service_key ):
+        if not CG.client_controller.services_manager.ServiceExists( tag_service_key ):
             
             tag_service_key = CC.COMBINED_TAG_SERVICE_KEY
             
@@ -3176,19 +3173,19 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
             file_search_context.SetComplete()
             
         
-        management_controller = ClientGUIManagementController.CreateManagementControllerQuery( page_name, file_search_context, search_enabled )
+        page_manager = ClientGUIPageManager.CreatePageManagerQuery( page_name, file_search_context, search_enabled )
         
         if initial_sort is not None:
             
-            management_controller.SetVariable( 'media_sort', initial_sort )
+            page_manager.SetVariable( 'media_sort', initial_sort )
             
         
         if initial_collect is not None:
             
-            management_controller.SetVariable( 'media_collect', initial_collect )
+            page_manager.SetVariable( 'media_collect', initial_collect )
             
         
-        page = self.NewPage( management_controller, initial_hashes = initial_hashes, on_deepest_notebook = on_deepest_notebook, select_page = select_page )
+        page = self.NewPage( page_manager, initial_hashes = initial_hashes, on_deepest_notebook = on_deepest_notebook, select_page = select_page )
         
         # don't need to do 'Do a Collect if needed', since SwapPanel lower down does it for us
         
@@ -3211,10 +3208,10 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
             return current_page.NewPagesNotebook( name = name, forced_insertion_index = forced_insertion_index, on_deepest_notebook = on_deepest_notebook, give_it_a_blank_page = give_it_a_blank_page )
             
         
-        self._controller.ResetIdleTimer()
-        self._controller.ResetPageChangeTimer()
+        CG.client_controller.ResetIdleTimer()
+        CG.client_controller.ResetPageChangeTimer()
         
-        page = PagesNotebook( self, self._controller, name )
+        page = PagesNotebook( self, name )
         
         if forced_insertion_index is None:
             
@@ -3243,7 +3240,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
             self.setCurrentIndex( insertion_index )
             
         
-        self._controller.pub( 'refresh_page_name', page.GetPageKey() )
+        CG.client_controller.pub( 'refresh_page_name', page.GetPageKey() )
         
         if give_it_a_blank_page:
             
@@ -3272,7 +3269,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
                 self.insertTab( insert_index, page, name )
                 self.setCurrentIndex( insert_index )
                 
-                self._controller.pub( 'refresh_page_name', page.GetPageKey() )
+                CG.client_controller.pub( 'refresh_page_name', page.GetPageKey() )
                 
                 self._closed_pages.remove( ( index, closed_page_key ) )
                 
@@ -3310,11 +3307,11 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
             new_page.PageShown()
             
         
-        self._controller.gui.RefreshStatusBar()
+        CG.client_controller.gui.RefreshStatusBar()
         
         self._previous_page_index = index
         
-        self._controller.pub( 'notify_page_change' )
+        CG.client_controller.pub( 'notify_page_change' )
         
     
     def PageShown( self ):
@@ -3343,7 +3340,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
             
             def work_callable():
                 
-                media_results = self._controller.Read( 'media_results', hashes, sorted = True )
+                media_results = CG.client_controller.Read( 'media_results', hashes, sorted = True )
                 
                 return media_results
                 

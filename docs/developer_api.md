@@ -1802,8 +1802,13 @@ file\_sort\_type is by default _import time_. It is an integer according to the 
 * 20 - hash hex (lexicographic/reverse lexicographic)
 * 21 - pixel hash hex (lexicographic/reverse lexicographic)
 * 22 - blurhash (lexicographic/reverse lexicographic)
+* 23 - average colour - lightness (darkest first/lightest first)
+* 24 - average colour - chromatic magnitude (greys first/colours first)
+* 25 - average colour - green/red axis (greens first/reds first)
+* 26 - average colour - blue/yellow axis (blues first/yellows first)
+* 27 - average colour - hue (rainbow - red first/rainbow - purple first)
 
-The pixel and blurhash sorts will put files without one of these (e.g. an mp3) at the end, regardless of asc/desc.
+The pixel, blurhash, and average colour sorts will put files without one of these (e.g. an mp3) at the end, regardless of asc/desc.
 
 Response:
 :   The full list of numerical file ids that match the search.

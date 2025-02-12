@@ -52,6 +52,8 @@ def ensure_component_is_encoded( mixed_encoding_string: str, safe_chars: str ) -
 def ensure_param_component_is_encoded( param_component: str ) -> str:
     """
     Either the key or the value. It can include a mix of encoded and non-encoded characters, it will be returned all encoded.
+    
+    If you have a tag sub-component that needs to encode "=" or "+", like "6+girls", this will not do it!! You need to call ensure_component_is_encoded with no safe_chars!
     """
     
     return ensure_component_is_encoded( param_component, PARAM_EXCEPTION_CHARS )

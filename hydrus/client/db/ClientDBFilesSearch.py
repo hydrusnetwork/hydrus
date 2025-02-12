@@ -2704,6 +2704,27 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
                 
                 did_sort = True
                 
+            elif sort_data in CC.AVERAGE_COLOUR_FILE_SORTS:
+                
+                with self._MakeTemporaryIntegerTable( hash_ids, 'hash_id' ) as temp_hash_ids_table_name:
+                    
+                    hash_ids_to_blurhashes = self.modules_files_metadata_basic.GetHashIdsToBlurhashes( temp_hash_ids_table_name )
+                    
+                
+                hash_ids_to_blurhashes = { hash_id : blurhash for ( hash_id, blurhash ) in hash_ids_to_blurhashes.items() if blurhash is not None }
+                
+                missed_hash_ids = [ hash_id for hash_id in hash_ids if hash_id not in hash_ids_to_blurhashes ]
+                
+                reverse = sort_order == CC.SORT_DESC
+                
+                blurhash_converter = ClientMedia.GetBlurhashToSortableCall( sort_data )
+                
+                hash_ids = sorted( list( hash_ids_to_blurhashes.keys() ), key = lambda hash_id: blurhash_converter( hash_ids_to_blurhashes[ hash_id ] ), reverse = reverse )
+                
+                hash_ids.extend( missed_hash_ids )
+                
+                did_sort = True
+                
             
         
         if query is not None:

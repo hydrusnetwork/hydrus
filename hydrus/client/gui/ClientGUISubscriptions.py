@@ -1315,9 +1315,9 @@ class EditSubscriptionQueryPanel( ClientGUIScrolledPanels.EditPanel ):
         self._check_now = QW.QCheckBox( self )
         self._paused = QW.QCheckBox( self )
         
-        self._file_seed_cache_control = ClientGUIFileSeedCache.FileSeedCacheStatusControl( self, CG.client_controller )
+        self._file_seed_cache_control = ClientGUIFileSeedCache.FileSeedCacheStatusControl( self )
         
-        self._gallery_seed_log_control = ClientGUIGallerySeedLog.GallerySeedLogStatusControl( self, CG.client_controller, True, True, 'search' )
+        self._gallery_seed_log_control = ClientGUIGallerySeedLog.GallerySeedLogStatusControl( self, True, True, 'search' )
         
         tag_import_options = query_header.GetTagImportOptions()
         show_downloader_options = False # just for additional tags, no parsing gubbins needed

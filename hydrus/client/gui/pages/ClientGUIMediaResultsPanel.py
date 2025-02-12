@@ -37,7 +37,7 @@ from hydrus.client.gui.duplicates import ClientGUIDuplicatesContentMergeOptions
 from hydrus.client.gui.media import ClientGUIMediaSimpleActions
 from hydrus.client.gui.media import ClientGUIMediaModalActions
 from hydrus.client.gui.networking import ClientGUIHydrusNetwork
-from hydrus.client.gui.pages import ClientGUIManagementController
+from hydrus.client.gui.pages import ClientGUIPageManager
 from hydrus.client.gui.panels import ClientGUIScrolledPanels
 from hydrus.client.gui.panels import ClientGUIScrolledPanelsEdit
 from hydrus.client.media import ClientMedia
@@ -72,7 +72,7 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.Liste
     
     newMediaAdded = QC.Signal()
     
-    def __init__( self, parent, page_key, management_controller: ClientGUIManagementController.ManagementController, media_results ):
+    def __init__( self, parent, page_key, page_manager: ClientGUIPageManager.PageManager, media_results ):
         
         self._qss_colours = {
             CC.COLOUR_THUMBGRID_BACKGROUND : QG.QColor( 255, 255, 255 ),
@@ -87,7 +87,7 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.Liste
         }
         
         self._page_key = page_key
-        self._management_controller = management_controller
+        self._page_manager = page_manager
         
         # TODO: Assuming the canvas listeningmedialist refactoring went well, this guy is next
         # take out the class inheritance, instead create a (non-listening) self._media_list, and fix all method calls to self._GetFirst and so on to instead point at that
@@ -97,7 +97,7 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.Liste
         # TODO: BRUH REWRITE THIS GARBAGE
         # we don't really want to be messing around with *args, **kwargs in __init__/super() gubbins, and this is highlighted as we move to super() and see this is all a mess!!
         # obviously decouple the list from the panel here so we aren't trying to do everything in one class
-        super().__init__( self._management_controller.GetLocationContext(), media_results, parent )
+        super().__init__( self._page_manager.GetLocationContext(), media_results, parent )
         
         self.setObjectName( 'HydrusMediaList' )
         
@@ -1778,11 +1778,11 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.Liste
         
         if len( hashes ) > 0:
             
-            media_sort = self._management_controller.GetVariable( 'media_sort' )
+            media_sort = self._page_manager.GetVariable( 'media_sort' )
             
-            if self._management_controller.HasVariable( 'media_collect' ):
+            if self._page_manager.HasVariable( 'media_collect' ):
                 
-                media_collect = self._management_controller.GetVariable( 'media_collect' )
+                media_collect = self._page_manager.GetVariable( 'media_collect' )
                 
             else:
                 

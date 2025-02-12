@@ -213,35 +213,35 @@ class GUISessionPageData( HydrusSerialisable.SerialisableBase ):
     SERIALISABLE_NAME = 'GUI Session Page Data'
     SERIALISABLE_VERSION = 1
     
-    def __init__( self, management_controller = None, hashes = None ):
+    def __init__( self, page_manager = None, hashes = None ):
         
         super().__init__()
         
-        if management_controller is None:
+        if page_manager is None:
             
-            self._management_controller = None
+            self._page_manager = None
             self._hashes = None
             
         else:
             
-            self._management_controller = management_controller.Duplicate() # duplicate, which _should_ freeze downloaders etc.. inside the MC
+            self._page_manager = page_manager.Duplicate() # duplicate, which _should_ freeze downloaders etc.. inside the MC
             self._hashes = list( hashes )
             
         
     
     def _GetSerialisableInfo( self ):
         
-        serialisable_management_controller = self._management_controller.GetSerialisableTuple()
+        serialisable_page_manager = self._page_manager.GetSerialisableTuple()
         serialisable_hashes = [ hash.hex() for hash in self._hashes ]
         
-        return ( serialisable_management_controller, serialisable_hashes )
+        return ( serialisable_page_manager, serialisable_hashes )
         
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
-        ( serialisable_management_controller, serialisable_hashes ) = serialisable_info
+        ( serialisable_page_manager, serialisable_hashes ) = serialisable_info
         
-        self._management_controller = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_management_controller )
+        self._page_manager = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_page_manager )
         self._hashes = [ bytes.fromhex( hash_hex ) for hash_hex in serialisable_hashes ]
         
     
@@ -250,9 +250,9 @@ class GUISessionPageData( HydrusSerialisable.SerialisableBase ):
         return self._hashes
         
     
-    def GetManagementController( self ):
+    def GetPageManager( self ):
         
-        return self._management_controller
+        return self._page_manager
         
     
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_GUI_SESSION_PAGE_DATA ] = GUISessionPageData

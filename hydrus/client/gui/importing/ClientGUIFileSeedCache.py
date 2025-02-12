@@ -367,11 +367,10 @@ def PopulateFileSeedCacheMenu( win: QW.QWidget, menu: QW.QMenu, file_seed_cache:
 
 class EditFileSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
     
-    def __init__( self, parent: QW.QWidget, controller: "CG.ClientController.Controller", file_seed_cache: ClientImportFileSeeds.FileSeedCache ):
+    def __init__( self, parent: QW.QWidget, file_seed_cache: ClientImportFileSeeds.FileSeedCache ):
         
         super().__init__( parent )
         
-        self._controller = controller
         self._file_seed_cache = file_seed_cache
         
         self._text = ClientGUICommon.BetterStaticText( self, 'initialising' )
@@ -400,7 +399,7 @@ class EditFileSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
         self._list_ctrl.AddRowsMenuCallable( self._GetListCtrlMenu )
         self._list_ctrl.SetCopyRowsCallable( self._GetCopyableRows )
         
-        self._controller.sub( self, 'NotifyFileSeedsUpdated', 'file_seed_cache_file_seeds_updated' )
+        CG.client_controller.sub( self, 'NotifyFileSeedsUpdated', 'file_seed_cache_file_seeds_updated' )
         
         QP.CallAfter( self._UpdateText )
         
@@ -924,9 +923,8 @@ class EditFileSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
 
 class FileSeedCacheButton( ClientGUICommon.ButtonWithMenuArrow ):
     
-    def __init__( self, parent, controller: "CG.ClientController.Controller", file_seed_cache_get_callable, file_seed_cache_set_callable = None ):
+    def __init__( self, parent, file_seed_cache_get_callable, file_seed_cache_set_callable = None ):
         
-        self._controller = controller
         self._file_seed_cache_get_callable = file_seed_cache_get_callable
         self._file_seed_cache_set_callable = file_seed_cache_set_callable
         
@@ -961,7 +959,7 @@ class FileSeedCacheButton( ClientGUICommon.ButtonWithMenuArrow ):
                 
                 with ClientGUITopLevelWindowsPanels.DialogNullipotent( self, title ) as dlg:
                     
-                    panel = EditFileSeedCachePanel( dlg, self._controller, file_seed_cache )
+                    panel = EditFileSeedCachePanel( dlg, file_seed_cache )
                     
                     dlg.SetPanel( panel )
                     
@@ -974,7 +972,7 @@ class FileSeedCacheButton( ClientGUICommon.ButtonWithMenuArrow ):
                 
                 with ClientGUITopLevelWindowsPanels.DialogEdit( self, title ) as dlg:
                     
-                    panel = EditFileSeedCachePanel( dlg, self._controller, dupe_file_seed_cache )
+                    panel = EditFileSeedCachePanel( dlg, dupe_file_seed_cache )
                     
                     dlg.SetPanel( panel )
                     
@@ -991,7 +989,7 @@ class FileSeedCacheButton( ClientGUICommon.ButtonWithMenuArrow ):
             
             frame = ClientGUITopLevelWindowsPanels.FrameThatTakesScrollablePanel( self, title, frame_key )
             
-            panel = EditFileSeedCachePanel( frame, self._controller, file_seed_cache )
+            panel = EditFileSeedCachePanel( frame, file_seed_cache )
             
             frame.SetPanel( panel )
             
@@ -1000,13 +998,12 @@ class FileSeedCacheButton( ClientGUICommon.ButtonWithMenuArrow ):
 
 class FileSeedCacheStatusControl( QW.QFrame ):
     
-    def __init__( self, parent, controller: "CG.ClientController.Controller", page_key = None ):
+    def __init__( self, parent, page_key = None ):
         
         super().__init__( parent )
         
         self.setFrameStyle( QW.QFrame.Shape.Box | QW.QFrame.Shadow.Raised )
         
-        self._controller = controller
         self._page_key = page_key
         
         self._file_seed_cache = None
@@ -1014,7 +1011,7 @@ class FileSeedCacheStatusControl( QW.QFrame ):
         self._import_summary_st = ClientGUICommon.BetterStaticText( self, ellipsize_end = True )
         self._progress_st = ClientGUICommon.BetterStaticText( self, ellipsize_end = True )
         
-        self._file_seed_cache_button = FileSeedCacheButton( self, self._controller, self._GetFileSeedCache )
+        self._file_seed_cache_button = FileSeedCacheButton( self, self._GetFileSeedCache )
         
         self._progress_gauge = ClientGUICommon.Gauge( self )
         
@@ -1121,7 +1118,7 @@ class FileSeedCacheStatusControl( QW.QFrame ):
                 
             
         
-        if self._controller.gui.IShouldRegularlyUpdate( self ) or do_it_anyway:
+        if CG.client_controller.gui.IShouldRegularlyUpdate( self ) or do_it_anyway:
             
             self._Update()
             

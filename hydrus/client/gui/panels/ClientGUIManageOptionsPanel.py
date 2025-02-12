@@ -3927,7 +3927,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         def _EditNamespaceGroupBySort( self, namespace ):
             
-            message = 'Enter the namespace. Leave blank for unnamespaced tags.'
+            message = 'Enter the namespace. Leave blank for unnamespaced tags, use ":" for all unspecified namespaced tags.'
             
             with ClientGUIDialogs.DialogTextEntry( self, message, allow_blank = True, default = namespace ) as dlg:
                 

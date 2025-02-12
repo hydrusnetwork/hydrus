@@ -139,9 +139,7 @@ def DumpToGETQuery( args ):
         
         if name in args:
             
-            PARAM_EXCEPTION_CHARS = "!$&'()*+,;=@:/?"
-            
-            args[ name ] = urllib.parse.quote( args[ name ], safe = PARAM_EXCEPTION_CHARS )
+            args[ name ] = urllib.parse.quote( args[ name ] )
             
         
     
@@ -149,6 +147,7 @@ def DumpToGETQuery( args ):
     
     return query
     
+
 def ParseFileArguments( path, decompression_bombs_ok = False ):
 
     hash = HydrusFileHandling.GetHashFromPath( path )
@@ -370,7 +369,7 @@ def ParseTwistedRequestGETArgs( requests_args: dict, int_params, byte_params, st
                 
             except Exception as e:
                 
-                raise HydrusExceptions.BadRequestException( 'I was expecting to parse \'' + name + '\' as a percent-encdode string, but it failed.' ) from e
+                raise HydrusExceptions.BadRequestException( 'I was expecting to parse \'' + name + '\' as a percent-encoded string, but it failed.' ) from e
                 
             
         elif name in json_params:

@@ -1,8 +1,10 @@
 import random
+import time
 import typing
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
+from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTime
 
@@ -581,6 +583,8 @@ class DuplicatesAutoResolutionManager( ClientDaemons.ManagerWithMainLoop ):
     
     def _AbleToWork( self ):
         
+        return False
+        
         if CG.client_controller.CurrentlyIdle():
             
             if not CG.client_controller.new_options.GetBoolean( 'duplicates_auto_resolution_during_idle' ):
@@ -604,22 +608,11 @@ class DuplicatesAutoResolutionManager( ClientDaemons.ManagerWithMainLoop ):
         return True
         
     
-    def GetName( self ) -> str:
-        
-        return 'duplicates auto-resolution'
-        
-    
-    def GetRules( self ):
-        
-        return []
-        
-    
-    def GetRunningStatus( self, rule_id: int ) -> str:
-        
-        return 'idle'
-        
-    
     def _DoMainLoop( self ):
+        
+        rules = CG.client_controller.Read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_DUPLICATES_AUTO_RESOLUTION_RULE )
+        
+        self.SetRules( rules ) 
         
         while True:
             
@@ -643,8 +636,17 @@ class DuplicatesAutoResolutionManager( ClientDaemons.ManagerWithMainLoop ):
                 
                 try:
                     
-                    pass # get some work, do some work
-                    still_work_to_do = False
+                    with self._lock:
+                        
+                        still_work_to_do = self._WorkRules()
+                        
+                    
+                except HydrusExceptions.DataMissing as e:
+                    
+                    time.sleep( 5 )
+                    
+                    HydrusData.Print( 'While doing auto-resolution work, we discovered an id that should not exist. Maybe this is bad timing.' )
+                    HydrusData.PrintException( e )
                     
                 except Exception as e:
                     
@@ -695,14 +697,85 @@ class DuplicatesAutoResolutionManager( ClientDaemons.ManagerWithMainLoop ):
         return reasonable_work_time * rest_ratio
         
     
+    def _WorkRules( self ):
+        
+        still_work_to_do = True
+        
+        we_did_search_work = False
+        
+        ids_to_counts = {}#CG.client_controller.Read( 'duplicate_auto_resolution_number_summary' )
+        
+        for ( rule_id, counts ) in ids_to_counts.items():
+            
+            if rule_id not in self._ids_to_rules:
+                
+                raise HydrusExceptions.DataMissing( f'Saw {rule_id}, but we only have {list(self._ids_to_rules.keys())} cached.' )
+                
+            
+            # if search work to do, do that
+                # we_did_search_work = True
+            
+        
+        if we_did_search_work:
+            
+            ids_to_counts = {}#CG.client_controller.Read( 'duplicate_auto_resolution_number_summary' )
+            
+        
+        for ( rule_id, counts ) in ids_to_counts.items():
+            
+            if rule_id not in self._ids_to_rules:
+                
+                raise HydrusExceptions.DataMissing( f'Saw {rule_id}, but we only have {list(self._ids_to_rules.keys())} cached.' )
+                
+            
+            # if actioning work to do, do that
+            
+        
+        still_work_to_do = False
+        
+        return still_work_to_do
+        
+    
+    def GetName( self ) -> str:
+        
+        return 'duplicates auto-resolution'
+        
+    
+    def GetRules( self ):
+        
+        return []
+        
+    
+    def GetRunningStatus( self, rule_id: int ) -> str:
+        
+        return 'idle'
+        
+    
     def SetRules( self, rules: typing.Collection[ DuplicatesAutoResolutionRule ] ):
         
-        # save to database
+        with self._lock:
+            
+            existing_db_names = set( self._controller.Read( 'serialisable_names', HydrusSerialisable.SERIALISABLE_TYPE_DUPLICATES_AUTO_RESOLUTION_RULE ) )
+            
+            good_names = set()
+            
+            for rule in rules:
+                
+                CG.client_controller.WriteSynchronous( 'serialisable', rule )
+                
+                good_names.add( rule.GetName() )
+                
+            
+            names_to_delete = existing_db_names.difference( good_names )
+            
+            for name in names_to_delete:
+                
+                CG.client_controller.WriteSynchronous( 'delete_serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_DUPLICATES_AUTO_RESOLUTION_RULE, name )
+                
+            
+            self._ids_to_rules = { rule.GetId() : rule for rule in rules }
+            
         
-        # make sure the rules that need ids now have them
-        
-        self._ids_to_rules = { rule.GetId() : rule for rule in rules }
-        
-        # send out an update signal
+        self.Wake()
         
     

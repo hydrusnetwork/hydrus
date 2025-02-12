@@ -20,32 +20,22 @@ from hydrus.client.metadata import ClientMetadataMigration
 from hydrus.client.search import ClientSearchFileSearchContext
 from hydrus.client.search import ClientSearchPredicate
 
-MANAGEMENT_TYPE_DUMPER = 0
-MANAGEMENT_TYPE_IMPORT_MULTIPLE_GALLERY = 1
-MANAGEMENT_TYPE_IMPORT_SIMPLE_DOWNLOADER = 2
-MANAGEMENT_TYPE_IMPORT_HDD = 3
-MANAGEMENT_TYPE_IMPORT_WATCHER = 4 # defunct
-MANAGEMENT_TYPE_PETITIONS = 5
-MANAGEMENT_TYPE_QUERY = 6
-MANAGEMENT_TYPE_IMPORT_URLS = 7
-MANAGEMENT_TYPE_DUPLICATE_FILTER = 8
-MANAGEMENT_TYPE_IMPORT_MULTIPLE_WATCHER = 9
-MANAGEMENT_TYPE_PAGE_OF_PAGES = 10
+from hydrus.client.gui.pages import ClientGUIPagesCore
 
-def CreateManagementController( page_name, management_type ):
+def CreatePageManager( page_name, page_type ):
     
     new_options = CG.client_controller.new_options
     
-    management_controller = ManagementController( page_name )
+    page_manager = PageManager( page_name )
     
-    management_controller.SetType( management_type )
-    management_controller.SetVariable( 'media_sort', new_options.GetDefaultSort() )
-    management_controller.SetVariable( 'media_collect', new_options.GetDefaultCollect() )
+    page_manager.SetType( page_type )
+    page_manager.SetVariable( 'media_sort', new_options.GetDefaultSort() )
+    page_manager.SetVariable( 'media_collect', new_options.GetDefaultCollect() )
     
-    return management_controller
+    return page_manager
     
 
-def CreateManagementControllerDuplicateFilter(
+def CreatePageManagerDuplicateFilter(
     location_context = None,
     initial_predicates = None,
     page_name = None
@@ -66,20 +56,20 @@ def CreateManagementControllerDuplicateFilter(
         page_name = 'duplicates'
         
     
-    management_controller = CreateManagementController( page_name, MANAGEMENT_TYPE_DUPLICATE_FILTER )
+    page_manager = CreatePageManager( page_name, ClientGUIPagesCore.PAGE_TYPE_DUPLICATE_FILTER )
     
     synchronised = CG.client_controller.new_options.GetBoolean( 'default_search_synchronised' )
     
-    management_controller.SetVariable( 'synchronised', synchronised )
+    page_manager.SetVariable( 'synchronised', synchronised )
     
     potential_duplicates_search_context = ClientPotentialDuplicatesSearchContext.PotentialDuplicatesSearchContext( location_context = location_context, initial_predicates = initial_predicates )
     
-    management_controller.SetVariable( 'potential_duplicates_search_context', potential_duplicates_search_context )
+    page_manager.SetVariable( 'potential_duplicates_search_context', potential_duplicates_search_context )
     
-    return management_controller
+    return page_manager
     
 
-def CreateManagementControllerImportGallery( page_name = None ):
+def CreatePageManagerImportGallery( page_name = None ):
     
     if page_name is None:
         
@@ -90,14 +80,14 @@ def CreateManagementControllerImportGallery( page_name = None ):
     
     multiple_gallery_import = ClientImportGallery.MultipleGalleryImport( gug_key_and_name = gug_key_and_name )
     
-    management_controller = CreateManagementController( page_name, MANAGEMENT_TYPE_IMPORT_MULTIPLE_GALLERY )
+    page_manager = CreatePageManager( page_name, ClientGUIPagesCore.PAGE_TYPE_IMPORT_MULTIPLE_GALLERY )
     
-    management_controller.SetVariable( 'multiple_gallery_import', multiple_gallery_import )
+    page_manager.SetVariable( 'multiple_gallery_import', multiple_gallery_import )
     
-    return management_controller
+    return page_manager
     
 
-def CreateManagementControllerImportSimpleDownloader():
+def CreatePageManagerImportSimpleDownloader():
     
     simple_downloader_import = ClientImportSimpleURLs.SimpleDownloaderImport()
     
@@ -105,25 +95,25 @@ def CreateManagementControllerImportSimpleDownloader():
     
     simple_downloader_import.SetFormulaName( formula_name )
     
-    management_controller = CreateManagementController( 'simple downloader', MANAGEMENT_TYPE_IMPORT_SIMPLE_DOWNLOADER )
+    page_manager = CreatePageManager( 'simple downloader', ClientGUIPagesCore.PAGE_TYPE_IMPORT_SIMPLE_DOWNLOADER )
     
-    management_controller.SetVariable( 'simple_downloader_import', simple_downloader_import )
+    page_manager.SetVariable( 'simple_downloader_import', simple_downloader_import )
     
-    return management_controller
+    return page_manager
     
 
-def CreateManagementControllerImportHDD( paths, file_import_options: FileImportOptions.FileImportOptions, metadata_routers: typing.Collection[ ClientMetadataMigration.SingleFileMetadataRouter ], paths_to_additional_service_keys_to_tags, delete_after_success ):
+def CreatePageManagerImportHDD( paths, file_import_options: FileImportOptions.FileImportOptions, metadata_routers: typing.Collection[ ClientMetadataMigration.SingleFileMetadataRouter ], paths_to_additional_service_keys_to_tags, delete_after_success ):
     
-    management_controller = CreateManagementController( 'import', MANAGEMENT_TYPE_IMPORT_HDD )
+    page_manager = CreatePageManager( 'import', ClientGUIPagesCore.PAGE_TYPE_IMPORT_HDD )
     
     hdd_import = ClientImportLocal.HDDImport( paths = paths, file_import_options = file_import_options, metadata_routers = metadata_routers, paths_to_additional_service_keys_to_tags = paths_to_additional_service_keys_to_tags, delete_after_success = delete_after_success )
     
-    management_controller.SetVariable( 'hdd_import', hdd_import )
+    page_manager.SetVariable( 'hdd_import', hdd_import )
     
-    return management_controller
+    return page_manager
     
 
-def CreateManagementControllerImportMultipleWatcher( page_name = None, url = None ):
+def CreatePageManagerImportMultipleWatcher( page_name = None, url = None ):
     
     if page_name is None:
         
@@ -132,14 +122,14 @@ def CreateManagementControllerImportMultipleWatcher( page_name = None, url = Non
     
     multiple_watcher_import = ClientImportWatchers.MultipleWatcherImport( url = url )
     
-    management_controller = CreateManagementController( page_name, MANAGEMENT_TYPE_IMPORT_MULTIPLE_WATCHER )
+    page_manager = CreatePageManager( page_name, ClientGUIPagesCore.PAGE_TYPE_IMPORT_MULTIPLE_WATCHER )
     
-    management_controller.SetVariable( 'multiple_watcher_import', multiple_watcher_import )
+    page_manager.SetVariable( 'multiple_watcher_import', multiple_watcher_import )
     
-    return management_controller
+    return page_manager
     
 
-def CreateManagementControllerImportURLs( page_name = None, destination_location_context = None, destination_tag_import_options = None ):
+def CreatePageManagerImportURLs( page_name = None, destination_location_context = None, destination_tag_import_options = None ):
     
     if page_name is None:
         
@@ -148,47 +138,47 @@ def CreateManagementControllerImportURLs( page_name = None, destination_location
     
     urls_import = ClientImportSimpleURLs.URLsImport( destination_location_context = destination_location_context, destination_tag_import_options = destination_tag_import_options )
     
-    management_controller = CreateManagementController( page_name, MANAGEMENT_TYPE_IMPORT_URLS )
+    page_manager = CreatePageManager( page_name, ClientGUIPagesCore.PAGE_TYPE_IMPORT_URLS )
     
-    management_controller.SetVariable( 'urls_import', urls_import )
+    page_manager.SetVariable( 'urls_import', urls_import )
     
-    return management_controller
+    return page_manager
     
 
-def CreateManagementControllerPetitions( petition_service_key ):
+def CreatePageManagerPetitions( petition_service_key ):
     
     petition_service = CG.client_controller.services_manager.GetService( petition_service_key )
     
     page_name = petition_service.GetName() + ' petitions'
     
-    management_controller = CreateManagementController( page_name, MANAGEMENT_TYPE_PETITIONS )
+    page_manager = CreatePageManager( page_name, ClientGUIPagesCore.PAGE_TYPE_PETITIONS )
     
-    management_controller.SetVariable( 'petition_service_key', petition_service_key )
+    page_manager.SetVariable( 'petition_service_key', petition_service_key )
     
-    management_controller.SetVariable( 'petition_type_content_type', None )
-    management_controller.SetVariable( 'petition_type_status', None )
-    management_controller.SetVariable( 'num_petitions_to_fetch', 40 )
-    management_controller.SetVariable( 'num_files_to_show', 256 )
+    page_manager.SetVariable( 'petition_type_content_type', None )
+    page_manager.SetVariable( 'petition_type_status', None )
+    page_manager.SetVariable( 'num_petitions_to_fetch', 40 )
+    page_manager.SetVariable( 'num_files_to_show', 256 )
     
-    return management_controller
+    return page_manager
     
 
-def CreateManagementControllerQuery( page_name, file_search_context: ClientSearchFileSearchContext.FileSearchContext, search_enabled ):
+def CreatePageManagerQuery( page_name, file_search_context: ClientSearchFileSearchContext.FileSearchContext, search_enabled ):
     
     location_context = file_search_context.GetLocationContext()
     
-    management_controller = CreateManagementController( page_name, MANAGEMENT_TYPE_QUERY )
+    page_manager = CreatePageManager( page_name, ClientGUIPagesCore.PAGE_TYPE_QUERY )
     
     synchronised = CG.client_controller.new_options.GetBoolean( 'default_search_synchronised' )
     
-    management_controller.SetVariable( 'file_search_context', file_search_context )
-    management_controller.SetVariable( 'search_enabled', search_enabled )
-    management_controller.SetVariable( 'synchronised', synchronised )
+    page_manager.SetVariable( 'file_search_context', file_search_context )
+    page_manager.SetVariable( 'search_enabled', search_enabled )
+    page_manager.SetVariable( 'synchronised', synchronised )
     
-    return management_controller
+    return page_manager
     
 
-class ManagementController( HydrusSerialisable.SerialisableBase ):
+class PageManager( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_MANAGEMENT_CONTROLLER
     SERIALISABLE_NAME = 'Client Page Management Controller'
@@ -200,7 +190,7 @@ class ManagementController( HydrusSerialisable.SerialisableBase ):
         
         self._page_name = page_name
         
-        self._management_type = None
+        self._page_type = None
         
         self._last_serialisable_change_timestamp = 0
         
@@ -209,7 +199,7 @@ class ManagementController( HydrusSerialisable.SerialisableBase ):
     
     def __repr__( self ):
         
-        return 'Management Controller: {} - {}'.format( self._management_type, self._page_name )
+        return 'Management Controller: {} - {}'.format( self._page_type, self._page_name )
         
     
     def _GetSerialisableInfo( self ):
@@ -219,7 +209,7 @@ class ManagementController( HydrusSerialisable.SerialisableBase ):
         
         serialisable_variables = self._variables.GetSerialisableTuple()
         
-        return ( self._page_name, self._management_type, serialisable_variables )
+        return ( self._page_name, self._page_type, serialisable_variables )
         
     
     def _InitialiseDefaults( self ):
@@ -230,7 +220,7 @@ class ManagementController( HydrusSerialisable.SerialisableBase ):
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
-        ( self._page_name, self._management_type, serialisable_variables ) = serialisable_info
+        ( self._page_name, self._page_type, serialisable_variables ) = serialisable_info
         
         self._InitialiseDefaults()
         
@@ -246,9 +236,9 @@ class ManagementController( HydrusSerialisable.SerialisableBase ):
         
         if version == 1:
             
-            ( management_type, serialisable_keys, serialisable_simples, serialisable_serialisables ) = old_serialisable_info
+            ( page_type, serialisable_keys, serialisable_simples, serialisable_serialisables ) = old_serialisable_info
             
-            if management_type == MANAGEMENT_TYPE_IMPORT_HDD:
+            if page_type == ClientGUIPagesCore.PAGE_TYPE_IMPORT_HDD:
                 
                 advanced_import_options = serialisable_simples[ 'advanced_import_options' ]
                 paths_info = serialisable_simples[ 'paths_info' ]
@@ -290,25 +280,25 @@ class ManagementController( HydrusSerialisable.SerialisableBase ):
                 del serialisable_serialisables[ 'delete_after_success' ]
                 
             
-            new_serialisable_info = ( management_type, serialisable_keys, serialisable_simples, serialisable_serialisables )
+            new_serialisable_info = ( page_type, serialisable_keys, serialisable_simples, serialisable_serialisables )
             
             return ( 2, new_serialisable_info )
             
         
         if version == 2:
             
-            ( management_type, serialisable_keys, serialisable_simples, serialisable_serialisables ) = old_serialisable_info
+            ( page_type, serialisable_keys, serialisable_simples, serialisable_serialisables ) = old_serialisable_info
             
             page_name = 'page'
             
-            new_serialisable_info = ( page_name, management_type, serialisable_keys, serialisable_simples, serialisable_serialisables )
+            new_serialisable_info = ( page_name, page_type, serialisable_keys, serialisable_simples, serialisable_serialisables )
             
             return ( 3, new_serialisable_info )
             
         
         if version == 3:
             
-            ( page_name, management_type, serialisable_keys, serialisable_simples, serialisable_serialisables ) = old_serialisable_info
+            ( page_name, page_type, serialisable_keys, serialisable_simples, serialisable_serialisables ) = old_serialisable_info
             
             if 'page_of_images_import' in serialisable_serialisables:
                 
@@ -317,14 +307,14 @@ class ManagementController( HydrusSerialisable.SerialisableBase ):
                 del serialisable_serialisables[ 'page_of_images_import' ]
                 
             
-            new_serialisable_info = ( page_name, management_type, serialisable_keys, serialisable_simples, serialisable_serialisables )
+            new_serialisable_info = ( page_name, page_type, serialisable_keys, serialisable_simples, serialisable_serialisables )
             
             return ( 4, new_serialisable_info )
             
         
         if version == 4:
             
-            ( page_name, management_type, serialisable_keys, serialisable_simples, serialisable_serialisables ) = old_serialisable_info
+            ( page_name, page_type, serialisable_keys, serialisable_simples, serialisable_serialisables ) = old_serialisable_info
             
             if 'thread_watcher_import' in serialisable_serialisables:
                 
@@ -333,14 +323,14 @@ class ManagementController( HydrusSerialisable.SerialisableBase ):
                 del serialisable_serialisables[ 'thread_watcher_import' ]
                 
             
-            new_serialisable_info = ( page_name, management_type, serialisable_keys, serialisable_simples, serialisable_serialisables )
+            new_serialisable_info = ( page_name, page_type, serialisable_keys, serialisable_simples, serialisable_serialisables )
             
             return ( 5, new_serialisable_info )
             
         
         if version == 5:
             
-            ( page_name, management_type, serialisable_keys, serialisable_simples, serialisable_serialisables ) = old_serialisable_info
+            ( page_name, page_type, serialisable_keys, serialisable_simples, serialisable_serialisables ) = old_serialisable_info
             
             if 'gallery_import' in serialisable_serialisables:
                 
@@ -349,20 +339,20 @@ class ManagementController( HydrusSerialisable.SerialisableBase ):
                 del serialisable_serialisables[ 'gallery_import' ]
                 
             
-            new_serialisable_info = ( page_name, management_type, serialisable_keys, serialisable_simples, serialisable_serialisables )
+            new_serialisable_info = ( page_name, page_type, serialisable_keys, serialisable_simples, serialisable_serialisables )
             
             return ( 6, new_serialisable_info )
             
         
         if version == 6:
             
-            ( page_name, management_type, serialisable_keys, serialisable_simples, serialisable_serialisables ) = old_serialisable_info
+            ( page_name, page_type, serialisable_keys, serialisable_simples, serialisable_serialisables ) = old_serialisable_info
             
             if 'watcher_import' in serialisable_serialisables:
                 
                 watcher = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_serialisables[ 'watcher_import' ] )
                 
-                management_type = MANAGEMENT_TYPE_IMPORT_MULTIPLE_WATCHER
+                page_type = ClientGUIPagesCore.PAGE_TYPE_IMPORT_MULTIPLE_WATCHER
                 
                 multiple_watcher_import = ClientImportWatchers.MultipleWatcherImport()
                 
@@ -375,30 +365,30 @@ class ManagementController( HydrusSerialisable.SerialisableBase ):
                 del serialisable_serialisables[ 'watcher_import' ]
                 
             
-            new_serialisable_info = ( page_name, management_type, serialisable_keys, serialisable_simples, serialisable_serialisables )
+            new_serialisable_info = ( page_name, page_type, serialisable_keys, serialisable_simples, serialisable_serialisables )
             
             return ( 7, new_serialisable_info )
             
         
         if version == 7:
             
-            ( page_name, management_type, serialisable_keys, serialisable_simples, serialisable_serialisables ) = old_serialisable_info
+            ( page_name, page_type, serialisable_keys, serialisable_simples, serialisable_serialisables ) = old_serialisable_info
             
             if page_name.startswith( '[USER]' ) and len( page_name ) > 6:
                 
                 page_name = page_name[6:]
                 
             
-            new_serialisable_info = ( page_name, management_type, serialisable_keys, serialisable_simples, serialisable_serialisables )
+            new_serialisable_info = ( page_name, page_type, serialisable_keys, serialisable_simples, serialisable_serialisables )
             
             return ( 8, new_serialisable_info )
             
         
         if version == 8:
             
-            ( page_name, management_type, serialisable_keys, serialisable_simples, serialisable_serialisables ) = old_serialisable_info
+            ( page_name, page_type, serialisable_keys, serialisable_simples, serialisable_serialisables ) = old_serialisable_info
             
-            if management_type == MANAGEMENT_TYPE_DUPLICATE_FILTER:
+            if page_type == ClientGUIPagesCore.PAGE_TYPE_DUPLICATE_FILTER:
                 
                 if 'duplicate_filter_file_domain' in serialisable_keys:
                     
@@ -414,14 +404,14 @@ class ManagementController( HydrusSerialisable.SerialisableBase ):
                 serialisable_simples[ 'both_files_match' ] = False
                 
             
-            new_serialisable_info = ( page_name, management_type, serialisable_keys, serialisable_simples, serialisable_serialisables )
+            new_serialisable_info = ( page_name, page_type, serialisable_keys, serialisable_simples, serialisable_serialisables )
             
             return ( 9, new_serialisable_info )
             
         
         if version == 9:
             
-            ( page_name, management_type, serialisable_keys, serialisable_simples, serialisable_serialisables ) = old_serialisable_info
+            ( page_name, page_type, serialisable_keys, serialisable_simples, serialisable_serialisables ) = old_serialisable_info
             
             if 'media_collect' in serialisable_simples:
                 
@@ -450,14 +440,14 @@ class ManagementController( HydrusSerialisable.SerialisableBase ):
                 del serialisable_simples[ 'media_collect' ]
                 
             
-            new_serialisable_info = ( page_name, management_type, serialisable_keys, serialisable_simples, serialisable_serialisables )
+            new_serialisable_info = ( page_name, page_type, serialisable_keys, serialisable_simples, serialisable_serialisables )
             
             return ( 10, new_serialisable_info )
             
         
         if version == 10:
             
-            ( page_name, management_type, serialisable_keys, serialisable_simples, serialisable_serialisables ) = old_serialisable_info
+            ( page_name, page_type, serialisable_keys, serialisable_simples, serialisable_serialisables ) = old_serialisable_info
             
             if 'file_service' in serialisable_keys:
                 
@@ -479,14 +469,14 @@ class ManagementController( HydrusSerialisable.SerialisableBase ):
                 serialisable_serialisables[ 'location_context' ] = location_context.GetSerialisableTuple()
                 
             
-            new_serialisable_info = ( page_name, management_type, serialisable_keys, serialisable_simples, serialisable_serialisables )
+            new_serialisable_info = ( page_name, page_type, serialisable_keys, serialisable_simples, serialisable_serialisables )
             
             return ( 11, new_serialisable_info )
             
         
         if version == 11:
             
-            ( page_name, management_type, serialisable_keys, serialisable_simples, serialisable_serialisables ) = old_serialisable_info
+            ( page_name, page_type, serialisable_keys, serialisable_simples, serialisable_serialisables ) = old_serialisable_info
             
             # notice I rename them to _key here!
             # we had 'page' and 'petition_service' before, so adding the key brings us in line with elsewhere
@@ -502,7 +492,7 @@ class ManagementController( HydrusSerialisable.SerialisableBase ):
             variables.update( simples )
             variables.update( serialisables )
             
-            if management_type == MANAGEMENT_TYPE_DUPLICATE_FILTER:
+            if page_type == ClientGUIPagesCore.PAGE_TYPE_DUPLICATE_FILTER:
                 
                 value = ClientDuplicates.DUPE_SEARCH_ONE_FILE_MATCHES_ONE_SEARCH
                 
@@ -535,16 +525,16 @@ class ManagementController( HydrusSerialisable.SerialisableBase ):
             
             serialisable_variables = variables.GetSerialisableTuple()
             
-            new_serialisable_info = ( page_name, management_type, serialisable_variables )
+            new_serialisable_info = ( page_name, page_type, serialisable_variables )
             
             return ( 12, new_serialisable_info )
             
         
         if version == 12:
             
-            ( page_name, management_type, serialisable_variables ) = old_serialisable_info
+            ( page_name, page_type, serialisable_variables ) = old_serialisable_info
             
-            if management_type == MANAGEMENT_TYPE_PETITIONS:
+            if page_type == ClientGUIPagesCore.PAGE_TYPE_PETITIONS:
                 
                 variables = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_variables )
                 
@@ -556,16 +546,16 @@ class ManagementController( HydrusSerialisable.SerialisableBase ):
                 serialisable_variables = variables.GetSerialisableTuple()
                 
             
-            new_serialisable_info = ( page_name, management_type, serialisable_variables )
+            new_serialisable_info = ( page_name, page_type, serialisable_variables )
             
             return ( 13, new_serialisable_info )
             
         
         if version == 13:
             
-            ( page_name, management_type, serialisable_variables ) = old_serialisable_info
+            ( page_name, page_type, serialisable_variables ) = old_serialisable_info
             
-            if management_type == MANAGEMENT_TYPE_DUPLICATE_FILTER:
+            if page_type == ClientGUIPagesCore.PAGE_TYPE_DUPLICATE_FILTER:
                 
                 variables: HydrusSerialisable.SerialisableDictionary = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_variables )
                 
@@ -606,7 +596,7 @@ class ManagementController( HydrusSerialisable.SerialisableBase ):
                 serialisable_variables = variables.GetSerialisableTuple()
                 
             
-            new_serialisable_info = ( page_name, management_type, serialisable_variables )
+            new_serialisable_info = ( page_name, page_type, serialisable_variables )
             
             return ( 14, new_serialisable_info )
             
@@ -616,31 +606,31 @@ class ManagementController( HydrusSerialisable.SerialisableBase ):
         
         d = {}
         
-        if self._management_type == MANAGEMENT_TYPE_IMPORT_HDD:
+        if self._page_type == ClientGUIPagesCore.PAGE_TYPE_IMPORT_HDD:
             
             hdd_import = self._variables[ 'hdd_import' ]
             
             d[ 'hdd_import' ] = hdd_import.GetAPIInfoDict( simple )
             
-        elif self._management_type == MANAGEMENT_TYPE_IMPORT_SIMPLE_DOWNLOADER:
+        elif self._page_type == ClientGUIPagesCore.PAGE_TYPE_IMPORT_SIMPLE_DOWNLOADER:
             
             simple_downloader_import = self._variables[ 'simple_downloader_import' ]
             
             d[ 'simple_downloader_import' ] = simple_downloader_import.GetAPIInfoDict( simple )
             
-        elif self._management_type == MANAGEMENT_TYPE_IMPORT_MULTIPLE_GALLERY:
+        elif self._page_type == ClientGUIPagesCore.PAGE_TYPE_IMPORT_MULTIPLE_GALLERY:
             
             multiple_gallery_import = self._variables[ 'multiple_gallery_import' ]
             
             d[ 'multiple_gallery_import' ] = multiple_gallery_import.GetAPIInfoDict( simple )
             
-        elif self._management_type == MANAGEMENT_TYPE_IMPORT_MULTIPLE_WATCHER:
+        elif self._page_type == ClientGUIPagesCore.PAGE_TYPE_IMPORT_MULTIPLE_WATCHER:
             
             multiple_watcher_import = self._variables[ 'multiple_watcher_import' ]
             
             d[ 'multiple_watcher_import' ] = multiple_watcher_import.GetAPIInfoDict( simple )
             
-        elif self._management_type == MANAGEMENT_TYPE_IMPORT_URLS:
+        elif self._page_type == ClientGUIPagesCore.PAGE_TYPE_IMPORT_URLS:
             
             urls_import = self._variables[ 'urls_import' ]
             
@@ -725,31 +715,31 @@ class ManagementController( HydrusSerialisable.SerialisableBase ):
         
         try:
             
-            if self._management_type == MANAGEMENT_TYPE_IMPORT_HDD:
+            if self._page_type == ClientGUIPagesCore.PAGE_TYPE_IMPORT_HDD:
                 
                 hdd_import = self._variables[ 'hdd_import' ]
                 
                 return hdd_import.GetNumSeeds()
                 
-            elif self._management_type == MANAGEMENT_TYPE_IMPORT_SIMPLE_DOWNLOADER:
+            elif self._page_type == ClientGUIPagesCore.PAGE_TYPE_IMPORT_SIMPLE_DOWNLOADER:
                 
                 simple_downloader_import = self._variables[ 'simple_downloader_import' ]
                 
                 return simple_downloader_import.GetNumSeeds()
                 
-            elif self._management_type == MANAGEMENT_TYPE_IMPORT_MULTIPLE_GALLERY:
+            elif self._page_type == ClientGUIPagesCore.PAGE_TYPE_IMPORT_MULTIPLE_GALLERY:
                 
                 multiple_gallery_import = self._variables[ 'multiple_gallery_import' ]
                 
                 return multiple_gallery_import.GetNumSeeds()
                 
-            elif self._management_type == MANAGEMENT_TYPE_IMPORT_MULTIPLE_WATCHER:
+            elif self._page_type == ClientGUIPagesCore.PAGE_TYPE_IMPORT_MULTIPLE_WATCHER:
                 
                 multiple_watcher_import = self._variables[ 'multiple_watcher_import' ]
                 
                 return multiple_watcher_import.GetNumSeeds()
                 
-            elif self._management_type == MANAGEMENT_TYPE_IMPORT_URLS:
+            elif self._page_type == ClientGUIPagesCore.PAGE_TYPE_IMPORT_URLS:
                 
                 urls_import = self._variables[ 'urls_import' ]
                 
@@ -771,7 +761,7 @@ class ManagementController( HydrusSerialisable.SerialisableBase ):
     
     def GetType( self ):
         
-        return self._management_type
+        return self._page_type
         
     
     def GetValueRange( self ):
@@ -780,23 +770,23 @@ class ManagementController( HydrusSerialisable.SerialisableBase ):
             
             try:
                 
-                if self._management_type == MANAGEMENT_TYPE_IMPORT_HDD:
+                if self._page_type == ClientGUIPagesCore.PAGE_TYPE_IMPORT_HDD:
                     
                     importer = self._variables[ 'hdd_import' ]
                     
-                elif self._management_type == MANAGEMENT_TYPE_IMPORT_SIMPLE_DOWNLOADER:
+                elif self._page_type == ClientGUIPagesCore.PAGE_TYPE_IMPORT_SIMPLE_DOWNLOADER:
                     
                     importer = self._variables[ 'simple_downloader_import' ]
                     
-                elif self._management_type == MANAGEMENT_TYPE_IMPORT_MULTIPLE_GALLERY:
+                elif self._page_type == ClientGUIPagesCore.PAGE_TYPE_IMPORT_MULTIPLE_GALLERY:
                     
                     importer = self._variables[ 'multiple_gallery_import' ]
                     
-                elif self._management_type == MANAGEMENT_TYPE_IMPORT_MULTIPLE_WATCHER:
+                elif self._page_type == ClientGUIPagesCore.PAGE_TYPE_IMPORT_MULTIPLE_WATCHER:
                     
                     importer = self._variables[ 'multiple_watcher_import' ]
                     
-                elif self._management_type == MANAGEMENT_TYPE_IMPORT_URLS:
+                elif self._page_type == ClientGUIPagesCore.PAGE_TYPE_IMPORT_URLS:
                     
                     importer = self._variables[ 'urls_import' ]
                     
@@ -827,25 +817,29 @@ class ManagementController( HydrusSerialisable.SerialisableBase ):
         
         if self.IsImporter():
             
-            if self._management_type == MANAGEMENT_TYPE_IMPORT_HDD:
+            if self._page_type == ClientGUIPagesCore.PAGE_TYPE_IMPORT_HDD:
                 
                 importer = self._variables[ 'hdd_import' ]
                 
-            elif self._management_type == MANAGEMENT_TYPE_IMPORT_SIMPLE_DOWNLOADER:
+            elif self._page_type == ClientGUIPagesCore.PAGE_TYPE_IMPORT_SIMPLE_DOWNLOADER:
                 
                 importer = self._variables[ 'simple_downloader_import' ]
                 
-            elif self._management_type == MANAGEMENT_TYPE_IMPORT_MULTIPLE_GALLERY:
+            elif self._page_type == ClientGUIPagesCore.PAGE_TYPE_IMPORT_MULTIPLE_GALLERY:
                 
                 importer = self._variables[ 'multiple_gallery_import' ]
                 
-            elif self._management_type == MANAGEMENT_TYPE_IMPORT_MULTIPLE_WATCHER:
+            elif self._page_type == ClientGUIPagesCore.PAGE_TYPE_IMPORT_MULTIPLE_WATCHER:
                 
                 importer = self._variables[ 'multiple_watcher_import' ]
                 
-            elif self._management_type == MANAGEMENT_TYPE_IMPORT_URLS:
+            elif self._page_type == ClientGUIPagesCore.PAGE_TYPE_IMPORT_URLS:
                 
                 importer = self._variables[ 'urls_import' ]
+                
+            else:
+                
+                return False
                 
             
             if importer.HasSerialisableChangesSince( since_timestamp ):
@@ -864,7 +858,7 @@ class ManagementController( HydrusSerialisable.SerialisableBase ):
     
     def IsImporter( self ):
         
-        return self._management_type in ( MANAGEMENT_TYPE_IMPORT_HDD, MANAGEMENT_TYPE_IMPORT_SIMPLE_DOWNLOADER, MANAGEMENT_TYPE_IMPORT_MULTIPLE_GALLERY, MANAGEMENT_TYPE_IMPORT_MULTIPLE_WATCHER, MANAGEMENT_TYPE_IMPORT_URLS )
+        return self._page_type in ( ClientGUIPagesCore.PAGE_TYPE_IMPORT_HDD, ClientGUIPagesCore.PAGE_TYPE_IMPORT_SIMPLE_DOWNLOADER, ClientGUIPagesCore.PAGE_TYPE_IMPORT_MULTIPLE_GALLERY, ClientGUIPagesCore.PAGE_TYPE_IMPORT_MULTIPLE_WATCHER, ClientGUIPagesCore.PAGE_TYPE_IMPORT_URLS )
         
     
     def NotifyLoadingWithHashes( self ):
@@ -892,9 +886,9 @@ class ManagementController( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def SetType( self, management_type ):
+    def SetType( self, page_type ):
         
-        self._management_type = management_type
+        self._page_type = page_type
         
         self._InitialiseDefaults()
         
@@ -937,4 +931,4 @@ class ManagementController( HydrusSerialisable.SerialisableBase ):
         
     
 
-HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_MANAGEMENT_CONTROLLER ] = ManagementController
+HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_MANAGEMENT_CONTROLLER ] = PageManager

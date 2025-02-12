@@ -69,7 +69,7 @@ class EditAPIPermissionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._original_api_permissions = api_permissions
         
-        self._access_key = QW.QLineEdit()
+        self._access_key = QW.QLineEdit( self )
         
         self._access_key.setReadOnly( True )
         

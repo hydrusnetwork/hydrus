@@ -571,15 +571,18 @@ def GetDuplicateComparisonStatements( shown_media_result: ClientMediaResult.Medi
                 
             else:
                 
+                duration_multiple = max( s_duration_s, c_duration_s ) / min( s_duration_s, c_duration_s )
+                
+                score = max( 1, min( 50, int( ( duration_multiple - 1 ) * 50 ) ) )
+                
                 if s_duration_s > c_duration_s:
                     
                     operator = '>'
-                    score = 50
                     
                 else:
                     
                     operator = '<'
-                    score = -50
+                    score = -score
                     
                 
                 statement = f'{HydrusTime.TimeDeltaToPrettyTimeDelta( s_duration_s )} {operator} {HydrusTime.TimeDeltaToPrettyTimeDelta( c_duration_s )}'
@@ -592,7 +595,7 @@ def GetDuplicateComparisonStatements( shown_media_result: ClientMediaResult.Medi
             
         else:
             
-            statement = f'the other has duration ({HydrusTime.TimeDeltaToPrettyTimeDelta( c_duration_s )}), the other does not'
+            statement = f'the other has duration ({HydrusTime.TimeDeltaToPrettyTimeDelta( c_duration_s )}), this does not'
             score = 0
             
         

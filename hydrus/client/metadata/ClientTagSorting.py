@@ -176,8 +176,13 @@ def namespace_user_key_factory():
     namespace_list = CG.client_controller.new_options.GetStringList( 'user_namespace_group_by_sort' )
     namespace_list_fast = set( namespace_list )
     
-    no_match_index = len( namespace_list )
-    no_namespace_index = no_match_index + 1
+    any_namespace_index = len( namespace_list )
+    no_namespace_index = any_namespace_index + 1
+    
+    if ':' in namespace_list:
+        
+        any_namespace_index = namespace_list.index( ':' )
+        
     
     def namespace_user_key( tag ):
         
@@ -199,7 +204,7 @@ def namespace_user_key_factory():
                 
                 comparable_namespace = HydrusTags.ConvertTagToSortable( namespace )
                 
-                return ( no_match_index, comparable_namespace )
+                return ( any_namespace_index, comparable_namespace )
                 
             
         

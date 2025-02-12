@@ -29,10 +29,18 @@ I try to release a new version every Wednesday by 8pm EST and write an accompany
 
 === "macOS"
 
-    *   Get the .dmg App. Open it, drag it to Applications, and check the readme inside.
-    *   macOS users have no mpv support for now, so no audio, and video may be laggy.
-    *   _This release has always been a little buggy. Many macOS users have better success [running from source](running_from_source.md)._
+    *   Get the App .zip. Double-click it, which should extract the App. Drag the App to your Applications.
+    *   Hydrus is an unsigned application, so you have to instruct macOS to trust it:
+        * Once Hydrus Network.app is installed in your Applications, control-click (or right-click) it and choose Open. By choosing Open, you are telling macOS that you want to bypass the security checks for that app only.
+        * If this fails, go to `Apple Menu -> System Preferences -> Security (or Security & Privacy)`. Change "Allow apps downloaded from:" to "Anywhere".
+    *   _This App has always been a little buggy. Many macOS users have better success [running from source](running_from_source.md). I encourage all macOS users to try it out._
     *   _Also, for difficult technical reasons, the App is currently built for the Intel chipset. If you are on Apple Silicon, we again recommend you [run from source](running_from_source.md)!_
+  
+    !!! info "App Database Location"
+        Unlike a normal install of hydrus, the Hydrus App is **non-portable** and puts your database in `~/Library/Hydrus` (i.e. `/Users/[You]/Library/Hydrus`). You can update simply by replacing the old App with the new, but if you wish to backup your database, you should be looking at `~/Library/Hydrus`, not the App itself.
+  
+    !!! info "mpv on macOS"
+        macOS users have no mpv support for now, so no audio, and video (which has to be rendered with the software-based native viewer) may be laggy. Sorry!
 
 === "Linux"
     
@@ -97,9 +105,6 @@ By default, hydrus stores all its data—options, files, subscriptions, _everyth
     
     **Do not install to a location with filesystem-level compression enabled! (e.g. BTRFS)** It may work ok to start, but when the SQLite database grows to large size, this can cause extreme access latency and I/O errors and corruption.
 
-!!! info "For macOS users"
-    The Hydrus App is **non-portable** and puts your database in `~/Library/Hydrus` (i.e. `/Users/[You]/Library/Hydrus`). You can update simply by replacing the old App with the new, but if you wish to backup, you should be looking at `~/Library/Hydrus`, not the App itself.
-
 ## Anti-virus { id="anti_virus" }
 
 Hydrus is made by an Anon out of duct tape and string. It combines file parsing tech with lots of network and database code in unusual and powerful ways, and all through a hacked-together executable that isn't signed by any big official company.
@@ -152,8 +157,8 @@ The update process:
 * Update your install:
     1. **If you use the installer**, just download the new installer and run it. It should detect where the last install was and overwrite everything automatically.
     2. **If you use the extract**, then just extract the new version right on top of your current install and overwrite manually. *It is wise to extract it straight from the archive to your install folder.*
-    3. **If you use the macOS App**, just drag and drop from the dmg to your Applications as normal.
-    4. **If you run from source**, then run `git pull` as normal.
+    3. **If you use the macOS App**, just extract the new App from the zip and drag and drop to your Applications as normal.
+    4. **If you run from source**, then run `git pull` as normal. If it has been a few months since you made your venv, or the changelog talks about a new library version specifically, you might like to run `setup_venv` again.
 * Start your client or server. It may take a few minutes to update its database. I will say in the release post if it is likely to take longer.
 
 A user has written a longer and more formal guide to updating [here](update_guide.rtf).

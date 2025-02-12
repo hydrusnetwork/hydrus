@@ -66,9 +66,16 @@ If you do not have a clean backup, you'll have to try recovering what data you c
 First of all, make a _new_ backup of the corrupted db, just in case something goes wrong with the recovery and we need to try again. You can just copy the client*.db files.
 
 
+*** sqlite3 executable ***
+
+We are going to talk to the database files directly, using SQL. I bundle 'sqlite3.exe' in the normal install, which is the Windows version of the SQLite terminal. If you are on Linux or macOS, you will want to look for your equivalent of the 'command-line tools' here: https://www.sqlite.org/download.html
+
+Or, look for a program like SQLiteStudio, which is a much richer UI that, if you dig around a bit, will let you run direct SQL commands on a particular db file.
+
+
 *** integrity checks ***
 
-To see if a file is not malformed, you need to run an integrity check. To do this, go to the db directory and look for the 'sqlite3' executable. Run it, and it'll bring up a terminal. Type or copy/paste this:
+To see if a file is not malformed, you need to run an integrity check. Go to the db directory and run the sqlite3 executable, and it'll bring up a terminal. Type or copy/paste this:
 
 .open client.db
 PRAGMA integrity_check;
@@ -109,6 +116,7 @@ The four files are separate, so if one is broken but the other three are fine, y
 
 There are three known repair operations. Try one and see if you can pass an integrity_check on the broken file. Clone works well for almost all simple problems, but the others have better success in different situations.
 
+
 ** clone **
 
 This instructs the database to copy itself to a new file. When it comes across damaged data, it will attempt to cleanly correct or nullify the broken links. The new file should be clean, but missing some data. It typically loses anywhere from 15-75%, which you can see by filesize. Losing 1-5% is normal because a clone includes an implicit vacuum.
@@ -143,6 +151,7 @@ Do not delete your original files for now. Just rename them to 'old' and move th
 
 You do not have to do an integrity_check after you clone. If you know your current hard drive is good, you can assume a clone works to create a 'clean' database.
 
+
 ** repair **
 
 This command tries to fix a database file in place. I do not recommend it as it works very very slowly. While it may be able to recover some rows a clones would lose, it cannot fix everything and may leave you with a database that is still malformed, so you'll want to run integrity_check again and do a clone if needed.
@@ -166,6 +175,7 @@ It is very important you have a backup copy of the broken file(s) here, as this 
 .exit
 
 If the recovery works, do the integrity_check. If that is also good, you are good to try to boot.
+
 
 ** manual export and import **
 

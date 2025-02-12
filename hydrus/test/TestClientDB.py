@@ -19,7 +19,7 @@ from hydrus.client import ClientLocation
 from hydrus.client import ClientServices
 from hydrus.client.db import ClientDB
 from hydrus.client.exporting import ClientExportingFiles
-from hydrus.client.gui.pages import ClientGUIManagementController
+from hydrus.client.gui.pages import ClientGUIPageManager
 from hydrus.client.gui.pages import ClientGUISession
 from hydrus.client.importing import ClientImportLocal
 from hydrus.client.importing import ClientImportFiles
@@ -1066,11 +1066,11 @@ class TestClientDB( unittest.TestCase ):
         
         #
         
-        management_controller = ClientGUIManagementController.CreateManagementControllerImportGallery()
+        page_manager = ClientGUIPageManager.CreatePageManagerImportGallery()
         
-        page_name = management_controller.GetPageName()
+        page_name = page_manager.GetPageName()
         
-        page_data = ClientGUISession.GUISessionPageData( management_controller, [] )
+        page_data = ClientGUISession.GUISessionPageData( page_manager, [] )
         
         page_data_hash = page_data.GetSerialisedHash()
         
@@ -1082,11 +1082,11 @@ class TestClientDB( unittest.TestCase ):
         
         #
         
-        management_controller = ClientGUIManagementController.CreateManagementControllerImportMultipleWatcher()
+        page_manager = ClientGUIPageManager.CreatePageManagerImportMultipleWatcher()
         
-        page_name = management_controller.GetPageName()
+        page_name = page_manager.GetPageName()
         
-        page_data = ClientGUISession.GUISessionPageData( management_controller, [] )
+        page_data = ClientGUISession.GUISessionPageData( page_manager, [] )
         
         page_data_hash = page_data.GetSerialisedHash()
         
@@ -1100,29 +1100,13 @@ class TestClientDB( unittest.TestCase ):
         
         service_keys_to_tags = ClientTags.ServiceKeysToTags( { HydrusData.GenerateKey() : [ 'some', 'tags' ] } )
         
-        management_controller = ClientGUIManagementController.CreateManagementControllerImportHDD( [ 'some', 'paths' ], FileImportOptions.FileImportOptions(), [], { 'paths' : service_keys_to_tags }, True )
+        page_manager = ClientGUIPageManager.CreatePageManagerImportHDD( [ 'some', 'paths' ], FileImportOptions.FileImportOptions(), [], { 'paths' : service_keys_to_tags }, True )
         
-        management_controller.GetVariable( 'hdd_import' ).PausePlay() # to stop trying to import 'some' 'paths'
+        page_manager.GetVariable( 'hdd_import' ).PausePlay() # to stop trying to import 'some' 'paths'
         
-        page_name = management_controller.GetPageName()
+        page_name = page_manager.GetPageName()
         
-        page_data = ClientGUISession.GUISessionPageData( management_controller, [] )
-        
-        page_data_hash = page_data.GetSerialisedHash()
-        
-        page_container = ClientGUISession.GUISessionContainerPageSingle( page_name, page_data_hash = page_data_hash )
-        
-        page_containers.append( page_container )
-        
-        hashes_to_page_data[ page_data_hash ] = page_data
-        
-        #
-        
-        management_controller = ClientGUIManagementController.CreateManagementControllerImportSimpleDownloader()
-        
-        page_name = management_controller.GetPageName()
-        
-        page_data = ClientGUISession.GUISessionPageData( management_controller, [] )
+        page_data = ClientGUISession.GUISessionPageData( page_manager, [] )
         
         page_data_hash = page_data.GetSerialisedHash()
         
@@ -1134,11 +1118,27 @@ class TestClientDB( unittest.TestCase ):
         
         #
         
-        management_controller = ClientGUIManagementController.CreateManagementControllerPetitions( TG.test_controller.example_tag_repo_service_key )
+        page_manager = ClientGUIPageManager.CreatePageManagerImportSimpleDownloader()
         
-        page_name = management_controller.GetPageName()
+        page_name = page_manager.GetPageName()
         
-        page_data = ClientGUISession.GUISessionPageData( management_controller, [] )
+        page_data = ClientGUISession.GUISessionPageData( page_manager, [] )
+        
+        page_data_hash = page_data.GetSerialisedHash()
+        
+        page_container = ClientGUISession.GUISessionContainerPageSingle( page_name, page_data_hash = page_data_hash )
+        
+        page_containers.append( page_container )
+        
+        hashes_to_page_data[ page_data_hash ] = page_data
+        
+        #
+        
+        page_manager = ClientGUIPageManager.CreatePageManagerPetitions( TG.test_controller.example_tag_repo_service_key )
+        
+        page_name = page_manager.GetPageName()
+        
+        page_data = ClientGUISession.GUISessionPageData( page_manager, [] )
         
         page_data_hash = page_data.GetSerialisedHash()
         
@@ -1154,11 +1154,11 @@ class TestClientDB( unittest.TestCase ):
         
         fsc = ClientSearchFileSearchContext.FileSearchContext( location_context = location_context, predicates = [] )
         
-        management_controller = ClientGUIManagementController.CreateManagementControllerQuery( 'search', fsc, True )
+        page_manager = ClientGUIPageManager.CreatePageManagerQuery( 'search', fsc, True )
         
-        page_name = management_controller.GetPageName()
+        page_name = page_manager.GetPageName()
         
-        page_data = ClientGUISession.GUISessionPageData( management_controller, [] )
+        page_data = ClientGUISession.GUISessionPageData( page_manager, [] )
         
         page_data_hash = page_data.GetSerialisedHash()
         
@@ -1176,11 +1176,11 @@ class TestClientDB( unittest.TestCase ):
         
         fsc = ClientSearchFileSearchContext.FileSearchContext( location_context = location_context, tag_context = tag_context, predicates = [] )
         
-        management_controller = ClientGUIManagementController.CreateManagementControllerQuery( 'search', fsc, False )
+        page_manager = ClientGUIPageManager.CreatePageManagerQuery( 'search', fsc, False )
         
-        page_name = management_controller.GetPageName()
+        page_name = page_manager.GetPageName()
         
-        page_data = ClientGUISession.GUISessionPageData( management_controller, [ HydrusData.GenerateKey() for i in range( 200 ) ] )
+        page_data = ClientGUISession.GUISessionPageData( page_manager, [ HydrusData.GenerateKey() for i in range( 200 ) ] )
         
         page_data_hash = page_data.GetSerialisedHash()
         
@@ -1196,11 +1196,11 @@ class TestClientDB( unittest.TestCase ):
         
         fsc = ClientSearchFileSearchContext.FileSearchContext( location_context = location_context, predicates = [ ClientSearchPredicate.SYSTEM_PREDICATE_ARCHIVE ] )
         
-        management_controller = ClientGUIManagementController.CreateManagementControllerQuery( 'files', fsc, True )
+        page_manager = ClientGUIPageManager.CreatePageManagerQuery( 'files', fsc, True )
         
-        page_name = management_controller.GetPageName()
+        page_name = page_manager.GetPageName()
         
-        page_data = ClientGUISession.GUISessionPageData( management_controller, [] )
+        page_data = ClientGUISession.GUISessionPageData( page_manager, [] )
         
         page_data_hash = page_data.GetSerialisedHash()
         
@@ -1216,11 +1216,11 @@ class TestClientDB( unittest.TestCase ):
         
         fsc = ClientSearchFileSearchContext.FileSearchContext( location_context = location_context, predicates = [ ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_TAG, 'tag', count = ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 3 ) ) ] )
         
-        management_controller = ClientGUIManagementController.CreateManagementControllerQuery( 'wew lad', fsc, True )
+        page_manager = ClientGUIPageManager.CreatePageManagerQuery( 'wew lad', fsc, True )
         
-        page_name = management_controller.GetPageName()
+        page_name = page_manager.GetPageName()
         
-        page_data = ClientGUISession.GUISessionPageData( management_controller, [] )
+        page_data = ClientGUISession.GUISessionPageData( page_manager, [] )
         
         page_data_hash = page_data.GetSerialisedHash()
         
@@ -1236,11 +1236,11 @@ class TestClientDB( unittest.TestCase ):
         
         fsc = ClientSearchFileSearchContext.FileSearchContext( location_context = location_context, predicates = [ ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_RATING, ( '>', 0.2, TestController.LOCAL_RATING_NUMERICAL_SERVICE_KEY ) ), ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_FILE_SERVICE, ( True, HC.CONTENT_STATUS_CURRENT, CC.LOCAL_FILE_SERVICE_KEY ) ) ] )
         
-        management_controller = ClientGUIManagementController.CreateManagementControllerQuery( 'files', fsc, True )
+        page_manager = ClientGUIPageManager.CreatePageManagerQuery( 'files', fsc, True )
         
-        page_name = management_controller.GetPageName()
+        page_name = page_manager.GetPageName()
         
-        page_data = ClientGUISession.GUISessionPageData( management_controller, [] )
+        page_data = ClientGUISession.GUISessionPageData( page_manager, [] )
         
         page_data_hash = page_data.GetSerialisedHash()
         

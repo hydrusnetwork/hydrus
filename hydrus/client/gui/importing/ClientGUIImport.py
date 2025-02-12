@@ -284,7 +284,7 @@ class FilenameTaggingOptionsPanel( QW.QWidget ):
             self._num_step.setValue( 1 )
             self._num_step.valueChanged.connect( self.tagsChanged )
             
-            self._num_namespace = QW.QLineEdit()
+            self._num_namespace = QW.QLineEdit( self._num_panel )
             self._num_namespace.setFixedWidth( 100 )
             self._num_namespace.textChanged.connect( self.tagsChanged )
             
@@ -1327,7 +1327,7 @@ class GalleryImportPanel( ClientGUICommon.StaticBox ):
         self._import_queue_panel = ClientGUICommon.StaticBox( self, 'imports' )
         
         self._file_status = ClientGUICommon.BetterStaticText( self._import_queue_panel, ellipsize_end = True )
-        self._file_seed_cache_control = ClientGUIFileSeedCache.FileSeedCacheStatusControl( self._import_queue_panel, CG.client_controller, self._page_key )
+        self._file_seed_cache_control = ClientGUIFileSeedCache.FileSeedCacheStatusControl( self._import_queue_panel, self._page_key )
         self._file_download_control = ClientGUINetworkJobControl.NetworkJobControl( self._import_queue_panel )
         
         self._files_pause_button = ClientGUICommon.BetterBitmapButton( self._import_queue_panel, CC.global_pixmaps().file_pause, self.PauseFiles )
@@ -1340,7 +1340,7 @@ class GalleryImportPanel( ClientGUICommon.StaticBox ):
         self._gallery_pause_button = ClientGUICommon.BetterBitmapButton( self._gallery_panel, CC.global_pixmaps().gallery_pause, self.PauseGallery )
         self._gallery_pause_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'pause/play search' ) )
         
-        self._gallery_seed_log_control = ClientGUIGallerySeedLog.GallerySeedLogStatusControl( self._gallery_panel, CG.client_controller, False, True, 'search', page_key = self._page_key )
+        self._gallery_seed_log_control = ClientGUIGallerySeedLog.GallerySeedLogStatusControl( self._gallery_panel, False, True, 'search', page_key = self._page_key )
         
         self._gallery_download_control = ClientGUINetworkJobControl.NetworkJobControl( self._gallery_panel )
         
@@ -1759,7 +1759,7 @@ class WatcherReviewPanel( ClientGUICommon.StaticBox ):
         self._files_pause_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'pause/play files' ) )
         
         self._file_status = ClientGUICommon.BetterStaticText( imports_panel, ellipsize_end = True )
-        self._file_seed_cache_control = ClientGUIFileSeedCache.FileSeedCacheStatusControl( imports_panel, CG.client_controller, self._page_key )
+        self._file_seed_cache_control = ClientGUIFileSeedCache.FileSeedCacheStatusControl( imports_panel, self._page_key )
         self._file_download_control = ClientGUINetworkJobControl.NetworkJobControl( imports_panel )
         
         #
@@ -1776,7 +1776,7 @@ class WatcherReviewPanel( ClientGUICommon.StaticBox ):
         self._check_now_button = QW.QPushButton( 'check now', checker_panel )
         self._check_now_button.clicked.connect( self.EventCheckNow )
         
-        self._gallery_seed_log_control = ClientGUIGallerySeedLog.GallerySeedLogStatusControl( checker_panel, CG.client_controller, True, False, 'check', page_key = self._page_key )
+        self._gallery_seed_log_control = ClientGUIGallerySeedLog.GallerySeedLogStatusControl( checker_panel, True, False, 'check', page_key = self._page_key )
         
         checker_options = ClientImportOptions.CheckerOptions()
         

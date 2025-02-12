@@ -267,11 +267,10 @@ def PopulateGallerySeedLogButton( win: QW.QWidget, menu: QW.QMenu, gallery_seed_
 
 class EditGallerySeedLogPanel( ClientGUIScrolledPanels.EditPanel ):
     
-    def __init__( self, parent, controller: "CG.ClientController.Controller", read_only: bool, can_generate_more_pages: bool, gallery_type_string: str, gallery_seed_log: ClientImportGallerySeeds.GallerySeedLog ):
+    def __init__( self, parent, read_only: bool, can_generate_more_pages: bool, gallery_type_string: str, gallery_seed_log: ClientImportGallerySeeds.GallerySeedLog ):
         
         super().__init__( parent )
         
-        self._controller = controller
         self._read_only = read_only
         self._can_generate_more_pages = can_generate_more_pages
         self._gallery_type_string = gallery_type_string
@@ -303,7 +302,7 @@ class EditGallerySeedLogPanel( ClientGUIScrolledPanels.EditPanel ):
         self._list_ctrl.AddRowsMenuCallable( self._GetListCtrlMenu )
         self._list_ctrl.SetCopyRowsCallable( self._GetCopyableRows )
         
-        self._controller.sub( self, 'NotifyGallerySeedsUpdated', 'gallery_seed_log_gallery_seeds_updated' )
+        CG.client_controller.sub( self, 'NotifyGallerySeedsUpdated', 'gallery_seed_log_gallery_seeds_updated' )
         
         QP.CallAfter( self._UpdateText )
         
@@ -599,9 +598,8 @@ class EditGallerySeedLogPanel( ClientGUIScrolledPanels.EditPanel ):
     
 class GallerySeedLogButton( ClientGUICommon.ButtonWithMenuArrow ):
     
-    def __init__( self, parent, controller: "CG.ClientController.Controller", read_only: bool, can_generate_more_pages: bool, gallery_type_string: str, gallery_seed_log_get_callable, gallery_seed_log_set_callable = None ):
+    def __init__( self, parent, read_only: bool, can_generate_more_pages: bool, gallery_type_string: str, gallery_seed_log_get_callable, gallery_seed_log_set_callable = None ):
         
-        self._controller = controller
         self._read_only = read_only
         self._can_generate_more_pages = can_generate_more_pages
         self._gallery_type_string = gallery_type_string
@@ -639,7 +637,7 @@ class GallerySeedLogButton( ClientGUICommon.ButtonWithMenuArrow ):
                 
                 with ClientGUITopLevelWindowsPanels.DialogNullipotent( self, title ) as dlg:
                     
-                    panel = EditGallerySeedLogPanel( dlg, self._controller, self._read_only, self._can_generate_more_pages, self._gallery_type_string, gallery_seed_log )
+                    panel = EditGallerySeedLogPanel( dlg, self._read_only, self._can_generate_more_pages, self._gallery_type_string, gallery_seed_log )
                     
                     dlg.SetPanel( panel )
                     
@@ -652,7 +650,7 @@ class GallerySeedLogButton( ClientGUICommon.ButtonWithMenuArrow ):
                 
                 with ClientGUITopLevelWindowsPanels.DialogEdit( self, title ) as dlg:
                     
-                    panel = EditGallerySeedLogPanel( dlg, self._controller, self._read_only, self._can_generate_more_pages, self._gallery_type_string, dupe_gallery_seed_log )
+                    panel = EditGallerySeedLogPanel( dlg, self._read_only, self._can_generate_more_pages, self._gallery_type_string, dupe_gallery_seed_log )
                     
                     dlg.SetPanel( panel )
                     
@@ -669,7 +667,7 @@ class GallerySeedLogButton( ClientGUICommon.ButtonWithMenuArrow ):
             
             frame = ClientGUITopLevelWindowsPanels.FrameThatTakesScrollablePanel( self, title, frame_key )
             
-            panel = EditGallerySeedLogPanel( frame, self._controller, self._read_only, self._can_generate_more_pages, self._gallery_type_string, gallery_seed_log )
+            panel = EditGallerySeedLogPanel( frame, self._read_only, self._can_generate_more_pages, self._gallery_type_string, gallery_seed_log )
             
             frame.SetPanel( panel )
             
@@ -677,13 +675,12 @@ class GallerySeedLogButton( ClientGUICommon.ButtonWithMenuArrow ):
     
 class GallerySeedLogStatusControl( QW.QFrame ):
     
-    def __init__( self, parent: QW.QWidget, controller: "CG.ClientController.Controller", read_only: bool, can_generate_more_pages: bool, gallery_type_string: str, page_key = None ):
+    def __init__( self, parent: QW.QWidget, read_only: bool, can_generate_more_pages: bool, gallery_type_string: str, page_key = None ):
         
         super().__init__( parent )
         
         self.setFrameStyle( QW.QFrame.Shape.Box | QW.QFrame.Shadow.Raised )
         
-        self._controller = controller
         self._read_only = read_only
         self._can_generate_more_pages = can_generate_more_pages
         self._page_key = page_key
@@ -693,7 +690,7 @@ class GallerySeedLogStatusControl( QW.QFrame ):
         
         self._log_summary_st = ClientGUICommon.BetterStaticText( self, ellipsize_end = True )
         
-        self._gallery_seed_log_button = GallerySeedLogButton( self, self._controller, self._read_only, self._can_generate_more_pages, gallery_type_string, self._GetGallerySeedLog )
+        self._gallery_seed_log_button = GallerySeedLogButton( self, self._read_only, self._can_generate_more_pages, gallery_type_string, self._GetGallerySeedLog )
         
         #
         
@@ -754,7 +751,7 @@ class GallerySeedLogStatusControl( QW.QFrame ):
     
     def TIMERUIUpdate( self ):
         
-        if self._controller.gui.IShouldRegularlyUpdate( self ):
+        if CG.client_controller.gui.IShouldRegularlyUpdate( self ):
             
             self._Update()
             

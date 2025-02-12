@@ -53,13 +53,13 @@ class GUISessionLegacy( HydrusSerialisable.SerialisableBaseNamed ):
                 
             elif page_type == 'page':
                 
-                ( management_controller, hashes ) = page_data
+                ( page_manager, hashes ) = page_data
                 
-                serialisable_management_controller = management_controller.GetSerialisableTuple()
+                serialisable_page_manager = page_manager.GetSerialisableTuple()
                 
                 serialisable_hashes = [ hash.hex() for hash in hashes ]
                 
-                serialisable_page_data = ( serialisable_management_controller, serialisable_hashes )
+                serialisable_page_data = ( serialisable_page_manager, serialisable_hashes )
                 
             
             serialisable_tuple = ( page_type, serialisable_page_data )
@@ -123,13 +123,13 @@ class GUISessionLegacy( HydrusSerialisable.SerialisableBaseNamed ):
                 
             elif page_type == 'page':
                 
-                ( serialisable_management_controller, serialisable_hashes ) = serialisable_page_data
+                ( serialisable_page_manager, serialisable_hashes ) = serialisable_page_data
                 
-                management_controller = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_management_controller )
+                page_manager = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_page_manager )
                 
                 hashes = [ bytes.fromhex( hash ) for hash in serialisable_hashes ]
                 
-                page_data = ( management_controller, hashes )
+                page_data = ( page_manager, hashes )
                 
             
             page_tuple = ( page_type, page_data )
@@ -158,15 +158,15 @@ class GUISessionLegacy( HydrusSerialisable.SerialisableBaseNamed ):
             
             new_serialisable_info = []
             
-            for ( page_name, serialisable_management_controller, serialisable_hashes ) in old_serialisable_info:
+            for ( page_name, serialisable_page_manager, serialisable_hashes ) in old_serialisable_info:
                 
-                management_controller = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_management_controller )
+                page_manager = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_page_manager )
                 
-                management_controller.SetPageName( page_name )
+                page_manager.SetPageName( page_name )
                 
-                serialisable_management_controller = management_controller.GetSerialisableTuple()
+                serialisable_page_manager = page_manager.GetSerialisableTuple()
                 
-                new_serialisable_info.append( ( serialisable_management_controller, serialisable_hashes ) )
+                new_serialisable_info.append( ( serialisable_page_manager, serialisable_hashes ) )
                 
             
             return ( 2, new_serialisable_info )
@@ -176,9 +176,9 @@ class GUISessionLegacy( HydrusSerialisable.SerialisableBaseNamed ):
             
             new_serialisable_info = []
             
-            for ( serialisable_management_controller, serialisable_hashes ) in old_serialisable_info:
+            for ( serialisable_page_manager, serialisable_hashes ) in old_serialisable_info:
                 
-                new_serialisable_info.append( ( 'page', ( serialisable_management_controller, serialisable_hashes ) ) )
+                new_serialisable_info.append( ( 'page', ( serialisable_page_manager, serialisable_hashes ) ) )
                 
             
             return ( 3, new_serialisable_info )
@@ -250,13 +250,13 @@ def ConvertPageTuplesToNotebookContainer( name, page_tuples ):
             
         else:
             
-            ( management_controller, hashes ) = old_page_data
+            ( page_manager, hashes ) = old_page_data
             
-            page_data = ClientGUISession.GUISessionPageData( management_controller = management_controller, hashes = hashes )
+            page_data = ClientGUISession.GUISessionPageData( page_manager = page_manager, hashes = hashes )
             
             page_data_hash = page_data.GetSerialisedHash()
             
-            page_container = ClientGUISession.GUISessionContainerPageSingle( management_controller.GetPageName(), page_data_hash = page_data_hash )
+            page_container = ClientGUISession.GUISessionContainerPageSingle( page_manager.GetPageName(), page_data_hash = page_data_hash )
             
             hashes_to_page_data[ page_data_hash ] = page_data
             

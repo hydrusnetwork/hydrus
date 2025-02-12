@@ -2,17 +2,17 @@ from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusNumbers
 
 from hydrus.client import ClientGlobals as CG
-from hydrus.client.gui.pages import ClientGUIManagementController
+from hydrus.client.gui.pages import ClientGUIPageManager
 from hydrus.client.gui.pages import ClientGUIMediaResultsPanel
 
 class MediaResultsPanelLoading( ClientGUIMediaResultsPanel.MediaResultsPanel ):
     
-    def __init__( self, parent, page_key, management_controller: ClientGUIManagementController.ManagementController ):
+    def __init__( self, parent, page_key, page_manager: ClientGUIPageManager.PageManager ):
         
         self._current = None
         self._max = None
         
-        super().__init__( parent, page_key, management_controller, [] )
+        super().__init__( parent, page_key, page_manager, [] )
         
         CG.client_controller.sub( self, 'SetNumQueryResults', 'set_num_query_results' )
         

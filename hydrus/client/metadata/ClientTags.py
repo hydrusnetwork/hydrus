@@ -44,6 +44,10 @@ def RenderNamespaceForUser( namespace ):
         
         return 'unnamespaced'
         
+    elif namespace == ':':
+        
+        return 'namespaced'
+        
     else:
         
         return namespace

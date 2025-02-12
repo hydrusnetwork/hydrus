@@ -10,6 +10,7 @@ from hydrus.core import HydrusLists
 from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusSerialisable
 from hydrus.core.files import HydrusPSDHandling
+from hydrus.core.files.images import HydrusBlurhash
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
@@ -76,6 +77,19 @@ def FlattenMedia( medias ) -> typing.List[ "MediaSingleton" ]:
         
     
     return flat_media
+    
+
+sort_data_to_blurhash_to_sortable_calls = {
+    CC.SORT_FILES_BY_AVERAGE_COLOUR_LIGHTNESS : HydrusBlurhash.ConvertBlurhashToSortableLightness,
+    CC.SORT_FILES_BY_AVERAGE_COLOUR_CHROMATIC_MAGNITUDE : HydrusBlurhash.ConvertBlurhashToSortableChromaticMagnitude,
+    CC.SORT_FILES_BY_AVERAGE_COLOUR_CHROMATICITY_GREEN_RED : HydrusBlurhash.ConvertBlurhashToSortableGreenRed,
+    CC.SORT_FILES_BY_AVERAGE_COLOUR_CHROMATICITY_BLUE_YELLOW : HydrusBlurhash.ConvertBlurhashToSortableBlueYellow,
+    CC.SORT_FILES_BY_AVERAGE_COLOUR_HUE : HydrusBlurhash.ConvertBlurhashToSortableHue
+}
+
+def GetBlurhashToSortableCall( sort_data: int ):
+    
+    return sort_data_to_blurhash_to_sortable_calls.get( sort_data, HydrusBlurhash.ConvertBlurhashToSortableLightness )
     
 
 def GetMediasTags( pool, tag_service_key, tag_display_type, content_statuses ):
@@ -2316,6 +2330,24 @@ class MediaSort( HydrusSerialisable.SerialisableBase ):
                         
                     
                 
+            elif sort_data in CC.AVERAGE_COLOUR_FILE_SORTS:
+                
+                blurhash_converter = GetBlurhashToSortableCall( sort_data )
+                
+                def sort_key( x ):
+                    
+                    blurhash = x.GetDisplayMedia().GetMediaResult().GetFileInfoManager().blurhash
+                    
+                    if blurhash is None:
+                        
+                        return ( 0 if reverse else 1, '' )
+                        
+                    else:
+                        
+                        return ( 1 if reverse else 0, blurhash_converter( blurhash ) )
+                        
+                    
+                
             elif sort_data == CC.SORT_FILES_BY_APPROX_BITRATE:
                 
                 def sort_key( x ):
@@ -2614,6 +2646,11 @@ class MediaSort( HydrusSerialisable.SerialisableBase ):
             sort_string_lookup[ CC.SORT_FILES_BY_PIXEL_HASH ] = ( 'lexicographic', 'reverse lexicographic', CC.SORT_ASC )
             sort_string_lookup[ CC.SORT_FILES_BY_HASH ] = ( 'lexicographic', 'reverse lexicographic', CC.SORT_ASC )
             sort_string_lookup[ CC.SORT_FILES_BY_BLURHASH ] = ( 'lexicographic', 'reverse lexicographic', CC.SORT_ASC )
+            sort_string_lookup[ CC.SORT_FILES_BY_AVERAGE_COLOUR_LIGHTNESS ] = ( 'darkest first', 'lightest first', CC.SORT_DESC )
+            sort_string_lookup[ CC.SORT_FILES_BY_AVERAGE_COLOUR_CHROMATIC_MAGNITUDE ] = ( 'greys first', 'colours first', CC.SORT_DESC )
+            sort_string_lookup[ CC.SORT_FILES_BY_AVERAGE_COLOUR_CHROMATICITY_GREEN_RED ] = ( 'greens first', 'reds first', CC.SORT_ASC )
+            sort_string_lookup[ CC.SORT_FILES_BY_AVERAGE_COLOUR_CHROMATICITY_BLUE_YELLOW ] = ( 'blues first', 'yellows first', CC.SORT_ASC )
+            sort_string_lookup[ CC.SORT_FILES_BY_AVERAGE_COLOUR_HUE ] = ( 'rainbow - red first', 'rainbow - purple first', CC.SORT_ASC )
             sort_string_lookup[ CC.SORT_FILES_BY_WIDTH ] = ( 'slimmest first', 'widest first', CC.SORT_ASC )
             sort_string_lookup[ CC.SORT_FILES_BY_HEIGHT ] = ( 'shortest first', 'tallest first', CC.SORT_ASC )
             sort_string_lookup[ CC.SORT_FILES_BY_RATIO ] = ( 'tallest first', 'widest first', CC.SORT_ASC )
