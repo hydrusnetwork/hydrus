@@ -15,6 +15,7 @@ The filetype for a file can be overridden with `manage -> force filetype` in the
 | static gif | `.gif`    | `image/gif`    |     ✅     |         ✅         |                       |
 | webp       | `.webp`   | `image/webp`   |     ✅     |         ✅         |                       |
 | avif       | `.avif`   | `image/avif`   |     ✅     |         ✅         |                       |
+| jxl        | `.jxl`    | `image/jxl`    |     ✅     |         ✅         |  JPEG XL              |
 | bitmap     | `.bmp`    | `image/bmp`    |     ✅     |         ✅         |                       |
 | heic       | `.heic`   | `image/heic`   |     ✅     |         ✅         |                       |
 | heif       | `.heif`   | `image/heif`   |     ✅     |         ✅         |                       |
