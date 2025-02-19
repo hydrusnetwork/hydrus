@@ -900,7 +900,7 @@ class ClientDBFilesDuplicates( ClientDBModule.ClientDBModule ):
                     
                     media_ids = self.GetAlternateMediaIds( alternates_group_id )
                     
-                    hash_ids = self.GetDuplicatesHashIds( media_ids, db_location_context = db_location_context )
+                    hash_ids.update( self.GetDuplicatesHashIds( media_ids, db_location_context = db_location_context ) )
                     
                 
             

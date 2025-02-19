@@ -1,5 +1,6 @@
 import os
 import threading
+import typing
 
 from qtpy import QtGui as QG
 
@@ -448,7 +449,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             'subscription_network_error_delay' : 12 * 3600,
             'subscription_other_error_delay' : 36 * 3600,
             'downloader_network_error_delay' : 90 * 60,
-            'file_viewing_stats_menu_display' : CC.FILE_VIEWING_STATS_MENU_DISPLAY_MEDIA_AND_PREVIEW_IN_SUBMENU,
+            'file_viewing_stats_menu_display' : CC.FILE_VIEWING_STATS_MENU_DISPLAY_SUMMED_AND_THEN_SUBMENU,
             'number_of_gui_session_backups' : 10,
             'animated_scanbar_height' : 20,
             'animated_scanbar_nub_width' : 10,
@@ -571,6 +572,10 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             'favourite_tags' : [],
             'advanced_file_deletion_reasons' : [ 'I do not like it.', 'It is bad quality.', 'It is not appropriate for this client.', 'Temporary delete--I want to bring it back later.' ],
             'user_namespace_group_by_sort' : [ 'creator', 'series', 'character', 'species', '', 'meta' ]
+        }
+        
+        self._dictionary[ 'integer_list' ] = {
+            'file_viewing_stats_interesting_canvas_types' : [ CC.CANVAS_MEDIA_VIEWER, CC.CANVAS_CLIENT_API ]
         }
         
         #
@@ -1304,7 +1309,15 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             return self._dictionary[ 'integers' ][ name ]
             
         
-
+    
+    def GetIntegerList( self, name: str ) -> typing.List[ int ]:
+        
+        with self._lock:
+            
+            return self._dictionary[ 'integer_list' ][ name ]
+            
+        
+    
     def GetAllIntegers( self):
         
         with self._lock:
@@ -1547,7 +1560,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def GetStringList( self, name ):
+    def GetStringList( self, name: str ) -> typing.List[ str ]:
         
         with self._lock:
             
@@ -1863,6 +1876,14 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         with self._lock:
             
             self._dictionary[ 'integers' ][ name ] = value
+            
+        
+    
+    def SetIntegerList( self, name: str, value: typing.List[ int ] ):
+        
+        with self._lock:
+            
+            self._dictionary[ 'integer_list' ][ name ] = list( value )
             
         
     

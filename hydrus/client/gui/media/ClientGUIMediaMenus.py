@@ -300,10 +300,11 @@ def AddFileViewingStatsMenu( menu, medias: typing.Collection[ ClientMedia.Media 
         
         return
         
+        
     
-    view_style = CG.client_controller.new_options.GetInteger( 'file_viewing_stats_menu_display' )
+    desired_canvas_types = CG.client_controller.new_options.GetIntegerList( 'file_viewing_stats_interesting_canvas_types' )
     
-    if view_style == CC.FILE_VIEWING_STATS_MENU_DISPLAY_NONE:
+    if len( desired_canvas_types ) == 0:
         
         return
         
@@ -319,35 +320,35 @@ def AddFileViewingStatsMenu( menu, medias: typing.Collection[ ClientMedia.Media 
         fvsm = ClientMediaManagers.FileViewingStatsManager.STATICGenerateCombinedManager( [ media.GetFileViewingStatsManager() for media in medias ] )
         
     
-    if view_style == CC.FILE_VIEWING_STATS_MENU_DISPLAY_MEDIA_AND_PREVIEW_SUMMED:
+    canvas_types_with_views = [ canvas_type for canvas_type in desired_canvas_types if fvsm.HasViews( canvas_type ) ]
+    
+    sum_appropriate = len( canvas_types_with_views ) > 1
+    
+    lines = [ fvsm.GetPrettyViewsLine( ( canvas_type, ) ) for canvas_type in canvas_types_with_views ]
+    
+    view_style = CG.client_controller.new_options.GetInteger( 'file_viewing_stats_menu_display' )
+    
+    if view_style == CC.FILE_VIEWING_STATS_MENU_DISPLAY_SUMMED_AND_THEN_SUBMENU and sum_appropriate:
         
-        combined_line = fvsm.GetPrettyViewsLine( ( CC.CANVAS_MEDIA_VIEWER, CC.CANVAS_PREVIEW ) )
+        submenu = ClientGUIMenus.GenerateMenu( menu )
         
-        ClientGUIMenus.AppendMenuLabel( menu, combined_line )
+        for line in lines:
+            
+            ClientGUIMenus.AppendMenuLabel( submenu, line )
+            
+        
+        summed_submenu_line = fvsm.GetPrettyViewsLine( canvas_types_with_views )
+        
+        ClientGUIMenus.AppendMenu( menu, submenu, summed_submenu_line )
         
     else:
         
-        media_line = fvsm.GetPrettyViewsLine( ( CC.CANVAS_MEDIA_VIEWER, ) )
-        preview_line = fvsm.GetPrettyViewsLine( ( CC.CANVAS_PREVIEW, ) )
-        
-        if view_style == CC.FILE_VIEWING_STATS_MENU_DISPLAY_MEDIA_ONLY:
+        for line in lines:
             
-            ClientGUIMenus.AppendMenuLabel( menu, media_line )
-            
-        elif view_style == CC.FILE_VIEWING_STATS_MENU_DISPLAY_MEDIA_AND_PREVIEW_IN_SUBMENU:
-            
-            submenu = ClientGUIMenus.GenerateMenu( menu )
-            
-            ClientGUIMenus.AppendMenuLabel( submenu, preview_line )
-            
-            ClientGUIMenus.AppendMenu( menu, submenu, media_line )
-            
-        elif view_style == CC.FILE_VIEWING_STATS_MENU_DISPLAY_MEDIA_AND_PREVIEW_STACKED:
-            
-            ClientGUIMenus.AppendMenuLabel( menu, media_line )
-            ClientGUIMenus.AppendMenuLabel( menu, preview_line )
+            ClientGUIMenus.AppendMenuLabel( menu, line )
             
         
+    
     
 
 def AddKnownURLsViewCopyMenu( win: QW.QWidget, command_processor: CAC.ApplicationCommandProcessorMixin, menu, focus_media, num_files_selected: int, selected_media = None ):

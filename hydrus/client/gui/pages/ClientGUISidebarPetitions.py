@@ -126,7 +126,7 @@ def MakeSomeFakePetitions( service_key: bytes ):
                 
                 from hydrus.client.media import ClientMediaResult
                 
-                for i in range( 8 ):
+                for i in range( random.randint( 4, 15 ) ):
                     
                     some_media_results = random.sample( cached_local_media_results, 64 )
                     
@@ -328,17 +328,13 @@ class SidebarPetitions( ClientGUISidebarCore.Sidebar ):
         self._contents_add.itemDoubleClicked.connect( self.ContentsAddDoubleClick )
         self._contents_add.setHorizontalScrollBarPolicy( QC.Qt.ScrollBarPolicy.ScrollBarAlwaysOff )
         
-        ( min_width, min_height ) = ClientGUIFunctions.ConvertTextToPixels( self._contents_add, ( 16, 20 ) )
-        
-        self._contents_add.setFixedHeight( min_height )
+        self._contents_add.SetHeightNumChars( 20 )
         
         self._contents_delete = ClientGUICommon.BetterCheckBoxList( self._petition_panel )
         self._contents_delete.itemDoubleClicked.connect( self.ContentsDeleteDoubleClick )
         self._contents_delete.setHorizontalScrollBarPolicy( QC.Qt.ScrollBarPolicy.ScrollBarAlwaysOff )
         
-        ( min_width, min_height ) = ClientGUIFunctions.ConvertTextToPixels( self._contents_delete, ( 16, 20 ) )
-        
-        self._contents_delete.setFixedHeight( min_height )
+        self._contents_delete.SetHeightNumChars( 20 )
         
         self._process = QW.QPushButton( 'process', self._petition_panel )
         self._process.clicked.connect( self.ProcessCurrentPetition )

@@ -1729,12 +1729,11 @@ Wildcards and namespace searches are supported, so if you search for 'character:
     *   system:num pixels > 50 px
     *   system:num pixels < 1 megapixels
     *   system:num pixels ~= 5 kilopixel
-    *   system:media views ~= 10
-    *   system:all views > 0
-    *   system:preview views < 10
-    *   system:media viewtime < 1 days 1 hour 0 minutes
-    *   system:all viewtime > 1 hours 100 seconds
-    *   system:preview viewtime ~= 1 day 30 hours 100 minutes 90s
+    *   system:views in media ~= 10
+    *   system:views in preview < 10
+    *   system:views > 0
+    *   system:viewtime in client api < 1 days 1 hour 0 minutes
+    *   system:viewtime in media, client api, preview ~= 1 day 30 hours 100 minutes 90s
     *   system:has url matching regex index\\.php
     *   system:does not have a url matching regex index\\.php
     *   system:has url https://safebooru.donmai.us/posts/4695284

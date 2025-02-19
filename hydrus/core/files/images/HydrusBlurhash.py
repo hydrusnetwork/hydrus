@@ -85,7 +85,7 @@ def xyz_to_lab( x, y, z ):
     return L, a, b
     
 
-def ConvertBlurhashToSortableChromaticMagnitude( blurhash: str ):
+def ConvertBlurhashToSortableChromaticMagnitude( blurhash: str, reverse: bool ):
     
     ( r, g, b ) = GetAverageColourFromBlurhash( blurhash )
     
@@ -97,7 +97,7 @@ def ConvertBlurhashToSortableChromaticMagnitude( blurhash: str ):
     return ( cm, l )
     
 
-def ConvertBlurhashToSortableBlueYellow( blurhash: str ):
+def ConvertBlurhashToSortableBlueYellow( blurhash: str, reverse: bool ):
     
     ( r, g, b ) = GetAverageColourFromBlurhash( blurhash )
     
@@ -106,7 +106,7 @@ def ConvertBlurhashToSortableBlueYellow( blurhash: str ):
     return ( b, -l )
     
 
-def ConvertBlurhashToSortableGreenRed( blurhash: str ):
+def ConvertBlurhashToSortableGreenRed( blurhash: str, reverse: bool ):
     
     ( r, g, b ) = GetAverageColourFromBlurhash( blurhash )
     
@@ -115,16 +115,26 @@ def ConvertBlurhashToSortableGreenRed( blurhash: str ):
     return ( a, -l )
     
 
-def ConvertBlurhashToSortableHue( blurhash: str ):
+def ConvertBlurhashToSortableHue( blurhash: str, reverse: bool ):
     
     ( r, g, b ) = GetAverageColourFromBlurhash( blurhash )
     
     ( h, s, l ) = rgb_to_hsl( r, g, b )
     
-    return ( h, - s )
+    if s < 0.03:
+        
+        # stuff greys at the bottom
+        initial = -1 if reverse else 1
+        
+    else:
+        
+        initial = 0
+        
+    
+    return ( initial, h, - s )
     
 
-def ConvertBlurhashToSortableLightness( blurhash: str ):
+def ConvertBlurhashToSortableLightness( blurhash: str, reverse: bool ):
     
     ( r, g, b ) = GetAverageColourFromBlurhash( blurhash )
     

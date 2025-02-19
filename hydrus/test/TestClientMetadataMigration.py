@@ -8,7 +8,6 @@ from hydrus.core import HydrusText
 from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
-from hydrus.client import ClientParsing
 from hydrus.client import ClientStrings
 from hydrus.client import ClientTime
 from hydrus.client.media import ClientMediaManagers
@@ -18,6 +17,7 @@ from hydrus.client.metadata import ClientMetadataMigration
 from hydrus.client.metadata import ClientMetadataMigrationExporters
 from hydrus.client.metadata import ClientMetadataMigrationImporters
 from hydrus.client.metadata import ClientTags
+from hydrus.client.parsing import ClientParsing
 
 from hydrus.test import HelperFunctions as HF
 from hydrus.test import TestGlobals as TG

@@ -331,6 +331,7 @@ class BetterButton( ShortcutAwareToolTipMixin, QW.QPushButton ):
         QW.QPushButton.setText( self, button_label )
         
     
+
 class BetterCheckBoxList( QW.QListWidget ):
     
     checkBoxListChanged = QC.Signal()
@@ -343,6 +344,10 @@ class BetterCheckBoxList( QW.QListWidget ):
         self.itemClicked.connect( self._ItemCheckStateChanged )
         
         self.setSelectionMode( QW.QAbstractItemView.SelectionMode.ExtendedSelection )
+        
+        self.setEditTriggers( QW.QAbstractItemView.EditTrigger.NoEditTriggers )
+        
+        self.setUniformItemSizes( True )
         
     
     def _ItemCheckStateChanged( self, item ):
@@ -419,6 +424,37 @@ class BetterCheckBoxList( QW.QListWidget ):
     def IsSelected( self, index: int ) -> bool:
         
         return self.item( index ).isSelected()
+        
+    
+    def SetHeightBasedOnContents( self ):
+        
+        num_chars = self.count()
+        
+        if num_chars > 32:
+            
+            self.SetHeightNumChars( 32 )
+            
+        else:
+            
+            self.SetHeightNumChars( num_chars, clip_virtual_size_too = True )
+            
+        
+    
+    def SetHeightNumChars( self, num_chars: int, clip_virtual_size_too = False ):
+        
+        row_height = self.sizeHintForRow( 0 )
+        
+        # ( width, height ) = ClientGUIFunctions.ConvertTextToPixels( self, ( 10, num_chars ) )
+        
+        height = ( row_height * num_chars ) + ( self.frameWidth() * 2 )
+        
+        self.setFixedHeight( height )
+        
+        if clip_virtual_size_too:
+            
+            # this fixes some weird issue where the vertical scrollbar wants to scroll down to an extra empty row
+            self.viewport().setFixedHeight( row_height * num_chars )
+            
         
     
     def SetValue( self, datas: typing.Collection ):
@@ -1047,7 +1083,7 @@ class ExportPatternButton( BetterButton ):
         
         menu = ClientGUIMenus.GenerateMenu( self )
         
-        ClientGUIMenus.AppendMenuLabel( menu, 'click on a phrase to copy to clipboard' )
+        ClientGUIMenus.AppendMenuLabel( menu, 'click on a phrase to copy to clipboard', make_it_bold = True )
         
         ClientGUIMenus.AppendSeparator( menu )
         

@@ -105,7 +105,7 @@ options = {}
 # Misc
 
 NETWORK_VERSION = 20
-SOFTWARE_VERSION = 609
+SOFTWARE_VERSION = 610
 CLIENT_API_VERSION = 78
 
 SERVER_THUMBNAIL_DIMENSIONS = ( 200, 200 )
@@ -194,12 +194,12 @@ CONTENT_TYPE_DEFINITIONS = 21
 CONTENT_TYPE_HTTP_HEADERS = 22
 
 content_type_string_lookup = {
-    CONTENT_TYPE_MAPPINGS : 'mappings',
+    CONTENT_TYPE_MAPPINGS : 'tag mappings',
     CONTENT_TYPE_TAG_SIBLINGS : 'tag siblings',
     CONTENT_TYPE_TAG_PARENTS : 'tag parents',
     CONTENT_TYPE_FILES : 'files',
     CONTENT_TYPE_RATINGS : 'ratings',
-    CONTENT_TYPE_MAPPING : 'mapping',
+    CONTENT_TYPE_MAPPING : 'tag mapping',
     CONTENT_TYPE_DIRECTORIES : 'directories',
     CONTENT_TYPE_URLS : 'urls',
     CONTENT_TYPE_VETO : 'veto',

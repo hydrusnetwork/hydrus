@@ -48,7 +48,7 @@ class RegexButton( ClientGUICommon.BetterButton ):
         
         submenu = ClientGUIMenus.GenerateMenu( menu )
         
-        ClientGUIMenus.AppendMenuLabel( submenu, 'click below to copy to clipboard', no_copy = True )
+        ClientGUIMenus.AppendMenuLabel( submenu, 'click below to copy to clipboard', no_copy = True, make_it_bold = True )
         
         ClientGUIMenus.AppendSeparator( submenu )
         
@@ -96,7 +96,7 @@ class RegexButton( ClientGUICommon.BetterButton ):
             
             submenu = ClientGUIMenus.GenerateMenu( menu )
             
-            ClientGUIMenus.AppendMenuLabel( submenu, 'click below to copy to clipboard', no_copy = True )
+            ClientGUIMenus.AppendMenuLabel( submenu, 'click below to copy to clipboard', no_copy = True, make_it_bold = True )
             
             ClientGUIMenus.AppendSeparator( submenu )
             
@@ -125,7 +125,7 @@ class RegexButton( ClientGUICommon.BetterButton ):
         
         ClientGUIMenus.AppendSeparator( submenu )
         
-        ClientGUIMenus.AppendMenuLabel( submenu, 'click below to copy to clipboard', no_copy = True )
+        ClientGUIMenus.AppendMenuLabel( submenu, 'click below to copy to clipboard', no_copy = True, make_it_bold = True )
         
         ClientGUIMenus.AppendSeparator( submenu )
         

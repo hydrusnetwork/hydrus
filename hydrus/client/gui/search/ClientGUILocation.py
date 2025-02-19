@@ -7,7 +7,6 @@ from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientLocation
 from hydrus.client.gui import ClientGUICore as CGC
-from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIMenus
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
@@ -60,11 +59,7 @@ class EditMultipleLocationContextPanel( ClientGUIScrolledPanels.EditPanel ):
                 
             
         
-        height_rows = min( 24, self._location_list.count() )
-        
-        ( gumpf, min_height ) = ClientGUIFunctions.ConvertTextToPixels( self._location_list, ( 24, height_rows + 2 ) )
-        
-        self._location_list.setMinimumHeight( min_height )
+        self._location_list.SetHeightBasedOnContents()
         
         vbox = QP.VBoxLayout()
         

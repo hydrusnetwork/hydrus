@@ -99,14 +99,15 @@ class ClientDBFilesViewingStats( ClientDBModule.ClientDBModule ):
             
         
     
-    def GetHashIdsFromFileViewingStatistics( self, view_type, viewing_locations, operator, viewing_value ) -> typing.Set[ int ]:
+    def GetHashIdsFromFileViewingStatistics( self, view_type, desired_canvas_types, operator, viewing_value ) -> typing.Set[ int ]:
         
         # only works for positive values like '> 5'. won't work for '= 0' or '< 1' since those are absent from the table
         
-        include_media = 'media' in viewing_locations
-        include_preview = 'preview' in viewing_locations
+        if len( desired_canvas_types ) == 0:
+            
+            return set()
+            
         
-        canvas_type_predicate = '1=1'
         group_by_phrase = ''
         
         if view_type == 'views':
@@ -124,9 +125,15 @@ class ClientDBFilesViewingStats( ClientDBModule.ClientDBModule ):
             return set()
             
         
-        if include_media and include_preview:
+        if len( desired_canvas_types ) == 1:
             
-            canvas_type_predicate = f'canvas_type in ( {CC.CANVAS_MEDIA_VIEWER}, {CC.CANVAS_PREVIEW} )'
+            desired_canvas_type = list( desired_canvas_types )[0]
+            
+            canvas_type_predicate = f'canvas_type = {desired_canvas_type}'
+            
+        else:
+            
+            canvas_type_predicate = f'canvas_type in {HydrusData.SplayListForDB( desired_canvas_types )}'
             
             group_by_phrase = ' GROUP BY hash_id'
             
@@ -138,18 +145,6 @@ class ClientDBFilesViewingStats( ClientDBModule.ClientDBModule ):
                 
                 content_phrase = 'SUM( viewtime_ms )'
                 
-            
-        elif include_media:
-            
-            canvas_type_predicate = 'canvas_type = {}'.format( CC.CANVAS_MEDIA_VIEWER )
-            
-        elif include_preview:
-            
-            canvas_type_predicate = 'canvas_type = {}'.format( CC.CANVAS_PREVIEW )
-            
-        else:
-            
-            return set()
             
         
         if operator == HC.UNICODE_APPROX_EQUAL:
@@ -164,13 +159,13 @@ class ClientDBFilesViewingStats( ClientDBModule.ClientDBModule ):
             test_phrase = '{} {} {}'.format( content_phrase, operator, viewing_value )
             
         
-        if include_media and include_preview:
+        if len( desired_canvas_types ) == 1:
             
-            select_statement = 'SELECT hash_id FROM file_viewing_stats {} HAVING {};'.format( group_by_phrase, test_phrase )
+            select_statement = 'SELECT hash_id FROM file_viewing_stats WHERE {} AND {}{};'.format( test_phrase, canvas_type_predicate, group_by_phrase )
             
         else:
             
-            select_statement = 'SELECT hash_id FROM file_viewing_stats WHERE {} AND {}{};'.format( test_phrase, canvas_type_predicate, group_by_phrase )
+            select_statement = 'SELECT hash_id FROM file_viewing_stats WHERE {} {} HAVING {};'.format( canvas_type_predicate, group_by_phrase, test_phrase )
             
         
         hash_ids = self._STS( self._Execute( select_statement ) )

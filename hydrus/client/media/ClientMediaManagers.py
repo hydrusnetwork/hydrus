@@ -584,17 +584,15 @@ class FileViewingStatsManager( object ):
     def GetPrettyViewsLine( self, canvas_types: typing.Collection[ int ] ) -> str:
         
         # TODO: update this and callers to handle client api canvas
-        if len( canvas_types ) == 2:
+        if len( canvas_types ) == 1:
             
-            info_string = ''
+            canvas_type = list( canvas_types )[0]
             
-        elif CC.CANVAS_MEDIA_VIEWER in canvas_types:
+            canvas_type_string = ' in ' + CC.canvas_type_str_lookup[ canvas_type ]
             
-            info_string = ' in media viewer'
+        else:
             
-        elif CC.CANVAS_PREVIEW in canvas_types:
-            
-            info_string = ' in preview window'
+            canvas_type_string = ''
             
         
         views_total = sum( ( self.views[ canvas_type ] for canvas_type in canvas_types ) )
@@ -602,7 +600,7 @@ class FileViewingStatsManager( object ):
         
         if views_total == 0:
             
-            return 'no view record{}'.format( info_string )
+            return 'no view record{}'.format( canvas_type_string )
             
         
         last_viewed_times_ms = []
@@ -626,7 +624,7 @@ class FileViewingStatsManager( object ):
             last_viewed_string = 'last {}'.format( HydrusTime.TimestampToPrettyTimeDelta( HydrusTime.SecondiseMS( max( last_viewed_times_ms ) ) ) )
             
         
-        return 'viewed {} times{}, totalling {}, {}'.format( HydrusNumbers.ToHumanInt( views_total ), info_string, HydrusTime.TimeDeltaToPrettyTimeDelta( HydrusTime.SecondiseMSFloat( viewtime_ms_total ) ), last_viewed_string )
+        return 'viewed {} times{}, totalling {}, {}'.format( HydrusNumbers.ToHumanInt( views_total ), canvas_type_string, HydrusTime.TimeDeltaToPrettyTimeDelta( HydrusTime.SecondiseMSFloat( viewtime_ms_total ) ), last_viewed_string )
         
     
     def GetTimesManager( self ) -> TimesManager:
@@ -642,6 +640,11 @@ class FileViewingStatsManager( object ):
     def GetViewtimeMS( self, canvas_type: int ) -> int:
         
         return self.viewtimes_ms[ canvas_type ]
+        
+    
+    def HasViews( self, canvas_type: int ) -> bool:
+        
+        return self.views[ canvas_type ] > 0
         
     
     def MergeCounts( self, file_viewing_stats_manager: "FileViewingStatsManager" ):

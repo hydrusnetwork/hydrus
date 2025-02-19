@@ -15,10 +15,10 @@ from hydrus.core.files.images import HydrusImageHandling
 
 from hydrus.client import ClientFiles
 from hydrus.client import ClientGlobals as CG
-from hydrus.client import ClientParsing
 from hydrus.client import ClientRendering
 from hydrus.client import ClientThreading
 from hydrus.client.caches import ClientCachesBase
+from hydrus.client.parsing import ClientParsing
 
 class ParsingCache( object ):
     

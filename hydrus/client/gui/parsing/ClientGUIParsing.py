@@ -14,7 +14,6 @@ from hydrus.core import HydrusSerialisable
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientDefaults
 from hydrus.client import ClientGlobals as CG
-from hydrus.client import ClientParsing
 from hydrus.client import ClientStrings
 from hydrus.client.gui import ClientGUIDialogs
 from hydrus.client.gui import ClientGUIDialogsMessage
@@ -40,6 +39,8 @@ from hydrus.client.networking import ClientNetworkingFunctions
 from hydrus.client.networking import ClientNetworkingGUG
 from hydrus.client.networking import ClientNetworkingJobs
 from hydrus.client.networking import ClientNetworkingURLClass
+from hydrus.client.parsing import ClientParsing
+from hydrus.client.parsing import ClientParsingResults
 
 class DownloaderExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
     
@@ -1085,15 +1086,11 @@ class EditContentParsersPanel( ClientGUICommon.StaticBox ):
         self._content_parsers.AddData( content_parser, select_sort_and_scroll = True )
         
     
-    def _ConvertContentParserToDisplayTuple( self, content_parser ):
+    def _ConvertContentParserToDisplayTuple( self, content_parser: ClientParsing.ContentParser ):
         
         name = content_parser.GetName()
         
-        produces = list( content_parser.GetParsableContent() )
-        
-        pretty_produces = ClientParsing.ConvertParsableContentToPrettyString( produces, include_veto = True )
-        
-        # produces has some garbage stuff like StringMatch that doesn't sort nice, so sort on pretty produces
+        pretty_produces = content_parser.GetParsableContentDescription().ToString()
         
         return ( name, pretty_produces )
         
@@ -1153,9 +1150,10 @@ class EditContentParsersPanel( ClientGUICommon.StaticBox ):
         self._content_parsers.Sort()
         
     
+
 class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
     
-    def __init__( self, parent, parser: ClientParsing.PageParser, formula = None, test_data = None ):
+    def __init__( self, parent, parser: ClientParsing.PageParser, formula = None, sort_posts_by_source_time = None, test_data = None ):
         
         self._original_parser = parser
         
@@ -1193,6 +1191,10 @@ class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._name = QW.QLineEdit( main_panel )
         
+        self._sort_posts_by_source_time = QW.QCheckBox( main_panel )
+        tt = 'If you are fetching posts from an unusually ordered source (e.g. "bookmarked time" or similar), but you are able to parse a source time for each separate post with a content parser in here, this will tell the parser to sort them by that timestamp you parsed, obviously newest first.'
+        self._sort_posts_by_source_time.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
+        
         #
         
         conversion_panel = ClientGUICommon.StaticBox( main_panel, 'pre-parsing conversion' )
@@ -1214,11 +1216,11 @@ class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
         
         if formula is None:
             
-            self._test_panel = ClientGUIParsingTest.TestPanelPageParser( test_panel, self.GetValue, self._string_converter.GetValue, test_data = test_data )
+            self._test_panel = ClientGUIParsingTest.TestPanelPageParser( test_panel, self._GetPageParser, self._string_converter.GetValue, test_data = test_data )
             
         else:
             
-            self._test_panel = ClientGUIParsingTest.TestPanelPageParserSubsidiary( test_panel, self.GetValue, self._string_converter.GetValue, self.GetFormula, test_data = test_data )
+            self._test_panel = ClientGUIParsingTest.TestPanelPageParserSubsidiary( test_panel, self._GetPageParser, self._string_converter.GetValue, self.GetValue, test_data = test_data )
             
             self._test_panel.SetCollapseNewlines( False )
             
@@ -1239,25 +1241,25 @@ class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        sub_page_parsers_notebook_panel = QW.QWidget( edit_notebook )
+        subsidiary_page_parsers_notebook_panel = QW.QWidget( edit_notebook )
         
         #
         
-        sub_page_parsers_panel = ClientGUIListCtrl.BetterListCtrlPanel( sub_page_parsers_notebook_panel )
+        subsidiary_page_parsers_panel = ClientGUIListCtrl.BetterListCtrlPanel( subsidiary_page_parsers_notebook_panel )
         
-        model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_SUB_PAGE_PARSERS.ID, self._ConvertSubPageParserToDisplayTuple, self._ConvertSubPageParserToSortTuple )
+        model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_SUBSIDIARY_PAGE_PARSERS.ID, self._ConvertSubPageParserToDisplayTuple, self._ConvertSubPageParserToSortTuple )
         
-        self._sub_page_parsers = ClientGUIListCtrl.BetterListCtrlTreeView( sub_page_parsers_panel, 4, model, use_simple_delete = True, activation_callback = self._EditSubPageParser )
+        self._subsidiary_page_parsers = ClientGUIListCtrl.BetterListCtrlTreeView( subsidiary_page_parsers_panel, 4, model, use_simple_delete = True, activation_callback = self._EditSubPageParser )
         
-        sub_page_parsers_panel.SetListCtrl( self._sub_page_parsers )
+        subsidiary_page_parsers_panel.SetListCtrl( self._subsidiary_page_parsers )
         
-        sub_page_parsers_panel.AddButton( 'add', self._AddSubPageParser )
-        sub_page_parsers_panel.AddButton( 'edit', self._EditSubPageParser, enabled_only_on_single_selection = True )
-        sub_page_parsers_panel.AddDeleteButton()
+        subsidiary_page_parsers_panel.AddButton( 'add', self._AddSubPageParser )
+        subsidiary_page_parsers_panel.AddButton( 'edit', self._EditSubPageParser, enabled_only_on_single_selection = True )
+        subsidiary_page_parsers_panel.AddDeleteButton()
         
-        sub_page_parsers_panel.AddSeparator()
+        subsidiary_page_parsers_panel.AddSeparator()
         
-        sub_page_parsers_panel.AddImportExportButtons(
+        subsidiary_page_parsers_panel.AddImportExportButtons(
             permitted_object_types = ( ClientParsing.SubsidiaryPageParser, ),
             import_add_callable = self._ImportAddSubsidiaryPageParser
         )
@@ -1276,7 +1278,7 @@ class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
         
         name = parser.GetName()
         
-        ( sub_page_parsers, content_parsers ) = parser.GetContentParsers()
+        ( subsidiary_page_parsers, content_parsers ) = parser.GetContentParsers()
         
         example_urls = parser.GetExampleURLs( encoded = False )
         
@@ -1287,9 +1289,14 @@ class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._name.setText( name )
         
-        self._sub_page_parsers.AddDatas( sub_page_parsers )
+        if sort_posts_by_source_time is not None:
+            
+            self._sort_posts_by_source_time.setChecked( sort_posts_by_source_time )
+            
         
-        self._sub_page_parsers.Sort()
+        self._subsidiary_page_parsers.AddDatas( subsidiary_page_parsers )
+        
+        self._subsidiary_page_parsers.Sort()
         
         self._content_parsers.AddDatas( content_parsers )
         
@@ -1312,11 +1319,22 @@ class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
         
         rows.append( ( 'name or description (optional): ', self._name ) )
         
+        if sort_posts_by_source_time is None:
+            
+            self._sort_posts_by_source_time.setVisible( False )
+            
+        else:
+            
+            rows.append( ( 'sort posts by source time: ', self._sort_posts_by_source_time ) )
+            
+        
         gridbox = ClientGUICommon.WrapInGrid( main_panel, rows )
         
         QP.AddToLayout( vbox, gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         QP.AddToLayout( vbox, conversion_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, example_urls_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        vbox.addStretch( 0 )
         
         main_panel.setLayout( vbox )
         
@@ -1332,9 +1350,9 @@ class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
         
         vbox = QP.VBoxLayout()
         
-        QP.AddToLayout( vbox, sub_page_parsers_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( vbox, subsidiary_page_parsers_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         
-        sub_page_parsers_notebook_panel.setLayout( vbox )
+        subsidiary_page_parsers_notebook_panel.setLayout( vbox )
         
         #
         
@@ -1379,7 +1397,7 @@ class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
         
         edit_notebook.addTab( main_panel, 'main' )
         edit_notebook.setCurrentWidget( main_panel )
-        edit_notebook.addTab( sub_page_parsers_notebook_panel, 'subsidiary page parsers' )
+        edit_notebook.addTab( subsidiary_page_parsers_notebook_panel, 'subsidiary page parsers' )
         edit_notebook.addTab( content_parsers_panel, 'content parsers' )
         
         edit_panel.Add( edit_notebook, CC.FLAGS_EXPAND_BOTH_WAYS )
@@ -1408,43 +1426,34 @@ class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _AddSubPageParser( self ):
         
-        sub_page_parser = ClientParsing.SubsidiaryPageParser()
-        
-        formula = sub_page_parser.GetFormula()
-        page_parser = sub_page_parser.GetPageParser()
+        subsidiary_page_parser = ClientParsing.SubsidiaryPageParser()
         
         with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit sub page parser', frame_key = 'deeply_nested_dialog' ) as dlg:
             
-            panel = EditPageParserPanel( dlg, page_parser, formula = formula, test_data = self._test_panel.GetTestDataForChild() )
+            panel = EditSubsidiaryPageParserPanel( dlg, subsidiary_page_parser, test_data = self._test_panel.GetTestDataForChild() )
             
             dlg.SetPanel( panel )
             
             if dlg.exec() == QW.QDialog.DialogCode.Accepted:
                 
-                new_page_parser = panel.GetValue()
+                new_subsidiary_page_parser = panel.GetValue()
                 
-                new_formula = panel.GetFormula()
-                
-                new_sub_page_parser = ClientParsing.SubsidiaryPageParser( formula = new_formula, page_parser = new_page_parser )
-                
-                self._sub_page_parsers.AddData( new_sub_page_parser, select_sort_and_scroll = True )
+                self._subsidiary_page_parsers.AddData( new_subsidiary_page_parser, select_sort_and_scroll = True )
                 
             
         
     
-    def _ConvertSubPageParserToDisplayTuple( self, sub_page_parser: ClientParsing.SubsidiaryPageParser ):
+    def _ConvertSubPageParserToDisplayTuple( self, subsidiary_page_parser: ClientParsing.SubsidiaryPageParser ):
         
-        formula = sub_page_parser.GetFormula()
-        page_parser = sub_page_parser.GetPageParser()
+        formula = subsidiary_page_parser.GetFormula()
+        page_parser = subsidiary_page_parser.GetPageParser()
         
         name = page_parser.GetName()
         
-        produces = page_parser.GetParsableContent()
-        
-        produces = sorted( produces, key = lambda row: ( row[0], row[1] ) ) # ( name, content_type ), ignores potentially unsortable StringMatch etc.. in additional info in case of dupe
+        parseable_content_descriptions = page_parser.GetParsableContentDescriptions()
         
         pretty_formula = formula.ToPrettyString()
-        pretty_produces = ClientParsing.ConvertParsableContentToPrettyString( produces )
+        pretty_produces = ClientParsingResults.ConvertParsableContentDescriptionsToPrettyString( parseable_content_descriptions )
         
         return ( name, pretty_formula, pretty_produces )
         
@@ -1470,31 +1479,24 @@ class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _EditSubPageParser( self ):
         
-        sub_page_parser = self._sub_page_parsers.GetTopSelectedData()
+        subsidiary_page_parser = self._subsidiary_page_parsers.GetTopSelectedData()
         
-        if sub_page_parser is None:
+        if subsidiary_page_parser is None:
             
             return
             
         
-        formula = sub_page_parser.GetFormula()
-        page_parser = sub_page_parser.GetPageParser()
-        
         with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit sub page parser', frame_key = 'deeply_nested_dialog' ) as dlg:
             
-            panel = EditPageParserPanel( dlg, page_parser, formula = formula, test_data = self._test_panel.GetTestDataForChild() )
+            panel = EditSubsidiaryPageParserPanel( dlg, subsidiary_page_parser, test_data = self._test_panel.GetTestDataForChild() )
             
             dlg.SetPanel( panel )
             
             if dlg.exec() == QW.QDialog.DialogCode.Accepted:
                 
-                new_formula = panel.GetFormula()
+                new_subsidiary_page_parser = panel.GetValue()
                 
-                new_page_parser = panel.GetValue()
-                
-                new_sub_page_parser = ClientParsing.SubsidiaryPageParser( formula = new_formula, page_parser = new_page_parser )
-                
-                self._sub_page_parsers.ReplaceData( sub_page_parser, new_sub_page_parser, sort_and_scroll = True )
+                self._subsidiary_page_parsers.ReplaceData( subsidiary_page_parser, new_subsidiary_page_parser, sort_and_scroll = True )
                 
             
         
@@ -1583,17 +1585,7 @@ class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
         CG.client_controller.CallToThread( wait_and_do_it, network_job )
         
     
-    def _ImportAddSubsidiaryPageParser( self, subsidiary_page_parser: ClientParsing.SubsidiaryPageParser ):
-        
-        self._sub_page_parsers.AddData( subsidiary_page_parser, select_sort_and_scroll = True )
-        
-    
-    def GetFormula( self ):
-        
-        return self._formula.GetValue()
-        
-    
-    def GetValue( self ):
+    def _GetPageParser( self ):
         
         name = self._name.text()
         
@@ -1601,7 +1593,7 @@ class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
         
         string_converter = self._string_converter.GetValue()
         
-        sub_page_parsers = self._sub_page_parsers.GetData()
+        subsidiary_page_parsers = self._subsidiary_page_parsers.GetData()
         
         content_parsers = self._content_parsers.GetData()
         
@@ -1609,15 +1601,37 @@ class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
         
         example_parsing_context = self._test_panel.GetExampleParsingContext()
         
-        parser = ClientParsing.PageParser( name, parser_key = parser_key, string_converter = string_converter, sub_page_parsers = sub_page_parsers, content_parsers = content_parsers, example_urls = example_urls, example_parsing_context = example_parsing_context )
+        page_parser = ClientParsing.PageParser( name, parser_key = parser_key, string_converter = string_converter, subsidiary_page_parsers = subsidiary_page_parsers, content_parsers = content_parsers, example_urls = example_urls, example_parsing_context = example_parsing_context )
         
-        return parser
+        return page_parser
+        
+    
+    def _ImportAddSubsidiaryPageParser( self, subsidiary_page_parser: ClientParsing.SubsidiaryPageParser ):
+        
+        self._subsidiary_page_parsers.AddData( subsidiary_page_parser, select_sort_and_scroll = True )
+        
+    
+    def GetFormula( self ):
+        
+        return self._formula.GetValue()
+        
+    
+    def GetSortPostsBySourceTime( self ):
+        
+        return self._sort_posts_by_source_time.isChecked()
+        
+    
+    def GetValue( self ):
+        
+        page_parser = self._GetPageParser()
+        
+        return page_parser
         
     
     def UserIsOKToCancel( self ):
         
         original_parser = self._original_parser.Duplicate()
-        current_parser = self.GetValue()
+        current_parser = self._GetPageParser()
         
         original_parser.NullifyTestData()
         current_parser.NullifyTestData()
@@ -1638,6 +1652,40 @@ class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
             
         
     
+
+class EditSubsidiaryPageParserPanel( EditPageParserPanel ):
+    
+    def __init__( self, parent: QW.QWidget, subsidiary_page_parser: ClientParsing.SubsidiaryPageParser, test_data = None ):
+        
+        page_parser = subsidiary_page_parser.GetPageParser()
+        formula = subsidiary_page_parser.GetFormula()
+        sort_posts_by_source_time = subsidiary_page_parser.GetSortPostsBySourceTime()
+        
+        super().__init__(
+            parent,
+            page_parser,
+            formula = formula,
+            sort_posts_by_source_time = sort_posts_by_source_time,
+            test_data = test_data
+        )
+        
+    
+    def GetValue( self ):
+        
+        page_parser = self._GetPageParser()
+        formula = self.GetFormula()
+        sort_posts_by_source_time = self.GetSortPostsBySourceTime()
+        
+        subsidiary_page_parser = ClientParsing.SubsidiaryPageParser(
+            formula = formula,
+            sort_posts_by_source_time = sort_posts_by_source_time,
+            page_parser = page_parser
+        )
+        
+        return subsidiary_page_parser
+        
+    
+
 class EditParsersPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def __init__( self, parent, parsers ):
@@ -1701,15 +1749,15 @@ class EditParsersPanel( ClientGUIScrolledPanels.EditPanel ):
         self._parsers.AddData( parser, select_sort_and_scroll = select_sort_and_scroll )
         
     
-    def _ConvertParserToListCtrlTuples( self, parser ):
+    def _ConvertParserToListCtrlTuples( self, parser: ClientParsing.PageParser ):
         
         name = parser.GetName()
         
         example_urls = sorted( parser.GetExampleURLs() )
         
-        produces = parser.GetParsableContent()
+        parsable_content_descriptions = parser.GetParsableContentDescriptions()
         
-        pretty_produces = ClientParsing.ConvertParsableContentToPrettyString( produces )
+        pretty_produces = ClientParsingResults.ConvertParsableContentDescriptionsToPrettyString( parsable_content_descriptions )
         
         sort_produces = pretty_produces
         

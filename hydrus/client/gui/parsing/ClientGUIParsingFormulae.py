@@ -10,7 +10,6 @@ from hydrus.core import HydrusSerialisable
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
-from hydrus.client import ClientParsing
 from hydrus.client import ClientSerialisable
 from hydrus.client import ClientStrings
 from hydrus.client.gui import ClientGUIDialogsMessage
@@ -26,6 +25,7 @@ from hydrus.client.gui.panels import ClientGUIScrolledPanels
 from hydrus.client.gui.parsing import ClientGUIParsingTest
 from hydrus.client.gui.widgets import ClientGUICommon
 from hydrus.client.gui.widgets import ClientGUIMenuButton
+from hydrus.client.parsing import ClientParsing
 
 class EditSpecificFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
     

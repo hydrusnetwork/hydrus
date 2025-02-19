@@ -1341,6 +1341,7 @@ class EditFileNotesPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolle
         super().__init__( parent )
         
         self._original_names = set()
+        self._original_names_to_notes = dict( names_to_notes )
         
         self._notebook = QW.QTabWidget( self )
         
@@ -1391,15 +1392,6 @@ class EditFileNotesPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolle
         
         ClientGUIFunctions.SetFocusLater( first_panel )
         
-        if CG.client_controller.new_options.GetBoolean( 'start_note_editing_at_end' ):
-            
-            CG.client_controller.CallAfterQtSafe( first_panel, 'moving cursor to end', first_panel.moveCursor, QG.QTextCursor.MoveOperation.End )
-            
-        else:
-            
-            CG.client_controller.CallAfterQtSafe( first_panel, 'moving cursor to start', first_panel.moveCursor, QG.QTextCursor.MoveOperation.Start )
-            
-        
         #
         
         button_hbox = QP.HBoxLayout()
@@ -1420,6 +1412,7 @@ class EditFileNotesPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolle
         self._my_shortcut_handler = ClientGUIShortcuts.ShortcutsHandler( self, self, [ 'global', 'media' ] )
         
         self._notebook.tabBarDoubleClicked.connect( self._TabBarDoubleClicked )
+        self._notebook.currentChanged.connect( self._CurrentNoteChanged )
         
     
     def _AddNote( self ):
@@ -1460,7 +1453,14 @@ class EditFileNotesPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolle
         
         ClientGUIFunctions.SetFocusLater( control )
         
-        CG.client_controller.CallAfterQtSafe( control, 'moving cursor to end', control.moveCursor, QG.QTextCursor.MoveOperation.End )
+        if CG.client_controller.new_options.GetBoolean( 'start_note_editing_at_end' ):
+            
+            CG.client_controller.CallAfterQtSafe( control, 'moving cursor to end', control.moveCursor, QG.QTextCursor.MoveOperation.End )
+            
+        else:
+            
+            CG.client_controller.CallAfterQtSafe( control, 'moving cursor to start', control.moveCursor, QG.QTextCursor.MoveOperation.Start )
+            
         
         self._UpdateButtons()
         
@@ -1472,6 +1472,11 @@ class EditFileNotesPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolle
         text = json.dumps( names_to_notes )
         
         CG.client_controller.pub( 'clipboard', 'text', text )
+        
+    
+    def _CurrentNoteChanged( self ):
+        
+        ClientGUIFunctions.SetFocusLater( self._notebook.currentWidget() )
         
     
     def _Paste( self ):
@@ -1670,6 +1675,25 @@ class EditFileNotesPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolle
             
         
         return command_processed
+        
+    
+    def UserIsOKToCancel( self ):
+        
+        ( names_to_notes, deletee_names ) = self.GetValue()
+        
+        if names_to_notes != self._original_names_to_notes:
+            
+            message = 'It looks like you have made changes--are you sure you want to cancel?'
+            
+            result = ClientGUIDialogsQuick.GetYesNo( self, message )
+            
+            if result != QW.QDialog.DialogCode.Accepted:
+                
+                return False
+                
+            
+        
+        return True
         
     
     def UserIsOKToOK( self ):

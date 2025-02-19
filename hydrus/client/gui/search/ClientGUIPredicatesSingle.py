@@ -15,7 +15,6 @@ from hydrus.core.files.images import HydrusImageHandling
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientImageHandling
-from hydrus.client import ClientParsing
 from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIOptionsPanels
@@ -27,6 +26,7 @@ from hydrus.client.gui.widgets import ClientGUICommon
 from hydrus.client.gui.widgets import ClientGUINumberTest
 from hydrus.client.gui.widgets import ClientGUIRegex
 from hydrus.client.metadata import ClientRatings
+from hydrus.client.parsing import ClientParsing
 from hydrus.client.search import ClientNumberTest
 from hydrus.client.search import ClientSearchPredicate
 
@@ -947,6 +947,7 @@ class PanelPredicateSystemFileViewingStatsViews( PanelPredicateSystemSingle ):
         
         self._viewing_locations.Append( 'media views', 'media' )
         self._viewing_locations.Append( 'preview views', 'preview' )
+        self._viewing_locations.Append( 'client api views', 'client api' )
         
         choices = ['<',HC.UNICODE_APPROX_EQUAL,'=','>']
         
@@ -962,9 +963,7 @@ class PanelPredicateSystemFileViewingStatsViews( PanelPredicateSystemSingle ):
         
         self._viewing_locations.SetValue( viewing_locations )
         
-        ( width, height ) = ClientGUIFunctions.ConvertTextToPixels( self._viewing_locations, ( 10, 3 ) )
-        
-        self._viewing_locations.setMaximumHeight( height )
+        self._viewing_locations.SetHeightBasedOnContents()
         
         self._sign.SetValue( sign )
         
@@ -1023,6 +1022,7 @@ class PanelPredicateSystemFileViewingStatsViewtime( PanelPredicateSystemSingle )
         
         self._viewing_locations.Append( 'media viewtime', 'media' )
         self._viewing_locations.Append( 'preview viewtime', 'preview' )
+        self._viewing_locations.Append( 'client api viewtime', 'client api' )
         
         choices = ['<',HC.UNICODE_APPROX_EQUAL,'=','>']
         
@@ -1038,9 +1038,7 @@ class PanelPredicateSystemFileViewingStatsViewtime( PanelPredicateSystemSingle )
         
         self._viewing_locations.SetValue( viewing_locations )
         
-        ( width, height ) = ClientGUIFunctions.ConvertTextToPixels( self._viewing_locations, ( 10, 3 ) )
-        
-        self._viewing_locations.setMaximumHeight( height )
+        self._viewing_locations.SetHeightBasedOnContents()
         
         self._sign.SetValue( sign )
         
@@ -1832,7 +1830,7 @@ class PanelPredicateSystemNumPixels( PanelPredicateSystemSingle ):
         
         hbox = QP.HBoxLayout()
         
-        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'system:num_pixels'), CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'system:number of pixels'), CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( hbox, self._sign, CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( hbox, self._num_pixels, CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( hbox, self._unit, CC.FLAGS_CENTER_PERPENDICULAR )

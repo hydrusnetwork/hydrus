@@ -320,6 +320,8 @@ Almost every OS you can name.
 
 !!! danger
     Do not put your live database in a folder that continuously syncs to a cloud backup. Many of these services will interfere with a running client and can cause database corruption. If you still want to use a system like this, either turn the sync off while the client is running, or use the above backup workflows to safely backup your client to a separate folder that syncs to the cloud.
+    
+    I am told that programs that dynamically alter the priority of processes, such as Process Lasso, can also introduce instability to hydrus.
 
 There is significantly more information about the database structure [here](database_migration.md).
 

@@ -12,7 +12,6 @@ from hydrus.core import HydrusTime
 from hydrus.client import ClientApplicationCommand as CAC
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
-from hydrus.client import ClientParsing
 from hydrus.client import ClientThreading
 from hydrus.client.gui import ClientGUIDialogs
 from hydrus.client.gui import ClientGUIFunctions
@@ -24,6 +23,7 @@ from hydrus.client.gui.widgets import ClientGUICommon
 from hydrus.client.media import ClientMedia
 from hydrus.client.metadata import ClientTags
 from hydrus.client.metadata import ClientTagSorting
+from hydrus.client.parsing import ClientParsingLegacy
 from hydrus.client.search import ClientSearchPredicate
 
 def FilterSuggestedPredicatesForMedia( predicates: typing.Sequence[ ClientSearchPredicate.Predicate ], medias: typing.Collection[ ClientMedia.Media ], service_key: bytes ) -> typing.List[ ClientSearchPredicate.Predicate ]:
@@ -752,7 +752,7 @@ class FileLookupScriptTagsPanel( QW.QWidget ):
             
         
     
-    def THREADFetchTags( self, script, job_status, file_identifier ):
+    def THREADFetchTags( self, script: ClientParsingLegacy.ParseRootFileLookup, job_status, file_identifier ):
         
         def qt_code( tags ):
             
@@ -766,9 +766,9 @@ class FileLookupScriptTagsPanel( QW.QWidget ):
             self._have_fetched = True
             
         
-        parse_results = script.DoQuery( job_status, file_identifier )
+        parsed_post = script.DoQuery( job_status, file_identifier )
         
-        tags = list( ClientParsing.GetTagsFromParseResults( parse_results ) )
+        tags = list( parsed_post.GetTags() )
         
         tag_sort = ClientTagSorting.TagSort( ClientTagSorting.SORT_BY_HUMAN_TAG, sort_order = CC.SORT_ASC )
         

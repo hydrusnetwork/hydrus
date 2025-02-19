@@ -8,11 +8,11 @@ from hydrus.core import HydrusText
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
-from hydrus.client import ClientParsing
 from hydrus.client import ClientThreading
 from hydrus.client.importing import ClientImportFileSeeds
 from hydrus.client.importing.options import FileImportOptions
 from hydrus.client.networking import ClientNetworkingJobs
+from hydrus.client.parsing import ClientParsingResults
 
 CHECKER_STATUS_OK = 0
 CHECKER_STATUS_DEAD = 1
@@ -38,25 +38,19 @@ DID_SUBSTANTIAL_FILE_WORK_MINIMUM_SLEEP_TIME = 0.1
 
 REPEATING_JOB_TYPICAL_PERIOD = 30.0
 
-def ConvertAllParseResultsToFileSeeds( all_parse_results, source_url, file_import_options ):
+def ConvertParsedPostsToFileSeeds( parsed_posts: typing.List[ ClientParsingResults.ParsedPost ], source_url: str, file_import_options: FileImportOptions.FileImportOptions ):
     
     file_seeds = []
     
     seen_urls = set()
     
-    for parse_results in all_parse_results:
+    for parsed_post in parsed_posts:
         
-        parsed_request_headers = ClientParsing.GetHTTPHeadersFromParseResults( parse_results )
-        
-        parsed_urls = ClientParsing.GetURLsFromParseResults( parse_results, ( HC.URL_TYPE_DESIRED, ), only_get_top_priority = True )
-        
-        parsed_urls = HydrusData.DedupeList( parsed_urls )
+        parsed_urls = parsed_post.GetURLs( ( HC.URL_TYPE_DESIRED, ), only_get_top_priority = True )
         
         parsed_urls = [ url for url in parsed_urls if url not in seen_urls ]
         
         seen_urls.update( parsed_urls )
-        
-        # note we do this recursively due to parse_results being appropriate only for these urls--don't move this out again, or tags will be messed up
         
         for url in parsed_urls:
             
@@ -64,9 +58,7 @@ def ConvertAllParseResultsToFileSeeds( all_parse_results, source_url, file_impor
             
             file_seed.SetReferralURL( source_url )
             
-            file_seed.AddRequestHeaders( parsed_request_headers )
-            
-            file_seed.AddParseResults( parse_results, file_import_options )
+            file_seed.AddParsedPost( parsed_post, file_import_options )
             
             file_seeds.append( file_seed )
             

@@ -83,7 +83,7 @@ class SubscriptionQueryHeader( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_SUBSCRIPTION_QUERY_HEADER
     SERIALISABLE_NAME = 'Subscription Query Summary'
-    SERIALISABLE_VERSION = 1
+    SERIALISABLE_VERSION = 2
     
     def __init__( self ):
         
@@ -99,6 +99,8 @@ class SubscriptionQueryHeader( HydrusSerialisable.SerialisableBase ):
         self._checker_status = ClientImporting.CHECKER_STATUS_OK
         self._query_log_container_status = LOG_CONTAINER_UNSYNCED
         self._file_seed_cache_status = ClientImportFileSeeds.FileSeedCacheStatus()
+        self._file_seed_cache_compaction_number = 250
+        self._gallery_seed_log_compaction_number = 100
         self._tag_import_options = TagImportOptions.TagImportOptions()
         self._raw_file_velocity = ( 0, 1 )
         self._pretty_file_velocity = 'unknown'
@@ -227,6 +229,8 @@ class SubscriptionQueryHeader( HydrusSerialisable.SerialisableBase ):
             self._checker_status,
             self._query_log_container_status,
             serialisable_file_seed_cache_status,
+            self._file_seed_cache_compaction_number,
+            self._gallery_seed_log_compaction_number,
             serialisable_tag_import_options,
             self._raw_file_velocity,
             self._pretty_file_velocity,
@@ -248,6 +252,8 @@ class SubscriptionQueryHeader( HydrusSerialisable.SerialisableBase ):
             self._checker_status,
             self._query_log_container_status,
             serialisable_file_seed_cache_status,
+            self._file_seed_cache_compaction_number,
+            self._gallery_seed_log_compaction_number,
             serialisable_tag_import_options,
             self._raw_file_velocity,
             self._pretty_file_velocity,
@@ -274,6 +280,55 @@ class SubscriptionQueryHeader( HydrusSerialisable.SerialisableBase ):
         except:
             
             self._example_gallery_seed = None
+            
+        
+    
+    def _UpdateSerialisableInfo( self, version, old_serialisable_info ):
+        
+        if version == 1:
+            
+            (
+                query_log_container_name,
+                query_text,
+                display_name,
+                check_now,
+                last_check_time,
+                next_check_time,
+                paused,
+                checker_status,
+                query_log_container_status,
+                serialisable_file_seed_cache_status,
+                serialisable_tag_import_options,
+                raw_file_velocity,
+                pretty_file_velocity,
+                serialisable_example_file_seed,
+                serialisable_example_gallery_seed
+                ) = old_serialisable_info
+            
+            file_seed_cache_compaction_number = 250
+            gallery_seed_log_compaction_number = 100
+            
+            new_serialisable_info = (
+                query_log_container_name,
+                query_text,
+                display_name,
+                check_now,
+                last_check_time,
+                next_check_time,
+                paused,
+                checker_status,
+                query_log_container_status,
+                serialisable_file_seed_cache_status,
+                file_seed_cache_compaction_number,
+                gallery_seed_log_compaction_number,
+                serialisable_tag_import_options,
+                raw_file_velocity,
+                pretty_file_velocity,
+                serialisable_example_file_seed,
+                serialisable_example_gallery_seed
+                )
+            
+            return ( 2, new_serialisable_info )
             
         
     
@@ -450,6 +505,11 @@ class SubscriptionQueryHeader( HydrusSerialisable.SerialisableBase ):
     def GetHumanName( self ):
         
         return self._GetHumanName()
+        
+    
+    def GetFileSeedCacheCompactionNumber( self ) -> int:
+        
+        return self._file_seed_cache_compaction_number
         
     
     def GetFileSeedCacheStatus( self ):
@@ -659,16 +719,16 @@ class SubscriptionQueryHeader( HydrusSerialisable.SerialisableBase ):
         
         gallery_seed_log = query_log_container.GetGallerySeedLog()
         
-        if gallery_seed_log.CanCompact( compact_before_this_time ):
+        if gallery_seed_log.CanCompact( self._gallery_seed_log_compaction_number, compact_before_this_time ):
             
-            gallery_seed_log.Compact( compact_before_this_time )
+            gallery_seed_log.Compact( self._gallery_seed_log_compaction_number, compact_before_this_time )
             
         
         file_seed_cache = query_log_container.GetFileSeedCache()
         
-        if file_seed_cache.CanCompact( compact_before_this_time ):
+        if file_seed_cache.CanCompact( self._file_seed_cache_compaction_number, compact_before_this_time ):
             
-            file_seed_cache.Compact( compact_before_this_time )
+            file_seed_cache.Compact( self._file_seed_cache_compaction_number, compact_before_this_time )
             
         
         self.SyncToQueryLogContainer( checker_options, query_log_container )
@@ -706,6 +766,11 @@ class SubscriptionQueryHeader( HydrusSerialisable.SerialisableBase ):
     def SetLastCheckTime( self, last_check_time: int ):
         
         self._last_check_time = last_check_time
+        
+    
+    def SetFileSeedCacheCompactionNumber( self, file_seed_cache_compaction_number: int ):
+        
+        self._file_seed_cache_compaction_number = file_seed_cache_compaction_number
         
     
     def SetNextCheckTime( self, next_check_time: int ):

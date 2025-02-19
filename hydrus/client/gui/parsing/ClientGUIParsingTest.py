@@ -15,7 +15,6 @@ from hydrus.core.files import HydrusFileHandling
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
-from hydrus.client import ClientParsing
 from hydrus.client import ClientStrings
 from hydrus.client.gui import ClientGUIDialogs
 from hydrus.client.gui import ClientGUIDialogsMessage
@@ -25,8 +24,11 @@ from hydrus.client.gui import ClientGUIStringControls
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.widgets import ClientGUICommon
 from hydrus.client.networking import ClientNetworkingJobs
+from hydrus.client.parsing import ClientParsing
 
 class TestPanel( QW.QWidget ):
+    
+    MAX_CHARS_IN_PREVIEW = 1024 * 64
     
     def __init__( self, parent, object_callable, test_data: typing.Optional[ ClientParsing.ParsingTestData ] = None ):
         
@@ -229,8 +231,6 @@ class TestPanel( QW.QWidget ):
         test_parse_ok = True
         looked_like_json = False
         
-        MAX_CHARS_IN_PREVIEW = 1024 * 64
-        
         if len( example_data ) > 0:
             
             good_type_found = True
@@ -301,9 +301,9 @@ class TestPanel( QW.QWidget ):
                         
                     
                 
-                if len( example_data_to_show ) > MAX_CHARS_IN_PREVIEW:
+                if len( example_data_to_show ) > self.MAX_CHARS_IN_PREVIEW:
                     
-                    preview = 'PREVIEW:' + '\n' + str( example_data_to_show[:MAX_CHARS_IN_PREVIEW] )
+                    preview = 'PREVIEW:' + '\n' + str( example_data_to_show[:self.MAX_CHARS_IN_PREVIEW] )
                     
                 else:
                     
@@ -324,9 +324,9 @@ class TestPanel( QW.QWidget ):
                     
                     description = 'that did not look like HTML or JSON, but will try to show it anyway'
                     
-                    if len( example_data ) > MAX_CHARS_IN_PREVIEW:
+                    if len( example_data ) > self.MAX_CHARS_IN_PREVIEW:
                         
-                        preview = 'PREVIEW:' + '\n' + repr( example_data[:MAX_CHARS_IN_PREVIEW] )
+                        preview = 'PREVIEW:' + '\n' + repr( example_data[:self.MAX_CHARS_IN_PREVIEW] )
                         
                     else:
                         
@@ -396,6 +396,13 @@ class TestPanel( QW.QWidget ):
             test_text = test_data.texts[0]
             
         
+        if len( test_text ) == 0:
+            
+            self._results.setPlainText( 'Nothing to parse!' )
+            
+            return
+            
+        
         try:
             
             if 'post_index' in test_data.parsing_context:
@@ -405,11 +412,11 @@ class TestPanel( QW.QWidget ):
             
             if isinstance( obj, ClientParsing.ParseFormula ):
                 
-                results_text = obj.ParsePretty( test_data.parsing_context, test_data.texts[0], self._collapse_newlines )
+                results_text = obj.ParsePretty( test_data.parsing_context, test_text, self._collapse_newlines )
                 
             else:
                 
-                results_text = obj.ParsePretty( test_data.parsing_context, test_data.texts[0] )
+                results_text = obj.ParsePretty( test_data.parsing_context, test_text )
                 
             
             self._results.setPlainText( results_text )
@@ -509,63 +516,73 @@ class TestPanelPageParser( TestPanel ):
         
         TestPanel._SetExampleData( self, example_data, example_bytes = example_bytes )
         
-        pre_parsing_converter = self._pre_parsing_converter_callable()
-        
-        if pre_parsing_converter.MakesChanges():
+        if len( self._example_data_raw ) > 0:
             
-            try:
+            pre_parsing_converter = self._pre_parsing_converter_callable()
+            
+            if pre_parsing_converter.MakesChanges():
                 
-                post_conversion_example_data = ClientParsing.MakeParsedTextPretty( pre_parsing_converter.Convert( self._example_data_raw ) )
+                try:
+                    
+                    post_conversion_example_data = pre_parsing_converter.Convert( self._example_data_raw )
+                    
+                    if len( post_conversion_example_data ) > self.MAX_CHARS_IN_PREVIEW:
+                        
+                        preview = 'PREVIEW:' + '\n' + str( post_conversion_example_data[:self.MAX_CHARS_IN_PREVIEW] )
+                        
+                    else:
+                        
+                        preview = post_conversion_example_data
+                        
+                    
+                    parse_phrase = 'uncertain data type'
+                    
+                    # can't just throw this at bs4 to see if it 'works', as it'll just wrap any unparsable string in some bare <html><body><p> tags
+                    if HydrusText.LooksLikeHTML( post_conversion_example_data ):
+                        
+                        parse_phrase = 'looks like HTML'
+                        
+                    
+                    # put this second, so if the JSON contains some HTML, it'll overwrite here. decent compromise
+                    if HydrusText.LooksLikeJSON( example_data ):
+                        
+                        parse_phrase = 'looks like JSON'
+                        
+                    
+                    description = HydrusData.ToHumanBytes( len( post_conversion_example_data ) ) + ' total, ' + parse_phrase
+                    
+                except Exception as e:
+                    
+                    post_conversion_example_data = self._example_data_raw
+                    
+                    etype = type( e )
+                    
+                    ( etype, value, tb ) = sys.exc_info()
+                    
+                    trace = ''.join( traceback.format_exception( etype, value, tb ) )
+                    
+                    message = 'Exception:' + '\n' + str( etype.__name__ ) + ': ' + str( e ) + '\n' + trace
+                    
+                    preview = message
+                    
+                    description = 'Could not convert.'
+                    
                 
-                if len( post_conversion_example_data ) > 1024:
-                    
-                    preview = 'PREVIEW:' + '\n' + str( post_conversion_example_data[:1024] )
-                    
-                else:
-                    
-                    preview = post_conversion_example_data
-                    
-                
-                parse_phrase = 'uncertain data type'
-                
-                # can't just throw this at bs4 to see if it 'works', as it'll just wrap any unparsable string in some bare <html><body><p> tags
-                if HydrusText.LooksLikeHTML( post_conversion_example_data ):
-                    
-                    parse_phrase = 'looks like HTML'
-                    
-                
-                # put this second, so if the JSON contains some HTML, it'll overwrite here. decent compromise
-                if HydrusText.LooksLikeJSON( example_data ):
-                    
-                    parse_phrase = 'looks like JSON'
-                    
-                
-                description = HydrusData.ToHumanBytes( len( post_conversion_example_data ) ) + ' total, ' + parse_phrase
-                
-            except Exception as e:
+            else:
                 
                 post_conversion_example_data = self._example_data_raw
                 
-                etype = type( e )
+                preview = 'No changes made.'
                 
-                ( etype, value, tb ) = sys.exc_info()
-                
-                trace = ''.join( traceback.format_exception( etype, value, tb ) )
-                
-                message = 'Exception:' + '\n' + str( etype.__name__ ) + ': ' + str( e ) + '\n' + trace
-                
-                preview = message
-                
-                description = 'Could not convert.'
+                description = self._example_data_raw_description.text()
                 
             
         else:
             
-            post_conversion_example_data = self._example_data_raw
+            description = 'no example data set yet'
+            preview = ''
             
-            preview = 'No changes made.'
-            
-            description = self._example_data_raw_description.text()
+            post_conversion_example_data = ''
             
         
         self._example_data_post_conversion_description.setText( description )
@@ -584,11 +601,11 @@ class TestPanelPageParser( TestPanel ):
     
 class TestPanelPageParserSubsidiary( TestPanelPageParser ):
     
-    def __init__( self, parent, object_callable, pre_parsing_converter_callable, formula_callable, test_data = None ):
+    def __init__( self, parent, object_callable, pre_parsing_converter_callable, subsidiary_parser_callable, test_data = None ):
         
         super().__init__( parent, object_callable, pre_parsing_converter_callable, test_data = test_data )
         
-        self._formula_callable = formula_callable
+        self._subsidiary_parser_callable = subsidiary_parser_callable
         
         post_separation_panel = QW.QWidget( self._data_preview_notebook )
         
@@ -636,15 +653,11 @@ class TestPanelPageParserSubsidiary( TestPanelPageParser ):
         
         TestPanelPageParser._SetExampleData( self, example_data, example_bytes = example_bytes )
         
-        formula = self._formula_callable()
-        
-        if formula is None:
+        if len( self._example_data_post_conversion ) > 0:
             
-            separation_example_data = []
-            description = 'No formula set!'
-            preview = ''
+            subsidiary_parser = typing.cast( ClientParsing.SubsidiaryPageParser, self._subsidiary_parser_callable() )
             
-        else:
+            formula = subsidiary_parser.GetFormula()
             
             try:
                 
@@ -656,9 +669,9 @@ class TestPanelPageParserSubsidiary( TestPanelPageParser ):
                 
                 preview = joiner.join( separation_example_data )
                 
-                if len( preview ) > 1024:
+                if len( preview ) > self.MAX_CHARS_IN_PREVIEW:
                     
-                    preview = 'PREVIEW:' + '\n' + str( preview[:1024] )
+                    preview = 'PREVIEW:' + '\n' + str( preview[:self.MAX_CHARS_IN_PREVIEW] )
                     
                 
                 description = HydrusNumbers.ToHumanInt( len( separation_example_data ) ) + ' subsidiary posts parsed'
@@ -680,6 +693,13 @@ class TestPanelPageParserSubsidiary( TestPanelPageParser ):
                 description = 'Could not convert.'
                 
             
+        else:
+            
+            description = 'nothing to parse'
+            separation_example_data = ''
+            
+            preview = ''
+            
         
         self._example_data_post_separation_description.setText( description )
         
@@ -697,9 +717,7 @@ class TestPanelPageParserSubsidiary( TestPanelPageParser ):
     
     def TestParse( self ):
         
-        formula = self._formula_callable()
-        
-        page_parser = self._object_callable()
+        subsidiary_parser = typing.cast( ClientParsing.SubsidiaryPageParser, self._subsidiary_parser_callable() )
         
         try:
             
@@ -707,27 +725,16 @@ class TestPanelPageParserSubsidiary( TestPanelPageParser ):
             
             test_data.parsing_context[ 'post_index' ] = 0
             
-            if formula is None:
-                
-                posts = test_data.texts
-                
-            else:
-                
-                posts = []
-                
-                collapse_newlines = False
-                
-                for test_text in test_data.texts:
-                    
-                    posts.extend( formula.Parse( test_data.parsing_context, test_text, collapse_newlines ) )
-                    
-                
-            
             pretty_texts = []
             
-            for post in posts:
+            for text in test_data.texts:
                 
-                pretty_text = page_parser.ParsePretty( test_data.parsing_context, post )
+                if len( text ) == 0:
+                    
+                    continue
+                    
+                
+                pretty_text = subsidiary_parser.ParsePretty( test_data.parsing_context, text )
                 
                 pretty_texts.append( pretty_text )
                 

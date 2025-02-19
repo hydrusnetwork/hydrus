@@ -90,6 +90,7 @@ class EditAPIPermissionsPanel( ClientGUIScrolledPanels.EditPanel ):
             self._basic_permissions.Append( ClientAPI.basic_permission_to_str_lookup[ permission ], permission )
             
         
+        self._basic_permissions.SetHeightBasedOnContents()
         self._basic_permissions.sortItems()
         
         self._check_all_permissions_button = ClientGUICommon.BetterButton( self._permissions_panel, 'check all permissions', self._CheckAllPermissions )

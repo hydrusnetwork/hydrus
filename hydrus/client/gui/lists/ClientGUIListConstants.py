@@ -591,7 +591,7 @@ default_column_list_sort_lookup[ COLUMN_LIST_NODES.ID ] = ( COLUMN_LIST_NODES.NA
 
 #
 
-class COLUMN_LIST_SUB_PAGE_PARSERS( COLUMN_LIST_DEFINITION ):
+class COLUMN_LIST_SUBSIDIARY_PAGE_PARSERS( COLUMN_LIST_DEFINITION ):
     
     ID = 23
     
@@ -600,13 +600,13 @@ class COLUMN_LIST_SUB_PAGE_PARSERS( COLUMN_LIST_DEFINITION ):
     PRODUCES = 2
     
 
-column_list_type_name_lookup[ COLUMN_LIST_SUB_PAGE_PARSERS.ID ] = 'subsidiary page parsers'
+column_list_type_name_lookup[ COLUMN_LIST_SUBSIDIARY_PAGE_PARSERS.ID ] = 'subsidiary page parsers'
 
-register_column_type( COLUMN_LIST_SUB_PAGE_PARSERS.ID, COLUMN_LIST_SUB_PAGE_PARSERS.NAME, 'name', False, 24, True )
-register_column_type( COLUMN_LIST_SUB_PAGE_PARSERS.ID, COLUMN_LIST_SUB_PAGE_PARSERS.FORMULA, '\'post\' separation formula', False, 24, True )
-register_column_type( COLUMN_LIST_SUB_PAGE_PARSERS.ID, COLUMN_LIST_SUB_PAGE_PARSERS.PRODUCES, 'produces', False, 36, True )
+register_column_type( COLUMN_LIST_SUBSIDIARY_PAGE_PARSERS.ID, COLUMN_LIST_SUBSIDIARY_PAGE_PARSERS.NAME, 'name', False, 24, True )
+register_column_type( COLUMN_LIST_SUBSIDIARY_PAGE_PARSERS.ID, COLUMN_LIST_SUBSIDIARY_PAGE_PARSERS.FORMULA, '\'post\' separation formula', False, 24, True )
+register_column_type( COLUMN_LIST_SUBSIDIARY_PAGE_PARSERS.ID, COLUMN_LIST_SUBSIDIARY_PAGE_PARSERS.PRODUCES, 'produces', False, 36, True )
 
-default_column_list_sort_lookup[ COLUMN_LIST_SUB_PAGE_PARSERS.ID ] = ( COLUMN_LIST_SUB_PAGE_PARSERS.NAME, True )
+default_column_list_sort_lookup[ COLUMN_LIST_SUBSIDIARY_PAGE_PARSERS.ID ] = ( COLUMN_LIST_SUBSIDIARY_PAGE_PARSERS.NAME, True )
 
 #
 

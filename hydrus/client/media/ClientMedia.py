@@ -2344,7 +2344,7 @@ class MediaSort( HydrusSerialisable.SerialisableBase ):
                         
                     else:
                         
-                        return ( 1 if reverse else 0, blurhash_converter( blurhash ) )
+                        return ( 1 if reverse else 0, blurhash_converter( blurhash, reverse ) )
                         
                     
                 
@@ -2571,26 +2571,31 @@ class MediaSort( HydrusSerialisable.SerialisableBase ):
                     return x.GetMime()
                     
                 
-            elif sort_data == CC.SORT_FILES_BY_MEDIA_VIEWS:
+            elif sort_data in ( CC.SORT_FILES_BY_MEDIA_VIEWS, CC.SORT_FILES_BY_MEDIA_VIEWTIME ):
                 
-                def sort_key( x ):
-                    
-                    fvsm = x.GetFileViewingStatsManager()
-                    
-                    # do not do viewtime as a secondary sort here, to allow for user secondary sort to help out
-                    
-                    return fvsm.GetViews( CC.CANVAS_MEDIA_VIEWER )
-                    
+                desired_canvas_types = CG.client_controller.new_options.GetIntegerList( 'file_viewing_stats_interesting_canvas_types' )
                 
-            elif sort_data == CC.SORT_FILES_BY_MEDIA_VIEWTIME:
-                
-                def sort_key( x ):
+                if sort_data == CC.SORT_FILES_BY_MEDIA_VIEWS:
                     
-                    fvsm = x.GetFileViewingStatsManager()
+                    def sort_key( x ):
+                        
+                        fvsm = x.GetFileViewingStatsManager()
+                        
+                        # do not do viewtime as a secondary sort here, to allow for user secondary sort to help out
+                        
+                        return sum( fvsm.GetViews( canvas_type ) for canvas_type in desired_canvas_types )
+                        
                     
-                    # do not do views as a secondary sort here, to allow for user secondary sort to help out
+                else:
                     
-                    return fvsm.GetViewtimeMS( CC.CANVAS_MEDIA_VIEWER )
+                    def sort_key( x ):
+                        
+                        fvsm = x.GetFileViewingStatsManager()
+                        
+                        # do not do views as a secondary sort here, to allow for user secondary sort to help out
+                        
+                        return sum( fvsm.GetViewtimeMS( canvas_type ) for canvas_type in desired_canvas_types )
+                        
                     
                 
             

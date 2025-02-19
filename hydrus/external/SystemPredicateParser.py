@@ -145,9 +145,11 @@ class Predicate( Enum ):
     MEDIA_VIEWS = auto()
     PREVIEW_VIEWS = auto()
     ALL_VIEWS = auto()
+    NEW_VIEWS = auto()
     MEDIA_VIEWTIME = auto()
     PREVIEW_VIEWTIME = auto()
     ALL_VIEWTIME = auto()
+    NEW_VIEWTIME = auto()
     URL_REGEX = auto()
     NO_URL_REGEX = auto()
     URL = auto()
@@ -197,6 +199,7 @@ class Value( Enum ):
 # Implemented in parse_operator
 class Operators( Enum ):
     RELATIONAL = auto()  # One of '=', '<', '>', UNICODE_APPROX_EQUAL ('≈') (takes '~=' too)
+    VIEWS_RELATIONAL = auto() # media, preview, client api, and a RELATIONAL
     RELATIONAL_EXACT = auto() # Like RELATIONAL but without the approximately equal operator
     RELATIONAL_TIME = auto()  # One of '=', '<', '>', UNICODE_APPROX_EQUAL ('≈') (takes '~=' too), and the various 'since', 'before', 'the day of', 'the month of' time-based analogues
     RELATIONAL_FOR_RATING_SERVICE = auto()  # RELATIONAL, but in the middle of a 'service_name = 4/5' kind of thing
@@ -282,13 +285,15 @@ SYSTEM_PREDICATES = {
     'num(ber)?( of)? file relationships': (Predicate.NUM_FILE_RELS, Operators.RELATIONAL, Value.NATURAL, Units.FILE_RELATIONSHIP_TYPE),
     r'ratio(?=.*\d)': (Predicate.RATIO, Operators.RATIO_OPERATORS, Value.RATIO, None),
     r'ratio(?!.*\d)': (Predicate.RATIO_SPECIAL, Operators.RATIO_OPERATORS_SPECIAL, Value.RATIO_SPECIAL, None),
-    'num pixels': (Predicate.NUM_PIXELS, Operators.RELATIONAL, Value.NATURAL, Units.PIXELS),
+    'num(ber)?( of)? pixels': (Predicate.NUM_PIXELS, Operators.RELATIONAL, Value.NATURAL, Units.PIXELS),
     'media views': (Predicate.MEDIA_VIEWS, Operators.RELATIONAL, Value.NATURAL, None),
     'preview views': (Predicate.PREVIEW_VIEWS, Operators.RELATIONAL, Value.NATURAL, None),
     'all views': (Predicate.ALL_VIEWS, Operators.RELATIONAL, Value.NATURAL, None),
+    '^views (in )?': (Predicate.NEW_VIEWS, Operators.VIEWS_RELATIONAL, Value.NATURAL, None ),
     'media viewtime': (Predicate.MEDIA_VIEWTIME, Operators.RELATIONAL, Value.TIME_INTERVAL, None),
     'preview viewtime': (Predicate.PREVIEW_VIEWTIME, Operators.RELATIONAL, Value.TIME_INTERVAL, None),
     'all viewtime': (Predicate.ALL_VIEWTIME, Operators.RELATIONAL, Value.TIME_INTERVAL, None),
+    '^viewtime (in )?': (Predicate.NEW_VIEWTIME, Operators.VIEWS_RELATIONAL, Value.TIME_INTERVAL, None ),
     'has (a )?url matching regex': (Predicate.URL_REGEX, None, Value.ANY_STRING, None),
     '(does not|doesn\'t) have (a )?url matching regex': (Predicate.NO_URL_REGEX, None, Value.ANY_STRING, None),
     'has url:? (?=http)': (Predicate.URL, None, Value.ANY_STRING, None),
@@ -759,7 +764,29 @@ def parse_operator( string: str, spec ):
         
     
     if spec is None:
+        
         return string, None
+        
+    elif spec == Operators.VIEWS_RELATIONAL:
+        
+        desired_canvas_types = []
+        
+        for possible_canvas_type in [ 'media', 'preview', 'client api' ]:
+            
+            if possible_canvas_type in string:
+                
+                desired_canvas_types.append( possible_canvas_type )
+                
+                string = string.replace( possible_canvas_type, '' )
+                
+            
+        
+        string = re.sub( '^[, ]+', '', string )
+        
+        ( string, relational_op ) = parse_operator( string, Operators.RELATIONAL )
+        
+        return ( string, ( desired_canvas_types, relational_op ) )
+        
     elif spec in ( Operators.RELATIONAL, Operators.RELATIONAL_EXACT, Operators.RELATIONAL_TIME ):
         
         exact = spec == Operators.RELATIONAL_EXACT

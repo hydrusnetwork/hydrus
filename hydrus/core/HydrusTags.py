@@ -206,7 +206,7 @@ def CleanTags( tags ):
     return clean_tags
     
 
-def CombineTag( namespace, subtag ):
+def CombineTag( namespace, subtag ) -> str:
     
     if namespace == '':
         

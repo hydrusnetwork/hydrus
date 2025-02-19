@@ -1107,6 +1107,11 @@ class AutoCompleteDropdown( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
         self._schedule_results_refresh_job = CG.client_controller.CallLaterQtSafe( self, delay, 'a/c results refresh', self._UpdateSearchResults )
         
     
+    def _SendKeyPressEventToTopList( self, event: QG.QKeyEvent ):
+        
+        pass
+        
+    
     def _SetupTopListBox( self ):
         
         pass
@@ -1261,9 +1266,29 @@ class AutoCompleteDropdown( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
                     
                     we_copying = ctrl and key in( ord( 'C' ), ord( 'c' ), QC.Qt.Key.Key_Insert )
                     
-                    we_copying_the_list = we_copying and self._text_ctrl.selectedText() == ''
+                    we_copying_elsewhere = we_copying and self._text_ctrl.selectedText() == ''
                     
-                    if key in ( QC.Qt.Key.Key_Up, QC.Qt.Key.Key_Down, QC.Qt.Key.Key_PageDown, QC.Qt.Key.Key_PageUp, QC.Qt.Key.Key_Home, QC.Qt.Key.Key_End ) or crazy_n_p_hardcodes or we_copying_the_list:
+                    current_results_list = typing.cast( ClientGUIListBoxes.ListBoxTags, self._dropdown_notebook.currentWidget() )
+                    
+                    try:
+                        
+                        stuff_in_results_list = len( current_results_list ) > 0
+                        
+                    except:
+                        
+                        stuff_in_results_list = False
+                        
+                    
+                    we_copying_the_results_list = we_copying_elsewhere and stuff_in_results_list
+                    we_copying_the_top_list = we_copying_elsewhere and not stuff_in_results_list
+                    
+                    if we_copying_the_top_list:
+                        
+                        self._SendKeyPressEventToTopList( event )
+                        
+                        return event.isAccepted()
+                        
+                    elif key in ( QC.Qt.Key.Key_Up, QC.Qt.Key.Key_Down, QC.Qt.Key.Key_PageDown, QC.Qt.Key.Key_PageUp, QC.Qt.Key.Key_Home, QC.Qt.Key.Key_End ) or crazy_n_p_hardcodes or we_copying_the_results_list:
                         
                         send_input_to_current_list = True
                         
@@ -2116,7 +2141,23 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTagsFileSearchContext ):
     searchChanged = QC.Signal( ClientSearchFileSearchContext.FileSearchContext )
     searchCancelled = QC.Signal()
     
-    def __init__( self, parent: QW.QWidget, page_key, file_search_context: ClientSearchFileSearchContext.FileSearchContext, media_sort_widget: typing.Optional[ ClientGUIMediaResultsPanelSortCollect.MediaSortControl ] = None, media_collect_widget: typing.Optional[ ClientGUIMediaResultsPanelSortCollect.MediaCollectControl ] = None, media_callable = None, synchronised = True, include_unusual_predicate_types = True, allow_all_known_files = True, only_allow_local_file_domains = False, only_allow_all_my_files_domains = False, force_system_everything = False, hide_favourites_edit_actions = False, fixed_results_list_height = None ):
+    def __init__(
+        self,
+        parent: QW.QWidget,
+        page_key,
+        file_search_context: ClientSearchFileSearchContext.FileSearchContext,
+        media_sort_widget: typing.Optional[ ClientGUIMediaResultsPanelSortCollect.MediaSortControl ] = None,
+        media_collect_widget: typing.Optional[ ClientGUIMediaResultsPanelSortCollect.MediaCollectControl ] = None,
+        media_callable = None,
+        synchronised = True,
+        include_unusual_predicate_types = True,
+        allow_all_known_files = True,
+        only_allow_local_file_domains = False,
+        only_allow_all_my_files_domains = False,
+        force_system_everything = False,
+        hide_favourites_edit_actions = False,
+        fixed_results_list_height = None
+    ):
         
         self._page_key = page_key
         
@@ -2731,6 +2772,11 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTagsFileSearchContext ):
         self._ManageFavouriteSearches( favourite_search_row_to_save = search_row )
         
     
+    def _SendKeyPressEventToTopList( self, event: QG.QKeyEvent ):
+        
+        self._predicates_listbox.keyPressEvent( event )
+        
+    
     def _SetupTopListBox( self ):
         
         self._predicates_listbox = ListBoxTagsActiveSearchPredicates( self, self._page_key, self._file_search_context )
@@ -3279,7 +3325,14 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
     nullEntered = QC.Signal()
     tagsPasted = QC.Signal( list )
     
-    def __init__( self, parent, chosen_tag_callable, location_context, tag_service_key, show_paste_button = False ):
+    def __init__(
+        self,
+        parent,
+        chosen_tag_callable,
+        location_context,
+        tag_service_key,
+        show_paste_button = False
+    ):
         
         self._display_tag_service_key = tag_service_key
         

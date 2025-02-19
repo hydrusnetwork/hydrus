@@ -420,7 +420,15 @@ class FileSystemPredicates( object ):
                 
                 ( view_type, viewing_locations, operator, viewing_value ) = value
                 
-                self._file_viewing_stats_predicates.append( ( view_type, viewing_locations, operator, viewing_value ) )
+                stupid_lookup_dict = {
+                    'media' : CC.CANVAS_MEDIA_VIEWER,
+                    'preview' : CC.CANVAS_PREVIEW,
+                    'client api' : CC.CANVAS_CLIENT_API
+                }
+                
+                desired_canvas_types = [ stupid_lookup_dict[ viewing_location ] for viewing_location in viewing_locations ]
+                
+                self._file_viewing_stats_predicates.append( ( view_type, desired_canvas_types, operator, viewing_value ) )
                 
             
         

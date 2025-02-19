@@ -1,5 +1,4 @@
 import collections
-import itertools
 import random
 import threading
 import time
@@ -16,23 +15,20 @@ from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
-from hydrus.client import ClientParsing
 from hydrus.client.importing import ClientImporting
 from hydrus.client.metadata import ClientTags
+from hydrus.client.parsing import ClientParsing
+from hydrus.client.parsing import ClientParsingResults
 
-def ConvertAllParseResultsToSubGallerySeeds( all_parse_results, can_generate_more_pages ):
+def ConvertParsedPostsToGallerySeeds( parsed_posts: typing.List[ ClientParsingResults.ParsedPost ], desired_url_types: typing.Collection[ int ], can_generate_more_pages: bool ):
     
     sub_gallery_seeds = []
     
     seen_urls = set()
     
-    for parse_results in all_parse_results:
+    for parsed_post in parsed_posts:
         
-        parsed_request_headers = ClientParsing.GetHTTPHeadersFromParseResults( parse_results )
-        
-        parsed_urls = ClientParsing.GetURLsFromParseResults( parse_results, ( HC.URL_TYPE_SUB_GALLERY, ), only_get_top_priority = True )
-        
-        parsed_urls = HydrusData.DedupeList( parsed_urls )
+        parsed_urls = parsed_post.GetURLs( desired_url_types, only_get_top_priority = True )
         
         parsed_urls = [ url for url in parsed_urls if url not in seen_urls ]
         
@@ -42,9 +38,7 @@ def ConvertAllParseResultsToSubGallerySeeds( all_parse_results, can_generate_mor
             
             gallery_seed = GallerySeed( url = url, can_generate_more_pages = can_generate_more_pages )
             
-            gallery_seed.AddRequestHeaders( parsed_request_headers )
-            
-            gallery_seed.AddParseResults( parse_results )
+            gallery_seed.AddParsedPost( parsed_post )
             
             sub_gallery_seeds.append( gallery_seed )
             
@@ -271,11 +265,15 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
         self._external_filterable_tags.update( tags )
         
     
-    def AddParseResults( self, parse_results ):
+    def AddParsedPost( self, parsed_post: ClientParsingResults.ParsedPost ):
         
-        tags = ClientParsing.GetTagsFromParseResults( parse_results )
+        parsed_request_headers = parsed_post.GetHTTPHeaders()
         
-        self._external_filterable_tags.update( tags )
+        self.AddRequestHeaders( parsed_request_headers )
+        
+        tags = parsed_post.GetTags()
+        
+        self.AddExternalFilterableTags( tags )
         
         self._UpdateModified()
         
@@ -389,6 +387,7 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
         result_404 = False
         added_new_gallery_pages = False
         stop_reason = ''
+        note = ''
         
         try:
             
@@ -409,6 +408,8 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
                 
             
             ( url_to_check, parser ) = CG.client_controller.network_engine.domain_manager.GetURLToFetchAndParser( gallery_url )
+            
+            gallery_urls_seen_before.add( url_to_check )
             
             status_hook( 'downloading gallery page' )
             
@@ -447,6 +448,7 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
             
             actual_fetched_url = network_job.GetActualFetchedURL()
             
+            status = CC.STATUS_SKIPPED
             do_parse = True
             
             if actual_fetched_url != url_to_check:
@@ -500,21 +502,23 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
                     'post_index' : '0'
                 }
                 
-                all_parse_results = parser.Parse( parsing_context, parsing_text )
+                parser = typing.cast( ClientParsing.PageParser, parser )
                 
-                if len( all_parse_results ) == 0:
+                parsed_posts = parser.Parse( parsing_context, parsing_text )
+                
+                if len( parsed_posts ) == 0:
                     
                     raise HydrusExceptions.VetoException( 'The parser found nothing in the document!' )
                     
                 
-                file_seeds = ClientImporting.ConvertAllParseResultsToFileSeeds( all_parse_results, url_for_child_referral, file_import_options )
-                
-                title = ClientParsing.GetTitleFromAllParseResults( all_parse_results )
+                title = ClientParsingResults.GetTitleFromParsedPosts( parsed_posts )
                 
                 if title is not None:
                     
                     title_hook( title )
                     
+                
+                file_seeds = ClientImporting.ConvertParsedPostsToFileSeeds( parsed_posts, url_for_child_referral, file_import_options )
                 
                 for file_seed in file_seeds:
                     
@@ -550,13 +554,16 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
                     can_add_more_gallery_urls = num_urls_added > 0 and can_search_for_more_files
                     
                 
-                flattened_results = list( itertools.chain.from_iterable( all_parse_results ) )
+                parsed_request_headers = {}
                 
-                parsed_request_headers = ClientParsing.GetHTTPHeadersFromParseResults( flattened_results )
+                for parsed_post in parsed_posts:
+                    
+                    parsed_request_headers.update( parsed_post.GetHTTPHeaders() )
+                    
                 
                 self._request_headers.update( parsed_request_headers )
                 
-                sub_gallery_seeds = ConvertAllParseResultsToSubGallerySeeds( all_parse_results, can_generate_more_pages = self._can_generate_more_pages )
+                sub_gallery_seeds = ConvertParsedPostsToGallerySeeds( parsed_posts, ( HC.URL_TYPE_SUB_GALLERY, ), self._can_generate_more_pages )
                 
                 new_sub_gallery_seeds = [ sub_gallery_seed for sub_gallery_seed in sub_gallery_seeds if sub_gallery_seed.url not in gallery_urls_seen_before ]
                 
@@ -576,28 +583,43 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
                     
                     added_new_gallery_pages = True
                     
-                    note += ' - {} sub-gallery urls found'.format( HydrusNumbers.ToHumanInt( len( new_sub_gallery_seeds ) ) )
+                    note += f' - {HydrusNumbers.ToHumanInt( len( new_sub_gallery_seeds ) )} sub-gallery urls found'
+                    
+                    num_dupe_items = len( sub_gallery_seeds ) - len( new_sub_gallery_seeds )
+                    
+                    if num_dupe_items > 0:
+                        
+                        note += f', but {HydrusNumbers.ToHumanInt( num_dupe_items )} had already been visited this run and were not added'
+                        
+                    
+                elif len( sub_gallery_seeds ) > 0:
+                    
+                    note += f' - {HydrusNumbers.ToHumanInt( len( sub_gallery_seeds ) )} sub-gallery urls found, but they had all already been visited this run and were not added'
                     
                 
                 if self._can_generate_more_pages and can_add_more_gallery_urls:
                     
-                    next_page_urls = ClientParsing.GetURLsFromParseResults( flattened_results, ( HC.URL_TYPE_NEXT, ), only_get_top_priority = True )
+                    next_page_gallery_seeds = ConvertParsedPostsToGallerySeeds( parsed_posts, ( HC.URL_TYPE_NEXT, ), self._can_generate_more_pages )
                     
-                    if self.url in next_page_urls:
-                        
-                        next_page_urls.remove( self.url )
-                        
+                    new_next_page_gallery_seeds = [ next_page_gallery_seed for next_page_gallery_seed in next_page_gallery_seeds if next_page_gallery_seed.url not in gallery_urls_seen_before ]
                     
-                    if url_to_check in next_page_urls:
+                    if len( new_next_page_gallery_seeds ) > 0:
                         
-                        next_page_urls.remove( url_to_check )
+                        note += f' - {HydrusNumbers.ToHumanInt( len( new_next_page_gallery_seeds ) )} next gallery pages found'
                         
-                    
-                    if len( next_page_urls ) > 0:
+                        num_dupe_items = len( next_page_gallery_seeds ) - len( new_next_page_gallery_seeds )
                         
-                        next_page_generation_phrase = ' next gallery pages found'
+                        if num_dupe_items > 0:
+                            
+                            note += f', but {HydrusNumbers.ToHumanInt( num_dupe_items )} had already been visited this run and were not added'
+                            
                         
                     else:
+                        
+                        if len( next_page_gallery_seeds ) > 0:
+                            
+                            note += f' - {HydrusNumbers.ToHumanInt(len( next_page_gallery_seeds ))} next gallery pages found, but they had all already been visited this run and were not added'
+                            
                         
                         # we have failed to parse a next page url, but we would still like one, so let's see if the url match can provide one
                         
@@ -609,7 +631,18 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
                                 
                                 next_page_url = url_class.GetNextGalleryPage( url_to_check )
                                 
-                                next_page_urls = [ next_page_url ]
+                                note += f' - next gallery page extrapolated from url class'
+                                
+                                if next_page_url not in gallery_urls_seen_before:
+                                    
+                                    gallery_seed = GallerySeed( url = next_page_url, can_generate_more_pages = self._can_generate_more_pages )
+                                    
+                                    new_next_page_gallery_seeds.append( gallery_seed )
+                                    
+                                else:
+                                    
+                                    note += f', but it had already been visited this run and was not added'
+                                    
                                 
                             except Exception as e:
                                 
@@ -619,51 +652,24 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
                                 
                             
                         
-                        next_page_generation_phrase = ' next gallery pages extrapolated from url class'
-                        
                     
-                    if len( next_page_urls ) > 0:
+                    num_new = len( new_next_page_gallery_seeds )
+                    
+                    if num_new > 0:
                         
-                        next_page_urls = HydrusData.DedupeList( next_page_urls )
+                        for next_gallery_seed in new_next_page_gallery_seeds:
+                            
+                            next_gallery_seed.SetRunToken( self._run_token )
+                            next_gallery_seed.SetReferralURL( url_for_child_referral )
+                            next_gallery_seed.AddExternalFilterableTags( self._external_filterable_tags )
+                            next_gallery_seed.AddExternalAdditionalServiceKeysToTags( self._external_additional_service_keys_to_tags )
+                            
+                            gallery_urls_seen_before.add( next_gallery_seed.url )
+                            
                         
-                        new_next_page_urls = [ next_page_url for next_page_url in next_page_urls if next_page_url not in gallery_urls_seen_before ]
+                        gallery_seed_log.AddGallerySeeds( new_next_page_gallery_seeds, parent_gallery_seed = self )
                         
-                        duplicate_next_page_urls = gallery_urls_seen_before.intersection( new_next_page_urls )
-                        
-                        num_new_next_page_urls = len( new_next_page_urls )
-                        num_dupe_next_page_urls = len( duplicate_next_page_urls )
-                        
-                        if num_new_next_page_urls > 0:
-                            
-                            next_gallery_seeds = [ GallerySeed( next_page_url ) for next_page_url in new_next_page_urls ]
-                            
-                            for next_gallery_seed in next_gallery_seeds:
-                                
-                                next_gallery_seed.SetRunToken( self._run_token )
-                                next_gallery_seed.SetReferralURL( url_for_child_referral )
-                                next_gallery_seed.AddExternalFilterableTags( self._external_filterable_tags )
-                                next_gallery_seed.AddExternalAdditionalServiceKeysToTags( self._external_additional_service_keys_to_tags )
-                                
-                            
-                            gallery_seed_log.AddGallerySeeds( next_gallery_seeds, parent_gallery_seed = self )
-                            
-                            added_new_gallery_pages = True
-                            
-                            gallery_urls_seen_before.update( new_next_page_urls )
-                            
-                            if num_dupe_next_page_urls == 0:
-                                
-                                note += ' - ' + HydrusNumbers.ToHumanInt( num_new_next_page_urls ) + next_page_generation_phrase
-                                
-                            else:
-                                
-                                note += ' - ' + HydrusNumbers.ToHumanInt( num_new_next_page_urls ) + next_page_generation_phrase + ', but ' + HydrusNumbers.ToHumanInt( num_dupe_next_page_urls ) + ' had already been visited this run and were not added'
-                                
-                            
-                        else:
-                            
-                            note += ' - ' + HydrusNumbers.ToHumanInt( num_dupe_next_page_urls ) + next_page_generation_phrase + ', but they had already been visited this run and were not added'
-                            
+                        added_new_gallery_pages = True
                         
                     
                 
@@ -738,6 +744,7 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
         return ( num_urls_added, num_urls_already_in_file_seed_cache, num_urls_total, result_404, added_new_gallery_pages, stop_reason )
         
     
+
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_GALLERY_SEED ] = GallerySeed
 
 class GallerySeedLog( HydrusSerialisable.SerialisableBase ):
@@ -745,8 +752,6 @@ class GallerySeedLog( HydrusSerialisable.SerialisableBase ):
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_GALLERY_SEED_LOG
     SERIALISABLE_NAME = 'Gallery Log'
     SERIALISABLE_VERSION = 1
-    
-    COMPACT_NUMBER = 100
     
     def __init__( self ):
         
@@ -933,16 +938,16 @@ class GallerySeedLog( HydrusSerialisable.SerialisableBase ):
         self.NotifyGallerySeedsUpdated( updated_gallery_seeds )
         
     
-    def CanCompact( self, compact_before_this_source_time ):
+    def CanCompact( self, compaction_number: int, compact_before_this_source_time: int ):
         
         with self._lock:
             
-            if len( self._gallery_seeds ) <= self.COMPACT_NUMBER:
+            if len( self._gallery_seeds ) <= compaction_number:
                 
                 return False
                 
             
-            for gallery_seed in self._gallery_seeds[:-self.COMPACT_NUMBER]:
+            for gallery_seed in self._gallery_seeds[:-compaction_number]:
                 
                 if gallery_seed.status == CC.STATUS_UNKNOWN:
                     
@@ -977,18 +982,18 @@ class GallerySeedLog( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def Compact( self, compact_before_this_source_time ):
+    def Compact( self, compaction_number: int, compact_before_this_source_time: int ):
         
         with self._lock:
             
-            if len( self._gallery_seeds ) <= self.COMPACT_NUMBER:
+            if len( self._gallery_seeds ) <= compaction_number:
                 
                 return
                 
             
             new_gallery_seeds = HydrusSerialisable.SerialisableList()
             
-            for gallery_seed in self._gallery_seeds[:-self.COMPACT_NUMBER]:
+            for gallery_seed in self._gallery_seeds[:-compaction_number]:
                 
                 still_to_do = gallery_seed.status == CC.STATUS_UNKNOWN
                 still_relevant = gallery_seed.created > compact_before_this_source_time
@@ -999,7 +1004,7 @@ class GallerySeedLog( HydrusSerialisable.SerialisableBase ):
                     
                 
             
-            new_gallery_seeds.extend( self._gallery_seeds[-self.COMPACT_NUMBER:] )
+            new_gallery_seeds.extend( self._gallery_seeds[-compaction_number:] )
             
             self._gallery_seeds = new_gallery_seeds
             self._gallery_seeds_to_indices = { gallery_seed : index for ( index, gallery_seed ) in enumerate( self._gallery_seeds ) }

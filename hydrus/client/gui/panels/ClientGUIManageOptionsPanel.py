@@ -692,11 +692,11 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows.append( ( 'Maximum number of subscriptions that can sync simultaneously:', self._max_simultaneous_subscriptions ) )
             rows.append( ( 'If a subscription has this many failed file imports, stop and continue later:', self._subscription_file_error_cancel_threshold ) )
             rows.append( ( 'Sync subscriptions in random order:', self._process_subs_in_random_order ) )
+            rows.append( ( 'Default subscription checker options:', self._subscription_checker_options ) )
             
             gridbox = ClientGUICommon.WrapInGrid( subscriptions, rows )
             
             subscriptions.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-            subscriptions.Add( self._subscription_checker_options, CC.FLAGS_EXPAND_PERPENDICULAR )
             
             #
             
@@ -704,11 +704,11 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             rows.append( ( 'Additional fixed time (in seconds) to wait between watcher checks:', self._watcher_page_wait_period ) )
             rows.append( ( 'If new watcher entered and no current highlight, highlight the new watcher:', self._highlight_new_watcher ) )
+            rows.append( ( 'Default watcher checker options:', self._watcher_checker_options ) )
             
             gridbox = ClientGUICommon.WrapInGrid( watchers, rows )
             
             watchers.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-            watchers.Add( self._watcher_checker_options, CC.FLAGS_EXPAND_PERPENDICULAR )
             
             #
             
@@ -1518,13 +1518,24 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._file_viewing_statistics_preview_max_time = ClientGUITime.NoneableTimeDeltaWidget( self, 60.0, hours = True, minutes = True, seconds = True, milliseconds = True )
             self._file_viewing_statistics_preview_max_time.setToolTip( ClientGUIFunctions.WrapToolTip( max_tt ) )
             
+            file_viewing_stats_interesting_canvas_types = self._new_options.GetIntegerList( 'file_viewing_stats_interesting_canvas_types' )
+            
+            self._file_viewing_stats_interesting_canvas_types = ClientGUICommon.BetterCheckBoxList( self )
+            
+            self._file_viewing_stats_interesting_canvas_types.Append( 'media views', CC.CANVAS_MEDIA_VIEWER, starts_checked = CC.CANVAS_MEDIA_VIEWER in file_viewing_stats_interesting_canvas_types )
+            self._file_viewing_stats_interesting_canvas_types.Append( 'preview views', CC.CANVAS_PREVIEW, starts_checked = CC.CANVAS_PREVIEW in file_viewing_stats_interesting_canvas_types )
+            self._file_viewing_stats_interesting_canvas_types.Append( 'client api views', CC.CANVAS_CLIENT_API, starts_checked = CC.CANVAS_CLIENT_API in file_viewing_stats_interesting_canvas_types )
+            
+            self._file_viewing_stats_interesting_canvas_types.SetHeightBasedOnContents()
+            
+            tt = 'This will also configure what counts when files are sorted by views/viewtime.'
+            
+            self._file_viewing_stats_interesting_canvas_types.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
+            
             self._file_viewing_stats_menu_display = ClientGUICommon.BetterChoice( self )
             
-            self._file_viewing_stats_menu_display.addItem( 'do not show', CC.FILE_VIEWING_STATS_MENU_DISPLAY_NONE )
-            self._file_viewing_stats_menu_display.addItem( 'show media', CC.FILE_VIEWING_STATS_MENU_DISPLAY_MEDIA_ONLY )
-            self._file_viewing_stats_menu_display.addItem( 'show media, and put preview in a submenu', CC.FILE_VIEWING_STATS_MENU_DISPLAY_MEDIA_AND_PREVIEW_IN_SUBMENU )
-            self._file_viewing_stats_menu_display.addItem( 'show media and preview in two lines', CC.FILE_VIEWING_STATS_MENU_DISPLAY_MEDIA_AND_PREVIEW_STACKED )
-            self._file_viewing_stats_menu_display.addItem( 'show media and preview combined', CC.FILE_VIEWING_STATS_MENU_DISPLAY_MEDIA_AND_PREVIEW_SUMMED )
+            self._file_viewing_stats_menu_display.addItem( 'show a combined value, and stack the separate values a submenu', CC.FILE_VIEWING_STATS_MENU_DISPLAY_SUMMED_AND_THEN_SUBMENU )
+            self._file_viewing_stats_menu_display.addItem( 'stack the separate values', CC.FILE_VIEWING_STATS_MENU_DISPLAY_STACKED )
             
             #
             
@@ -1551,7 +1562,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows.append( ( 'Cap any view on the media viewer to this maximum time:', self._file_viewing_statistics_media_max_time ) )
             rows.append( ( 'Min time to view on preview viewer to count as a view:', self._file_viewing_statistics_preview_min_time ) )
             rows.append( ( 'Cap any view on the preview viewer to this maximum time:', self._file_viewing_statistics_preview_max_time ) )
-            rows.append( ( 'Show media/preview viewing stats on media right-click menus?:', self._file_viewing_stats_menu_display ) )
+            rows.append( ( 'Show viewing stats on media right-click menus?:', self._file_viewing_stats_menu_display ) )
+            rows.append( ( 'Which views to show?:', self._file_viewing_stats_interesting_canvas_types ) )
             
             gridbox = ClientGUICommon.WrapInGrid( self, rows )
             
@@ -1572,6 +1584,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._new_options.SetNoneableInteger( 'file_viewing_statistics_preview_max_time_ms', HydrusTime.MillisecondiseS( self._file_viewing_statistics_preview_max_time.GetValue() ) )
             
             self._new_options.SetInteger( 'file_viewing_stats_menu_display', self._file_viewing_stats_menu_display.GetValue() )
+            self._new_options.SetIntegerList( 'file_viewing_stats_interesting_canvas_types', self._file_viewing_stats_interesting_canvas_types.GetValue() )
             
         
     

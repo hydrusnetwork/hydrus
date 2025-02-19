@@ -12,7 +12,6 @@ from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
-from hydrus.client import ClientParsing
 from hydrus.client import ClientPaths
 from hydrus.client import ClientSerialisable
 from hydrus.client import ClientStrings
@@ -34,6 +33,9 @@ from hydrus.client.gui.parsing import ClientGUIParsingFormulae
 from hydrus.client.gui.widgets import ClientGUICommon
 from hydrus.client.gui.widgets import ClientGUIMenuButton
 from hydrus.client.networking import ClientNetworkingJobs
+from hydrus.client.parsing import ClientParsing
+from hydrus.client.parsing import ClientParsingLegacy
+from hydrus.client.parsing import ClientParsingResults
 
 class EditNodes( QW.QWidget ):
     
@@ -129,7 +131,7 @@ class EditNodes( QW.QWidget ):
             
         else:
             
-            if isinstance( obj, ( ClientParsing.ContentParser, ClientParsing.ParseNodeContentLink ) ):
+            if isinstance( obj, ( ClientParsing.ContentParser, ClientParsingLegacy.ParseNodeContentLink ) ):
                 
                 node = obj
                 
@@ -157,7 +159,7 @@ class EditNodes( QW.QWidget ):
         
         dlg_title = 'edit link node'
         
-        empty_node = ClientParsing.ParseNodeContentLink()
+        empty_node = ClientParsingLegacy.ParseNodeContentLink()
         
         panel_class = EditParseNodeContentLinkPanel
         
@@ -246,7 +248,7 @@ class EditNodes( QW.QWidget ):
                 
                 panel = ClientGUIParsing.EditContentParserPanel( dlg, node, ClientParsing.ParsingTestData( {}, ( example_data, ) ), [ HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_TYPE_VETO ] )
                 
-            elif isinstance( node, ClientParsing.ParseNodeContentLink ):
+            elif isinstance( node, ClientParsingLegacy.ParseNodeContentLink ):
                 
                 panel = EditParseNodeContentLinkPanel( dlg, node, example_data = example_data )
                 
@@ -541,7 +543,7 @@ The formula should attempt to parse full or relative urls. If the url is relativ
         
         children = self._children.GetValue()
         
-        node = ClientParsing.ParseNodeContentLink( name = name, formula = formula, children = children )
+        node = ClientParsingLegacy.ParseNodeContentLink( name = name, formula = formula, children = children )
         
         return node
         
@@ -577,9 +579,9 @@ class EditParsingScriptFileLookupPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._file_identifier_type = ClientGUICommon.BetterChoice( query_panel )
         
-        for t in [ ClientParsing.FILE_IDENTIFIER_TYPE_FILE, ClientParsing.FILE_IDENTIFIER_TYPE_MD5, ClientParsing.FILE_IDENTIFIER_TYPE_SHA1, ClientParsing.FILE_IDENTIFIER_TYPE_SHA256, ClientParsing.FILE_IDENTIFIER_TYPE_SHA512, ClientParsing.FILE_IDENTIFIER_TYPE_USER_INPUT ]:
+        for t in [ ClientParsingLegacy.FILE_IDENTIFIER_TYPE_FILE, ClientParsingLegacy.FILE_IDENTIFIER_TYPE_MD5, ClientParsingLegacy.FILE_IDENTIFIER_TYPE_SHA1, ClientParsingLegacy.FILE_IDENTIFIER_TYPE_SHA256, ClientParsingLegacy.FILE_IDENTIFIER_TYPE_SHA512, ClientParsingLegacy.FILE_IDENTIFIER_TYPE_USER_INPUT ]:
             
-            self._file_identifier_type.addItem( ClientParsing.file_identifier_string_lookup[ t], t )
+            self._file_identifier_type.addItem( ClientParsingLegacy.file_identifier_string_lookup[ t], t )
             
         
         self._file_identifier_string_converter = ClientGUIStringControls.StringConverterButton( query_panel, file_identifier_string_converter )
@@ -726,7 +728,7 @@ And pass that html to a number of 'parsing children' that will each look through
         
         file_identifier_type = self._file_identifier_type.GetValue()
         
-        if file_identifier_type == ClientParsing.FILE_IDENTIFIER_TYPE_FILE:
+        if file_identifier_type == ClientParsingLegacy.FILE_IDENTIFIER_TYPE_FILE:
             
             if not os.path.exists( test_arg ):
                 
@@ -737,7 +739,7 @@ And pass that html to a number of 'parsing children' that will each look through
             
             file_identifier = test_arg
             
-        elif file_identifier_type == ClientParsing.FILE_IDENTIFIER_TYPE_USER_INPUT:
+        elif file_identifier_type == ClientParsingLegacy.FILE_IDENTIFIER_TYPE_USER_INPUT:
             
             file_identifier = test_arg
             
@@ -783,16 +785,16 @@ And pass that html to a number of 'parsing children' that will each look through
     
     def EventTestParse( self ):
         
-        def qt_code( results ):
+        def qt_code( parsed_post: ClientParsingResults.ParsedPost ):
             
             if not self or not QP.isValid( self ):
                 
                 return
                 
             
-            result_lines = [ '*** ' + HydrusNumbers.ToHumanInt( len( results ) ) + ' RESULTS BEGIN ***' ]
+            result_lines = [ '*** ' + HydrusNumbers.ToHumanInt( len( parsed_post ) ) + ' RESULTS BEGIN ***' ]
             
-            result_lines.extend( ( ClientParsing.ConvertParseResultToPrettyString( result ) for result in results ) )
+            result_lines.extend( [ parsed_content.ToString() for parsed_content in parsed_post.parsed_contents ] )
             
             result_lines.append( '*** RESULTS END ***' )
             
@@ -805,9 +807,9 @@ And pass that html to a number of 'parsing children' that will each look through
             
             try:
                 
-                results = script.Parse( job_status, data )
+                parsed_post = script.Parse( job_status, data )
                 
-                QP.CallAfter( qt_code, results )
+                QP.CallAfter( qt_code, parsed_post )
                 
             except Exception as e:
                 
@@ -857,7 +859,7 @@ And pass that html to a number of 'parsing children' that will each look through
         static_args = self._static_args.GetValue()
         children = self._children.GetValue()
         
-        script = ClientParsing.ParseRootFileLookup( name, url = url, query_type = query_type, file_identifier_type = file_identifier_type, file_identifier_string_converter = file_identifier_string_converter, file_identifier_arg_name = file_identifier_arg_name, static_args = static_args, children = children )
+        script = ClientParsingLegacy.ParseRootFileLookup( name, url = url, query_type = query_type, file_identifier_type = file_identifier_type, file_identifier_string_converter = file_identifier_string_converter, file_identifier_arg_name = file_identifier_arg_name, static_args = static_args, children = children )
         
         return script
         
@@ -973,7 +975,7 @@ class ManageParsingScriptsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
         else:
             
-            if isinstance( obj, ClientParsing.ParseRootFileLookup ):
+            if isinstance( obj, ClientParsingLegacy.ParseRootFileLookup ):
                 
                 script = obj
                 
@@ -993,7 +995,7 @@ class ManageParsingScriptsPanel( ClientGUIScrolledPanels.ManagePanel ):
         name = 'new script'
         url = ''
         query_type = HC.GET
-        file_identifier_type = ClientParsing.FILE_IDENTIFIER_TYPE_MD5
+        file_identifier_type = ClientParsingLegacy.FILE_IDENTIFIER_TYPE_MD5
         file_identifier_string_converter = ClientStrings.StringConverter( ( ( ClientStrings.STRING_CONVERSION_ENCODE, ClientStrings.ENCODING_TYPE_HEX_UTF8 ), ), 'some hash bytes' )
         file_identifier_arg_name = 'md5'
         static_args = {}
@@ -1001,7 +1003,7 @@ class ManageParsingScriptsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         dlg_title = 'edit file metadata lookup script'
         
-        empty_script = ClientParsing.ParseRootFileLookup( name, url = url, query_type = query_type, file_identifier_type = file_identifier_type, file_identifier_string_converter = file_identifier_string_converter, file_identifier_arg_name = file_identifier_arg_name, static_args = static_args, children = children)
+        empty_script = ClientParsingLegacy.ParseRootFileLookup( name, url = url, query_type = query_type, file_identifier_type = file_identifier_type, file_identifier_string_converter = file_identifier_string_converter, file_identifier_arg_name = file_identifier_arg_name, static_args = static_args, children = children)
         
         panel_class = EditParsingScriptFileLookupPanel
         
@@ -1071,7 +1073,7 @@ class ManageParsingScriptsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         script = data
         
-        if isinstance( script, ClientParsing.ParseRootFileLookup ):
+        if isinstance( script, ClientParsingLegacy.ParseRootFileLookup ):
             
             panel_class = EditParsingScriptFileLookupPanel
             

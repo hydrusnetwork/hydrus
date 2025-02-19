@@ -253,6 +253,8 @@ class EditSelectMultiple( ClientGUIScrolledPanels.EditPanel ):
                 
             
         
+        self._checkboxes.SetHeightBasedOnContents()
+        
         #
         
         vbox = QP.VBoxLayout()

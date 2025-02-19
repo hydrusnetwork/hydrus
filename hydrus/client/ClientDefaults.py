@@ -160,7 +160,7 @@ def GetDefaultParsers():
     
     dir_path = os.path.join( HC.STATIC_DIR, 'default', 'parsers' )
     
-    from hydrus.client import ClientParsing
+    from hydrus.client.parsing import ClientParsing
     
     return GetDefaultObjectsFromPNGs( dir_path, ( ClientParsing.PageParser, ) )
     
@@ -728,7 +728,7 @@ def GetDefaultSimpleDownloaderFormulae():
     
     dir_path = os.path.join( HC.STATIC_DIR, 'default', 'simple_downloader_formulae' )
     
-    from hydrus.client import ClientParsing
+    from hydrus.client.parsing import ClientParsing
     
     return GetDefaultObjectsFromPNGs( dir_path, ( ClientParsing.SimpleDownloaderParsingFormula, ) )
     

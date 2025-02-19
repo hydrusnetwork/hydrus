@@ -1304,20 +1304,35 @@ class EditSubscriptionQueryPanel( ClientGUIScrolledPanels.EditPanel ):
         query_header = query_header.Duplicate()
         query_log_container = query_log_container.Duplicate()
         
-        self._status_st = ClientGUICommon.BetterStaticText( self )
+        name_panel = ClientGUICommon.StaticBox( self, 'query and name' )
+        
+        self._display_name = ClientGUICommon.NoneableTextCtrl( name_panel, '', placeholder_text = 'my subscription', none_phrase = 'use query text' )
+        self._query_text = QW.QLineEdit( name_panel )
+        
+        #
+        
+        status_panel = ClientGUICommon.StaticBox( self, 'status' )
+        
+        self._status_st = ClientGUICommon.BetterStaticText( status_panel )
         
         st_width = ClientGUIFunctions.ConvertTextToPixelWidth( self._status_st, 50 )
         
         self._status_st.setMinimumWidth( st_width )
         
-        self._display_name = ClientGUICommon.NoneableTextCtrl( self, '', placeholder_text = 'my subscription', none_phrase = 'use query text' )
-        self._query_text = QW.QLineEdit( self )
-        self._check_now = QW.QCheckBox( self )
-        self._paused = QW.QCheckBox( self )
+        self._check_now = QW.QCheckBox( status_panel )
+        self._paused = QW.QCheckBox( status_panel )
         
-        self._file_seed_cache_control = ClientGUIFileSeedCache.FileSeedCacheStatusControl( self )
+        #
         
-        self._gallery_seed_log_control = ClientGUIGallerySeedLog.GallerySeedLogStatusControl( self, True, True, 'search' )
+        log_panel = ClientGUICommon.StaticBox( self, 'history' )
+        
+        self._file_seed_cache_control = ClientGUIFileSeedCache.FileSeedCacheStatusControl( log_panel )
+        
+        self._gallery_seed_log_control = ClientGUIGallerySeedLog.GallerySeedLogStatusControl( log_panel, True, True, 'search' )
+        
+        #
+        
+        tags_panel = ClientGUICommon.StaticBox( self, 'tags' )
         
         tag_import_options = query_header.GetTagImportOptions()
         show_downloader_options = False # just for additional tags, no parsing gubbins needed
@@ -1326,6 +1341,16 @@ class EditSubscriptionQueryPanel( ClientGUIScrolledPanels.EditPanel ):
         self._import_options_button = ClientGUIImportOptions.ImportOptionsButton( self, show_downloader_options, allow_default_selection )
         
         self._import_options_button.SetTagImportOptions( tag_import_options )
+        
+        #
+        
+        compaction_number_panel = ClientGUICommon.StaticBox( self, 'advanced', can_expand = True, start_expanded = False )
+        
+        file_seed_cache_compaction_number = query_header.GetFileSeedCacheCompactionNumber()
+        
+        self._file_seed_cache_compaction_number = ClientGUICommon.BetterSpinBox( compaction_number_panel, initial = file_seed_cache_compaction_number, min = 100, max = 65536 )
+        tt = 'The file log attached to this query will regularly cull itself to the x most recent URLs. The default is to keep 250, but if the periodic file limit or the visited gallery URLs are larger, this will automatically scale. Outside of debugging, you should have no reason to edit this value.'
+        self._file_seed_cache_compaction_number.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
         
         #
         
@@ -1354,28 +1379,68 @@ class EditSubscriptionQueryPanel( ClientGUIScrolledPanels.EditPanel ):
         
         rows = []
         
-        rows.append( ( 'optional display name: ', self._display_name ) )
         rows.append( ( 'query text: ', self._query_text ) )
+        rows.append( ( 'optional display name: ', self._display_name ) )
+        
+        gridbox = ClientGUICommon.WrapInGrid( name_panel, rows )
+        
+        name_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        
+        #
+        
+        rows = []
+        
         rows.append( ( 'check now: ', self._check_now ) )
         rows.append( ( 'paused: ', self._paused ) )
         
-        gridbox = ClientGUICommon.WrapInGrid( self, rows )
+        gridbox = ClientGUICommon.WrapInGrid( status_panel, rows )
         
-        vbox = QP.VBoxLayout()
+        status_panel.Add( self._status_st, CC.FLAGS_EXPAND_PERPENDICULAR )
+        status_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
-        QP.AddToLayout( vbox, self._status_st, CC.FLAGS_EXPAND_PERPENDICULAR )
-        QP.AddToLayout( vbox, self._file_seed_cache_control, CC.FLAGS_EXPAND_PERPENDICULAR )
-        QP.AddToLayout( vbox, self._gallery_seed_log_control, CC.FLAGS_EXPAND_PERPENDICULAR )
-        QP.AddToLayout( vbox, gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        #
         
-        label = 'The tag import options here is only for setting \'additional tags\' for this single query! If you want to change the parsed tags or do subscription-wide \'additional tags\', jump up a level to the edit subscriptions dialog.'
+        log_panel.Add( self._file_seed_cache_control, CC.FLAGS_EXPAND_PERPENDICULAR )
+        log_panel.Add( self._gallery_seed_log_control, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        #
+        
+        label = 'This is only for setting \'additional tags\' for this single query! If you want to change the parsed tags or do subscription-wide \'additional tags\', jump up a level to the edit subscriptions dialog.'
         
         st = ClientGUICommon.BetterStaticText( self, label = label )
         
         st.setWordWrap( True )
         
-        QP.AddToLayout( vbox, st, CC.FLAGS_EXPAND_PERPENDICULAR )
-        QP.AddToLayout( vbox, self._import_options_button, CC.FLAGS_EXPAND_PERPENDICULAR )
+        tags_panel.Add( st, CC.FLAGS_EXPAND_PERPENDICULAR )
+        tags_panel.Add( self._import_options_button, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        #
+        
+        rows = []
+        
+        rows.append( ( 'DEBUG: file log compaction number: ', self._file_seed_cache_compaction_number ) )
+        
+        gridbox = ClientGUICommon.WrapInGrid( self, rows )
+        
+        label = 'Do not edit this unless you know what you are doing!'
+        
+        st = ClientGUICommon.BetterStaticText( compaction_number_panel, label )
+        
+        st.setWordWrap( True )
+        
+        compaction_number_panel.Add( st, CC.FLAGS_EXPAND_PERPENDICULAR )
+        compaction_number_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        
+        #
+        
+        vbox = QP.VBoxLayout()
+        
+        QP.AddToLayout( vbox, name_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, status_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, log_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, tags_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, compaction_number_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
         vbox.addStretch( 0 )
         
         self.widget().setLayout( vbox )
@@ -1405,6 +1470,8 @@ class EditSubscriptionQueryPanel( ClientGUIScrolledPanels.EditPanel ):
         query_header.SetDisplayName( self._display_name.GetValue() )
         
         query_header.SetTagImportOptions( self._import_options_button.GetTagImportOptions() )
+        
+        query_header.SetFileSeedCacheCompactionNumber( self._file_seed_cache_compaction_number.value() )
         
         query_log_container = self._original_query_log_container.Duplicate()
         

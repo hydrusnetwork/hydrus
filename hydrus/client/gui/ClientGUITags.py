@@ -1313,10 +1313,8 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._simple_blacklist_global_checkboxes.Append( 'unnamespaced tags', '' )
         self._simple_blacklist_global_checkboxes.Append( 'namespaced tags', ':' )
-
-        ( w, h ) = ClientGUIFunctions.ConvertTextToPixels( self._simple_blacklist_global_checkboxes, ( 20, 3 ) )
         
-        self._simple_blacklist_global_checkboxes.setFixedHeight( h + ( self._simple_blacklist_global_checkboxes.frameWidth() * 2 ) )
+        self._simple_blacklist_global_checkboxes.SetHeightBasedOnContents()
         
         self._simple_blacklist_namespace_checkboxes = ClientGUICommon.BetterCheckBoxList( self._simple_whitelist_panel )
         
@@ -1403,9 +1401,7 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         self._simple_whitelist_global_checkboxes.Append( 'unnamespaced tags', '' )
         self._simple_whitelist_global_checkboxes.Append( 'namespaced tags', ':' )
         
-        ( w, h ) = ClientGUIFunctions.ConvertTextToPixels( self._simple_whitelist_global_checkboxes, ( 20, 3 ) )
-        
-        self._simple_whitelist_global_checkboxes.setFixedHeight( h + ( self._simple_whitelist_global_checkboxes.frameWidth() * 2 ) )
+        self._simple_whitelist_global_checkboxes.SetHeightBasedOnContents()
         
         self._simple_whitelist_namespace_checkboxes = ClientGUICommon.BetterCheckBoxList( self._simple_whitelist_panel )
         

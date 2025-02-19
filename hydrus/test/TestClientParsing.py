@@ -5,9 +5,9 @@ import unittest
 
 from hydrus.core import HydrusConstants as HC
 
-from hydrus.client import ClientParsing
 from hydrus.client import ClientStrings
 from hydrus.client import ClientTime
+from hydrus.client.parsing import ClientParsing
 
 class DummyFormula( ClientParsing.ParseFormula ):
     
@@ -168,7 +168,7 @@ class TestContentParser( unittest.TestCase ):
         
         content_parser = ClientParsing.ContentParser( name = name, content_type = HC.CONTENT_TYPE_MAPPINGS, formula = dummy_formula, additional_info = additional_info )
         
-        self.assertEqual( ClientParsing.GetTagsFromParseResults( content_parser.Parse( parsing_context, parsing_text ) ), { 'character:lara croft', 'double pistols' } )
+        self.assertEqual( content_parser.Parse( parsing_context, parsing_text ).GetTags(), { 'character:lara croft', 'double pistols' } )
         
         # ''
         
@@ -176,7 +176,7 @@ class TestContentParser( unittest.TestCase ):
         
         content_parser = ClientParsing.ContentParser( name = name, content_type = HC.CONTENT_TYPE_MAPPINGS, formula = dummy_formula, additional_info = additional_info )
         
-        self.assertEqual( ClientParsing.GetTagsFromParseResults( content_parser.Parse( parsing_context, parsing_text ) ), { ':character:lara croft', 'double pistols' } )
+        self.assertEqual( content_parser.Parse( parsing_context, parsing_text ).GetTags(), { ':character:lara croft', 'double pistols' } )
         
         # character
         
@@ -184,7 +184,7 @@ class TestContentParser( unittest.TestCase ):
         
         content_parser = ClientParsing.ContentParser( name = name, content_type = HC.CONTENT_TYPE_MAPPINGS, formula = dummy_formula, additional_info = additional_info )
         
-        self.assertEqual( ClientParsing.GetTagsFromParseResults( content_parser.Parse( parsing_context, parsing_text ) ), { 'character:character:lara croft', 'character:double pistols' } )
+        self.assertEqual( content_parser.Parse( parsing_context, parsing_text ).GetTags(), { 'character:character:lara croft', 'character:double pistols' } )
         
         # series
         
@@ -192,7 +192,7 @@ class TestContentParser( unittest.TestCase ):
         
         content_parser = ClientParsing.ContentParser( name = name, content_type = HC.CONTENT_TYPE_MAPPINGS, formula = dummy_formula, additional_info = additional_info )
         
-        self.assertEqual( ClientParsing.GetTagsFromParseResults( content_parser.Parse( parsing_context, parsing_text ) ), { 'series:character:lara croft', 'series:double pistols' } )
+        self.assertEqual( content_parser.Parse( parsing_context, parsing_text ).GetTags(), { 'series:character:lara croft', 'series:double pistols' } )
         
     
 

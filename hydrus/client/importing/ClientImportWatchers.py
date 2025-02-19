@@ -883,7 +883,7 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
         
         compact_before_this_time = self._last_check_time - ( death_period * 2 )
         
-        self._gallery_seed_log.Compact( compact_before_this_time )
+        self._gallery_seed_log.Compact( 500, compact_before_this_time )
         
     
     def _DelayWork( self, time_delta, reason ):

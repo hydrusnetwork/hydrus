@@ -2512,7 +2512,14 @@ class ListBox( QW.QScrollArea ):
                 
             elif ctrl and key_code in ( ord( 'C' ), ord( 'c' ), QC.Qt.Key.Key_Insert ):
                 
-                command = COPY_SELECTED_TAGS
+                if len( self._selected_terms ) > 0:
+                    
+                    command = COPY_SELECTED_TAGS
+                    
+                else:
+                    
+                    command = COPY_ALL_TAGS
+                    
                 
                 include_parents = shift
                 

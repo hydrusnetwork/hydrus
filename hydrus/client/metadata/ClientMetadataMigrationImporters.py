@@ -8,12 +8,12 @@ from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
-from hydrus.client import ClientParsing
 from hydrus.client import ClientStrings
 from hydrus.client import ClientTime
 from hydrus.client.media import ClientMediaResult
 from hydrus.client.metadata import ClientMetadataMigrationCore
 from hydrus.client.metadata import ClientTags
+from hydrus.client.parsing import ClientParsing
 
 # TODO: All importers should probably have a string processor
 

@@ -1964,24 +1964,13 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                     
                     ( view_type, viewing_locations, operator, viewing_value ) = self._value
                     
-                    include_media = 'media' in viewing_locations
-                    include_previews = 'preview' in viewing_locations
-                    
-                    if include_media and include_previews:
+                    if len( viewing_locations ) == 0:
                         
-                        domain = 'all'
-                        
-                    elif include_media:
-                        
-                        domain = 'media'
-                        
-                    elif include_previews:
-                        
-                        domain = 'preview'
+                        domain = 'unknown'
                         
                     else:
                         
-                        domain = 'unknown'
+                        domain = ', '.join( viewing_locations )
                         
                     
                     if view_type == 'views':
@@ -1997,7 +1986,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                         value_string = 'Unknown view type!'
                         
                     
-                    base = '{} {} {} {}'.format( domain, view_type, operator, value_string )
+                    base = '{} in {} {} {}'.format( view_type, domain, operator, value_string )
                     
                 
             

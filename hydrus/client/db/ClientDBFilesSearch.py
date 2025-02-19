@@ -1460,7 +1460,7 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
         
         #
         
-        for ( view_type, viewing_locations, operator, viewing_value ) in system_predicates.GetFileViewingStatsPredicates():
+        for ( view_type, desired_canvas_types, operator, viewing_value ) in system_predicates.GetFileViewingStatsPredicates():
             
             only_do_zero = ( operator in ( '=', HC.UNICODE_APPROX_EQUAL ) and viewing_value == 0 ) or ( operator == '<' and viewing_value == 1 )
             include_zero = operator == '<'
@@ -1475,7 +1475,7 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
                 
             else:
                 
-                viewing_hash_ids = self.modules_files_viewing_stats.GetHashIdsFromFileViewingStatistics( view_type, viewing_locations, operator, viewing_value )
+                viewing_hash_ids = self.modules_files_viewing_stats.GetHashIdsFromFileViewingStatistics( view_type, desired_canvas_types, operator, viewing_value )
                 
                 query_hash_ids = intersection_update_qhi( query_hash_ids, viewing_hash_ids )
                 
@@ -2140,24 +2140,24 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
         
         query_hash_ids = self._DoNotePreds( system_predicates, query_hash_ids, job_status = job_status )
         
-        for ( view_type, viewing_locations, operator, viewing_value ) in system_predicates.GetFileViewingStatsPredicates():
+        for ( view_type, desired_canvas_types, operator, viewing_value ) in system_predicates.GetFileViewingStatsPredicates():
             
             only_do_zero = ( operator in ( '=', HC.UNICODE_APPROX_EQUAL ) and viewing_value == 0 ) or ( operator == '<' and viewing_value == 1 )
             include_zero = operator == '<'
             
             if only_do_zero:
                 
-                nonzero_hash_ids = self.modules_files_viewing_stats.GetHashIdsFromFileViewingStatistics( view_type, viewing_locations, '>', 0 )
+                nonzero_hash_ids = self.modules_files_viewing_stats.GetHashIdsFromFileViewingStatistics( view_type, desired_canvas_types, '>', 0 )
                 
                 query_hash_ids.difference_update( nonzero_hash_ids )
                 
             elif include_zero:
                 
-                nonzero_hash_ids = self.modules_files_viewing_stats.GetHashIdsFromFileViewingStatistics( view_type, viewing_locations, '>', 0 )
+                nonzero_hash_ids = self.modules_files_viewing_stats.GetHashIdsFromFileViewingStatistics( view_type, desired_canvas_types, '>', 0 )
                 
                 zero_hash_ids = query_hash_ids.difference( nonzero_hash_ids )
                 
-                accurate_except_zero_hash_ids = self.modules_files_viewing_stats.GetHashIdsFromFileViewingStatistics( view_type, viewing_locations, operator, viewing_value )
+                accurate_except_zero_hash_ids = self.modules_files_viewing_stats.GetHashIdsFromFileViewingStatistics( view_type, desired_canvas_types, operator, viewing_value )
                 
                 hash_ids = zero_hash_ids.union( accurate_except_zero_hash_ids )
                 
@@ -2479,13 +2479,20 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
                     
                     query = 'SELECT hash_id, width, height FROM {temp_table} CROSS JOIN files_info USING ( hash_id );'
                     
-                elif sort_data == CC.SORT_FILES_BY_MEDIA_VIEWS:
+                elif sort_data in ( CC.SORT_FILES_BY_MEDIA_VIEWS, CC.SORT_FILES_BY_MEDIA_VIEWTIME ):
                     
-                    query = 'SELECT hash_id, views FROM {temp_table} CROSS JOIN file_viewing_stats USING ( hash_id ) WHERE canvas_type = {canvas_type};'.format( temp_table = '{temp_table}', canvas_type = CC.CANVAS_MEDIA_VIEWER )
+                    desired_canvas_types = CG.client_controller.new_options.GetIntegerList( 'file_viewing_stats_interesting_canvas_types' )
                     
-                elif sort_data == CC.SORT_FILES_BY_MEDIA_VIEWTIME:
+                    desired_canvas_types_splayed = HydrusData.SplayListForDB( desired_canvas_types )
                     
-                    query = 'SELECT hash_id, viewtime_ms FROM {temp_table} CROSS JOIN file_viewing_stats USING ( hash_id ) WHERE canvas_type = {canvas_type};'.format( temp_table = '{temp_table}', canvas_type = CC.CANVAS_MEDIA_VIEWER )
+                    if sort_data == CC.SORT_FILES_BY_MEDIA_VIEWS:
+                        
+                        query = 'SELECT hash_id, views FROM {temp_table} CROSS JOIN file_viewing_stats USING ( hash_id ) WHERE canvas_type IN {desired_canvas_types_splayed};'.format( temp_table = '{temp_table}', desired_canvas_types_splayed = desired_canvas_types_splayed )
+                        
+                    else:
+                        
+                        query = 'SELECT hash_id, viewtime_ms FROM {temp_table} CROSS JOIN file_viewing_stats USING ( hash_id ) WHERE canvas_type IN {desired_canvas_types_splayed};'.format( temp_table = '{temp_table}', desired_canvas_types_splayed = desired_canvas_types_splayed )
+                        
                     
                 elif sort_data == CC.SORT_FILES_BY_APPROX_BITRATE:
                     
@@ -2719,7 +2726,7 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
                 
                 blurhash_converter = ClientMedia.GetBlurhashToSortableCall( sort_data )
                 
-                hash_ids = sorted( list( hash_ids_to_blurhashes.keys() ), key = lambda hash_id: blurhash_converter( hash_ids_to_blurhashes[ hash_id ] ), reverse = reverse )
+                hash_ids = sorted( list( hash_ids_to_blurhashes.keys() ), key = lambda hash_id: blurhash_converter( hash_ids_to_blurhashes[ hash_id ], reverse ), reverse = reverse )
                 
                 hash_ids.extend( missed_hash_ids )
                 

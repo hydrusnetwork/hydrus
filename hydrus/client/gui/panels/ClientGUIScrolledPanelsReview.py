@@ -29,7 +29,6 @@ from hydrus.client import ClientData
 from hydrus.client import ClientFiles
 from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientLocation
-from hydrus.client import ClientParsing
 from hydrus.client import ClientFilesPhysical
 from hydrus.client import ClientRendering
 from hydrus.client import ClientSerialisable
@@ -59,6 +58,7 @@ from hydrus.client.networking import ClientNetworkingDomain
 from hydrus.client.networking import ClientNetworkingGUG
 from hydrus.client.networking import ClientNetworkingLogin
 from hydrus.client.networking import ClientNetworkingURLClass
+from hydrus.client.parsing import ClientParsing
 from hydrus.client.search import ClientSearchFileSearchContext
 
 class AboutPanel( ClientGUIScrolledPanels.ReviewPanel ):

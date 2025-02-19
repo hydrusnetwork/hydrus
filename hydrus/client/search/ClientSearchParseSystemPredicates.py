@@ -203,6 +203,42 @@ def url_class_pred_generator( include, url_class_name ):
     return ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_KNOWN_URLS, ( include, 'url_class', url_class, description ) )
     
 
+def views_or_viewtime_wash_desired_canvas_types( desired_canvas_types ):
+    
+    if len( desired_canvas_types ) == 0:
+        
+        from hydrus.client import ClientConstants as CC
+        
+        silly_lookup = {
+            CC.CANVAS_MEDIA_VIEWER : 'media',
+            CC.CANVAS_PREVIEW : 'preview',
+            CC.CANVAS_CLIENT_API : 'client api'
+        }
+        
+        desired_canvas_types = [ silly_lookup[ canvas_type ] for canvas_type in CG.client_controller.new_options.GetIntegerList( 'file_viewing_stats_interesting_canvas_types' ) ]
+        
+    
+    return tuple( desired_canvas_types )
+    
+
+def views_pred_generator( o, v, u ):
+    
+    ( desired_canvas_types, o ) = o
+    
+    desired_canvas_types = views_or_viewtime_wash_desired_canvas_types( desired_canvas_types )
+    
+    return ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_FILE_VIEWING_STATS, ( 'views', desired_canvas_types, o, v ) )
+    
+
+def viewtime_pred_generator( o, v, u ):
+    
+    ( desired_canvas_types, o ) = o
+    
+    desired_canvas_types = views_or_viewtime_wash_desired_canvas_types( desired_canvas_types )
+    
+    return ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_FILE_VIEWING_STATS, ( 'viewtime', desired_canvas_types, o, convert_timetuple_to_seconds( v ) ) )
+    
+
 SystemPredicateParser.InitialiseFiletypes( HC.mime_enum_lookup )
 SystemPredicateParser.InitialiseFiletypes( HC.string_enum_lookup )
 SystemPredicateParser.InitialiseFiletypes( { 'gif' : [ HC.IMAGE_GIF, HC.ANIMATION_GIF ] } )
@@ -265,9 +301,11 @@ pred_generators = {
     SystemPredicateParser.Predicate.MEDIA_VIEWS : lambda o, v, u: ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_FILE_VIEWING_STATS, ( 'views', ( 'media', ), o, v ) ),
     SystemPredicateParser.Predicate.PREVIEW_VIEWS : lambda o, v, u: ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_FILE_VIEWING_STATS, ( 'views', ( 'preview', ), o, v ) ),
     SystemPredicateParser.Predicate.ALL_VIEWS : lambda o, v, u: ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_FILE_VIEWING_STATS, ( 'views', ( 'media', 'preview' ), o, v ) ),
+    SystemPredicateParser.Predicate.NEW_VIEWS : views_pred_generator,
     SystemPredicateParser.Predicate.MEDIA_VIEWTIME : lambda o, v, u: ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_FILE_VIEWING_STATS, ( 'viewtime', ( 'media', ), o, convert_timetuple_to_seconds( v ) ) ),
     SystemPredicateParser.Predicate.PREVIEW_VIEWTIME : lambda o, v, u: ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_FILE_VIEWING_STATS, ( 'viewtime', ( 'preview', ), o, convert_timetuple_to_seconds( v ) ) ),
     SystemPredicateParser.Predicate.ALL_VIEWTIME : lambda o, v, u: ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_FILE_VIEWING_STATS, ( 'viewtime', ( 'media', 'preview' ), o, convert_timetuple_to_seconds( v ) ) ),
+    SystemPredicateParser.Predicate.NEW_VIEWTIME : viewtime_pred_generator,
     SystemPredicateParser.Predicate.URL_REGEX : lambda o, v, u: ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_KNOWN_URLS, ( True, 'regex', v, 'has url matching regex {}'.format( v ) ) ),
     SystemPredicateParser.Predicate.NO_URL_REGEX : lambda o, v, u: ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_KNOWN_URLS, ( False, 'regex', v, 'does not have url matching regex {}'.format( v ) ) ),
     SystemPredicateParser.Predicate.URL : lambda o, v, u: ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_KNOWN_URLS, ( True, 'exact_match', v, 'has url {}'.format( v ) ) ),

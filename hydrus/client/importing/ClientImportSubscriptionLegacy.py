@@ -377,12 +377,12 @@ class SubscriptionQueryLegacy( HydrusSerialisable.SerialisableBase ):
         
         if self._gallery_seed_log.CanCompact( compact_before_this_time ):
             
-            self._gallery_seed_log.Compact( compact_before_this_time )
+            self._gallery_seed_log.Compact( 100, compact_before_this_time )
             
         
         if self._file_seed_cache.CanCompact( compact_before_this_time ):
             
-            self._file_seed_cache.Compact( compact_before_this_time )
+            self._file_seed_cache.Compact( 250, compact_before_this_time )
             
         
     
