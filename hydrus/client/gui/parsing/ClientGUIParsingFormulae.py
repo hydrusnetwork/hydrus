@@ -143,6 +143,7 @@ class EditContextVariableFormulaPanel( EditSpecificFormulaPanel ):
         return formula
         
     
+
 class EditFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def __init__( self, parent: QW.QWidget, formula: ClientParsing.ParseFormula, test_data_callable: typing.Callable[ [], ClientParsing.ParsingTestData ] ):
@@ -226,6 +227,7 @@ class EditFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
         new_zipper = ClientParsing.ParseFormulaZipper()
         new_context_variable = ClientParsing.ParseFormulaContextVariable()
         new_nested = ClientParsing.ParseFormulaNested()
+        new_static = ClientParsing.ParseFormulaStatic()
         
         choice_tuples = []
         
@@ -252,6 +254,11 @@ class EditFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
         if not isinstance( self._current_formula, ClientParsing.ParseFormulaContextVariable ):
             
             choice_tuples.append( ( 'change to a new CONTEXT VARIABLE formula', new_context_variable ) )
+            
+        
+        if not isinstance( self._current_formula, ClientParsing.ParseFormulaStatic ):
+            
+            choice_tuples.append( ( 'change to a new STATIC formula', new_static ) )
             
         
         try:
@@ -287,6 +294,10 @@ class EditFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
         elif isinstance( self._current_formula, ClientParsing.ParseFormulaContextVariable ):
             
             panel_class = EditContextVariableFormulaPanel
+            
+        elif isinstance( self._current_formula, ClientParsing.ParseFormulaStatic ):
+            
+            panel_class = EditStaticFormulaPanel
             
         else:
             
@@ -1457,6 +1468,114 @@ class EditNestedFormulaPanel( EditSpecificFormulaPanel ):
         string_processor = self._string_processor_button.GetValue()
         
         formula = ClientParsing.ParseFormulaNested( main_formula = main_formula, sub_formula = sub_formula, name = name, string_processor = string_processor )
+        
+        return formula
+        
+    
+
+class EditStaticFormulaPanel( EditSpecificFormulaPanel ):
+    
+    def __init__( self, parent: QW.QWidget, collapse_newlines: bool, formula: ClientParsing.ParseFormulaStatic, test_data: ClientParsing.ParsingTestData ):
+        
+        super().__init__( parent, collapse_newlines )
+        
+        #
+        
+        menu_items = []
+        
+        page_func = HydrusData.Call( ClientGUIDialogsQuick.OpenDocumentation, self, HC.DOCUMENTATION_DOWNLOADER_PARSERS_FORMULAE_STATIC )
+        
+        menu_items.append( ( 'normal', 'open the static formula help', 'Open the help page for static formulae in your web browser.', page_func ) )
+        
+        help_button = ClientGUIMenuButton.MenuBitmapButton( self, CC.global_pixmaps().help, menu_items )
+        
+        help_hbox = ClientGUICommon.WrapInText( help_button, self, 'help for this panel -->', object_name = 'HydrusIndeterminate' )
+        
+        #
+        
+        test_panel = ClientGUICommon.StaticBox( self, 'test' )
+        
+        self._test_panel = ClientGUIParsingTest.TestPanelFormula( test_panel, self.GetValue, test_data = test_data )
+        
+        self._test_panel.SetCollapseNewlines( collapse_newlines )
+        
+        #
+        
+        num_to_do = formula.GetNumToDo()
+        
+        edit_panel = ClientGUICommon.StaticBox( self, 'edit' )
+        
+        self._static_text = QW.QLineEdit( edit_panel )
+        self._num_to_do = ClientGUICommon.BetterSpinBox( edit_panel, initial = num_to_do, min = 1, max = 65535 )
+        
+        static_text = formula.GetStaticText()
+        name = formula.GetName()
+        string_processor = formula.GetStringProcessor()
+        
+        self._name = QW.QLineEdit( edit_panel )
+        self._name.setText( name )
+        self._name.setToolTip( ClientGUIFunctions.WrapToolTip( 'Optional, and decorative only. Leave blank to set nothing.' ) )
+        
+        self._string_processor_button = ClientGUIStringControls.StringProcessorWidget( edit_panel, string_processor, self._test_panel.GetTestDataForStringProcessor )
+        
+        #
+        
+        self._static_text.setText( static_text )
+        
+        #
+        
+        rows = []
+        
+        rows.append( ( 'name/description:', self._name ) )
+        rows.append( ( 'static text:', self._static_text ) )
+        rows.append( ( 'number to output:', self._num_to_do ) )
+        
+        gridbox = ClientGUICommon.WrapInGrid( edit_panel, rows )
+        
+        edit_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        
+        if collapse_newlines:
+            
+            label = 'Newlines are removed from parsed strings right after parsing, before string processing.'
+            
+        else:
+            
+            label = 'Newlines are not collapsed here (probably a note parser)'
+            
+        
+        edit_panel.Add( ClientGUICommon.BetterStaticText( edit_panel, label, ellipsize_end = True ), CC.FLAGS_EXPAND_PERPENDICULAR )
+        edit_panel.Add( self._string_processor_button, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        #
+        
+        test_panel.Add( self._test_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        #
+        
+        hbox = QP.HBoxLayout()
+        
+        QP.AddToLayout( hbox, edit_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( hbox, test_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        vbox = QP.VBoxLayout()
+        
+        QP.AddToLayout( vbox, help_hbox, CC.FLAGS_ON_RIGHT )
+        QP.AddToLayout( vbox, hbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        
+        self.widget().setLayout( vbox )
+        
+    
+    def GetValue( self ):
+        
+        static_text = self._static_text.text()
+        
+        num_to_do = self._num_to_do.value()
+        
+        name = self._name.text()
+        
+        string_processor = self._string_processor_button.GetValue()
+        
+        formula = ClientParsing.ParseFormulaStatic( static_text = static_text, num_to_do = num_to_do, name = name, string_processor = string_processor )
         
         return formula
         

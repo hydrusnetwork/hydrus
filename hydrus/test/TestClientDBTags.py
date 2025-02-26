@@ -888,73 +888,89 @@ class TestClientDBTags( unittest.TestCase ):
             services.append( ClientServices.GenerateService( other_service_key, HC.LOCAL_TAG, other_service_key.hex() ) )
             
         
+        old_services = TG.test_controller.services_manager.GetServices()
+        
         self._write( 'update_services', services )
         
-        # let's do it a bunch of times in different orders with different structures
+        # bit of a hell problem and solution here!
+        # what happened is I made some media result caching stuff more intelligent elsewhere, which caused the media result db thing here not to purge a media result from the last help file import job wew
+        # then, the database wanted to update that cached guy with the mappings updates we do
+        # which then failed because the service key was not found here! aieeeeeeeeeeeee
+        # this is entirely my fault for having a house of cards unit test environment
+        TG.test_controller.services_manager._SetServices( services )
         
-        for other_service_key in other_service_keys:
+        try:
             
-            self._write( 'content_updates', ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( other_service_key, get_pre_mapping_content_updates() ) )
+            # let's do it a bunch of times in different orders with different structures
             
-            content_updates = get_display_content_updates_in_random_order()
-            
-            # let's test a mix of atomic and complete sync
-            block_size = random.choice( [ 1, 3, 5 ] )
-            
-            for block_of_content_updates in HydrusLists.SplitListIntoChunks( content_updates, block_size ):
+            for other_service_key in other_service_keys:
                 
-                self._write( 'content_updates', ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( other_service_key, block_of_content_updates ) )
+                self._write( 'content_updates', ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( other_service_key, get_pre_mapping_content_updates() ) )
                 
-                still_work_to_do = True
+                content_updates = get_display_content_updates_in_random_order()
                 
-                while still_work_to_do:
+                # let's test a mix of atomic and complete sync
+                block_size = random.choice( [ 1, 3, 5 ] )
+                
+                for block_of_content_updates in HydrusLists.SplitListIntoChunks( content_updates, block_size ):
                     
-                    still_work_to_do = self._write( 'sync_tag_display_maintenance', other_service_key, 1 )
+                    self._write( 'content_updates', ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( other_service_key, block_of_content_updates ) )
                     
-                
-            
-            self._write( 'content_updates', ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( other_service_key, get_post_mapping_content_updates() ) )
-            
-            ( siblings, ideal_sibling, descendants, ancestors ) = self._read( 'tag_siblings_and_parents_lookup', ( child_tag_1, ) )[ child_tag_1 ][ other_service_key ]
-            # get ideal from here too
-            
-            self.assertEqual( siblings, { child_tag_1, child_tag_2, child_tag_3 } )
-            self.assertEqual( ancestors, { parent_1, parent_2 } )
-            
-            for ( storage_tag, file_hash ) in [
-                ( child_tag_1, pre_combined_file_1 ),
-                ( child_tag_2, pre_combined_file_2 ),
-                ( child_tag_3, pre_combined_file_3 ),
-                ( child_tag_1, pre_specific_file_1 ),
-                ( child_tag_2, pre_specific_file_2 ),
-                ( child_tag_3, pre_specific_file_3 ),
-                ( child_tag_1, post_combined_file_1 ),
-                ( child_tag_2, post_combined_file_2 ),
-                ( child_tag_3, post_combined_file_3 ),
-                ( child_tag_1, post_specific_file_1 ),
-                ( child_tag_2, post_specific_file_2 ),
-                ( child_tag_3, post_specific_file_3 )
-            ]:
-                
-                # fetch the mappings of all six files, should be the same, with whatever ideal in place, and both parents
-                # we do combined and specific to test cached specific values and on-the-fly calculated combined
-                # we do pre and post to test synced vs content updates
-                
-                ( media_result, ) = self._read( 'media_results', ( file_hash, ) )
-                
-                tags_manager = media_result.GetTagsManager()
-                
-                self.assertIn( storage_tag, tags_manager.GetCurrent( other_service_key, ClientTags.TAG_DISPLAY_STORAGE ) )
-                
-                if storage_tag != ideal_sibling:
+                    still_work_to_do = True
                     
-                    self.assertNotIn( storage_tag, tags_manager.GetCurrent( other_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ) )
+                    while still_work_to_do:
+                        
+                        still_work_to_do = self._write( 'sync_tag_display_maintenance', other_service_key, 1 )
+                        
                     
                 
-                self.assertIn( ideal_sibling, tags_manager.GetCurrent( other_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ) )
-                self.assertIn( parent_1, tags_manager.GetCurrent( other_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ) )
-                self.assertIn( parent_2, tags_manager.GetCurrent( other_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ) )
+                self._write( 'content_updates', ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( other_service_key, get_post_mapping_content_updates() ) )
                 
+                ( siblings, ideal_sibling, descendants, ancestors ) = self._read( 'tag_siblings_and_parents_lookup', ( child_tag_1, ) )[ child_tag_1 ][ other_service_key ]
+                # get ideal from here too
+                
+                self.assertEqual( siblings, { child_tag_1, child_tag_2, child_tag_3 } )
+                self.assertEqual( ancestors, { parent_1, parent_2 } )
+                
+                for ( storage_tag, file_hash ) in [
+                    ( child_tag_1, pre_combined_file_1 ),
+                    ( child_tag_2, pre_combined_file_2 ),
+                    ( child_tag_3, pre_combined_file_3 ),
+                    ( child_tag_1, pre_specific_file_1 ),
+                    ( child_tag_2, pre_specific_file_2 ),
+                    ( child_tag_3, pre_specific_file_3 ),
+                    ( child_tag_1, post_combined_file_1 ),
+                    ( child_tag_2, post_combined_file_2 ),
+                    ( child_tag_3, post_combined_file_3 ),
+                    ( child_tag_1, post_specific_file_1 ),
+                    ( child_tag_2, post_specific_file_2 ),
+                    ( child_tag_3, post_specific_file_3 )
+                ]:
+                    
+                    # fetch the mappings of all six files, should be the same, with whatever ideal in place, and both parents
+                    # we do combined and specific to test cached specific values and on-the-fly calculated combined
+                    # we do pre and post to test synced vs content updates
+                    
+                    ( media_result, ) = self._read( 'media_results', ( file_hash, ) )
+                    
+                    tags_manager = media_result.GetTagsManager()
+                    
+                    self.assertIn( storage_tag, tags_manager.GetCurrent( other_service_key, ClientTags.TAG_DISPLAY_STORAGE ) )
+                    
+                    if storage_tag != ideal_sibling:
+                        
+                        self.assertNotIn( storage_tag, tags_manager.GetCurrent( other_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ) )
+                        
+                    
+                    self.assertIn( ideal_sibling, tags_manager.GetCurrent( other_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ) )
+                    self.assertIn( parent_1, tags_manager.GetCurrent( other_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ) )
+                    self.assertIn( parent_2, tags_manager.GetCurrent( other_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ) )
+                    
+                
+            
+        finally:
+            
+            TG.test_controller.services_manager._SetServices( old_services )
             
         
     

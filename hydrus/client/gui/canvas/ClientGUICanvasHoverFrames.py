@@ -67,7 +67,7 @@ class RatingIncDecCanvas( ClientGUIRatings.RatingIncDec ):
     
     def _SetRating( self, rating ):
         
-        ClientGUIRatings.RatingIncDec._SetRating( self, rating )
+        super()._SetRating( rating )
         
         if self._current_media is not None and rating is not None:
             
@@ -88,24 +88,24 @@ class RatingIncDecCanvas( ClientGUIRatings.RatingIncDec ):
             
             for ( service_key, content_updates ) in content_update_package.IterateContentUpdates():
                 
+                if service_key != self._service_key:
+                    
+                    continue
+                    
+                
                 for content_update in content_updates:
                     
-                    ( data_type, action, row ) = content_update.ToTuple()
+                    hashes = content_update.GetHashes()
                     
-                    if data_type == HC.CONTENT_TYPE_RATINGS:
+                    if HydrusLists.SetsIntersect( self._hashes, hashes ):
                         
-                        hashes = content_update.GetHashes()
+                        ( self._rating_state, self._rating ) = ClientRatings.GetIncDecStateFromMedia( ( self._current_media, ), self._service_key )
                         
-                        if HydrusLists.SetsIntersect( self._hashes, hashes ):
-                            
-                            ( self._rating_state, self._rating ) = ClientRatings.GetIncDecStateFromMedia( ( self._current_media, ), self._service_key )
-                            
-                            self.update()
-                            
-                            self._UpdateTooltip()
-                            
-                            return
-                            
+                        self.update()
+                        
+                        self._UpdateTooltip()
+                        
+                        return
                         
                     
                 
@@ -212,22 +212,22 @@ class RatingLikeCanvas( ClientGUIRatings.RatingLike ):
             
             for ( service_key, content_updates ) in content_update_package.IterateContentUpdates():
                 
+                if service_key != self._service_key:
+                    
+                    continue
+                    
+                
                 for content_update in content_updates:
                     
-                    ( data_type, action, row ) = content_update.ToTuple()
+                    hashes = content_update.GetHashes()
                     
-                    if data_type == HC.CONTENT_TYPE_RATINGS:
+                    if HydrusLists.SetsIntersect( self._hashes, hashes ):
                         
-                        hashes = content_update.GetHashes()
+                        self._SetRatingFromCurrentMedia()
                         
-                        if HydrusLists.SetsIntersect( self._hashes, hashes ):
-                            
-                            self._SetRatingFromCurrentMedia()
-                            
-                            self.update()
-                            
-                            return
-                            
+                        self.update()
+                        
+                        return
                         
                     
                 
@@ -271,7 +271,7 @@ class RatingNumericalCanvas( ClientGUIRatings.RatingNumerical ):
     
     def _ClearRating( self ):
         
-        ClientGUIRatings.RatingNumerical._ClearRating( self )
+        super()._ClearRating()
         
         if self._current_media is not None:
             
@@ -291,15 +291,13 @@ class RatingNumericalCanvas( ClientGUIRatings.RatingNumerical ):
         
         if self._current_media is not None:
             
-            ( self._rating_state, self._rating ) = ClientRatings.GetNumericalStateFromMedia( ( self._current_media, ), self._service_key )
-            
             ClientGUIRatings.DrawNumerical( painter, 0, 0, self._service_key, self._rating_state, self._rating )
             
         
     
     def _SetRating( self, rating ):
         
-        ClientGUIRatings.RatingNumerical._SetRating( self, rating )
+        super()._SetRating( rating )
         
         if self._current_media is not None and rating is not None:
             
@@ -320,24 +318,24 @@ class RatingNumericalCanvas( ClientGUIRatings.RatingNumerical ):
             
             for ( service_key, content_updates ) in content_update_package.IterateContentUpdates():
                 
+                if service_key != self._service_key:
+                    
+                    continue
+                    
+                
                 for content_update in content_updates:
                     
-                    ( data_type, action, row ) = content_update.ToTuple()
+                    hashes = content_update.GetHashes()
                     
-                    if data_type == HC.CONTENT_TYPE_RATINGS:
+                    if HydrusLists.SetsIntersect( self._hashes, hashes ):
                         
-                        hashes = content_update.GetHashes()
+                        ( self._rating_state, self._rating ) = ClientRatings.GetNumericalStateFromMedia( ( self._current_media, ), self._service_key )
                         
-                        if HydrusLists.SetsIntersect( self._hashes, hashes ):
-                            
-                            ( self._rating_state, self._rating ) = ClientRatings.GetIncDecStateFromMedia( ( self._current_media, ), self._service_key )
-                            
-                            self.update()
-                            
-                            self._UpdateTooltip()
-                            
-                            return
-                            
+                        self.update()
+                        
+                        self._UpdateTooltip()
+                        
+                        return
                         
                     
                 
@@ -355,6 +353,8 @@ class RatingNumericalCanvas( ClientGUIRatings.RatingNumerical ):
         else:
             
             self._hashes = self._current_media.GetHashes()
+            
+            ( self._rating_state, self._rating ) = ClientRatings.GetNumericalStateFromMedia( ( self._current_media, ), self._service_key )
             
         
         self.update()
@@ -1137,7 +1137,9 @@ class CanvasHoverFrameTop( CanvasHoverFrame ):
         
         alt_down = QW.QApplication.keyboardModifiers() & QC.Qt.KeyboardModifier.AltModifier
         
-        result = ClientGUIDragDrop.DoFileExportDragDrop( self, page_key, media, alt_down )
+        drag_object = QG.QDrag( self )
+        
+        result = ClientGUIDragDrop.DoFileExportDragDrop( drag_object, page_key, media, alt_down )
         
         if result != QC.Qt.DropAction.IgnoreAction:
             
@@ -1581,23 +1583,14 @@ class CanvasHoverFrameTopRight( CanvasHoverFrame ):
             
             my_hash = self._current_media.GetHash()
             
-            do_redraw = False
-            
             for ( service_key, content_updates ) in content_update_package.IterateContentUpdates():
                 
-                # ratings updates do not change the shape of this hover but file changes of several kinds do
-                
-                if True in ( my_hash in content_update.GetHashes() for content_update in content_updates if content_update.GetDataType() == HC.CONTENT_TYPE_FILES ):
+                if True in ( my_hash in content_update.GetHashes() for content_update in content_updates ):
                     
-                    do_redraw = True
+                    self._ResetWidgets()
                     
-                    break
+                    return
                     
-                
-            
-            if do_redraw:
-                
-                self._ResetWidgets()
                 
             
         
@@ -1920,8 +1913,6 @@ class CanvasHoverFrameRightNotes( CanvasHoverFrame ):
             do_redraw = False
             
             for ( service_key, content_updates ) in content_update_package.IterateContentUpdates():
-                
-                # ratings updates do not change the shape of this hover but file changes of several kinds do
                 
                 if True in ( my_hash in content_update.GetHashes() for content_update in content_updates if content_update.GetDataType() == HC.CONTENT_TYPE_NOTES ):
                     

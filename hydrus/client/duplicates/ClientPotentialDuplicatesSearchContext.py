@@ -75,12 +75,12 @@ class PotentialDuplicatesSearchContext( HydrusSerialisable.SerialisableBase ):
         return self._dupe_search_type
         
     
-    def GetFileSearchContext1( self ) -> ClientSearchFileSearchContext:
+    def GetFileSearchContext1( self ) -> ClientSearchFileSearchContext.FileSearchContext:
         
         return self._file_search_context_1
         
     
-    def GetFileSearchContext2( self ) -> ClientSearchFileSearchContext:
+    def GetFileSearchContext2( self ) -> ClientSearchFileSearchContext.FileSearchContext:
         
         return self._file_search_context_2
         

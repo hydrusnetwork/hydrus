@@ -240,6 +240,11 @@ class MediaResult( object ):
         self._locations_manager.ResetService( service_key )
         
     
+    def SetFileInfoManager( self, file_info_manager ):
+        
+        self._file_info_manager = file_info_manager
+        
+    
     def SetTagsManager( self, tags_manager ):
         
         self._tags_manager = tags_manager

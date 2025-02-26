@@ -40,9 +40,7 @@ class QMimeDataHydrusFiles( QC.QMimeData ):
 
 DND_TEMP_DIRS = []
 
-def DoFileExportDragDrop( window, page_key, media, alt_down ):
-    
-    drop_source = QG.QDrag( window )
+def DoFileExportDragDrop( drag_object: QG.QDrag, page_key, media, alt_down ):
     
     data_object = QMimeDataHydrusFiles()
     
@@ -206,12 +204,17 @@ def DoFileExportDragDrop( window, page_key, media, alt_down ):
     '''
     #
     
-    drop_source.setMimeData( data_object )
+    drag_object.setMimeData( data_object )
     
-    result = drop_source.exec_( flags, QC.Qt.DropAction.CopyAction )
+    cursor = QG.QCursor( QC.Qt.CursorShape.ClosedHandCursor )
+    
+    drag_object.setDragCursor( cursor.pixmap(), QC.Qt.DropAction.MoveAction )
+    
+    result = drag_object.exec_( flags, QC.Qt.DropAction.CopyAction )
     
     return result
     
+
 class FileDropTarget( QC.QObject ):
     
     def __init__( self, parent, filenames_callable = None, url_callable = None, media_callable = None ):
@@ -254,7 +257,6 @@ class FileDropTarget( QC.QObject ):
             
             return True
             
-        
         
         return False
         

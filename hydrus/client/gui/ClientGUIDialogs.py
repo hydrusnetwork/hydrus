@@ -360,6 +360,7 @@ class DialogInputTags( Dialog ):
         self._tag_autocomplete = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( self, self.EnterTags, default_location_context, service_key, show_paste_button = True )
         
         self._tags.tagsChanged.connect( self._tag_autocomplete.SetContextTags )
+        self._tag_autocomplete.externalCopyKeyPressEvent.connect( self._tags.keyPressEvent )
         
         self._tag_autocomplete.nullEntered.connect( self.OK )
         

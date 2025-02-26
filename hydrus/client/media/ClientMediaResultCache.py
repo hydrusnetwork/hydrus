@@ -43,7 +43,7 @@ class MediaResultCache( object ):
         
         CG.client_controller.sub( self, 'ProcessContentUpdatePackage', 'content_updates_data' )
         CG.client_controller.sub( self, 'ProcessServiceUpdates', 'service_updates_data' )
-        CG.client_controller.sub( self, 'NewForceRefreshTags', 'notify_new_force_refresh_tags_data' )
+        CG.client_controller.sub( self, 'ForceRefreshTags', 'notify_force_refresh_tags_data' )
         CG.client_controller.sub( self, 'NewTagDisplayRules', 'notify_new_tag_display_rules' )
         
     
@@ -65,6 +65,13 @@ class MediaResultCache( object ):
         
     
     def DropMediaResult( self, hash_id: int, hash: bytes ):
+        """
+        Note this guy should not be called by normal code. Only useful in testing.
+        
+        We always always want to let the weakref decide when to delete old stuff.
+        """
+        
+        # The canvas desync we had before, where file maintenance jobs were not updating the media result copy in the canvas media list, were because of calling this guy!
         
         with self._lock:
             
@@ -102,42 +109,7 @@ class MediaResultCache( object ):
             
         
     
-    def GetMediaResultsAndMissing( self, hash_ids: typing.Iterable[ int ] ):
-        
-        with self._lock:
-            
-            media_results = []
-            missing_hash_ids = []
-            
-            for hash_id in hash_ids:
-                
-                media_result = self._hash_ids_to_media_results.get( hash_id, None )
-                
-                if media_result is None:
-                    
-                    missing_hash_ids.append( hash_id )
-                    
-                else:
-                    
-                    media_results.append( media_result )
-                    
-                    self._fifo_timeout_cache.TouchKey( hash_id )
-                    
-                
-            
-            return ( media_results, missing_hash_ids )
-            
-        
-    
-    def HasFile( self, hash_id: int ):
-        
-        with self._lock:
-            
-            return hash_id in self._hash_ids_to_media_results
-            
-        
-    
-    def NewForceRefreshTags( self ):
+    def ForceRefreshTags( self ):
         
         # repo sync or tag migration occurred, so we need complete refresh
         
@@ -175,6 +147,41 @@ class MediaResultCache( object ):
             
         
         CG.client_controller.CallToThread( do_it, hash_ids )
+        
+    
+    def GetMediaResultsAndMissing( self, hash_ids: typing.Iterable[ int ] ) -> typing.Tuple[ typing.List[ ClientMediaResult.MediaResult ], typing.List[ int ] ]:
+        
+        with self._lock:
+            
+            media_results = []
+            missing_hash_ids = []
+            
+            for hash_id in hash_ids:
+                
+                media_result = self._hash_ids_to_media_results.get( hash_id, None )
+                
+                if media_result is None:
+                    
+                    missing_hash_ids.append( hash_id )
+                    
+                else:
+                    
+                    media_results.append( media_result )
+                    
+                    self._fifo_timeout_cache.TouchKey( hash_id )
+                    
+                
+            
+            return ( media_results, missing_hash_ids )
+            
+        
+    
+    def HasFile( self, hash_id: int ):
+        
+        with self._lock:
+            
+            return hash_id in self._hash_ids_to_media_results
+            
         
     
     def NewTagDisplayRules( self ):
@@ -258,3 +265,4 @@ class MediaResultCache( object ):
                 
             
         
+    

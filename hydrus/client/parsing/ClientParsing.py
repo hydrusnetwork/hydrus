@@ -601,6 +601,7 @@ class ParseFormulaContextVariable( ParseFormula ):
         return text
         
     
+
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_PARSE_FORMULA_CONTEXT_VARIABLE ] = ParseFormulaContextVariable
 
 HTML_CONTENT_ATTRIBUTE = 0
@@ -984,6 +985,7 @@ class ParseFormulaHTML( ParseFormula ):
         return pretty_multiline_string
         
     
+
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_PARSE_FORMULA_HTML ] = ParseFormulaHTML
 
 HTML_RULE_TYPE_DESCENDING = 0
@@ -1767,6 +1769,97 @@ class ParseFormulaNested( ParseFormula ):
     
 
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_PARSE_FORMULA_NESTED ] = ParseFormulaNested
+
+class ParseFormulaStatic( ParseFormula ):
+    
+    SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_PARSE_FORMULA_STATIC
+    SERIALISABLE_NAME = 'Static Parsing Formula'
+    SERIALISABLE_VERSION = 1
+    
+    def __init__( self, static_text = None, num_to_do = None, name = None, string_processor = None ):
+        
+        super().__init__( name = name, string_processor = string_processor )
+        
+        if static_text is None:
+            
+            static_text = 'example text'
+            
+        
+        if num_to_do is None:
+            
+            num_to_do = 1
+            
+        
+        self._static_text = static_text
+        self._num_to_do = num_to_do
+        
+    
+    def _GetSerialisableInfo( self ):
+        
+        serialisable_string_processor = self._string_processor.GetSerialisableTuple()
+        
+        return ( self._static_text, self._num_to_do, self._name, serialisable_string_processor )
+        
+    
+    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
+        
+        ( self._static_text, self._num_to_do, self._name, serialisable_string_processor ) = serialisable_info
+        
+        self._string_processor = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_string_processor )
+        
+    
+    def _ParseRawTexts( self, parsing_context, parsing_text, collapse_newlines: bool ):
+        
+        return [ self._static_text for i in range( self._num_to_do ) ]
+        
+    
+    def GetNumToDo( self ):
+        
+        return self._num_to_do
+        
+    
+    def GetStaticText( self ) -> str:
+        
+        return self._static_text
+        
+    
+    def ToPrettyString( self ):
+        
+        if self._name == '':
+            
+            t = ''
+            
+        else:
+            
+            t = f'{self._name}: '
+            
+        
+        if self._num_to_do > 1:
+            
+            t += f'{self._num_to_do}x '
+            
+        
+        return f'Static: {t}{HydrusText.ElideText( self._static_text, 64 )}.'
+        
+    
+    def ToPrettyMultilineString( self ):
+        
+        header = '--STATIC--'
+        
+        if self._name != '':
+            
+            header += '\n' + self._name
+            
+        
+        description = f'always output: {self._num_to_do}x {self._static_text}'
+        
+        text = header + '\n' * 2 + description
+        
+        return text
+        
+    
+
+HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_PARSE_FORMULA_STATIC ] = ParseFormulaStatic
 
 class SimpleDownloaderParsingFormula( HydrusSerialisable.SerialisableBaseNamed ):
     

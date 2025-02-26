@@ -143,6 +143,8 @@ class MediaResultsPanelThumbnails( ClientGUIMediaResultsPanel.MediaResultsPanel 
         
         super().__init__( parent, page_key, page_manager, media_results )
         
+        self._my_current_drag_object = None
+        
         self._last_device_pixel_ratio = self.devicePixelRatio()
         
         ( thumbnail_span_width, thumbnail_span_height ) = self._GetThumbnailSpanDimensions()
@@ -164,7 +166,7 @@ class MediaResultsPanelThumbnails( ClientGUIMediaResultsPanel.MediaResultsPanel 
         self._UpdateScrollBars()
         
         CG.client_controller.sub( self, 'MaintainPageCache', 'memory_maintenance_pulse' )
-        CG.client_controller.sub( self, 'NotifyNewFileInfo', 'new_file_info' )
+        CG.client_controller.sub( self, 'NotifyFilesNeedRedraw', 'notify_files_need_redraw' )
         CG.client_controller.sub( self, 'NewThumbnails', 'new_thumbnails' )
         CG.client_controller.sub( self, 'ThumbnailsReset', 'notify_complete_thumbnail_reset' )
         CG.client_controller.sub( self, 'RedrawAllThumbnails', 'refresh_all_tag_presentation_gui' )
@@ -190,6 +192,20 @@ class MediaResultsPanelThumbnails( ClientGUIMediaResultsPanel.MediaResultsPanel 
         page_indices = list( range( first_visible_page_index, last_visible_page_index + 1 ) )
         
         return page_indices
+        
+    
+    def _CheckDnDIsOK( self, drag_object ):
+        
+        if self._my_current_drag_object == drag_object and QW.QApplication.mouseButtons() != QC.Qt.MouseButton.LeftButton:
+            
+            # awkward situation where, it seems, the DnD is spawned while the 'release left-click' event is in the queue
+            # the DnD spawns after the click release and sits there until the user clicks again
+            # I think this is because I am spawning the DnD in the move event rather than the mouse press
+            
+            self._my_current_drag_object.cancel()
+            
+            self._my_current_drag_object = None
+            
         
     
     def _CreateNewDirtyPage( self ):
@@ -490,27 +506,6 @@ class MediaResultsPanelThumbnails( ClientGUIMediaResultsPanel.MediaResultsPanel 
             
         
         return thumbnails
-        
-    
-    def _GetYStart( self ):
-        
-        visible_rect = QP.ScrollAreaVisibleRect( self )
-        
-        visible_rect_y = visible_rect.y()
-        
-        visible_rect_height = visible_rect.height()
-        
-        my_virtual_size = self.widget().size()
-        
-        my_virtual_height = my_virtual_size.height()
-        
-        max_y = my_virtual_height - visible_rect_height
-        
-        y_start = max( 0, visible_rect_y )
-        
-        y_start = min( y_start, max_y )
-        
-        return y_start
         
     
     def _MediaIsInCleanPage( self, thumbnail ):
@@ -904,6 +899,72 @@ class MediaResultsPanelThumbnails( ClientGUIMediaResultsPanel.MediaResultsPanel 
             
         
     
+    def DoMouseMoveEvent( self, event ):
+        
+        if event.buttons() & QC.Qt.MouseButton.LeftButton:
+            
+            we_started_dragging_on_this_panel = self._drag_init_coordinates is not None
+            
+            if we_started_dragging_on_this_panel:
+                
+                old_drag_pos = self._drag_init_coordinates
+                
+                global_mouse_pos = QG.QCursor.pos()
+                
+                delta_pos = global_mouse_pos - old_drag_pos
+                
+                total_absolute_pixels_moved = delta_pos.manhattanLength()
+                
+                we_moved = total_absolute_pixels_moved > 0
+                
+                if we_moved:
+                    
+                    self._drag_prefire_event_count += 1
+                    
+                
+                # prefire deal here is mpv lags on initial click, which can cause a drag (and hence an immediate pause) event by accident when mouserelease isn't processed quick
+                # so now we'll say we can't start a drag unless we get a smooth ramp to our pixel delta threshold
+                clean_drag_started = self._drag_prefire_event_count >= 10
+                prob_not_an_accidental_click = HydrusTime.TimeHasPassedMS( self._drag_click_timestamp_ms + 100 )
+                
+                if clean_drag_started and prob_not_an_accidental_click:
+                    
+                    media = self._GetSelectedFlatMedia( discriminant = CC.DISCRIMINANT_LOCAL )
+                    
+                    if len( media ) > 0:
+                        
+                        alt_down = event.modifiers() & QC.Qt.KeyboardModifier.AltModifier
+                        
+                        self._my_current_drag_object = QG.QDrag( self )
+                        
+                        CG.client_controller.CallLaterQtSafe( self, 0.1, 'doing DnD check', self._CheckDnDIsOK, self._my_current_drag_object )
+                        
+                        result = ClientGUIDragDrop.DoFileExportDragDrop( self._my_current_drag_object, self._page_key, media, alt_down )
+                        
+                        self._my_current_drag_object = None
+                        
+                        if result not in ( QC.Qt.DropAction.IgnoreAction, ):
+                            
+                            self.focusMediaPaused.emit()
+                            
+                        
+                        event.accept()
+                        
+                        return
+                        
+                    
+                
+            
+        else:
+            
+            self._drag_init_coordinates = None
+            self._drag_prefire_event_count = 0
+            self._drag_click_timestamp_ms = 0
+            
+        
+        event.ignore()
+        
+    
     def EventMouseFullScreen( self, event ):
         
         t = self._GetThumbnailUnderMouse( event )
@@ -952,62 +1013,6 @@ class MediaResultsPanelThumbnails( ClientGUIMediaResultsPanel.MediaResultsPanel 
         self._DeleteAllDirtyPages()
         
     
-    def mouseMoveEvent( self, event ):
-        
-        if event.buttons() & QC.Qt.MouseButton.LeftButton:
-            
-            we_started_dragging_on_this_panel = self._drag_init_coordinates is not None
-            
-            if we_started_dragging_on_this_panel:
-                
-                old_drag_pos = self._drag_init_coordinates
-                
-                global_mouse_pos = QG.QCursor.pos()
-                
-                delta_pos = global_mouse_pos - old_drag_pos
-                
-                total_absolute_pixels_moved = delta_pos.manhattanLength()
-                
-                we_moved = total_absolute_pixels_moved > 0
-                
-                if we_moved:
-                    
-                    self._drag_prefire_event_count += 1
-                    
-                
-                # prefire deal here is mpv lags on initial click, which can cause a drag (and hence an immediate pause) event by accident when mouserelease isn't processed quick
-                # so now we'll say we can't start a drag unless we get a smooth ramp to our pixel delta threshold
-                clean_drag_started = self._drag_prefire_event_count >= 10
-                prob_not_an_accidental_click = HydrusTime.TimeHasPassedMS( self._drag_click_timestamp_ms + 100 )
-                
-                if clean_drag_started and prob_not_an_accidental_click:
-                    
-                    media = self._GetSelectedFlatMedia( discriminant = CC.DISCRIMINANT_LOCAL )
-                    
-                    if len( media ) > 0:
-                        
-                        alt_down = event.modifiers() & QC.Qt.KeyboardModifier.AltModifier
-                        
-                        result = ClientGUIDragDrop.DoFileExportDragDrop( self, self._page_key, media, alt_down )
-                        
-                        if result not in ( QC.Qt.DropAction.IgnoreAction, ):
-                            
-                            self.focusMediaPaused.emit()
-                            
-                        
-                    
-                
-            
-        else:
-            
-            self._drag_init_coordinates = None
-            self._drag_prefire_event_count = 0
-            self._drag_click_timestamp_ms = 0
-            
-        
-        event.ignore()
-        
-    
     def mouseReleaseEvent( self, event ):
         
         if event.button() != QC.Qt.MouseButton.RightButton:
@@ -1039,32 +1044,11 @@ class MediaResultsPanelThumbnails( ClientGUIMediaResultsPanel.MediaResultsPanel 
             
         
     
-    def NotifyNewFileInfo( self, hashes ):
+    def NotifyFilesNeedRedraw( self, hashes ):
         
-        def qt_do_update( hashes_to_media_results ):
-            
-            affected_media = self._GetMedia( set( hashes_to_media_results.keys() ) )
-            
-            for media in affected_media:
-                
-                media.UpdateFileInfo( hashes_to_media_results )
-                
-            
-            self._RedrawMedia( affected_media )
-            
+        affected_media = self._GetMedia( hashes )
         
-        def do_it( win, callable, affected_hashes ):
-            
-            media_results = CG.client_controller.Read( 'media_results', affected_hashes )
-            
-            hashes_to_media_results = { media_result.GetHash() : media_result for media_result in media_results }
-            
-            CG.client_controller.CallAfterQtSafe( win, 'new file info notification', qt_do_update, hashes_to_media_results )
-            
-        
-        affected_hashes = self._hashes.intersection( hashes )
-        
-        CG.client_controller.CallToThread( do_it, self, do_it, affected_hashes )
+        self._RedrawMedia( affected_media )
         
     
     def ProcessApplicationCommand( self, command: CAC.ApplicationCommand ):
@@ -1960,7 +1944,14 @@ class MediaResultsPanelThumbnails( ClientGUIMediaResultsPanel.MediaResultsPanel 
             
             super().__init__( parent )
             
+            self.setMouseTracking( True )
+            
             self._parent = parent
+            
+        
+        def mouseMoveEvent( self, event ):
+            
+            self._parent.DoMouseMoveEvent( event )
             
         
         def mousePressEvent( self, event ):

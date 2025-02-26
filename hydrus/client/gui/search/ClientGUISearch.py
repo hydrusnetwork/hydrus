@@ -1137,9 +1137,11 @@ class TagContextButton( ClientGUICommon.BetterButton ):
                 ClientGUIMenus.AppendSeparator( menu )
                 
             
-            tag_context = ClientSearchTagContext.TagContext( service_key = service.GetServiceKey() )
+            new_tag_context = self._tag_context.Duplicate()
             
-            ClientGUIMenus.AppendMenuCheckItem( menu, service.GetName(), 'Change the current tag domain to {}.'.format( service.GetName() ), tag_context == self._tag_context, self.SetValue, tag_context )
+            new_tag_context.service_key = service.GetServiceKey()
+            
+            ClientGUIMenus.AppendMenuCheckItem( menu, service.GetName(), 'Change the current tag domain to {}.'.format( service.GetName() ), new_tag_context == self._tag_context, self.SetValue, new_tag_context )
             
             last_seen_service_type = service.GetServiceType()
             
@@ -1152,13 +1154,49 @@ class TagContextButton( ClientGUICommon.BetterButton ):
         return self._tag_context
         
     
-    def SetValue( self, tag_context: ClientSearchTagContext.TagContext ):
+    def SetDisplayTagServiceKey( self, service_key: bytes ):
         
-        original_tag_context = self._tag_context
+        duplicate_tag_context = self._tag_context.Duplicate()
+        
+        duplicate_tag_context.display_service_key = service_key
+        
+        self.SetValue( duplicate_tag_context )
+        
+    
+    def SetIncludeCurrent( self, value: bool ):
+        
+        duplicate_tag_context = self._tag_context.Duplicate()
+        
+        duplicate_tag_context.include_current_tags = value
+        
+        self.SetValue( duplicate_tag_context )
+        
+    
+    def SetIncludePending( self, value: bool ):
+        
+        duplicate_tag_context = self._tag_context.Duplicate()
+        
+        duplicate_tag_context.include_pending_tags = value
+        
+        self.SetValue( duplicate_tag_context )
+        
+    
+    def SetTagServiceKey( self, service_key: bytes ):
+        
+        tag_context = self._tag_context.Duplicate()
+        
+        tag_context.service_key = service_key
+        
+        self.SetValue( tag_context )
+        
+    
+    def SetValue( self, tag_context: ClientSearchTagContext.TagContext ):
         
         tag_context = tag_context.Duplicate()
         
         tag_context.FixMissingServices( CG.client_controller.services_manager.FilterValidServiceKeys )
+        
+        emit_signal = self._tag_context != tag_context
         
         self._tag_context = tag_context
         
@@ -1175,7 +1213,7 @@ class TagContextButton( ClientGUICommon.BetterButton ):
         
         self.setToolTip( ClientGUIFunctions.WrapToolTip( label ) )
         
-        if self._tag_context != original_tag_context:
+        if emit_signal:
             
             self.valueChanged.emit( self._tag_context )
             

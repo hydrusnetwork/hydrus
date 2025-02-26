@@ -774,8 +774,11 @@ class ShortcutWidget( QW.QWidget ):
             self._keyboard_radio.setChecked( True )
             self._keyboard_shortcut.SetValue( shortcut )
             
+            ClientGUIFunctions.SetFocusLater( self._keyboard_shortcut )
+            
         
     
+
 class KeyboardShortcutWidget( QW.QLineEdit ):
     
     valueChanged = QC.Signal()
@@ -788,6 +791,10 @@ class KeyboardShortcutWidget( QW.QLineEdit ):
         
         self._SetShortcutString()
         
+        self.setReadOnly( True )
+        
+        self.installEventFilter( self )
+        
     
     def _SetShortcutString( self ):
         
@@ -796,18 +803,25 @@ class KeyboardShortcutWidget( QW.QLineEdit ):
         self.setText( display_string )
         
     
-    def keyPressEvent( self, event ):
+    def eventFilter( self, watched, event ) -> bool:
         
-        shortcut = ClientGUIShortcuts.ConvertKeyEventToShortcut( event )
+        if event.type() == QC.QEvent.Type.KeyPress:
+            
+            shortcut = ClientGUIShortcuts.ConvertKeyEventToShortcut( event )
+            
+            if shortcut is not None:
+                
+                self._shortcut = shortcut
+                
+                self._SetShortcutString()
+                
+                self.valueChanged.emit()
+                
+            
+            return True
+            
         
-        if shortcut is not None:
-            
-            self._shortcut = shortcut
-            
-            self._SetShortcutString()
-            
-            self.valueChanged.emit()
-            
+        return super().eventFilter( watched, event )
         
     
     def GetValue( self ):
@@ -822,6 +836,7 @@ class KeyboardShortcutWidget( QW.QLineEdit ):
         self._SetShortcutString()
         
     
+
 class MouseShortcutWidget( QW.QWidget ):
     
     valueChanged = QC.Signal()

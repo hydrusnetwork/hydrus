@@ -8,6 +8,7 @@ from hydrus.core import HydrusExceptions
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
+from hydrus.client import ClientLocation
 from hydrus.client.gui import ClientGUICore as CGC
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIMenus
@@ -809,6 +810,29 @@ class MediaSortControl( QW.QWidget ):
             
         
     
+    def _UpdateToolTip( self ):
+        
+        media_sort = self._GetCurrentSort()
+        
+        # note we can't support this in 'all known files', but we don't make a song and dance about it here because it is advanced anyway
+        if media_sort.CanSortAtDBLevel( ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY ) ):
+            
+            tt = 'This sort type is simple enough that if your search has a "system:limit is n", the database will be able to select the nth tallest/smallest/whatever according to your sort.'
+            
+        else:
+            
+            tt = 'This sort type is too complicated to perform before media results are loaded, so if your search has a "system:limit is n", your n "limited" results will be a random sample.'
+            
+        
+        wrapped_tt = ClientGUIFunctions.WrapToolTip( tt )
+        
+        self.setToolTip( wrapped_tt )
+        self._sort_type_button.setToolTip( wrapped_tt )
+        self._sort_tag_display_type_button.setToolTip( wrapped_tt )
+        self._sort_order_choice.setToolTip( wrapped_tt )
+        self._tag_context_button.setToolTip( wrapped_tt )
+        
+    
     def _UserChoseASort( self ):
         
         if CG.client_controller.new_options.GetBoolean( 'save_page_sort_on_change' ):
@@ -817,6 +841,8 @@ class MediaSortControl( QW.QWidget ):
             
             CG.client_controller.new_options.SetDefaultSort( media_sort )
             
+        
+        self._UpdateToolTip()
         
     
     def BroadcastSort( self ):
@@ -876,6 +902,8 @@ class MediaSortControl( QW.QWidget ):
         self._sort_order_choice.SetValue( media_sort.sort_order )
         
         self._tag_context_button.SetValue( media_sort.tag_context )
+        
+        self._UpdateToolTip()
         
         if do_sort:
             

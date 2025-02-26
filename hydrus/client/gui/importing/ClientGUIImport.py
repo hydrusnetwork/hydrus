@@ -501,6 +501,7 @@ class FilenameTaggingOptionsPanel( QW.QWidget ):
             
             self._tag_autocomplete_all.movePageLeft.connect( self.movePageLeft )
             self._tag_autocomplete_all.movePageRight.connect( self.movePageRight )
+            self._tag_autocomplete_all.externalCopyKeyPressEvent.connect( self._tags.keyPressEvent )
             
             self._tags.tagsChanged.connect( self._tag_autocomplete_all.SetContextTags )
             
@@ -520,6 +521,7 @@ class FilenameTaggingOptionsPanel( QW.QWidget ):
             
             self._tag_autocomplete_selection.movePageLeft.connect( self.movePageLeft )
             self._tag_autocomplete_selection.movePageRight.connect( self.movePageRight )
+            self._tag_autocomplete_selection.externalCopyKeyPressEvent.connect( self._single_tags.keyPressEvent )
             
             self._single_tags.tagsChanged.connect( self._tag_autocomplete_selection.SetContextTags )
             

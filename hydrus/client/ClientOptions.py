@@ -283,6 +283,9 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             'mpv_loop_playlist_instead_of_file' : False,
             'draw_thumbnail_rating_background' : True,
             'show_destination_page_when_dnd_url' : True,
+            'confirm_non_empty_downloader_page_close' : True,
+            'confirm_all_page_closes' : False,
+            'refresh_search_page_on_system_limited_sort_changed' : True,
         }
         
         #

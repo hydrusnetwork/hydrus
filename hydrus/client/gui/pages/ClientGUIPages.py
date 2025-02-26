@@ -313,9 +313,44 @@ class Page( QW.QWidget ):
             
         
     
-    def CheckAbleToClose( self ):
+    def AskIfAbleToClose( self, for_session_close = False ):
         
-        self._sidebar.CheckAbleToClose()
+        user_was_asked = False
+        
+        try:
+            
+            self.CheckAbleToClose( for_session_close = for_session_close )
+            
+        except HydrusExceptions.VetoException as e:
+            
+            message = '{} Are you sure you want to close it?'.format( str( e ) )
+            
+            result = ClientGUIDialogsQuick.GetYesNo( self, message )
+            
+            user_was_asked = True
+            
+            if result == QW.QDialog.DialogCode.Rejected:
+                
+                raise HydrusExceptions.VetoException()
+                
+            
+        
+        if not user_was_asked and CG.client_controller.new_options.GetBoolean( 'confirm_all_page_closes' ):
+            
+            message = 'Are you sure you want to close this page?'
+            
+            result = ClientGUIDialogsQuick.GetYesNo( self, message )
+            
+            if result == QW.QDialog.DialogCode.Rejected:
+                
+                raise HydrusExceptions.VetoException()
+                
+            
+        
+    
+    def CheckAbleToClose( self, for_session_close = False ):
+        
+        self._sidebar.CheckAbleToClose( for_session_close = for_session_close )
         
     
     def CleanBeforeClose( self ):
@@ -863,25 +898,6 @@ class Page( QW.QWidget ):
         self._SwapMediaResultsPanel( new_panel )
         
     
-    def TestAbleToClose( self ):
-        
-        try:
-            
-            self._sidebar.CheckAbleToClose()
-            
-        except HydrusExceptions.VetoException as e:
-            
-            message = '{} Are you sure you want to close it?'.format( str( e ) )
-            
-            result = ClientGUIDialogsQuick.GetYesNo( self, message )
-            
-            if result == QW.QDialog.DialogCode.Rejected:
-                
-                raise HydrusExceptions.VetoException()
-                
-            
-        
-    
     def REPEATINGPageUpdate( self ):
         
         self._sidebar.REPEATINGPageUpdate()
@@ -1097,35 +1113,22 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         
         closees = [ index for index in range( self.count() ) ]
         
-        self._ClosePages( closees, polite, delete_pages = delete_pages )
+        self._ClosePages( closees, 'pages', polite = polite, delete_pages = delete_pages )
         
     
     def _CloseLeftPages( self, from_index ):
         
-        message = 'Close all pages to the left?'
+        closees = [ index for index in range( self.count() ) if index < from_index ]
         
-        result = ClientGUIDialogsQuick.GetYesNo( self, message )
+        self._ClosePages( closees, 'pages to the left' )
         
-        if result == QW.QDialog.DialogCode.Accepted:
-            
-            closees = [ index for index in range( self.count() ) if index < from_index ]
-            
-            self._ClosePages( closees )
-            
         
     
     def _CloseOtherPages( self, except_index ):
         
-        message = 'Close all other pages?'
+        closees = [ index for index in range( self.count() ) if index != except_index ]
         
-        result = ClientGUIDialogsQuick.GetYesNo( self, message )
-        
-        if result == QW.QDialog.DialogCode.Accepted:
-            
-            closees = [ index for index in range( self.count() ) if index != except_index ]
-            
-            self._ClosePages( closees )
-            
+        self._ClosePages( closees, 'other pages' )
         
     
     def _ClosePage( self, index, polite = True, delete_page = False ):
@@ -1138,13 +1141,13 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
             return False
             
         
-        page: typing.Union[ Page, PagesNotebook ] = self.widget( index )
+        page = typing.cast( typing.Union[ Page, PagesNotebook ], self.widget( index ) )
         
         if polite:
             
             try:
                 
-                page.TestAbleToClose()
+                page.AskIfAbleToClose()
                 
             except HydrusExceptions.VetoException:
                 
@@ -1199,35 +1202,88 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         return True
         
     
-    def _ClosePages( self, indices, polite = True, delete_pages = False ):
+    def _ClosePages( self, indices, pages_description, polite = True, delete_pages = False ):
         
-        indices = list( indices )
-        
-        indices.sort( reverse = True ) # so we are closing from the end first
-        
-        for index in indices:
+        if not polite:
             
-            successful = self._ClosePage( index, polite, delete_page = delete_pages )
+            do_it = True
             
-            if not successful:
+        else:
+            
+            actual_num_pages = 0
+            actual_media_pages = []
+            
+            for i in indices:
                 
-                break
+                page = self.widget( i )
+                
+                if isinstance( page, Page ):
+                    
+                    actual_num_pages += 1
+                    actual_media_pages.append( page )
+                    
+                elif isinstance( page, PagesNotebook ):
+                    
+                    actual_num_pages += 1 + page.GetNumPagesHeld()
+                    actual_media_pages.extend( page.GetMediaPages( only_my_level = False ) )
+                    
+                
+            
+            reasons_and_pages = self.GetAbleToCloseData( pages = actual_media_pages )
+            
+            if len( reasons_and_pages ) > 0:
+                
+                statement = ConvertReasonsAndPagesToStatement( reasons_and_pages )
+                
+                message = f'Are you sure you want to close {HydrusNumbers.ToHumanInt( actual_num_pages )} {pages_description}?'
+                message += '\n' * 2
+                message += statement
+                
+                try:
+                    
+                    # raises veto on no
+                    ShowReasonsAndPagesConfirmationDialog( self, reasons_and_pages, message )
+                    
+                    do_it = True
+                    
+                except HydrusExceptions.VetoException:
+                    
+                    do_it = False
+                    
+                
+            else:
+                
+                message = f'Close {HydrusNumbers.ToHumanInt( actual_num_pages )} {pages_description}?'
+                
+                result = ClientGUIDialogsQuick.GetYesNo( self, message )
+                
+                do_it = result == QW.QDialog.DialogCode.Accepted
+                
+            
+        
+        if do_it:
+            
+            indices = list( indices )
+            
+            indices.sort( reverse = True ) # so we are closing from the end first
+            
+            for index in indices:
+                
+                successful = self._ClosePage( index, polite = False, delete_page = delete_pages )
+                
+                if not successful:
+                    
+                    break
+                    
                 
             
         
     
     def _CloseRightPages( self, from_index ):
         
-        message = 'Close all pages to the right?'
+        closees = [ index for index in range( self.count() ) if index > from_index ]
         
-        result = ClientGUIDialogsQuick.GetYesNo( self, message )
-        
-        if result == QW.QDialog.DialogCode.Accepted:
-            
-            closees = [ index for index in range( self.count() ) if index > from_index ]
-            
-            self._ClosePages( closees )
-            
+        self._ClosePages( closees, 'pages to the right' )
         
     
     def _DuplicatePage( self, index ):
@@ -1237,7 +1293,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
             return False
             
         
-        page: typing.Union[ Page, PagesNotebook ] = self.widget( index )
+        page = typing.cast(  typing.Union[ Page, PagesNotebook ], self.widget( index ) )
         
         only_changed_page_data = False
         about_to_save = False
@@ -1344,7 +1400,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         return self
         
     
-    def _GetPages( self ) -> typing.List[ Page ]:
+    def _GetPages( self ) -> typing.List[ typing.Union[ Page, "PagesNotebook" ] ]:
         
         return [ self.widget( i ) for i in range( self.count() ) ]
         
@@ -1416,7 +1472,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
     
     def _MovePages( self, pages, dest_notebook ):
         
-        insertion_tab_index = dest_notebook.GetNumPages( only_my_level = True )
+        insertion_tab_index = dest_notebook.GetNumPagesHeld( only_my_level = True )
         
         for page in pages:
             
@@ -2019,6 +2075,50 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         job_status.FinishAndDismiss()
         
     
+    def AskIfAbleToClose( self, for_session_close = False ):
+        
+        user_was_asked = False
+        
+        reasons_and_pages = self.GetAbleToCloseData( for_session_close = for_session_close )
+        
+        if len( reasons_and_pages ) > 0:
+            
+            statement = ConvertReasonsAndPagesToStatement( reasons_and_pages )
+            
+            message = 'Are you sure you want to close this page of pages?'
+            message += '\n' * 2
+            message += statement
+            
+            user_was_asked = True
+            
+            # raises veto on no
+            ShowReasonsAndPagesConfirmationDialog( self, reasons_and_pages, message )
+            
+        
+        if not user_was_asked and CG.client_controller.new_options.GetBoolean( 'confirm_all_page_closes' ) and not for_session_close:
+            
+            message = 'Are you sure you want to close this page of pages?'
+            
+            num_pages_held = self.GetNumPagesHeld()
+            
+            if num_pages_held > 0:
+                
+                message += f'\n\nIt is holding {HydrusNumbers.ToHumanInt( num_pages_held )} pages.'
+                
+            else:
+                
+                message += '\n\nIt is empty.'
+                
+            
+            result = ClientGUIDialogsQuick.GetYesNo( self, message )
+            
+            if result == QW.QDialog.DialogCode.Rejected:
+                
+                raise HydrusExceptions.VetoException()
+                
+            
+        
+    
     def ChooseNewPage( self ):
         
         self._ChooseNewPage()
@@ -2066,7 +2166,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
             
             if isinstance( page, PagesNotebook ):
                 
-                if page.GetNumPages() > 0:
+                if page.GetNumPagesHeld() > 0:
                     
                     page.CloseCurrentPage( polite )
                     
@@ -2170,6 +2270,43 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         notebook._ChooseNewPage()
         
     
+    def GetAbleToCloseData( self, for_session_close = False, pages = None ):
+        
+        reasons_to_pages = collections.defaultdict( list )
+        
+        if pages is None:
+            
+            pages_to_consult = self._GetMediaPages( False )
+            
+        else:
+            
+            pages_to_consult = pages
+            
+        
+        for page in pages_to_consult:
+            
+            try:
+                
+                page.CheckAbleToClose( for_session_close = for_session_close )
+                
+            except HydrusExceptions.VetoException as e:
+                
+                reason = str( e )
+                
+                reasons_to_pages[ reason ].append( page )
+                
+            
+        
+        for ( reason, pages ) in reasons_to_pages.items():
+            
+            pages.sort( key = lambda p: HydrusData.HumanTextSortKey( p.GetName() ) )
+            
+        
+        reasons_and_pages = sorted( reasons_to_pages.items(), key = lambda a: len( a[1] ) )
+        
+        return reasons_and_pages
+        
+    
     def GetAPIInfoDict( self, simple ):
         
         return {
@@ -2251,7 +2388,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         return ( total_num_files, ( total_num_value, total_num_range ) )
         
     
-    def GetNumPages( self, only_my_level = False ):
+    def GetNumPagesHeld( self, only_my_level = False ):
         
         if only_my_level:
             
@@ -2265,7 +2402,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
                 
                 if isinstance( page, PagesNotebook ):
                     
-                    total += page.GetNumPages( False )
+                    total += page.GetNumPagesHeld( only_my_level = False )
                     
                 else:
                     
@@ -2540,34 +2677,6 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         return root
         
     
-    def GetTestAbleToCloseData( self ):
-        
-        reasons_to_pages = collections.defaultdict( list )
-        
-        for page in self._GetMediaPages( False ):
-            
-            try:
-                
-                page.CheckAbleToClose()
-                
-            except HydrusExceptions.VetoException as e:
-                
-                reason = str( e )
-                
-                reasons_to_pages[ reason ].append( page )
-                
-            
-        
-        for ( reason, pages ) in reasons_to_pages.items():
-            
-            pages.sort( key = lambda p: HydrusData.HumanTextSortKey( p.GetName() ) )
-            
-        
-        reasons_and_pages = sorted( reasons_to_pages.items(), key = lambda a: len( a[1] ) )
-        
-        return reasons_and_pages
-        
-    
     def GetTotalFileSize( self ):
         
         total_file_size = 0
@@ -2580,7 +2689,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         return total_file_size
         
     
-    def GetTotalNumHashesAndSeeds( self ) -> int:
+    def GetTotalNumHashesAndSeeds( self ) -> typing.Tuple[ int, int ]:
         
         total_num_hashes = 0
         total_num_seeds = 0
@@ -2802,7 +2911,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
             
             try:
                 
-                self.TestAbleToClose()
+                self.AskIfAbleToClose( for_session_close = True )
                 
             except HydrusExceptions.VetoException:
                 
@@ -3430,23 +3539,6 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
                 
                 break
                 
-            
-        
-    
-    def TestAbleToClose( self ):
-        
-        reasons_and_pages = self.GetTestAbleToCloseData()
-        
-        if len( reasons_and_pages ) > 0:
-            
-            statement = ConvertReasonsAndPagesToStatement( reasons_and_pages )
-            
-            message = 'Are you sure you want to close this page of pages?'
-            message += '\n' * 2
-            message += statement
-            
-            # raises veto on no
-            ShowReasonsAndPagesConfirmationDialog( self, reasons_and_pages, message )
             
         
     

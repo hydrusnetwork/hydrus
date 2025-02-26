@@ -1341,7 +1341,7 @@ class DB( HydrusDB.HydrusDB ):
         
         self._cursor_transaction_wrapper.pub_after_job( 'notify_new_pending' )
         self._cursor_transaction_wrapper.pub_after_job( 'notify_new_tag_display_application' )
-        self._cursor_transaction_wrapper.pub_after_job( 'notify_new_force_refresh_tags_data' )
+        self._cursor_transaction_wrapper.pub_after_job( 'notify_force_refresh_tags_data' )
         
         self.pub_service_updates_after_commit( { service_key : [ ClientServices.ServiceUpdate( HC.SERVICE_UPDATE_DELETE_PENDING ) ] } )
         
@@ -1626,12 +1626,7 @@ class DB( HydrusDB.HydrusDB ):
             self.modules_files_metadata_basic.SetForcedFiletype( hash_id, mime )
             
         
-        hashes_that_need_refresh = self.modules_media_results.DropMediaResults( hash_ids_to_hashes )
-        
-        if len( hashes_that_need_refresh ) > 0:
-            
-            CG.client_controller.pub( 'new_file_info', hashes_that_need_refresh )
-            
+        self.modules_media_results.ForceRefreshFileInfoManagers( hash_ids_to_hashes )
         
     
     def _GenerateDBJob( self, job_type, synchronous, action, *args, **kwargs ):
@@ -3758,12 +3753,7 @@ class DB( HydrusDB.HydrusDB ):
             
             #
             
-            hashes_dropped = self.modules_media_results.DropMediaResults( { hash_id : hash } )
-            
-            if len( hashes_dropped ) > 0:
-                
-                self._controller.pub( 'new_file_info', hashes_dropped )
-                
+            self.modules_media_results.ForceRefreshFileInfoManagers( { hash_id : hash } )
             
             #
             
@@ -5350,7 +5340,7 @@ class DB( HydrusDB.HydrusDB ):
             job_status.FinishAndDismiss( 5 )
             
             self._cursor_transaction_wrapper.pub_after_job( 'notify_new_tag_display_application' )
-            self._cursor_transaction_wrapper.pub_after_job( 'notify_new_force_refresh_tags_data' )
+            self._cursor_transaction_wrapper.pub_after_job( 'notify_force_refresh_tags_data' )
             
         
     
@@ -5605,7 +5595,7 @@ class DB( HydrusDB.HydrusDB ):
             job_status.FinishAndDismiss( 5 )
             
             self._cursor_transaction_wrapper.pub_after_job( 'notify_new_tag_display_application' )
-            self._cursor_transaction_wrapper.pub_after_job( 'notify_new_force_refresh_tags_data' )
+            self._cursor_transaction_wrapper.pub_after_job( 'notify_force_refresh_tags_data' )
             
         
     
@@ -5684,7 +5674,7 @@ class DB( HydrusDB.HydrusDB ):
             
             job_status.FinishAndDismiss( 5 )
             
-            self._cursor_transaction_wrapper.pub_after_job( 'notify_new_force_refresh_tags_data' )
+            self._cursor_transaction_wrapper.pub_after_job( 'notify_force_refresh_tags_data' )
             
         
     
@@ -5788,7 +5778,7 @@ class DB( HydrusDB.HydrusDB ):
             HydrusData.ShowText( 'Now the mappings cache regen is done, you might want to restart the program.' )
             
             self._cursor_transaction_wrapper.pub_after_job( 'notify_new_tag_display_application' )
-            self._cursor_transaction_wrapper.pub_after_job( 'notify_new_force_refresh_tags_data' )
+            self._cursor_transaction_wrapper.pub_after_job( 'notify_force_refresh_tags_data' )
             
         
     
@@ -5897,7 +5887,7 @@ class DB( HydrusDB.HydrusDB ):
             job_status.FinishAndDismiss( 5 )
             
             self._cursor_transaction_wrapper.pub_after_job( 'notify_new_tag_display_application' )
-            self._cursor_transaction_wrapper.pub_after_job( 'notify_new_force_refresh_tags_data' )
+            self._cursor_transaction_wrapper.pub_after_job( 'notify_force_refresh_tags_data' )
             
         
     
@@ -5993,7 +5983,7 @@ class DB( HydrusDB.HydrusDB ):
             
             job_status.FinishAndDismiss( 5 )
             
-            self._cursor_transaction_wrapper.pub_after_job( 'notify_new_force_refresh_tags_data' )
+            self._cursor_transaction_wrapper.pub_after_job( 'notify_force_refresh_tags_data' )
             
         
     
@@ -6317,7 +6307,7 @@ class DB( HydrusDB.HydrusDB ):
                     
                     message = 'Invalid tag scanning: {} bad tags found and fixed! They have been written to the log.'.format( HydrusNumbers.ToHumanInt( bad_tag_count ) )
                     
-                    self._cursor_transaction_wrapper.pub_after_job( 'notify_new_force_refresh_tags_data' )
+                    self._cursor_transaction_wrapper.pub_after_job( 'notify_force_refresh_tags_data' )
                     
                 
                 HydrusData.Print( message )
@@ -6529,7 +6519,7 @@ class DB( HydrusDB.HydrusDB ):
             
             job_status.FinishAndDismiss( 5 )
             
-            self._cursor_transaction_wrapper.pub_after_job( 'notify_new_force_refresh_tags_data' )
+            self._cursor_transaction_wrapper.pub_after_job( 'notify_force_refresh_tags_data' )
             
         
     
@@ -6571,7 +6561,7 @@ class DB( HydrusDB.HydrusDB ):
             
             if service_type == HC.TAG_REPOSITORY:
                     
-                CG.client_controller.pub( 'notify_new_force_refresh_tags_data' )
+                CG.client_controller.pub( 'notify_force_refresh_tags_data' )
                 
             
             self._cursor_transaction_wrapper.pub_after_job( 'notify_account_sync_due' )
@@ -6733,7 +6723,7 @@ class DB( HydrusDB.HydrusDB ):
             
             if service_type == HC.TAG_REPOSITORY:
                     
-                CG.client_controller.pub( 'notify_new_force_refresh_tags_data' )
+                CG.client_controller.pub( 'notify_force_refresh_tags_data' )
                 
             
             job_status.SetStatusText( prefix + ': done!' )
@@ -6848,7 +6838,7 @@ class DB( HydrusDB.HydrusDB ):
             job_status.FinishAndDismiss( 5 )
             
             self._cursor_transaction_wrapper.pub_after_job( 'notify_new_tag_display_application' )
-            self._cursor_transaction_wrapper.pub_after_job( 'notify_new_force_refresh_tags_data' )
+            self._cursor_transaction_wrapper.pub_after_job( 'notify_force_refresh_tags_data' )
             
         
     
@@ -9398,7 +9388,7 @@ class DB( HydrusDB.HydrusDB ):
         
         if we_deleted_tag_service:
             
-            CG.client_controller.pub( 'notify_new_force_refresh_tags_data' )
+            CG.client_controller.pub( 'notify_force_refresh_tags_data' )
             
         
     

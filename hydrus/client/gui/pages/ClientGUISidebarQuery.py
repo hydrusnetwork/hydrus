@@ -3,7 +3,6 @@ from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
-from hydrus.client import ClientLocation
 from hydrus.client import ClientThreading
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import QtPorting as QP
@@ -15,6 +14,7 @@ from hydrus.client.gui.pages import ClientGUIMediaResultsPanelThumbnails
 from hydrus.client.gui.pages import ClientGUISidebarCore
 from hydrus.client.gui.search import ClientGUIACDropdown
 from hydrus.client.gui.widgets import ClientGUICommon
+from hydrus.client.media import ClientMedia
 from hydrus.client.search import ClientSearchFileSearchContext
 
 class SidebarQuery( ClientGUISidebarCore.Sidebar ):
@@ -63,7 +63,9 @@ class SidebarQuery( ClientGUISidebarCore.Sidebar ):
             
             self._tag_autocomplete.searchChanged.connect( self.SearchChanged )
             
-            self._tag_autocomplete.locationChanged.connect( self.SetLocationContext )
+            self._tag_autocomplete.locationChanged.connect( self.locationChanged )
+            
+            self._tag_autocomplete.tagContextChanged.connect( self.tagContextChanged )
             
         
     
@@ -74,10 +76,6 @@ class SidebarQuery( ClientGUISidebarCore.Sidebar ):
             self._query_job_status.Cancel()
             
             file_search_context = self._tag_autocomplete.GetFileSearchContext()
-            
-            location_context = file_search_context.GetLocationContext()
-            
-            self._SetLocationContext( location_context )
             
             panel = ClientGUIMediaResultsPanelThumbnails.MediaResultsPanelThumbnails( self._page, self._page_key, self._page_manager, [] )
             
@@ -121,7 +119,7 @@ class SidebarQuery( ClientGUISidebarCore.Sidebar ):
             
             self._current_selection_tags_box.SetTagServiceKey( tag_service_key )
             
-            self._tag_autocomplete.tagServiceChanged.connect( self._current_selection_tags_box.SetTagServiceKey )
+            self._tag_autocomplete.tagContextChanged.connect( self._current_selection_tags_box.SetTagContext )
             
         
         QP.AddToLayout( sizer, self._current_selection_tags_box, CC.FLAGS_EXPAND_BOTH_WAYS )
@@ -177,6 +175,21 @@ class SidebarQuery( ClientGUISidebarCore.Sidebar ):
             
         
     
+    def _SortChanged( self, media_sort: ClientMedia.MediaSort ):
+        
+        super()._SortChanged( media_sort )
+        
+        file_search_context = self._tag_autocomplete.GetFileSearchContext()
+        
+        if media_sort.CanSortAtDBLevel( file_search_context.GetLocationContext() ):
+            
+            if CG.client_controller.new_options.GetBoolean( 'refresh_search_page_on_system_limited_sort_changed' ) and self._tag_autocomplete.IsSynchronised() and file_search_context.GetSystemPredicates().HasSystemLimit():
+                
+                self._RefreshQuery()
+                
+            
+        
+    
     def _UpdateCancelButton( self ):
         
         if self._search_enabled:
@@ -203,11 +216,6 @@ class SidebarQuery( ClientGUISidebarCore.Sidebar ):
         super().ConnectMediaResultsPanelSignals( media_panel )
         
         media_panel.newMediaAdded.connect( self.PauseSearching )
-        
-    
-    def SetLocationContext( self, location_context: ClientLocation.LocationContext ):
-        
-        self._SetLocationContext( location_context )
         
     
     def CleanBeforeClose( self ):
@@ -287,9 +295,8 @@ class SidebarQuery( ClientGUISidebarCore.Sidebar ):
             
             self._page_manager.SetVariable( 'file_search_context', file_search_context.Duplicate() )
             
-            location_context = file_search_context.GetLocationContext()
-            
-            self._SetLocationContext( location_context )
+            self.locationChanged.emit( file_search_context.GetLocationContext() )
+            self.tagContextChanged.emit( file_search_context.GetTagContext() )
             
             synchronised = self._tag_autocomplete.IsSynchronised()
             
@@ -328,6 +335,9 @@ class SidebarQuery( ClientGUISidebarCore.Sidebar ):
             location_context = self._page_manager.GetLocationContext()
             
             panel = ClientGUIMediaResultsPanelThumbnails.MediaResultsPanelThumbnails( self._page, self._page_key, self._page_manager, media_results )
+            
+            # little ugly, but whatever we out here for now
+            panel.SetTagContext( self._tag_autocomplete.GetFileSearchContext().GetTagContext() )
             
             panel.SetEmptyPageStatusOverride( 'no files found for this search' )
             

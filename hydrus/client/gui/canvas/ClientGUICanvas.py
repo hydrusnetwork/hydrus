@@ -382,6 +382,7 @@ class Canvas( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
         CG.client_controller.sub( self, 'ZoomSwitch', 'canvas_zoom_switch' )
         CG.client_controller.sub( self, 'ManageTags', 'canvas_manage_tags' )
         CG.client_controller.sub( self, 'update', 'notify_new_colourset' )
+        CG.client_controller.sub( self, 'NotifyFilesNeedRedraw', 'notify_files_need_redraw' )
         
     
     def _Archive( self ):
@@ -781,6 +782,22 @@ class Canvas( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
             media_rect = self._media_container.rect()
             
             return media_rect.contains( media_mouse_pos )
+            
+        
+    
+    def NotifyFilesNeedRedraw( self, hashes ):
+        
+        if self._current_media is not None:
+            
+            hash = self._current_media.GetHash()
+            
+            if hash in hashes:
+                
+                media = self._current_media
+                
+                self.ClearMedia()
+                self.SetMedia( media )
+                
             
         
     
@@ -1332,8 +1349,6 @@ class Canvas( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
                 self._media_container.ClearMedia()
                 
             else:
-                
-                ( media_width, media_height ) = self._current_media.GetResolution()
                 
                 maintain_zoom = self._maintain_pan_and_zoom and previous_media is not None
                 maintain_pan = self._maintain_pan_and_zoom

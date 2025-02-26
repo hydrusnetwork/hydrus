@@ -2357,7 +2357,7 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
         
         did_sort = False
         
-        if sort_by is not None and not location_context.IsAllKnownFiles():
+        if sort_by is not None and sort_by.CanSortAtDBLevel( location_context ):
             
             ( did_sort, query_hash_ids ) = self.TryToSortHashIds( location_context, query_hash_ids, sort_by )
             
@@ -2400,6 +2400,11 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
     def TryToSortHashIds( self, location_context: ClientLocation.LocationContext, hash_ids, sort_by: ClientMedia.MediaSort ):
         
         did_sort = False
+        
+        if not sort_by.CanSortAtDBLevel( location_context ):
+            
+            return ( did_sort, hash_ids )
+            
         
         ( sort_metadata, sort_data ) = sort_by.sort_type
         sort_order = sort_by.sort_order

@@ -233,6 +233,7 @@ class TestPanel( QW.QWidget ):
         
         if len( example_data ) > 0:
             
+            parse_phrase = ''
             good_type_found = True
             
             if HydrusText.LooksLikeJSON( example_data ):
@@ -322,15 +323,15 @@ class TestPanel( QW.QWidget ):
                     
                 else:
                     
-                    description = 'that did not look like HTML or JSON, but will try to show it anyway'
+                    description = 'that did not look like a full HTML document, nor JSON, but will try to show it anyway'
                     
                     if len( example_data ) > self.MAX_CHARS_IN_PREVIEW:
                         
-                        preview = 'PREVIEW:' + '\n' + repr( example_data[:self.MAX_CHARS_IN_PREVIEW] )
+                        preview = f'PREVIEW:\n{example_data[:self.MAX_CHARS_IN_PREVIEW]}'
                         
                     else:
                         
-                        preview = repr( example_data )
+                        preview = f'{example_data}'
                         
                     
                 

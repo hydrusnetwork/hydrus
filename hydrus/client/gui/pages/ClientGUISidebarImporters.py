@@ -210,11 +210,18 @@ class SidebarImporterHDD( SidebarImporter ):
         self._current_action.setText( current_action )
         
     
-    def CheckAbleToClose( self ):
+    def CheckAbleToClose( self, for_session_close = False ):
         
         if self._hdd_import.CurrentlyWorking():
             
             raise HydrusExceptions.VetoException( 'This page is still importing.' )
+            
+        
+        num_items = len( self._hdd_import.GetFileSeedCache() )
+        
+        if not for_session_close and CG.client_controller.new_options.GetBoolean( 'confirm_non_empty_downloader_page_close' ) and num_items > 0:
+            
+            raise HydrusExceptions.VetoException( f'This is a local import page holding {HydrusNumbers.ToHumanInt( num_items )} import objects.' )
             
         
     
@@ -442,10 +449,6 @@ class SidebarImporterMultipleGallery( SidebarImporter ):
         self._ClearExistingHighlight()
         
         media_results = []
-        
-        location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY )
-        
-        self._SetLocationContext( location_context )
         
         panel = ClientGUIMediaResultsPanelThumbnails.MediaResultsPanelThumbnails( self._page, self._page_key, self._page_manager, media_results )
         
@@ -761,10 +764,6 @@ class SidebarImporterMultipleGallery( SidebarImporter ):
                     
                     self._highlighted_gallery_import.PublishToPage( True )
                     
-                    location_context = FileImportOptions.GetRealFileImportOptions( self._highlighted_gallery_import.GetFileImportOptions(), FileImportOptions.IMPORT_TYPE_LOUD ).GetDestinationLocationContext()
-                    
-                    self._SetLocationContext( location_context )
-                    
                     panel = ClientGUIMediaResultsPanelThumbnails.MediaResultsPanelThumbnails( self._page, self._page_key, self._page_manager, media_results )
                     
                     panel.SetEmptyPageStatusOverride( 'no files for this query and its publishing settings' )
@@ -1039,10 +1038,6 @@ class SidebarImporterMultipleGallery( SidebarImporter ):
             
             media_results = CG.client_controller.Read( 'media_results', hashes, sorted = True )
             
-            location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY )
-            
-            self._SetLocationContext( location_context )
-            
             panel = ClientGUIMediaResultsPanelThumbnails.MediaResultsPanelThumbnails( self._page, self._page_key, self._page_manager, media_results )
             
             self._page.SwapMediaResultsPanel( panel )
@@ -1287,9 +1282,10 @@ class SidebarImporterMultipleGallery( SidebarImporter ):
         self._UpdateImportStatus()
         
     
-    def CheckAbleToClose( self ):
+    def CheckAbleToClose( self, for_session_close = False ):
         
         num_working = 0
+        num_items = 0
         
         for gallery_import in self._multiple_gallery_import.GetGalleryImports():
             
@@ -1298,10 +1294,17 @@ class SidebarImporterMultipleGallery( SidebarImporter ):
                 num_working += 1
                 
             
+            num_items += len( gallery_import.GetFileSeedCache() )
+            
         
         if num_working > 0:
             
             raise HydrusExceptions.VetoException( HydrusNumbers.ToHumanInt( num_working ) + ' queries are still importing.' )
+            
+        
+        if not for_session_close and CG.client_controller.new_options.GetBoolean( 'confirm_non_empty_downloader_page_close' ) and num_items > 0:
+            
+            raise HydrusExceptions.VetoException( f'This is a gallery downloader page holding {HydrusNumbers.ToHumanInt(num_items)} import objects.' )
             
         
     
@@ -1568,11 +1571,7 @@ class SidebarImporterMultipleWatcher( SidebarImporter ):
         
         self._ClearExistingHighlight()
         
-        location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY )
-        
         media_results = []
-        
-        self._SetLocationContext( location_context )
         
         panel = ClientGUIMediaResultsPanelThumbnails.MediaResultsPanelThumbnails( self._page, self._page_key, self._page_manager, media_results )
         
@@ -1911,10 +1910,6 @@ class SidebarImporterMultipleWatcher( SidebarImporter ):
                     
                     self._highlighted_watcher.PublishToPage( True )
                     
-                    location_context = FileImportOptions.GetRealFileImportOptions( self._highlighted_watcher.GetFileImportOptions(), FileImportOptions.IMPORT_TYPE_LOUD ).GetDestinationLocationContext()
-                    
-                    self._SetLocationContext( location_context )
-                    
                     panel = ClientGUIMediaResultsPanelThumbnails.MediaResultsPanelThumbnails( self._page, self._page_key, self._page_manager, media_results )
                     
                     panel.SetEmptyPageStatusOverride( 'no files for this watcher and its publishing settings' )
@@ -2181,10 +2176,6 @@ class SidebarImporterMultipleWatcher( SidebarImporter ):
             self._ClearExistingHighlightAndPanel()
             
             media_results = CG.client_controller.Read( 'media_results', hashes, sorted = True )
-            
-            location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY )
-            
-            self._SetLocationContext( location_context )
             
             panel = ClientGUIMediaResultsPanelThumbnails.MediaResultsPanelThumbnails( self._page, self._page_key, self._page_manager, media_results )
             
@@ -2457,9 +2448,10 @@ class SidebarImporterMultipleWatcher( SidebarImporter ):
         self._UpdateImportStatus()
         
     
-    def CheckAbleToClose( self ):
+    def CheckAbleToClose( self, for_session_close = False ):
         
         num_working = 0
+        num_items = 0
         
         for watcher in self._multiple_watcher_import.GetWatchers():
             
@@ -2468,10 +2460,17 @@ class SidebarImporterMultipleWatcher( SidebarImporter ):
                 num_working += 1
                 
             
+            num_items += len( watcher.GetFileSeedCache() )
+            
         
         if num_working > 0:
             
             raise HydrusExceptions.VetoException( HydrusNumbers.ToHumanInt( num_working ) + ' watchers are still importing.' )
+            
+        
+        if not for_session_close and CG.client_controller.new_options.GetBoolean( 'confirm_non_empty_downloader_page_close' ) and num_items > 0:
+            
+            raise HydrusExceptions.VetoException( f'This is a watcher page holding {HydrusNumbers.ToHumanInt(num_items)} import objects.' )
             
         
     
@@ -2865,11 +2864,18 @@ class SidebarImporterSimpleDownloader( SidebarImporter ):
             
         
     
-    def CheckAbleToClose( self ):
+    def CheckAbleToClose( self, for_session_close = False ):
         
         if self._simple_downloader_import.CurrentlyWorking():
             
             raise HydrusExceptions.VetoException( 'This page is still importing.' )
+            
+        
+        num_items = len( self._simple_downloader_import.GetFileSeedCache() )
+        
+        if not for_session_close and CG.client_controller.new_options.GetBoolean( 'confirm_non_empty_downloader_page_close' ) and num_items > 0:
+            
+            raise HydrusExceptions.VetoException( f'This is a simple urls import page holding {HydrusNumbers.ToHumanInt( num_items )} import objects.' )
             
         
     
@@ -3114,11 +3120,18 @@ class SidebarImporterURLs( SidebarImporter ):
             
         
     
-    def CheckAbleToClose( self ):
+    def CheckAbleToClose( self, for_session_close = False ):
         
         if self._urls_import.CurrentlyWorking():
             
             raise HydrusExceptions.VetoException( 'This page is still importing.' )
+            
+        
+        num_items = len( self._urls_import.GetFileSeedCache() )
+        
+        if not for_session_close and CG.client_controller.new_options.GetBoolean( 'confirm_non_empty_downloader_page_close' ) and num_items > 0:
+            
+            raise HydrusExceptions.VetoException( f'This is a urls import page holding {HydrusNumbers.ToHumanInt( num_items )} import objects.' )
             
         
     

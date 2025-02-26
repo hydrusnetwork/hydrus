@@ -116,6 +116,11 @@ class TagContext( HydrusSerialisable.SerialisableBase ):
             self.service_key = CC.COMBINED_TAG_SERVICE_KEY
             
         
+        if len( filter_method( [ self.display_service_key ] ) ) == 0:
+            
+            self.display_service_key = CC.COMBINED_TAG_SERVICE_KEY
+            
+        
     
     def IsAllKnownTags( self ):
         

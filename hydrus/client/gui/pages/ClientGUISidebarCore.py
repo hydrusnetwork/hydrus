@@ -18,6 +18,7 @@ from hydrus.client.gui.search import ClientGUIACDropdown
 from hydrus.client.media import ClientMedia
 from hydrus.client.metadata import ClientTags
 from hydrus.client.search import ClientSearchPredicate
+from hydrus.client.search import ClientSearchTagContext
 
 class ListBoxTagsMediaSidebar( ClientGUIListBoxes.ListBoxTagsMedia ):
     
@@ -155,6 +156,7 @@ class ListBoxTagsMediaSidebar( ClientGUIListBoxes.ListBoxTagsMedia ):
 class Sidebar( QW.QScrollArea ):
     
     locationChanged = QC.Signal( ClientLocation.LocationContext )
+    tagContextChanged = QC.Signal( ClientSearchTagContext.TagContext )
     
     SHOW_COLLECT = True
     
@@ -171,8 +173,6 @@ class Sidebar( QW.QScrollArea ):
         self.setVerticalScrollBarPolicy( QC.Qt.ScrollBarPolicy.ScrollBarAsNeeded )
         
         self._page_manager = page_manager
-        
-        self._last_seen_location_context = self._page_manager.GetLocationContext()
         
         self._page = page
         self._page_key = self._page_manager.GetVariable( 'page_key' )
@@ -229,16 +229,6 @@ class Sidebar( QW.QScrollArea ):
         QP.AddToLayout( sizer, self._current_selection_tags_box, CC.FLAGS_EXPAND_BOTH_WAYS )
         
     
-    def _SetLocationContext( self, location_context: ClientLocation.LocationContext ):
-        
-        if location_context != self._last_seen_location_context:
-            
-            self._last_seen_location_context = location_context
-            
-            self.locationChanged.emit( location_context )
-            
-        
-    
     def _SortChanged( self, media_sort ):
         
         self._page_manager.SetVariable( 'media_sort', media_sort )
@@ -257,7 +247,7 @@ class Sidebar( QW.QScrollArea ):
             
         
     
-    def CheckAbleToClose( self ):
+    def CheckAbleToClose( self, for_session_close = False ):
         
         pass
         

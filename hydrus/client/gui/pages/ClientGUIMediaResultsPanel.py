@@ -110,6 +110,8 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.Liste
         
         self._UpdateBackgroundColour()
         
+        self._vertical_scrollbar_pos_on_hide = None
+        
         self.verticalScrollBar().setSingleStep( 50 )
         
         self._focused_media = None
@@ -166,11 +168,11 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.Liste
         
         if len( self._selected_media ) == 0:
             
-            media_results = self.GenerateMediaResults( discriminant = CC.DISCRIMINANT_LOCAL_BUT_NOT_IN_TRASH, selected_media = set( self._sorted_media ), for_media_viewer = True )
+            media_results = self.GetMediaResults( discriminant = CC.DISCRIMINANT_LOCAL_BUT_NOT_IN_TRASH, selected_media = set( self._sorted_media ), for_media_viewer = True )
             
         else:
             
-            media_results = self.GenerateMediaResults( discriminant = CC.DISCRIMINANT_LOCAL_BUT_NOT_IN_TRASH, selected_media = set( self._selected_media ), for_media_viewer = True )
+            media_results = self.GetMediaResults( discriminant = CC.DISCRIMINANT_LOCAL_BUT_NOT_IN_TRASH, selected_media = set( self._selected_media ), for_media_viewer = True )
             
         
         if len( media_results ) > 0:
@@ -634,6 +636,27 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.Liste
         return ( sorted_mime_descriptor, selected_mime_descriptor )
         
     
+    def _GetYStart( self ):
+        
+        visible_rect = QP.ScrollAreaVisibleRect( self )
+        
+        visible_rect_y = visible_rect.y()
+        
+        visible_rect_height = visible_rect.height()
+        
+        my_virtual_size = self.widget().size()
+        
+        my_virtual_height = my_virtual_size.height()
+        
+        max_y = my_virtual_height - visible_rect_height
+        
+        y_start = max( 0, visible_rect_y )
+        
+        y_start = min( y_start, max_y )
+        
+        return y_start
+        
+    
     def _HasFocusSingleton( self ) -> bool:
         
         try:
@@ -830,7 +853,7 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.Liste
                 
             
         
-        media_results = self.GenerateMediaResults( discriminant = CC.DISCRIMINANT_LOCAL, for_media_viewer = True )
+        media_results = self.GetMediaResults( discriminant = CC.DISCRIMINANT_LOCAL, for_media_viewer = True )
         
         if len( media_results ) > 0:
             
@@ -1904,12 +1927,17 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.Liste
     
     def PageHidden( self ):
         
-        pass
+        self._vertical_scrollbar_pos_on_hide = self.verticalScrollBar().value()
         
     
     def PageShown( self ):
         
         self._PublishSelectionChange()
+        
+        if self._vertical_scrollbar_pos_on_hide is not None:
+            
+            self.verticalScrollBar().setValue( self._vertical_scrollbar_pos_on_hide )
+            
         
     
     def ProcessApplicationCommand( self, command: CAC.ApplicationCommand ):

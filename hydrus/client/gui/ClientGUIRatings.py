@@ -4,6 +4,7 @@ from qtpy import QtCore as QC
 from qtpy import QtGui as QG
 from qtpy import QtWidgets as QW
 
+from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusNumbers
 
@@ -142,8 +143,6 @@ def DrawLike( painter: QG.QPainter, x, y, service_key, rating_state ):
     
 
 def DrawNumerical( painter: QG.QPainter, x, y, service_key, rating_state, rating ):
-    
-    # TODO: this draw background stuff is horrible, we really need an svg solution or a nice call like 'draw a fuzzy line around this guy'
     
     painter.setRenderHint( QG.QPainter.RenderHint.Antialiasing, True )
     
@@ -395,7 +394,14 @@ class RatingIncDec( QW.QWidget ):
         
         painter = QG.QPainter( self )
         
-        self._Draw( painter )
+        try:
+            
+            self._Draw( painter )
+            
+        except Exception as e:
+            
+            HydrusData.ShowException( e, do_wait = False )
+            
         
     
     def setEnabled( self, value: bool ):
@@ -522,7 +528,14 @@ class RatingLike( QW.QWidget ):
         
         painter = QG.QPainter( self )
         
-        self._Draw( painter )
+        try:
+            
+            self._Draw( painter )
+            
+        except Exception as e:
+            
+            HydrusData.ShowException( e, do_wait = False )
+            
         
     
     def EventRightDown( self, event ):
@@ -794,7 +807,14 @@ class RatingNumerical( QW.QWidget ):
         
         painter = QG.QPainter( self )
         
-        self._Draw( painter )
+        try:
+            
+            self._Draw( painter )
+            
+        except Exception as e:
+            
+            HydrusData.ShowException( e, do_wait = False )
+            
         
     
     def setEnabled( self, value: bool ):

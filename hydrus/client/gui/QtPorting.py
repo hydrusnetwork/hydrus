@@ -551,7 +551,23 @@ class TabWidgetWithDnD( QW.QTabWidget ):
         
         self._tab_bar = self.tabBar()
         
+        self._my_current_drag_object = None
+        
         self._supplementary_drop_target = None
+        
+    
+    def _CheckDnDIsOK( self, drag_object ):
+        
+        if self._my_current_drag_object == drag_object and QW.QApplication.mouseButtons() != QC.Qt.MouseButton.LeftButton:
+            
+            # awkward situation where, it seems, the DnD is spawned while the 'release left-click' event is in the queue
+            # the DnD spawns after the click release and sits there until the user clicks again
+            # I think this is because I am spawning the DnD in the move event rather than the mouse press
+            
+            self._my_current_drag_object.cancel()
+            
+            self._my_current_drag_object = None
+            
         
     
     def _LayoutPagesHelper( self ):
@@ -668,24 +684,28 @@ class TabWidgetWithDnD( QW.QTabWidget ):
         
         mimeData.setData( 'application/hydrus-tab', b'' )
         
-        drag = QG.QDrag( self._tab_bar )
+        self._my_current_drag_object = QG.QDrag( self._tab_bar )
         
-        drag.setMimeData( mimeData )
+        self._my_current_drag_object.setMimeData( mimeData )
         
-        drag.setPixmap( pixmap )
+        self._my_current_drag_object.setPixmap( pixmap )
         
-        cursor = QG.QCursor( QC.Qt.CursorShape.OpenHandCursor )
-        
-        drag.setHotSpot( QC.QPoint( 0, 0 ) )
+        self._my_current_drag_object.setHotSpot( QC.QPoint( 0, 0 ) )
         
         # this puts the tab pixmap exactly where we picked it up, but it looks bad
-        # drag.setHotSpot( tab_bar_mouse_pos - tab_rect.topLeft() )
+        # self._my_current_drag_object.setHotSpot( tab_bar_mouse_pos - tab_rect.topLeft() )
         
-        drag.setDragCursor( cursor.pixmap(), QC.Qt.DropAction.MoveAction )
+        cursor = QG.QCursor( QC.Qt.CursorShape.ClosedHandCursor )
         
-        drag.exec_( QC.Qt.DropAction.MoveAction )
+        self._my_current_drag_object.setDragCursor( cursor.pixmap(), QC.Qt.DropAction.MoveAction )
         
-
+        CG.client_controller.CallLaterQtSafe( self, 0.1, 'checking DnD is ok', self._CheckDnDIsOK, self._my_current_drag_object )
+        
+        self._my_current_drag_object.exec_( QC.Qt.DropAction.MoveAction )
+        
+        self._my_current_drag_object = None
+        
+    
     def dragEnterEvent( self, e: QG.QDragEnterEvent ):
         
         if self.currentWidget() and self.currentWidget().rect().contains( self.currentWidget().mapFromGlobal( self.mapToGlobal( e.position().toPoint() ) ) ):

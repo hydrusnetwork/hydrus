@@ -1476,7 +1476,10 @@ class EditFileNotesPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolle
     
     def _CurrentNoteChanged( self ):
         
-        ClientGUIFunctions.SetFocusLater( self._notebook.currentWidget() )
+        if self._notebook.count() > 0:
+            
+            ClientGUIFunctions.SetFocusLater( self._notebook.currentWidget() )
+            
         
     
     def _Paste( self ):

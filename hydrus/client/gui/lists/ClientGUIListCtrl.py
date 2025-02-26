@@ -888,7 +888,7 @@ class BetterListCtrlTreeView( QW.QTreeView ):
         self.DeleteDatas( deletee_datas )
         
     
-    def keyPressEvent( self, event ):
+    def keyPressEvent( self, event: QG.QKeyEvent ):
         
         ( modifier, key ) = ClientGUIShortcuts.ConvertKeyEventToSimpleTuple( event )
         
@@ -912,7 +912,7 @@ class BetterListCtrlTreeView( QW.QTreeView ):
             
             event_processed = True
             
-        elif key in ( ord( 'C' ), ord( 'c' ) ) and modifier == QC.Qt.KeyboardModifier.ControlModifier:
+        elif ClientGUIShortcuts.KeyPressEventIsACopy( event ):
             
             if self._copy_rows_callable is not None:
                 

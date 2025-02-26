@@ -172,6 +172,14 @@ Using a substitution phrase of "\1-\2" will give:
 
 If one of the sub-formulae produces fewer results than the others, its final value will be used to fill in the gaps. In this way, you might somewhere parse one prefix and seven suffixes, where joining them will use the same prefix seven times.
 
+## static { id="static_formula" }
+
+This makes it simple to output any text you want. If you want to pre-bake a tag into a parser, or you need a base to do some funky string conversion on, this will do it.
+
+[![](images/edit_static_formula_panel.png)](images/edit_static_formula_panel.png)
+
+You can also have it output that same text multiple times, if that is convenient.
+
 ## context variable { id="context_variable_formula" }
 
 This is a basic hacky answer to a particular problem. It is a simple key:value dictionary that at the moment only stores one variable, 'url', which contains the original URL used to fetch the data being parsed.

@@ -40,6 +40,7 @@ from hydrus.client.media import ClientMedia
 from hydrus.client.metadata import ClientTags
 from hydrus.client.metadata import ClientTagSorting
 from hydrus.client.search import ClientSearchPredicate
+from hydrus.client.search import ClientSearchTagContext
 
 class BetterQListWidget( QW.QListWidget ):
     
@@ -2510,7 +2511,7 @@ class ListBox( QW.QScrollArea ):
                 
                 self._SelectAll()
                 
-            elif ctrl and key_code in ( ord( 'C' ), ord( 'c' ), QC.Qt.Key.Key_Insert ):
+            elif ClientGUIShortcuts.KeyPressEventIsACopy( event ):
                 
                 if len( self._selected_terms ) > 0:
                     
@@ -5149,6 +5150,11 @@ class StaticBoxSorterForListBoxTags( ClientGUICommon.StaticBox ):
         self._tag_sort.valueChanged.connect( self.EventSort )
         
         self.Add( self._tag_sort, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+    
+    def SetTagContext( self, tag_context: ClientSearchTagContext.TagContext ):
+        
+        self.SetTagServiceKey( tag_context.service_key )
         
     
     def SetTagServiceKey( self, service_key ):

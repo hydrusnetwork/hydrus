@@ -20,7 +20,9 @@ SEARCH_TYPE_OR = 1
 
 class FileSystemPredicates( object ):
     
-    def __init__( self, system_predicates: typing.Collection[ ClientSearchPredicate.Predicate ] ):
+    def __init__( self, predicates: typing.Collection[ ClientSearchPredicate.Predicate ] ):
+        
+        system_predicates = [ predicate for predicate in predicates if predicate.GetType() in ClientSearchPredicate.SYSTEM_PREDICATE_TYPES ]
         
         self._has_system_everything = False
         
@@ -797,6 +799,11 @@ class FileSearchContext( HydrusSerialisable.SerialisableBase ):
         self._predicates = predicates
         
         self._InitialiseTemporaryVariables()
+        
+    
+    def SetTagContext( self, tag_context: ClientSearchTagContext.TagContext ):
+        
+        self._tag_context = tag_context
         
     
     def SetTagServiceKey( self, tag_service_key ):

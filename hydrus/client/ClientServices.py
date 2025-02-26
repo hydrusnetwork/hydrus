@@ -2275,7 +2275,7 @@ class ServiceRepository( ServiceRestricted ):
                     self._SetDirty()
                     
                 
-                CG.client_controller.pub( 'notify_new_force_refresh_tags_data' )
+                CG.client_controller.pub( 'notify_force_refresh_tags_data' )
                 CG.client_controller.pub( 'notify_new_tag_display_application' )
                 
             

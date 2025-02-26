@@ -524,8 +524,15 @@ class MPVWidget( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
                     
                     self._number_of_restarts_this_second += 1
                     
-                    # if we say no more than 20 restarts allowed, what about the 33ms two-frame animation!
-                    number_of_restarts_allowed = max( 20, ( 1000 / self._media.GetDurationMS() ) * 5 )
+                    if self._media.HasDuration():
+                        
+                        # if we say no more than 20 restarts allowed, what about the 33ms two-frame animation!
+                        number_of_restarts_allowed = max( 20, ( 1000 / self._media.GetDurationMS() ) * 5 )
+                        
+                    else:
+                        
+                        number_of_restarts_allowed = 20
+                        
                     
                     if self._number_of_restarts_this_second > number_of_restarts_allowed:
                         

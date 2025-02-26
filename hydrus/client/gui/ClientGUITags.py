@@ -2744,6 +2744,7 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
             self._add_tag_box.movePageRight.connect( self.movePageRight )
             self._add_tag_box.showPrevious.connect( self.showPrevious )
             self._add_tag_box.showNext.connect( self.showNext )
+            self._add_tag_box.externalCopyKeyPressEvent.connect( self._tags_box.keyPressEvent )
             
             self._add_tag_box.nullEntered.connect( self.OK )
             
@@ -3681,6 +3682,9 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
             self._children.tagsChanged.connect( self._children_input.SetContextTags )
             self._parents.tagsChanged.connect( self._parents_input.SetContextTags )
             
+            self._children_input.externalCopyKeyPressEvent.connect( self._children.keyPressEvent )
+            self._parents_input.externalCopyKeyPressEvent.connect( self._parents.keyPressEvent )
+            
             #
             
             self._status_st = ClientGUICommon.BetterStaticText( self,'Files with any tag on the left will also be given the tags on the right.' )
@@ -4459,6 +4463,8 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
             self._new_input = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( self, self.SetNew, default_location_context, service_key, show_paste_button = True )
             
             self._old_siblings.tagsChanged.connect( self._old_input.SetContextTags )
+            
+            self._old_input.externalCopyKeyPressEvent.connect( self._old_siblings.keyPressEvent )
             
             #
             

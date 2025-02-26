@@ -23,6 +23,8 @@ from hydrus.client.search import ClientSearchFileSearchContext
 from hydrus.client.search import ClientSearchTagContext
 from hydrus.client.search import ClientSearchPredicate
 
+# TODO: This guy shares a bunch with the Read dude, so figure out a shared superclass that has include current/pending and such! 
+# FileSearchContext isn't all there is
 class AutoCompleteDropdownMetadataConditional( ClientGUIACDropdown.AutoCompleteDropdownTagsFileSearchContext ):
     
     def __init__( self, parent: QW.QWidget, file_search_context: ClientSearchFileSearchContext.FileSearchContext ):
@@ -81,8 +83,8 @@ class AutoCompleteDropdownMetadataConditional( ClientGUIACDropdown.AutoCompleteD
         
         self._predicates_listbox.listBoxChanged.connect( self._NotifyPredicatesBoxChanged )
         
-        self._include_current_tags.valueChanged.connect( self._IncludeCurrentChanged )
-        self._include_pending_tags.valueChanged.connect( self._IncludePendingChanged )
+        self._include_current_tags.valueChanged.connect( self._tag_context_button.SetIncludeCurrent )
+        self._include_pending_tags.valueChanged.connect( self._tag_context_button.SetIncludePending )
         
     
     def _BroadcastChoices( self, predicates: typing.Collection[ ClientSearchPredicate.Predicate ], shift_down ):
@@ -121,26 +123,13 @@ class AutoCompleteDropdownMetadataConditional( ClientGUIACDropdown.AutoCompleteD
         self.blockSignals( False )
         
         self.locationChanged.emit( self._location_context_button.GetValue() )
-        self.tagServiceChanged.emit( self._tag_service_key )
+        
+        self.tagContextChanged.emit( self._tag_context_button.GetValue() )
         
     
     def _GetCurrentBroadcastTextPredicate( self ) -> typing.Optional[ ClientSearchPredicate.Predicate ]:
         
         return None
-        
-    
-    def _IncludeCurrentChanged( self, value ):
-        
-        self._file_search_context.SetIncludeCurrentTags( value )
-        
-        self._RestoreTextCtrlFocus()
-        
-    
-    def _IncludePendingChanged( self, value ):
-        
-        self._file_search_context.SetIncludePendingTags( value )
-        
-        self._RestoreTextCtrlFocus()
         
     
     def _InitChildrenList( self ):
@@ -152,7 +141,9 @@ class AutoCompleteDropdownMetadataConditional( ClientGUIACDropdown.AutoCompleteD
         
         height_num_chars = 3
         
-        return ClientGUIACDropdown.ListBoxTagsPredicatesAC( self._dropdown_notebook, self.BroadcastChoices, self._float_mode, self._tag_service_key, tag_display_type = ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, height_num_chars = height_num_chars )
+        tag_service_key = self._file_search_context.SetTagContext().service_key
+        
+        return ClientGUIACDropdown.ListBoxTagsPredicatesAC( self._dropdown_notebook, self.BroadcastChoices, self._float_mode, tag_service_key, tag_display_type = ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, height_num_chars = height_num_chars )
         
     
     def _LocationContextJustChanged( self, location_context: ClientLocation.LocationContext ):
@@ -187,7 +178,9 @@ class AutoCompleteDropdownMetadataConditional( ClientGUIACDropdown.AutoCompleteD
                     
                     collapse_search_characters = True
                     
-                    tag_autocomplete_options = CG.client_controller.tag_display_manager.GetTagAutocompleteOptions( self._tag_service_key )
+                    tag_service_key = self._file_search_context.GetTagContext().service_key
+                    
+                    tag_autocomplete_options = CG.client_controller.tag_display_manager.GetTagAutocompleteOptions( tag_service_key )
                     
                     pat = ClientSearchAutocomplete.ParsedAutocompleteText( text, tag_autocomplete_options, collapse_search_characters = collapse_search_characters )
                     
@@ -229,6 +222,19 @@ class AutoCompleteDropdownMetadataConditional( ClientGUIACDropdown.AutoCompleteD
         self._file_search_context.SetPredicates( predicates )
         
     
+    def _SetTagContext( self, tag_context: ClientSearchTagContext.TagContext ):
+        
+        it_changed = super()._SetTagContext( tag_context )
+        
+        if it_changed:
+            
+            self._include_current_tags.SetOnOff( tag_context.include_current_tags )
+            self._include_pending_tags.SetOnOff( tag_context.include_pending_tags )
+            
+        
+        return it_changed
+        
+    
     def _ShouldBroadcastCurrentInputOnEnterKey( self ):
         
         return False
@@ -258,18 +264,6 @@ class AutoCompleteDropdownMetadataConditional( ClientGUIACDropdown.AutoCompleteD
         CG.client_controller.CallAfterQtSafe( self, 'Metadata Conditional Results Generation', self.SetFetchedResults, job_status, parsed_autocomplete_text, self._results_cache, results )
         
     
-    def _TagContextJustChanged( self, tag_context: ClientSearchTagContext.TagContext ):
-        
-        it_changed = super()._TagContextJustChanged( tag_context )
-        
-        if it_changed:
-            
-            self._file_search_context.SetTagServiceKey( self._tag_service_key )
-            
-        
-        return it_changed
-        
-    
     def GetPredicates( self ) -> typing.Set[ ClientSearchPredicate.Predicate ]:
         
         return self._file_search_context.GetPredicates()
@@ -292,10 +286,7 @@ class AutoCompleteDropdownMetadataConditional( ClientGUIACDropdown.AutoCompleteD
         self._predicates_listbox.SetFileSearchContext( self._file_search_context )
         
         self._SetLocationContext( self._file_search_context.GetLocationContext() )
-        self._SetTagService( self._file_search_context.GetTagContext().service_key )
-        
-        self._include_current_tags.SetOnOff( self._file_search_context.GetTagContext().include_current_tags )
-        self._include_pending_tags.SetOnOff( self._file_search_context.GetTagContext().include_pending_tags )
+        self._SetTagContext( self._file_search_context.GetTagContext() )
         
     
     def SetIncludeCurrent( self, value: bool ):
