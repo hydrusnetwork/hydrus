@@ -20,7 +20,7 @@
       
       
       <link rel="icon" href="assets/favicon.svg">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.6.4">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.6.5">
     
     
       
@@ -1641,6 +1641,15 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#static_formula" class="md-nav__link">
+    <span class="md-ellipsis">
+      static
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#context_variable_formula" class="md-nav__link">
     <span class="md-ellipsis">
       context variable
@@ -2300,6 +2309,15 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#static_formula" class="md-nav__link">
+    <span class="md-ellipsis">
+      static
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#context_variable_formula" class="md-nav__link">
     <span class="md-ellipsis">
       context variable
@@ -2440,6 +2458,10 @@ Using a substitution phrase of &quot;\1-\2&quot; will give:
   c-3
 </code></pre></div>
 <p>If one of the sub-formulae produces fewer results than the others, its final value will be used to fill in the gaps. In this way, you might somewhere parse one prefix and seven suffixes, where joining them will use the same prefix seven times.</p>
+<h2 id="static_formula">static<a class="headerlink" href="#static_formula" title="Permanent link">&para;</a></h2>
+<p>This makes it simple to output any text you want. If you want to pre-bake a tag into a parser, or you need a base to do some funky string conversion on, this will do it.</p>
+<p><a href="images/edit_static_formula_panel.png"><img alt="" src="images/edit_static_formula_panel.png" /></a></p>
+<p>You can also have it output that same text multiple times, if that is convenient.</p>
 <h2 id="context_variable_formula">context variable<a class="headerlink" href="#context_variable_formula" title="Permanent link">&para;</a></h2>
 <p>This is a basic hacky answer to a particular problem. It is a simple key:value dictionary that at the moment only stores one variable, 'url', which contains the original URL used to fetch the data being parsed.</p>
 <p>If a different URL Class links to this parser via an API URL, this 'url' variable will always be the API URL (i.e. it literally is the URL used to fetch the data), not any thread/whatever URL the user entered.</p>
@@ -2467,7 +2489,7 @@ Using a substitution phrase of &quot;\1-\2&quot; will give:
     <span class="md-icon" title="Last update">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 13.1c-.1 0-.3.1-.4.2l-1 1 2.1 2.1 1-1c.2-.2.2-.6 0-.8l-1.3-1.3c-.1-.1-.2-.2-.4-.2m-1.9 1.8-6.1 6V23h2.1l6.1-6.1zM12.5 7v5.2l4 2.4-1 1L11 13V7zM11 21.9c-5.1-.5-9-4.8-9-9.9C2 6.5 6.5 2 12 2c5.3 0 9.6 4.1 10 9.3-.3-.1-.6-.2-1-.2s-.7.1-1 .2C19.6 7.2 16.2 4 12 4c-4.4 0-8 3.6-8 8 0 4.1 3.1 7.5 7.1 7.9l-.1.2z"/></svg>
     </span>
-    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">October 2, 2024</span>
+    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">February 26, 2025</span>
   </span>
 
     
