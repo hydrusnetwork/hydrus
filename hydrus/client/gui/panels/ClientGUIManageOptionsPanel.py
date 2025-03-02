@@ -3010,10 +3010,14 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._draw_tags_hover_in_media_viewer_background = QW.QCheckBox( media_canvas_panel )
             self._draw_tags_hover_in_media_viewer_background.setToolTip( ClientGUIFunctions.WrapToolTip( 'Draw the left list of tags in the background of the media viewer.' ) )
+            self._disable_tags_hover_in_media_viewer = QW.QCheckBox( media_canvas_panel )
+            self._disable_tags_hover_in_media_viewer.setToolTip( ClientGUIFunctions.WrapToolTip( 'Disable hovering on the left list of tags in the media viewer.' ) )
             self._draw_top_hover_in_media_viewer_background = QW.QCheckBox( media_canvas_panel )
             self._draw_top_hover_in_media_viewer_background.setToolTip( ClientGUIFunctions.WrapToolTip( 'Draw the center-top file metadata in the background of the media viewer.' ) )
             self._draw_top_right_hover_in_media_viewer_background = QW.QCheckBox( media_canvas_panel )
             self._draw_top_right_hover_in_media_viewer_background.setToolTip( ClientGUIFunctions.WrapToolTip( 'Draw the top-right ratings, inbox and URL information in the background of the media viewer.' ) )
+            self._disable_top_right_hover_in_media_viewer = QW.QCheckBox( media_canvas_panel )
+            self._disable_top_right_hover_in_media_viewer.setToolTip( ClientGUIFunctions.WrapToolTip( 'Disable hovering on the top-right ratings, inbox and URL information in the media viewer.' ) )
             self._draw_notes_hover_in_media_viewer_background = QW.QCheckBox( media_canvas_panel )
             self._draw_notes_hover_in_media_viewer_background.setToolTip( ClientGUIFunctions.WrapToolTip( 'Draw the right list of notes in the background of the media viewer.' ) )
             self._draw_bottom_right_index_in_media_viewer_background = QW.QCheckBox( media_canvas_panel )
@@ -3084,8 +3088,10 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._animated_scanbar_hide_height.SetValue( self._new_options.GetNoneableInteger( 'animated_scanbar_hide_height' ) )
             
             self._draw_tags_hover_in_media_viewer_background.setChecked( self._new_options.GetBoolean( 'draw_tags_hover_in_media_viewer_background' ) )
+            self._disable_tags_hover_in_media_viewer.setChecked( self._new_options.GetBoolean( 'disable_tags_hover_in_media_viewer' ) )
             self._draw_top_hover_in_media_viewer_background.setChecked( self._new_options.GetBoolean( 'draw_top_hover_in_media_viewer_background' ) )
             self._draw_top_right_hover_in_media_viewer_background.setChecked( self._new_options.GetBoolean( 'draw_top_right_hover_in_media_viewer_background' ) )
+            self._disable_top_right_hover_in_media_viewer.setChecked( self._new_options.GetBoolean( 'disable_top_right_hover_in_media_viewer' ) )
             self._draw_notes_hover_in_media_viewer_background.setChecked( self._new_options.GetBoolean( 'draw_notes_hover_in_media_viewer_background' ) )
             self._draw_bottom_right_index_in_media_viewer_background.setChecked( self._new_options.GetBoolean( 'draw_bottom_right_index_in_media_viewer_background' ) )
             self._use_nice_resolution_strings.setChecked( self._new_options.GetBoolean( 'use_nice_resolution_strings' ) )
@@ -3132,8 +3138,10 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows = []
             
             rows.append( ( 'Duplicate tags hover-window information in the background of the viewer:', self._draw_tags_hover_in_media_viewer_background ) )
+            rows.append( ( 'Disable tags hover-window hovering in the viewer:', self._disable_tags_hover_in_media_viewer ) )
             rows.append( ( 'Duplicate top hover-window information in the background of the viewer:', self._draw_top_hover_in_media_viewer_background ) )
             rows.append( ( 'Duplicate top-right hover-window information in the background of the viewer:', self._draw_top_right_hover_in_media_viewer_background ) )
+            rows.append( ( 'Disable top-right hover-window in the viewer:', self._disable_top_right_hover_in_media_viewer ) )
             rows.append( ( 'Duplicate notes hover-window information in the background of the viewer:', self._draw_notes_hover_in_media_viewer_background ) )
             rows.append( ( 'Draw bottom-right index text in the background of the viewer:', self._draw_bottom_right_index_in_media_viewer_background ) )
             rows.append( ( 'Swap in common resolution labels:', self._use_nice_resolution_strings ) )
@@ -3226,8 +3234,10 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         def UpdateOptions( self ):
             
             self._new_options.SetBoolean( 'draw_tags_hover_in_media_viewer_background', self._draw_tags_hover_in_media_viewer_background.isChecked() )
+            self._new_options.SetBoolean( 'disable_tags_hover_in_media_viewer', self._disable_tags_hover_in_media_viewer.isChecked() )
             self._new_options.SetBoolean( 'draw_top_hover_in_media_viewer_background', self._draw_top_hover_in_media_viewer_background.isChecked() )
             self._new_options.SetBoolean( 'draw_top_right_hover_in_media_viewer_background', self._draw_top_right_hover_in_media_viewer_background.isChecked() )
+            self._new_options.SetBoolean( 'disable_top_right_hover_in_media_viewer', self._disable_top_right_hover_in_media_viewer.isChecked() )
             self._new_options.SetBoolean( 'draw_notes_hover_in_media_viewer_background', self._draw_notes_hover_in_media_viewer_background.isChecked() )
             self._new_options.SetBoolean( 'draw_bottom_right_index_in_media_viewer_background', self._draw_bottom_right_index_in_media_viewer_background.isChecked() )
             self._new_options.SetBoolean( 'use_nice_resolution_strings', self._use_nice_resolution_strings.isChecked() )

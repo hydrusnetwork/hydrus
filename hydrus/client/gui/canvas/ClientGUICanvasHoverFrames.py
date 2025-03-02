@@ -442,7 +442,7 @@ class CanvasHoverFrame( QW.QFrame ):
     
     def _RaiseHover( self ):
         
-        if not self._is_currently_up:
+        if not self._is_currently_up :
             
             if HG.hover_window_report_mode:
                 
@@ -1117,6 +1117,15 @@ class CanvasHoverFrameTop( CanvasHoverFrame ):
         ClientGUIMenus.AppendMenuCheckItem( menu, 'draw notes hover-window text in the background', 'Draw a copy of the respective hover window\'s text in the background of the media viewer canvas.', new_options.GetBoolean( 'draw_notes_hover_in_media_viewer_background' ), flip_background_boolean, 'draw_notes_hover_in_media_viewer_background' )
         ClientGUIMenus.AppendMenuCheckItem( menu, 'draw bottom-right index text in the background', 'Draw a copy of the respective hover window\'s text in the background of the media viewer canvas.', new_options.GetBoolean( 'draw_bottom_right_index_in_media_viewer_background' ), flip_background_boolean, 'draw_bottom_right_index_in_media_viewer_background' )
         
+        ClientGUIMenus.AppendSeparator( menu )
+
+        ClientGUIMenus.AppendMenuCheckItem( menu, 'always on top', 'Draw this window on top of all other windows.', new_options.GetBoolean( 'media_viewer_window_always_on_top' ), flip_background_boolean, 'media_viewer_window_always_on_top' )
+
+        ClientGUIMenus.AppendSeparator( menu )
+
+        ClientGUIMenus.AppendMenuCheckItem( menu, 'disable tags hover-window', 'Disable hovering the tags window.', new_options.GetBoolean( 'disable_tags_hover_in_media_viewer' ), flip_background_boolean, 'disable_tags_hover_in_media_viewer' )
+        ClientGUIMenus.AppendMenuCheckItem( menu, 'disable top-right hover-window', 'Disable hovering the ratings/notes window.', new_options.GetBoolean( 'disable_top_right_hover_in_media_viewer' ), flip_background_boolean, 'disable_top_right_hover_in_media_viewer' )
+
         ClientGUIMenus.AppendSeparator( menu )
         
         ClientGUIMenus.AppendMenuCheckItem( menu, 'apply image ICC Profile colour adjustments', 'Set whether images with ICC Profiles should have them applied. This may be useful to flip back and forth if you are in the duplicate filter.', new_options.GetBoolean( 'do_icc_profile_normalisation' ), self.sendApplicationCommand.emit, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_FLIP_ICC_PROFILE_APPLICATION ) )
@@ -2292,7 +2301,7 @@ class CanvasHoverFrameRightDuplicates( CanvasHoverFrame ):
 class CanvasHoverFrameTags( CanvasHoverFrame ):
     
     def __init__( self, parent, my_canvas, top_hover: CanvasHoverFrameTop, canvas_key, location_context: ClientLocation.LocationContext ):
-        
+
         super().__init__( parent, my_canvas, canvas_key )
         
         self._top_hover = top_hover
@@ -2306,9 +2315,12 @@ class CanvasHoverFrameTags( CanvasHoverFrame ):
         self.setLayout( vbox )
         
         CG.client_controller.sub( self, 'ProcessContentUpdatePackage', 'content_updates_gui' )
-        
     
     def _GetIdealSizeAndPosition( self ):
+
+        if CG.client_controller.new_options.GetBoolean( 'disable_tags_hover_in_media_viewer' ):
+
+            return ( False, QC.QSize( 0, 0 ), QC.QPoint( 0, 0 ) )
         
         parent_window = self.parentWidget().window()
         

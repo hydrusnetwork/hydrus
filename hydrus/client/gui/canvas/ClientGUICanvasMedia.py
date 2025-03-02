@@ -1777,7 +1777,7 @@ class MediaContainer( QW.QWidget ):
         
     
     def _TryToChangeZoom( self, new_zoom, zoom_center_type_override = None ):
-        
+
         if not self.IsZoomable():
             
             return
@@ -2714,7 +2714,6 @@ class MediaContainer( QW.QWidget ):
             
             new_zoom = switch_base
             
-        
         self._TryToChangeZoom( new_zoom )
         
         if new_zoom == switch_base:
