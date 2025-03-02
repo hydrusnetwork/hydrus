@@ -1445,6 +1445,10 @@ class CanvasHoverFrameTopRight( CanvasHoverFrame ):
     
     def _GetIdealSizeAndPosition( self ):
         
+        if CG.client_controller.new_options.GetBoolean( 'disable_top_right_hover_in_media_viewer' ):
+
+            return ( False, QC.QSize( 0, 0 ), QC.QPoint( 0, 0 ) )
+        
         parent_window = self.parentWidget().window()
         
         parent_size = parent_window.size()
