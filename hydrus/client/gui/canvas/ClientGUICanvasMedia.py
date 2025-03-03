@@ -80,19 +80,19 @@ def CalculateCanvasZooms( canvas_size: QC.QSize, canvas_type: int, device_pixel_
     
     if media is None:
         
-        return ( 1.0, 1.0 )
+        return ( 1.0, 1.0, 1.0, 1.0, 1.0 )
         
     
     if show_action in ( CC.MEDIA_VIEWER_ACTION_DO_NOT_SHOW_ON_ACTIVATION_OPEN_EXTERNALLY, CC.MEDIA_VIEWER_ACTION_SHOW_OPEN_EXTERNALLY_BUTTON, CC.MEDIA_VIEWER_ACTION_DO_NOT_SHOW ):
         
-        return ( 1.0, 1.0 )
+        return ( 1.0, 1.0, 1.0, 1.0, 1.0 )
         
     
     ( media_width, media_height ) = CalculateMediaSize( media, 1.0 )
     
     if media_width == 0 or media_height == 0:
         
-        return ( 1.0, 1.0 )
+        return ( 1.0, 1.0, 1.0, 1.0, 1.0 )
         
     
     new_options = CG.client_controller.new_options
@@ -107,7 +107,16 @@ def CalculateCanvasZooms( canvas_size: QC.QSize, canvas_type: int, device_pixel_
     height_zoom = raw_canvas_height / media_height
     
     canvas_zoom = min( ( width_zoom, height_zoom ) )
-    
+
+    image_aspect = media_width / media_height
+    canvas_aspect = raw_canvas_width / raw_canvas_height
+
+    #overfill the canvas
+    if image_aspect > canvas_aspect:
+        fill_auto_zoom = height_zoom
+    else:
+        fill_auto_zoom = width_zoom
+
     #
     
     mime = media.GetMime()
@@ -196,7 +205,7 @@ def CalculateCanvasZooms( canvas_size: QC.QSize, canvas_type: int, device_pixel_
         default_zoom = canvas_zoom
         
     
-    return ( default_zoom, canvas_zoom )
+    return ( default_zoom, canvas_zoom, width_zoom, height_zoom, fill_auto_zoom )
     
 
 def CalculateMediaContainerSize( media, device_pixel_ratio: float, zoom, show_action ) -> QC.QSize:
@@ -1403,7 +1412,21 @@ class MediaContainer( QW.QWidget ):
         self._default_zoom = 1.0
         self._current_zoom = 1.0
         self._canvas_zoom = 1.0
+        self._fill_auto_zoom = 1.0
+        self._fill_x_zoom = 1.0
+        self._fill_y_zoom = 1.0
         
+        self._window_zooms = {
+            "default": 1.0,
+            "canvas": 1.0,
+            "fill_auto": 1.0,
+            "fill_x": 1.0,
+            "fill_y": 1.0,
+            "100": 1.0
+        }
+
+        self._window_zoom = "default"
+
         self._media_window = None
         
         self._embed_button = EmbedButton( self, self._background_colour_generator )
@@ -1799,7 +1822,7 @@ class MediaContainer( QW.QWidget ):
         
         if new_my_width > max_zoom_dimension or new_my_height > max_zoom_dimension:
             
-            ( limit_max_normal_zoom, limit_max_canvas_zoom ) = CalculateCanvasZooms( QC.QSize( max_zoom_dimension, max_zoom_dimension ), self._canvas_type, my_dpr, self._media, CC.MEDIA_VIEWER_ACTION_SHOW_WITH_NATIVE )
+            ( limit_max_normal_zoom, limit_max_canvas_zoom, _, _, _ ) = CalculateCanvasZooms( QC.QSize( max_zoom_dimension, max_zoom_dimension ), self._canvas_type, my_dpr, self._media, CC.MEDIA_VIEWER_ACTION_SHOW_WITH_NATIVE )
             
             new_zoom = limit_max_canvas_zoom
             
@@ -2438,6 +2461,22 @@ class MediaContainer( QW.QWidget ):
         canvas_size = self.parentWidget().size()
         
         my_dpr = self.devicePixelRatio()
+
+        previous_window_zooms = self._window_zooms
+
+        previous_window_zoom_setting = self._window_zoom
+
+        if previous_window_zooms is not None:
+
+            self._window_zooms[ "default" ], \
+            self._window_zooms[ "canvas" ], \
+            self._window_zooms[ "fill_x" ], \
+            self._window_zooms[ "fill_y" ], \
+            self._window_zooms[ "fill_auto" ] = CalculateCanvasZooms(canvas_size, self._canvas_type, my_dpr, self._media, self._show_action)
+
+            self._SetZoom( self._window_zooms[ previous_window_zoom_setting ] )
+
+            return
         
         previous_current_zoom = self._current_zoom
         
@@ -2448,7 +2487,7 @@ class MediaContainer( QW.QWidget ):
             media_show_action = CC.MEDIA_VIEWER_ACTION_SHOW_OPEN_EXTERNALLY_BUTTON
             
         
-        ( previous_default_zoom, previous_canvas_zoom ) = CalculateCanvasZooms( canvas_size, self._canvas_type, my_dpr, previous_media, media_show_action )
+        ( previous_default_zoom, previous_canvas_zoom, _, _, _ ) = CalculateCanvasZooms( canvas_size, self._canvas_type, my_dpr, previous_media, media_show_action )
         
         ( media_show_action, media_start_paused, media_start_with_embed ) = ClientMedia.GetShowAction( self._media, self._canvas_type )
         
@@ -2457,7 +2496,7 @@ class MediaContainer( QW.QWidget ):
             media_show_action = CC.MEDIA_VIEWER_ACTION_SHOW_OPEN_EXTERNALLY_BUTTON
             
         
-        ( gumpf_current_zoom, self._canvas_zoom ) = CalculateCanvasZooms( canvas_size, self._canvas_type, my_dpr, self._media, media_show_action )
+        ( gumpf_current_zoom, self._canvas_zoom, _, _, _ ) = CalculateCanvasZooms( canvas_size, self._canvas_type, my_dpr, self._media, media_show_action )
         
         # previously, we always matched width, but this causes a problem in dupe viewer when B has a little watermark on the bottom, spilling below bottom of screen
         # I think in future we will have more options regarding all this, and this method will change significantly
@@ -2528,23 +2567,49 @@ class MediaContainer( QW.QWidget ):
             
             current_zoom = width_locked_zoom
             
-        
         self._SetZoom( current_zoom )
         
     
-    def Zoom100( self ):
+    def Zoom100( self, zoom_center_type_override = None ):
+
+        self._window_zoom = "100"
         
-        self._TryToChangeZoom( 1.0 )
-        
-    
-    def ZoomCanvas( self ):
-        
-        self._TryToChangeZoom( self._canvas_zoom )
+        self._TryToChangeZoom( 1.0, zoom_center_type_override = zoom_center_type_override  )
         
     
-    def ZoomDefault( self ):
+    def ZoomCanvas( self, zoom_center_type_override = None ):
+
+        self._window_zoom = "canvas"
         
-        self._TryToChangeZoom( self._default_zoom )
+        self._TryToChangeZoom( self._window_zooms[ self._window_zoom ], zoom_center_type_override = zoom_center_type_override  )
+        
+    
+    def ZoomCanvasFillX( self, zoom_center_type_override = None ):
+
+        self._window_zoom = "fill_x"
+        
+        self._TryToChangeZoom( self._window_zooms[ self._window_zoom ], zoom_center_type_override = zoom_center_type_override  )
+        
+    
+    def ZoomCanvasFillY( self, zoom_center_type_override = None ):
+        
+        self._window_zoom = "fill_y"
+
+        self._TryToChangeZoom( self._window_zooms[ self._window_zoom ], zoom_center_type_override = zoom_center_type_override  )
+        
+    
+    def ZoomCanvasFillAuto( self, zoom_center_type_override = None ):
+
+        self._window_zoom = "fill_auto"
+        
+        self._TryToChangeZoom( self._window_zooms[ self._window_zoom ], zoom_center_type_override = zoom_center_type_override  )
+        
+    
+    def ZoomDefault( self, zoom_center_type_override = None ):
+
+        self._window_zoom = "default"
+        
+        self._TryToChangeZoom( self._window_zooms[ self._window_zoom ], zoom_center_type_override = zoom_center_type_override  )
         
     
     def ZoomMax( self ):
@@ -2637,9 +2702,14 @@ class MediaContainer( QW.QWidget ):
         canvas_size = self.parentWidget().size()
         my_dpr = self.devicePixelRatio()
         
-        ( self._default_zoom, self._canvas_zoom ) = CalculateCanvasZooms( canvas_size, self._canvas_type, my_dpr, self._media, self._show_action )
+        self._window_zooms[ "default" ], \
+        self._window_zooms[ "canvas" ], \
+        self._window_zooms[ "fill_x" ], \
+        self._window_zooms[ "fill_y" ], \
+        self._window_zooms[ "fill_auto" ] = CalculateCanvasZooms(canvas_size, self._canvas_type, my_dpr, self._media, self._show_action)
+        self._window_zoom = "default"
         
-        self._SetZoom( self._default_zoom )
+        self._SetZoom( self._window_zooms [ self._window_zoom ] )
         
     
     def ZoomSwitch( self, zoom_center_type_override = None ):
@@ -2649,19 +2719,22 @@ class MediaContainer( QW.QWidget ):
             return
             
         
-        if self._canvas_zoom == 1.0 and self._current_zoom == 1.0:
+        if self._window_zooms[ "canvas" ] == 1.0 and self._current_zoom == 1.0:
             
             return
             
         
         if self._current_zoom == 1.0:
             
-            new_zoom = self._canvas_zoom
+            new_zoom = self._window_zooms[ "canvas" ]
+
+            self._window_zoom = "canvas"
             
         else:
             
             new_zoom = 1.0
             
+            self._window_zoom = "100"
         
         self._TryToChangeZoom( new_zoom, zoom_center_type_override = zoom_center_type_override )
         
@@ -2709,11 +2782,16 @@ class MediaContainer( QW.QWidget ):
                 
             
             new_zoom = max_zoom
+
+            self._window_zoom = "canvas"
             
         else:
             
             new_zoom = switch_base
+
+            self._window_zoom = "100"
             
+        
         self._TryToChangeZoom( new_zoom )
         
         if new_zoom == switch_base:

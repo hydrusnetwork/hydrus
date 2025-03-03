@@ -257,6 +257,8 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             'disable_tags_hover_in_media_viewer': False,
             'disable_top_right_hover_in_media_viewer': False,
             'media_viewer_window_always_on_top': False,
+            'media_viewer_lock_current_zoom': False,
+            'media_viewer_lock_current_pan': False,
             'allow_blurhash_fallback' : True,
             'fade_thumbnails' : True,
             'slideshow_always_play_duration_media_once_through' : False,

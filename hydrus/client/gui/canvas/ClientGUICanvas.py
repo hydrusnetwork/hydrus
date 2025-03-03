@@ -348,6 +348,10 @@ class Canvas( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
         self._canvas_key = HydrusData.GenerateKey()
         
         self._maintain_pan_and_zoom = False
+
+        self._maintain_zoom = False
+
+        self._maintain_pan = False
         
         self._service_keys_to_services = {}
         
@@ -1245,10 +1249,42 @@ class Canvas( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
             elif action == CAC.SIMPLE_ZOOM_100:
                 
                 self._media_container.Zoom100()
+
+            elif action == CAC.SIMPLE_ZOOM_100_CENTER:
+                
+                self._media_container.Zoom100( zoom_center_type_override = ClientGUICanvasMedia.ZOOM_CENTERPOINT_VIEWER_CENTER )
                 
             elif action == CAC.SIMPLE_ZOOM_CANVAS:
                 
                 self._media_container.ZoomCanvas()
+                
+            elif action == CAC.SIMPLE_ZOOM_CANVAS_CENTER:
+                
+                self._media_container.ZoomCanvas( zoom_center_type_override = ClientGUICanvasMedia.ZOOM_CENTERPOINT_VIEWER_CENTER )
+
+            elif action == CAC.SIMPLE_ZOOM_CANVAS_FILL_X:
+                
+                self._media_container.ZoomCanvasFillX()
+                
+            elif action == CAC.SIMPLE_ZOOM_CANVAS_FILL_X_CENTER:
+                
+                self._media_container.ZoomCanvasFillX( zoom_center_type_override = ClientGUICanvasMedia.ZOOM_CENTERPOINT_VIEWER_CENTER )
+
+            elif action == CAC.SIMPLE_ZOOM_CANVAS_FILL_Y:
+                
+                self._media_container.ZoomCanvasFillY()
+                
+            elif action == CAC.SIMPLE_ZOOM_CANVAS_FILL_Y_CENTER:
+                
+                self._media_container.ZoomCanvasFillY( zoom_center_type_override = ClientGUICanvasMedia.ZOOM_CENTERPOINT_VIEWER_CENTER )
+
+            elif action == CAC.SIMPLE_ZOOM_CANVAS_FILL_AUTO:
+                
+                self._media_container.ZoomCanvasFillAuto()
+                
+            elif action == CAC.SIMPLE_ZOOM_CANVAS_FILL_AUTO_CENTER:
+                
+                self._media_container.ZoomCanvasFillAuto( zoom_center_type_override = ClientGUICanvasMedia.ZOOM_CENTERPOINT_VIEWER_CENTER )
                 
             elif action == CAC.SIMPLE_ZOOM_DEFAULT:
                 
@@ -1350,8 +1386,8 @@ class Canvas( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
                 
             else:
                 
-                maintain_zoom = self._maintain_pan_and_zoom and previous_media is not None
-                maintain_pan = self._maintain_pan_and_zoom
+                maintain_zoom = self._new_options.GetBoolean( 'media_viewer_lock_current_zoom' ) and previous_media is not None
+                maintain_pan = self._new_options.GetBoolean( 'media_viewer_lock_current_pan' )
 
                 if self._current_media.GetLocationsManager().IsLocal():
                     

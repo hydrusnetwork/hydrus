@@ -859,6 +859,10 @@ class CanvasHoverFrameTop( CanvasHoverFrame ):
         zoom_switch.SetToolTipWithShortcuts( 'zoom switch', CAC.SIMPLE_SWITCH_BETWEEN_100_PERCENT_AND_CANVAS_ZOOM )
         zoom_switch.setFocusPolicy( QC.Qt.FocusPolicy.TabFocus )
         
+        zoom_options = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().zoom_switch, self._ShowZoomOptionsMenu )
+        zoom_options.setToolTip( ClientGUIFunctions.WrapToolTip( 'advanced zoom options' ) )
+        zoom_options.setFocusPolicy( QC.Qt.FocusPolicy.TabFocus )
+        
         self._volume_control = ClientGUIMediaControls.VolumeControl( self, CC.CANVAS_MEDIA_VIEWER )
         
         if not ClientGUIMPV.MPV_IS_AVAILABLE:
@@ -902,6 +906,7 @@ class CanvasHoverFrameTop( CanvasHoverFrame ):
         QP.AddToLayout( self._top_right_hbox, zoom_in, CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( self._top_right_hbox, zoom_out, CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( self._top_right_hbox, zoom_switch, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( self._top_right_hbox, zoom_options, CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( self._top_right_hbox, self._volume_control, CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( self._top_right_hbox, shortcuts, CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( self._top_right_hbox, view_options, CC.FLAGS_CENTER_PERPENDICULAR )
@@ -1132,6 +1137,32 @@ class CanvasHoverFrameTop( CanvasHoverFrame ):
         
         CGC.core().PopupMenu( self, menu )
         
+    def _ShowZoomOptionsMenu( self ):
+        
+        def flip_background_boolean( name ):
+            
+            new_options.FlipBoolean( name )
+            
+            self.update()
+            
+        
+        new_options = CG.client_controller.new_options
+
+        
+        menu = ClientGUIMenus.GenerateMenu( self )
+        
+        ClientGUIMenus.AppendMenuItem( menu, '100% zoom', 'Set the zoom level to 100%.', self.sendApplicationCommand.emit, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_ZOOM_100_CENTER ) )
+        ClientGUIMenus.AppendMenuItem( menu, 'canvas fit', 'Fit the image to the viewer.', self.sendApplicationCommand.emit, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_ZOOM_CANVAS_CENTER ) )
+        ClientGUIMenus.AppendMenuItem( menu, 'fill horizontally', 'Scale the image to fill the viewer width.', self.sendApplicationCommand.emit, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_ZOOM_CANVAS_FILL_X_CENTER ) )
+        ClientGUIMenus.AppendMenuItem( menu, 'fill vertically', 'Scale the image to fill the viewer height.', self.sendApplicationCommand.emit, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_ZOOM_CANVAS_FILL_Y_CENTER ) )
+        ClientGUIMenus.AppendMenuItem( menu, 'canvas fill', 'Fill the viewer by matching the image aspect ratio with the viewer.', self.sendApplicationCommand.emit, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_ZOOM_CANVAS_FILL_AUTO_CENTER )  )
+        
+        ClientGUIMenus.AppendSeparator( menu )
+
+        ClientGUIMenus.AppendMenuCheckItem( menu, 'lock current zoom', 'Prevent the zoom level from changing when switching images.', new_options.GetBoolean( 'media_viewer_lock_current_zoom' ), flip_background_boolean, 'media_viewer_lock_current_zoom' )
+        ClientGUIMenus.AppendMenuCheckItem( menu, 'lock current panning', 'Prevent the panning position from changing when switching images.', new_options.GetBoolean( 'media_viewer_lock_current_pan' ), flip_background_boolean, 'media_viewer_lock_current_pan' )
+      
+        CGC.core().PopupMenu( self, menu )
     
     def DragButtonHit( self ):
         
