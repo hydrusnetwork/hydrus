@@ -558,6 +558,18 @@ class TabWidgetWithDnD( QW.QTabWidget ):
     
     def _CheckDnDIsOK( self, drag_object ):
         
+        # drag.cancel is not supported on macOS
+        if HC.PLATFORM_MACOS:
+            
+            return
+            
+        
+        # QW.QApplication.mouseButtons() doesn't work unless mouse is over!
+        if not ClientGUIFunctions.MouseIsOverOneOfOurWindows():
+            
+            return
+            
+        
         if self._my_current_drag_object == drag_object and QW.QApplication.mouseButtons() != QC.Qt.MouseButton.LeftButton:
             
             # awkward situation where, it seems, the DnD is spawned while the 'release left-click' event is in the queue

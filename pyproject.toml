@@ -1,6 +1,6 @@
 [project]
 name = "hydrus"
-version = "v611"
+version = "v612"
 description = "A personal booru-style media tagger"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -95,13 +95,13 @@ qt6-new = [
 qt6-new-pyqt6 = [
     "pyqt6",
     "pyqt6-charts",
-    "qtpy==2.4.2",
+    "qtpy",
 ]
 qt6-older = [
     "pyside6==6.3.1",
     "qtpy==2.3.1",
 ]
 qt6-test = [
-    "pyside6==6.8.1.1",
-    "qtpy==2.4.2",
+    "pyside6==6.8.2.1",
+    "qtpy==2.4.3",
 ]

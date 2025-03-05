@@ -406,7 +406,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._connection_error_wait_time.setToolTip( ClientGUIFunctions.WrapToolTip( 'If a network connection times out as above, it will wait increasing multiples of this base time before retrying.' ) )
             
             self._serverside_bandwidth_wait_time = ClientGUICommon.BetterSpinBox( general, min = error_wait_time_min, max = error_wait_time_max )
-            self._serverside_bandwidth_wait_time.setToolTip( ClientGUIFunctions.WrapToolTip( 'If a server returns a failure status code indicating it is short on bandwidth, the network job will wait increasing multiples of this base time before retrying.' ) )
+            self._serverside_bandwidth_wait_time.setToolTip( ClientGUIFunctions.WrapToolTip( 'If a server returns a failure status code indicating it is short on bandwidth, and the server does not give a Retry-After header response, the network job will wait increasing multiples of this base time before retrying.' ) )
             
             self._domain_network_infrastructure_error_velocity = ClientGUITime.VelocityCtrl( general, 0, 100, 30, hours = True, minutes = True, seconds = True, per_phrase = 'within', unit = 'errors' )
             

@@ -90,6 +90,9 @@ fake_petition_mode = False
 force_idle_mode = False
 thumbnail_debug_mode = False
 autocomplete_delay_mode = False
+
+macos_window_position_fix_test = False
+
 blurhash_mode = False
 
 do_idle_shutdown_work = False

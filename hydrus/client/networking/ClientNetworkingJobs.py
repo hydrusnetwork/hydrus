@@ -1152,16 +1152,24 @@ class NetworkJob( object ):
             
         
     
-    def _WaitOnServersideBandwidth( self, status_text: str ):
+    def _WaitOnServersideBandwidth( self, status_text: str, num_seconds_to_wait = None ):
         
         # 429/509/529 response from server. basically means 'I'm under big load mate'
         # a future version of this could def talk to domain manager and add a temp delay so other network jobs can be informed
         
-        serverside_bandwidth_wait_time = CG.client_controller.new_options.GetInteger( 'serverside_bandwidth_wait_time' )
+        if num_seconds_to_wait is None:
+            
+            serverside_bandwidth_wait_time = CG.client_controller.new_options.GetInteger( 'serverside_bandwidth_wait_time' )
+            
+            backoff_factor = 1.25
+            problem_rating = ( self._current_connection_attempt_number + self._current_request_attempt_number ) - 1
+            
+            problem_coefficient = backoff_factor ** problem_rating
+            
+            num_seconds_to_wait = problem_coefficient * serverside_bandwidth_wait_time
+            
         
-        problem_rating = ( self._current_connection_attempt_number + self._current_request_attempt_number ) - 1
-        
-        self._serverside_bandwidth_wake_time = HydrusTime.GetNow() + ( problem_rating * serverside_bandwidth_wait_time )
+        self._serverside_bandwidth_wake_time = HydrusTime.GetNow() + num_seconds_to_wait
         
         while not HydrusTime.TimeHasPassed( self._serverside_bandwidth_wake_time ) and not self._IsCancelled():
             
@@ -1786,6 +1794,34 @@ class NetworkJob( object ):
                     
                 except HydrusExceptions.BandwidthException as e:
                     
+                    num_seconds_to_wait = None
+                    
+                    if response is not None:
+                        
+                        if 'Retry-After' in response.headers:
+                            
+                            retry_after = response.headers[ 'Retry-After' ]
+                            
+                            try:
+                                
+                                num_seconds_to_wait = int( retry_after )
+                                
+                            except:
+                                
+                                try:
+                                    
+                                    timestamp = ClientTime.ParseDate( retry_after )
+                                    
+                                    num_seconds_to_wait = min( max( 60, timestamp - HydrusTime.GetNow() ), 86400 )
+                                    
+                                except:
+                                    
+                                    HydrusData.Print( f'Was given an unparsable Retry-After of {retry_after}!' )
+                                    
+                                
+                            
+                        
+                    
                     self._ResetForAnotherAttempt()
                     
                     if self._CanReattemptRequest():
@@ -1797,7 +1833,7 @@ class NetworkJob( object ):
                         raise HydrusExceptions.BandwidthException( 'Server reported very limited bandwidth: ' + str( e ) )
                         
                     
-                    self._WaitOnServersideBandwidth( 'server reported limited bandwidth' )
+                    self._WaitOnServersideBandwidth( 'server reported limited bandwidth', num_seconds_to_wait = num_seconds_to_wait )
                     
                 except HydrusExceptions.ShouldReattemptNetworkException as e:
                     

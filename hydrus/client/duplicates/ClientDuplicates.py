@@ -579,13 +579,19 @@ def GetDuplicateComparisonStatements( shown_media_result: ClientMediaResult.Medi
                     
                     operator = '>'
                     
+                    sign = '+'
+                    percentage_difference = ( s_duration_s / c_duration_s ) - 1.0
+                    
                 else:
                     
                     operator = '<'
                     score = -score
                     
+                    sign = ''
+                    percentage_difference = ( s_duration_s / c_duration_s ) - 1.0
+                    
                 
-                statement = f'{HydrusTime.TimeDeltaToPrettyTimeDelta( s_duration_s )} {operator} {HydrusTime.TimeDeltaToPrettyTimeDelta( c_duration_s )}'
+                statement = f'{HydrusTime.TimeDeltaToPrettyTimeDelta( s_duration_s )} {operator} {HydrusTime.TimeDeltaToPrettyTimeDelta( c_duration_s )} ({sign}{HydrusNumbers.FloatToPercentage(percentage_difference)})'
                 
             
         elif s_has_duration:

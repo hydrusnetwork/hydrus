@@ -35,15 +35,11 @@ class ClientDBFilesDuplicatesAutoResolutionSearch( ClientDBModule.ClientDBModule
         super().__init__( 'client duplicates auto-resolution search', cursor )
         
     
-    def DoResolutionWork( self, rule: ClientDuplicatesAutoResolution.DuplicatesAutoResolutionRule, max_work_time = 0.5 ) -> bool:
+    def DoResolutionWork( self, rule: ClientDuplicatesAutoResolution.DuplicatesAutoResolutionRule, stop_time = None ) -> bool:
         
         work_still_to_do = True
         
-        # we probably want some sort of progress reporting for an UI watching this guy
-        
         db_location_context = self.modules_files_storage.GetDBLocationContext( rule.GetPotentialDuplicatesSearchContext().GetFileSearchContext1().GetLocationContext() )
-        
-        time_started = HydrusTime.GetNowFloat()
         
         def get_row():
             
@@ -89,7 +85,7 @@ class ClientDBFilesDuplicatesAutoResolutionSearch( ClientDBModule.ClientDBModule
             
             self.modules_files_duplicates_auto_resolution_storage.IncrementActionedPairCount( rule )
             
-            if max_work_time is not None and HydrusTime.TimeHasPassedFloat( time_started + max_work_time ):
+            if stop_time is not None and HydrusTime.TimeHasPassedFloat( stop_time ):
                 
                 return work_still_to_do
                 
@@ -113,13 +109,15 @@ class ClientDBFilesDuplicatesAutoResolutionSearch( ClientDBModule.ClientDBModule
     
     def DoSearchWork( self, rule: ClientDuplicatesAutoResolution.DuplicatesAutoResolutionRule ):
         
-        # this guy originally wanted to do the search in 256 chunks, but it is actually easier for all concerned if we try to do as much work as we can every time
+        we_produced_matching_pairs = False
         
-        potential_duplicates_search_context = rule.GetPotentialDuplicatesSearchContext()
+        # this guy originally wanted to do the search in 256 chunks, but it is actually easier for all concerned if we try to do as much work as we can every time
         
         unsearched_pairs = self.modules_files_duplicates_auto_resolution_storage.GetUnsearchedPairs( rule )
         
         if len( unsearched_pairs ) > 0:
+            
+            potential_duplicates_search_context = rule.GetPotentialDuplicatesSearchContext()
             
             matching_pairs = self.modules_files_duplicates_file_query.GetPotentialDuplicatePairsForAutoResolution( potential_duplicates_search_context, unsearched_pairs )
             
@@ -130,6 +128,10 @@ class ClientDBFilesDuplicatesAutoResolutionSearch( ClientDBModule.ClientDBModule
             self.modules_files_duplicates_auto_resolution_storage.SetPairsStatus( rule, matching_pairs, ClientDuplicatesAutoResolution.DUPLICATE_STATUS_MATCHES_SEARCH_BUT_NOT_TESTED )
             self.modules_files_duplicates_auto_resolution_storage.SetPairsStatus( rule, unmatching_pairs, ClientDuplicatesAutoResolution.DUPLICATE_STATUS_DOES_NOT_MATCH_SEARCH )
             
+            we_produced_matching_pairs = len( matching_pairs ) > 0
+            
+        
+        return we_produced_matching_pairs
         
     
     def GetTablesAndColumnsThatUseDefinitions( self, content_type: int ) -> typing.List[ typing.Tuple[ str, str ] ]:

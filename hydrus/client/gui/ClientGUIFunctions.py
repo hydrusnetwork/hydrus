@@ -366,6 +366,20 @@ def MouseIsOnMyDisplay( window ):
     
     return mouse_screen is window_screen
     
+
+def MouseIsOverOneOfOurWindows():
+    
+    for window in QW.QApplication.topLevelWidgets():
+        
+        if MouseIsOverWidget( window ):
+            
+            return True
+            
+        
+    
+    return False
+    
+
 def MouseIsOverWidget( win: QW.QWidget ):
     
     # note this is different from win.underMouse(), which in different situations seems to be more complicated than just a rect test

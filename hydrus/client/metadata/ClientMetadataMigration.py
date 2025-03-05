@@ -164,7 +164,7 @@ class SingleFileMetadataRouter( HydrusSerialisable.SerialisableBase ):
         return '{}Taking {}{}, sending {}.'.format( header, source_text, full_munge_text, dest_text )
         
     
-    def Work( self, media_result: ClientMediaResult.MediaResult, file_path: str ):
+    def Work( self, media_result: ClientMediaResult.MediaResult, file_path: str ) -> bool:
         
         rows = set()
         
@@ -199,7 +199,7 @@ class SingleFileMetadataRouter( HydrusSerialisable.SerialisableBase ):
         
         if len( rows ) == 0:
             
-            return
+            return False
             
         
         if isinstance( self._exporter, ClientMetadataMigrationExporters.SingleFileMetadataExporterSidecar ):
@@ -214,6 +214,8 @@ class SingleFileMetadataRouter( HydrusSerialisable.SerialisableBase ):
             
             raise Exception( 'Problem with exporter object!' )
             
+        
+        return True
         
     
 

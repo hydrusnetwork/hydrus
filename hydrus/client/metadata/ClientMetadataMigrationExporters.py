@@ -43,24 +43,6 @@ class SingleFileMetadataExporterMedia( SingleFileMetadataExporter ):
         
     
 
-class SingleFileMetadataExporterSidecar( SingleFileMetadataExporter, ClientMetadataMigrationCore.SidecarNode ):
-    
-    def __init__( self, remove_actual_filename_ext: bool, suffix: str, filename_string_converter: ClientStrings.StringConverter ):
-        
-        super().__init__( remove_actual_filename_ext, suffix, filename_string_converter )
-        
-    
-    def Export( self, actual_file_path: str, rows: typing.Collection[ str ] ):
-        
-        raise NotImplementedError()
-        
-    
-    def ToString( self ) -> str:
-        
-        raise NotImplementedError()
-        
-    
-
 class SingleFileMetadataExporterMediaNotes( SingleFileMetadataExporterMedia, HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_METADATA_SINGLE_FILE_EXPORTER_MEDIA_NOTES
@@ -441,6 +423,36 @@ class SingleFileMetadataExporterMediaURLs( SingleFileMetadataExporterMedia, Hydr
 
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_METADATA_SINGLE_FILE_EXPORTER_MEDIA_URLS ] = SingleFileMetadataExporterMediaURLs
 
+class SingleFileMetadataExporterSidecar( SingleFileMetadataExporter, ClientMetadataMigrationCore.SidecarNode ):
+    
+    def __init__( self, remove_actual_filename_ext: bool, suffix: str, filename_string_converter: ClientStrings.StringConverter, sidecar_file_extension: str ):
+        
+        self._sidecar_file_extension = sidecar_file_extension
+        
+        super().__init__( remove_actual_filename_ext, suffix, filename_string_converter )
+        
+    
+    def _GetExportPath( self, actual_file_path: str ) -> str:
+        
+        return ClientMetadataMigrationCore.GetSidecarPath( actual_file_path, self._remove_actual_filename_ext, self._suffix, self._filename_string_converter, self._sidecar_file_extension )
+        
+    
+    def Export( self, actual_file_path: str, rows: typing.Collection[ str ] ):
+        
+        raise NotImplementedError()
+        
+    
+    def GetExportPath( self, actual_file_path: str ) -> str:
+        
+        return self._GetExportPath( actual_file_path )
+        
+    
+    def ToString( self ) -> str:
+        
+        raise NotImplementedError()
+        
+    
+
 class SingleFileMetadataExporterJSON( SingleFileMetadataExporterSidecar, HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_METADATA_SINGLE_FILE_EXPORTER_JSON
@@ -464,7 +476,7 @@ class SingleFileMetadataExporterJSON( SingleFileMetadataExporterSidecar, HydrusS
             filename_string_converter = ClientStrings.StringConverter( example_string = '0123456789abcdef.jpg.json' )
             
         
-        super().__init__( remove_actual_filename_ext, suffix, filename_string_converter )
+        super().__init__( remove_actual_filename_ext, suffix, filename_string_converter, 'json' )
         
         if nested_object_names is None:
             
@@ -512,7 +524,7 @@ class SingleFileMetadataExporterJSON( SingleFileMetadataExporterSidecar, HydrusS
             return
             
         
-        path = ClientMetadataMigrationCore.GetSidecarPath( actual_file_path, self._remove_actual_filename_ext, self._suffix, self._filename_string_converter, 'json' )
+        path = self._GetExportPath( actual_file_path )
         
         if len( self._nested_object_names ) > 0:
             
@@ -627,7 +639,7 @@ class SingleFileMetadataExporterTXT( SingleFileMetadataExporterSidecar, HydrusSe
             separator = '\n'
             
         
-        super().__init__( remove_actual_filename_ext, suffix, filename_string_converter )
+        super().__init__( remove_actual_filename_ext, suffix, filename_string_converter, 'txt' )
         
         self._separator = separator
         
@@ -681,7 +693,7 @@ class SingleFileMetadataExporterTXT( SingleFileMetadataExporterSidecar, HydrusSe
             return
             
         
-        path = ClientMetadataMigrationCore.GetSidecarPath( actual_file_path, self._remove_actual_filename_ext, self._suffix, self._filename_string_converter, 'txt' )
+        path = self._GetExportPath( actual_file_path )
         
         with open( path, 'w', encoding = 'utf-8' ) as f:
             

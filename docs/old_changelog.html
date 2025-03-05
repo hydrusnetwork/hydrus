@@ -35,6 +35,36 @@
             <h1 id="changelog"><a href="#changelog">changelog</a></h1>
             <ul>
                 <li>
+                    <h2 id="version_612"><a href="#version_612">version 612</a></h2>
+                    <ul>
+                        <li><h3>misc</h3></li>
+                        <li>I added 'you can scan for this' flags for JXL for rotation EXIF, has EXIF, has non-EXIF, has transparency, and has ICC Profile, which we forgot to add when first rolling out JXL support. all existing JXL files will be scheduled for rescan of these properties on update, so if you have any wrongly rotated JXL, they should fix themselves soon after update (issue #1684)</li>
+                        <li>the 'duration' duplicates filter comparison statement now says the +/-% difference in duration. if it is only +1%, it is now clearer</li>
+                        <li>if a server gives a 429 (Too Many Requests) with a 'Retry-After' response header, hydrus now obeys this rather than its default server retry time as set in `options-&gt;connection` (issue #734)</li>
+                        <li>added `help-&gt;debug-&gt;debug modes-&gt;macOS window position fix test` to test a fix for macOS windows always getting delta y position on init</li>
+                        <li><h3>drag-cancelling tech</h3></li>
+                        <li>the new drag-cancelling tech was false-positive cancelling fast drags where you moved the mouse outside of the window 200ms after the initial click press. this is fixed</li>
+                        <li>the new drag-cancelling tech no longer occurs on macOS, since it was raising an error. it seems due to system policy you can't programatically cancel a drag on macOS in Qt (issue #1685)</li>
+                        <li><h3>sidecars in export folders</h3></li>
+                        <li>an export folder with sidecars will now fill in any sidecar gaps on every run. if a file should have a sidecar but currently does not, the sidecar will be generated (issue #1682)</li>
+                        <li>an export folder set to 'synchronise' (which deletes files from the export destination if they are no longer in the export folder's search) will now be more careful not to delete sidecars</li>
+                        <li><h3>some running from source stuff</h3></li>
+                        <li>for users who run from source, the 'test' `PySide6` is updated from `6.8.1.1` to `6.8.2.1`, and the `qtpy` from `2.4.2` to `2.4.3`</li>
+                        <li>added a `open_venv.ps1` script to easily activate the venv in powershell</li>
+                        <li><h3>duplicates auto-resolution</h3></li>
+                        <li>_my work this upcoming system grinds on. I successfully did the thing I stalled on a couple weeks ago, and now the only big thing I still have to do before advanced users can try it is a preview panel and a billion unit tests_</li>
+                        <li>the database modules are live! they boot and will initialise their (as-yet empty) tables on update to v612</li>
+                        <li>the daemon is now live! it runs its full mainloop and consults the database modules for work</li>
+                        <li>rewrote some daemon-db interaction, mostly for KISS and deduplication of responsibility</li>
+                        <li>figured out some tech to reset duplicates rule search progress on edits and user command</li>
+                        <li>simplified the daemon workflow so that rules hold on to cached search counts and report their own search status</li>
+                        <li>fixed some stuff in rule-setting and status fetching</li>
+                        <li>the auto-resolution rule object is now serialisable and _could_ be saved to disk if I enabled the edit UI</li>
+                        <li>rules now report their correct search status, no longer a placeholder</li>
+                        <li>the daemon now reports the correct running status, no longer a placeholder</li>
+                    </ul>
+                </li>
+                <li>
                     <h2 id="version_611"><a href="#version_611">version 611</a></h2>
                     <ul>
                         <li><h3>misc</h3></li>
@@ -19283,7 +19313,7 @@
                     </ul>
                 </li>
                 <li>
-                    <h2 id="version_early"><a href="#version_early">early versions </a>of beta</h2>
+                    <h2 id="version_early"><a href="#version_early">early versions</a> of beta</h2>
                     <ul>
                         <li>made db, playing around with LAMP</li>
                         <li>an initial p2p framework started</li>

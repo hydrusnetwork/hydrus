@@ -1,3 +1,4 @@
+import collections
 import random
 import time
 import typing
@@ -320,16 +321,59 @@ class DuplicatesAutoResolutionRule( HydrusSerialisable.SerialisableBaseNamed ):
         
         self._custom_duplicate_content_merge_options: typing.Optional[ ClientDuplicates.DuplicateContentMergeOptions ] = None
         
-        # a search cache that we can update on every run, just some nice numbers for the human to see or force-populate in UI that say 'ok for this search we have 700,000 pairs, and we already processed 220,000'
-        # I think a dict of numbers to strings
-        # number of pairs that match the search
-        # how many didn't pass the comparator test
-        # also would be neat just to remember how many pairs we have successfully processed
+        self._counts_cache = collections.Counter()
         
     
-    # serialisable gubbins
-    # get/set
-    # 'here's a pair of media results, pass/fail?'
+    def __eq__( self, other ):
+        
+        if isinstance( other, DuplicatesAutoResolutionRule ):
+            
+            return self.__hash__() == other.__hash__()
+            
+        
+        return NotImplemented
+        
+    
+    def __hash__( self ):
+        
+        return self._id.__hash__()
+        
+    
+    def _GetSerialisableInfo( self ):
+        
+        serialisable_potential_duplicates_search_context = self._potential_duplicates_search_context.GetSerialisableTuple()
+        serialisable_pair_selector = self._pair_selector.GetSerialisableTuple()
+        serialisable_custom_duplicate_content_merge_options = None if self._custom_duplicate_content_merge_options is None else self._custom_duplicate_content_merge_options.GetSerialisableTuple()
+        
+        return (
+            self._id,
+            self._paused,
+            serialisable_potential_duplicates_search_context,
+            serialisable_pair_selector,
+            self._action,
+            self._delete_a,
+            self._delete_b,
+            serialisable_custom_duplicate_content_merge_options 
+        )
+        
+    
+    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
+        
+        (
+            self._id,
+            self._paused,
+            serialisable_potential_duplicates_search_context,
+            serialisable_pair_selector,
+            self._action,
+            self._delete_a,
+            self._delete_b,
+            serialisable_custom_duplicate_content_merge_options 
+        ) = serialisable_info
+        
+        self._potential_duplicates_search_context = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_potential_duplicates_search_context )
+        self._pair_selector = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_pair_selector )
+        self._custom_duplicate_content_merge_options = None if serialisable_custom_duplicate_content_merge_options is None else HydrusSerialisable.CreateFromSerialisableTuple( serialisable_custom_duplicate_content_merge_options )
+        
     
     def GetAction( self ) -> int:
         
@@ -399,12 +443,101 @@ class DuplicatesAutoResolutionRule( HydrusSerialisable.SerialisableBaseNamed ):
     
     def GetSearchSummary( self ) -> str:
         
-        return 'unknown'
+        if sum( self._counts_cache.values() ) == 0:
+            
+            return 'no data'
+            
+        
+        not_searched = self._counts_cache[ DUPLICATE_STATUS_NOT_SEARCHED ]
+        not_match = self._counts_cache[ DUPLICATE_STATUS_DOES_NOT_MATCH_SEARCH ]
+        not_tested = self._counts_cache[ DUPLICATE_STATUS_MATCHES_SEARCH_BUT_NOT_TESTED ]
+        failed_test = self._counts_cache[ DUPLICATE_STATUS_MATCHES_SEARCH_FAILED_TEST ]
+        
+        passed_test = self._counts_cache[ DUPLICATE_STATUS_MATCHES_SEARCH_PASSED_TEST ]
+        
+        if not_searched == 0:
+            
+            result = 'all searched'
+            
+        else:
+            
+            result = f'{not_searched} to search'
+            
+        
+        if not_match > 0:
+            
+            result += f', {not_match} failed search'
+            
+        
+        if not_tested > 0:
+            
+            result += f', {not_tested} still to test'
+            
+        
+        if failed_test > 0:
+            
+            result += f', {failed_test} failed the test'
+            
+        
+        result += f', {passed_test} passed the test'
+        
+        return result
+        
+    
+    def HasResolutionWorkToDo( self ):
+        
+        return self._counts_cache[ DUPLICATE_STATUS_MATCHES_SEARCH_BUT_NOT_TESTED ] > 0
+        
+    
+    def HasSearchWorkToDo( self ):
+        
+        return self._counts_cache[ DUPLICATE_STATUS_NOT_SEARCHED ] > 0
         
     
     def IsPaused( self ) -> bool:
         
         return self._paused
+        
+    
+    def SetAction( self, action: int ):
+        
+        self._action = action
+        
+    
+    def SetCountsCache( self, counts ):
+        
+        self._counts_cache = counts
+        
+    
+    def SetDeleteInfo( self, delete_a: bool, delete_b: bool ):
+        
+        self._delete_a = delete_a
+        self._delete_b = delete_b
+        
+    
+    def SetDuplicateContentMergeOptions( self, duplicate_content_merge_options: typing.Optional[ ClientDuplicates.DuplicateContentMergeOptions ] ):
+        
+        self._custom_duplicate_content_merge_options = duplicate_content_merge_options
+        
+    
+    def SetId( self, value: int ):
+        
+        self._id = value
+        
+    
+    def SetPaused( self, value: bool ):
+        
+        self._paused = value
+        
+    
+    def SetPotentialDuplicatesSearchContext( self, value: ClientPotentialDuplicatesSearchContext.PotentialDuplicatesSearchContext ):
+        
+        self._potential_duplicates_search_context = value
+        
+    
+    def SetPairSelector( self, value: PairSelector ):
+        
+        self._pair_selector = value
         
     
     def TestPair( self, media_result_1: ClientMediaResult.MediaResult, media_result_2: ClientMediaResult.MediaResult ):
@@ -447,42 +580,6 @@ class DuplicatesAutoResolutionRule( HydrusSerialisable.SerialisableBaseNamed ):
         content_update_packages = [ duplicate_content_merge_options.ProcessPairIntoContentUpdatePackage( media_result_a, media_result_b, delete_a = delete_a, delete_b = delete_b, file_deletion_reason = f'duplicates auto-resolution ({self._name})' ) ]
         
         return ( action, hash_a, hash_b, content_update_packages )
-        
-    
-    def SetAction( self, action: int ):
-        
-        self._action = action
-        
-    
-    def SetDeleteInfo( self, delete_a: bool, delete_b: bool ):
-        
-        self._delete_a = delete_a
-        self._delete_b = delete_b
-        
-    
-    def SetDuplicateContentMergeOptions( self, duplicate_content_merge_options: typing.Optional[ ClientDuplicates.DuplicateContentMergeOptions ] ):
-        
-        self._custom_duplicate_content_merge_options = duplicate_content_merge_options
-        
-    
-    def SetId( self, value: int ):
-        
-        self._id = value
-        
-    
-    def SetPaused( self, value: bool ):
-        
-        self._paused = value
-        
-    
-    def SetPotentialDuplicatesSearchContext( self, value: ClientPotentialDuplicatesSearchContext.PotentialDuplicatesSearchContext ):
-        
-        self._potential_duplicates_search_context = value
-        
-    
-    def SetPairSelector( self, value: PairSelector ):
-        
-        self._pair_selector = value
         
     
 
@@ -575,15 +672,12 @@ class DuplicatesAutoResolutionManager( ClientDaemons.ManagerWithMainLoop ):
         
         super().__init__( controller, 15 )
         
-        self._ids_to_rules = {}
-        
-        # load rules from db or whatever on controller init
-        # on program first boot, we should initialise with the defaults set to paused!
+        self._currently_searching_rule = None
+        self._currently_resolving_rule = None
+        self._working_hard_rules = set()
         
     
     def _AbleToWork( self ):
-        
-        return False
         
         if CG.client_controller.CurrentlyIdle():
             
@@ -610,10 +704,6 @@ class DuplicatesAutoResolutionManager( ClientDaemons.ManagerWithMainLoop ):
     
     def _DoMainLoop( self ):
         
-        rules = CG.client_controller.Read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_DUPLICATES_AUTO_RESOLUTION_RULE )
-        
-        self.SetRules( rules ) 
-        
         while True:
             
             with self._lock:
@@ -638,14 +728,14 @@ class DuplicatesAutoResolutionManager( ClientDaemons.ManagerWithMainLoop ):
                     
                     with self._lock:
                         
-                        still_work_to_do = self._WorkRules()
+                        still_work_to_do = self._WorkRules( work_period )
                         
                     
                 except HydrusExceptions.DataMissing as e:
                     
                     time.sleep( 5 )
                     
-                    HydrusData.Print( 'While doing auto-resolution work, we discovered an id that should not exist. Maybe this is bad timing.' )
+                    HydrusData.Print( 'While doing auto-resolution work, we discovered an id that should not exist. If you just deleted one yourself this second, then maybe this is bad timing.' )
                     HydrusData.PrintException( e )
                     
                 except Exception as e:
@@ -697,41 +787,96 @@ class DuplicatesAutoResolutionManager( ClientDaemons.ManagerWithMainLoop ):
         return reasonable_work_time * rest_ratio
         
     
-    def _WorkRules( self ):
+    def _WorkRules( self, allowed_work_time: float ):
         
-        still_work_to_do = True
-        
-        we_did_search_work = False
-        
-        ids_to_counts = {}#CG.client_controller.Read( 'duplicate_auto_resolution_number_summary' )
-        
-        for ( rule_id, counts ) in ids_to_counts.items():
-            
-            if rule_id not in self._ids_to_rules:
-                
-                raise HydrusExceptions.DataMissing( f'Saw {rule_id}, but we only have {list(self._ids_to_rules.keys())} cached.' )
-                
-            
-            # if search work to do, do that
-                # we_did_search_work = True
-            
-        
-        if we_did_search_work:
-            
-            ids_to_counts = {}#CG.client_controller.Read( 'duplicate_auto_resolution_number_summary' )
-            
-        
-        for ( rule_id, counts ) in ids_to_counts.items():
-            
-            if rule_id not in self._ids_to_rules:
-                
-                raise HydrusExceptions.DataMissing( f'Saw {rule_id}, but we only have {list(self._ids_to_rules.keys())} cached.' )
-                
-            
-            # if actioning work to do, do that
-            
+        time_to_stop = HydrusTime.GetNowFloat() + allowed_work_time
         
         still_work_to_do = False
+        
+        matching_pairs_produced = False
+        
+        rules = CG.client_controller.Read( 'duplicate_auto_resolution_rules_with_counts' )
+        
+        for rule in rules:
+            
+            if rule.IsPaused():
+                
+                continue
+                
+            
+            if rule.HasSearchWorkToDo():
+                
+                try:
+                    
+                    with self._lock:
+                        
+                        self._currently_searching_rule = rule
+                        
+                    
+                    matching_pairs_produced_here = CG.client_controller.WriteSynchronous( 'duplicate_auto_resolution_do_search_work', rule )
+                    
+                    if matching_pairs_produced_here:
+                        
+                        matching_pairs_produced = True
+                        
+                    
+                finally:
+                    
+                    with self._lock:
+                        
+                        self._currently_searching_rule = None
+                        
+                    
+                
+            
+            if HydrusTime.TimeHasPassedFloat( time_to_stop ):
+                
+                return True
+                
+            
+        
+        if matching_pairs_produced:
+            
+            rules = CG.client_controller.Read( 'duplicate_auto_resolution_rules_with_counts' )
+            
+        
+        for rule in rules:
+            
+            if rule.IsPaused():
+                
+                continue
+                
+            
+            if rule.HasResolutionWorkToDo():
+                
+                try:
+                    
+                    with self._lock:
+                        
+                        self._currently_resolving_rule = rule
+                        
+                    
+                    still_work_to_do_here = CG.client_controller.WriteSynchronous( 'duplicate_auto_resolution_do_resolution_work', rule, stop_time = time_to_stop )
+                    
+                    if still_work_to_do_here:
+                        
+                        still_work_to_do = True
+                        
+                    
+                finally:
+                    
+                    with self._lock:
+                        
+                        self._currently_resolving_rule = None
+                        
+                    
+                
+            
+            if HydrusTime.TimeHasPassedFloat( time_to_stop ):
+                
+                return True
+                
+            
         
         return still_work_to_do
         
@@ -741,17 +886,54 @@ class DuplicatesAutoResolutionManager( ClientDaemons.ManagerWithMainLoop ):
         return 'duplicates auto-resolution'
         
     
-    def GetRules( self ):
+    def GetRules( self ) -> typing.List[ DuplicatesAutoResolutionRule ]:
         
-        return []
+        rules = typing.cast( typing.List[ DuplicatesAutoResolutionRule ], CG.client_controller.Read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_DUPLICATES_AUTO_RESOLUTION_RULE ) )
         
-    
-    def GetRunningStatus( self, rule_id: int ) -> str:
-        
-        return 'idle'
+        return rules
         
     
-    def SetRules( self, rules: typing.Collection[ DuplicatesAutoResolutionRule ] ):
+    def GetRunningStatus( self, rule: DuplicatesAutoResolutionRule ) -> str:
+        
+        with self._lock:
+            
+            if rule == self._currently_searching_rule:
+                
+                return 'searching'
+                
+            elif rule == self._currently_resolving_rule:
+                
+                return 'resolving'
+                
+            elif rule in self._working_hard_rules:
+                
+                return 'working hard'
+                
+            elif rule.HasSearchWorkToDo() or rule.HasSearchWorkToDo():
+                
+                return 'pending'
+                
+            else:
+                
+                return 'idle'
+                
+            
+        
+    
+    def ResetRuleSearchProgress( self, rules: typing.Collection[ DuplicatesAutoResolutionRule ] ):
+        
+        with self._lock:
+            
+            for rule in rules:
+                
+                CG.client_controller.WriteSynchronous( 'duplicate_auto_resolution_reset_rule_search_progress', rule )
+                
+            
+        
+        self.Wake()
+        
+    
+    def SetRules( self, rules: typing.Collection[ DuplicatesAutoResolutionRule ], rules_to_reset_search_progress_for: typing.Collection[ DuplicatesAutoResolutionRule ] ):
         
         with self._lock:
             
@@ -773,7 +955,10 @@ class DuplicatesAutoResolutionManager( ClientDaemons.ManagerWithMainLoop ):
                 CG.client_controller.WriteSynchronous( 'delete_serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_DUPLICATES_AUTO_RESOLUTION_RULE, name )
                 
             
-            self._ids_to_rules = { rule.GetId() : rule for rule in rules }
+            for rule in rules_to_reset_search_progress_for:
+                
+                CG.client_controller.WriteSynchronous( 'duplicate_auto_resolution_reset_rule_search_progress', rule )
+                
             
         
         self.Wake()

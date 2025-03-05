@@ -6,13 +6,17 @@ from qtpy import QtWidgets as QW
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusNumbers
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
 from hydrus.client.duplicates import ClientDuplicatesAutoResolution
 from hydrus.client.duplicates import ClientDuplicates
+from hydrus.client.gui import ClientGUIAsync
+from hydrus.client.gui import ClientGUICore as CGC
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIFunctions
+from hydrus.client.gui import ClientGUIMenus
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.duplicates import ClientGUIDuplicatesContentMergeOptions
@@ -128,6 +132,7 @@ class EditDuplicatesAutoResolutionRulesPanel( ClientGUIScrolledPanels.EditPanel 
         pair_selector_summary = duplicates_auto_resolution_rule.GetPairSelectorSummary()
         action_summary = duplicates_auto_resolution_rule.GetActionSummary()
         search_status = duplicates_auto_resolution_rule.GetSearchSummary()
+        
         paused = duplicates_auto_resolution_rule.IsPaused()
         
         pretty_paused = 'yes' if paused else ''
@@ -644,7 +649,7 @@ class ReviewDuplicatesAutoResolutionPanel( QW.QWidget ):
         
         #
         
-        # TODO: A cog icon with 'run in normal/idle time' stuff
+        self._cog_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().cog, self._ShowCogMenu )
         
         #
         
@@ -669,6 +674,7 @@ class ReviewDuplicatesAutoResolutionPanel( QW.QWidget ):
         st.setWordWrap( True )
         
         QP.AddToLayout( vbox, st, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._cog_button, CC.FLAGS_ON_RIGHT )
         QP.AddToLayout( vbox, self._duplicates_auto_resolution_rules_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         vbox.addStretch( 0 )
         
@@ -676,9 +682,11 @@ class ReviewDuplicatesAutoResolutionPanel( QW.QWidget ):
         
         #
         
-        self._ResetListData()
+        self._rules_list_updater = self._InitialiseUpdater()
         
-        # TODO: hook into the manager's pubsub update signal, _ResetListData
+        self._rules_list_updater.update()
+        
+        CG.client_controller.sub( self, 'NotifyWorkComplete', 'notify_duplicates_auto_resolution_work_complete' )
         
     
     def _CanRunNow( self ):
@@ -689,6 +697,7 @@ class ReviewDuplicatesAutoResolutionPanel( QW.QWidget ):
     def _ConvertRuleToDisplayTuple( self, duplicates_auto_resolution_rule: ClientDuplicatesAutoResolution.DuplicatesAutoResolutionRule ):
         
         name = duplicates_auto_resolution_rule.GetName()
+        
         search_status = duplicates_auto_resolution_rule.GetSearchSummary()
         
         if duplicates_auto_resolution_rule.IsPaused():
@@ -697,7 +706,7 @@ class ReviewDuplicatesAutoResolutionPanel( QW.QWidget ):
             
         else:
             
-            running_status = CG.client_controller.duplicates_auto_resolution_manager.GetRunningStatus( duplicates_auto_resolution_rule.GetId() )
+            running_status = CG.client_controller.duplicates_auto_resolution_manager.GetRunningStatus( duplicates_auto_resolution_rule )
             
         
         return ( name, search_status, running_status )
@@ -709,7 +718,7 @@ class ReviewDuplicatesAutoResolutionPanel( QW.QWidget ):
         
         # TODO: Some sort of async delay as we wait for any current work to halt and the manager to save
         
-        duplicates_auto_resolution_rules = self._duplicates_auto_resolution_rules.GetData()
+        duplicates_auto_resolution_rules = typing.cast( typing.List[ ClientDuplicatesAutoResolution.DuplicatesAutoResolutionRule ], self._duplicates_auto_resolution_rules.GetData() )
         
         with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit rules' ) as dlg:
             
@@ -721,20 +730,101 @@ class ReviewDuplicatesAutoResolutionPanel( QW.QWidget ):
                 
                 edited_duplicates_auto_resolution_rules = panel.GetValue()
                 
-                CG.client_controller.duplicates_auto_resolution_manager.SetRules( edited_duplicates_auto_resolution_rules )
+                edited_duplicates_auto_resolution_rules = [] # TODO: final activation remove line
+                
+                old_serialised_data_reference = { rule.DumpToString() for rule in duplicates_auto_resolution_rules }
+                
+                rules_to_reset_search_status_for = [ rule for rule in edited_duplicates_auto_resolution_rules if rule.DumpToString() not in old_serialised_data_reference ]
+                
+                CG.client_controller.duplicates_auto_resolution_manager.SetRules( edited_duplicates_auto_resolution_rules, rules_to_reset_search_status_for )
                 
             
         
     
-    def _ResetListData( self ):
+    def _InitialiseUpdater( self ):
         
-        rules = CG.client_controller.duplicates_auto_resolution_manager.GetRules()
+        def loading_callable():
+            
+            self._duplicates_auto_resolution_rules_panel.setEnabled( False )
+            
         
-        self._duplicates_auto_resolution_rules.SetData( rules )
+        def work_callable( args ):
+            
+            rules = CG.client_controller.Read( 'duplicate_auto_resolution_rules_with_counts' )
+            
+            return rules
+            
+        
+        def publish_callable( rules ):
+            
+            self._duplicates_auto_resolution_rules.SetData( rules )
+            
+            self._duplicates_auto_resolution_rules_panel.setEnabled( True )
+            
+        
+        updater = ClientGUIAsync.AsyncQtUpdater( self, loading_callable, work_callable, publish_callable )
+        
+        return updater
+        
+    
+    def _ResetSearch( self ):
+        
+        rules = self._duplicates_auto_resolution_rules.GetData( only_selected = True )
+        
+        if len( rules ) == 0:
+            
+            rules = self._duplicates_auto_resolution_rules.GetData()
+            
+            if len( rules ) == 0:
+                
+                return
+                
+            
+        
+        text = f'This will command the database to re-search these {HydrusNumbers.ToHumanInt(len(rules))} rules from scratch. There is no point to running this unless you suspect there is a miscount.'
+        
+        result = ClientGUIDialogsQuick.GetYesNo( self, text )
+        
+        if result == QW.QDialog.DialogCode.Accepted:
+            
+            CG.client_controller.duplicates_auto_resolution_manager.ResetRuleSearchProgress( rules )
+            
+            self._rules_list_updater.update()
+            
         
     
     def _RunNow( self ):
         
-        pass
+        rules = self._duplicates_auto_resolution_rules.GetData( only_selected = True )
+        
+        if len( rules ) == 0:
+            
+            return
+            
+        
+        # tell the daemon to hurry these along
+        
+    
+    def _ShowCogMenu( self ):
+        
+        rules = self._duplicates_auto_resolution_rules.GetData( only_selected = True )
+        
+        menu = ClientGUIMenus.GenerateMenu( self )
+        
+        if len( rules ) == 0:
+            
+            ClientGUIMenus.AppendMenuItem( menu, f'reset search on all rules', 'Reset the search for all your rules.', self._ResetSearch )
+            
+        else:
+            
+            ClientGUIMenus.AppendMenuItem( menu, f'reset search on {HydrusNumbers.ToHumanInt( len( rules ) )} selected rules', 'Reset the search for the given rules.', self._ResetSearch )
+            
+        
+        CGC.core().PopupMenu( self._cog_button, menu )
+        
+    
+    def NotifyWorkComplete( self ):
+        
+        self._rules_list_updater.update()
         
     
