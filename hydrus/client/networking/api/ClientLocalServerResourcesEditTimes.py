@@ -115,7 +115,7 @@ class HydrusResourceClientAPIRestrictedEditTimesSetTime( HydrusResourceClientAPI
             
             if timestamp_ms is None:
                 
-                raise HydrusExceptions.BadRequestException( 'Sorry, you can only delete web domain timestamps (type 0) for now!' )
+                raise HydrusExceptions.BadRequestException( f'Sorry, you can only delete web domain timestamps (type 0) for now! You sent ({timestamp_type})!' )
                 
             else:
                 
@@ -127,7 +127,7 @@ class HydrusResourceClientAPIRestrictedEditTimesSetTime( HydrusResourceClientAPI
                     
                     if result is None:
                         
-                        raise HydrusExceptions.BadRequestException( f'Sorry, if the timestamp type is other than 0 (web domain), then you cannot add new timestamps, only edit existing ones. I did not see the given timestamp type on one of the files you sent, specifically: {media_result.GetHash().hex()}' )
+                        raise HydrusExceptions.BadRequestException( f'Sorry, if the timestamp type is other than 0 (web domain), then you cannot add new timestamps, only edit existing ones. I did not see the given timestamp type ({timestamp_data_stub.ToString()}) on one of the files you sent, specifically: {media_result.GetHash().hex()}' )
                         
                     
                 

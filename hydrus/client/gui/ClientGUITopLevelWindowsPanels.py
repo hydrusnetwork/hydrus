@@ -2,10 +2,8 @@ from qtpy import QtWidgets as QW
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusExceptions
-from hydrus.core import HydrusGlobals as HG
 
 from hydrus.client import ClientConstants as CC
-from hydrus.client import ClientGlobals as CG
 from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIShortcuts
 from hydrus.client.gui import ClientGUITopLevelWindows
@@ -79,11 +77,6 @@ class DialogThatTakesScrollablePanel( ClientGUITopLevelWindows.DialogThatResizes
         self.setLayout( vbox )
         
         ClientGUITopLevelWindows.SetInitialTLWSizeAndPosition( self, self._frame_key )
-        
-        if HG.macos_window_position_fix_test:
-            
-            CG.client_controller.CallLaterQtSafe( self, 0.1, 'macOS position fix test', ClientGUITopLevelWindows.SetInitialTLWSizeAndPosition, self, self._frame_key )
-            
         
     
 
@@ -276,11 +269,6 @@ class FrameThatTakesScrollablePanel( ClientGUITopLevelWindows.FrameThatResizes )
         self.setLayout( vbox )
         
         ClientGUITopLevelWindows.SetInitialTLWSizeAndPosition( self, self._frame_key )
-        
-        if HG.macos_window_position_fix_test:
-            
-            CG.client_controller.CallLaterQtSafe( self, 0.1, 'macOS position fix test', ClientGUITopLevelWindows.SetInitialTLWSizeAndPosition, self, self._frame_key )
-            
         
         self.show()
         

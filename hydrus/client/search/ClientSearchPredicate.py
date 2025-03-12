@@ -69,6 +69,7 @@ PREDICATE_TYPE_SYSTEM_HAS_TRANSPARENCY = 50
 PREDICATE_TYPE_SYSTEM_HAS_FORCED_FILETYPE = 51
 PREDICATE_TYPE_SYSTEM_NUM_URLS = 52
 PREDICATE_TYPE_SYSTEM_URLS = 53
+PREDICATE_TYPE_SYSTEM_TAG_ADVANCED = 54
 
 SYSTEM_PREDICATE_TYPES = {
     PREDICATE_TYPE_SYSTEM_EVERYTHING,
@@ -109,6 +110,7 @@ SYSTEM_PREDICATE_TYPES = {
     PREDICATE_TYPE_SYSTEM_NUM_PIXELS,
     PREDICATE_TYPE_SYSTEM_DIMENSIONS,
     PREDICATE_TYPE_SYSTEM_NOTES,
+    PREDICATE_TYPE_SYSTEM_TAG_ADVANCED,
     PREDICATE_TYPE_SYSTEM_TAG_AS_NUMBER,
     PREDICATE_TYPE_SYSTEM_FILE_RELATIONSHIPS,
     PREDICATE_TYPE_SYSTEM_FILE_RELATIONSHIPS_COUNT,
@@ -346,6 +348,7 @@ EDIT_PRED_TYPES = {
     PREDICATE_TYPE_SYSTEM_SIMILAR_TO_FILES,
     PREDICATE_TYPE_SYSTEM_SIMILAR_TO_DATA,
     PREDICATE_TYPE_SYSTEM_SIZE,
+    PREDICATE_TYPE_SYSTEM_TAG_ADVANCED,
     PREDICATE_TYPE_SYSTEM_TAG_AS_NUMBER,
     PREDICATE_TYPE_SYSTEM_FILE_RELATIONSHIPS_COUNT,
     PREDICATE_TYPE_SYSTEM_FILE_VIEWING_STATS,
@@ -506,6 +509,15 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
             
             serialisable_value = ( [ hash.hex() for hash in hashes ], hash_type )
             
+        elif self._predicate_type == PREDICATE_TYPE_SYSTEM_TAG_ADVANCED:
+            
+            ( service_key_or_none, tag_display_type, statuses, tag ) = self._value
+            
+            serialisable_service_key_or_none = HydrusData.BytesToNoneOrHex( service_key_or_none )
+            serialisable_statuses = tuple( statuses )
+            
+            serialisable_value = ( serialisable_service_key_or_none, tag_display_type, serialisable_statuses, tag )
+            
         elif self._predicate_type == PREDICATE_TYPE_OR_CONTAINER:
             
             or_predicates = self._value
@@ -572,6 +584,15 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
             ( serialisable_hashes, hash_type ) = serialisable_value
             
             self._value = ( tuple( [ bytes.fromhex( serialisable_hash ) for serialisable_hash in serialisable_hashes ] ), hash_type )
+            
+        elif self._predicate_type == PREDICATE_TYPE_SYSTEM_TAG_ADVANCED:
+            
+            ( serialisable_key_or_none, tag_display_type, serialisable_statuses, tag ) = serialisable_value
+            
+            service_key_or_none = HydrusData.HexToNoneOrBytes( serialisable_key_or_none )
+            statuses = tuple( serialisable_statuses )
+            
+            self._value = ( service_key_or_none, tag_display_type, statuses, tag )
             
         elif self._predicate_type in ( PREDICATE_TYPE_SYSTEM_AGE, PREDICATE_TYPE_SYSTEM_LAST_VIEWED_TIME, PREDICATE_TYPE_SYSTEM_MODIFIED_TIME, PREDICATE_TYPE_SYSTEM_ARCHIVED_TIME ):
             
@@ -1688,6 +1709,76 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                     else:
                         
                         base = f'{base} {is_phrase} {HydrusNumbers.ToHumanInt( len( hashes ) )} hashes'
+                        
+                    
+                
+            elif self._predicate_type == PREDICATE_TYPE_SYSTEM_TAG_ADVANCED:
+                
+                if self._value is None:
+                    
+                    base = 'tag (advanced)'
+                    
+                else:
+                    
+                    if self._inclusive:
+                        
+                        base = 'has tag'
+                        
+                    else:
+                        
+                        base = 'does not have tag'
+                        
+                    
+                    ( service_key_or_none, tag_display_type, statuses, tag ) = self._value
+                    
+                    do_more = True
+                    
+                    if service_key_or_none is None:
+                        
+                        pass
+                        
+                    else:
+                        
+                        try:
+                            
+                            service = CG.client_controller.services_manager.GetService( service_key_or_none )
+                            
+                            name = service.GetName()
+                            
+                            base += f' in "{name}"'
+                            
+                        except HydrusExceptions.DataMissing:
+                            
+                            base = 'unknown tag service advanced tag predicate'
+                            
+                            do_more = False
+                            
+                        
+                    
+                    if do_more:
+                        
+                        if tag_display_type == ClientTags.TAG_DISPLAY_STORAGE:
+                            
+                            base += ', ignoring siblings'
+                            
+                        
+                        if set( statuses ) != { HC.CONTENT_STATUS_CURRENT, HC.CONTENT_STATUS_PENDING }:
+                            
+                            if len( statuses ) == 1:
+                                
+                                ( status, ) = statuses
+                                
+                                base += f', with status {HC.content_status_string_lookup[ status ]}'
+                                
+                            else:
+                                
+                                status_string = ', '.join( [ HC.content_status_string_lookup[ status ] for status in sorted( statuses ) ] )
+                                
+                                base += f', with status in {status_string}'
+                                
+                            
+                        
+                        base += f': "{tag}"'
                         
                     
                 

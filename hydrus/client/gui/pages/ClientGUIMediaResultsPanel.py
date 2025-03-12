@@ -1275,7 +1275,9 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.Liste
                 
                 time.sleep( 0.1 )
                 
-                CG.client_controller.CallToThread( CG.client_controller.files_maintenance_manager.RunJobImmediately, flat_media, job_type )
+                media_results = [ m.GetMediaResult() for m in flat_media ]
+                
+                CG.client_controller.CallToThread( CG.client_controller.files_maintenance_manager.RunJobImmediately, media_results, job_type )
                 
             else:
                 

@@ -2346,6 +2346,7 @@ class DB( HydrusDB.HydrusDB ):
             ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HASH,
             ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_FILE_SERVICE,
             ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_FILE_RELATIONSHIPS,
+            ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_TAG_ADVANCED,
             ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_TAG_AS_NUMBER,
             ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_FILE_VIEWING_STATS
         }
@@ -3704,7 +3705,9 @@ class DB( HydrusDB.HydrusDB ):
             
             file_modified_timestamp_ms = file_import_job.GetFileModifiedTimestampMS()
             
-            self.modules_files_timestamps.SetTime( [ hash_id ], ClientTime.TimestampData.STATICFileModifiedTime( file_modified_timestamp_ms ) )
+            timestamp_data = ClientTime.TimestampData.STATICFileModifiedTime( file_modified_timestamp_ms )
+            
+            self.modules_files_timestamps.SetTime( [ hash_id ], timestamp_data )
             
             #
             
@@ -3720,7 +3723,9 @@ class DB( HydrusDB.HydrusDB ):
                 
                 content_update = ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ADD, ( file_info_manager, now_ms ) )
                 
-                self.pub_content_update_package_after_commit( ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( destination_file_service_key, content_update ) )
+                self.pub_content_update_package_after_commit(
+                    ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( destination_file_service_key, content_update )
+                )
                 
             
             #
@@ -3741,7 +3746,9 @@ class DB( HydrusDB.HydrusDB ):
                 
                 content_update = ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, ( hash, ) )
                 
-                self.pub_content_update_package_after_commit( ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, content_update ) )
+                self.pub_content_update_package_after_commit(
+                    ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, content_update )
+                )
                 
             else:
                 
@@ -3756,6 +3763,7 @@ class DB( HydrusDB.HydrusDB ):
             #
             
             self.modules_media_results.ForceRefreshFileInfoManagers( { hash_id : hash } )
+            self.modules_media_results.ForceRefreshFileModifiedTimestamps( { hash_id : hash } )
             
             #
             
@@ -3873,6 +3881,7 @@ class DB( HydrusDB.HydrusDB ):
                 'missing_archive_timestamps_legacy_test' : self.modules_files_inbox.WeHaveMissingLegacyArchiveTimestamps,
                 'missing_repository_update_hashes' : self.modules_repositories.GetRepositoryUpdateHashesIDoNotHave,
                 'num_deferred_file_deletes' : self.modules_files_storage.GetDeferredPhysicalDeleteCounts,
+                'potential_duplicate_pairs' : self.modules_files_duplicates_file_query.GetPotentialDuplicatePairs,
                 'recent_tags' : self.modules_recent_tags.GetRecentTags,
                 'repository_progress' : self.modules_repositories.GetRepositoryProgress,
                 'repository_update_hashes_to_process' : self.modules_repositories.GetRepositoryUpdateHashesICanProcess,
@@ -4296,7 +4305,15 @@ class DB( HydrusDB.HydrusDB ):
         
         #
         
-        self.modules_files_search_tags = ClientDBFilesSearch.ClientDBFilesSearchTags( self._c, self.modules_services, self.modules_tags, self.modules_files_storage, self.modules_mappings_counts, self.modules_tag_search )
+        self.modules_files_search_tags = ClientDBFilesSearch.ClientDBFilesSearchTags(
+            self._c,
+            self.modules_services,
+            self.modules_tags,
+            self.modules_tag_siblings,
+            self.modules_files_storage,
+            self.modules_mappings_counts,
+            self.modules_tag_search
+        )
         
         self._modules.append( self.modules_files_search_tags )
         

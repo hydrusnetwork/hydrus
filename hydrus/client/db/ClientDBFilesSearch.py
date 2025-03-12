@@ -26,6 +26,7 @@ from hydrus.client.db import ClientDBNotesMap
 from hydrus.client.db import ClientDBServices
 from hydrus.client.db import ClientDBSimilarFiles
 from hydrus.client.db import ClientDBTagSearch
+from hydrus.client.db import ClientDBTagSiblings
 from hydrus.client.db import ClientDBURLMap
 from hydrus.client.media import ClientMedia
 from hydrus.client.metadata import ClientTags
@@ -228,6 +229,7 @@ class ClientDBFilesSearchTags( ClientDBModule.ClientDBModule ):
         cursor: sqlite3.Cursor,
         modules_services: ClientDBServices.ClientDBMasterServices,
         modules_tags: ClientDBMaster.ClientDBMasterTags,
+        modules_tag_siblings: ClientDBTagSiblings.ClientDBTagSiblings,
         modules_files_storage: ClientDBFilesStorage,
         modules_mappings_counts: ClientDBMappingsCounts.ClientDBMappingsCounts,
         modules_tag_search: ClientDBTagSearch.ClientDBTagSearch
@@ -235,6 +237,7 @@ class ClientDBFilesSearchTags( ClientDBModule.ClientDBModule ):
         
         self.modules_services = modules_services
         self.modules_tags = modules_tags
+        self.modules_tag_siblings = modules_tag_siblings
         self.modules_files_storage = modules_files_storage
         self.modules_mappings_counts = modules_mappings_counts
         self.modules_tag_search = modules_tag_search
@@ -394,7 +397,7 @@ class ClientDBFilesSearchTags( ClientDBModule.ClientDBModule ):
             
             search_tag_context = ClientSearchTagContext.TagContext( service_key = search_tag_service_key, include_current_tags = tag_context.include_current_tags, include_pending_tags = tag_context.include_pending_tags, display_service_key = search_tag_service_key )
             
-            ideal_tag_id = self.modules_tag_search.modules_tag_siblings.GetIdealTagId( tag_display_type, search_tag_service_id, tag_id )
+            ideal_tag_id = self.modules_tag_siblings.GetIdealTagId( tag_display_type, search_tag_service_id, tag_id )
             
             for file_service_key in file_service_keys:
                 
@@ -421,6 +424,156 @@ class ClientDBFilesSearchTags( ClientDBModule.ClientDBModule ):
             
         
         return results
+        
+    
+    def GetHashIdsFromTagAdvanced( self, tag: str, tag_display_type: int, statuses: typing.Collection[ int ], tag_service_keys: typing.Collection[ bytes ], location_context: ClientLocation.LocationContext, hash_ids = None, hash_ids_table_name = None, job_status = None ):
+        
+        # This search routine and its predicate caller were brought to you by: cheap booze and hololive 6th fes. ~Color Rise Harmony~ STAGE 3
+        
+        # TODO: This code is actually not bad compared to the other search gubbins in this module
+        # We could integrate the other features of the other methods and crunch it all into one advanced search routine that we optimise on its own rather than having similar search code in ten different places
+        # and/or split the clever stuff in here that does the mappings_table storage->display wangle etc... into a new method that other guys call with current/pending
+        
+        cancelled_hook = None
+        
+        if job_status is not None:
+            
+            cancelled_hook = job_status.IsCancelled
+            
+        
+        ( file_service_keys, file_location_is_cross_referenced ) = location_context.GetCoveringCurrentFileServiceKeys()
+        
+        if not file_location_is_cross_referenced and hash_ids_table_name is not None:
+            
+            file_location_is_cross_referenced = True
+            
+        
+        file_service_ids = [ self.modules_services.GetServiceId( file_service_key ) for file_service_key in file_service_keys ]
+        tag_service_ids = [ self.modules_services.GetServiceId( tag_service_key ) for tag_service_key in tag_service_keys ]
+        
+        result_hash_ids = set()
+        
+        tag_id = self.modules_tags.GetTagId( tag )
+        
+        for file_service_id in file_service_ids:
+            
+            for tag_service_id in tag_service_ids:
+                
+                ( current_mappings_table_name, deleted_mappings_table_name, pending_mappings_table_name, petitioned_mappings_table_name ) = ClientDBMappingsStorage.GenerateMappingsTableNames( tag_service_id )
+                
+                if file_service_id == self.modules_services.combined_file_service_id:
+                    
+                    statuses_to_table_names = {
+                        HC.CONTENT_STATUS_CURRENT : ( current_mappings_table_name, ClientTags.TAG_DISPLAY_STORAGE ),
+                        HC.CONTENT_STATUS_DELETED : ( deleted_mappings_table_name, ClientTags.TAG_DISPLAY_STORAGE ),
+                        HC.CONTENT_STATUS_PENDING : ( pending_mappings_table_name, ClientTags.TAG_DISPLAY_STORAGE ),
+                        HC.CONTENT_STATUS_PETITIONED : ( petitioned_mappings_table_name, ClientTags.TAG_DISPLAY_STORAGE )
+                    }
+                    
+                else:
+                    
+                    ( cache_current_mappings_table_name, cache_deleted_mappings_table_name, cache_pending_mappings_table_name ) = ClientDBMappingsStorage.GenerateSpecificMappingsCacheTableNames( file_service_id, tag_service_id )
+                    
+                    if tag_display_type == ClientTags.TAG_DISPLAY_STORAGE:
+                        
+                        statuses_to_table_names = {
+                            HC.CONTENT_STATUS_CURRENT : ( cache_current_mappings_table_name, ClientTags.TAG_DISPLAY_STORAGE ),
+                            HC.CONTENT_STATUS_DELETED : ( cache_deleted_mappings_table_name, ClientTags.TAG_DISPLAY_STORAGE ),
+                            HC.CONTENT_STATUS_PENDING : ( cache_pending_mappings_table_name, ClientTags.TAG_DISPLAY_STORAGE ),
+                            HC.CONTENT_STATUS_PETITIONED : ( petitioned_mappings_table_name, ClientTags.TAG_DISPLAY_STORAGE )
+                        }
+                        
+                    elif tag_display_type == ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL:
+                        
+                        ( cache_current_display_mappings_table_name, cache_pending_display_mappings_table_name ) = ClientDBMappingsStorage.GenerateSpecificDisplayMappingsCacheTableNames( file_service_id, tag_service_id )
+                        
+                        statuses_to_table_names = {
+                            HC.CONTENT_STATUS_CURRENT : ( cache_current_display_mappings_table_name, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ),
+                            HC.CONTENT_STATUS_DELETED : ( cache_pending_display_mappings_table_name, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ),
+                            HC.CONTENT_STATUS_PENDING : ( cache_pending_mappings_table_name, ClientTags.TAG_DISPLAY_STORAGE ),
+                            HC.CONTENT_STATUS_PETITIONED : ( petitioned_mappings_table_name, ClientTags.TAG_DISPLAY_STORAGE )
+                        }
+                        
+                    else:
+                        
+                        statuses_to_table_names = {}
+                        
+                    
+                
+                for status in statuses:
+                    
+                    if status not in statuses_to_table_names:
+                        
+                        continue
+                        
+                    
+                    ( mappings_table_name, table_tag_display_type ) = statuses_to_table_names[ status ]
+                    
+                    if tag_display_type == ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL:
+                        
+                        ideal_tag_id = self.modules_tag_siblings.GetIdealTagId( ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, tag_service_id, tag_id )
+                        
+                        if table_tag_display_type == ClientTags.TAG_DISPLAY_STORAGE:
+                            
+                            search_tag_ids = self.modules_tag_siblings.GetChainMembersFromIdeal( ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, tag_service_id, ideal_tag_id )
+                            
+                        else:
+                            
+                            search_tag_ids = ( ideal_tag_id, )
+                            
+                        
+                    else:
+                        
+                        search_tag_ids = ( tag_id, )
+                        
+                    
+                    if len( search_tag_ids ) == 1:
+                        
+                        ( search_tag_id, ) = search_tag_ids
+                        
+                        if hash_ids is not None and hash_ids_table_name is not None:
+                            
+                            # temp hashes to mappings
+                            query = f'SELECT hash_id FROM {hash_ids_table_name} CROSS JOIN {mappings_table_name} USING ( hash_id ) WHERE tag_id = ?'
+                            
+                        else:
+                            
+                            query = f'SELECT hash_id FROM {mappings_table_name} WHERE tag_id = ?;'
+                            
+                        
+                        result_hash_ids.update( self._STI( self._ExecuteCancellable( query, ( search_tag_id, ), cancelled_hook ) ) )
+                        
+                    else:
+                        
+                        with self._MakeTemporaryIntegerTable( search_tag_ids, 'tag_id' ) as temp_tag_ids_table_name:
+                            
+                            if hash_ids is not None and hash_ids_table_name is not None:
+                                
+                                # temp hashes to mappings to temp tags
+                                # old method, does not do EXISTS efficiently, it makes a list instead and checks that
+                                # queries = [ 'SELECT hash_id FROM {} WHERE EXISTS ( SELECT 1 FROM {} CROSS JOIN {} USING ( tag_id ) WHERE {}.hash_id = {}.hash_id );'.format( hash_ids_table_name, table_name, temp_tag_ids_table_name, table_name, hash_ids_table_name ) for table_name in table_names ]
+                                # new method, this seems to actually do the correlated scalar subquery, although it does seem to be sqlite voodoo
+                                query = f'SELECT hash_id FROM {hash_ids_table_name} WHERE EXISTS ( SELECT 1 FROM {mappings_table_name} WHERE {mappings_table_name}.hash_id = {hash_ids_table_name}.hash_id AND EXISTS ( SELECT 1 FROM {temp_tag_ids_table_name} WHERE {mappings_table_name}.tag_id = {temp_tag_ids_table_name}.tag_id ) );'
+                                
+                            else:
+                                
+                                # temp tags to mappings
+                                query = f'SELECT hash_id FROM {temp_tag_ids_table_name} CROSS JOIN {mappings_table_name} USING ( tag_id );'
+                                
+                            
+                            result_hash_ids.update( self._STI( self._ExecuteCancellable( query, (), cancelled_hook ) ) )
+                            
+                        
+                    
+                
+            
+        
+        if not file_location_is_cross_referenced:
+            
+            result_hash_ids = self.modules_files_storage.FilterHashIds( location_context, result_hash_ids )
+            
+        
+        return result_hash_ids
         
     
     def GetHashIdsFromTagIds( self, tag_display_type: int, file_service_key: bytes, tag_context: ClientSearchTagContext.TagContext, tag_ids: typing.Collection[ int ], hash_ids = None, hash_ids_table_name = None, job_status = None ):
@@ -902,6 +1055,71 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
         self.modules_files_search_tags = modules_files_search_tags
         
         super().__init__( 'client file query', cursor )
+        
+    
+    def _DoAdvancedTagPredicate(
+        self,
+        file_search_context: ClientSearchFileSearchContext.FileSearchContext,
+        job_status: ClientThreading.JobStatus,
+        pred: ClientSearchPredicate.Predicate,
+        query_hash_ids: typing.Optional[ typing.Set[ int ] ]
+    ):
+        
+        ( service_key_or_none, tag_display_type, statuses, tag ) = pred.GetValue()
+        
+        if service_key_or_none is None:
+            
+            prime_search_tag_service_key = file_search_context.GetTagContext().service_key
+            
+        else:
+            
+            prime_search_tag_service_key = service_key_or_none
+            
+        
+        if prime_search_tag_service_key == CC.COMBINED_TAG_SERVICE_KEY:
+            
+            services = self.modules_services.GetServices( HC.REAL_TAG_SERVICES )
+            
+            search_tag_service_keys = [ service.GetServiceKey() for service in services ]
+            
+        else:
+            
+            search_tag_service_keys = ( prime_search_tag_service_key, )
+            
+        
+        location_context = file_search_context.GetLocationContext()
+        
+        if query_hash_ids is None:
+            
+            result = self.modules_files_search_tags.GetHashIdsFromTagAdvanced(
+                tag,
+                tag_display_type,
+                statuses,
+                search_tag_service_keys,
+                location_context,
+                job_status = job_status
+            )
+            
+        else:
+            
+            with self._MakeTemporaryIntegerTable( query_hash_ids, 'hash_id' ) as temp_table_name:
+                
+                self._AnalyzeTempTable( temp_table_name )
+                
+                result = self.modules_files_search_tags.GetHashIdsFromTagAdvanced(
+                    tag,
+                    tag_display_type,
+                    statuses,
+                    search_tag_service_keys,
+                    location_context,
+                    hash_ids = query_hash_ids,
+                    hash_ids_table_name = temp_table_name,
+                    job_status = job_status
+                )
+                
+            
+        
+        return result
         
     
     def _DoNotePreds( self, system_predicates: ClientSearchFileSearchContext.FileSystemPredicates, query_hash_ids: typing.Optional[ typing.Set[ int ] ], job_status: typing.Optional[ ClientThreading.JobStatus ] = None ) -> typing.Optional[ typing.Set[ int ] ]:
@@ -1719,6 +1937,20 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
         
         #
         
+        # ok let's do inclusive advanced tags. no great place to put these, but expensive search is already bought in here so there we go
+        
+        for pred in system_predicates.GetAdvancedTagPredicates():
+            
+            if pred.IsInclusive():
+                
+                pred_query_hash_ids = self._DoAdvancedTagPredicate( file_search_context, job_status, pred, query_hash_ids )
+                
+                query_hash_ids = intersection_update_qhi( query_hash_ids, pred_query_hash_ids )
+                
+            
+        
+        #
+        
         # OR round two--if file preds will not be fast, let's step in to reduce the file domain search space
         if not done_or_predicates and not there_are_simple_files_info_preds_to_search_for:
             
@@ -1847,6 +2079,16 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
                             
                         
                     
+                
+            
+        
+        for pred in system_predicates.GetAdvancedTagPredicates():
+            
+            if not pred.IsInclusive():
+                
+                pred_query_hash_ids = self._DoAdvancedTagPredicate( file_search_context, job_status, pred, query_hash_ids )
+                
+                query_hash_ids.difference_update( pred_query_hash_ids )
                 
             
         

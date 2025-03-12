@@ -2604,7 +2604,7 @@ class Controller( HydrusController.HydrusController ):
                 return
                 
             
-            thumbnail = self.GetCache( 'thumbnail' ).GetThumbnail( media )
+            thumbnail = self.GetCache( 'thumbnail' ).GetThumbnail( media.GetDisplayMedia().GetMediaResult() )
             
             qt_image = thumbnail.GetQtImage().copy()
             

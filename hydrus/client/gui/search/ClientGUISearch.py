@@ -52,6 +52,7 @@ FLESH_OUT_SYSTEM_PRED_TYPES = {
     ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_SIMILAR_TO_DATA,
     ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_SIMILAR_TO_FILES,
     ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_FILE_SERVICE,
+    ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_TAG_ADVANCED,
     ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_TAG_AS_NUMBER,
     ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_URLS,
     ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_FILE_RELATIONSHIPS,
@@ -371,6 +372,10 @@ class EditPredicatesPanel( ClientGUIScrolledPanels.EditPanel ):
             elif predicate_type == ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_SIZE:
                 
                 self._editable_pred_panels.append( ClientGUIPredicatesSingle.PanelPredicateSystemSize( self, predicate ) )
+                
+            elif predicate_type == ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_TAG_ADVANCED:
+                
+                self._editable_pred_panels.append( ClientGUIPredicatesSingle.PanelPredicateSystemTagAdvanced( self, predicate ) )
                 
             elif predicate_type == ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_TAG_AS_NUMBER:
                 
@@ -828,6 +833,12 @@ class FleshOutPredicatePanel( ClientGUIScrolledPanels.EditPanel ):
         elif predicate_type == ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_SIZE:
             
             editable_pred_panels.append( self._PredOKPanel( self, ClientGUIPredicatesSingle.PanelPredicateSystemSize, predicate ) )
+            
+        elif predicate_type == ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_TAG_ADVANCED:
+            
+            label = 'This predicate is only needed to solve advanced problems. It may run very slow.'
+            
+            editable_pred_panels.append( self._PredOKPanel( self, ClientGUIPredicatesSingle.PanelPredicateSystemTagAdvanced, predicate ) )
             
         elif predicate_type == ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_TAG_AS_NUMBER:
             

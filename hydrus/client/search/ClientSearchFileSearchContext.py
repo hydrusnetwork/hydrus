@@ -48,6 +48,8 @@ class FileSystemPredicates( object ):
         self._num_tags_predicates = []
         self._num_urls_predicates = []
         
+        self._advanced_tag_predicates = []
+        
         self._duplicate_count_predicates = []
         
         self._king_filter = None
@@ -311,6 +313,11 @@ class FileSystemPredicates( object ):
                     
                 
             
+            if predicate_type == ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_TAG_ADVANCED:
+                
+                self._advanced_tag_predicates.append( predicate )
+                
+            
             if predicate_type == ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_TAG_AS_NUMBER:
                 
                 ( namespace, operator, num ) = value
@@ -433,6 +440,11 @@ class FileSystemPredicates( object ):
                 self._file_viewing_stats_predicates.append( ( view_type, desired_canvas_types, operator, viewing_value ) )
                 
             
+        
+    
+    def GetAdvancedTagPredicates( self ):
+        
+        return self._advanced_tag_predicates
         
     
     def GetAllowedFiletypes( self ):

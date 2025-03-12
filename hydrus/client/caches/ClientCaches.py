@@ -19,6 +19,7 @@ from hydrus.client import ClientRendering
 from hydrus.client import ClientThreading
 from hydrus.client.caches import ClientCachesBase
 from hydrus.client.parsing import ClientParsing
+from hydrus.client.media import ClientMediaResult
 
 class ParsingCache( object ):
     
@@ -305,17 +306,17 @@ class ThumbnailCache( object ):
         self._controller.sub( self, 'NotifyNewOptions', 'notify_new_options' )
         
     
-    def _GetBestRecoveryThumbnailHydrusBitmap( self, display_media ):
+    def _GetBestRecoveryThumbnailHydrusBitmap( self, media_result: ClientMediaResult.MediaResult ):
         
         if self._allow_blurhash_fallback:
             
-            blurhash = display_media.GetFileInfoManager().blurhash
+            blurhash = media_result.GetFileInfoManager().blurhash
             
             if blurhash is not None:
                 
                 try:
                     
-                    ( media_width, media_height ) = display_media.GetResolution()
+                    ( media_width, media_height ) = media_result.GetResolution()
                     
                     bounding_dimensions = self._controller.options[ 'thumbnail_dimensions' ]
                     thumbnail_scale_type = self._controller.new_options.GetInteger( 'thumbnail_scale_type' )
@@ -339,20 +340,20 @@ class ThumbnailCache( object ):
         return self._special_thumbs[ HC.APPLICATION_UNKNOWN ]
         
     
-    def _GetThumbnailHydrusBitmap( self, display_media ):
+    def _GetThumbnailHydrusBitmap( self, media_result: ClientMediaResult.MediaResult ):
         
         if HG.blurhash_mode:
             
-            return self._GetBestRecoveryThumbnailHydrusBitmap( display_media )
+            return self._GetBestRecoveryThumbnailHydrusBitmap( media_result )
             
         
-        hash = display_media.GetHash()
+        hash = media_result.GetHash()
         
-        locations_manager = display_media.GetLocationsManager()
+        locations_manager = media_result.GetLocationsManager()
         
         try:
             
-            thumbnail_path = self._controller.client_files_manager.GetThumbnailPath( display_media )
+            thumbnail_path = self._controller.client_files_manager.GetThumbnailPath( media_result )
             
         except HydrusExceptions.FileMissingException as e:
             
@@ -363,7 +364,7 @@ class ThumbnailCache( object ):
                 self._HandleThumbnailException( hash, e, summary )
                 
             
-            return self._GetBestRecoveryThumbnailHydrusBitmap( display_media )
+            return self._GetBestRecoveryThumbnailHydrusBitmap( media_result )
             
         
         thumbnail_mime = HC.IMAGE_JPEG
@@ -379,7 +380,7 @@ class ThumbnailCache( object ):
             try:
                 
                 # file is malformed, let's force a regen
-                self._controller.files_maintenance_manager.RunJobImmediately( [ display_media ], ClientFiles.REGENERATE_FILE_DATA_JOB_FORCE_THUMBNAIL, pub_job_status = False )
+                self._controller.files_maintenance_manager.RunJobImmediately( [ media_result ], ClientFiles.REGENERATE_FILE_DATA_JOB_FORCE_THUMBNAIL, pub_job_status = False )
                 
             except Exception as e:
                 
@@ -387,7 +388,7 @@ class ThumbnailCache( object ):
                 
                 self._HandleThumbnailException( hash, e, summary )
                 
-                return self._GetBestRecoveryThumbnailHydrusBitmap( display_media )
+                return self._GetBestRecoveryThumbnailHydrusBitmap( media_result )
                 
             
             try:
@@ -400,13 +401,13 @@ class ThumbnailCache( object ):
                 
                 self._HandleThumbnailException( hash, e, summary )
                 
-                return self._GetBestRecoveryThumbnailHydrusBitmap( display_media )
+                return self._GetBestRecoveryThumbnailHydrusBitmap( media_result )
                 
             
         
         ( current_width, current_height ) = HydrusImageHandling.GetResolutionNumPy( numpy_image )
         
-        ( media_width, media_height ) = display_media.GetResolution()
+        ( media_width, media_height ) = media_result.GetResolution()
         
         bounding_dimensions = self._controller.options[ 'thumbnail_dimensions' ]
         thumbnail_scale_type = self._controller.new_options.GetInteger( 'thumbnail_scale_type' )
@@ -433,15 +434,13 @@ class ThumbnailCache( object ):
                     HydrusData.ShowText( 'Thumbnail {} wrong size ({}x{} instead of {}x{}), scheduling regeneration from source.'.format( hash.hex(), current_width, current_height, expected_width, expected_height ) )
                     
                 
-                delayed_item = display_media.GetMediaResult()
-                
                 with self._lock:
                     
-                    if delayed_item not in self._delayed_regeneration_queue_quick:
+                    if media_result not in self._delayed_regeneration_queue_quick:
                         
-                        self._delayed_regeneration_queue_quick.add( delayed_item )
+                        self._delayed_regeneration_queue_quick.add( media_result )
                         
-                        self._delayed_regeneration_queue.append( delayed_item )
+                        self._delayed_regeneration_queue.append( media_result )
                         
                     
                 
@@ -593,13 +592,13 @@ class ThumbnailCache( object ):
         self._delayed_regeneration_queue.sort( key = sort_regen, reverse = True )
         
     
-    def _ShouldBeAbleToProvideThumb( self, media ):
+    def _ShouldBeAbleToProvideThumb( self, media_result: ClientMediaResult.MediaResult ):
         
-        locations_manager = media.GetLocationsManager()
+        locations_manager = media_result.GetLocationsManager()
         
         we_have_file = locations_manager.IsLocal()
         we_should_have_thumb = not locations_manager.GetCurrent().isdisjoint( CG.client_controller.services_manager.GetServiceKeys( ( HC.FILE_REPOSITORY, ) ) )
-        we_have_blurhash = media.GetFileInfoManager().blurhash is not None
+        we_have_blurhash = media_result.GetFileInfoManager().blurhash is not None
         
         return we_have_file or we_should_have_thumb or we_have_blurhash
         
@@ -694,21 +693,21 @@ class ThumbnailCache( object ):
             
         
     
-    def GetThumbnail( self, media ) -> ClientRendering.HydrusBitmap:
+    def GetHydrusPlaceholderThumbnail( self ):
         
-        display_media = media.GetDisplayMedia()
+        return self._special_thumbs[ HC.APPLICATION_UNKNOWN ]
         
-        if display_media is None:
-            
-            # sometimes media can get switched around during a collect event, and if this happens during waterfall, we have a problem here
-            # just return for now, we'll see how it goes
+    
+    def GetThumbnail( self, media_result: ClientMediaResult.MediaResult ) -> ClientRendering.HydrusBitmap:
+        
+        if media_result is None:
             
             return self._special_thumbs[ HC.APPLICATION_UNKNOWN ]
             
         
-        can_provide = self._ShouldBeAbleToProvideThumb( display_media )
+        can_provide = self._ShouldBeAbleToProvideThumb( media_result )
         
-        mime = display_media.GetMime()
+        mime = media_result.GetMime()
         
         if mime in self._special_thumbs:
             
@@ -723,7 +722,7 @@ class ThumbnailCache( object ):
             
             if mime in HC.MIMES_WITH_THUMBNAILS:
                 
-                hash = display_media.GetHash()
+                hash = media_result.GetHash()
                 
                 result = self._data_cache.GetIfHasData( hash )
                 
@@ -731,7 +730,7 @@ class ThumbnailCache( object ):
                     
                     try:
                         
-                        hydrus_bitmap = self._GetThumbnailHydrusBitmap( display_media )
+                        hydrus_bitmap = self._GetThumbnailHydrusBitmap( media_result )
                         
                     except:
                         
@@ -761,13 +760,15 @@ class ThumbnailCache( object ):
             return True
             
         
-        mime = display_media.GetMime()
+        media_result = display_media.GetMediaResult()
+        
+        mime = media_result.GetMime()
         
         if mime in HC.MIMES_WITH_THUMBNAILS:
             
-            if self._ShouldBeAbleToProvideThumb( display_media ):
+            if self._ShouldBeAbleToProvideThumb( media_result ):
                 
-                hash = display_media.GetHash()
+                hash = media_result.GetHash()
                 
                 return self._data_cache.HasData( hash )
                 
@@ -863,7 +864,7 @@ class ThumbnailCache( object ):
                 
                 if media.GetDisplayMedia() is not None:
                     
-                    self.GetThumbnail( media )
+                    self.GetThumbnail( media.GetDisplayMedia().GetMediaResult() )
                     
                     page_keys_to_rendered_medias[ page_key ].append( media )
                     

@@ -5045,37 +5045,43 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             #
             
-            render_panel = ClientGUICommon.StaticBox( self, 'namespace rendering' )
+            namespace_rendering_panel = ClientGUICommon.StaticBox( self, 'namespace rendering' )
             
-            render_st = ClientGUICommon.BetterStaticText( render_panel, label = 'Namespaced tags are stored and directly edited in hydrus as "namespace:subtag", but most presentation windows can display them differently.' )
+            render_st = ClientGUICommon.BetterStaticText( namespace_rendering_panel, label = 'Namespaced tags are stored and directly edited in hydrus as "namespace:subtag", but most presentation windows can display them differently.' )
             
-            self._show_namespaces = QW.QCheckBox( render_panel )
-            self._show_number_namespaces = QW.QCheckBox( render_panel )
+            self._show_namespaces = QW.QCheckBox( namespace_rendering_panel )
+            self._show_number_namespaces = QW.QCheckBox( namespace_rendering_panel )
             self._show_number_namespaces.setToolTip( ClientGUIFunctions.WrapToolTip( 'This lets unnamespaced "16:9" show as that, not hiding the "16".' ) )
-            self._show_subtag_number_namespaces = QW.QCheckBox( render_panel )
+            self._show_subtag_number_namespaces = QW.QCheckBox( namespace_rendering_panel )
             self._show_subtag_number_namespaces.setToolTip( ClientGUIFunctions.WrapToolTip( 'This lets unnamespaced "page:3" show as that, not hiding the "page" where it can get mixed with chapter etc...' ) )
-            self._namespace_connector = QW.QLineEdit( render_panel )
-            self._sibling_connector = QW.QLineEdit( render_panel )
+            self._namespace_connector = QW.QLineEdit( namespace_rendering_panel )
             
-            self._fade_sibling_connector = QW.QCheckBox( render_panel )
+            #
+            
+            other_rendering_panel = ClientGUICommon.StaticBox( self, 'other rendering' )
+            
+            self._sibling_connector = QW.QLineEdit( other_rendering_panel )
+            
+            self._fade_sibling_connector = QW.QCheckBox( other_rendering_panel )
             tt = 'If set, then if the sibling goes from one namespace to another, that colour will fade across the distance of the sibling connector. Just a bit of fun.'
             self._fade_sibling_connector.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
             
-            self._sibling_connector_custom_namespace_colour = ClientGUICommon.NoneableTextCtrl( render_panel, 'system', none_phrase = 'use ideal tag colour' )
+            self._sibling_connector_custom_namespace_colour = ClientGUICommon.NoneableTextCtrl( other_rendering_panel, 'system', none_phrase = 'use ideal tag colour' )
             tt = 'The sibling connector can use a particular namespace\'s colour.'
             self._sibling_connector_custom_namespace_colour.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
             
-            self._or_connector = QW.QLineEdit( render_panel )
+            self._or_connector = QW.QLineEdit( other_rendering_panel )
             tt = 'When an OR predicate is rendered on one line, it splits the components by this text.'
             self._or_connector.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
             
-            self._or_connector_custom_namespace_colour = QW.QLineEdit( render_panel )
+            self._or_connector_custom_namespace_colour = QW.QLineEdit( other_rendering_panel )
             tt = 'The "OR:" row can use a particular namespace\'s colour.'
             self._or_connector_custom_namespace_colour.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
             
-            self._replace_tag_underscores_with_spaces = QW.QCheckBox( render_panel )
+            self._replace_tag_underscores_with_spaces = QW.QCheckBox( other_rendering_panel )
+            self._replace_tag_underscores_with_spaces.setToolTip( ClientGUIFunctions.WrapToolTip( 'This does not logically merge tags or change behaviour in any way, it only changes tag rendering in UI.' ) )
             
-            self._replace_tag_emojis_with_boxes = QW.QCheckBox( render_panel )
+            self._replace_tag_emojis_with_boxes = QW.QCheckBox( other_rendering_panel )
             self._replace_tag_emojis_with_boxes.setToolTip( ClientGUIFunctions.WrapToolTip( 'This will replace emojis and weird symbols with □ in front-facing user views, in case you are getting crazy rendering. It may break some CJK punctuation.' ) )
             
             #
@@ -5148,9 +5154,19 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows = []
             
             rows.append( ( 'Show namespaces: ', self._show_namespaces ) )
-            rows.append( ( 'Unless namespace is a number: ', self._show_number_namespaces ) )
-            rows.append( ( 'Unless subtag is a number: ', self._show_subtag_number_namespaces ) )
+            rows.append( ( 'Show namespace if it is a number: ', self._show_number_namespaces ) )
+            rows.append( ( 'Show namespace if subtag is a number: ', self._show_subtag_number_namespaces ) )
             rows.append( ( 'If shown, namespace connecting string: ', self._namespace_connector ) )
+            
+            gridbox = ClientGUICommon.WrapInGrid( namespace_rendering_panel, rows )
+            
+            namespace_rendering_panel.Add( render_st, CC.FLAGS_EXPAND_PERPENDICULAR )
+            namespace_rendering_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            
+            #
+            
+            rows = []
+            
             rows.append( ( 'Sibling connecting string: ', self._sibling_connector ) )
             rows.append( ( 'Fade the colour of the sibling connector string on Qt6: ', self._fade_sibling_connector ) )
             rows.append( ( 'Namespace for the colour of the sibling connecting string: ', self._sibling_connector_custom_namespace_colour ) )
@@ -5159,16 +5175,16 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows.append( ( 'EXPERIMENTAL: Replace all underscores with spaces: ', self._replace_tag_underscores_with_spaces ) )
             rows.append( ( 'EXPERIMENTAL: Replace all emojis with □: ', self._replace_tag_emojis_with_boxes ) )
             
-            gridbox = ClientGUICommon.WrapInGrid( render_panel, rows )
+            gridbox = ClientGUICommon.WrapInGrid( other_rendering_panel, rows )
             
-            render_panel.Add( render_st, CC.FLAGS_EXPAND_PERPENDICULAR )
-            render_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            other_rendering_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
             #
             
             QP.AddToLayout( vbox, self._tag_banners_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
             QP.AddToLayout( vbox, self._selection_tags_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-            QP.AddToLayout( vbox, render_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+            QP.AddToLayout( vbox, namespace_rendering_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+            QP.AddToLayout( vbox, other_rendering_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
             QP.AddToLayout( vbox, namespace_colours_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
             
             #

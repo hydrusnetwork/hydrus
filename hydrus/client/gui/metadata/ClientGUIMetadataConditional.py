@@ -141,7 +141,7 @@ class AutoCompleteDropdownMetadataConditional( ClientGUIACDropdown.AutoCompleteD
         
         height_num_chars = 3
         
-        tag_service_key = self._file_search_context.SetTagContext().service_key
+        tag_service_key = self._file_search_context.GetTagContext().service_key
         
         return ClientGUIACDropdown.ListBoxTagsPredicatesAC( self._dropdown_notebook, self.BroadcastChoices, self._float_mode, tag_service_key, tag_display_type = ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, height_num_chars = height_num_chars )
         

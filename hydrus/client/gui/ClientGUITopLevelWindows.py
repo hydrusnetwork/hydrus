@@ -4,6 +4,7 @@ from qtpy import QtGui as QG
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
+from hydrus.core import HydrusGlobals as HG
 
 from hydrus.client import ClientGlobals as CG
 from hydrus.client.gui import ClientGUIDialogsMessage
@@ -144,11 +145,8 @@ def GetSafeSize( tlw: QW.QWidget, min_size: QC.QSize, gravity ) -> QC.QSize:
     
     return QC.QSize( width, height )
     
+
 def ExpandTLWIfPossible( tlw: QW.QWidget, frame_key, desired_size_delta: QC.QSize ):
-    
-    new_options = CG.client_controller.new_options
-    
-    ( remember_size, remember_position, last_size, last_position, default_gravity, default_position, maximised, fullscreen ) = new_options.GetFrameLocation( frame_key )
     
     if not tlw.isMaximized() and not tlw.isFullScreen():
         
@@ -176,7 +174,10 @@ def ExpandTLWIfPossible( tlw: QW.QWidget, frame_key, desired_size_delta: QC.QSiz
         
         desired_size = QC.QSize( desired_width, desired_height )
         
-        new_size = GetSafeSize( tlw, desired_size, default_gravity )
+        # we don't want to expand to parent size here
+        gravity_for_expand_time = ( -1, -1 )
+        
+        new_size = GetSafeSize( tlw, desired_size, gravity_for_expand_time )
         
         if new_size.width() > current_width or new_size.height() > current_height:
             
@@ -188,6 +189,7 @@ def ExpandTLWIfPossible( tlw: QW.QWidget, frame_key, desired_size_delta: QC.QSiz
             
         
     
+
 def SaveTLWSizeAndPosition( tlw: QW.QWidget, frame_key ):
     
     if tlw.isMinimized():
@@ -373,6 +375,11 @@ def SetInitialTLWSizeAndPosition( tlw: QW.QWidget, frame_key ):
     if safe_position is not None:
         
         tlw.move( safe_position )
+        
+        if HG.macos_window_position_fix_test:
+            
+            CG.client_controller.CallLaterQtSafe( tlw, 0.1, 'macOS position fix test', tlw.move, safe_position )
+            
         
     
     if slide_up_and_left:
@@ -680,6 +687,7 @@ class NewDialog( QP.Dialog ):
             
         
     
+
 class DialogThatResizes( NewDialog ):
     
     def __init__( self, parent, title, frame_key, do_not_activate = False ):
@@ -694,6 +702,7 @@ class DialogThatResizes( NewDialog ):
         SaveTLWSizeAndPosition( self, self._frame_key )
         
     
+
 class Frame( QW.QWidget ):
     
     def __init__( self, parent, title ):
@@ -753,6 +762,7 @@ class MainFrame( QW.QMainWindow ):
         self.CleanBeforeDestroy()
         
     
+
 class FrameThatResizes( Frame ):
     
     def __init__( self, parent, title, frame_key ):
@@ -782,7 +792,11 @@ class FrameThatResizes( Frame ):
         return True # was: event.ignore()
         
     
-class FrameThatResizesWithHovers( FrameThatResizes ): pass
+
+class FrameThatResizesWithHovers( FrameThatResizes ):
+    
+    pass
+    
 
 class MainFrameThatResizes( MainFrame ):
 

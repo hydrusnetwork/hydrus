@@ -295,7 +295,7 @@ class HydrusListItemModel( QC.QAbstractItemModel ):
             
         else:
             
-            return QC.QAbstractItemModel.headerData( self, section, orientation, role = role )
+            return super().headerData( section, orientation, role = role )
             
         
     

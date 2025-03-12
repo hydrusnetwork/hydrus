@@ -622,13 +622,13 @@ class ClientFilesManager( object ):
         return subfolder.GetFilePath( f'{hash_encoded}.thumbnail' )
         
     
-    def _GenerateThumbnailBytes( self, file_path, media ):
+    def _GenerateThumbnailBytes( self, file_path, media_result ):
         
-        hash = media.GetHash()
-        mime = media.GetMime()
-        ( width, height ) = media.GetResolution()
-        duration_ms = media.GetDurationMS()
-        num_frames = media.GetNumFrames()
+        hash = media_result.GetHash()
+        mime = media_result.GetMime()
+        ( width, height ) = media_result.GetResolution()
+        duration_ms = media_result.GetDurationMS()
+        num_frames = media_result.GetNumFrames()
         
         bounding_dimensions = self._controller.options[ 'thumbnail_dimensions' ]
         thumbnail_scale_type = self._controller.new_options.GetInteger( 'thumbnail_scale_type' )
@@ -1713,10 +1713,10 @@ class ClientFilesManager( object ):
             
         
     
-    def GetThumbnailPath( self, media ):
+    def GetThumbnailPath( self, media_result ):
         
-        hash = media.GetHash()
-        mime = media.GetMime()
+        hash = media_result.GetHash()
+        mime = media_result.GetMime()
         
         if HG.file_report_mode:
             
@@ -1735,7 +1735,7 @@ class ClientFilesManager( object ):
         
         if thumb_missing:
             
-            self.RegenerateThumbnail( media )
+            self.RegenerateThumbnail( media_result )
             
         
         return path
@@ -1822,15 +1822,15 @@ class ClientFilesManager( object ):
             
         
     
-    def RegenerateThumbnail( self, media ):
+    def RegenerateThumbnail( self, media_result ):
         
-        if not media.GetLocationsManager().IsLocal():
+        if not media_result.GetLocationsManager().IsLocal():
             
             raise HydrusExceptions.FileMissingException( 'I was called to regenerate a thumbnail from source, but the source file does not think it is in the local file store!' )
             
         
-        hash = media.GetHash()
-        mime = media.GetMime()
+        hash = media_result.GetHash()
+        mime = media_result.GetMime()
         
         if mime not in HC.MIMES_WITH_THUMBNAILS:
             
@@ -1850,7 +1850,7 @@ class ClientFilesManager( object ):
                 
             
             # in another world I do this inside the file read lock, but screw it I'd rather have the time spent outside
-            thumbnail_bytes = self._GenerateThumbnailBytes( file_path, media )
+            thumbnail_bytes = self._GenerateThumbnailBytes( file_path, media_result )
             
             with self._GetPrefixUmbrellaRWLock( hash, 't' ).write:
                 
@@ -1861,21 +1861,21 @@ class ClientFilesManager( object ):
         return True
         
     
-    def RegenerateThumbnailIfWrongSize( self, media ):
+    def RegenerateThumbnailIfWrongSize( self, media_result ):
         
         do_it = False
         
         try:
             
-            hash = media.GetHash()
-            mime = media.GetMime()
+            hash = media_result.GetHash()
+            mime = media_result.GetMime()
             
             if mime not in HC.MIMES_WITH_THUMBNAILS:
                 
                 return
                 
             
-            ( media_width, media_height ) = media.GetResolution()
+            ( media_width, media_height ) = media_result.GetResolution()
             
             path = self._GenerateExpectedThumbnailPath( hash )
             
@@ -1908,7 +1908,7 @@ class ClientFilesManager( object ):
         
         if do_it:
             
-            self.RegenerateThumbnail( media )
+            self.RegenerateThumbnail( media_result )
             
         
         return do_it
@@ -2744,16 +2744,16 @@ class FilesMaintenanceManager( ClientDaemons.ManagerWithMainLoop ):
             
         
     
-    def _RegenBlurhash( self, media ):
+    def _RegenBlurhash( self, media_result ):
         
-        if media.GetMime() not in HC.MIMES_WITH_THUMBNAILS:
+        if media_result.GetMime() not in HC.MIMES_WITH_THUMBNAILS:
             
             return None
             
         
         try:
             
-            thumbnail_path = self._controller.client_files_manager.GetThumbnailPath( media )
+            thumbnail_path = self._controller.client_files_manager.GetThumbnailPath( media_result )
             
         except HydrusExceptions.FileMissingException as e:
             

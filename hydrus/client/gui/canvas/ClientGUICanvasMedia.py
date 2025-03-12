@@ -2843,7 +2843,7 @@ class EmbedButton( QW.QWidget ):
         
         if needs_thumb:
             
-            thumbnail_path = CG.client_controller.client_files_manager.GetThumbnailPath( self._media )
+            thumbnail_path = CG.client_controller.client_files_manager.GetThumbnailPath( self._media.GetDisplayMedia().GetMediaResult() )
             
             thumbnail_mime = HydrusFileHandling.GetThumbnailMime( thumbnail_path )
             
@@ -2871,7 +2871,7 @@ class OpenExternallyPanel( QW.QWidget ):
         
         if self._media.GetLocationsManager().IsLocal():
             
-            qt_pixmap = CG.client_controller.GetCache( 'thumbnail' ).GetThumbnail( media ).GetQtPixmap()
+            qt_pixmap = CG.client_controller.GetCache( 'thumbnail' ).GetThumbnail( media.GetDisplayMedia().GetMediaResult() ).GetQtPixmap()
             
             thumbnail_dpr_percent = CG.client_controller.new_options.GetInteger( 'thumbnail_dpr_percent' )
             

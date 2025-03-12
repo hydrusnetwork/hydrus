@@ -156,3 +156,19 @@ If you don't know how drive encryption works, search it up and have a play with 
 The repositories do not work like conventional search engines; it takes a short but predictable while for changes to propagate to other users.
 
 The client's searches only ever happen over its local cache of what is on the repository. Any changes you make will be delayed for others until their next update occurs. At the moment, the update period is 100,000 seconds, which is about 1 day and 4 hours.
+
+## Why work alone? { id="work_alone" }
+
+If I work in a team, I tend to burn out and then quit, usually in a big drama bomb. This happened several times in my life until I decided to work on Hydrus strictly alone, and I've been stable ever since. I'm just no good at working with others!
+
+If you would like to help out with hydrus, there are several things you can work on, from simple downloaders to full API tools. Feel free to reach out. But please don't make spontaneous pull requests, and know that I will never be able to collaborate closely with you on code.
+
+## Why weekly releases? { id="weekly_releases" }
+
+I am someone who always does his homework the night before it is due. If I give myself two months to do something, I'll spend the first six weeks playing vidya. Having a very strict weekly schedule ensures I am always under the pressure of a deadline and lets me fix mistakes (of which there are many!) on a tight loop.
+
+## Why not use normal x.y.z versioning? { id="versioning" }
+
+The Hydrus 'project' is a huge unsteered mess. There are no 'major' or 'minor' features that I work on in a clear separate branch, and everything is in beta and open to revision all the time. I'm just trying stuff and seeing what is interesting. Hydrus will never be 1.0.0 'done', either, so I also don't want to fall into the early-access undefined versioning morass of 0.8, 0.9, 0.9.3, 0.9.78, 0.9.113. All I need is a number that increments every release.
+
+I plan to stop around version v1000.

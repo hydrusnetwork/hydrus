@@ -54,6 +54,18 @@ def BytesToNoneOrHex( b: typing.Optional[ bytes ] ):
         
     
 
+def HexToNoneOrBytes( h: typing.Optional[ str ] ):
+    
+    if h is None:
+        
+        return None
+        
+    else:
+        
+        return bytes.fromhex( h )
+        
+    
+
 def CalculateScoreFromRating( count, rating ):
     
     # https://www.evanmiller.org/how-not-to-sort-by-average-rating.html

@@ -19,6 +19,7 @@ from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIMenus
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
+from hydrus.client.gui.duplicates import ClientGUIDuplicatesAutoResolutionRulePreview
 from hydrus.client.gui.duplicates import ClientGUIDuplicatesContentMergeOptions
 from hydrus.client.gui.duplicates import ClientGUIPotentialDuplicatesSearchContext
 from hydrus.client.gui.lists import ClientGUIListConstants as CGLC
@@ -245,6 +246,8 @@ class EditDuplicatesAutoResolutionRulePanel( ClientGUIScrolledPanels.EditPanel )
         
         self._preview_panel = QW.QWidget( self._main_notebook )
         
+        self._full_preview_panel = ClientGUIDuplicatesAutoResolutionRulePreview.PreviewPanel( self._preview_panel, self.GetValue )
+        
         #
         
         self._name.setText( self._duplicates_auto_resolution_rule.GetName() )
@@ -271,9 +274,9 @@ class EditDuplicatesAutoResolutionRulePanel( ClientGUIScrolledPanels.EditPanel )
         
         vbox = QP.VBoxLayout()
         
-        label = 'Now we have some pairs, we need to determine if we are confident enough to make an automatic decision. If we are setting one file to be a better duplicate of the other, we also need to arrange which is the A (usually the better) and the B (the worse).'
+        label = 'Now, for each pair that matches our search, we need to determine if their differences (or similarities!) are clear enough that we confidently can make an automatic decision. If we are setting one file to be a better duplicate of the other, we also need to arrange which is the A (usually the better) and the B (usually the worse).'
         label += '\n\n'
-        label += 'The client will test the incoming pair both ways around against these rules, and if they fit either way, that "AB" is set and the action is applied. If the pair fails the rules both ways around, no changes will be made. If there are no rules, all pairs will be actioned--but you need at least one A- or B-defining rule for a "better/worse duplicates" action'
+        label += 'The client will test the incoming pair both ways around against these rules, and if they fit either way, that "AB" pair order is set and the action is applied. If the pair fails the rules both ways around, no changes will be made. If there are no rules, all pairs will be actioned--but you need at least one A- or B-defining rule for a "better/worse duplicates" action'
         
         st = ClientGUICommon.BetterStaticText( self._selector_panel, label )
         
@@ -303,7 +306,7 @@ class EditDuplicatesAutoResolutionRulePanel( ClientGUIScrolledPanels.EditPanel )
         
         #
         
-        label = 'In future, this panel will run some live database queries and preview examples of the pairs it finds and which pass the test.\n\nRun Search (pair count)\n\nRun Test on n pairs\n\nTest Results%\n\nShow a Failing Test | Show a Passing Test\n\nthumb A <-> thumb B, some way to launch a (read-only?) media viewer or something'
+        label = 'Let\'s review our rule to make sure it makes sense.'
         
         st = ClientGUICommon.BetterStaticText( self._preview_panel, label = label )
         
@@ -311,7 +314,8 @@ class EditDuplicatesAutoResolutionRulePanel( ClientGUIScrolledPanels.EditPanel )
         
         vbox = QP.VBoxLayout()
         
-        QP.AddToLayout( vbox, st, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( vbox, st, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._full_preview_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         self._preview_panel.setLayout( vbox )
         
@@ -345,6 +349,20 @@ class EditDuplicatesAutoResolutionRulePanel( ClientGUIScrolledPanels.EditPanel )
         QP.AddToLayout( vbox, self._rule_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         self.widget().setLayout( vbox )
+        
+        #
+        
+        self._main_notebook.currentChanged.connect( self._CurrentPageChanged )
+        
+    
+    def _CurrentPageChanged( self ):
+        
+        page = self._main_notebook.currentWidget()
+        
+        if page == self._preview_panel:
+            
+            self._full_preview_panel.PageShown()
+            
         
     
     def GetValue( self ):

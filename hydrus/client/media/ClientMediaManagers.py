@@ -1173,7 +1173,14 @@ class LocationsManager( object ):
                 
             elif action == HC.CONTENT_UPDATE_ADD:
                 
-                service_type = CG.client_controller.services_manager.GetServiceType( service_key )
+                try:
+                    
+                    service_type = CG.client_controller.services_manager.GetServiceType( service_key )
+                    
+                except HydrusExceptions.DataMissing:
+                    
+                    return
+                    
                 
                 if service_type == HC.IPFS:
                     
@@ -1418,7 +1425,14 @@ class RatingsManager( object ):
             
         else:
             
-            service_type = CG.client_controller.services_manager.GetServiceType( service_key )
+            try:
+                
+                service_type = CG.client_controller.services_manager.GetServiceType( service_key )
+                
+            except HydrusExceptions.DataMissing:
+                
+                return None
+                
             
             if service_type == HC.LOCAL_RATING_INCDEC:
                 
@@ -1433,7 +1447,14 @@ class RatingsManager( object ):
     
     def GetRatingForAPI( self, service_key ) -> typing.Union[ int, bool, None ]:
         
-        service = CG.client_controller.services_manager.GetService( service_key )
+        try:
+            
+            service = CG.client_controller.services_manager.GetService( service_key )
+            
+        except HydrusExceptions.DataMissing:
+            
+            return None
+            
         
         service_type = service.GetServiceType()
         

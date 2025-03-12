@@ -353,7 +353,7 @@ class URLClass( HydrusSerialisable.SerialisableBaseNamed ):
         
         self._example_url = example_url
         
-        if self._no_more_parameters_than_this or self._api_lookup_converter.MakesChanges():
+        if self._no_more_parameters_than_this:
             
             self._keep_extra_parameters_for_server = False
             
@@ -606,7 +606,7 @@ class URLClass( HydrusSerialisable.SerialisableBaseNamed ):
         self._api_lookup_converter = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_api_lookup_converter )
         self._referral_url_converter = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_referral_url_converter )
         
-        if self._no_more_parameters_than_this or self._api_lookup_converter.MakesChanges():
+        if self._no_more_parameters_than_this:
             
             self._keep_extra_parameters_for_server = False
             

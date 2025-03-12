@@ -1104,7 +1104,7 @@ class EditURLClassParameterFixedNamePanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._default_value_string_processor = ClientGUIStringControls.StringProcessorWidget( self, parameter.GetDefaultValueStringProcessor(), self._GetTestData )
         tt = 'WARNING WARNING: Extremely Big Brain'
-        tt += '/n' * 2
+        tt += '\n' * 2
         tt += 'You can apply the parsing system\'s normal String Processor steps to your fixed default value here. For instance, you could append/replace the default value with random hex or today\'s date. This is obviously super advanced, so be careful.'
         self._default_value_string_processor.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
         
@@ -1433,6 +1433,8 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
         tt = 'Normally, to ensure the same URLs are merged, hydrus will alphabetise GET parameters as part of the normalisation process.'
         tt += '\n' * 2
         tt += 'Almost all servers support GET params in any order. One or two do not. Uncheck this if you know there is a problem.'
+        tt += '\n\n'
+        tt += 'Be careful mixing this with an API or Referral URL Converter that converts parameter data, since now you have unordered parameter data to think about.'
         
         self._alphabetise_get_parameters.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
         
@@ -1453,11 +1455,9 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
         self._no_more_parameters_than_this.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
         
         self._keep_extra_parameters_for_server = QW.QCheckBox( self._options_panel )
-        
-        tt = 'Only available if not using an API/redirect converter!'
-        tt += '\n' * 2
-        tt += 'If checked, the URL not strip out undefined parameters in the normalisation process that occurs before a URL is sent to the server. In general, you probably want to keep this on, since these extra parameters can include temporary tokens and so on. Undefined parameters are removed when URLs are compared to each other (to detect dupes) or saved to the "known urls" storage in the database.'
-        
+        tt = 'If checked, the URL not strip out undefined parameters in the normalisation process that occurs before a URL is sent to the server. In general, you probably want to keep this on, since these extra parameters can include temporary tokens and so on. Undefined parameters are removed when URLs are compared to each other (to detect dupes) or saved to the "known urls" storage in the database.'
+        tt += '\n\n'
+        tt += 'Be careful mixing this with an API or Referral URL Converter that converts parameter data, since now you have optional parameter data to think about.'
         self._keep_extra_parameters_for_server.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
         
         self._can_produce_multiple_files = QW.QCheckBox( self._options_panel )
@@ -1565,7 +1565,7 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
         self._normalised_url.setReadOnly( True )
         
         tt = 'This is the fully normalised URL, which is what is saved to the database. It is used to compare to other URLs.'
-        tt += '/n' * 2
+        tt += '\n' * 2
         tt += 'We want to normalise to a single reliable URL because the same URL can be expressed in different ways. The parameters can be reordered, and descriptive \'sugar\' like "/123456/bodysuit-samus_aran" can be altered at a later date, say to "/123456/bodysuit-green_eyes-samus_aran". In order to collapse all the different expressions of a url down to a single comparable form, we remove any cruft and "normalise" things. The preferred scheme (http/https) will be switched to, and, typically, parameters will be alphabetised and non-defined elements will be removed.'
         
         self._normalised_url.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
@@ -1979,8 +1979,12 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
         
         # we need to regen possible next gallery page choices before we fetch current value and update everything else
         
-        if self._update_already_in_progress: return # Could use blockSignals but this way I don't have to block signals on individual controls
-
+        if self._update_already_in_progress:
+            
+            return # Could use blockSignals but this way I don't have to block signals on individual controls
+            # 2025-03 edit: what
+            
+        
         self._update_already_in_progress = True
         
         if self._url_type.GetValue() == HC.URL_TYPE_GALLERY:
@@ -2039,7 +2043,7 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._single_value_parameters_string_match.setEnabled( self._has_single_value_parameters.isChecked() )
         
-        nuke_keep_extra_params = self._no_more_parameters_than_this.isChecked() or self._api_lookup_converter.GetValue().MakesChanges()
+        nuke_keep_extra_params = self._no_more_parameters_than_this.isChecked()
         
         if nuke_keep_extra_params:
             

@@ -2172,7 +2172,14 @@ class Thumbnail( Selectable ):
         # we don't really want to mess around with DPR here, we just want to draw thumbs
         # that said, this works after a medium-high headache getting it there, so let's not get ahead of ourselves
         
-        thumbnail_hydrus_bmp = CG.client_controller.GetCache( 'thumbnail' ).GetThumbnail( self )
+        if media.GetDisplayMedia() is None:
+            
+            thumbnail_hydrus_bmp = CG.client_controller.GetCache( 'thumbnail' ).GetThumbnail( None )
+            
+        else:
+            
+            thumbnail_hydrus_bmp = CG.client_controller.GetCache( 'thumbnail' ).GetThumbnail( media.GetDisplayMedia().GetMediaResult() )
+            
         
         thumbnail_border = CG.client_controller.new_options.GetInteger( 'thumbnail_border' )
         

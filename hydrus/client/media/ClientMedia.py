@@ -1665,7 +1665,7 @@ class MediaCollection( MediaList, Media ):
         self._RecalcInternals()
         
     
-    def GetDisplayMedia( self ):
+    def GetDisplayMedia( self ) -> typing.Optional[ "MediaSingleton" ]:
         
         first = self._GetFirst()
         
