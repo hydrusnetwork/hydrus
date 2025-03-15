@@ -181,6 +181,8 @@ SIMPLE_ZOOM_CANVAS_FILL_Y = 168
 SIMPLE_ZOOM_CANVAS_FILL_Y_CENTER = 169
 SIMPLE_ZOOM_CANVAS_FILL_AUTO = 170
 SIMPLE_ZOOM_CANVAS_FILL_AUTO_CENTER = 171
+SIMPLE_SWITCH_BETWEEN_100_PERCENT_AND_CANVAS_FIT_AND_FILL_ZOOM = 172
+SIMPLE_SWITCH_BETWEEN_100_PERCENT_AND_CANVAS_FIT_AND_FILL_ZOOM_VIEWER_CENTER = 173
 
 REARRANGE_THUMBNAILS_TYPE_FIXED = 0
 REARRANGE_THUMBNAILS_TYPE_COMMAND = 1
@@ -365,6 +367,8 @@ simple_enum_to_str_lookup = {
     SIMPLE_ZOOM_IN_VIEWER_CENTER : 'zoom: in with forced media viewer center',
     SIMPLE_ZOOM_OUT_VIEWER_CENTER : 'zoom: out with forced media viewer center',
     SIMPLE_SWITCH_BETWEEN_100_PERCENT_AND_CANVAS_ZOOM_VIEWER_CENTER : 'zoom: switch 100% and canvas fit with forced media viewer center',
+    SIMPLE_SWITCH_BETWEEN_100_PERCENT_AND_CANVAS_FIT_AND_FILL_ZOOM : 'zoom: switch 100% and canvas fit/fill',
+    SIMPLE_SWITCH_BETWEEN_100_PERCENT_AND_CANVAS_FIT_AND_FILL_ZOOM_VIEWER_CENTER : 'zoom: switch 100% and canvas fit/fill with forced media viewer center',
     SIMPLE_SHOW_DUPLICATES : 'file relationships: show',
     SIMPLE_DUPLICATE_MEDIA_DISSOLVE_FOCUSED_ALTERNATE_GROUP : 'file relationships: dissolve focused file alternate group',
     SIMPLE_DUPLICATE_MEDIA_DISSOLVE_ALTERNATE_GROUP : 'file relationships: dissolve alternate groups',
@@ -496,6 +500,7 @@ legacy_simple_str_to_enum_lookup = {
     'show_hide_splitters' : SIMPLE_SHOW_HIDE_SPLITTERS,
     'show_menu' : SIMPLE_SHOW_MENU,
     'switch_between_100_percent_and_canvas_zoom' : SIMPLE_SWITCH_BETWEEN_100_PERCENT_AND_CANVAS_ZOOM,
+    'switch_between_100_percent_and_canvas_fit_and_fill_zoom' : SIMPLE_SWITCH_BETWEEN_100_PERCENT_AND_CANVAS_FIT_AND_FILL_ZOOM,
     'switch_between_fullscreen_borderless_and_regular_framed_window' : SIMPLE_SWITCH_BETWEEN_FULLSCREEN_BORDERLESS_AND_REGULAR_FRAMED_WINDOW,
     'synchronised_wait_switch' : SIMPLE_SYNCHRONISED_WAIT_SWITCH,
     'unclose_page' : SIMPLE_UNCLOSE_PAGE,

@@ -572,7 +572,9 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             'default_suggested_tags_notebook_page' : 'related',
             'last_incremental_tagging_namespace' : 'page',
             'last_incremental_tagging_prefix' : '',
-            'last_incremental_tagging_suffix' : ''
+            'last_incremental_tagging_suffix' : '',
+            'media_viewer_default_window_zoom': 'canvas',
+            'media_viewer_default_preview_window_zoom': 'canvas'
         }
         
         self._dictionary[ 'string_list' ] = {

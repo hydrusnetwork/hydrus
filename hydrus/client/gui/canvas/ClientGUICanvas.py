@@ -702,10 +702,20 @@ class Canvas( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
             
             if my_size != media_container_size:
                 
-                self._media_container.ZoomReinit()
-                
+                if self._new_options.GetBoolean( 'media_viewer_lock_current_zoom' ):
+
+                    self._media_container.ZoomMaintain( self._current_media )
+
+                else:
+                    
+                    self._media_container.ZoomReinit()
+
+                #always reset center on window resize
+                #if not self._new_options.GetBoolean( 'media_viewer_lock_current_pan' ):
+
                 self._media_container.ResetCenterPosition()
                 
+
                 self.EndDrag()
                 
             
@@ -1237,6 +1247,14 @@ class Canvas( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
             elif action == CAC.SIMPLE_SWITCH_BETWEEN_100_PERCENT_AND_CANVAS_ZOOM:
                 
                 self._media_container.ZoomSwitch()
+
+            elif action == CAC.SIMPLE_SWITCH_BETWEEN_100_PERCENT_AND_CANVAS_FIT_AND_FILL_ZOOM:
+                
+                self._media_container.ZoomSwitch3()
+
+            elif action == CAC.SIMPLE_SWITCH_BETWEEN_100_PERCENT_AND_CANVAS_FIT_AND_FILL_ZOOM_VIEWER_CENTER :
+                
+                self._media_container.ZoomSwitch3( zoom_center_type_override = ClientGUICanvasMedia.ZOOM_CENTERPOINT_VIEWER_CENTER )
                 
             elif action == CAC.SIMPLE_SWITCH_BETWEEN_100_PERCENT_AND_MAX_ZOOM:
                 
