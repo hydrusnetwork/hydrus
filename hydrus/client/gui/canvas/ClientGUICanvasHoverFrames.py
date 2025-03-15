@@ -1124,9 +1124,9 @@ class CanvasHoverFrameTop( CanvasHoverFrame ):
         ClientGUIMenus.AppendMenuCheckItem( menu, 'draw notes hover-window text in the background', 'Draw a copy of the respective hover window\'s text in the background of the media viewer canvas.', new_options.GetBoolean( 'draw_notes_hover_in_media_viewer_background' ), flip_background_boolean, 'draw_notes_hover_in_media_viewer_background' )
         ClientGUIMenus.AppendMenuCheckItem( menu, 'draw bottom-right index text in the background', 'Draw a copy of the respective hover window\'s text in the background of the media viewer canvas.', new_options.GetBoolean( 'draw_bottom_right_index_in_media_viewer_background' ), flip_background_boolean, 'draw_bottom_right_index_in_media_viewer_background' )
         
-        ClientGUIMenus.AppendSeparator( menu )
-
-        ClientGUIMenus.AppendMenuCheckItem( menu, 'always on top', 'Draw this window on top of all other windows.', new_options.GetBoolean( 'media_viewer_window_always_on_top' ), flip_background_boolean, 'media_viewer_window_always_on_top' )
+        #ClientGUIMenus.AppendSeparator( menu )
+        #always-on-top not implemented yet
+        #ClientGUIMenus.AppendMenuCheckItem( menu, 'always on top', 'Draw this window on top of all other windows.', new_options.GetBoolean( 'media_viewer_window_always_on_top' ), flip_background_boolean, 'media_viewer_window_always_on_top' )
 
         ClientGUIMenus.AppendSeparator( menu )
 
