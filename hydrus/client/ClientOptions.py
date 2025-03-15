@@ -254,6 +254,11 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             'draw_top_right_hover_in_media_viewer_background' : True,
             'draw_notes_hover_in_media_viewer_background' : True,
             'draw_bottom_right_index_in_media_viewer_background' : True,
+            'disable_tags_hover_in_media_viewer': False,
+            'disable_top_right_hover_in_media_viewer': False,
+            'media_viewer_window_always_on_top': False,
+            'media_viewer_lock_current_zoom': False,
+            'media_viewer_lock_current_pan': False,
             'allow_blurhash_fallback' : True,
             'fade_thumbnails' : True,
             'slideshow_always_play_duration_media_once_through' : False,
@@ -567,7 +572,9 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             'default_suggested_tags_notebook_page' : 'related',
             'last_incremental_tagging_namespace' : 'page',
             'last_incremental_tagging_prefix' : '',
-            'last_incremental_tagging_suffix' : ''
+            'last_incremental_tagging_suffix' : '',
+            'media_viewer_default_window_zoom': 'canvas',
+            'media_viewer_default_preview_window_zoom': 'canvas'
         }
         
         self._dictionary[ 'string_list' ] = {

@@ -3010,10 +3010,14 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._draw_tags_hover_in_media_viewer_background = QW.QCheckBox( media_canvas_panel )
             self._draw_tags_hover_in_media_viewer_background.setToolTip( ClientGUIFunctions.WrapToolTip( 'Draw the left list of tags in the background of the media viewer.' ) )
+            self._disable_tags_hover_in_media_viewer = QW.QCheckBox( media_canvas_panel )
+            self._disable_tags_hover_in_media_viewer.setToolTip( ClientGUIFunctions.WrapToolTip( 'Disable hovering on the left list of tags in the media viewer (does not affect background draw).' ) )
             self._draw_top_hover_in_media_viewer_background = QW.QCheckBox( media_canvas_panel )
             self._draw_top_hover_in_media_viewer_background.setToolTip( ClientGUIFunctions.WrapToolTip( 'Draw the center-top file metadata in the background of the media viewer.' ) )
             self._draw_top_right_hover_in_media_viewer_background = QW.QCheckBox( media_canvas_panel )
             self._draw_top_right_hover_in_media_viewer_background.setToolTip( ClientGUIFunctions.WrapToolTip( 'Draw the top-right ratings, inbox and URL information in the background of the media viewer.' ) )
+            self._disable_top_right_hover_in_media_viewer = QW.QCheckBox( media_canvas_panel )
+            self._disable_top_right_hover_in_media_viewer.setToolTip( ClientGUIFunctions.WrapToolTip( 'Disable hovering on the top-right ratings, inbox and URL information in the media viewer (does not affect background draw).' ) )
             self._draw_notes_hover_in_media_viewer_background = QW.QCheckBox( media_canvas_panel )
             self._draw_notes_hover_in_media_viewer_background.setToolTip( ClientGUIFunctions.WrapToolTip( 'Draw the right list of notes in the background of the media viewer.' ) )
             self._draw_bottom_right_index_in_media_viewer_background = QW.QCheckBox( media_canvas_panel )
@@ -3084,8 +3088,10 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._animated_scanbar_hide_height.SetValue( self._new_options.GetNoneableInteger( 'animated_scanbar_hide_height' ) )
             
             self._draw_tags_hover_in_media_viewer_background.setChecked( self._new_options.GetBoolean( 'draw_tags_hover_in_media_viewer_background' ) )
+            self._disable_tags_hover_in_media_viewer.setChecked( self._new_options.GetBoolean( 'disable_tags_hover_in_media_viewer' ) )
             self._draw_top_hover_in_media_viewer_background.setChecked( self._new_options.GetBoolean( 'draw_top_hover_in_media_viewer_background' ) )
             self._draw_top_right_hover_in_media_viewer_background.setChecked( self._new_options.GetBoolean( 'draw_top_right_hover_in_media_viewer_background' ) )
+            self._disable_top_right_hover_in_media_viewer.setChecked( self._new_options.GetBoolean( 'disable_top_right_hover_in_media_viewer' ) )
             self._draw_notes_hover_in_media_viewer_background.setChecked( self._new_options.GetBoolean( 'draw_notes_hover_in_media_viewer_background' ) )
             self._draw_bottom_right_index_in_media_viewer_background.setChecked( self._new_options.GetBoolean( 'draw_bottom_right_index_in_media_viewer_background' ) )
             self._use_nice_resolution_strings.setChecked( self._new_options.GetBoolean( 'use_nice_resolution_strings' ) )
@@ -3132,8 +3138,10 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows = []
             
             rows.append( ( 'Duplicate tags hover-window information in the background of the viewer:', self._draw_tags_hover_in_media_viewer_background ) )
+            rows.append( ( 'Disable tags hover-window hovering in the viewer:', self._disable_tags_hover_in_media_viewer ) )
             rows.append( ( 'Duplicate top hover-window information in the background of the viewer:', self._draw_top_hover_in_media_viewer_background ) )
             rows.append( ( 'Duplicate top-right hover-window information in the background of the viewer:', self._draw_top_right_hover_in_media_viewer_background ) )
+            rows.append( ( 'Disable top-right hover-window in the viewer:', self._disable_top_right_hover_in_media_viewer ) )
             rows.append( ( 'Duplicate notes hover-window information in the background of the viewer:', self._draw_notes_hover_in_media_viewer_background ) )
             rows.append( ( 'Draw bottom-right index text in the background of the viewer:', self._draw_bottom_right_index_in_media_viewer_background ) )
             rows.append( ( 'Swap in common resolution labels:', self._use_nice_resolution_strings ) )
@@ -3226,8 +3234,10 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         def UpdateOptions( self ):
             
             self._new_options.SetBoolean( 'draw_tags_hover_in_media_viewer_background', self._draw_tags_hover_in_media_viewer_background.isChecked() )
+            self._new_options.SetBoolean( 'disable_tags_hover_in_media_viewer', self._disable_tags_hover_in_media_viewer.isChecked() )
             self._new_options.SetBoolean( 'draw_top_hover_in_media_viewer_background', self._draw_top_hover_in_media_viewer_background.isChecked() )
             self._new_options.SetBoolean( 'draw_top_right_hover_in_media_viewer_background', self._draw_top_right_hover_in_media_viewer_background.isChecked() )
+            self._new_options.SetBoolean( 'disable_top_right_hover_in_media_viewer', self._disable_top_right_hover_in_media_viewer.isChecked() )
             self._new_options.SetBoolean( 'draw_notes_hover_in_media_viewer_background', self._draw_notes_hover_in_media_viewer_background.isChecked() )
             self._new_options.SetBoolean( 'draw_bottom_right_index_in_media_viewer_background', self._draw_bottom_right_index_in_media_viewer_background.isChecked() )
             self._new_options.SetBoolean( 'use_nice_resolution_strings', self._use_nice_resolution_strings.isChecked() )
@@ -3314,6 +3324,24 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             tt = 'When you zoom in or out, there is a centerpoint about which the image zooms. This point \'stays still\' while the image expands or shrinks around it. Different centerpoints give different feels, especially if you drag images around a bit before zooming.'
             
             self._media_viewer_zoom_center.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
+
+            #
+            
+            self._media_viewer_default_window_zoom = ClientGUICommon.BetterChoice( media_panel )
+            
+            for window_zoom_type in ClientGUICanvasMedia.WINDOW_ZOOM_TYPES:
+                
+                self._media_viewer_default_window_zoom.addItem( ClientGUICanvasMedia.window_zoom_str_lookup[ window_zoom_type ], window_zoom_type )
+               
+            self._media_viewer_default_window_zoom.setToolTip( ClientGUIFunctions.WrapToolTip( 'The zoom setting that will be loaded upon opening a new media viewer window.' ) )
+            
+            self._media_viewer_default_preview_window_zoom = ClientGUICommon.BetterChoice( media_panel )
+            
+            for window_zoom_type in ClientGUICanvasMedia.WINDOW_ZOOM_TYPES:
+                
+                self._media_viewer_default_preview_window_zoom.addItem( ClientGUICanvasMedia.window_zoom_str_lookup[ window_zoom_type ], window_zoom_type )
+               
+            self._media_viewer_default_preview_window_zoom.setToolTip( ClientGUIFunctions.WrapToolTip( 'The zoom setting that will be loaded for a new page\'s media preview window.' ) )
             
             #
             
@@ -3361,6 +3389,9 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._media_zooms.setText( ','.join( ( str( media_zoom ) for media_zoom in media_zooms ) ) )
             
             self._media_viewer_zoom_center.SetValue( self._new_options.GetInteger( 'media_viewer_zoom_center' ) )
+
+            self._media_viewer_default_window_zoom.SetValue( self._new_options.GetString( 'media_viewer_default_window_zoom' ) )
+            self._media_viewer_default_preview_window_zoom.SetValue( self._new_options.GetString( 'media_viewer_default_preview_window_zoom' ) )
             
             self._load_images_with_pil.setChecked( self._new_options.GetBoolean( 'load_images_with_pil' ) )
             self._enable_truncated_images_pil.setChecked( self._new_options.GetBoolean( 'enable_truncated_images_pil' ) )
@@ -3392,6 +3423,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             rows.append( ( 'Centerpoint for media zooming:', self._media_viewer_zoom_center ) )
             rows.append( ( 'Media zooms:', self._media_zooms ) )
+            rows.append( ( 'Default media viewer zoom:', self._media_viewer_default_window_zoom ) )
+            rows.append( ( 'Default media preview window zoom:', self._media_viewer_default_preview_window_zoom ) )
             rows.append( ( 'Start animations this % in:', self._animation_start_position ) )
             rows.append( ( 'Always Loop Animations:', self._always_loop_animations ) )
             rows.append( ( 'DEBUG: Loop Playlist instead of Loop File in mpv:', self._mpv_loop_playlist_instead_of_file ) )
@@ -3649,6 +3682,9 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
             
             self._new_options.SetInteger( 'media_viewer_zoom_center', self._media_viewer_zoom_center.GetValue() )
+
+            self._new_options.SetString( 'media_viewer_default_window_zoom', self._media_viewer_default_window_zoom.GetValue() )
+            self._new_options.SetString( 'media_viewer_default_preview_window_zoom', self._media_viewer_default_preview_window_zoom.GetValue() )
             
             self._new_options.SetBoolean( 'load_images_with_pil', self._load_images_with_pil.isChecked() )
             self._new_options.SetBoolean( 'enable_truncated_images_pil', self._enable_truncated_images_pil.isChecked() )
