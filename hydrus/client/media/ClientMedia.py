@@ -43,7 +43,7 @@ def CanDisplayMedia( media: "MediaSingleton" ) -> bool:
         return False
         
     
-    # note width/height is None for audio etc..
+    # note width/height is None for audio etc.., so it isn't immediately disqualifying
     
     ( width, height ) = media.GetResolution()
     
@@ -52,7 +52,7 @@ def CanDisplayMedia( media: "MediaSingleton" ) -> bool:
         return False
         
     
-    if media.IsStaticImage() and ( width is None or height is None ):
+    if media.IsStaticImage() and not media.HasUsefulResolution():
         
         return False
         
@@ -1808,6 +1808,13 @@ class MediaCollection( MediaList, Media ):
         return True
         
     
+    def HasUsefulResolution( self ):
+        
+        ( width, height ) = self.GetResolution()
+        
+        return width is not None and width != 0 and height is not None and height != 0
+        
+    
     def IsStaticImage( self ):
         
         return False
@@ -2019,6 +2026,11 @@ class MediaSingleton( Media ):
     def HasNotes( self ):
         
         return self._media_result.HasNotes()
+        
+    
+    def HasUsefulResolution( self ):
+        
+        return self._media_result.HasUsefulResolution()
         
     
     def IsCollection( self ):
@@ -2414,7 +2426,7 @@ class MediaSort( HydrusSerialisable.SerialisableBase ):
                                 
                                 ( width, height ) = x.GetResolution()
                                 
-                                if size is None or size == 0 or width is None or width == 0 or height is None or height == 0:
+                                if size is None or size == 0 or not x.HasUsefulResolution():
                                     
                                     frame_bitrate = -1
                                     
@@ -2564,7 +2576,7 @@ class MediaSort( HydrusSerialisable.SerialisableBase ):
                     
                     ( width, height ) = x.GetResolution()
                     
-                    if width is None or height is None or width == 0 or height == 0:
+                    if not x.HasUsefulResolution():
                         
                         return -1
                         

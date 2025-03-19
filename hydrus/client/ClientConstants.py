@@ -605,6 +605,7 @@ class GlobalPixmaps( object ):
         self.zoom_in = QG.QPixmap( os.path.join( HC.STATIC_DIR, 'zoom_in.png' ) )
         self.zoom_out = QG.QPixmap( os.path.join( HC.STATIC_DIR, 'zoom_out.png' ) )
         self.zoom_switch = QG.QPixmap( os.path.join( HC.STATIC_DIR, 'zoom_switch.png' ) )
+        self.zoom_cog = QG.QPixmap( os.path.join( HC.STATIC_DIR, 'zoom_cog.png' ) )
         self.eye = QG.QPixmap( os.path.join( HC.STATIC_DIR, 'eye.png' ) )
         self.fullscreen_switch = QG.QPixmap( os.path.join( HC.STATIC_DIR, 'fullscreen_switch.png' ) )
         self.open_externally = QG.QPixmap( os.path.join( HC.STATIC_DIR, 'open_externally.png' ) )

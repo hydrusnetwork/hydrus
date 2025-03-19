@@ -3970,7 +3970,12 @@ class DB( HydrusDB.HydrusDB ):
                 'dissolve_alternates_group' : self.modules_files_duplicates.DissolveAlternatesGroupIdFromHashes,
                 'dissolve_duplicates_group' : self.modules_files_duplicates.DissolveMediaIdFromHashes,
                 'do_deferred_table_delete_work' : self.modules_db_maintenance.DoDeferredDeleteTablesWork,
+                'duplicate_auto_resolution_do_resolution_work' : self.modules_files_duplicates_auto_resolution_search.DoResolutionWork,
+                'duplicate_auto_resolution_do_search_work' : self.modules_files_duplicates_auto_resolution_search.DoSearchWork,
+                'duplicate_auto_resolution_maintenance_fix_orphan_rules' : self.modules_files_duplicates_auto_resolution_storage.MaintenanceFixOrphanRules,
+                'duplicate_auto_resolution_maintenance_fix_orphan_pairs' : self.modules_files_duplicates_auto_resolution_storage.MaintenanceFixOrphanPairs,
                 'duplicate_auto_resolution_reset_rule_search_progress' : self.modules_files_duplicates_auto_resolution_storage.ResetRuleSearchProgress,
+                'duplicate_auto_resolution_set_rules' : self.modules_files_duplicates_auto_resolution_storage.SetRules,
                 'duplicate_set_king' : self.modules_files_duplicates.SetKingFromHash,
                 'file_maintenance_add_jobs' : self.modules_files_maintenance_queue.AddJobs,
                 'file_maintenance_add_jobs_hashes' : self.modules_files_maintenance_queue.AddJobsHashes,
@@ -4219,7 +4224,16 @@ class DB( HydrusDB.HydrusDB ):
         
         self._modules.append( self.modules_similar_files )
         
-        self.modules_files_duplicates = ClientDBFilesDuplicates.ClientDBFilesDuplicates( self._c, self.modules_files_storage, self.modules_hashes_local_cache, self.modules_similar_files )
+        self.modules_files_duplicates_auto_resolution_storage = ClientDBFilesDuplicatesAutoResolutionStorage.ClientDBFilesDuplicatesAutoResolutionStorage(
+            self._c,
+            self.modules_services,
+            self.modules_db_maintenance,
+            self.modules_serialisable
+        )
+        
+        self._modules.append( self.modules_files_duplicates_auto_resolution_storage )
+        
+        self.modules_files_duplicates = ClientDBFilesDuplicates.ClientDBFilesDuplicates( self._c, self.modules_files_storage, self.modules_hashes_local_cache, self.modules_similar_files, self.modules_files_duplicates_auto_resolution_storage )
         
         self._modules.append( self.modules_files_duplicates )
         
@@ -4363,17 +4377,6 @@ class DB( HydrusDB.HydrusDB ):
         )
         
         self._modules.append( self.modules_files_duplicates_setter )
-        
-        #
-        
-        self.modules_files_duplicates_auto_resolution_storage = ClientDBFilesDuplicatesAutoResolutionStorage.ClientDBFilesDuplicatesAutoResolutionStorage(
-            self._c,
-            self.modules_services,
-            self.modules_db_maintenance,
-            self.modules_serialisable
-        )
-        
-        self._modules.append( self.modules_files_duplicates_auto_resolution_storage )
         
         #
         

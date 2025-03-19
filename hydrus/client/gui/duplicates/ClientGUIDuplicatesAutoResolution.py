@@ -1,3 +1,5 @@
+import threading
+import time
 import typing
 
 from qtpy import QtCore as QC
@@ -6,10 +8,12 @@ from qtpy import QtWidgets as QW
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusNumbers
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
+from hydrus.client import ClientThreading
 from hydrus.client.duplicates import ClientDuplicatesAutoResolution
 from hydrus.client.duplicates import ClientDuplicates
 from hydrus.client.gui import ClientGUIAsync
@@ -74,7 +78,7 @@ class EditDuplicatesAutoResolutionRulesPanel( ClientGUIScrolledPanels.EditPanel 
         
         QP.AddToLayout( vbox, help_hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
         
-        st = ClientGUICommon.BetterStaticText( self, 'Hey, this system does not work yet! This UI is just a placeholder!' )
+        st = ClientGUICommon.BetterStaticText( self, 'Hey, I am close to launching this system, but it does not do anything real yet! Feel free to play around with this UI and let me know about any bugs! This dialog will not save any data on "apply".' )
         st.setWordWrap( True )
         QP.AddToLayout( vbox, st, CC.FLAGS_EXPAND_PERPENDICULAR )
         
@@ -218,7 +222,7 @@ class EditDuplicatesAutoResolutionRulePanel( ClientGUIScrolledPanels.EditPanel )
         
         self._potential_duplicates_search_context = ClientGUIPotentialDuplicatesSearchContext.EditPotentialDuplicatesSearchContextPanel( self._search_panel, potential_duplicates_search_context, put_searches_side_by_side = True )
         
-        self._potential_duplicates_search_context.setEnabled( False )
+        #self._potential_duplicates_search_context.setEnabled( False )
         
         #
         
@@ -228,7 +232,7 @@ class EditDuplicatesAutoResolutionRulePanel( ClientGUIScrolledPanels.EditPanel )
         
         self._pair_selector = EditPairSelectorWidget( self._selector_panel, pair_selector )
         
-        self._pair_selector.setEnabled( False )
+        #self._pair_selector.setEnabled( False )
         
         #
         
@@ -240,7 +244,7 @@ class EditDuplicatesAutoResolutionRulePanel( ClientGUIScrolledPanels.EditPanel )
         
         self._edit_actions_panel = EditPairActionsWidget( self._actions_panel, action, delete_a, delete_b, duplicates_content_merge_options )
         
-        self._edit_actions_panel.setEnabled( False )
+        #self._edit_actions_panel.setEnabled( False )
         
         #
         
@@ -342,7 +346,7 @@ class EditDuplicatesAutoResolutionRulePanel( ClientGUIScrolledPanels.EditPanel )
         
         vbox = QP.VBoxLayout()
         
-        st = ClientGUICommon.BetterStaticText( self, 'Hey, this system does not work yet! This UI is just a placeholder!' )
+        st = ClientGUICommon.BetterStaticText( self, 'Hey, I am close to launching this system, but it does not do anything real yet! Feel free to play around with this UI and let me know about any bugs!' )
         st.setWordWrap( True )
         QP.AddToLayout( vbox, st, CC.FLAGS_EXPAND_PERPENDICULAR )
         
@@ -399,8 +403,7 @@ class EditDuplicatesAutoResolutionRulePanel( ClientGUIScrolledPanels.EditPanel )
         #
         
         duplicates_auto_resolution_rule.SetId( self._duplicates_auto_resolution_rule.GetId() )
-        
-        # TODO: transfer any cached search data, including what we may have re-fetched in this panel's work, to the new rule
+        duplicates_auto_resolution_rule.SetCountsCache( self._duplicates_auto_resolution_rule.GetCountsCacheDuplicate() )
         
         return duplicates_auto_resolution_rule
         
@@ -649,6 +652,8 @@ class EditPairSelectorWidget( ClientGUICommon.StaticBox ):
         
     
 
+EDIT_RULES_DIALOG_LOCK = threading.Lock()
+
 class ReviewDuplicatesAutoResolutionPanel( QW.QWidget ):
     
     def __init__( self, parent: QW.QWidget ):
@@ -667,6 +672,7 @@ class ReviewDuplicatesAutoResolutionPanel( QW.QWidget ):
         
         #
         
+        self._refresh_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().refresh, self._UpdateList )
         self._cog_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().cog, self._ShowCogMenu )
         
         #
@@ -688,11 +694,17 @@ class ReviewDuplicatesAutoResolutionPanel( QW.QWidget ):
         
         QP.AddToLayout( vbox, help_hbox, CC.FLAGS_ON_RIGHT )
         
-        st = ClientGUICommon.BetterStaticText( self, 'Hey, this system does not work yet! This UI is just a placeholder!' )
+        st = ClientGUICommon.BetterStaticText( self, 'Hey, I am close to launching this system, but it does not do anything real yet! Feel free to play around with the UI that is enabled!' )
         st.setWordWrap( True )
         
         QP.AddToLayout( vbox, st, CC.FLAGS_EXPAND_PERPENDICULAR )
-        QP.AddToLayout( vbox, self._cog_button, CC.FLAGS_ON_RIGHT )
+        
+        button_hbox = QP.HBoxLayout()
+        
+        QP.AddToLayout( button_hbox, self._refresh_button, CC.FLAGS_CENTER )
+        QP.AddToLayout( button_hbox, self._cog_button, CC.FLAGS_CENTER )
+        
+        QP.AddToLayout( vbox, button_hbox, CC.FLAGS_ON_RIGHT )
         QP.AddToLayout( vbox, self._duplicates_auto_resolution_rules_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         vbox.addStretch( 0 )
         
@@ -732,31 +744,104 @@ class ReviewDuplicatesAutoResolutionPanel( QW.QWidget ):
     
     _ConvertRuleToSortTuple = _ConvertRuleToDisplayTuple
     
+    def _DeleteOrphanRules( self ):
+        
+        text = f'This will scan the database for rule definitions in the primary rule module and the backing object in the serialisable module. If a rule is in one location but not the other (probably due to hard drive damage), the rule will be deleted.'
+        text += '\n\n'
+        text += 'This command is useful if your client is shouting about missing rules, otherwise it is pointless.'
+        
+        result = ClientGUIDialogsQuick.GetYesNo( self, text )
+        
+        if result == QW.QDialog.DialogCode.Accepted:
+            
+            CG.client_controller.Write( 'duplicate_auto_resolution_maintenance_fix_orphan_rules' )
+            
+            self._rules_list_updater.update()
+            
+        
+    
+    def _DeleteOrphanPairs( self ):
+        
+        text = f'This will scan the primary potential pairs table. If any are missing from the auto-resolution rule cache, they will be added. Orphans will be deleted.'
+        
+        result = ClientGUIDialogsQuick.GetYesNo( self, text )
+        
+        if result == QW.QDialog.DialogCode.Accepted:
+            
+            CG.client_controller.Write( 'duplicate_auto_resolution_maintenance_fix_orphan_pairs' )
+            
+            self._rules_list_updater.update()
+            
+        
+    
     def _Edit( self ):
         
-        # TODO: Some sort of async delay as we wait for any current work to halt and the manager to save
+        def do_it_qt( duplicates_auto_resolution_rules: typing.List[ ClientDuplicatesAutoResolution.DuplicatesAutoResolutionRule ] ):
+            
+            with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit rules' ) as dlg:
+                
+                panel = EditDuplicatesAutoResolutionRulesPanel( dlg, duplicates_auto_resolution_rules )
+                
+                dlg.SetPanel( panel )
+                
+                if dlg.exec() == QW.QDialog.DialogCode.Accepted:
+                    
+                    edited_duplicates_auto_resolution_rules = panel.GetValue()
+                    
+                    edited_duplicates_auto_resolution_rules = [] # TODO: final activation remove line
+                    
+                    old_serialised_data_reference = { rule.DumpToString() for rule in duplicates_auto_resolution_rules }
+                    
+                    CG.client_controller.duplicates_auto_resolution_manager.SetRules( edited_duplicates_auto_resolution_rules )
+                    
+                
+            
         
-        duplicates_auto_resolution_rules = typing.cast( typing.List[ ClientDuplicatesAutoResolution.DuplicatesAutoResolutionRule ], self._duplicates_auto_resolution_rules.GetData() )
+        def do_it():
+            
+            with EDIT_RULES_DIALOG_LOCK:
+                
+                job_status = ClientThreading.JobStatus()
+                
+                job_status.SetStatusText( 'Waiting for current rules work to finish.' )
+                
+                CG.client_controller.pub( 'message', job_status )
+                
+                try:
+                    
+                    work_edit_lock = CG.client_controller.duplicates_auto_resolution_manager.GetEditWorkLock()
+                    
+                    while not work_edit_lock.acquire( False ):
+                        
+                        time.sleep( 0.1 )
+                        
+                        if HG.started_shutdown:
+                            
+                            return
+                            
+                        
+                    
+                finally:
+                    
+                    job_status.FinishAndDismiss()
+                    
+                
+                # we have the lock
+                
+                try:
+                    
+                    rules = CG.client_controller.duplicates_auto_resolution_manager.GetRules()
+                    
+                    CG.client_controller.CallBlockingToQt( self, do_it_qt, rules )
+                    
+                finally:
+                    
+                    work_edit_lock.release()
+                    
+                
+            
         
-        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit rules' ) as dlg:
-            
-            panel = EditDuplicatesAutoResolutionRulesPanel( dlg, duplicates_auto_resolution_rules )
-            
-            dlg.SetPanel( panel )
-            
-            if dlg.exec() == QW.QDialog.DialogCode.Accepted:
-                
-                edited_duplicates_auto_resolution_rules = panel.GetValue()
-                
-                edited_duplicates_auto_resolution_rules = [] # TODO: final activation remove line
-                
-                old_serialised_data_reference = { rule.DumpToString() for rule in duplicates_auto_resolution_rules }
-                
-                rules_to_reset_search_status_for = [ rule for rule in edited_duplicates_auto_resolution_rules if rule.DumpToString() not in old_serialised_data_reference ]
-                
-                CG.client_controller.duplicates_auto_resolution_manager.SetRules( edited_duplicates_auto_resolution_rules, rules_to_reset_search_status_for )
-                
-            
+        CG.client_controller.CallToThread( do_it )
         
     
     def _InitialiseUpdater( self ):
@@ -838,7 +923,17 @@ class ReviewDuplicatesAutoResolutionPanel( QW.QWidget ):
             ClientGUIMenus.AppendMenuItem( menu, f'reset search on {HydrusNumbers.ToHumanInt( len( rules ) )} selected rules', 'Reset the search for the given rules.', self._ResetSearch )
             
         
+        ClientGUIMenus.AppendSeparator( menu )
+        
+        ClientGUIMenus.AppendMenuItem( menu, 'maintenance: delete orphan rules', 'Scan for rules that are partly missing (probably from hard drive damage) and delete them.', self._DeleteOrphanRules )
+        ClientGUIMenus.AppendMenuItem( menu, 'maintenance: fix orphan potential pairs', 'Scan for potential pairs in your rule cache that are no longer pertinent and delete them.', self._DeleteOrphanPairs )
+        
         CGC.core().PopupMenu( self._cog_button, menu )
+        
+    
+    def _UpdateList( self ):
+        
+        self._rules_list_updater.update()
         
     
     def NotifyWorkComplete( self ):

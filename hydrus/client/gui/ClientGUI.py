@@ -3617,7 +3617,6 @@ ATTACH "client.mappings.db" as external_mappings;'''
         debug_modes = ClientGUIMenus.GenerateMenu( debug_menu )
         
         ClientGUIMenus.AppendMenuCheckItem( debug_modes, 'force idle mode', 'Make the client consider itself idle and fire all maintenance routines right now. This may hang the gui for a while.', HG.force_idle_mode, self._SwitchBoolean, 'force_idle_mode' )
-        ClientGUIMenus.AppendMenuCheckItem( debug_modes, 'macOS window position fix test', 'Double-set the initial TLW position, to countteract the OS addings its own pos delta.', HG.macos_window_position_fix_test, self._SwitchBoolean, 'macos_window_position_fix_test' )
         ClientGUIMenus.AppendMenuItem( debug_modes, 'simulate a wake from sleep', 'Tell the controller to pretend that it just woke up from sleep.', self._controller.SimulateWakeFromSleepEvent )
         ClientGUIMenus.AppendMenuCheckItem( debug_modes, 'thumbnail debug mode', 'Show some thumbnail debug info.', HG.thumbnail_debug_mode, self._SwitchBoolean, 'thumbnail_debug_mode' )
         
@@ -7076,10 +7075,6 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         elif name == 'thumbnail_debug_mode':
             
             HG.thumbnail_debug_mode = not HG.thumbnail_debug_mode
-            
-        elif name == 'macos_window_position_fix_test':
-            
-            HG.macos_window_position_fix_test = not HG.macos_window_position_fix_test
             
         elif name == 'force_idle_mode':
             

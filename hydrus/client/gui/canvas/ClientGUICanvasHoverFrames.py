@@ -24,6 +24,7 @@ from hydrus.client.gui import ClientGUIShortcuts
 from hydrus.client.gui import ClientGUIShortcutControls
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
+from hydrus.client.gui.canvas import ClientGUICanvasMedia
 from hydrus.client.gui.canvas import ClientGUIMPV
 from hydrus.client.gui.duplicates import ClientGUIDuplicatesContentMergeOptions
 from hydrus.client.gui.lists import ClientGUIListBoxes
@@ -720,6 +721,7 @@ class CanvasHoverFrameTop( CanvasHoverFrame ):
         
         super().__init__( parent, my_canvas, canvas_key )
         
+        self._current_zoom_type = ClientGUICanvasMedia.MEDIA_VIEWER_ZOOM_TYPE_DEFAULT_FOR_FILETYPE
         self._current_zoom = 1.0
         self._current_index_string = ''
         
@@ -861,8 +863,8 @@ class CanvasHoverFrameTop( CanvasHoverFrame ):
         #zoom_switch.SetToolTipWithShortcuts( 'zoom switch3', CAC.SIMPLE_SWITCH_BETWEEN_100_PERCENT_AND_CANVAS_FIT_AND_FILL_ZOOM_VIEWER_CENTER )
         zoom_switch.setFocusPolicy( QC.Qt.FocusPolicy.TabFocus )
         
-        zoom_options = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().zoom_switch, self._ShowZoomOptionsMenu )
-        zoom_options.setToolTip( ClientGUIFunctions.WrapToolTip( 'advanced zoom options' ) )
+        zoom_options = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().zoom_cog, self._ShowZoomOptionsMenu )
+        zoom_options.setToolTip( ClientGUIFunctions.WrapToolTip( 'advanced zoom' ) )
         zoom_options.setFocusPolicy( QC.Qt.FocusPolicy.TabFocus )
         
         self._volume_control = ClientGUIMediaControls.VolumeControl( self, CC.CANVAS_MEDIA_VIEWER )
@@ -1130,8 +1132,8 @@ class CanvasHoverFrameTop( CanvasHoverFrame ):
 
         ClientGUIMenus.AppendSeparator( menu )
 
-        ClientGUIMenus.AppendMenuCheckItem( menu, 'disable tags hover-window', 'Disable hovering the tags window.', new_options.GetBoolean( 'disable_tags_hover_in_media_viewer' ), flip_background_boolean, 'disable_tags_hover_in_media_viewer' )
-        ClientGUIMenus.AppendMenuCheckItem( menu, 'disable top-right hover-window', 'Disable hovering the ratings/notes window.', new_options.GetBoolean( 'disable_top_right_hover_in_media_viewer' ), flip_background_boolean, 'disable_top_right_hover_in_media_viewer' )
+        ClientGUIMenus.AppendMenuCheckItem( menu, 'do not pop-in tags hover-window on mouseover', 'Disable hovering the tags window.', new_options.GetBoolean( 'disable_tags_hover_in_media_viewer' ), flip_background_boolean, 'disable_tags_hover_in_media_viewer' )
+        ClientGUIMenus.AppendMenuCheckItem( menu, 'do not pop-in top-right hover-window on mouseover', 'Disable hovering the ratings/notes window.', new_options.GetBoolean( 'disable_top_right_hover_in_media_viewer' ), flip_background_boolean, 'disable_top_right_hover_in_media_viewer' )
 
         ClientGUIMenus.AppendSeparator( menu )
         
@@ -1139,32 +1141,51 @@ class CanvasHoverFrameTop( CanvasHoverFrame ):
         
         CGC.core().PopupMenu( self, menu )
         
+    
     def _ShowZoomOptionsMenu( self ):
         
         def flip_background_boolean( name ):
             
             new_options.FlipBoolean( name )
             
+            mutually_exclusive_guys = ( 'media_viewer_lock_current_zoom', 'media_viewer_lock_current_zoom_type' )
+            
+            for ( a, b ) in ( mutually_exclusive_guys, mutually_exclusive_guys[::-1] ):
+                
+                if name == a and new_options.GetBoolean( a ) and new_options.GetBoolean( b ):
+                    
+                    new_options.SetBoolean( b, False )
+                    
+                
+            
             self.update()
             
         
         new_options = CG.client_controller.new_options
-
         
         menu = ClientGUIMenus.GenerateMenu( self )
         
-        ClientGUIMenus.AppendMenuItem( menu, '100% zoom', 'Set the zoom level to 100%.', self.sendApplicationCommand.emit, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_ZOOM_100_CENTER ) )
-        ClientGUIMenus.AppendMenuItem( menu, 'canvas fit', 'Fit the image to the viewer.', self.sendApplicationCommand.emit, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_ZOOM_CANVAS_CENTER ) )
-        ClientGUIMenus.AppendMenuItem( menu, 'fill horizontally', 'Scale the image to fill the viewer width.', self.sendApplicationCommand.emit, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_ZOOM_CANVAS_FILL_X_CENTER ) )
-        ClientGUIMenus.AppendMenuItem( menu, 'fill vertically', 'Scale the image to fill the viewer height.', self.sendApplicationCommand.emit, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_ZOOM_CANVAS_FILL_Y_CENTER ) )
-        ClientGUIMenus.AppendMenuItem( menu, 'canvas fill', 'Fill the viewer by matching the image aspect ratio with the viewer.', self.sendApplicationCommand.emit, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_ZOOM_CANVAS_FILL_AUTO_CENTER )  )
+        ClientGUIMenus.AppendMenuItem( menu, 'recenter media', 'Restore the media position to the center point.', self.sendApplicationCommand.emit, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_RESET_PAN_TO_CENTER ) )
         
         ClientGUIMenus.AppendSeparator( menu )
-
-        ClientGUIMenus.AppendMenuCheckItem( menu, 'lock current zoom', 'Prevent the zoom level from changing when switching images.', new_options.GetBoolean( 'media_viewer_lock_current_zoom' ), flip_background_boolean, 'media_viewer_lock_current_zoom' )
-        ClientGUIMenus.AppendMenuCheckItem( menu, 'lock current panning', 'Prevent the panning position from changing when switching images.', new_options.GetBoolean( 'media_viewer_lock_current_pan' ), flip_background_boolean, 'media_viewer_lock_current_pan' )
-      
+        
+        for zoom_type in ClientGUICanvasMedia.MEDIA_VIEWER_ZOOM_TYPES:
+            
+            label = ClientGUICanvasMedia.media_viewer_zoom_type_str_lookup[ zoom_type ]
+            description = ClientGUICanvasMedia.media_viewer_zoom_type_description_lookup[ zoom_type ]
+            simple_command = ClientGUICanvasMedia.media_viewer_zoom_type_to_cac_simple_commands[ zoom_type ]
+            
+            ClientGUIMenus.AppendMenuCheckItem( menu, label, description, self._current_zoom_type == zoom_type, self.sendApplicationCommand.emit, CAC.ApplicationCommand.STATICCreateSimpleCommand( simple_command ) )
+            
+        
+        ClientGUIMenus.AppendSeparator( menu )
+        
+        ClientGUIMenus.AppendMenuCheckItem( menu, 'try to lock current size', 'Try to preserve the zoom ratio between visual media. Useful when trying to compare duplicates.', new_options.GetBoolean( 'media_viewer_lock_current_zoom' ), flip_background_boolean, 'media_viewer_lock_current_zoom' )
+        ClientGUIMenus.AppendMenuCheckItem( menu, 'lock current zoom type', 'Prevent the zoom level from changing when switching images.', new_options.GetBoolean( 'media_viewer_lock_current_zoom_type' ), flip_background_boolean, 'media_viewer_lock_current_zoom_type' )
+        ClientGUIMenus.AppendMenuCheckItem( menu, 'lock current pan', 'Prevent the panning position from changing when switching images. Useful when trying to compare duplicates.', new_options.GetBoolean( 'media_viewer_lock_current_pan' ), flip_background_boolean, 'media_viewer_lock_current_pan' )
+        
         CGC.core().PopupMenu( self, menu )
+        
     
     def DragButtonHit( self ):
         
@@ -1223,8 +1244,9 @@ class CanvasHoverFrameTop( CanvasHoverFrame ):
             
         
     
-    def SetCurrentZoom( self, zoom: float ):
+    def SetCurrentZoom( self, zoom_type: int, zoom: float ):
         
+        self._current_zoom_type = zoom_type
         self._current_zoom = zoom
         
         label = ClientData.ConvertZoomToPercentage( self._current_zoom )
@@ -1322,6 +1344,32 @@ class CanvasHoverFrameTopDuplicatesFilter( CanvasHoverFrameTopNavigable ):
         self._last_button.setFocusPolicy( QC.Qt.FocusPolicy.TabFocus )
         
         QP.AddToLayout( self._top_left_hbox, self._last_button, CC.FLAGS_CENTER_PERPENDICULAR )
+        
+    
+    def _ShowZoomOptionsMenu( self ):
+        
+        new_options = CG.client_controller.new_options
+        
+        menu = ClientGUIMenus.GenerateMenu( self )
+        
+        ClientGUIMenus.AppendMenuItem( menu, 'recenter media', 'Restore the media position to the center point.', self.sendApplicationCommand.emit, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_RESET_PAN_TO_CENTER ) )
+        
+        ClientGUIMenus.AppendSeparator( menu )
+        
+        for zoom_type in ClientGUICanvasMedia.MEDIA_VIEWER_ZOOM_TYPES:
+            
+            label = ClientGUICanvasMedia.media_viewer_zoom_type_str_lookup[ zoom_type ]
+            description = ClientGUICanvasMedia.media_viewer_zoom_type_description_lookup[ zoom_type ]
+            simple_command = ClientGUICanvasMedia.media_viewer_zoom_type_to_cac_simple_commands[ zoom_type ]
+            
+            ClientGUIMenus.AppendMenuCheckItem( menu, label, description, self._current_zoom_type == zoom_type, self.sendApplicationCommand.emit, CAC.ApplicationCommand.STATICCreateSimpleCommand( simple_command ) )
+            
+        
+        ClientGUIMenus.AppendSeparator( menu )
+        
+        ClientGUIMenus.AppendMenuLabel( menu, 'media size and pan are locked' )
+        
+        CGC.core().PopupMenu( self, menu )
         
     
 class CanvasHoverFrameTopNavigableList( CanvasHoverFrameTopNavigable ):

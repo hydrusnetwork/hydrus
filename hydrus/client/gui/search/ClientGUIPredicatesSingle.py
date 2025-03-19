@@ -16,6 +16,7 @@ from hydrus.core.files.images import HydrusImageHandling
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientImageHandling
+from hydrus.client import ClientLocation
 from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIOptionsPanels
@@ -3033,13 +3034,13 @@ class PanelPredicateSystemTagAdvanced( PanelPredicateSystemSingle ):
         self._tag_display_type = ClientGUICommon.BetterRadioBox(
             self,
             [
-                ( 'include siblings', ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ),
-                ( 'ignoring siblings', ClientTags.TAG_DISPLAY_STORAGE )
+                ( 'including siblings/parents', ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ),
+                ( 'ignoring siblings/parents', ClientTags.TAG_DISPLAY_STORAGE )
             ],
             vertical = True
         )
         
-        tt = 'Including siblings will search on the "display" tag domain, which is what you see when searching for and browsing files. Ignoring siblings will search on the "storage" tag domain, which is what you see when editing tags.'
+        tt = 'Including siblings/parents will search on the "display" tag domain, which is what you see when normally searching for and browsing files. In "display", all siblings are merged to the ideal tag, and missing parents are filled in. Ignoring siblings/parents will search on the "storage" tag domain, which is what is actually recorded on disk (and what you see when editing tags).'
         
         self._tag_display_type.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
         
@@ -3063,6 +3064,15 @@ class PanelPredicateSystemTagAdvanced( PanelPredicateSystemSingle ):
         
         self._tag.setPlaceholderText( 'tag' )
         
+        from hydrus.client.gui.search import ClientGUIACDropdown
+        
+        self._tag_autocomplete = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite(
+            self,
+            self._AutoCompleteEntersTags,
+            ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY ),
+            CC.COMBINED_TAG_SERVICE_KEY
+        )
+        
         #
         
         predicate = self._GetPredicateToInitialisePanelWith( predicate )
@@ -3085,6 +3095,11 @@ class PanelPredicateSystemTagAdvanced( PanelPredicateSystemSingle ):
         
         self._tag.setMinimumWidth( width )
         
+        tag_vbox = QP.VBoxLayout()
+        
+        QP.AddToLayout( tag_vbox, self._tag, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( tag_vbox, self._tag_autocomplete, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
         #
         
         hbox = QP.HBoxLayout()
@@ -3094,13 +3109,25 @@ class PanelPredicateSystemTagAdvanced( PanelPredicateSystemSingle ):
         QP.AddToLayout( hbox, self._service_key_or_none, CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( hbox, self._tag_display_type, CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( hbox, self._statuses, CC.FLAGS_CENTER_PERPENDICULAR )
-        QP.AddToLayout( hbox, self._tag, CC.FLAGS_CENTER_PERPENDICULAR_EXPAND_DEPTH )
+        QP.AddToLayout( hbox, tag_vbox, CC.FLAGS_CENTER_PERPENDICULAR_EXPAND_DEPTH )
         
         hbox.addStretch( 0 )
         
         self.setLayout( hbox )
         
         self.setFocusProxy( self._inclusive )
+        
+    
+    def _AutoCompleteEntersTags( self, tags ):
+        
+        tags = list( tags )
+        
+        if len( tags ) > 0:
+            
+            tag = tags[0]
+            
+            self._tag.setText( tag )
+            
         
     
     def GetDefaultPredicate( self ):

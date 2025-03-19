@@ -4,7 +4,6 @@ from qtpy import QtGui as QG
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
-from hydrus.core import HydrusGlobals as HG
 
 from hydrus.client import ClientGlobals as CG
 from hydrus.client.gui import ClientGUIDialogsMessage
@@ -376,9 +375,14 @@ def SetInitialTLWSizeAndPosition( tlw: QW.QWidget, frame_key ):
         
         tlw.move( safe_position )
         
-        if HG.macos_window_position_fix_test:
+        if HC.PLATFORM_MACOS:
             
-            CG.client_controller.CallLaterQtSafe( tlw, 0.1, 'macOS position fix test', tlw.move, safe_position )
+            # macOS seems to move dialogs down like 26 pixels right after open. Our investigation suggested this was something OS side, rather than Qt
+            # we schedule this to overwrite whatever macOS wanted with what we want
+            # https://github.com/hydrusnetwork/hydrus/issues/1673
+            # https://github.com/hydrusnetwork/hydrus/issues/1681
+            
+            CG.client_controller.CallLaterQtSafe( tlw, 0.1, 'macOS position fix', tlw.move, safe_position )
             
         
     

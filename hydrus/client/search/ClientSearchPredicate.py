@@ -1759,7 +1759,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                         
                         if tag_display_type == ClientTags.TAG_DISPLAY_STORAGE:
                             
-                            base += ', ignoring siblings'
+                            base += ', ignoring siblings/parents'
                             
                         
                         if set( statuses ) != { HC.CONTENT_STATUS_CURRENT, HC.CONTENT_STATUS_PENDING }:

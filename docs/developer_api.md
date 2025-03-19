@@ -2370,7 +2370,7 @@ Response:
 
 This will give 404 if the file is not stored locally (which includes if it _should_ exist but is actually missing from the file store).
 
-### **GET `/get_files/thumbnail_path`** { id="get_files_thumbnail" }
+### **GET `/get_files/thumbnail_path`** { id="get_files_thumbnail_path" }
 
 _Get a local thumbnail path._
 
@@ -2388,10 +2388,10 @@ Arguments:
 Only use one of `file_id` or `hash`. As with metadata fetching, you may only use the hash argument if you have access to all files. If you are tag-restricted, you will have to use a file_id in the last search you ran.
 
 ``` title="Example request"
-/get_files/thumbnail?file_id=452158
+/get_files/thumbnail_path?file_id=452158
 ```
 ``` title="Example request"
-/get_files/thumbnail?hash=7f30c113810985b69014957c93bc25e8eb4cf3355dae36d8b9d011d8b0cf623a&include_thumbnail_filetype=true
+/get_files/thumbnail_path?hash=7f30c113810985b69014957c93bc25e8eb4cf3355dae36d8b9d011d8b0cf623a&include_thumbnail_filetype=true
 ```
 
 Response:
@@ -2434,7 +2434,7 @@ Response:
         {
             "path" : "C:\my_thumbs",
             "ideal_weight" : 1,
-            "max_num_bytes": None,
+            "max_num_bytes": null,
             "prefixes" : [
                 "t00", "t01", "t02", "t03", "t04", "t05", "t06", "t07", "t08", "t09", "t0a", "t0b", "t0c", "t0d", "t0e", "t0f",
                 "t10", "t11", "t12", "t13", "t14", "t15", "t16", "t17", "t18", "t19", "t1a", "t1b", "t1c", "t1d", "t1e", "t1f",
@@ -2457,7 +2457,7 @@ Response:
         {
             "path" : "D:\hydrus_files_1",
             "ideal_weight" : 5,
-            "max_num_bytes": None,
+            "max_num_bytes": null,
             "prefixes" : [
                 "f00", "f02", "f04", "f05", "f08", "f0c", "f11", "f12", "f13", "f15", "f17", "f18", "f1a", "f1b", "f20", "f23",
                 "f25", "f26", "f27", "f2b", "f2e", "f2f", "f31", "f35", "f36", "f37", "f38", "f3a", "f40", "f42", "f43", "f44",

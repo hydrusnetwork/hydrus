@@ -12,6 +12,7 @@ from hydrus.client.db import ClientDBDefinitionsCache
 from hydrus.client.db import ClientDBFilesStorage
 from hydrus.client.db import ClientDBModule
 from hydrus.client.db import ClientDBSimilarFiles
+from hydrus.client.db import ClientDBFilesDuplicatesAutoResolutionStorage
 from hydrus.client.duplicates import ClientDuplicates
 
 class ClientDBFilesDuplicates( ClientDBModule.ClientDBModule ):
@@ -21,7 +22,8 @@ class ClientDBFilesDuplicates( ClientDBModule.ClientDBModule ):
         cursor: sqlite3.Cursor,
         modules_files_storage: ClientDBFilesStorage.ClientDBFilesStorage,
         modules_hashes_local_cache: ClientDBDefinitionsCache.ClientDBCacheLocalHashes,
-        modules_similar_files: ClientDBSimilarFiles.ClientDBSimilarFiles
+        modules_similar_files: ClientDBSimilarFiles.ClientDBSimilarFiles,
+        modules_files_duplicates_auto_resolution_storage: ClientDBFilesDuplicatesAutoResolutionStorage.ClientDBFilesDuplicatesAutoResolutionStorage
         ):
         
         super().__init__( 'client file duplicates', cursor )
@@ -29,6 +31,7 @@ class ClientDBFilesDuplicates( ClientDBModule.ClientDBModule ):
         self.modules_files_storage = modules_files_storage
         self.modules_hashes_local_cache = modules_hashes_local_cache
         self.modules_similar_files = modules_similar_files
+        self.modules_files_duplicates_auto_resolution_storage = modules_files_duplicates_auto_resolution_storage
         
         self._service_ids_to_content_types_to_outstanding_local_processing = collections.defaultdict( dict )
         
@@ -221,6 +224,10 @@ class ClientDBFilesDuplicates( ClientDBModule.ClientDBModule ):
             
             self._ExecuteMany( 'INSERT OR IGNORE INTO potential_duplicate_pairs ( smaller_media_id, larger_media_id, distance ) VALUES ( ?, ?, ? );', inserts )
             
+            self.modules_files_duplicates_auto_resolution_storage.NotifyNewPotentialDuplicatePairsAdded(
+                [ ( smaller_media_id, larger_media_id ) for ( smaller_media_id, larger_media_id, distance ) in inserts ]
+            )
+            
         
     
     def AlternatesGroupsAreFalsePositive( self, alternates_group_id_a, alternates_group_id_b ):
@@ -349,7 +356,7 @@ class ClientDBFilesDuplicates( ClientDBModule.ClientDBModule ):
         
         if len( deletees ) > 0:
             
-            self._ExecuteMany( 'DELETE FROM potential_duplicate_pairs WHERE smaller_media_id = ? AND larger_media_id = ?;', deletees )
+            self.DeletePotentialDuplicates( deletees )
             
         
     
@@ -377,7 +384,23 @@ class ClientDBFilesDuplicates( ClientDBModule.ClientDBModule ):
         
         self._Execute( 'DELETE FROM potential_duplicate_pairs;' )
         
+        self.modules_files_duplicates_auto_resolution_storage.DeleteAllPotentialDuplicatePairs()
+        
         self.modules_similar_files.ResetSearch( hash_ids )
+        
+    
+    def DeletePotentialDuplicates( self, pairs ):
+        
+        self._ExecuteMany( 'DELETE FROM potential_duplicate_pairs WHERE smaller_media_id = ? AND larger_media_id = ?;', pairs )
+        
+        self.modules_files_duplicates_auto_resolution_storage.NotifyExistingPotentialDuplicatePairsRemoved( pairs )
+        
+    
+    def DeletePotentialDuplicatesForMediaId( self, media_id: int ):
+        
+        self._Execute( 'DELETE FROM potential_duplicate_pairs WHERE smaller_media_id = ? OR larger_media_id = ?;', ( media_id, media_id ) )
+        
+        self.modules_files_duplicates_auto_resolution_storage.NotifyMediaIdNoLongerPotential( media_id )
         
     
     def DissolveAlternatesGroupId( self, alternates_group_id ):
@@ -414,7 +437,7 @@ class ClientDBFilesDuplicates( ClientDBModule.ClientDBModule ):
         
         self.RemoveAlternateMember( media_id )
         
-        self._Execute( 'DELETE FROM potential_duplicate_pairs WHERE smaller_media_id = ? OR larger_media_id = ?;', ( media_id, media_id ) )
+        self.DeletePotentialDuplicatesForMediaId( media_id )
         
         hash_ids = self.GetDuplicateHashIds( media_id )
         
@@ -493,7 +516,7 @@ class ClientDBFilesDuplicates( ClientDBModule.ClientDBModule ):
         Which of these actually exist in storage?
         """
         
-        existing_pairs = self._STS( self._Execute( f'SELECT smaller_media_id, larger_media_id FROM {potential_pair_ids_table_name} CROSS JOIN potential_duplicate_pairs ON ( {potential_pair_ids_table_name}.smaller_media_id = potential_duplicate_pairs.smaller_media_id AND {potential_pair_ids_table_name}.larger_media_id = potential_duplicate_pairs.larger_media_id );' ) )
+        existing_pairs = set( self._Execute( f'SELECT smaller_media_id, larger_media_id FROM {potential_pair_ids_table_name} CROSS JOIN potential_duplicate_pairs ON ( {potential_pair_ids_table_name}.smaller_media_id = potential_duplicate_pairs.smaller_media_id AND {potential_pair_ids_table_name}.larger_media_id = potential_duplicate_pairs.larger_media_id );' ) )
         
         return existing_pairs
         
@@ -1322,13 +1345,13 @@ class ClientDBFilesDuplicates( ClientDBModule.ClientDBModule ):
         
         # ensure the potential merge pair is gone
         
-        self._Execute( 'DELETE FROM potential_duplicate_pairs WHERE smaller_media_id = ? AND larger_media_id = ?;', ( smaller_media_id, larger_media_id ) )
+        self.DeletePotentialDuplicates( [ ( smaller_media_id, larger_media_id ) ] )
         
         # now merge potentials from the old to the new--however this has complicated tests to stop confirmed alts and so on, so can't just update ids
         
         existing_potential_info_of_mergee_media_id = self._Execute( 'SELECT smaller_media_id, larger_media_id, distance FROM potential_duplicate_pairs WHERE smaller_media_id = ? OR larger_media_id = ?;', ( mergee_media_id, mergee_media_id ) ).fetchall()
         
-        self._Execute( 'DELETE FROM potential_duplicate_pairs WHERE smaller_media_id = ? OR larger_media_id = ?;', ( mergee_media_id, mergee_media_id ) )
+        self.DeletePotentialDuplicatesForMediaId( mergee_media_id )
         
         for ( smaller_media_id, larger_media_id, distance ) in existing_potential_info_of_mergee_media_id:
             
@@ -1361,7 +1384,7 @@ class ClientDBFilesDuplicates( ClientDBModule.ClientDBModule ):
         
         confirmed_alternate_pairs = self._Execute( 'SELECT smaller_media_id, larger_media_id FROM confirmed_alternate_pairs WHERE smaller_media_id = ? OR larger_media_id = ?;', ( superior_media_id, superior_media_id ) ).fetchall()
         
-        self._ExecuteMany( 'DELETE FROM potential_duplicate_pairs WHERE smaller_media_id = ? AND larger_media_id = ?;', confirmed_alternate_pairs )
+        self.DeletePotentialDuplicates( confirmed_alternate_pairs )
         
         # clear out empty records
         
@@ -1447,7 +1470,7 @@ class ClientDBFilesDuplicates( ClientDBModule.ClientDBModule ):
         
         if media_id is not None:
             
-            self._Execute( 'DELETE FROM potential_duplicate_pairs WHERE smaller_media_id = ? OR larger_media_id = ?;', ( media_id, media_id ) )
+            self.DeletePotentialDuplicatesForMediaId( media_id )
             
         
     

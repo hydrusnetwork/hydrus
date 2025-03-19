@@ -53,7 +53,7 @@ class ClientDBFilesDuplicatesAutoResolutionSearch( ClientDBModule.ClientDBModule
             ( smaller_media_id, larger_media_id ) = pair_to_work
             
             smaller_hash_id = self.modules_files_duplicates.GetBestKingId( smaller_media_id, db_location_context = db_location_context )
-            larger_hash_id = self.modules_files_duplicates.GetBestKingId( smaller_media_id, db_location_context = db_location_context )
+            larger_hash_id = self.modules_files_duplicates.GetBestKingId( larger_media_id, db_location_context = db_location_context )
             
             if smaller_hash_id is None or larger_hash_id is None:
                 
@@ -65,7 +65,7 @@ class ClientDBFilesDuplicatesAutoResolutionSearch( ClientDBModule.ClientDBModule
                 
             
             media_result_1 = self.modules_media_results.GetMediaResult( smaller_hash_id )
-            media_result_2 = self.modules_media_results.GetMediaResult( larger_media_id )
+            media_result_2 = self.modules_media_results.GetMediaResult( larger_hash_id )
             
             result = rule.TestPair( media_result_1, media_result_2 )
             

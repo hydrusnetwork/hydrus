@@ -24,20 +24,20 @@ class ThumbnailPairListModel( QC.QAbstractTableModel ):
         
         super().__init__( None )
         
-        self._pairs = []
+        self._data_rows = []
         
         self._media_results_to_thumbnail_pixmaps = {}
         self._media_results_being_loaded = set()
         
-
+    
     def rowCount(self, parent = QC.QModelIndex() ):
         
-        return len( self._pairs )
+        return len( self._data_rows )
         
-
+    
     def columnCount(self, parent = QC.QModelIndex() ):
         
-        return 2
+        raise NotImplemented()
         
     
     def data( self, index: QC.QModelIndex, role: QC.Qt.ItemDataRole.DisplayRole ):
@@ -50,9 +50,9 @@ class ThumbnailPairListModel( QC.QAbstractTableModel ):
         row = index.row()
         col = index.column()
         
-        if role == QC.Qt.ItemDataRole.DecorationRole:
+        if role == QC.Qt.ItemDataRole.DecorationRole and col <= 1:
             
-            media_result = self._pairs[ row ][ col ]
+            media_result = self._data_rows[ row ][ col ]
             
             if media_result in self._media_results_to_thumbnail_pixmaps:
                 
@@ -65,25 +65,6 @@ class ThumbnailPairListModel( QC.QAbstractTableModel ):
             
         
         return None
-        
-    
-    def headerData( self, section: int, orientation: QC.Qt.Orientation, role = QC.Qt.ItemDataRole.DisplayRole ):
-        
-        if orientation == QC.Qt.Orientation.Horizontal and role == QC.Qt.ItemDataRole.DisplayRole:
-            
-            if section == 0:
-                
-                return 'A'
-                
-            else:
-                
-                return 'B'
-                
-            
-        else:
-            
-            return super().headerData( section, orientation, role = role )
-            
         
     
     def _LoadMediaResultThumbnailPixmap( self, index: QC.QModelIndex, media_result: ClientMediaResult.MediaResult ):
@@ -113,7 +94,7 @@ class ThumbnailPairListModel( QC.QAbstractTableModel ):
             
             try:
                 
-                current_media_result_at_this_position = self._pairs[ row ][ col ]
+                current_media_result_at_this_position = self._data_rows[ row ][ col ]
                 
                 if current_media_result_at_this_position != media_result:
                     
@@ -133,26 +114,90 @@ class ThumbnailPairListModel( QC.QAbstractTableModel ):
         job.start()
         
     
-    def SetPairs( self, pairs_of_media_results ):
+    def SetData( self, data_rows ):
         
         self.beginResetModel()
-        self._pairs = pairs_of_media_results
+        self._data_rows = data_rows
         self.endResetModel()
+        
+    
+
+class ThumbnailPairListModelFails( ThumbnailPairListModel ):
+    
+    def columnCount(self, parent = QC.QModelIndex() ):
+        
+        return 2
+        
+    
+
+class ThumbnailPairListModelPasses( ThumbnailPairListModel ):
+    
+    def columnCount(self, parent = QC.QModelIndex() ):
+        
+        return 3
+        
+    
+    def data( self, index: QC.QModelIndex, role: QC.Qt.ItemDataRole.DisplayRole ):
+        
+        if not index.isValid():
+            
+            return None
+            
+        
+        row = index.row()
+        col = index.column()
+        
+        if role == QC.Qt.ItemDataRole.DisplayRole:
+            
+            if col == 2:
+                
+                fixed_order = self._data_rows[ row ][ col ]
+                
+                if fixed_order:
+                    
+                    return 'yes'
+                    
+                else:
+                    
+                    return 'no, could be either way'
+                    
+                
+            
+        
+        return super().data( index, role )
+        
+    
+    def headerData( self, section: int, orientation: QC.Qt.Orientation, role = QC.Qt.ItemDataRole.DisplayRole ):
+        
+        if orientation == QC.Qt.Orientation.Horizontal and role == QC.Qt.ItemDataRole.DisplayRole:
+            
+            if section == 0:
+                
+                return 'A'
+                
+            elif section == 1:
+                
+                return 'B'
+                
+            else:
+                
+                return 'certain on this order?'
+                
+            
+        else:
+            
+            return super().headerData( section, orientation, role = role )
+            
         
     
 
 class ThumbnailPairList( QW.QTableView ):
     
-    def __init__( self, parent, show_ab_headers ):
+    def __init__( self, parent, model: ThumbnailPairListModel ):
         
         super().__init__( parent )
         
-        self.setModel( ThumbnailPairListModel() )
-        
-        if not show_ab_headers:
-            
-            self.horizontalHeader().setVisible( False )
-            
+        self.setModel( model )
         
         self.verticalHeader().setVisible( False )
         
@@ -164,17 +209,48 @@ class ThumbnailPairList( QW.QTableView ):
         self.verticalHeader().setDefaultSectionSize( thumbnail_height )
         self.verticalHeader().setSectionResizeMode( QW.QHeaderView.ResizeMode.Fixed )
         
+        self.horizontalHeader().setDefaultSectionSize( thumbnail_width )
+        
         self.setColumnWidth( 0, thumbnail_width )
         
-        self.horizontalHeader().setSectionResizeMode( 0, QW.QHeaderView.ResizeMode.Fixed )
-        self.horizontalHeader().setSectionResizeMode( 1, QW.QHeaderView.ResizeMode.Stretch )
+        column_count = model.columnCount()
+        
+        for i in range( column_count ):
+            
+            if i == column_count - 1:
+                
+                self.horizontalHeader().setSectionResizeMode( i, QW.QHeaderView.ResizeMode.Stretch )
+                
+            else:
+                
+                self.horizontalHeader().setSectionResizeMode( i, QW.QHeaderView.ResizeMode.Fixed )
+                
+            
         
         self.setMinimumSize( QC.QSize( thumbnail_width * 2 + 24, thumbnail_height * 2 ) )
         
     
-    def SetPairs( self, pairs_of_media_results ):
+    def SetData( self, tuples_of_data ):
         
-        self.model().SetPairs( pairs_of_media_results )
+        self.model().SetData( tuples_of_data )
+        
+    
+
+class ThumbnailPairListFails( ThumbnailPairList ):
+    
+    def __init__( self, parent ):
+        
+        super().__init__( parent, ThumbnailPairListModelFails() )
+        
+        self.horizontalHeader().setVisible( False )
+        
+    
+
+class ThumbnailPairListPasses( ThumbnailPairList ):
+    
+    def __init__( self, parent ):
+        
+        super().__init__( parent, ThumbnailPairListModelPasses() )
         
     
 
@@ -188,13 +264,15 @@ class PreviewPanel( ClientGUICommon.StaticBox ):
         
         self._value: typing.Optional[ ClientDuplicatesAutoResolution.DuplicatesAutoResolutionRule ] = None
         
+        self._num_pairs = 0
         self._fetched_pairs = []
-        self._ab_pairs_that_pass = []
+        self._ab_pairs_that_pass_with_fixed_order_info = []
         self._pairs_that_fail = []
         
         self._search_panel = ClientGUICommon.StaticBox( self, 'search' )
         
         self._search_results_label = ClientGUICommon.BetterStaticText( self._search_panel, label = 'ready to fetch pairs' )
+        self._num_to_fetch = ClientGUICommon.NoneableSpinCtrl( self._search_panel, 256, none_phrase = 'fetch all' )
         self._fetch_pairs_button = ClientGUICommon.BetterBitmapButton( self._search_panel, CC.global_pixmaps().refresh, self._RefetchPairs )
         self._fetch_pairs_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'Refresh the search' ) )
         
@@ -209,7 +287,7 @@ class PreviewPanel( ClientGUICommon.StaticBox ):
         
         self._pass_pairs_label = ClientGUICommon.BetterStaticText( self, label = 'ready to generate preview' )
         
-        self._pass_pairs_list = ThumbnailPairList( self._pass_panel, True )
+        self._pass_pairs_list = ThumbnailPairListPasses( self._pass_panel )
         
         #
         
@@ -217,7 +295,7 @@ class PreviewPanel( ClientGUICommon.StaticBox ):
         
         self._fail_pairs_label = ClientGUICommon.BetterStaticText( self, label = 'ready to generate preview' )
         
-        self._fail_pairs_list = ThumbnailPairList( self._fail_panel, False )
+        self._fail_pairs_list = ThumbnailPairListFails( self._fail_panel )
         
         #
         
@@ -225,10 +303,17 @@ class PreviewPanel( ClientGUICommon.StaticBox ):
         
         hbox = QP.HBoxLayout()
         
-        QP.AddToLayout( hbox, self._search_results_label, CC.FLAGS_EXPAND_BOTH_WAYS )
+        rows = []
+        
+        rows.append( ( 'only sample this many: ', self._num_to_fetch ) )
+        
+        gridbox = ClientGUICommon.WrapInGrid( self, rows )
+        
+        QP.AddToLayout( hbox, gridbox, CC.FLAGS_CENTER )
         QP.AddToLayout( hbox, self._fetch_pairs_button, CC.FLAGS_CENTER )
         
-        self._search_panel.Add( hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._search_panel.Add( self._search_results_label, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._search_panel.Add( hbox, CC.FLAGS_ON_RIGHT )
         
         #
         
@@ -255,17 +340,22 @@ class PreviewPanel( ClientGUICommon.StaticBox ):
             return
             
         
+        fetch_limit = self._num_to_fetch.GetValue()
+        
         potential_duplicates_search_context = self._value.GetPotentialDuplicatesSearchContext()
         
         def work_callable():
             
-            fetched_pairs = CG.client_controller.Read( 'potential_duplicate_pairs', potential_duplicates_search_context )
+            ( num_pairs, fetched_pairs ) = CG.client_controller.Read( 'potential_duplicate_pairs', potential_duplicates_search_context, fetch_limit = fetch_limit )
             
-            return fetched_pairs
+            return ( num_pairs, fetched_pairs )
             
         
-        def publish_callable( fetched_pairs ):
+        def publish_callable( result ):
             
+            ( num_pairs, fetched_pairs ) = result
+            
+            self._num_pairs = num_pairs
             self._fetched_pairs = fetched_pairs
             
             self._UpdateSearchLabel()
@@ -283,7 +373,7 @@ class PreviewPanel( ClientGUICommon.StaticBox ):
             
         
         self._fetched_pairs = []
-        self._ab_pairs_that_pass = []
+        self._ab_pairs_that_pass_with_fixed_order_info = []
         self._pairs_that_fail = []
         
         self._fetch_pairs_button.setEnabled( False )
@@ -311,7 +401,7 @@ class PreviewPanel( ClientGUICommon.StaticBox ):
         
         def work_callable():
             
-            ab_pairs_that_pass = []
+            ab_pairs_that_pass_with_fixed_order_info = []
             pairs_that_fail = []
             
             for pair in fetched_pairs:
@@ -326,19 +416,23 @@ class PreviewPanel( ClientGUICommon.StaticBox ):
                     
                 else:
                     
-                    ab_pairs_that_pass.append( result )
+                    ( media_result_one, media_result_two ) = result # this might be either order, if not fixed_order mate, so let's show that in UI
+                    
+                    fixed_order = not selector.PairMatchesBothWaysAround( media_result_one, media_result_two )
+                    
+                    ab_pairs_that_pass_with_fixed_order_info.append( ( media_result_one, media_result_two, fixed_order ) )
                     
                 
             
-            return ( ab_pairs_that_pass, pairs_that_fail )
+            return ( ab_pairs_that_pass_with_fixed_order_info, pairs_that_fail )
             
         
         def publish_callable( result ):
             
-            ( self._ab_pairs_that_pass, self._pairs_that_fail ) = result
+            ( self._ab_pairs_that_pass_with_fixed_order_info, self._pairs_that_fail ) = result
             
-            self._pass_pairs_list.SetPairs( self._ab_pairs_that_pass )
-            self._fail_pairs_list.SetPairs( self._pairs_that_fail )
+            self._pass_pairs_list.SetData( self._ab_pairs_that_pass_with_fixed_order_info )
+            self._fail_pairs_list.SetData( self._pairs_that_fail )
             
             self._UpdateTestLabels()
             
@@ -365,13 +459,13 @@ class PreviewPanel( ClientGUICommon.StaticBox ):
             
         else:
             
-            if len( self._fetched_pairs ) == 0:
+            if self._num_pairs == 0:
                 
                 label = 'no pairs found with this search'
                 
             else:
                 
-                label = f'{HydrusNumbers.ToHumanInt(len(self._fetched_pairs))} pairs found'
+                label = f'{HydrusNumbers.ToHumanInt( self._num_pairs )} pairs found'
                 
             
         
@@ -380,13 +474,13 @@ class PreviewPanel( ClientGUICommon.StaticBox ):
     
     def _UpdateTestLabels( self ):
         
-        if len( self._ab_pairs_that_pass ) == 0:
+        if len( self._ab_pairs_that_pass_with_fixed_order_info ) == 0:
             
             label = 'None!'
             
         else:
             
-            label = f'{HydrusNumbers.ToHumanInt(len(self._ab_pairs_that_pass))} pairs'
+            label = f'{HydrusNumbers.ToHumanInt(len(self._ab_pairs_that_pass_with_fixed_order_info))} pairs'
             
         
         self._pass_pairs_label.setText( label )

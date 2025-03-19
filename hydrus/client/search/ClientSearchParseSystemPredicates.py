@@ -327,7 +327,9 @@ pred_generators = {
     SystemPredicateParser.Predicate.NO_RATING : lambda o, v, u: rating_service_pred_generator( '=', ( 'not rated', v ) ),
     SystemPredicateParser.Predicate.RATING_SPECIFIC_NUMERICAL : lambda o, v, u: rating_service_pred_generator( o, v ),
     SystemPredicateParser.Predicate.RATING_SPECIFIC_LIKE_DISLIKE : lambda o, v, u: rating_service_pred_generator( '=', v ),
-    SystemPredicateParser.Predicate.RATING_SPECIFIC_INCDEC : lambda o, v, u: rating_service_pred_generator( o, v )
+    SystemPredicateParser.Predicate.RATING_SPECIFIC_INCDEC : lambda o, v, u: rating_service_pred_generator( o, v ),
+    SystemPredicateParser.Predicate.TAG_ADVANCED_INCLUSIVE : lambda o, v, u: ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_TAG_ADVANCED, ( o[0], o[1], o[2], v ) ),
+    SystemPredicateParser.Predicate.TAG_ADVANCED_EXCLUSIVE : lambda o, v, u: ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_TAG_ADVANCED, ( o[0], o[1], o[2], v ), inclusive = False ),
 }
 
 def ParseSystemPredicateStringsToPredicates( system_predicate_strings: typing.Collection[ str ], discard_failures = False ) -> typing.List[ ClientSearchPredicate.Predicate ]:

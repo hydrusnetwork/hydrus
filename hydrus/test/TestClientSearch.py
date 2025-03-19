@@ -1893,6 +1893,11 @@ class TestAutocompletePredGubbins( unittest.TestCase ):
             ( 'system:count for example local rating inc/dec service less than 123', 'system:rating for example local rating inc/dec service less than 123' ),
             ( f'system:count for example local rating inc/dec service is about 123', f'system:rating for example local rating inc/dec service {HC.UNICODE_APPROX_EQUAL} 123' ),
             ( f'system:count for example local rating inc/dec service is about 123', 'system:rating for example local rating inc/dec service is about 123' ),
+            ( 'system:has tag: "skirt"', 'system:has tag: "skirt"' ),
+            ( 'system:does not have tag: "skirt"', 'system:does not have tag: "skirt"' ),
+            ( 'system:has tag in "my tags", ignoring siblings/parents: "skirt"', 'system:has tag in "my tags", ignoring siblings/parents, status current, pending: "skirt"' ),
+            ( 'system:has tag in "all known tags", with status deleted: "filename:blarg"', 'system:has tag "all known tags", status deleted: "filename:blarg"' ),
+            ( 'system:has tag in "all known tags", with status in current, pending, deleted, petitioned: "filename:blarg"', 'system:has tag "all known tags", deleted, current, pending, petitioned: "filename:blarg"' ),
         ]:
             
             ( sys_pred, ) = ClientSearchParseSystemPredicates.ParseSystemPredicateStringsToPredicates( ( sys_pred_text, ) )

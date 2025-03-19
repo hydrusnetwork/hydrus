@@ -1,5 +1,6 @@
 import collections
 import random
+import threading
 import time
 import typing
 
@@ -27,6 +28,14 @@ DUPLICATE_STATUS_MATCHES_SEARCH_BUT_NOT_TESTED = 1
 DUPLICATE_STATUS_MATCHES_SEARCH_FAILED_TEST = 2
 DUPLICATE_STATUS_MATCHES_SEARCH_PASSED_TEST = 3 # presumably this will not be needed much since we'll delete the duplicate pair soon after, but we may as well be careful
 DUPLICATE_STATUS_NOT_SEARCHED = 4 # assign this to new pairs that are added, by default
+
+duplicate_status_str_lookup = {
+    DUPLICATE_STATUS_DOES_NOT_MATCH_SEARCH : 'Did not match search',
+    DUPLICATE_STATUS_MATCHES_SEARCH_BUT_NOT_TESTED : 'Matches search, not yet tested',
+    DUPLICATE_STATUS_MATCHES_SEARCH_FAILED_TEST : 'Matches search, failed test',
+    DUPLICATE_STATUS_MATCHES_SEARCH_PASSED_TEST : 'Matches search, passed test',
+    DUPLICATE_STATUS_NOT_SEARCHED : 'Not searched'
+}
 
 class PairComparator( HydrusSerialisable.SerialisableBase ):
     
@@ -248,12 +257,15 @@ class PairSelector( HydrusSerialisable.SerialisableBase ):
         return self._comparators
         
     
-    def GetMatchingAB( self, media_result_1: ClientMediaResult.MediaResult, media_result_2: ClientMediaResult.MediaResult ) -> typing.Optional[ typing.Tuple[ ClientMediaResult.MediaResult, ClientMediaResult.MediaResult ] ]:
+    def GetMatchingAB( self, media_result_1: ClientMediaResult.MediaResult, media_result_2: ClientMediaResult.MediaResult, test_both_ways_around = True ) -> typing.Optional[ typing.Tuple[ ClientMediaResult.MediaResult, ClientMediaResult.MediaResult ] ]:
         
         pair = [ media_result_1, media_result_2 ]
         
-        # just in case both match
-        random.shuffle( pair )
+        if test_both_ways_around:
+            
+            # just in case both match
+            random.shuffle( pair )
+            
         
         ( media_result_1, media_result_2 ) = pair
         
@@ -267,7 +279,7 @@ class PairSelector( HydrusSerialisable.SerialisableBase ):
             
             return ( media_result_1, media_result_2 )
             
-        elif False not in ( comparator.Test( media_result_2, media_result_1 ) for comparator in self._comparators ):
+        elif test_both_ways_around and False not in ( comparator.Test( media_result_2, media_result_1 ) for comparator in self._comparators ):
             
             return ( media_result_2, media_result_1 )
             
@@ -282,6 +294,11 @@ class PairSelector( HydrusSerialisable.SerialisableBase ):
         comparator_strings = sorted( [ comparator.GetSummary() for comparator in self._comparators ] )
         
         return ', '.join( comparator_strings )
+        
+    
+    def PairMatchesBothWaysAround( self, media_result_1: ClientMediaResult.MediaResult, media_result_2: ClientMediaResult.MediaResult ) -> bool:
+        
+        return self.GetMatchingAB( media_result_1, media_result_2, test_both_ways_around = False ) is not None and self.GetMatchingAB( media_result_2, media_result_1, test_both_ways_around = False ) is not None
         
     
     def SetComparators( self, comparators: typing.Collection[ PairComparator ] ):
@@ -406,6 +423,11 @@ class DuplicatesAutoResolutionRule( HydrusSerialisable.SerialisableBaseNamed ):
         return s
         
     
+    def GetCountsCacheDuplicate( self ):
+        
+        return collections.Counter( self._counts_cache )
+        
+    
     def GetDeleteInfo( self ) -> typing.Tuple[ bool, bool ]:
         
         return ( self._delete_a, self._delete_b )
@@ -455,31 +477,34 @@ class DuplicatesAutoResolutionRule( HydrusSerialisable.SerialisableBaseNamed ):
         
         passed_test = self._counts_cache[ DUPLICATE_STATUS_MATCHES_SEARCH_PASSED_TEST ]
         
-        if not_searched == 0:
-            
-            result = 'all searched'
-            
-        else:
-            
-            result = f'{not_searched} to search'
-            
+        result = ''
         
-        if not_match > 0:
+        if not_searched > 0:
             
-            result += f', {not_match} failed search'
+            result += f'{not_searched} to search, '
             
         
         if not_tested > 0:
             
-            result += f', {not_tested} still to test'
+            result += f'{not_tested} still to test, '
             
+        
+        if not_searched + not_tested == 0:
+            
+            result += 'Done! '
+            
+        
+        result += f'{passed_test} pairs resolved'
         
         if failed_test > 0:
             
-            result += f', {failed_test} failed the test'
+            result += f' ({failed_test} failed the test)'
             
         
-        result += f', {passed_test} passed the test'
+        if not_match > 0:
+            
+            result += f' ({not_match} did not match the search)'
+            
         
         return result
         
@@ -676,6 +701,8 @@ class DuplicatesAutoResolutionManager( ClientDaemons.ManagerWithMainLoop ):
         self._currently_resolving_rule = None
         self._working_hard_rules = set()
         
+        self._edit_work_lock = threading.Lock()
+        
     
     def _AbleToWork( self ):
         
@@ -722,40 +749,38 @@ class DuplicatesAutoResolutionManager( ClientDaemons.ManagerWithMainLoop ):
                 
                 CG.client_controller.WaitUntilViewFree()
                 
-                start_time = HydrusTime.GetNowFloat()
-                
-                try:
+                with self._edit_work_lock:
                     
-                    with self._lock:
+                    start_time = HydrusTime.GetNowFloat()
+                    
+                    try:
                         
                         still_work_to_do = self._WorkRules( work_period )
                         
+                    except HydrusExceptions.DataMissing as e:
+                        
+                        time.sleep( 5 )
+                        
+                        HydrusData.Print( 'While doing auto-resolution work, we discovered an id that should not exist. If you just deleted one yourself this second, let hydev know as this should not happen. You might need to run the "orphan rule" maintenance job off the cog icon on the duplicates resolution sidebar panel.' )
+                        HydrusData.PrintException( e )
+                        
+                    except Exception as e:
+                        
+                        self._serious_error_encountered = True
+                        
+                        HydrusData.PrintException( e )
+                        
+                        message = 'There was an unexpected problem during duplicates auto-resolution work! This system will not run again this boot. A full traceback of this error should be written to the log.'
+                        message += '\n' * 2
+                        message += str( e )
+                        
+                        HydrusData.ShowText( message )
+                        
                     
-                except HydrusExceptions.DataMissing as e:
-                    
-                    time.sleep( 5 )
-                    
-                    HydrusData.Print( 'While doing auto-resolution work, we discovered an id that should not exist. If you just deleted one yourself this second, then maybe this is bad timing.' )
-                    HydrusData.PrintException( e )
-                    
-                except Exception as e:
-                    
-                    self._serious_error_encountered = True
-                    
-                    HydrusData.PrintException( e )
-                    
-                    message = 'There was an unexpected problem during duplicates auto-resolution work! This system will not run again this boot. A full traceback of this error should be written to the log.'
-                    message += '\n' * 2
-                    message += str( e )
-                    
-                    HydrusData.ShowText( message )
-                    
-                finally:
-                    
-                    CG.client_controller.pub( 'notify_duplicates_auto_resolution_work_complete' )
+                    time_it_took = HydrusTime.GetNowFloat() - start_time
                     
                 
-                time_it_took = HydrusTime.GetNowFloat() - start_time
+                CG.client_controller.pub( 'notify_duplicates_auto_resolution_work_complete' )
                 
             
             wait_period = self._GetWaitPeriod( work_period, time_it_took, still_work_to_do )
@@ -881,6 +906,11 @@ class DuplicatesAutoResolutionManager( ClientDaemons.ManagerWithMainLoop ):
         return still_work_to_do
         
     
+    def GetEditWorkLock( self ):
+        
+        return self._edit_work_lock
+        
+    
     def GetName( self ) -> str:
         
         return 'duplicates auto-resolution'
@@ -888,7 +918,7 @@ class DuplicatesAutoResolutionManager( ClientDaemons.ManagerWithMainLoop ):
     
     def GetRules( self ) -> typing.List[ DuplicatesAutoResolutionRule ]:
         
-        rules = typing.cast( typing.List[ DuplicatesAutoResolutionRule ], CG.client_controller.Read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_DUPLICATES_AUTO_RESOLUTION_RULE ) )
+        rules = CG.client_controller.Read( 'duplicate_auto_resolution_rules_with_counts' )
         
         return rules
         
@@ -922,44 +952,17 @@ class DuplicatesAutoResolutionManager( ClientDaemons.ManagerWithMainLoop ):
     
     def ResetRuleSearchProgress( self, rules: typing.Collection[ DuplicatesAutoResolutionRule ] ):
         
-        with self._lock:
+        for rule in rules:
             
-            for rule in rules:
-                
-                CG.client_controller.WriteSynchronous( 'duplicate_auto_resolution_reset_rule_search_progress', rule )
-                
+            CG.client_controller.WriteSynchronous( 'duplicate_auto_resolution_reset_rule_search_progress', rule )
             
         
         self.Wake()
         
     
-    def SetRules( self, rules: typing.Collection[ DuplicatesAutoResolutionRule ], rules_to_reset_search_progress_for: typing.Collection[ DuplicatesAutoResolutionRule ] ):
+    def SetRules( self, rules: typing.Collection[ DuplicatesAutoResolutionRule ] ):
         
-        with self._lock:
-            
-            existing_db_names = set( self._controller.Read( 'serialisable_names', HydrusSerialisable.SERIALISABLE_TYPE_DUPLICATES_AUTO_RESOLUTION_RULE ) )
-            
-            good_names = set()
-            
-            for rule in rules:
-                
-                CG.client_controller.WriteSynchronous( 'serialisable', rule )
-                
-                good_names.add( rule.GetName() )
-                
-            
-            names_to_delete = existing_db_names.difference( good_names )
-            
-            for name in names_to_delete:
-                
-                CG.client_controller.WriteSynchronous( 'delete_serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_DUPLICATES_AUTO_RESOLUTION_RULE, name )
-                
-            
-            for rule in rules_to_reset_search_progress_for:
-                
-                CG.client_controller.WriteSynchronous( 'duplicate_auto_resolution_reset_rule_search_progress', rule )
-                
-            
+        CG.client_controller.Write( 'duplicate_auto_resolution_set_rules', rules )
         
         self.Wake()
         

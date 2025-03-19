@@ -1,0 +1,660 @@
+/* ----------------------------------------------
+
+Name: Catmocchin_blue (based on Catppuccin palette)
+
+Credits to other themes:
+DarkerDuck_(darkorange).qss
+QScrollBar from Dark_Blue.qss
+e621_redux.qss
+
+
+To achieve the intended results you must:
+
+1. Activate 'darkmode' in help -> darkmode
+2. Adjust the Qt style to 'Fusion' in file -> options -> style
+3. Adjust the Qt stylesheet to 'catmocchin_blue' in file -> options -> style
+
+4. Adjust your tag presentation color values under file -> options -> tag presentation -> (On thumbnail top, On thumbnail bottom-right, On media viewer top) like so:
+
+    background colour............: #45475a | alpha 175
+    text colour..................: #cdd6f4
+
+5. Additionally if you want more suitable for theme tag colors, adjust values under file -> options -> tag presentation -> select tag category and click edit button:
+
+    'character' tags............: #40a02b
+    'creator' tags..............: #d20f39
+    'meta' tags.................: #9399b2
+    'person' tags ..............: #a6d189
+    'series' tags...............: #8839ef
+    'source' tags...............: #ea76cb
+    'studio' tags...............: #e64553
+    'system' tags...............: #df8e1d
+    namespaced tags.............: #04a5e5
+    unnamespaced tags...........: #1e66f5
+
+6. Optional: under QWidget you can adjust font and its size to your liking, check example.
+
+TODO:
+- figure out Collections dropdown checkbox
+
+---------------------------------------------- */
+
+/* --------------------------------- */
+/*      QWidget                      */
+/* --------------------------------- */
+
+QWidget
+{
+    color: #cdd6f4;
+    background-color: #1e1e2e;
+    alternate-background-color: #1e1e2e;
+
+/* You can adjust the font and its size here, font needs to be installed in your system, commented for defaults */
+/* Example: 
+    font-family: Lexend, sans-serif;
+    font-weight: 400;
+    font-size: 10pt;
+*/
+}
+
+QWidget:disabled
+{
+    background-color: #1e1e2e;
+}
+
+QWidget:item:hover
+{
+    background-color: #89b4fa;
+    color: #181825;
+}
+
+QWidget:item:selected
+{
+    background-color: #89b4fa;
+}
+
+/* Override colors setting; previously were controlled via options -> colours */
+
+QWidget#HydrusMediaList
+{
+    qproperty-hmrp_background: #181825;
+    qproperty-hmrp_thumbnail_local_background_normal: #181825;
+    qproperty-hmrp_thumbnail_local_background_selected: #181825;
+    qproperty-hmrp_thumbnail_local_border_normal: #45475a;
+    qproperty-hmrp_thumbnail_local_border_selected: #89b4fa;
+    qproperty-hmrp_thumbnail_not_local_background_normal: #181825;
+    qproperty-hmrp_thumbnail_not_local_background_selected: #181825;
+    qproperty-hmrp_thumbnail_not_local_border_normal: #ea999c;
+    qproperty-hmrp_thumbnail_not_local_border_selected: #89b4fa;
+}
+
+/* The media viewer. */
+
+QWidget#HydrusMediaViewer
+{
+    qproperty-hmv_background: #181825;
+    qproperty-hmv_text: #cdd6f4;
+}
+
+/* The tag autocomplete text input. */
+
+QWidget#HydrusTagAutocomplete
+{
+    qproperty-hta_background: #313244;
+}
+
+/* Tag lists across the program. */
+
+QWidget#HydrusTagList
+{
+    qproperty-htl_background: #181825;
+}
+
+/* --------------------------------- */
+/*      QToolButton                  */
+/* --------------------------------- */
+
+/* This mostly controls file log, search log, import options buttons with arrow and dropdown, which usually seen in gallery downloader or edit subscription. Very hacky solution. */
+
+QToolButton 
+{
+    color: #cdd6f4;
+    background-color: #11111b;
+    border: 1px solid #6c7086;
+    padding: 1px;
+    padding-right: 14px;
+}
+
+QToolButton:hover
+{
+    border: 1px solid #89b4fa;
+}
+
+QToolButton::menu-button
+{
+    border: 1px;
+    border-color: #6c7086;
+    background-color: #11111b;
+    border-style: solid;
+    padding: 1px;
+    width: 12px;
+}
+
+QToolButton::menu-button:hover
+{
+    border: 1px solid #89b4fa;
+}
+
+/* --------------------------------- */
+/*      QToolTip                     */
+/* --------------------------------- */
+
+QToolTip
+{
+    color: #cdd6f4;
+    border: 1px solid #6c7086;
+    background-color: #181825;
+    padding: 2px;
+}
+
+/* --------------------------------- */
+/*      QMenuBar                     */
+/* --------------------------------- */
+
+QMenuBar::item
+{
+    background: transparent;
+}
+
+QMenuBar::item:selected
+{
+    background: transparent;
+    border: 1px solid #6c7086;
+}
+
+/* --------------------------------- */
+/*      QMenu                        */
+/* --------------------------------- */
+
+QMenu
+{
+    border: 1px solid #313244;
+}
+
+QMenu::item
+{
+    padding: 2px 20px 2px 20px;
+}
+
+QMenu::item:selected
+{
+    color: #181825;
+    background-color: #89b4fa;
+}
+
+/* --------------------------------- */
+/*      QAbstractItemView            */
+/* --------------------------------- */
+
+QAbstractItemView
+{
+    alternate-background-color: #181825;
+}
+
+/* --------------------------------- */
+/*      QLineEdit                    */
+/* --------------------------------- */
+
+QLineEdit
+{
+    color: #cdd6f4;
+    background-color: #1e1e2e;
+    padding: 1px;
+    border-style: solid;
+    border: 1px solid #6c7086;
+}
+
+QLineEdit#HydrusValid
+{
+    background-color: #40a02b;
+}
+
+QLineEdit#HydrusInvalid
+{
+    background-color: #d20f39;
+}
+
+QLineEdit#HydrusIndeterminate
+{
+    background-color: #89b4fa;
+}
+
+/* --------------------------------- */
+/*      QPushButton                  */
+/* --------------------------------- */
+
+QPushButton
+{
+    color: #cdd6f4;
+    background-color: #11111b;
+    border: 1px;
+    border-color: #6c7086;
+    border-style: solid;
+    padding: 3px;
+    padding-left: 5px;
+    padding-right: 5px;
+}
+
+QPushButton:pressed
+{
+    background-color: #1e1e2e;
+}
+
+/* Buttons on dialogs */
+
+QPushButton#HydrusAccept
+{
+    color: #a6e3a1;
+}
+
+QPushButton#HydrusCancel
+{
+    color: #f38ba8;
+}
+
+/* This is the green/red button that switches 'include current tags' and similar states on/off */
+
+QPushButton#HydrusOnOffButton[hydrus_on=true]
+{
+    color: #a6e3a1;
+}
+
+QPushButton#HydrusOnOffButton[hydrus_on=false]
+{
+    color: #f38ba8;
+}
+
+/* --------------------------------- */
+/*      QComboBox                    */
+/* --------------------------------- */
+
+QComboBox
+{
+    /* Undocumented property! combobox-popup: [boolean] */
+    /* Which style of popup list to use. Fusion defaults to 1. */
+    /* Disabled due to buggy behaviour. */
+    combobox-popup: 0;
+
+    border: 1px solid #6c7086;
+    background-color: #1e1e2e;
+    selection-background-color: #89b4fa;
+}
+
+QComboBox:hover,QPushButton:hover
+{
+    border: 1px solid #89b4fa;
+}
+
+QComboBox:on
+{
+    color: #cdd6f4;
+    padding-top: 4px;
+    padding-left: 4px;
+    background-color: #1e1e2e;
+    selection-background-color: #89b4fa;
+}
+
+QComboBox QAbstractItemView
+{
+    color: #cdd6f4;
+    border: 1px solid #6c7086;
+    background-color: #1e1e2e;
+    selection-background-color: #89b4fa;
+}
+
+QComboBox::drop-down
+{
+    color: #cdd6f4;
+    background-color: #313244;
+    selection-background-color: #89b4fa;
+    border: 0px solid transparent;
+    padding: 4px 4px 4px 4px;
+}
+
+QComboBox::down-arrow
+{
+    image: url("static/down_arrow.png");
+}
+
+/* --------------------------------- */
+/*      QGroupBox                    */
+/* --------------------------------- */
+
+QGroupBox:focus
+{
+    border: 1px solid #89b4fa;
+}
+
+/* --------------------------------- */
+/*      QTextEdit                    */
+/* --------------------------------- */
+
+QTextEdit
+{
+    background-color: #1e1e2e;
+}
+
+QTextEdit:focus
+{
+    border: 1px solid #89b4fa;
+}
+
+QTextEdit#HydrusValid
+{
+    background-color: #40a02b;
+}
+
+QTextEdit#HydrusInvalid
+{
+    background-color: #d20f39;
+}
+
+QTextEdit#HydrusIndeterminate
+{
+    background-color: #89b4fa;
+}
+
+/* --------------------------------- */
+/*      QPlainTextEdit               */
+/* --------------------------------- */
+
+QPlainTextEdit
+{
+    background-color: #1e1e2e;
+}
+
+QPlainTextEdit#HydrusValid
+{
+    background-color: #40a02b;
+}
+
+QPlainTextEdit#HydrusInvalid
+{
+    background-color: #d20f39;
+}
+
+QPlainTextEdit#HydrusIndeterminate
+{
+    background-color: #89b4fa;
+}
+
+/* --------------------------------- */
+/*      QScrollBar                   */
+/* --------------------------------- */
+
+QScrollBar 
+{
+    background: #1e1e2e;
+    margin: 0;
+}
+
+QScrollBar:hover 
+{
+    background: #1e1e2e;
+}
+
+QScrollBar:vertical 
+{
+    width: 8px;
+}
+
+QScrollBar:horizontal 
+{
+    height: 8px;
+}
+
+QScrollBar::handle 
+{
+    padding: 0;
+    margin: 2px;
+    border-radius: 2px;
+    border: 2px solid #89b4fa;
+    background: #1e1e2e;
+}
+
+QScrollBar::handle:vertical 
+{
+    min-height: 20px;
+    min-width: 0px;
+}
+
+QScrollBar::handle:horizontal 
+{
+    min-width: 20px;
+    min-height: 0px;
+}
+
+QScrollBar::handle:hover 
+{
+    border-color: #1e66f5;
+    background: #1e1e2e;
+}
+
+QScrollBar::handle:pressed 
+{
+    background: #1e1e2e;
+    border-color: #1e66f5;
+}
+
+QScrollBar::add-line , QScrollBar::sub-line 
+{
+    height: 0px;
+    border: 0px;
+}
+
+QScrollBar::up-arrow, QScrollBar::down-arrow 
+{
+    border: 0px;
+    width: 0px;
+    height: 0px;
+}
+
+QScrollBar::add-page, QScrollBar::sub-page 
+{
+    background: none;
+}
+
+/* --------------------------------- */
+/*      QHeaderView                  */
+/* --------------------------------- */
+
+QHeaderView::section
+{
+    background-color: #181825;
+    color: #cdd6f4;
+    padding-left: 4px;
+    border: 1px solid #6c7086;
+}
+
+/* --------------------------------- */
+/*      QProgressBar                 */
+/* --------------------------------- */
+
+QProgressBar
+{
+    text-align: center;
+    background-color: #45475a;
+    border-radius: 2px;
+    color: #11111b;
+    margin: 2px 4px;
+}
+
+/* Custom gradient progress bar */
+
+QProgressBar::chunk
+{
+    background-color: qlineargradient(x1: 0, y1: 0, x2: 1, y2: 0, stop: 0 #89b4fa, stop: 1 #b4befe);
+    border-radius: 2px;
+    margin: 0px;
+}
+
+/* --------------------------------- */
+/*      QCheckBox                    */
+/* --------------------------------- */
+
+QCheckBox::indicator:checked
+{
+    height: 10px;
+    width: 10px;
+    border-style: solid;
+    border-width: 1px;
+    border-color: #89b4fa;
+    background-color: #89b4fa;
+}
+
+QCheckBox::indicator:checked:hover
+{
+    height: 10px;
+    width: 10px;
+    border-style: solid;
+    border-width: 1px;
+    border-color: #45475a;
+    background-color: #89b4fa;
+}
+
+QCheckBox::indicator:unchecked 
+{
+    height: 10px;
+    width: 10px;
+    border-style: solid;
+    border-width: 1px;
+    border-color: #45475a;
+    background-color: transparent;
+}
+
+QCheckBox::indicator:unchecked:hover
+{
+    height: 10px;
+    width: 10px;
+    border-style: solid;
+    border-width: 1px;
+    border-color: #89b4fa;
+    background-color: transparent;
+}
+QCheckBox#HydrusWarning {
+    color: #d20f39;
+    background: transparent;
+}
+
+/* --------------------------------- */
+/*      QTabBar                      */
+/* --------------------------------- */
+
+QTabBar::tab 
+{
+    color: #585b70;
+    background-color: #181825;
+    padding-left: 10px;
+    padding-right: 10px;
+    padding-top: 3px;
+    padding-bottom: 2px;
+}
+
+QTabBar::tab:last
+{
+    margin-right: 0; /* the last selected tab has nothing to overlap with on the right */
+    border-top-right-radius: 3px;
+}
+
+QTabBar::tab:first:!selected
+{
+    margin-left: 0px; /* the last selected tab has nothing to overlap with on the right */
+    border-top-left-radius: 3px;
+}
+
+QTabBar::tab:selected
+{
+    color: #cdd6f4;
+    border-bottom: 1px solid #89b4fa;
+}
+
+QTabBar::tab:hover:!selected
+{
+    color: #11111b;
+    background-color: #89b4fa;
+}
+
+/* --------------------------------- */
+/*      QTabWidget                   */
+/* --------------------------------- */
+
+QTabWidget::pane 
+{
+    border-top: 1px solid #1e1e2e;
+}
+
+/* --------------------------------- */
+/*      Hydrus exclusive             */
+/* --------------------------------- */
+
+/* The scanbar beneath video/audio in the media viewer. */
+
+QWidget#HydrusAnimationBar {
+    qproperty-hab_border: #6c7086;
+    qproperty-hab_background: #181825;
+    qproperty-hab_nub: #89b4fa;
+}
+
+/* Example: This regex is valid */
+
+QLabel#HydrusValid
+{
+    color: #a6e3a1;
+}
+
+/* Duplicates filter 'middle' text colour */
+
+QLabel#HydrusIndeterminate
+{
+    color: #89b4fa;
+}
+
+/* Example: This regex is invalid */
+
+QLabel#HydrusInvalid
+{
+    color: #f38ba8;
+}
+
+/* And this one is odd since we are assigning a colour to <a> html richtext inside a QLabel.
+We hack it with hardcoded 'style' attribute in the html in python code. */
+
+QLabel#HydrusHyperlink
+{
+    qproperty-link_color: #1e66f5;
+}
+
+/* Example: Your files are going to be deleted! */
+
+QLabel#HydrusWarning 
+{
+    color: #d20f39;
+}
+
+QCheckBox#HydrusWarning
+{
+    color: #d20f39;
+}
+
+/* This is the Command Palette (default Ctrl+P), and specifically the background colour of the item you currently have selected. */
+
+QLocatorResultWidget#unselectedLocatorResult
+{
+    background: #181825;
+    border-bottom: 1px solid#6c7086;
+}
+QLocatorResultWidget#selectedLocatorResult
+{
+    background: #1e66f5;
+    border-bottom: 1px solid#6c7086;
+}

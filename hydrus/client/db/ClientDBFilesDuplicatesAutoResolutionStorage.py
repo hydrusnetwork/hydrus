@@ -76,6 +76,30 @@ class ClientDBFilesDuplicatesAutoResolutionStorage( ClientDBModule.ClientDBModul
         self._have_initialised_rules = True
         
     
+    def DeleteAllPotentialDuplicatePairs( self ):
+        
+        # either dissolve or merge or manual removal from all potential pairs for a search reset or something
+        
+        if not self._have_initialised_rules:
+            
+            self._Reinit()
+            
+        
+        for ( rule_id, resolution_rule ) in self._rule_ids_to_rules.items():
+            
+            statuses_to_table_names = GenerateResolutionDecisionTableNames( rule_id )
+            
+            for ( status, table_name ) in statuses_to_table_names.items():
+                
+                self._Execute( f'DELETE FROM {table_name};' )
+                
+            
+        
+        self._Execute( 'UPDATE duplicates_files_auto_resolution_rule_count_cache;' )
+        
+        CG.client_controller.duplicates_auto_resolution_manager.Wake()
+        
+    
     def GetMatchingUntestedPair( self, rule: ClientDuplicatesAutoResolution.DuplicatesAutoResolutionRule ):
         
         if not self._have_initialised_rules:
@@ -222,7 +246,7 @@ class ClientDBFilesDuplicatesAutoResolutionStorage( ClientDBModule.ClientDBModul
         
         if pairs_to_sync_to is None:
             
-            pairs_to_sync_to = self._STS( self._Execute( f'SELECT smaller_media_id, larger_media_id FROM {master_potential_duplicate_pairs_table_name};' ) )
+            pairs_to_sync_to = set( self._Execute( f'SELECT smaller_media_id, larger_media_id FROM {master_potential_duplicate_pairs_table_name};' ) )
             pairs_stored_in_duplicates_proper = set( pairs_to_sync_to )
             
         
@@ -230,9 +254,9 @@ class ClientDBFilesDuplicatesAutoResolutionStorage( ClientDBModule.ClientDBModul
             
             if pairs_stored_in_duplicates_proper is None:
                 
-                table_join = f'{temp_media_ids_table_name} CROSS JOIN {master_potential_duplicate_pairs_table_name} ON ( {temp_media_ids_table_name}.smaller_media_id = {master_potential_duplicate_pairs_table_name}.smaller_media_id AND {temp_media_ids_table_name}.larger_media_id = {master_potential_duplicate_pairs_table_name}.larger_media_id )'
+                table_join = f'{temp_media_ids_table_name} CROSS JOIN {master_potential_duplicate_pairs_table_name} USING ( smaller_media_id, larger_media_id )'
                 
-                pairs_stored_in_duplicates_proper = self._STS( self._Execute( f'SELECT smaller_media_id, larger_media_id FROM {table_join};' ) )
+                pairs_stored_in_duplicates_proper = set( self._Execute( f'SELECT smaller_media_id, larger_media_id FROM {table_join};' ) )
                 
             
             for ( rule_id, resolution_rule ) in self._rule_ids_to_rules.items():
@@ -242,7 +266,7 @@ class ClientDBFilesDuplicatesAutoResolutionStorage( ClientDBModule.ClientDBModul
                 
                 for ( status, table_name ) in statuses_to_table_names:
                     
-                    pairs_i_have = self._STS( self._Execute( f'SELECT smaller_media_id, larger_media_id FROM {temp_media_ids_table_name} CROSS JOIN {table_name} ON ( {temp_media_ids_table_name}.smaller_media_id = {table_name}.smaller_media_id AND {temp_media_ids_table_name}.larger_media_id = {table_name}.larger_media_id );' ) )
+                    pairs_i_have = set( self._Execute( f'SELECT smaller_media_id, larger_media_id FROM {temp_media_ids_table_name} CROSS JOIN {table_name} USING ( smaller_media_id, larger_media_id ) );' ) )
                     
                     statuses_to_pairs_i_have[ status ] = pairs_i_have
                     
@@ -262,7 +286,9 @@ class ClientDBFilesDuplicatesAutoResolutionStorage( ClientDBModule.ClientDBModul
                     
                     if num_added > 0:
                         
-                        self._Execute( 'UPDATE duplicates_files_auto_resolution_rule_count_cache SET status_count = status_count + ? WHERE rule_id = ? AND status = ?;', num_added, rule_id, ClientDuplicatesAutoResolution.DUPLICATE_STATUS_NOT_SEARCHED )
+                        self._Execute( 'UPDATE duplicates_files_auto_resolution_rule_count_cache SET status_count = status_count + ? WHERE rule_id = ? AND status = ?;', ( num_added, rule_id, ClientDuplicatesAutoResolution.DUPLICATE_STATUS_NOT_SEARCHED ) )
+                        
+                        HydrusData.Print( f'During auto-resolution pair-sync, added {HydrusNumbers.ToHumanInt( num_added )} pairs for rule {resolution_rule.GetName()}, ({rule_id}).')
                         
                     
                 
@@ -281,7 +307,9 @@ class ClientDBFilesDuplicatesAutoResolutionStorage( ClientDBModule.ClientDBModul
                         
                         if num_deleted > 0:
                             
-                            self._Execute( 'UPDATE duplicates_files_auto_resolution_rule_count_cache SET status_count = status_count - ? WHERE rule_id = ? AND status = ?;', num_deleted, rule_id, status )
+                            self._Execute( 'UPDATE duplicates_files_auto_resolution_rule_count_cache SET status_count = status_count - ? WHERE rule_id = ? AND status = ?;', ( num_deleted, rule_id, status ) )
+                            
+                            HydrusData.Print( f'During auto-resolution pair-sync, deleted {HydrusNumbers.ToHumanInt( num_deleted )} pairs for rule {resolution_rule.GetName()} ({rule_id}), status {status} ({ClientDuplicatesAutoResolution.duplicate_status_str_lookup[ status ]}).')
                             
                         
                     
@@ -341,25 +369,56 @@ class ClientDBFilesDuplicatesAutoResolutionStorage( ClientDBModule.ClientDBModul
             
         
         # new pairs have been discovered and added to the system, so we should schedule them for a search according to our rules
+        # we won't trust that the caller definitely knows they are new--nor indeed that our current storage is totally synced with that understanding--we'll scan ourselves carefully to make sure we don't dupe a pair across our status tables
         
-        for ( rule_id, resolution_rule ) in self._rule_ids_to_rules.items():
+        pairs_added = set( pairs_added )
+        
+        any_added = False
+        
+        with self._MakeTemporaryIntegerTable( pairs_added, ( 'smaller_media_id', 'larger_media_id' ) ) as temp_media_ids_table_name:
             
-            statuses_to_table_names = GenerateResolutionDecisionTableNames( rule_id )
+            self._AnalyzeTempTable( temp_media_ids_table_name )
             
-            self._ExecuteMany(
-                f'INSERT OR IGNORE INTO {statuses_to_table_names[ ClientDuplicatesAutoResolution.DUPLICATE_STATUS_NOT_SEARCHED ]} ( smaller_media_id, larger_media_id ) VALUES ( ?, ? );',
-                pairs_added
-            )
-            
-            num_added = self._GetRowCount()
-            
-            if num_added > 0:
+            for ( rule_id, resolution_rule ) in self._rule_ids_to_rules.items():
                 
-                self._Execute( 'UPDATE duplicates_files_auto_resolution_rule_count_cache SET status_count = status_count + ? WHERE rule_id = ? AND status = ?;', num_added, rule_id, ClientDuplicatesAutoResolution.DUPLICATE_STATUS_NOT_SEARCHED )
+                statuses_to_table_names = GenerateResolutionDecisionTableNames( rule_id )
+                
+                pairs_that_already_exist_for_this_rule = set()
+                
+                for ( status, table_name ) in statuses_to_table_names.items():
+                    
+                    if status == ClientDuplicatesAutoResolution.DUPLICATE_STATUS_NOT_SEARCHED:
+                        
+                        continue
+                        
+                    
+                    pairs_in_this_table = self._Execute( f'SELECT smaller_media_id, larger_media_id FROM {temp_media_ids_table_name} CROSS JOIN {table_name} USING ( smaller_media_id, larger_media_id );' )
+                    
+                    pairs_that_already_exist_for_this_rule.update( pairs_in_this_table )
+                    
+                
+                pairs_to_add_for_this_rule = pairs_added.difference( pairs_that_already_exist_for_this_rule )
+                
+                self._ExecuteMany(
+                    f'INSERT OR IGNORE INTO {statuses_to_table_names[ ClientDuplicatesAutoResolution.DUPLICATE_STATUS_NOT_SEARCHED ]} ( smaller_media_id, larger_media_id ) VALUES ( ?, ? );',
+                    pairs_to_add_for_this_rule
+                )
+                
+                num_added = self._GetRowCount()
+                
+                if num_added > 0:
+                    
+                    self._Execute( 'UPDATE duplicates_files_auto_resolution_rule_count_cache SET status_count = status_count + ? WHERE rule_id = ? AND status = ?;', ( num_added, rule_id, ClientDuplicatesAutoResolution.DUPLICATE_STATUS_NOT_SEARCHED ) )
+                    
+                    any_added = True
+                    
                 
             
         
-        CG.client_controller.duplicates_auto_resolution_manager.Wake()
+        if any_added:
+            
+            CG.client_controller.duplicates_auto_resolution_manager.Wake()
+            
         
     
     def NotifyExistingPotentialDuplicatePairsRemoved( self, pairs_removed ):
@@ -371,6 +430,8 @@ class ClientDBFilesDuplicatesAutoResolutionStorage( ClientDBModule.ClientDBModul
         
         # maybe these pairs were collapsed by a merge action, broken by a false positive, or simply dissolved
         # whatever the reason, they no longer exist as a pair, so this system does not need to track them any more 
+        
+        any_removed = False
         
         for ( rule_id, resolution_rule ) in self._rule_ids_to_rules.items():
             
@@ -387,12 +448,53 @@ class ClientDBFilesDuplicatesAutoResolutionStorage( ClientDBModule.ClientDBModul
                 
                 if num_deleted > 0:
                     
-                    self._Execute( 'UPDATE duplicates_files_auto_resolution_rule_count_cache SET status_count = status_count - ? WHERE rule_id = ? AND status = ?;', num_deleted, rule_id, status )
+                    self._Execute( 'UPDATE duplicates_files_auto_resolution_rule_count_cache SET status_count = status_count - ? WHERE rule_id = ? AND status = ?;', ( num_deleted, rule_id, status ) )
+                    
+                    any_removed = True
                     
                 
             
         
-        CG.client_controller.duplicates_auto_resolution_manager.Wake()
+        if any_removed:
+            
+            CG.client_controller.duplicates_auto_resolution_manager.Wake()
+            
+        
+    
+    def NotifyMediaIdNoLongerPotential( self, media_id: int ):
+        
+        # either dissolve or merge or manual removal from all potential pairs for a search reset or something
+        
+        if not self._have_initialised_rules:
+            
+            self._Reinit()
+            
+        
+        any_removed = False
+        
+        for ( rule_id, resolution_rule ) in self._rule_ids_to_rules.items():
+            
+            statuses_to_table_names = GenerateResolutionDecisionTableNames( rule_id )
+            
+            for ( status, table_name ) in statuses_to_table_names.items():
+                
+                self._Execute( f'DELETE FROM {table_name} WHERE smaller_media_id = ? OR larger_media_id = ?;', ( media_id, media_id ) )
+                
+                num_deleted = self._GetRowCount()
+                
+                if num_deleted > 0:
+                    
+                    self._Execute( 'UPDATE duplicates_files_auto_resolution_rule_count_cache SET status_count = status_count - ? WHERE rule_id = ? AND status = ?;', ( num_deleted, rule_id, status ) )
+                    
+                    any_removed = True
+                    
+                
+            
+        
+        if any_removed:
+            
+            CG.client_controller.duplicates_auto_resolution_manager.Wake()
+            
         
     
     def ResetRuleSearchProgress( self, rule: ClientDuplicatesAutoResolution.DuplicatesAutoResolutionRule ):
@@ -440,7 +542,7 @@ class ClientDBFilesDuplicatesAutoResolutionStorage( ClientDBModule.ClientDBModul
                 
                 if num_added > 0:
                     
-                    self._Execute( 'UPDATE duplicates_files_auto_resolution_rule_count_cache SET status_count = status_count + ? WHERE rule_id = ? AND status = ?;', num_added, rule_id, status )
+                    self._Execute( 'UPDATE duplicates_files_auto_resolution_rule_count_cache SET status_count = status_count + ? WHERE rule_id = ? AND status = ?;', ( num_added, rule_id, status ) )
                     
                 
             else:
@@ -454,7 +556,7 @@ class ClientDBFilesDuplicatesAutoResolutionStorage( ClientDBModule.ClientDBModul
                 
                 if num_deleted > 0:
                     
-                    self._Execute( 'UPDATE duplicates_files_auto_resolution_rule_count_cache SET status_count = status_count - ? WHERE rule_id = ? AND status = ?;', num_deleted, rule_id, status )
+                    self._Execute( 'UPDATE duplicates_files_auto_resolution_rule_count_cache SET status_count = status_count - ? WHERE rule_id = ? AND status = ?;', ( num_deleted, rule_id, status ) )
                     
                 
             
@@ -500,7 +602,7 @@ class ClientDBFilesDuplicatesAutoResolutionStorage( ClientDBModule.ClientDBModul
             
             num_added = self._GetRowCount()
             
-            self._Execute( 'REPLACE INTO duplicates_files_auto_resolution_rule_count_cache ( rule_id, status, status_count ) VALUES ( ?, ?, ? );', rule_id, ClientDuplicatesAutoResolution.DUPLICATE_STATUS_NOT_SEARCHED, num_added )
+            self._Execute( 'REPLACE INTO duplicates_files_auto_resolution_rule_count_cache ( rule_id, status, status_count ) VALUES ( ?, ?, ? );', ( rule_id, ClientDuplicatesAutoResolution.DUPLICATE_STATUS_NOT_SEARCHED, num_added ) )
             
         
         rule_ids_to_new_resolution_rules = { rule.GetId() : rule for rule in new_rules }
@@ -515,7 +617,7 @@ class ClientDBFilesDuplicatesAutoResolutionStorage( ClientDBModule.ClientDBModul
             
             rule = self._rule_ids_to_rules[ rule_id ]
             
-            self._Execute( 'DELETE FROM duplicate_files_auto_resolution_rules WHERE rule_id = ?;' )
+            self._Execute( 'DELETE FROM duplicate_files_auto_resolution_rules WHERE rule_id = ?;', ( rule_id, ) )
             
             statuses_to_table_names = GenerateResolutionDecisionTableNames( rule_id )
             
@@ -537,6 +639,8 @@ class ClientDBFilesDuplicatesAutoResolutionStorage( ClientDBModule.ClientDBModul
             
             existing_rule = self._rule_ids_to_rules[ rule_id ]
             
+            self.modules_serialisable.SetJSONDump( rule ) # got to save it lol
+            
             if rule.GetPotentialDuplicatesSearchContext() != existing_rule.GetPotentialDuplicatesSearchContext():
                 
                 statuses_to_table_names = GenerateResolutionDecisionTableNames( rule_id )
@@ -551,14 +655,14 @@ class ClientDBFilesDuplicatesAutoResolutionStorage( ClientDBModule.ClientDBModul
                         
                         if num_added > 0:
                             
-                            self._Execute( 'UPDATE duplicates_files_auto_resolution_rule_count_cache SET status_count = status_count + ? WHERE rule_id = ? AND status = ?;', num_added, rule_id, status )
+                            self._Execute( 'UPDATE duplicates_files_auto_resolution_rule_count_cache SET status_count = status_count + ? WHERE rule_id = ? AND status = ?;', ( num_added, rule_id, status ) )
                             
                         
                     else:
                         
                         self._Execute( f'DELETE FROM {table_name};' )
                         
-                        self._Execute( 'REPLACE INTO duplicates_files_auto_resolution_rule_count_cache ( rule_id, status, status_count ) VALUES ( ?, ?, ? );', rule_id, status, 0 )
+                        self._Execute( 'REPLACE INTO duplicates_files_auto_resolution_rule_count_cache ( rule_id, status, status_count ) VALUES ( ?, ?, ? );', ( rule_id, status, 0 ) )
                         
                     
                 

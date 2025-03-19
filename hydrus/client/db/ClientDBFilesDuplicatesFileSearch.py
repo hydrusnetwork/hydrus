@@ -40,7 +40,7 @@ class ClientDBFilesDuplicatesFileSearch( ClientDBModule.ClientDBModule ):
         self.modules_media_results = modules_media_results
         
     
-    def GetPotentialDuplicatePairs( self, potential_duplicates_search_context: ClientPotentialDuplicatesSearchContext.PotentialDuplicatesSearchContext ):
+    def GetPotentialDuplicatePairs( self, potential_duplicates_search_context: ClientPotentialDuplicatesSearchContext.PotentialDuplicatesSearchContext, fetch_limit = None ):
         
         potential_duplicates_search_context = potential_duplicates_search_context.Duplicate()
         
@@ -93,6 +93,15 @@ class ClientDBFilesDuplicatesFileSearch( ClientDBModule.ClientDBModule ):
         
         seen_hash_ids = set()
         
+        num_pairs = len( pairs_of_hash_ids )
+        
+        if fetch_limit is not None and len( pairs_of_hash_ids ) >= fetch_limit:
+            
+            pairs_of_hash_ids = random.sample( pairs_of_hash_ids, fetch_limit )
+            
+        
+        pairs_of_hash_ids.sort()
+        
         for ( smaller_media_king_hash_id, larger_media_king_hash_id ) in pairs_of_hash_ids:
             
             seen_hash_ids.add( smaller_media_king_hash_id )
@@ -105,7 +114,7 @@ class ClientDBFilesDuplicatesFileSearch( ClientDBModule.ClientDBModule ):
         
         pairs_of_media_results = [ ( hash_ids_to_media_results[ smaller_media_king_hash_id ], hash_ids_to_media_results[ larger_media_king_hash_id ] ) for ( smaller_media_king_hash_id, larger_media_king_hash_id ) in pairs_of_hash_ids ]
         
-        return pairs_of_media_results
+        return ( num_pairs, pairs_of_media_results )
         
     
     def GetPotentialDuplicatePairsForAutoResolution( self, potential_duplicates_search_context: ClientPotentialDuplicatesSearchContext.PotentialDuplicatesSearchContext, relevant_pairs: typing.Collection[ typing.Tuple[ int, int ] ] ):
@@ -174,7 +183,7 @@ class ClientDBFilesDuplicatesFileSearch( ClientDBModule.ClientDBModule ):
                         
                     
                     # distinct important here for the search results table join
-                    matching_pairs = self._Execute( 'SELECT DISTINCT smaller_media_id, larger_media_id FROM {};'.format( table_join ) )
+                    matching_pairs = self._Execute( 'SELECT DISTINCT smaller_media_id, larger_media_id FROM {};'.format( table_join ) ).fetchall()
                     
                 
             

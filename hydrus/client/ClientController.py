@@ -980,6 +980,13 @@ class Controller( HydrusController.HydrusController ):
     
     def FlipProfileMode( self ):
         
+        if sys.version_info >= ( 3, 12 ):
+            
+            HydrusData.ShowText( 'Sorry, this is broke on python 3.12+, hydev will fix soon\u2122!' )
+            
+            return
+            
+        
         if not HG.profile_mode:
             
             now = HydrusTime.GetNow()

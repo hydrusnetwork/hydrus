@@ -163,15 +163,7 @@ class SidebarDuplicateFilter( ClientGUISidebarCore.Sidebar ):
         
         self._main_notebook.addTab( self._main_left_panel, 'preparation' )
         self._main_notebook.addTab( self._main_right_panel, 'filtering' )
-        
-        if CG.client_controller.new_options.GetBoolean( 'advanced_mode' ):
-            
-            self._main_notebook.addTab( self._duplicates_auto_resolution_panel, 'auto-resolution' )
-            
-        else:
-            
-            self._duplicates_auto_resolution_panel.setVisible( False )
-            
+        self._main_notebook.addTab( self._duplicates_auto_resolution_panel, 'auto-resolution' )
         
         self._main_notebook.setCurrentWidget( self._main_right_panel )
         

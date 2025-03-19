@@ -2786,7 +2786,7 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
                         width = row[1]
                         height = row[2]
                         
-                        if width is None or height is None:
+                        if width is None or height is None or width == 0 or height == 0:
                             
                             return -1
                             

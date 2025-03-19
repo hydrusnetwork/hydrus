@@ -62,7 +62,8 @@ class ClientDBFilesDuplicatesSetter( ClientDBModule.ClientDBModule ):
             
             # this shouldn't be strictly needed, but lets do it here anyway to catch unforeseen problems
             # it is ok to remove this even if we are just about to add it back in--this clears out invalid pairs and increases priority with distance 0
-            self._Execute( 'DELETE FROM potential_duplicate_pairs WHERE smaller_media_id = ? AND larger_media_id = ?;', ( smaller_media_id, larger_media_id ) )
+            
+            self.modules_files_duplicates.DeletePotentialDuplicates( [ ( smaller_media_id, larger_media_id ) ] )
             
             if hash_id_a == hash_id_b:
                 
