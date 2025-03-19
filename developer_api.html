@@ -20,7 +20,7 @@
       
       
       <link rel="icon" href="assets/favicon.svg">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.6.7">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.6.9">
     
     
       
@@ -28,7 +28,7 @@
       
     
     
-      <link rel="stylesheet" href="assets/stylesheets/main.8608ea7d.min.css">
+      <link rel="stylesheet" href="assets/stylesheets/main.4af4bdda.min.css">
       
         
         <link rel="stylesheet" href="assets/stylesheets/palette.06af60db.min.css">
@@ -2486,7 +2486,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#get_files_thumbnail" class="md-nav__link">
+  <a href="#get_files_thumbnail_path" class="md-nav__link">
     <span class="md-ellipsis">
       GET /get_files/thumbnail_path
     </span>
@@ -3769,7 +3769,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#get_files_thumbnail" class="md-nav__link">
+  <a href="#get_files_thumbnail_path" class="md-nav__link">
     <span class="md-ellipsis">
       GET /get_files/thumbnail_path
     </span>
@@ -6478,7 +6478,7 @@ Accept: application/json
 <span class="p">}</span>
 </code></pre></div>
 <p>This will give 404 if the file is not stored locally (which includes if it <em>should</em> exist but is actually missing from the file store).</p>
-<h3 id="get_files_thumbnail"><strong>GET <code>/get_files/thumbnail_path</code></strong><a class="headerlink" href="#get_files_thumbnail" title="Permanent link">&para;</a></h3>
+<h3 id="get_files_thumbnail_path"><strong>GET <code>/get_files/thumbnail_path</code></strong><a class="headerlink" href="#get_files_thumbnail_path" title="Permanent link">&para;</a></h3>
 <p><em>Get a local thumbnail path.</em></p>
 <dl>
 <dt>Restricted access:</dt>
@@ -6496,9 +6496,9 @@ Accept: application/json
 </dd>
 </dl>
 <p>Only use one of <code>file_id</code> or <code>hash</code>. As with metadata fetching, you may only use the hash argument if you have access to all files. If you are tag-restricted, you will have to use a file_id in the last search you ran.</p>
-<p><div class="highlight"><span class="filename">Example request</span><pre><span></span><code>/get_files/thumbnail?file_id=452158
+<p><div class="highlight"><span class="filename">Example request</span><pre><span></span><code>/get_files/thumbnail_path?file_id=452158
 </code></pre></div>
-<div class="highlight"><span class="filename">Example request</span><pre><span></span><code>/get_files/thumbnail?hash=7f30c113810985b69014957c93bc25e8eb4cf3355dae36d8b9d011d8b0cf623a&amp;include_thumbnail_filetype=true
+<div class="highlight"><span class="filename">Example request</span><pre><span></span><code>/get_files/thumbnail_path?hash=7f30c113810985b69014957c93bc25e8eb4cf3355dae36d8b9d011d8b0cf623a&amp;include_thumbnail_filetype=true
 </code></pre></div></p>
 <dl>
 <dt>Response:</dt>
@@ -6532,7 +6532,7 @@ Accept: application/json
 <span class="w">        </span><span class="p">{</span>
 <span class="w">            </span><span class="nt">&quot;path&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;C:\my_thumbs&quot;</span><span class="p">,</span>
 <span class="w">            </span><span class="nt">&quot;ideal_weight&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
-<span class="w">            </span><span class="nt">&quot;max_num_bytes&quot;</span><span class="p">:</span><span class="w"> </span><span class="err">No</span><span class="kc">ne</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;max_num_bytes&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="p">,</span>
 <span class="w">            </span><span class="nt">&quot;prefixes&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
 <span class="w">                </span><span class="s2">&quot;t00&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;t01&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;t02&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;t03&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;t04&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;t05&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;t06&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;t07&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;t08&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;t09&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;t0a&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;t0b&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;t0c&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;t0d&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;t0e&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;t0f&quot;</span><span class="p">,</span>
 <span class="w">                </span><span class="s2">&quot;t10&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;t11&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;t12&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;t13&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;t14&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;t15&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;t16&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;t17&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;t18&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;t19&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;t1a&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;t1b&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;t1c&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;t1d&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;t1e&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;t1f&quot;</span><span class="p">,</span>
@@ -6555,7 +6555,7 @@ Accept: application/json
 <span class="w">        </span><span class="p">{</span>
 <span class="w">            </span><span class="nt">&quot;path&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;D:\hydrus_files_1&quot;</span><span class="p">,</span>
 <span class="w">            </span><span class="nt">&quot;ideal_weight&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="mi">5</span><span class="p">,</span>
-<span class="w">            </span><span class="nt">&quot;max_num_bytes&quot;</span><span class="p">:</span><span class="w"> </span><span class="err">No</span><span class="kc">ne</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;max_num_bytes&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="p">,</span>
 <span class="w">            </span><span class="nt">&quot;prefixes&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
 <span class="w">                </span><span class="s2">&quot;f00&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;f02&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;f04&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;f05&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;f08&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;f0c&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;f11&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;f12&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;f13&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;f15&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;f17&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;f18&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;f1a&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;f1b&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;f20&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;f23&quot;</span><span class="p">,</span>
 <span class="w">                </span><span class="s2">&quot;f25&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;f26&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;f27&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;f2b&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;f2e&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;f2f&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;f31&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;f35&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;f36&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;f37&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;f38&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;f3a&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;f40&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;f42&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;f43&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;f44&quot;</span><span class="p">,</span>
@@ -8046,7 +8046,7 @@ This request will also return any cookies for subdomains. The session system in 
     <span class="md-icon" title="Last update">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 13.1c-.1 0-.3.1-.4.2l-1 1 2.1 2.1 1-1c.2-.2.2-.6 0-.8l-1.3-1.3c-.1-.1-.2-.2-.4-.2m-1.9 1.8-6.1 6V23h2.1l6.1-6.1zM12.5 7v5.2l4 2.4-1 1L11 13V7zM11 21.9c-5.1-.5-9-4.8-9-9.9C2 6.5 6.5 2 12 2c5.3 0 9.6 4.1 10 9.3-.3-.1-.6-.2-1-.2s-.7.1-1 .2C19.6 7.2 16.2 4 12 4c-4.4 0-8 3.6-8 8 0 4.1 3.1 7.5 7.1 7.9l-.1.2z"/></svg>
     </span>
-    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="February 19, 2025 21:30:32">February 19, 2025</span>
+    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="March 19, 2025 21:09:10">March 19, 2025</span>
   </span>
 
     
