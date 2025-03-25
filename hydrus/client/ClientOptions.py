@@ -246,6 +246,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             'focus_preview_on_ctrl_click_only_static' : False,
             'focus_preview_on_shift_click' : False,
             'focus_preview_on_shift_click_only_static' : False,
+            'focus_media_tab_on_viewer_close_if_possible' : False,
             'fade_sibling_connector' : True,
             'use_custom_sibling_connector_colour' : False,
             'hide_uninteresting_modified_time' : True,
