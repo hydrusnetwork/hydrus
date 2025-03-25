@@ -2568,6 +2568,14 @@ class CanvasWithHovers( Canvas ):
             if action == CAC.SIMPLE_CLOSE_MEDIA_VIEWER:
                 
                 self._TryToCloseWindow()
+            
+            elif action == CAC.SIMPLE_CLOSE_MEDIA_VIEWER_AND_FOCUS_TAB:
+
+                if CG.client_controller.gui.GetPageFromPageKey( self._page_key ) is not None:
+        
+                    CG.client_controller.gui.ShowPage( self._page_key )
+                
+                self._TryToCloseWindow()
                 
             elif action == CAC.SIMPLE_SWITCH_BETWEEN_FULLSCREEN_BORDERLESS_AND_REGULAR_FRAMED_WINDOW:
                 
