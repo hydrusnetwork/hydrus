@@ -78,7 +78,7 @@ class EditDuplicatesAutoResolutionRulesPanel( ClientGUIScrolledPanels.EditPanel 
         
         QP.AddToLayout( vbox, help_hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
         
-        st = ClientGUICommon.BetterStaticText( self, 'Hey, I am close to launching this system, but it does not do anything real yet! Feel free to play around with this UI and let me know about any bugs! This dialog will not save any data on "apply".' )
+        st = ClientGUICommon.BetterStaticText( self, 'Hey, I am launching this system this week, but only for the one test rule (hit "add suggested" to get it)! Let me know how it goes!' )
         st.setWordWrap( True )
         QP.AddToLayout( vbox, st, CC.FLAGS_EXPAND_PERPENDICULAR )
         
@@ -346,7 +346,7 @@ class EditDuplicatesAutoResolutionRulePanel( ClientGUIScrolledPanels.EditPanel )
         
         vbox = QP.VBoxLayout()
         
-        st = ClientGUICommon.BetterStaticText( self, 'Hey, I am close to launching this system, but it does not do anything real yet! Feel free to play around with this UI and let me know about any bugs!' )
+        st = ClientGUICommon.BetterStaticText( self, 'Hey, I am launching this system this week, but only for the one test rule! Most of this dialog is disabled, but check out the preview panel!' )
         st.setWordWrap( True )
         QP.AddToLayout( vbox, st, CC.FLAGS_EXPAND_PERPENDICULAR )
         
@@ -694,7 +694,7 @@ class ReviewDuplicatesAutoResolutionPanel( QW.QWidget ):
         
         QP.AddToLayout( vbox, help_hbox, CC.FLAGS_ON_RIGHT )
         
-        st = ClientGUICommon.BetterStaticText( self, 'Hey, I am close to launching this system, but it does not do anything real yet! Feel free to play around with the UI that is enabled!' )
+        st = ClientGUICommon.BetterStaticText( self, 'Hey, I am launching this system this week, but only for the one test rule! Try it out and let me know how it goes!' )
         st.setWordWrap( True )
         
         QP.AddToLayout( vbox, st, CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -722,8 +722,9 @@ class ReviewDuplicatesAutoResolutionPanel( QW.QWidget ):
     def _CanWorkHard( self ):
         
         rules = self._duplicates_auto_resolution_rules.GetData( only_selected = True )
+        working_hard_rules = CG.client_controller.duplicates_auto_resolution_manager.GetWorkingHard()
         
-        return True in ( rule.CanWorkHard() for rule in rules )
+        return True in ( rule.CanWorkHard() or rule in working_hard_rules for rule in rules )
         
     
     def _ConvertRuleToDisplayTuple( self, duplicates_auto_resolution_rule: ClientDuplicatesAutoResolution.DuplicatesAutoResolutionRule ):
@@ -878,7 +879,7 @@ class ReviewDuplicatesAutoResolutionPanel( QW.QWidget ):
         
         def loading_callable():
             
-            self._duplicates_auto_resolution_rules_panel.setEnabled( False )
+            pass
             
         
         def work_callable( args ):
@@ -891,8 +892,6 @@ class ReviewDuplicatesAutoResolutionPanel( QW.QWidget ):
         def publish_callable( rules ):
             
             self._duplicates_auto_resolution_rules.SetData( rules )
-            
-            self._duplicates_auto_resolution_rules_panel.setEnabled( True )
             
         
         updater = ClientGUIAsync.AsyncQtUpdater( self, loading_callable, work_callable, publish_callable )
