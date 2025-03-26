@@ -10,11 +10,14 @@ from hydrus.core import HydrusNumbers
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
+from hydrus.client import ClientLocation
 from hydrus.client import ClientRendering
 from hydrus.client.duplicates import ClientDuplicatesAutoResolution
 from hydrus.client.gui import ClientGUIAsync
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import QtPorting as QP
+from hydrus.client.gui.canvas import ClientGUICanvas
+from hydrus.client.gui.canvas import ClientGUICanvasFrame
 from hydrus.client.gui.widgets import ClientGUICommon
 from hydrus.client.media import ClientMediaResult
 
@@ -114,6 +117,13 @@ class ThumbnailPairListModel( QC.QAbstractTableModel ):
         job.start()
         
     
+    def GetMediaResultPair( self, row: int ):
+        
+        r = self._data_rows[ row ]
+        
+        return ( r[0], r[1] )
+        
+    
     def SetData( self, data_rows ):
         
         self.beginResetModel()
@@ -209,6 +219,9 @@ class ThumbnailPairList( QW.QTableView ):
         self.verticalHeader().setDefaultSectionSize( thumbnail_height )
         self.verticalHeader().setSectionResizeMode( QW.QHeaderView.ResizeMode.Fixed )
         
+        self.setVerticalScrollMode( QW.QAbstractItemView.ScrollMode.ScrollPerItem )
+        self.verticalScrollBar().setSingleStep( 1 )
+        
         self.horizontalHeader().setDefaultSectionSize( thumbnail_width )
         
         self.setColumnWidth( 0, thumbnail_width )
@@ -227,7 +240,9 @@ class ThumbnailPairList( QW.QTableView ):
                 
             
         
-        self.setMinimumSize( QC.QSize( thumbnail_width * 2 + 24, thumbnail_height * 2 ) )
+        my_width = thumbnail_width * model.columnCount() + 24
+        
+        self.setMinimumSize( QC.QSize( my_width, thumbnail_height * 2 ) )
         
     
     def SetData( self, tuples_of_data ):
@@ -254,6 +269,41 @@ class ThumbnailPairListPasses( ThumbnailPairList ):
         
     
 
+class ListEnterCatcher( QC.QObject ):
+    
+    def __init__( self, parent, thumbnail_pair_list: ThumbnailPairList ):
+        
+        self._thumbnail_pair_list = thumbnail_pair_list
+        
+        super().__init__( parent )
+        
+        self._thumbnail_pair_list.installEventFilter( self )
+        
+    
+    def eventFilter( self, obj, event ):
+        
+        # we can't use the normal activated guy since this appears to not stop enter propagation, allowing the dialog to close immediately after lol
+        # this signals to stop event propagation
+        
+        if event.type() == QC.QEvent.Type.KeyPress:
+            
+            if event.key() in ( QC.Qt.Key.Key_Return, QC.Qt.Key.Key_Enter ):
+                
+                current_index = self._thumbnail_pair_list.currentIndex()
+                
+                if current_index.isValid():
+                    
+                    self._thumbnail_pair_list.activated.emit( current_index )
+                    
+                
+                return True
+                
+            
+        
+        return False
+        
+    
+
 class PreviewPanel( ClientGUICommon.StaticBox ):
     
     def __init__( self, parent: QW.QWidget, value_callable ):
@@ -272,9 +322,14 @@ class PreviewPanel( ClientGUICommon.StaticBox ):
         self._search_panel = ClientGUICommon.StaticBox( self, 'search' )
         
         self._search_results_label = ClientGUICommon.BetterStaticText( self._search_panel, label = 'ready to fetch pairs' )
-        self._num_to_fetch = ClientGUICommon.NoneableSpinCtrl( self._search_panel, 256, none_phrase = 'fetch all' )
+        self._search_results_label.setWordWrap( True )
+        self._num_to_fetch = ClientGUICommon.NoneableSpinCtrl( self._search_panel, 256, min = 1, none_phrase = 'fetch all' )
+        
+        self._fetch_count_button = ClientGUICommon.BetterBitmapButton( self._search_panel, CC.global_pixmaps().refresh, self._RefetchCount )
+        self._fetch_count_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'Refresh the whole search' ) )
+        
         self._fetch_pairs_button = ClientGUICommon.BetterBitmapButton( self._search_panel, CC.global_pixmaps().refresh, self._RefetchPairs )
-        self._fetch_pairs_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'Refresh the search' ) )
+        self._fetch_pairs_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'Fetch a sample of pairs' ) )
         
         #
         
@@ -286,6 +341,7 @@ class PreviewPanel( ClientGUICommon.StaticBox ):
         self._pass_panel = ClientGUICommon.StaticBox( self, 'pairs that will be actioned' )
         
         self._pass_pairs_label = ClientGUICommon.BetterStaticText( self, label = 'ready to generate preview' )
+        self._pass_pairs_label.setWordWrap( True )
         
         self._pass_pairs_list = ThumbnailPairListPasses( self._pass_panel )
         
@@ -294,6 +350,7 @@ class PreviewPanel( ClientGUICommon.StaticBox ):
         self._fail_panel = ClientGUICommon.StaticBox( self, 'pairs that will be skipped' )
         
         self._fail_pairs_label = ClientGUICommon.BetterStaticText( self, label = 'ready to generate preview' )
+        self._fail_pairs_label.setWordWrap( True )
         
         self._fail_pairs_list = ThumbnailPairListFails( self._fail_panel )
         
@@ -303,17 +360,23 @@ class PreviewPanel( ClientGUICommon.StaticBox ):
         
         hbox = QP.HBoxLayout()
         
+        QP.AddToLayout( hbox, self._search_results_label, CC.FLAGS_CENTER_PERPENDICULAR_EXPAND_DEPTH )
+        QP.AddToLayout( hbox, self._fetch_count_button, CC.FLAGS_CENTER )
+        
+        self._search_panel.Add( hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        hbox = QP.HBoxLayout()
+        
         rows = []
         
         rows.append( ( 'only sample this many: ', self._num_to_fetch ) )
         
         gridbox = ClientGUICommon.WrapInGrid( self, rows )
         
-        QP.AddToLayout( hbox, gridbox, CC.FLAGS_CENTER )
+        QP.AddToLayout( hbox, gridbox, CC.FLAGS_CENTER_PERPENDICULAR_EXPAND_DEPTH )
         QP.AddToLayout( hbox, self._fetch_pairs_button, CC.FLAGS_CENTER )
         
-        self._search_panel.Add( self._search_results_label, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._search_panel.Add( hbox, CC.FLAGS_ON_RIGHT )
+        self._search_panel.Add( hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         #
         
@@ -332,6 +395,78 @@ class PreviewPanel( ClientGUICommon.StaticBox ):
         self.Add( self._pass_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         self.Add( self._fail_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         
+        #
+        
+        self._pass_pairs_list.activated.connect( self._PassRowActivated )
+        self._fail_pairs_list.activated.connect( self._FailRowActivated )
+        
+        self._enter_catcher_pass = ListEnterCatcher( self, self._pass_pairs_list )
+        self._enter_catcher_fail = ListEnterCatcher( self, self._fail_pairs_list )
+        
+    
+    def _FailRowActivated( self, model_index: QC.QModelIndex ):
+        
+        if not model_index.isValid():
+            
+            return
+            
+        
+        row = model_index.row()
+        
+        ( media_result_1, media_result_2 ) = self._fail_pairs_list.model().GetMediaResultPair( row )
+        
+        self._ShowMediaViewer( media_result_1, media_result_2 )
+        
+    
+    def _PassRowActivated( self, model_index: QC.QModelIndex ):
+        
+        if not model_index.isValid():
+            
+            return
+            
+        
+        row = model_index.row()
+        
+        ( media_result_1, media_result_2 ) = self._pass_pairs_list.model().GetMediaResultPair( row )
+        
+        self._ShowMediaViewer( media_result_1, media_result_2 )
+        
+    
+    def _RefetchCount( self ):
+        
+        if self._value is None:
+            
+            return
+            
+        
+        # if and when the search tab gets and caches this, we could just ask that guy
+        
+        potential_duplicates_search_context = self._value.GetPotentialDuplicatesSearchContext()
+        
+        def work_callable():
+            
+            num_pairs = CG.client_controller.Read( 'potential_duplicates_count', potential_duplicates_search_context )
+            
+            return num_pairs
+            
+        
+        def publish_callable( num_pairs ):
+            
+            self._num_pairs = num_pairs
+            
+            self._UpdateSearchLabel()
+            
+            self._RefetchPairs()
+            
+        
+        self._ResetSearchAppearance()
+        
+        self._search_results_label.setText( f'fetching count{HC.UNICODE_ELLIPSIS}' )
+        
+        async_job = ClientGUIAsync.AsyncQtJob( self, work_callable, publish_callable )
+        
+        async_job.start()
+        
     
     def _RefetchPairs( self ):
         
@@ -346,46 +481,57 @@ class PreviewPanel( ClientGUICommon.StaticBox ):
         
         def work_callable():
             
-            ( num_pairs, fetched_pairs ) = CG.client_controller.Read( 'potential_duplicate_pairs', potential_duplicates_search_context, fetch_limit = fetch_limit )
+            fetched_pairs = CG.client_controller.Read( 'potential_duplicate_pairs', potential_duplicates_search_context, fetch_limit = fetch_limit )
             
-            return ( num_pairs, fetched_pairs )
+            return fetched_pairs
             
         
-        def publish_callable( result ):
+        def publish_callable( fetched_pairs ):
             
-            ( num_pairs, fetched_pairs ) = result
-            
-            self._num_pairs = num_pairs
             self._fetched_pairs = fetched_pairs
             
             self._UpdateSearchLabel()
             
-            if len( self._fetched_pairs ) == 0:
-                
-                self._test_pairs_button.setEnabled( False )
-                
-                self._fetch_pairs_button.setEnabled( True )
-                
-            else:
-                
-                self._RetestPairs()
-                
+            self._RetestPairs()
             
         
-        self._fetched_pairs = []
-        self._ab_pairs_that_pass_with_fixed_order_info = []
-        self._pairs_that_fail = []
-        
-        self._fetch_pairs_button.setEnabled( False )
-        self._test_pairs_button.setEnabled( False )
+        self._ResetFetchPairsAppearance()
         
         self._search_results_label.setText( f'fetching pairs{HC.UNICODE_ELLIPSIS}' )
-        self._pass_pairs_label.setText( '' )
-        self._fail_pairs_label.setText( '' )
         
         async_job = ClientGUIAsync.AsyncQtJob( self, work_callable, publish_callable )
         
         async_job.start()
+        
+    
+    def _ResetFetchPairsAppearance( self ):
+        
+        self._fetched_pairs = []
+        
+        self._ResetTestPairsAppearance()
+        
+    
+    def _ResetSearchAppearance( self ):
+        
+        self._num_pairs = 0
+        self._search_results_label.setText( '' )
+        
+        self._ResetFetchPairsAppearance()
+        
+    
+    def _ResetTestPairsAppearance( self ):
+        
+        self._ab_pairs_that_pass_with_fixed_order_info = []
+        self._pairs_that_fail = []
+        
+        self._pass_pairs_list.SetData( [] )
+        self._fail_pairs_list.SetData( [] )
+        
+        self._fetch_pairs_button.setEnabled( False )
+        self._test_pairs_button.setEnabled( False )
+        
+        self._pass_pairs_label.setText( '' )
+        self._fail_pairs_label.setText( '' )
         
     
     def _RetestPairs( self ):
@@ -440,8 +586,7 @@ class PreviewPanel( ClientGUICommon.StaticBox ):
             self._test_pairs_button.setEnabled( True )
             
         
-        self._fetch_pairs_button.setEnabled( False )
-        self._test_pairs_button.setEnabled( False )
+        self._ResetTestPairsAppearance()
         
         self._pass_pairs_label.setText( f'testing pairs{HC.UNICODE_ELLIPSIS}' )
         self._fail_pairs_label.setText( f'testing pairs{HC.UNICODE_ELLIPSIS}' )
@@ -449,6 +594,20 @@ class PreviewPanel( ClientGUICommon.StaticBox ):
         async_job = ClientGUIAsync.AsyncQtJob( self, work_callable, publish_callable )
         
         async_job.start()
+        
+    
+    def _ShowMediaViewer( self, media_result_1, media_result_2 ):
+        
+        canvas_frame = ClientGUICanvasFrame.CanvasFrame( self.window(), set_parent = True )
+        
+        page_key = HydrusData.GenerateKey()
+        location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY )
+        media_results = [ media_result_1, media_result_2 ]
+        first_hash = media_result_1.GetHash()
+        
+        canvas_window = ClientGUICanvas.CanvasMediaListBrowser( canvas_frame, page_key, location_context, media_results, first_hash )
+        
+        canvas_frame.SetCanvas( canvas_window )
         
     
     def _UpdateSearchLabel( self ):
@@ -480,7 +639,7 @@ class PreviewPanel( ClientGUICommon.StaticBox ):
             
         else:
             
-            label = f'{HydrusNumbers.ToHumanInt(len(self._ab_pairs_that_pass_with_fixed_order_info))} pairs'
+            label = f'{HydrusNumbers.ToHumanInt(len(self._ab_pairs_that_pass_with_fixed_order_info))} pairs - double-click to open a media viewer'
             
         
         self._pass_pairs_label.setText( label )
@@ -491,7 +650,7 @@ class PreviewPanel( ClientGUICommon.StaticBox ):
             
         else:
             
-            label = f'{HydrusNumbers.ToHumanInt(len(self._pairs_that_fail))} pairs'
+            label = f'{HydrusNumbers.ToHumanInt(len(self._pairs_that_fail))} pairs - double-click to open a media viewer'
             
         
         self._fail_pairs_label.setText( label )
@@ -517,6 +676,8 @@ class PreviewPanel( ClientGUICommon.StaticBox ):
             self._fetch_pairs_button.setEnabled( False )
             self._test_pairs_button.setEnabled( False )
             
+            self._ResetSearchAppearance()
+            
             self._search_results_label.setText( f'Problem fetching the current rule! {e}' )
             
             return
@@ -526,7 +687,7 @@ class PreviewPanel( ClientGUICommon.StaticBox ):
         
         if old_value is None:
             
-            self._RefetchPairs()
+            self._RefetchCount()
             
         else:
             
@@ -535,7 +696,7 @@ class PreviewPanel( ClientGUICommon.StaticBox ):
             
             if new_search.DumpToString() != old_search.DumpToString():
                 
-                self._RefetchPairs()
+                self._RefetchCount()
                 
             else:
                 

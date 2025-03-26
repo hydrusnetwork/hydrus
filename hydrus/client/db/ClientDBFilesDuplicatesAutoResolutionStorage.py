@@ -95,7 +95,7 @@ class ClientDBFilesDuplicatesAutoResolutionStorage( ClientDBModule.ClientDBModul
                 
             
         
-        self._Execute( 'UPDATE duplicates_files_auto_resolution_rule_count_cache;' )
+        self._Execute( 'DELETE FROM duplicates_files_auto_resolution_rule_count_cache;' )
         
         CG.client_controller.duplicates_auto_resolution_manager.Wake()
         
@@ -200,7 +200,7 @@ class ClientDBFilesDuplicatesAutoResolutionStorage( ClientDBModule.ClientDBModul
         return list( result.keys() )
         
     
-    def GetUnsearchedPairs( self, rule: ClientDuplicatesAutoResolution.DuplicatesAutoResolutionRule ):
+    def GetUnsearchedPairsAndDistances( self, rule: ClientDuplicatesAutoResolution.DuplicatesAutoResolutionRule, limit = None ):
         
         if not self._have_initialised_rules:
             
@@ -218,7 +218,14 @@ class ClientDBFilesDuplicatesAutoResolutionStorage( ClientDBModule.ClientDBModul
         
         table_name = statuses_to_table_names[ ClientDuplicatesAutoResolution.DUPLICATE_STATUS_NOT_SEARCHED ]
         
-        return self._Execute( f'SELECT smaller_media_id, larger_media_id FROM {table_name};' ).fetchall()
+        if limit is None:
+            
+            return self._Execute( f'SELECT smaller_media_id, larger_media_id, distance FROM {table_name} CROSS JOIN potential_duplicate_pairs USING ( smaller_media_id, larger_media_id );' ).fetchall()
+            
+        else:
+            
+            return self._Execute( f'SELECT smaller_media_id, larger_media_id, distance FROM {table_name} CROSS JOIN potential_duplicate_pairs USING ( smaller_media_id, larger_media_id ) LIMIT ?;', ( limit, ) ).fetchall()
+            
         
     
     def GetTablesAndColumnsThatUseDefinitions( self, content_type: int ) -> typing.List[ typing.Tuple[ str, str ] ]:

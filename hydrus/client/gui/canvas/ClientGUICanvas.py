@@ -2394,7 +2394,7 @@ class CanvasWithHovers( Canvas ):
             can_hide = False
             
         
-        if ClientGUIFunctions.DialogIsOpen():
+        if ClientGUIFunctions.DialogIsOpenAndIAmNotItsChild( self ):
             
             can_hide = False
             

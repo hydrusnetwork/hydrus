@@ -31,6 +31,7 @@ nav:
     - advanced_parents.md
     - advanced_sidecars.md
     - advanced_multiple_local_file_services.md
+    - advanced_duplicates_auto_resolution.md
     - advanced.md
     - reducing_lag.md
     - database_migration.md

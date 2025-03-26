@@ -13,10 +13,20 @@ from hydrus.client.gui.media import ClientGUIMediaControls
 
 class CanvasFrame( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.FrameThatResizesWithHovers ):
     
-    def __init__( self, parent ):            
+    def __init__( self, parent, set_parent = False ):            
         
-        # Parent is set to None here so that this window shows up as a separate entry on the taskbar
-        super().__init__( None, 'hydrus client media viewer', 'media_viewer' )
+        if set_parent:
+            
+            # child of auto-resolution dialog, modal gubbins requires ancestry
+            parent_to_set = parent
+            
+        else:
+            
+            # Parent is set to None here so that this window shows up as a separate entry on the taskbar
+            parent_to_set = None
+            
+        
+        super().__init__( parent_to_set, 'hydrus client media viewer', 'media_viewer' )
         
         self._canvas_window = None
         

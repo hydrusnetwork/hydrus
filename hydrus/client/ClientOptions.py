@@ -292,6 +292,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             'confirm_non_empty_downloader_page_close' : True,
             'confirm_all_page_closes' : False,
             'refresh_search_page_on_system_limited_sort_changed' : True,
+            'do_not_setgeometry_on_an_mpv' : False,
         }
         
         #

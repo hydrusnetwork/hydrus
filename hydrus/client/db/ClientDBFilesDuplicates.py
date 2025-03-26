@@ -1053,6 +1053,8 @@ class ClientDBFilesDuplicates( ClientDBModule.ClientDBModule ):
     
     def GetPotentialDuplicatePairsTableJoinGetInitialTablesAndPreds( self, pixel_dupes_preference: int, max_hamming_distance: int, master_potential_duplicate_pairs_table_name = 'potential_duplicate_pairs' ):
         
+        # little note but the 'master_potential_duplicate_pairs_table_name' needs a distance column! not just the media pair
+        
         tables = [
             master_potential_duplicate_pairs_table_name,
             'duplicate_files AS duplicate_files_smaller',

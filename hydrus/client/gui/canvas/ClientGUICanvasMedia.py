@@ -1732,9 +1732,17 @@ class MediaContainer( QW.QWidget ):
         
         if self.size() != size_hint:
             
-            if move_delta is not None:
+            if move_delta is not None and not move_delta.isNull():
                 
-                self.setGeometry( QC.QRect( self.pos() + move_delta, size_hint ) )
+                if isinstance( self._media_window, ClientGUIMPV.MPVWidget ) and CG.client_controller.new_options.GetBoolean( 'do_not_setgeometry_on_an_mpv' ):
+                    
+                    self._MoveDelta( move_delta )
+                    self.resize( size_hint )
+                    
+                else:
+                    
+                    self.setGeometry( QC.QRect( self.pos() + move_delta, size_hint ) )
+                    
                 
             else:
                 

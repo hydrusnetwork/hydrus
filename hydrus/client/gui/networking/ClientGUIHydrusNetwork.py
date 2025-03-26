@@ -512,7 +512,7 @@ class ReviewAccountsPanel( QW.QWidget ):
         self._account_list = ClientGUICommon.BetterCheckBoxList( self._accounts_box )
         self._account_list.setSelectionMode( QW.QAbstractItemView.SelectionMode.SingleSelection )
         
-        ( min_width, min_height ) = ClientGUIFunctions.ConvertTextToPixelWidth( self._account_list, 74 )
+        min_width = ClientGUIFunctions.ConvertTextToPixelWidth( self._account_list, 74 )
         
         self._account_list.setMinimumWidth( min_width )
         

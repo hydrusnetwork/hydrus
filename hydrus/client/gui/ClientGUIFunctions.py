@@ -187,6 +187,21 @@ def DialogIsOpen():
     return False
     
 
+def DialogIsOpenAndIAmNotItsChild( win: QW.QWidget ):
+    
+    tlws = QW.QApplication.topLevelWidgets()
+    
+    for tlw in tlws:
+        
+        if isinstance( tlw, QP.Dialog ) and tlw.isModal() and not IsQtAncestor( win, tlw, through_tlws = True):
+            
+            return True
+            
+        
+    
+    return False
+    
+
 def DrawText( painter, x, y, text ):
     
     ( size, text ) = GetTextSizeFromPainter( painter, text )
