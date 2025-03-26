@@ -2,9 +2,9 @@
 title: Filtering Duplicates Automatically
 ---
 
-## Hey, this is all for a system that is only just launching. Not everything is active/ready yet!
+**Hey, this is all for a system that is only just launching. Not everything is active/ready yet!**
 
-# the problem with duplicates processing
+## the problem with duplicates processing
 
 The duplicates filter can get pretty tedious. Pairs that are obvious resizes or pixel duplicates are easy to resolve but boring to work through.
 
