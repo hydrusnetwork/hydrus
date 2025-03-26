@@ -49,7 +49,7 @@ I try to release a new version every Wednesday by 8pm EST and write an accompany
         
         One user notes that launching with the environment variable `QT_QPA_PLATFORM=xcb`, which forces X11, may help!
         
-        Another user says setting `WAYLAND_DISPLAY=hydrus-client` (or `WAYLAND_DISPLAY=hydrus_client` or `WAYLAND_DISPLAY=python` depending on how you are launching the program), which forces hydrus (and its embedded mpv windows) to use Xwayland, is another solution! You might need to do `sudo apt install xwayland` first.
+        Another user says setting `WAYLAND_DISPLAY= ` (as in setting it to nothing), which forces hydrus (and its embedded mpv windows) to use Xwayland, is another solution! You might need to do `sudo apt install xwayland` first.
     
     !!! note "Qt compatibility"
         
