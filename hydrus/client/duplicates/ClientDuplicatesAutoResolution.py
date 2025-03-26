@@ -7,6 +7,7 @@ import typing
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTime
 
@@ -486,12 +487,12 @@ class DuplicatesAutoResolutionRule( HydrusSerialisable.SerialisableBaseNamed ):
         
         if not_searched > 0:
             
-            result += f'{not_searched} to search, '
+            result += f'{HydrusNumbers.ToHumanInt( not_searched )} to search, '
             
         
         if not_tested > 0:
             
-            result += f'{not_tested} still to test, '
+            result += f'{HydrusNumbers.ToHumanInt( not_tested )} still to test, '
             
         
         if not_searched + not_tested == 0:
@@ -499,16 +500,16 @@ class DuplicatesAutoResolutionRule( HydrusSerialisable.SerialisableBaseNamed ):
             result += 'Done! '
             
         
-        result += f'{passed_test} pairs resolved'
+        result += f'{HydrusNumbers.ToHumanInt( passed_test )} pairs resolved'
         
         if failed_test > 0:
             
-            result += f' ({failed_test} failed the test)'
+            result += f' ({HydrusNumbers.ToHumanInt( failed_test )} failed the test)'
             
         
         if not_match > 0:
             
-            result += f' ({not_match} did not match the search)'
+            result += f' ({HydrusNumbers.ToHumanInt( not_match )} did not match the search)'
             
         
         return result
