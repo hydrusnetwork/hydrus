@@ -757,6 +757,8 @@ class CanvasHoverFrameTop( CanvasHoverFrame ):
         self.setLayout( vbox )
 
         self._window_always_on_top = False #can set this with a global option if you want
+
+        self._window_show_title_bar = True #should always start on
         
         CG.client_controller.sub( self, 'ProcessContentUpdatePackage', 'content_updates_gui' )
         CG.client_controller.sub( self, 'SetIndexString', 'canvas_new_index_string' )
@@ -1114,14 +1116,28 @@ class CanvasHoverFrameTop( CanvasHoverFrame ):
             
             self.update()
             
+
+        def flip_show_window_title_bar():
+            
+            self.parentWidget().window().setWindowFlag( QC.Qt.WindowType.FramelessWindowHint, self._window_show_title_bar )
+
+            self._window_show_title_bar = not self._window_show_title_bar
+            
+            self.parentWidget().window().show()
+
+            self.update()
+
+
         def flip_always_on_top():
 
             self._window_always_on_top = not self._window_always_on_top
             
-            self.parentWidget().window().setWindowFlag(QC.Qt.WindowType.WindowStaysOnTopHint, self._window_always_on_top)
-            
+            self.parentWidget().window().setWindowFlag( QC.Qt.WindowType.WindowStaysOnTopHint, self._window_always_on_top )
+            self.window().setWindowFlag( QC.Qt.WindowType.WindowStaysOnTopHint, self._window_always_on_top )
+
             self.parentWidget().window().show()
-            
+            self.window().show()
+
             self.update()
         
         new_options = CG.client_controller.new_options
@@ -1129,6 +1145,7 @@ class CanvasHoverFrameTop( CanvasHoverFrame ):
         menu = ClientGUIMenus.GenerateMenu( self )
         
         ClientGUIMenus.AppendMenuCheckItem( menu, 'always on top', 'Toggle whether this window is always on top.', self._window_always_on_top, flip_always_on_top )
+        ClientGUIMenus.AppendMenuCheckItem( menu, 'show titlebar', 'Toggle the OS frame of this window.', self._window_show_title_bar, flip_show_window_title_bar )
 
         ClientGUIMenus.AppendSeparator( menu )
         
