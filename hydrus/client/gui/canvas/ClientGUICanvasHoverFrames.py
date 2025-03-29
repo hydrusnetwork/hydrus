@@ -755,6 +755,8 @@ class CanvasHoverFrameTop( CanvasHoverFrame ):
         QP.AddToLayout( vbox, self._info_text, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         self.setLayout( vbox )
+
+        self._window_always_on_top = False #can set this with a global option if you want
         
         CG.client_controller.sub( self, 'ProcessContentUpdatePackage', 'content_updates_gui' )
         CG.client_controller.sub( self, 'SetIndexString', 'canvas_new_index_string' )
@@ -1112,23 +1114,29 @@ class CanvasHoverFrameTop( CanvasHoverFrame ):
             
             self.update()
             
+        def flip_always_on_top():
+
+            self._window_always_on_top = not self._window_always_on_top
+            
+            self.parentWidget().window().setWindowFlag(QC.Qt.WindowType.WindowStaysOnTopHint, self._window_always_on_top)
+            
+            self.parentWidget().window().show()
+            
+            self.update()
         
         new_options = CG.client_controller.new_options
         
         menu = ClientGUIMenus.GenerateMenu( self )
         
-        # add 'disable hover window x' here too, but not the top hover lol
-        # add 'always on top' here too
+        ClientGUIMenus.AppendMenuCheckItem( menu, 'always on top', 'Toggle whether this window is always on top.', self._window_always_on_top, flip_always_on_top )
+
+        ClientGUIMenus.AppendSeparator( menu )
         
         ClientGUIMenus.AppendMenuCheckItem( menu, 'draw tags hover-window text in the background', 'Draw a copy of the respective hover window\'s text in the background of the media viewer canvas.', new_options.GetBoolean( 'draw_tags_hover_in_media_viewer_background' ), flip_background_boolean, 'draw_tags_hover_in_media_viewer_background' )
         ClientGUIMenus.AppendMenuCheckItem( menu, 'draw top hover-window text in the background', 'Draw a copy of the respective hover window\'s text in the background of the media viewer canvas.', new_options.GetBoolean( 'draw_top_hover_in_media_viewer_background' ), flip_background_boolean, 'draw_top_hover_in_media_viewer_background' )
         ClientGUIMenus.AppendMenuCheckItem( menu, 'draw top-right hover-window text in the background', 'Draw a copy of the respective hover window\'s text in the background of the media viewer canvas.', new_options.GetBoolean( 'draw_top_right_hover_in_media_viewer_background' ), flip_background_boolean, 'draw_top_right_hover_in_media_viewer_background' )
         ClientGUIMenus.AppendMenuCheckItem( menu, 'draw notes hover-window text in the background', 'Draw a copy of the respective hover window\'s text in the background of the media viewer canvas.', new_options.GetBoolean( 'draw_notes_hover_in_media_viewer_background' ), flip_background_boolean, 'draw_notes_hover_in_media_viewer_background' )
         ClientGUIMenus.AppendMenuCheckItem( menu, 'draw bottom-right index text in the background', 'Draw a copy of the respective hover window\'s text in the background of the media viewer canvas.', new_options.GetBoolean( 'draw_bottom_right_index_in_media_viewer_background' ), flip_background_boolean, 'draw_bottom_right_index_in_media_viewer_background' )
-        
-        #ClientGUIMenus.AppendSeparator( menu )
-        #always-on-top not implemented yet
-        #ClientGUIMenus.AppendMenuCheckItem( menu, 'always on top', 'Draw this window on top of all other windows.', new_options.GetBoolean( 'media_viewer_window_always_on_top' ), flip_background_boolean, 'media_viewer_window_always_on_top' )
 
         ClientGUIMenus.AppendSeparator( menu )
 
