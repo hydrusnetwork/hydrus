@@ -185,6 +185,7 @@ SIMPLE_SWITCH_BETWEEN_100_PERCENT_AND_CANVAS_FIT_AND_FILL_ZOOM = 172
 SIMPLE_SWITCH_BETWEEN_100_PERCENT_AND_CANVAS_FIT_AND_FILL_ZOOM_VIEWER_CENTER = 173
 SIMPLE_ZOOM_DEFAULT_VIEWER_CENTER = 174
 SIMPLE_RESET_PAN_TO_CENTER = 175
+SIMPLE_CLOSE_MEDIA_VIEWER_AND_FOCUS_TAB = 176
 
 REARRANGE_THUMBNAILS_TYPE_FIXED = 0
 REARRANGE_THUMBNAILS_TYPE_COMMAND = 1
@@ -247,6 +248,7 @@ simple_enum_to_str_lookup = {
     SIMPLE_ARCHIVE_FILE : 'archive file',
     SIMPLE_CHECK_ALL_IMPORT_FOLDERS : 'check all import folders now',
     SIMPLE_CLOSE_MEDIA_VIEWER : 'close media viewer',
+    SIMPLE_CLOSE_MEDIA_VIEWER_AND_FOCUS_TAB : 'close media viewer and focus the tab the media came from, if possible',
     SIMPLE_CLOSE_PAGE : 'close page',
     LEGACY_SIMPLE_COPY_BMP : 'copy bmp of image',
     LEGACY_SIMPLE_COPY_LITTLE_BMP : 'copy small bmp of image for quick source lookups',
@@ -426,6 +428,7 @@ legacy_simple_str_to_enum_lookup = {
     'archive_file' : SIMPLE_ARCHIVE_FILE,
     'check_all_import_folders' : SIMPLE_CHECK_ALL_IMPORT_FOLDERS,
     'close_media_viewer' : SIMPLE_CLOSE_MEDIA_VIEWER,
+    'close_media_viewer_and_focus_tab' : SIMPLE_CLOSE_MEDIA_VIEWER_AND_FOCUS_TAB,
     'close_page' : SIMPLE_CLOSE_PAGE,
     'copy_bmp' : LEGACY_SIMPLE_COPY_BMP,
     'copy_bmp_or_file_if_not_bmpable' : LEGACY_SIMPLE_COPY_BMP_OR_FILE_IF_NOT_BMPABLE,
