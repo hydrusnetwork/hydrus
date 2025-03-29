@@ -611,7 +611,7 @@ class CanvasHoverFrame( QW.QFrame ):
         
         mouse_over_important_descendant = self._MouseOverImportantDescendant()
         
-        dialog_is_open = ClientGUIFunctions.DialogIsOpen()
+        dialog_is_open = ClientGUIFunctions.DialogIsOpenAndIAmNotItsChild( self )
         
         mouse_is_near_animation_bar = self._my_canvas.MouseIsNearAnimationBar()
         

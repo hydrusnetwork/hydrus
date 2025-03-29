@@ -31,6 +31,7 @@ from hydrus.client import ClientManagers
 from hydrus.client import ClientServices
 from hydrus.client import ClientThreading
 from hydrus.client.caches import ClientCaches
+from hydrus.client.duplicates import ClientDuplicatesAutoResolution
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui import ClientGUISplash
 from hydrus.client.gui.lists import ClientGUIListManager
@@ -49,13 +50,16 @@ from hydrus.test import TestClientConstants
 from hydrus.test import TestClientDaemons
 from hydrus.test import TestClientDB
 from hydrus.test import TestClientDBDuplicates
+from hydrus.test import TestClientDBDuplicatesAutoResolution
 from hydrus.test import TestClientDBTags
+from hydrus.test import TestClientDuplicatesAutoResolution
 from hydrus.test import TestClientFileStorage
 from hydrus.test import TestClientImageHandling
 from hydrus.test import TestClientImportObjects
 from hydrus.test import TestClientImportOptions
 from hydrus.test import TestClientImportSubscriptions
 from hydrus.test import TestClientListBoxes
+from hydrus.test import TestClientMetadataConditional
 from hydrus.test import TestClientMetadataMigration
 from hydrus.test import TestClientMigration
 from hydrus.test import TestClientNetworking
@@ -302,6 +306,8 @@ class Controller( object ):
         self.CallToThreadLongRunning( self.network_engine.MainLoop )
         
         self.tag_display_manager = ClientTagsHandling.TagDisplayManager()
+        
+        self.duplicates_auto_resolution_manager = ClientDuplicatesAutoResolution.DuplicatesAutoResolutionManager( self )
         
         self._managers[ 'undo' ] = ClientManagers.UndoManager( self )
         
@@ -805,7 +811,12 @@ class Controller( object ):
             TestHydrusTags,
             TestHydrusTime,
             TestHydrusSerialisable,
-            TestHydrusSessions
+            TestHydrusSessions,
+            TestClientMetadataConditional
+        ]
+        
+        module_lookup[ 'metadata_conditional' ] = [
+            TestClientMetadataConditional
         ]
         
         module_lookup[ 'search' ] = [
@@ -835,11 +846,26 @@ class Controller( object ):
         ]
         
         module_lookup[ 'db_duplicates' ] = [
-            TestClientDBDuplicates
+            TestClientDBDuplicates,
+            TestClientDBDuplicatesAutoResolution
+        ]
+        
+        module_lookup[ 'db_duplicates_auto_resolution' ] = [
+            TestClientDBDuplicatesAutoResolution
         ]
         
         module_lookup[ 'db_tags' ] = [
             TestClientDBTags
+        ]
+        
+        module_lookup[ 'duplicates_auto_resolution' ] = [
+            TestClientDBDuplicatesAutoResolution,
+            TestClientDuplicatesAutoResolution,
+            TestClientMetadataConditional
+        ]
+        
+        module_lookup[ 'duplicates_auto_resolution_objects' ] = [
+            TestClientDuplicatesAutoResolution
         ]
         
         module_lookup[ 'nat' ] = [

@@ -7,6 +7,58 @@ title: Changelog
 !!! note
     This is the new changelog, only the most recent builds. For all versions, see the [old changelog](old_changelog.html).
 
+## [Version 615](https://github.com/hydrusnetwork/hydrus/releases/tag/v615)
+
+### duplicates auto-resolution brief
+
+* the system is ready for advanced users to try! there is one simple static rule available. check out the help https://hydrusnetwork.github.io/hydrus/advanced_duplicates_auto_resolution.html , go into the UI, and try out the suggested pixel-perfect jpg & png rule. I want to know if--
+   - it all makes sense to you
+   - where it runs smooth
+   - where it runs garbage
+   - any errors?
+   - out of interest, what do you get? Of ~800k potential pairs, I had ~6,000 jpg/png pixel pairs, resulting in ~4,700 total actual processed pairs (numbers shrink because multiple good files can share the same bad file). speed was bleh in the preview viewer (about 30 seconds to load the preview numbers) but nice when doing work: only a second or two to save the rule and then ~20k files/s in the search stage and 10 files/s in the processing stage. about 7 mins to ditch 7.5GB of Clipboard.png, hooray
+
+### duplicates auto-resolution
+
+* fleshed out the help page here: https://hydrusnetwork.github.io/hydrus/advanced_duplicates_auto_resolution.html it is linked in the main help directory, too, under 'advanced'
+* made it so you can double-click or enter/return any pass/fail test row in the auto-resolution preview panel to open that pair in a normal media viewer
+* added `work on these rules during idle/normal time` to the cog button on the auto-resolution sidebar tab
+* wrote up 'work hard' functionality and wired up the button--however I think I might remove this, since the system works well enough on its own. let me know what you think
+* reworked the preview panel to have a two-stage search. it spends a whack of CPU time fetching the total count of the search, and then the sample part works faster afterwards and can be hit over and over. it still sucks and I have another idea to speed things up, we'll see
+* updated the main duplicates auto-resolution maintenance routine to do the search step in blocks of 8192 rather than trying to do everything at once as soon as a rule is added. I hesitated doing this earlier, since the large one-time init search is more efficient, but we are going to be doing incremental searches in normal operation, so making small search chunks work well is not optional. I think the biggest potential weakness of this whole system is going to be incremental searches on new potential pairs when the potential duplicate pairs search of the auto-resolution rule has significant per-search overhead, but which searches will those be? sounds like we'll find out in the coming weeks. thankfully, jpg/png pixel dupes seems to scale excellently, so we are good for today
+
+### misc auto-resolution stuff
+
+* reduced flicker on the main 'auto-resolution' review panel as it works a real rule
+* fixed a 'hey I guess the auto-resolution preview panel is 1200px wide now' bug on certain rule-fetch validation errors
+* renamed 'A will pass' comparison UI labels to 'A will match'
+* the preview panel lists now scroll one row per scroll (it was doing 3 before, lol, and the default height is ~2 rows)
+* the auto-resolution preview panel (particularly the 'will be actioned' list, with its third column) should size itself better if you have large thumbnails
+* if the auto-resolution preview panel had results but the search changes and now we have no resullts, the test result lists will now appropriaterly clear themselves
+* the preview result lists now generally clear nicely before a new search is started, so if something actually goes wrong, you don't have old test results hanging around
+* fixed incremental potential duplicates search on non-pixel-duplicate searches
+
+### unit tests
+
+* wrote unit tests for the `MetadataConditional`
+* wrote unit tests for all the predicate types that can work in the `MetadataConditional`
+* wrote unit tests for the `Selector`
+* wrote unit tests for the one-file `Comparator`
+* wrote unit tests for auto-resolution rules: for editing at the db level; for syncing to existing, new, dissolved, and resolved potential duplicate pairs; performing search; performing resolution
+
+### misc
+
+* fixed a typo bug that broke the maintenance job that resets all potential duplicate pair search. it was related to the recent auto-resolution integration
+* fixed a typo bug that was stopping the 'review accounts' repository admin panel from opening
+* added an FAQ about the extensionless files that appear in your file storage if you sync with a repository
+* added `LINUX DEBUG: Do not allow combined setGeometry on mpv window` to `options->media playback`. if you have crashes on X11 in v614 when zooming mpv windows, give it a go and let me know what happens
+* thanks to a user, added a note to the install help that if you are on Linux & Wayland, adding the `WAYLAND_DISPLAY` environment variable, which forces the program to run in XWayland, seems to relieve many UI bugs (issue #1695)
+
+### boring cleanup
+
+* cleared out a surplus entry in db init related to duplicates auto-resolution
+* tweaked the 'don't show hovers/hide cursor if a dialog is open' tests in the media viewer, ignoring them if we are the child of one lol
+
 ## [Version 614](https://github.com/hydrusnetwork/hydrus/releases/tag/v614)
 
 ### misc
@@ -482,69 +534,3 @@ title: Changelog
 * the python mpv package is updated from `1.0.6` to `1.0.7` (test verison stays at `1.0.7`; there is nothing new)
 * twisted (the networking engine that runs the hydrus server and client api) now includes better TLS and http2 support
 * some import hacks that helped old PyInstaller navigate numpy and OpenCV bundling are removed
-
-## [Version 605](https://github.com/hydrusnetwork/hydrus/releases/tag/v605)
-
-### ratings on thumbnails
-
-* thanks to a user, ratings are now displayable in thumbnails! hit the new 'show in thumbnails' service checkbox in _services->manage services_ and that service's ratings will show
-* I updated this a bit and added a second option for 'show even when there is no rating value'
-* I played around with different backing colours to make these new ratings stand out more. in the end, my best solution was very hacky and isn't amazing--the stars in particular can get washed by a banner or busy thumb underneath. I tried a block of backing colour but it all looked worse. we may be approaching a 'just do it with svgs' moment for ratings rather than my decade-old painter primitives and coordinate lists. have a play with it and let me know what you think
-* I improved some rating drawing positioning, too--some stuff was off by half a pixel etc..
-* thumbnails now refresh when after a _manage services_ ok
-
-### misc
-
-* did a hotfix a couple hours after v604 release, v604a, to fix an issue with double/middle-clicking collection thumbnails to launch the media viewer
-* I deleted the Endchan /hydrus/ board and removed the links from the client and help. the board was intended as a bunker and never got much traffic, but the whole site being spammed this week reminded me that I don't want to own a board any more. if we ever need a bunker again, I'll revisit the issue
-* fixed some file-picker dialogs' name filters, which were not filtering to PNG or JSON correctly. all file dialogs that filter files this way now also offer `Any files (*)` as a second option
-* the Lain import downloaders dialog now filters the file-picker to .png files
-* I reworked the 'top hover file summary' settings under `options->media viewer` to their own box with a bit of extra text, and I renamed the complementary setting under `options->thumbnails` to the clearer "Show the media viewer's top hover file text in the status bar when a single thumbnail is selected"
-* I did a bunch of layout work this week, cleaning up how things position and expand to fill available screen space. there were several hundred things impacted and I did not have time to check everything that might have been changed. please let me know if some dialog has a help button that's weirdly aligned etc.., thank you!
-* cleaned up the reason-initialisation of the advanced file deletion dialog. the list of reasons is now much more item-position-stable and will not create duplicates when intersecting options clash. the selection rules are now simple: if all the file(s) have existing deletion reasons, this reason is listed, marked as the existing reason, and selected; otherwise, if the dialog is set to remember the previous deletion reason, this is listed and selected; otherwise, the "default" reason the dialog launches with is listed and selected. items have a more stable position as the list now always follows an order of (optional unique default shared reason, list of pre-defined reasons, optional unique shared existing reason, optional do-not-alter existing reason, custom reason), and items are marked in-place if they are interesting (issue #1653)
-* fixed 'do not verify https' network jobs for clients with a CA bundle set in their envs
-
-### duplicates
-
-* in a terminology change that matters in other places, the duplicate filter, for the current file index, no longer says 'A' or 'B': but now 'File One/File Two'
-* the comparison scores list in the mid-right duplicates hover window now says the total score difference as an actual number. let's see if the IRL scores are helpful as we move into making these rules more user-customisable
-
-### default downloaders
-
-* the e621 site has 'contributor' tags now, to distinguish VA talent or model makers from the primary artist. I was going to fold this into the normal default e621 parser as just another 'creator' tag, but the examples I found were pretty spammy so I'm not sure it is so useful, at least out of the box for normal users. if you are super interested in this, you might like to check out the new 'e621 file page parser with contributor tags' under `network->downloader components->manage url class links` for the `e621 file page` url class. the tags all seem to have `_(va)` kind of thing after them, so they wouldn't _confuse_ our existing creator tags, but it does seem like a lot of incidental spam and maybe it muddies things and should indeed be its own namespace in hydrus or just be ignored, idk, let me know what you think
-
-### style
-
-* thanks to a user, the e621 stylesheet gets some tweaks and better darkmode colours. check the new 'e621_redux' QSS. there's some some interesting new transparency tech on taglists
-
-### client api
-
-* fixed an issue with the `/manage_file_relationships/set_file_relationships` call and the 'set B as better' duplicate action (seen at times in other areas of the client, very rarely, as "set as worse" or "this is a worse duplicate") with `do_default_content_merge`--it was doing nothing, since there is no default for this action. now it fetches the normal 'set A as better' default options (also making sure to apply them the correct way around ha ha)
-* client api version is now 77
-
-### boring code cleanup
-
-* across the duplicates system, I've reworked a tangle of references to 'first' and 'second' or '1' and '2' to a unified 'A' and 'B' for our pair processing. in code and duplicates action settings, the A is the first file in the pair being actioned and B is the second. in a few places where we have yet determined AB, I now specifically use 1/2. it is arbitrary, but at least it is now clear
-* refactored the 'edit duplicate content merge options' panel to its own file and converted it to a non-scrolling widget so I can embed it in panels easier. it can also take SetValue calls after init and will reconfigure itself for different duplicate action types
-* did some more Qt Enum updates since my linter found a bunch more: `QPainter.RenderHint`, `QPainter.CompositionMode`, `QPalette.ColorRole`, `QColor.NameFormat`, `QFont.Weight`, `QFont.StyleHint`, `QFont.StyleStrategy`, `QImage.Format`, `QTextCursor.MoveOperation`, `QColorSpace.NamedColorSpace`, `QTextOption.WrapMode`
-
-* boring layout cleanup
-* I did some Qt research and fixed a jank expanding layout technique I use in ~90 different places. a bunch of panels should eat up extra pixels a little more reliably, with fewer cases of the invididual widgets all experiencing cosmological redshift or mysterious magical growing lower buffer space if the dialog grows
-* also fixed a bunch of bad sizer flags and stretch stuff used on my text&widget gridsizer that I use in ~190 places
-* fixed some crazy flags and layout used inside my text&widget gridsizer
-* fixed up some crazy layout in manage siblings
-* fixed some crazy popup toaster layout
-* fixed crazy layout in the login credentials edit panel
-* fixed some crazy layout in the shortcut action editing UI
-* fixed some crazy layout in the new duplicate pairs search context panel. it now expands to fill available space properly
-* fixed several options pages that didn't know what to do with extra space
-* the system:hash panel list now expands vertically
-* reworked the view options dialog under the `options->media playback` file list into one clean and lined-up gridbox
-
-### duplicates auto-resolution
-
-* finished the 'action' tab, which governs the duplicate type to apply to the pair, whether to delete A or B, and any custom duplicate content merge options
-* gave the rule dialog workflow a slight pass, particularly making the 'comparator' step define 'A' and 'B' rather than 'better' and 'worse'. my head was too into setting better/worse duplicates, which made things things awkward for same quality, alternates, or false positive actions. similarly, the 'action' step is now orienting towards position-specific 'A is better' verbs rather than 'yeah I guess set the better as better bro'. also, as before, as soon as this panel was finished, I immediately disabled it for the first test, ha ha
-* the one-file comparator can now do 'either A or B has property x' tests
-* added some safety code to the rule dialog
-* work still to do is: the master database search and caching code, the preview panel, which will load up some example pairs and show them in a nice way (⊙ _ ⊙ ), tying all the objects finally together and saving them to db, and then the daemon that'll work rules on demand and in the background. I feel ok about most of it, but the db stuff may be a nightmare, and the preview code, which will need thumbnails and media viewer tech from a dialog to be worth something, will definitely be one. it'll be great to finally have 'thumbs anywhere' tech though, so lfg

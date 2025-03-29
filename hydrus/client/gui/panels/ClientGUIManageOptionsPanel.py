@@ -3305,6 +3305,9 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._mpv_loop_playlist_instead_of_file = QW.QCheckBox( media_panel )
             self._mpv_loop_playlist_instead_of_file.setToolTip( ClientGUIFunctions.WrapToolTip( 'Try this if you get "too many events queued" error in mpv.' ) )
             
+            self._do_not_setgeometry_on_an_mpv = QW.QCheckBox( media_panel )
+            self._do_not_setgeometry_on_an_mpv.setToolTip( ClientGUIFunctions.WrapToolTip( 'Try this if X11 crashes when you zoom an mpv window.' ) )
+            
             self._draw_transparency_checkerboard_media_canvas = QW.QCheckBox( media_panel )
             self._draw_transparency_checkerboard_media_canvas.setToolTip( ClientGUIFunctions.WrapToolTip( 'If unchecked, will fill in with the normal background colour. Does not apply to MPV.' ) )
             
@@ -3384,6 +3387,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._animation_start_position.setValue( int( HC.options['animation_start_position'] * 100.0 ) )
             self._always_loop_animations.setChecked( self._new_options.GetBoolean( 'always_loop_gifs' ) )
             self._mpv_loop_playlist_instead_of_file.setChecked( self._new_options.GetBoolean( 'mpv_loop_playlist_instead_of_file' ) )
+            self._do_not_setgeometry_on_an_mpv.setChecked( self._new_options.GetBoolean( 'do_not_setgeometry_on_an_mpv' ) )
             self._draw_transparency_checkerboard_media_canvas.setChecked( self._new_options.GetBoolean( 'draw_transparency_checkerboard_media_canvas' ) )
             
             media_zooms = self._new_options.GetMediaZooms()
@@ -3430,6 +3434,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows.append( ( 'Start animations this % in:', self._animation_start_position ) )
             rows.append( ( 'Always Loop Animations:', self._always_loop_animations ) )
             rows.append( ( 'DEBUG: Loop Playlist instead of Loop File in mpv:', self._mpv_loop_playlist_instead_of_file ) )
+            rows.append( ( 'LINUX DEBUG: Do not allow combined setGeometry on mpv window:', self._do_not_setgeometry_on_an_mpv ) )
             rows.append( ( 'Draw image transparency as checkerboard:', self._draw_transparency_checkerboard_media_canvas ) )
             
             gridbox = ClientGUICommon.WrapInGrid( media_panel, rows )
@@ -3665,6 +3670,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             HC.options[ 'animation_start_position' ] = self._animation_start_position.value() / 100.0
             self._new_options.SetBoolean( 'always_loop_gifs', self._always_loop_animations.isChecked() )
             self._new_options.SetBoolean( 'mpv_loop_playlist_instead_of_file', self._mpv_loop_playlist_instead_of_file.isChecked() )
+            self._new_options.SetBoolean( 'do_not_setgeometry_on_an_mpv', self._do_not_setgeometry_on_an_mpv.isChecked() )
             self._new_options.SetBoolean( 'draw_transparency_checkerboard_media_canvas', self._draw_transparency_checkerboard_media_canvas.isChecked() )
             
             try:

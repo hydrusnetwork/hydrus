@@ -105,7 +105,7 @@ options = {}
 # Misc
 
 NETWORK_VERSION = 20
-SOFTWARE_VERSION = 614
+SOFTWARE_VERSION = 615
 CLIENT_API_VERSION = 78
 
 SERVER_THUMBNAIL_DIMENSIONS = ( 200, 200 )
@@ -1483,7 +1483,7 @@ DOCUMENTATION_DOWNLOADER_URL_CLASSES = 'downloader_url_classes.html'
 DOCUMENTATION_GETTING_STARTED_SUBSCRIPTIONS = 'getting_started_subscriptions.html'
 DOCUMENTATION_DATABASE_MIGRATION = 'database_migration.html'
 DOCUMENTATION_DUPLICATES = 'duplicates.html'
-DOCUMENTATION_DUPLICATES_AUTO_RESOLUTION = 'duplicates_auto_resolution.html'
+DOCUMENTATION_DUPLICATES_AUTO_RESOLUTION = 'advanced_duplicates_auto_resolution.html'
 DOCUMENTATION_DOWNLOADER_SHARING = 'downloader_sharing.html'
 DOCUMENTATION_DOWNLOADER_PARSERS_PAGE_PARSERS_PAGE_PARSERS = 'downloader_parsers_page_parsers.html#page_parsers'
 DOCUMENTATION_DOWNLOADER_PARSERS_CONTENT_PARSERS_CONTENT_PARSERS = 'downloader_parsers_content_parsers.html#content_parsers'

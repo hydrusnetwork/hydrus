@@ -359,6 +359,7 @@ EDIT_PRED_TYPES = {
 }
 
 # this has useful order
+# bro any time you add to this, add a new unit test!
 PREDICATE_TYPES_WE_CAN_TEST_ON_MEDIA_RESULTS = [ PREDICATE_TYPE_SYSTEM_INBOX, PREDICATE_TYPE_SYSTEM_ARCHIVE, PREDICATE_TYPE_SYSTEM_MIME, PREDICATE_TYPE_SYSTEM_WIDTH, PREDICATE_TYPE_SYSTEM_HEIGHT ]
 
 class Predicate( HydrusSerialisable.SerialisableBase ):

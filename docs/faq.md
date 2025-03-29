@@ -157,6 +157,14 @@ The repositories do not work like conventional search engines; it takes a short 
 
 The client's searches only ever happen over its local cache of what is on the repository. Any changes you make will be delayed for others until their next update occurs. At the moment, the update period is 100,000 seconds, which is about 1 day and 4 hours.
 
+## I looked in my file storage--what are these extensionless files? { id="repo_files" }
+
+If you sync to a repository like the PTR, your client will download many 'update' files from it so it can 'process' and sync. Hydrus wants to hold onto these source files so it can can reprocess or do other maintenance tasks without needing the server again, and so it saves them in the normal file storage beside your jpegs and webms. They have the same hash-style names, but no extension, so you'll just see '2fc7df0b017f490378aa40ff7f1603d9041973485937b3a1c15cffbba17de6e3' and so on.
+
+The files are g-zipped json, so if you are interested, load one up in your favourite scripting console and decompress it, and you'll see some gigantic lists--probably either of ( tag_id, file_id ) mapping pairs, or ( tag_id, tag ) and ( file_id, hash ) definition pairs.
+
+You can view the files in the client, presuming `help->advanced mode`, by selecting 'repository updates' as your file domain. They are best left alone, unless you decide to stop syncing with the PTR, at which point you can `ctrl+a->delete` them in the client whenever you like.
+
 ## Why work alone? { id="work_alone" }
 
 If I work in a team, I tend to burn out and then quit, usually in a big drama bomb. This happened several times in my life until I decided to work on Hydrus strictly alone, and I've been stable ever since. I'm just no good at working with others!

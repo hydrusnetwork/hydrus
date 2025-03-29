@@ -206,6 +206,10 @@ The incidence of false positives increases as you broaden the search distance--t
 [![](images/dupe_garbage.png)](images/dupe_garbage.png)
     
 
+## auto-resolution
+
+I do not recommend rushing into this, but once you are comfortable with the duplicates system and know what you want out of it, there is now a system that allows for [automating simple duplicate-processing](./advanced_duplicates_auto_resolution.md).
+
 ## the duplicates system { id="duplicates_advanced" }
 
 _(advanced nonsense, you can skip this section. tl;dr: duplicate file groups keep track of their best quality file, sometimes called the King)_

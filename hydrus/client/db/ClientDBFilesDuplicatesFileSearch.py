@@ -54,6 +54,11 @@ class ClientDBFilesDuplicatesFileSearch( ClientDBModule.ClientDBModule ):
         
         db_location_context = self.modules_files_storage.GetDBLocationContext( file_search_context_1.GetLocationContext() )
         
+        # I had a decent idea to say 'if fetch_limit is not None, then make a double-column temp int table and then read (fetch_limit x 10) pairs from potential dupes and just work on them
+        # but of course that caused low hit-rate searches to produce few results and gave a gonk 'num_pairs' final result
+        # maybe we can revisit when the search tab shows total count and the preview tab is just about showing 'some stuff'
+        # and maybe we can and should optimise the big table joins here
+        
         with self._MakeTemporaryIntegerTable( [], 'hash_id' ) as temp_table_name_1:
             
             with self._MakeTemporaryIntegerTable( [], 'hash_id' ) as temp_table_name_2:
@@ -86,14 +91,20 @@ class ClientDBFilesDuplicatesFileSearch( ClientDBModule.ClientDBModule ):
                         
                     
                 
-                # distinct important here for the search results table join
-                pairs_of_hash_ids = self._Execute( 'SELECT DISTINCT duplicate_files_smaller.king_hash_id, duplicate_files_larger.king_hash_id FROM {};'.format( table_join ) ).fetchall()
+                if fetch_limit is None:
+                    
+                    # distinct important here for the search results table join
+                    pairs_of_hash_ids = self._Execute( 'SELECT DISTINCT duplicate_files_smaller.king_hash_id, duplicate_files_larger.king_hash_id FROM {};'.format( table_join ) ).fetchall()
+                    
+                else:
+                    
+                    # distinct important here for the search results table join
+                    pairs_of_hash_ids = self._Execute( 'SELECT DISTINCT duplicate_files_smaller.king_hash_id, duplicate_files_larger.king_hash_id FROM {} LIMIT ?;'.format( table_join ), ( fetch_limit * 10, ) ).fetchall()
+                    
                 
             
         
         seen_hash_ids = set()
-        
-        num_pairs = len( pairs_of_hash_ids )
         
         if fetch_limit is not None and len( pairs_of_hash_ids ) >= fetch_limit:
             
@@ -114,10 +125,10 @@ class ClientDBFilesDuplicatesFileSearch( ClientDBModule.ClientDBModule ):
         
         pairs_of_media_results = [ ( hash_ids_to_media_results[ smaller_media_king_hash_id ], hash_ids_to_media_results[ larger_media_king_hash_id ] ) for ( smaller_media_king_hash_id, larger_media_king_hash_id ) in pairs_of_hash_ids ]
         
-        return ( num_pairs, pairs_of_media_results )
+        return pairs_of_media_results
         
     
-    def GetPotentialDuplicatePairsForAutoResolution( self, potential_duplicates_search_context: ClientPotentialDuplicatesSearchContext.PotentialDuplicatesSearchContext, relevant_pairs: typing.Collection[ typing.Tuple[ int, int ] ] ):
+    def GetPotentialDuplicatePairsForAutoResolution( self, potential_duplicates_search_context: ClientPotentialDuplicatesSearchContext.PotentialDuplicatesSearchContext, relevant_pairs_and_distances: typing.Collection[ typing.Tuple[ int, int, int ] ] ):
         
         # we need to search the mass of potential duplicates using our search context, but we only want results from within the given pairs
         # to achieve this, we need two layers of clever fast filtering:
@@ -136,7 +147,7 @@ class ClientDBFilesDuplicatesFileSearch( ClientDBModule.ClientDBModule ):
         
         db_location_context = self.modules_files_storage.GetDBLocationContext( file_search_context_1.GetLocationContext() )
         
-        all_media_ids = set( itertools.chain.from_iterable( relevant_pairs ) )
+        all_media_ids = set( itertools.chain.from_iterable( ( ( smaller_media_id, larger_media_id ) for ( smaller_media_id, larger_media_id, distance ) in relevant_pairs_and_distances ) ) )
         
         required_hash_ids = self.modules_files_duplicates.GetKingHashIds( all_media_ids )
         
@@ -146,7 +157,7 @@ class ClientDBFilesDuplicatesFileSearch( ClientDBModule.ClientDBModule ):
         # I threw in the ANALYZE to help the query planner navigate this. we'll see how it is IRL, fingers-crossed we win with three-row tables giving us insta-search
         # trying to insert a forced CROSS JOIN in dynamic join calls here is total wewmode, so tread carefully
         
-        with self._MakeTemporaryIntegerTable( relevant_pairs, ( 'smaller_media_id', 'larger_media_id' ) ) as temp_media_ids_table_name:
+        with self._MakeTemporaryIntegerTable( relevant_pairs_and_distances, ( 'smaller_media_id', 'larger_media_id', 'distance' ) ) as temp_media_ids_table_name:
             
             self._Execute( f'ANALYZE {temp_media_ids_table_name};')
             

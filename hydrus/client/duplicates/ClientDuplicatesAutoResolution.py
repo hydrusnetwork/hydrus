@@ -7,6 +7,7 @@ import typing
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTime
 
@@ -117,15 +118,15 @@ class PairComparatorOneFile( PairComparator ):
         
         if self._looking_at == LOOKING_AT_A:
             
-            return f'A will pass: {self._metadata_conditional.GetSummary()}'
+            return f'A will match: {self._metadata_conditional.GetSummary()}'
             
         elif self._looking_at == LOOKING_AT_B:
             
-            return f'B will pass: {self._metadata_conditional.GetSummary()}'
+            return f'B will match: {self._metadata_conditional.GetSummary()}'
             
         elif self._looking_at == LOOKING_AT_EITHER:
             
-            return f'either will pass: {self._metadata_conditional.GetSummary()}'
+            return f'either will match: {self._metadata_conditional.GetSummary()}'
             
         else:
             
@@ -392,6 +393,11 @@ class DuplicatesAutoResolutionRule( HydrusSerialisable.SerialisableBaseNamed ):
         self._custom_duplicate_content_merge_options = None if serialisable_custom_duplicate_content_merge_options is None else HydrusSerialisable.CreateFromSerialisableTuple( serialisable_custom_duplicate_content_merge_options )
         
     
+    def CanWorkHard( self ):
+        
+        return not self._paused and ( self.HasResolutionWorkToDo() or self.HasSearchWorkToDo() )
+        
+    
     def GetAction( self ) -> int:
         
         return self._action
@@ -481,12 +487,12 @@ class DuplicatesAutoResolutionRule( HydrusSerialisable.SerialisableBaseNamed ):
         
         if not_searched > 0:
             
-            result += f'{not_searched} to search, '
+            result += f'{HydrusNumbers.ToHumanInt( not_searched )} to search, '
             
         
         if not_tested > 0:
             
-            result += f'{not_tested} still to test, '
+            result += f'{HydrusNumbers.ToHumanInt( not_tested )} still to test, '
             
         
         if not_searched + not_tested == 0:
@@ -494,16 +500,16 @@ class DuplicatesAutoResolutionRule( HydrusSerialisable.SerialisableBaseNamed ):
             result += 'Done! '
             
         
-        result += f'{passed_test} pairs resolved'
+        result += f'{HydrusNumbers.ToHumanInt( passed_test )} pairs resolved'
         
         if failed_test > 0:
             
-            result += f' ({failed_test} failed the test)'
+            result += f' ({HydrusNumbers.ToHumanInt( failed_test )} failed the test)'
             
         
         if not_match > 0:
             
-            result += f' ({not_match} did not match the search)'
+            result += f' ({HydrusNumbers.ToHumanInt( not_match )} did not match the search)'
             
         
         return result
@@ -706,6 +712,11 @@ class DuplicatesAutoResolutionManager( ClientDaemons.ManagerWithMainLoop ):
     
     def _AbleToWork( self ):
         
+        if len( self._working_hard_rules ) > 0:
+            
+            return True
+            
+        
         if CG.client_controller.CurrentlyIdle():
             
             if not CG.client_controller.new_options.GetBoolean( 'duplicates_auto_resolution_during_idle' ):
@@ -783,7 +794,10 @@ class DuplicatesAutoResolutionManager( ClientDaemons.ManagerWithMainLoop ):
                 CG.client_controller.pub( 'notify_duplicates_auto_resolution_work_complete' )
                 
             
-            wait_period = self._GetWaitPeriod( work_period, time_it_took, still_work_to_do )
+            with self._lock:
+                
+                wait_period = self._GetWaitPeriod( work_period, time_it_took, still_work_to_do )
+                
             
             self._wake_event.wait( wait_period )
             
@@ -791,7 +805,33 @@ class DuplicatesAutoResolutionManager( ClientDaemons.ManagerWithMainLoop ):
             
         
     
+    def _FilterToWorkingHardRules( self, rules: typing.Collection[ DuplicatesAutoResolutionRule ] ):
+        
+        if len( self._working_hard_rules ) > 0:
+            
+            for rule in rules:
+                
+                if rule in self._working_hard_rules and not rule.CanWorkHard():
+                    
+                    self._working_hard_rules.discard( rule )
+                    
+                
+            
+            if len( self._working_hard_rules ) > 0:
+                
+                rules = [ rule for rule in rules if rule in self._working_hard_rules ]
+                
+            
+        
+        return rules
+        
+    
     def _GetWaitPeriod( self, work_period: float, time_it_took: float, still_work_to_do: bool ):
+        
+        if len( self._working_hard_rules ) > 0:
+            
+            return 0.1
+            
         
         if not still_work_to_do:
             
@@ -822,6 +862,11 @@ class DuplicatesAutoResolutionManager( ClientDaemons.ManagerWithMainLoop ):
         
         rules = CG.client_controller.Read( 'duplicate_auto_resolution_rules_with_counts' )
         
+        with self._lock:
+            
+            rules = self._FilterToWorkingHardRules( rules )
+            
+        
         for rule in rules:
             
             if rule.IsPaused():
@@ -838,7 +883,12 @@ class DuplicatesAutoResolutionManager( ClientDaemons.ManagerWithMainLoop ):
                         self._currently_searching_rule = rule
                         
                     
-                    matching_pairs_produced_here = CG.client_controller.WriteSynchronous( 'duplicate_auto_resolution_do_search_work', rule )
+                    ( still_work_to_do_here, matching_pairs_produced_here ) = CG.client_controller.WriteSynchronous( 'duplicate_auto_resolution_do_search_work', rule )
+                    
+                    if still_work_to_do_here:
+                        
+                        still_work_to_do = True
+                        
                     
                     if matching_pairs_produced_here:
                         
@@ -863,6 +913,11 @@ class DuplicatesAutoResolutionManager( ClientDaemons.ManagerWithMainLoop ):
         if matching_pairs_produced:
             
             rules = CG.client_controller.Read( 'duplicate_auto_resolution_rules_with_counts' )
+            
+            with self._lock:
+                
+                rules = self._FilterToWorkingHardRules( rules )
+                
             
         
         for rule in rules:
@@ -901,6 +956,11 @@ class DuplicatesAutoResolutionManager( ClientDaemons.ManagerWithMainLoop ):
                 
                 return True
                 
+            
+        
+        with self._lock:
+            
+            still_work_to_do = still_work_to_do or len( self._working_hard_rules ) > 0
             
         
         return still_work_to_do
@@ -950,6 +1010,14 @@ class DuplicatesAutoResolutionManager( ClientDaemons.ManagerWithMainLoop ):
             
         
     
+    def GetWorkingHard( self ) -> typing.Collection[ DuplicatesAutoResolutionRule ]:
+        
+        with self._lock:
+            
+            return set( self._working_hard_rules )
+            
+        
+    
     def ResetRuleSearchProgress( self, rules: typing.Collection[ DuplicatesAutoResolutionRule ] ):
         
         for rule in rules:
@@ -962,7 +1030,29 @@ class DuplicatesAutoResolutionManager( ClientDaemons.ManagerWithMainLoop ):
     
     def SetRules( self, rules: typing.Collection[ DuplicatesAutoResolutionRule ] ):
         
+        with self._lock:
+            
+            self._working_hard_rules = set()
+            
+        
         CG.client_controller.Write( 'duplicate_auto_resolution_set_rules', rules )
+        
+        self.Wake()
+        
+    
+    def SetWorkingHard( self, rule: DuplicatesAutoResolutionRule, work_hard: bool ):
+        
+        with self._lock:
+            
+            if work_hard and rule not in self._working_hard_rules and rule.CanWorkHard():
+                
+                self._working_hard_rules.add( rule )
+                
+            elif not work_hard and rule in self._working_hard_rules:
+                
+                self._working_hard_rules.discard( rule )
+                
+            
         
         self.Wake()
         

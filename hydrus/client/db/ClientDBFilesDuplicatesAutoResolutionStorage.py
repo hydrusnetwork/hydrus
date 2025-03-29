@@ -95,7 +95,7 @@ class ClientDBFilesDuplicatesAutoResolutionStorage( ClientDBModule.ClientDBModul
                 
             
         
-        self._Execute( 'UPDATE duplicates_files_auto_resolution_rule_count_cache;' )
+        self._Execute( 'DELETE FROM duplicates_files_auto_resolution_rule_count_cache;' )
         
         CG.client_controller.duplicates_auto_resolution_manager.Wake()
         
@@ -200,7 +200,7 @@ class ClientDBFilesDuplicatesAutoResolutionStorage( ClientDBModule.ClientDBModul
         return list( result.keys() )
         
     
-    def GetUnsearchedPairs( self, rule: ClientDuplicatesAutoResolution.DuplicatesAutoResolutionRule ):
+    def GetUnsearchedPairsAndDistances( self, rule: ClientDuplicatesAutoResolution.DuplicatesAutoResolutionRule, limit = None ):
         
         if not self._have_initialised_rules:
             
@@ -218,7 +218,14 @@ class ClientDBFilesDuplicatesAutoResolutionStorage( ClientDBModule.ClientDBModul
         
         table_name = statuses_to_table_names[ ClientDuplicatesAutoResolution.DUPLICATE_STATUS_NOT_SEARCHED ]
         
-        return self._Execute( f'SELECT smaller_media_id, larger_media_id FROM {table_name};' ).fetchall()
+        if limit is None:
+            
+            return self._Execute( f'SELECT smaller_media_id, larger_media_id, distance FROM {table_name} CROSS JOIN potential_duplicate_pairs USING ( smaller_media_id, larger_media_id );' ).fetchall()
+            
+        else:
+            
+            return self._Execute( f'SELECT smaller_media_id, larger_media_id, distance FROM {table_name} CROSS JOIN potential_duplicate_pairs USING ( smaller_media_id, larger_media_id ) LIMIT ?;', ( limit, ) ).fetchall()
+            
         
     
     def GetTablesAndColumnsThatUseDefinitions( self, content_type: int ) -> typing.List[ typing.Tuple[ str, str ] ]:
@@ -250,6 +257,8 @@ class ClientDBFilesDuplicatesAutoResolutionStorage( ClientDBModule.ClientDBModul
             pairs_stored_in_duplicates_proper = set( pairs_to_sync_to )
             
         
+        all_were_good = True
+        
         with self._MakeTemporaryIntegerTable( pairs_to_sync_to, ( 'smaller_media_id', 'larger_media_id' ) ) as temp_media_ids_table_name:
             
             if pairs_stored_in_duplicates_proper is None:
@@ -264,9 +273,9 @@ class ClientDBFilesDuplicatesAutoResolutionStorage( ClientDBModule.ClientDBModul
                 statuses_to_table_names = GenerateResolutionDecisionTableNames( rule_id )
                 statuses_to_pairs_i_have = collections.defaultdict( set )
                 
-                for ( status, table_name ) in statuses_to_table_names:
+                for ( status, table_name ) in statuses_to_table_names.items():
                     
-                    pairs_i_have = set( self._Execute( f'SELECT smaller_media_id, larger_media_id FROM {temp_media_ids_table_name} CROSS JOIN {table_name} USING ( smaller_media_id, larger_media_id ) );' ) )
+                    pairs_i_have = set( self._Execute( f'SELECT smaller_media_id, larger_media_id FROM {temp_media_ids_table_name} CROSS JOIN {table_name} USING ( smaller_media_id, larger_media_id );' ) )
                     
                     statuses_to_pairs_i_have[ status ] = pairs_i_have
                     
@@ -290,6 +299,8 @@ class ClientDBFilesDuplicatesAutoResolutionStorage( ClientDBModule.ClientDBModul
                         
                         HydrusData.Print( f'During auto-resolution pair-sync, added {HydrusNumbers.ToHumanInt( num_added )} pairs for rule {resolution_rule.GetName()}, ({rule_id}).')
                         
+                        all_were_good = False
+                        
                     
                 
                 for ( status, pairs_i_have ) in statuses_to_pairs_i_have.items():
@@ -311,12 +322,19 @@ class ClientDBFilesDuplicatesAutoResolutionStorage( ClientDBModule.ClientDBModul
                             
                             HydrusData.Print( f'During auto-resolution pair-sync, deleted {HydrusNumbers.ToHumanInt( num_deleted )} pairs for rule {resolution_rule.GetName()} ({rule_id}), status {status} ({ClientDuplicatesAutoResolution.duplicate_status_str_lookup[ status ]}).')
                             
+                            all_were_good = False
+                            
                         
                     
                 
             
         
         self._Execute( 'DELETE FROM duplicates_files_auto_resolution_rule_count_cache;' )
+        
+        if all_were_good:
+            
+            HydrusData.ShowText( 'All the duplicates auto-resolution pairs looked good--no orphans!' )
+            
         
         CG.client_controller.duplicates_auto_resolution_manager.Wake()
         
@@ -327,6 +345,8 @@ class ClientDBFilesDuplicatesAutoResolutionStorage( ClientDBModule.ClientDBModul
             
             self._Reinit()
             
+        
+        all_were_good = True
         
         all_serialised_rule_ids = set( self._rule_ids_to_rules.keys() )
         
@@ -342,6 +362,8 @@ class ClientDBFilesDuplicatesAutoResolutionStorage( ClientDBModule.ClientDBModul
             HydrusData.ShowText( f'Deleted {HydrusNumbers.ToHumanInt( len( orphaned_on_our_side ) )} orphaned auto-resolution rule definitions!' )
             HydrusData.Print( f'Deleted ids: {sorted( orphaned_on_our_side )}')
             
+            all_were_good = False
+            
         
         if len( orphaned_on_object_side ) > 0:
             
@@ -355,8 +377,15 @@ class ClientDBFilesDuplicatesAutoResolutionStorage( ClientDBModule.ClientDBModul
             HydrusData.ShowText( f'Deleted {HydrusNumbers.ToHumanInt( len( orphaned_on_object_side ) )} orphaned auto-resolution rule objects!' )
             HydrusData.Print( f'Deleted names: {sorted( orphaned_object_names )}')
             
+            all_were_good = False
+            
         
         self._Execute( 'DELETE FROM duplicates_files_auto_resolution_rule_count_cache;' )
+        
+        if all_were_good:
+            
+            HydrusData.ShowText( 'All the duplicates auto-resolution rules looked good--no orphans!' )
+            
         
         self._Reinit()
         
