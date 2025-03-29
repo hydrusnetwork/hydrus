@@ -897,7 +897,14 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.Liste
             canvas_frame.SetCanvas( canvas_window )
             
             canvas_window.userRemovedMedia.connect( self.RemoveMedia )
-            canvas_window.exitFocusMedia.connect( self.SetFocusedMedia )
+
+            if CG.client_controller.new_options.GetBoolean( 'focus_media_tab_on_viewer_close_if_possible' ):
+                
+                canvas_window.exitFocusMedia.connect( self.SetFocusedMediaAndFocusTab )
+
+            else:
+
+                canvas_window.exitFocusMedia.connect( self.SetFocusedMedia )
             
         
     
@@ -1732,7 +1739,7 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.Liste
         self._SetDuplicates( HC.DUPLICATE_POTENTIAL, media_group = media_group )
         
     
-    def _SetFocusedMedia( self, media ):
+    def _SetFocusedMedia( self, media, focus_page = False ):
         
         self._next_best_media_if_focuses_removed = None
         
@@ -1780,8 +1787,7 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.Liste
         if self._focused_media is not None:
             
             publish_media = self._focused_media.GetDisplayMedia()
-            
-        
+
         if publish_media is None:
             
             self.focusMediaCleared.emit()
@@ -2562,7 +2568,17 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.Liste
     def SetFocusedMedia( self, media ):
         
         pass
+    
+    def SetFocusedMediaAndFocusTab( self, media ):
+
+        if CG.client_controller.gui.GetPageFromPageKey( self._page_key ) is not None:
         
+            CG.client_controller.gui.ShowPage( self._page_key )
+
+            self.SetFocusedMedia( media )
+            
+            self._PublishSelectionChange()
+            
     
     def get_hmrp_background( self ):
         

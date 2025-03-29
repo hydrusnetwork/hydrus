@@ -5902,6 +5902,10 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._thumbnail_visibility_scroll_percent.setToolTip( ClientGUIFunctions.WrapToolTip( 'Lower numbers will cause fewer scrolls, higher numbers more.' ) )
             
             self._thumbnail_scroll_rate = QW.QLineEdit( thumbnail_interaction_box )
+
+            self._focus_media_tab_on_viewer_close_if_possible = QW.QCheckBox( thumbnail_interaction_box )
+            self._focus_media_tab_on_viewer_close_if_possible.setToolTip( ClientGUIFunctions.WrapToolTip( 'If the tab containing the thumbnail you opened a media viewer from is still open, bring it to the foreground upon media viewer close' ) )
+
             
             #
             
@@ -5933,6 +5937,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._focus_preview_on_ctrl_click_only_static.setChecked( self._new_options.GetBoolean( 'focus_preview_on_ctrl_click_only_static' ) )
             self._focus_preview_on_shift_click.setChecked( self._new_options.GetBoolean( 'focus_preview_on_shift_click' ) )
             self._focus_preview_on_shift_click_only_static.setChecked( self._new_options.GetBoolean( 'focus_preview_on_shift_click_only_static' ) )
+
+            self._focus_media_tab_on_viewer_close_if_possible.setChecked( self._new_options.GetBoolean( 'focus_media_tab_on_viewer_close_if_possible' ) )
             
             self._thumbnail_visibility_scroll_percent.setValue( self._new_options.GetInteger( 'thumbnail_visibility_scroll_percent' ) )
             
@@ -5977,6 +5983,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows.append( ( '  Only on files with no duration: ', self._focus_preview_on_shift_click_only_static ) )
             rows.append( ( 'Do not scroll down on key navigation if thumbnail at least this % visible: ', self._thumbnail_visibility_scroll_percent ) )
             rows.append( ( 'EXPERIMENTAL: Scroll thumbnails at this rate per scroll tick: ', self._thumbnail_scroll_rate ) )
+            rows.append( ( 'Return to the active thumbnail\'s tab after focusing it when closing the media viewer: ', self._focus_media_tab_on_viewer_close_if_possible ) )
             
             gridbox = ClientGUICommon.WrapInGrid( thumbnail_interaction_box, rows )
             
@@ -6030,6 +6037,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._new_options.SetBoolean( 'focus_preview_on_ctrl_click_only_static', self._focus_preview_on_ctrl_click_only_static.isChecked() )
             self._new_options.SetBoolean( 'focus_preview_on_shift_click', self._focus_preview_on_shift_click.isChecked() )
             self._new_options.SetBoolean( 'focus_preview_on_shift_click_only_static', self._focus_preview_on_shift_click_only_static.isChecked() )
+            
+            self._new_options.SetBoolean( 'focus_media_tab_on_viewer_close_if_possible', self._focus_media_tab_on_viewer_close_if_possible.isChecked() )
             
             self._new_options.SetBoolean( 'allow_blurhash_fallback', self._allow_blurhash_fallback.isChecked() )
             
