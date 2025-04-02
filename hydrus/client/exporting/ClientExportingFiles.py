@@ -544,6 +544,8 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
         
         sync_paths = set()
         
+        sidecar_paths_that_did_not_exist_before_this_run = set()
+        
         client_files_manager = CG.client_controller.client_files_manager
         
         num_actually_copied = 0
@@ -660,9 +662,16 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
                 
                 if isinstance( metadata_exporter, ClientMetadataMigrationExporters.SingleFileMetadataExporterSidecar ):
                     
+                    # we have to be careful with path.exists regarding multiple routers going to one sidecar
+                    
                     sidecar_path = metadata_exporter.GetExportPath( dest_path )
                     
                     if not os.path.exists( sidecar_path ):
+                        
+                        sidecar_paths_that_did_not_exist_before_this_run.add( sidecar_path )
+                        
+                    
+                    if sidecar_path in sidecar_paths_that_did_not_exist_before_this_run:
                         
                         metadata_router.Work( media_result, dest_path )
                         

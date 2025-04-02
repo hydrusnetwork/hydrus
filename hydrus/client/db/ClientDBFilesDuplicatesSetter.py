@@ -32,9 +32,9 @@ class ClientDBFilesDuplicatesSetter( ClientDBModule.ClientDBModule ):
         return tables_and_columns
         
     
-    def SetDuplicatePairStatus( self, pair_info ):
+    def SetDuplicatePairStatus( self, pair_infos ):
         
-        for ( duplicate_type, hash_a, hash_b, content_update_packages ) in pair_info:
+        for ( duplicate_type, hash_a, hash_b, content_update_packages ) in pair_infos:
             
             for content_update_package in content_update_packages:
                 

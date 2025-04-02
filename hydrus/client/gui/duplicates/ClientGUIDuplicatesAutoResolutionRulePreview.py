@@ -11,298 +11,15 @@ from hydrus.core import HydrusNumbers
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientLocation
-from hydrus.client import ClientRendering
 from hydrus.client.duplicates import ClientDuplicatesAutoResolution
 from hydrus.client.gui import ClientGUIAsync
 from hydrus.client.gui import ClientGUIFunctions
+from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.canvas import ClientGUICanvas
 from hydrus.client.gui.canvas import ClientGUICanvasFrame
+from hydrus.client.gui.duplicates import ThumbnailPairList
 from hydrus.client.gui.widgets import ClientGUICommon
-from hydrus.client.media import ClientMediaResult
-
-class ThumbnailPairListModel( QC.QAbstractTableModel ):
-    
-    def __init__( self ):
-        
-        super().__init__( None )
-        
-        self._data_rows = []
-        
-        self._media_results_to_thumbnail_pixmaps = {}
-        self._media_results_being_loaded = set()
-        
-    
-    def rowCount(self, parent = QC.QModelIndex() ):
-        
-        return len( self._data_rows )
-        
-    
-    def columnCount(self, parent = QC.QModelIndex() ):
-        
-        raise NotImplemented()
-        
-    
-    def data( self, index: QC.QModelIndex, role: QC.Qt.ItemDataRole.DisplayRole ):
-        
-        if not index.isValid():
-            
-            return None
-            
-        
-        row = index.row()
-        col = index.column()
-        
-        if role == QC.Qt.ItemDataRole.DecorationRole and col <= 1:
-            
-            media_result = self._data_rows[ row ][ col ]
-            
-            if media_result in self._media_results_to_thumbnail_pixmaps:
-                
-                return self._media_results_to_thumbnail_pixmaps[ media_result ]
-                
-            else:
-                
-                self._LoadMediaResultThumbnailPixmap( index, media_result )
-                
-            
-        
-        return None
-        
-    
-    def _LoadMediaResultThumbnailPixmap( self, index: QC.QModelIndex, media_result: ClientMediaResult.MediaResult ):
-        
-        if media_result in self._media_results_being_loaded:
-            
-            return
-            
-        
-        self._media_results_being_loaded.add( media_result )
-        
-        def work_callable():
-            
-            thumbnail_hydrus_bmp = CG.client_controller.GetCache( 'thumbnail' ).GetThumbnail( media_result )
-            
-            return thumbnail_hydrus_bmp
-            
-        
-        def publish_callable( thumbnail_hydrus_bmp: ClientRendering.HydrusBitmap ):
-            
-            pixmap = thumbnail_hydrus_bmp.GetQtPixmap()
-            
-            self._media_results_to_thumbnail_pixmaps[ media_result ] = pixmap
-            
-            row = index.row()
-            col = index.column()
-            
-            try:
-                
-                current_media_result_at_this_position = self._data_rows[ row ][ col ]
-                
-                if current_media_result_at_this_position != media_result:
-                    
-                    raise Exception()
-                    
-                
-            except:
-                
-                return
-                
-            
-            self.dataChanged.emit( index, index, [ QC.Qt.ItemDataRole.DecorationRole ] )
-            
-        
-        job = ClientGUIAsync.AsyncQtJob( self, work_callable, publish_callable )
-        
-        job.start()
-        
-    
-    def GetMediaResultPair( self, row: int ):
-        
-        r = self._data_rows[ row ]
-        
-        return ( r[0], r[1] )
-        
-    
-    def SetData( self, data_rows ):
-        
-        self.beginResetModel()
-        self._data_rows = data_rows
-        self.endResetModel()
-        
-    
-
-class ThumbnailPairListModelFails( ThumbnailPairListModel ):
-    
-    def columnCount(self, parent = QC.QModelIndex() ):
-        
-        return 2
-        
-    
-
-class ThumbnailPairListModelPasses( ThumbnailPairListModel ):
-    
-    def columnCount(self, parent = QC.QModelIndex() ):
-        
-        return 3
-        
-    
-    def data( self, index: QC.QModelIndex, role: QC.Qt.ItemDataRole.DisplayRole ):
-        
-        if not index.isValid():
-            
-            return None
-            
-        
-        row = index.row()
-        col = index.column()
-        
-        if role == QC.Qt.ItemDataRole.DisplayRole:
-            
-            if col == 2:
-                
-                fixed_order = self._data_rows[ row ][ col ]
-                
-                if fixed_order:
-                    
-                    return 'yes'
-                    
-                else:
-                    
-                    return 'no, could be either way'
-                    
-                
-            
-        
-        return super().data( index, role )
-        
-    
-    def headerData( self, section: int, orientation: QC.Qt.Orientation, role = QC.Qt.ItemDataRole.DisplayRole ):
-        
-        if orientation == QC.Qt.Orientation.Horizontal and role == QC.Qt.ItemDataRole.DisplayRole:
-            
-            if section == 0:
-                
-                return 'A'
-                
-            elif section == 1:
-                
-                return 'B'
-                
-            else:
-                
-                return 'certain on this order?'
-                
-            
-        else:
-            
-            return super().headerData( section, orientation, role = role )
-            
-        
-    
-
-class ThumbnailPairList( QW.QTableView ):
-    
-    def __init__( self, parent, model: ThumbnailPairListModel ):
-        
-        super().__init__( parent )
-        
-        self.setModel( model )
-        
-        self.verticalHeader().setVisible( False )
-        
-        self.setSelectionBehavior( QW.QAbstractItemView.SelectionBehavior.SelectRows )
-        self.setSelectionMode( QW.QAbstractItemView.SelectionMode.SingleSelection )
-        
-        ( thumbnail_width, thumbnail_height ) = HC.options[ 'thumbnail_dimensions' ]
-        
-        self.verticalHeader().setDefaultSectionSize( thumbnail_height )
-        self.verticalHeader().setSectionResizeMode( QW.QHeaderView.ResizeMode.Fixed )
-        
-        self.setVerticalScrollMode( QW.QAbstractItemView.ScrollMode.ScrollPerItem )
-        self.verticalScrollBar().setSingleStep( 1 )
-        
-        self.horizontalHeader().setDefaultSectionSize( thumbnail_width )
-        
-        self.setColumnWidth( 0, thumbnail_width )
-        
-        column_count = model.columnCount()
-        
-        for i in range( column_count ):
-            
-            if i == column_count - 1:
-                
-                self.horizontalHeader().setSectionResizeMode( i, QW.QHeaderView.ResizeMode.Stretch )
-                
-            else:
-                
-                self.horizontalHeader().setSectionResizeMode( i, QW.QHeaderView.ResizeMode.Fixed )
-                
-            
-        
-        my_width = thumbnail_width * model.columnCount() + 24
-        
-        self.setMinimumSize( QC.QSize( my_width, thumbnail_height * 2 ) )
-        
-    
-    def SetData( self, tuples_of_data ):
-        
-        self.model().SetData( tuples_of_data )
-        
-    
-
-class ThumbnailPairListFails( ThumbnailPairList ):
-    
-    def __init__( self, parent ):
-        
-        super().__init__( parent, ThumbnailPairListModelFails() )
-        
-        self.horizontalHeader().setVisible( False )
-        
-    
-
-class ThumbnailPairListPasses( ThumbnailPairList ):
-    
-    def __init__( self, parent ):
-        
-        super().__init__( parent, ThumbnailPairListModelPasses() )
-        
-    
-
-class ListEnterCatcher( QC.QObject ):
-    
-    def __init__( self, parent, thumbnail_pair_list: ThumbnailPairList ):
-        
-        self._thumbnail_pair_list = thumbnail_pair_list
-        
-        super().__init__( parent )
-        
-        self._thumbnail_pair_list.installEventFilter( self )
-        
-    
-    def eventFilter( self, obj, event ):
-        
-        # we can't use the normal activated guy since this appears to not stop enter propagation, allowing the dialog to close immediately after lol
-        # this signals to stop event propagation
-        
-        if event.type() == QC.QEvent.Type.KeyPress:
-            
-            if event.key() in ( QC.Qt.Key.Key_Return, QC.Qt.Key.Key_Enter ):
-                
-                current_index = self._thumbnail_pair_list.currentIndex()
-                
-                if current_index.isValid():
-                    
-                    self._thumbnail_pair_list.activated.emit( current_index )
-                    
-                
-                return True
-                
-            
-        
-        return False
-        
-    
 
 class PreviewPanel( ClientGUICommon.StaticBox ):
     
@@ -316,7 +33,7 @@ class PreviewPanel( ClientGUICommon.StaticBox ):
         
         self._num_pairs = 0
         self._fetched_pairs = []
-        self._ab_pairs_that_pass_with_fixed_order_info = []
+        self._ab_pairs_that_pass = []
         self._pairs_that_fail = []
         
         self._search_panel = ClientGUICommon.StaticBox( self, 'search' )
@@ -338,21 +55,21 @@ class PreviewPanel( ClientGUICommon.StaticBox ):
         
         #
         
-        self._pass_panel = ClientGUICommon.StaticBox( self, 'pairs that will be actioned' )
+        self._pass_panel = ClientGUICommon.StaticBox( self, 'pairs that will be actioned', can_expand = True, start_expanded = True )
         
         self._pass_pairs_label = ClientGUICommon.BetterStaticText( self, label = 'ready to generate preview' )
         self._pass_pairs_label.setWordWrap( True )
         
-        self._pass_pairs_list = ThumbnailPairListPasses( self._pass_panel )
+        self._pass_pairs_list = ThumbnailPairList.ThumbnailPairListPreviewPendingAutoResolutionAction( self._pass_panel, ClientDuplicatesAutoResolution.DuplicatesAutoResolutionRule( 'initialising' ) )
         
         #
         
-        self._fail_panel = ClientGUICommon.StaticBox( self, 'pairs that will be skipped' )
+        self._fail_panel = ClientGUICommon.StaticBox( self, 'pairs that will be skipped', can_expand = True, start_expanded = True )
         
         self._fail_pairs_label = ClientGUICommon.BetterStaticText( self, label = 'ready to generate preview' )
         self._fail_pairs_label.setWordWrap( True )
         
-        self._fail_pairs_list = ThumbnailPairListFails( self._fail_panel )
+        self._fail_pairs_list = ThumbnailPairList.ThumbnailPairListJustThumbs( self._fail_panel )
         
         #
         
@@ -400,8 +117,8 @@ class PreviewPanel( ClientGUICommon.StaticBox ):
         self._pass_pairs_list.activated.connect( self._PassRowActivated )
         self._fail_pairs_list.activated.connect( self._FailRowActivated )
         
-        self._enter_catcher_pass = ListEnterCatcher( self, self._pass_pairs_list )
-        self._enter_catcher_fail = ListEnterCatcher( self, self._fail_pairs_list )
+        self._enter_catcher_pass = ThumbnailPairList.ListEnterCatcher( self, self._pass_pairs_list )
+        self._enter_catcher_fail = ThumbnailPairList.ListEnterCatcher( self, self._fail_pairs_list )
         
     
     def _FailRowActivated( self, model_index: QC.QModelIndex ):
@@ -521,7 +238,7 @@ class PreviewPanel( ClientGUICommon.StaticBox ):
     
     def _ResetTestPairsAppearance( self ):
         
-        self._ab_pairs_that_pass_with_fixed_order_info = []
+        self._ab_pairs_that_pass = []
         self._pairs_that_fail = []
         
         self._pass_pairs_list.SetData( [] )
@@ -541,19 +258,21 @@ class PreviewPanel( ClientGUICommon.StaticBox ):
             return
             
         
+        rule = self._value
         selector = self._value.GetPairSelector()
         
         fetched_pairs = self._fetched_pairs
         
         def work_callable():
             
-            ab_pairs_that_pass_with_fixed_order_info = []
+            ab_pairs_that_pass = []
             pairs_that_fail = []
             
             for pair in fetched_pairs:
                 
                 ( media_result_one, media_result_two ) = pair
                 
+                # TODO: Argh this will be slow. We need to figure out a better stream here then. incremental addition or something like it
                 result = selector.GetMatchingAB( media_result_one, media_result_two )
                 
                 if result is None:
@@ -562,22 +281,19 @@ class PreviewPanel( ClientGUICommon.StaticBox ):
                     
                 else:
                     
-                    ( media_result_one, media_result_two ) = result # this might be either order, if not fixed_order mate, so let's show that in UI
-                    
-                    fixed_order = not selector.PairMatchesBothWaysAround( media_result_one, media_result_two )
-                    
-                    ab_pairs_that_pass_with_fixed_order_info.append( ( media_result_one, media_result_two, fixed_order ) )
+                    ab_pairs_that_pass.append( pair )
                     
                 
             
-            return ( ab_pairs_that_pass_with_fixed_order_info, pairs_that_fail )
+            return ( ab_pairs_that_pass, pairs_that_fail )
             
         
         def publish_callable( result ):
             
-            ( self._ab_pairs_that_pass_with_fixed_order_info, self._pairs_that_fail ) = result
+            ( self._ab_pairs_that_pass, self._pairs_that_fail ) = result
             
-            self._pass_pairs_list.SetData( self._ab_pairs_that_pass_with_fixed_order_info )
+            self._pass_pairs_list.model().SetRule( self._value )
+            self._pass_pairs_list.SetData( self._ab_pairs_that_pass )
             self._fail_pairs_list.SetData( self._pairs_that_fail )
             
             self._UpdateTestLabels()
@@ -603,6 +319,16 @@ class PreviewPanel( ClientGUICommon.StaticBox ):
         page_key = HydrusData.GenerateKey()
         location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY )
         media_results = [ media_result_1, media_result_2 ]
+        
+        media_results = [ mr for mr in media_results if mr.GetLocationsManager().IsLocal() ]
+        
+        if len( media_results ) == 0:
+            
+            ClientGUIDialogsMessage.ShowWarning( self, 'Sorry, but neither of those files is local (they were probably deleted), so they cannot be displayed in the media viewer!' )
+            
+            return
+            
+        
         first_hash = media_result_1.GetHash()
         
         canvas_window = ClientGUICanvas.CanvasMediaListBrowser( canvas_frame, page_key, location_context, media_results, first_hash )
@@ -633,13 +359,13 @@ class PreviewPanel( ClientGUICommon.StaticBox ):
     
     def _UpdateTestLabels( self ):
         
-        if len( self._ab_pairs_that_pass_with_fixed_order_info ) == 0:
+        if len( self._ab_pairs_that_pass ) == 0:
             
             label = 'None!'
             
         else:
             
-            label = f'{HydrusNumbers.ToHumanInt(len(self._ab_pairs_that_pass_with_fixed_order_info))} pairs - double-click to open a media viewer'
+            label = f'{HydrusNumbers.ToHumanInt(len(self._ab_pairs_that_pass))} pairs - double-click to open a media viewer'
             
         
         self._pass_pairs_label.setText( label )

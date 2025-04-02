@@ -1897,7 +1897,15 @@ class DB( HydrusDB.HydrusDB ):
         
         #
         
-        total_alternate_files = sum( ( count for ( alternates_group_id, count ) in self._Execute( f'SELECT alternates_group_id, COUNT( * ) FROM {current_files_table_name} CROSS JOIN duplicate_file_members USING ( hash_id ) CROSS JOIN alternate_file_group_members USING ( media_id ) GROUP BY alternates_group_id;' ) if count > 1 ) )
+        # first grab all the alternate groups that actually have more than one media id in them
+        useful_alternates_group_ids = { alternates_group_id for ( alternates_group_id, count ) in self._Execute( f'SELECT alternates_group_id, COUNT( * ) FROM duplicate_files CROSS JOIN alternate_file_group_members USING ( media_id ) GROUP BY alternates_group_id;' ) if count > 1 }
+        
+        boned_stats[ 'total_alternate_groups' ] = len( useful_alternates_group_ids )
+        
+        with self._MakeTemporaryIntegerTable( useful_alternates_group_ids, 'alternates_group_id' ) as temp_alternates_group_ids_table_name:
+            
+            total_alternate_files = sum( ( count for ( alternates_group_id, count ) in self._Execute( f'SELECT alternates_group_id, COUNT( * ) FROM {current_files_table_name} CROSS JOIN duplicate_file_members USING ( hash_id ) CROSS JOIN alternate_file_group_members USING ( media_id ) CROSS JOIN {temp_alternates_group_ids_table_name} USING ( alternates_group_id ) GROUP BY alternates_group_id;' ) if count > 1 ) )
+            
         
         boned_stats[ 'total_alternate_files' ] = total_alternate_files
         
@@ -3821,6 +3829,8 @@ class DB( HydrusDB.HydrusDB ):
             {
                 'boned_stats' : self._GetBonedStats,
                 'duplicate_pairs_for_filtering' : self.modules_files_duplicates_file_query.GetPotentialDuplicatePairsForFiltering,
+                'duplicates_auto_resolution_actioned_pairs' : self.modules_files_duplicates_auto_resolution_search.GetActionedPairs,
+                'duplicates_auto_resolution_pending_action_pairs' : self.modules_files_duplicates_auto_resolution_search.GetPendingActionPairs,
                 'file_history' : self._GetFileHistory,
                 'file_info_managers' : self.modules_media_results.GetFileInfoManagersFromHashes,
                 'file_info_managers_from_ids' : self.modules_media_results.GetFileInfoManagers,
@@ -3856,7 +3866,6 @@ class DB( HydrusDB.HydrusDB ):
                 'deferred_delete_data' : self.modules_db_maintenance.GetDeferredDeleteTableData,
                 'deferred_physical_delete' : self.modules_files_storage.GetDeferredPhysicalDelete,
                 'duplicate_auto_resolution_rules_with_counts' : self.modules_files_duplicates_auto_resolution_storage.GetRulesWithCounts,
-                'duplicate_auto_resolution_reset_rule_search_progress' : self.modules_files_duplicates_auto_resolution_storage.ResetRuleSearchProgress,
                 'file_duplicate_hashes' : self.modules_files_duplicates.GetFileHashesByDuplicateType,
                 'file_duplicate_info' : self.modules_files_duplicates.GetFileDuplicateInfo,
                 'file_hashes' : self.modules_hashes.GetFileHashes,
@@ -3968,11 +3977,15 @@ class DB( HydrusDB.HydrusDB ):
                 'dissolve_alternates_group' : self.modules_files_duplicates.DissolveAlternatesGroupIdFromHashes,
                 'dissolve_duplicates_group' : self.modules_files_duplicates.DissolveMediaIdFromHashes,
                 'do_deferred_table_delete_work' : self.modules_db_maintenance.DoDeferredDeleteTablesWork,
+                'duplicate_auto_resolution_approve_pending_pairs' : self.modules_files_duplicates_auto_resolution_search.ApprovePendingPairs,
+                'duplicate_auto_resolution_deny_pending_pairs' : self.modules_files_duplicates_auto_resolution_search.DenyPendingPairs,
                 'duplicate_auto_resolution_do_resolution_work' : self.modules_files_duplicates_auto_resolution_search.DoResolutionWork,
                 'duplicate_auto_resolution_do_search_work' : self.modules_files_duplicates_auto_resolution_search.DoSearchWork,
                 'duplicate_auto_resolution_maintenance_fix_orphan_rules' : self.modules_files_duplicates_auto_resolution_storage.MaintenanceFixOrphanRules,
-                'duplicate_auto_resolution_maintenance_fix_orphan_pairs' : self.modules_files_duplicates_auto_resolution_storage.MaintenanceFixOrphanPairs,
+                'duplicate_auto_resolution_maintenance_fix_orphan_potential_pairs' : self.modules_files_duplicates_auto_resolution_storage.MaintenanceFixOrphanPotentialPairs,
                 'duplicate_auto_resolution_reset_rule_search_progress' : self.modules_files_duplicates_auto_resolution_storage.ResetRuleSearchProgress,
+                'duplicate_auto_resolution_reset_rule_test_progress' : self.modules_files_duplicates_auto_resolution_storage.ResetRuleTestProgress,
+                'duplicate_auto_resolution_reset_rule_declined' : self.modules_files_duplicates_auto_resolution_storage.ResetRuleDeclined,
                 'duplicate_auto_resolution_set_rules' : self.modules_files_duplicates_auto_resolution_storage.SetRules,
                 'duplicate_set_king' : self.modules_files_duplicates.SetKingFromHash,
                 'file_maintenance_add_jobs' : self.modules_files_maintenance_queue.AddJobs,
@@ -9324,6 +9337,138 @@ class DB( HydrusDB.HydrusDB ):
                 
                 self.pub_initial_message( message )
                 
+            
+        
+        if version == 615:
+            
+            found_some = False
+            
+            from hydrus.client.duplicates import ClientDuplicatesAutoResolution
+            
+            if self._TableExists( 'main.duplicate_files_auto_resolution_rules' ):
+                
+                try:
+                    
+                    result = self._Execute( 'SELECT actioned_pair_count FROM duplicate_files_auto_resolution_rules;' ).fetchone()
+                    
+                    do_it = True
+                    
+                except:
+                    
+                    do_it = False
+                    
+                
+                if do_it:
+                    
+                    rule_ids = self._STS( self._Execute( 'SELECT rule_id FROM duplicate_files_auto_resolution_rules;' ) )
+                    
+                    for rule_id in rule_ids:
+                        
+                        found_some = True
+                        
+                        table_core = f'duplicate_files_auto_resolution_pair_decisions_{rule_id}'
+                        
+                        for status in (
+                            ClientDuplicatesAutoResolution.DUPLICATE_STATUS_NOT_SEARCHED,
+                            ClientDuplicatesAutoResolution.DUPLICATE_STATUS_MATCHES_SEARCH_BUT_NOT_TESTED,
+                            ClientDuplicatesAutoResolution.DUPLICATE_STATUS_DOES_NOT_MATCH_SEARCH,
+                            ClientDuplicatesAutoResolution.DUPLICATE_STATUS_MATCHES_SEARCH_FAILED_TEST,
+                            ClientDuplicatesAutoResolution.DUPLICATE_STATUS_ACTIONED
+                        ):
+                            
+                            table_name = f'{table_core}_{status}'
+                            
+                            self._Execute( f'DROP TABLE IF EXISTS {table_name};' )
+                            
+                        
+                    
+                    self._Execute( 'DROP TABLE duplicate_files_auto_resolution_rules;' )
+                    
+                    self._Execute( 'DELETE FROM duplicates_files_auto_resolution_rule_count_cache;' )
+                    
+                    self.modules_serialisable.DeleteJSONDumpNamed( HydrusSerialisable.SERIALISABLE_TYPE_DUPLICATES_AUTO_RESOLUTION_RULE )
+                    
+                    if found_some:
+                        
+                        def notify_deleting_auto_resolution_rules():
+                            
+                            message = 'Hey, it looks like you participated in the duplicates auto-resolution test--thank you!\n\nUnfortunately, I have made some database changes that are incompatible with the old system, and I have to delete the old jpeg/png rule now. Sorry!'
+                            
+                            from hydrus.client.gui import ClientGUIDialogsMessage
+                            
+                            ClientGUIDialogsMessage.ShowInformation( None, message )
+                            
+                        
+                        self._controller.CallBlockingToQt( None, notify_deleting_auto_resolution_rules )
+                        
+                    
+                    self._Execute( 'CREATE TABLE IF NOT EXISTS main.duplicate_files_auto_resolution_rules ( rule_id INTEGER PRIMARY KEY );' )
+                    
+                
+            
+            #
+            
+            try:
+                
+                domain_manager = self.modules_serialisable.GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
+                
+                domain_manager.Initialise()
+                
+                #
+                
+                domain_manager.OverwriteDefaultGUGs( [
+                    'e6ai tag search',
+                    'e621 tag search',
+                    'e926 tag search'
+                ] )
+                
+                domain_manager.OverwriteDefaultParsers( [
+                    'e621 file page api parser',
+                    'e621 gallery page api parser',
+                    'e621 pool api parser'
+                ] )
+                
+                domain_manager.OverwriteDefaultURLClasses( [
+                    'e6ai file page api',
+                    'e6ai file page',
+                    'e6ai gallery page api',
+                    'e6ai gallery page',
+                    'e6ai pools page api',
+                    'e6ai pools page',
+                    'e621 file page api',
+                    'e621 file page',
+                    'e621 gallery page api',
+                    'e621 gallery page',
+                    'e621 pools page api',
+                    'e621 pools page',
+                    'e926 file page api',
+                    'e926 file page',
+                    'e926 gallery page api',
+                    'e926 gallery page',
+                    'e926 pools page api',
+                    'e926 pools page'
+                ] )
+                
+                #
+                
+                domain_manager.TryToLinkURLClassesAndParsers()
+                
+                #
+                
+                self.modules_serialisable.SetJSONDump( domain_manager )
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to update some downloader objects failed! Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
+                
+            
+            message = 'Hey, if you have any e621 subscriptions, the downloader is fixed this week--it recently stopped getting tags. You do not have to do anything.\n\nYour e621 subs will seem to find ~100 files the next time they run and then work through them real quick. There is nothing wrong--they are adapting, one time, to a new URL format. If you changed your e621 subscription to have a very high "normal checks" file limit, go edit them right now! 100 is proper.'
+            
+            self.pub_initial_message( message )
             
         
         self._controller.frame_splash_status.SetTitleText( 'updated db to v{}'.format( HydrusNumbers.ToHumanInt( version + 1 ) ) )

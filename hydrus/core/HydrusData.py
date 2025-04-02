@@ -389,7 +389,7 @@ def PrintExceptionTuple( etype, value, tb, do_wait = True ):
     
     if tb is None:
         
-        trace = 'No error trace--here is the stack:' + '\n' + ''.join( traceback.format_stack() )
+        trace = 'No error trace!'
         
     else:
         
@@ -404,8 +404,7 @@ def PrintExceptionTuple( etype, value, tb, do_wait = True ):
     
     stack = stack.rstrip()
     
-    message = f'''
-================ Exception ================
+    message = f'''================ Exception ================
 {etype.__name__}: {value}
 ================ Traceback ================
 {trace}
@@ -413,12 +412,14 @@ def PrintExceptionTuple( etype, value, tb, do_wait = True ):
 {stack}
 =================== End ==================='''
     
-    DebugPrint( message )
+    DebugPrint( '\n' + message )
     
     if do_wait:
         
         time.sleep( 0.2 )
         
+    
+    return message
     
 
 ShowException = PrintException

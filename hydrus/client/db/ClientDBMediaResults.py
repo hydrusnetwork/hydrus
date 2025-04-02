@@ -1,4 +1,5 @@
 import collections
+import itertools
 import sqlite3
 import typing
 
@@ -541,6 +542,23 @@ class ClientDBMediaResults( ClientDBModule.ClientDBModule ):
             
         
         return media_results
+        
+    
+    def GetMediaResultPairs( self, pairs_of_hash_ids ):
+        
+        all_hash_ids = set( itertools.chain.from_iterable( pairs_of_hash_ids ) )
+        
+        media_results = self.GetMediaResults( all_hash_ids )
+        
+        hash_ids_to_media_results = { media_result.GetHashId() : media_result for media_result in media_results }
+        
+        media_result_pairs = [
+            ( hash_ids_to_media_results[ hash_id_a ], hash_ids_to_media_results[ hash_id_b ] )
+            for ( hash_id_a, hash_id_b )
+            in pairs_of_hash_ids
+        ]
+        
+        return media_result_pairs
         
     
     def GetMediaResultFromHash( self, hash ) -> ClientMediaResult.MediaResult:

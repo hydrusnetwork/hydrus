@@ -239,8 +239,10 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
     def _ShowHitPeriodicFileLimitMessage( self, query_name: int, query_text: int, file_limit: int ):
         
         message = 'The query "{}" for subscription "{}" found {} new URLs without running into any it had seen before.'.format( query_name, self._name, file_limit )
-        message += '\n'
-        message += 'Either a user uploaded a lot of files to that query in a short period, in which case there is a gap in your subscription you may wish to fill, or the site has just changed its URL format, in which case you may see several of these messages for this site over the coming weeks, and you should ignore them.'
+        message += '\n\n'
+        message += 'It is likely that a user probably uploaded a lot of files to that query in a short period, in which case there is now a gap in your subscription that you may wish to fill.'
+        message += '\n\n'
+        message += 'If you get many of these messages, one for every subscription query for the site, and the gap downloaders find no new files, then the site has changed URL format in a subtle way and the subscription checker was unable to recognise it (in which case, if the subscription appears to be working, you can ignore any more of these messages).'
         
         call = HydrusData.Call( CG.client_controller.pub, 'make_new_subscription_gap_downloader', self._gug_key_and_name, query_text, self._file_import_options.Duplicate(), self._tag_import_options.Duplicate(), self._note_import_options, file_limit * 5 )
         
@@ -560,9 +562,43 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                                             
                                         else:
                                             
-                                            self._ShowHitPeriodicFileLimitMessage( query_name, query_text, file_limit_for_this_sync )
+                                            do_periodic_message = True
                                             
-                                            stop_reason = 'hit periodic file limit without seeing any already-seen files!'
+                                            try:
+                                                
+                                                result = file_seed_cache.GetFirstFileSeed()
+                                                
+                                                if result is not None:
+                                                    
+                                                    # we check multiple url classes to better handle an NGUG that's hitting multiple sites
+                                                    old_url_class = CG.client_controller.network_engine.domain_manager.GetURLClass( result.file_seed_data )
+                                                    new_url_classes = { CG.client_controller.network_engine.domain_manager.GetURLClass( file_seed.file_seed_data ) for file_seed in file_seeds_to_add_in_this_sync_ordered }
+                                                    
+                                                    # ok looks like the downloader switched url format. this is a small issue but not a problem the user needs to be informed of
+                                                    if old_url_class not in new_url_classes:
+                                                        
+                                                        do_periodic_message = False
+                                                        
+                                                    
+                                                
+                                            except Exception as e:
+                                                
+                                                HydrusData.Print( 'While trying to compare subscription seed url classes, encountered this error:' )
+                                                HydrusData.PrintException( e, do_wait = False )
+                                                
+                                            
+                                            if do_periodic_message:
+                                                
+                                                self._ShowHitPeriodicFileLimitMessage( query_name, query_text, file_limit_for_this_sync )
+                                                
+                                                stop_reason = 'hit periodic file limit without seeing any already-seen files!'
+                                                
+                                            else:
+                                                
+                                                HydrusData.Print( f'The query "{query_name}" for subscription "{self._name}" found {file_limit_for_this_sync} new URLs without running into any it had seen before. I do not think this needs a gap downloader because the url class appears to have changed.' )
+                                                
+                                                stop_reason = 'hit periodic file limit after url class appeared to change. sub may spend some extra time catching up'
+                                                
                                             
                                         
                                     

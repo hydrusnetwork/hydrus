@@ -24,6 +24,7 @@ from hydrus.client.gui import ClientGUIMenus
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.duplicates import ClientGUIDuplicatesAutoResolutionRulePreview
+from hydrus.client.gui.duplicates import ClientGUIDuplicatesAutoResolutionRuleReview
 from hydrus.client.gui.duplicates import ClientGUIDuplicatesContentMergeOptions
 from hydrus.client.gui.duplicates import ClientGUIPotentialDuplicatesSearchContext
 from hydrus.client.gui.lists import ClientGUIListConstants as CGLC
@@ -78,7 +79,13 @@ class EditDuplicatesAutoResolutionRulesPanel( ClientGUIScrolledPanels.EditPanel 
         
         QP.AddToLayout( vbox, help_hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
         
-        st = ClientGUICommon.BetterStaticText( self, 'Hey, I am launching this system this week, but only for the one test rule (hit "add suggested" to get it)! Let me know how it goes!' )
+        st_warning = ClientGUICommon.BetterStaticText( self, 'THIS IS AN ADVANCED SYSTEM. READ THE HELP DOCUMENTATION. DO NOT CREATE A NEW RULE WITHOUT UNDERSTANDING AND PREVIEWING WHAT IT WILL DO' )
+        st_warning.setWordWrap( True )
+        st_warning.setObjectName( 'HydrusWarning' )
+        st_warning.setAlignment( QC.Qt.AlignmentFlag.AlignCenter )
+        QP.AddToLayout( vbox, st_warning, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        st = ClientGUICommon.BetterStaticText( self, 'Hey, I am launching this system, but only for the one test rule (hit "add suggested" to get it)! Let me know how it goes!' )
         st.setWordWrap( True )
         QP.AddToLayout( vbox, st, CC.FLAGS_EXPAND_PERPENDICULAR )
         
@@ -138,11 +145,11 @@ class EditDuplicatesAutoResolutionRulesPanel( ClientGUIScrolledPanels.EditPanel 
         action_summary = duplicates_auto_resolution_rule.GetActionSummary()
         search_status = duplicates_auto_resolution_rule.GetSearchSummary()
         
-        paused = duplicates_auto_resolution_rule.IsPaused()
+        operation_mode = duplicates_auto_resolution_rule.GetOperationMode()
         
-        pretty_paused = 'yes' if paused else ''
+        pretty_operation_mode = ClientDuplicatesAutoResolution.duplicates_auto_resolution_rule_operation_mode_str_lookup[ operation_mode ]
         
-        return ( name, rule_summary, pair_selector_summary, action_summary, search_status, pretty_paused )
+        return ( name, rule_summary, pair_selector_summary, action_summary, search_status, pretty_operation_mode )
         
     
     _ConvertRuleToSortTuple = _ConvertRuleToDisplayTuple
@@ -210,7 +217,16 @@ class EditDuplicatesAutoResolutionRulePanel( ClientGUIScrolledPanels.EditPanel )
         
         self._name = QW.QLineEdit( self._rule_panel )
         
-        self._paused = QW.QCheckBox( self._rule_panel )
+        self._operation_mode = ClientGUICommon.BetterChoice( self._rule_panel )
+        
+        for operation_mode in [
+            ClientDuplicatesAutoResolution.DUPLICATES_AUTO_RESOLUTION_RULE_OPERATION_MODE_PAUSED,
+            ClientDuplicatesAutoResolution.DUPLICATES_AUTO_RESOLUTION_RULE_OPERATION_MODE_WORK_BUT_NO_ACTION,
+            ClientDuplicatesAutoResolution.DUPLICATES_AUTO_RESOLUTION_RULE_OPERATION_MODE_FULLY_AUTOMATIC
+        ]:
+            
+            self._operation_mode.addItem( ClientDuplicatesAutoResolution.duplicates_auto_resolution_rule_operation_mode_desc_lookup[ operation_mode ], operation_mode )
+            
         
         self._main_notebook = ClientGUICommon.BetterNotebook( self )
         
@@ -244,8 +260,6 @@ class EditDuplicatesAutoResolutionRulePanel( ClientGUIScrolledPanels.EditPanel )
         
         self._edit_actions_panel = EditPairActionsWidget( self._actions_panel, action, delete_a, delete_b, duplicates_content_merge_options )
         
-        self._edit_actions_panel.setEnabled( False )
-        
         #
         
         self._preview_panel = QW.QWidget( self._main_notebook )
@@ -255,7 +269,7 @@ class EditDuplicatesAutoResolutionRulePanel( ClientGUIScrolledPanels.EditPanel )
         #
         
         self._name.setText( self._duplicates_auto_resolution_rule.GetName() )
-        self._paused.setChecked( self._duplicates_auto_resolution_rule.IsPaused() )
+        self._operation_mode.SetValue( self._duplicates_auto_resolution_rule.GetOperationMode() )
         
         #
         
@@ -295,6 +309,8 @@ class EditDuplicatesAutoResolutionRulePanel( ClientGUIScrolledPanels.EditPanel )
         #
         
         label = 'And now we have pairs to action, what should we do?'
+        label += '\n\n'
+        label += 'Note that in the auto-resolution filter, "always archive both" will be treated as "if one is archived, archive the other".'
         
         st = ClientGUICommon.BetterStaticText( self._actions_panel, label = label )
         
@@ -335,7 +351,7 @@ class EditDuplicatesAutoResolutionRulePanel( ClientGUIScrolledPanels.EditPanel )
         rows = []
         
         rows.append( ( 'name: ', self._name ) )
-        rows.append( ( 'paused: ', self._paused ) )
+        rows.append( ( 'operation: ', self._operation_mode ) )
         
         gridbox = ClientGUICommon.WrapInGrid( self._rule_panel, rows )
         
@@ -346,7 +362,7 @@ class EditDuplicatesAutoResolutionRulePanel( ClientGUIScrolledPanels.EditPanel )
         
         vbox = QP.VBoxLayout()
         
-        st = ClientGUICommon.BetterStaticText( self, 'Hey, I am launching this system this week, but only for the one test rule! Most of this dialog is disabled, but check out the preview panel!' )
+        st = ClientGUICommon.BetterStaticText( self, 'Hey, I am launching this system, but only for the one test rule! Most of this dialog is disabled, but check out the preview panel!' )
         st.setWordWrap( True )
         QP.AddToLayout( vbox, st, CC.FLAGS_EXPAND_PERPENDICULAR )
         
@@ -375,7 +391,7 @@ class EditDuplicatesAutoResolutionRulePanel( ClientGUIScrolledPanels.EditPanel )
         
         duplicates_auto_resolution_rule = ClientDuplicatesAutoResolution.DuplicatesAutoResolutionRule( name )
         
-        duplicates_auto_resolution_rule.SetPaused( self._paused.isChecked() )
+        duplicates_auto_resolution_rule.SetOperationMode( self._operation_mode.GetValue() )
         
         duplicates_auto_resolution_rule.SetPotentialDuplicatesSearchContext( self._potential_duplicates_search_context.GetValue() )
         
@@ -681,12 +697,13 @@ class ReviewDuplicatesAutoResolutionPanel( QW.QWidget ):
         
         model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_REVIEW_DUPLICATES_AUTO_RESOLUTION_RULES.ID, self._ConvertRuleToDisplayTuple, self._ConvertRuleToSortTuple )
         
-        self._duplicates_auto_resolution_rules = ClientGUIListCtrl.BetterListCtrlTreeView( self._duplicates_auto_resolution_rules_panel, 12, model, use_simple_delete = True, activation_callback = self._Edit )
+        self._duplicates_auto_resolution_rules = ClientGUIListCtrl.BetterListCtrlTreeView( self._duplicates_auto_resolution_rules_panel, 12, model, use_simple_delete = True, activation_callback = self._ReviewActions )
         
         self._duplicates_auto_resolution_rules_panel.SetListCtrl( self._duplicates_auto_resolution_rules )
         
-        self._duplicates_auto_resolution_rules_panel.AddButton( 'work hard', self._FlipWorkingHard, enabled_check_func = self._CanWorkHard )
         self._duplicates_auto_resolution_rules_panel.AddButton( 'edit rules', self._Edit )
+        self._duplicates_auto_resolution_rules_panel.AddButton( 'review actions', self._ReviewActions, enabled_only_on_selection = True )
+        self._duplicates_auto_resolution_rules_panel.AddButton( 'work hard', self._FlipWorkingHard, enabled_check_func = self._CanWorkHard )
         
         #
         
@@ -694,7 +711,7 @@ class ReviewDuplicatesAutoResolutionPanel( QW.QWidget ):
         
         QP.AddToLayout( vbox, help_hbox, CC.FLAGS_ON_RIGHT )
         
-        st = ClientGUICommon.BetterStaticText( self, 'Hey, I am launching this system this week, but only for the one test rule! Try it out and let me know how it goes!' )
+        st = ClientGUICommon.BetterStaticText( self, 'Hey, I am launching this system, but only for the one test rule! Try it out and let me know how it goes!' )
         st.setWordWrap( True )
         
         QP.AddToLayout( vbox, st, CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -733,14 +750,7 @@ class ReviewDuplicatesAutoResolutionPanel( QW.QWidget ):
         
         search_status = duplicates_auto_resolution_rule.GetSearchSummary()
         
-        if duplicates_auto_resolution_rule.IsPaused():
-            
-            running_status = 'paused'
-            
-        else:
-            
-            running_status = CG.client_controller.duplicates_auto_resolution_manager.GetRunningStatus( duplicates_auto_resolution_rule )
-            
+        running_status = CG.client_controller.duplicates_auto_resolution_manager.GetRunningStatus( duplicates_auto_resolution_rule )
         
         return ( name, search_status, running_status )
         
@@ -763,15 +773,15 @@ class ReviewDuplicatesAutoResolutionPanel( QW.QWidget ):
             
         
     
-    def _DeleteOrphanPairs( self ):
+    def _DeleteOrphanPotentialPairs( self ):
         
-        text = f'This will scan the primary potential pairs table. If any are missing from the auto-resolution rule cache, they will be added. Orphans will be deleted.'
+        text = f'This will scan the primary potential pairs table. If any are missing from the auto-resolution rule potential pair cache, they will be added. Orphans will be deleted.'
         
         result = ClientGUIDialogsQuick.GetYesNo( self, text )
         
         if result == QW.QDialog.DialogCode.Accepted:
             
-            CG.client_controller.Write( 'duplicate_auto_resolution_maintenance_fix_orphan_pairs' )
+            CG.client_controller.Write( 'duplicate_auto_resolution_maintenance_fix_orphan_potential_pairs' )
             
             self._rules_list_updater.update()
             
@@ -830,6 +840,8 @@ class ReviewDuplicatesAutoResolutionPanel( QW.QWidget ):
                 # we have the lock
                 
                 try:
+                    
+                    CG.client_controller.pub( 'edit_duplicates_auto_resolution_rules_dialog_opening' )
                     
                     rules = CG.client_controller.duplicates_auto_resolution_manager.GetRules()
                     
@@ -899,6 +911,32 @@ class ReviewDuplicatesAutoResolutionPanel( QW.QWidget ):
         return updater
         
     
+    def _ResetDeclined( self ):
+        
+        rules = self._duplicates_auto_resolution_rules.GetData( only_selected = True )
+        
+        if len( rules ) == 0:
+            
+            rules = self._duplicates_auto_resolution_rules.GetData()
+            
+            if len( rules ) == 0:
+                
+                return
+                
+            
+        
+        text = f'This will command the database to repeal all user-declined decisions for these {HydrusNumbers.ToHumanInt(len(rules))} rules. Do this if you want to re-do them or have decided to set this rule to fully automatic and are happy it can now handle them appropriately.'
+        
+        result = ClientGUIDialogsQuick.GetYesNo( self, text )
+        
+        if result == QW.QDialog.DialogCode.Accepted:
+            
+            CG.client_controller.duplicates_auto_resolution_manager.ResetRuleDeclined( rules )
+            
+            self._rules_list_updater.update()
+            
+        
+    
     def _ResetSearch( self ):
         
         rules = self._duplicates_auto_resolution_rules.GetData( only_selected = True )
@@ -913,7 +951,7 @@ class ReviewDuplicatesAutoResolutionPanel( QW.QWidget ):
                 
             
         
-        text = f'This will command the database to re-search these {HydrusNumbers.ToHumanInt(len(rules))} rules from scratch. There is no point to running this unless you suspect there is a miscount.'
+        text = f'This will command the database to re-search these {HydrusNumbers.ToHumanInt(len(rules))} rules. It will not undo any user-declined decisions. There is no point to running this unless you suspect a miscount or other sync bug.'
         
         result = ClientGUIDialogsQuick.GetYesNo( self, text )
         
@@ -922,6 +960,46 @@ class ReviewDuplicatesAutoResolutionPanel( QW.QWidget ):
             CG.client_controller.duplicates_auto_resolution_manager.ResetRuleSearchProgress( rules )
             
             self._rules_list_updater.update()
+            
+        
+    
+    def _ResetTest( self ):
+        
+        rules = self._duplicates_auto_resolution_rules.GetData( only_selected = True )
+        
+        if len( rules ) == 0:
+            
+            rules = self._duplicates_auto_resolution_rules.GetData()
+            
+            if len( rules ) == 0:
+                
+                return
+                
+            
+        
+        text = f'This will command the database to re-test the pending/fails for these {HydrusNumbers.ToHumanInt(len(rules))} rules. It will not undo any user-declined decisions. There is no point to running this unless you suspect a miscount or other sync bug.'
+        
+        result = ClientGUIDialogsQuick.GetYesNo( self, text )
+        
+        if result == QW.QDialog.DialogCode.Accepted:
+            
+            CG.client_controller.duplicates_auto_resolution_manager.ResetRuleTestProgress( rules )
+            
+            self._rules_list_updater.update()
+            
+        
+    
+    def _ReviewActions( self ):
+        
+        rules = self._duplicates_auto_resolution_rules.GetData( only_selected = True )
+        
+        for rule in rules:
+            
+            frame = ClientGUITopLevelWindowsPanels.FrameThatTakesScrollablePanel( self, 'review duplicate auto-resolution actions' )
+            
+            panel = ClientGUIDuplicatesAutoResolutionRuleReview.ReviewActionsPanel( frame, rule )
+            
+            frame.SetPanel( panel )
             
         
     
@@ -939,16 +1017,20 @@ class ReviewDuplicatesAutoResolutionPanel( QW.QWidget ):
         if len( rules ) == 0:
             
             ClientGUIMenus.AppendMenuItem( menu, f'reset search on all rules', 'Reset the search for all your rules.', self._ResetSearch )
+            ClientGUIMenus.AppendMenuItem( menu, f'reset test on all rules', 'Reset the test for all your rules.', self._ResetTest )
+            ClientGUIMenus.AppendMenuItem( menu, f'reset user declined on all rules', 'Reset the test for all your rules.', self._ResetDeclined )
             
         else:
             
             ClientGUIMenus.AppendMenuItem( menu, f'reset search on {HydrusNumbers.ToHumanInt( len( rules ) )} selected rules', 'Reset the search for the given rules.', self._ResetSearch )
+            ClientGUIMenus.AppendMenuItem( menu, f'reset test on {HydrusNumbers.ToHumanInt( len( rules ) )} selected rules', 'Reset the search for the given rules.', self._ResetTest )
+            ClientGUIMenus.AppendMenuItem( menu, f'reset user declined search on {HydrusNumbers.ToHumanInt( len( rules ) )} selected rules', 'Reset the search for the given rules.', self._ResetDeclined )
             
         
         ClientGUIMenus.AppendSeparator( menu )
         
         ClientGUIMenus.AppendMenuItem( menu, 'maintenance: delete orphan rules', 'Scan for rules that are partly missing (probably from hard drive damage) and delete them.', self._DeleteOrphanRules )
-        ClientGUIMenus.AppendMenuItem( menu, 'maintenance: fix orphan potential pairs', 'Scan for potential pairs in your rule cache that are no longer pertinent and delete them.', self._DeleteOrphanPairs )
+        ClientGUIMenus.AppendMenuItem( menu, 'maintenance: fix orphan potential pairs', 'Scan for potential pairs in your rule cache that are no longer pertinent and delete them.', self._DeleteOrphanPotentialPairs )
         
         CGC.core().PopupMenu( self._cog_button, menu )
         

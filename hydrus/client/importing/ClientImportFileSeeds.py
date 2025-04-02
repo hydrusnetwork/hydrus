@@ -3136,6 +3136,21 @@ class FileSeedCache( HydrusSerialisable.SerialisableBase ):
             
         
     
+    def GetFirstFileSeed( self ) -> typing.Optional[ FileSeed ]:
+        
+        with self._file_seeds:
+            
+            if len( self._file_seeds ) == 0:
+                
+                return None
+                
+            else:
+                
+                return self._file_seeds[0]
+                
+            
+        
+    
     def GetHashes( self ):
         
         with self._lock:

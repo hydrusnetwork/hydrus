@@ -15,9 +15,6 @@ If only there were some way to automate common decisions! We could have hydrus s
     
     If you plan to do something huge, like deleting 50,000 files, make a backup before it starts.
 
-!!! warning "Default merge options"
-    Check your default duplicate metadata merge options before engaging with this! If they say 'always archive both', which assumes you were looking at both in the duplicate filter, that's probably not appropriate for automatic merging.
-
 !!! info "Everything is off by default"
     Resolving duplicates is a highly subjective issue. Maybe you think EXIF data is the best, or maybe you always want it gone. Maybe you never want to delete low quality files, or always merge URLs, or set an artist correction as a duplicate instead of an alternate. People simply differ.
     
@@ -41,13 +38,17 @@ In this case, we always want to keep the (usually smaller, original) jpeg and di
 
 We could follow this script every time and be happy with it. Let's do it!
 
+### auto-resolution tab
+
+Go to the duplicates filtering page and switch to the 'auto-resolution' tab. This shows all your active auto-resolution rules and what they are currently doing. Hit `edit rules` to get started.
+
+[![](images/duplicates_auto_resolution_sidebar.png)](images/duplicates_auto_resolution_sidebar.png)
+
 ### search
 
-Let's check out the 'auto-resolution' tab under the duplicates filtering page. There's a dialog to edit the current 'auto-resolution rules' and a button to add some suggested ones where everything is set up for you:
+Each rule represents a search, a way of testing pairs, and then a duplicate action. There's a button to add suggested rules.
 
 [![](images/duplicates_auto_resolution_search.png)](images/duplicates_auto_resolution_search.png)
-
-Each rule represents a search, a way of testing pairs, and then a duplicate action.
 
 Note that in addition to the jpeg/png filetype predicates, I have added `width > 128` and `height > 128` to each search. I said above that we are confident of this rule for _normal_ images, but what about 16x16 icons? There a jpeg might, by chance, be a pixel-perfect match of a png, and maybe we want to keep the png anyway for odd cases.
 
@@ -84,11 +85,29 @@ In our simple jpeg/png pixel duplicates, nothing will fail the test, because we 
 
 Note also that the matching pairs may or may not have a specific order. If you set ambiguous comparison rules, it may be that a pair could set its AB as 1,2 or 2,1, and if that's the case, it will say so--and if you spam the refresh button, you'll see those rows flip back and forth. Ambiguous AB order is fine if you are setting 'alternates' or 'same quality', but know that hydrus will choose 1,2 or 2,1 randomly when it does its work for real, so it is simply not appropriate for 'better than'. If you need to fix this situation, go back to the 'comparison' tab and tighten up the rules.
 
+There is also a preview of the content updates A and B will receive. This can get complicated, with tags, ratings, notes, urls, and more. If it looks wrong, check your duplicate metadata merge options!
+
 Once we are happy, we can apply the dialogs and save our rule back. It will start working immediately.
 
-## how does this all work?
+### semi and fully automatic
 
-When you add a new rule, hydrus will throw all the current potential duplicate pairs at the rule and then work in small background packets, doing bits of search and then resolution, usually half a second or so at a time, finding which pairs match the search, and then processing any pairs that match the comparison test. The list on the duplicates page will update with a live summary.
+Rules can either be 'semi-automatic' or 'fully automatic'. They have the all same settings, and they will search and test pairs the same way, but semi-automatic rules will not perform their final duplicate action without your approval. Fully automatic rules are fire-and-forget, and will do everything without your interference.
+
+You might like to start your rules in semi-automatic, and if you never encounter any false-positives, you can switch it to fully automatic.
+
+## so, how does this all work?
+
+When you add a new rule, hydrus will throw all the current potential duplicate pairs at the rule and then work in brief background packets, searching for pairs and then running them against the comparsion test. Semi-automatic rules will queue ready-to-action pairs for your approval, but fully automatic rules will go ahead and action them immediately. The list on the duplicates page will update with a live summary.
+
+Click 'review actions' to see it in more detail:
+
+[![](images/duplicates_auto_resolution_pending_actions.png)](images/duplicates_auto_resolution_pending_actions.png)
+
+This panel shows pairs a semi-automatic rule is prepared to action. Select those that are good and click 'approve', click 'deny' for any that are false positives. If a rule needs you to click 'deny' a lot, it probably needs tighter search or comarison. The ideal of these rules is automation!
+
+[![](images/duplicates_auto_resolution_actions_taken.png)](images/duplicates_auto_resolution_actions_taken.png)
+
+This shows everything the rule has actioned. The 'undo' button is serious and will be inconvenient to you, so try not to rely on it.
 
 When you import new files and the regular potential dupes search (on the 'preparation' tab of the duplicates page) finds new pairs amongst them, the auto-resolution rules will be told about them and will quickly see if they can action them. You can force the system to work a bit harder on a particular rule if you want to catch up somewhere, but normally you can just leave it all alone and be happy that it is saving you time in the background.
 

@@ -233,6 +233,75 @@ class ContentUpdate( object ):
         self._hashes = None
         
     
+    def ToActionSummary( self ):
+        
+        value_string = ''
+        
+        if self._data_type == HC.CONTENT_TYPE_URLS:
+            
+            ( urls, hashes ) = self._row
+            
+            value_string = ', '.join( urls )
+            
+        elif self._data_type == HC.CONTENT_TYPE_TIMESTAMP:
+            
+            ( hashes, timestamp_data ) = self._row
+            
+            value_string = timestamp_data.ToString()
+            
+        elif self._data_type == HC.CONTENT_TYPE_MAPPINGS:
+            
+            if self._action == HC.CONTENT_UPDATE_ADVANCED:
+                
+                value_string = 'advanced'
+                
+            else:
+                
+                ( tag, hashes ) = self._row
+                
+                value_string = tag
+                
+            
+        elif self._data_type == HC.CONTENT_TYPE_RATINGS:
+            
+            if self._action == HC.CONTENT_UPDATE_ADD:
+                
+                ( rating, hashes ) = self._row
+                
+                value_string = str( rating )
+                
+            
+        elif self._data_type == HC.CONTENT_TYPE_NOTES:
+            
+            if self._action == HC.CONTENT_UPDATE_SET:
+                
+                ( hash, name, note ) = self._row
+                
+                value_string = name
+                
+            elif self._action == HC.CONTENT_UPDATE_DELETE:
+                
+                ( hash, name ) = self._row
+                
+                value_string = name
+                
+            
+        
+        if value_string != '':
+            
+            value_string = ': ' + value_string
+            
+        
+        try:
+            
+            return f'{HC.content_update_string_lookup[ self._action ]} {HC.content_type_string_lookup[ self._data_type ]}{value_string}'
+            
+        except:
+            
+            return 'could not parse this content update!'
+            
+        
+    
     def ToTuple( self ):
         
         return ( self._data_type, self._action, self._row )

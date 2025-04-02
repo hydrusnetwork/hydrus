@@ -1,3 +1,4 @@
+import collections
 import threading
 import time
 import typing
@@ -882,7 +883,7 @@ def get_domain_modified_content_updates( destination_media_result: ClientMediaRe
 class DuplicateContentMergeOptions( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_DUPLICATE_CONTENT_MERGE_OPTIONS
-    SERIALISABLE_NAME = 'Duplicate Content Merge Options'
+    SERIALISABLE_NAME = 'Duplicate Metadata Merge Options'
     SERIALISABLE_VERSION = 7
     
     def __init__( self ):
@@ -1061,6 +1062,70 @@ class DuplicateContentMergeOptions( HydrusSerialisable.SerialisableBase ):
             
         
     
+    def GetMergeSummaryOnPair( self, media_result_a: ClientMediaResult.MediaResult, media_result_b: ClientMediaResult.MediaResult, delete_a: bool, delete_b: bool, in_auto_resolution = False ):
+        
+        # do file delete; this guy only cares about the content merge
+        content_update_package = self.ProcessPairIntoContentUpdatePackage( media_result_a, media_result_b, delete_a = delete_a, delete_b = delete_b, in_auto_resolution = in_auto_resolution )
+        
+        hash_a = media_result_a.GetHash()
+        hash_b = media_result_b.GetHash()
+        
+        a_work = collections.defaultdict( list )
+        b_work = collections.defaultdict( list )
+        
+        for ( service_key, content_updates ) in content_update_package.IterateContentUpdates():
+            
+            for content_update in content_updates:
+                
+                hashes = content_update.GetHashes()
+                
+                s = content_update.ToActionSummary()
+                
+                if hash_a in hashes:
+                    
+                    a_work[ service_key ].append( s )
+                    
+                
+                if hash_b in hashes:
+                    
+                    b_work[ service_key ].append( s )
+                    
+                
+            
+        
+        work_strings = []
+        
+        for ( hash_name, work ) in [
+            ( 'A', a_work ),
+            ( 'B', b_work )
+        ]:
+            
+            work_flat = sorted( [ ( CG.client_controller.services_manager.GetName( service_key ), sorted( summary_strings ) ) for ( service_key, summary_strings ) in work.items() ] )
+            
+            gubbins = '|'.join( [ name + ': ' + ', '.join( summary_strings ) for ( name, summary_strings ) in work_flat ] )
+            
+            if len( gubbins ) == 0:
+                
+                work_string = hash_name + ': no changes'
+                
+            else:
+                
+                work_string = hash_name + ': ' + gubbins
+                
+            
+            work_strings.append( work_string )
+            
+        
+        if len( work_strings ) > 0:
+            
+            return '\n'.join( work_strings )
+            
+        else:
+            
+            return 'no content updates'
+            
+        
+    
     def GetRatingServiceActions( self ) -> typing.Collection[ tuple ]:
         
         return self._rating_service_actions
@@ -1131,7 +1196,16 @@ class DuplicateContentMergeOptions( HydrusSerialisable.SerialisableBase ):
         self._sync_urls_action = sync_urls_action
         
     
-    def ProcessPairIntoContentUpdatePackage( self, media_result_a: ClientMediaResult.MediaResult, media_result_b: ClientMediaResult.MediaResult, delete_a = False, delete_b = False, file_deletion_reason = None, do_not_do_deletes = False ) -> ClientContentUpdates.ContentUpdatePackage:
+    def ProcessPairIntoContentUpdatePackage(
+        self,
+        media_result_a: ClientMediaResult.MediaResult,
+        media_result_b: ClientMediaResult.MediaResult,
+        delete_a = False,
+        delete_b = False,
+        file_deletion_reason = None,
+        do_not_do_deletes = False,
+        in_auto_resolution = False
+    ) -> ClientContentUpdates.ContentUpdatePackage:
         
         # small note here, if we have BETTER/WORSE distinctions in any of the settings, A is better, B is worse. if we have HC.DUPLICATE_WORSE anywhere, which sets B as better, it must be flipped beforehand to BETTER and BA -> AB
         # TODO: since this is a crazy situation, maybe this guy should just take the duplicate action, and then it can convert to media_result_better as needed
@@ -1358,10 +1432,18 @@ class DuplicateContentMergeOptions( HydrusSerialisable.SerialisableBase ):
         # and not delete_a gubbins here to help out the delete lock lmao. don't want to archive and then try to delete
         # TODO: this is obviously a bad solution, so better to refactor this function to return a list of content_update_packages and stick the delete command right up top, tested for locks on current info
         
+        action_to_actually_consult = self._sync_archive_action
+        
+        # don't archive both files if the user hasn't seen them in the duplicate filter bruh
+        if in_auto_resolution and action_to_actually_consult == SYNC_ARCHIVE_DO_BOTH_REGARDLESS:
+            
+            action_to_actually_consult = SYNC_ARCHIVE_IF_ONE_DO_BOTH
+            
+        
         first_locations_manager = media_result_a.GetLocationsManager()
         second_locations_manager = media_result_b.GetLocationsManager()
         
-        if self._sync_archive_action == SYNC_ARCHIVE_IF_ONE_DO_BOTH:
+        if action_to_actually_consult == SYNC_ARCHIVE_IF_ONE_DO_BOTH:
             
             if first_locations_manager.inbox and not second_locations_manager.inbox and not delete_a:
                 
@@ -1372,7 +1454,7 @@ class DuplicateContentMergeOptions( HydrusSerialisable.SerialisableBase ):
                 content_update_package.AddContentUpdate( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, content_update_archive_second )
                 
             
-        elif self._sync_archive_action == SYNC_ARCHIVE_DO_BOTH_REGARDLESS:
+        elif action_to_actually_consult == SYNC_ARCHIVE_DO_BOTH_REGARDLESS:
             
             if first_locations_manager.inbox and not delete_a:
                 

@@ -173,8 +173,6 @@ class DialogPageChooser( ClientGUIDialogs.Dialog ):
                     
                     page_name = 'files'
                     
-                    search_enabled = True
-                    
                     new_options = self._controller.new_options
                     
                     tag_service_key = new_options.GetKey( 'default_tag_service_search_page' )
@@ -190,7 +188,7 @@ class DialogPageChooser( ClientGUIDialogs.Dialog ):
                     
                     file_search_context = ClientSearchFileSearchContext.FileSearchContext( location_context = location_context, tag_context = tag_context )
                     
-                    self._result = ( 'page', ClientGUIPageManager.CreatePageManagerQuery( page_name, file_search_context, search_enabled ) )
+                    self._result = ( 'page', ClientGUIPageManager.CreatePageManagerQuery( page_name, file_search_context ) )
                     
                 elif entry_type == 'page_duplicate_filter':
                     

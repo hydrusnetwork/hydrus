@@ -901,10 +901,11 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.Liste
             if CG.client_controller.new_options.GetBoolean( 'focus_media_tab_on_viewer_close_if_possible' ):
                 
                 canvas_window.exitFocusMedia.connect( self.SetFocusedMediaAndFocusTab )
-
+                
             else:
-
+                
                 canvas_window.exitFocusMedia.connect( self.SetFocusedMedia )
+                
             
         
     
@@ -2568,17 +2569,19 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.Liste
     def SetFocusedMedia( self, media ):
         
         pass
+        
     
     def SetFocusedMediaAndFocusTab( self, media ):
-
-        if CG.client_controller.gui.GetPageFromPageKey( self._page_key ) is not None:
         
+        if CG.client_controller.gui.GetPageFromPageKey( self._page_key ) is not None:
+            
             CG.client_controller.gui.ShowPage( self._page_key )
 
             self.SetFocusedMedia( media )
             
             self._PublishSelectionChange()
             
+        
     
     def get_hmrp_background( self ):
         

@@ -1327,7 +1327,7 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def GetURLClass( self, url ):
+    def GetURLClass( self, url ) -> typing.Optional[ ClientNetworkingURLClass.URLClass ]:
         
         with self._lock:
             

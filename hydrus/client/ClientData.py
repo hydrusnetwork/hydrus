@@ -18,15 +18,21 @@ def AddPaddingToDimensions( dimensions, padding ):
     
     return ( x + padding, y + padding )
     
+
 def CatchExceptionClient( etype, value, tb ):
     
     try:
+        
+        if etype == HydrusExceptions.ShutdownException:
+            
+            return
+            
         
         trace_list = traceback.format_tb( tb )
         
         trace = ''.join( trace_list )
         
-        pretty_value = str( value )
+        pretty_value = f'{value}'
         
         all_lines = pretty_value.splitlines()
         
@@ -48,18 +54,11 @@ def CatchExceptionClient( etype, value, tb ):
         
         job_status = ClientThreading.JobStatus()
         
-        if etype == HydrusExceptions.ShutdownException:
-            
-            return
-            
-        else:
-            
-            try: job_status.SetStatusTitle( str( etype.__name__ ) )
-            except: job_status.SetStatusTitle( str( etype ) )
-            
-            job_status.SetStatusText( first_line )
-            job_status.SetTraceback( trace )
-            
+        try: job_status.SetStatusTitle( str( etype.__name__ ) )
+        except: job_status.SetStatusTitle( str( etype ) )
+        
+        job_status.SetStatusText( first_line )
+        job_status.SetTraceback( trace )
         
         text = job_status.ToString()
         
@@ -174,6 +173,7 @@ def ShowExceptionClient( e, do_wait = True ):
     
     ShowExceptionTupleClient( etype, value, tb, do_wait = do_wait )
     
+
 def ShowExceptionTupleClient( etype, value, tb, do_wait = True ):
     
     if etype is None:
@@ -181,54 +181,38 @@ def ShowExceptionTupleClient( etype, value, tb, do_wait = True ):
         etype = HydrusExceptions.UnknownException
         
     
-    if value is None:
-        
-        value = 'Unknown error'
-        
-    
-    if tb is None:
-        
-        trace = 'No error trace--here is the stack:' + '\n' + ''.join( traceback.format_stack() )
-        
-    else:
-        
-        trace = ''.join( traceback.format_exception( etype, value, tb ) )
-        
-    
-    pretty_value = str( value )
-    
-    all_lines = pretty_value.splitlines()
-    
-    first_line = all_lines[0]
-    
-    if len( all_lines ) > 1:
-        
-        the_rest = all_lines[1:]
-        
-        trace = trace + '\n' + '\n'.join( the_rest )
-        
-    
-    job_status = ClientThreading.JobStatus()
-    
     if etype == HydrusExceptions.ShutdownException:
         
         return
         
-    else:
+    
+    pretty_value = f'{value}'
+    
+    if value is None or len( pretty_value.splitlines() ) == 0:
         
-        title = str( getattr( etype, '__name__', etype ) )
-        
-        job_status.SetStatusTitle( title )
-        
-        job_status.SetStatusText( first_line )
-        job_status.SetTraceback( trace )
+        value = 'Unknown error'
+        pretty_value = value
         
     
-    text = job_status.ToString()
+    all_lines = pretty_value.splitlines()
     
-    HydrusData.Print( 'Exception:' )
+    first_line = 'Exception'
     
-    HydrusData.DebugPrint( text )
+    if len( all_lines ) > 0:
+        
+        first_line = all_lines[0]
+        
+    
+    job_status = ClientThreading.JobStatus()
+    
+    try: job_status.SetStatusTitle( str( etype.__name__ ) )
+    except: job_status.SetStatusTitle( str( etype ) )
+    
+    job_status.SetStatusText( first_line )
+    
+    message = HydrusData.PrintExceptionTuple( etype, value, tb, do_wait = False )
+    
+    job_status.SetTraceback( message )
     
     CG.client_controller.pub( 'message', job_status )
     

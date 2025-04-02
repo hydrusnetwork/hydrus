@@ -1,3 +1,4 @@
+import itertools
 import sqlite3
 import typing
 
@@ -35,6 +36,53 @@ class ClientDBFilesDuplicatesAutoResolutionSearch( ClientDBModule.ClientDBModule
         super().__init__( 'client duplicates auto-resolution search', cursor )
         
     
+    def ApprovePendingPairs( self, rule: ClientDuplicatesAutoResolution.DuplicatesAutoResolutionRule, pairs ):
+        
+        for ( media_result_a, media_result_b ) in pairs:
+            
+            hash_id_a = media_result_a.GetHashId()
+            hash_id_b = media_result_b.GetHashId()
+            
+            media_id_a = self.modules_files_duplicates.GetMediaId( hash_id_a )
+            media_id_b = self.modules_files_duplicates.GetMediaId( hash_id_b )
+            
+            if media_id_a == media_id_b: # ok a previous approve in this run already merged these guys; nothing to do
+                
+                continue
+                
+            
+            result = rule.GetDuplicateActionResult( media_result_a, media_result_b )
+            
+            self.modules_files_duplicates_setter.SetDuplicatePairStatus( [ result ] )
+            
+            smaller_media_id = min( media_id_a, media_id_b )
+            larger_media_id = max( media_id_a, media_id_b )
+            
+            duplicate_type = result[0]
+            
+            self.modules_files_duplicates_auto_resolution_storage.RecordActionedPair( rule, smaller_media_id, larger_media_id, hash_id_a, hash_id_b, duplicate_type, HydrusTime.GetNowMS() )
+            
+        
+    
+    def DenyPendingPairs( self, rule: ClientDuplicatesAutoResolution.DuplicatesAutoResolutionRule, pairs ):
+        
+        for ( media_result_a, media_result_b ) in pairs:
+            
+            hash_id_a = media_result_a.GetHashId()
+            hash_id_b = media_result_b.GetHashId()
+            
+            media_id_a = self.modules_files_duplicates.GetMediaId( hash_id_a )
+            media_id_b = self.modules_files_duplicates.GetMediaId( hash_id_b )
+            
+            smaller_media_id = min( media_id_a, media_id_b )
+            larger_media_id = max( media_id_a, media_id_b )
+            
+            pair = ( smaller_media_id, larger_media_id )
+            
+            self.modules_files_duplicates_auto_resolution_storage.SetPairsToSimpleQueue( rule, ( pair, ), ClientDuplicatesAutoResolution.DUPLICATE_STATUS_USER_DECLINED )
+            
+        
+    
     def DoResolutionWork( self, rule: ClientDuplicatesAutoResolution.DuplicatesAutoResolutionRule, stop_time = None ) -> bool:
         
         work_still_to_do = True
@@ -57,7 +105,7 @@ class ClientDBFilesDuplicatesAutoResolutionSearch( ClientDBModule.ClientDBModule
             
             if smaller_hash_id is None or larger_hash_id is None:
                 
-                self.modules_files_duplicates_auto_resolution_storage.SetPairsStatus( rule, ( pair_to_work, ), ClientDuplicatesAutoResolution.DUPLICATE_STATUS_MATCHES_SEARCH_FAILED_TEST )
+                self.modules_files_duplicates_auto_resolution_storage.SetPairsToSimpleQueue( rule, ( pair_to_work, ), ClientDuplicatesAutoResolution.DUPLICATE_STATUS_MATCHES_SEARCH_FAILED_TEST )
                 
                 pair_to_work = get_row()
                 
@@ -71,7 +119,7 @@ class ClientDBFilesDuplicatesAutoResolutionSearch( ClientDBModule.ClientDBModule
             
             if result is None:
                 
-                self.modules_files_duplicates_auto_resolution_storage.SetPairsStatus( rule, ( pair_to_work, ), ClientDuplicatesAutoResolution.DUPLICATE_STATUS_MATCHES_SEARCH_FAILED_TEST )
+                self.modules_files_duplicates_auto_resolution_storage.SetPairsToSimpleQueue( rule, ( pair_to_work, ), ClientDuplicatesAutoResolution.DUPLICATE_STATUS_MATCHES_SEARCH_FAILED_TEST )
                 
                 pair_to_work = get_row()
                 
@@ -79,11 +127,34 @@ class ClientDBFilesDuplicatesAutoResolutionSearch( ClientDBModule.ClientDBModule
                 
             
             # result is ( action, hash_a, hash_b, content_update_packages )
-            self.modules_files_duplicates_setter.SetDuplicatePairStatus(
-                ( result, )
-            )
             
-            self.modules_files_duplicates_auto_resolution_storage.IncrementActionedPairCount( rule )
+            hash_a = result[1]
+            
+            if media_result_1.GetHash() == hash_a:
+                
+                hash_id_a = smaller_hash_id
+                hash_id_b = larger_hash_id
+                
+            else:
+                
+                hash_id_a = larger_hash_id
+                hash_id_b = smaller_hash_id
+                
+            
+            operation_mode = rule.GetOperationMode()
+            
+            if operation_mode == ClientDuplicatesAutoResolution.DUPLICATES_AUTO_RESOLUTION_RULE_OPERATION_MODE_WORK_BUT_NO_ACTION:
+                
+                self.modules_files_duplicates_auto_resolution_storage.SetPairToPendingAction( rule, smaller_media_id, larger_media_id, hash_id_a, hash_id_b )
+                
+            else:
+                
+                self.modules_files_duplicates_setter.SetDuplicatePairStatus( [ result ] )
+                
+                duplicate_type = result[0]
+                
+                self.modules_files_duplicates_auto_resolution_storage.RecordActionedPair( rule, smaller_media_id, larger_media_id, hash_id_a, hash_id_b, duplicate_type, HydrusTime.GetNowMS() )
+                
             
             if stop_time is not None and HydrusTime.TimeHasPassedFloat( stop_time ):
                 
@@ -132,13 +203,41 @@ class ClientDBFilesDuplicatesAutoResolutionSearch( ClientDBModule.ClientDBModule
             
             unmatching_pairs = set( unsearched_pairs ).difference( matching_pairs )
             
-            self.modules_files_duplicates_auto_resolution_storage.SetPairsStatus( rule, matching_pairs, ClientDuplicatesAutoResolution.DUPLICATE_STATUS_MATCHES_SEARCH_BUT_NOT_TESTED )
-            self.modules_files_duplicates_auto_resolution_storage.SetPairsStatus( rule, unmatching_pairs, ClientDuplicatesAutoResolution.DUPLICATE_STATUS_DOES_NOT_MATCH_SEARCH )
+            self.modules_files_duplicates_auto_resolution_storage.SetPairsToSimpleQueue( rule, matching_pairs, ClientDuplicatesAutoResolution.DUPLICATE_STATUS_MATCHES_SEARCH_BUT_NOT_TESTED )
+            self.modules_files_duplicates_auto_resolution_storage.SetPairsToSimpleQueue( rule, unmatching_pairs, ClientDuplicatesAutoResolution.DUPLICATE_STATUS_DOES_NOT_MATCH_SEARCH )
             
             we_produced_matching_pairs = len( matching_pairs ) > 0
             
         
         return ( work_still_to_do, we_produced_matching_pairs )
+        
+    
+    def GetActionedPairs( self, rule: ClientDuplicatesAutoResolution.DuplicatesAutoResolutionRule, fetch_limit = None ):
+        
+        hash_id_pairs_with_data = self.modules_files_duplicates_auto_resolution_storage.GetActionedPairs( rule, fetch_limit = fetch_limit )
+        
+        all_hash_ids = set( itertools.chain.from_iterable( ( ( hash_id_a, hash_id_b ) for ( hash_id_a, hash_id_b, duplicate_type, timestamp_ms ) in hash_id_pairs_with_data ) ) )
+        
+        media_results = self.modules_media_results.GetMediaResults( all_hash_ids )
+        
+        hash_ids_to_media_results = { media_result.GetHashId() : media_result for media_result in media_results }
+        
+        media_result_pairs_with_data = [
+            ( hash_ids_to_media_results[ hash_id_a ], hash_ids_to_media_results[ hash_id_b ], duplicate_type, timestamp_ms )
+            for ( hash_id_a, hash_id_b, duplicate_type, timestamp_ms )
+            in hash_id_pairs_with_data
+        ]
+        
+        return media_result_pairs_with_data
+        
+    
+    def GetPendingActionPairs( self, rule: ClientDuplicatesAutoResolution.DuplicatesAutoResolutionRule, fetch_limit = None ):
+        
+        hash_id_pairs = self.modules_files_duplicates_auto_resolution_storage.GetPendingActionPairs( rule, fetch_limit = fetch_limit )
+        
+        media_result_pairs = self.modules_media_results.GetMediaResultPairs( hash_id_pairs )
+        
+        return media_result_pairs
         
     
     def GetTablesAndColumnsThatUseDefinitions( self, content_type: int ) -> typing.List[ typing.Tuple[ str, str ] ]:

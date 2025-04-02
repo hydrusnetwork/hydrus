@@ -151,7 +151,12 @@ class FileSystemPredicates( object ):
                 
                 ( hashes, hash_type ) = value
                 
-                self._common_info[ 'hash' ] = ( hashes, hash_type, predicate.IsInclusive() )
+                if 'hashes' not in self._common_info:
+                    
+                    self._common_info[ 'hashes' ] = []
+                    
+                
+                self._common_info[ 'hashes' ].append( ( hashes, hash_type, predicate.IsInclusive() ) )
                 
             
             if predicate_type in ( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_AGE, ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_LAST_VIEWED_TIME, ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_MODIFIED_TIME, ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_ARCHIVED_TIME ):

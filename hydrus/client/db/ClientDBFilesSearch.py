@@ -1647,26 +1647,27 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
         
         #
         
-        if 'hash' in simple_preds:
+        if 'hashes' in simple_preds:
             
-            ( search_hashes, search_hash_type, inclusive ) = simple_preds[ 'hash' ]
-            
-            if inclusive:
+            for ( search_hashes, search_hash_type, inclusive ) in simple_preds[ 'hashes' ]:
                 
-                if search_hash_type == 'sha256':
+                if inclusive:
                     
-                    matching_sha256_hashes = [ search_hash for search_hash in search_hashes if self.modules_hashes.HasHash( search_hash ) ]
+                    if search_hash_type == 'sha256':
+                        
+                        matching_sha256_hashes = [ search_hash for search_hash in search_hashes if self.modules_hashes.HasHash( search_hash ) ]
+                        
+                    else:
+                        
+                        source_to_desired = self.modules_hashes.GetFileHashes( search_hashes, search_hash_type, 'sha256' )
+                        
+                        matching_sha256_hashes = list( source_to_desired.values() )
+                        
                     
-                else:
+                    specific_hash_ids = self.modules_hashes_local_cache.GetHashIds( matching_sha256_hashes )
                     
-                    source_to_desired = self.modules_hashes.GetFileHashes( search_hashes, search_hash_type, 'sha256' )
+                    query_hash_ids = intersection_update_qhi( query_hash_ids, specific_hash_ids )
                     
-                    matching_sha256_hashes = list( source_to_desired.values() )
-                    
-                
-                specific_hash_ids = self.modules_hashes_local_cache.GetHashIds( matching_sha256_hashes )
-                
-                query_hash_ids = intersection_update_qhi( query_hash_ids, specific_hash_ids )
                 
             
         
@@ -2092,26 +2093,27 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
                 
             
         
-        if 'hash' in simple_preds:
+        if 'hashes' in simple_preds:
             
-            ( search_hashes, search_hash_type, inclusive ) = simple_preds[ 'hash' ]
-            
-            if not inclusive:
+            for ( search_hashes, search_hash_type, inclusive ) in simple_preds[ 'hashes' ]:
                 
-                if search_hash_type == 'sha256':
+                if not inclusive:
                     
-                    matching_sha256_hashes = [ search_hash for search_hash in search_hashes if self.modules_hashes.HasHash( search_hash ) ]
+                    if search_hash_type == 'sha256':
+                        
+                        matching_sha256_hashes = [ search_hash for search_hash in search_hashes if self.modules_hashes.HasHash( search_hash ) ]
+                        
+                    else:
+                        
+                        source_to_desired = self.modules_hashes.GetFileHashes( search_hashes, search_hash_type, 'sha256' )
+                        
+                        matching_sha256_hashes = list( source_to_desired.values() )
+                        
                     
-                else:
+                    specific_hash_ids = self.modules_hashes_local_cache.GetHashIds( matching_sha256_hashes )
                     
-                    source_to_desired = self.modules_hashes.GetFileHashes( search_hashes, search_hash_type, 'sha256' )
+                    query_hash_ids.difference_update( specific_hash_ids )
                     
-                    matching_sha256_hashes = list( source_to_desired.values() )
-                    
-                
-                specific_hash_ids = self.modules_hashes_local_cache.GetHashIds( matching_sha256_hashes )
-                
-                query_hash_ids.difference_update( specific_hash_ids )
                 
             
         

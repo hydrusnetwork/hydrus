@@ -3987,6 +3987,7 @@ Arguments (in percent-encoded JSON):
     "earliest_import_time" : 1451408539,
     "total_viewtime" : [3280, 41621, 2932, 83021],
     "total_alternate_files" : 265,
+    "total_alternate_groups" : 63,
     "total_duplicate_files" : 125,
     "total_potential_pairs" : 3252
   }

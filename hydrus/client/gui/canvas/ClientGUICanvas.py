@@ -2438,6 +2438,11 @@ class CanvasWithHovers( Canvas ):
         self.window().close()
         
     
+    def _TryToShowPageThatLaunchedUs( self ):
+        
+        pass
+        
+    
     def CleanBeforeDestroy( self ):
         
         self.setCursor( QG.QCursor( QC.Qt.CursorShape.ArrowCursor ) )
@@ -2568,12 +2573,10 @@ class CanvasWithHovers( Canvas ):
             if action == CAC.SIMPLE_CLOSE_MEDIA_VIEWER:
                 
                 self._TryToCloseWindow()
-            
+                
             elif action == CAC.SIMPLE_CLOSE_MEDIA_VIEWER_AND_FOCUS_TAB:
-
-                if CG.client_controller.gui.GetPageFromPageKey( self._page_key ) is not None:
-        
-                    CG.client_controller.gui.ShowPage( self._page_key )
+                
+                self._TryToShowPageThatLaunchedUs()
                 
                 self._TryToCloseWindow()
                 
@@ -3724,6 +3727,14 @@ class CanvasMediaList( CanvasWithHovers ):
         
         CG.client_controller.sub( self, 'ProcessContentUpdatePackage', 'content_updates_gui' )
         CG.client_controller.sub( self, 'ProcessServiceUpdates', 'service_updates_gui' )
+        
+    
+    def _TryToShowPageThatLaunchedUs( self ):
+        
+        if CG.client_controller.gui.GetPageFromPageKey( self._page_key ) is not None:
+            
+            CG.client_controller.gui.ShowPage( self._page_key )
+            
         
     
     def TryToDoPreClose( self ):

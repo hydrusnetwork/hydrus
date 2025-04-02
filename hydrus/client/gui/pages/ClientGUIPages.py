@@ -3255,9 +3255,6 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
             page_name = 'files'
             
         
-        search_disabled = len( initial_hashes ) > 0 and len( initial_predicates ) == 0
-        search_enabled = not search_disabled
-        
         new_options = CG.client_controller.new_options
         
         tag_service_key = new_options.GetKey( 'default_tag_service_search_page' )
@@ -3282,7 +3279,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
             file_search_context.SetComplete()
             
         
-        page_manager = ClientGUIPageManager.CreatePageManagerQuery( page_name, file_search_context, search_enabled )
+        page_manager = ClientGUIPageManager.CreatePageManagerQuery( page_name, file_search_context )
         
         if initial_sort is not None:
             

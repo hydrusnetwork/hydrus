@@ -2387,11 +2387,13 @@ class ReviewHowBonedAmI( ClientGUIScrolledPanels.ReviewPanel ):
         panel_vbox = QP.VBoxLayout()
         
         self._media_views_st = ClientGUICommon.BetterStaticText( self._views_panel )
+        self._media_views_st.setAlignment( QC.Qt.AlignmentFlag.AlignCenter )
         
         self._preview_views_st = ClientGUICommon.BetterStaticText( self._views_panel )
+        self._preview_views_st.setAlignment( QC.Qt.AlignmentFlag.AlignCenter )
         
-        QP.AddToLayout( panel_vbox, self._media_views_st, CC.FLAGS_CENTER )
-        QP.AddToLayout( panel_vbox, self._preview_views_st, CC.FLAGS_CENTER )
+        QP.AddToLayout( panel_vbox, self._media_views_st, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( panel_vbox, self._preview_views_st, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         panel_vbox.addStretch( 0 )
         
@@ -2402,12 +2404,20 @@ class ReviewHowBonedAmI( ClientGUIScrolledPanels.ReviewPanel ):
         panel_vbox = QP.VBoxLayout()
         
         self._potentials_st = ClientGUICommon.BetterStaticText( self._duplicates_panel )
+        self._potentials_st.setAlignment( QC.Qt.AlignmentFlag.AlignCenter )
         self._duplicates_st = ClientGUICommon.BetterStaticText( self._duplicates_panel )
+        self._duplicates_st.setAlignment( QC.Qt.AlignmentFlag.AlignCenter )
         self._alternates_st = ClientGUICommon.BetterStaticText( self._duplicates_panel )
+        self._alternates_st.setAlignment( QC.Qt.AlignmentFlag.AlignCenter )
         
-        QP.AddToLayout( panel_vbox, self._potentials_st, CC.FLAGS_CENTER )
-        QP.AddToLayout( panel_vbox, self._duplicates_st, CC.FLAGS_CENTER )
-        QP.AddToLayout( panel_vbox, self._alternates_st, CC.FLAGS_CENTER )
+        st = ClientGUICommon.BetterStaticText( self._duplicates_panel, label = 'Since many duplicate files get deleted, this will not give nice "all-time" numbers unless you change the file domain to "all files ever imported or deleted".' )
+        st.setWordWrap( True )
+        st.setAlignment( QC.Qt.AlignmentFlag.AlignCenter )
+        
+        QP.AddToLayout( panel_vbox, st, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( panel_vbox, self._potentials_st, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( panel_vbox, self._duplicates_st, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( panel_vbox, self._alternates_st, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         panel_vbox.addStretch( 0 )
         
@@ -2536,13 +2546,14 @@ class ReviewHowBonedAmI( ClientGUIScrolledPanels.ReviewPanel ):
     def _SetDuplicatesPanel( self, boned_stats: dict ):
         
         total_alternate_files = boned_stats[ 'total_alternate_files' ]
+        total_alternate_groups = boned_stats[ 'total_alternate_groups' ]
         total_duplicate_files = boned_stats[ 'total_duplicate_files' ]
         #total_potential_pairs = boned_stats[ 'total_potential_pairs' ]
         
         #potentials_label = f'Total duplicate potential pairs: {HydrusNumbers.ToHumanInt( total_potential_pairs )}'
-        potentials_label = f'Total duplicate potential pairs: disabled for now'
-        duplicates_label = f'Total files set duplicate: {HydrusNumbers.ToHumanInt( total_duplicate_files )}'
-        alternates_label = f'Total duplicate file groups set alternate: {HydrusNumbers.ToHumanInt( total_alternate_files )}'
+        potentials_label = f'Total potential duplicate pairs: disabled for now'
+        duplicates_label = f'Total files in duplicate groups: {HydrusNumbers.ToHumanInt( total_duplicate_files )}'
+        alternates_label = f'Total files in alternate groups: {HydrusNumbers.ToHumanInt( total_alternate_files )} ({HydrusNumbers.ToHumanInt( total_alternate_groups )} groups)'
         
         self._potentials_st.setText( potentials_label )
         self._duplicates_st.setText( duplicates_label )

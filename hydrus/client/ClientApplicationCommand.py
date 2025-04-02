@@ -428,7 +428,6 @@ legacy_simple_str_to_enum_lookup = {
     'archive_file' : SIMPLE_ARCHIVE_FILE,
     'check_all_import_folders' : SIMPLE_CHECK_ALL_IMPORT_FOLDERS,
     'close_media_viewer' : SIMPLE_CLOSE_MEDIA_VIEWER,
-    'close_media_viewer_and_focus_tab' : SIMPLE_CLOSE_MEDIA_VIEWER_AND_FOCUS_TAB,
     'close_page' : SIMPLE_CLOSE_PAGE,
     'copy_bmp' : LEGACY_SIMPLE_COPY_BMP,
     'copy_bmp_or_file_if_not_bmpable' : LEGACY_SIMPLE_COPY_BMP_OR_FILE_IF_NOT_BMPABLE,

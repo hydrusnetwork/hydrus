@@ -27,15 +27,19 @@ from hydrus.client.search import ClientSearchFileSearchContext
 DUPLICATE_STATUS_DOES_NOT_MATCH_SEARCH = 0
 DUPLICATE_STATUS_MATCHES_SEARCH_BUT_NOT_TESTED = 1
 DUPLICATE_STATUS_MATCHES_SEARCH_FAILED_TEST = 2
-DUPLICATE_STATUS_MATCHES_SEARCH_PASSED_TEST = 3 # presumably this will not be needed much since we'll delete the duplicate pair soon after, but we may as well be careful
+DUPLICATE_STATUS_ACTIONED = 3
 DUPLICATE_STATUS_NOT_SEARCHED = 4 # assign this to new pairs that are added, by default
+DUPLICATE_STATUS_MATCHES_SEARCH_PASSED_TEST_READY_TO_ACTION = 5
+DUPLICATE_STATUS_USER_DECLINED = 6
 
 duplicate_status_str_lookup = {
     DUPLICATE_STATUS_DOES_NOT_MATCH_SEARCH : 'Did not match search',
     DUPLICATE_STATUS_MATCHES_SEARCH_BUT_NOT_TESTED : 'Matches search, not yet tested',
     DUPLICATE_STATUS_MATCHES_SEARCH_FAILED_TEST : 'Matches search, failed test',
-    DUPLICATE_STATUS_MATCHES_SEARCH_PASSED_TEST : 'Matches search, passed test',
-    DUPLICATE_STATUS_NOT_SEARCHED : 'Not searched'
+    DUPLICATE_STATUS_MATCHES_SEARCH_PASSED_TEST_READY_TO_ACTION : 'Matches search, passed test, ready to action',
+    DUPLICATE_STATUS_ACTIONED : 'Actioned',
+    DUPLICATE_STATUS_NOT_SEARCHED : 'Not searched',
+    DUPLICATE_STATUS_USER_DECLINED : 'User declined'
 }
 
 class PairComparator( HydrusSerialisable.SerialisableBase ):
@@ -232,6 +236,16 @@ class PairSelector( HydrusSerialisable.SerialisableBase ):
         self._comparators: typing.List[ PairComparator ] = HydrusSerialisable.SerialisableList()
         
     
+    def __eq__( self, other ):
+        
+        if isinstance( other, PairSelector ):
+            
+            return self.GetSerialisableTuple() == other.GetSerialisableTuple()
+            
+        
+        return NotImplemented
+        
+    
     def _GetSerialisableInfo( self ):
         
         serialisable_comparators = HydrusSerialisable.SerialisableList( self._comparators ).GetSerialisableTuple()
@@ -310,6 +324,22 @@ class PairSelector( HydrusSerialisable.SerialisableBase ):
 
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_DUPLICATES_AUTO_RESOLUTION_PAIR_SELECTOR ] = PairSelector
 
+DUPLICATES_AUTO_RESOLUTION_RULE_OPERATION_MODE_PAUSED = 0
+DUPLICATES_AUTO_RESOLUTION_RULE_OPERATION_MODE_WORK_BUT_NO_ACTION = 1
+DUPLICATES_AUTO_RESOLUTION_RULE_OPERATION_MODE_FULLY_AUTOMATIC = 2
+
+duplicates_auto_resolution_rule_operation_mode_desc_lookup = {
+    DUPLICATES_AUTO_RESOLUTION_RULE_OPERATION_MODE_PAUSED : 'paused',
+    DUPLICATES_AUTO_RESOLUTION_RULE_OPERATION_MODE_WORK_BUT_NO_ACTION : 'semi-automatic: will search and test, but no action without human approval',
+    DUPLICATES_AUTO_RESOLUTION_RULE_OPERATION_MODE_FULLY_AUTOMATIC : 'fully automatic: will search and test and action'
+}
+
+duplicates_auto_resolution_rule_operation_mode_str_lookup = {
+    DUPLICATES_AUTO_RESOLUTION_RULE_OPERATION_MODE_PAUSED : 'paused',
+    DUPLICATES_AUTO_RESOLUTION_RULE_OPERATION_MODE_WORK_BUT_NO_ACTION : 'semi-automatic',
+    DUPLICATES_AUTO_RESOLUTION_RULE_OPERATION_MODE_FULLY_AUTOMATIC : 'fully automatic'
+}
+
 class DuplicatesAutoResolutionRule( HydrusSerialisable.SerialisableBaseNamed ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_DUPLICATES_AUTO_RESOLUTION_RULE
@@ -326,7 +356,7 @@ class DuplicatesAutoResolutionRule( HydrusSerialisable.SerialisableBaseNamed ):
         # the id here will be for the database to match up rules to cached pair statuses. slightly wewmode, but we'll see
         self._id = -1
         
-        self._paused = False
+        self._operation_mode = DUPLICATES_AUTO_RESOLUTION_RULE_OPERATION_MODE_WORK_BUT_NO_ACTION
         
         self._potential_duplicates_search_context = ClientPotentialDuplicatesSearchContext.PotentialDuplicatesSearchContext()
         
@@ -365,7 +395,7 @@ class DuplicatesAutoResolutionRule( HydrusSerialisable.SerialisableBaseNamed ):
         
         return (
             self._id,
-            self._paused,
+            self._operation_mode,
             serialisable_potential_duplicates_search_context,
             serialisable_pair_selector,
             self._action,
@@ -379,7 +409,7 @@ class DuplicatesAutoResolutionRule( HydrusSerialisable.SerialisableBaseNamed ):
         
         (
             self._id,
-            self._paused,
+            self._operation_mode,
             serialisable_potential_duplicates_search_context,
             serialisable_pair_selector,
             self._action,
@@ -395,7 +425,7 @@ class DuplicatesAutoResolutionRule( HydrusSerialisable.SerialisableBaseNamed ):
     
     def CanWorkHard( self ):
         
-        return not self._paused and ( self.HasResolutionWorkToDo() or self.HasSearchWorkToDo() )
+        return self._operation_mode != DUPLICATES_AUTO_RESOLUTION_RULE_OPERATION_MODE_PAUSED and ( self.HasResolutionWorkToDo() or self.HasSearchWorkToDo() )
         
     
     def GetAction( self ) -> int:
@@ -429,6 +459,60 @@ class DuplicatesAutoResolutionRule( HydrusSerialisable.SerialisableBaseNamed ):
         return s
         
     
+    def GetActionSummaryOnPair( self, media_result_a: ClientMediaResult.MediaResult, media_result_b: ClientMediaResult.MediaResult, do_either_way_test = True ) -> str:
+        
+        components = []
+        
+        if do_either_way_test:
+            
+            result = self._pair_selector.GetMatchingAB( media_result_a, media_result_b )
+            
+            if result is None:
+                
+                return 'pair do not pass the test'
+                
+            
+            if self._pair_selector.PairMatchesBothWaysAround( media_result_a, media_result_b ):
+                
+                components.append( 'either way around' )
+                
+            else:
+                
+                components.append( 'this way around' )
+                
+            
+        
+        #
+        
+        action_s = HC.duplicate_type_auto_resolution_action_description_lookup[ self._action ]
+        
+        components.append( action_s )
+        
+        #
+        
+        if self._custom_duplicate_content_merge_options is None:
+            
+            duplicate_content_merge_options = CG.client_controller.new_options.GetDuplicateContentMergeOptions( self._action )
+            
+        else:
+            
+            duplicate_content_merge_options = self._custom_duplicate_content_merge_options
+            
+        
+        try:
+            
+            components.append( duplicate_content_merge_options.GetMergeSummaryOnPair( media_result_a, media_result_b, self._delete_a, self._delete_b, in_auto_resolution = True ) )
+            
+        except Exception as e:
+            
+            HydrusData.ShowException( e, do_wait = False )
+            
+            components.append( 'Could not summarise the duplicate merge! Please tell hydrus dev.' )
+            
+        
+        return '\n'.join( components )
+        
+    
     def GetCountsCacheDuplicate( self ):
         
         return collections.Counter( self._counts_cache )
@@ -447,6 +531,11 @@ class DuplicatesAutoResolutionRule( HydrusSerialisable.SerialisableBaseNamed ):
     def GetId( self ) -> int:
         
         return self._id
+        
+    
+    def GetOperationMode( self ) -> int:
+        
+        return self._operation_mode
         
     
     def GetPairSelector( self ) -> PairSelector:
@@ -480,8 +569,9 @@ class DuplicatesAutoResolutionRule( HydrusSerialisable.SerialisableBaseNamed ):
         not_match = self._counts_cache[ DUPLICATE_STATUS_DOES_NOT_MATCH_SEARCH ]
         not_tested = self._counts_cache[ DUPLICATE_STATUS_MATCHES_SEARCH_BUT_NOT_TESTED ]
         failed_test = self._counts_cache[ DUPLICATE_STATUS_MATCHES_SEARCH_FAILED_TEST ]
-        
-        passed_test = self._counts_cache[ DUPLICATE_STATUS_MATCHES_SEARCH_PASSED_TEST ]
+        ready_to_action = self._counts_cache[ DUPLICATE_STATUS_MATCHES_SEARCH_PASSED_TEST_READY_TO_ACTION ]
+        actioned = self._counts_cache[ DUPLICATE_STATUS_ACTIONED ]
+        declined = self._counts_cache[ DUPLICATE_STATUS_USER_DECLINED ]
         
         result = ''
         
@@ -495,16 +585,26 @@ class DuplicatesAutoResolutionRule( HydrusSerialisable.SerialisableBaseNamed ):
             result += f'{HydrusNumbers.ToHumanInt( not_tested )} still to test, '
             
         
-        if not_searched + not_tested == 0:
+        if ready_to_action > 0:
+            
+            result += f'{HydrusNumbers.ToHumanInt( ready_to_action )} ready to resolve, '
+            
+        
+        if not_searched + not_tested + ready_to_action == 0:
             
             result += 'Done! '
             
         
-        result += f'{HydrusNumbers.ToHumanInt( passed_test )} pairs resolved'
+        result += f'{HydrusNumbers.ToHumanInt( actioned )} pairs resolved'
         
         if failed_test > 0:
             
             result += f' ({HydrusNumbers.ToHumanInt( failed_test )} failed the test)'
+            
+        
+        if declined > 0:
+            
+            result += f' ({HydrusNumbers.ToHumanInt( declined )} declined by user)'
             
         
         if not_match > 0:
@@ -525,9 +625,9 @@ class DuplicatesAutoResolutionRule( HydrusSerialisable.SerialisableBaseNamed ):
         return self._counts_cache[ DUPLICATE_STATUS_NOT_SEARCHED ] > 0
         
     
-    def IsPaused( self ) -> bool:
+    def IsPaused( self ):
         
-        return self._paused
+        return self._operation_mode == DUPLICATES_AUTO_RESOLUTION_RULE_OPERATION_MODE_PAUSED
         
     
     def SetAction( self, action: int ):
@@ -556,9 +656,9 @@ class DuplicatesAutoResolutionRule( HydrusSerialisable.SerialisableBaseNamed ):
         self._id = value
         
     
-    def SetPaused( self, value: bool ):
+    def SetOperationMode( self, value: int ):
         
-        self._paused = value
+        self._operation_mode = value
         
     
     def SetPotentialDuplicatesSearchContext( self, value: ClientPotentialDuplicatesSearchContext.PotentialDuplicatesSearchContext ):
@@ -584,6 +684,11 @@ class DuplicatesAutoResolutionRule( HydrusSerialisable.SerialisableBaseNamed ):
             ( media_result_a, media_result_b ) = result
             
         
+        return self.GetDuplicateActionResult( media_result_a, media_result_b )
+        
+    
+    def GetDuplicateActionResult( self, media_result_a: ClientMediaResult.MediaResult, media_result_b: ClientMediaResult.MediaResult ):
+        
         action = self._action
         delete_a = self._delete_a
         delete_b = self._delete_b
@@ -608,8 +713,9 @@ class DuplicatesAutoResolutionRule( HydrusSerialisable.SerialisableBaseNamed ):
         hash_a = media_result_a.GetHash()
         hash_b = media_result_b.GetHash()
         
-        content_update_packages = [ duplicate_content_merge_options.ProcessPairIntoContentUpdatePackage( media_result_a, media_result_b, delete_a = delete_a, delete_b = delete_b, file_deletion_reason = f'duplicates auto-resolution ({self._name})' ) ]
+        content_update_packages = [ duplicate_content_merge_options.ProcessPairIntoContentUpdatePackage( media_result_a, media_result_b, delete_a = delete_a, delete_b = delete_b, file_deletion_reason = f'duplicates auto-resolution ({self._name})', in_auto_resolution = True ) ]
         
+        # TODO: Make this an object bro
         return ( action, hash_a, hash_b, content_update_packages )
         
     
@@ -987,7 +1093,11 @@ class DuplicatesAutoResolutionManager( ClientDaemons.ManagerWithMainLoop ):
         
         with self._lock:
             
-            if rule == self._currently_searching_rule:
+            if rule.IsPaused():
+                
+                return 'paused'
+                
+            elif rule == self._currently_searching_rule:
                 
                 return 'searching'
                 
@@ -1018,11 +1128,31 @@ class DuplicatesAutoResolutionManager( ClientDaemons.ManagerWithMainLoop ):
             
         
     
+    def ResetRuleDeclined( self, rules: typing.Collection[ DuplicatesAutoResolutionRule ] ):
+        
+        for rule in rules:
+            
+            CG.client_controller.WriteSynchronous( 'duplicate_auto_resolution_reset_rule_declined', rule )
+            
+        
+        self.Wake()
+        
+    
     def ResetRuleSearchProgress( self, rules: typing.Collection[ DuplicatesAutoResolutionRule ] ):
         
         for rule in rules:
             
             CG.client_controller.WriteSynchronous( 'duplicate_auto_resolution_reset_rule_search_progress', rule )
+            
+        
+        self.Wake()
+        
+    
+    def ResetRuleTestProgress( self, rules: typing.Collection[ DuplicatesAutoResolutionRule ] ):
+        
+        for rule in rules:
+            
+            CG.client_controller.WriteSynchronous( 'duplicate_auto_resolution_reset_rule_test_progress', rule )
             
         
         self.Wake()

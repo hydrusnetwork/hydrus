@@ -229,7 +229,7 @@ class PopupMessage( PopupWindow ):
             
             new_text = 'The text is too long to display here. Here is the start of it (the rest is printed to the log):'
             
-            new_text += '\n' * 2
+            new_text += '\n'
             
             new_text += text[ : self.TEXT_CUTOFF ]
             

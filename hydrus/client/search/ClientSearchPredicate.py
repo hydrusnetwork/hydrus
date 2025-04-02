@@ -1102,7 +1102,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
         
         if my_type == other_type:
             
-            if my_type in ( PREDICATE_TYPE_SYSTEM_LIMIT, PREDICATE_TYPE_SYSTEM_HASH ):
+            if my_type in ( PREDICATE_TYPE_SYSTEM_LIMIT, ):
                 
                 return True
                 

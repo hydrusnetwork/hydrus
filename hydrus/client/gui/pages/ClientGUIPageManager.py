@@ -163,7 +163,7 @@ def CreatePageManagerPetitions( petition_service_key ):
     return page_manager
     
 
-def CreatePageManagerQuery( page_name, file_search_context: ClientSearchFileSearchContext.FileSearchContext, search_enabled ):
+def CreatePageManagerQuery( page_name, file_search_context: ClientSearchFileSearchContext.FileSearchContext ):
     
     location_context = file_search_context.GetLocationContext()
     
@@ -172,7 +172,6 @@ def CreatePageManagerQuery( page_name, file_search_context: ClientSearchFileSear
     synchronised = CG.client_controller.new_options.GetBoolean( 'default_search_synchronised' )
     
     page_manager.SetVariable( 'file_search_context', file_search_context )
-    page_manager.SetVariable( 'search_enabled', search_enabled )
     page_manager.SetVariable( 'synchronised', synchronised )
     
     return page_manager

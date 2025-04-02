@@ -9,6 +9,7 @@ from hydrus.client import ClientGlobals as CG
 from hydrus.client.duplicates import ClientDuplicates
 from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIDialogsQuick
+from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUITags
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui.importing import ClientGUIImportOptions
@@ -20,7 +21,7 @@ class EditDuplicateContentMergeOptionsWidget( ClientGUICommon.StaticBox ):
     
     def __init__( self, parent: QW.QWidget, duplicate_action, duplicate_content_merge_options: ClientDuplicates.DuplicateContentMergeOptions, for_custom_action = False, can_expand = False, start_expanded = True ):
         
-        super().__init__( parent, 'duplicate content merge options', can_expand = can_expand, start_expanded = start_expanded )
+        super().__init__( parent, 'duplicate metadata merge options', can_expand = can_expand, start_expanded = start_expanded )
         
         self._duplicate_action = duplicate_action
         self._for_custom_action = for_custom_action
@@ -36,12 +37,13 @@ class EditDuplicateContentMergeOptionsWidget( ClientGUICommon.StaticBox ):
         
         model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_DUPLICATE_CONTENT_MERGE_OPTIONS_TAG_SERVICES.ID, self._ConvertTagDataToDisplayTuple, self._ConvertTagDataToSortTuple )
         
-        self._tag_service_actions = ClientGUIListCtrl.BetterListCtrlTreeView( tag_services_listctrl_panel, 5, model, delete_key_callback = self._DeleteTag, activation_callback = self._EditTag )
+        self._tag_service_actions = ClientGUIListCtrl.BetterListCtrlTreeView( tag_services_listctrl_panel, 5, model, delete_key_callback = self._DeleteTag )
         
         tag_services_listctrl_panel.SetListCtrl( self._tag_service_actions )
         
         tag_services_listctrl_panel.AddButton( 'add', self._AddTag )
-        tag_services_listctrl_panel.AddButton( 'edit', self._EditTag, enabled_only_on_single_selection = True )
+        self._edit_tag_action_button = tag_services_listctrl_panel.AddButton( 'edit action', self._EditTagAction, enabled_only_on_single_selection = True )
+        tag_services_listctrl_panel.AddButton( 'edit filter', self._EditTagFilter, enabled_only_on_single_selection = True )
         tag_services_listctrl_panel.AddButton( 'delete', self._DeleteTag, enabled_only_on_selection = True )
         
         #
@@ -57,7 +59,7 @@ class EditDuplicateContentMergeOptionsWidget( ClientGUICommon.StaticBox ):
         rating_services_listctrl_panel.SetListCtrl( self._rating_service_actions )
         
         rating_services_listctrl_panel.AddButton( 'add', self._AddRating )
-        self._edit_rating_button = rating_services_listctrl_panel.AddButton( 'edit', self._EditRating, enabled_only_on_single_selection = True )
+        self._edit_rating_button = rating_services_listctrl_panel.AddButton( 'edit action', self._EditRating, enabled_only_on_single_selection = True )
         rating_services_listctrl_panel.AddButton( 'delete', self._DeleteRating, enabled_only_on_selection = True )
         
         #
@@ -67,6 +69,8 @@ class EditDuplicateContentMergeOptionsWidget( ClientGUICommon.StaticBox ):
         self._sync_archive_action.addItem( 'make no change', ClientDuplicates.SYNC_ARCHIVE_NONE )
         self._sync_archive_action.addItem( 'if one is archived, archive the other', ClientDuplicates.SYNC_ARCHIVE_IF_ONE_DO_BOTH )
         self._sync_archive_action.addItem( 'always archive both', ClientDuplicates.SYNC_ARCHIVE_DO_BOTH_REGARDLESS )
+        
+        self._sync_archive_action.setToolTip( ClientGUIFunctions.WrapToolTip( 'In the duplicates auto-resolution system, "always archive both" (which assumes human eyes) will be treated as "if one is archived, archive the other".' ) )
         
         self._sync_urls_action = ClientGUICommon.BetterChoice( self )
         self._sync_file_modified_date_action = ClientGUICommon.BetterChoice( self )
@@ -86,6 +90,10 @@ class EditDuplicateContentMergeOptionsWidget( ClientGUICommon.StaticBox ):
         
         #
         
+        st = ClientGUICommon.BetterStaticText( rating_services_panel, label = 'If both files have a rating, inc/dec ratings will move/copy via simple addition. Star ratings will overwrite only if the source has a higher rating than the destination.' )
+        st.setWordWrap( True )
+        
+        rating_services_panel.Add( st, CC.FLAGS_EXPAND_PERPENDICULAR )
         rating_services_panel.Add( rating_services_listctrl_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         #
@@ -432,7 +440,7 @@ class EditDuplicateContentMergeOptionsWidget( ClientGUICommon.StaticBox ):
         self._rating_service_actions.Sort()
         
     
-    def _EditTag( self ):
+    def _EditTagAction( self ):
         
         service_key = self._tag_service_actions.GetTopSelectedData()
         
@@ -462,6 +470,24 @@ class EditDuplicateContentMergeOptionsWidget( ClientGUICommon.StaticBox ):
             
             action = HC.CONTENT_MERGE_ACTION_TWO_WAY_MERGE
             
+        
+        self._service_keys_to_tag_options[ service_key ] = ( action, tag_filter )
+        
+        self._tag_service_actions.UpdateDatas( ( service_key, ) )
+        
+        self._tag_service_actions.Sort()
+        
+    
+    def _EditTagFilter( self ):
+        
+        service_key = self._tag_service_actions.GetTopSelectedData()
+        
+        if service_key is None:
+            
+            return
+            
+        
+        ( action, tag_filter ) = self._service_keys_to_tag_options[ service_key ]
         
         with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit which tags will be merged' ) as dlg_3:
             
@@ -545,6 +571,8 @@ class EditDuplicateContentMergeOptionsWidget( ClientGUICommon.StaticBox ):
             note += '\n' * 2
             note += 'Note that this has fewer actions than the "this is better" decision. You can mostly just copy in both directions.'
             
+        
+        self._edit_tag_action_button.setVisible( we_better_dupe )
         
         self._not_better_note_st.setText( note )
         

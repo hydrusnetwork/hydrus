@@ -80,7 +80,8 @@ class TestClientDBDuplicatesAutoResolution( unittest.TestCase ):
             ClientDuplicatesAutoResolution.DUPLICATE_STATUS_DOES_NOT_MATCH_SEARCH,
             ClientDuplicatesAutoResolution.DUPLICATE_STATUS_MATCHES_SEARCH_BUT_NOT_TESTED,
             ClientDuplicatesAutoResolution.DUPLICATE_STATUS_MATCHES_SEARCH_FAILED_TEST,
-            ClientDuplicatesAutoResolution.DUPLICATE_STATUS_MATCHES_SEARCH_PASSED_TEST,
+            ClientDuplicatesAutoResolution.DUPLICATE_STATUS_MATCHES_SEARCH_PASSED_TEST_READY_TO_ACTION,
+            ClientDuplicatesAutoResolution.DUPLICATE_STATUS_ACTIONED,
             ClientDuplicatesAutoResolution.DUPLICATE_STATUS_NOT_SEARCHED
         ]:
             
@@ -142,6 +143,8 @@ class TestClientDBDuplicatesAutoResolution( unittest.TestCase ):
         
         rule_1 = ClientDuplicatesAutoResolution.DuplicatesAutoResolutionRule( 'test 1' )
         
+        rule_1.SetOperationMode( ClientDuplicatesAutoResolution.DUPLICATES_AUTO_RESOLUTION_RULE_OPERATION_MODE_FULLY_AUTOMATIC )
+        
         rules_we_are_setting = [ rule_1.Duplicate() ]
         
         self._write( 'duplicate_auto_resolution_set_rules', rules_we_are_setting )
@@ -150,7 +153,7 @@ class TestClientDBDuplicatesAutoResolution( unittest.TestCase ):
         
         rule_1_read = rules_we_read[0]
         
-        self.assertNotEquals( rule_1_read.GetId(), -1 )
+        self.assertNotEqual( rule_1_read.GetId(), -1 )
         
         rule_1.SetId( rule_1_read.GetId() )
         
@@ -160,6 +163,8 @@ class TestClientDBDuplicatesAutoResolution( unittest.TestCase ):
         
         rule_2 = ClientDuplicatesAutoResolution.DuplicatesAutoResolutionRule( 'test 2' )
         
+        rule_2.SetOperationMode( ClientDuplicatesAutoResolution.DUPLICATES_AUTO_RESOLUTION_RULE_OPERATION_MODE_FULLY_AUTOMATIC )
+        
         rules_we_are_setting = [ rule_1.Duplicate(), rule_2.Duplicate() ]
         
         self._write( 'duplicate_auto_resolution_set_rules', rules_we_are_setting )
@@ -168,8 +173,8 @@ class TestClientDBDuplicatesAutoResolution( unittest.TestCase ):
         
         rule_2_read = [ rule for rule in rules_we_read if rule.GetId() not in ( -1, rule_1.GetId() ) ][0]
         
-        self.assertNotEquals( rule_2_read.GetId(), -1 )
-        self.assertNotEquals( rule_1.GetId(), rule_2.GetId() )
+        self.assertNotEqual( rule_2_read.GetId(), -1 )
+        self.assertNotEqual( rule_1.GetId(), rule_2.GetId() )
         
         rule_2.SetId( rule_2_read.GetId() )
         
@@ -189,6 +194,8 @@ class TestClientDBDuplicatesAutoResolution( unittest.TestCase ):
         
         rule_3 = ClientDuplicatesAutoResolution.DuplicatesAutoResolutionRule( 'test 3' )
         
+        rule_3.SetOperationMode( ClientDuplicatesAutoResolution.DUPLICATES_AUTO_RESOLUTION_RULE_OPERATION_MODE_FULLY_AUTOMATIC )
+        
         rules_we_are_setting = [ rule_2.Duplicate(), rule_3.Duplicate() ]
         
         self._write( 'duplicate_auto_resolution_set_rules', rules_we_are_setting )
@@ -197,14 +204,336 @@ class TestClientDBDuplicatesAutoResolution( unittest.TestCase ):
         
         rule_3_read = [ rule for rule in rules_we_read if rule.GetId() not in ( -1, rule_2.GetId() ) ][0]
         
-        self.assertNotEquals( rule_3_read.GetId(), -1 )
-        self.assertNotEquals( rule_1.GetId(), rule_3.GetId() )
+        self.assertNotEqual( rule_3_read.GetId(), -1 )
+        self.assertNotEqual( rule_1.GetId(), rule_3.GetId() )
         
         rule_3.SetId( rule_3_read.GetId() )
         
         compare_rule_lists( rules_we_read, rules_we_are_setting )
         
         self._compare_counts_cache( rule_3_read.GetCountsCacheDuplicate(), {} )
+        
+    
+    def test_editing_rules_resets_queues_search_change( self ):
+        
+        self._clear_db()
+        
+        rule_1 = ClientDuplicatesAutoResolution.DuplicatesAutoResolutionRule( 'test 1' )
+        
+        rule_1.SetOperationMode( ClientDuplicatesAutoResolution.DUPLICATES_AUTO_RESOLUTION_RULE_OPERATION_MODE_WORK_BUT_NO_ACTION )
+        
+        location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY )
+        
+        predicates = [
+            ClientSearchPredicate.Predicate( predicate_type = ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_EVERYTHING )
+        ]
+        
+        file_search_context_1 = ClientSearchFileSearchContext.FileSearchContext(
+            location_context = location_context,
+            predicates = predicates
+        )
+        
+        potential_duplicates_search_context = ClientPotentialDuplicatesSearchContext.PotentialDuplicatesSearchContext()
+        
+        potential_duplicates_search_context.SetFileSearchContext1( file_search_context_1 )
+        potential_duplicates_search_context.SetFileSearchContext2( file_search_context_1 )
+        potential_duplicates_search_context.SetDupeSearchType( ClientDuplicates.DUPE_SEARCH_ONE_FILE_MATCHES_ONE_SEARCH )
+        potential_duplicates_search_context.SetPixelDupesPreference( ClientDuplicates.SIMILAR_FILES_PIXEL_DUPES_ALLOWED )
+        potential_duplicates_search_context.SetMaxHammingDistance( 8 )
+        
+        rule_1.SetPotentialDuplicatesSearchContext( potential_duplicates_search_context )
+        
+        selector = ClientDuplicatesAutoResolution.PairSelector()
+        
+        comparator = ClientDuplicatesAutoResolution.PairComparatorOneFile()
+        
+        mc = ClientMetadataConditional.MetadataConditional()
+        
+        file_search_context = ClientSearchFileSearchContext.FileSearchContext(
+            ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY ),
+            ClientSearchTagContext.TagContext(),
+            predicates = [
+                ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_MIME, value = { HC.IMAGE_JPEG } )
+            ]
+        )
+        
+        mc.SetFileSearchContext( file_search_context )
+        
+        comparator.SetMetadataConditional( mc )
+        
+        selector.SetComparators( [ comparator ] )
+        
+        rule_1.SetPairSelector( selector )
+        
+        rules_we_are_setting = [ rule_1.Duplicate() ]
+        
+        self._write( 'duplicate_auto_resolution_set_rules', rules_we_are_setting )
+        
+        rules_we_read = self._read( 'duplicate_auto_resolution_rules_with_counts' )
+        
+        rule_1_read = rules_we_read[0]
+        
+        hashes = self._import_four_files()
+        
+        self._write(
+            'duplicate_pair_status',
+            [
+                ( HC.DUPLICATE_POTENTIAL, hashes[0], hashes[1], [ ClientContentUpdates.ContentUpdatePackage() ] ),
+                ( HC.DUPLICATE_POTENTIAL, hashes[2], hashes[3], [ ClientContentUpdates.ContentUpdatePackage() ] )
+            ]
+        )
+        
+        self._write( 'duplicate_auto_resolution_do_search_work', rule_1_read )
+        
+        rules_we_read = self._read( 'duplicate_auto_resolution_rules_with_counts' )
+        
+        rule_1_read = rules_we_read[0]
+        
+        self._compare_counts_cache( rule_1_read.GetCountsCacheDuplicate(), { ClientDuplicatesAutoResolution.DUPLICATE_STATUS_MATCHES_SEARCH_BUT_NOT_TESTED : 2 } )
+        
+        self._write( 'duplicate_auto_resolution_do_resolution_work', rule_1_read )
+        
+        rules_we_read = self._read( 'duplicate_auto_resolution_rules_with_counts' )
+        
+        rule_1_read = rules_we_read[0]
+        
+        self._compare_counts_cache( rule_1_read.GetCountsCacheDuplicate(), { ClientDuplicatesAutoResolution.DUPLICATE_STATUS_MATCHES_SEARCH_PASSED_TEST_READY_TO_ACTION : 1, ClientDuplicatesAutoResolution.DUPLICATE_STATUS_MATCHES_SEARCH_FAILED_TEST : 1 } )
+        
+        rule_1 = rule_1_read.Duplicate()
+        
+        potential_duplicates_search_context.SetPixelDupesPreference( ClientDuplicates.SIMILAR_FILES_PIXEL_DUPES_REQUIRED )
+        
+        rule_1.SetPotentialDuplicatesSearchContext( potential_duplicates_search_context )
+        
+        rules_we_are_setting = [ rule_1 ]
+        
+        self._write( 'duplicate_auto_resolution_set_rules', rules_we_are_setting )
+        
+        rules_we_read = self._read( 'duplicate_auto_resolution_rules_with_counts' )
+        
+        rule_1_read = rules_we_read[0]
+        
+        self._compare_counts_cache( rule_1_read.GetCountsCacheDuplicate(), { ClientDuplicatesAutoResolution.DUPLICATE_STATUS_NOT_SEARCHED : 2 } )
+        
+    
+    def test_editing_rules_resets_queues_selector_change( self ):
+        
+        self._clear_db()
+        
+        rule_1 = ClientDuplicatesAutoResolution.DuplicatesAutoResolutionRule( 'test 1' )
+        
+        rule_1.SetOperationMode( ClientDuplicatesAutoResolution.DUPLICATES_AUTO_RESOLUTION_RULE_OPERATION_MODE_WORK_BUT_NO_ACTION )
+        
+        location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY )
+        
+        predicates = [
+            ClientSearchPredicate.Predicate( predicate_type = ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_EVERYTHING )
+        ]
+        
+        file_search_context_1 = ClientSearchFileSearchContext.FileSearchContext(
+            location_context = location_context,
+            predicates = predicates
+        )
+        
+        potential_duplicates_search_context = ClientPotentialDuplicatesSearchContext.PotentialDuplicatesSearchContext()
+        
+        potential_duplicates_search_context.SetFileSearchContext1( file_search_context_1 )
+        potential_duplicates_search_context.SetFileSearchContext2( file_search_context_1 )
+        potential_duplicates_search_context.SetDupeSearchType( ClientDuplicates.DUPE_SEARCH_ONE_FILE_MATCHES_ONE_SEARCH )
+        potential_duplicates_search_context.SetPixelDupesPreference( ClientDuplicates.SIMILAR_FILES_PIXEL_DUPES_ALLOWED )
+        potential_duplicates_search_context.SetMaxHammingDistance( 8 )
+        
+        rule_1.SetPotentialDuplicatesSearchContext( potential_duplicates_search_context )
+        
+        selector = ClientDuplicatesAutoResolution.PairSelector()
+        
+        comparator = ClientDuplicatesAutoResolution.PairComparatorOneFile()
+        
+        mc = ClientMetadataConditional.MetadataConditional()
+        
+        file_search_context = ClientSearchFileSearchContext.FileSearchContext(
+            ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY ),
+            ClientSearchTagContext.TagContext(),
+            predicates = [
+                ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_MIME, value = { HC.IMAGE_JPEG } )
+            ]
+        )
+        
+        mc.SetFileSearchContext( file_search_context )
+        
+        comparator.SetMetadataConditional( mc )
+        
+        selector.SetComparators( [ comparator ] )
+        
+        rule_1.SetPairSelector( selector )
+        
+        rules_we_are_setting = [ rule_1.Duplicate() ]
+        
+        self._write( 'duplicate_auto_resolution_set_rules', rules_we_are_setting )
+        
+        rules_we_read = self._read( 'duplicate_auto_resolution_rules_with_counts' )
+        
+        rule_1_read = rules_we_read[0]
+        
+        hashes = self._import_four_files()
+        
+        self._write(
+            'duplicate_pair_status',
+            [
+                ( HC.DUPLICATE_POTENTIAL, hashes[0], hashes[1], [ ClientContentUpdates.ContentUpdatePackage() ] ),
+                ( HC.DUPLICATE_POTENTIAL, hashes[2], hashes[3], [ ClientContentUpdates.ContentUpdatePackage() ] )
+            ]
+        )
+        
+        self._write( 'duplicate_auto_resolution_do_search_work', rule_1_read )
+        
+        rules_we_read = self._read( 'duplicate_auto_resolution_rules_with_counts' )
+        
+        rule_1_read = rules_we_read[0]
+        
+        self._compare_counts_cache( rule_1_read.GetCountsCacheDuplicate(), { ClientDuplicatesAutoResolution.DUPLICATE_STATUS_MATCHES_SEARCH_BUT_NOT_TESTED : 2 } )
+        
+        self._write( 'duplicate_auto_resolution_do_resolution_work', rule_1_read )
+        
+        rules_we_read = self._read( 'duplicate_auto_resolution_rules_with_counts' )
+        
+        rule_1_read = rules_we_read[0]
+        
+        self._compare_counts_cache( rule_1_read.GetCountsCacheDuplicate(), { ClientDuplicatesAutoResolution.DUPLICATE_STATUS_MATCHES_SEARCH_PASSED_TEST_READY_TO_ACTION : 1, ClientDuplicatesAutoResolution.DUPLICATE_STATUS_MATCHES_SEARCH_FAILED_TEST : 1 } )
+        
+        rule_1 = rule_1_read.Duplicate()
+        
+        selector = ClientDuplicatesAutoResolution.PairSelector()
+        
+        comparator = ClientDuplicatesAutoResolution.PairComparatorOneFile()
+        
+        mc = ClientMetadataConditional.MetadataConditional()
+        
+        file_search_context = ClientSearchFileSearchContext.FileSearchContext(
+            ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY ),
+            ClientSearchTagContext.TagContext(),
+            predicates = [
+                ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_MIME, value = { HC.IMAGE_PNG } )
+            ]
+        )
+        
+        mc.SetFileSearchContext( file_search_context )
+        
+        comparator.SetMetadataConditional( mc )
+        
+        selector.SetComparators( [ comparator ] )
+        
+        rule_1.SetPairSelector( selector )
+        
+        rules_we_are_setting = [ rule_1 ]
+        
+        self._write( 'duplicate_auto_resolution_set_rules', rules_we_are_setting )
+        
+        rules_we_read = self._read( 'duplicate_auto_resolution_rules_with_counts' )
+        
+        rule_1_read = rules_we_read[0]
+        
+        self._compare_counts_cache( rule_1_read.GetCountsCacheDuplicate(), { ClientDuplicatesAutoResolution.DUPLICATE_STATUS_MATCHES_SEARCH_BUT_NOT_TESTED : 2 } )
+        
+    
+    def test_editing_rules_resets_queues_semi_to_fully( self ):
+        
+        self._clear_db()
+        
+        rule_1 = ClientDuplicatesAutoResolution.DuplicatesAutoResolutionRule( 'test 1' )
+        
+        rule_1.SetOperationMode( ClientDuplicatesAutoResolution.DUPLICATES_AUTO_RESOLUTION_RULE_OPERATION_MODE_WORK_BUT_NO_ACTION )
+        
+        location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY )
+        
+        predicates = [
+            ClientSearchPredicate.Predicate( predicate_type = ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_EVERYTHING )
+        ]
+        
+        file_search_context_1 = ClientSearchFileSearchContext.FileSearchContext(
+            location_context = location_context,
+            predicates = predicates
+        )
+        
+        potential_duplicates_search_context = ClientPotentialDuplicatesSearchContext.PotentialDuplicatesSearchContext()
+        
+        potential_duplicates_search_context.SetFileSearchContext1( file_search_context_1 )
+        potential_duplicates_search_context.SetFileSearchContext2( file_search_context_1 )
+        potential_duplicates_search_context.SetDupeSearchType( ClientDuplicates.DUPE_SEARCH_ONE_FILE_MATCHES_ONE_SEARCH )
+        potential_duplicates_search_context.SetPixelDupesPreference( ClientDuplicates.SIMILAR_FILES_PIXEL_DUPES_ALLOWED )
+        potential_duplicates_search_context.SetMaxHammingDistance( 8 )
+        
+        rule_1.SetPotentialDuplicatesSearchContext( potential_duplicates_search_context )
+        
+        selector = ClientDuplicatesAutoResolution.PairSelector()
+        
+        comparator = ClientDuplicatesAutoResolution.PairComparatorOneFile()
+        
+        mc = ClientMetadataConditional.MetadataConditional()
+        
+        file_search_context = ClientSearchFileSearchContext.FileSearchContext(
+            ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY ),
+            ClientSearchTagContext.TagContext(),
+            predicates = [
+                ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_MIME, value = { HC.IMAGE_JPEG } )
+            ]
+        )
+        
+        mc.SetFileSearchContext( file_search_context )
+        
+        comparator.SetMetadataConditional( mc )
+        
+        selector.SetComparators( [ comparator ] )
+        
+        rule_1.SetPairSelector( selector )
+        
+        rules_we_are_setting = [ rule_1.Duplicate() ]
+        
+        self._write( 'duplicate_auto_resolution_set_rules', rules_we_are_setting )
+        
+        rules_we_read = self._read( 'duplicate_auto_resolution_rules_with_counts' )
+        
+        rule_1_read = rules_we_read[0]
+        
+        hashes = self._import_four_files()
+        
+        self._write(
+            'duplicate_pair_status',
+            [
+                ( HC.DUPLICATE_POTENTIAL, hashes[0], hashes[1], [ ClientContentUpdates.ContentUpdatePackage() ] ),
+                ( HC.DUPLICATE_POTENTIAL, hashes[2], hashes[3], [ ClientContentUpdates.ContentUpdatePackage() ] )
+            ]
+        )
+        
+        self._write( 'duplicate_auto_resolution_do_search_work', rule_1_read )
+        
+        rules_we_read = self._read( 'duplicate_auto_resolution_rules_with_counts' )
+        
+        rule_1_read = rules_we_read[0]
+        
+        self._compare_counts_cache( rule_1_read.GetCountsCacheDuplicate(), { ClientDuplicatesAutoResolution.DUPLICATE_STATUS_MATCHES_SEARCH_BUT_NOT_TESTED : 2 } )
+        
+        self._write( 'duplicate_auto_resolution_do_resolution_work', rule_1_read )
+        
+        rules_we_read = self._read( 'duplicate_auto_resolution_rules_with_counts' )
+        
+        rule_1_read = rules_we_read[0]
+        
+        self._compare_counts_cache( rule_1_read.GetCountsCacheDuplicate(), { ClientDuplicatesAutoResolution.DUPLICATE_STATUS_MATCHES_SEARCH_PASSED_TEST_READY_TO_ACTION : 1, ClientDuplicatesAutoResolution.DUPLICATE_STATUS_MATCHES_SEARCH_FAILED_TEST : 1 } )
+        
+        rule_1 = rule_1_read.Duplicate()
+        
+        rule_1.SetOperationMode( ClientDuplicatesAutoResolution.DUPLICATES_AUTO_RESOLUTION_RULE_OPERATION_MODE_FULLY_AUTOMATIC )
+        
+        rules_we_are_setting = [ rule_1 ]
+        
+        self._write( 'duplicate_auto_resolution_set_rules', rules_we_are_setting )
+        
+        rules_we_read = self._read( 'duplicate_auto_resolution_rules_with_counts' )
+        
+        rule_1_read = rules_we_read[0]
+        
+        self._compare_counts_cache( rule_1_read.GetCountsCacheDuplicate(), { ClientDuplicatesAutoResolution.DUPLICATE_STATUS_MATCHES_SEARCH_BUT_NOT_TESTED : 1, ClientDuplicatesAutoResolution.DUPLICATE_STATUS_MATCHES_SEARCH_FAILED_TEST : 1 } )
         
     
     def test_rules_sync_to_pairs( self ):
@@ -221,6 +550,8 @@ class TestClientDBDuplicatesAutoResolution( unittest.TestCase ):
         )
         
         rule_1 = ClientDuplicatesAutoResolution.DuplicatesAutoResolutionRule( 'test 1' )
+        
+        rule_1.SetOperationMode( ClientDuplicatesAutoResolution.DUPLICATES_AUTO_RESOLUTION_RULE_OPERATION_MODE_FULLY_AUTOMATIC )
         
         rules_we_are_setting = [ rule_1.Duplicate() ]
         
@@ -306,6 +637,8 @@ class TestClientDBDuplicatesAutoResolution( unittest.TestCase ):
         
         rule_1 = ClientDuplicatesAutoResolution.DuplicatesAutoResolutionRule( 'test 1' )
         
+        rule_1.SetOperationMode( ClientDuplicatesAutoResolution.DUPLICATES_AUTO_RESOLUTION_RULE_OPERATION_MODE_FULLY_AUTOMATIC )
+        
         location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY )
         
         predicates = [
@@ -349,7 +682,7 @@ class TestClientDBDuplicatesAutoResolution( unittest.TestCase ):
         self._compare_counts_cache( rule_1_read.GetCountsCacheDuplicate(), { ClientDuplicatesAutoResolution.DUPLICATE_STATUS_MATCHES_SEARCH_BUT_NOT_TESTED : 1, ClientDuplicatesAutoResolution.DUPLICATE_STATUS_DOES_NOT_MATCH_SEARCH : 1 } )
         
     
-    def test_rules_resolution( self ):
+    def test_rules_auto_resolution( self ):
         
         # two pairs, and our search gets both, and then we resolve one
         
@@ -366,6 +699,125 @@ class TestClientDBDuplicatesAutoResolution( unittest.TestCase ):
         )
         
         rule_1 = ClientDuplicatesAutoResolution.DuplicatesAutoResolutionRule( 'test 1' )
+        
+        rule_1.SetOperationMode( ClientDuplicatesAutoResolution.DUPLICATES_AUTO_RESOLUTION_RULE_OPERATION_MODE_FULLY_AUTOMATIC )
+        
+        location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY )
+        
+        predicates = [
+            ClientSearchPredicate.Predicate( predicate_type = ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_EVERYTHING )
+        ]
+        
+        file_search_context_1 = ClientSearchFileSearchContext.FileSearchContext(
+            location_context = location_context,
+            predicates = predicates
+        )
+        
+        potential_duplicates_search_context = ClientPotentialDuplicatesSearchContext.PotentialDuplicatesSearchContext()
+        
+        potential_duplicates_search_context.SetFileSearchContext1( file_search_context_1 )
+        potential_duplicates_search_context.SetFileSearchContext2( file_search_context_1 )
+        potential_duplicates_search_context.SetDupeSearchType( ClientDuplicates.DUPE_SEARCH_ONE_FILE_MATCHES_ONE_SEARCH )
+        potential_duplicates_search_context.SetPixelDupesPreference( ClientDuplicates.SIMILAR_FILES_PIXEL_DUPES_ALLOWED )
+        potential_duplicates_search_context.SetMaxHammingDistance( 8 )
+        
+        rule_1.SetPotentialDuplicatesSearchContext( potential_duplicates_search_context )
+        
+        selector = ClientDuplicatesAutoResolution.PairSelector()
+        
+        comparator = ClientDuplicatesAutoResolution.PairComparatorOneFile()
+        
+        mc = ClientMetadataConditional.MetadataConditional()
+        
+        file_search_context = ClientSearchFileSearchContext.FileSearchContext(
+            ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY ),
+            ClientSearchTagContext.TagContext(),
+            predicates = [
+                ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_MIME, value = { HC.IMAGE_JPEG } )
+            ]
+        )
+        
+        mc.SetFileSearchContext( file_search_context )
+        
+        comparator.SetMetadataConditional( mc )
+        
+        selector.SetComparators( [ comparator ] )
+        
+        rule_1.SetPairSelector( selector )
+        
+        rule_1.SetAction( HC.DUPLICATE_BETTER )
+        
+        rules_we_are_setting = [ rule_1.Duplicate() ]
+        
+        self._write( 'duplicate_auto_resolution_set_rules', rules_we_are_setting )
+        
+        rules_we_read = self._read( 'duplicate_auto_resolution_rules_with_counts' )
+        
+        rule_1_read = rules_we_read[0]
+        
+        self._compare_counts_cache( rule_1_read.GetCountsCacheDuplicate(), { ClientDuplicatesAutoResolution.DUPLICATE_STATUS_NOT_SEARCHED : 2 } )
+        
+        ( still_work_to_do_here, matching_pairs_produced_here ) = self._write( 'duplicate_auto_resolution_do_search_work', rule_1_read )
+        
+        self.assertFalse( still_work_to_do_here )
+        self.assertTrue( matching_pairs_produced_here )
+        
+        rules_we_read = self._read( 'duplicate_auto_resolution_rules_with_counts' )
+        
+        rule_1_read = rules_we_read[0]
+        
+        self._compare_counts_cache( rule_1_read.GetCountsCacheDuplicate(), { ClientDuplicatesAutoResolution.DUPLICATE_STATUS_MATCHES_SEARCH_BUT_NOT_TESTED : 2 } )
+        
+        still_work_to_do_here = self._write( 'duplicate_auto_resolution_do_resolution_work', rule_1_read )
+        
+        self.assertFalse( still_work_to_do_here )
+        
+        rules_we_read = self._read( 'duplicate_auto_resolution_rules_with_counts' )
+        
+        rule_1_read = rules_we_read[0]
+        
+        self._compare_counts_cache( rule_1_read.GetCountsCacheDuplicate(), { ClientDuplicatesAutoResolution.DUPLICATE_STATUS_ACTIONED : 1, ClientDuplicatesAutoResolution.DUPLICATE_STATUS_MATCHES_SEARCH_FAILED_TEST : 1 } )
+        
+        for ( hash, is_king, dupe_counts ) in [
+            ( hashes[0], True, { HC.DUPLICATE_MEMBER : 1 } ),
+            ( hashes[1], False, { HC.DUPLICATE_MEMBER : 1 } ),
+            ( hashes[2], True, { HC.DUPLICATE_POTENTIAL : 1 } ),
+            ( hashes[3], True, { HC.DUPLICATE_POTENTIAL : 1 } )
+        ]:
+            
+            result = self._read( 'file_duplicate_info', ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY ), hash )
+            
+            self.assertEqual( result[ 'is_king' ], is_king )
+            
+            self._compare_counts_cache( result[ 'counts' ], dupe_counts )
+            
+        
+        actioned_pairs_with_info = self._read( 'duplicates_auto_resolution_actioned_pairs', rule_1_read )
+        
+        ( media_result_1, media_result_2, duplicate_type, timestamp_ms ) = actioned_pairs_with_info[0]
+        
+        self.assertEqual( media_result_1.GetHash(), hashes[0] )
+        self.assertEqual( media_result_2.GetHash(), hashes[1] )
+        self.assertEqual( duplicate_type, HC.DUPLICATE_BETTER )
+        
+    
+    def _semi_resolution_setup( self ):
+        
+        self._clear_db()
+        
+        hashes = self._import_four_files()
+        
+        self._write(
+            'duplicate_pair_status',
+            [
+                ( HC.DUPLICATE_POTENTIAL, hashes[0], hashes[1], [ ClientContentUpdates.ContentUpdatePackage() ] ),
+                ( HC.DUPLICATE_POTENTIAL, hashes[2], hashes[3], [ ClientContentUpdates.ContentUpdatePackage() ] )
+            ]
+        )
+        
+        rule_1 = ClientDuplicatesAutoResolution.DuplicatesAutoResolutionRule( 'test 1' )
+        
+        rule_1.SetOperationMode( ClientDuplicatesAutoResolution.DUPLICATES_AUTO_RESOLUTION_RULE_OPERATION_MODE_WORK_BUT_NO_ACTION )
         
         location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY )
         
@@ -439,7 +891,46 @@ class TestClientDBDuplicatesAutoResolution( unittest.TestCase ):
         
         rule_1_read = rules_we_read[0]
         
-        self._compare_counts_cache( rule_1_read.GetCountsCacheDuplicate(), { ClientDuplicatesAutoResolution.DUPLICATE_STATUS_MATCHES_SEARCH_PASSED_TEST : 1, ClientDuplicatesAutoResolution.DUPLICATE_STATUS_MATCHES_SEARCH_FAILED_TEST : 1 } )
+        self._compare_counts_cache( rule_1_read.GetCountsCacheDuplicate(), { ClientDuplicatesAutoResolution.DUPLICATE_STATUS_MATCHES_SEARCH_PASSED_TEST_READY_TO_ACTION : 1, ClientDuplicatesAutoResolution.DUPLICATE_STATUS_MATCHES_SEARCH_FAILED_TEST : 1 } )
+        
+        for ( hash, is_king, dupe_counts ) in [
+            ( hashes[0], True, { HC.DUPLICATE_POTENTIAL : 1 } ),
+            ( hashes[1], True, { HC.DUPLICATE_POTENTIAL : 1 } ),
+            ( hashes[2], True, { HC.DUPLICATE_POTENTIAL : 1 } ),
+            ( hashes[3], True, { HC.DUPLICATE_POTENTIAL : 1 } )
+        ]:
+            
+            result = self._read( 'file_duplicate_info', ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY ), hash )
+            
+            self.assertEqual( result[ 'is_king' ], is_king )
+            
+            self._compare_counts_cache( result[ 'counts' ], dupe_counts )
+            
+        
+        return hashes
+        
+    
+    def test_rules_semi_resolution_approve( self ):
+        
+        # two pairs, and our search gets both, and one tests ok--we approve it
+        
+        hashes = self._semi_resolution_setup()
+        
+        rules_we_read = self._read( 'duplicate_auto_resolution_rules_with_counts' )
+        
+        rule_1_read = rules_we_read[0]
+        
+        pending_action_pairs = self._read( 'duplicates_auto_resolution_pending_action_pairs', rule_1_read )
+        
+        [ ( media_result_1, media_result_2 ) ] = pending_action_pairs
+        
+        self._write( 'duplicate_auto_resolution_approve_pending_pairs', rule_1_read, [ ( media_result_1, media_result_2 ) ] )
+        
+        rules_we_read = self._read( 'duplicate_auto_resolution_rules_with_counts' )
+        
+        rule_1_read = rules_we_read[0]
+        
+        self._compare_counts_cache( rule_1_read.GetCountsCacheDuplicate(), { ClientDuplicatesAutoResolution.DUPLICATE_STATUS_ACTIONED : 1, ClientDuplicatesAutoResolution.DUPLICATE_STATUS_MATCHES_SEARCH_FAILED_TEST : 1 } )
         
         for ( hash, is_king, dupe_counts ) in [
             ( hashes[0], True, { HC.DUPLICATE_MEMBER : 1 } ),
@@ -454,5 +945,54 @@ class TestClientDBDuplicatesAutoResolution( unittest.TestCase ):
             
             self._compare_counts_cache( result[ 'counts' ], dupe_counts )
             
+        
+        actioned_pairs_with_info = self._read( 'duplicates_auto_resolution_actioned_pairs', rule_1_read )
+        
+        ( media_result_1, media_result_2, duplicate_type, timestamp_ms ) = actioned_pairs_with_info[0]
+        
+        self.assertEqual( media_result_1.GetHash(), hashes[0] )
+        self.assertEqual( media_result_2.GetHash(), hashes[1] )
+        self.assertEqual( duplicate_type, HC.DUPLICATE_BETTER )
+        
+    
+    def test_rules_semi_resolution_deny( self ):
+        
+        # two pairs, and our search gets both, and one tests ok--we deny it
+        
+        hashes = self._semi_resolution_setup()
+        
+        rules_we_read = self._read( 'duplicate_auto_resolution_rules_with_counts' )
+        
+        rule_1_read = rules_we_read[0]
+        
+        pending_action_pairs = self._read( 'duplicates_auto_resolution_pending_action_pairs', rule_1_read )
+        
+        [ ( media_result_1, media_result_2 ) ] = pending_action_pairs
+        
+        self._write( 'duplicate_auto_resolution_deny_pending_pairs', rule_1_read, [ ( media_result_1, media_result_2 ) ] )
+        
+        rules_we_read = self._read( 'duplicate_auto_resolution_rules_with_counts' )
+        
+        rule_1_read = rules_we_read[0]
+        
+        self._compare_counts_cache( rule_1_read.GetCountsCacheDuplicate(), { ClientDuplicatesAutoResolution.DUPLICATE_STATUS_USER_DECLINED : 1, ClientDuplicatesAutoResolution.DUPLICATE_STATUS_MATCHES_SEARCH_FAILED_TEST : 1 } )
+        
+        for ( hash, is_king, dupe_counts ) in [
+            ( hashes[0], True, { HC.DUPLICATE_POTENTIAL : 1 } ),
+            ( hashes[1], True, { HC.DUPLICATE_POTENTIAL : 1 } ),
+            ( hashes[2], True, { HC.DUPLICATE_POTENTIAL : 1 } ),
+            ( hashes[3], True, { HC.DUPLICATE_POTENTIAL : 1 } )
+        ]:
+            
+            result = self._read( 'file_duplicate_info', ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY ), hash )
+            
+            self.assertEqual( result[ 'is_king' ], is_king )
+            
+            self._compare_counts_cache( result[ 'counts' ], dupe_counts )
+            
+        
+        actioned_pairs_with_info = self._read( 'duplicates_auto_resolution_actioned_pairs', rule_1_read )
+        
+        self.assertEqual( actioned_pairs_with_info, [] )
         
     
