@@ -7,6 +7,32 @@ title: Changelog
 !!! note
     This is the new changelog, only the most recent builds. For all versions, see the [old changelog](old_changelog.html).
 
+## [Version 617](https://github.com/hydrusnetwork/hydrus/releases/tag/v617)
+
+### misc
+
+* the 'file relationship' commands for 'dissolve duplicate group', 'dissolve alternates group', 'delete false positives', 'reset potential search', and 'remove potential pairs' are now added as mappable actions for the 'media' shortcut set. careful with these--they are advanced and powerful. all of them are wrapped in yes/no confirmation dialogs, every time
+* disabled a 512MB/768MB backing bitmap limit on the `pillow_heif` library we use to render HEIF and AVIF. this allows for loading very large files (issue #1697)
+* improved error handling during an out-of-memory problem during image conversion
+
+### default downloaders
+
+* the new e621 parser now grabs the 'director' namespace from e6ai, parsing it as 'creator'. it looks like in many cases this will be 'creator:anonymous director', which I considered filtering out, but this appears to be a conscious 'creator is staying Anon' choice on e6ai's part rather than a 'tagme' style invitation for more work, so it has useful value for our purposes
+
+### default downloader options
+
+* tl;dr upshot for today: if you have custom tag/note import options for e621, hit up `network->downloaders->manage default import options` and ensure you have options set for both 'eXXX file page api' and particularly the new 'eXXX gallery page api' entries. use the copy/paste buttons to make it easy
+* the new e621 downloader raised an interesting issue--when a gallery parser produces direct file URLs, there is no way to set custom default tag/note import options for this import. neither file nor gallery urls can have a set default options entry, so it was defaulting to the 'file post' default settings every time--that's ok, but not what we might actually want. I've fixed this today
+* hydrus is now smarter about how it figures out which tag and note import options to use for a particular network download. if the main URL we are going for has no default tag/note import options entry, we now always consult any referral URL as a secondary. previously, the way watcher downloads set up their options was through a hardcoded hack that swapped in the 'parent' url to check; now we check both in all cases and let the first good hit tell us what to do. this will, fingers crossed, fix a bunch of other unusual tag-adding behaviour on downloaders that have post urls that produce separate direct file import objects
+* the default importer options panel now allows gallery url classes! extra text also explains how the system works and how you should engage it. I kind of hate it, but it works. I also don't want to make this even more complicated by enabling File URLs (that would filter and shape the metadata passed down to them by higher URLs' parsers) and then try to explain that to a user. **if we find what we have now is still insufficient or just unhelpfully complicated, I think I'd like to start a conversation about converting the whole thing to domain-based instead!** what a mess!
+* network report mode now reports how this stuff is navigated, for better debug in future
+
+### boring cleanup
+
+* continued my old multi-column list 'view' conversion, finishing it for all the remaining 34 lists: the 'move media files' locations list; the legacy file-lookup-script parsing system's node-editing panels; the edit account types list; the janitor process petitions list;the repair file storage locations list; the EXIF review list; all the lists in the login UI; the edit parsers list; the edit bandwidth rules list; the manage server services list; the manage client services list; the client api access keys list; the ipfs shares list; the lists in the options dialog; review vacuum data; review deferred table delete data; the debug job scheduler review panel; the manual local file import list; the file maintenance pending jobs list; the cookies review list; the network session review list; the review network jobs list; the review bandwidth usage list; the review http headers list
+* with this list refactor finally done, I can think about extending lists again. I'd like to next go for hide/showing and re-ordering columns
+* when I was poking around the AVIF stuff, I discovered regular `Pillow` seems to be getting native AVIF support very soon with the upcoming `11.2.0`. AVIF is similarly recently deprecated in `pillow_heif`. hydrus now has code to navigate this situation sanely, and as soon as the new `Pillow` comes out, hydrus will detect this and just that instead for AVIFs
+
 ## [Version 616](https://github.com/hydrusnetwork/hydrus/releases/tag/v616)
 
 ### more media viewer stuff from a user
@@ -499,67 +525,3 @@ title: Changelog
 ### duplicates auto-resolution
 
 * the final difficult duplicates auto-resolution database problem (fast incremental duplicate pairs search) is solved. outside of at-scale testing and final integration, the database side of this is now complete. now just need to to figure out a daemon and a preview panel
-
-## [Version 607](https://github.com/hydrusnetwork/hydrus/releases/tag/v607)
-
-### misc
-
-* jpeg-xl images are now fully supported! jpeg-xl is one of the contenders for 'what format do we use next?', and I think a pretty good one. it is basically jpeg but it can handle more colour depth/HDR, transparency, and optional lossless encoding, all while saving about 40% equivalent filesize to a jpeg/png. I understand it can also do animation (although we don't add that today), making it a potential 'capabilities superset' of gif as well. jpeg-xl is not well supported yet, but I hope that as more programs add support we'll see that change, and hydrus does its part today. thanks to the users who navigated this
-* added some boxes to `options->thumbnails` to give it some better layout and grouping
-* the 'show the media viewer top hover text in the status bar when one thumb is selected' option now defaults to True. it was a mistake to turn this off by default, and all users will be switched to True on update. the checkbox remains in `options->thumbnails` if you want to turn it off
-* added 'Give thumbnail ratings a flat background' to `options->thumbnails` to turn off if you prefer to just have the ratings without the rectangle backing I added last week
-* the new 'namespace grouping sort' sorted text list in `options->sort/collect` now has a paste button if you need to enter a ton of them
-* a new checkbox under `options->importing` let's you stop the program switching to the destination download page whenever you drag and drop a URL on the program. this was personally driving me nuts
-* when you right-click a selection of predicates that includes OR preds, the 'copy' submenu now includes an option to copy texts with collapse ORs, which renders them like "a OR b OR c" in one line, rather than the separate rows
-* the duplicate filter's "comparison statements" in the mid-right hover now show if one or both files have duration. I hacked this in simply for guys who are using external tools to get videos into the potential duplicate pairs queue, and I still want to completely rewrite this thing to a fully user-editable system once I have the tools matured in the duplicates auto-resolution work
-* a safety limit that would force the status bar to stick to 'x files' instead of the more interesting and cpu-intensive 'x images/collections/whatever' is raised from 1,000 files to 100,000. let's see how it goes
-* fixed a sometimes-error when showing different file presentations of watchers/gallery downloaders (when you right-click some and say `show files->blah`)
-* the complicated pre-download file status logic that determines if a URL-mapping has untrustworthy neighbours now prints a little log message of what it discovered when it hits a positive. this thing runs a little quiet and I want to see if it is firing too often or is not quite checking what we want in difficult cases
-* fixed a weird typo when unsetting the EXPERIMENTAL media viewer background bitmap thing in `options->thumbnails`
-
-### MPV
-
-* I did some work trying to handle the 'too many events queued' problems we've seen with mpv recently. I cleaned some code and reduced the overhead of my custom event handling, but I am generally convinced that some of the problems we've seen are due to 100% CPU bugs in various libmpv versions, particularly because I can set the 'loglevel' of mpv to 'no', for 'nothing at all', but the error still happens, suggesting there is probably no log-processing speed I can do on my end to fix this. I am leaving the emergency-dump-out code in place, but for this specific 'too many events queued' error it no longer adds that file to the 'never load again this boot' list--you can deselect the file and then reselect to try again (although it seems like the mpv player's event loop can be poisoned by the situation and lags a bit on next load). I have also seen the error occur at I believe the start of playback, but then I could load the file fine another time with the same dll, which suggests the log stuff can pile up due to a brief busy period in thread scheduling or whatever. so, there is more to do here--perhaps a 'if we get the error persisting for more than two seconds' or something
-* I did discover a different loop flag I could set for mpv that fixes one of the reliable problems--setting 'loop-playlist' rather than 'loop-file', which seems to force the file to reload and avoids the EOF rewind bug that mpv is running into. if you get the error on the first loop of a file, try hitting the new checkbox under `options->media playback` and we'll see how it all goes
-* I also just bit the bullet and added a DEBUG option, also to `options->media playback`, to disable the new 'too many events queued' dump-out hook. if you hit many false-positives and are feeling brave, try turning it off, but you may have to deal with some 100% CPU situations
-
-### viewtimes are now in ms
-
-* the filetime viewing stats system now records total viewtime in ms (previously it only had 'second' resolution). this doesn't matter all that much, but all the little deltas it adds are now 'viewed file for 3.2 seconds' rather than always rounding to the nearest integer
-* the settings under `options->file viewing statistics` are now full 'time delta' widgets that support ms, so you can say 'viewing a file for at least 2.5 seconds counts as a view' rather, again, than having to deal with full integers all the time
-* system:viewtime now supports milliseconds input for viewtime ranges
-* mr bones now reports a ms-precise (float) total viewtime (e.g. 3.456s) for the current search
-
-### client api
-
-* the client api can now see and edit file viewtime statistics!
-* `/get_files/file_metadata` now states the file viewtime statistics (last viewed time, total views, total viewtime for the different viewer types) for each file
-* file viewtime statistics has a new 'client api viewer' enum, separate from the existing 'media viewer' and 'preview viewer' record, if you'd like to do your own thing. I've hacked this a bit, and it doesn't show in the normal Client UI yet, nor can you search on it via `system:file viewing statistics`. the current options on how to show viewtime (`options->file viewing statistics`) are frankly crazy, so I think probably we'll want to go to a list of simpler checkboxes or something and stop trying to be clever
-* the new `/edit_times/increment_file_viewtime`, which needs the existing 'edit times' permission, lets you add views and viewtime and set the latest view timestamp
-* the new `/edit_times/set_file_viewtime`, which needs the existing 'edit times' permission, lets you set fixed values (i.e. if you are migrating from one client to another)
-* I have not added a delete/clear call here yet. if you would like to do this, let me know what you would like. the client only has 'clear everything for this file' and 'clear all records completely', but I expect we'd want the ability to clear by view type?
-* wrote help for this
-* wrote unit tests for this
-* client api version is now 78
-* the rich version of `/get_files/file_metadata` is now providing a lot of personal user metadata like inbox, ratings, local tags, and now viewtime statistics, making the 'just share some files with a friend' scenario less attractive. I was considering adding a new 'edit file viewtimes' permission today that would allow the edit and also dynamically show/hide the new viewtimes, but I think it would be better if I make a _read_ permission in the _ouvre_ of 'can see user file metadata', which, if absent, will mean callers can only ask for the basic file information. this permission may apply in other places, and the whole client api permissions system could do with a pass and likely some KISS. let me know what you think!
-
-### boring cleanup
-
-* cleaned up how some thumbnail-focus-delegation happens on new file focuses
-* cleaned some viewtime pipeline code generally
-* fixed the API help json example requests for `set_time`, which didn't have `file_id` stuff
-* replaced all my 'convert ms time to s time, but a float, oh except I guess when it is null, don't forget bro' code with a single and safer unified call across the program
-* cleaned up some agnostic 's or ms' duration calls, but there's plenty more to do
-
-### build updates
-
-* last week's 'future build' went well, so I am folding the changes into the normal build. users who run from source may like to run their `setup_venv` script again today, and users who would like to run from source but only have python 3.13 now have a route to run hydrus
-* details--
-* PySide6 (Qt) is updated from `6.6.3.1` to `6.7.3` (test version is now `6.8.1.1`, which source users on Python 3.13 can run)
-* on macOS, PyQt6 (Qt) is updated from `6.6.0` to `6.7.1`
-* OpenCV (image stuff) is updated from `4.8.1.78` to `4.10.0.84`, which lets us update numpy (test version is now `4.11.0.86`)
-* numpy is switched from `<2.0.0` to `>=2.0.0`. this adds Python 3.13 support to hydrus for source users
-* pillow-jxl-plugin is added, and thereby we have Jpeg-XL support (thanks to some users for navigating this!)
-* the python mpv package is updated from `1.0.6` to `1.0.7` (test verison stays at `1.0.7`; there is nothing new)
-* twisted (the networking engine that runs the hydrus server and client api) now includes better TLS and http2 support
-* some import hacks that helped old PyInstaller navigate numpy and OpenCV bundling are removed

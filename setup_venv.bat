@@ -222,6 +222,7 @@ IF "%install_type%" == "d" (
     python -m pip install -r static\requirements\advanced\requirements_opencv_test.txt
     python -m pip install -r static\requirements\advanced\requirements_other_future.txt
     python -m pip install -r static\requirements\hydev\requirements_windows_build.txt
+    python -m pip install -r static\requirements\advanced\requirements_qt6_new_pyqt6.txt
 
 )
 

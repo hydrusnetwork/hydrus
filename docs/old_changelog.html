@@ -35,6 +35,27 @@
             <h1 id="changelog"><a href="#changelog">changelog</a></h1>
             <ul>
                 <li>
+                    <h2 id="version_617"><a href="#version_617">version 617</a></h2>
+                    <ul>
+                        <li><h3>misc</h3></li>
+                        <li>the 'file relationship' commands for 'dissolve duplicate group', 'dissolve alternates group', 'delete false positives', 'reset potential search', and 'remove potential pairs' are now added as mappable actions for the 'media' shortcut set. careful with these--they are advanced and powerful. all of them are wrapped in yes/no confirmation dialogs, every time</li>
+                        <li>disabled a 512MB/768MB backing bitmap limit on the `pillow_heif` library we use to render HEIF and AVIF. this allows for loading very large files (issue #1697)</li>
+                        <li>improved error handling during an out-of-memory problem during image conversion</li>
+                        <li><h3>default downloaders</h3></li>
+                        <li>the new e621 parser now grabs the 'director' namespace from e6ai, parsing it as 'creator'. it looks like in many cases this will be 'creator:anonymous director', which I considered filtering out, but this appears to be a conscious 'creator is staying Anon' choice on e6ai's part rather than a 'tagme' style invitation for more work, so it has useful value for our purposes</li>
+                        <li><h3>default downloader options</h3></li>
+                        <li>tl;dr upshot for today: if you have custom tag/note import options for e621, hit up `network-&gt;downloaders-&gt;manage default import options` and ensure you have options set for both 'eXXX file page api' and particularly the new 'eXXX gallery page api' entries. use the copy/paste buttons to make it easy</li>
+                        <li>the new e621 downloader raised an interesting issue--when a gallery parser produces direct file URLs, there is no way to set custom default tag/note import options for this import. neither file nor gallery urls can have a set default options entry, so it was defaulting to the 'file post' default settings every time--that's ok, but not what we might actually want. I've fixed this today</li>
+                        <li>hydrus is now smarter about how it figures out which tag and note import options to use for a particular network download. if the main URL we are going for has no default tag/note import options entry, we now always consult any referral URL as a secondary. previously, the way watcher downloads set up their options was through a hardcoded hack that swapped in the 'parent' url to check; now we check both in all cases and let the first good hit tell us what to do. this will, fingers crossed, fix a bunch of other unusual tag-adding behaviour on downloaders that have post urls that produce separate direct file import objects</li>
+                        <li>the default importer options panel now allows gallery url classes! extra text also explains how the system works and how you should engage it. I kind of hate it, but it works. I also don't want to make this even more complicated by enabling File URLs (that would filter and shape the metadata passed down to them by higher URLs' parsers) and then try to explain that to a user. **if we find what we have now is still insufficient or just unhelpfully complicated, I think I'd like to start a conversation about converting the whole thing to domain-based instead!** what a mess!</li>
+                        <li>network report mode now reports how this stuff is navigated, for better debug in future</li>
+                        <li><h3>boring cleanup</h3></li>
+                        <li>continued my old multi-column list 'view' conversion, finishing it for all the remaining 34 lists: the 'move media files' locations list; the legacy file-lookup-script parsing system's node-editing panels; the edit account types list; the janitor process petitions list;the repair file storage locations list; the EXIF review list; all the lists in the login UI; the edit parsers list; the edit bandwidth rules list; the manage server services list; the manage client services list; the client api access keys list; the ipfs shares list; the lists in the options dialog; review vacuum data; review deferred table delete data; the debug job scheduler review panel; the manual local file import list; the file maintenance pending jobs list; the cookies review list; the network session review list; the review network jobs list; the review bandwidth usage list; the review http headers list</li>
+                        <li>with this list refactor finally done, I can think about extending lists again. I'd like to next go for hide/showing and re-ordering columns</li>
+                        <li>when I was poking around the AVIF stuff, I discovered regular `Pillow` seems to be getting native AVIF support very soon with the upcoming `11.2.0`. AVIF is similarly recently deprecated in `pillow_heif`. hydrus now has code to navigate this situation sanely, and as soon as the new `Pillow` comes out, hydrus will detect this and just that instead for AVIFs</li>
+                    </ul>
+                </li>
+                <li>
                     <h2 id="version_616"><a href="#version_616">version 616</a></h2>
                     <ul>
                         <li><h3>more media viewer stuff from a user</h3></li>

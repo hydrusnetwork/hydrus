@@ -1694,7 +1694,7 @@ class EditParsersPanel( ClientGUIScrolledPanels.EditPanel ):
         
         parsers_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
-        model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_PARSERS.ID, self._ConvertParserToListCtrlTuples )
+        model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_PARSERS.ID, self._ConvertParserToDisplayTuple, self._ConvertParserToSortTuple )
         
         self._parsers = ClientGUIListCtrl.BetterListCtrlTreeView( parsers_panel, 20, model, use_simple_delete = True, activation_callback = self._Edit )
         
@@ -1749,7 +1749,25 @@ class EditParsersPanel( ClientGUIScrolledPanels.EditPanel ):
         self._parsers.AddData( parser, select_sort_and_scroll = select_sort_and_scroll )
         
     
-    def _ConvertParserToListCtrlTuples( self, parser: ClientParsing.PageParser ):
+    def _ConvertParserToDisplayTuple( self, parser: ClientParsing.PageParser ):
+        
+        name = parser.GetName()
+        
+        example_urls = sorted( parser.GetExampleURLs() )
+        
+        parsable_content_descriptions = parser.GetParsableContentDescriptions()
+        
+        pretty_produces = ClientParsingResults.ConvertParsableContentDescriptionsToPrettyString( parsable_content_descriptions )
+        
+        pretty_name = name
+        pretty_example_urls = ', '.join( example_urls )
+        
+        display_tuple = ( pretty_name, pretty_example_urls, pretty_produces )
+        
+        return display_tuple
+        
+    
+    def _ConvertParserToSortTuple( self, parser: ClientParsing.PageParser ):
         
         name = parser.GetName()
         
@@ -1761,13 +1779,9 @@ class EditParsersPanel( ClientGUIScrolledPanels.EditPanel ):
         
         sort_produces = pretty_produces
         
-        pretty_name = name
-        pretty_example_urls = ', '.join( example_urls )
-        
-        display_tuple = ( pretty_name, pretty_example_urls, pretty_produces )
         sort_tuple = ( name, example_urls, sort_produces )
         
-        return ( display_tuple, sort_tuple )
+        return sort_tuple
         
     
     def _Edit( self ):

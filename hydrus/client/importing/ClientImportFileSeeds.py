@@ -354,34 +354,11 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
         self._hashes = { hash_type : bytes.fromhex( encoded_hash ) for ( hash_type, encoded_hash ) in serialisable_hashes if encoded_hash is not None }
         
     
-    def _GetImportOptionsLookupURL( self ) -> str:
-        
-        if self.IsAPostURL():
-            
-            lookup_url = self.file_seed_data
-            
-        else:
-            
-            if self._referral_url is not None:
-                
-                lookup_url = self._referral_url
-                
-            else:
-                
-                lookup_url = self.file_seed_data
-                
-            
-        
-        return lookup_url
-        
-    
     def _SetupNoteImportOptions( self, given_note_import_options: NoteImportOptions.NoteImportOptions ) -> NoteImportOptions.NoteImportOptions:
         
         if given_note_import_options.IsDefault():
             
-            lookup_url = self._GetImportOptionsLookupURL()
-            
-            note_import_options = CG.client_controller.network_engine.domain_manager.GetDefaultNoteImportOptionsForURL( lookup_url )
+            note_import_options = CG.client_controller.network_engine.domain_manager.GetDefaultNoteImportOptionsForURL( self._referral_url, self.file_seed_data )
             
         else:
             
@@ -395,9 +372,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
         
         if given_tag_import_options.IsDefault():
             
-            lookup_url = self._GetImportOptionsLookupURL()
-            
-            tag_import_options = CG.client_controller.network_engine.domain_manager.GetDefaultTagImportOptionsForURL( lookup_url )
+            tag_import_options = CG.client_controller.network_engine.domain_manager.GetDefaultTagImportOptionsForURL( self._referral_url, self.file_seed_data )
             
         else:
             

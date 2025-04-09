@@ -46,7 +46,7 @@ class EditNodes( QW.QWidget ):
         self._referral_url_callable = referral_url_callable
         self._example_data_callable = example_data_callable
         
-        model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_NODES.ID, self._ConvertNodeToTuples )
+        model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_NODES.ID, self._ConvertNodeToDisplayTuple, self._ConvertNodeToSortTuple )
         
         self._nodes = ClientGUIListCtrl.BetterListCtrlTreeView( self, 20, model, delete_key_callback = self.Delete, activation_callback = self.Edit )
         
@@ -90,12 +90,14 @@ class EditNodes( QW.QWidget ):
         self.setLayout( vbox )
         
     
-    def _ConvertNodeToTuples( self, node ):
+    def _ConvertNodeToDisplayTuple( self, node ):
         
         ( name, node_type, produces ) = node.ToPrettyStrings()
         
-        return ( ( name, node_type, produces ), ( name, node_type, produces ) )
+        return ( name, node_type, produces )
         
+    
+    _ConvertNodeToSortTuple = _ConvertNodeToDisplayTuple
     
     def _GetExportObject( self ):
         
@@ -874,7 +876,7 @@ class ManageParsingScriptsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         super().__init__( parent )
         
-        model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_PARSING_SCRIPTS.ID, self._ConvertScriptToTuples )
+        model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_PARSING_SCRIPTS.ID, self._ConvertScriptToDisplayTuple, self._ConvertScriptToSortTuple )
         
         self._scripts = ClientGUIListCtrl.BetterListCtrlTreeView( self, 20, model, delete_key_callback = self.Delete, activation_callback = self.Edit )
         
@@ -934,12 +936,14 @@ class ManageParsingScriptsPanel( ClientGUIScrolledPanels.ManagePanel ):
         self.widget().setLayout( vbox )
         
     
-    def _ConvertScriptToTuples( self, script ):
+    def _ConvertScriptToDisplayTuple( self, script ):
         
         ( name, query_type, script_type, produces ) = script.ToPrettyStrings()
         
-        return ( ( name, query_type, script_type, produces ), ( name, query_type, script_type, produces ) )
+        return ( name, query_type, script_type, produces )
         
+    
+    _ConvertScriptToSortTuple = _ConvertScriptToDisplayTuple
     
     def _GetExportObject( self ):
         

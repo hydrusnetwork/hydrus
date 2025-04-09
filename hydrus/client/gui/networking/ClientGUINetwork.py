@@ -329,7 +329,7 @@ class EditNetworkContextCustomHeadersPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._list_ctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
-        model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_NETWORK_CONTEXTS_CUSTOM_HEADERS.ID, self._ConvertDataToListCtrlTuples )
+        model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_NETWORK_CONTEXTS_CUSTOM_HEADERS.ID, self._ConvertDataToDisplayTuple, self._ConvertDataToSortTuple )
         
         self._list_ctrl = ClientGUIListCtrl.BetterListCtrlTreeView( self._list_ctrl_panel, 15, model, use_simple_delete = True, activation_callback = self._Edit )
         
@@ -392,7 +392,7 @@ class EditNetworkContextCustomHeadersPanel( ClientGUIScrolledPanels.EditPanel ):
             
         
     
-    def _ConvertDataToListCtrlTuples( self, data ):
+    def _ConvertDataToDisplayTuple( self, data ):
         
         ( network_context, ( key, value ), approved, reason ) = data
         
@@ -406,9 +406,20 @@ class EditNetworkContextCustomHeadersPanel( ClientGUIScrolledPanels.EditPanel ):
         
         display_tuple = ( pretty_network_context, pretty_key_value, pretty_approved, pretty_reason )
         
+        return display_tuple
+        
+    
+    def _ConvertDataToSortTuple( self, data ):
+        
+        ( network_context, ( key, value ), approved, reason ) = data
+        
+        pretty_network_context = network_context.ToString()
+        
+        pretty_approved = ClientNetworkingDomain.valid_str_lookup[ approved ]
+        
         sort_tuple = ( pretty_network_context, ( key, value ), pretty_approved, reason )
         
-        return ( display_tuple, sort_tuple )
+        return sort_tuple
         
     
     def _Duplicate( self ):
@@ -601,7 +612,7 @@ class ReviewAllBandwidthPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         self._bandwidths_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
-        model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_BANDWIDTH_REVIEW.ID, self._ConvertNetworkContextsToListCtrlTuples )
+        model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_BANDWIDTH_REVIEW.ID, self._ConvertNetworkContextsToDisplayTuple, self._ConvertNetworkContextsToSortTuple )
         
         self._bandwidths = ClientGUIListCtrl.BetterListCtrlTreeView( self._bandwidths_panel, 20, model, activation_callback = self.ShowNetworkContext )
         
@@ -659,25 +670,19 @@ class ReviewAllBandwidthPanel( ClientGUIScrolledPanels.ReviewPanel ):
         self.widget().setLayout( vbox )
         
     
-    def _ConvertNetworkContextsToListCtrlTuples( self, network_context ):
+    def _ConvertNetworkContextsToDisplayTuple( self, network_context ):
         
         bandwidth_tracker = self._controller.network_engine.bandwidth_manager.GetTracker( network_context )
         
         has_rules = not self._controller.network_engine.bandwidth_manager.UsesDefaultRules( network_context )
         
-        sortable_network_context = ( network_context.context_type, network_context.context_data )
-        sortable_context_type = CC.network_context_type_string_lookup[ network_context.context_type ]
         current_usage = bandwidth_tracker.GetUsage( HC.BANDWIDTH_TYPE_DATA, 1, for_user = True )
         
         day_usage_requests = bandwidth_tracker.GetUsage( HC.BANDWIDTH_TYPE_REQUESTS, 86400 )
         day_usage_data = bandwidth_tracker.GetUsage( HC.BANDWIDTH_TYPE_DATA, 86400 )
         
-        day_usage = ( day_usage_data, day_usage_requests )
-        
         month_usage_requests = bandwidth_tracker.GetUsage( HC.BANDWIDTH_TYPE_REQUESTS, None )
         month_usage_data = bandwidth_tracker.GetUsage( HC.BANDWIDTH_TYPE_DATA, None )
-        
-        month_usage = ( month_usage_data, month_usage_requests )
         
         if self._history_time_delta_none.isChecked():
             
@@ -691,8 +696,6 @@ class ReviewAllBandwidthPanel( ClientGUIScrolledPanels.ReviewPanel ):
             search_usage_requests = bandwidth_tracker.GetUsage( HC.BANDWIDTH_TYPE_REQUESTS, search_delta )
             search_usage_data = bandwidth_tracker.GetUsage( HC.BANDWIDTH_TYPE_DATA, search_delta )
             
-        
-        search_usage = ( search_usage_data, search_usage_requests )
         
         pretty_search_usage = HydrusData.ToHumanBytes( search_usage_data ) + ' in ' + HydrusNumbers.ToHumanInt( search_usage_requests ) + ' requests'
         
@@ -736,9 +739,50 @@ class ReviewAllBandwidthPanel( ClientGUIScrolledPanels.ReviewPanel ):
             
         
         display_tuple = ( pretty_network_context, pretty_context_type, pretty_current_usage, pretty_day_usage, pretty_search_usage, pretty_month_usage, pretty_has_rules, pretty_blocked )
+        
+        return display_tuple
+        
+    
+    def _ConvertNetworkContextsToSortTuple( self, network_context ):
+        
+        bandwidth_tracker = self._controller.network_engine.bandwidth_manager.GetTracker( network_context )
+        
+        has_rules = not self._controller.network_engine.bandwidth_manager.UsesDefaultRules( network_context )
+        
+        sortable_network_context = ( network_context.context_type, network_context.context_data )
+        sortable_context_type = CC.network_context_type_string_lookup[ network_context.context_type ]
+        current_usage = bandwidth_tracker.GetUsage( HC.BANDWIDTH_TYPE_DATA, 1, for_user = True )
+        
+        day_usage_requests = bandwidth_tracker.GetUsage( HC.BANDWIDTH_TYPE_REQUESTS, 86400 )
+        day_usage_data = bandwidth_tracker.GetUsage( HC.BANDWIDTH_TYPE_DATA, 86400 )
+        
+        day_usage = ( day_usage_data, day_usage_requests )
+        
+        month_usage_requests = bandwidth_tracker.GetUsage( HC.BANDWIDTH_TYPE_REQUESTS, None )
+        month_usage_data = bandwidth_tracker.GetUsage( HC.BANDWIDTH_TYPE_DATA, None )
+        
+        month_usage = ( month_usage_data, month_usage_requests )
+        
+        if self._history_time_delta_none.isChecked():
+            
+            search_usage_requests = bandwidth_tracker.GetAllUsage( HC.BANDWIDTH_TYPE_REQUESTS )
+            search_usage_data = bandwidth_tracker.GetAllUsage( HC.BANDWIDTH_TYPE_DATA )
+            
+        else:
+            
+            search_delta = self._history_time_delta_threshold.GetValue()
+            
+            search_usage_requests = bandwidth_tracker.GetUsage( HC.BANDWIDTH_TYPE_REQUESTS, search_delta )
+            search_usage_data = bandwidth_tracker.GetUsage( HC.BANDWIDTH_TYPE_DATA, search_delta )
+            
+        
+        search_usage = ( search_usage_data, search_usage_requests )
+        
+        ( waiting_estimate, network_context_gumpf ) = self._controller.network_engine.bandwidth_manager.GetWaitingEstimateAndContext( [ network_context ] )
+        
         sort_tuple = ( sortable_network_context, sortable_context_type, current_usage, day_usage, search_usage, month_usage, has_rules, waiting_estimate )
         
-        return ( display_tuple, sort_tuple )
+        return sort_tuple
         
     
     def _DeleteNetworkContexts( self ):
@@ -1151,7 +1195,7 @@ class ReviewNetworkJobs( ClientGUIScrolledPanels.ReviewPanel ):
         
         self._list_ctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
-        model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_NETWORK_JOBS_REVIEW.ID, self._ConvertDataToListCtrlTuples )
+        model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_NETWORK_JOBS_REVIEW.ID, self._ConvertDataToDisplayTuple, self._ConvertDataToSortTuple )
         
         self._list_ctrl = ClientGUIListCtrl.BetterListCtrlTreeView( self._list_ctrl_panel, 20, model )
         
@@ -1182,7 +1226,27 @@ class ReviewNetworkJobs( ClientGUIScrolledPanels.ReviewPanel ):
         self.widget().setLayout( vbox )
         
     
-    def _ConvertDataToListCtrlTuples( self, job_row ):
+    def _ConvertDataToDisplayTuple( self, job_row ):
+        
+        network_engine_status: int = job_row[0]
+        job: ClientNetworkingJobs.NetworkJob = job_row[1]
+        
+        position = network_engine_status
+        url = job.GetURL()
+        ( status, current_speed, num_bytes_read, num_bytes_to_read ) = job.GetStatus()
+        
+        pretty_position = ClientNetworking.job_status_str_lookup[ position ]
+        pretty_url = url
+        pretty_status = status
+        pretty_current_speed = HydrusData.ToHumanBytes( current_speed ) + '/s'
+        pretty_progress = HydrusData.ConvertValueRangeToBytes( num_bytes_read, num_bytes_to_read )
+        
+        display_tuple = ( pretty_position, pretty_url, pretty_status, pretty_current_speed, pretty_progress )
+        
+        return display_tuple
+        
+    
+    def _ConvertDataToSortTuple( self, job_row ):
         
         network_engine_status: int = job_row[0]
         job: ClientNetworkingJobs.NetworkJob = job_row[1]
@@ -1192,16 +1256,9 @@ class ReviewNetworkJobs( ClientGUIScrolledPanels.ReviewPanel ):
         ( status, current_speed, num_bytes_read, num_bytes_to_read ) = job.GetStatus()
         progress = ( num_bytes_read, num_bytes_to_read if num_bytes_to_read is not None else 0 )
         
-        pretty_position = ClientNetworking.job_status_str_lookup[ position ]
-        pretty_url = url
-        pretty_status = status
-        pretty_current_speed = HydrusData.ToHumanBytes( current_speed ) + '/s'
-        pretty_progress = HydrusData.ConvertValueRangeToBytes( num_bytes_read, num_bytes_to_read )
-        
-        display_tuple = ( pretty_position, pretty_url, pretty_status, pretty_current_speed, pretty_progress )
         sort_tuple = ( position, url, status, current_speed, progress )
         
-        return ( display_tuple, sort_tuple )
+        return sort_tuple
         
     
     def _RefreshSnapshot( self ):
@@ -1269,7 +1326,7 @@ class ReviewNetworkSessionsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         listctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
-        model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_REVIEW_NETWORK_SESSIONS.ID, self._ConvertNetworkContextToListCtrlTuples )
+        model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_REVIEW_NETWORK_SESSIONS.ID, self._ConvertNetworkContextToDisplayTuple, self._ConvertNetworkContextToSortTuple )
         
         self._listctrl = ClientGUIListCtrl.BetterListCtrlTreeView( listctrl_panel, 32, model, delete_key_callback = self._Clear, activation_callback = self._Review )
         
@@ -1351,7 +1408,7 @@ class ReviewNetworkSessionsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         self._Update()
         
     
-    def _ConvertNetworkContextToListCtrlTuples( self, network_context ):
+    def _ConvertNetworkContextToDisplayTuple( self, network_context ):
         
         session = self._session_manager.GetSession( network_context )
         
@@ -1366,12 +1423,10 @@ class ReviewNetworkSessionsPanel( ClientGUIScrolledPanels.ReviewPanel ):
             
             if number_of_cookies > 0:
                 
-                expiry = 0
                 pretty_expiry = 'session'
                 
             else:
                 
-                expiry = -1
                 pretty_expiry = ''
                 
             
@@ -1384,15 +1439,51 @@ class ReviewNetworkSessionsPanel( ClientGUIScrolledPanels.ReviewPanel ):
                 
             except:
                 
-                expiry = -1
                 pretty_expiry = 'Unusual expiry numbers'
                 
             
         
         display_tuple = ( pretty_network_context, pretty_number_of_cookies, pretty_expiry )
+        
+        return display_tuple
+        
+    
+    def _ConvertNetworkContextToSortTuple( self, network_context ):
+        
+        session = self._session_manager.GetSession( network_context )
+        
+        pretty_network_context = network_context.ToString()
+        
+        number_of_cookies = len( session.cookies )
+        
+        expires_numbers = [ c.expires for c in session.cookies if c.expires is not None ]
+        
+        if len( expires_numbers ) == 0:
+            
+            if number_of_cookies > 0:
+                
+                expiry = 0
+                
+            else:
+                
+                expiry = -1
+                
+            
+        else:
+            
+            try:
+                
+                expiry = max( expires_numbers )
+                
+            except:
+                
+                expiry = -1
+                
+            
+        
         sort_tuple = ( pretty_network_context, number_of_cookies, expiry )
         
-        return ( display_tuple, sort_tuple )
+        return sort_tuple
         
     
     # this method is thanks to a user's contribution!
@@ -1499,7 +1590,7 @@ class ReviewNetworkSessionPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         listctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
-        model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_REVIEW_NETWORK_SESSION.ID, self._ConvertCookieToListCtrlTuples )
+        model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_REVIEW_NETWORK_SESSION.ID, self._ConvertCookieToDisplayTuple, self._ConvertCookieToSortTuple )
         
         self._listctrl = ClientGUIListCtrl.BetterListCtrlTreeView( listctrl_panel, 8, model, delete_key_callback = self._Delete, activation_callback = self._Edit )
         
@@ -1566,7 +1657,7 @@ class ReviewNetworkSessionPanel( ClientGUIScrolledPanels.ReviewPanel ):
         self._Update()
         
     
-    def _ConvertCookieToListCtrlTuples( self, cookie ):
+    def _ConvertCookieToDisplayTuple( self, cookie ):
         
         name = cookie.name
         pretty_name = name
@@ -1591,12 +1682,28 @@ class ReviewNetworkSessionPanel( ClientGUIScrolledPanels.ReviewPanel ):
             pretty_expiry = HydrusTime.TimestampToPrettyExpires( expiry )
             
         
+        display_tuple = ( pretty_name, pretty_value, pretty_domain, pretty_path, pretty_expiry )
+        
+        return display_tuple
+        
+    
+    def _ConvertCookieToSortTuple( self, cookie ):
+        
+        name = cookie.name
+        
+        value = cookie.value
+        
+        domain = cookie.domain
+        
+        path = cookie.path
+        
+        expiry = cookie.expires
+        
         sort_expiry = ClientGUIListCtrl.SafeNoneInt( expiry )
         
-        display_tuple = ( pretty_name, pretty_value, pretty_domain, pretty_path, pretty_expiry )
         sort_tuple = ( name, value, domain, path, sort_expiry )
         
-        return ( display_tuple, sort_tuple )
+        return sort_tuple
         
     
     def _Delete( self ):

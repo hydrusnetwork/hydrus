@@ -55,7 +55,7 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         super().__init__( parent )
         
-        model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_MANAGE_SERVICES.ID, self._ConvertServiceToListCtrlTuples )
+        model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_MANAGE_SERVICES.ID, self._ConvertServiceToDisplayTuple, self._ConvertServiceToSortTuple )
         
         self._listctrl = ClientGUIListCtrl.BetterListCtrlTreeView( self, 25, model, delete_key_callback = self._Delete, activation_callback = self._Edit)
         
@@ -127,7 +127,7 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
             
         
     
-    def _ConvertServiceToListCtrlTuples( self, service ):
+    def _ConvertServiceToDisplayTuple( self, service ):
         
         service_type = service.GetServiceType()
         name = service.GetName()
@@ -163,7 +163,36 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
             pretty_deletable = ''
             
         
-        return ( ( name, pretty_service_type, pretty_deletable ), ( name, pretty_service_type, deletable ) )
+        return ( name, pretty_service_type, pretty_deletable )
+        
+    
+    def _ConvertServiceToSortTuple( self, service ):
+        
+        service_type = service.GetServiceType()
+        name = service.GetName()
+        
+        deletable = service_type in HC.ADDREMOVABLE_SERVICES
+        
+        pretty_service_type = HC.service_string_lookup[ service_type ]
+        
+        if deletable:
+            
+            if service_type in HC.MUST_HAVE_AT_LEAST_ONE_SERVICES or service_type in HC.MUST_BE_EMPTY_OF_FILES_SERVICES:
+                
+                clauses = []
+                
+                if service_type in HC.MUST_BE_EMPTY_OF_FILES_SERVICES:
+                    
+                    clauses.append( 'must be empty of files' )
+                    
+                if service_type in HC.MUST_HAVE_AT_LEAST_ONE_SERVICES:
+                    
+                    clauses.append( 'must have at least one' )
+                    
+                
+            
+        
+        return ( name, pretty_service_type, deletable )
         
     
     def _GetExistingNames( self ):
@@ -1899,7 +1928,7 @@ class ReviewServiceClientAPISubPanel( ClientGUICommon.StaticBox ):
         
         permissions_list_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
-        model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_CLIENT_API_PERMISSIONS.ID, self._ConvertDataToListCtrlTuples )
+        model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_CLIENT_API_PERMISSIONS.ID, self._ConvertDataToDisplayTuple, self._ConvertDataToSortTuple )
         
         self._permissions_list = ClientGUIListCtrl.BetterListCtrlTreeView( permissions_list_panel, 10, model, delete_key_callback = self._Delete, activation_callback = self._Edit )
         
@@ -1935,7 +1964,7 @@ class ReviewServiceClientAPISubPanel( ClientGUICommon.StaticBox ):
         CG.client_controller.sub( self, 'ServiceUpdated', 'service_updated' )
         
     
-    def _ConvertDataToListCtrlTuples( self, api_permissions ):
+    def _ConvertDataToDisplayTuple( self, api_permissions ):
         
         name = api_permissions.GetName()
         
@@ -1944,13 +1973,24 @@ class ReviewServiceClientAPISubPanel( ClientGUICommon.StaticBox ):
         basic_permissions_string = api_permissions.GetBasicPermissionsString()
         advanced_permissions_string = api_permissions.GetAdvancedPermissionsString()
         
+        display_tuple = ( pretty_name, basic_permissions_string, advanced_permissions_string )
+        
+        return display_tuple
+        
+    
+    def _ConvertDataToSortTuple( self, api_permissions ):
+        
+        name = api_permissions.GetName()
+        
+        basic_permissions_string = api_permissions.GetBasicPermissionsString()
+        advanced_permissions_string = api_permissions.GetAdvancedPermissionsString()
+        
         sort_basic_permissions = basic_permissions_string
         sort_advanced_permissions = advanced_permissions_string
         
-        display_tuple = ( pretty_name, basic_permissions_string, advanced_permissions_string )
         sort_tuple = ( name, sort_basic_permissions, sort_advanced_permissions )
         
-        return ( display_tuple, sort_tuple )
+        return sort_tuple
         
     
     def _CopyAPIAccessKey( self ):
@@ -3476,7 +3516,7 @@ class ReviewServiceIPFSSubPanel( ClientGUICommon.StaticBox ):
         
         self._ipfs_shares_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
-        model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_IPFS_SHARES.ID, self._ConvertDataToListCtrlTuple )
+        model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_IPFS_SHARES.ID, self._ConvertDataToDisplayTuple, self._ConvertDataToSortTuple )
         
         self._ipfs_shares = ClientGUIListCtrl.BetterListCtrlTreeView( self._ipfs_shares_panel, 6, model, delete_key_callback = self._Unpin, activation_callback = self._SetNotes )
         
@@ -3499,7 +3539,7 @@ class ReviewServiceIPFSSubPanel( ClientGUICommon.StaticBox ):
         CG.client_controller.sub( self, 'ServiceUpdated', 'service_updated' )
         
     
-    def _ConvertDataToListCtrlTuple( self, data ):
+    def _ConvertDataToDisplayTuple( self, data ):
         
         ( multihash, num_files, total_size, note ) = data
         
@@ -3509,9 +3549,17 @@ class ReviewServiceIPFSSubPanel( ClientGUICommon.StaticBox ):
         pretty_note = note
         
         display_tuple = ( pretty_multihash, pretty_num_files, pretty_total_size, pretty_note )
+        
+        return display_tuple
+        
+    
+    def _ConvertDataToSortTuple( self, data ):
+        
+        ( multihash, num_files, total_size, note ) = data
+        
         sort_tuple = ( multihash, num_files, total_size, note )
         
-        return ( display_tuple, sort_tuple )
+        return sort_tuple
         
     
     def _CopyMultihashes( self ):

@@ -235,6 +235,30 @@ def AddDuplicatesMenu( win: QW.QWidget, command_processor: CAC.ApplicationComman
             
             duplicates_single_dissolution_menu = ClientGUIMenus.GenerateMenu( duplicates_action_submenu )
             
+            if focus_is_in_duplicate_group:
+                
+                if not focus_is_definitely_king:
+                    
+                    ClientGUIMenus.AppendMenuItem( duplicates_single_dissolution_menu, 'remove this file from its duplicate group', 'Extract this file from its duplicate group and reset its search status.', command_processor.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_REMOVE_FOCUSED_FROM_DUPLICATE_GROUP ) )
+                    
+                
+                ClientGUIMenus.AppendMenuItem( duplicates_single_dissolution_menu, 'DUPLICATE WIPE: dissolve this file\'s duplicate group', 'Completely eliminate this file\'s duplicate group and reset all files\' search status.', command_processor.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_DISSOLVE_FOCUSED_DUPLICATE_GROUP ) )
+                
+            
+            if focus_is_in_alternate_group:
+                
+                ClientGUIMenus.AppendMenuItem( duplicates_single_dissolution_menu, 'remove this file\'s duplicate group from its alternate group', 'Extract this file\'s duplicate group from its alternate group and reset the duplicate group\'s search status.', command_processor.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_REMOVE_FOCUSED_FROM_ALTERNATE_GROUP ) )
+                
+                ClientGUIMenus.AppendMenuItem( duplicates_single_dissolution_menu, 'EVEN BIGGER WIPE: dissolve this file\'s alternate group', 'Completely eliminate this file\'s alternate group, undoing all alternate decisions. This resets search status for all involved files.', command_processor.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_DISSOLVE_FOCUSED_ALTERNATE_GROUP ) )
+                
+            
+            if focus_has_fps:
+                
+                ClientGUIMenus.AppendMenuItem( duplicates_single_dissolution_menu, 'delete all false-positive relationships this file\'s alternate group has with other groups', 'Clear out all false-positive relationships this file\'s alternates group has with other groups and resets search status.', command_processor.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_CLEAR_FOCUSED_FALSE_POSITIVES ) )
+                
+            
+            ClientGUIMenus.AppendSeparator( duplicates_single_dissolution_menu )
+            
             if focus_can_be_searched:
                 
                 ClientGUIMenus.AppendMenuItem( duplicates_single_dissolution_menu, 'schedule this file to be searched for potentials again', 'Queue this file for another potentials search. Will not remove any existing potentials.', command_processor.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_RESET_FOCUSED_POTENTIAL_SEARCH ) )
@@ -245,28 +269,6 @@ def AddDuplicatesMenu( win: QW.QWidget, command_processor: CAC.ApplicationComman
                 ClientGUIMenus.AppendMenuItem( duplicates_single_dissolution_menu, 'remove this file\'s potential relationships', 'Clear out this file\'s potential relationships.', command_processor.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_REMOVE_FOCUSED_POTENTIALS ) )
                 
             
-            if focus_is_in_duplicate_group:
-                
-                if not focus_is_definitely_king:
-                    
-                    ClientGUIMenus.AppendMenuItem( duplicates_single_dissolution_menu, 'remove this file from its duplicate group', 'Extract this file from its duplicate group and reset its search status.', command_processor.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_REMOVE_FOCUSED_FROM_DUPLICATE_GROUP ) )
-                    
-                
-                ClientGUIMenus.AppendMenuItem( duplicates_single_dissolution_menu, 'dissolve this file\'s duplicate group completely', 'Completely eliminate this file\'s duplicate group and reset all files\' search status.', command_processor.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_DISSOLVE_FOCUSED_DUPLICATE_GROUP ) )
-                
-            
-            if focus_is_in_alternate_group:
-                
-                ClientGUIMenus.AppendMenuItem( duplicates_single_dissolution_menu, 'remove this file from its alternate group', 'Extract this file\'s duplicate group from its alternate group and reset the duplicate group\'s search status.', command_processor.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_REMOVE_FOCUSED_FROM_ALTERNATE_GROUP ) )
-                
-                ClientGUIMenus.AppendMenuItem( duplicates_single_dissolution_menu, 'dissolve this file\'s alternate group completely', 'Completely eliminate this file\'s alternate group and all duplicate group members. This resets search status for all involved files.', command_processor.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_DISSOLVE_FOCUSED_ALTERNATE_GROUP ) )
-                
-            
-            if focus_has_fps:
-                
-                ClientGUIMenus.AppendMenuItem( duplicates_single_dissolution_menu, 'delete all false-positive relationships this file\'s alternate group has with other groups', 'Clear out all false-positive relationships this file\'s alternates group has with other groups and resets search status.', command_processor.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_CLEAR_FOCUSED_FALSE_POSITIVES ) )
-                
-            
             ClientGUIMenus.AppendMenu( duplicates_action_submenu, duplicates_single_dissolution_menu, 'remove/reset for this file' )
             
         
@@ -274,11 +276,12 @@ def AddDuplicatesMenu( win: QW.QWidget, command_processor: CAC.ApplicationComman
             
             duplicates_multiple_dissolution_menu = ClientGUIMenus.GenerateMenu( duplicates_action_submenu )
             
-            ClientGUIMenus.AppendMenuItem( duplicates_multiple_dissolution_menu, 'schedule these files to be searched for potentials again', 'Queue these files for another potentials search. Will not remove any existing potentials.', command_processor.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_RESET_POTENTIAL_SEARCH ) )
-            ClientGUIMenus.AppendMenuItem( duplicates_multiple_dissolution_menu, 'remove these files\' potential relationships', 'Clear out these files\' potential relationships.', command_processor.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_REMOVE_POTENTIALS ) )
-            ClientGUIMenus.AppendMenuItem( duplicates_multiple_dissolution_menu, 'dissolve these files\' duplicate groups completely', 'Completely eliminate these files\' duplicate groups and reset all files\' search status.', command_processor.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_DISSOLVE_DUPLICATE_GROUP ) )
-            ClientGUIMenus.AppendMenuItem( duplicates_multiple_dissolution_menu, 'dissolve these files\' alternate groups completely', 'Completely eliminate these files\' alternate groups and all duplicate group members. This resets search status for all involved files.', command_processor.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_DISSOLVE_ALTERNATE_GROUP ) )
+            ClientGUIMenus.AppendMenuItem( duplicates_multiple_dissolution_menu, 'DUPLICATE WIPE: completely dissolve these files\' duplicate groups', 'Completely eliminate these files\' duplicate groups and reset all files\' search status.', command_processor.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_DISSOLVE_DUPLICATE_GROUP ) )
+            ClientGUIMenus.AppendMenuItem( duplicates_multiple_dissolution_menu, 'EVEN BIGGER WIPE: completely dissolve these files\' alternate groups', 'Completely eliminate these files\' alternate groups, undoing all alternate decisions. This resets search status for all involved files.', command_processor.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_DISSOLVE_ALTERNATE_GROUP ) )
             ClientGUIMenus.AppendMenuItem( duplicates_multiple_dissolution_menu, 'delete all false-positive relationships these files\' alternate groups have with other groups', 'Clear out all false-positive relationships these files\' alternates groups has with other groups and resets search status.', command_processor.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_CLEAR_FALSE_POSITIVES ) )
+            ClientGUIMenus.AppendSeparator( duplicates_multiple_dissolution_menu )
+            ClientGUIMenus.AppendMenuItem( duplicates_multiple_dissolution_menu, 'schedule these files to be searched for potentials again', 'Queue these files for another potentials search. Will not remove any existing potentials or real duplicate relationships.', command_processor.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_RESET_POTENTIAL_SEARCH ) )
+            ClientGUIMenus.AppendMenuItem( duplicates_multiple_dissolution_menu, 'remove these files\' potential relationships', 'Clear out these files\' potential relationships.', command_processor.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_REMOVE_POTENTIALS ) )
             
             ClientGUIMenus.AppendMenu( duplicates_action_submenu, duplicates_multiple_dissolution_menu, 'advanced: remove/reset for all selected' )
             

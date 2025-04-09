@@ -99,102 +99,128 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def _GetDefaultNoteImportOptionsForURL( self, url ):
+    def _GetDefaultNoteImportOptionsForURL( self, referral_url: typing.Optional[ str ], file_or_post_url: str ):
         
-        url_class = self._GetURLClass( url )
+        urls_to_examine_in_order = [ file_or_post_url ]
         
-        if url_class is None or url_class.GetURLType() not in ( HC.URL_TYPE_POST, HC.URL_TYPE_WATCHABLE ):
+        if referral_url is not None:
             
-            return self._file_post_default_note_import_options
-            
-        
-        try:
-            
-            ( url_class, url ) = self._GetNormalisedAPIURLClassAndURL( url )
-            
-        except HydrusExceptions.URLClassException:
-            
-            return self._file_post_default_note_import_options
+            urls_to_examine_in_order.append( referral_url )
             
         
-        # some lad decided to api convert one url type to another
-        if url_class.GetURLType() not in ( HC.URL_TYPE_POST, HC.URL_TYPE_WATCHABLE ):
+        ClientNetworkingFunctions.NetworkReportMode( f'Doing default tag import options lookup for {urls_to_examine_in_order}.' )
+        
+        for url in urls_to_examine_in_order:
             
-            return self._file_post_default_note_import_options
+            url_class = self._GetURLClass( url )
+            
+            if url_class is not None:
+                
+                try:
+                    
+                    # we store options for the final link in the api redirect chain
+                    ( url_class, api_url ) = self._GetNormalisedAPIURLClassAndURL( url )
+                    
+                except HydrusExceptions.URLClassException as e:
+                    
+                    ClientNetworkingFunctions.NetworkReportMode( f'Failed to API-redirect-resolve on {url}: {e}.' )
+                    
+                    continue
+                    
+                
+                url_class_key = url_class.GetClassKey()
+                
+                if url_class_key in self._url_class_keys_to_default_note_import_options:
+                    
+                    ClientNetworkingFunctions.NetworkReportMode( f'{url} resolved to specific note import options.' )
+                    
+                    return self._url_class_keys_to_default_note_import_options[ url_class_key ]
+                    
+                else:
+                    
+                    url_type = url_class.GetURLType()
+                    
+                    if url_type == HC.URL_TYPE_POST:
+                        
+                        ClientNetworkingFunctions.NetworkReportMode( f'{url} resolved to default post note import options.' )
+                        
+                        return self._file_post_default_note_import_options
+                        
+                    elif url_type == HC.URL_TYPE_WATCHABLE:
+                        
+                        ClientNetworkingFunctions.NetworkReportMode( f'{url} resolved to default watcher note import options.' )
+                        
+                        return self._watchable_default_note_import_options
+                        
+                    
+                
             
         
-        url_class_key = url_class.GetClassKey()
+        ClientNetworkingFunctions.NetworkReportMode( f'No matches; resolving to default post note import options.' )
         
-        if url_class_key in self._url_class_keys_to_default_note_import_options:
-            
-            return self._url_class_keys_to_default_note_import_options[ url_class_key ]
-            
-        else:
-            
-            url_type = url_class.GetURLType()
-            
-            if url_type == HC.URL_TYPE_POST:
-                
-                return self._file_post_default_note_import_options
-                
-            elif url_type == HC.URL_TYPE_WATCHABLE:
-                
-                return self._watchable_default_note_import_options
-                
-            else:
-                
-                raise HydrusExceptions.URLClassException( 'Could not find note import options for that kind of URL Class!' )
-                
-            
+        return self._file_post_default_note_import_options
         
     
-    def _GetDefaultTagImportOptionsForURL( self, url ):
+    def _GetDefaultTagImportOptionsForURL( self, referral_url: typing.Optional[ str ], file_or_post_url: str ):
         
-        url_class = self._GetURLClass( url )
+        urls_to_examine_in_order = [ file_or_post_url ]
         
-        if url_class is None or url_class.GetURLType() not in ( HC.URL_TYPE_POST, HC.URL_TYPE_WATCHABLE ):
+        if referral_url is not None:
             
-            return self._file_post_default_tag_import_options
-            
-        
-        try:
-            
-            ( url_class, url ) = self._GetNormalisedAPIURLClassAndURL( url )
-            
-        except HydrusExceptions.URLClassException:
-            
-            return self._file_post_default_tag_import_options
+            urls_to_examine_in_order.append( referral_url )
             
         
-        # some lad decided to api convert one url type to another
-        if url_class.GetURLType() not in ( HC.URL_TYPE_POST, HC.URL_TYPE_WATCHABLE ):
+        ClientNetworkingFunctions.NetworkReportMode( f'Doing default tag import options lookup for {urls_to_examine_in_order}.' )
+        
+        for url in urls_to_examine_in_order:
             
-            return self._file_post_default_tag_import_options
+            url_class = self._GetURLClass( url )
+            
+            if url_class is not None:
+                
+                try:
+                    
+                    # we store options for the final link in the api redirect chain
+                    ( url_class, api_url ) = self._GetNormalisedAPIURLClassAndURL( url )
+                    
+                except HydrusExceptions.URLClassException as e:
+                    
+                    ClientNetworkingFunctions.NetworkReportMode( f'Failed to API-redirect-resolve on {url}: {e}.' )
+                    
+                    continue
+                    
+                
+                url_class_key = url_class.GetClassKey()
+                
+                if url_class_key in self._url_class_keys_to_default_tag_import_options:
+                    
+                    ClientNetworkingFunctions.NetworkReportMode( f'{url} resolved to specific tag import options.' )
+                    
+                    return self._url_class_keys_to_default_tag_import_options[ url_class_key ]
+                    
+                else:
+                    
+                    url_type = url_class.GetURLType()
+                    
+                    if url_type == HC.URL_TYPE_POST:
+                        
+                        ClientNetworkingFunctions.NetworkReportMode( f'{url} resolved to default post tag import options.' )
+                        
+                        return self._file_post_default_tag_import_options
+                        
+                    elif url_type == HC.URL_TYPE_WATCHABLE:
+                        
+                        ClientNetworkingFunctions.NetworkReportMode( f'{url} resolved to default watcher tag import options.' )
+                        
+                        return self._watchable_default_tag_import_options
+                        
+                    
+                
             
         
-        url_class_key = url_class.GetClassKey()
+        ClientNetworkingFunctions.NetworkReportMode( f'No matches; resolving to default post tag import options.' )
         
-        if url_class_key in self._url_class_keys_to_default_tag_import_options:
-            
-            return self._url_class_keys_to_default_tag_import_options[ url_class_key ]
-            
-        else:
-            
-            url_type = url_class.GetURLType()
-            
-            if url_type == HC.URL_TYPE_POST:
-                
-                return self._file_post_default_tag_import_options
-                
-            elif url_type == HC.URL_TYPE_WATCHABLE:
-                
-                return self._watchable_default_tag_import_options
-                
-            else:
-                
-                raise HydrusExceptions.URLClassException( 'Could not find tag import options for that kind of URL Class!' )
-                
-            
+        return self._file_post_default_tag_import_options
         
     
     def _GetGUG( self, gug_key_and_name ):
@@ -215,7 +241,7 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def _GetNormalisedAPIURLClassAndURL( self, url ):
+    def _GetNormalisedAPIURLClassAndURL( self, url ) -> typing.Tuple[ ClientNetworkingURLClass.URLClass, str ]:
         
         url_class = self._GetURLClass( url )
         
@@ -1143,11 +1169,11 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def GetDefaultNoteImportOptionsForURL( self, url ):
+    def GetDefaultNoteImportOptionsForURL( self, referral_url, url ):
         
         with self._lock:
             
-            return self._GetDefaultNoteImportOptionsForURL( url )
+            return self._GetDefaultNoteImportOptionsForURL( referral_url, url )
             
         
     
@@ -1159,11 +1185,11 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def GetDefaultTagImportOptionsForURL( self, url ):
+    def GetDefaultTagImportOptionsForURL( self, referral_url, url ):
         
         with self._lock:
             
-            return self._GetDefaultTagImportOptionsForURL( url )
+            return self._GetDefaultTagImportOptionsForURL( referral_url, url )
             
         
     
@@ -1441,6 +1467,7 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
                     
                     message = f'Request for URL to fetch:\n{url}\n->\n(no transformation)'
                     
+                
                 if HG.network_report_mode_silent:
                     
                     HydrusData.Print( message )

@@ -100,7 +100,7 @@ class EditDefaultImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        eligible_url_classes = [ url_class for url_class in url_classes if url_class.GetURLType() in ( HC.URL_TYPE_POST, HC.URL_TYPE_WATCHABLE ) and url_class.GetClassKey() in self._url_class_keys_to_parser_keys ]
+        eligible_url_classes = [ url_class for url_class in url_classes if url_class.GetURLType() in ( HC.URL_TYPE_POST, HC.URL_TYPE_WATCHABLE, HC.URL_TYPE_GALLERY ) and url_class.GetClassKey() in self._url_class_keys_to_parser_keys ]
         
         self._list_ctrl.AddDatas( eligible_url_classes )
         
@@ -117,6 +117,16 @@ class EditDefaultImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         vbox = QP.VBoxLayout()
         
+        label = 'Hydrus will first check the URL that you see in the "file log". If it matches an URL Class entry in the list below, and that row has specific defaults set, those will be used. If no match is found (or the URL is Unknown/File URL), hydrus will look at the Referral URL, which is usually a Gallery or Watchable URL. If that has specific options, those will be used; if not, then the default for file posts or watchable urls will be chosen respectively.'
+        label += '\n\n'
+        label += 'Make sure you set good options that you will always be happy with under "default for file posts", since that will be used most often. Then, if you need a special blacklist or tag rules for a certain site, try to set it to the appropriate "Post URL", if any. If the downloader produces raw file URLs in the "file log", then set options for the Gallery or Watchable URL you see in the "search/check log".'
+        label += '\n\n'
+        label += 'If you figure out some good options here and need to "re-run" some earlier downloads with the new defaults, do not just re-queue the files\' URLs for a redownload in an URLs downloader page--hydrus will skip booru-style URLs it has seen before, so it will not refetch the metadata for your new options in this case. Instead, try selecting the files and _right-click->urls->force metadata refetch->url class_, which will do that same job for you but with a special flag set to force the refetch.'
+        
+        st = ClientGUICommon.BetterStaticText( self, label = label )
+        st.setWordWrap( True )
+        
+        QP.AddToLayout( vbox, st, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         QP.AddToLayout( vbox, self._list_ctrl_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         
@@ -345,17 +355,13 @@ class EditDefaultImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             
             url_type = url_class.GetURLType()
             
-            if url_type == HC.URL_TYPE_POST:
-                
-                note_import_options = self._file_post_default_import_options_button.GetNoteImportOptions()
-                
-            elif url_type == HC.URL_TYPE_WATCHABLE:
+            if url_type == HC.URL_TYPE_WATCHABLE:
                 
                 note_import_options = self._watchable_default_import_options_button.GetNoteImportOptions()
                 
             else:
                 
-                raise HydrusExceptions.URLClassException( 'Could not find note import options for that kind of URL Class!' )
+                note_import_options = self._file_post_default_import_options_button.GetNoteImportOptions()
                 
             
             note_import_options = note_import_options.Duplicate()
@@ -378,17 +384,13 @@ class EditDefaultImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             
             url_type = url_class.GetURLType()
             
-            if url_type == HC.URL_TYPE_POST:
-                
-                tag_import_options = self._file_post_default_import_options_button.GetTagImportOptions()
-                
-            elif url_type == HC.URL_TYPE_WATCHABLE:
+            if url_type == HC.URL_TYPE_WATCHABLE:
                 
                 tag_import_options = self._watchable_default_import_options_button.GetTagImportOptions()
                 
             else:
                 
-                raise HydrusExceptions.URLClassException( 'Could not find tag import options for that kind of URL Class!' )
+                tag_import_options = self._file_post_default_import_options_button.GetTagImportOptions()
                 
             
             tag_import_options = tag_import_options.Duplicate()

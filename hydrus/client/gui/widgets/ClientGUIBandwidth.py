@@ -64,7 +64,7 @@ class BandwidthRulesCtrl( ClientGUICommon.StaticBox ):
             
 '''
         
-        model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_BANDWIDTH_RULES.ID, self._ConvertRuleToListCtrlTuples )
+        model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_BANDWIDTH_RULES.ID, self._ConvertRuleToDisplayTuple, self._ConvertRuleToSortTuple )
         
         self._listctrl = ClientGUIListCtrl.BetterListCtrlTreeView( listctrl_panel, 8, model, use_simple_delete = True, activation_callback = self._Edit )
         
@@ -104,11 +104,13 @@ class BandwidthRulesCtrl( ClientGUICommon.StaticBox ):
             
         
     
-    def _ConvertRuleToListCtrlTuples( self, rule ):
+    def _ConvertRuleToDisplayTuple( self, rule ):
         
         ( bandwidth_type, time_delta, max_allowed ) = rule
         
         pretty_time_delta = HydrusTime.TimeDeltaToPrettyTimeDelta( time_delta )
+        
+        pretty_max_allowed = ''
         
         if bandwidth_type == HC.BANDWIDTH_TYPE_DATA:
             
@@ -119,12 +121,20 @@ class BandwidthRulesCtrl( ClientGUICommon.StaticBox ):
             pretty_max_allowed = HydrusNumbers.ToHumanInt( max_allowed ) + ' requests'
             
         
+        display_tuple = ( pretty_max_allowed, pretty_time_delta )
+        
+        return display_tuple
+        
+    
+    def _ConvertRuleToSortTuple( self, rule ):
+        
+        ( bandwidth_type, time_delta, max_allowed ) = rule
+        
         sort_time_delta = ClientGUIListCtrl.SafeNoneInt( time_delta )
         
         sort_tuple = ( max_allowed, sort_time_delta )
-        display_tuple = ( pretty_max_allowed, pretty_time_delta )
         
-        return ( display_tuple, sort_tuple )
+        return sort_tuple
         
     
     def _Edit( self ):

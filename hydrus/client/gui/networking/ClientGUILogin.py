@@ -269,7 +269,7 @@ class EditLoginsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._domains_and_login_info_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
-        model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_DOMAINS_TO_LOGIN_INFO.ID, self._ConvertDomainAndLoginInfoListCtrlTuples )
+        model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_DOMAINS_TO_LOGIN_INFO.ID, self._ConvertDomainAndLoginInfoToDisplayTuple, self._ConvertDomainAndLoginInfoToSortTuple )
         
         self._domains_and_login_info = ClientGUIListCtrl.BetterListCtrlTreeView( self._domains_and_login_info_panel, 16, model, use_simple_delete = True, activation_callback = self._EditCredentials )
         
@@ -625,7 +625,108 @@ class EditLoginsPanel( ClientGUIScrolledPanels.EditPanel ):
             
         
     
-    def _ConvertDomainAndLoginInfoListCtrlTuples( self, domain_and_login_info ):
+    def _ConvertDomainAndLoginInfoToDisplayTuple( self, domain_and_login_info ):
+        
+        ( login_domain, login_script_key_and_name, credentials_tuple, login_access_type, login_access_text, active, validity, validity_error_text, no_work_until, no_work_until_reason ) = domain_and_login_info
+        
+        login_expiry = None
+        
+        try:
+            
+            login_script = self._GetLoginScript( login_script_key_and_name )
+            
+            sort_login_script = login_script.GetName()
+            
+            network_context = ClientNetworkingContexts.NetworkContext( context_type = CC.NETWORK_CONTEXT_DOMAIN, context_data = login_domain )
+            
+            logged_in = login_script.IsLoggedIn( self._engine, network_context )
+            
+            if logged_in:
+                
+                login_expiry = login_script.GetLoginExpiry( self._engine, network_context )
+                
+            
+        except HydrusExceptions.DataMissing:
+            
+            sort_login_script = 'login script not found'
+            
+            logged_in = False
+            
+        
+        access = '{} - {}'.format( ClientNetworkingLogin.login_access_type_str_lookup[ login_access_type ], login_access_text )
+        
+        if active:
+            
+            sort_active = 'yes'
+            
+        else:
+            
+            sort_active = 'no'
+            
+        
+        sort_validity = ClientNetworkingLogin.validity_str_lookup[ validity ]
+        
+        if len( validity_error_text ) > 0:
+            
+            sort_validity += ' - {}'.format( validity_error_text )
+            
+        
+        if login_expiry is None:
+            
+            sort_login_expiry = HydrusTime.GetNow() + 45 * 60
+            
+        else:
+            
+            sort_login_expiry = login_expiry
+            
+        
+        if HydrusTime.TimeHasPassed( no_work_until ):
+            
+            pretty_no_work_until = ''
+            
+        else:
+            
+            pretty_no_work_until = '{} - {}'.format( HydrusTime.TimestampToPrettyExpires( no_work_until ), no_work_until_reason )
+            
+        
+        pretty_login_domain = login_domain
+        pretty_login_script = sort_login_script
+        pretty_access = access
+        pretty_active = sort_active
+        
+        if active:
+            
+            pretty_validity = sort_validity
+            
+        else:
+            
+            pretty_validity = ''
+            
+        
+        if logged_in:
+            
+            if login_expiry is None:
+                
+                pretty_login_expiry = 'session'
+                
+            else:
+                
+                pretty_login_expiry = HydrusTime.TimestampToPrettyExpires( login_expiry )
+                
+            
+            pretty_logged_in = 'yes - {}'.format( pretty_login_expiry )
+            
+        else:
+            
+            pretty_logged_in = 'no'
+            
+        
+        display_tuple = ( pretty_login_domain, pretty_login_script, pretty_access, pretty_active, pretty_logged_in, pretty_validity, pretty_no_work_until )
+        
+        return display_tuple
+        
+    
+    def _ConvertDomainAndLoginInfoToSortTuple( self, domain_and_login_info ):
         
         ( login_domain, login_script_key_and_name, credentials_tuple, login_access_type, login_access_text, active, validity, validity_error_text, no_work_until, no_work_until_reason ) = domain_and_login_info
         
@@ -682,51 +783,9 @@ class EditLoginsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         sort_logged_in = ( logged_in, sort_login_expiry )
         
-        if HydrusTime.TimeHasPassed( no_work_until ):
-            
-            pretty_no_work_until = ''
-            
-        else:
-            
-            pretty_no_work_until = '{} - {}'.format( HydrusTime.TimestampToPrettyExpires( no_work_until ), no_work_until_reason )
-            
-        
-        pretty_login_domain = login_domain
-        pretty_login_script = sort_login_script
-        pretty_access = access
-        pretty_active = sort_active
-        
-        if active:
-            
-            pretty_validity = sort_validity
-            
-        else:
-            
-            pretty_validity = ''
-            
-        
-        if logged_in:
-            
-            if login_expiry is None:
-                
-                pretty_login_expiry = 'session'
-                
-            else:
-                
-                pretty_login_expiry = HydrusTime.TimestampToPrettyExpires( login_expiry )
-                
-            
-            pretty_logged_in = 'yes - {}'.format( pretty_login_expiry )
-            
-        else:
-            
-            pretty_logged_in = 'no'
-            
-        
-        display_tuple = ( pretty_login_domain, pretty_login_script, pretty_access, pretty_active, pretty_logged_in, pretty_validity, pretty_no_work_until )
         sort_tuple = ( login_domain, sort_login_script, access, sort_active, sort_logged_in, sort_validity, no_work_until )
         
-        return ( display_tuple, sort_tuple )
+        return sort_tuple
         
     
     def _DoLogin( self ):
@@ -1321,7 +1380,7 @@ class EditLoginScriptPanel( ClientGUIScrolledPanels.EditPanel ):
         
         credential_definitions_panel = ClientGUIListCtrl.BetterListCtrlPanel( credential_definitions_box_panel )
         
-        model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_CREDENTIAL_DEFINITIONS.ID, self._ConvertCredentialDefinitionToListCtrlTuples )
+        model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_CREDENTIAL_DEFINITIONS.ID, self._ConvertCredentialDefinitionToDisplayTuple, self._ConvertCredentialDefinitionToSortTuple )
         
         self._credential_definitions = ClientGUIListCtrl.BetterListCtrlTreeView( credential_definitions_panel, 4, model, use_simple_delete = True, activation_callback = self._EditCredentialDefinitions )
         
@@ -1349,7 +1408,7 @@ class EditLoginScriptPanel( ClientGUIScrolledPanels.EditPanel ):
         
         example_domains_info_panel = ClientGUIListCtrl.BetterListCtrlPanel( example_domains_info_box_panel )
         
-        model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_EXAMPLE_DOMAINS_INFO.ID, self._ConvertExampleDomainInfoToListCtrlTuples )
+        model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_EXAMPLE_DOMAINS_INFO.ID, self._ConvertExampleDomainInfoToDisplayTuple, self._ConvertExampleDomainInfoToSortTuple )
         
         self._example_domains_info = ClientGUIListCtrl.BetterListCtrlTreeView( example_domains_info_panel, 6, model, use_simple_delete = True, activation_callback = self._EditExampleDomainsInfo )
         
@@ -1369,7 +1428,7 @@ class EditLoginScriptPanel( ClientGUIScrolledPanels.EditPanel ):
         
         test_listctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( test_panel )
         
-        model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_LOGIN_SCRIPT_TEST_RESULTS.ID, self._ConvertTestResultToListCtrlTuples )
+        model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_LOGIN_SCRIPT_TEST_RESULTS.ID, self._ConvertTestResultToDisplayTuple, self._ConvertTestResultToSortTuple )
         
         self._test_listctrl = ClientGUIListCtrl.BetterListCtrlTreeView( test_listctrl_panel, 6, model, activation_callback = self._ReviewTestResult )
         
@@ -1517,7 +1576,7 @@ class EditLoginScriptPanel( ClientGUIScrolledPanels.EditPanel ):
         return self._EditLoginStep( login_step )
         
     
-    def _ConvertCredentialDefinitionToListCtrlTuples( self, credential_definition ):
+    def _ConvertCredentialDefinitionToDisplayTuple( self, credential_definition ):
         
         name = credential_definition.GetName()
         credential_type = credential_definition.GetType()
@@ -1533,12 +1592,27 @@ class EditLoginScriptPanel( ClientGUIScrolledPanels.EditPanel ):
         pretty_value = value
         
         display_tuple = ( pretty_name, pretty_type_string, pretty_value )
-        sort_tuple = ( name, type_string, value )
         
-        return ( display_tuple, sort_tuple )
+        return display_tuple
         
     
-    def _ConvertExampleDomainInfoToListCtrlTuples( self, example_domain_info ):
+    def _ConvertCredentialDefinitionToSortTuple( self, credential_definition ):
+        
+        name = credential_definition.GetName()
+        credential_type = credential_definition.GetType()
+        
+        type_string = ClientNetworkingLogin.credential_type_str_lookup[ credential_type ]
+        
+        string_match = credential_definition.GetStringMatch()
+        
+        value = string_match.ToString()
+        
+        sort_tuple = ( name, type_string, value )
+        
+        return sort_tuple
+        
+    
+    def _ConvertExampleDomainInfoToDisplayTuple( self, example_domain_info ):
         
         ( domain, access_type, access_text ) = example_domain_info
         
@@ -1547,9 +1621,19 @@ class EditLoginScriptPanel( ClientGUIScrolledPanels.EditPanel ):
         pretty_access_text = access_text
         
         display_tuple = ( pretty_domain, pretty_access_type, pretty_access_text )
+        
+        return display_tuple
+        
+    
+    def _ConvertExampleDomainInfoToSortTuple( self, example_domain_info ):
+        
+        ( domain, access_type, access_text ) = example_domain_info
+        
+        pretty_access_type = ClientNetworkingLogin.login_access_type_str_lookup[ access_type ]
+        
         sort_tuple = ( domain, pretty_access_type, access_text )
         
-        return ( display_tuple, sort_tuple )
+        return sort_tuple
         
     
     def _ConvertLoginStepToListBoxString( self, login_step ):
@@ -1559,7 +1643,7 @@ class EditLoginScriptPanel( ClientGUIScrolledPanels.EditPanel ):
         return name
         
     
-    def _ConvertTestResultToListCtrlTuples( self, test_result ):
+    def _ConvertTestResultToDisplayTuple( self, test_result ):
         
         ( name, url, body, downloaded_data, new_temp_strings, new_cookie_strings, result ) = test_result
         
@@ -1570,9 +1654,17 @@ class EditLoginScriptPanel( ClientGUIScrolledPanels.EditPanel ):
         pretty_result = result
         
         display_tuple = ( pretty_name, pretty_url, pretty_result )
+        
+        return display_tuple
+        
+    
+    def _ConvertTestResultToSortTuple( self, test_result ):
+        
+        ( name, url, body, downloaded_data, new_temp_strings, new_cookie_strings, result ) = test_result
+        
         sort_tuple = ( name, url, result )
         
-        return ( display_tuple, sort_tuple )
+        return sort_tuple
         
     
     def _EditCredentialDefinitions( self ):
@@ -1913,7 +2005,7 @@ class EditLoginScriptsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         login_scripts_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
-        model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_LOGIN_SCRIPTS.ID, self._ConvertLoginScriptToListCtrlTuples )
+        model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_LOGIN_SCRIPTS.ID, self._ConvertLoginScriptToDisplayTuple, self._ConvertLoginScriptToSortTuple )
         
         self._login_scripts = ClientGUIListCtrl.BetterListCtrlTreeView( login_scripts_panel, 20, model, use_simple_delete = True, activation_callback = self._Edit )
         
@@ -1970,7 +2062,7 @@ class EditLoginScriptsPanel( ClientGUIScrolledPanels.EditPanel ):
         self._login_scripts.AddData( login_script, select_sort_and_scroll = True )
         
     
-    def _ConvertLoginScriptToListCtrlTuples( self, login_script ):
+    def _ConvertLoginScriptToDisplayTuple( self, login_script ):
         
         name = login_script.GetName()
         
@@ -1980,9 +2072,19 @@ class EditLoginScriptsPanel( ClientGUIScrolledPanels.EditPanel ):
         pretty_example_domains = ', '.join( example_domains )
         
         display_tuple = ( pretty_name, pretty_example_domains )
+        
+        return display_tuple
+        
+    
+    def _ConvertLoginScriptToSortTuple( self, login_script ):
+        
+        name = login_script.GetName()
+        
+        example_domains = sorted( login_script.GetExampleDomains() )
+        
         sort_tuple = ( name, example_domains )
         
-        return ( display_tuple, sort_tuple )
+        return sort_tuple
         
     
     def _Edit( self ):

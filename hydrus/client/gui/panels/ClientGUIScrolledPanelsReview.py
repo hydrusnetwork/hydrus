@@ -165,7 +165,7 @@ class MoveMediaFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         current_media_base_locations_listctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( file_locations_panel )
         
-        model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_DB_MIGRATION_LOCATIONS.ID, self._ConvertLocationToListCtrlTuples )
+        model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_DB_MIGRATION_LOCATIONS.ID, self._ConvertLocationToDisplayTuple, self._ConvertLocationToSortTuple )
         
         self._current_media_base_locations_listctrl = ClientGUIListCtrl.BetterListCtrlTreeView( current_media_base_locations_listctrl_panel, 8, model, activation_callback = self._SetMaxNumBytes )
         self._current_media_base_locations_listctrl.setSelectionMode( QW.QAbstractItemView.SelectionMode.SingleSelection )
@@ -410,12 +410,12 @@ class MoveMediaFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
         self._SaveToDB()
         
     
-    def _ConvertLocationToListCtrlTuples( self, base_location: ClientFilesPhysical.FilesStorageBaseLocation ):
+    def _ConvertLocationToDisplayTuple( self, base_location: ClientFilesPhysical.FilesStorageBaseLocation ):
         
         f_space = self._all_local_files_total_size
         ( t_space_min, t_space_max ) = self._GetThumbnailSizeEstimates()
         
-        # current
+        #
         
         ( locations_to_file_weights, locations_to_thumb_weights ) = self._GetLocationsToCurrentWeights()
         
@@ -446,7 +446,6 @@ class MoveMediaFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
             
             if free_space is None:
                 
-                free_space = 0
                 pretty_free_space = 'unknown'
                 
             
@@ -454,7 +453,6 @@ class MoveMediaFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
             
             pretty_location = 'DOES NOT EXIST: {}'.format( path )
             
-            free_space = 0
             pretty_free_space = 'DOES NOT EXIST'
             
         
@@ -476,8 +474,6 @@ class MoveMediaFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
         p = HydrusNumbers.FloatToPercentage
         
         current_bytes = fp * f_space + tp * t_space_max
-        
-        current_usage = ( fp, tp )
         
         usages = []
         
@@ -515,8 +511,6 @@ class MoveMediaFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
             
         else:
             
-            ideal_weight = 0
-            
             if base_location in locations_to_file_weights:
                 
                 pretty_ideal_weight = '0'
@@ -530,12 +524,10 @@ class MoveMediaFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
         if base_location.max_num_bytes is None:
             
             pretty_max_num_bytes = 'n/a'
-            sort_max_num_bytes = -1
             
         else:
             
             pretty_max_num_bytes = HydrusData.ToHumanBytes( base_location.max_num_bytes )
-            sort_max_num_bytes = base_location.max_num_bytes
             
         
         ideal_fp = self._media_base_locations_to_ideal_usage.get( base_location, 0.0 )
@@ -587,9 +579,100 @@ class MoveMediaFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
             
         
         display_tuple = ( pretty_location, pretty_portable, pretty_free_space, pretty_current_usage, pretty_ideal_weight, pretty_max_num_bytes, pretty_ideal_usage )
+        
+        return display_tuple
+        
+    
+    def _ConvertLocationToSortTuple( self, base_location: ClientFilesPhysical.FilesStorageBaseLocation ):
+        
+        ( locations_to_file_weights, locations_to_thumb_weights ) = self._GetLocationsToCurrentWeights()
+        
+        #
+        
+        path = base_location.path
+        
+        if os.path.exists( path ):
+            
+            pretty_location = path
+            
+            try:
+                
+                free_space = HydrusPaths.GetFreeSpace( path )
+                
+            except Exception as e:
+                
+                message = 'There was a problem finding the free space for "{path}"! Perhaps this location does not exist?'
+                
+                HydrusData.Print( message )
+                
+                HydrusData.PrintException( e )
+                
+                free_space = 0
+                
+            
+            if free_space is None:
+                
+                free_space = 0
+                
+            
+        else:
+            
+            pretty_location = 'DOES NOT EXIST: {}'.format( path )
+            
+            free_space = 0
+            
+        
+        portable_location = HydrusPaths.ConvertAbsPathToPortablePath( base_location.path )
+        portable = not os.path.isabs( portable_location )
+        
+        fp = locations_to_file_weights[ base_location ]
+        tp = locations_to_thumb_weights[ base_location ]
+        
+        current_usage = ( fp, tp )
+        
+        #
+        
+        if base_location in self._media_base_locations:
+            
+            ideal_weight = base_location.ideal_weight
+            
+        else:
+            
+            ideal_weight = 0
+            
+        
+        if base_location.max_num_bytes is None:
+            
+            sort_max_num_bytes = -1
+            
+        else:
+            
+            sort_max_num_bytes = base_location.max_num_bytes
+            
+        
+        ideal_fp = self._media_base_locations_to_ideal_usage.get( base_location, 0.0 )
+        
+        if self._ideal_thumbnails_base_location_override is None:
+            
+            ideal_tp = ideal_fp
+            
+        else:
+            
+            if base_location == self._ideal_thumbnails_base_location_override:
+                
+                ideal_tp = 1.0
+                
+            else:
+                
+                ideal_tp = 0.0
+                
+            
+        
+        ideal_usage = ( ideal_fp, ideal_tp )
+        
         sort_tuple = ( pretty_location, portable, free_space, ideal_weight, ideal_usage, sort_max_num_bytes, current_usage )
         
-        return ( display_tuple, sort_tuple )
+        return sort_tuple
         
     
     def _DecreaseWeight( self ):
@@ -1538,7 +1621,7 @@ class ReviewFileEmbeddedMetadata( ClientGUIScrolledPanels.ReviewPanel ):
         
         exif_panel = ClientGUICommon.StaticBox( self, 'EXIF' )
         
-        model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_EXIF_DATA.ID, self._ConvertEXIFToListCtrlTuples )
+        model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_EXIF_DATA.ID, self._ConvertEXIFToDataTuple, self._ConvertEXIFToSortTuple )
         
         self._exif_listctrl = ClientGUIListCtrl.BetterListCtrlTreeView( exif_panel, 16, model, activation_callback = self._CopyRow )
         
@@ -1628,8 +1711,8 @@ class ReviewFileEmbeddedMetadata( ClientGUIScrolledPanels.ReviewPanel ):
         self.widget().setLayout( vbox )
         
     
-    def _ConvertEXIFToListCtrlTuples( self, exif_tuple ):
-    
+    def _ConvertEXIFToDataTuple( self, exif_tuple ):
+        
         ( exif_id, raw_value ) = exif_tuple
         
         if exif_id in ExifTags.TAGS:
@@ -1644,7 +1727,6 @@ class ReviewFileEmbeddedMetadata( ClientGUIScrolledPanels.ReviewPanel ):
             
         else:
             
-            label = 'zzz'
             pretty_label = 'Unknown'
             
         
@@ -1668,9 +1750,44 @@ class ReviewFileEmbeddedMetadata( ClientGUIScrolledPanels.ReviewPanel ):
             
         
         display_tuple = ( pretty_id, pretty_label, pretty_value )
+        
+        return display_tuple
+        
+    
+    def _ConvertEXIFToSortTuple( self, exif_tuple ):
+        
+        ( exif_id, raw_value ) = exif_tuple
+        
+        if exif_id in ExifTags.TAGS:
+            
+            label = ExifTags.TAGS[ exif_id ]
+            
+        elif exif_id in ExifTags.GPSTAGS:
+            
+            label = ExifTags.GPSTAGS[ exif_id ]
+            
+        else:
+            
+            label = 'zzz'
+            
+        
+        if isinstance( raw_value, bytes ):
+            
+            value = raw_value.hex()
+            
+        else:
+            
+            value = str( raw_value )
+            
+            if HydrusText.NULL_CHARACTER in value:
+                
+                value = value.replace( HydrusText.NULL_CHARACTER, '[null]' )
+                
+            
+        
         sort_tuple = ( exif_id, label, value )
         
-        return ( display_tuple, sort_tuple )
+        return sort_tuple
         
     
     def _CopyRow( self ):
@@ -1922,7 +2039,7 @@ class ReviewFileMaintenance( ClientGUIScrolledPanels.ReviewPanel ):
         
         jobs_listctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self._current_work_panel )
         
-        model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_FILE_MAINTENANCE_JOBS.ID, self._ConvertJobTypeToListCtrlTuples )
+        model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_FILE_MAINTENANCE_JOBS.ID, self._ConvertJobTypeToDisplayTuple, self._ConvertJobTypeToSortTuple )
         
         self._jobs_listctrl = ClientGUIListCtrl.BetterListCtrlTreeView( jobs_listctrl_panel, 8, model )
         
@@ -2091,10 +2208,9 @@ class ReviewFileMaintenance( ClientGUIScrolledPanels.ReviewPanel ):
         job.start()
         
     
-    def _ConvertJobTypeToListCtrlTuples( self, job_type ):
+    def _ConvertJobTypeToDisplayTuple( self, job_type ):
         
         pretty_job_type = ClientFiles.regen_file_enum_to_str_lookup[ job_type ]
-        sort_job_type = pretty_job_type
         
         if job_type in self._job_types_to_due_counts:
             
@@ -2115,9 +2231,27 @@ class ReviewFileMaintenance( ClientGUIScrolledPanels.ReviewPanel ):
             
         
         display_tuple = ( pretty_job_type, pretty_num_to_do )
+        
+        return display_tuple
+        
+    
+    def _ConvertJobTypeToSortTuple( self, job_type ):
+        
+        pretty_job_type = ClientFiles.regen_file_enum_to_str_lookup[ job_type ]
+        sort_job_type = pretty_job_type
+        
+        if job_type in self._job_types_to_due_counts:
+            
+            num_to_do = self._job_types_to_due_counts[ job_type ]
+            
+        else:
+            
+            num_to_do = 0
+            
+        
         sort_tuple = ( sort_job_type, num_to_do )
         
-        return ( display_tuple, sort_tuple )
+        return sort_tuple
         
     
     def _DeleteWork( self ):
@@ -2897,7 +3031,7 @@ class ReviewLocalFileImports( ClientGUIScrolledPanels.ReviewPanel ):
         
         listctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
-        model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_INPUT_LOCAL_FILES.ID, self._ConvertListCtrlDataToTuple )
+        model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_INPUT_LOCAL_FILES.ID, self._ConvertPathToDisplayTuple, self._ConvertPathToSortTuple )
         
         self._paths_list = ClientGUIListCtrl.BetterListCtrlTreeView( listctrl_panel, 12, model, delete_key_callback = self.RemovePaths )
         
@@ -3050,7 +3184,7 @@ class ReviewLocalFileImports( ClientGUIScrolledPanels.ReviewPanel ):
             
         
     
-    def _ConvertListCtrlDataToTuple( self, path ):
+    def _ConvertPathToDisplayTuple( self, path ):
         
         ( index, mime, size ) = self._current_path_data[ path ]
         
@@ -3059,9 +3193,19 @@ class ReviewLocalFileImports( ClientGUIScrolledPanels.ReviewPanel ):
         pretty_size = HydrusData.ToHumanBytes( size )
         
         display_tuple = ( pretty_index, path, pretty_mime, pretty_size )
+        
+        return display_tuple
+        
+    
+    def _ConvertPathToSortTuple( self, path ):
+        
+        ( index, mime, size ) = self._current_path_data[ path ]
+        
+        pretty_mime = HC.mime_string_lookup[ mime ]
+        
         sort_tuple = ( index, path, pretty_mime, size )
         
-        return ( display_tuple, sort_tuple )
+        return sort_tuple
         
     
     def _DoImport( self ):
@@ -3505,7 +3649,7 @@ class JobSchedulerPanel( QW.QWidget ):
         
         self._list_ctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
-        model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_JOB_SCHEDULER_REVIEW.ID, self._ConvertDataToListCtrlTuples )
+        model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_JOB_SCHEDULER_REVIEW.ID, self._ConvertDataToDisplayTuple, self._ConvertDataToSortTuple )
         
         self._list_ctrl = ClientGUIListCtrl.BetterListCtrlTreeView( self._list_ctrl_panel, 20, model )
         
@@ -3530,20 +3674,29 @@ class JobSchedulerPanel( QW.QWidget ):
         self.setLayout( vbox )
         
     
-    def _ConvertDataToListCtrlTuples( self, job: HydrusThreading.SchedulableJob ):
+    def _ConvertDataToDisplayTuple( self, job: HydrusThreading.SchedulableJob ):
         
         job_type = job.PRETTY_CLASS_NAME
         job_call = job.GetPrettyJob()
-        due = job.GetNextWorkTime()
         
         pretty_job_type = job_type
         pretty_job_call = job_call
         pretty_due = job.GetDueString()
         
         display_tuple = ( pretty_job_type, pretty_job_call, pretty_due )
+        
+        return display_tuple
+        
+    
+    def _ConvertDataToSortTuple( self, job: HydrusThreading.SchedulableJob ):
+        
+        job_type = job.PRETTY_CLASS_NAME
+        job_call = job.GetPrettyJob()
+        due = job.GetNextWorkTime()
+        
         sort_tuple = ( job_type, job_call, due )
         
-        return ( display_tuple, sort_tuple )
+        return sort_tuple
         
     
     def _RefreshSnapshot( self ):
@@ -3563,7 +3716,7 @@ class ThreadsPanel( QW.QWidget ):
         
         self._list_ctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
-        model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_THREADS_REVIEW.ID, self._ConvertDataToListCtrlTuples )
+        model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_THREADS_REVIEW.ID, self._ConvertDataToDisplayTuple, self._ConvertDataToSortTuple )
         
         self._list_ctrl = ClientGUIListCtrl.BetterListCtrlTreeView( self._list_ctrl_panel, 20, model )
         
@@ -3588,7 +3741,7 @@ class ThreadsPanel( QW.QWidget ):
         self.setLayout( vbox )
         
     
-    def _ConvertDataToListCtrlTuples( self, thread ):
+    def _ConvertDataToDisplayTuple( self, thread ):
         
         name = thread.GetName()
         thread_type = repr( type( thread ) )
@@ -3599,9 +3752,19 @@ class ThreadsPanel( QW.QWidget ):
         pretty_current_job = current_job
         
         display_tuple = ( pretty_name, pretty_thread_type, pretty_current_job )
+        
+        return display_tuple
+        
+    
+    def _ConvertDataToSortTuple( self, thread ):
+        
+        name = thread.GetName()
+        thread_type = repr( type( thread ) )
+        current_job = repr( thread.GetCurrentJobSummary() )
+        
         sort_tuple = ( name, thread_type, current_job )
         
-        return ( display_tuple, sort_tuple )
+        return sort_tuple
         
     
     def _RefreshSnapshot( self ):
@@ -3632,7 +3795,7 @@ class ReviewDeferredDeleteTableData( ClientGUIScrolledPanels.ReviewPanel ):
         
         self._names_to_num_rows = {}
         
-        model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_DEFERRED_DELETE_TABLE_DATA.ID, self._ConvertRowToListCtrlTuples )
+        model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_DEFERRED_DELETE_TABLE_DATA.ID, self._ConvertRowToDisplayTuple, self._ConvertRowToSortTuple )
         
         self._deferred_delete_listctrl = ClientGUIListCtrl.BetterListCtrlTreeView( deferred_delete_listctrl_panel, 24, model )
         
@@ -3669,16 +3832,14 @@ class ReviewDeferredDeleteTableData( ClientGUIScrolledPanels.ReviewPanel ):
         self._controller.sub( self, 'NotifyRefresh', 'notify_deferred_delete_database_maintenance_new_work' )
         
     
-    def _ConvertRowToListCtrlTuples( self, name ):
+    def _ConvertRowToDisplayTuple( self, name ):
         
         num_rows = self._names_to_num_rows.get( name, None )
         
-        sort_name = name
         pretty_name = name
         
         if num_rows is None:
             
-            sort_num_rows = -1
             pretty_num_rows = 'unknown'
             
         else:
@@ -3688,9 +3849,28 @@ class ReviewDeferredDeleteTableData( ClientGUIScrolledPanels.ReviewPanel ):
             
         
         display_tuple = ( pretty_name, pretty_num_rows )
+        
+        return display_tuple
+        
+    
+    def _ConvertRowToSortTuple( self, name ):
+        
+        num_rows = self._names_to_num_rows.get( name, None )
+        
+        sort_name = name
+        
+        if num_rows is None:
+            
+            sort_num_rows = -1
+            
+        else:
+            
+            sort_num_rows = num_rows
+            
+        
         sort_tuple = ( sort_name, sort_num_rows )
         
-        return ( display_tuple, sort_tuple )
+        return sort_tuple
         
     
     def _FlipWorkingHard( self ):
@@ -3825,7 +4005,7 @@ Vacuuming is an expensive operation. It creates one (temporary) copy of the data
         
         vacuum_listctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
-        model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_VACUUM_DATA.ID, self._ConvertNameToListCtrlTuples )
+        model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_VACUUM_DATA.ID, self._ConvertNameToDisplayTuple, self._ConvertNameToSortTuple )
         
         self._vacuum_listctrl = ClientGUIListCtrl.BetterListCtrlTreeView( vacuum_listctrl_panel, 6, model )
         
@@ -3894,13 +4074,12 @@ Vacuuming is an expensive operation. It creates one (temporary) copy of the data
         return True
         
     
-    def _ConvertNameToListCtrlTuples( self, name ):
+    def _ConvertNameToDisplayTuple( self, name ):
         
         vacuum_dict = self._vacuum_data[ name ]
         
         page_size = vacuum_dict[ 'page_size' ]
         
-        sort_name = name
         pretty_name = name
         
         sort_total_size = page_size * vacuum_dict[ 'page_count' ]
@@ -3918,7 +4097,6 @@ Vacuuming is an expensive operation. It creates one (temporary) copy of the data
         
         if sort_last_vacuumed_ms == 0 or sort_last_vacuumed_ms is None:
             
-            sort_last_vacuumed_ms = 0
             pretty_last_vacuumed_ms = 'never done'
             
         else:
@@ -3928,15 +4106,43 @@ Vacuuming is an expensive operation. It creates one (temporary) copy of the data
         
         ( result, info ) = self._CanVacuumName( name )
         
-        sort_can_vacuum = result
         pretty_can_vacuum = info
         
         ( sort_vacuum_time_estimate, pretty_vacuum_time_estimate ) = self._GetVacuumTimeEstimate( sort_total_size )
         
         display_tuple = ( pretty_name, pretty_total_size, pretty_free_size, pretty_last_vacuumed_ms, pretty_can_vacuum, pretty_vacuum_time_estimate )
+        
+        return display_tuple
+        
+    
+    def _ConvertNameToSortTuple( self, name ):
+        
+        vacuum_dict = self._vacuum_data[ name ]
+        
+        page_size = vacuum_dict[ 'page_size' ]
+        
+        sort_name = name
+        
+        sort_total_size = page_size * vacuum_dict[ 'page_count' ]
+        
+        sort_free_size = page_size * vacuum_dict[ 'freelist_count' ]
+        
+        sort_last_vacuumed_ms = vacuum_dict[ 'last_vacuumed_ms' ]
+        
+        if sort_last_vacuumed_ms == 0 or sort_last_vacuumed_ms is None:
+            
+            sort_last_vacuumed_ms = 0
+            
+        
+        ( result, info ) = self._CanVacuumName( name )
+        
+        sort_can_vacuum = result
+        
+        ( sort_vacuum_time_estimate, pretty_vacuum_time_estimate ) = self._GetVacuumTimeEstimate( sort_total_size )
+        
         sort_tuple = ( sort_name, sort_total_size, sort_free_size, sort_last_vacuumed_ms, sort_can_vacuum, sort_vacuum_time_estimate )
         
-        return ( display_tuple, sort_tuple )
+        return sort_tuple
         
     
     def _GetVacuumTimeEstimate( self, db_size ):

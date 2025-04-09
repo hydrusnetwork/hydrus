@@ -288,7 +288,7 @@ class SidebarPetitions( ClientGUISidebarCore.Sidebar ):
         
         self._petitions_summary_list_panel = ClientGUIListCtrl.BetterListCtrlPanel( self._petitions_panel )
         
-        model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_PETITIONS_SUMMARY.ID, self._ConvertDataToListCtrlTuples )
+        model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_PETITIONS_SUMMARY.ID, self._ConvertDataToDisplayTuple, self._ConvertDataToSortTuple )
         
         self._petitions_summary_list = ClientGUIListCtrl.BetterListCtrlTreeView( self._petitions_summary_list_panel, 12, model, activation_callback = self._ActivateToHighlightPetition )
         
@@ -595,12 +595,10 @@ class SidebarPetitions( ClientGUISidebarCore.Sidebar ):
         self._ClearCurrentPetition()
         
     
-    def _ConvertDataToListCtrlTuples( self, petition_header: HydrusNetwork.PetitionHeader ):
+    def _ConvertDataToDisplayTuple( self, petition_header: HydrusNetwork.PetitionHeader ):
         
         pretty_action = ''
         pretty_content = 'fetching' + HC.UNICODE_ELLIPSIS
-        
-        sort_content = 1
         
         petition = None
         this_is_current_petition = False
@@ -639,6 +637,53 @@ class SidebarPetitions( ClientGUISidebarCore.Sidebar ):
             
             pretty_action = GetPetitionActionInfo( petition )[0]
             
+        
+        if this_is_current_petition:
+            
+            pretty_action = f'* {pretty_action}'
+            
+        
+        pretty_account_key = petition_header.account_key.hex()
+        pretty_reason = petition_header.reason
+        
+        display_tuple = ( pretty_action, pretty_account_key, pretty_reason, pretty_content )
+        
+        return display_tuple
+        
+    
+    def _ConvertDataToSortTuple( self, petition_header: HydrusNetwork.PetitionHeader ):
+        
+        pretty_action = ''
+        
+        sort_content = 1
+        
+        petition = None
+        this_is_current_petition = False
+        
+        if petition_header in self._outgoing_petition_headers_to_petitions:
+            
+            petition = self._outgoing_petition_headers_to_petitions[ petition_header ]
+            
+        elif petition_header in self._failed_outgoing_petition_headers_to_petitions:
+            
+            petition = self._failed_outgoing_petition_headers_to_petitions[ petition_header ]
+            
+        elif petition_header in self._petition_headers_to_fetched_petitions_cache:
+            
+            petition = self._petition_headers_to_fetched_petitions_cache[ petition_header ]
+            
+            this_is_current_petition = False
+            
+            if self._current_petition is not None and petition_header == self._current_petition.GetPetitionHeader():
+                
+                this_is_current_petition = True
+                
+            
+        
+        if petition is not None:
+            
+            pretty_action = GetPetitionActionInfo( petition )[0]
+            
             sort_content = petition.GetActualContentWeight()
             
         
@@ -654,10 +699,9 @@ class SidebarPetitions( ClientGUISidebarCore.Sidebar ):
         sort_account_key = pretty_account_key
         sort_reason = pretty_reason
         
-        display_tuple = ( pretty_action, pretty_account_key, pretty_reason, pretty_content )
         sort_tuple = ( sort_action, sort_account_key, sort_reason, sort_content )
         
-        return ( display_tuple, sort_tuple )
+        return sort_tuple
         
     
     def _CopyAccountKey( self ):

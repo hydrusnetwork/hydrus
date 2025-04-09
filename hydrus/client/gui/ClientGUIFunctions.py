@@ -26,18 +26,21 @@ def ClientToScreen( win: QW.QWidget, pos: QC.QPoint ) -> QC.QPoint:
         return QC.QPoint( 50, 50 )
         
     
+
 def ColourIsBright( colour: QG.QColor ):
     
     it_is_bright = colour.valueF() > 0.75
     
     return it_is_bright
     
+
 def ColourIsGreyish( colour: QG.QColor ):
     
     it_is_greyish = colour.hsvSaturationF() < 0.12
     
     return it_is_greyish
     
+
 # OK, so we now have a fixed block for width, which we sometimes want to calculate in both directions.
 # by normalising our 'one character' width, the inverse calculation uses the same coefficient and we aren't losing so much in rounding
 NUM_CHARS_FOR_WIDTH_CALCULATIONS = 32
@@ -47,6 +50,7 @@ def GetOneCharacterPixelHeight( window ) -> float:
     
     return window.fontMetrics().height() * MAGIC_TEXT_PADDING
     
+
 def GetOneCharacterPixelWidth( window ) -> float:
     
     char_block_width = window.fontMetrics().boundingRect( NUM_CHARS_FOR_WIDTH_CALCULATIONS * 'x' ).width() * MAGIC_TEXT_PADDING
@@ -55,6 +59,7 @@ def GetOneCharacterPixelWidth( window ) -> float:
     
     return one_char_width
     
+
 def ConvertPixelsToTextWidth( window, pixels, round_down = False ) -> int:
     
     one_char_width = GetOneCharacterPixelWidth( window )
@@ -68,6 +73,7 @@ def ConvertPixelsToTextWidth( window, pixels, round_down = False ) -> int:
         return round( pixels / one_char_width )
         
     
+
 def ConvertQtImageToNumPy( qt_image: QG.QImage, strip_useless_alpha = True ):
     
     #        _     _                          _        _                           
@@ -120,6 +126,11 @@ def ConvertQtImageToNumPy( qt_image: QG.QImage, strip_useless_alpha = True ):
     
     data_bytearray = qt_image.bits()
     
+    if data_bytearray is None:
+        
+        raise Exception( 'Could not convert an image from Qt format to NumPy. Maybe out-of-memory issue?' )
+        
+    
     if QtInit.WE_ARE_PYSIDE:
         
         data_bytes = bytes( data_bytearray )
@@ -156,6 +167,7 @@ def ConvertQtImageToNumPy( qt_image: QG.QImage, strip_useless_alpha = True ):
     
     return numpy_image
     
+
 def ConvertTextToPixels( window, char_dimensions ) -> typing.Tuple[ int, int ]:
     
     ( char_cols, char_rows ) = char_dimensions
@@ -165,6 +177,7 @@ def ConvertTextToPixels( window, char_dimensions ) -> typing.Tuple[ int, int ]:
     
     return ( round( char_cols * one_char_width ), round( char_rows * one_char_height ) )
     
+
 def ConvertTextToPixelWidth( window, char_cols ) -> int:
     
     one_char_width = GetOneCharacterPixelWidth( window )
@@ -238,14 +251,17 @@ def GetDifferentLighterDarkerColour( colour, intensity = 3 ):
     
     return GetLighterDarkerColour( new_colour, intensity )
     
+
 def GetDisplayPosition( window ):
     
     return window.screen().availableGeometry().topLeft()
     
+
 def GetDisplaySize( window ):
     
     return window.screen().availableGeometry().size()
     
+
 def GetLighterDarkerColour( colour, intensity = 3 ):
     
     if intensity is None or intensity == 0:
@@ -272,10 +288,12 @@ def GetLighterDarkerColour( colour, intensity = 3 ):
         return colour.lighter( qt_intensity )
         
     
+
 def GetMouseScreen() -> typing.Optional[ QG.QScreen ]:
     
     return QW.QApplication.screenAt( QG.QCursor.pos() )
     
+
 def GetTextSizeFromPainter( painter: QG.QPainter, text: str ):
     
     try:
@@ -307,6 +325,7 @@ def GetTextSizeFromPainter( painter: QG.QPainter, text: str ):
     
     return ( text_size, text )
     
+
 def GetTLWParents( widget ):
     
     widget_tlw = widget.window()        
@@ -326,6 +345,7 @@ def GetTLWParents( widget ):
     
     return parent_tlws
     
+
 def IsQtAncestor( child: QW.QWidget, ancestor: QW.QWidget, through_tlws = False ):
     
     if child is None:
@@ -360,6 +380,7 @@ def IsQtAncestor( child: QW.QWidget, ancestor: QW.QWidget, through_tlws = False 
     
     return False
     
+
 def MouseIsOnMyDisplay( window ):
     
     window_handle = window.window().windowHandle()
@@ -407,6 +428,7 @@ def MouseIsOverWidget( win: QW.QWidget ):
     
     return win.rect().contains( local_mouse_pos )
     
+
 def NotebookScreenToHitTest( notebook, screen_position ):
     
     tab_pos = notebook.tabBar().mapFromGlobal( screen_position )    
@@ -434,14 +456,17 @@ def SetBitmapButtonBitmap( button, bitmap ):
     
     button.last_bitmap = bitmap
     
+
 def SetFocusLater( win: QW.QWidget ):
     
     CG.client_controller.CallAfterQtSafe( win, 'set focus to a window', win.setFocus, QC.Qt.FocusReason.OtherFocusReason )
     
+
 def TLWIsActive( window ):
     
     return window.window() == QW.QApplication.activeWindow()
     
+
 def TLWOrChildIsActive( win ):
     
     current_focus_tlw = QW.QApplication.activeWindow()

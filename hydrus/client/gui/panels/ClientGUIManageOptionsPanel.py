@@ -1094,7 +1094,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             mime_panel = ClientGUICommon.StaticBox( self, '\'open externally\' launch paths' )
             
-            model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_EXTERNAL_PROGRAMS.ID, self._ConvertMimeToListCtrlTuples )
+            model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_EXTERNAL_PROGRAMS.ID, self._ConvertMimeToDisplayTuple, self._ConvertMimeToSortTuple )
             
             self._mime_launch_listctrl = ClientGUIListCtrl.BetterListCtrlTreeView( mime_panel, 15, model, activation_callback = self._EditMimeLaunch )
             
@@ -1167,7 +1167,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self.setLayout( vbox )
             
         
-        def _ConvertMimeToListCtrlTuples( self, data ):
+        def _ConvertMimeToDisplayTuple( self, data ):
             
             ( mime, launch_path ) = data
             
@@ -1183,10 +1183,11 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
             
             display_tuple = ( pretty_mime, pretty_launch_path )
-            sort_tuple = display_tuple
             
-            return ( display_tuple, sort_tuple )
+            return display_tuple
             
+        
+        _ConvertMimeToSortTuple = _ConvertMimeToDisplayTuple
         
         def _EditMimeLaunch( self ):
             
@@ -3392,7 +3393,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             media_viewer_list_panel = ClientGUIListCtrl.BetterListCtrlPanel( filetype_handling_panel )
             
-            model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_MEDIA_VIEWER_OPTIONS.ID, self._GetListCtrlData )
+            model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_MEDIA_VIEWER_OPTIONS.ID, self._GetListCtrlDisplayTuple, self._GetListCtrlSortTuple )
             
             self._filetype_handling_listctrl = ClientGUIListCtrl.BetterListCtrlTreeView( media_viewer_list_panel, 20, model, activation_callback = self.EditMediaViewerOptions, use_simple_delete = True )
             
@@ -3541,7 +3542,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             return unset_mimes
             
         
-        def _GetListCtrlData( self, data ):
+        def _GetListCtrlDisplayTuple( self, data ):
             
             ( mime, media_show_action, media_start_paused, media_start_with_embed, preview_show_action, preview_start_paused, preview_start_with_embed, zoom_info ) = data
             
@@ -3583,10 +3584,11 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
             
             display_tuple = ( pretty_mime, pretty_media_show_action, pretty_preview_show_action, pretty_zoom_info )
-            sort_tuple = ( pretty_mime, pretty_media_show_action, pretty_preview_show_action, pretty_zoom_info )
             
-            return ( display_tuple, sort_tuple )
+            return display_tuple
             
+        
+        _GetListCtrlSortTuple = _GetListCtrlDisplayTuple
         
         def _GetPrettyMime( self, mime ):
             
@@ -5438,7 +5440,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             search_tag_slices_weight_panel = ClientGUIListCtrl.BetterListCtrlPanel( search_tag_slices_weight_box )
             
-            model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_TAG_SLICE_WEIGHT.ID, self._ConvertTagSliceAndWeightToListCtrlTuples )
+            model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_TAG_SLICE_WEIGHT.ID, self._ConvertTagSliceAndWeightToDisplayTuple, self._ConvertTagSliceAndWeightToSortTuple )
             
             self._search_tag_slices_weights = ClientGUIListCtrl.BetterListCtrlTreeView( search_tag_slices_weight_panel, 8, model, activation_callback = self._EditSearchTagSliceWeight, use_simple_delete = True, can_delete_callback = self._CanDeleteSearchTagSliceWeight )
             tt = 'ADVANCED! These weights adjust the ranking scores of suggested tags by the tag type that searched for them. Set to 0 to not search with that type of tag.'
@@ -5456,7 +5458,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             result_tag_slices_weight_panel = ClientGUIListCtrl.BetterListCtrlPanel( result_tag_slices_weight_box )
             
-            model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_TAG_SLICE_WEIGHT.ID, self._ConvertTagSliceAndWeightToListCtrlTuples )
+            model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_TAG_SLICE_WEIGHT.ID, self._ConvertTagSliceAndWeightToDisplayTuple, self._ConvertTagSliceAndWeightToSortTuple )
             
             self._result_tag_slices_weights = ClientGUIListCtrl.BetterListCtrlTreeView( result_tag_slices_weight_panel, 8, model, activation_callback = self._EditResultTagSliceWeight, use_simple_delete = True, can_delete_callback = self._CanDeleteResultTagSliceWeight )
             tt = 'ADVANCED! These weights adjust the ranking scores of suggested tags by their tag type. Set to 0 to not suggest that type of tag at all.'
@@ -5732,19 +5734,29 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             return True
             
         
-        def _ConvertTagSliceAndWeightToListCtrlTuples( self, tag_slice_and_weight ):
+        def _ConvertTagSliceAndWeightToDisplayTuple( self, tag_slice_and_weight ):
+            
+            ( tag_slice, weight ) = tag_slice_and_weight
+            
+            pretty_tag_slice = HydrusTags.ConvertTagSliceToPrettyString( tag_slice )
+            
+            pretty_weight = HydrusNumbers.ToHumanInt( weight ) + '%'
+            
+            display_tuple = ( pretty_tag_slice, pretty_weight )
+            
+            return display_tuple
+            
+        
+        def _ConvertTagSliceAndWeightToSortTuple( self, tag_slice_and_weight ):
             
             ( tag_slice, weight ) = tag_slice_and_weight
             
             pretty_tag_slice = HydrusTags.ConvertTagSliceToPrettyString( tag_slice )
             sort_tag_slice = pretty_tag_slice
             
-            pretty_weight = HydrusNumbers.ToHumanInt( weight ) + '%'
-            
-            display_tuple = ( pretty_tag_slice, pretty_weight )
             sort_tuple = ( sort_tag_slice, weight )
             
-            return ( display_tuple, sort_tuple )
+            return sort_tuple
             
         
         def _EditResultTagSliceWeight( self ):

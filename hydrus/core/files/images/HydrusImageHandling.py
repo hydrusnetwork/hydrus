@@ -14,11 +14,46 @@ from PIL import ImageOps as PILImageOps
 
 try:
     
+    # TODO: clean up this import mess
+    
     from pillow_heif import register_heif_opener
-    from pillow_heif import register_avif_opener
     
     register_heif_opener(thumbnails=False)
-    register_avif_opener(thumbnails=False)
+    
+    try:
+        
+        import pillow_heif
+        import PIL
+        
+        if hasattr( pillow_heif, 'register_avif_opener' ) and tuple( ( int( v ) for v in PIL.__version__.split( '.' ) ) ) < ( 11, 2 ):
+            
+            try:
+                
+                from pillow_heif import register_avif_opener
+                
+                register_avif_opener(thumbnails=False) # this is now deprecated 2024-04. Pillow is getting native AVIF in 11.2.0
+                
+            except:
+                
+                pass
+                
+            
+        
+    except:
+        
+        pass
+        
+    
+    try:
+        
+        import pillow_heif.options
+        
+        pillow_heif.options.DISABLE_SECURITY_LIMITS = True # no 512MB/768MB bitmap limit for file loading
+        
+    except:
+        
+        pass
+        
     
     HEIF_OK = True
     

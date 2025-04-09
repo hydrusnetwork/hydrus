@@ -47,7 +47,7 @@ class RepairFileSystemPanel( ClientGUIScrolledPanels.ManagePanel ):
         st = ClientGUICommon.BetterStaticText( self, text )
         st.setWordWrap( True )
         
-        model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_REPAIR_LOCATIONS.ID, self._ConvertPrefixToListCtrlTuples )
+        model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_REPAIR_LOCATIONS.ID, self._ConvertPrefixToDisplayTuple, self._ConvertPrefixToSortTuple )
         
         self._locations = ClientGUIListCtrl.BetterListCtrlTreeView( self, 12, model, activation_callback = self._SetLocations )
         
@@ -108,7 +108,7 @@ class RepairFileSystemPanel( ClientGUIScrolledPanels.ManagePanel ):
             
         
     
-    def _ConvertPrefixToListCtrlTuples( self, subfolder ):
+    def _ConvertPrefixToDisplayTuple( self, subfolder ):
         
         prefix = subfolder.prefix
         incorrect_base_location = subfolder.base_location
@@ -133,7 +133,6 @@ class RepairFileSystemPanel( ClientGUIScrolledPanels.ManagePanel ):
         else:
             
             pretty_correct_base_location = ''
-            ok = None
             pretty_ok = ''
             
         
@@ -141,9 +140,34 @@ class RepairFileSystemPanel( ClientGUIScrolledPanels.ManagePanel ):
         pretty_prefix = prefix
         
         display_tuple = ( pretty_incorrect_base_location, pretty_prefix, pretty_correct_base_location, pretty_ok )
+        
+        return display_tuple
+        
+    
+    def _ConvertPrefixToSortTuple( self, subfolder ):
+        
+        prefix = subfolder.prefix
+        incorrect_base_location = subfolder.base_location
+        
+        if subfolder in self._missing_subfolders_to_new_subfolders:
+            
+            ( new_subfolder, ok ) = self._missing_subfolders_to_new_subfolders[ subfolder ]
+            
+            correct_base_location = new_subfolder.base_location
+            
+            pretty_correct_base_location = correct_base_location.path
+            
+        else:
+            
+            pretty_correct_base_location = ''
+            ok = None
+            
+        
+        pretty_incorrect_base_location = incorrect_base_location.path
+        
         sort_tuple = ( pretty_incorrect_base_location, prefix, pretty_correct_base_location, ok )
         
-        return ( display_tuple, sort_tuple )
+        return sort_tuple
         
     
     def _GetValue( self ):

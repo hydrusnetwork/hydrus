@@ -5,7 +5,9 @@ import typing
 import unicodedata
 import urllib.parse
 
+from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusGlobals as HG
 
 from hydrus.client import ClientGlobals as CG
 
@@ -455,6 +457,21 @@ def LooksLikeAFullURL( text: str ) -> bool:
     except:
         
         return False
+        
+    
+
+def NetworkReportMode( message: str ):
+    
+    if HG.network_report_mode:
+        
+        if HG.network_report_mode_silent:
+            
+            HydrusData.Print( message )
+            
+        else:
+            
+            HydrusData.ShowText( message ) 
+            
         
     
 
