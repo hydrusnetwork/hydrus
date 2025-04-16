@@ -345,19 +345,6 @@ class QuickDownloadManager( ClientDaemons.ManagerWithMainLoop ):
                                     
                                 
                             
-                        elif service.GetServiceType() == HC.IPFS:
-                            
-                            multihash = media_result.GetLocationsManager().GetServiceFilename( service_key )
-                            
-                            if multihash is not None:
-                                
-                                service.ImportFile( multihash, silent = True )
-                                
-                                file_successful = True
-                                
-                                break
-                                
-                            
                         
                     except Exception as e:
                         

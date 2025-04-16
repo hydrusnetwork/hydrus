@@ -664,16 +664,12 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _ConvertQueryHeaderToSortTuple( self, query_header: ClientImportSubscriptionQuery.SubscriptionQueryHeader ):
         
-        last_check_time = query_header.GetLastCheckTime()
-        next_check_time = query_header.GetNextCheckTime()
         paused = query_header.IsPaused()
         checker_status = query_header.GetCheckerStatus()
         
         name = query_header.GetHumanName()
         
         file_seed_cache_status = query_header.GetFileSeedCacheStatus()
-        
-        latest_new_file_time = file_seed_cache_status.GetLatestAddedTime()
         
         ( file_velocity, pretty_file_velocity ) = query_header.GetFileVelocityInfo()
         
@@ -700,6 +696,27 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         ( num_done, num_total ) = file_seed_cache_status.GetValueRange()
         
         items = ( num_total, num_done )
+        
+        latest_new_file_time = file_seed_cache_status.GetLatestAddedTime()
+        
+        if latest_new_file_time == 0:
+            
+            latest_new_file_time = HydrusTime.GetNow()
+            
+        
+        last_check_time = query_header.GetLastCheckTime()
+        
+        if last_check_time == 0:
+            
+            last_check_time = HydrusTime.GetNow()
+            
+        
+        next_check_time = query_header.GetNextCheckTime()
+        
+        if next_check_time == 0:
+            
+            next_check_time = HydrusTime.GetNow()
+            
         
         sort_latest_new_file_time = ClientGUIListCtrl.SafeNoneInt( latest_new_file_time )
         sort_last_check_time = ClientGUIListCtrl.SafeNoneInt( last_check_time )
@@ -1889,9 +1906,19 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             
         else:
             
-            latest_new_file_time = 0
+            latest_new_file_time = -1
             
-            last_checked = 0
+            last_checked = -1
+            
+        
+        if latest_new_file_time == 0:
+            
+            latest_new_file_time = HydrusTime.GetNow()
+            
+        
+        if last_checked == 0:
+            
+            last_checked = HydrusTime.GetNow()
             
         
         #

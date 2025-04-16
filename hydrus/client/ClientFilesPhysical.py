@@ -74,12 +74,14 @@ class FilesStorageBaseLocation( object ):
     
     def __init__( self, path: str, ideal_weight: int, max_num_bytes = None ):
         
-        if not os.path.isabs( path ):
-            
-            path = HydrusPaths.ConvertPortablePathToAbsPath( path )
-            
+        self.creation_path = path
+        
+        # it may seem silly to wash these like this, but it is nice and certain about slashes and so on, which we like
+        path = HydrusPaths.ConvertPortablePathToAbsPath( path )
+        portable_path = HydrusPaths.ConvertAbsPathToPortablePath( path )
         
         self.path = path
+        self.portable_path = portable_path
         self.ideal_weight = ideal_weight
         self.max_num_bytes = max_num_bytes
         
@@ -152,11 +154,6 @@ class FilesStorageBaseLocation( object ):
             
         
         return True
-        
-    
-    def GetPortablePath( self ):
-        
-        return HydrusPaths.ConvertAbsPathToPortablePath( self.path )
         
     
     def HasNoUpperLimit( self ):

@@ -1,4 +1,5 @@
 import hashlib
+from io import BytesIO
 import json
 import random
 import threading
@@ -6,14 +7,11 @@ import time
 import traceback
 import typing
 
-from qtpy import QtWidgets as QW
-
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusNumbers
-from hydrus.core import HydrusPaths
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTags
 from hydrus.core import HydrusTime
@@ -25,8 +23,6 @@ from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientFiles
 from hydrus.client import ClientThreading
-from hydrus.client.gui import QtPorting as QP
-from hydrus.client.importing import ClientImporting
 from hydrus.client.metadata import ClientContentUpdates
 from hydrus.client.metadata import ClientRatings
 from hydrus.client.networking import ClientNetworkingContexts
@@ -89,8 +85,6 @@ def GenerateDefaultServiceDictionary( service_type ):
             
             dictionary[ 'credentials' ] = HydrusNetwork.Credentials( '127.0.0.1', 5001 )
             dictionary[ 'multihash_prefix' ] = ''
-            dictionary[ 'use_nocopy' ] = False
-            dictionary[ 'nocopy_abs_path_translations' ] = {}
             
         
     
@@ -2785,6 +2779,64 @@ class ServiceRepository( ServiceRestricted ):
             
         
     
+
+def GetIPFSConfigValue( api_base_url, config_key ):
+    
+    url = f'{api_base_url}config?arg={config_key}'
+    
+    network_job = ClientNetworkingJobs.NetworkJobIPFS( url )
+    
+    CG.client_controller.network_engine.AddJob( network_job )
+    
+    network_job.WaitUntilDone()
+    
+    parsing_text = network_job.GetContentText()
+    
+    j = json.loads( parsing_text )
+    
+    return j[ 'Value' ]
+    
+
+def SetIPFSConfigValueBool( api_base_url, config_key, value: bool ):
+    
+    value_json = 'true' if value else 'false'
+    
+    # bool=true helps it know the type
+    url = f'{api_base_url}config?arg={config_key}&arg={value_json}&bool=true'
+    
+    network_job = ClientNetworkingJobs.NetworkJobIPFS( url )
+    
+    CG.client_controller.network_engine.AddJob( network_job )
+    
+    network_job.WaitUntilDone()
+    
+    parsing_text = network_job.GetContentText()
+    
+    j = json.loads( parsing_text )
+    
+    if j[ 'Value' ] != value:
+        
+        raise Exception( f'Could not set {config_key} to {value}!\n\n{parsing_text}' )
+        
+    
+
+def GetTSize( api_base_url, multihash ):
+    
+    url = f'{api_base_url}dag/stat?arg={multihash}&progress=false'
+    
+    network_job = ClientNetworkingJobs.NetworkJobIPFS( url )
+    
+    CG.client_controller.network_engine.AddJob( network_job )
+    
+    network_job.WaitUntilDone()
+    
+    parsing_text = network_job.GetContentText()
+    
+    j = json.loads( parsing_text )
+    
+    return j[ 'TotalSize' ]
+    
+
 class ServiceIPFS( ServiceRemote ):
     
     def _GetSerialisableDictionary( self ):
@@ -2792,8 +2844,6 @@ class ServiceIPFS( ServiceRemote ):
         dictionary = ServiceRemote._GetSerialisableDictionary( self )
         
         dictionary[ 'multihash_prefix' ] = self._multihash_prefix
-        dictionary[ 'use_nocopy' ] = self._use_nocopy
-        dictionary[ 'nocopy_abs_path_translations' ] = self._nocopy_abs_path_translations
         
         return dictionary
         
@@ -2803,8 +2853,6 @@ class ServiceIPFS( ServiceRemote ):
         ServiceRemote._LoadFromDictionary( self, dictionary )
         
         self._multihash_prefix = dictionary[ 'multihash_prefix' ]
-        self._use_nocopy = dictionary[ 'use_nocopy' ]
-        self._nocopy_abs_path_translations = dictionary[ 'nocopy_abs_path_translations' ]
         
     
     def _GetAPIBaseURL( self ):
@@ -2814,110 +2862,6 @@ class ServiceIPFS( ServiceRemote ):
         api_base_url = 'http://{}/api/v0/'.format( full_host )
         
         return api_base_url
-        
-    
-    def ConvertMultihashToURLTree( self, name, size, multihash, job_status: typing.Optional[ ClientThreading.JobStatus ] = None ):
-        
-        with self._lock:
-            
-            api_base_url = self._GetAPIBaseURL()
-            
-        
-        links_url = api_base_url + 'object/links/' + multihash
-        
-        network_job = ClientNetworkingJobs.NetworkJobIPFS( links_url )
-        
-        if job_status is not None:
-            
-            job_status.SetNetworkJob( network_job )
-            
-        
-        try:
-            
-            CG.client_controller.network_engine.AddJob( network_job )
-            
-            network_job.WaitUntilDone()
-            
-        finally:
-            
-            if job_status is not None:
-                
-                job_status.DeleteNetworkJob()
-                
-                if job_status.IsCancelled():
-                    
-                    raise HydrusExceptions.CancelledException( 'Multihash parsing cancelled by user.' )
-                    
-                
-            
-        
-        parsing_text = network_job.GetContentText()
-        
-        links_json = json.loads( parsing_text )
-        
-        is_directory = False
-        
-        if 'Links' in links_json:
-            
-            for link in links_json[ 'Links' ]:
-                
-                if link[ 'Name' ] != '':
-                    
-                    is_directory = True
-                    
-                
-            
-        
-        if is_directory:
-            
-            children = []
-            
-            for link in links_json[ 'Links' ]:
-                
-                subname = link[ 'Name' ]
-                subsize = link[ 'Size' ]
-                submultihash = link[ 'Hash' ]
-                
-                children.append( self.ConvertMultihashToURLTree( subname, subsize, submultihash, job_status = job_status ) )
-                
-            
-            if size is None:
-                
-                size = sum( ( subsize for ( type_gumpf, subname, subsize, submultihash ) in children ) )
-                
-            
-            return ( 'directory', name, size, children )
-            
-        else:
-            
-            url = api_base_url + 'cat/' + multihash
-            
-            return ( 'file', name, size, url )
-            
-        
-    
-    def EnableNoCopy( self, value ):
-        
-        with self._lock:
-            
-            api_base_url = self._GetAPIBaseURL()
-            
-        
-        arg_value = json.dumps( value ) # lower case true/false
-        
-        url = api_base_url + 'config?arg=Experimental.FilestoreEnabled&arg={}&bool=true'.format( arg_value )
-        
-        network_job = ClientNetworkingJobs.NetworkJobIPFS( url )
-        
-        CG.client_controller.network_engine.AddJob( network_job )
-        
-        network_job.WaitUntilDone()
-        
-        parsing_text = network_job.GetContentText()
-        
-        j = json.loads( parsing_text )
-        
-        return j[ 'Value' ] == value
         
     
     def GetDaemonVersion( self ):
@@ -2948,136 +2892,6 @@ class ServiceIPFS( ServiceRemote ):
             
             return self._multihash_prefix
             
-        
-    
-    def GetNoCopyAvailable( self ):
-        
-        with self._lock:
-            
-            api_base_url = self._GetAPIBaseURL()
-            
-        
-        url = api_base_url + 'config?arg=Experimental.FilestoreEnabled'
-        
-        network_job = ClientNetworkingJobs.NetworkJobIPFS( url )
-        
-        CG.client_controller.network_engine.AddJob( network_job )
-        
-        try:
-            
-            network_job.WaitUntilDone()
-            
-        except HydrusExceptions.ServerException:
-            
-            # returns 500 and error if not yet set, wew
-            
-            parsing_text = network_job.GetContentText()
-            
-            if 'Experimental key has no attributes' in parsing_text:
-                
-                return False
-                
-            
-        
-        parsing_text = network_job.GetContentText()
-        
-        j = json.loads( parsing_text )
-        
-        return j[ 'Value' ]
-        
-    
-    def ImportFile( self, multihash, silent = False ):
-        
-        def on_qt_select_tree( job_status, url_tree ):
-            
-            try:
-                
-                from hydrus.client.gui import ClientGUIDialogs
-                
-                tlw = CG.client_controller.GetMainTLW()
-                
-                with ClientGUIDialogs.DialogSelectFromURLTree( tlw, url_tree ) as dlg:
-                    
-                    urls_good = False
-                    
-                    if dlg.exec() == QW.QDialog.DialogCode.Accepted:
-                        
-                        urls = dlg.GetURLs()
-                        
-                        if len( urls ) > 0:
-                            
-                            CG.client_controller.CallToThread( ClientImporting.THREADDownloadURLs, job_status, urls, multihash )
-                            
-                            urls_good = True
-                            
-                        
-                    
-                    if not urls_good:
-                        
-                        job_status.FinishAndDismiss()
-                        
-                    
-                
-            except:
-                
-                job_status.FinishAndDismiss()
-                
-                raise
-                
-            
-        
-        def off_qt():
-            
-            job_status = ClientThreading.JobStatus( pausable = True, cancellable = True )
-            
-            job_status.SetStatusText( 'Looking up multihash information' )
-            
-            if not silent:
-                
-                CG.client_controller.pub( 'message', job_status )
-                
-            
-            try:
-                
-                try:
-                    
-                    url_tree = self.ConvertMultihashToURLTree( multihash, None, multihash, job_status = job_status )
-                    
-                except HydrusExceptions.NotFoundException:
-                    
-                    job_status.SetStatusText( 'Failed to find multihash information for "{}"!'.format( multihash ) )
-                    
-                    return
-                    
-                except HydrusExceptions.ServerException as e:
-                    
-                    job_status.SetStatusText( 'IPFS Error: "{}"!'.format( e ) )
-                    
-                    return
-                    
-                
-                if url_tree[0] == 'file':
-                    
-                    url = url_tree[3]
-                    
-                    CG.client_controller.CallToThread( ClientImporting.THREADDownloadURL, job_status, url, multihash )
-                    
-                else:
-                    
-                    job_status.SetStatusText( 'Waiting for user selection' )
-                    
-                    QP.CallAfter( on_qt_select_tree, job_status, url_tree )
-                    
-                
-            except:
-                
-                job_status.FinishAndDismiss()
-                
-                raise
-                
-            
-        
-        CG.client_controller.CallToThread( off_qt )
         
     
     def IsPinned( self, multihash ):
@@ -3135,11 +2949,19 @@ class ServiceIPFS( ServiceRemote ):
         
         CG.client_controller.pub( 'message', job_status )
         
+        with self._lock:
+            
+            api_base_url = self._GetAPIBaseURL()
+            
+        
         try:
             
-            file_info = []
-            
             hashes = sorted( hashes )
+            
+            dag_object = {
+                'Data' : { '/' : { 'bytes' : 'CAE=' } }, # ok this is an empty UnixFS dir in base64, but the 'bytes' part lets DAG-JSON know it should be in bytes. nothing could be simpler or more obvious
+                'Links' : []
+            }
             
             for ( i, hash ) in enumerate( hashes ):
                 
@@ -3167,25 +2989,48 @@ class ServiceIPFS( ServiceRemote ):
                         
                         multihash = self.PinFile( hash, mime )
                         
-                    except HydrusExceptions.DataMissing:
+                    except Exception as e:
                         
-                        HydrusData.ShowText( 'File {} could not be pinned!'.format( hash.hex() ) )
-                        
-                        continue
+                        raise Exception( f'File {hash.hex()} could not be pinned!\n\n{e}' )
                         
                     
                 
-                file_info.append( ( hash, mime, multihash ) )
+                try:
+                    
+                    tsize = GetTSize( api_base_url, multihash )
+                    
+                except Exception as e:
+                    
+                    raise Exception( f'Could not get multihash total size info for {hash.hex()}/{multihash}!\n\n{e}' )
+                    
+                
+                filename = hash.hex() + HC.mime_ext_lookup[ mime ]
+                
+                dag_object[ 'Links' ].append(
+                    {
+                        'Name' : filename,
+                        'Hash' : {
+                            '/' : multihash
+                        },
+                        'Tsize' : tsize
+                    }
+                )
                 
             
-            with self._lock:
-                
-                api_base_url = self._GetAPIBaseURL()
-                
+            job_status.SetStatusText( 'creating directory' )
+            job_status.DeleteVariable( 'popup_gauge_1' )
             
-            url = api_base_url + 'object/new?arg=unixfs-dir'
+            dag_json_encoded = json.dumps( dag_object )
+            
+            url = api_base_url + 'dag/put?input-codec=dag-json&store-codec=dag-pb&pin=true'
             
             network_job = ClientNetworkingJobs.NetworkJobIPFS( url )
+            
+            f = BytesIO( dag_json_encoded.encode( 'utf-8' ) )
+            
+            files = { 'file' : ( 'dag.json', f, 'application/json' ) }
+            
+            network_job.SetFiles( files )
             
             CG.client_controller.network_engine.AddJob( network_job )
             
@@ -3195,46 +3040,7 @@ class ServiceIPFS( ServiceRemote ):
             
             response_json = json.loads( parsing_text )
             
-            for ( i, ( hash, mime, multihash ) ) in enumerate( file_info ):
-                
-                ( i_paused, should_quit ) = job_status.WaitIfNeeded()
-                
-                if should_quit:
-                    
-                    job_status.SetStatusText( 'cancelled!' )
-                    
-                    return
-                    
-                
-                job_status.SetStatusText( 'creating directory: ' + HydrusNumbers.ValueRangeToPrettyString( i + 1, len( file_info ) ) )
-                job_status.SetVariable( 'popup_gauge_1', ( i + 1, len( file_info ) ) )
-                
-                object_multihash = response_json[ 'Hash' ]
-                
-                filename = hash.hex() + HC.mime_ext_lookup[ mime ]
-                
-                url = api_base_url + 'object/patch/add-link?arg=' + object_multihash + '&arg=' + filename + '&arg=' + multihash
-                
-                network_job = ClientNetworkingJobs.NetworkJobIPFS( url )
-                
-                CG.client_controller.network_engine.AddJob( network_job )
-                
-                network_job.WaitUntilDone()
-                
-                parsing_text = network_job.GetContentText()
-                
-                response_json = json.loads( parsing_text )
-                
-            
-            directory_multihash = response_json[ 'Hash' ]
-            
-            url = api_base_url + 'pin/add?arg=' + directory_multihash
-            
-            network_job = ClientNetworkingJobs.NetworkJobIPFS( url )
-            
-            CG.client_controller.network_engine.AddJob( network_job )
-            
-            network_job.WaitUntilDone()
+            directory_multihash = response_json[ 'Cid' ][ '/' ]
             
             content_update_row = ( hashes, directory_multihash, note )
             
@@ -3282,46 +3088,11 @@ class ServiceIPFS( ServiceRemote ):
         
         with open( path, 'rb' ) as f:
             
-            if self._use_nocopy:
-                
-                url = api_base_url + 'add?nocopy=true'
-                
-                mime_string = 'application/octet-stream'
-                
-                ipfs_abspath = None
-                
-                for ( hydrus_portable_path, ipfs_translation ) in self._nocopy_abs_path_translations.items():
-                    
-                    hydrus_path = HydrusPaths.ConvertPortablePathToAbsPath( hydrus_portable_path )
-                    
-                    if path.startswith( hydrus_path ):
-                        
-                        if ipfs_translation == '':
-                            
-                            raise Exception( 'The path {} does not have an IPFS translation set! Please check your IPFS path mappings under manage services!'.format( hydrus_path ) )
-                            
-                        
-                        ipfs_abspath = path.replace( hydrus_path, ipfs_translation )
-                        
-                        break
-                        
-                    
-                
-                if ipfs_abspath is None:
-                    
-                    raise Exception( 'Could not figure out an ipfs absolute path for {}! Have new paths been added due to a database migration? Please check your IPFS path mappings under manage services!'.format( path ) )
-                    
-                
-                files = { 'path' : ( hash.hex(), f, mime_string, { 'Abspath' : ipfs_abspath } ) }
-                
-            else:
-                
-                url = api_base_url + 'add'
-                
-                mime_string = HC.mime_mimetype_string_lookup[ mime ]
-                
-                files = { 'path' : ( hash.hex(), f, mime_string ) }
-                
+            url = api_base_url + 'add'
+            
+            mime_string = HC.mime_mimetype_string_lookup[ mime ]
+            
+            files = { 'path' : ( hash.hex(), f, mime_string ) }
             
             network_job = ClientNetworkingJobs.NetworkJobIPFS( url )
             
@@ -3383,7 +3154,7 @@ class ServiceIPFS( ServiceRemote ):
         
         if self.IsPinned( multihash ):
             
-            url = api_base_url + 'pin/rm/' + multihash
+            url = f'{api_base_url}pin/rm?arg={multihash}'
             
             network_job = ClientNetworkingJobs.NetworkJobIPFS( url )
             
@@ -3406,7 +3177,7 @@ class ServiceIPFS( ServiceRemote ):
         
         if self.IsPinned( multihash ):
             
-            url = api_base_url + 'pin/rm/' + multihash
+            url = f'{api_base_url}pin/rm?arg={multihash}'
             
             network_job = ClientNetworkingJobs.NetworkJobIPFS( url )
             

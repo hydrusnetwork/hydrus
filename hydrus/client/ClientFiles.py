@@ -1137,14 +1137,14 @@ class ClientFilesManager( object ):
                 
                 if len( self._missing_subfolders ) > 4:
                     
+                    HydrusData.DebugPrint( 'Missing locations follow:' )
+                    HydrusData.DebugPrint( missing_string )
+                    
                     text = 'When initialising the client files manager, some file locations did not exist! They have all been written to the log!'
                     text += '\n' * 2
                     text += 'If this is happening on client boot, you should now be presented with a dialog to correct this manually!'
                     
                     self._controller.BlockingSafeShowCriticalMessage( 'missing locations', text )
-                    
-                    HydrusData.DebugPrint( 'Missing locations follow:' )
-                    HydrusData.DebugPrint( missing_string )
                     
                 else:
                     
@@ -2084,6 +2084,7 @@ class FilesMaintenanceManager( ClientDaemons.ManagerWithMainLoop ):
         
         super().__init__( controller, 15 )
         
+        self._pubbed_message_about_archive_delete_lock = False
         self._pubbed_message_about_bad_file_record_delete = False
         self._pubbed_message_about_invalid_file_export = False
         
@@ -2353,41 +2354,93 @@ class FilesMaintenanceManager( ClientDaemons.ManagerWithMainLoop ):
                 
                 leave_deletion_record = job_type == REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE_DELETE_RECORD
                 
-                content_update = ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, ( hash, ), reason = 'Record deleted during File Integrity check.' )
-                
-                content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, content_update )
-                
-                self._controller.WriteSynchronous( 'content_updates', content_update_package )
-                
-                if not leave_deletion_record:
+                if media_result.IsPhysicalDeleteLocked():
                     
-                    content_update = ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_CLEAR_DELETE_RECORD, ( hash, ) )
+                    # just send to trash instead
+                    # it is KISS to not budge on this. don't try to inbox files and then delete 
+                    
+                    reason = 'Wanted to delete record during File Integrity check, but file was physical delete locked.'
+                    
+                    if leave_deletion_record:
+                        
+                        reason += ' Wanted to leave a deletion record.'
+                        
+                    else:
+                        
+                        reason += ' Wanted to leave no deletion record.'
+                        
+                    
+                    content_update = ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, ( hash, ), reason = reason )
+                    
+                    content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY, content_update )
+                    
+                    self._controller.WriteSynchronous( 'content_updates', content_update_package )
+                    
+                    message = f'During file maintenance, failed to physically delete {media_result.GetHash().hex()}!'
+                    
+                    if leave_deletion_record:
+                        
+                        message += ' Wanted to leave a deletion record.'
+                        
+                    else:
+                        
+                        message += ' Wanted to leave no deletion record.'
+                        
+                    
+                    HydrusData.Print( message )
+                    
+                    if not self._pubbed_message_about_archive_delete_lock:
+                        
+                        message = 'During file maintenance, a file was found to be missing or invalid. Unfortunately, it appears to be archived and the archived file delete lock is on, so I cannot fully delete the file record. I have simply sent the file to the trash instead. You should search up recently trashed files and inbox & physically delete them yourself.'
+                        message += '\n' * 2
+                        message += 'More files may be in this situation, but this message will not appear again during this boot.'
+                        
+                        HydrusData.ShowText( message )
+                        
+                        self._pubbed_message_about_archive_delete_lock = True
+                        
+                    
+                else:
+                    
+                    content_update = ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, ( hash, ), reason = 'Record deleted during File Integrity check.' )
                     
                     content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, content_update )
                     
                     self._controller.WriteSynchronous( 'content_updates', content_update_package )
                     
-                
-                if not self._pubbed_message_about_bad_file_record_delete:
+                    HydrusData.Print( f'During file maintenance, physically deleted {media_result.GetHash().hex()}!' )
                     
-                    self._pubbed_message_about_bad_file_record_delete = True
-                    
-                    if leave_deletion_record:
+                    if not leave_deletion_record:
                         
-                        m = 'Its file record has been deleted from the database, leaving a deletion record (so it cannot be easily reimported).'
+                        HydrusData.Print( f'Clearing delete record for {media_result.GetHash().hex()}!' )
                         
-                    else:
+                        content_update = ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_CLEAR_DELETE_RECORD, ( hash, ) )
                         
-                        m = 'Its file record has been removed from the database without leaving a deletion record (so it can be easily reimported).'
+                        content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, content_update )
+                        
+                        self._controller.WriteSynchronous( 'content_updates', content_update_package )
                         
                     
-                    message = 'During file maintenance, a file was found to be missing or invalid. {} Its file hash and any known URLs have been written to "{}".'.format( m, error_dir )
-                    message += '\n' * 2
-                    message += 'This may happen to more files in the near future, but this message will not appear again during this boot.'
+                    if not self._pubbed_message_about_bad_file_record_delete:
+                        
+                        self._pubbed_message_about_bad_file_record_delete = True
+                        
+                        if leave_deletion_record:
+                            
+                            m = 'Its file record has been deleted from the database, leaving a deletion record (so it cannot be easily reimported).'
+                            
+                        else:
+                            
+                            m = 'Its file record has been removed from the database without leaving a deletion record (so it can be easily reimported).'
+                            
+                        
+                        message = 'During file maintenance, a file was found to be missing or invalid. {} Its file hash and any known URLs have been written to "{}".'.format( m, error_dir )
+                        message += '\n' * 2
+                        message += 'This may happen to more files in the near future, but this message will not appear again during this boot.'
+                        
+                        HydrusData.ShowText( message )
+                        
                     
-                    HydrusData.ShowText( message )
-                    
-                
             
         
         return file_was_bad

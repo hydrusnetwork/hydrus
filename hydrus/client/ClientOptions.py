@@ -132,7 +132,6 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         self._dictionary[ 'booleans' ] = {
             'advanced_mode' : False,
             'remove_filtered_files_even_when_skipped' : False,
-            'filter_inbox_and_archive_predicates' : False,
             'discord_dnd_fix' : False,
             'secret_discord_dnd_fix' : False,
             'show_unmatched_urls_in_media_viewer' : False,
@@ -207,7 +206,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             'file_viewing_statistics_active_on_dupe_filter' : False,
             'prefix_hash_when_copying' : False,
             'file_system_waits_on_wakeup' : False,
-            'always_show_system_everything' : False,
+            'show_system_everything' : True,
             'watch_clipboard_for_watcher_urls' : False,
             'watch_clipboard_for_other_recognised_urls' : False,
             'default_search_synchronised' : True,

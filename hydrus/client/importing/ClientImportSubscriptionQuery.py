@@ -522,7 +522,7 @@ class SubscriptionQueryHeader( HydrusSerialisable.SerialisableBase ):
         return ( self._raw_file_velocity, self._pretty_file_velocity )
         
     
-    def GetLastCheckTime( self ):
+    def GetLastCheckTime( self ) -> int:
         
         return self._last_check_time
         

@@ -856,6 +856,9 @@ class AddEditDeleteListBoxUniqueNamedObjects( AddEditDeleteListBox ):
 # failing that, we must be able to merge a bunch of this to a base superclass
 class QueueListBox( QW.QWidget ):
     
+    listBoxContentsChanged = QC.Signal()
+    listBoxContentsDeleted = QC.Signal()
+    listBoxOrderChanged = QC.Signal()
     listBoxChanged = QC.Signal()
     
     def __init__( self, parent, height_num_chars, data_to_pretty_callable, add_callable = None, edit_callable = None, paste_callable = None ):
@@ -869,7 +872,7 @@ class QueueListBox( QW.QWidget ):
         
         self._permitted_object_types = tuple()
         
-        self._listbox = BetterQListWidget( self )
+        self._listbox = BetterQListWidget( self, delete_callable = self._Delete )
         self._listbox.setSelectionMode( QW.QAbstractItemView.SelectionMode.ExtendedSelection )
         
         self._up_button = ClientGUICommon.BetterButton( self, '\u2191', self._Up )
@@ -961,6 +964,7 @@ class QueueListBox( QW.QWidget ):
         
         self._AddData( data )
         
+        self.listBoxContentsChanged.emit()
         self.listBoxChanged.emit()
         
     
@@ -993,6 +997,8 @@ class QueueListBox( QW.QWidget ):
             
             self._listbox.DeleteSelected()
             
+            self.listBoxContentsChanged.emit()
+            self.listBoxContentsDeleted.emit()
             self.listBoxChanged.emit()
             
         
@@ -1001,6 +1007,7 @@ class QueueListBox( QW.QWidget ):
         
         self._listbox.MoveSelected( 1 )
         
+        self.listBoxOrderChanged.emit()
         self.listBoxChanged.emit()
         
     
@@ -1018,25 +1025,32 @@ class QueueListBox( QW.QWidget ):
     
     def _Edit( self ):
         
-        for list_widget_item in self._listbox.selectedItems():
+        items = list( self._listbox.selectedItems() )
+        
+        if len( items ) == 0:
             
-            data = list_widget_item.data( QC.Qt.ItemDataRole.UserRole )
-            
-            try:
-                
-                new_data = self._edit_callable( data )
-                
-            except HydrusExceptions.VetoException:
-                
-                break
-                
-            
-            pretty_new_data = self._data_to_pretty_callable( new_data )
-            
-            list_widget_item.setText( pretty_new_data )
-            list_widget_item.setData( QC.Qt.ItemDataRole.UserRole, new_data )
+            return
             
         
+        top_list_widget_item = items[0]
+        
+        data = top_list_widget_item.data( QC.Qt.ItemDataRole.UserRole )
+        
+        try:
+            
+            new_data = self._edit_callable( data )
+            
+        except HydrusExceptions.VetoException:
+            
+            return
+            
+        
+        pretty_new_data = self._data_to_pretty_callable( new_data )
+        
+        top_list_widget_item.setText( pretty_new_data )
+        top_list_widget_item.setData( QC.Qt.ItemDataRole.UserRole, new_data )
+        
+        self.listBoxContentsChanged.emit()
         self.listBoxChanged.emit()
         
     
@@ -1271,6 +1285,7 @@ class QueueListBox( QW.QWidget ):
                 
             
         
+        self.listBoxContentsChanged.emit()
         self.listBoxChanged.emit()
         
         return ( num_added, bad_object_type_names, other_bad_errors )
@@ -1292,6 +1307,7 @@ class QueueListBox( QW.QWidget ):
             self._AddData( data )
             
         
+        self.listBoxContentsChanged.emit()
         self.listBoxChanged.emit()
         
     
@@ -1299,6 +1315,7 @@ class QueueListBox( QW.QWidget ):
         
         self._listbox.MoveSelected( -1 )
         
+        self.listBoxOrderChanged.emit()
         self.listBoxChanged.emit()
         
     
@@ -1325,6 +1342,7 @@ class QueueListBox( QW.QWidget ):
             self._AddData( data )
             
         
+        self.listBoxContentsChanged.emit()
         self.listBoxChanged.emit()
         
     
@@ -1386,6 +1404,20 @@ class QueueListBox( QW.QWidget ):
             
         
         return self._listbox.PopData( 0 )
+        
+    
+    def SetData( self, datas ):
+        
+        selected_datas = self.GetData( only_selected = True )
+        
+        self._listbox.clear()
+        
+        for data in datas:
+            
+            self._AddData( data )
+            
+        
+        self._listbox.SelectData( selected_datas )
         
     
 

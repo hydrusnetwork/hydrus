@@ -55,7 +55,7 @@ class PreviewPanel( ClientGUICommon.StaticBox ):
         
         #
         
-        self._pass_panel = ClientGUICommon.StaticBox( self, 'pairs that will be actioned', can_expand = True, start_expanded = True )
+        self._pass_panel = ClientGUICommon.StaticBox( self, 'pairs that will be actioned', can_expand = True, start_expanded = True, expanded_size_vertical_policy = QW.QSizePolicy.Policy.Expanding )
         
         self._pass_pairs_label = ClientGUICommon.BetterStaticText( self, label = 'ready to generate preview' )
         self._pass_pairs_label.setWordWrap( True )
@@ -64,7 +64,7 @@ class PreviewPanel( ClientGUICommon.StaticBox ):
         
         #
         
-        self._fail_panel = ClientGUICommon.StaticBox( self, 'pairs that will be skipped', can_expand = True, start_expanded = True )
+        self._fail_panel = ClientGUICommon.StaticBox( self, 'pairs that will be skipped', can_expand = True, start_expanded = True, expanded_size_vertical_policy = QW.QSizePolicy.Policy.Expanding )
         
         self._fail_pairs_label = ClientGUICommon.BetterStaticText( self, label = 'ready to generate preview' )
         self._fail_pairs_label.setWordWrap( True )

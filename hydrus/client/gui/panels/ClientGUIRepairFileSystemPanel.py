@@ -8,6 +8,7 @@ from hydrus.core import HydrusExceptions
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientFilesPhysical
 from hydrus.client import ClientGlobals as CG
+from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.lists import ClientGUIListConstants as CGLC
@@ -255,7 +256,16 @@ class RepairFileSystemPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         ( correct_rows, thumb_problems ) = self._GetValue()
         
-        CG.client_controller.WriteSynchronous( 'repair_client_files', correct_rows )
+        try:
+            
+            CG.client_controller.WriteSynchronous( 'repair_client_files', correct_rows )
+            
+        except Exception as e:
+            
+            message = f'Hey, I am sorry, but I could not save your repaired rows. There may be additional problems with your database. Full error:\n\n{e}'
+            
+            ClientGUIDialogsMessage.ShowCritical( self, 'problem saving good locations back', message )
+            
         
     
     def UserIsOKToOK( self ):

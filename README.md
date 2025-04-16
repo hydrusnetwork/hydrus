@@ -1,10 +1,16 @@
 ## Hydrus Network (Client and Server)
 
-The hydrus network client is an application written for Anon and other internet-fluent media nerds who have large image/swf/webm collections. It browses with tags instead of folders, a little like a booru on your desktop. Advanced users can share tags and files anonymously through custom servers that any user may run. Everything is free and privacy is the first concern. Executable releases are available for Windows, Linux, and macOS. The program is in python, so you can also run it straight from the source code.
+The hydrus network client is a file-management application written for internet-fluent media nerds who have large file collections. It browses with tags instead of folders, a little like a booru on your desktop. If they wish, users can easily share tags anonymously through a public server. Everything is free, no ads, and privacy is the first concern. If you have 10,000+ files and cannot find anything, hydrus might help!
 
-I am continually working on the software and try to put out a new release every Wednesday by 8pm EST.
+Hydrus supports various filetypes for images, video and audio files, image project files, and more. A full list of supported filetypes is [here](https://hydrusnetwork.github.io/hydrus/filetypes.html). On the Windows and Linux builds, an MPV window is embedded to play video and audio smoothly. Some supported filetypes cannot be viewed directly in the client, such as PDF, but it is easy to launch any file with your OS's default program.
 
-This github repository is currently a weekly sync with my home dev environment, where I work on hydrus by myself. **Feel free to fork and do whatever you like with my code, but please do not make pull requests.** The [issue tracker here on Github](https://github.com/hydrusnetwork/hydrus/issues) is active and run by blessed volunteer users. I am not active here on Github, and I have difficulty keeping up with social media in general, but I welcome feedback of any sort and will eventually catch up with and reply to email, twitter @s/DMs, discord @s/DMs, or posts in the 8chan thread.
+I am continually working on the software and try to put out a new release every Wednesday by 8pm EST. Executable releases are available for Windows, Linux, and macOS, but the program is in python, so you can also just run it straight from the source code. I am not active here on github, but I welcome feedback of any sort on other channels and will try to get back to any pings every Saturday. 
+
+The client can download files and parse tags and other metadata from a number of websites, including the popular imageboards and boorus, and some gallery sites. It can be extended to download from more locations using easily shareable user-made downloaders. It can also be set to 'subscribe' to any gallery search, repeating it every few days to keep up with new results.
+
+The program's emphasis is on your freedom. You control everything, and the program never phones home. In the same way, it is quite an advanced program, and not a beautiful one, so it isn't for everyone. Try it out, see if you like it!
+
+This github repository is currently a weekly sync with my home dev environment, where I work on hydrus by myself. **Feel free to fork and do whatever you like with my code, but please do not make pull requests.** The [issue tracker here on Github](https://github.com/hydrusnetwork/hydrus/issues) is active and run by volunteer users.
 
 ## Start Here!
 
@@ -19,10 +25,9 @@ The help is also included in every release.
 * [homepage](https://hydrusnetwork.github.io/hydrus/)
 * [issue tracker](https://github.com/hydrusnetwork/hydrus/issues)
 * [email](mailto:hydrus.admin@gmail.com)
-* [8chan.moe /t/ (Hydrus Network General)](https://8chan.moe/t/catalog.html)
-* [twitter](https://twitter.com/hydrusnetwork)
-* [tumblr](https://hydrus.tumblr.com/)
 * [discord](https://discord.gg/wPHPCUZ)
+* [tumblr](https://hydrus.tumblr.com/)
+* [x](https://x.com/hydrusnetwork)
 * [patreon](https://www.patreon.com/hydrus_dev)
 * [user-run repository and wiki](https://github.com/CuddleBear92/Hydrus-Presets-and-Scripts)
 

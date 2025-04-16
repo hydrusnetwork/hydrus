@@ -1628,7 +1628,7 @@ class OnOffButton( QW.QPushButton ):
 
 class StaticBox( QW.QFrame ):
     
-    def __init__( self, parent, title, can_expand = False, start_expanded = True ):
+    def __init__( self, parent, title, can_expand = False, start_expanded = True, expanded_size_vertical_policy = QW.QSizePolicy.Policy.Fixed ):
         
         super().__init__( parent )
         
@@ -1645,7 +1645,7 @@ class StaticBox( QW.QFrame ):
         self._title_st = BetterStaticText( self, label = title )
         self._title_st.setFont( title_font )
         
-        self._expanded_size_vertical_policy = None
+        self._expanded_size_vertical_policy = expanded_size_vertical_policy
         
         self._expand_button = BetterButton( self, label = '\u25B2', func = self.ExpandCollapse )
         self._expand_button.setFixedWidth( ClientGUIFunctions.ConvertTextToPixelWidth( self._expand_button, 4 ) )
@@ -1685,7 +1685,7 @@ class StaticBox( QW.QFrame ):
         
         if not start_expanded:
             
-            self.ExpandCollapse( do_sizer_gubbins = False )
+            self.ExpandCollapse()
             
         
     
@@ -1698,35 +1698,27 @@ class StaticBox( QW.QFrame ):
         self._sizer.addSpacerItem( self._spacer )
         
     
-    def ExpandCollapse( self, do_sizer_gubbins = True ):
+    def ExpandCollapse( self ):
         
         if self._expanded:
             
             new_label = '\u25BC'
             
-            if do_sizer_gubbins:
-                
-                size_policy = self.sizePolicy()
-                
-                self._expanded_size_vertical_policy = size_policy.verticalPolicy()
-                
-                size_policy.setVerticalPolicy( QW.QSizePolicy.Policy.Fixed )
-                
-                self.setSizePolicy( size_policy )
-                
+            size_policy = self.sizePolicy()
+            
+            size_policy.setVerticalPolicy( QW.QSizePolicy.Policy.Fixed )
+            
+            self.setSizePolicy( size_policy )
             
         else:
             
             new_label = '\u25B2'
             
-            if self._expanded_size_vertical_policy is not None:
-                
-                size_policy = self.sizePolicy()
-                
-                size_policy.setVerticalPolicy( self._expanded_size_vertical_policy )
-                
-                self.setSizePolicy( size_policy )
-                
+            size_policy = self.sizePolicy()
+            
+            size_policy.setVerticalPolicy( self._expanded_size_vertical_policy )
+            
+            self.setSizePolicy( size_policy )
             
         
         self._expand_button.setText( new_label )

@@ -131,13 +131,23 @@ def ConvertQtImageToNumPy( qt_image: QG.QImage, strip_useless_alpha = True ):
         raise Exception( 'Could not convert an image from Qt format to NumPy. Maybe out-of-memory issue?' )
         
     
+    data_bytes = None
+    
     if QtInit.WE_ARE_PYSIDE:
         
         data_bytes = bytes( data_bytearray )
         
     elif QtInit.WE_ARE_PYQT:
         
-        data_bytes = data_bytearray.asstring( height * width * depth )
+        if hasattr( data_bytearray, 'asstring' ):
+            
+            data_bytes = data_bytearray.asstring( height * width * depth )
+            
+        
+    
+    if data_bytes is None:
+        
+        raise Exception( 'Could not extract data_bytearray to data_bytes when pulling Qt Image data to NumPy array!' )
         
     
     if qt_image.bytesPerLine() == width * depth:

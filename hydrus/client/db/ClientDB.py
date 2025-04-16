@@ -2341,9 +2341,6 @@ class DB( HydrusDB.HydrusDB ):
         
         location_context = file_search_context.GetLocationContext()
         
-        system_everything_limit = 10000
-        system_everything_suffix = ''
-        
         predicates = []
         
         system_everythings = [ ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_EVERYTHING ) ]
@@ -2372,7 +2369,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 # this shouldn't happen, combined on both sides, but let's do our best anyway
                 
-                if force_system_everything or self._controller.new_options.GetBoolean( 'always_show_system_everything' ):
+                if force_system_everything or self._controller.new_options.GetBoolean( 'show_system_everything' ):
                     
                     predicates.append( ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_EVERYTHING ) )
                     
@@ -2479,29 +2476,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 inbox_archive_preds = ClientSearchPredicate.MergePredicates( inbox_archive_preds )
                 
-                zero_counts = [ pred.GetCount().HasZeroCount() for pred in inbox_archive_preds ]
-                
-                if True in zero_counts and self._controller.new_options.GetBoolean( 'filter_inbox_and_archive_predicates' ):
-                    
-                    if False in zero_counts and location_context.IsOneDomain():
-                        
-                        # something is in here, but we are hiding, so let's inform system everything
-                        useful_pred = list( ( pred for pred in inbox_archive_preds if pred.GetCount().HasNonZeroCount() ) )[0]
-                        
-                        if useful_pred.GetType() == ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_INBOX:
-                            
-                            system_everything_suffix = 'all in inbox'
-                            
-                        else:
-                            
-                            system_everything_suffix = 'all in archive'
-                            
-                        
-                    
-                else:
-                    
-                    predicates.extend( inbox_archive_preds )
-                    
+                predicates.extend( inbox_archive_preds )
                 
             
             blank_pred_types.update( [
@@ -2524,11 +2499,9 @@ class DB( HydrusDB.HydrusDB ):
             
             system_everything = list( system_everythings )[0]
             
-            system_everything.SetCountTextSuffix( system_everything_suffix )
-            
             num_everything = system_everything.GetCount().GetMinCount()
             
-            if force_system_everything or ( num_everything <= system_everything_limit or self._controller.new_options.GetBoolean( 'always_show_system_everything' ) ):
+            if force_system_everything or self._controller.new_options.GetBoolean( 'show_system_everything' ):
                 
                 predicates.append( system_everything )
                 
@@ -9502,6 +9475,44 @@ class DB( HydrusDB.HydrusDB ):
                 
                 self.pub_initial_message( message )
                 
+            
+        
+        if version == 617:
+            
+            try:
+                
+                new_options = self.modules_serialisable.GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_CLIENT_OPTIONS )
+                
+                try:
+                    
+                    user_wants_us_to_leave_it_on = new_options.GetBoolean( 'always_show_system_everything' )
+                    
+                except:
+                    
+                    user_wants_us_to_leave_it_on = False
+                    
+                
+                if not user_wants_us_to_leave_it_on:
+                    
+                    results = self._GetServiceInfo( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY )
+                    
+                    if results.get( HC.SERVICE_INFO_NUM_FILES, 0 ) > 10000:
+                        
+                        new_options.SetBoolean( 'show_system_everything', False )
+                        
+                        self.modules_serialisable.SetJSONDump( new_options )
+                        
+                    
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to update your options failed! Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
+                
+            
             
         
         self._controller.frame_splash_status.SetTitleText( 'updated db to v{}'.format( HydrusNumbers.ToHumanInt( version + 1 ) ) )

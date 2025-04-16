@@ -48,7 +48,7 @@ class ClientDBFilesPhysicalStorage( ClientDBModule.ClientDBModule ):
             
             path = HydrusPaths.ConvertPortablePathToAbsPath( portable_location_path )
             
-            base_location = paths_to_base_locations.get( path, ClientFilesPhysical.FilesStorageBaseLocation( path, 0 ) )
+            base_location = paths_to_base_locations.get( path, ClientFilesPhysical.FilesStorageBaseLocation( portable_location_path, 0 ) )
             
             subfolders.add( ClientFilesPhysical.FilesStorageSubfolder( prefix, base_location, purge ) )
             
@@ -101,9 +101,7 @@ class ClientDBFilesPhysicalStorage( ClientDBModule.ClientDBModule ):
         
         for ( portable_path, ideal_weight, max_num_bytes ) in self._Execute( 'SELECT location, weight, max_num_bytes FROM ideal_client_files_locations;' ):
             
-            abs_path = HydrusPaths.ConvertPortablePathToAbsPath( portable_path )
-            
-            media_base_locations.add( ClientFilesPhysical.FilesStorageBaseLocation( abs_path, ideal_weight, max_num_bytes = max_num_bytes ) )
+            media_base_locations.add( ClientFilesPhysical.FilesStorageBaseLocation( portable_path, ideal_weight, max_num_bytes = max_num_bytes ) )
             
         
         result = self._Execute( 'SELECT location FROM ideal_thumbnail_override_location;' ).fetchone()
@@ -116,9 +114,7 @@ class ClientDBFilesPhysicalStorage( ClientDBModule.ClientDBModule ):
             
             ( portable_ideal_thumbnail_override_path, ) = result
             
-            abs_ideal_thumbnail_override_path = HydrusPaths.ConvertPortablePathToAbsPath( portable_ideal_thumbnail_override_path )
-            
-            thumbnail_override_base_location = ClientFilesPhysical.FilesStorageBaseLocation( abs_ideal_thumbnail_override_path, 1 )
+            thumbnail_override_base_location = ClientFilesPhysical.FilesStorageBaseLocation( portable_ideal_thumbnail_override_path, 1 )
             
         
         return ( media_base_locations, thumbnail_override_base_location )
@@ -179,6 +175,23 @@ class ClientDBFilesPhysicalStorage( ClientDBModule.ClientDBModule ):
             raise Exception( f'Was commanded to move "{source_subfolder}" to "{dest_subfolder}", but they are the same location!' )
             
         
+        prefix = source_subfolder.prefix
+        portable_source_base_location = source_subfolder.base_location.portable_path
+        
+        self._Execute( 'DELETE FROM client_files_subfolders WHERE prefix = ? AND location = ?;', ( prefix, portable_source_base_location ) )
+        
+        if self._GetRowCount() == 0:
+            
+            absolute_base_location = source_subfolder.base_location.path
+            
+            self._Execute( 'DELETE FROM client_files_subfolders WHERE prefix = ? AND location = ?;', ( prefix, absolute_base_location ) )
+            
+            if self._GetRowCount() == 0:
+                
+                raise Exception( f'Was commanded to move "{source_subfolder}" to "{dest_subfolder}", but the entry for the source folder seems incorrect! Please contact hydrus dev!' )
+                
+            
+        
         # via symlinking etc... which means we are just updating a simple db record, not wanting to move any files
         they_are_secretly_the_same = os.path.samefile( source_subfolder.base_location.path, dest_subfolder.base_location.path )
         
@@ -197,12 +210,8 @@ class ClientDBFilesPhysicalStorage( ClientDBModule.ClientDBModule ):
                 
             
         
-        prefix = source_subfolder.prefix
+        portable_dest_base_location = dest_subfolder.base_location.portable_path
         
-        portable_source_base_location = source_subfolder.base_location.GetPortablePath()
-        portable_dest_base_location = dest_subfolder.base_location.GetPortablePath()
-        
-        self._Execute( 'DELETE FROM client_files_subfolders WHERE prefix = ? AND location = ?;', ( prefix, portable_source_base_location ) )
         self._Execute( 'INSERT OR IGNORE INTO client_files_subfolders ( prefix, location, purge ) VALUES ( ?, ?, ? );', ( prefix, portable_dest_base_location, False ) )
         
         if not they_are_secretly_the_same:
@@ -215,7 +224,7 @@ class ClientDBFilesPhysicalStorage( ClientDBModule.ClientDBModule ):
             
         
     
-    def RepairClientFiles( self, correct_rows ):
+    def RepairClientFiles( self, correct_rows: typing.List[ typing.Tuple[ ClientFilesPhysical.FilesStorageSubfolder, ClientFilesPhysical.FilesStorageSubfolder ] ] ):
         
         # TODO: as we move to multiple valid locations, this should probably become something else, or the things that feed it should have more sophisticated discovery of the correct 
         # tbh we should probably replace it with a 'set everything to this' call, like setideal but just an override to fix actual current understanding of file location
@@ -232,12 +241,25 @@ class ClientDBFilesPhysicalStorage( ClientDBModule.ClientDBModule ):
             prefix = incorrect_subfolder.prefix
             
             # it is possible these are actually the same, when we do the 'just regen my thumbs, no recovery'
-            portable_incorrect_base_location = incorrect_subfolder.base_location.GetPortablePath()
-            portable_correct_base_location = correct_subfolder.base_location.GetPortablePath()
+            portable_incorrect_base_location = incorrect_subfolder.base_location.portable_path
+            portable_correct_base_location = correct_subfolder.base_location.portable_path
             
             if portable_incorrect_base_location != portable_correct_base_location:
                 
                 self._Execute( 'DELETE FROM client_files_subfolders WHERE prefix = ? AND location = ?;', ( prefix, portable_incorrect_base_location ) )
+                
+                if self._GetRowCount() == 0:
+                    
+                    absolute_base_location = incorrect_subfolder.base_location.path
+                    
+                    self._Execute( 'DELETE FROM client_files_subfolders WHERE prefix = ? AND location = ?;', ( prefix, absolute_base_location ) )
+                    
+                    if self._GetRowCount() == 0:
+                        
+                        raise Exception( f'When trying to repair the database file storage system, I could not remove the old "{incorrect_subfolder}" entry from the database! Please contact hydrus dev--you probably need manual fixing.' )
+                        
+                    
+                
                 self._Execute( 'INSERT OR IGNORE INTO client_files_subfolders ( prefix, location, purge ) VALUES ( ?, ?, ? );', ( prefix, portable_correct_base_location, False ) )
                 
             

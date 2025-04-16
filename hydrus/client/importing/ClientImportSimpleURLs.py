@@ -276,124 +276,137 @@ class SimpleDownloaderImport( HydrusSerialisable.SerialisableBase ):
             
             with self._lock:
                 
-                ( url, simple_downloader_formula ) = self._pending_jobs.pop( 0 )
+                job = self._pending_jobs[ 0 ]
+                
+                ( url, simple_downloader_formula ) = job
                 
                 self._gallery_status = 'checking ' + url
                 
             
-            error_occurred = False
-            
-            gallery_seed_status = CC.STATUS_ERROR
-            parser_status = 'job not completed'
-            
-            gallery_seed = ClientImportGallerySeeds.GallerySeed( url, can_generate_more_pages = False )
-            
             try:
                 
-                self._gallery_seed_log.AddGallerySeeds( ( gallery_seed, ) )
-                
-                network_job = self._NetworkJobFactory( 'GET', url )
-                
-                network_job.OverrideBandwidth( 30 )
-                
-                CG.client_controller.network_engine.AddJob( network_job )
-                
-                with self._PageNetworkJobPresentationContextFactory( network_job ):
-                    
-                    network_job.WaitUntilDone()
-                    
-                
-                parsing_text = network_job.GetContentText()
-                
-                #
-                
-                parsing_context = {}
-                
-                parsing_context[ 'url' ] = url
-                
-                parsing_formula = simple_downloader_formula.GetFormula()
-                collapse_newlines = True
-                file_seeds = []
-                
-                for parsed_text in parsing_formula.Parse( parsing_context, parsing_text, collapse_newlines ):
-                    
-                    try:
-                        
-                        file_url = urllib.parse.urljoin( url, parsed_text )
-                        
-                        file_seed = ClientImportFileSeeds.FileSeed( ClientImportFileSeeds.FILE_SEED_TYPE_URL, file_url )
-                        
-                        file_seed.SetReferralURL( url )
-                        
-                        file_seeds.append( file_seed )
-                        
-                    except:
-                        
-                        continue
-                        
-                    
-                
-                num_new = self._file_seed_cache.AddFileSeeds( file_seeds )
-                
-                if num_new > 0:
-                    
-                    ClientImporting.WakeRepeatingJob( self._files_repeating_job )
-                    
-                
-                parser_status = 'page checked OK with formula "' + simple_downloader_formula.GetName() + '" - ' + HydrusNumbers.ToHumanInt( num_new ) + ' new urls'
-                
-                num_already_in_file_seed_cache = len( file_seeds ) - num_new
-                
-                if num_already_in_file_seed_cache > 0:
-                    
-                    parser_status += ' (' + HydrusNumbers.ToHumanInt( num_already_in_file_seed_cache ) + ' already in queue)'
-                    
-                
-                gallery_seed_status = CC.STATUS_SUCCESSFUL_AND_NEW
-                
-            except HydrusExceptions.ShutdownException:
-                
-                gallery_seed_status = CC.STATUS_VETOED
-                parser_status = 'program is shutting down'
-                
-                return
-                
-            except HydrusExceptions.NotFoundException:
-                
-                gallery_seed_status = CC.STATUS_VETOED
-                
-                error_occurred = True
-                
-                parser_status = 'page 404'
-                
-            except HydrusExceptions.NetworkException as e:
-                
-                delay = CG.client_controller.new_options.GetInteger( 'downloader_network_error_delay' )
-                
-                self._DelayWork( delay, str( e ) )
+                error_occurred = False
                 
                 gallery_seed_status = CC.STATUS_ERROR
-                error_occurred = True
+                parser_status = 'job not completed'
                 
-                parser_status = str( e )
+                gallery_seed = ClientImportGallerySeeds.GallerySeed( url, can_generate_more_pages = False )
                 
-                HydrusData.PrintException( e )
-                
-            except Exception as e:
-                
-                gallery_seed_status = CC.STATUS_ERROR
-                
-                error_occurred = True
-                
-                parser_status = str( e )
+                try:
+                    
+                    network_job = self._NetworkJobFactory( 'GET', url )
+                    
+                    network_job.OverrideBandwidth( 30 )
+                    
+                    CG.client_controller.network_engine.AddJob( network_job )
+                    
+                    with self._PageNetworkJobPresentationContextFactory( network_job ):
+                        
+                        network_job.WaitUntilDone()
+                        
+                    
+                    parsing_text = network_job.GetContentText()
+                    
+                    #
+                    
+                    parsing_context = {}
+                    
+                    parsing_context[ 'url' ] = url
+                    
+                    parsing_formula = simple_downloader_formula.GetFormula()
+                    collapse_newlines = True
+                    file_seeds = []
+                    
+                    for parsed_text in parsing_formula.Parse( parsing_context, parsing_text, collapse_newlines ):
+                        
+                        try:
+                            
+                            file_url = urllib.parse.urljoin( url, parsed_text )
+                            
+                            file_seed = ClientImportFileSeeds.FileSeed( ClientImportFileSeeds.FILE_SEED_TYPE_URL, file_url )
+                            
+                            file_seed.SetReferralURL( url )
+                            
+                            file_seeds.append( file_seed )
+                            
+                        except:
+                            
+                            continue
+                            
+                        
+                    
+                    num_new = self._file_seed_cache.AddFileSeeds( file_seeds )
+                    
+                    if num_new > 0:
+                        
+                        ClientImporting.WakeRepeatingJob( self._files_repeating_job )
+                        
+                    
+                    parser_status = 'page checked OK with formula "' + simple_downloader_formula.GetName() + '" - ' + HydrusNumbers.ToHumanInt( num_new ) + ' new urls'
+                    
+                    num_already_in_file_seed_cache = len( file_seeds ) - num_new
+                    
+                    if num_already_in_file_seed_cache > 0:
+                        
+                        parser_status += ' (' + HydrusNumbers.ToHumanInt( num_already_in_file_seed_cache ) + ' already in queue)'
+                        
+                    
+                    gallery_seed_status = CC.STATUS_SUCCESSFUL_AND_NEW
+                    
+                except HydrusExceptions.ShutdownException:
+                    
+                    gallery_seed_status = CC.STATUS_VETOED
+                    parser_status = 'program is shutting down'
+                    
+                    return
+                    
+                except HydrusExceptions.NotFoundException:
+                    
+                    gallery_seed_status = CC.STATUS_VETOED
+                    
+                    error_occurred = True
+                    
+                    parser_status = 'page 404'
+                    
+                except HydrusExceptions.NetworkException as e:
+                    
+                    delay = CG.client_controller.new_options.GetInteger( 'downloader_network_error_delay' )
+                    
+                    self._DelayWork( delay, str( e ) )
+                    
+                    gallery_seed_status = CC.STATUS_ERROR
+                    error_occurred = True
+                    
+                    parser_status = str( e )
+                    
+                    HydrusData.PrintException( e )
+                    
+                except Exception as e:
+                    
+                    gallery_seed_status = CC.STATUS_ERROR
+                    
+                    error_occurred = True
+                    
+                    parser_status = str( e )
+                    
+                finally:
+                    
+                    gallery_seed_note = parser_status
+                    
+                    gallery_seed.SetStatus( gallery_seed_status, note = gallery_seed_note )
+                    
+                    self._gallery_seed_log.AddGallerySeeds( ( gallery_seed, ) )
+                    
                 
             finally:
                 
-                gallery_seed_note = parser_status
-                
-                gallery_seed.SetStatus( gallery_seed_status, note = gallery_seed_note )
-                
-                self._gallery_seed_log.NotifyGallerySeedsUpdated( ( gallery_seed, ) )
+                with self._lock:
+                    
+                    if job in self._pending_jobs:
+                        
+                        self._pending_jobs.remove( job )
+                        
+                    
                 
             
             with self._lock:
@@ -652,6 +665,30 @@ class SimpleDownloaderImport( HydrusSerialisable.SerialisableBase ):
                 
                 self._SerialisableChangeMade()
                 
+            
+        
+    
+    def SetPendingJobs( self, jobs ):
+        
+        with self._lock:
+            
+            self._pending_jobs = jobs
+            
+            self._SerialisableChangeMade()
+            
+        
+    
+    def SetPendingJobsOrder( self, jobs ):
+        
+        with self._lock:
+            
+            # accept the re-order, but handle the situation where in the event before this we removed an item and the UI isn't synced yet
+            
+            my_jobs_fast = set( self._pending_jobs )
+            
+            self._pending_jobs = [ job for job in jobs if job in my_jobs_fast ]
+            
+            self._SerialisableChangeMade()
             
         
     

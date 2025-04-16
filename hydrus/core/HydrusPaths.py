@@ -70,6 +70,7 @@ def ConvertAbsPathToPortablePath( abs_path, base_dir_override = None ):
     
     return portable_path
     
+
 def ConvertPortablePathToAbsPath( portable_path, base_dir_override = None ):
     
     portable_path = os.path.normpath( portable_path ) # collapses .. stuff and converts / to \\ for windows only
@@ -92,6 +93,7 @@ def ConvertPortablePathToAbsPath( portable_path, base_dir_override = None ):
         abs_path = os.path.normpath( os.path.join( base_dir, portable_path ) )
         
     
+    # is this sensible, what am I trying to do here? recover from a legacy platform migration maybe, from perhaps when I stored backslashes in portable paths?
     if not HC.PLATFORM_WINDOWS and not os.path.exists( abs_path ):
         
         abs_path = abs_path.replace( '\\', '/' )

@@ -2963,12 +2963,6 @@ ATTACH "client.mappings.db" as external_mappings;'''
                 ClientGUIMenus.AppendMenuItem( self._menubar_pages_petition_submenu, service.GetName(), 'Open a new petition page for ' + service.GetName() + '.', self._notebook.NewPagePetitions, service.GetServiceKey(), on_deepest_notebook = True )
                 
             
-            self._menubar_pages_download_popup_submenu.setEnabled( True )
-            
-            has_ipfs = len( [ service for service in services if service.GetServiceType() == HC.IPFS ] )
-            
-            self._menubar_pages_download_popup_submenu.menuAction().setVisible( has_ipfs )
-            
         
         return ClientGUIAsync.AsyncQtUpdater( self, loading_callable, work_callable, publish_callable )
         
@@ -3944,14 +3938,6 @@ ATTACH "client.mappings.db" as external_mappings;'''
         ClientGUIMenus.AppendMenuItem( download_menu, 'simple downloader', 'Open a new tab to download files from generic galleries or threads.', self.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_NEW_SIMPLE_DOWNLOADER_PAGE ) )
         
         ClientGUIMenus.AppendMenu( menu, download_menu, 'new download page' )
-        
-        #
-        
-        self._menubar_pages_download_popup_submenu = ClientGUIMenus.GenerateMenu( menu )
-        
-        ClientGUIMenus.AppendMenuItem( self._menubar_pages_download_popup_submenu, 'an ipfs multihash', 'Enter an IPFS multihash and attempt to import whatever is returned.', self._StartIPFSDownload )
-        
-        ClientGUIMenus.AppendMenu( menu, self._menubar_pages_download_popup_submenu, 'new download popup' )
         
         #
         
@@ -6932,44 +6918,6 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         ClientGUIDialogsMessage.ShowInformation( self, message )
         
     
-    def _StartIPFSDownload( self ):
-        
-        ipfs_services = self._controller.services_manager.GetServices( ( HC.IPFS, ), randomised = True )
-        
-        if len( ipfs_services ) > 0:
-            
-            if len( ipfs_services ) == 1:
-                
-                ( service, ) = ipfs_services
-                
-            else:
-                
-                choice_tuples = [ ( service.GetName(), service ) for service in ipfs_services ]
-                
-                try:
-                    
-                    service = ClientGUIDialogsQuick.SelectFromList( self, 'Select which IPFS Daemon', choice_tuples )
-                    
-                except HydrusExceptions.CancelledException:
-                    
-                    return
-                    
-                
-            
-            with ClientGUIDialogs.DialogTextEntry( self, 'Enter multihash to download.' ) as dlg:
-                
-                result = dlg.exec()
-                
-                if result == QW.QDialog.DialogCode.Accepted:
-                    
-                    multihash = dlg.GetValue()
-                    
-                    service.ImportFile( multihash )
-                    
-                
-            
-        
-    
     def _SwitchBoolean( self, name ):
         
         if name == 'autocomplete_delay_mode':
@@ -8291,7 +8239,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         urls = sorted( urls )
         
-        tag_import_options = CG.client_controller.network_engine.domain_manager.GetDefaultTagImportOptionsForURL( urls[0] )
+        tag_import_options = CG.client_controller.network_engine.domain_manager.GetDefaultTagImportOptionsForURL( None, urls[0] )
         
         tag_import_options = tag_import_options.Duplicate()
         

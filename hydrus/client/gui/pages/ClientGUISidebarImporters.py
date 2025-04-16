@@ -2524,8 +2524,6 @@ class SidebarImporterSimpleDownloader( SidebarImporter ):
         
         #
         
-        #
-        
         self._simple_parsing_jobs_panel = ClientGUICommon.StaticBox( self._simple_downloader_panel, 'parsing' )
         
         self._pause_queue_button = ClientGUICommon.BetterBitmapButton( self._simple_parsing_jobs_panel, CC.global_pixmaps().gallery_pause, self.PauseQueue )
@@ -2537,18 +2535,11 @@ class SidebarImporterSimpleDownloader( SidebarImporter ):
         
         self._page_download_control = ClientGUINetworkJobControl.NetworkJobControl( self._simple_parsing_jobs_panel )
         
-        self._pending_jobs_listbox = ClientGUIListBoxes.BetterQListWidget( self._simple_parsing_jobs_panel )
-        
-        self._pending_jobs_listbox.setSelectionMode( QW.QAbstractItemView.SelectionMode.ExtendedSelection )
-        
-        self._advance_button = QW.QPushButton( '\u2191', self._simple_parsing_jobs_panel )
-        self._advance_button.clicked.connect( self.EventAdvance )
-        
-        self._delete_button = QW.QPushButton( 'X', self._simple_parsing_jobs_panel )
-        self._delete_button.clicked.connect( self.EventDelete )
-        
-        self._delay_button = QW.QPushButton( '\u2193', self._simple_parsing_jobs_panel )
-        self._delay_button.clicked.connect( self.EventDelay )
+        self._pending_jobs_queue_box = ClientGUIListBoxes.QueueListBox(
+            self._simple_parsing_jobs_panel,
+            8,
+            self._ConvertPendingJobToString,
+        )
         
         self._page_url_input = ClientGUITextInput.TextAndPasteCtrl( self._simple_parsing_jobs_panel, self._PendPageURLs )
         
@@ -2588,17 +2579,6 @@ class SidebarImporterSimpleDownloader( SidebarImporter ):
         self._import_queue_panel.Add( self._file_seed_cache_control, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._import_queue_panel.Add( self._file_download_control, CC.FLAGS_EXPAND_PERPENDICULAR )
         
-        queue_buttons_vbox = QP.VBoxLayout()
-        
-        QP.AddToLayout( queue_buttons_vbox, self._advance_button, CC.FLAGS_CENTER_PERPENDICULAR )
-        QP.AddToLayout( queue_buttons_vbox, self._delete_button, CC.FLAGS_CENTER_PERPENDICULAR )
-        QP.AddToLayout( queue_buttons_vbox, self._delay_button, CC.FLAGS_CENTER_PERPENDICULAR )
-        
-        queue_hbox = QP.HBoxLayout()
-        
-        QP.AddToLayout( queue_hbox, self._pending_jobs_listbox, CC.FLAGS_EXPAND_BOTH_WAYS )
-        QP.AddToLayout( queue_hbox, queue_buttons_vbox, CC.FLAGS_CENTER_PERPENDICULAR )
-        
         formulae_hbox = QP.HBoxLayout()
         
         QP.AddToLayout( formulae_hbox, self._formulae, CC.FLAGS_EXPAND_BOTH_WAYS )
@@ -2612,7 +2592,7 @@ class SidebarImporterSimpleDownloader( SidebarImporter ):
         self._simple_parsing_jobs_panel.Add( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         self._simple_parsing_jobs_panel.Add( self._gallery_seed_log_control, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._simple_parsing_jobs_panel.Add( self._page_download_control, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._simple_parsing_jobs_panel.Add( queue_hbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        self._simple_parsing_jobs_panel.Add( self._pending_jobs_queue_box, CC.FLAGS_EXPAND_BOTH_WAYS )
         self._simple_parsing_jobs_panel.Add( self._page_url_input, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._simple_parsing_jobs_panel.Add( formulae_hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
         
@@ -2650,6 +2630,18 @@ class SidebarImporterSimpleDownloader( SidebarImporter ):
         self._UpdateImportStatus()
         
         self._import_options_button.fileImportOptionsChanged.connect( self._simple_downloader_import.SetFileImportOptions )
+        
+        self._pending_jobs_queue_box.listBoxContentsDeleted.connect( self._QueueBoxContentsDeleted )
+        self._pending_jobs_queue_box.listBoxOrderChanged.connect( self._QueueBoxOrderChanged )
+        
+    
+    def _ConvertPendingJobToString( self, job ):
+        
+        ( url, simple_downloader_formula ) = job
+        
+        pretty_job = simple_downloader_formula.GetName() + ': ' + url
+        
+        return pretty_job
         
     
     def _EditFormulae( self ):
@@ -2797,28 +2789,29 @@ class SidebarImporterSimpleDownloader( SidebarImporter ):
             
         
     
+    def _QueueBoxContentsDeleted( self ):
+        
+        jobs = self._pending_jobs_queue_box.GetData()
+        
+        self._simple_downloader_import.SetPendingJobs( jobs )
+        
+    
+    def _QueueBoxOrderChanged( self ):
+        
+        jobs = self._pending_jobs_queue_box.GetData()
+        
+        self._simple_downloader_import.SetPendingJobsOrder( jobs )
+        
+    
     def _UpdateImportStatus( self ):
         
         ( pending_jobs, parser_status, current_action, queue_paused, files_paused ) = self._simple_downloader_import.GetStatus()
         
-        current_pending_jobs = self._pending_jobs_listbox.GetData()
+        current_pending_jobs = self._pending_jobs_queue_box.GetData()
         
         if current_pending_jobs != pending_jobs:
             
-            selected_jobs = set( self._pending_jobs_listbox.GetData( only_selected = True ) )
-            
-            self._pending_jobs_listbox.clear()
-            
-            for job in pending_jobs:
-                
-                ( url, simple_downloader_formula ) = job
-                
-                pretty_job = simple_downloader_formula.GetName() + ': ' + url
-                
-                self._pending_jobs_listbox.Append( pretty_job, job )
-                
-            
-            self._pending_jobs_listbox.SelectData( selected_jobs )
+            self._pending_jobs_queue_box.SetData( pending_jobs )
             
         
         self._parser_status.setText( parser_status )
@@ -2876,62 +2869,6 @@ class SidebarImporterSimpleDownloader( SidebarImporter ):
         if not for_session_close and CG.client_controller.new_options.GetBoolean( 'confirm_non_empty_downloader_page_close' ) and num_items > 0:
             
             raise HydrusExceptions.VetoException( f'This is a simple urls import page holding {HydrusNumbers.ToHumanInt( num_items )} import objects.' )
-            
-        
-    
-    def EventAdvance( self ):
-        
-        selected_jobs = self._pending_jobs_listbox.GetData( only_selected = True )
-        
-        for job in selected_jobs:
-            
-            self._simple_downloader_import.AdvanceJob( job )
-            
-        
-        if len( selected_jobs ) > 0:
-            
-            self._UpdateImportStatus()
-            
-        
-    
-    def EventDelay( self ):
-        
-        selected_jobs = list( self._pending_jobs_listbox.GetData( only_selected = True ) )
-        
-        selected_jobs.reverse()
-        
-        for job in selected_jobs:
-            
-            self._simple_downloader_import.DelayJob( job )
-            
-        
-        if len( selected_jobs ) > 0:
-            
-            self._UpdateImportStatus()
-            
-        
-    
-    def EventDelete( self ):
-        
-        selected_jobs = self._pending_jobs_listbox.GetData( only_selected = True )
-        
-        message = 'Delete {} jobs?'.format( HydrusNumbers.ToHumanInt( len( selected_jobs ) ) )
-        
-        result = ClientGUIDialogsQuick.GetYesNo( self, message )
-        
-        if result != QW.QDialog.DialogCode.Accepted:
-            
-            return
-            
-        
-        for job in selected_jobs:
-            
-            self._simple_downloader_import.DeleteJob( job )
-            
-        
-        if len( selected_jobs ) > 0:
-            
-            self._UpdateImportStatus()
             
         
     

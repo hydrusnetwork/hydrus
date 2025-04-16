@@ -405,8 +405,6 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
         
         self._count = count
         
-        self._count_text_suffix = ''
-        
         self._ideal_sibling = None
         self._siblings = None
         self._parents = None
@@ -1166,11 +1164,6 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
         self._count = count
         
     
-    def SetCountTextSuffix( self, suffix: str ):
-        
-        self._count_text_suffix = suffix
-        
-    
     def SetIdealSibling( self, tag: str ):
         
         self._ideal_sibling = tag
@@ -1250,11 +1243,6 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
             if len( suffix ) > 0:
                 
                 count_text += ' {}'.format( suffix )
-                
-            
-            if self._count_text_suffix != '':
-                
-                count_text += ' ({})'.format( self._count_text_suffix )
                 
             
         

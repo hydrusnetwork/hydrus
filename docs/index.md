@@ -7,24 +7,15 @@ hide:
 
 # hydrus network - client and server
 
-The hydrus network client is a desktop application written for Anonymous and other internet enthusiasts with large media collections. It organises your files into an internal database and browses them with tags instead of folders, a little like a booru on your desktop. Tags and files can be anonymously shared through custom servers that any user may run. Everything is free, nothing phones home, and the source code is included with the release. It is developed mostly for Windows, but builds for Linux and macOS are available (perhaps with some limitations, depending on your situation).
+The hydrus network client is a file-management application written for internet-fluent media nerds who have large file collections. It browses with tags instead of folders, a little like a booru on your desktop. If they wish, users can easily share tags anonymously through a public server. Everything is free, no ads, and privacy is the first concern. If you have 10,000+ files and cannot find anything, hydrus might help!
 
-The software is constantly being improved. I try to put out a new release every Wednesday by 8pm Eastern.
+Hydrus supports various filetypes for images, video and audio files, image project files, and more. A full list of supported filetypes is [here](filetypes.md). On the Windows and Linux builds, an MPV window is embedded to play video and audio smoothly. Some supported filetypes cannot be viewed directly in the client, such as PDF, but it is easy to launch any file with your OS's default program.
 
-Hydrus supports various filetypes for images, video and audio files, image project files, and more. A full list of supported filetypes is [here](filetypes.md).
+I am continually working on the software and try to put out a new release every Wednesday by 8pm EST. Executable releases are available for Windows, Linux, and macOS, but the program is in python, so you can also just run it straight from the source code. I welcome feedback of any sort and will try to get back to any pings every Saturday.
 
-On the Windows and Linux builds, an MPV window is embedded to play video and audio smoothly. For files like pdf, which cannot currently be viewed in the client, it is easy to launch any file with your OS's default program.
+The client can download files and parse tags and other metadata from a number of websites, including the popular imageboards and boorus, and some gallery sites. It can be extended to download from more locations using easily shareable user-made downloaders. It can also be set to 'subscribe' to any gallery search, repeating it every few days to keep up with new results.
 
-The client can download files and parse tags from a number of websites, including by default:
-
-*   4chan and other imageboards, with a thread watcher
-*   the popular boorus
-*   gallery sites like deviant art, hentai foundry, and pixiv
-*   tumblr and twitter
-
-And can be extended to download from more locations using easily shareable user-made downloaders. It can also be set to 'subscribe' to any gallery search, repeating it every few days to keep up with new results.
-
-The program's emphasis is on your freedom. There is no DRM, no spying, no censorship. The program never phones home.
+The program's emphasis is on your freedom. You control everything, and the program never phones home. In the same way, it is quite an advanced program, and not a beautiful one, so it isn't for everyone. Try it out, see if you like it!
 
 ## Start Here
 
@@ -33,12 +24,12 @@ If you would like to try hydrus, I _**strongly**_ recommend you check out the **
 ## links
 
 * [homepage](https://hydrusnetwork.github.io/hydrus/)
-* [github](https://github.com/hydrusnetwork/hydrus) ([latest build](https://github.com/hydrusnetwork/hydrus/releases/latest))
+* [github](https://github.com/hydrusnetwork/hydrus) ([latest build](https://github.com/hydrusnetwork/hydrus/releases/latest)) ([releases](https://github.com/hydrusnetwork/hydrus/releases))
 * [issue tracker](https://github.com/hydrusnetwork/hydrus/issues)
-* [8chan.moe /t/ (Hydrus Network General)](https://8chan.moe/t/catalog.html)
+* [email](mailto:hydrus.admin@gmail.com)
+* [discord](https://discord.gg/wPHPCUZ)
 * [tumblr](https://hydrus.tumblr.com)
 * [x](https://x.com/hydrusnetwork)
-* [discord](https://discord.gg/wPHPCUZ)
 * [patreon](https://www.patreon.com/hydrus_dev)
 * [user-run repository and wiki (including download presets for several non-default boorus)](https://github.com/CuddleBear92/Hydrus-Presets-and-Scripts)
 * [more links and contact info](contact.md)

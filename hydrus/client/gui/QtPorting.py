@@ -974,6 +974,7 @@ def DeleteAllNotebookPages( notebook ):
         tab.deleteLater()
         
     
+
 def SplitVertically( splitter: QW.QSplitter, w1, w2, hpos ):
     
     if w1.parentWidget() != splitter:
@@ -1173,7 +1174,7 @@ def AddToLayout( layout, item, flag = None, alignment = None ):
             zero_border = True
             
         
-    elif flag in ( CC.FLAGS_EXPAND_PERPENDICULAR, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR, CC.FLAGS_ON_RIGHT ):
+    elif flag in ( CC.FLAGS_EXPAND_PERPENDICULAR, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR, CC.FLAGS_ON_RIGHT, CC.FLAGS_EXPAND_PERPENDICULAR_BUT_BOTH_WAYS_LATER ):
         
         if flag == CC.FLAGS_EXPAND_SIZER_PERPENDICULAR:
             
@@ -1194,6 +1195,18 @@ def AddToLayout( layout, item, flag = None, alignment = None ):
                 
             
             item.setSizePolicy( h_policy, v_policy )
+            
+        
+        if flag == CC.FLAGS_EXPAND_PERPENDICULAR_BUT_BOTH_WAYS_LATER:
+            
+            # we used to do this just for expanding guys, and it is ostensibly ignored for Fixed stuff, but if we have expanding boxes that change between Fixed and Expanding, we'll want to set it!
+            # default appears to be 0 in the direction of the Layout
+            if isinstance( layout, QW.QVBoxLayout ) or isinstance( layout, QW.QHBoxLayout ):
+                
+                stretch_factor = 50
+                
+                layout.setStretchFactor( item, stretch_factor )
+                
             
         
     elif flag in ( CC.FLAGS_EXPAND_BOTH_WAYS, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS, CC.FLAGS_EXPAND_BOTH_WAYS_POLITE, CC.FLAGS_EXPAND_BOTH_WAYS_SHY ):
@@ -1394,6 +1407,7 @@ def CallAfter( fn, *args, **kwargs ):
     
     QW.QApplication.instance().eventDispatcher().wakeUp()
     
+
 def ClearLayout( layout, delete_widgets = False ):
     
     while layout.count() > 0:
@@ -1422,25 +1436,6 @@ def ClearLayout( layout, delete_widgets = False ):
         layout.removeItem( item )
         
     
-def GetClientData( widget, idx ):
-    
-    if isinstance( widget, QW.QComboBox ):
-        
-        return widget.itemData( idx, QC.Qt.ItemDataRole.UserRole )
-    
-    
-    elif isinstance( widget, QW.QTreeWidget ):
-        
-        return widget.topLevelItem( idx ).data( 0, QC.Qt.ItemDataRole.UserRole )
-    
-    elif isinstance( widget, QW.QListWidget ):
-        
-        return widget.item( idx ).data( QC.Qt.ItemDataRole.UserRole )
-    
-    else:
-        
-        raise ValueError( 'Unknown widget class in GetClientData' )
-
 
 def Unsplit( splitter, widget ):
     
@@ -1455,48 +1450,8 @@ def CenterOnWindow( parent, window ):
     parent_window = parent.window()
     
     window.move( parent_window.frameGeometry().center() - window.rect().center() )
-
-def ListWidgetDelete( widget, idx ):
     
-    if isinstance( idx, QC.QModelIndex ):
-        
-        idx = idx.row()
-    
-    if idx != -1:
-        
-        item = widget.takeItem( idx )
-        
-        del item
 
-
-def ListWidgetGetSelection( widget ):
-    
-    for i in range( widget.count() ):
-
-        if widget.item( i ).isSelected(): return i
-
-    return -1
-
-
-def ListWidgetSetSelection( widget, idxs ):
-    
-    widget.clearSelection()
-
-    if not isinstance( idxs, list ):
-        
-        idxs = [ idxs ]
-        
-    
-    count = widget.count()
-    
-    for idx in idxs:
-        
-        if 0 <= idx <= count -1:
-            
-            widget.item( idx ).setSelected( True )
-            
-        
-    
 def SetInitialSize( widget, size ):
     
     if hasattr( widget, 'SetInitialSize' ):
@@ -1512,9 +1467,10 @@ def SetInitialSize( widget, size ):
     
     if size.width() >= 0: widget.setMinimumWidth( size.width() )
     if size.height() >= 0: widget.setMinimumHeight( size.height() )
+    
 
 def SetBackgroundColour( widget, colour ):
-
+    
     widget.setAutoFillBackground( True )
 
     object_name = widget.objectName()
@@ -1550,6 +1506,7 @@ def SetMinClientSize( widget, size ):
     
     if size.width() >= 0: widget.setMinimumWidth( size.width() )
     if size.height() >= 0: widget.setMinimumHeight( size.height() )
+    
 
 class StatusBar( QW.QStatusBar ):
     
@@ -1677,7 +1634,7 @@ class EllipsizedLabel( QW.QLabel ):
         
     
     def paintEvent( self, event ):
-
+        
         if not self._ellipsize_end:
             
             QW.QLabel.paintEvent( self, event )
@@ -1757,6 +1714,7 @@ class EllipsizedLabel( QW.QLabel ):
             '''
             
         
+    
 
 class Dialog( QW.QDialog ):
     
@@ -1817,6 +1775,7 @@ class Dialog( QW.QDialog ):
             
         
     
+
 class PasswordEntryDialog( Dialog ):
     
     def __init__( self, parent, message, caption ):
@@ -2062,9 +2021,9 @@ def ListsToTuples( potentially_nested_lists ):
 class WidgetEventFilter ( QC.QObject ):
     
     _strong_focus_required = { 'EVT_KEY_DOWN' }
-
+    
     def __init__( self, parent_widget ):
-
+    
         self._parent_widget = parent_widget
         
         super().__init__( parent_widget )
@@ -2074,7 +2033,7 @@ class WidgetEventFilter ( QC.QObject ):
         self._callback_map = defaultdict( list )
         
         self._user_moved_window = False # There is no EVT_MOVE_END in Qt so some trickery is required.
-
+    
     def _ExecuteCallbacks( self, event_name, event ):
         
         if event_name not in self._callback_map: return

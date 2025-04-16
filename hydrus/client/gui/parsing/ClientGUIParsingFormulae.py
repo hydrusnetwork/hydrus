@@ -1,6 +1,5 @@
 import typing
 
-from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
 
 from hydrus.core import HydrusConstants as HC
@@ -659,6 +658,7 @@ class EditHTMLTagRulePanel( ClientGUIScrolledPanels.EditPanel ):
         return tag_rule
         
     
+
 class EditHTMLFormulaPanel( EditSpecificFormulaPanel ):
     
     def __init__( self, parent: QW.QWidget, collapse_newlines: bool, formula: ClientParsing.ParseFormulaHTML, test_data: ClientParsing.ParsingTestData ):
@@ -689,20 +689,13 @@ class EditHTMLFormulaPanel( EditSpecificFormulaPanel ):
         
         edit_panel = ClientGUICommon.StaticBox( self, 'edit' )
         
-        self._tag_rules = ClientGUIListBoxes.BetterQListWidget( edit_panel )
-        self._tag_rules.setSelectionMode( QW.QAbstractItemView.SelectionMode.SingleSelection )
-
-        self._tag_rules.itemDoubleClicked.connect( self.Edit )
-        
-        self._add_rule = ClientGUICommon.BetterButton( edit_panel, 'add', self.Add )
-        
-        self._edit_rule = ClientGUICommon.BetterButton( edit_panel, 'edit', self.Edit )
-        
-        self._move_rule_up = ClientGUICommon.BetterButton( edit_panel, '\u2191', self.MoveUp )
-        
-        self._delete_rule = ClientGUICommon.BetterButton( edit_panel, 'X', self.Delete )
-        
-        self._move_rule_down = ClientGUICommon.BetterButton( edit_panel, '\u2193', self.MoveDown )
+        self._tag_rules = ClientGUIListBoxes.QueueListBox(
+            edit_panel,
+            8,
+            self._ConvertTagRuleToPrettyString,
+            add_callable = self._AddNewRule,
+            edit_callable = self._EditRule
+        )
         
         self._content_to_fetch = ClientGUICommon.BetterChoice( edit_panel )
         
@@ -728,15 +721,7 @@ class EditHTMLFormulaPanel( EditSpecificFormulaPanel ):
         
         #
         
-        for rule in tag_rules:
-            
-            pretty_rule = rule.ToString()
-            
-            item = QW.QListWidgetItem()
-            item.setText( pretty_rule )
-            item.setData( QC.Qt.ItemDataRole.UserRole, rule )
-            self._tag_rules.addItem( item )
-            
+        self._tag_rules.SetData( tag_rules )
         
         self._content_to_fetch.SetValue( content_to_fetch )
         
@@ -746,24 +731,6 @@ class EditHTMLFormulaPanel( EditSpecificFormulaPanel ):
         
         #
         
-        udd_button_vbox = QP.VBoxLayout()
-        
-        udd_button_vbox.addStretch( 1 )
-        QP.AddToLayout( udd_button_vbox, self._move_rule_up, CC.FLAGS_CENTER_PERPENDICULAR )
-        QP.AddToLayout( udd_button_vbox, self._delete_rule, CC.FLAGS_CENTER_PERPENDICULAR )
-        QP.AddToLayout( udd_button_vbox, self._move_rule_down, CC.FLAGS_CENTER_PERPENDICULAR )
-        udd_button_vbox.addStretch( 1 )
-        
-        tag_rules_hbox = QP.HBoxLayout()
-        
-        QP.AddToLayout( tag_rules_hbox, self._tag_rules, CC.FLAGS_EXPAND_BOTH_WAYS )
-        QP.AddToLayout( tag_rules_hbox, udd_button_vbox, CC.FLAGS_CENTER_PERPENDICULAR )
-        
-        ae_button_hbox = QP.HBoxLayout()
-        
-        QP.AddToLayout( ae_button_hbox, self._add_rule, CC.FLAGS_CENTER_PERPENDICULAR )
-        QP.AddToLayout( ae_button_hbox, self._edit_rule, CC.FLAGS_CENTER_PERPENDICULAR )
-        
         rows = []
         
         rows.append( ( 'name/description:', self._name ) )
@@ -771,9 +738,7 @@ class EditHTMLFormulaPanel( EditSpecificFormulaPanel ):
         gridbox = ClientGUICommon.WrapInGrid( edit_panel, rows )
         
         edit_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        
-        edit_panel.Add( tag_rules_hbox, CC.FLAGS_EXPAND_BOTH_WAYS )
-        edit_panel.Add( ae_button_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        edit_panel.Add( self._tag_rules, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         rows = []
         
@@ -815,6 +780,39 @@ class EditHTMLFormulaPanel( EditSpecificFormulaPanel ):
         self.widget().setLayout( vbox )
         
     
+    def _AddNewRule( self ):
+        
+        new_rule = ClientParsing.ParseRuleHTML()
+        
+        return self._EditRule( new_rule )
+        
+    
+    def _ConvertTagRuleToPrettyString( self, tag_rule: ClientParsing.ParseRuleHTML ):
+        
+        return tag_rule.ToString()
+        
+    
+    def _EditRule( self, tag_rule: ClientParsing.ParseRuleHTML ):
+        
+        dlg_title = 'edit tag rule'
+        
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, dlg_title, frame_key = 'deeply_nested_dialog' ) as dlg:
+            
+            panel = EditHTMLTagRulePanel( dlg, tag_rule )
+            
+            dlg.SetPanel( panel )
+            
+            if dlg.exec() == QW.QDialog.DialogCode.Accepted:
+                
+                edited_rule = panel.GetValue()
+                
+                return edited_rule
+                
+            
+        
+        raise HydrusExceptions.CancelledException()
+        
+    
     def _UpdateControls( self ):
         
         if self._content_to_fetch.GetValue() == ClientParsing.HTML_CONTENT_ATTRIBUTE:
@@ -827,74 +825,9 @@ class EditHTMLFormulaPanel( EditSpecificFormulaPanel ):
             
         
     
-    def Add( self ):
-        
-        dlg_title = 'edit tag rule'
-        
-        with ClientGUITopLevelWindowsPanels.DialogEdit( self, dlg_title, frame_key = 'deeply_nested_dialog' ) as dlg:
-            
-            new_rule = ClientParsing.ParseRuleHTML()
-            
-            panel = EditHTMLTagRulePanel( dlg, new_rule )
-            
-            dlg.SetPanel( panel )
-            
-            if dlg.exec() == QW.QDialog.DialogCode.Accepted:
-                
-                rule = panel.GetValue()
-                
-                pretty_rule = rule.ToString()
-                
-                item = QW.QListWidgetItem()
-                item.setText( pretty_rule )
-                item.setData( QC.Qt.ItemDataRole.UserRole, rule )
-                self._tag_rules.addItem( item )
-                
-            
-        
-    
-    def Delete( self ):
-        
-        selection = QP.ListWidgetGetSelection( self._tag_rules )
-        
-        if selection != -1:
-            
-            QP.ListWidgetDelete( self._tag_rules, selection )
-            
-        
-    
-    def Edit( self ):
-        
-        selection = QP.ListWidgetGetSelection( self._tag_rules )
-        
-        if selection != -1:
-            
-            rule = QP.GetClientData( self._tag_rules, selection )
-            
-            dlg_title = 'edit tag rule'
-            
-            with ClientGUITopLevelWindowsPanels.DialogEdit( self, dlg_title, frame_key = 'deeply_nested_dialog' ) as dlg:
-                
-                panel = EditHTMLTagRulePanel( dlg, rule )
-                
-                dlg.SetPanel( panel )
-                
-                if dlg.exec() == QW.QDialog.DialogCode.Accepted:
-                    
-                    rule = panel.GetValue()
-                    
-                    pretty_rule = rule.ToString()
-                    
-                    self._tag_rules.item( selection ).setText( pretty_rule )
-                    self._tag_rules.item( selection ).setData( QC.Qt.ItemDataRole.UserRole, rule )
-                    
-                
-            
-        
-    
     def GetValue( self ):
         
-        tag_rules = [ QP.GetClientData( self._tag_rules, i ) for i in range( self._tag_rules.count() ) ]
+        tag_rules = self._tag_rules.GetData()
         
         content_to_fetch = self._content_to_fetch.GetValue()
         
@@ -920,42 +853,7 @@ class EditHTMLFormulaPanel( EditSpecificFormulaPanel ):
         return formula
         
     
-    def MoveDown( self ):
-        
-        selection = QP.ListWidgetGetSelection( self._tag_rules )
-        
-        if selection != -1 and selection + 1 < self._tag_rules.count():
-            
-            pretty_rule = self._tag_rules.item( selection ).text()
-            rule = QP.GetClientData( self._tag_rules, selection )
-            
-            QP.ListWidgetDelete( self._tag_rules, selection )
-            
-            item = QW.QListWidgetItem()
-            item.setText( pretty_rule )
-            item.setData( QC.Qt.ItemDataRole.UserRole, rule )
-            self._tag_rules.insertItem( selection + 1, item )
-            
-        
-    
-    def MoveUp( self ):
-        
-        selection = QP.ListWidgetGetSelection( self._tag_rules )
-        
-        if selection != -1 and selection > 0:
-            
-            pretty_rule = self._tag_rules.item( selection ).text()
-            rule = QP.GetClientData( self._tag_rules, selection )
-            
-            QP.ListWidgetDelete( self._tag_rules, selection )
-            
-            item = QW.QListWidgetItem()
-            item.setText( pretty_rule )
-            item.setData( QC.Qt.ItemDataRole.UserRole, rule )
-            self._tag_rules.insertItem( selection - 1, item )
-            
-        
-    
+
 class EditJSONParsingRulePanel( ClientGUIScrolledPanels.EditPanel ):
     
     def __init__( self, parent: QW.QWidget, rule: ClientParsing.ParseRuleHTML ):
@@ -1093,19 +991,13 @@ class EditJSONFormulaPanel( EditSpecificFormulaPanel ):
         
         edit_panel = ClientGUICommon.StaticBox( self, 'edit' )
         
-        self._parse_rules = ClientGUIListBoxes.BetterQListWidget( edit_panel )
-        self._parse_rules.setSelectionMode( QW.QAbstractItemView.SelectionMode.SingleSelection )
-        self._parse_rules.itemDoubleClicked.connect( self.Edit )
-        
-        self._add_rule = ClientGUICommon.BetterButton( edit_panel, 'add', self.Add )
-        
-        self._edit_rule = ClientGUICommon.BetterButton( edit_panel, 'edit', self.Edit )
-        
-        self._move_rule_up = ClientGUICommon.BetterButton( edit_panel, '\u2191', self.MoveUp )
-        
-        self._delete_rule = ClientGUICommon.BetterButton( edit_panel, 'X', self.Delete )
-        
-        self._move_rule_down = ClientGUICommon.BetterButton( edit_panel, '\u2193', self.MoveDown )
+        self._parse_rules = ClientGUIListBoxes.QueueListBox(
+            edit_panel,
+            8,
+            self._ConvertParseRuleToPrettyString,
+            add_callable = self._AddNewRule,
+            edit_callable = self._EditRule
+        )
         
         self._content_to_fetch = ClientGUICommon.BetterChoice( edit_panel )
         
@@ -1126,37 +1018,11 @@ class EditJSONFormulaPanel( EditSpecificFormulaPanel ):
         
         #
         
-        for rule in parse_rules:
-            
-            pretty_rule = ClientParsing.RenderJSONParseRule( rule )
-            
-            item = QW.QListWidgetItem()
-            item.setText( pretty_rule )
-            item.setData( QC.Qt.ItemDataRole.UserRole, rule )
-            self._parse_rules.addItem( item )
-            
+        self._parse_rules.SetData( parse_rules )
         
         self._content_to_fetch.SetValue( content_to_fetch )
         
         #
-        
-        udd_button_vbox = QP.VBoxLayout()
-        
-        udd_button_vbox.addStretch( 1 )
-        QP.AddToLayout( udd_button_vbox, self._move_rule_up, CC.FLAGS_CENTER_PERPENDICULAR )
-        QP.AddToLayout( udd_button_vbox, self._delete_rule, CC.FLAGS_CENTER_PERPENDICULAR )
-        QP.AddToLayout( udd_button_vbox, self._move_rule_down, CC.FLAGS_CENTER_PERPENDICULAR )
-        udd_button_vbox.addStretch( 1 )
-        
-        parse_rules_hbox = QP.HBoxLayout()
-        
-        QP.AddToLayout( parse_rules_hbox, self._parse_rules, CC.FLAGS_EXPAND_BOTH_WAYS )
-        QP.AddToLayout( parse_rules_hbox, udd_button_vbox, CC.FLAGS_CENTER_PERPENDICULAR )
-        
-        ae_button_hbox = QP.HBoxLayout()
-        
-        QP.AddToLayout( ae_button_hbox, self._add_rule, CC.FLAGS_CENTER_PERPENDICULAR )
-        QP.AddToLayout( ae_button_hbox, self._edit_rule, CC.FLAGS_CENTER_PERPENDICULAR )
         
         rows = []
         
@@ -1165,9 +1031,7 @@ class EditJSONFormulaPanel( EditSpecificFormulaPanel ):
         gridbox = ClientGUICommon.WrapInGrid( edit_panel, rows )
         
         edit_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        
-        edit_panel.Add( parse_rules_hbox, CC.FLAGS_EXPAND_BOTH_WAYS )
-        edit_panel.Add( ae_button_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        edit_panel.Add( self._parse_rules, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         rows = []
         
@@ -1208,74 +1072,42 @@ class EditJSONFormulaPanel( EditSpecificFormulaPanel ):
         self.widget().setLayout( vbox )
         
     
-    def Add( self ):
+    def _AddNewRule( self ):
+        
+        new_rule = ( ClientParsing.JSON_PARSE_RULE_TYPE_DICT_KEY, ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FIXED, match_value = 'posts', example_string = 'posts' ) )
+        
+        return self._EditRule( new_rule )
+        
+    
+    def _ConvertParseRuleToPrettyString( self, parse_rule ):
+        
+        return ClientParsing.RenderJSONParseRule( parse_rule )
+        
+    
+    def _EditRule( self, parse_rule ):
         
         dlg_title = 'edit parse rule'
         
         with ClientGUITopLevelWindowsPanels.DialogEdit( self, dlg_title, frame_key = 'deeply_nested_dialog' ) as dlg:
             
-            new_rule = ( ClientParsing.JSON_PARSE_RULE_TYPE_DICT_KEY, ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FIXED, match_value = 'posts', example_string = 'posts' ) )
-            
-            panel = EditJSONParsingRulePanel( dlg, new_rule )
+            panel = EditJSONParsingRulePanel( dlg, parse_rule )
             
             dlg.SetPanel( panel )
             
             if dlg.exec() == QW.QDialog.DialogCode.Accepted:
                 
-                rule = panel.GetValue()
+                edited_rule = panel.GetValue()
                 
-                pretty_rule = ClientParsing.RenderJSONParseRule( rule )
-
-                item = QW.QListWidgetItem()
-                item.setText( pretty_rule )
-                item.setData( QC.Qt.ItemDataRole.UserRole, rule )
-                self._parse_rules.addItem( item )
+                return edited_rule
                 
             
         
-    
-    def Delete( self ):
-        
-        selection = QP.ListWidgetGetSelection( self._parse_rules )
-        
-        if selection != -1:
-            
-            QP.ListWidgetDelete( self._parse_rules, selection )
-            
-        
-    
-    def Edit( self ):
-        
-        selection = QP.ListWidgetGetSelection( self._parse_rules )
-        
-        if selection != -1:
-            
-            rule = QP.GetClientData( self._parse_rules, selection )
-            
-            dlg_title = 'edit parse rule'
-            
-            with ClientGUITopLevelWindowsPanels.DialogEdit( self, dlg_title, frame_key = 'deeply_nested_dialog' ) as dlg:
-                
-                panel = EditJSONParsingRulePanel( dlg, rule )
-                
-                dlg.SetPanel( panel )
-                
-                if dlg.exec() == QW.QDialog.DialogCode.Accepted:
-                    
-                    rule = panel.GetValue()
-                    
-                    pretty_rule = ClientParsing.RenderJSONParseRule( rule )
-                    
-                    self._parse_rules.item( selection ).setText( pretty_rule )
-                    self._parse_rules.item( selection ).setData( QC.Qt.ItemDataRole.UserRole, rule )
-                    
-                
-            
+        raise HydrusExceptions.CancelledException()
         
     
     def GetValue( self ):
         
-        parse_rules = [ QP.GetClientData( self._parse_rules, i ) for i in range( self._parse_rules.count() ) ]
+        parse_rules = self._parse_rules.GetData()
         
         content_to_fetch = self._content_to_fetch.GetValue()
         
@@ -1286,42 +1118,6 @@ class EditJSONFormulaPanel( EditSpecificFormulaPanel ):
         formula = ClientParsing.ParseFormulaJSON( parse_rules = parse_rules, content_to_fetch = content_to_fetch, name = name, string_processor = string_processor )
         
         return formula
-        
-    
-    def MoveDown( self ):
-        
-        selection = QP.ListWidgetGetSelection( self._parse_rules )
-        
-        if selection != -1 and selection + 1 < self._parse_rules.count():
-            
-            pretty_rule = self._parse_rules.item( selection ).text()
-            rule = QP.GetClientData( self._parse_rules, selection )
-            
-            QP.ListWidgetDelete( self._parse_rules, selection )
-            
-            item = QW.QListWidgetItem()
-            item.setText( pretty_rule )
-            item.setData( QC.Qt.ItemDataRole.UserRole, rule )
-            self._parse_rules.insertItem( selection + 1, item )
-            
-        
-    
-    def MoveUp( self ):
-        
-        selection = QP.ListWidgetGetSelection( self._parse_rules )
-        
-        if selection != -1 and selection > 0:
-            
-            pretty_rule = self._parse_rules.item( selection ).text()
-            rule = QP.GetClientData( self._parse_rules, selection )
-            
-            QP.ListWidgetDelete( self._parse_rules, selection )
-            
-            item = QW.QListWidgetItem()
-            item.setText( pretty_rule )
-            item.setData( QC.Qt.ItemDataRole.UserRole, rule )
-            self._parse_rules.insertItem( selection - 1, item )
-            
         
     
 

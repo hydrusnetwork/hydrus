@@ -152,7 +152,7 @@ class EditTagAutocompleteOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         self._search_namespaces_into_full_tags.setToolTip( ClientGUIFunctions.WrapToolTip( 'If on, a search for "ser" will return all "series:" results such as "series:metroid". On large tag services, these searches are extremely slow.' ) )
         
         self._unnamespaced_search_gives_any_namespace_wildcards = QW.QCheckBox( self )
-        self._unnamespaced_search_gives_any_namespace_wildcards.setToolTip( ClientGUIFunctions.WrapToolTip( 'If on, an unnamespaced search like "sam" will return special wildcards for "sam* (any namespace)" and "sam (any namespace)", just as if you had typed "*:sam".' ) )
+        self._unnamespaced_search_gives_any_namespace_wildcards.setToolTip( ClientGUIFunctions.WrapToolTip( 'If on, an unnamespaced search like "sam" will return a special additional "any-namespace" wildcard for "sam (any namespace)", just as if you had typed "*:sam". If you regularly like to search for tags that may have multiple namespaces, this may save you time.\n\nIf you are not sure what this does, leave it unchecked.' ) )
         
         self._namespace_bare_fetch_all_allowed = QW.QCheckBox( self )
         self._namespace_bare_fetch_all_allowed.setToolTip( ClientGUIFunctions.WrapToolTip( 'If on, a search for "series:" will return all "series:" results. On large tag services, these searches are extremely slow.' ) )

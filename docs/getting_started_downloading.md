@@ -4,9 +4,9 @@ title: Downloading
 
 # Getting started with downloading
 
-The hydrus client has a sophisticated and completely user-customisable download system. It can pull from any booru or regular gallery site or imageboard, and also from some special examples like twitter and tumblr. A single file or URL to massive imports, the downloader can handle it all. A fresh install will by default have support for the bigger sites, but it _is_ possible, with some work, for any user to [create a new shareable downloader](downloader_intro.md) for a new site.
+The hydrus client has a sophisticated and completely user-customisable download system. It can pull from any booru or regular gallery site or imageboard, and also, to a smaller extent, special examples like twitter. A fresh install will by default have support for the bigger sites, but it _is_ possible, with some work, for any user to [create a new shareable downloader](downloader_intro.md) for a new site.
 
-The downloader is highly parallelisable, and while the default [bandwidth rules](#bandwidth) should stop you from running too hot and downloading so much at once that you annoy the servers you are downloading from, there are no brakes in the program on what you can get.
+The downloader is highly parallelisable, but the default [bandwidth rules](#bandwidth) should stop you from running too hot and downloading so much at once that you annoy the servers you are downloading from.
 
 !!! danger
     It is very important that you take this slow. Many users get overexcited with their new ability to download 500,000 files _and then do so_, only discovering later that 98% of what they got was junk that they now have to wade through. Figure out what workflows work for you, how fast you process files, what content you _actually_ want, how much bandwidth and hard drive space you have, and prioritise and throttle your incoming downloads to match. If you can realistically only archive/delete filter 50 files a day, there is little benefit to downloading 500 new files a day. START SLOW.
@@ -30,7 +30,7 @@ There are several different downloader types, each with its own purpose:
 :    You paste or drag-and-drop gallery and post/file URLs into this, and if hydrus understands it, it will import it. Does not do multi-page searching. Useful for one-off jobs. (The [API](client_api.md) can send URLs to this)
 
 **Simple downloader**
-:    Intended for simple one-off jobs with a single simple parsing rule, like 'get all the linked images from this page'.
+:    Advanced. Intended for simple one-off jobs with a single simple parsing rule, like 'get all the linked images from this page'.
 
 ### Gallery download
 ![](images/downloader_page.png)
@@ -172,7 +172,7 @@ At the moment, this is in tag import options, the `force page fetch even if...` 
 
 ### Note Parsing
 
-Hydrus alsos parse 'notes' from some sites. This is a young feature, and a little advanced at times, but it generally means the comments that artists leave on certain gallery sites, or something like a tweet text. Notes are editable by you and appear in a hovering window on the right side of the media viewer.
+Hydrus also parses 'notes' from some sites. This is a young feature, and a little advanced at times, but it generally means the comments that artists leave on certain gallery sites, or something like a tweet text. Notes are editable by you and appear in a hovering window on the right side of the media viewer.
 
 ![](images/note_import_options_normal.png)
 
@@ -215,7 +215,7 @@ The client supports a very basic and ugly login system. It can handle simple sit
 Many sites grant all their content without you having to log in at all, but others require it for NSFW or special content, or you may wish to take advantage of site-side user preferences like personal blacklists. If you wish, you can give hydrus some login details here, and it will try to login--just as a browser would--before it downloads anything from that domain.
 
 !!! warning
-    For multiple reasons, I do not recommend you use important accounts with hydrus. Use a throwaway account you don't care much about.
+    As a general rule, I do not recommend you use important accounts with hydrus. Use a throwaway account you don't care much about.
 
 To start using a login script, select the domain and click 'edit credentials'. You'll put in your username/password, and then 'activate' the login for the domain, and that should be it! The next time you try to get something from that site, the first request will wait (usually about ten seconds) while a login popup performs the login. Most logins last for about thirty days (and many refresh that 30-day timer every time you make a new request), so once you are set up, you usually never notice it again, especially if you have a subscription on the domain.
 

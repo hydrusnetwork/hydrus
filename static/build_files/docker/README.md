@@ -12,9 +12,6 @@ The client runs with default permissions of `1000:1000`, ~~this can be changed b
 
 If you have enough RAM, mount `/tmp` as tmpfs. If not, download more RAM.
 
-As of `v359` hydrus understands IPFS `nocopy`. And can be easily run with go-ipfs container.
-Read [Hydrus IPFS help](https://hydrusnetwork.github.io/hydrus/ipfs.html). Mount `HOST_PATH_DB/client_files` to `/data/client_files` in ipfs. Go manage the ipfs service and set the path to `/data/client_files`, you'll know where to put it in.
-
 Example compose file:
 ```yaml
 version: '3.8'

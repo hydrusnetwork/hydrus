@@ -1527,13 +1527,9 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._ac_read_list_height_num_chars = ClientGUICommon.BetterSpinBox( self._read_autocomplete_panel, min = 1, max = 128 )
             
-            self._always_show_system_everything = QW.QCheckBox( self._read_autocomplete_panel )
+            self._show_system_everything = QW.QCheckBox( self._read_autocomplete_panel )
             tt = 'After users get some experience with the program and a larger collection, they tend to have less use for system:everything.'
-            self._always_show_system_everything.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
-            
-            self._filter_inbox_and_archive_predicates = QW.QCheckBox( self._read_autocomplete_panel )
-            tt = 'If everything is current in the inbox (or archive), then there is no use listing it or its opposite--it either does not change the search or it produces nothing. If you find it jarring though, turn it off here!'
-            self._filter_inbox_and_archive_predicates.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
+            self._show_system_everything.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
             
             #
             
@@ -1565,9 +1561,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._ac_read_list_height_num_chars.setValue( self._new_options.GetInteger( 'ac_read_list_height_num_chars' ) )
             
-            self._always_show_system_everything.setChecked( self._new_options.GetBoolean( 'always_show_system_everything' ) )
-            
-            self._filter_inbox_and_archive_predicates.setChecked( self._new_options.GetBoolean( 'filter_inbox_and_archive_predicates' ) )
+            self._show_system_everything.setChecked( self._new_options.GetBoolean( 'show_system_everything' ) )
             
             self._forced_search_limit.SetValue( self._new_options.GetNoneableInteger( 'forced_search_limit' ) )
             
@@ -1588,8 +1582,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows.append( ( 'Autocomplete dropdown floats over file search pages: ', self._autocomplete_float_main_gui ) )
             rows.append( ( 'Autocomplete list height: ', self._ac_read_list_height_num_chars ) )
             rows.append( ( 'Start new search pages in \'searching immediately\': ', self._default_search_synchronised ) )
-            rows.append( ( 'show system:everything even if total files is over 10,000: ', self._always_show_system_everything ) )
-            rows.append( ( 'hide inbox and archive system predicates if either has no files: ', self._filter_inbox_and_archive_predicates ) )
+            rows.append( ( 'Show system:everything: ', self._show_system_everything ) )
             
             gridbox = ClientGUICommon.WrapInGrid( self._read_autocomplete_panel, rows )
             
@@ -1629,8 +1622,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._new_options.SetInteger( 'ac_read_list_height_num_chars', self._ac_read_list_height_num_chars.value() )
             
-            self._new_options.SetBoolean( 'always_show_system_everything', self._always_show_system_everything.isChecked() )
-            self._new_options.SetBoolean( 'filter_inbox_and_archive_predicates', self._filter_inbox_and_archive_predicates.isChecked() )
+            self._new_options.SetBoolean( 'show_system_everything', self._show_system_everything.isChecked() )
             
             self._new_options.SetNoneableInteger( 'forced_search_limit', self._forced_search_limit.GetValue() )
             
