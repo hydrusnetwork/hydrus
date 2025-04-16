@@ -2297,8 +2297,6 @@ Connect to noVNC via <code>http://yourdockerhost:5800/vnc.html</code> or use <a 
 The client runs with default permissions of <code>1000:1000</code>, <del>this can be changed by the ENV <code>UID</code> and <code>GID</code>(not working atm, fixed to 1000)</del> will be fixed someday™.</p>
 <h4 id="the_container_will_not_fix_the_permissions_inside_the_db_folder_chown_your_db_folder_content_on_your_own">The container will <strong>NOT</strong> fix the permissions inside the db folder. <strong>CHOWN YOUR DB FOLDER CONTENT ON YOUR OWN</strong><a class="headerlink" href="#the_container_will_not_fix_the_permissions_inside_the_db_folder_chown_your_db_folder_content_on_your_own" title="Permanent link">&para;</a></h4>
 <p>If you have enough RAM, mount <code>/tmp</code> as tmpfs. If not, download more RAM.</p>
-<p>As of <code>v359</code> hydrus understands IPFS <code>nocopy</code>. And can be easily run with go-ipfs container.
-Read <a href="https://hydrusnetwork.github.io/hydrus/ipfs.html">Hydrus IPFS help</a>. Mount <code>HOST_PATH_DB/client_files</code> to <code>/data/client_files</code> in ipfs. Go manage the ipfs service and set the path to <code>/data/client_files</code>, you'll know where to put it in.</p>
 <p>Example compose file:
 <div class="highlight"><pre><span></span><code><span class="nt">version</span><span class="p">:</span><span class="w"> </span><span class="s">&#39;3.8&#39;</span>
 <span class="nt">volumes</span><span class="p">:</span>

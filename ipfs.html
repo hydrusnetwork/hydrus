@@ -1270,15 +1270,6 @@
   
 </li>
       
-        <li class="md-nav__item">
-  <a href="#additional_links" class="md-nav__link">
-    <span class="md-ellipsis">
-      additional links
-    </span>
-  </a>
-  
-</li>
-      
     </ul>
   
 </nav>
@@ -2284,15 +2275,6 @@
   
 </li>
       
-        <li class="md-nav__item">
-  <a href="#additional_links" class="md-nav__link">
-    <span class="md-ellipsis">
-      additional links
-    </span>
-  </a>
-  
-</li>
-      
     </ul>
   
 </nav>
@@ -2319,7 +2301,7 @@
 
 <h1 id="ipfs">IPFS<a class="headerlink" href="#ipfs" title="Permanent link">&para;</a></h1>
 <p>IPFS is a p2p protocol that makes it easy to share many sorts of data. The hydrus client can communicate with an IPFS daemon to send and receive files.</p>
-<p>You can read more about IPFS from <a href="http://ipfs.io">their homepage</a>, or <a href="https://medium.com/@ConsenSys/an-introduction-to-ipfs-9bba4860abd0">this guide</a> that explains its various rules in more detail.</p>
+<p>You can read more about IPFS from <a href="http://ipfs.tech">their homepage</a>.</p>
 <p>For our purposes, we only need to know about these concepts:</p>
 <ul>
 <li><strong>IPFS daemon</strong> -- A running instance of the IPFS executable that can talk to the larger network.</li>
@@ -2328,53 +2310,49 @@
 <li><strong>unpin</strong> -- To tell our IPFS daemon to stop hosting a file or group of files.</li>
 </ul>
 <h2 id="getting_ipfs">getting ipfs<a class="headerlink" href="#getting_ipfs" title="Permanent link">&para;</a></h2>
-<p><em>Note there is now a nicer desktop package <a href="https://docs.ipfs.io/install/ipfs-desktop/">here</a>. I haven't used it, but it may be a nicer intro to the program.</em></p>
-<p>Get the prebuilt executable <a href="https://docs.ipfs.io/install/command-line/">here</a>. Inside should be a very simple 'ipfs' executable that does everything. Extract it somewhere and open up a terminal in the same folder, and then type:</p>
-<ul>
-<li><code>ipfs init</code></li>
-<li><code>ipfs daemon</code></li>
-</ul>
-<p>The IPFS exe should now be running in that terminal, ready to respond to requests:</p>
-<p><img alt="" src="images/ipfs_terminal.png" /></p>
-<p>You can kill it with <span class="keys"><kbd class="key-control">Ctrl</kbd><span>+</span><kbd class="key-c">C</kbd></span> and restart it with the <code>ipfs daemon</code> call again (you only have to run <code>ipfs init</code> once).</p>
-<p>When it is running, opening <a href="http://127.0.0.1:8080/ipfs/QmfM2r8seH2GiRaC4esTjeraXEachRt8ZsSeGaWTPLyMoG">this page</a> should download and display an example 'Hello World!' file from <span class="dealwithit">~~~across the internet~~~</span>.</p>
-<p>Your daemon listens for other instances of ipfs using port 4001, so if you know how to open that port in your firewall and router, make sure you do.</p>
+<p>IPFS used to mostly be just an executable, but it now comes as a much nicer <a href="https://docs.ipfs.tech/install/ipfs-desktop/">desktop package</a>. I recommend using this as you are learning.</p>
+<p>Just install and run it, and it will handle the technical side of things. Once it is up, if it all seems to be happy and connected to the network, open <a href="http://127.0.0.1:8080/ipfs/QmfM2r8seH2GiRaC4esTjeraXEachRt8ZsSeGaWTPLyMoG">this page</a>, and it should download and display an example 'Hello World!' file from <span class="dealwithit">~~~across the internet~~~</span>.</p>
+<p>Your daemon listens for other instances of ipfs using port 4001, so if you need to open that port in your firewall/router, make sure you do. It presents an API on port 5001 and an http interface for your browser on 8080. Putting <code>http://127.0.0.1:8080/ipfs/[multihash]</code> into your browser should load up that multihash, which for our purposes will usually be a file or a directory of more multihashes.</p>
+<div class="admonition info">
+<p class="admonition-title">Slow Access</p>
+<p>IPFS can be very slow. Even if you know that your friend has a file pinned, it can take time for your request to propagate across the network and connect you to his node. If you try to hit year-old multihashes, expect to get a lot of timeouts (the files are almost certainly no longer pinned by any active daemon across the network).</p>
+<p>Similarly, if you turn your daemon off and thus disconnect from the network, it cannot serve anything you have pinned to anyone else.</p>
+</div>
 <h2 id="connecting">connecting your client<a class="headerlink" href="#connecting" title="Permanent link">&para;</a></h2>
-<p>IPFS daemons are treated as services inside hydrus, so go to <em>services-&gt;manage services-&gt;remote-&gt;ipfs daemons</em> and add in your information. Hydrus uses the API port, default 5001, so you will probably want to use credentials of <code>127.0.0.1:5001</code>. You can click 'test credentials' to make sure everything is working.</p>
+<p>IPFS daemons are treated as services inside hydrus, so go to <em>services-&gt;manage services-&gt;add-&gt;ipfs daemon</em>. You will probably want to use credentials of <code>127.0.0.1:5001</code>. Click 'test address' to make sure everything is working.</p>
 <p><img alt="" src="images/ipfs_services.png" /></p>
 <p>Thereafter, you will get the option to 'pin' and 'unpin' from a thumbnail's right-click menu, like so:</p>
 <p><img alt="" src="images/ipfs_pin.png" /></p>
-<p>This works like hydrus's repository uploads--it won't happen immediately, but instead will be queued up at the pending menu. Commit all your pins when you are ready:</p>
+<p>This works like hydrus's repository uploads--it won't happen immediately, but instead will be queued up at the pending menu.</p>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>We are in a danger area here! If you pin a file and then tell someone the multihash, consider it now public! You do not control what happens to a pinned file after the first person downloads it from you. You can unpin it, but as long as someone else keeps it pinned, that file will live forever on IPFS. Be careful!</p>
+</div>
+<p>Commit all your pins when you are ready:</p>
 <p><img alt="" src="images/ipfs_commit.png" /></p>
-<p>Notice how the IPFS icon appears on your pending and pinned files. You can search for these files using 'system:file service'.</p>
-<p>Unpin works the same as pin, just like a hydrus repository petition.</p>
+<p>Notice how the IPFS icon appears on your pending and pinned files. You can search for these files by changing the file domain (where it normally says "my files" in the autocomplete dropdown) or by using 'system:file service'.</p>
+<p>Unpin works the same as pin.</p>
 <p>Right-clicking any pinned file will give you a new 'share' action:</p>
 <p><img alt="" src="images/ipfs_multihash.png" /></p>
-<p>Which will put it straight in your clipboard. In this case, it is <a href="http://127.0.0.1:8080/ipfs/QmP6BNvWfkNf74bY3q1ohtDZ9gAmss4LAjuFhqpDPQNm1S">QmP6BNvWfkNf74bY3q1ohtDZ9gAmss4LAjuFhqpDPQNm1S</a>.</p>
-<p>If you want to share a pinned file with someone, you have to tell them this multihash. They can then:</p>
+<p>Which will put it straight in your clipboard.</p>
+<p>If you want to share a pinned file with someone, you have to tell them that multihash. They can then:</p>
 <ul>
 <li>View it through their own ipfs daemon's gateway, at <code>http://127.0.0.1:8080/ipfs/[multihash]</code></li>
 <li>View it through a public web gateway, such as the one the IPFS people run, at <code>http://ipfs.io/ipfs/[multihash]</code></li>
-<li>Download it through their ipfs-connected hydrus client by going <em>pages-&gt;new download popup-&gt;an ipfs multihash</em>.</li>
 </ul>
+<p>You can also paste one of these URLs into any normal hydrus downloader.</p>
+<div class="admonition info">
+<p class="admonition-title">URL Prefix</p>
+<p>If you put in <code>http://127.0.0.1:8080/ipfs/</code> in the clipboard prefix field in <em>manage services</em>, then any time you copy a multihash, you'll actually copy the whole valid URL that fetches it. You could also use a public gateway prefix, or an externally visible host for your local IPFS instance.</p>
+</div>
 <h2 id="directories">directories<a class="headerlink" href="#directories" title="Permanent link">&para;</a></h2>
-<p>If you have many files to share, IPFS also supports directories, and now hydrus does as well. IPFS directories use the same sorts of multihash as files, and you can download them into the hydrus client using the same <em>pages-&gt;new download popup-&gt;an ipfs multihash</em> menu entry. The client will detect the multihash represents a directory and give you a simple selection dialog:</p>
+<p>If you have many files to share, IPFS also supports directories. IPFS directories use a similar multihash as files, and will appear as a directory listing in any web browser:</p>
 <p><img alt="" src="images/ipfs_dir_download.png" /></p>
 <p>You may recognise those hash filenames--this example was created by hydrus, which can create ipfs directories from any selection of files from the same right-click menu:</p>
 <p><img alt="" src="images/ipfs_dir_upload.png" /></p>
 <p>Hydrus will pin all the files and then wrap them in a directory, showing its progress in a popup. Your current directory shares are summarised on the respective <em>services-&gt;review services</em> panel:</p>
 <p><img alt="" src="images/ipfs_review_services.png" /></p>
-<h2 id="additional_links">additional links<a class="headerlink" href="#additional_links" title="Permanent link">&para;</a></h2>
-<p>If you find you use IPFS a lot, here are some add-ons for your web browser, as recommended by /tech/:</p>
-<p>This script changes all bare ipfs hashes into clickable links to the ipfs gateway (on page loads):</p>
-<ul>
-<li><a href="https://greasyfork.org/en/scripts/14837-ipfs-hash-linker">https://greasyfork.org/en/scripts/14837-ipfs-hash-linker</a></li>
-</ul>
-<p>These redirect all gateway links to your local daemon when it's on, it works well with the previous script:</p>
-<ul>
-<li><a href="https://github.com/lidel/ipfs-firefox-addon">https://github.com/lidel/ipfs-firefox-addon</a></li>
-<li><a href="https://github.com/dylanPowers/ipfs-chrome-extension">https://github.com/dylanPowers/ipfs-chrome-extension</a></li>
-</ul>
+<p>Hydrus used to support native downloads of IPFS multihashes, including directories, but it ended up a bit of a mess. I expect to reintroduce it in a nicer format in future. For now, please use the URL downloader.</p>
 
 
 
@@ -2395,7 +2373,7 @@
     <span class="md-icon" title="Last update">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 13.1c-.1 0-.3.1-.4.2l-1 1 2.1 2.1 1-1c.2-.2.2-.6 0-.8l-1.3-1.3c-.1-.1-.2-.2-.4-.2m-1.9 1.8-6.1 6V23h2.1l6.1-6.1zM12.5 7v5.2l4 2.4-1 1L11 13V7zM11 21.9c-5.1-.5-9-4.8-9-9.9C2 6.5 6.5 2 12 2c5.3 0 9.6 4.1 10 9.3-.3-.1-.6-.2-1-.2s-.7.1-1 .2C19.6 7.2 16.2 4 12 4c-4.4 0-8 3.6-8 8 0 4.1 3.1 7.5 7.1 7.9l-.1.2z"/></svg>
     </span>
-    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="September 7, 2022 21:16:25">September 7, 2022</span>
+    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="April 16, 2025 21:06:32">April 16, 2025</span>
   </span>
 
     

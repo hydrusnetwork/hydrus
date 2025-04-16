@@ -2380,8 +2380,9 @@
 <h1 id="getting_started_with_files">Getting started with files<a class="headerlink" href="#getting_started_with_files" title="Permanent link">&para;</a></h1>
 <div class="admonition warning">
 <p class="admonition-title">Warning</p>
-<p>Hydrus can be powerful, and you control everything. By default, you are not connected to any servers and absolutely nothing is shared with other users--and you can't accidentally one-click your way to exposing your whole collection--but if you tag private files with real names and click to upload that data to a tag repository that other people have access to, the program won't try to stop you. If you want to do private sexy slideshows of your shy wife, that's great, but think twice before you upload files or tags anywhere, particularly as you learn. It is <strong>impossible</strong> to contain leaks of private information.</p>
-<p>There are no limits and few brakes on your behaviour. It is possible to import millions of files. For many new users, their first mistake is downloading too much too fast in overexcitement and becoming overwhelmed. Take things slow and figure out good processing workflows that work for your schedule before you start adding 500 subscriptions.</p>
+<p>Hydrus can be powerful, and you control everything. By default, you are not connected to any servers and absolutely nothing is shared with other users--and you can't accidentally one-click your way to exposing your whole collection--but if you tag private files with real names and click to upload that data to a tag repository that other people have access to, the program won't try to stop you.</p>
+<p>If you want to do private sexy slideshows of your shy wife, that's great, but if you have set up a repository or Client API connection to share content with friends, use your brain! It is <strong>impossible</strong> to contain leaks of private information.</p>
+<p>It is possible to import millions of files. For many new users, their first mistake is downloading too much too fast in overexcitement and becoming overwhelmed. Take things slow and figure out good processing workflows that work for your schedule before you start adding 500 subscriptions.</p>
 </div>
 <h2 id="the_problem">The problem<a class="headerlink" href="#the_problem" title="Permanent link">&para;</a></h2>
 <p>If you have ever seen something like this--</p>
@@ -2451,6 +2452,7 @@
 <p>This saves time.</p>
 <h2 id="what_hydrus_is_for">What Hydrus is for<a class="headerlink" href="#what_hydrus_is_for" title="Permanent link">&para;</a></h2>
 <p>The hydrus client's workflows are not designed for half-finished files that you are still working on. Think of it as a giant archive for everything excellent you have decided to store away. It lets you find and remember these things quickly.</p>
+<p>Similarly, hydrus does not expect its files to ever change! Do not go into the <code>client_files</code> folder and edit files in-place. The file storage is strictly read-only, and if you violate that, hydrus will eventually notice and assume it was hard drive damage. If you want to transform files, you should export them, edit them, and re-import them.</p>
 <p>In general, Hydrus is good for individual files like you commonly find on imageboards or boorus. Although advanced users can cobble together some page-tag-based solutions, it is not yet great for multi-file media like comics and definitely not as a typical playlist-based music player.</p>
 <p>If you are looking for a comic manager to supplement hydrus, check out this user-made guide to other archiving software <a href="https://github.com/CuddleBear92/Hydrus-Presets-and-Scripts/wiki/0-Alternative-Programs-and-Resources#software">here</a>!</p>
 <p>And although the client can hold millions of files, it starts to creak and chug when displaying or otherwise tracking more than about 40,000 or so in a single gui window. As you learn to use it, please try not to let your download queues or general search pages regularly sit at more than 40 or 50k total <em>items</em>, or you'll start to slow other things down. Another common mistake is to leave one large 'system:everything' or 'system:inbox' page open with 70k+ files. For these sorts of 'ongoing processing' pages, try adding a 'system:limit=256' to keep them snappy. One user mentioned he had regular gui hangs of thirty seconds or so, and when we looked into it, it turned out his handful of download pages had three million files queued up! Just try and take things slow until you figure out what your computer's limits are.</p>
@@ -2474,7 +2476,7 @@
     <span class="md-icon" title="Last update">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 13.1c-.1 0-.3.1-.4.2l-1 1 2.1 2.1 1-1c.2-.2.2-.6 0-.8l-1.3-1.3c-.1-.1-.2-.2-.4-.2m-1.9 1.8-6.1 6V23h2.1l6.1-6.1zM12.5 7v5.2l4 2.4-1 1L11 13V7zM11 21.9c-5.1-.5-9-4.8-9-9.9C2 6.5 6.5 2 12 2c5.3 0 9.6 4.1 10 9.3-.3-.1-.6-.2-1-.2s-.7.1-1 .2C19.6 7.2 16.2 4 12 4c-4.4 0-8 3.6-8 8 0 4.1 3.1 7.5 7.1 7.9l-.1.2z"/></svg>
     </span>
-    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="November 13, 2024 22:31:43">November 13, 2024</span>
+    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="April 16, 2025 21:06:32">April 16, 2025</span>
   </span>
 
     

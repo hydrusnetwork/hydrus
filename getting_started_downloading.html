@@ -2624,8 +2624,8 @@
 
 
 <h1 id="getting_started_with_downloading">Getting started with downloading<a class="headerlink" href="#getting_started_with_downloading" title="Permanent link">&para;</a></h1>
-<p>The hydrus client has a sophisticated and completely user-customisable download system. It can pull from any booru or regular gallery site or imageboard, and also from some special examples like twitter and tumblr. A single file or URL to massive imports, the downloader can handle it all. A fresh install will by default have support for the bigger sites, but it <em>is</em> possible, with some work, for any user to <a href="downloader_intro.html">create a new shareable downloader</a> for a new site.</p>
-<p>The downloader is highly parallelisable, and while the default <a href="#bandwidth">bandwidth rules</a> should stop you from running too hot and downloading so much at once that you annoy the servers you are downloading from, there are no brakes in the program on what you can get.</p>
+<p>The hydrus client has a sophisticated and completely user-customisable download system. It can pull from any booru or regular gallery site or imageboard, and also, to a smaller extent, special examples like twitter. A fresh install will by default have support for the bigger sites, but it <em>is</em> possible, with some work, for any user to <a href="downloader_intro.html">create a new shareable downloader</a> for a new site.</p>
+<p>The downloader is highly parallelisable, but the default <a href="#bandwidth">bandwidth rules</a> should stop you from running too hot and downloading so much at once that you annoy the servers you are downloading from.</p>
 <div class="admonition danger">
 <p class="admonition-title">Danger</p>
 <p>It is very important that you take this slow. Many users get overexcited with their new ability to download 500,000 files <em>and then do so</em>, only discovering later that 98% of what they got was junk that they now have to wade through. Figure out what workflows work for you, how fast you process files, what content you <em>actually</em> want, how much bandwidth and hard drive space you have, and prioritise and throttle your incoming downloads to match. If you can realistically only archive/delete filter 50 files a day, there is little benefit to downloading 500 new files a day. START SLOW.</p>
@@ -2643,7 +2643,7 @@
 <dt><strong>URL download</strong></dt>
 <dd>You paste or drag-and-drop gallery and post/file URLs into this, and if hydrus understands it, it will import it. Does not do multi-page searching. Useful for one-off jobs. (The <a href="client_api.html">API</a> can send URLs to this)</dd>
 <dt><strong>Simple downloader</strong></dt>
-<dd>Intended for simple one-off jobs with a single simple parsing rule, like 'get all the linked images from this page'.</dd>
+<dd>Advanced. Intended for simple one-off jobs with a single simple parsing rule, like 'get all the linked images from this page'.</dd>
 </dl>
 <h3 id="gallery_download">Gallery download<a class="headerlink" href="#gallery_download" title="Permanent link">&para;</a></h3>
 <p><img alt="" src="images/downloader_page.png" /></p>
@@ -2737,7 +2737,7 @@ A few of the options have more information if you hover over them.</dd>
 <p>But if you mess up your tag import options somewhere and need to re-run a download with forced tag re-fetching, how to do it?</p>
 <p>At the moment, this is in tag import options, the <code>force page fetch even if...</code> checkboxes. You can either set up a one-time downloader page with specific tag import options that check both of these checkboxes and then paste URLs in, or you can right-click a selection of thumbnails and have hydrus create the page for you under the <em>urls-&gt;force metadata refetch</em> menu. Once you are done with the downloader page, delete it and do not use it for normal jobs--again, this method of downloading is inefficient and should not be used for repeating, long-term, or speculative jobs. Only use it to fill in specific holes.</p>
 <h3 id="note_parsing">Note Parsing<a class="headerlink" href="#note_parsing" title="Permanent link">&para;</a></h3>
-<p>Hydrus alsos parse 'notes' from some sites. This is a young feature, and a little advanced at times, but it generally means the comments that artists leave on certain gallery sites, or something like a tweet text. Notes are editable by you and appear in a hovering window on the right side of the media viewer.</p>
+<p>Hydrus also parses 'notes' from some sites. This is a young feature, and a little advanced at times, but it generally means the comments that artists leave on certain gallery sites, or something like a tweet text. Notes are editable by you and appear in a hovering window on the right side of the media viewer.</p>
 <p><img alt="" src="images/note_import_options_normal.png" /></p>
 <p>Most of the controls here ensure that successive parses do not duplicate existing notes. The default settings are fine for all normal purposes, and you can leave them alone unless you know you want something special (e.g. turning note parsing off completely).</p>
 <h2 id="bandwidth">Bandwidth<a class="headerlink" href="#bandwidth" title="Permanent link">&para;</a></h2>
@@ -2760,7 +2760,7 @@ A few of the options have more information if you hover over them.</dd>
 <p>Many sites grant all their content without you having to log in at all, but others require it for NSFW or special content, or you may wish to take advantage of site-side user preferences like personal blacklists. If you wish, you can give hydrus some login details here, and it will try to login--just as a browser would--before it downloads anything from that domain.</p>
 <div class="admonition warning">
 <p class="admonition-title">Warning</p>
-<p>For multiple reasons, I do not recommend you use important accounts with hydrus. Use a throwaway account you don't care much about.</p>
+<p>As a general rule, I do not recommend you use important accounts with hydrus. Use a throwaway account you don't care much about.</p>
 </div>
 <p>To start using a login script, select the domain and click 'edit credentials'. You'll put in your username/password, and then 'activate' the login for the domain, and that should be it! The next time you try to get something from that site, the first request will wait (usually about ten seconds) while a login popup performs the login. Most logins last for about thirty days (and many refresh that 30-day timer every time you make a new request), so once you are set up, you usually never notice it again, especially if you have a subscription on the domain.</p>
 <p>Most sites only have one way of logging in, but hydrus does support more. Hentai Foundry is a good example--by default, the client performs the 'click-through' login as a guest, which requires no credentials and means any hydrus client can get any content from the start. But this way of logging in only lasts about 60 minutes or so before having to be refreshed, and it does not hide any spicy stuff, so if you use HF a lot, I recommend you create a throwaway account, set the filters you like in your HF profile (e.g. no guro content), and then click the 'change login script' in the client to the proper username/pass login.</p>
@@ -2800,7 +2800,7 @@ A few of the options have more information if you hover over them.</dd>
     <span class="md-icon" title="Last update">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 13.1c-.1 0-.3.1-.4.2l-1 1 2.1 2.1 1-1c.2-.2.2-.6 0-.8l-1.3-1.3c-.1-.1-.2-.2-.4-.2m-1.9 1.8-6.1 6V23h2.1l6.1-6.1zM12.5 7v5.2l4 2.4-1 1L11 13V7zM11 21.9c-5.1-.5-9-4.8-9-9.9C2 6.5 6.5 2 12 2c5.3 0 9.6 4.1 10 9.3-.3-.1-.6-.2-1-.2s-.7.1-1 .2C19.6 7.2 16.2 4 12 4c-4.4 0-8 3.6-8 8 0 4.1 3.1 7.5 7.1 7.9l-.1.2z"/></svg>
     </span>
-    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="January 8, 2025 20:54:35">January 8, 2025</span>
+    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="April 16, 2025 21:06:32">April 16, 2025</span>
   </span>
 
     
