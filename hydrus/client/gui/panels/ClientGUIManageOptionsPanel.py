@@ -3,6 +3,7 @@ import random
 import typing
 
 from qtpy import QtGui as QG
+from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
 
 from hydrus.core import HydrusConstants as HC
@@ -2073,11 +2074,24 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._pages_panel = ClientGUICommon.StaticBox( self, 'pages' )
             
+            self._all_my_files_in_chooser_hbox = QP.HBoxLayout()
             self._show_all_my_files_on_page_chooser = QW.QCheckBox( self._pages_panel )
             self._show_all_my_files_on_page_chooser.setToolTip( ClientGUIFunctions.WrapToolTip( 'This will only show if you have more than one local file domain.' ) )
+            self._show_all_my_files_on_page_chooser_at_top = QW.QCheckBox( self._pages_panel )
+            self._show_all_my_files_on_page_chooser_at_top.setToolTip( ClientGUIFunctions.WrapToolTip( 'Put "all my files" at the top of the page chooser, to see it if you have too many local file domains.' ) )
+            QP.AddToLayout( self._all_my_files_in_chooser_hbox, self._show_all_my_files_on_page_chooser )
+            QP.AddToLayout( self._all_my_files_in_chooser_hbox, ClientGUICommon.BetterStaticText( self, 'At the top:' ) )
+            QP.AddToLayout( self._all_my_files_in_chooser_hbox, self._show_all_my_files_on_page_chooser_at_top )
+            
+            self._local_files_in_chooser_hbox = QP.HBoxLayout()
             self._show_local_files_on_page_chooser = QW.QCheckBox( self._pages_panel )
             self._show_local_files_on_page_chooser.setToolTip( ClientGUIFunctions.WrapToolTip( 'If you do not know what this is, you do not want it!' ) )
-            
+            self._show_local_files_on_page_chooser_at_top = QW.QCheckBox( self._pages_panel )
+            self._show_local_files_on_page_chooser_at_top.setToolTip( ClientGUIFunctions.WrapToolTip( 'Put "local files" at the top of the page chooser (above "all my files" as well, if it is present).' ) )
+            QP.AddToLayout( self._local_files_in_chooser_hbox, self._show_local_files_on_page_chooser )
+            QP.AddToLayout( self._local_files_in_chooser_hbox, ClientGUICommon.BetterStaticText( self, 'At the top:' ) )
+            QP.AddToLayout( self._local_files_in_chooser_hbox, self._show_local_files_on_page_chooser_at_top )
+
             self._confirm_all_page_closes = QW.QCheckBox( self._pages_panel )
             self._confirm_all_page_closes.setToolTip( ClientGUIFunctions.WrapToolTip( 'With this, you will always be asked, even on single page closures of simple file pages.' ) )
             self._confirm_non_empty_downloader_page_close = QW.QCheckBox( self._pages_panel )
@@ -2177,7 +2191,10 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._show_session_size_warnings.setChecked( self._new_options.GetBoolean( 'show_session_size_warnings' ) )
             
             self._show_all_my_files_on_page_chooser.setChecked( self._new_options.GetBoolean( 'show_all_my_files_on_page_chooser' ) )
+            self._show_all_my_files_on_page_chooser_at_top.setChecked( self._new_options.GetBoolean( 'show_all_my_files_on_page_chooser_at_top' ) )
             self._show_local_files_on_page_chooser.setChecked( self._new_options.GetBoolean( 'show_local_files_on_page_chooser' ) )
+            self._show_local_files_on_page_chooser_at_top.setChecked( self._new_options.GetBoolean( 'show_local_files_on_page_chooser_at_top' ) )
+            
             self._confirm_all_page_closes.setChecked( self._new_options.GetBoolean( 'confirm_all_page_closes' ) )
             self._confirm_non_empty_downloader_page_close.setChecked( self._new_options.GetBoolean( 'confirm_non_empty_downloader_page_close' ) )
             
@@ -2225,8 +2242,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             rows = []
             
-            rows.append( ( 'In new page chooser, show "all my files" if appropriate: ', self._show_all_my_files_on_page_chooser ) )
-            rows.append( ( 'In new page chooser, show "local files": ', self._show_local_files_on_page_chooser ) )
+            rows.append( ( 'In new page chooser, show "all my files" if appropriate:', self._all_my_files_in_chooser_hbox ) )
+            rows.append( ( 'In new page chooser, show "local files":', self._local_files_in_chooser_hbox ) )
             rows.append( ( 'Confirm when closing any page: ', self._confirm_all_page_closes ) )
             rows.append( ( 'Confirm when closing a non-empty downloader page: ', self._confirm_non_empty_downloader_page_close ) )
             rows.append( ( 'Put new page tabs on: ', self._default_new_page_goes ) )
@@ -2305,7 +2322,10 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._new_options.SetBoolean( 'only_save_last_session_during_idle', self._only_save_last_session_during_idle.isChecked() )
             
             self._new_options.SetBoolean( 'show_all_my_files_on_page_chooser', self._show_all_my_files_on_page_chooser.isChecked() )
+            self._new_options.SetBoolean( 'show_all_my_files_on_page_chooser_at_top', self._show_all_my_files_on_page_chooser_at_top.isChecked() )
             self._new_options.SetBoolean( 'show_local_files_on_page_chooser', self._show_local_files_on_page_chooser.isChecked() )
+            self._new_options.SetBoolean( 'show_local_files_on_page_chooser_at_top', self._show_local_files_on_page_chooser_at_top.isChecked() )
+            
             self._new_options.SetBoolean( 'confirm_all_page_closes', self._confirm_all_page_closes.isChecked() )
             self._new_options.SetBoolean( 'confirm_non_empty_downloader_page_close', self._confirm_non_empty_downloader_page_close.isChecked() )
             
