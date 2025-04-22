@@ -241,6 +241,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             'draw_transparency_checkerboard_media_canvas' : False,
             'draw_transparency_checkerboard_media_canvas_duplicates' : True,
             'menu_choice_buttons_can_mouse_scroll' : True,
+            'remember_options_window_panel' : True,
             'focus_preview_on_ctrl_click' : False,
             'focus_preview_on_ctrl_click_only_static' : False,
             'focus_preview_on_shift_click' : False,
@@ -576,7 +577,8 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             'default_suggested_tags_notebook_page' : 'related',
             'last_incremental_tagging_namespace' : 'page',
             'last_incremental_tagging_prefix' : '',
-            'last_incremental_tagging_suffix' : ''
+            'last_incremental_tagging_suffix' : '',
+            'last_options_window_panel' : 'gui'
         }
         
         self._dictionary[ 'string_list' ] = {

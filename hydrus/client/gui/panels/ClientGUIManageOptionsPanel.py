@@ -105,6 +105,12 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         self._listbook.AddPage( 'advanced', self._AdvancedPanel( self._listbook, self._new_options ) )
         
+        if self._new_options.GetBoolean( 'remember_options_window_panel') :
+            
+            self._listbook.currentChanged.connect( self.SetCurrentOptionsPanel )
+            
+            self._listbook.SelectName( self._new_options.GetString( 'last_options_window_panel' ) )
+        
         #
         
         vbox = QP.VBoxLayout()
@@ -1767,6 +1773,9 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._use_qt_file_dialogs = QW.QCheckBox( self._misc_panel )
             self._use_qt_file_dialogs.setToolTip( ClientGUIFunctions.WrapToolTip( 'If you get crashes opening file/directory dialogs, try this.' ) )
             
+            self._remember_options_window_panel = QW.QCheckBox( self._misc_panel )
+            self._remember_options_window_panel.setToolTip( ClientGUIFunctions.WrapToolTip( 'This will cause the options window (this one) to reopen at the last panel you were looking at when it was closed.' ) )
+            
             #
             
             frame_locations_panel = ClientGUICommon.StaticBox( self, 'frame locations' )
@@ -1812,6 +1821,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._use_qt_file_dialogs.setChecked( self._new_options.GetBoolean( 'use_qt_file_dialogs' ) )
             
+            self._remember_options_window_panel.setChecked( self._new_options.GetBoolean( 'remember_options_window_panel' ) )
+            
             self._disable_get_safe_position_test.setChecked( self._new_options.GetBoolean( 'disable_get_safe_position_test' ) )
             
             for ( name, info ) in self._new_options.GetFrameLocations():
@@ -1843,6 +1854,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows.append( ( 'EXPERIMENTAL: Bytes strings >1KB pseudo significant figures: ', self._human_bytes_sig_figs ) )
             rows.append( ( 'BUGFIX: If on macOS, show dialog menus in a debug menu: ', self._do_macos_debug_dialog_menus ) )
             rows.append( ( 'ANTI-CRASH BUGFIX: Use Qt file/directory selection dialogs, rather than OS native: ', self._use_qt_file_dialogs ) )
+            rows.append( ( 'Remember last open section in Options window', self._remember_options_window_panel ) )
             
             gridbox = ClientGUICommon.WrapInGrid( self, rows )
             
@@ -2018,6 +2030,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._new_options.SetBoolean( 'do_macos_debug_dialog_menus', self._do_macos_debug_dialog_menus.isChecked() )
             self._new_options.SetBoolean( 'use_qt_file_dialogs', self._use_qt_file_dialogs.isChecked() )
+            self._new_options.SetBoolean( 'remember_options_window_panel', self._remember_options_window_panel.isChecked() )
             
             self._new_options.SetBoolean( 'disable_get_safe_position_test', self._disable_get_safe_position_test.isChecked() )
             
@@ -6086,6 +6099,13 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._new_options.SetNoneableString( 'media_background_bmp_path', media_background_bmp_path )
             
+        
+    
+    def SetCurrentOptionsPanel ( self ):
+        
+        current_panel_name = self._listbook.tabText( self._listbook.GetCurrentPageIndex() )
+        
+        self._new_options.SetString( 'last_options_window_panel', current_panel_name )
         
     
     def CommitChanges( self ):
