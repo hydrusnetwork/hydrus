@@ -5457,7 +5457,14 @@ Accept: application/json
 </code></pre></div></p>
 <p>This data is essentially how mappings in the <code>storage</code> <code>tag_display_type</code> become <code>display</code>.</p>
 <p>The hex keys are the service keys, which you will have seen elsewhere, like <a href="#get_files_file_metadata">GET /get_files/file_metadata</a>. Note that there is no concept of 'all known tags' here. If a tag is in 'my tags', it follows the rules of 'my tags', and then all the services' display tags are merged into the 'all known tags' pool for user display.</p>
-<p><strong>Also, the siblings and parents here are not just what is in <em>tags-&gt;manage tag siblings/parents</em>, they are the final computed combination of rules as set in <em>tags-&gt;manage where tag siblings and parents apply</em>.</strong> The data given here is not guaranteed to be useful for editing siblings and parents on a particular service. That data, which is currently pair-based, will appear in a different API request in future.</p>
+<div class="admonition warning">
+<p class="admonition-title">Tag Relationships Apply In A Complicated Way</p>
+<p>There are two caveats to this data:  </p>
+<ol>
+<li>The siblings and parents here are not just what is in <em>tags-&gt;manage tag siblings/parents</em>, they are the final computed combination of rules as set in <em>tags-&gt;manage where tag siblings and parents apply</em>. The data given here is not guaranteed to be useful for editing siblings and parents on a particular service. That data, which is currently pair-based, will appear in a different API request in future.</li>
+<li>This is what is <em>actually processed, right now,</em> for those user preferences, as per <em>tags-&gt;sibling/parent sync-&gt;review current sync</em>. It reflects what they currently see in the UI. If the user still has pending sync work, this computation will change in future, perhaps radically (e.g. if they just removed the whole PTR ruleset two minutes ago), as will the rest of the "display" domain. The results may be funky while a user is in the midst of syncing, but these values are fine for most purposes. In the short term, you can broadly assume that the rules here very closely align with what you see in a recent file metadata call that pulls storage vs display mappings. If you want to decorate an autocomplete results call with sibling or parent data, this data is good for that.</li>
+</ol>
+</div>
 <ul>
 <li><code>ideal_tag</code> is how the tag appears in normal display to the user.</li>
 <li><code>siblings</code> is every tag that will show as the <code>ideal_tag</code>, including the <code>ideal_tag</code> itself.</li>
@@ -8158,7 +8165,7 @@ This request will also return any cookies for subdomains. The session system in 
     <span class="md-icon" title="Last update">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 13.1c-.1 0-.3.1-.4.2l-1 1 2.1 2.1 1-1c.2-.2.2-.6 0-.8l-1.3-1.3c-.1-.1-.2-.2-.4-.2m-1.9 1.8-6.1 6V23h2.1l6.1-6.1zM12.5 7v5.2l4 2.4-1 1L11 13V7zM11 21.9c-5.1-.5-9-4.8-9-9.9C2 6.5 6.5 2 12 2c5.3 0 9.6 4.1 10 9.3-.3-.1-.6-.2-1-.2s-.7.1-1 .2C19.6 7.2 16.2 4 12 4c-4.4 0-8 3.6-8 8 0 4.1 3.1 7.5 7.1 7.9l-.1.2z"/></svg>
     </span>
-    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="April 2, 2025 20:37:30">April 2, 2025</span>
+    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="April 23, 2025 20:18:44">April 23, 2025</span>
   </span>
 
     

@@ -2433,7 +2433,7 @@
 
   <h1>Filtering Duplicates Automatically</h1>
 
-<p><strong>Hey, this is all for a system that is only just launching. Not everything is active/ready yet!</strong></p>
+<p><strong>Hey, this is all for a system that is still launching. Advanced users only, and only simple comparisons are active/ready for real use!</strong></p>
 <h2 id="the_problem_with_duplicates_processing">the problem with duplicates processing<a class="headerlink" href="#the_problem_with_duplicates_processing" title="Permanent link">&para;</a></h2>
 <p>The duplicates filter can get pretty tedious. Pairs that are obvious resizes or pixel duplicates are easy to resolve but boring to work through.</p>
 <p>If only there were some way to automate common decisions! We could have hydrus solve these trivial duplicates in the background, leaving us with less, more interesting work to do.</p>
@@ -2463,7 +2463,7 @@
 <p>Go to the duplicates filtering page and switch to the 'auto-resolution' tab. This shows all your active auto-resolution rules and what they are currently doing. Hit <code>edit rules</code> to get started.</p>
 <p><a href="images/duplicates_auto_resolution_sidebar.png"><img alt="" src="images/duplicates_auto_resolution_sidebar.png" /></a></p>
 <h3 id="search">search<a class="headerlink" href="#search" title="Permanent link">&para;</a></h3>
-<p>Each rule represents a search, a way of testing pairs, and then a duplicate action. There's a button to add suggested rules.</p>
+<p>Each rule represents a search, a way of testing pairs, and then a duplicate action. There's a button to add suggested rules. Try adding 'pixel-perfect jpegs vs pngs'.</p>
 <p><a href="images/duplicates_auto_resolution_search.png"><img alt="" src="images/duplicates_auto_resolution_search.png" /></a></p>
 <p>Note that in addition to the jpeg/png filetype predicates, I have added <code>width &gt; 128</code> and <code>height &gt; 128</code> to each search. I said above that we are confident of this rule for <em>normal</em> images, but what about 16x16 icons? There a jpeg might, by chance, be a pixel-perfect match of a png, and maybe we want to keep the png anyway for odd cases.</p>
 <div class="admonition info">
@@ -2474,8 +2474,9 @@
 <h3 id="comparison">comparison<a class="headerlink" href="#comparison" title="Permanent link">&para;</a></h3>
 <p>Now let's look at the comparison tab:</p>
 <p><a href="images/duplicates_auto_resolution_comparison.png"><img alt="" src="images/duplicates_auto_resolution_comparison.png" /></a></p>
-<p>This is the area of the system that will see most future work. It uses the normal system predicate system for its logic. Only a few predicate types are supported right now, but this will expand. Also, the system only supports <code>A matches test</code> or <code>B matches test</code>, testing each file in isolation, but in future we'll have <code>A's filesize &gt;= 5x B's filesize</code> and so on.</p>
-<p>For our rule, we know that every 1,2 pair from the search will include one jpeg and one png, but they will come in random order. We can tell hydrus to orient it always as jpeg-png by saying that A has to be the jpeg.</p>
+<p>Since we know that every incoming search pair will include one jpeg and one png, we can simply define that A has to be the jpeg.</p>
+<p>You can get more complicated:</p>
+<p><a href="images/duplicates_auto_resolution_comparison_complex.png"><img alt="" src="images/duplicates_auto_resolution_comparison_complex.png" /></a></p>
 <h3 id="action">action<a class="headerlink" href="#action" title="Permanent link">&para;</a></h3>
 <p>The 'action' tab simply sets what we want to do. This all works the same way as in the duplicate filter. For our rule, we want to say A, the jpeg, is better, and we want to delete B, the worse png. We'll leave the content merge options as the default, merging tags and ratings and so on just as we would for a 'set better than' in a normal duplicate filter.</p>
 <p><a href="images/duplicates_auto_resolution_action.png"><img alt="" src="images/duplicates_auto_resolution_action.png" /></a></p>
@@ -2489,7 +2490,7 @@
 <p>Once we are happy, we can apply the dialogs and save our rule back. It will start working immediately.</p>
 <h3 id="semi_and_fully_automatic">semi and fully automatic<a class="headerlink" href="#semi_and_fully_automatic" title="Permanent link">&para;</a></h3>
 <p>Rules can either be 'semi-automatic' or 'fully automatic'. They have the all same settings, and they will search and test pairs the same way, but semi-automatic rules will not perform their final duplicate action without your approval. Fully automatic rules are fire-and-forget, and will do everything without your interference.</p>
-<p>You might like to start your rules in semi-automatic, and if you never encounter any false-positives, you can switch it to fully automatic.</p>
+<p>You might like to start your rules in semi-automatic, and if you don't encounter any false-positives after a bit of work, then you can more confidently switch it to fully automatic.</p>
 <h2 id="so_how_does_this_all_work">so, how does this all work?<a class="headerlink" href="#so_how_does_this_all_work" title="Permanent link">&para;</a></h2>
 <p>When you add a new rule, hydrus will throw all the current potential duplicate pairs at the rule and then work in brief background packets, searching for pairs and then running them against the comparsion test. Semi-automatic rules will queue ready-to-action pairs for your approval, but fully automatic rules will go ahead and action them immediately. The list on the duplicates page will update with a live summary.</p>
 <p>Click 'review actions' to see it in more detail:</p>
@@ -2499,7 +2500,7 @@
 <p>This shows everything the rule has actioned. The 'undo' button is serious and will be inconvenient to you, so try not to rely on it.</p>
 <p>When you import new files and the regular potential dupes search (on the 'preparation' tab of the duplicates page) finds new pairs amongst them, the auto-resolution rules will be told about them and will quickly see if they can action them. You can force the system to work a bit harder on a particular rule if you want to catch up somewhere, but normally you can just leave it all alone and be happy that it is saving you time in the background.</p>
 <h2 id="future">future<a class="headerlink" href="#future" title="Permanent link">&para;</a></h2>
-<p>I will expand the 'comparison' tab allow for more system predicate types and figure out 'A vs B' tests too. Pixel-perfect jpeg/png is easy and simple to logically define, but we'll want to push into fuzzier territory like 'delete all files that are close-match dupes but the resolution difference is greater than 1.4x' etc.. Depending on how things go, we may figure out some new hardcoded tools that do more sophisticated A vs B similarity testing, like "A is &gt;= 99.7% pixel-similar to B" or "A is pixel-perfect-in-greyscale to B" (for recolour detection) and so on.</p>
+<p>We need more powerful comparison tools. Pixel-perfect jpeg/png is easy and simple to logically define, but we want to push into fuzzier territory like 'delete all files that are close-match dupes but the resolution difference is greater than 1.4x' etc.. To differentiate alternates from dupes, I think we need sophisticated A vs B similarity testing, like "A is &gt;= 99.7% pixel-similar to B" to differentiate jpeg encoding artifacts from actual watermarks and artist corrections and such.</p>
 <p>I'd also eventually love if auto-resolution rules applied to files <em>as</em> they are imported, so, in the vein of a 'previously deleted' import result, you could have an instant result of 'duplicate discarded: (rule name)'. This may be tricky though and make file imports take +800ms each, so we'll see how our early tests shake out.</p>
 <p>If you try out the system, thank you. Let me know how it works and I'll keep iterating.</p>
 
@@ -2522,7 +2523,7 @@
     <span class="md-icon" title="Last update">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 13.1c-.1 0-.3.1-.4.2l-1 1 2.1 2.1 1-1c.2-.2.2-.6 0-.8l-1.3-1.3c-.1-.1-.2-.2-.4-.2m-1.9 1.8-6.1 6V23h2.1l6.1-6.1zM12.5 7v5.2l4 2.4-1 1L11 13V7zM11 21.9c-5.1-.5-9-4.8-9-9.9C2 6.5 6.5 2 12 2c5.3 0 9.6 4.1 10 9.3-.3-.1-.6-.2-1-.2s-.7.1-1 .2C19.6 7.2 16.2 4 12 4c-4.4 0-8 3.6-8 8 0 4.1 3.1 7.5 7.1 7.9l-.1.2z"/></svg>
     </span>
-    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="April 2, 2025 20:37:30">April 2, 2025</span>
+    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="April 23, 2025 20:18:44">April 23, 2025</span>
   </span>
 
     
