@@ -243,7 +243,7 @@ def _draw_path( painter, path: QG.QPainterPath, x: float, y: float ):
     painter.drawPath( path )
     painter.restore()
 
-def DrawShape( painter, shape: str, x: float, y: float, text: str = None, text_colour: QG.QColor = None ):
+def DrawShape( painter, shape, x: float, y: float, text: str = None, text_colour: QG.QColor = None ):
 
     shape = ClientRatings.shape_to_str_lookup_dict.get( shape, None )
 
