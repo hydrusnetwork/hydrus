@@ -1451,9 +1451,9 @@ class EditServiceStarRatingsSubPanel( ClientGUICommon.StaticBox ):
         
         self._shape = ClientGUICommon.BetterChoice( self )
         
-        for shape in [ ClientRatings.CIRCLE, ClientRatings.SQUARE, ClientRatings.FAT_STAR, ClientRatings.PENTAGRAM_STAR ]:
+        for ( shape, name ) in ClientRatings.shape_to_str_lookup_dict.items():
             
-            self._shape.addItem( ClientRatings.shape_to_str_lookup_dict[ shape ], shape )
+            self._shape.addItem( name, shape )
             
         
         #
