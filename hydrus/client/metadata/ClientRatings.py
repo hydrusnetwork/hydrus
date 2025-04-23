@@ -12,12 +12,48 @@ CIRCLE = 0
 SQUARE = 1
 FAT_STAR = 2
 PENTAGRAM_STAR = 3
+SIX_POINT_STAR = 4
+EIGHT_POINT_STAR = 5
+X_SHAPE = 6
+CROSS = 7
+TRIANGLE_UP = 30
+TRIANGLE_DOWN = 31
+TRIANGLE_RIGHT = 32
+TRIANGLE_LEFT = 33
+DIAMOND = 40
+RHOMBUS_R = 42
+RHOMBUS_L = 43
+HOURGLASS = 44
+PENTAGON = 50
+HEXAGON = 60
+SMALL_HEXAGON = 61
+HEART = 101
+TEARDROP = 102
+MOON_CRESCENT = 103
 
 shape_to_str_lookup_dict = {
     CIRCLE : 'circle',
     SQUARE : 'square',
     FAT_STAR : 'fat star',
-    PENTAGRAM_STAR : 'pentagram star'
+    PENTAGRAM_STAR : 'pentagram star',
+    SIX_POINT_STAR : 'six point star',
+    EIGHT_POINT_STAR : 'eight point star',
+    X_SHAPE : 'x shape',
+    CROSS : 'square cross',
+    TRIANGLE_UP : 'triangle up',
+    TRIANGLE_DOWN : 'triangle down',
+    TRIANGLE_RIGHT : 'triangle right',
+    TRIANGLE_LEFT : 'triangle left',
+    DIAMOND : 'diamond',
+    RHOMBUS_R : 'rhombus right',
+    RHOMBUS_L : 'rhombus left',
+    HOURGLASS : 'hourglass',
+    PENTAGON : 'pentagon',
+    HEXAGON : 'hexagon',
+    SMALL_HEXAGON : 'small hexagon',
+    HEART : 'heart',
+    TEARDROP : 'teardrop',
+    MOON_CRESCENT : 'crescent moon'
 }
 
 def ConvertRatingToStars( num_stars: int, allow_zero: bool, rating: float ) -> int:

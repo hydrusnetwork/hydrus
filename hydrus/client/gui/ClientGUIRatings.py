@@ -12,6 +12,7 @@ from hydrus.client import ClientGlobals as CG
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui.widgets import ClientGUICommon
+from hydrus.client.gui.widgets import ClientGUIPainterShapes
 from hydrus.client.metadata import ClientRatings
 
 default_like_colours = {}
@@ -34,32 +35,6 @@ default_incdec_colours[ ClientRatings.LIKE ] = ( ( 0, 0, 0 ), ( 80, 200, 120 ) )
 default_incdec_colours[ ClientRatings.DISLIKE ] = ( ( 0, 0, 0 ), ( 255, 255, 255 ) )
 default_incdec_colours[ ClientRatings.NULL ] = ( ( 0, 0, 0 ), ( 191, 191, 191 ) )
 default_incdec_colours[ ClientRatings.MIXED ] = ( ( 0, 0, 0 ), ( 95, 95, 95 ) )
-
-PENTAGRAM_STAR_COORDS = [
-    QC.QPointF( 6, 0 ), # top
-    QC.QPointF( 7.5, 4.5 ),
-    QC.QPointF( 12, 4.5 ), # right
-    QC.QPointF( 8.3, 7.2 ),
-    QC.QPointF( 9.8, 12 ), # bottom right
-    QC.QPointF( 6, 9 ),
-    QC.QPointF( 2.2, 12 ), # bottom left
-    QC.QPointF( 3.7, 7.2 ),
-    QC.QPointF( 0, 4.5 ), # left
-    QC.QPointF( 4.5, 4.5 )
-]
-
-FAT_STAR_COORDS = [
-    QC.QPointF( 6, 0 ), # top
-    QC.QPointF( 7.8, 4.1 ),
-    QC.QPointF( 12, 4.6 ), # right
-    QC.QPointF( 8.9, 7.6 ),
-    QC.QPointF( 9.8, 12 ), # bottom right
-    QC.QPointF( 6, 9.8 ),
-    QC.QPointF( 2.2, 12 ), # bottom left
-    QC.QPointF( 3.1, 7.6 ),
-    QC.QPointF( 0, 4.5 ), # left
-    QC.QPointF( 4.2, 4.1 )
-]
 
 INCDEC_SIZE = QC.QSize( 32, 16 )
 
@@ -108,7 +83,7 @@ def DrawIncDec( painter: QG.QPainter, x, y, service_key, rating_state, rating ):
     
     painter.setFont( original_font )
     
-
+    
 def DrawLike( painter: QG.QPainter, x, y, service_key, rating_state ):
     
     painter.setRenderHint( QG.QPainter.RenderHint.Antialiasing, True )
@@ -120,26 +95,7 @@ def DrawLike( painter: QG.QPainter, x, y, service_key, rating_state ):
     painter.setPen( QG.QPen( pen_colour ) )
     painter.setBrush( QG.QBrush( brush_colour ) )
     
-    if shape == ClientRatings.CIRCLE:
-        
-        painter.drawEllipse( QC.QPointF( x+8, y+8 ), 6, 6 )
-        
-    elif shape == ClientRatings.SQUARE:
-        
-        painter.drawRect( QC.QRectF( x+2, y+2, 12, 12 ) )
-        
-    elif shape in ( ClientRatings.FAT_STAR, ClientRatings.PENTAGRAM_STAR ):
-        
-        coords = FAT_STAR_COORDS if shape == ClientRatings.FAT_STAR else PENTAGRAM_STAR_COORDS
-        
-        offset = QC.QPointF( x + 2, y + 2 )
-        
-        painter.translate( offset )
-        
-        painter.drawPolygon( QG.QPolygonF( coords ) )
-        
-        painter.translate( -offset )
-        
+    ClientGUIPainterShapes.DrawShape( painter, shape, x, y )
     
 
 def DrawNumerical( painter: QG.QPainter, x, y, service_key, rating_state, rating ):
@@ -149,7 +105,7 @@ def DrawNumerical( painter: QG.QPainter, x, y, service_key, rating_state, rating
     ( shape, stars ) = GetStars( service_key, rating_state, rating )
     
     x_delta = 0
-    x_step = 12
+    x_step = ClientGUIPainterShapes.SIZE.width()
     
     for ( num_stars, pen_colour, brush_colour ) in stars:
         
@@ -158,26 +114,7 @@ def DrawNumerical( painter: QG.QPainter, x, y, service_key, rating_state, rating
         
         for i in range( num_stars ):
             
-            if shape == ClientRatings.CIRCLE:
-                
-                painter.drawEllipse( QC.QPointF( x + 8 + x_delta, y + 8 ), 6, 6 )
-                
-            elif shape == ClientRatings.SQUARE:
-                
-                painter.drawRect( x + 2 + x_delta, y + 2, 12, 12 )
-                
-            elif shape in ( ClientRatings.FAT_STAR, ClientRatings.PENTAGRAM_STAR ):
-                
-                offset = QC.QPoint( x + 2 + x_delta, y + 2 )
-                
-                painter.translate( offset )
-                
-                coords = FAT_STAR_COORDS if shape == ClientRatings.FAT_STAR else PENTAGRAM_STAR_COORDS
-                
-                painter.drawPolygon( QG.QPolygonF( coords ) )
-                
-                painter.translate( -offset )
-                
+            ClientGUIPainterShapes.DrawShape( painter, shape, x + x_delta, y )
             
             x_delta += x_step
             
@@ -413,7 +350,6 @@ class RatingIncDec( QW.QWidget ):
         self._UpdateTooltip()
         
     
-
 class RatingIncDecDialog( RatingIncDec ):
     
     def _Draw( self, painter ):
@@ -562,7 +498,6 @@ class RatingLike( QW.QWidget ):
         self._UpdateTooltip()
         
     
-
 class RatingLikeDialog( RatingLike ):
     
     def _Draw( self, painter ):
@@ -614,6 +549,7 @@ class RatingLikeDialog( RatingLike ):
         self.update()
         
     
+
 class RatingNumerical( QW.QWidget ):
     
     valueChanged = QC.Signal()
@@ -826,7 +762,6 @@ class RatingNumerical( QW.QWidget ):
         self._UpdateTooltip()
         
     
-
 class RatingNumericalDialog( RatingNumerical ):
     
     def _ClearRating( self ):
