@@ -13,6 +13,7 @@ from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTags
+from hydrus.core import HydrusText
 from hydrus.core import HydrusTime
 
 from hydrus.client import ClientTime
@@ -1229,7 +1230,7 @@ class StringSorter( StringProcessingStep ):
                 
                 if self._sort_type == CONTENT_PARSER_SORT_TYPE_HUMAN_SORT:
                     
-                    sort_convert = HydrusData.HumanTextSortKey
+                    sort_convert = HydrusText.HumanTextSortKey
                     
                 
                 key = lambda k_s: sort_convert( data_convert( k_s ) )
@@ -1428,7 +1429,7 @@ class StringTagFilter( StringProcessingStep ):
         
         tags = self._tag_filter.Filter( tags, apply_unnamespaced_rules_to_namespaced_tags = True )
         
-        tags = sorted( tags, key = HydrusTags.ConvertTagToSortable )
+        tags = sorted( tags, key = HydrusText.HumanTextSortKey )
         
         return tags
         

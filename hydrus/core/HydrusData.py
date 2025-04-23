@@ -7,7 +7,6 @@ import itertools
 import os
 import numpy
 import random
-import re
 import struct
 import sys
 import time
@@ -269,24 +268,6 @@ def GetTypeName( obj_type ):
         
         return repr( obj_type )
         
-    
-
-def GenerateHumanTextSortKey():
-    """Solves the 19, 20, 200, 21, 22 issue when sorting 'Page 21.jpg' type strings.
-    Breaks the string into groups of text and int (i.e. ( "Page ", 21, ".jpg" ) )."""
-    
-    int_convert = lambda t: int( t ) if t.isdecimal() else t
-    
-    split_alphanum = lambda t: tuple( ( int_convert( sub_t ) for sub_t in re.split( '([0-9]+)', t.casefold() ) ) )
-    
-    return split_alphanum
-    
-
-HumanTextSortKey = GenerateHumanTextSortKey()
-
-def HumanTextSort( texts ):
-    
-    texts.sort( key = HumanTextSortKey ) 
     
 
 def IterateHexPrefixes():

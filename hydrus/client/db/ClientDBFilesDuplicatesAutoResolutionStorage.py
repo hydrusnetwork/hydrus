@@ -782,7 +782,7 @@ class ClientDBFilesDuplicatesAutoResolutionStorage( ClientDBModule.ClientDBModul
             self._Reinit()
             
         
-        rules_to_add = [ rule for rule in new_rules if rule.GetId() == -1 ]
+        rules_to_add = [ rule for rule in new_rules if rule.GetId() < 0 ]
         
         for rule in rules_to_add:
             

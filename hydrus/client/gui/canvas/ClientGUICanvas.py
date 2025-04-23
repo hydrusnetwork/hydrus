@@ -3739,7 +3739,7 @@ class CanvasMediaList( CanvasWithHovers ):
     
     def TryToDoPreClose( self ):
         
-        if self._current_media is not None:
+        if self._current_media is not None and CG.client_controller.new_options.GetBoolean( 'focus_media_thumb_on_viewer_close' ):
             
             self.exitFocusMedia.emit( self._current_media )
             

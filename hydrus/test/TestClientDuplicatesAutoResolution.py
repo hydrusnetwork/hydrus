@@ -5,7 +5,7 @@ from hydrus.core import HydrusData
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientLocation
-from hydrus.client.duplicates import ClientDuplicatesAutoResolution
+from hydrus.client.duplicates import ClientDuplicatesAutoResolutionComparators
 from hydrus.client.metadata import ClientMetadataConditional
 from hydrus.client.search import ClientSearchFileSearchContext
 from hydrus.client.search import ClientNumberTest
@@ -16,28 +16,28 @@ from hydrus.test import HelperFunctions
 
 class TestComparatorOneFile( unittest.TestCase ):
     
-    def test_comparator_empty( self ):
+    def test_comparator_1_empty( self ):
         
         media_result_a = HelperFunctions.GetFakeMediaResult( HydrusData.GenerateKey(), mime = HC.IMAGE_JPEG )
         media_result_b = HelperFunctions.GetFakeMediaResult( HydrusData.GenerateKey(), mime = HC.IMAGE_PNG )
         
-        comparator = ClientDuplicatesAutoResolution.PairComparatorOneFile()
+        comparator = ClientDuplicatesAutoResolutionComparators.PairComparatorOneFile()
         
-        comparator.SetLookingAt( ClientDuplicatesAutoResolution.LOOKING_AT_A )
-        
-        self.assertTrue( comparator.CanDetermineBetter() )
-        
-        self.assertTrue( comparator.Test( media_result_a, media_result_b ) )
-        self.assertTrue( comparator.Test( media_result_b, media_result_a ) )
-        
-        comparator.SetLookingAt( ClientDuplicatesAutoResolution.LOOKING_AT_B )
+        comparator.SetLookingAt( ClientDuplicatesAutoResolutionComparators.LOOKING_AT_A )
         
         self.assertTrue( comparator.CanDetermineBetter() )
         
         self.assertTrue( comparator.Test( media_result_a, media_result_b ) )
         self.assertTrue( comparator.Test( media_result_b, media_result_a ) )
         
-        comparator.SetLookingAt( ClientDuplicatesAutoResolution.LOOKING_AT_EITHER )
+        comparator.SetLookingAt( ClientDuplicatesAutoResolutionComparators.LOOKING_AT_B )
+        
+        self.assertTrue( comparator.CanDetermineBetter() )
+        
+        self.assertTrue( comparator.Test( media_result_a, media_result_b ) )
+        self.assertTrue( comparator.Test( media_result_b, media_result_a ) )
+        
+        comparator.SetLookingAt( ClientDuplicatesAutoResolutionComparators.LOOKING_AT_EITHER )
         
         self.assertFalse( comparator.CanDetermineBetter() )
         
@@ -45,12 +45,12 @@ class TestComparatorOneFile( unittest.TestCase ):
         self.assertTrue( comparator.Test( media_result_b, media_result_a ) )
         
     
-    def test_comparator( self ):
+    def test_comparator_2( self ):
         
         media_result_a = HelperFunctions.GetFakeMediaResult( HydrusData.GenerateKey(), mime = HC.IMAGE_JPEG )
         media_result_b = HelperFunctions.GetFakeMediaResult( HydrusData.GenerateKey(), mime = HC.IMAGE_PNG )
         
-        comparator = ClientDuplicatesAutoResolution.PairComparatorOneFile()
+        comparator = ClientDuplicatesAutoResolutionComparators.PairComparatorOneFile()
         
         mc = ClientMetadataConditional.MetadataConditional()
         
@@ -66,26 +66,397 @@ class TestComparatorOneFile( unittest.TestCase ):
         
         comparator.SetMetadataConditional( mc )
         
-        comparator.SetLookingAt( ClientDuplicatesAutoResolution.LOOKING_AT_A )
+        comparator.SetLookingAt( ClientDuplicatesAutoResolutionComparators.LOOKING_AT_A )
         
         self.assertTrue( comparator.CanDetermineBetter() )
         
         self.assertTrue( comparator.Test( media_result_a, media_result_b ) )
         self.assertFalse( comparator.Test( media_result_b, media_result_a ) )
         
-        comparator.SetLookingAt( ClientDuplicatesAutoResolution.LOOKING_AT_B )
+        comparator.SetLookingAt( ClientDuplicatesAutoResolutionComparators.LOOKING_AT_B )
         
         self.assertTrue( comparator.CanDetermineBetter() )
         
         self.assertFalse( comparator.Test( media_result_a, media_result_b ) )
         self.assertTrue( comparator.Test( media_result_b, media_result_a ) )
         
-        comparator.SetLookingAt( ClientDuplicatesAutoResolution.LOOKING_AT_EITHER )
+        comparator.SetLookingAt( ClientDuplicatesAutoResolutionComparators.LOOKING_AT_EITHER )
         
         self.assertFalse( comparator.CanDetermineBetter() )
         
         self.assertTrue( comparator.Test( media_result_a, media_result_b ) )
         self.assertTrue( comparator.Test( media_result_b, media_result_a ) )
+        
+    
+
+class TestComparatorRelativeFileInfo( unittest.TestCase ):
+    
+    def test_comparator_0_flat( self ):
+        
+        media_result_a = HelperFunctions.GetFakeMediaResult( HydrusData.GenerateKey(), mime = HC.IMAGE_JPEG )
+        media_result_b = HelperFunctions.GetFakeMediaResult( HydrusData.GenerateKey(), mime = HC.IMAGE_JPEG )
+        
+        comparator = ClientDuplicatesAutoResolutionComparators.PairComparatorRelativeFileInfo()
+        
+        comparator.SetSystemPredicate(
+            ClientSearchPredicate.Predicate(
+                predicate_type = ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_SIZE
+            )
+        )
+        
+        comparator.SetMultiplier( 1.0 )
+        comparator.SetDelta( 0 )
+        
+        comparator.SetNumberTest(
+            ClientNumberTest.NumberTest(
+                operator = ClientNumberTest.NUMBER_TEST_OPERATOR_EQUAL
+            )
+        )
+        
+        self.assertFalse( comparator.CanDetermineBetter() )
+        
+        #
+        
+        media_result_a.GetFileInfoManager().size = 1000
+        media_result_b.GetFileInfoManager().size = 1000
+        
+        self.assertTrue( comparator.Test( media_result_a, media_result_b ) )
+        self.assertTrue( comparator.Test( media_result_b, media_result_a ) )
+        
+        #
+        
+        media_result_a.GetFileInfoManager().size = 1000
+        media_result_b.GetFileInfoManager().size = 950
+        
+        self.assertFalse( comparator.Test( media_result_a, media_result_b ) )
+        self.assertFalse( comparator.Test( media_result_b, media_result_a ) )
+        
+        #
+        
+        comparator = ClientDuplicatesAutoResolutionComparators.PairComparatorRelativeFileInfo()
+        
+        comparator.SetSystemPredicate(
+            ClientSearchPredicate.Predicate(
+                predicate_type = ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_SIZE
+            )
+        )
+        
+        comparator.SetMultiplier( 1.0 )
+        comparator.SetDelta( 0 )
+        
+        comparator.SetNumberTest(
+            ClientNumberTest.NumberTest(
+                operator = ClientNumberTest.NUMBER_TEST_OPERATOR_GREATER_THAN
+            )
+        )
+        
+        self.assertTrue( comparator.CanDetermineBetter() )
+        
+        #
+        
+        media_result_a.GetFileInfoManager().size = 1000
+        media_result_b.GetFileInfoManager().size = 1000
+        
+        self.assertFalse( comparator.Test( media_result_a, media_result_b ) )
+        self.assertFalse( comparator.Test( media_result_b, media_result_a ) )
+        
+        #
+        
+        media_result_a.GetFileInfoManager().size = 1000
+        media_result_b.GetFileInfoManager().size = 995
+        
+        self.assertTrue( comparator.Test( media_result_a, media_result_b ) )
+        self.assertFalse( comparator.Test( media_result_b, media_result_a ) )
+        
+    
+    def test_comparator_1_delta( self ):
+        
+        media_result_a = HelperFunctions.GetFakeMediaResult( HydrusData.GenerateKey(), mime = HC.IMAGE_JPEG )
+        media_result_b = HelperFunctions.GetFakeMediaResult( HydrusData.GenerateKey(), mime = HC.IMAGE_JPEG )
+        
+        # exactly 100 px difference
+        
+        comparator = ClientDuplicatesAutoResolutionComparators.PairComparatorRelativeFileInfo()
+        
+        comparator.SetSystemPredicate(
+            ClientSearchPredicate.Predicate(
+                predicate_type = ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_SIZE
+            )
+        )
+        
+        comparator.SetMultiplier( 1.0 )
+        comparator.SetDelta( 100 )
+        
+        comparator.SetNumberTest(
+            ClientNumberTest.NumberTest(
+                operator = ClientNumberTest.NUMBER_TEST_OPERATOR_EQUAL
+            )
+        )
+        
+        self.assertTrue( comparator.CanDetermineBetter() )
+        
+        #
+        
+        media_result_a.GetFileInfoManager().size = 1000
+        media_result_b.GetFileInfoManager().size = 1000
+        
+        self.assertFalse( comparator.Test( media_result_a, media_result_b ) )
+        self.assertFalse( comparator.Test( media_result_b, media_result_a ) )
+        
+        #
+        
+        media_result_a.GetFileInfoManager().size = 1000
+        media_result_b.GetFileInfoManager().size = 900
+        
+        self.assertTrue( comparator.Test( media_result_a, media_result_b ) )
+        self.assertFalse( comparator.Test( media_result_b, media_result_a ) )
+        
+        # at least 100 px difference to get any Trues
+        
+        comparator = ClientDuplicatesAutoResolutionComparators.PairComparatorRelativeFileInfo()
+        
+        comparator.SetSystemPredicate(
+            ClientSearchPredicate.Predicate(
+                predicate_type = ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_SIZE
+            )
+        )
+        
+        comparator.SetMultiplier( 1.0 )
+        comparator.SetDelta( 100 )
+        
+        comparator.SetNumberTest(
+            ClientNumberTest.NumberTest(
+                operator = ClientNumberTest.NUMBER_TEST_OPERATOR_GREATER_THAN
+            )
+        )
+        
+        self.assertTrue( comparator.CanDetermineBetter() )
+        
+        #
+        
+        media_result_a.GetFileInfoManager().size = 1000
+        media_result_b.GetFileInfoManager().size = 1000
+        
+        self.assertFalse( comparator.Test( media_result_a, media_result_b ) )
+        self.assertFalse( comparator.Test( media_result_b, media_result_a ) )
+        
+        #
+        
+        media_result_a.GetFileInfoManager().size = 1000
+        media_result_b.GetFileInfoManager().size = 900
+        
+        self.assertFalse( comparator.Test( media_result_a, media_result_b ) )
+        self.assertFalse( comparator.Test( media_result_b, media_result_a ) )
+        
+        #
+        
+        media_result_a.GetFileInfoManager().size = 1000
+        media_result_b.GetFileInfoManager().size = 950
+        
+        self.assertFalse( comparator.Test( media_result_a, media_result_b ) )
+        self.assertFalse( comparator.Test( media_result_b, media_result_a ) )
+        
+        #
+        
+        media_result_a.GetFileInfoManager().size = 1000
+        media_result_b.GetFileInfoManager().size = 850
+        
+        self.assertTrue( comparator.Test( media_result_a, media_result_b ) )
+        self.assertFalse( comparator.Test( media_result_b, media_result_a ) )
+        
+    
+    def test_comparator_2_multiplier( self ):
+        
+        media_result_a = HelperFunctions.GetFakeMediaResult( HydrusData.GenerateKey(), mime = HC.IMAGE_JPEG )
+        media_result_b = HelperFunctions.GetFakeMediaResult( HydrusData.GenerateKey(), mime = HC.IMAGE_JPEG )
+        
+        # exactly twice
+        
+        comparator = ClientDuplicatesAutoResolutionComparators.PairComparatorRelativeFileInfo()
+        
+        comparator.SetSystemPredicate(
+            ClientSearchPredicate.Predicate(
+                predicate_type = ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_SIZE
+            )
+        )
+        
+        comparator.SetMultiplier( 2.0 )
+        comparator.SetDelta( 0 )
+        
+        comparator.SetNumberTest(
+            ClientNumberTest.NumberTest(
+                operator = ClientNumberTest.NUMBER_TEST_OPERATOR_EQUAL
+            )
+        )
+        
+        self.assertTrue( comparator.CanDetermineBetter() )
+        
+        #
+        
+        media_result_a.GetFileInfoManager().size = 1000
+        media_result_b.GetFileInfoManager().size = 1000
+        
+        self.assertFalse( comparator.Test( media_result_a, media_result_b ) )
+        self.assertFalse( comparator.Test( media_result_b, media_result_a ) )
+        
+        #
+        
+        media_result_a.GetFileInfoManager().size = 1000
+        media_result_b.GetFileInfoManager().size = 500
+        
+        self.assertTrue( comparator.Test( media_result_a, media_result_b ) )
+        self.assertFalse( comparator.Test( media_result_b, media_result_a ) )
+        
+        # at least twice to get any Trues
+        
+        comparator = ClientDuplicatesAutoResolutionComparators.PairComparatorRelativeFileInfo()
+        
+        comparator.SetSystemPredicate(
+            ClientSearchPredicate.Predicate(
+                predicate_type = ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_SIZE
+            )
+        )
+        
+        comparator.SetMultiplier( 2.0 )
+        comparator.SetDelta( 0 )
+        
+        comparator.SetNumberTest(
+            ClientNumberTest.NumberTest(
+                operator = ClientNumberTest.NUMBER_TEST_OPERATOR_GREATER_THAN
+            )
+        )
+        
+        self.assertTrue( comparator.CanDetermineBetter() )
+        
+        #
+        
+        media_result_a.GetFileInfoManager().size = 1000
+        media_result_b.GetFileInfoManager().size = 1000
+        
+        self.assertFalse( comparator.Test( media_result_a, media_result_b ) )
+        self.assertFalse( comparator.Test( media_result_b, media_result_a ) )
+        
+        #
+        
+        media_result_a.GetFileInfoManager().size = 1000
+        media_result_b.GetFileInfoManager().size = 500
+        
+        self.assertFalse( comparator.Test( media_result_a, media_result_b ) )
+        self.assertFalse( comparator.Test( media_result_b, media_result_a ) )
+        
+        #
+        
+        media_result_a.GetFileInfoManager().size = 1000
+        media_result_b.GetFileInfoManager().size = 600
+        
+        self.assertFalse( comparator.Test( media_result_a, media_result_b ) )
+        self.assertFalse( comparator.Test( media_result_b, media_result_a ) )
+        
+        #
+        
+        media_result_a.GetFileInfoManager().size = 1000
+        media_result_b.GetFileInfoManager().size = 400
+        
+        self.assertTrue( comparator.Test( media_result_a, media_result_b ) )
+        self.assertFalse( comparator.Test( media_result_b, media_result_a ) )
+        
+    
+    def test_comparator_3_crazy( self ):
+        
+        media_result_a = HelperFunctions.GetFakeMediaResult( HydrusData.GenerateKey(), mime = HC.IMAGE_JPEG )
+        media_result_b = HelperFunctions.GetFakeMediaResult( HydrusData.GenerateKey(), mime = HC.IMAGE_JPEG )
+        
+        # just for fun
+        
+        comparator = ClientDuplicatesAutoResolutionComparators.PairComparatorRelativeFileInfo()
+        
+        comparator.SetSystemPredicate(
+            ClientSearchPredicate.Predicate(
+                predicate_type = ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_SIZE
+            )
+        )
+        
+        comparator.SetMultiplier( 2.0 )
+        comparator.SetDelta( 100 )
+        
+        comparator.SetNumberTest(
+            ClientNumberTest.NumberTest(
+                operator = ClientNumberTest.NUMBER_TEST_OPERATOR_GREATER_THAN
+            )
+        )
+        
+        self.assertTrue( comparator.CanDetermineBetter() )
+        
+        #
+        
+        media_result_b.GetFileInfoManager().size = media_result_a.GetFileInfoManager().size
+        
+        self.assertFalse( comparator.Test( media_result_a, media_result_b ) )
+        self.assertFalse( comparator.Test( media_result_b, media_result_a ) )
+        
+        #
+        
+        media_result_a.GetFileInfoManager().size = 1000
+        media_result_b.GetFileInfoManager().size = 1000
+        
+        self.assertFalse( comparator.Test( media_result_a, media_result_b ) )
+        self.assertFalse( comparator.Test( media_result_b, media_result_a ) )
+        
+        #
+        
+        media_result_a.GetFileInfoManager().size = 1000
+        media_result_b.GetFileInfoManager().size = 500
+        
+        self.assertFalse( comparator.Test( media_result_a, media_result_b ) )
+        self.assertFalse( comparator.Test( media_result_b, media_result_a ) )
+        
+        #
+        
+        media_result_a.GetFileInfoManager().size = 1000
+        media_result_b.GetFileInfoManager().size = 450
+        
+        self.assertFalse( comparator.Test( media_result_a, media_result_b ) )
+        self.assertFalse( comparator.Test( media_result_b, media_result_a ) )
+        
+        #
+        
+        media_result_a.GetFileInfoManager().size = 1000
+        media_result_b.GetFileInfoManager().size = 445
+        
+        self.assertTrue( comparator.Test( media_result_a, media_result_b ) )
+        self.assertFalse( comparator.Test( media_result_b, media_result_a ) )
+        
+    
+
+class TestComparatorHardcoded( unittest.TestCase ):
+    
+    def test_comparator_0_filetypes( self ):
+        
+        media_result_a = HelperFunctions.GetFakeMediaResult( HydrusData.GenerateKey(), mime = HC.IMAGE_JPEG )
+        media_result_b = HelperFunctions.GetFakeMediaResult( HydrusData.GenerateKey(), mime = HC.IMAGE_JPEG )
+        media_result_c = HelperFunctions.GetFakeMediaResult( HydrusData.GenerateKey(), mime = HC.IMAGE_PNG )
+        
+        comparator = ClientDuplicatesAutoResolutionComparators.PairComparatorRelativeHardcoded( hardcoded_type = ClientDuplicatesAutoResolutionComparators.HARDCODED_COMPARATOR_TYPE_FILETYPE_SAME )
+        
+        self.assertFalse( comparator.CanDetermineBetter() )
+        
+        self.assertTrue( comparator.Test( media_result_a, media_result_b ) )
+        self.assertTrue( comparator.Test( media_result_b, media_result_a ) )
+        
+        self.assertFalse( comparator.Test( media_result_a, media_result_c ) )
+        self.assertFalse( comparator.Test( media_result_c, media_result_a ) )
+        
+        #
+        
+        comparator = ClientDuplicatesAutoResolutionComparators.PairComparatorRelativeHardcoded( hardcoded_type = ClientDuplicatesAutoResolutionComparators.HARDCODED_COMPARATOR_TYPE_FILETYPE_DIFFERS )
+        
+        self.assertFalse( comparator.CanDetermineBetter() )
+        
+        self.assertFalse( comparator.Test( media_result_a, media_result_b ) )
+        self.assertFalse( comparator.Test( media_result_b, media_result_a ) )
+        
+        self.assertTrue( comparator.Test( media_result_a, media_result_c ) )
+        self.assertTrue( comparator.Test( media_result_c, media_result_a ) )
         
     
 
@@ -96,7 +467,7 @@ class TestSelector( unittest.TestCase ):
         media_result_1 = HelperFunctions.GetFakeMediaResult( HydrusData.GenerateKey(), mime = HC.IMAGE_JPEG )
         media_result_2 = HelperFunctions.GetFakeMediaResult( HydrusData.GenerateKey(), mime = HC.IMAGE_PNG )
         
-        selector = ClientDuplicatesAutoResolution.PairSelector()
+        selector = ClientDuplicatesAutoResolutionComparators.PairSelector()
         
         self.assertTrue( selector.PairMatchesBothWaysAround( media_result_1, media_result_2 ) )
         self.assertTrue( selector.PairMatchesBothWaysAround( media_result_2, media_result_1 ) )
@@ -110,9 +481,9 @@ class TestSelector( unittest.TestCase ):
         media_result_1 = HelperFunctions.GetFakeMediaResult( HydrusData.GenerateKey(), mime = HC.IMAGE_JPEG )
         media_result_2 = HelperFunctions.GetFakeMediaResult( HydrusData.GenerateKey(), mime = HC.IMAGE_PNG )
         
-        selector = ClientDuplicatesAutoResolution.PairSelector()
+        selector = ClientDuplicatesAutoResolutionComparators.PairSelector()
         
-        comparator = ClientDuplicatesAutoResolution.PairComparatorOneFile()
+        comparator = ClientDuplicatesAutoResolutionComparators.PairComparatorOneFile()
         
         mc = ClientMetadataConditional.MetadataConditional()
         
@@ -142,9 +513,9 @@ class TestSelector( unittest.TestCase ):
         media_result_1 = HelperFunctions.GetFakeMediaResult( HydrusData.GenerateKey(), mime = HC.IMAGE_JPEG )
         media_result_2 = HelperFunctions.GetFakeMediaResult( HydrusData.GenerateKey(), mime = HC.IMAGE_PNG )
         
-        selector = ClientDuplicatesAutoResolution.PairSelector()
+        selector = ClientDuplicatesAutoResolutionComparators.PairSelector()
         
-        comparator = ClientDuplicatesAutoResolution.PairComparatorOneFile()
+        comparator = ClientDuplicatesAutoResolutionComparators.PairComparatorOneFile()
         
         mc = ClientMetadataConditional.MetadataConditional()
         
@@ -174,9 +545,9 @@ class TestSelector( unittest.TestCase ):
         media_result_1 = HelperFunctions.GetFakeMediaResult( HydrusData.GenerateKey(), mime = HC.IMAGE_JPEG )
         media_result_2 = HelperFunctions.GetFakeMediaResult( HydrusData.GenerateKey(), mime = HC.IMAGE_PNG )
         
-        selector = ClientDuplicatesAutoResolution.PairSelector()
+        selector = ClientDuplicatesAutoResolutionComparators.PairSelector()
         
-        comparator = ClientDuplicatesAutoResolution.PairComparatorOneFile()
+        comparator = ClientDuplicatesAutoResolutionComparators.PairComparatorOneFile()
         
         mc = ClientMetadataConditional.MetadataConditional()
         
@@ -206,9 +577,9 @@ class TestSelector( unittest.TestCase ):
         media_result_1 = HelperFunctions.GetFakeMediaResult( HydrusData.GenerateKey(), mime = HC.IMAGE_JPEG )
         media_result_2 = HelperFunctions.GetFakeMediaResult( HydrusData.GenerateKey(), mime = HC.IMAGE_PNG )
         
-        selector = ClientDuplicatesAutoResolution.PairSelector()
+        selector = ClientDuplicatesAutoResolutionComparators.PairSelector()
         
-        comparator_1 = ClientDuplicatesAutoResolution.PairComparatorOneFile()
+        comparator_1 = ClientDuplicatesAutoResolutionComparators.PairComparatorOneFile()
         
         mc = ClientMetadataConditional.MetadataConditional()
         
@@ -224,7 +595,7 @@ class TestSelector( unittest.TestCase ):
         
         comparator_1.SetMetadataConditional( mc )
         
-        comparator_2 = ClientDuplicatesAutoResolution.PairComparatorOneFile()
+        comparator_2 = ClientDuplicatesAutoResolutionComparators.PairComparatorOneFile()
         
         mc = ClientMetadataConditional.MetadataConditional()
         
@@ -254,9 +625,9 @@ class TestSelector( unittest.TestCase ):
         media_result_1 = HelperFunctions.GetFakeMediaResult( HydrusData.GenerateKey(), mime = HC.IMAGE_JPEG )
         media_result_2 = HelperFunctions.GetFakeMediaResult( HydrusData.GenerateKey(), mime = HC.IMAGE_PNG )
         
-        selector = ClientDuplicatesAutoResolution.PairSelector()
+        selector = ClientDuplicatesAutoResolutionComparators.PairSelector()
         
-        comparator_1 = ClientDuplicatesAutoResolution.PairComparatorOneFile()
+        comparator_1 = ClientDuplicatesAutoResolutionComparators.PairComparatorOneFile()
         
         mc = ClientMetadataConditional.MetadataConditional()
         
@@ -272,7 +643,7 @@ class TestSelector( unittest.TestCase ):
         
         comparator_1.SetMetadataConditional( mc )
         
-        comparator_2 = ClientDuplicatesAutoResolution.PairComparatorOneFile()
+        comparator_2 = ClientDuplicatesAutoResolutionComparators.PairComparatorOneFile()
         
         mc = ClientMetadataConditional.MetadataConditional()
         

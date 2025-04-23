@@ -1,3 +1,4 @@
+from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
 
 from hydrus.core import HydrusConstants as HC
@@ -9,9 +10,22 @@ from hydrus.client.search import ClientNumberTest
 
 class NumberTestWidget( QW.QWidget ):
     
-    def __init__( self, parent, allowed_operators = None, max = 200000, unit_string = None, appropriate_absolute_plus_or_minus_default = 1, appropriate_percentage_plus_or_minus_default = 15 ):
+    valueChanged = QC.Signal()
+    
+    def __init__(
+        self,
+        parent,
+        allowed_operators = None,
+        max = 200000,
+        unit_string = None,
+        appropriate_absolute_plus_or_minus_default = 1,
+        appropriate_percentage_plus_or_minus_default = 15,
+        swap_in_string_for_value = None
+    ):
         
         super().__init__( parent )
+        
+        self._swap_in_string_for_value = swap_in_string_for_value
         
         choice_tuples = []
         
@@ -39,7 +53,17 @@ class NumberTestWidget( QW.QWidget ):
         
         self._operator = ClientGUICommon.BetterRadioBox( self, choice_tuples )
         
+        self._value_swap_in_st = ClientGUICommon.BetterStaticText( self, label = 'none' if self._swap_in_string_for_value is None else self._swap_in_string_for_value )
         self._value = self._GenerateValueWidget( max )
+        
+        if self._swap_in_string_for_value is None:
+            
+            self._value_swap_in_st.setVisible( False )
+            
+        else:
+            
+            self._value.setVisible( False )
+            
         
         #
         
@@ -85,6 +109,7 @@ class NumberTestWidget( QW.QWidget ):
         hbox = QP.HBoxLayout()
         
         QP.AddToLayout( hbox, self._operator, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._value_swap_in_st, CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( hbox, self._value, CC.FLAGS_CENTER_PERPENDICULAR )
         
         if unit_string is not None:
@@ -98,19 +123,29 @@ class NumberTestWidget( QW.QWidget ):
         self.setLayout( hbox )
         
         self._operator.radioBoxChanged.connect( self._UpdateVisibility )
+        self._operator.radioBoxChanged.connect( self.valueChanged )
+        
+        self._percent_plus_or_minus.valueChanged.connect( self.valueChanged )
         
         self._UpdateVisibility()
-        
         
     
     def _GenerateAbsoluteValueWidget( self, max: int ):
         
-        return ClientGUICommon.BetterSpinBox( self._absolute_plus_or_minus_panel, min = 0, max = int( max / 2 ), width = 60 )
+        widget = ClientGUICommon.BetterSpinBox( self._absolute_plus_or_minus_panel, min = 0, max = int( max / 2 ), width = 60 )
+        
+        widget.valueChanged.connect( self.valueChanged )
+        
+        return widget
         
     
     def _GenerateValueWidget( self, max: int ):
         
-        return ClientGUICommon.BetterSpinBox( self, max = max, width = 60 )
+        widget = ClientGUICommon.BetterSpinBox( self, max = max, width = 60 )
+        
+        widget.valueChanged.connect( self.valueChanged )
+        
+        return widget
         
     
     def _GetSubValue( self ):

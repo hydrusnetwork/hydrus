@@ -371,7 +371,7 @@ class EditTagDisplayApplication( ClientGUIScrolledPanels.EditPanel ):
         message += '\n' * 2
         message += 'If you apply multiple services and there are conflicts (e.g. disagreements on where siblings go, or loops), the services at the top of the list have precedence. If you want to overwrite some PTR rules, then make what you want on a local service and then put it above the PTR here. Also, siblings apply first, then parents.'
         message += '\n' * 2
-        message += 'If you make big changes here, it will take a long time for the client to recalculate everything. Check the sync progress panel under _tags->sibling/parent sync_ to see how it is going. If your client gets laggy doing the recalc, turn it off during "normal time".'
+        message += 'If you make big changes here, it will take a long time for the client to recalculate everything. Sibling and parent chains will be broken apart and rearranged live, and for a brief period, some sibling or parent suggestions or presentation may be unusual. Check the sync progress panel under _tags->sibling/parent sync_ to see how it is going. If your client gets too laggy doing the recalc, turn it off during "normal time".'
         
         self._message = ClientGUICommon.BetterStaticText( self, label = message )
         self._message.setWordWrap( True )
@@ -416,7 +416,7 @@ class EditTagDisplayApplication( ClientGUIScrolledPanels.EditPanel ):
         
         if CG.client_controller.new_options.GetBoolean( 'save_default_tag_service_tab_on_change' ):
             
-            current_page: EditTagDisplayApplication._Panel = self._tag_services.currentWidget()
+            current_page = typing.cast( EditTagDisplayApplication._Panel, self._tag_services.currentWidget() )
             
             CG.client_controller.new_options.SetKey( 'default_tag_service_tab', current_page.GetServiceKey() )
             
@@ -2440,11 +2440,11 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
     
     def _SetSearchFocus( self ):
         
-        page: ManageTagsPanel._Panel = self._tag_services.currentWidget()
+        current_page = typing.cast( ManageTagsPanel._Panel, self._tag_services.currentWidget() )
         
-        if page is not None:
+        if current_page is not None:
             
-            page.SetTagBoxFocus()
+            current_page.SetTagBoxFocus()
             
         
     
@@ -2452,7 +2452,7 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
         
         for index in range( self._tag_services.count() ):
             
-            page: ManageTagsPanel._Panel = self._tag_services.widget( index )
+            page = typing.cast( ManageTagsPanel._Panel, self._tag_services.widget( index ) )
             
             service_key = page.GetServiceKey()
             
@@ -3555,7 +3555,7 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
         
         if CG.client_controller.new_options.GetBoolean( 'save_default_tag_service_tab_on_change' ):
             
-            current_page: ManageTagParents._Panel = self._tag_services.currentWidget()
+            current_page = typing.cast( ManageTagParents._Panel, self._tag_services.currentWidget() )
             
             CG.client_controller.new_options.SetKey( 'default_tag_service_tab', current_page.GetServiceKey() )
             
@@ -3563,11 +3563,11 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
     
     def _SetSearchFocus( self ):
         
-        page: ManageTagParents._Panel = self._tag_services.currentWidget()
+        current_page = typing.cast( ManageTagParents._Panel, self._tag_services.currentWidget() )
         
-        if page is not None:
+        if current_page is not None:
             
-            page.SetTagBoxFocus()
+            current_page.SetTagBoxFocus()
             
         
     
@@ -3590,7 +3590,7 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
     
     def UserIsOKToOK( self ):
         
-        current_page: ManageTagParents._Panel = self._tag_services.currentWidget()
+        current_page = typing.cast( ManageTagParents._Panel, self._tag_services.currentWidget() )
         
         if current_page.HasUncommittedPair():
             
@@ -4336,19 +4336,22 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
         
         if CG.client_controller.new_options.GetBoolean( 'save_default_tag_service_tab_on_change' ):
             
-            current_page: ManageTagSiblings._Panel = self._tag_services.currentWidget()
+            current_page = typing.cast( ManageTagSiblings._Panel, self._tag_services.currentWidget() )
             
-            CG.client_controller.new_options.SetKey( 'default_tag_service_tab', current_page.GetServiceKey() )
+            if current_page is not None:
+                
+                CG.client_controller.new_options.SetKey( 'default_tag_service_tab', current_page.GetServiceKey() )
+                
             
         
     
     def _SetSearchFocus( self ):
         
-        page: ManageTagSiblings._Panel = self._tag_services.currentWidget()
+        current_page = typing.cast( ManageTagSiblings._Panel, self._tag_services.currentWidget() )
         
-        if page is not None:
+        if current_page is not None:
             
-            page.SetTagBoxFocus()
+            current_page.SetTagBoxFocus()
             
         
     
@@ -4371,7 +4374,7 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
     
     def UserIsOKToOK( self ):
         
-        current_page: ManageTagSiblings._Panel = self._tag_services.currentWidget()
+        current_page = typing.cast( ManageTagSiblings._Panel, self._tag_services.currentWidget() )
         
         if current_page.HasUncommittedPair():
             
@@ -4390,11 +4393,11 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
     
     def EventServiceChanged( self, event ):
         
-        page: ManageTagSiblings._Panel = self._tag_services.currentWidget()
+        current_page = typing.cast( ManageTagSiblings._Panel, self._tag_services.currentWidget() )
         
-        if page is not None:
+        if current_page is not None:
             
-            CG.client_controller.CallAfterQtSafe( page, 'setting page focus', page.SetTagBoxFocus )
+            CG.client_controller.CallAfterQtSafe( current_page, 'setting page focus', current_page.SetTagBoxFocus )
             
         
     
@@ -5140,8 +5143,7 @@ class ReviewTagDisplayMaintenancePanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         vbox = QP.VBoxLayout()
         
-        message = 'Figuring out how tags should appear according to sibling and parent application rules takes time. When you set new rules, the changes do not happen immediately--the client catches up in the background. This work takes a lot of math and can be laggy.'
-        
+        message = 'Figuring out how tags should appear according to sibling and parent application rules takes time. When you set new rules, the changes in presentation and suggestion do not happen immediately--the client catches up to your settings in the background. This work takes a lot of math and can cause lag.\n\nIf there is a lot of work still to do, your tag suggestions and presentation during the interim may be unusual.'
         
         self._message = ClientGUICommon.BetterStaticText( self, label = message )
         self._message.setWordWrap( True )
@@ -5167,7 +5169,7 @@ class ReviewTagDisplayMaintenancePanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         if CG.client_controller.new_options.GetBoolean( 'save_default_tag_service_tab_on_change' ):
             
-            current_page: ManageTagSiblings._Panel = self._tag_services.currentWidget()
+            current_page = typing.cast( ReviewTagDisplayMaintenancePanel._Panel, self._tag_services.currentWidget() )
             
             CG.client_controller.new_options.SetKey( 'default_tag_service_tab', current_page.GetServiceKey() )
             

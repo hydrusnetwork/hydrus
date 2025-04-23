@@ -1,5 +1,4 @@
 import collections
-import random
 import threading
 import time
 import typing
@@ -16,6 +15,7 @@ from hydrus.client import ClientDaemons
 from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientLocation
 from hydrus.client.duplicates import ClientDuplicates
+from hydrus.client.duplicates import ClientDuplicatesAutoResolutionComparators
 from hydrus.client.duplicates import ClientPotentialDuplicatesSearchContext
 from hydrus.client.media import ClientMediaResult
 from hydrus.client.metadata import ClientMetadataConditional 
@@ -42,288 +42,6 @@ duplicate_status_str_lookup = {
     DUPLICATE_STATUS_USER_DECLINED : 'User declined'
 }
 
-class PairComparator( HydrusSerialisable.SerialisableBase ):
-    
-    def CanDetermineBetter( self ) -> bool:
-        
-        raise NotImplementedError()
-        
-    
-    def GetSummary( self ) -> str:
-        
-        raise NotImplementedError()
-        
-    
-    def Test( self, media_result_better, media_result_worse ) -> bool:
-        
-        raise NotImplementedError()
-        
-    
-
-LOOKING_AT_A = 0
-LOOKING_AT_B = 1
-LOOKING_AT_EITHER = 2
-
-class PairComparatorOneFile( PairComparator ):
-    
-    SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_DUPLICATES_AUTO_RESOLUTION_PAIR_COMPARATOR_ONE_FILE
-    SERIALISABLE_NAME = 'Duplicates Auto-Resolution Pair Comparator - One File'
-    SERIALISABLE_VERSION = 1
-    
-    def __init__( self ):
-        """
-        This guy holds one test and is told to test either the better or worse candidate. Multiple of these stacked up make for 'the better file is a jpeg over one megabyte, the worse file is a jpeg under 100KB'.
-        """
-        
-        super().__init__()
-        
-        # this guy tests the A or the B for a single property
-        # user could set up multiple on either side of the equation
-        # what are we testing?
-            # A: mime is jpeg (& worse file is png)
-            # B: has icc profile
-            # EITHER: filesize < 200KB
-        
-        self._looking_at = LOOKING_AT_A
-        
-        self._metadata_conditional = ClientMetadataConditional.MetadataConditional()
-        
-    
-    def _GetSerialisableInfo( self ):
-        
-        serialisable_metadata_conditional = self._metadata_conditional.GetSerialisableTuple()
-        
-        return ( self._looking_at, serialisable_metadata_conditional )
-        
-    
-    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
-        
-        ( self._looking_at, serialisable_metadata_conditional ) = serialisable_info
-        
-        self._metadata_conditional = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_metadata_conditional )
-        
-    
-    def CanDetermineBetter( self ) -> bool:
-        
-        return self._looking_at in ( LOOKING_AT_A, LOOKING_AT_B )
-        
-    
-    def GetLookingAt( self ) -> int:
-        
-        return self._looking_at
-        
-    
-    def GetMetadataConditional( self ) -> ClientMetadataConditional.MetadataConditional:
-        
-        return self._metadata_conditional
-        
-    
-    def GetSummary( self ):
-        
-        if self._looking_at == LOOKING_AT_A:
-            
-            return f'A will match: {self._metadata_conditional.GetSummary()}'
-            
-        elif self._looking_at == LOOKING_AT_B:
-            
-            return f'B will match: {self._metadata_conditional.GetSummary()}'
-            
-        elif self._looking_at == LOOKING_AT_EITHER:
-            
-            return f'either will match: {self._metadata_conditional.GetSummary()}'
-            
-        else:
-            
-            return 'unknown comparator rule!'
-            
-        
-    
-    def SetLookingAt( self, looking_at: int ):
-        
-        self._looking_at = looking_at
-        
-    
-    def SetMetadataConditional( self, metadata_conditional: ClientMetadataConditional.MetadataConditional ):
-        
-        self._metadata_conditional = metadata_conditional
-        
-    
-    def Test( self, media_result_a: ClientMediaResult.MediaResult, media_result_b: ClientMediaResult.MediaResult ) -> bool:
-        
-        if self._looking_at == LOOKING_AT_A:
-            
-            return self._metadata_conditional.Test( media_result_a )
-            
-        elif self._looking_at == LOOKING_AT_B:
-            
-            return self._metadata_conditional.Test( media_result_b )
-            
-        elif self._looking_at == LOOKING_AT_EITHER:
-            
-            return self._metadata_conditional.Test( media_result_a ) or self._metadata_conditional.Test( media_result_b )
-            
-        
-    
-
-HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_DUPLICATES_AUTO_RESOLUTION_PAIR_COMPARATOR_ONE_FILE ] = PairComparatorOneFile
-
-class PairComparatorRelative( PairComparator ):
-    
-    SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_DUPLICATES_AUTO_RESOLUTION_PAIR_COMPARATOR_TWO_FILES_RELATIVE
-    SERIALISABLE_NAME = 'Duplicates Auto-Resolution Pair Comparator - Relative'
-    SERIALISABLE_VERSION = 1
-    
-    def __init__( self ):
-        """
-        This guy compares the pair directly. It can say 'yes the better candidate is 4x bigger than the worse'. 
-        """
-        
-        super().__init__()
-        
-        # this work does not need to be done yet!
-        
-        # THIS WILL NOT BE A METADATA CONDITIONAL
-        # THIS WILL BE A NEW OBJECT ENTIRELY
-        # IT WILL CONSULT TWO MEDIA RESULTS AND CREATE A DYNAMIC NUMBER TEST TO DO >, x4, approx-=, whatever
-        # WE _MAY_ USE UN-FLESHED SYSTEM PREDS OR SIMILAR TO SPECIFY AND PERFORM OUR METADATA FETCH, SINCE THOSE GUYS WILL LEARN THAT TECH FOR MEDIA TESTS ANYWAY
-        
-        # property
-            # width
-            # filesize
-            # age
-            # etc..
-        # operator
-            # is more than 4x larger
-            # is at least x absolute value larger?
-        
-    
-    def CanDetermineBetter( self ) -> bool:
-        
-        return True
-        
-    
-    # serialisable gubbins
-    # get/set
-    
-    def GetSummary( self ):
-        
-        return 'A has 4x pixel count of B'
-        
-    
-    def Test( self, media_result_a: ClientMediaResult.MediaResult, media_result_b: ClientMediaResult.MediaResult ) -> bool:
-        
-        return False
-        
-    
-
-HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_DUPLICATES_AUTO_RESOLUTION_PAIR_COMPARATOR_TWO_FILES_RELATIVE ] = PairComparatorRelative
-
-class PairSelector( HydrusSerialisable.SerialisableBase ):
-    
-    SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_DUPLICATES_AUTO_RESOLUTION_PAIR_SELECTOR
-    SERIALISABLE_NAME = 'Duplicates Auto-Resolution Pair Selector'
-    SERIALISABLE_VERSION = 1
-    
-    def __init__( self ):
-        """
-        This guy holds a bunch of comparators. It is given a pair of media and it tests all the rules both ways around. If the files pass all the rules, we have a match and thus a confirmed better file.
-        
-        A potential future expansion here is to attach scores to the rules and have a score threshold, but let's not get ahead of ourselves.
-        """
-        
-        super().__init__()
-        
-        self._comparators: typing.List[ PairComparator ] = HydrusSerialisable.SerialisableList()
-        
-    
-    def __eq__( self, other ):
-        
-        if isinstance( other, PairSelector ):
-            
-            return self.GetSerialisableTuple() == other.GetSerialisableTuple()
-            
-        
-        return NotImplemented
-        
-    
-    def _GetSerialisableInfo( self ):
-        
-        serialisable_comparators = HydrusSerialisable.SerialisableList( self._comparators ).GetSerialisableTuple()
-        
-        return serialisable_comparators
-        
-    
-    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
-        
-        serialisable_comparators = serialisable_info
-        
-        self._comparators = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_comparators )
-        
-    
-    def CanDetermineBetter( self ):
-        
-        # note this is correctly false if no comparators
-        
-        return True in ( comparator.CanDetermineBetter() for comparator in self._comparators )
-        
-    
-    def GetComparators( self ):
-        
-        return self._comparators
-        
-    
-    def GetMatchingAB( self, media_result_1: ClientMediaResult.MediaResult, media_result_2: ClientMediaResult.MediaResult, test_both_ways_around = True ) -> typing.Optional[ typing.Tuple[ ClientMediaResult.MediaResult, ClientMediaResult.MediaResult ] ]:
-        
-        pair = [ media_result_1, media_result_2 ]
-        
-        if test_both_ways_around:
-            
-            # just in case both match
-            random.shuffle( pair )
-            
-        
-        ( media_result_1, media_result_2 ) = pair
-        
-        if len( self._comparators ) == 0:
-            
-            # no testing, just return whatever. let's hope this is an alternates thing
-            return ( media_result_1, media_result_2 )
-            
-        
-        if False not in ( comparator.Test( media_result_1, media_result_2 ) for comparator in self._comparators ):
-            
-            return ( media_result_1, media_result_2 )
-            
-        elif test_both_ways_around and False not in ( comparator.Test( media_result_2, media_result_1 ) for comparator in self._comparators ):
-            
-            return ( media_result_2, media_result_1 )
-            
-        else:
-            
-            return None
-            
-        
-    
-    def GetSummary( self ) -> str:
-        
-        comparator_strings = sorted( [ comparator.GetSummary() for comparator in self._comparators ] )
-        
-        return ', '.join( comparator_strings )
-        
-    
-    def PairMatchesBothWaysAround( self, media_result_1: ClientMediaResult.MediaResult, media_result_2: ClientMediaResult.MediaResult ) -> bool:
-        
-        return self.GetMatchingAB( media_result_1, media_result_2, test_both_ways_around = False ) is not None and self.GetMatchingAB( media_result_2, media_result_1, test_both_ways_around = False ) is not None
-        
-    
-    def SetComparators( self, comparators: typing.Collection[ PairComparator ] ):
-        
-        self._comparators = list( comparators )
-        
-    
-
-HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_DUPLICATES_AUTO_RESOLUTION_PAIR_SELECTOR ] = PairSelector
-
 DUPLICATES_AUTO_RESOLUTION_RULE_OPERATION_MODE_PAUSED = 0
 DUPLICATES_AUTO_RESOLUTION_RULE_OPERATION_MODE_WORK_BUT_NO_ACTION = 1
 DUPLICATES_AUTO_RESOLUTION_RULE_OPERATION_MODE_FULLY_AUTOMATIC = 2
@@ -340,6 +58,8 @@ duplicates_auto_resolution_rule_operation_mode_str_lookup = {
     DUPLICATES_AUTO_RESOLUTION_RULE_OPERATION_MODE_FULLY_AUTOMATIC : 'fully automatic'
 }
 
+NEW_RULE_SESSION_ID = -1
+
 class DuplicatesAutoResolutionRule( HydrusSerialisable.SerialisableBaseNamed ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_DUPLICATES_AUTO_RESOLUTION_RULE
@@ -353,14 +73,19 @@ class DuplicatesAutoResolutionRule( HydrusSerialisable.SerialisableBaseNamed ):
         
         super().__init__( name )
         
+        # by doing this we use more than we'd like, but it solves an issue in the dialog compared to having all uninitialised as -1
+        global NEW_RULE_SESSION_ID
+        
         # the id here will be for the database to match up rules to cached pair statuses. slightly wewmode, but we'll see
-        self._id = -1
+        self._id = NEW_RULE_SESSION_ID
+        
+        NEW_RULE_SESSION_ID -= 1
         
         self._operation_mode = DUPLICATES_AUTO_RESOLUTION_RULE_OPERATION_MODE_WORK_BUT_NO_ACTION
         
         self._potential_duplicates_search_context = ClientPotentialDuplicatesSearchContext.PotentialDuplicatesSearchContext()
         
-        self._pair_selector = PairSelector()
+        self._pair_selector = ClientDuplicatesAutoResolutionComparators.PairSelector()
         
         self._action = HC.DUPLICATE_BETTER
         
@@ -384,6 +109,7 @@ class DuplicatesAutoResolutionRule( HydrusSerialisable.SerialisableBaseNamed ):
     
     def __hash__( self ):
         
+        # before we are initialised (i.e. in the dialog list), let's return something unique
         return self._id.__hash__()
         
     
@@ -538,7 +264,7 @@ class DuplicatesAutoResolutionRule( HydrusSerialisable.SerialisableBaseNamed ):
         return self._operation_mode
         
     
-    def GetPairSelector( self ) -> PairSelector:
+    def GetPairSelector( self ) -> ClientDuplicatesAutoResolutionComparators.PairSelector:
         
         return self._pair_selector
         
@@ -666,7 +392,7 @@ class DuplicatesAutoResolutionRule( HydrusSerialisable.SerialisableBaseNamed ):
         self._potential_duplicates_search_context = value
         
     
-    def SetPairSelector( self, value: PairSelector ):
+    def SetPairSelector( self, value: ClientDuplicatesAutoResolutionComparators.PairSelector ):
         
         self._pair_selector = value
         
@@ -726,7 +452,7 @@ def GetDefaultRuleSuggestions() -> typing.List[ DuplicatesAutoResolutionRule ]:
     
     suggested_rules = []
     
-    #
+    # ############
     
     location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY )
     
@@ -764,11 +490,11 @@ def GetDefaultRuleSuggestions() -> typing.List[ DuplicatesAutoResolutionRule ]:
     
     duplicates_auto_resolution_rule.SetPotentialDuplicatesSearchContext( potential_duplicates_search_context )
     
-    selector = PairSelector()
+    selector = ClientDuplicatesAutoResolutionComparators.PairSelector()
     
-    comparator = PairComparatorOneFile()
+    comparator = ClientDuplicatesAutoResolutionComparators.PairComparatorOneFile()
     
-    comparator.SetLookingAt( LOOKING_AT_A )
+    comparator.SetLookingAt( ClientDuplicatesAutoResolutionComparators.LOOKING_AT_A )
     
     file_search_context_mc = ClientSearchFileSearchContext.FileSearchContext(
         predicates = [ ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_MIME, value = ( HC.IMAGE_JPEG, ) ) ]
@@ -793,7 +519,152 @@ def GetDefaultRuleSuggestions() -> typing.List[ DuplicatesAutoResolutionRule ]:
     
     suggested_rules.append( duplicates_auto_resolution_rule )
     
+    # ############
+    
+    location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY )
+    
+    predicates = [
+        ClientSearchPredicate.Predicate( predicate_type = ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_MIME, value = ( HC.GENERAL_IMAGE, ) ),
+        ClientSearchPredicate.Predicate(
+            predicate_type = ClientSearchPredicate.PREDICATE_TYPE_OR_CONTAINER,
+            value = [
+                ClientSearchPredicate.Predicate( predicate_type = ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HAS_EXIF, value = True ),
+                ClientSearchPredicate.Predicate( predicate_type = ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HAS_ICC_PROFILE, value = True )
+            ]
+        ),
+        ClientSearchPredicate.Predicate( predicate_type = ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HEIGHT, value = ClientNumberTest.NumberTest.STATICCreateFromCharacters( '>', 128 ) ),
+        ClientSearchPredicate.Predicate( predicate_type = ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_WIDTH, value = ClientNumberTest.NumberTest.STATICCreateFromCharacters( '>', 128 ) )
+    ]
+    
+    file_search_context_1 = ClientSearchFileSearchContext.FileSearchContext(
+        location_context = location_context,
+        predicates = predicates
+    )
+    
+    predicates = [
+        ClientSearchPredicate.Predicate( predicate_type = ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_MIME, value = ( HC.GENERAL_IMAGE, ) ),
+        ClientSearchPredicate.Predicate( predicate_type = ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HAS_EXIF, value = False ),
+        ClientSearchPredicate.Predicate( predicate_type = ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HAS_ICC_PROFILE, value = False ),
+        ClientSearchPredicate.Predicate( predicate_type = ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HEIGHT, value = ClientNumberTest.NumberTest.STATICCreateFromCharacters( '>', 128 ) ),
+        ClientSearchPredicate.Predicate( predicate_type = ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_WIDTH, value = ClientNumberTest.NumberTest.STATICCreateFromCharacters( '>', 128 ) )
+    ]
+    
+    file_search_context_2 = ClientSearchFileSearchContext.FileSearchContext(
+        location_context = location_context,
+        predicates = predicates
+    )
+    
+    potential_duplicates_search_context = ClientPotentialDuplicatesSearchContext.PotentialDuplicatesSearchContext()
+    
+    potential_duplicates_search_context.SetFileSearchContext1( file_search_context_1 )
+    potential_duplicates_search_context.SetFileSearchContext2( file_search_context_2 )
+    potential_duplicates_search_context.SetDupeSearchType( ClientDuplicates.DUPE_SEARCH_BOTH_FILES_MATCH_DIFFERENT_SEARCHES )
+    potential_duplicates_search_context.SetPixelDupesPreference( ClientDuplicates.SIMILAR_FILES_PIXEL_DUPES_REQUIRED )
+    potential_duplicates_search_context.SetMaxHammingDistance( 0 )
+    
+    duplicates_auto_resolution_rule = DuplicatesAutoResolutionRule( 'pixel-perfect pairs - keep EXIF or ICC data' )
+    
+    duplicates_auto_resolution_rule.SetPotentialDuplicatesSearchContext( potential_duplicates_search_context )
+    
+    selector = ClientDuplicatesAutoResolutionComparators.PairSelector()
+    
+    comparators = []
+    
+    comparator = ClientDuplicatesAutoResolutionComparators.PairComparatorOneFile()
+    
+    comparator.SetLookingAt( ClientDuplicatesAutoResolutionComparators.LOOKING_AT_B )
+    
+    file_search_context_mc = ClientSearchFileSearchContext.FileSearchContext(
+        predicates = [
+            ClientSearchPredicate.Predicate( predicate_type = ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HAS_EXIF, value = False ),
+            ClientSearchPredicate.Predicate( predicate_type = ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HAS_ICC_PROFILE, value = False )
+        ]
+    )
+    
+    metadata_conditional = ClientMetadataConditional.MetadataConditional()
+    
+    metadata_conditional.SetFileSearchContext( file_search_context_mc )
+    
+    comparator.SetMetadataConditional( metadata_conditional )
+    
+    comparators.append( comparator )
+    
+    comparator = ClientDuplicatesAutoResolutionComparators.PairComparatorRelativeHardcoded( hardcoded_type = ClientDuplicatesAutoResolutionComparators.HARDCODED_COMPARATOR_TYPE_FILETYPE_SAME )
+    
+    comparators.append( comparator )
+    
+    selector.SetComparators( comparators )
+    
+    duplicates_auto_resolution_rule.SetPairSelector( selector )
+    
     #
+    
+    duplicates_auto_resolution_rule.SetAction( HC.DUPLICATE_BETTER )
+    duplicates_auto_resolution_rule.SetDeleteInfo( False, True )
+    
+    #
+    
+    suggested_rules.append( duplicates_auto_resolution_rule )
+    
+    # ############
+    
+    location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY )
+    
+    predicates = [
+        ClientSearchPredicate.Predicate( predicate_type = ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_MIME, value = ( HC.GENERAL_IMAGE, ) ),
+        ClientSearchPredicate.Predicate( predicate_type = ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HAS_EXIF, value = False ),
+        ClientSearchPredicate.Predicate( predicate_type = ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HAS_ICC_PROFILE, value = False ),
+        ClientSearchPredicate.Predicate( predicate_type = ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HEIGHT, value = ClientNumberTest.NumberTest.STATICCreateFromCharacters( '>', 128 ) ),
+        ClientSearchPredicate.Predicate( predicate_type = ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_WIDTH, value = ClientNumberTest.NumberTest.STATICCreateFromCharacters( '>', 128 ) )
+    ]
+    
+    file_search_context_1 = ClientSearchFileSearchContext.FileSearchContext(
+        location_context = location_context,
+        predicates = predicates
+    )
+    
+    potential_duplicates_search_context = ClientPotentialDuplicatesSearchContext.PotentialDuplicatesSearchContext()
+    
+    potential_duplicates_search_context.SetFileSearchContext1( file_search_context_1 )
+    potential_duplicates_search_context.SetDupeSearchType( ClientDuplicates.DUPE_SEARCH_BOTH_FILES_MATCH_ONE_SEARCH )
+    potential_duplicates_search_context.SetPixelDupesPreference( ClientDuplicates.SIMILAR_FILES_PIXEL_DUPES_REQUIRED )
+    potential_duplicates_search_context.SetMaxHammingDistance( 0 )
+    
+    duplicates_auto_resolution_rule = DuplicatesAutoResolutionRule( 'pixel-perfect pairs - eliminate bloat' )
+    
+    duplicates_auto_resolution_rule.SetPotentialDuplicatesSearchContext( potential_duplicates_search_context )
+    
+    selector = ClientDuplicatesAutoResolutionComparators.PairSelector()
+    
+    comparators = []
+    
+    comparator = ClientDuplicatesAutoResolutionComparators.PairComparatorRelativeFileInfo()
+    
+    comparator.SetMultiplier( 1.00 )
+    comparator.SetDelta( 0 )
+    comparator.SetNumberTest( ClientNumberTest.NumberTest( operator = ClientNumberTest.NUMBER_TEST_OPERATOR_LESS_THAN ) )
+    comparator.SetSystemPredicate( ClientSearchPredicate.Predicate( predicate_type = ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_SIZE ) )
+    
+    comparators.append( comparator )
+    
+    comparator = ClientDuplicatesAutoResolutionComparators.PairComparatorRelativeHardcoded( hardcoded_type = ClientDuplicatesAutoResolutionComparators.HARDCODED_COMPARATOR_TYPE_FILETYPE_SAME )
+    
+    comparators.append( comparator )
+    
+    selector.SetComparators( comparators )
+    
+    duplicates_auto_resolution_rule.SetPairSelector( selector )
+    
+    #
+    
+    duplicates_auto_resolution_rule.SetAction( HC.DUPLICATE_BETTER )
+    duplicates_auto_resolution_rule.SetDeleteInfo( False, True )
+    
+    #
+    
+    suggested_rules.append( duplicates_auto_resolution_rule )
+    
+    # ############
     
     return suggested_rules
     

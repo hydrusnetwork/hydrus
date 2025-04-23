@@ -157,7 +157,7 @@ class ThumbnailPairListModelPendingAutoResolutionAction( ThumbnailPairListModel 
         row = index.row()
         col = index.column()
         
-        if role == QC.Qt.ItemDataRole.DisplayRole:
+        if role in ( QC.Qt.ItemDataRole.DisplayRole, QC.Qt.ItemDataRole.ToolTipRole ):
             
             if col == 2:
                 

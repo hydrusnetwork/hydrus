@@ -5,6 +5,7 @@ from qtpy import QtWidgets as QW
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusText
 
 from hydrus.client.gui import QtInit
 
@@ -26,7 +27,7 @@ def GetAvailableStyles():
     
     # so eventually expand this to do QStylePlugin or whatever we are doing to add more QStyles
     
-    return sorted( QW.QStyleFactory.keys(), key = HydrusData.HumanTextSortKey )
+    return sorted( QW.QStyleFactory.keys(), key = HydrusText.HumanTextSortKey )
     
 
 def GetAvailableStyleSheets():
@@ -48,7 +49,7 @@ def GetAvailableStyleSheets():
             
         
     
-    HydrusData.HumanTextSort( stylesheet_filenames )
+    HydrusText.HumanTextSort( stylesheet_filenames )
     
     return stylesheet_filenames
     

@@ -824,7 +824,8 @@ class Controller( object ):
         ]
         
         module_lookup[ 'tags_fast' ] = [
-            TestClientTags
+            TestClientTags,
+            TestHydrusTags
         ]
         
         module_lookup[ 'tags' ] = [
@@ -859,8 +860,8 @@ class Controller( object ):
         ]
         
         module_lookup[ 'duplicates_auto_resolution' ] = [
-            TestClientDBDuplicatesAutoResolution,
             TestClientDuplicatesAutoResolution,
+            TestClientDBDuplicatesAutoResolution,
             TestClientMetadataConditional
         ]
         

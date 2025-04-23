@@ -6234,6 +6234,8 @@ class DB( HydrusDB.HydrusDB ):
         
         for ( group_of_tag_ids, num_done, num_to_do ) in HydrusDB.ReadLargeIdQueryInSeparateChunks( self._c, select_statement, BLOCK_SIZE ):
             
+            message = 'Scanning tags: {} - Bad Found: {}'.format( HydrusNumbers.ValueRangeToPrettyString( num_done, num_to_do ), HydrusNumbers.ToHumanInt( bad_tag_count ) )
+            
             if job_status is not None:
                 
                 if job_status.IsCancelled():
@@ -6241,10 +6243,10 @@ class DB( HydrusDB.HydrusDB ):
                     break
                     
                 
-                message = 'Scanning tags: {} - Bad Found: {}'.format( HydrusNumbers.ValueRangeToPrettyString( num_done, num_to_do ), HydrusNumbers.ToHumanInt( bad_tag_count ) )
-                
                 job_status.SetStatusText( message )
                 
+            
+            self._controller.frame_splash_status.SetSubtext( message )
             
             for tag_id in group_of_tag_ids:
                 
@@ -6277,6 +6279,8 @@ class DB( HydrusDB.HydrusDB ):
         
         for ( i, ( tag_id, tag, cleaned_tag ) ) in enumerate( invalid_tag_ids_and_tags ):
             
+            message = 'Fixing bad tags: {}'.format( HydrusNumbers.ValueRangeToPrettyString( i + 1, bad_tag_count ) )
+            
             if job_status is not None:
                 
                 if job_status.IsCancelled():
@@ -6284,10 +6288,10 @@ class DB( HydrusDB.HydrusDB ):
                     break
                     
                 
-                message = 'Fixing bad tags: {}'.format( HydrusNumbers.ValueRangeToPrettyString( i + 1, bad_tag_count ) )
-                
                 job_status.SetStatusText( message )
                 
+            
+            self._controller.frame_splash_status.SetSubtext( message )
             
             # now find an entirely new namespace_id, subtag_id pair for this tag
             
@@ -6323,11 +6327,11 @@ class DB( HydrusDB.HydrusDB ):
             
             try:
                 
-                HydrusData.Print( 'Invalid tag fixing: {} replaced with {}'.format( repr( tag ), repr( cleaned_tag ) ) )
+                HydrusData.Print( f'Invalid tag fixing: tag_id {tag_id}: "{tag}" replaced with "{cleaned_tag}"' )
                 
             except:
                 
-                HydrusData.Print( 'Invalid tag fixing: Could not even print the bad tag to the log! It is now known as {}'.format( repr( cleaned_tag ) ) )
+                HydrusData.Print( f'Invalid tag fixing: tag_id {tag_id}: Could not even print the bad tag to the log! It is now known as "{cleaned_tag}"' )
                 
             
         
@@ -6353,6 +6357,8 @@ class DB( HydrusDB.HydrusDB ):
             
             job_status.Finish()
             
+        
+        return bad_tag_count
         
     
     def _RepopulateMappingsFromCache( self, tag_service_key = None, job_status = None ):
@@ -9513,6 +9519,78 @@ class DB( HydrusDB.HydrusDB ):
                 self.pub_initial_message( message )
                 
             
+        
+        if version == 618:
+            
+            try:
+                
+                self._RepairInvalidTags()
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to scan and fix bad tags in the database failed! You can re-attempt this job under _database->check and repair->fix invalid tags_. Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
+                
+            
+            try:
+                
+                domain_manager = self.modules_serialisable.GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
+                
+                domain_manager.Initialise()
+                
+                #
+                
+                domain_manager.OverwriteDefaultURLClasses( [
+                    'holotower thread json api',
+                    'holotower thread'
+                ] )
+                
+                domain_manager.OverwriteDefaultParsers( [
+                    'holotower thread api parser',
+                    'safebooru file page parser'
+                ] )
+                
+                #
+                
+                domain_manager.TryToLinkURLClassesAndParsers()
+                
+                #
+                
+                self.modules_serialisable.SetJSONDump( domain_manager )
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to update some downloader objects failed! Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
+                
+            
+            try:
+                
+                new_options = self.modules_serialisable.GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_CLIENT_OPTIONS )
+                
+                current_value = new_options.GetInteger( 'ms_to_wait_between_physical_file_deletes' )
+                
+                if current_value == 250:
+                    
+                    new_options.SetInteger( 'ms_to_wait_between_physical_file_deletes', 600 )
+                    
+                    self.modules_serialisable.SetJSONDump( new_options )
+                    
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to update your options failed! Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
+                
             
         
         self._controller.frame_splash_status.SetTitleText( 'updated db to v{}'.format( HydrusNumbers.ToHumanInt( version + 1 ) ) )

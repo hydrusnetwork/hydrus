@@ -1708,12 +1708,20 @@ class NumberTestWidgetDuration( ClientGUINumberTest.NumberTestWidget ):
     
     def _GenerateAbsoluteValueWidget( self, max: int ):
         
-        return TimeDeltaWidget( self, min = 0, minutes = True, seconds = True, milliseconds = True )
+        widget = TimeDeltaWidget( self, min = 0, minutes = True, seconds = True, milliseconds = True )
+        
+        widget.timeDeltaChanged.connect( self.valueChanged )
+        
+        return widget
         
     
     def _GenerateValueWidget( self, max: int ):
         
-        return TimeDeltaWidget( self, min = 0, days = False, hours = True, minutes = True, seconds = True, milliseconds = True )
+        widget = TimeDeltaWidget( self, min = 0, days = False, hours = True, minutes = True, seconds = True, milliseconds = True )
+        
+        widget.timeDeltaChanged.connect( self.valueChanged )
+        
+        return widget
         
     
     def _GetAbsoluteValue( self ):

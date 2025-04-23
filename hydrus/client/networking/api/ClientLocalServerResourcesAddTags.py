@@ -342,7 +342,7 @@ class HydrusResourceClientAPIRestrictedAddTagsGetTagSiblingsParents( HydrusResou
         
         tags = HydrusTags.CleanTags( tags )
         
-        tags_to_service_keys_to_siblings_and_parents = CG.client_controller.Read( 'tag_siblings_and_parents_lookup', tags )
+        tags_to_service_keys_to_siblings_and_parents = CG.client_controller.Read( 'tag_siblings_and_parents_lookup', ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, tags )
         
         tags_dict = {}
         

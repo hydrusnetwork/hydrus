@@ -2,6 +2,7 @@ import typing
 
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTags
+from hydrus.core import HydrusText
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
@@ -132,7 +133,7 @@ def lexicographic_key( tag ):
     
     ( namespace, subtag ) = HydrusTags.SplitTag( tag )
     
-    comparable_subtag = HydrusTags.ConvertTagToSortable( subtag )
+    comparable_subtag = HydrusText.HumanTextSortKey( subtag )
     
     if namespace == '':
         
@@ -140,7 +141,7 @@ def lexicographic_key( tag ):
         
     else:
         
-        comparable_namespace = HydrusTags.ConvertTagToSortable( namespace )
+        comparable_namespace = HydrusText.HumanTextSortKey( namespace )
         
         return ( comparable_namespace, comparable_subtag )
         
@@ -150,7 +151,7 @@ def subtag_lexicographic_key( tag ):
     
     ( namespace, subtag ) = HydrusTags.SplitTag( tag )
     
-    comparable_subtag = HydrusTags.ConvertTagToSortable( subtag )
+    comparable_subtag = HydrusText.HumanTextSortKey( subtag )
     
     return comparable_subtag
     
@@ -165,7 +166,7 @@ def namespace_az_key( tag ):
         
     else:
         
-        comparable_namespace = HydrusTags.ConvertTagToSortable( namespace )
+        comparable_namespace = HydrusText.HumanTextSortKey( namespace )
         
         return ( 0, comparable_namespace )
         
@@ -202,7 +203,7 @@ def namespace_user_key_factory():
                 
             else:
                 
-                comparable_namespace = HydrusTags.ConvertTagToSortable( namespace )
+                comparable_namespace = HydrusText.HumanTextSortKey( namespace )
                 
                 return ( any_namespace_index, comparable_namespace )
                 

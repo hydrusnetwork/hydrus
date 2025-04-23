@@ -171,3 +171,96 @@ class TestPredicateTesting( unittest.TestCase ):
         self.assertFalse( pred.TestMediaResult( media_result_fail ) )
         
     
+    def test_type_exif( self ):
+        
+        pred = ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HAS_EXIF )
+        
+        self.assertTrue( pred.CanTestMediaResult() )
+        
+        media_result_pass = HelperFunctions.GetFakeMediaResult( HydrusData.GenerateKey(), mime = HC.IMAGE_JPEG )
+        media_result_fail = media_result_pass.Duplicate()
+        
+        media_result_pass.GetFileInfoManager().has_exif = True
+        media_result_fail.GetFileInfoManager().has_exif = False
+        
+        self.assertTrue( pred.TestMediaResult( media_result_pass ) )
+        self.assertFalse( pred.TestMediaResult( media_result_fail ) )
+        
+        #
+        
+        pred = ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HAS_EXIF, value = False )
+        
+        self.assertTrue( pred.CanTestMediaResult() )
+        
+        media_result_pass = HelperFunctions.GetFakeMediaResult( HydrusData.GenerateKey(), mime = HC.IMAGE_JPEG )
+        media_result_fail = media_result_pass.Duplicate()
+        
+        media_result_pass.GetFileInfoManager().has_exif = False
+        media_result_fail.GetFileInfoManager().has_exif = True
+        
+        self.assertTrue( pred.TestMediaResult( media_result_pass ) )
+        self.assertFalse( pred.TestMediaResult( media_result_fail ) )
+        
+    
+    def test_type_icc_profile( self ):
+        
+        pred = ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HAS_ICC_PROFILE )
+        
+        self.assertTrue( pred.CanTestMediaResult() )
+        
+        media_result_pass = HelperFunctions.GetFakeMediaResult( HydrusData.GenerateKey(), mime = HC.IMAGE_JPEG )
+        media_result_fail = media_result_pass.Duplicate()
+        
+        media_result_pass.GetFileInfoManager().has_icc_profile = True
+        media_result_fail.GetFileInfoManager().has_icc_profile = False
+        
+        self.assertTrue( pred.TestMediaResult( media_result_pass ) )
+        self.assertFalse( pred.TestMediaResult( media_result_fail ) )
+        
+        #
+        
+        pred = ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HAS_ICC_PROFILE, value = False )
+        
+        self.assertTrue( pred.CanTestMediaResult() )
+        
+        media_result_pass = HelperFunctions.GetFakeMediaResult( HydrusData.GenerateKey(), mime = HC.IMAGE_JPEG )
+        media_result_fail = media_result_pass.Duplicate()
+        
+        media_result_pass.GetFileInfoManager().has_icc_profile = False
+        media_result_fail.GetFileInfoManager().has_icc_profile = True
+        
+        self.assertTrue( pred.TestMediaResult( media_result_pass ) )
+        self.assertFalse( pred.TestMediaResult( media_result_fail ) )
+        
+    
+    def test_type_human_readable_metadata( self ):
+        
+        pred = ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HAS_HUMAN_READABLE_EMBEDDED_METADATA )
+        
+        self.assertTrue( pred.CanTestMediaResult() )
+        
+        media_result_pass = HelperFunctions.GetFakeMediaResult( HydrusData.GenerateKey(), mime = HC.IMAGE_JPEG )
+        media_result_fail = media_result_pass.Duplicate()
+        
+        media_result_pass.GetFileInfoManager().has_human_readable_embedded_metadata = True
+        media_result_fail.GetFileInfoManager().has_human_readable_embedded_metadata = False
+        
+        self.assertTrue( pred.TestMediaResult( media_result_pass ) )
+        self.assertFalse( pred.TestMediaResult( media_result_fail ) )
+        
+        #
+        
+        pred = ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HAS_HUMAN_READABLE_EMBEDDED_METADATA, value = False )
+        
+        self.assertTrue( pred.CanTestMediaResult() )
+        
+        media_result_pass = HelperFunctions.GetFakeMediaResult( HydrusData.GenerateKey(), mime = HC.IMAGE_JPEG )
+        media_result_fail = media_result_pass.Duplicate()
+        
+        media_result_pass.GetFileInfoManager().has_human_readable_embedded_metadata = False
+        media_result_fail.GetFileInfoManager().has_human_readable_embedded_metadata = True
+        
+        self.assertTrue( pred.TestMediaResult( media_result_pass ) )
+        self.assertFalse( pred.TestMediaResult( media_result_fail ) )
+        
+    

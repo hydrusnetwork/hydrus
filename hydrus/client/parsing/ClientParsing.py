@@ -1341,7 +1341,7 @@ class ParseFormulaJSON( ParseFormula ):
                             
                             list_to_index = list( root.keys() )
                             
-                            HydrusData.HumanTextSort( list_to_index )
+                            HydrusText.HumanTextSort( list_to_index )
                             
                         
                         try:

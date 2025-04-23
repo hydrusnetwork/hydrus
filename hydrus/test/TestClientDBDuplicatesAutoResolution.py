@@ -11,6 +11,7 @@ from hydrus.client.db import ClientDB
 from hydrus.client.duplicates import ClientDuplicates
 from hydrus.client.duplicates import ClientPotentialDuplicatesSearchContext
 from hydrus.client.duplicates import ClientDuplicatesAutoResolution
+from hydrus.client.duplicates import ClientDuplicatesAutoResolutionComparators
 from hydrus.client.importing import ClientImportFiles
 from hydrus.client.importing.options import FileImportOptions
 from hydrus.client.metadata import ClientContentUpdates
@@ -153,7 +154,7 @@ class TestClientDBDuplicatesAutoResolution( unittest.TestCase ):
         
         rule_1_read = rules_we_read[0]
         
-        self.assertNotEqual( rule_1_read.GetId(), -1 )
+        self.assertTrue( rule_1_read.GetId() > 0 )
         
         rule_1.SetId( rule_1_read.GetId() )
         
@@ -173,7 +174,7 @@ class TestClientDBDuplicatesAutoResolution( unittest.TestCase ):
         
         rule_2_read = [ rule for rule in rules_we_read if rule.GetId() not in ( -1, rule_1.GetId() ) ][0]
         
-        self.assertNotEqual( rule_2_read.GetId(), -1 )
+        self.assertTrue( rule_2_read.GetId() > 0 )
         self.assertNotEqual( rule_1.GetId(), rule_2.GetId() )
         
         rule_2.SetId( rule_2_read.GetId() )
@@ -202,9 +203,9 @@ class TestClientDBDuplicatesAutoResolution( unittest.TestCase ):
         
         rules_we_read = self._read( 'duplicate_auto_resolution_rules_with_counts' )
         
-        rule_3_read = [ rule for rule in rules_we_read if rule.GetId() not in ( -1, rule_2.GetId() ) ][0]
+        rule_3_read = [ rule for rule in rules_we_read if rule.GetId() > 0 and rule.GetId() != rule_2.GetId() ][0]
         
-        self.assertNotEqual( rule_3_read.GetId(), -1 )
+        self.assertTrue( rule_3_read.GetId() > 0 )
         self.assertNotEqual( rule_1.GetId(), rule_3.GetId() )
         
         rule_3.SetId( rule_3_read.GetId() )
@@ -243,9 +244,9 @@ class TestClientDBDuplicatesAutoResolution( unittest.TestCase ):
         
         rule_1.SetPotentialDuplicatesSearchContext( potential_duplicates_search_context )
         
-        selector = ClientDuplicatesAutoResolution.PairSelector()
+        selector = ClientDuplicatesAutoResolutionComparators.PairSelector()
         
-        comparator = ClientDuplicatesAutoResolution.PairComparatorOneFile()
+        comparator = ClientDuplicatesAutoResolutionComparators.PairComparatorOneFile()
         
         mc = ClientMetadataConditional.MetadataConditional()
         
@@ -345,9 +346,9 @@ class TestClientDBDuplicatesAutoResolution( unittest.TestCase ):
         
         rule_1.SetPotentialDuplicatesSearchContext( potential_duplicates_search_context )
         
-        selector = ClientDuplicatesAutoResolution.PairSelector()
+        selector = ClientDuplicatesAutoResolutionComparators.PairSelector()
         
-        comparator = ClientDuplicatesAutoResolution.PairComparatorOneFile()
+        comparator = ClientDuplicatesAutoResolutionComparators.PairComparatorOneFile()
         
         mc = ClientMetadataConditional.MetadataConditional()
         
@@ -403,9 +404,9 @@ class TestClientDBDuplicatesAutoResolution( unittest.TestCase ):
         
         rule_1 = rule_1_read.Duplicate()
         
-        selector = ClientDuplicatesAutoResolution.PairSelector()
+        selector = ClientDuplicatesAutoResolutionComparators.PairSelector()
         
-        comparator = ClientDuplicatesAutoResolution.PairComparatorOneFile()
+        comparator = ClientDuplicatesAutoResolutionComparators.PairComparatorOneFile()
         
         mc = ClientMetadataConditional.MetadataConditional()
         
@@ -465,9 +466,9 @@ class TestClientDBDuplicatesAutoResolution( unittest.TestCase ):
         
         rule_1.SetPotentialDuplicatesSearchContext( potential_duplicates_search_context )
         
-        selector = ClientDuplicatesAutoResolution.PairSelector()
+        selector = ClientDuplicatesAutoResolutionComparators.PairSelector()
         
-        comparator = ClientDuplicatesAutoResolution.PairComparatorOneFile()
+        comparator = ClientDuplicatesAutoResolutionComparators.PairComparatorOneFile()
         
         mc = ClientMetadataConditional.MetadataConditional()
         
@@ -723,9 +724,9 @@ class TestClientDBDuplicatesAutoResolution( unittest.TestCase ):
         
         rule_1.SetPotentialDuplicatesSearchContext( potential_duplicates_search_context )
         
-        selector = ClientDuplicatesAutoResolution.PairSelector()
+        selector = ClientDuplicatesAutoResolutionComparators.PairSelector()
         
-        comparator = ClientDuplicatesAutoResolution.PairComparatorOneFile()
+        comparator = ClientDuplicatesAutoResolutionComparators.PairComparatorOneFile()
         
         mc = ClientMetadataConditional.MetadataConditional()
         
@@ -840,9 +841,9 @@ class TestClientDBDuplicatesAutoResolution( unittest.TestCase ):
         
         rule_1.SetPotentialDuplicatesSearchContext( potential_duplicates_search_context )
         
-        selector = ClientDuplicatesAutoResolution.PairSelector()
+        selector = ClientDuplicatesAutoResolutionComparators.PairSelector()
         
-        comparator = ClientDuplicatesAutoResolution.PairComparatorOneFile()
+        comparator = ClientDuplicatesAutoResolutionComparators.PairComparatorOneFile()
         
         mc = ClientMetadataConditional.MetadataConditional()
         

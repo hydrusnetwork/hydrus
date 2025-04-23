@@ -2,7 +2,7 @@
 title: Filtering Duplicates Automatically
 ---
 
-**Hey, this is all for a system that is only just launching. Not everything is active/ready yet!**
+**Hey, this is all for a system that is still launching. Advanced users only, and only simple comparisons are active/ready for real use!**
 
 ## the problem with duplicates processing
 
@@ -46,7 +46,7 @@ Go to the duplicates filtering page and switch to the 'auto-resolution' tab. Thi
 
 ### search
 
-Each rule represents a search, a way of testing pairs, and then a duplicate action. There's a button to add suggested rules.
+Each rule represents a search, a way of testing pairs, and then a duplicate action. There's a button to add suggested rules. Try adding 'pixel-perfect jpegs vs pngs'.
 
 [![](images/duplicates_auto_resolution_search.png)](images/duplicates_auto_resolution_search.png)
 
@@ -63,9 +63,11 @@ Now let's look at the comparison tab:
 
 [![](images/duplicates_auto_resolution_comparison.png)](images/duplicates_auto_resolution_comparison.png)
 
-This is the area of the system that will see most future work. It uses the normal system predicate system for its logic. Only a few predicate types are supported right now, but this will expand. Also, the system only supports `A matches test` or `B matches test`, testing each file in isolation, but in future we'll have `A's filesize >= 5x B's filesize` and so on.
+Since we know that every incoming search pair will include one jpeg and one png, we can simply define that A has to be the jpeg.
 
-For our rule, we know that every 1,2 pair from the search will include one jpeg and one png, but they will come in random order. We can tell hydrus to orient it always as jpeg-png by saying that A has to be the jpeg.
+You can get more complicated:
+
+[![](images/duplicates_auto_resolution_comparison_complex.png)](images/duplicates_auto_resolution_comparison_complex.png)
 
 ### action
 
@@ -93,7 +95,7 @@ Once we are happy, we can apply the dialogs and save our rule back. It will star
 
 Rules can either be 'semi-automatic' or 'fully automatic'. They have the all same settings, and they will search and test pairs the same way, but semi-automatic rules will not perform their final duplicate action without your approval. Fully automatic rules are fire-and-forget, and will do everything without your interference.
 
-You might like to start your rules in semi-automatic, and if you never encounter any false-positives, you can switch it to fully automatic.
+You might like to start your rules in semi-automatic, and if you don't encounter any false-positives after a bit of work, then you can more confidently switch it to fully automatic.
 
 ## so, how does this all work?
 
@@ -113,7 +115,7 @@ When you import new files and the regular potential dupes search (on the 'prepar
 
 ## future
 
-I will expand the 'comparison' tab allow for more system predicate types and figure out 'A vs B' tests too. Pixel-perfect jpeg/png is easy and simple to logically define, but we'll want to push into fuzzier territory like 'delete all files that are close-match dupes but the resolution difference is greater than 1.4x' etc.. Depending on how things go, we may figure out some new hardcoded tools that do more sophisticated A vs B similarity testing, like "A is >= 99.7% pixel-similar to B" or "A is pixel-perfect-in-greyscale to B" (for recolour detection) and so on.
+We need more powerful comparison tools. Pixel-perfect jpeg/png is easy and simple to logically define, but we want to push into fuzzier territory like 'delete all files that are close-match dupes but the resolution difference is greater than 1.4x' etc.. To differentiate alternates from dupes, I think we need sophisticated A vs B similarity testing, like "A is >= 99.7% pixel-similar to B" to differentiate jpeg encoding artifacts from actual watermarks and artist corrections and such.
 
 I'd also eventually love if auto-resolution rules applied to files _as_ they are imported, so, in the vein of a 'previously deleted' import result, you could have an instant result of 'duplicate discarded: (rule name)'. This may be tricky though and make file imports take +800ms each, so we'll see how our early tests shake out.
 

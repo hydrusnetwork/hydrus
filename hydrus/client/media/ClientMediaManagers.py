@@ -4,10 +4,11 @@ import threading
 import typing
 
 from hydrus.core import HydrusConstants as HC
-from hydrus.core import HydrusTags
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusNumbers
+from hydrus.core import HydrusTags
+from hydrus.core import HydrusText
 from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
@@ -1849,7 +1850,8 @@ class TagsManager( object ):
             
             for desired_namespace in namespaces:
                 
-                subtags = sorted( ( HydrusTags.ConvertTagToSortable( subtag ) for ( namespace, subtag ) in pairs if namespace == desired_namespace ) )
+                # yes this is correct, we want _comparable_ tag slice
+                subtags = sorted( ( HydrusText.HumanTextSortKey( subtag ) for ( namespace, subtag ) in pairs if namespace == desired_namespace ) )
                 
                 slice_tags.append( tuple( subtags ) )
                 

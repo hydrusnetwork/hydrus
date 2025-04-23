@@ -12,6 +12,8 @@ from PIL import ImageFile as PILImageFile
 from PIL import Image as PILImage
 from PIL import ImageOps as PILImageOps
 
+from hydrus.core import HydrusData
+
 try:
     
     # TODO: clean up this import mess
@@ -25,15 +27,24 @@ try:
         import pillow_heif
         import PIL
         
-        if hasattr( pillow_heif, 'register_avif_opener' ) and tuple( ( int( v ) for v in PIL.__version__.split( '.' ) ) ) < ( 11, 2 ):
+        pillow_does_not_have_native_avif_support = True
+        # this is the version test that failed. they decided not to bundle it in the wheel because it bloated it https://pillow.readthedocs.io/en/stable/releasenotes/11.2.1.html
+        # now waiting on a future version to see if they can figure out a solution 
+        # pillow_does_not_have_native_avif_support = tuple( ( int( v ) for v in PIL.__version__.split( '.' ) ) ) < ( 11, 2 )
+        
+        # if this situation lingers, another patch is to import 'pillow-avif-plugin'
+        
+        if pillow_does_not_have_native_avif_support and hasattr( pillow_heif, 'register_avif_opener' ):
             
             try:
                 
                 from pillow_heif import register_avif_opener
                 
-                register_avif_opener(thumbnails=False) # this is now deprecated 2024-04. Pillow is getting native AVIF in 11.2.0
+                register_avif_opener(thumbnails=False) # this is now deprecated 2024-04, pillow_heif 0.22.0
                 
             except:
+                
+                HydrusData.Print( 'Could not register AVIF Opener with PIL.' )
                 
                 pass
                 

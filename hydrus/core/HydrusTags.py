@@ -1,5 +1,4 @@
 import collections
-import re
 import threading
 
 from hydrus.core import HydrusConstants as HC
@@ -16,7 +15,7 @@ def CollapseMultipleSortedNumericTagsToMinMax( tags ):
         
     else:
         
-        includes_non_numeric_tag = True in ( not isinstance( ConvertTagToSortable( tag ), tuple ) for tag in tags )
+        includes_non_numeric_tag = False in ( tag.isdecimal() for tag in tags )
         
         if includes_non_numeric_tag:
             
@@ -36,52 +35,6 @@ def CollapseMultipleSortedNumericTagsToMinMax( tags ):
             
         
     
-def ConvertTagToSortable( tag ):
-    
-    # this copies the human sort in hydrusdata
-    
-    convert = lambda text: ( '', int( text ) ) if text.isdecimal() else ( text, 0 )
-    
-    return tuple( [ convert( c ) for c in re.split( '([0-9]+)', tag.casefold() ) ] )
-    
-    # old method
-    
-    '''if len( t ) > 0 and t[0].isdecimal():
-        
-        # We want to maintain that:
-        # 0 < 0a < 0b < 1 ( lexicographic comparison )
-        # -and-
-        # 2 < 22 ( value comparison )
-        # So, if the first bit can be turned into an int, split it into ( int, extra )
-        
-        int_component = ''
-        
-        i = 0
-        
-        for character in t:
-            
-            if character.isdecimal():
-                
-                int_component += character
-                
-            else:
-                
-                break
-                
-            
-            i += 1
-            
-        
-        str_component = t[i:]
-        
-        number = int( int_component )
-        
-        return ( number, str_component )
-        
-    else:
-        
-        return t
-        '''
 
 def FilterNamespaces( tags, namespaces ):
     
@@ -115,7 +68,7 @@ def SortNumericTags( tags ):
     
     tags = list( tags )
     
-    tags.sort( key = ConvertTagToSortable )
+    tags.sort( key = HydrusText.HumanTextSortKey )
     
     return tags
     
@@ -152,18 +105,18 @@ def CleanTag( tag ):
         
         if ':' in tag:
             
-            tag = StripTextOfGumpf( tag ) # need to repeat here to catch 'system:' stuff
+            tag = StripTagTextOfGumpf( tag ) # need to repeat here to catch 'system:' stuff
             
             ( namespace, subtag ) = SplitTag( tag )
             
-            namespace = StripTextOfGumpf( namespace )
-            subtag = StripTextOfGumpf( subtag )
+            namespace = StripTagTextOfGumpf( namespace )
+            subtag = StripTagTextOfGumpf( subtag )
             
             tag = CombineTag( namespace, subtag )
             
         else:
             
-            tag = StripTextOfGumpf( tag )
+            tag = StripTagTextOfGumpf( tag )
             
         
     except Exception as e:
@@ -296,13 +249,9 @@ def SplitTag( tag ):
         
     
 
-NULL_CHARACTER = '\x00'
-HANGUL_FILLER_CHARACTER = '\u3164'
-
-def StripTextOfGumpf( t ):
+def StripTagTextOfGumpf( t ):
     
-    # TODO: intro this sometime with a full db update
-    # t = t.replace( HC.UNICODE_ZERO_WIDTH_SPACE, '' )
+    t = HydrusText.re_undesired_control_characters.sub( '', t )
     
     t = HydrusText.re_one_or_more_whitespace.sub( ' ', t )
     
@@ -312,15 +261,21 @@ def StripTextOfGumpf( t ):
     
     t = t.strip()
     
-    if NULL_CHARACTER in t:
+    if HydrusText.re_looks_like_hangul.search( t ) is None: # if we ain't korean, get that thing out of here
         
-        t = t.replace( NULL_CHARACTER, '' )
+        t = t.replace( HydrusText.HANGUL_FILLER_CHARACTER, '' )
         
     
-    if t == HANGUL_FILLER_CHARACTER:
+    if HydrusText.re_this_is_all_latin_and_zero_width.match( t ) is not None: # if we are "blue_eyes[ZWNJ]", get it out of here
         
-        t = ''
+        t = HydrusText.re_zero_width_joiners.sub( '', t )
         
+    
+    t = HydrusText.re_oops_all_zero_width_joiners.sub( '', t )
+    
+    t = HydrusText.re_one_or_more_whitespace.sub( ' ', t )
+    
+    t = t.strip()
     
     return t
     

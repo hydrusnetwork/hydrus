@@ -15,6 +15,58 @@ from hydrus.test import HelperFunctions
 
 class TestPredicates( unittest.TestCase ):
     
+    def test_extract_value( self ):
+        
+        fake_media_result = HelperFunctions.GetFakeMediaResult( HydrusData.GenerateKey(), mime = HC.IMAGE_JPEG )
+        
+        fake_non_image_media_result = HelperFunctions.GetFakeMediaResult( HydrusData.GenerateKey(), mime = HC.APPLICATION_XLS )
+        fake_non_image_media_result.GetFileInfoManager().width = None
+        fake_non_image_media_result.GetFileInfoManager().height = None
+        
+        # size
+        
+        system_predicate = ClientSearchPredicate.Predicate( predicate_type = ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_SIZE )
+        
+        self.assertTrue( system_predicate.CanExtractValueFromMediaResult() )
+        self.assertEqual( system_predicate.ExtractValueFromMediaResult( fake_media_result ), fake_media_result.GetFileInfoManager().size )
+        
+        # width
+        
+        system_predicate = ClientSearchPredicate.Predicate( predicate_type = ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_WIDTH )
+        
+        self.assertTrue( system_predicate.CanExtractValueFromMediaResult() )
+        self.assertEqual( system_predicate.ExtractValueFromMediaResult( fake_media_result ), fake_media_result.GetFileInfoManager().width )
+        
+        # height
+        
+        system_predicate = ClientSearchPredicate.Predicate( predicate_type = ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HEIGHT )
+        
+        self.assertTrue( system_predicate.CanExtractValueFromMediaResult() )
+        self.assertEqual( system_predicate.ExtractValueFromMediaResult( fake_media_result ), fake_media_result.GetFileInfoManager().height )
+        
+        # num_pixels
+        
+        system_predicate = ClientSearchPredicate.Predicate( predicate_type = ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_NUM_PIXELS )
+        
+        self.assertTrue( system_predicate.CanExtractValueFromMediaResult() )
+        self.assertEqual( system_predicate.ExtractValueFromMediaResult( fake_media_result ), fake_media_result.GetFileInfoManager().width * fake_media_result.GetFileInfoManager().height )
+        self.assertEqual( system_predicate.ExtractValueFromMediaResult( fake_non_image_media_result ), None )
+        
+        # duration
+        
+        system_predicate = ClientSearchPredicate.Predicate( predicate_type = ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_DURATION )
+        
+        self.assertTrue( system_predicate.CanExtractValueFromMediaResult() )
+        self.assertEqual( system_predicate.ExtractValueFromMediaResult( fake_media_result ), fake_media_result.GetFileInfoManager().duration_ms )
+        
+        # num_frames
+        
+        system_predicate = ClientSearchPredicate.Predicate( predicate_type = ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_NUM_FRAMES )
+        
+        self.assertTrue( system_predicate.CanExtractValueFromMediaResult() )
+        self.assertEqual( system_predicate.ExtractValueFromMediaResult( fake_media_result ), fake_media_result.GetFileInfoManager().num_frames )
+        
+    
     def test_metadata_conditional( self ):
         
         # presumably this will not be false one day

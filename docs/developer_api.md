@@ -1141,7 +1141,11 @@ Response:
     
     The hex keys are the service keys, which you will have seen elsewhere, like [GET /get\_files/file\_metadata](#get_files_file_metadata). Note that there is no concept of 'all known tags' here. If a tag is in 'my tags', it follows the rules of 'my tags', and then all the services' display tags are merged into the 'all known tags' pool for user display.
     
-    **Also, the siblings and parents here are not just what is in _tags->manage tag siblings/parents_, they are the final computed combination of rules as set in _tags->manage where tag siblings and parents apply_.** The data given here is not guaranteed to be useful for editing siblings and parents on a particular service. That data, which is currently pair-based, will appear in a different API request in future.
+    !!! warning "Tag Relationships Apply In A Complicated Way"
+        There are two caveats to this data:  
+        
+        1. The siblings and parents here are not just what is in _tags->manage tag siblings/parents_, they are the final computed combination of rules as set in _tags->manage where tag siblings and parents apply_. The data given here is not guaranteed to be useful for editing siblings and parents on a particular service. That data, which is currently pair-based, will appear in a different API request in future.
+        2. This is what is _actually processed, right now,_ for those user preferences, as per _tags->sibling/parent sync->review current sync_. It reflects what they currently see in the UI. If the user still has pending sync work, this computation will change in future, perhaps radically (e.g. if they just removed the whole PTR ruleset two minutes ago), as will the rest of the "display" domain. The results may be funky while a user is in the midst of syncing, but these values are fine for most purposes. In the short term, you can broadly assume that the rules here very closely align with what you see in a recent file metadata call that pulls storage vs display mappings. If you want to decorate an autocomplete results call with sibling or parent data, this data is good for that.
     
     - `ideal_tag` is how the tag appears in normal display to the user.
     - `siblings` is every tag that will show as the `ideal_tag`, including the `ideal_tag` itself.

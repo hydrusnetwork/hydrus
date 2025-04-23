@@ -1279,7 +1279,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._delete_to_recycle_bin = QW.QCheckBox( self )
             
-            self._ms_to_wait_between_physical_file_deletes = ClientGUICommon.BetterSpinBox( self, min=20, max = 5000 )
+            self._ms_to_wait_between_physical_file_deletes = ClientGUITime.TimeDeltaWidget( self, min = 0.02, days = False, hours = False, minutes = False, seconds = True, milliseconds = True )
             tt = 'Deleting a file from a hard disk can be resource expensive, so when files leave the trash, the actual physical file delete happens later, in the background. The operation is spread out so as not to give you lag spikes.'
             self._ms_to_wait_between_physical_file_deletes.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
             
@@ -1328,7 +1328,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._delete_to_recycle_bin.setChecked( HC.options[ 'delete_to_recycle_bin' ] )
             
-            self._ms_to_wait_between_physical_file_deletes.setValue( self._new_options.GetInteger( 'ms_to_wait_between_physical_file_deletes' ) )
+            self._ms_to_wait_between_physical_file_deletes.SetValue( HydrusTime.SecondiseMSFloat( self._new_options.GetInteger( 'ms_to_wait_between_physical_file_deletes' ) ) )
             
             self._confirm_trash.setChecked( HC.options[ 'confirm_trash' ] )
             tt = 'If there is only one place to delete the file from, you will get no delete dialog--it will just be deleted immediately. Applies the same way to undelete.'
@@ -1377,7 +1377,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows.append( ( 'Confirm when copying files across local file services: ', self._confirm_multiple_local_file_services_copy ) )
             rows.append( ( 'Confirm when moving files across local file services: ', self._confirm_multiple_local_file_services_move ) )
             rows.append( ( 'When physically deleting files or folders, send them to the OS\'s recycle bin: ', self._delete_to_recycle_bin ) )
-            rows.append( ( 'When maintenance physically deletes files, wait this many ms between each delete: ', self._ms_to_wait_between_physical_file_deletes ) )
+            rows.append( ( 'When maintenance physically deletes files, wait this long between each delete: ', self._ms_to_wait_between_physical_file_deletes ) )
             rows.append( ( 'When finishing filtering, always delete from all possible domains: ', self._only_show_delete_from_all_local_domains_when_filtering ) )
             rows.append( ( 'Remove files from view when they are archive/delete filtered: ', self._remove_filtered_files ) )
             rows.append( ( '--even skipped files: ', self._remove_filtered_files_even_when_skipped ) )
@@ -1480,7 +1480,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._new_options.SetBoolean( 'only_show_delete_from_all_local_domains_when_filtering', self._only_show_delete_from_all_local_domains_when_filtering.isChecked() )
             
-            self._new_options.SetInteger( 'ms_to_wait_between_physical_file_deletes', self._ms_to_wait_between_physical_file_deletes.value() )
+            self._new_options.SetInteger( 'ms_to_wait_between_physical_file_deletes', HydrusTime.MillisecondiseS( self._ms_to_wait_between_physical_file_deletes.GetValue() ) )
             
             self._new_options.SetBoolean( 'confirm_multiple_local_file_services_copy', self._confirm_multiple_local_file_services_copy.isChecked() )
             self._new_options.SetBoolean( 'confirm_multiple_local_file_services_move', self._confirm_multiple_local_file_services_move.isChecked() )
@@ -2989,6 +2989,9 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._focus_media_tab_on_viewer_close_if_possible = QW.QCheckBox( window_panel )
             self._focus_media_tab_on_viewer_close_if_possible.setToolTip( ClientGUIFunctions.WrapToolTip( 'If the search page you opened a media viewer from is still open, re-focus it upon media viewer close. Useful if you use multiple media viewers launched from different pages. There is also a shortcut action to perform this on an individual basis.' ) )
             
+            self._focus_media_thumb_on_viewer_close = QW.QCheckBox( window_panel )
+            self._focus_media_thumb_on_viewer_close.setToolTip( ClientGUIFunctions.WrapToolTip( 'When you close a Media Viewer, it normally tells the original search page to change the current thumbnail selection to whatever you closed the media viewer on. If you prefer this not to happen, uncheck this!' ) )
+            
             #
             
             media_viewer_panel = ClientGUICommon.StaticBox( self, 'mouse and animations' )
@@ -3082,6 +3085,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             #
             
             self._focus_media_tab_on_viewer_close_if_possible.setChecked( self._new_options.GetBoolean( 'focus_media_tab_on_viewer_close_if_possible' ) )
+            self._focus_media_thumb_on_viewer_close.setChecked( self._new_options.GetBoolean( 'focus_media_thumb_on_viewer_close' ) )
             
             self._animated_scanbar_height.setValue( self._new_options.GetInteger( 'animated_scanbar_height' ) )
             self._animated_scanbar_nub_width.setValue( self._new_options.GetInteger( 'animated_scanbar_nub_width' ) )
@@ -3126,6 +3130,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows = []
             
             rows.append( ( 'Re-focus original search page when closing the media viewer: ', self._focus_media_tab_on_viewer_close_if_possible ) )
+            rows.append( ( 'Tell original search page to select exit media when closing the media viewer: ', self._focus_media_thumb_on_viewer_close ) )
             
             gridbox = ClientGUICommon.WrapInGrid( window_panel, rows )
             
@@ -3245,6 +3250,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         def UpdateOptions( self ):
             
             self._new_options.SetBoolean( 'focus_media_tab_on_viewer_close_if_possible', self._focus_media_tab_on_viewer_close_if_possible.isChecked() )
+            self._new_options.SetBoolean( 'focus_media_thumb_on_viewer_close', self._focus_media_thumb_on_viewer_close.isChecked() )
             
             self._new_options.SetBoolean( 'draw_tags_hover_in_media_viewer_background', self._draw_tags_hover_in_media_viewer_background.isChecked() )
             self._new_options.SetBoolean( 'disable_tags_hover_in_media_viewer', self._disable_tags_hover_in_media_viewer.isChecked() )
@@ -5280,7 +5286,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                     
                     if namespace != 'system':
                         
-                        namespace = HydrusTags.StripTextOfGumpf( namespace )
+                        namespace = HydrusTags.StripTagTextOfGumpf( namespace )
                         
                     
                     existing_namespaces = self._namespace_colours.GetNamespaceColours().keys()

@@ -148,6 +148,7 @@ def WrapInText( control, parent, text, object_name = None ):
         
     
     st.setAlignment( QC.Qt.AlignmentFlag.AlignRight | QC.Qt.AlignmentFlag.AlignVCenter )
+    
     h_policy = QW.QSizePolicy.Policy.Expanding
     v_policy = QW.QSizePolicy.Policy.Fixed
     
@@ -155,6 +156,11 @@ def WrapInText( control, parent, text, object_name = None ):
     
     QP.AddToLayout( hbox, st, CC.FLAGS_NONE )
     QP.AddToLayout( hbox, control, CC.FLAGS_CENTER )
+    
+    if isinstance( control, QW.QWidget ):
+        
+        st.setToolTip( control.toolTip() )
+        
     
     return hbox
     

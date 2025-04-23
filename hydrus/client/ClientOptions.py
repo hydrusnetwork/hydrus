@@ -293,6 +293,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             'confirm_all_page_closes' : False,
             'refresh_search_page_on_system_limited_sort_changed' : True,
             'do_not_setgeometry_on_an_mpv' : False,
+            'focus_media_thumb_on_viewer_close' : True,
         }
         
         #
@@ -469,7 +470,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             'ac_write_list_height_num_chars' : 11,
             'system_busy_cpu_percent' : 50,
             'human_bytes_sig_figs' : 3,
-            'ms_to_wait_between_physical_file_deletes' : 250,
+            'ms_to_wait_between_physical_file_deletes' : 600,
             'potential_duplicates_search_work_time_ms' : 500,
             'potential_duplicates_search_rest_percentage' : 100,
             'repository_processing_work_time_ms_very_idle' : 30000,

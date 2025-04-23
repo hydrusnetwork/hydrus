@@ -106,11 +106,11 @@ def GetYesNo( win, message, title = 'Are you sure?', yes_label = 'yes', no_label
         
     
 
-def GetYesNoNo( win, message, title = 'Are you sure?', yes_label = 'yes', no_tuples = None, auto_yes_time = None ):
+def GetYesNoNo( win, message, title = 'Are you sure?', yes_label = 'yes', no_tuples = None, auto_yes_time = None, disable_yes_initially = False ):
     
     with ClientGUITopLevelWindowsPanels.DialogCustomButtonQuestion( win, title ) as dlg:
         
-        panel = ClientGUIScrolledPanelsButtonQuestions.QuestionYesNoNoPanel( dlg, message, yes_label = yes_label, no_tuples = no_tuples )
+        panel = ClientGUIScrolledPanelsButtonQuestions.QuestionYesNoNoPanel( dlg, message, yes_label = yes_label, no_tuples = no_tuples, disable_yes_initially = disable_yes_initially )
         
         dlg.SetPanel( panel )
         

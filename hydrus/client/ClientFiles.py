@@ -12,6 +12,7 @@ from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusLists
 from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusPaths
+from hydrus.core import HydrusText
 from hydrus.core import HydrusThreading
 from hydrus.core import HydrusTime
 from hydrus.core.files import HydrusFileHandling
@@ -317,7 +318,7 @@ def GetAllFilePaths( raw_paths, do_human_sort = True, clear_out_sidecars = True 
     
     if do_human_sort:
         
-        HydrusData.HumanTextSort( file_paths )
+        HydrusText.HumanTextSort( file_paths )
         
     
     num_files_with_sidecars = len( file_paths )
