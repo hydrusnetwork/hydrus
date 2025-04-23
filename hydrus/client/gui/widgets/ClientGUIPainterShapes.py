@@ -234,6 +234,8 @@ SHAPE_DRAW_FN_LOOKUP = {
     'crescent moon' : lambda painter, x, y : _draw_path( painter, MOON_CRESCENT_PATH, x, y )
 }
 
+SVG_PIXMAP_CACHE = {}  # (shape_name, QColor.name()) -> QPixmap
+
 # 
 
 def _draw_path( painter, path: QG.QPainterPath, x: float, y: float ):
@@ -242,6 +244,49 @@ def _draw_path( painter, path: QG.QPainterPath, x: float, y: float ):
     painter.translate( x, y )
     painter.drawPath( path )
     painter.restore()
+    
+def _draw_svg_qicon( painter, shape_name: str, x: float, y: float ):
+    from hydrus.client import ClientConstants as CC
+
+    icon = CC.global_icons().user_icons.get( shape_name )
+    
+    if icon is not None:
+        
+        rect = QC.QRectF( x, y, 12, 12 )
+        icon.paint( painter, rect.toRect() )
+
+def _draw_svg_colored(painter, shape_name: str, x: float, y: float):
+    from hydrus.client import ClientConstants as CC
+
+    icon = CC.global_icons().user_icons.get(shape_name)
+    if icon is None:
+        return
+
+    color = painter.brush().color()
+    cache_key = (shape_name, color.name())
+
+    if cache_key in SVG_PIXMAP_CACHE:
+        pixmap = SVG_PIXMAP_CACHE[cache_key]
+    else:
+        base_pixmap = icon.pixmap(12, 12)
+
+        # Create a tinted version
+        tinted = QG.QPixmap(base_pixmap.size())
+        tinted.fill(QC.Qt.GlobalColor.transparent)
+
+        p = QG.QPainter(tinted)
+        p.setCompositionMode(QG.QPainter.CompositionMode.CompositionMode_Source)
+        p.drawPixmap(0, 0, base_pixmap)
+
+        p.setCompositionMode(QG.QPainter.CompositionMode.CompositionMode_SourceIn)
+        p.fillRect(tinted.rect(), color)
+        p.end()
+
+        SVG_PIXMAP_CACHE[cache_key] = tinted
+        pixmap = tinted
+
+    painter.drawPixmap(x, y, pixmap)
+
 
 def DrawShape( painter, shape, x: float, y: float, text: str = None, text_colour: QG.QColor = None ):
 
@@ -258,6 +303,13 @@ def DrawShape( painter, shape, x: float, y: float, text: str = None, text_colour
         painter.translate( QC.QPointF( x, y ) )
         painter.drawPolygon( QG.QPolygonF( SHAPE_COORDS_LOOKUP[ shape ] ) )
         painter.restore()
+    
+    elif shape.startswith('svg:'):
+    
+        shape_name = shape[4:]
+    
+        #_draw_svg_qicon( painter, shape_name, x, y )
+        _draw_svg_colored(painter, shape_name, x, y)
     
     if text: 
         painter.save()

@@ -56,6 +56,45 @@ shape_to_str_lookup_dict = {
     MOON_CRESCENT : 'crescent moon'
 }
 
+#
+
+from hydrus.client import ClientConstants as CC
+
+def EncodeShapeNameToID(name: str) -> int:
+    
+    prefix = 900000000
+    base36 = "0123456789abcdefghijklmnopqrstuvwxyz"
+    value = 0
+    
+    for c in name.lower():
+        
+        if c not in base36:
+            
+            continue
+        
+        value *= 36
+        
+        value += base36.index(c)
+    
+    return prefix + value
+
+for name in CC.global_icons().user_icons.keys():
+    
+    if len( name ) > 6:
+        # limit to 6 character filenames to avoid running out of integer space
+        # perhaps we should warn the user if they have any unaccepted svgs here, but assuming we document this feature it'll be fine
+        continue
+    
+    shape_id = EncodeShapeNameToID( name )
+    
+    while shape_id in shape_to_str_lookup_dict:
+        # rare but safe fallback
+        shape_id += 1  
+    
+    shape_to_str_lookup_dict[ shape_id ] = f'svg:{name}'
+    
+#
+
 def ConvertRatingToStars( num_stars: int, allow_zero: bool, rating: float ) -> int:
     
     if allow_zero:
