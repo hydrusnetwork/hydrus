@@ -255,7 +255,7 @@ def _draw_svg_qicon( painter, shape_name: str, x: float, y: float ):
         rect = QC.QRectF( x, y, 12, 12 )
         icon.paint( painter, rect.toRect() )
 
-def _draw_svg_colored(painter, shape_name: str, x: float, y: float):
+def _draw_icon_coloured(painter, shape_name: str, x: float, y: float):
     from hydrus.client import ClientConstants as CC
 
     icon = CC.global_icons().user_icons.get(shape_name)
@@ -287,6 +287,100 @@ def _draw_svg_colored(painter, shape_name: str, x: float, y: float):
 
     painter.drawPixmap(x, y, pixmap)
 
+def _draw_icon_coloured_outlined(painter, shape_name: str, x: float, y: float):
+    from hydrus.client import ClientConstants as CC
+    
+    icon = CC.global_icons().user_icons.get( shape_name )
+    
+    if icon is None:
+        
+        return
+    
+    fill_colour = painter.brush().color()
+    stroke_colour = painter.pen().color()
+    cache_key = ( shape_name, fill_colour.name(), stroke_colour.name() )
+    
+    if cache_key in SVG_PIXMAP_CACHE:
+        
+        pixmap = SVG_PIXMAP_CACHE[ cache_key ]
+        
+    else:
+        
+        base = icon.pixmap( SIZE )
+        #mask = base.createHeuristicMask()
+        mask = base.createMaskFromColor( QC.Qt.GlobalColor.transparent, QG.Qt.MaskMode.MaskOutColor )
+        
+        tinted = QG.QPixmap( SIZE )
+        tinted.fill( QC.Qt.GlobalColor.transparent )
+        
+        outline = QG.QPixmap( SIZE )
+        outline.fill( QC.Qt.GlobalColor.transparent )
+        
+        final = QG.QPixmap( SIZE )
+        final.fill( QC.Qt.GlobalColor.transparent )
+        
+        #make colour version
+        p = QG.QPainter(tinted)
+        p.setCompositionMode( QG.QPainter.CompositionMode.CompositionMode_Source )
+        p.drawPixmap( 0, 0, base )
+        p.setCompositionMode( QG.QPainter.CompositionMode.CompositionMode_SourceIn )
+        p.fillRect( tinted.rect(), fill_colour )
+        p.end()
+        
+        po = QG.QPainter( outline )
+        po.setRenderHint( QG.QPainter.RenderHint.Antialiasing, True )
+        
+        #make outline v1
+        # po.setPen( QG.QPen( stroke_colour, 1.5 ) )
+        # for dx in ( -1, 0, 1 ):
+        #     for dy in ( -1, 0, 1 ):
+        #         po.drawPixmap( dx, dy, mask )
+        # po.setCompositionMode( QG.QPainter.CompositionMode.CompositionMode_DestinationOut )
+        # po.drawPixmap( 0, 0, mask )
+        # po.setOpacity( 0.9 )
+        # po.setCompositionMode( QG.QPainter.CompositionMode.CompositionMode_SourceIn )
+        # po.fillRect( outline.rect(), stroke_colour )
+        # po.end()
+        
+        #make outline v2
+        mask_img = mask.toImage().convertToFormat( QG.QImage.Format.Format_ARGB32_Premultiplied )
+        
+        feather = 3
+        feathered = mask_img.scaled(
+            mask.width() + feather, mask.height() + feather,
+            QC.Qt.AspectRatioMode.IgnoreAspectRatio,
+            QC.Qt.TransformationMode.SmoothTransformation
+        )
+        feathered = feathered.copy( 1, 1, mask.width(), mask.height() )
+        feathered_pixmap = QG.QPixmap.fromImage( feathered )
+        
+        po.setRenderHint( QG.QPainter.RenderHint.Antialiasing, True )
+        po.setCompositionMode( QG.QPainter.CompositionMode.CompositionMode_Source )
+        
+        for dx in ( -1, 0, 1 ):
+            for dy in ( -1, 0, 1 ):
+                po.drawPixmap( dx, dy, feathered_pixmap )
+        
+        po.setCompositionMode( QG.QPainter.CompositionMode.CompositionMode_DestinationOut )
+        po.drawPixmap( 0, 0, mask )
+        
+        po.setOpacity( 0.9 )
+        po.setCompositionMode( QG.QPainter.CompositionMode.CompositionMode_SourceIn )
+        po.fillRect( outline.rect(), stroke_colour )
+        po.end()
+        
+        #combine fill+outline
+        fp = QG.QPainter( final )
+        fp.setRenderHint( QG.QPainter.RenderHint.Antialiasing, True )
+        fp.drawPixmap(0, 0, outline)
+        fp.drawPixmap(0, 0, tinted)
+        fp.end()
+        
+        SVG_PIXMAP_CACHE[ cache_key ] = final
+        pixmap = final
+    
+    painter.drawPixmap(x, y, pixmap)
+
 
 def DrawShape( painter, shape, x: float, y: float, text: str = None, text_colour: QG.QColor = None ):
 
@@ -309,7 +403,8 @@ def DrawShape( painter, shape, x: float, y: float, text: str = None, text_colour
         shape_name = shape[4:]
     
         #_draw_svg_qicon( painter, shape_name, x, y )
-        _draw_svg_colored(painter, shape_name, x, y)
+        #_draw_icon_coloured(painter, shape_name, x, y)
+        _draw_icon_coloured_outlined(painter, shape_name, x, y)
     
     if text: 
         painter.save()
