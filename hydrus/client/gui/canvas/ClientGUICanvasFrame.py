@@ -39,6 +39,15 @@ class CanvasFrame( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindow
         self._was_maximised_before_fullscreen = True
         
     
+    def moveEvent(self, event):
+        
+        # manually calling SaveTLW on moveEvent fixes a bug that does not save the position of the window when it is moved, but not resized, by Windows Snap™
+        # but it's probably useful on all platforms with window movement keys so removing #if HC.PLATFORM_WINDOWS
+        ClientGUITopLevelWindows.SaveTLWSizeAndPosition( self, self._frame_key )
+        
+        super().moveEvent(event)
+        
+    
     def closeEvent( self, event ):
         
         if self._canvas_window is not None:
@@ -46,6 +55,11 @@ class CanvasFrame( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindow
             can_close = self._canvas_window.TryToDoPreClose()
             
             if can_close:
+                
+                # only affect media viewer TLWs
+                if CG.client_controller.new_options.GetBoolean( 'save_window_size_and_position_on_close' ):
+                    
+                    ClientGUITopLevelWindows.SaveTLWSizeAndPosition( self, self._frame_key )
                 
                 self._canvas_window.CleanBeforeDestroy()
                 

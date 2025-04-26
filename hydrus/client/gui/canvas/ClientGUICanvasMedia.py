@@ -2463,6 +2463,39 @@ class MediaContainer( QW.QWidget ):
         return CalculateMediaContainerSize( self._media, my_dpr, self._current_zoom, self._show_action )
         
     
+    def SizeSelfToMedia( self ):
+        
+        if self._media is None:
+            
+            return
+            
+        
+        media_size = self._media_window.size()
+        media_width = media_size.width()
+        media_height = media_size.height()
+        
+        if media_width is None or media_height is None:
+            
+            return
+            
+        
+        media_win_pos = self._media_window.mapToGlobal( QC.QPoint( 0, 0 ) )
+        
+        frame_geometry = self.window().frameGeometry()
+        window_geometry = self.window().geometry()
+        title_bar_offset = frame_geometry.top() - window_geometry.top()
+        
+        adjusted_pos = QC.QPoint(media_win_pos.x(), media_win_pos.y() + title_bar_offset)
+        
+        self.window().showNormal()
+        
+        self.window().resize( media_width, media_height )
+        self.window().move( adjusted_pos )
+        
+        self.ResetCenterPosition()
+        self._SizeAndPositionChildren()
+        
+    
     def StopForSlideshow( self, value ):
         
         if self.CurrentlyPresentingMediaWithDuration():
@@ -2887,6 +2920,10 @@ class MediaContainer( QW.QWidget ):
             
             self.ResetCenterPosition()
             
+        
+    def ZoomToZoomPercent ( self, new_zoom, zoom_center_type_override = None  ):
+        
+        self._TryToChangeZoom( new_zoom, zoom_center_type_override )
         
     
     def ZoomToZoomType( self, zoom_type = None ):
