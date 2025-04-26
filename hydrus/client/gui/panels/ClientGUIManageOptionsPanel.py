@@ -1784,6 +1784,9 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._disable_get_safe_position_test = QW.QCheckBox( self._misc_panel )
             self._disable_get_safe_position_test.setToolTip( ClientGUIFunctions.WrapToolTip( 'If your windows keep getting \'rescued\' despite being in a good location, try this.' ) )
             
+            self._save_window_size_and_position_on_close = QW.QCheckBox( self._misc_panel )
+            self._save_window_size_and_position_on_close.setToolTip( ClientGUIFunctions.WrapToolTip( 'If you want to save media viewer size when closing the window in addition to when it gets resized/moved normally, check this box. Can be useful behaviour when using multiple open media viewers.' ) )
+            
             model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_FRAME_LOCATIONS.ID, self._GetPrettyFrameLocationInfo, self._GetPrettyFrameLocationInfo )
             
             self._frame_locations_panel = ClientGUIListCtrl.BetterListCtrlPanel( frame_locations_panel )
@@ -1826,6 +1829,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._disable_get_safe_position_test.setChecked( self._new_options.GetBoolean( 'disable_get_safe_position_test' ) )
             
+            self._save_window_size_and_position_on_close.setChecked( self._new_options.GetBoolean( 'save_window_size_and_position_on_close' ) )
+            
             for ( name, info ) in self._new_options.GetFrameLocations():
                 
                 listctrl_data = QP.ListsToTuples( [ name ] + list( info ) )
@@ -1855,7 +1860,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows.append( ( 'EXPERIMENTAL: Bytes strings >1KB pseudo significant figures: ', self._human_bytes_sig_figs ) )
             rows.append( ( 'BUGFIX: If on macOS, show dialog menus in a debug menu: ', self._do_macos_debug_dialog_menus ) )
             rows.append( ( 'ANTI-CRASH BUGFIX: Use Qt file/directory selection dialogs, rather than OS native: ', self._use_qt_file_dialogs ) )
-            rows.append( ( 'Remember last open section in Options window', self._remember_options_window_panel ) )
+            rows.append( ( 'Remember last open options panel in this window: ', self._remember_options_window_panel ) )
             
             gridbox = ClientGUICommon.WrapInGrid( self, rows )
             
@@ -1873,6 +1878,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows = []
             
             rows.append( ( 'BUGFIX: Disable off-screen window rescue: ', self._disable_get_safe_position_test ) )
+            
+            rows.append( ( 'Save media viewer window size and position on close: ', self._save_window_size_and_position_on_close ) )
             
             gridbox = ClientGUICommon.WrapInGrid( self, rows )
             
@@ -2034,6 +2041,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._new_options.SetBoolean( 'remember_options_window_panel', self._remember_options_window_panel.isChecked() )
             
             self._new_options.SetBoolean( 'disable_get_safe_position_test', self._disable_get_safe_position_test.isChecked() )
+            self._new_options.SetBoolean( 'save_window_size_and_position_on_close', self._save_window_size_and_position_on_close.isChecked() )
             
             for listctrl_list in self._frame_locations.GetData():
                 

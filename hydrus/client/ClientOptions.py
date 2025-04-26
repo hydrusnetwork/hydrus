@@ -144,6 +144,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             'use_native_menubar' : HC.PLATFORM_MACOS,
             'shortcuts_merge_non_number_numpad' : True,
             'disable_get_safe_position_test' : False,
+            'save_window_size_and_position_on_close' : False,
             'freeze_message_manager_when_mouse_on_other_monitor' : False,
             'freeze_message_manager_when_main_gui_minimised' : False,
             'load_images_with_pil' : True,

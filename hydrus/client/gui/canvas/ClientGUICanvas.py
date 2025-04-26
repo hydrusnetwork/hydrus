@@ -1248,9 +1248,41 @@ class Canvas( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
                 
                 self._media_container.ResetCenterPosition()
                 
+            elif action == CAC.SIMPLE_RESIZE_WINDOW_TO_MEDIA:
+                
+                self._media_container.SizeSelfToMedia()
+                
+            elif action == CAC.SIMPLE_RESIZE_WINDOW_TO_MEDIA_VIEWER_CENTER:
+            
+                self._media_container.SizeSelfToMedia()
+                
+                self._media_container.ResetCenterPosition()
+                
+            elif action == CAC.SIMPLE_RESIZE_WINDOW_TO_MEDIA_ZOOMED:
+                
+                new_zoom = command.GetSimpleData()
+                
+                self._media_container.ZoomToZoomPercent( new_zoom )
+                
+                self._media_container.SizeSelfToMedia()
+                
+            elif action == CAC.SIMPLE_RESIZE_WINDOW_TO_MEDIA_ZOOMED_VIEWER_CENTER:
+                
+                new_zoom = command.GetSimpleData()
+                
+                self._media_container.ZoomToZoomPercent( new_zoom, zoom_center_type_override = ClientGUICanvasMedia.ZOOM_CENTERPOINT_VIEWER_CENTER )
+                
+                self._media_container.SizeSelfToMedia()
+                
+                self._media_container.ResetCenterPosition()
+                
             elif action == CAC.SIMPLE_SWITCH_BETWEEN_100_PERCENT_AND_CANVAS_ZOOM:
                 
                 self._media_container.ZoomSwitch()
+            
+            elif action == CAC.SIMPLE_SWITCH_BETWEEN_100_PERCENT_AND_CANVAS_ZOOM_VIEWER_CENTER:
+                
+                self._media_container.ZoomSwitch( zoom_center_type_override = ClientGUICanvasMedia.ZOOM_CENTERPOINT_VIEWER_CENTER )
                 
             elif action == CAC.SIMPLE_SWITCH_BETWEEN_100_PERCENT_AND_CANVAS_FIT_AND_FILL_ZOOM:
                 
@@ -1320,9 +1352,17 @@ class Canvas( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
                 
                 self._media_container.ZoomMax()
                 
-            elif action == CAC.SIMPLE_SWITCH_BETWEEN_100_PERCENT_AND_CANVAS_ZOOM_VIEWER_CENTER:
+            elif action == CAC.SIMPLE_ZOOM_TO_PERCENTAGE:
                 
-                self._media_container.ZoomSwitch( zoom_center_type_override = ClientGUICanvasMedia.ZOOM_CENTERPOINT_VIEWER_CENTER )
+                new_zoom = command.GetSimpleData()
+                
+                self._media_container.ZoomToZoomPercent( new_zoom )
+                
+            elif action == CAC.SIMPLE_ZOOM_TO_PERCENTAGE_CENTER:
+                                                        
+                new_zoom = command.GetSimpleData()
+                
+                self._media_container.ZoomToZoomPercent( new_zoom, zoom_center_type_override = ClientGUICanvasMedia.ZOOM_CENTERPOINT_VIEWER_CENTER )
                 
             elif action == CAC.SIMPLE_FLIP_ICC_PROFILE_APPLICATION:
                 
