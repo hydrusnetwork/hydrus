@@ -1,12 +1,6 @@
 # -*- mode: python ; coding: utf-8 -*-
 
-import cloudscraper
-import os
-import glob
-cloudscraper_dir = os.path.dirname( cloudscraper.__file__ )
-
 block_cipher = None
-
 
 a = Analysis(['hydrus\\hydrus_client.pyw'],
              pathex=['.'],
@@ -23,10 +17,8 @@ a = Analysis(['hydrus\\hydrus_client.pyw'],
                ('hydrus\\README.md', '.'),
                ('hydrus\\auto_update_installer.bat', '.'),
                ('hydrus\\help my client will not boot.txt', '.'),
-               ('hydrus\\db', 'db'),
-               (cloudscraper_dir, 'cloudscraper')
+               ('hydrus\\db', 'db')
              ],
-             hiddenimports=['cloudscraper'],
              hookspath=[],
              runtime_hooks=[],
              excludes=[],
