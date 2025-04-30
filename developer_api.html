@@ -5168,11 +5168,11 @@ Accept: application/json
 <dt>Response:</dt>
 <dd>Some JSON which files are known to be mapped to that URL. Note this needs a database hit, so it may be delayed if the client is otherwise busy. Don't rely on this to always be fast. 
 <div class="highlight"><span class="filename">Example response</span><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;normalised_url&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;https://safebooru.org/index.php?id=2753608&amp;page=post&amp;s=view&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;normalised_url&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;https://somebooru.org/index.php?id=123456&amp;page=post&amp;s=view&quot;</span><span class="p">,</span>
 <span class="w">  </span><span class="nt">&quot;url_file_statuses&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
 <span class="w">    </span><span class="p">{</span>
 <span class="w">      </span><span class="nt">&quot;status&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;hash&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;20e9002824e5e7ffc240b91b6e4a6af552b3143993c1778fd523c30d9fdde02c&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;hash&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;529af82eee3660008a51823ee4ca0c40d1b4d59b6e2f7418e8b23f2d9c01b1fb&quot;</span><span class="p">,</span>
 <span class="w">      </span><span class="nt">&quot;note&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;url recognised: Imported at 2015/10/18 10:58:01, which was 3 years 4 months ago (before this check).&quot;</span>
 <span class="w">    </span><span class="p">}</span>
 <span class="w">  </span><span class="p">]</span>
@@ -5203,15 +5203,15 @@ Accept: application/json
 </ul>
 </dd>
 <dt>Example request:</dt>
-<dd>for URL <code>https://boards.4chan.org/tv/thread/197641945/itt-moments-in-film-or-tv-that-aged-poorly</code>:
-<div class="highlight"><pre><span></span><code>/add_urls/get_url_info?url=https%3A%2F%2Fboards.4chan.org%2Ftv%2Fthread%2F197641945%2Fitt-moments-in-film-or-tv-that-aged-poorly
+<dd>for URL <code>https://someimageboard.org/cool/thread/123456/robots</code>:
+<div class="highlight"><pre><span></span><code>/add_urls/get_url_info?url=https%3A%2F%2Fsomeimageboard.org%2Fcool%2Fthread%2F123456%2Frobots
 </code></pre></div></dd>
 <dt>Response:</dt>
 <dd>
 <p>Some JSON describing what the client thinks of the URL.
 <div class="highlight"><span class="filename">Example response</span><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;request_url&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;https://a.4cdn.org/tv/thread/197641945.json&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;normalised_url&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;https://boards.4chan.org/tv/thread/197641945&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;request_url&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;https://someimageboard.org/cool/thread/123456.json&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;normalised_url&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;https://someimageboard.org/cool/thread/123456&quot;</span><span class="p">,</span>
 <span class="w">  </span><span class="nt">&quot;url_type&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="mi">4</span><span class="p">,</span>
 <span class="w">  </span><span class="nt">&quot;url_type_string&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;watchable url&quot;</span><span class="p">,</span>
 <span class="w">  </span><span class="nt">&quot;match_name&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;8chan thread&quot;</span><span class="p">,</span>
@@ -5228,7 +5228,7 @@ Accept: application/json
 </ul>
 <p>'Unknown' URLs are treated in the client as direct File URLs. Even though the 'File URL' type is available, most file urls do not have a URL Class, so they will appear as Unknown. Adding them to the client will pass them to the URL Downloader as a raw file for download and import.</p>
 <p>The <code>normalised_url</code> is the fully normalised URL--what is used for comparison and saving to disk.</p>
-<p>The <code>request_url</code> is either the lighter 'for server' normalised URL, which may include ephemeral token parameters, or, as in the case here, the fully converted API/redirect URL. (When hydrus is asked to check a 4chan thread, it doesn't hit the HTML, but the JSON API.)</p>
+<p>The <code>request_url</code> is either the lighter 'for server' normalised URL, which may include ephemeral token parameters, or, as in the case here, the fully converted API/redirect URL. (When hydrus is asked to check an imageboard thread, it usually doesn't hit the HTML, but the JSON API.)</p>
 </dd>
 </dl>
 <h3 id="add_urls_add_url"><strong>POST <code>/add_urls/add_url</code></strong><a class="headerlink" href="#add_urls_add_url" title="Permanent link">&para;</a></h3>
@@ -5262,15 +5262,15 @@ Accept: application/json
 <p><code>service_keys_to_additional_tags</code> uses the same data structure as in /add_tags/add_tags--service keys to a list of tags to add. You will need 'add tags' permission or this will 403. These tags work exactly as 'additional' tags work in a <em>tag import options</em>. They are service specific, and always added unless some advanced tag import options checkbox (like 'only add tags to new files') is set.</p>
 <p>filterable_tags works like the tags parsed by a hydrus downloader. It is just a list of strings. They have no inherant service and will be sent to a <em>tag import options</em>, if one exists, to decide which tag services get what. This parameter is useful if you are pulling all a URL's tags outside of hydrus and want to have them processed like any other downloader, rather than figuring out service names and namespace filtering on your end. Note that in order for a tag import options to kick in, I think you will have to have a Post URL URL Class hydrus-side set up for the URL so some tag import options (whether that is Class-specific or just the default) can be loaded at import time.</p>
 <p><div class="highlight"><span class="filename">Example request body</span><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;url&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;https://8ch.net/tv/res/1846574.html&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;url&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;https://someimageboard.org/cool/res/12345.html&quot;</span><span class="p">,</span>
 <span class="w">  </span><span class="nt">&quot;destination_page_name&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;kino zone&quot;</span><span class="p">,</span>
 <span class="w">  </span><span class="nt">&quot;service_keys_to_additional_tags&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="nt">&quot;6c6f63616c2074616773&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;as seen on /tv/&quot;</span><span class="p">]</span>
+<span class="w">    </span><span class="nt">&quot;6c6f63616c2074616773&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;from /cool/&quot;</span><span class="p">]</span>
 <span class="w">  </span><span class="p">}</span>
 <span class="p">}</span>
 </code></pre></div>
 <div class="highlight"><span class="filename">Example request body</span><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;url&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;https://safebooru.org/index.php?page=post&amp;s=view&amp;id=3195917&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;url&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;https://someimageboard.org/index.php?page=post&amp;s=view&amp;id=123456&quot;</span><span class="p">,</span>
 <span class="w">  </span><span class="nt">&quot;filterable_tags&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
 <span class="w">    </span><span class="s2">&quot;1girl&quot;</span><span class="p">,</span>
 <span class="w">    </span><span class="s2">&quot;artist name&quot;</span><span class="p">,</span>
@@ -5309,8 +5309,8 @@ Accept: application/json
 <dt>Response:</dt>
 <dd>Some JSON with info on the URL added.
 <div class="highlight"><span class="filename">Example response</span><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;human_result_text&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;\&quot;https://8ch.net/tv/res/1846574.html\&quot; URL added successfully.&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;normalised_url&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;https://8ch.net/tv/res/1846574.html&quot;</span>
+<span class="w">  </span><span class="nt">&quot;human_result_text&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;\&quot;https://someimageboard.org/cool/res/12345.html\&quot; URL added successfully.&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;normalised_url&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;https://someimageboard.org/cool/res/12345.html&quot;</span>
 <span class="p">}</span>
 </code></pre></div></dd>
 </dl>
@@ -5341,8 +5341,8 @@ Accept: application/json
 <p>Unless you really know what you are doing, I strongly recommend you stick to associating URLs with just one single 'hash' at a time. Multiple hashes pointing to the same URL is unusual and frequently unhelpful.</p>
 <p>By default, anything you throw at the 'add' side will be normalised nicely, but if you need to add some specific/weird URL text, or you need to add a URI, set <code>normalise_urls</code> to <code>false</code>. Anything you throw at the 'delete' side will not be normalised, so double-check you are deleting exactly what you mean to via <a href="#get_files_file_metadata">GET /get_files/file_metadata</a> etc.. </p>
 <div class="highlight"><span class="filename">Example request body</span><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;url_to_add&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;https://rule34.xxx/index.php?id=2588418&amp;page=post&amp;s=view&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;hash&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;3b820114f658d768550e4e3d4f1dced3ff8db77443472b5ad93700647ad2d3ba&quot;</span>
+<span class="w">  </span><span class="nt">&quot;url_to_add&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;https://somebooru.org/index.php?id=12345&amp;page=post&amp;s=view&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;hash&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;529af82eee3660008a51823ee4ca0c40d1b4d59b6e2f7418e8b23f2d9c01b1fb&quot;</span>
 <span class="p">}</span>
 </code></pre></div>
 <dl>
@@ -6012,8 +6012,8 @@ Accept: application/json
 <li>system:viewtime in media, client api, preview ~= 1 day 30 hours 100 minutes 90s</li>
 <li>system:has url matching regex index\.php</li>
 <li>system:does not have a url matching regex index\.php</li>
-<li>system:has url https://safebooru.donmai.us/posts/4695284</li>
-<li>system:does not have url https://safebooru.donmai.us/posts/4695284</li>
+<li>system:has url https://somebooru.org/posts/123456</li>
+<li>system:does not have url https://somebooru.org/posts/123456</li>
 <li>system:has domain safebooru.com</li>
 <li>system:does not have domain safebooru.com</li>
 <li>system:has a url with class safebooru file page</li>
@@ -6267,7 +6267,7 @@ Accept: application/json
 <span class="w">      </span><span class="nt">&quot;time_modified&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="mi">1604055647</span><span class="p">,</span>
 <span class="w">      </span><span class="nt">&quot;time_modified_details&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
 <span class="w">        </span><span class="nt">&quot;local&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="mi">1641044491</span><span class="p">,</span>
-<span class="w">        </span><span class="nt">&quot;gelbooru.com&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="mi">1604055647</span>
+<span class="w">        </span><span class="nt">&quot;somebooru.org&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="mi">1604055647</span>
 <span class="w">      </span><span class="p">},</span>
 <span class="w">      </span><span class="nt">&quot;file_services&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
 <span class="w">        </span><span class="nt">&quot;current&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
@@ -6305,9 +6305,9 @@ Accept: application/json
 <span class="w">      </span><span class="nt">&quot;has_icc_profile&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span>
 <span class="w">      </span><span class="nt">&quot;has_transparency&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span>
 <span class="w">      </span><span class="nt">&quot;known_urls&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
-<span class="w">        </span><span class="s2">&quot;https://gelbooru.com/index.php?page=post&amp;s=view&amp;id=4841557&quot;</span><span class="p">,</span>
-<span class="w">        </span><span class="s2">&quot;https://img2.gelbooru.com/images/80/c8/80c8646b4a49395fb36c805f316c49a9.jpg&quot;</span><span class="p">,</span>
-<span class="w">        </span><span class="s2">&quot;http://origin-orig.deviantart.net/ed31/f/2019/210/7/8/beachqueen_samus_by_dandonfuga-ddcu1xg.jpg&quot;</span>
+<span class="w">        </span><span class="s2">&quot;https://somebooru.org/index.php?page=post&amp;s=view&amp;id=12345&quot;</span><span class="p">,</span>
+<span class="w">        </span><span class="s2">&quot;https://cdn.somebooru.org/images/4d/7f/4d7f62bb8675cef84760d6263e4c254c5129ef56.jpg&quot;</span><span class="p">,</span>
+<span class="w">        </span><span class="s2">&quot;http://somegallerysite.com/post/123456/samus_is_cool.jpg&quot;</span>
 <span class="w">      </span><span class="p">],</span>
 <span class="w">      </span><span class="nt">&quot;ratings&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
 <span class="w">        </span><span class="nt">&quot;74d52c6238d25f846d579174c11856b1aaccdb04a185cb2c79f0d0e499284f2c&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
@@ -6483,14 +6483,14 @@ Accept: application/json
 <div class="highlight"><span class="filename">For example</span><pre><span></span><code><span class="p">{</span>
 <span class="w">  </span><span class="nt">&quot;detailed_known_urls&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
 <span class="w">    </span><span class="p">{</span>
-<span class="w">      </span><span class="nt">&quot;normalised_url&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;https://gelbooru.com/index.php?id=4841557&amp;page=post&amp;s=view&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;normalised_url&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;https://somebooru.org/index.php?id=123456&amp;page=post&amp;s=view&quot;</span><span class="p">,</span>
 <span class="w">      </span><span class="nt">&quot;url_type&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
 <span class="w">      </span><span class="nt">&quot;url_type_string&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;post url&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;match_name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;gelbooru file page&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;match_name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;somebooru file page&quot;</span><span class="p">,</span>
 <span class="w">      </span><span class="nt">&quot;can_parse&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span>
 <span class="w">    </span><span class="p">},</span>
 <span class="w">    </span><span class="p">{</span>
-<span class="w">      </span><span class="nt">&quot;normalised_url&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;https://img2.gelbooru.com/images/80/c8/80c8646b4a49395fb36c805f316c49a9.jpg&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;normalised_url&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;https://cdn.somebooru.org/images/4d/7f/4d7f62bb8675cef84760d6263e4c254c5129ef56.jpg&quot;</span><span class="p">,</span>
 <span class="w">      </span><span class="nt">&quot;url_type&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">5</span><span class="p">,</span>
 <span class="w">      </span><span class="nt">&quot;url_type_string&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;unknown url&quot;</span><span class="p">,</span>
 <span class="w">      </span><span class="nt">&quot;match_name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;unknown url&quot;</span><span class="p">,</span>
@@ -7228,7 +7228,7 @@ Accept: application/json
 </ul>
 </dd>
 </dl>
-<div class="highlight"><span class="filename">Example request (for gelbooru.com)</span><pre><span></span><code>/manage_cookies/get_cookies?domain=gelbooru.com
+<div class="highlight"><span class="filename">Example request</span><pre><span></span><code>/manage_cookies/get_cookies?domain=somebooru.org
 </code></pre></div>
 <dl>
 <dt>Response:</dt>
@@ -7236,9 +7236,9 @@ Accept: application/json
 </dl>
 <div class="highlight"><span class="filename">Example response</span><pre><span></span><code><span class="p">{</span>
 <span class="w">    </span><span class="nt">&quot;cookies&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
-<span class="w">        </span><span class="p">[</span><span class="s2">&quot;__cfduid&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;f1bef65041e54e93110a883360bc7e71&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;.gelbooru.com&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;/&quot;</span><span class="p">,</span><span class="w"> </span><span class="mi">1596223327</span><span class="p">],</span>
-<span class="w">        </span><span class="p">[</span><span class="s2">&quot;pass_hash&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;0b0833b797f108e340b315bc5463c324&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;gelbooru.com&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;/&quot;</span><span class="p">,</span><span class="w"> </span><span class="mi">1585855361</span><span class="p">],</span>
-<span class="w">        </span><span class="p">[</span><span class="s2">&quot;user_id&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;123456&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;gelbooru.com&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;/&quot;</span><span class="p">,</span><span class="w"> </span><span class="mi">1585855361</span><span class="p">]</span>
+<span class="w">        </span><span class="p">[</span><span class="s2">&quot;__cfduid&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;f1bef65041e54e93110a883360bc7e71&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;.somebooru.org&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;/&quot;</span><span class="p">,</span><span class="w"> </span><span class="mi">1596223327</span><span class="p">],</span>
+<span class="w">        </span><span class="p">[</span><span class="s2">&quot;pass_hash&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;0b0833b797f108e340b315bc5463c324&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;somebooru.org&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;/&quot;</span><span class="p">,</span><span class="w"> </span><span class="mi">1585855361</span><span class="p">],</span>
+<span class="w">        </span><span class="p">[</span><span class="s2">&quot;user_id&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;123456&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;somebooru.org&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;/&quot;</span><span class="p">,</span><span class="w"> </span><span class="mi">1585855361</span><span class="p">]</span>
 <span class="w">    </span><span class="p">]</span>
 <span class="p">}</span>
 </code></pre></div>
@@ -7290,7 +7290,7 @@ This request will also return any cookies for subdomains. The session system in 
 </ul>
 </dd>
 </dl>
-<div class="highlight"><span class="filename">Example request (for gelbooru.com)</span><pre><span></span><code>/manage_headers/get_headers?domain=gelbooru.com
+<div class="highlight"><span class="filename">Example request</span><pre><span></span><code>/manage_headers/get_headers?domain=somebooru.com
 </code></pre></div>
 <div class="highlight"><span class="filename">Example request (for global)</span><pre><span></span><code>/manage_headers/get_headers
 </code></pre></div>
@@ -7301,7 +7301,7 @@ This request will also return any cookies for subdomains. The session system in 
 <div class="highlight"><span class="filename">Example response</span><pre><span></span><code><span class="p">{</span>
 <span class="w">  </span><span class="nt">&quot;network_context&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
 <span class="w">    </span><span class="nt">&quot;type&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;data&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;gelbooru.com&quot;</span>
+<span class="w">    </span><span class="nt">&quot;data&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;somebooru.org&quot;</span>
 <span class="w">  </span><span class="p">},</span>
 <span class="w">  </span><span class="nt">&quot;headers&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
 <span class="w">    </span><span class="nt">&quot;User-Agent&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
@@ -7778,7 +7778,7 @@ This request will also return any cookies for subdomains. The session system in 
 <span class="w">        </span><span class="nt">&quot;label&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;safebooru: elf&quot;</span>
 <span class="w">      </span><span class="p">},</span>
 <span class="w">      </span><span class="nt">&quot;network_job&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">        </span><span class="nt">&quot;url&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;https://safebooru.org//images/4425/17492ccf2fe97591e14531d4b070e922c70384c9.jpg&quot;</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;url&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;https://somebooru.org//images/12345/4d7f62bb8675cef84760d6263e4c254c5129ef56.jpg&quot;</span><span class="p">,</span>
 <span class="w">        </span><span class="nt">&quot;waiting_on_connection_error&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span>
 <span class="w">        </span><span class="nt">&quot;domain_ok&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
 <span class="w">        </span><span class="nt">&quot;waiting_on_serverside_bandwidth&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span>
@@ -8165,7 +8165,7 @@ This request will also return any cookies for subdomains. The session system in 
     <span class="md-icon" title="Last update">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 13.1c-.1 0-.3.1-.4.2l-1 1 2.1 2.1 1-1c.2-.2.2-.6 0-.8l-1.3-1.3c-.1-.1-.2-.2-.4-.2m-1.9 1.8-6.1 6V23h2.1l6.1-6.1zM12.5 7v5.2l4 2.4-1 1L11 13V7zM11 21.9c-5.1-.5-9-4.8-9-9.9C2 6.5 6.5 2 12 2c5.3 0 9.6 4.1 10 9.3-.3-.1-.6-.2-1-.2s-.7.1-1 .2C19.6 7.2 16.2 4 12 4c-4.4 0-8 3.6-8 8 0 4.1 3.1 7.5 7.1 7.9l-.1.2z"/></svg>
     </span>
-    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="April 23, 2025 20:18:44">April 23, 2025</span>
+    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="April 30, 2025 19:19:14">April 30, 2025</span>
   </span>
 
     
