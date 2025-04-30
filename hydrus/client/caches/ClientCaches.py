@@ -13,11 +13,11 @@ from hydrus.core.files import HydrusFileHandling
 from hydrus.core.files.images import HydrusBlurhash
 from hydrus.core.files.images import HydrusImageHandling
 
-from hydrus.client import ClientFiles
 from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientRendering
 from hydrus.client import ClientThreading
 from hydrus.client.caches import ClientCachesBase
+from hydrus.client.files import ClientFilesMaintenance
 from hydrus.client.parsing import ClientParsing
 from hydrus.client.media import ClientMediaResult
 
@@ -146,9 +146,9 @@ class ImageRendererCache( object ):
         self._data_cache.Clear()
         
     
-    def GetImageRenderer( self, media ):
+    def GetImageRenderer( self, media_result: ClientMediaResult.MediaResult ) -> ClientRendering.ImageRenderer:
         
-        hash = media.GetHash()
+        hash = media_result.GetHash()
         
         key = hash
         
@@ -156,7 +156,7 @@ class ImageRendererCache( object ):
         
         if result is None:
             
-            image_renderer = ClientRendering.ImageRenderer( media )
+            image_renderer = ClientRendering.ImageRenderer( media_result )
             
             # we are no longer going to let big lads flush the whole cache. they can render on demand
             
@@ -175,7 +175,7 @@ class ImageRendererCache( object ):
         return image_renderer
         
     
-    def HasImageRenderer( self, hash ):
+    def HasImageRenderer( self, hash ) -> bool:
         
         key = hash
         
@@ -190,9 +190,9 @@ class ImageRendererCache( object ):
         self._data_cache.SetCacheSizeAndTimeout( cache_size, cache_timeout )
         
     
-    def PrefetchImageRenderer( self, media ):
+    def PrefetchImageRenderer( self, media_result: ClientMediaResult.MediaResult ):
         
-        ( width, height ) = media.GetResolution()
+        ( width, height ) = media_result.GetResolution()
         
         # essentially, we are not going to prefetch giganto images any more. they can render on demand and not mess our queue
         
@@ -200,7 +200,7 @@ class ImageRendererCache( object ):
         
         if width * height * 3 < self._data_cache.GetSizeLimit() * ( image_cache_prefetch_limit_percentage / 100 ):
             
-            self.GetImageRenderer( media )
+            self.GetImageRenderer( media_result )
             
         
     
@@ -224,9 +224,9 @@ class ImageTileCache( object ):
         self._data_cache.Clear()
         
     
-    def GetTile( self, image_renderer: ClientRendering.ImageRenderer, media, clip_rect, target_resolution ):
+    def GetTile( self, image_renderer: ClientRendering.ImageRenderer, media_result: ClientMediaResult.MediaResult, clip_rect, target_resolution ) -> ClientRendering.ImageTile:
         
-        hash = media.GetHash()
+        hash = media_result.GetHash()
         
         key = (
             hash,
@@ -380,7 +380,7 @@ class ThumbnailCache( object ):
             try:
                 
                 # file is malformed, let's force a regen
-                self._controller.files_maintenance_manager.RunJobImmediately( [ media_result ], ClientFiles.REGENERATE_FILE_DATA_JOB_FORCE_THUMBNAIL, pub_job_status = False )
+                self._controller.files_maintenance_manager.RunJobImmediately( [ media_result ], ClientFilesMaintenance.REGENERATE_FILE_DATA_JOB_FORCE_THUMBNAIL, pub_job_status = False )
                 
             except Exception as e:
                 
@@ -619,7 +619,7 @@ class ThumbnailCache( object ):
             
             if len( outstanding_delayed_hashes ) > 0:
                 
-                self._controller.files_maintenance_manager.ScheduleJob( outstanding_delayed_hashes, ClientFiles.REGENERATE_FILE_DATA_JOB_FORCE_THUMBNAIL )
+                self._controller.files_maintenance_manager.ScheduleJob( outstanding_delayed_hashes, ClientFilesMaintenance.REGENERATE_FILE_DATA_JOB_FORCE_THUMBNAIL )
                 
             
             self._delayed_regeneration_queue_quick.difference_update( cancelled_media_results )
@@ -693,7 +693,7 @@ class ThumbnailCache( object ):
             
         
     
-    def GetHydrusPlaceholderThumbnail( self ):
+    def GetHydrusPlaceholderThumbnail( self ) -> ClientRendering.HydrusBitmap:
         
         return self._special_thumbs[ HC.APPLICATION_UNKNOWN ]
         
@@ -906,7 +906,7 @@ class ThumbnailCache( object ):
             
             try:
                 
-                self._controller.files_maintenance_manager.RunJobImmediately( [ media_result ], ClientFiles.REGENERATE_FILE_DATA_JOB_FORCE_THUMBNAIL, pub_job_status = False )
+                self._controller.files_maintenance_manager.RunJobImmediately( [ media_result ], ClientFilesMaintenance.REGENERATE_FILE_DATA_JOB_FORCE_THUMBNAIL, pub_job_status = False )
                 
             except HydrusExceptions.FileMissingException:
                 

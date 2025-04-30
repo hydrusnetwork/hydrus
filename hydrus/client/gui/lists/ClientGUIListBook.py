@@ -121,6 +121,11 @@ class ListBook( QW.QWidget ):
         return self._page_list.GetData()
         
     
+    def GetCurrentPageIndex( self ) :
+        
+        return self._page_list.currentRow()
+        
+    
     def setTabText( self, index, text ):
         
         self._page_list.item( index ).setText( text )
@@ -149,6 +154,16 @@ class ListBook( QW.QWidget ):
     def SelectRight( self ):
         
         self._ShiftSelection( 1 )
+        
+    
+    def SelectName( self, name: str ):
+        
+        items = self._page_list.findItems( name, QC.Qt.MatchFlag.MatchExactly )
+        
+        if items:
+            
+            self._page_list.setCurrentItem( items[0] )
+            
         
     
     def SortList( self ):

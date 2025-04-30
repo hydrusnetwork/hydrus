@@ -10,9 +10,9 @@ from hydrus.core.files.images import HydrusImageMetadata
 from hydrus.core.files.images import HydrusImageOpening
 
 from hydrus.client import ClientConstants as CC
-from hydrus.client import ClientFiles
 from hydrus.client import ClientGlobals as CG
-from hydrus.client import ClientImageHandling
+from hydrus.client.files import ClientFiles
+from hydrus.client.files.images import ClientImagePerceptualHashes
 from hydrus.client.importing.options import FileImportOptions
 
 class FileImportStatus( object ):
@@ -356,7 +356,7 @@ class FileImportJob( object ):
                 HydrusData.ShowText( 'File import job generating perceptual_hashes' )
                 
             
-            self._perceptual_hashes = ClientImageHandling.GenerateShapePerceptualHashes( self._temp_path, mime )
+            self._perceptual_hashes = ClientImagePerceptualHashes.GenerateShapePerceptualHashes( self._temp_path, mime )
             
             if HG.file_import_report_mode:
                 

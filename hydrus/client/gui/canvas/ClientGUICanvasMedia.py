@@ -2463,6 +2463,39 @@ class MediaContainer( QW.QWidget ):
         return CalculateMediaContainerSize( self._media, my_dpr, self._current_zoom, self._show_action )
         
     
+    def SizeSelfToMedia( self ):
+        
+        if self._media is None:
+            
+            return
+            
+        
+        media_size = self._media_window.size()
+        media_width = media_size.width()
+        media_height = media_size.height()
+        
+        if media_width is None or media_height is None:
+            
+            return
+            
+        
+        media_win_pos = self._media_window.mapToGlobal( QC.QPoint( 0, 0 ) )
+        
+        frame_geometry = self.window().frameGeometry()
+        window_geometry = self.window().geometry()
+        title_bar_offset = frame_geometry.top() - window_geometry.top()
+        
+        adjusted_pos = QC.QPoint(media_win_pos.x(), media_win_pos.y() + title_bar_offset)
+        
+        self.window().showNormal()
+        
+        self.window().resize( media_width, media_height )
+        self.window().move( adjusted_pos )
+        
+        self.ResetCenterPosition()
+        self._SizeAndPositionChildren()
+        
+    
     def StopForSlideshow( self, value ):
         
         if self.CurrentlyPresentingMediaWithDuration():
@@ -2888,6 +2921,10 @@ class MediaContainer( QW.QWidget ):
             self.ResetCenterPosition()
             
         
+    def ZoomToZoomPercent ( self, new_zoom, zoom_center_type_override = None  ):
+        
+        self._TryToChangeZoom( new_zoom, zoom_center_type_override )
+        
     
     def ZoomToZoomType( self, zoom_type = None ):
         
@@ -3064,7 +3101,7 @@ class OpenExternallyPanel( QW.QWidget ):
         
         if self._media.GetLocationsManager().IsLocal():
             
-            qt_pixmap = CG.client_controller.GetCache( 'thumbnail' ).GetThumbnail( media.GetDisplayMedia().GetMediaResult() ).GetQtPixmap()
+            qt_pixmap = CG.client_controller.thumbnails_cache.GetThumbnail( media.GetDisplayMedia().GetMediaResult() ).GetQtPixmap()
             
             thumbnail_dpr_percent = CG.client_controller.new_options.GetInteger( 'thumbnail_dpr_percent' )
             
@@ -3456,7 +3493,7 @@ class StaticImage( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
         
         self._last_device_pixel_ratio = self.devicePixelRatio()
         
-        self._tile_cache = CG.client_controller.GetCache( 'image_tiles' )
+        self._image_tiles_cache = CG.client_controller.image_tiles_cache
         
         self._canvas_tiles = {}
         
@@ -3632,7 +3669,7 @@ class StaticImage( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
         
         self._DrawBackground( painter, topLeftOffset = raw_canvas_clip_rect.topLeft() )
         
-        tile = self._tile_cache.GetTile( self._image_renderer, self._media, native_clip_rect, raw_canvas_clip_rect.size() )
+        tile = self._image_tiles_cache.GetTile( self._image_renderer, self._media.GetMediaResult(), native_clip_rect, raw_canvas_clip_rect.size() )
         
         painter.drawPixmap( 0, 0, tile.qt_pixmap )
         
@@ -3887,9 +3924,9 @@ class StaticImage( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
             
             self._ClearCanvasTileCache()
             
-            image_cache = CG.client_controller.GetCache( 'images' )
+            images_cache = CG.client_controller.images_cache
             
-            self._image_renderer = image_cache.GetImageRenderer( self._media )
+            self._image_renderer = images_cache.GetImageRenderer( self._media.GetMediaResult() )
             
             if not self._image_renderer.IsReady():
                 
@@ -3955,9 +3992,9 @@ class StaticImage( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
         
         self._media = media
         
-        image_cache = CG.client_controller.GetCache( 'images' )
+        images_cache = CG.client_controller.images_cache
         
-        self._image_renderer = image_cache.GetImageRenderer( self._media )
+        self._image_renderer = images_cache.GetImageRenderer( self._media.GetMediaResult() )
         
         if not self._image_renderer.IsReady():
             

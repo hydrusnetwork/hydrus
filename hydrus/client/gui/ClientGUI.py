@@ -595,7 +595,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         
         self._have_shown_once = False
         
-        if self._controller.new_options.GetBoolean( 'start_client_in_system_tray' ):
+        if ClientGUISystemTray.SystemTrayAvailable() and self._controller.new_options.GetBoolean( 'start_client_in_system_tray' ):
             
             self._currently_minimised_to_system_tray = True
             
@@ -877,27 +877,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
             
         
         availability_lines.append( 'cbor2 present: {}'.format( str( CBOR_AVAILABLE ) ) )
-        
         availability_lines.append( 'chardet present: {}'.format( str( HydrusText.CHARDET_OK ) ) )
-        
-        from hydrus.client.networking import ClientNetworkingJobs
-        
-        if ClientNetworkingJobs.CLOUDSCRAPER_OK:
-            
-            try:
-                
-                availability_lines.append( 'cloudscraper present: {}'.format( ClientNetworkingJobs.cloudscraper.__version__ ) )
-                
-            except:
-                
-                availability_lines.append( 'cloudscraper present: unknown version' )
-                
-            
-        else:
-            
-            availability_lines.append( 'cloudscraper present: {}'.format( 'False' ) )
-            
-        
         availability_lines.append( 'cryptography present: {}'.format( HydrusEncryption.CRYPTO_OK ) )
         availability_lines.append( 'dateparser present: {}'.format( ClientTime.DATEPARSER_OK ) )
         availability_lines.append( 'dateutil present: {}'.format( ClientTime.DATEUTIL_OK ) )
@@ -905,7 +885,8 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         availability_lines.append( 'lxml present: {}'.format( ClientParsing.LXML_IS_OK ) )
         availability_lines.append( 'lz4 present: {}'.format( HydrusCompression.LZ4_OK ) )
         availability_lines.append( 'olefile present: {}'.format( HydrusOLEHandling.OLEFILE_OK ) )
-        availability_lines.append( 'Pillow HEIF/AVIF: {}'.format( HydrusImageHandling.HEIF_OK ) )
+        availability_lines.append( 'Pillow HEIF: {}'.format( HydrusImageHandling.HEIF_OK ) )
+        availability_lines.append( 'Pillow AVIF: {}'.format( HydrusImageHandling.AVIF_OK ) )
         availability_lines.append( 'Pillow JXL: {}'.format( HydrusImageHandling.JXL_OK ) )
         availability_lines.append( 'psutil present: {}'.format( HydrusPSUtil.PSUTIL_OK ) )
         availability_lines.append( 'pympler present: {}'.format( HydrusMemory.PYMPLER_OK ) )
@@ -2139,6 +2120,20 @@ QMenuBar::item { padding: 2px 8px; margin: 0px; }'''
         
     
     def _FlipShowHideWholeUI( self ):
+        
+        if not ClientGUISystemTray.SystemTrayAvailable():
+            
+            try:
+                
+                raise Exception( 'Was called to flip hide/show to system tray, but system tray is not available!' )
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e, do_wait = False )
+                
+            
+            return
+            
         
         if not self._currently_minimised_to_system_tray:
             
@@ -7124,7 +7119,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     
     def _UpdateSystemTrayIcon( self, currently_booting = False ):
         
-        if not ClientGUISystemTray.SystemTrayAvailable() or ( not (HC.PLATFORM_WINDOWS or HC.PLATFORM_MACOS) and not CG.client_controller.new_options.GetBoolean( 'advanced_mode' ) ):
+        if not ClientGUISystemTray.SystemTrayAvailable() or ( not (HC.PLATFORM_WINDOWS or HC.PLATFORM_MACOS ) and not CG.client_controller.new_options.GetBoolean( 'advanced_mode' ) ):
             
             return
             
@@ -7342,7 +7337,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         try:
             
-            if self._controller.new_options.GetBoolean( 'close_client_to_system_tray' ):
+            if ClientGUISystemTray.SystemTrayAvailable() and self._controller.new_options.GetBoolean( 'close_client_to_system_tray' ):
                 
                 self._FlipShowHideWholeUI()
                 
@@ -7461,7 +7456,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                             
                             self._was_maximised = event.oldState() == QC.Qt.WindowState.WindowMaximized
                             
-                            if not self._currently_minimised_to_system_tray and self._controller.new_options.GetBoolean( 'minimise_client_to_system_tray' ):
+                            if ClientGUISystemTray.SystemTrayAvailable() and not self._currently_minimised_to_system_tray and self._controller.new_options.GetBoolean( 'minimise_client_to_system_tray' ):
                                 
                                 self._FlipShowHideWholeUI()
                                 
@@ -7507,11 +7502,6 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 if not tlw or not QP.isValid( tlw ):
                     
                     self._animation_update_windows.discard( window )
-                    
-                    continue
-                    
-                
-                if self._currently_minimised_to_system_tray:
                     
                     continue
                     

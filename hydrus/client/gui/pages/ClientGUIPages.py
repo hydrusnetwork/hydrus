@@ -1510,7 +1510,9 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
             
             full_page_name = page.GetName()
             
-            full_page_name = full_page_name.replace( '\n', '' )
+            full_page_name = ''.join( full_page_name.splitlines() )
+            
+            full_page_name = full_page_name[:256]
             
         
         page_name = HydrusText.ElideText( full_page_name, max_page_name_chars )

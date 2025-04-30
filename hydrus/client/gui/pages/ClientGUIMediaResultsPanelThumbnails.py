@@ -16,8 +16,8 @@ from hydrus.core import HydrusTime
 from hydrus.client import ClientApplicationCommand as CAC
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientData
-from hydrus.client import ClientFiles
 from hydrus.client import ClientGlobals as CG
+from hydrus.client.files import ClientFilesMaintenance
 from hydrus.client.gui import ClientGUIDragDrop
 from hydrus.client.gui import ClientGUICore as CGC
 from hydrus.client.gui import ClientGUIFunctions
@@ -263,7 +263,7 @@ class MediaResultsPanelThumbnails( ClientGUIMediaResultsPanel.MediaResultsPanel 
         
         if len( thumbnails ) > 0:
             
-            CG.client_controller.GetCache( 'thumbnail' ).CancelWaterfall( self._page_key, thumbnails )
+            CG.client_controller.thumbnails_cache.CancelWaterfall( self._page_key, thumbnails )
             
         
         self._dirty_canvas_pages.append( canvas_page )
@@ -307,7 +307,7 @@ class MediaResultsPanelThumbnails( ClientGUIMediaResultsPanel.MediaResultsPanel 
         
         thumbnails_to_render_later = []
         
-        thumbnail_cache = CG.client_controller.GetCache( 'thumbnail' )
+        thumbnail_cache = CG.client_controller.thumbnails_cache
         
         thumbnail_margin = CG.client_controller.new_options.GetInteger( 'thumbnail_margin' )
         
@@ -344,7 +344,7 @@ class MediaResultsPanelThumbnails( ClientGUIMediaResultsPanel.MediaResultsPanel 
         
         if len( thumbnails_to_render_later ) > 0:
             
-            CG.client_controller.GetCache( 'thumbnail' ).Waterfall( self._page_key, thumbnails_to_render_later )
+            CG.client_controller.thumbnails_cache.Waterfall( self._page_key, thumbnails_to_render_later )
             
         
     
@@ -684,14 +684,14 @@ class MediaResultsPanelThumbnails( ClientGUIMediaResultsPanel.MediaResultsPanel 
         
         visible_thumbnails = [ thumbnail for thumbnail in thumbnails if self._MediaIsInCleanPage( thumbnail ) ]
         
-        thumbnail_cache = CG.client_controller.GetCache( 'thumbnail' )
+        thumbnails_cache = CG.client_controller.thumbnails_cache
         
         thumbnails_to_render_now = []
         thumbnails_to_render_later = []
         
         for thumbnail in visible_thumbnails:
             
-            if thumbnail_cache.HasThumbnailCached( thumbnail ):
+            if thumbnails_cache.HasThumbnailCached( thumbnail ):
                 
                 thumbnails_to_render_now.append( thumbnail )
                 
@@ -708,7 +708,7 @@ class MediaResultsPanelThumbnails( ClientGUIMediaResultsPanel.MediaResultsPanel 
         
         if len( thumbnails_to_render_later ) > 0:
             
-            CG.client_controller.GetCache( 'thumbnail' ).Waterfall( self._page_key, thumbnails_to_render_later )
+            thumbnails_cache.Waterfall( self._page_key, thumbnails_to_render_later )
             
         
     
@@ -873,7 +873,7 @@ class MediaResultsPanelThumbnails( ClientGUIMediaResultsPanel.MediaResultsPanel 
                 
                 self._RecalculateVirtualSize()
                 
-                CG.client_controller.GetCache( 'thumbnail' ).Waterfall( self._page_key, thumbnails )
+                CG.client_controller.thumbnails_cache.Waterfall( self._page_key, thumbnails )
                 
                 send_publish = False
                 
@@ -1684,9 +1684,9 @@ class MediaResultsPanelThumbnails( ClientGUIMediaResultsPanel.MediaResultsPanel 
             
             regen_menu = ClientGUIMenus.GenerateMenu( manage_menu )
             
-            for job_type in ClientFiles.ALL_REGEN_JOBS_IN_HUMAN_ORDER:
+            for job_type in ClientFilesMaintenance.ALL_REGEN_JOBS_IN_HUMAN_ORDER:
                 
-                ClientGUIMenus.AppendMenuItem( regen_menu, ClientFiles.regen_file_enum_to_str_lookup[ job_type ], ClientFiles.regen_file_enum_to_description_lookup[ job_type ], self._RegenerateFileData, job_type )
+                ClientGUIMenus.AppendMenuItem( regen_menu, ClientFilesMaintenance.regen_file_enum_to_str_lookup[ job_type ], ClientFilesMaintenance.regen_file_enum_to_description_lookup[ job_type ], self._RegenerateFileData, job_type )
                 
             
             ClientGUIMenus.AppendMenu( manage_menu, regen_menu, 'maintenance' )
@@ -2174,11 +2174,11 @@ class Thumbnail( Selectable ):
         
         if media.GetDisplayMedia() is None:
             
-            thumbnail_hydrus_bmp = CG.client_controller.GetCache( 'thumbnail' ).GetThumbnail( None )
+            thumbnail_hydrus_bmp = CG.client_controller.thumbnails_cache.GetHydrusPlaceholderThumbnail()
             
         else:
             
-            thumbnail_hydrus_bmp = CG.client_controller.GetCache( 'thumbnail' ).GetThumbnail( media.GetDisplayMedia().GetMediaResult() )
+            thumbnail_hydrus_bmp = CG.client_controller.thumbnails_cache.GetThumbnail( media.GetDisplayMedia().GetMediaResult() )
             
         
         thumbnail_border = CG.client_controller.new_options.GetInteger( 'thumbnail_border' )

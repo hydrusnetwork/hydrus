@@ -1,4 +1,5 @@
 import os
+import json
 import random
 import typing
 import unittest
@@ -59,6 +60,328 @@ class DummyFormula( ClientParsing.ParseFormula ):
             
         
         return t + 'test' + '\n' + 'returns what you give it'
+        
+    
+
+class TestParseFormulaJSON( unittest.TestCase ):
+    
+    def test_json_formula_index( self ):
+        
+        j_text = json.dumps(
+            {
+                "posts" : [
+                    1,
+                    2,
+                    3
+                ]
+            }
+        )
+        
+        formula = ClientParsing.ParseFormulaJSON(
+            parse_rules = [
+                ( ClientParsing.JSON_PARSE_RULE_TYPE_DICT_KEY, ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FIXED, match_value = 'posts', example_string = 'posts' ) ),
+                ( ClientParsing.JSON_PARSE_RULE_TYPE_INDEXED_ITEM, 1 )
+            ],
+            content_to_fetch = ClientParsing.JSON_CONTENT_STRING
+        )
+        
+        self.assertEqual( formula.Parse( {}, j_text, True ), [ "2" ] )
+        
+    
+    def test_json_formula_items( self ):
+        
+        j_text = json.dumps(
+            {
+                "posts" : [
+                    1,
+                    2,
+                    3
+                ]
+            }
+        )
+        
+        formula = ClientParsing.ParseFormulaJSON(
+            parse_rules = [
+                ( ClientParsing.JSON_PARSE_RULE_TYPE_DICT_KEY, ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FIXED, match_value = 'posts', example_string = 'posts' ) ),
+                ( ClientParsing.JSON_PARSE_RULE_TYPE_ALL_ITEMS, None )
+            ],
+            content_to_fetch = ClientParsing.JSON_CONTENT_STRING
+        )
+        
+        self.assertEqual( formula.Parse( {}, j_text, True ), [ "1", "2", "3" ] )
+        
+    
+    def test_json_formula_key( self ):
+        
+        j_text = json.dumps(
+            {
+                "posts" : [
+                    {
+                        'a' : 'blah1',
+                        'id' : 123
+                    },
+                    {
+                        'a' : 'blah2',
+                        'id' : 456
+                    },
+                    {
+                        'a' : 'blah7',
+                        'id' : 789
+                    }
+                ]
+            }
+        )
+        
+        formula = ClientParsing.ParseFormulaJSON(
+            parse_rules = [
+                ( ClientParsing.JSON_PARSE_RULE_TYPE_DICT_KEY, ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FIXED, match_value = 'posts', example_string = 'posts' ) ),
+                ( ClientParsing.JSON_PARSE_RULE_TYPE_ALL_ITEMS, None ),
+                ( ClientParsing.JSON_PARSE_RULE_TYPE_DICT_KEY, ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FIXED, match_value = 'id', example_string = 'id' ) )
+            ],
+            content_to_fetch = ClientParsing.JSON_CONTENT_STRING
+        )
+        
+        self.assertEqual( formula.Parse( {}, j_text, True ), [ "123", "456", "789" ] )
+        
+    
+    def test_json_formula_pull_json( self ):
+        
+        j_text = json.dumps(
+            {
+                "posts" : [
+                    {
+                        'a' : 'blah1',
+                        'id' : 123
+                    },
+                    {
+                        'a' : 'blah2',
+                        'id' : 456
+                    },
+                    {
+                        'a' : 'blah7',
+                        'id' : 789
+                    }
+                ]
+            }
+        )
+        
+        formula = ClientParsing.ParseFormulaJSON(
+            parse_rules = [
+                ( ClientParsing.JSON_PARSE_RULE_TYPE_DICT_KEY, ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FIXED, match_value = 'posts', example_string = 'posts' ) ),
+                ( ClientParsing.JSON_PARSE_RULE_TYPE_ALL_ITEMS, None )
+            ],
+            content_to_fetch = ClientParsing.JSON_CONTENT_JSON
+        )
+        
+        result = formula.Parse( {}, j_text, True )
+        
+        result_loaded = [ json.loads( r ) for r in result ]
+        
+        self.assertEqual( result_loaded, [ {"a": "blah1", "id": 123}, {"a": "blah2", "id": 456}, {"a": "blah7", "id": 789} ] )
+        
+    
+    def test_json_formula_dict_keys( self ):
+        
+        j_text = json.dumps(
+            {
+                "posts" : [
+                    {
+                        'a' : 'blah1',
+                        'id' : 123
+                    },
+                    {
+                        'a' : 'blah2',
+                        'id' : 456
+                    },
+                    {
+                        'a_test' : 'blah7',
+                        'id_test' : 789
+                    }
+                ]
+            }
+        )
+        
+        formula = ClientParsing.ParseFormulaJSON(
+            parse_rules = [
+                ( ClientParsing.JSON_PARSE_RULE_TYPE_DICT_KEY, ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FIXED, match_value = 'posts', example_string = 'posts' ) ),
+                ( ClientParsing.JSON_PARSE_RULE_TYPE_INDEXED_ITEM, 2 )
+            ],
+            content_to_fetch = ClientParsing.JSON_CONTENT_DICT_KEYS
+        )
+        
+        self.assertEqual( set( formula.Parse( {}, j_text, True ) ), { 'a_test', 'id_test' } )
+        
+    
+    def test_json_formula_ascend( self ):
+        
+        j_text = json.dumps(
+            {
+                "posts" : [
+                    {
+                        'a' : 'blah1',
+                        'id' : 123
+                    },
+                    {
+                        'a' : 'blah2',
+                        'id' : 456
+                    },
+                    {
+                        'b' : 'blah7',
+                        'id' : 789
+                    }
+                ]
+            }
+        )
+        
+        formula = ClientParsing.ParseFormulaJSON(
+            parse_rules = [
+                ( ClientParsing.JSON_PARSE_RULE_TYPE_DICT_KEY, ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FIXED, match_value = 'posts', example_string = 'posts' ) ),
+                ( ClientParsing.JSON_PARSE_RULE_TYPE_ALL_ITEMS, None ),
+                ( ClientParsing.JSON_PARSE_RULE_TYPE_DICT_KEY, ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FIXED, match_value = 'a', example_string = 'a' ) ),
+                ( ClientParsing.JSON_PARSE_RULE_TYPE_ASCEND, 1 ),
+                ( ClientParsing.JSON_PARSE_RULE_TYPE_DICT_KEY, ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FIXED, match_value = 'id', example_string = 'id' ) )
+            ],
+            content_to_fetch = ClientParsing.JSON_CONTENT_STRING
+        )
+        
+        self.assertEqual( formula.Parse( {}, j_text, True ), [ '123', '456' ] )
+        
+    
+    def test_json_formula_ascend_double( self ):
+        
+        j_text = json.dumps(
+            {
+                "posts" : [
+                    {
+                        "info" : {
+                            'a' : 'blah1',
+                            'id' : 123
+                        },
+                        'actual_value' : 'hello a'
+                    },
+                    {
+                        "info" : {
+                            'b' : 'blah1',
+                            'id' : 123
+                        },
+                        'actual_value' : 'hello b'
+                    },
+                ]
+            }
+        )
+        
+        formula = ClientParsing.ParseFormulaJSON(
+            parse_rules = [
+                ( ClientParsing.JSON_PARSE_RULE_TYPE_DICT_KEY, ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FIXED, match_value = 'posts', example_string = 'posts' ) ),
+                ( ClientParsing.JSON_PARSE_RULE_TYPE_ALL_ITEMS, None ),
+                ( ClientParsing.JSON_PARSE_RULE_TYPE_DICT_KEY, ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FIXED, match_value = 'info', example_string = 'info' ) ),
+                ( ClientParsing.JSON_PARSE_RULE_TYPE_DICT_KEY, ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FIXED, match_value = 'a', example_string = 'a' ) ),
+                ( ClientParsing.JSON_PARSE_RULE_TYPE_ASCEND, 2 ),
+                ( ClientParsing.JSON_PARSE_RULE_TYPE_DICT_KEY, ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FIXED, match_value = 'actual_value', example_string = 'actual_value' ) )
+            ],
+            content_to_fetch = ClientParsing.JSON_CONTENT_STRING
+        )
+        
+        self.assertEqual( formula.Parse( {}, j_text, True ), [ 'hello a' ] )
+        
+    
+    def test_json_formula_value_string( self ):
+        
+        j_text = json.dumps(
+            {
+                "posts" : [
+                    {
+                        'a' : 'blah1',
+                        'id' : 123
+                    },
+                    {
+                        'a' : 'blah2',
+                        'id' : 456
+                    },
+                    {
+                        'b' : 'blah7',
+                        'id' : 789
+                    }
+                ]
+            }
+        )
+        
+        formula = ClientParsing.ParseFormulaJSON(
+            parse_rules = [
+                ( ClientParsing.JSON_PARSE_RULE_TYPE_DICT_KEY, ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FIXED, match_value = 'posts', example_string = 'posts' ) ),
+                ( ClientParsing.JSON_PARSE_RULE_TYPE_ALL_ITEMS, None ),
+                ( ClientParsing.JSON_PARSE_RULE_TYPE_DICT_KEY, ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FIXED, match_value = 'a', example_string = 'a' ) ),
+                ( ClientParsing.JSON_PARSE_RULE_TYPE_TEST_STRING_ITEMS, ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FIXED, match_value = 'blah2', example_string = 'blah2' ) )
+            ],
+            content_to_fetch = ClientParsing.JSON_CONTENT_STRING
+        )
+        
+        self.assertEqual( formula.Parse( {}, j_text, True ), [ 'blah2' ] )
+        
+    
+    def test_json_formula_value_and_ascend( self ):
+        
+        j_text = json.dumps(
+            {
+                "raw_text": {
+                    "text": "can we do that thing?",
+                    "facets": [
+                        {
+                            "type": "tag",
+                            "indices": [
+                                21,
+                                47
+                            ],
+                            "original": "blue_hair"
+                        },
+                        {
+                            "type": "tag",
+                            "indices": [
+                                12,
+                                91
+                            ],
+                            "original": "skirt"
+                        },
+                        {
+                            "type": "media",
+                            "indices": [
+                                96,
+                                119
+                            ],
+                            "original" : "whatever",
+                            "id": "123456"
+                        }
+                    ]
+                }
+            }
+        )
+        
+        formula = ClientParsing.ParseFormulaJSON(
+            parse_rules = [
+                ( ClientParsing.JSON_PARSE_RULE_TYPE_DICT_KEY, ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FIXED, match_value = 'raw_text', example_string = 'raw_text' ) ),
+                ( ClientParsing.JSON_PARSE_RULE_TYPE_DICT_KEY, ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FIXED, match_value = 'facets', example_string = 'facets' ) ),
+                ( ClientParsing.JSON_PARSE_RULE_TYPE_ALL_ITEMS, None ),
+                ( ClientParsing.JSON_PARSE_RULE_TYPE_DICT_KEY, ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FIXED, match_value = 'type', example_string = 'type' ) ),
+            ],
+            content_to_fetch = ClientParsing.JSON_CONTENT_STRING
+        )
+        
+        self.assertEqual( formula.Parse( {}, j_text, True ), [ 'tag', 'tag', 'media' ] )
+        
+        formula = ClientParsing.ParseFormulaJSON(
+            parse_rules = [
+                ( ClientParsing.JSON_PARSE_RULE_TYPE_DICT_KEY, ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FIXED, match_value = 'raw_text', example_string = 'raw_text' ) ),
+                ( ClientParsing.JSON_PARSE_RULE_TYPE_DICT_KEY, ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FIXED, match_value = 'facets', example_string = 'facets' ) ),
+                ( ClientParsing.JSON_PARSE_RULE_TYPE_ALL_ITEMS, None ),
+                ( ClientParsing.JSON_PARSE_RULE_TYPE_DICT_KEY, ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FIXED, match_value = 'type', example_string = 'type' ) ),
+                ( ClientParsing.JSON_PARSE_RULE_TYPE_TEST_STRING_ITEMS, ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FIXED, match_value = 'tag', example_string = 'tag' ) ),
+                ( ClientParsing.JSON_PARSE_RULE_TYPE_ASCEND, 1 ),
+                ( ClientParsing.JSON_PARSE_RULE_TYPE_DICT_KEY, ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FIXED, match_value = 'original', example_string = 'original' ) )
+            ],
+            content_to_fetch = ClientParsing.JSON_CONTENT_STRING
+        )
+        
+        self.assertEqual( formula.Parse( {}, j_text, True ), [ 'blue_hair', 'skirt' ] )
         
     
 

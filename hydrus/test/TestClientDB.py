@@ -13,12 +13,12 @@ from hydrus.core.networking import HydrusNetwork
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientDefaults
-from hydrus.client import ClientFilesPhysical
-from hydrus.client import ClientImageHandling
 from hydrus.client import ClientLocation
 from hydrus.client import ClientServices
 from hydrus.client.db import ClientDB
 from hydrus.client.exporting import ClientExportingFiles
+from hydrus.client.files import ClientFilesPhysical
+from hydrus.client.files.images import ClientImagePerceptualHashes
 from hydrus.client.gui.pages import ClientGUIPageManager
 from hydrus.client.gui.pages import ClientGUISession
 from hydrus.client.importing import ClientImportLocal
@@ -509,7 +509,7 @@ class TestClientDB( unittest.TestCase ):
         tests.append( ( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_SIMILAR_TO_DATA, ( ( pixel_hash, ), (), 0 ), 1 ) )
         tests.append( ( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_SIMILAR_TO_DATA, ( ( os.urandom( 32 ), ), (), 0 ), 0 ) )
         
-        perceptual_hashes = ClientImageHandling.GenerateShapePerceptualHashes( path, HC.IMAGE_PNG )
+        perceptual_hashes = ClientImagePerceptualHashes.GenerateShapePerceptualHashes( path, HC.IMAGE_PNG )
         
         tests.append( ( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_SIMILAR_TO_DATA, ( (), tuple( perceptual_hashes ), 0 ), 1 ) )
         tests.append( ( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_SIMILAR_TO_DATA, ( (), ( os.urandom( 32 ), ), 0 ), 0 ) )

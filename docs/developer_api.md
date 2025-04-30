@@ -828,11 +828,11 @@ Response:
 :   Some JSON which files are known to be mapped to that URL. Note this needs a database hit, so it may be delayed if the client is otherwise busy. Don't rely on this to always be fast. 
 ```json title="Example response"
 {
-  "normalised_url" : "https://safebooru.org/index.php?id=2753608&page=post&s=view",
+  "normalised_url" : "https://somebooru.org/index.php?id=123456&page=post&s=view",
   "url_file_statuses" : [
     {
       "status" : 2,
-      "hash" : "20e9002824e5e7ffc240b91b6e4a6af552b3143993c1778fd523c30d9fdde02c",
+      "hash" : "529af82eee3660008a51823ee4ca0c40d1b4d59b6e2f7418e8b23f2d9c01b1fb",
       "note" : "url recognised: Imported at 2015/10/18 10:58:01, which was 3 years 4 months ago (before this check)."
     }
   ]
@@ -865,17 +865,17 @@ Arguments:
     *   `url`: (the url you want to ask about)
 
 Example request:
-:   for URL `https://boards.4chan.org/tv/thread/197641945/itt-moments-in-film-or-tv-that-aged-poorly`:
+:   for URL `https://someimageboard.org/cool/thread/123456/robots`:
     ```
-    /add_urls/get_url_info?url=https%3A%2F%2Fboards.4chan.org%2Ftv%2Fthread%2F197641945%2Fitt-moments-in-film-or-tv-that-aged-poorly
+    /add_urls/get_url_info?url=https%3A%2F%2Fsomeimageboard.org%2Fcool%2Fthread%2F123456%2Frobots
     ```
-        
+    
 Response: 
 :   Some JSON describing what the client thinks of the URL.
 ```json title="Example response"
 {
-  "request_url" : "https://a.4cdn.org/tv/thread/197641945.json",
-  "normalised_url" : "https://boards.4chan.org/tv/thread/197641945",
+  "request_url" : "https://someimageboard.org/cool/thread/123456.json",
+  "normalised_url" : "https://someimageboard.org/cool/thread/123456",
   "url_type" : 4,
   "url_type_string" : "watchable url",
   "match_name" : "8chan thread",
@@ -895,7 +895,7 @@ Response:
     
     The `normalised_url` is the fully normalised URL--what is used for comparison and saving to disk.
     
-    The `request_url` is either the lighter 'for server' normalised URL, which may include ephemeral token parameters, or, as in the case here, the fully converted API/redirect URL. (When hydrus is asked to check a 4chan thread, it doesn't hit the HTML, but the JSON API.)
+    The `request_url` is either the lighter 'for server' normalised URL, which may include ephemeral token parameters, or, as in the case here, the fully converted API/redirect URL. (When hydrus is asked to check an imageboard thread, it usually doesn't hit the HTML, but the JSON API.)
     
 
 ### **POST `/add_urls/add_url`** { id="add_urls_add_url" }
@@ -934,16 +934,16 @@ filterable_tags works like the tags parsed by a hydrus downloader. It is just a 
 
 ```json title="Example request body"
 {
-  "url" : "https://8ch.net/tv/res/1846574.html",
+  "url" : "https://someimageboard.org/cool/res/12345.html",
   "destination_page_name" : "kino zone",
   "service_keys_to_additional_tags" : {
-    "6c6f63616c2074616773" : ["as seen on /tv/"]
+    "6c6f63616c2074616773" : ["from /cool/"]
   }
 }
 ```
 ```json title="Example request body"
 {
-  "url" : "https://safebooru.org/index.php?page=post&s=view&id=3195917",
+  "url" : "https://someimageboard.org/index.php?page=post&s=view&id=123456",
   "filterable_tags" : [
     "1girl",
     "artist name",
@@ -983,8 +983,8 @@ Response:
 :   Some JSON with info on the URL added.
 ```json title="Example response"
 {
-  "human_result_text" : "\"https://8ch.net/tv/res/1846574.html\" URL added successfully.",
-  "normalised_url" : "https://8ch.net/tv/res/1846574.html"
+  "human_result_text" : "\"https://someimageboard.org/cool/res/12345.html\" URL added successfully.",
+  "normalised_url" : "https://someimageboard.org/cool/res/12345.html"
 }
 ```
 
@@ -1017,8 +1017,8 @@ By default, anything you throw at the 'add' side will be normalised nicely, but 
 
 ```json title="Example request body"
 {
-  "url_to_add" : "https://rule34.xxx/index.php?id=2588418&page=post&s=view",
-  "hash" : "3b820114f658d768550e4e3d4f1dced3ff8db77443472b5ad93700647ad2d3ba"
+  "url_to_add" : "https://somebooru.org/index.php?id=12345&page=post&s=view",
+  "hash" : "529af82eee3660008a51823ee4ca0c40d1b4d59b6e2f7418e8b23f2d9c01b1fb"
 }
 ```
 
@@ -1740,8 +1740,8 @@ Wildcards and namespace searches are supported, so if you search for 'character:
     *   system:viewtime in media, client api, preview ~= 1 day 30 hours 100 minutes 90s
     *   system:has url matching regex index\\.php
     *   system:does not have a url matching regex index\\.php
-    *   system:has url https://safebooru.donmai.us/posts/4695284
-    *   system:does not have url https://safebooru.donmai.us/posts/4695284
+    *   system:has url https://somebooru.org/posts/123456
+    *   system:does not have url https://somebooru.org/posts/123456
     *   system:has domain safebooru.com
     *   system:does not have domain safebooru.com
     *   system:has a url with class safebooru file page
@@ -2009,7 +2009,7 @@ Response:
       "time_modified" : 1604055647,
       "time_modified_details" : {
         "local" : 1641044491,
-        "gelbooru.com" : 1604055647
+        "somebooru.org" : 1604055647
       },
       "file_services" : {
         "current" : {
@@ -2047,9 +2047,9 @@ Response:
       "has_icc_profile" : false,
       "has_transparency" : false,
       "known_urls" : [
-        "https://gelbooru.com/index.php?page=post&s=view&id=4841557",
-        "https://img2.gelbooru.com/images/80/c8/80c8646b4a49395fb36c805f316c49a9.jpg",
-        "http://origin-orig.deviantart.net/ed31/f/2019/210/7/8/beachqueen_samus_by_dandonfuga-ddcu1xg.jpg"
+        "https://somebooru.org/index.php?page=post&s=view&id=12345",
+        "https://cdn.somebooru.org/images/4d/7f/4d7f62bb8675cef84760d6263e4c254c5129ef56.jpg",
+        "http://somegallerysite.com/post/123456/samus_is_cool.jpg"
       ],
       "ratings" : {
         "74d52c6238d25f846d579174c11856b1aaccdb04a185cb2c79f0d0e499284f2c" : true,
@@ -2254,14 +2254,14 @@ If you add `detailed_url_information=true`, a new entry, `detailed_known_urls`, 
 {
   "detailed_known_urls": [
     {
-      "normalised_url": "https://gelbooru.com/index.php?id=4841557&page=post&s=view",
+      "normalised_url": "https://somebooru.org/index.php?id=123456&page=post&s=view",
       "url_type": 0,
       "url_type_string": "post url",
-      "match_name": "gelbooru file page",
+      "match_name": "somebooru file page",
       "can_parse": true
     },
     {
-      "normalised_url": "https://img2.gelbooru.com/images/80/c8/80c8646b4a49395fb36c805f316c49a9.jpg",
+      "normalised_url": "https://cdn.somebooru.org/images/4d/7f/4d7f62bb8675cef84760d6263e4c254c5129ef56.jpg",
       "url_type": 5,
       "url_type_string": "unknown url",
       "match_name": "unknown url",
@@ -3045,8 +3045,8 @@ Required Headers: n/a
 Arguments:
 :   *  `domain`
 
-``` title="Example request (for gelbooru.com)"
-/manage_cookies/get_cookies?domain=gelbooru.com
+``` title="Example request"
+/manage_cookies/get_cookies?domain=somebooru.org
 ```
 
 Response:
@@ -3055,9 +3055,9 @@ Response:
 ```json title="Example response"
 {
 	"cookies" : [
-		["__cfduid", "f1bef65041e54e93110a883360bc7e71", ".gelbooru.com", "/", 1596223327],
-		["pass_hash", "0b0833b797f108e340b315bc5463c324", "gelbooru.com", "/", 1585855361],
-		["user_id", "123456", "gelbooru.com", "/", 1585855361]
+		["__cfduid", "f1bef65041e54e93110a883360bc7e71", ".somebooru.org", "/", 1596223327],
+		["pass_hash", "0b0833b797f108e340b315bc5463c324", "somebooru.org", "/", 1585855361],
+		["user_id", "123456", "somebooru.org", "/", 1585855361]
 	]
 }
 ```
@@ -3110,8 +3110,8 @@ Required Headers: n/a
 Arguments:
 :   *  `domain`: optional, the domain to fetch headers for
 
-``` title="Example request (for gelbooru.com)"
-/manage_headers/get_headers?domain=gelbooru.com
+``` title="Example request"
+/manage_headers/get_headers?domain=somebooru.com
 ```
 
 ``` title="Example request (for global)"
@@ -3125,7 +3125,7 @@ Response:
 {
   "network_context" : {
     "type" : 2,
-    "data" : "gelbooru.com"
+    "data" : "somebooru.org"
   },
   "headers" : {
     "User-Agent" : {
@@ -3635,7 +3635,7 @@ Response:
         "label": "safebooru: elf"
       },
       "network_job": {
-        "url": "https://safebooru.org//images/4425/17492ccf2fe97591e14531d4b070e922c70384c9.jpg",
+        "url": "https://somebooru.org//images/12345/4d7f62bb8675cef84760d6263e4c254c5129ef56.jpg",
         "waiting_on_connection_error": false,
         "domain_ok": true,
         "waiting_on_serverside_bandwidth": false,

@@ -280,6 +280,54 @@ class BetterBitmapButton( ShortcutAwareToolTipMixin, QW.QPushButton ):
         self._func( *self._args,  **self._kwargs )
         
     
+class BetterBitmapWindowDragButton( BetterBitmapButton ):
+    
+    def __init__( self, parent, bitmap, func, target_window ):
+        
+        super().__init__( parent, bitmap, func )
+        
+        self._target_window = target_window
+        
+        self._original_icon = bitmap
+        
+    
+    def mousePressEvent( self, event ):
+        
+        if event.button() == QC.Qt.MouseButton.LeftButton:
+            
+            self._startDrag()
+            
+            self.setIcon( CC.global_pixmaps().move_cursor )
+            
+        elif event.button() == QC.Qt.MouseButton.RightButton:
+            
+            self._func()
+            
+        else:
+            
+            super().mousePressEvent( event )
+        
+    
+    def mouseReleaseEvent(self, event):
+        
+        if event.button() == QC.Qt.MouseButton.LeftButton:
+            
+            self.setIcon(self._original_icon)
+            
+        super().mouseReleaseEvent(event)
+        
+    
+    def _startDrag( self ):
+        
+        if self._target_window is not None:
+            
+            window_handle = self._target_window.windowHandle()
+            
+            if window_handle is not None:
+                
+                window_handle.startSystemMove()
+        
+    
 class BetterButton( ShortcutAwareToolTipMixin, QW.QPushButton ):
     
     def __init__( self, parent, label, func, *args, **kwargs ):
@@ -1785,7 +1833,7 @@ class TextAndGauge( QW.QWidget ):
         
         super().__init__( parent )
         
-        self._st = BetterStaticText( self )
+        self._st = BetterStaticText( self, tooltip_label = True )
         self._gauge = Gauge( self )
         
         vbox = QP.VBoxLayout( margin = 0 )

@@ -6,10 +6,10 @@ from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusTime
 
-from hydrus.client import ClientFiles
 from hydrus.client import ClientGlobals as CG
 from hydrus.client.db import ClientDBDefinitionsCache
 from hydrus.client.db import ClientDBModule
+from hydrus.client.files import ClientFilesMaintenance
 
 class ClientDBFilesMaintenanceQueue( ClientDBModule.ClientDBModule ):
     
@@ -44,7 +44,7 @@ class ClientDBFilesMaintenanceQueue( ClientDBModule.ClientDBModule ):
     
     def AddJobs( self, hash_ids, job_type, time_can_start = 0 ):
         
-        deletee_job_types =  ClientFiles.regen_file_enum_to_overruled_jobs[ job_type ]
+        deletee_job_types =  ClientFilesMaintenance.regen_file_enum_to_overruled_jobs[ job_type ]
         
         for deletee_job_type in deletee_job_types:
             
@@ -90,7 +90,7 @@ class ClientDBFilesMaintenanceQueue( ClientDBModule.ClientDBModule ):
         
         if job_types is None:
             
-            possible_job_types = ClientFiles.ALL_REGEN_JOBS_IN_RUN_ORDER
+            possible_job_types = ClientFilesMaintenance.ALL_REGEN_JOBS_IN_RUN_ORDER
             
         else:
             
@@ -115,7 +115,7 @@ class ClientDBFilesMaintenanceQueue( ClientDBModule.ClientDBModule ):
                 
                 hashes_to_job_types = {}
                 
-                sort_index = { job_type : index for ( index, job_type ) in enumerate( ClientFiles.ALL_REGEN_JOBS_IN_RUN_ORDER ) }
+                sort_index = { job_type : index for ( index, job_type ) in enumerate( ClientFilesMaintenance.ALL_REGEN_JOBS_IN_RUN_ORDER ) }
                 
                 for ( hash_id, job_types ) in hash_ids_to_job_types.items():
                     

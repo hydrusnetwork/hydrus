@@ -15,6 +15,27 @@ from hydrus.client import ClientGlobals as CG
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui import ClientGUIFunctions
 
+HG.last_mouse_click_button = QC.Qt.MouseButton.LeftButton
+
+def AddLastClickMemory( menu: QW.QMenu ):
+    
+    class _ClickMemoryFilter( QC.QObject ):
+        
+        def eventFilter(self, watched, event):
+            
+            if event.type() == QC.QEvent.Type.MouseButtonPress:
+                
+                HG.last_mouse_click_button = event.button()
+                    
+            return False
+
+    filter_obj = _ClickMemoryFilter(menu)
+    
+    menu.installEventFilter(filter_obj)
+    
+    return filter_obj
+    
+
 def AppendMenu( menu, submenu, label ):
     
     RemoveFinalSeparator( submenu )

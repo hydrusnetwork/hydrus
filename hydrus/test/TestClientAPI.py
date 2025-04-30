@@ -3720,9 +3720,9 @@ class TestClientAPI( unittest.TestCase ):
         
         # known
         
-        url = 'http://8ch.net/tv/res/1846574.html'
-        request_url = 'https://8ch.net/tv/res/1846574.json'
-        normalised_url = 'https://8ch.net/tv/res/1846574.html'
+        url = 'http://boards.holotower.org/hlgg/res/123456.html'
+        request_url = 'https://boards.holotower.org/hlgg/res/123456.json'
+        normalised_url = 'https://boards.holotower.org/hlgg/res/123456.html'
         # http so we can test normalised is https
         
         path = '/add_urls/get_url_info?url={}'.format( urllib.parse.quote( url, safe = '' ) )
@@ -3745,7 +3745,7 @@ class TestClientAPI( unittest.TestCase ):
         expected_result[ 'normalised_url' ] = normalised_url
         expected_result[ 'url_type' ] = HC.URL_TYPE_WATCHABLE
         expected_result[ 'url_type_string' ] = 'watchable url'
-        expected_result[ 'match_name' ] = '8chan thread'
+        expected_result[ 'match_name' ] = 'holotower thread'
         expected_result[ 'can_parse' ] = True
         
         wash_example_json_response( expected_result )
@@ -3792,7 +3792,7 @@ class TestClientAPI( unittest.TestCase ):
         
         headers = { 'Hydrus-Client-API-Access-Key' : access_key_hex, 'Content-Type' : HC.mime_mimetype_string_lookup[ HC.APPLICATION_JSON ] }
         
-        url = 'http://8ch.net/tv/res/1846574.html'
+        url = 'http://boards.holotower.org/hlgg/res/123456.html'
         
         request_dict = { 'url' : url }
         
@@ -3810,8 +3810,8 @@ class TestClientAPI( unittest.TestCase ):
         
         response_json = json.loads( text )
         
-        self.assertEqual( response_json[ 'human_result_text' ], '"https://8ch.net/tv/res/1846574.html" URL added successfully.' )
-        self.assertEqual( response_json[ 'normalised_url' ], 'https://8ch.net/tv/res/1846574.html' )
+        self.assertEqual( response_json[ 'human_result_text' ], '"https://boards.holotower.org/hlgg/res/123456.html" URL added successfully.' )
+        self.assertEqual( response_json[ 'normalised_url' ], 'https://boards.holotower.org/hlgg/res/123456.html' )
         
         self.assertEqual( TG.test_controller.GetWrite( 'import_url_test' ), [ ( ( url, set(), ClientTags.ServiceKeysToTags(), None, None, False, None ), {} ) ] )
         
@@ -3821,7 +3821,7 @@ class TestClientAPI( unittest.TestCase ):
         
         headers = { 'Hydrus-Client-API-Access-Key' : access_key_hex, 'Content-Type' : HC.mime_mimetype_string_lookup[ HC.APPLICATION_JSON ] }
         
-        url = 'http://8ch.net/tv/res/1846574.html'
+        url = 'http://boards.holotower.org/hlgg/res/123456.html'
         
         request_dict = { 'url' : url, 'file_service_key' : CC.LOCAL_FILE_SERVICE_KEY.hex() }
         
@@ -3839,8 +3839,8 @@ class TestClientAPI( unittest.TestCase ):
         
         response_json = json.loads( text )
         
-        self.assertEqual( response_json[ 'human_result_text' ], '"https://8ch.net/tv/res/1846574.html" URL added successfully.' )
-        self.assertEqual( response_json[ 'normalised_url' ], 'https://8ch.net/tv/res/1846574.html' )
+        self.assertEqual( response_json[ 'human_result_text' ], '"https://boards.holotower.org/hlgg/res/123456.html" URL added successfully.' )
+        self.assertEqual( response_json[ 'normalised_url' ], 'https://boards.holotower.org/hlgg/res/123456.html' )
         
         self.assertEqual( TG.test_controller.GetWrite( 'import_url_test' ), [ ( ( url, set(), ClientTags.ServiceKeysToTags(), None, None, False, ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY ) ), {} ) ] )
         
@@ -3864,8 +3864,8 @@ class TestClientAPI( unittest.TestCase ):
         
         response_json = json.loads( text )
         
-        self.assertEqual( response_json[ 'human_result_text' ], '"https://8ch.net/tv/res/1846574.html" URL added successfully.' )
-        self.assertEqual( response_json[ 'normalised_url' ], 'https://8ch.net/tv/res/1846574.html' )
+        self.assertEqual( response_json[ 'human_result_text' ], '"https://boards.holotower.org/hlgg/res/123456.html" URL added successfully.' )
+        self.assertEqual( response_json[ 'normalised_url' ], 'https://boards.holotower.org/hlgg/res/123456.html' )
         
         self.assertEqual( TG.test_controller.GetWrite( 'import_url_test' ), [ ( ( url, set(), ClientTags.ServiceKeysToTags(), 'muh /tv/', None, False, None ), {} ) ] )
         
@@ -3892,8 +3892,8 @@ class TestClientAPI( unittest.TestCase ):
         
         response_json = json.loads( text )
         
-        self.assertEqual( response_json[ 'human_result_text' ], '"https://8ch.net/tv/res/1846574.html" URL added successfully.' )
-        self.assertEqual( response_json[ 'normalised_url' ], 'https://8ch.net/tv/res/1846574.html' )
+        self.assertEqual( response_json[ 'human_result_text' ], '"https://boards.holotower.org/hlgg/res/123456.html" URL added successfully.' )
+        self.assertEqual( response_json[ 'normalised_url' ], 'https://boards.holotower.org/hlgg/res/123456.html' )
         
         self.assertEqual( TG.test_controller.GetWrite( 'import_url_test' ), [ ( ( url, set(), ClientTags.ServiceKeysToTags(), None, page_key, False, None ), {} ) ] )
         
@@ -3917,8 +3917,8 @@ class TestClientAPI( unittest.TestCase ):
         
         response_json = json.loads( text )
         
-        self.assertEqual( response_json[ 'human_result_text' ], '"https://8ch.net/tv/res/1846574.html" URL added successfully.' )
-        self.assertEqual( response_json[ 'normalised_url' ], 'https://8ch.net/tv/res/1846574.html' )
+        self.assertEqual( response_json[ 'human_result_text' ], '"https://boards.holotower.org/hlgg/res/123456.html" URL added successfully.' )
+        self.assertEqual( response_json[ 'normalised_url' ], 'https://boards.holotower.org/hlgg/res/123456.html' )
         
         filterable_tags = [ 'filename:yo' ]
         additional_service_keys_to_tags = ClientTags.ServiceKeysToTags( { CC.DEFAULT_LOCAL_TAG_SERVICE_KEY : { '/tv/ thread' } } )
@@ -3945,8 +3945,8 @@ class TestClientAPI( unittest.TestCase ):
         
         response_json = json.loads( text )
         
-        self.assertEqual( response_json[ 'human_result_text' ], '"https://8ch.net/tv/res/1846574.html" URL added successfully.' )
-        self.assertEqual( response_json[ 'normalised_url' ], 'https://8ch.net/tv/res/1846574.html' )
+        self.assertEqual( response_json[ 'human_result_text' ], '"https://boards.holotower.org/hlgg/res/123456.html" URL added successfully.' )
+        self.assertEqual( response_json[ 'normalised_url' ], 'https://boards.holotower.org/hlgg/res/123456.html' )
         
         filterable_tags = [ 'filename:yo' ]
         additional_service_keys_to_tags = ClientTags.ServiceKeysToTags( { CC.DEFAULT_LOCAL_TAG_SERVICE_KEY : { '/tv/ thread' } } )

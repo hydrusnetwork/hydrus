@@ -1248,9 +1248,41 @@ class Canvas( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
                 
                 self._media_container.ResetCenterPosition()
                 
+            elif action == CAC.SIMPLE_RESIZE_WINDOW_TO_MEDIA:
+                
+                self._media_container.SizeSelfToMedia()
+                
+            elif action == CAC.SIMPLE_RESIZE_WINDOW_TO_MEDIA_VIEWER_CENTER:
+            
+                self._media_container.SizeSelfToMedia()
+                
+                self._media_container.ResetCenterPosition()
+                
+            elif action == CAC.SIMPLE_RESIZE_WINDOW_TO_MEDIA_ZOOMED:
+                
+                new_zoom = command.GetSimpleData()
+                
+                self._media_container.ZoomToZoomPercent( new_zoom )
+                
+                self._media_container.SizeSelfToMedia()
+                
+            elif action == CAC.SIMPLE_RESIZE_WINDOW_TO_MEDIA_ZOOMED_VIEWER_CENTER:
+                
+                new_zoom = command.GetSimpleData()
+                
+                self._media_container.ZoomToZoomPercent( new_zoom, zoom_center_type_override = ClientGUICanvasMedia.ZOOM_CENTERPOINT_VIEWER_CENTER )
+                
+                self._media_container.SizeSelfToMedia()
+                
+                self._media_container.ResetCenterPosition()
+                
             elif action == CAC.SIMPLE_SWITCH_BETWEEN_100_PERCENT_AND_CANVAS_ZOOM:
                 
                 self._media_container.ZoomSwitch()
+            
+            elif action == CAC.SIMPLE_SWITCH_BETWEEN_100_PERCENT_AND_CANVAS_ZOOM_VIEWER_CENTER:
+                
+                self._media_container.ZoomSwitch( zoom_center_type_override = ClientGUICanvasMedia.ZOOM_CENTERPOINT_VIEWER_CENTER )
                 
             elif action == CAC.SIMPLE_SWITCH_BETWEEN_100_PERCENT_AND_CANVAS_FIT_AND_FILL_ZOOM:
                 
@@ -1320,9 +1352,17 @@ class Canvas( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
                 
                 self._media_container.ZoomMax()
                 
-            elif action == CAC.SIMPLE_SWITCH_BETWEEN_100_PERCENT_AND_CANVAS_ZOOM_VIEWER_CENTER:
+            elif action == CAC.SIMPLE_ZOOM_TO_PERCENTAGE:
                 
-                self._media_container.ZoomSwitch( zoom_center_type_override = ClientGUICanvasMedia.ZOOM_CENTERPOINT_VIEWER_CENTER )
+                new_zoom = command.GetSimpleData()
+                
+                self._media_container.ZoomToZoomPercent( new_zoom )
+                
+            elif action == CAC.SIMPLE_ZOOM_TO_PERCENTAGE_CENTER:
+                                                        
+                new_zoom = command.GetSimpleData()
+                
+                self._media_container.ZoomToZoomPercent( new_zoom, zoom_center_type_override = ClientGUICanvasMedia.ZOOM_CENTERPOINT_VIEWER_CENTER )
                 
             elif action == CAC.SIMPLE_FLIP_ICC_PROFILE_APPLICATION:
                 
@@ -3059,7 +3099,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
             media_to_prefetch.extend( self._batch_of_pairs_to_process[ self._current_pair_index + 1 ] )
             
         
-        image_cache = CG.client_controller.GetCache( 'images' )
+        images_cache = CG.client_controller.images_cache
         
         for media in media_to_prefetch:
             
@@ -3068,11 +3108,11 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
             
             if media.IsStaticImage() and ClientGUICanvasMedia.WeAreExpectingToLoadThisMediaFile( media, self.CANVAS_TYPE ):
                 
-                if not image_cache.HasImageRenderer( hash ):
+                if not images_cache.HasImageRenderer( hash ):
                     
                     # we do qt safe to make sure the job is cancelled if we are destroyed
                     
-                    CG.client_controller.CallAfterQtSafe( self, 'image pre-fetch', image_cache.PrefetchImageRenderer, media )
+                    CG.client_controller.CallAfterQtSafe( self, 'image pre-fetch', images_cache.PrefetchImageRenderer, media.GetMediaResult() )
                     
                 
             
@@ -3818,7 +3858,7 @@ class CanvasMediaList( CanvasWithHovers ):
             to_render.append( ( previous, delay ) )
             
         
-        image_cache = CG.client_controller.GetCache( 'images' )
+        images_cache = CG.client_controller.images_cache
         
         for ( media, delay ) in to_render:
             
@@ -3827,11 +3867,11 @@ class CanvasMediaList( CanvasWithHovers ):
             
             if media.IsStaticImage() and ClientGUICanvasMedia.WeAreExpectingToLoadThisMediaFile( media, self.CANVAS_TYPE ):
                 
-                if not image_cache.HasImageRenderer( hash ):
+                if not images_cache.HasImageRenderer( hash ):
                     
                     # we do qt safe to make sure the job is cancelled if we are destroyed
                     
-                    CG.client_controller.CallLaterQtSafe( self, delay, 'image pre-fetch', image_cache.PrefetchImageRenderer, media )
+                    CG.client_controller.CallLaterQtSafe( self, delay, 'image pre-fetch', images_cache.PrefetchImageRenderer, media.GetMediaResult() )
                     
                 
             

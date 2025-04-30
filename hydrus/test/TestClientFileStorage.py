@@ -4,7 +4,7 @@ import unittest
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 
-from hydrus.client import ClientFilesPhysical
+from hydrus.client.files import ClientFilesPhysical
 
 from hydrus.test import TestGlobals as TG
 

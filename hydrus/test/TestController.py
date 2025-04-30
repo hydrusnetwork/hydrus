@@ -23,8 +23,6 @@ from hydrus.core import HydrusThreading
 from hydrus.client import ClientAPI
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientDefaults
-from hydrus.client import ClientFiles
-from hydrus.client import ClientFilesPhysical
 from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientOptions
 from hydrus.client import ClientManagers
@@ -32,6 +30,8 @@ from hydrus.client import ClientServices
 from hydrus.client import ClientThreading
 from hydrus.client.caches import ClientCaches
 from hydrus.client.duplicates import ClientDuplicatesAutoResolution
+from hydrus.client.files import ClientFilesManager
+from hydrus.client.files import ClientFilesPhysical
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui import ClientGUISplash
 from hydrus.client.gui.lists import ClientGUIListManager
@@ -289,7 +289,7 @@ class Controller( object ):
         self.column_list_manager = ClientGUIListManager.ColumnListManager()
         
         self.services_manager = ClientServices.ServicesManager( self )
-        self.client_files_manager = ClientFiles.ClientFilesManager( self )
+        self.client_files_manager = ClientFilesManager.ClientFilesManager( self )
         
         self.parsing_cache = ClientCaches.ParsingCache()
         
@@ -311,11 +311,9 @@ class Controller( object ):
         
         self._managers[ 'undo' ] = ClientManagers.UndoManager( self )
         
-        self._caches = {}
-        
-        self._caches[ 'images' ] = ClientCaches.ImageRendererCache( self )
-        self._caches[ 'image_tiles' ] = ClientCaches.ImageTileCache( self )
-        self._caches[ 'thumbnail' ] = ClientCaches.ThumbnailCache( self )
+        self.images_cache = ClientCaches.ImageRendererCache( self )
+        self.image_tiles_cache = ClientCaches.ImageTileCache( self )
+        self.thumbnails_cache = ClientCaches.ThumbnailCache( self )
         
         self.server_session_manager = HydrusSessions.HydrusSessionManagerServer()
         
@@ -539,11 +537,6 @@ class Controller( object ):
     def DoingFastExit( self ):
         
         return False
-        
-    
-    def GetCache( self, name ):
-        
-        return self._caches[ name ]
         
     
     def GetCurrentSessionPageAPIInfoDict( self ):

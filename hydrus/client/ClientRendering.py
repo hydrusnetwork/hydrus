@@ -16,11 +16,11 @@ from hydrus.core.files import HydrusAnimationHandling
 from hydrus.core.files import HydrusVideoHandling
 from hydrus.core.files.images import HydrusImageHandling
 
-from hydrus.client import ClientFiles
 from hydrus.client import ClientGlobals as CG
-from hydrus.client import ClientImageHandling
 from hydrus.client import ClientVideoHandling
 from hydrus.client.caches import ClientCachesBase
+from hydrus.client.files import ClientFilesMaintenance
+from hydrus.client.files.images import ClientImageHandling
 from hydrus.client.media import ClientMedia
 from hydrus.client import ClientUgoiraHandling
 
@@ -112,7 +112,7 @@ class ImageRenderer( ClientCachesBase.CacheableObject ):
         self._this_is_for_metadata_alone = this_is_for_metadata_alone
         
         CG.client_controller.CallToThread( self._Initialise )
-
+        
 
     def GetNumPyImage(self):
 
@@ -281,8 +281,8 @@ class ImageRenderer( ClientCachesBase.CacheableObject ):
             
             HydrusData.ShowText( m )
             
-            CG.client_controller.Write( 'file_maintenance_add_jobs_hashes', { self._hash }, ClientFiles.REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA_TRY_URL_ELSE_REMOVE_RECORD )
-            CG.client_controller.Write( 'file_maintenance_add_jobs_hashes', { self._hash }, ClientFiles.REGENERATE_FILE_DATA_JOB_FILE_METADATA )
+            CG.client_controller.Write( 'file_maintenance_add_jobs_hashes', { self._hash }, ClientFilesMaintenance.REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA_TRY_URL_ELSE_REMOVE_RECORD )
+            CG.client_controller.Write( 'file_maintenance_add_jobs_hashes', { self._hash }, ClientFilesMaintenance.REGENERATE_FILE_DATA_JOB_FILE_METADATA )
             '''
             
             if not self._render_failed:
@@ -303,7 +303,7 @@ class ImageRenderer( ClientCachesBase.CacheableObject ):
                     
                     HydrusData.ShowText( m )
                     
-                    CG.client_controller.Write( 'file_maintenance_add_jobs_hashes', { self._hash }, ClientFiles.REGENERATE_FILE_DATA_JOB_FILE_METADATA )
+                    CG.client_controller.Write( 'file_maintenance_add_jobs_hashes', { self._hash }, ClientFilesMaintenance.REGENERATE_FILE_DATA_JOB_FILE_METADATA )
                     
                 
             
@@ -906,6 +906,18 @@ class RasterContainerVideo( RasterContainer ):
             
             self._frame_durations_ms = [] # we only support constant framerate for apng, I think the spec support variable though if PIL ever supports that
             self._times_to_play_animation = HydrusAnimationHandling.GetTimesToPlayAPNG( self._path )
+            
+        elif self._media.GetMime() == HC.ANIMATION_WEBP:
+            
+            try:
+                
+                ( self._frame_durations_ms, self._times_to_play_animation ) = HydrusAnimationHandling.GetWebPFrameDurationsMS( self._path )
+                
+            except:
+                
+                self._frame_durations_ms = []
+                self._times_to_play_animation = 0
+                
             
         elif self._media.GetMime() == HC.ANIMATION_UGOIRA:
             
