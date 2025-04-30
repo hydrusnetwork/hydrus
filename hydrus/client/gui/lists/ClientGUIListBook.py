@@ -158,11 +158,12 @@ class ListBook( QW.QWidget ):
     
     def SelectName( self, name: str ):
         
-        items = self._page_list.findItems( name, QC.Qt.MatchExactly )
+        items = self._page_list.findItems( name, QC.Qt.MatchFlag.MatchExactly )
         
         if items:
             
             self._page_list.setCurrentItem( items[0] )
+            
         
     
     def SortList( self ):

@@ -4000,8 +4000,12 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
                 self._current_pertinent_tags.update( parents )
                 
                 show_all = self._show_all.isChecked()
-                show_pending_and_petitioned = self._show_pending_and_petitioned.isChecked()
-                pursue_whole_chain = self._pursue_whole_chain.isChecked()
+                
+                self._show_pending_and_petitioned.setEnabled( not show_all )
+                self._pursue_whole_chain.setEnabled( not show_all )
+                
+                show_pending_and_petitioned = self._show_pending_and_petitioned.isEnabled() and self._show_pending_and_petitioned.isChecked()
+                pursue_whole_chain = self._pursue_whole_chain.isEnabled() and self._pursue_whole_chain.isChecked()
                 
                 return ( set( self._current_pertinent_tags ), show_all, show_pending_and_petitioned, pursue_whole_chain, self._parent_action_context )
                 
@@ -4812,7 +4816,10 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
                     
                 
                 show_all = self._show_all.isChecked()
-                show_pending_and_petitioned = self._show_pending_and_petitioned.isChecked()
+                
+                self._show_pending_and_petitioned.setEnabled( not show_all )
+                
+                show_pending_and_petitioned = self._show_pending_and_petitioned.isEnabled() and self._show_pending_and_petitioned.isChecked()
                 
                 return ( set( self._current_pertinent_tags ), show_all, show_pending_and_petitioned, self._sibling_action_context )
                 

@@ -6,7 +6,6 @@ python-dateutil
 
 beautifulsoup4>=4.0.0
 chardet>=3.0.4
-cloudscraper>=1.2.33
 html5lib>=1.0.1
 lxml>=4.5.0
 lz4>=3.0.0
@@ -20,8 +19,10 @@ psutil>=5.0.0
 pyOpenSSL>=19.1.0
 PySocks>=1.7.0
 PyYAML>=5.0.0
+requests==2.32.3
 Send2Trash>=1.5.0
 service-identity>=18.1.0
+setuptools==70.3.0
 show-in-file-manager>=1.1.5
 twisted[tls,http2]>=20.3.0
 
@@ -30,9 +31,6 @@ mpv==1.0.7
 
 QtPy==2.4.1
 PySide6==6.7.3
-
-requests==2.32.3
-setuptools==70.3.0
 
 pyinstaller==6.7
 mkdocs-material

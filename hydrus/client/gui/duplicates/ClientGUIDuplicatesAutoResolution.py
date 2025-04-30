@@ -766,7 +766,7 @@ class EditPairSelectorWidget( ClientGUICommon.StaticBox ):
             
         except HydrusExceptions.CancelledException:
             
-            return
+            raise
             
         
         return self._Edit( comparator )
@@ -1064,6 +1064,20 @@ class ReviewDuplicatesAutoResolutionPanel( QW.QWidget ):
         return updater
         
     
+    def _RegenNumbers( self ):
+        
+        text = f'This will delete all the cached pair counts for your rules. If it seems there is a miscount somewhere (e.g. a pending pair to search that never clears), try hitting this.'
+        
+        result = ClientGUIDialogsQuick.GetYesNo( self, text )
+        
+        if result == QW.QDialog.DialogCode.Accepted:
+            
+            CG.client_controller.Write( 'duplicate_auto_resolution_maintenance_regen_numbers' )
+            
+            self._rules_list_updater.update()
+            
+        
+    
     def _ResetDeclined( self ):
         
         rules = self._duplicates_auto_resolution_rules.GetData( only_selected = True )
@@ -1184,6 +1198,7 @@ class ReviewDuplicatesAutoResolutionPanel( QW.QWidget ):
         
         ClientGUIMenus.AppendMenuItem( menu, 'maintenance: delete orphan rules', 'Scan for rules that are partly missing (probably from hard drive damage) and delete them.', self._DeleteOrphanRules )
         ClientGUIMenus.AppendMenuItem( menu, 'maintenance: fix orphan potential pairs', 'Scan for potential pairs in your rule cache that are no longer pertinent and delete them.', self._DeleteOrphanPotentialPairs )
+        ClientGUIMenus.AppendMenuItem( menu, 'maintenance: regen cached numbers', 'Clear cached pair counts and regenerate from source.', self._RegenNumbers )
         
         CGC.core().PopupMenu( self._cog_button, menu )
         

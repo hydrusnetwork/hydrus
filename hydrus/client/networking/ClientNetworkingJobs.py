@@ -25,30 +25,6 @@ from hydrus.client import ClientTime
 from hydrus.client.networking import ClientNetworkingContexts
 from hydrus.client.networking import ClientNetworkingFunctions
 
-try:
-    
-    import cloudscraper
-    
-    CLOUDSCRAPER_OK = True
-    
-    try:
-        
-        # help pyinstaller
-        import pyparsing
-        
-        PYPARSING_OK = True
-        
-    except:
-        
-        PYPARSING_OK = False
-        
-    
-except:
-    
-    CLOUDSCRAPER_OK = False
-    PYPARSING_OK = False
-    
-
 def ConvertStatusCodeAndDataIntoExceptionInfo( status_code, data, is_hydrus_service = False ):
     
     ( error_text, encoding ) = HydrusText.NonFailingUnicodeDecode( data, 'utf-8' )
@@ -175,7 +151,6 @@ class NetworkJob( object ):
         self._current_connection_attempt_number = 1
         self._current_request_attempt_number = 1
         self._this_is_a_one_shot_request = False
-        self._we_tried_cloudflare_once = False
         
         self._domain = ClientNetworkingFunctions.ConvertURLIntoDomain( self._url )
         self._second_level_domain = ClientNetworkingFunctions.ConvertURLIntoSecondLevelDomain( self._url )
@@ -936,182 +911,6 @@ class NetworkJob( object ):
         self._wake_time_float = HydrusTime.GetNowFloat() + seconds_float
         
     
-    def _SolveCloudFlare( self, response ):
-        
-        if CLOUDSCRAPER_OK:
-            
-            try:
-                
-                # cloudscraper refactored a bit around 1.2.60, so we now have some different paths to what we want
-                
-                old_class_object = None
-                new_class_instance = None
-                
-                if hasattr( cloudscraper, 'CloudScraper' ):
-                    
-                    old_class_object = getattr( cloudscraper, 'CloudScraper' )
-                    
-                
-                if hasattr( cloudscraper, 'cloudflare' ):
-                    
-                    m = getattr( cloudscraper, 'cloudflare' )
-                    
-                    if hasattr( m, 'Cloudflare' ):
-                        
-                        new_class_object = getattr( m, 'Cloudflare' )
-                        
-                        cs = cloudscraper.CloudScraper()
-                        
-                        new_class_instance = new_class_object( cs )
-                        
-                    
-                
-                possible_paths = [
-                    ( old_class_object, 'is_Firewall_Blocked' ),
-                    ( new_class_instance, 'is_Firewall_Blocked' )
-                ]
-                
-                is_firewall = False
-                
-                for ( m, method_name ) in possible_paths:
-                    
-                    if m is None:
-                        
-                        continue
-                        
-                    
-                    if hasattr( m, method_name ):
-                        
-                        is_firewall = getattr( m, method_name )( response )
-                        
-                        if is_firewall:
-                            
-                            break
-                            
-                        
-                    
-                
-                possible_paths = [
-                    ( old_class_object, 'is_reCaptcha_Challenge' ),
-                    ( old_class_object, 'is_Captcha_Challenge' ),
-                    ( new_class_instance, 'is_Captcha_Challenge' )
-                ]
-                
-                is_captcha = False
-                
-                for ( m, method_name ) in possible_paths:
-                    
-                    if m is None:
-                        
-                        continue
-                        
-                    
-                    if hasattr( m, method_name ):
-                        
-                        is_captcha = getattr( m, method_name )( response )
-                        
-                        if is_captcha:
-                            
-                            break
-                            
-                        
-                    
-                
-                possible_paths = [
-                    ( old_class_object, 'is_IUAM_Challenge' ),
-                    ( new_class_instance, 'is_IUAM_Challenge' ),
-                    ( new_class_instance, 'is_New_IUAM_Challenge' )
-                ]
-                
-                is_iuam = False
-                
-                for ( m, method_name ) in possible_paths:
-                    
-                    if m is None:
-                        
-                        continue
-                        
-                    
-                    if hasattr( m, method_name ):
-                        
-                        is_iuam = getattr( m, method_name )( response )
-                        
-                        if is_iuam:
-                            
-                            break
-                            
-                        
-                    
-                
-                is_attemptable = is_captcha or is_iuam
-                
-            except Exception as e:
-                
-                HydrusData.Print( 'cloudflarescraper had an error looking at "{}" response: {}'.format( self._url, str( e ) ) )
-                
-                HydrusData.PrintException( e )
-                
-                return
-                
-            
-            if is_firewall:
-                
-                raise HydrusExceptions.CloudFlareException( 'It looks like the site has Firewall-Blocked your IP or IP range with CloudFlare.' )
-                
-            
-            if is_attemptable:
-                
-                try:
-                    
-                    with self._lock:
-                        
-                        ncs = list( self._network_contexts )
-                        snc = self._session_network_context
-                        
-                    
-                    headers = self.engine.domain_manager.GetHeaders( ncs )
-                    
-                    if 'User-Agent' not in headers:
-                        
-                        raise HydrusExceptions.CloudFlareException( 'No User-Agent set for hydrus!' )
-                        
-                    
-                    user_agent = headers[ 'User-Agent' ]
-                    
-                    ( cf_tokens, user_agent ) = cloudscraper.get_tokens( self._url, browser = { 'custom' : user_agent } )
-                    
-                    session = self.engine.session_manager.GetSession( snc )
-                    
-                    cf_cookies = [ cookie for cookie in session.cookies if cookie.name.startswith( '__cf' ) ]
-                    
-                    for cookie in cf_cookies:
-                        
-                        session.cookies.clear( cookie.domain, cookie.path, cookie.name )
-                        
-                    
-                    domain = '.{}'.format( ClientNetworkingFunctions.ConvertURLIntoSecondLevelDomain( self._url ) )
-                    path = '/'
-                    expires = HydrusTime.GetNow() + 30 * 86400
-                    secure = True
-                    rest = { 'HttpOnly' : None, 'SameSite' : 'None' }
-                    
-                    for ( name, value ) in cf_tokens.items():
-                        
-                        ClientNetworkingFunctions.AddCookieToSession( session, name, value, domain, path, expires, secure = secure, rest = rest )
-                        
-                    
-                    self.engine.session_manager.SetSessionDirty( snc )
-                    
-                except Exception as e:
-                    
-                    raise HydrusExceptions.CloudFlareException( 'This looks like an unsolvable CloudFlare captcha! Best solution we know of is to copy cookies and User-Agent header from your web browser to hydrus!' )
-                    
-                
-                raise HydrusExceptions.ShouldReattemptNetworkException( 'CloudFlare needed solving.' )
-                
-            
-        
-    
     def _WaitOnConnectionError( self, status_text: str ):
         
         connection_error_wait_time = CG.client_controller.new_options.GetInteger( 'connection_error_wait_time' )
@@ -1486,6 +1285,7 @@ class NetworkJob( object ):
             
             return self._response_server_header is not None and self._response_server_header == 'cloudflare'
             
+        
     
     def IsDone( self ):
         
@@ -1753,14 +1553,6 @@ class NetworkJob( object ):
                         with self._lock:
                             
                             self._status_text = str( response.status_code ) + ' - ' + str( response.reason )
-                            
-                        
-                        # it is important we do this before ReadResponse, as the CF test needs r.text, which is nullified if we first access with iter_content
-                        if not self._we_tried_cloudflare_once:
-                            
-                            self._we_tried_cloudflare_once = True
-                            
-                            self._SolveCloudFlare( response )
                             
                         
                         # don't care about 'more_to_download' here. lmao if some server ever tried to pull it off anyway

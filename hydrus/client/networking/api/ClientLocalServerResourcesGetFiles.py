@@ -16,7 +16,6 @@ from hydrus.client import ClientAPI
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientLocation
-from hydrus.client import ClientRendering
 from hydrus.client import ClientThreading
 from hydrus.client import ClientUgoiraHandling
 from hydrus.client.media import ClientMedia
@@ -247,12 +246,14 @@ class HydrusResourceClientAPIRestrictedGetFilesGetRenderedFile( HydrusResourceCl
                 if not format in [ HC.IMAGE_PNG, HC.IMAGE_JPEG, HC.IMAGE_WEBP ]:
                     
                     raise HydrusExceptions.BadRequestException( 'Invalid render format!' )
+                    
                 
             else:
                 
                 format = HC.IMAGE_PNG
+                
             
-            renderer: ClientRendering.ImageRenderer = CG.client_controller.GetCache( 'images' ).GetImageRenderer( media_result )
+            renderer = CG.client_controller.images_cache.GetImageRenderer( media_result )
             
             while not renderer.IsReady():
                 

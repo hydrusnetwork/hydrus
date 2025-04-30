@@ -39,7 +39,6 @@ class HydrusController( object ):
         
         self._pubsub = HydrusPubSub.HydrusPubSub( pubsub_valid_callable )
         self._daemon_jobs = {}
-        self._caches = {}
         self._managers = {}
         
         self._fast_job_scheduler = None
@@ -410,7 +409,7 @@ class HydrusController( object ):
     
     def ClearCaches( self ) -> None:
         
-        for cache in self._caches.values(): cache.Clear()
+        pass
         
     
     def CurrentlyIdle( self ) -> bool:
@@ -476,11 +475,6 @@ class HydrusController( object ):
     def GetDBStatus( self ):
         
         return self.db.GetStatus()
-        
-    
-    def GetCache( self, name ):
-        
-        return self._caches[ name ]
         
     
     def GetHydrusTempDir( self ):

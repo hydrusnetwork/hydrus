@@ -23,6 +23,13 @@ def GetAnimationProperties( path, mime ):
         
         ( duration_ms, num_frames ) = GetAPNGDurationMSAndNumFrames( path )
         
+    elif mime == HC.ANIMATION_WEBP:
+        
+        ( frame_durations_ms, times_to_play ) = GetWebPFrameDurationsMS( path )
+        
+        duration_ms = sum( frame_durations_ms )
+        num_frames = len( frame_durations_ms )
+        
     else:
         
         ( frame_durations_ms, times_to_play ) = GetFrameDurationsMSPILAnimation( path )
@@ -327,6 +334,108 @@ def GetTimesToPlayPILAnimationFromPIL( pil_image: PILImage.Image ) -> int:
         
     
     return times_to_play
+    
+
+def GetWebPChunks( file_bytes ):
+    
+    chunks = []
+    
+    offset = 12  # RIFF/size/WEBP
+    
+    num_bytes = len( file_bytes )
+    
+    while offset < num_bytes:
+        
+        if offset + 8 > num_bytes:
+            
+            break
+            
+        
+        chunk_type = file_bytes[ offset : offset + 4 ]
+        
+        chunk_size_bytes = file_bytes[ offset + 4 : offset + 8 ]
+        chunk_size = int.from_bytes( chunk_size_bytes, byteorder = 'little' )
+        
+        chunk_data_start = offset + 8
+        
+        chunk = file_bytes[ chunk_data_start : chunk_data_start + chunk_size ]
+        
+        chunks.append( ( chunk_type, chunk ) )
+        
+        total_chunk_size = 8 + chunk_size
+        
+        if total_chunk_size % 2 == 1:
+            
+            total_chunk_size += 1
+            
+        
+        offset += total_chunk_size
+        
+    
+    return chunks
+    
+
+def GetWebPFrameDurationsMS( path ):
+    
+    with open( path, 'rb' ) as f:
+        
+        file_bytes = f.read()
+        
+    
+    webp_chunks = GetWebPChunks( file_bytes )
+    
+    fallback_frame_duration_ms = 83 # (83ms -- 1000 / 12) Set a 12 fps default when duration is missing or too funky to extract. most stuff looks ok at this.
+    
+    frame_durations_ms = []
+    times_to_play = 0
+    
+    for ( chunk_type, chunk ) in webp_chunks:
+        
+        if chunk_type == b'ANIM':
+            
+            try:
+                
+                # Loop is 2 bytes at offset + 4
+                
+                loop_bytes = chunk[ 4 : 6 ]
+                
+                times_to_play = int.from_bytes( loop_bytes, byteorder = 'little' )
+                
+            except:
+                
+                pass
+                
+            
+        elif chunk_type == b'ANMF':
+            
+            try:
+                
+                if len( chunk ) < 16:
+                    
+                    raise ValueError( "ANMF chunk too small" )
+                    
+                
+                # Duration is 3 bytes at offset + 12
+                
+                duration_bytes = chunk[ 12 : 15 ]
+                
+                duration_ms = int.from_bytes( duration_bytes, byteorder = 'little' )
+                
+                if duration_ms == 0:
+                    
+                    raise Exception( 'Zero-duration frame!' )
+                    
+                
+            except:
+                
+                duration_ms = fallback_frame_duration_ms
+                
+            
+            frame_durations_ms.append( duration_ms )
+            
+        
+    
+    return ( frame_durations_ms, times_to_play )
     
 
 def PILAnimationHasDuration( path ):

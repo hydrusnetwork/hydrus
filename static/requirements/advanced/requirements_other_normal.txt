@@ -1,2 +1,0 @@
-requests==2.32.3
-setuptools==70.3.0

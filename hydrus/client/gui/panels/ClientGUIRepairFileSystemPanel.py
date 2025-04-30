@@ -6,8 +6,8 @@ from qtpy import QtWidgets as QW
 from hydrus.core import HydrusExceptions
 
 from hydrus.client import ClientConstants as CC
-from hydrus.client import ClientFilesPhysical
 from hydrus.client import ClientGlobals as CG
+from hydrus.client.files import ClientFilesPhysical
 from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import QtPorting as QP

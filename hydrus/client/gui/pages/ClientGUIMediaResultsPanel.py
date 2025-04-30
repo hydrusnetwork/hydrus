@@ -17,11 +17,11 @@ from hydrus.core.networking import HydrusNetwork
 
 from hydrus.client import ClientApplicationCommand as CAC
 from hydrus.client import ClientConstants as CC
-from hydrus.client import ClientFiles
 from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientLocation
 from hydrus.client import ClientPaths
 from hydrus.client import ClientServices
+from hydrus.client.files import ClientFilesMaintenance
 from hydrus.client.gui import ClientGUIDialogs
 from hydrus.client.gui import ClientGUIDialogsManage
 from hydrus.client.gui import ClientGUIDialogsMessage
@@ -890,6 +890,8 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.Liste
             
             self.SetFocusedMedia( None )
             
+            #
+            
             canvas_frame = ClientGUICanvasFrame.CanvasFrame( self.window() )
             
             canvas_window = ClientGUICanvas.CanvasMediaListBrowser( canvas_frame, self._page_key, self._location_context, media_results, first_hash )
@@ -1225,23 +1227,23 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.Liste
         
         if num_files > 0:
             
-            if job_type == ClientFiles.REGENERATE_FILE_DATA_JOB_FILE_METADATA:
+            if job_type == ClientFilesMaintenance.REGENERATE_FILE_DATA_JOB_FILE_METADATA:
                 
                 message = 'This will reparse the {} selected files\' metadata.'.format( HydrusNumbers.ToHumanInt( num_files ) )
                 message += '\n' * 2
                 message += 'If the files were imported before some more recent improvement in the parsing code (such as EXIF rotation or bad video resolution or duration or frame count calculation), this will update them.'
                 
-            elif job_type == ClientFiles.REGENERATE_FILE_DATA_JOB_FORCE_THUMBNAIL:
+            elif job_type == ClientFilesMaintenance.REGENERATE_FILE_DATA_JOB_FORCE_THUMBNAIL:
                 
                 message = 'This will force-regenerate the {} selected files\' thumbnails.'.format( HydrusNumbers.ToHumanInt( num_files ) )
                 
-            elif job_type == ClientFiles.REGENERATE_FILE_DATA_JOB_REFIT_THUMBNAIL:
+            elif job_type == ClientFilesMaintenance.REGENERATE_FILE_DATA_JOB_REFIT_THUMBNAIL:
                 
                 message = 'This will regenerate the {} selected files\' thumbnails, but only if they are the wrong size.'.format( HydrusNumbers.ToHumanInt( num_files ) )
                 
             else:
                 
-                message = ClientFiles.regen_file_enum_to_description_lookup[ job_type ]
+                message = ClientFilesMaintenance.regen_file_enum_to_description_lookup[ job_type ]
                 
             
             do_it_now = True

@@ -17,10 +17,10 @@ from hydrus.core.files import HydrusFileHandling
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientDaemons
-from hydrus.client import ClientFiles
 from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientPaths
 from hydrus.client import ClientThreading
+from hydrus.client.files import ClientFiles
 from hydrus.client.importing import ClientImportControl
 from hydrus.client.importing import ClientImporting
 from hydrus.client.importing import ClientImportFileSeeds

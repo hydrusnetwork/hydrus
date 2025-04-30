@@ -1,6 +1,6 @@
 [project]
 name = "hydrus"
-version = "v619"
+version = "v620"
 description = "A personal booru-style media tagger"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -9,7 +9,6 @@ dependencies = [
     "beautifulsoup4>=4.0.0",
     "cbor2>=5.6.5",
     "chardet>=3.0.4",
-    "cloudscraper>=1.2.33",
     "cryptography>=44.0.0",
     "dateparser>=1.2.0",
     "html5lib>=1.0.1",
@@ -27,8 +26,10 @@ dependencies = [
     "pysocks>=1.7.0",
     "python-dateutil>=2.9.0.post0",
     "pyyaml>=5.0.0",
+    "requests==2.32.3",
     "send2trash>=1.5.0",
     "service-identity>=18.1.0",
+    "setuptools==70.3.0",
     "show-in-file-manager>=1.1.5",
     "twisted[http2,tls]>=20.3.0",
     # requirements_macos.txt
@@ -81,12 +82,9 @@ opencv-test = [
     "opencv-python-headless==4.11.0.86",
 ]
 other-future = [
-    "requests==2.32.3",
-    "setuptools==70.3.0",
+    "pillow-avif-plugin",
 ]
 other-normal = [
-    "requests==2.32.3",
-    "setuptools==70.3.0",
 ]
 qt6-new = [
     "pyside6==6.7.3",

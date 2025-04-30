@@ -1,4 +1,3 @@
-
 import os
 import traceback
 
@@ -18,7 +17,7 @@ from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientLocation
 from hydrus.client import ClientPaths
-from hydrus.client import ClientImageHandling
+from hydrus.client.files.images import ClientImagePerceptualHashes
 from hydrus.client.importing import ClientImportFiles
 from hydrus.client.importing.options import FileImportOptions
 from hydrus.client.metadata import ClientContentUpdates
@@ -339,7 +338,7 @@ class HydrusResourceClientAPIRestrictedAddFilesGenerateHashes( HydrusResourceCli
             
             if mime in HC.FILES_THAT_HAVE_PERCEPTUAL_HASH:
                 
-                perceptual_hashes = ClientImageHandling.GenerateShapePerceptualHashesNumPy( numpy_image )
+                perceptual_hashes = ClientImagePerceptualHashes.GenerateShapePerceptualHashesNumPy( numpy_image )
                 
                 body_dict['perceptual_hashes'] = [ perceptual_hash.hex() for perceptual_hash in perceptual_hashes ]
                 

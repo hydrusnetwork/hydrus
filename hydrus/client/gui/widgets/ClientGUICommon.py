@@ -1833,7 +1833,7 @@ class TextAndGauge( QW.QWidget ):
         
         super().__init__( parent )
         
-        self._st = BetterStaticText( self )
+        self._st = BetterStaticText( self, tooltip_label = True )
         self._gauge = Gauge( self )
         
         vbox = QP.VBoxLayout( margin = 0 )

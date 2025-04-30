@@ -1,11 +1,6 @@
 # -*- mode: python -*-
 
-import cloudscraper
-import os
-cloudscraper_dir = os.path.dirname( cloudscraper.__file__ )
-
 block_cipher = None
-
 
 a = Analysis(['hydrus/hydrus_client.py'],
              pathex=['.'],
@@ -19,8 +14,7 @@ a = Analysis(['hydrus/hydrus_client.py'],
                ('hydrus/license.txt', '.'),
                ('hydrus/README.md', '.'),
                ('hydrus/help my client will not boot.txt', '.'),
-               ('hydrus/db', 'db'),
-               (cloudscraper_dir, 'cloudscraper')
+               ('hydrus/db', 'db')
              ],
              hookspath=[],
              runtime_hooks=[],

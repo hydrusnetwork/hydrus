@@ -310,3 +310,15 @@ def StripOutAnyUselessAlphaChannel( numpy_image: numpy.array ) -> numpy.array:
     
     return numpy_image
     
+
+def StripOutAnyAlphaChannel( numpy_image: numpy.array ) -> numpy.array:
+    
+    if HydrusImageColours.NumPyImageHasAlphaChannel( numpy_image ):
+        
+        channel_number = HydrusImageColours.GetNumPyAlphaChannelNumber( numpy_image )
+        
+        numpy_image = numpy_image[:,:,:channel_number].copy()
+        
+    
+    return numpy_image
+    

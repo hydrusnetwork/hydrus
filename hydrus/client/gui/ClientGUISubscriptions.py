@@ -249,7 +249,7 @@ def GetQueryLogContainers( query_headers: typing.Iterable[ ClientImportSubscript
 
 class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
     
-    def __init__( self, parent: QW.QWidget, subscription: ClientImportSubscriptions.Subscription, names_to_edited_query_log_containers: typing.Mapping[ str, ClientImportSubscriptionQuery.SubscriptionQueryLogContainer ] ):
+    def __init__( self, parent: QW.QWidget, subscription: ClientImportSubscriptions.Subscription, names_to_edited_query_log_containers: typing.Mapping[ str, ClientImportSubscriptionQuery.SubscriptionQueryLogContainer ], original_existing_query_log_container_names: typing.Set[ str ] ):
         
         subscription = subscription.Duplicate()
         
@@ -257,6 +257,7 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._original_subscription = subscription
         self._names_to_edited_query_log_containers = dict( names_to_edited_query_log_containers )
+        self._original_existing_query_log_container_names = original_existing_query_log_container_names
         
         #
         
@@ -313,7 +314,7 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
             menu_items.append( ( 'normal', 'show', 'Show quality info.', self._STARTShowQualityInfo ) )
             menu_items.append( ( 'normal', 'copy csv data to clipboard', 'Copy quality info to clipboard.', self._STARTCopyQualityInfo ) )
             
-            queries_panel.AddMenuButton( 'quality info', menu_items, enabled_only_on_selection = True )
+            queries_panel.AddMenuButton( 'quality info', menu_items, enabled_check_func = self._ListCtrlHasExistingQueriesSelected )
             
         
         #
@@ -853,11 +854,25 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         return query_strings
         
     
+    def _GetSelectedExistingQueries( self ):
+        
+        query_headers = typing.cast( typing.Collection[ ClientImportSubscriptionQuery.SubscriptionQueryHeader ], self._query_headers.GetData( only_selected = True ) )
+        
+        existing_query_headers = [ query_header for query_header in query_headers if query_header.GetQueryLogContainerName() in self._original_existing_query_log_container_names ]
+        
+        return existing_query_headers
+        
+    
     def _STARTCopyQualityInfo( self ):
         
-        self.setEnabled( False )
+        query_headers = self._GetSelectedExistingQueries()
         
-        query_headers = self._query_headers.GetData( only_selected = True )
+        if len( query_headers ) == 0:
+            
+            return
+            
+        
+        self.setEnabled( False )
         
         def work_callable():
             
@@ -905,9 +920,14 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _STARTShowQualityInfo( self ):
         
-        self.setEnabled( False )
+        query_headers = self._GetSelectedExistingQueries()
         
-        query_headers = self._query_headers.GetData( only_selected = True )
+        if len( query_headers ) == 0:
+            
+            return
+            
+        
+        self.setEnabled( False )
         
         def work_callable():
             
@@ -999,6 +1019,13 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
             
         
         return False
+        
+    
+    def _ListCtrlHasExistingQueriesSelected( self ):
+        
+        query_headers = self._GetSelectedExistingQueries()
+        
+        return len( query_headers ) > 0
         
     
     def _PasteQueries( self ):
@@ -1309,6 +1336,7 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         return ( subscription, self._names_to_edited_query_log_containers )
         
     
+
 class EditSubscriptionQueryPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def __init__( self, parent: QW.QWidget, query_header: ClientImportSubscriptionQuery.SubscriptionQueryHeader, query_log_container: ClientImportSubscriptionQuery.SubscriptionQueryLogContainer ):
@@ -1518,11 +1546,11 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         super().__init__( parent )
         
-        self._existing_query_log_container_names = set()
+        self._original_existing_query_log_container_names = set()
         
         for subscription in subscriptions:
             
-            self._existing_query_log_container_names.update( subscription.GetAllQueryLogContainerNames() )
+            self._original_existing_query_log_container_names.update( subscription.GetAllQueryLogContainerNames() )
             
         
         self._names_to_edited_query_log_containers = {}
@@ -2333,7 +2361,7 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit subscription', frame_key ) as dlg_edit:
             
-            panel = EditSubscriptionPanel( dlg_edit, empty_subscription, self._names_to_edited_query_log_containers )
+            panel = EditSubscriptionPanel( dlg_edit, empty_subscription, self._names_to_edited_query_log_containers, self._original_existing_query_log_container_names )
             
             dlg_edit.SetPanel( panel )
             
@@ -2730,7 +2758,7 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit subscription', frame_key ) as dlg:
             
-            panel = EditSubscriptionPanel( dlg, subscription, self._names_to_edited_query_log_containers )
+            panel = EditSubscriptionPanel( dlg, subscription, self._names_to_edited_query_log_containers, self._original_existing_query_log_container_names )
             
             dlg.SetPanel( panel )
             
@@ -2772,7 +2800,7 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         edited_query_log_containers = [ query_log_container for query_log_container in edited_query_log_containers if query_log_container.GetName() in required_query_log_container_names ]
         
-        deletee_query_log_container_names = self._existing_query_log_container_names.difference( required_query_log_container_names )
+        deletee_query_log_container_names = self._original_existing_query_log_container_names.difference( required_query_log_container_names )
         
         return ( subscriptions, edited_query_log_containers, deletee_query_log_container_names )
         

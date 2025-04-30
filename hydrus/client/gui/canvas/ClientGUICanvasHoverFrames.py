@@ -1226,6 +1226,8 @@ class CanvasHoverFrameTop( CanvasHoverFrame ):
         
         ClientGUIMenus.AddLastClickMemory( menu )
         
+        # TODO: fix this up to have an optional second callable on menu items for right-click
+        
         ClientGUIMenus.AppendMenuItem( menu, 'resize to fit', 'Resize the window to fit the media without changing anything else.', lambda: ( self.sendApplicationCommand.emit( CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_RESIZE_WINDOW_TO_MEDIA_VIEWER_CENTER ) )
                                                                                                                                 if HG.last_mouse_click_button != QC.Qt.MouseButton.RightButton 
                                                                                                                                 else self.sendApplicationCommand.emit( CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_RESIZE_WINDOW_TO_MEDIA ) ) ) )

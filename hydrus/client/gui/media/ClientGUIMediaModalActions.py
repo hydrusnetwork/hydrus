@@ -17,10 +17,10 @@ from hydrus.core.files.images import HydrusImageOpening
 from hydrus.client import ClientApplicationCommand as CAC
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
-from hydrus.client import ClientFiles
 from hydrus.client import ClientPaths
 from hydrus.client import ClientPDFHandling
 from hydrus.client import ClientThreading
+from hydrus.client.files import ClientFilesMaintenance
 from hydrus.client.gui import ClientGUIAsync
 from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIDialogsQuick
@@ -1062,7 +1062,7 @@ def SetFilesForcedFiletypes( win: QW.QWidget, medias: typing.Collection[ ClientM
                     
                     if len( hashes_we_needed_to_dupe ) > 0:
                         
-                        CG.client_controller.WriteSynchronous( 'file_maintenance_add_jobs_hashes', hashes_we_needed_to_dupe, ClientFiles.REGENERATE_FILE_DATA_JOB_DELETE_NEIGHBOUR_DUPES, HydrusTime.GetNow() + 3600 )
+                        CG.client_controller.WriteSynchronous( 'file_maintenance_add_jobs_hashes', hashes_we_needed_to_dupe, ClientFilesMaintenance.REGENERATE_FILE_DATA_JOB_DELETE_NEIGHBOUR_DUPES, HydrusTime.GetNow() + 3600 )
                         
                     
                     pauser.Pause()

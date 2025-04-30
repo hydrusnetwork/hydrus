@@ -171,15 +171,15 @@ goto :parse_fail
 set future=n
 
 REM comment this guy out if no special stuff going on
-REM ECHO --------
-REM ECHO Future Libraries
-REM ECHO:
-REM ECHO There is a future test of requests and setuptools. Want to try it?
-REM SET /P future="(y)es/(n)o? "
+ECHO --------
+ECHO Future Libraries
+ECHO:
+ECHO There is a test for a new AVIF library. Want to try it?
+SET /P future="(y)es/(n)o? "
 
-REM IF "%future%" == "y" goto :question_future_done
-REM IF "%future%" == "n" goto :question_future_done
-REM goto :parse_fail
+IF "%future%" == "y" goto :question_future_done
+IF "%future%" == "n" goto :question_future_done
+goto :parse_fail
 
 :question_future_done
 

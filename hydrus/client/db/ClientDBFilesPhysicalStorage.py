@@ -5,9 +5,9 @@ import typing
 from hydrus.core import HydrusData
 from hydrus.core import HydrusPaths
 
-from hydrus.client import ClientFilesPhysical
 from hydrus.client import ClientGlobals as CG
 from hydrus.client.db import ClientDBModule
+from hydrus.client.files import ClientFilesPhysical
 
 class ClientDBFilesPhysicalStorage( ClientDBModule.ClientDBModule ):
     

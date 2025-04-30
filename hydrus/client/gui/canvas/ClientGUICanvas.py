@@ -3099,7 +3099,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
             media_to_prefetch.extend( self._batch_of_pairs_to_process[ self._current_pair_index + 1 ] )
             
         
-        image_cache = CG.client_controller.GetCache( 'images' )
+        images_cache = CG.client_controller.images_cache
         
         for media in media_to_prefetch:
             
@@ -3108,11 +3108,11 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
             
             if media.IsStaticImage() and ClientGUICanvasMedia.WeAreExpectingToLoadThisMediaFile( media, self.CANVAS_TYPE ):
                 
-                if not image_cache.HasImageRenderer( hash ):
+                if not images_cache.HasImageRenderer( hash ):
                     
                     # we do qt safe to make sure the job is cancelled if we are destroyed
                     
-                    CG.client_controller.CallAfterQtSafe( self, 'image pre-fetch', image_cache.PrefetchImageRenderer, media )
+                    CG.client_controller.CallAfterQtSafe( self, 'image pre-fetch', images_cache.PrefetchImageRenderer, media.GetMediaResult() )
                     
                 
             
@@ -3858,7 +3858,7 @@ class CanvasMediaList( CanvasWithHovers ):
             to_render.append( ( previous, delay ) )
             
         
-        image_cache = CG.client_controller.GetCache( 'images' )
+        images_cache = CG.client_controller.images_cache
         
         for ( media, delay ) in to_render:
             
@@ -3867,11 +3867,11 @@ class CanvasMediaList( CanvasWithHovers ):
             
             if media.IsStaticImage() and ClientGUICanvasMedia.WeAreExpectingToLoadThisMediaFile( media, self.CANVAS_TYPE ):
                 
-                if not image_cache.HasImageRenderer( hash ):
+                if not images_cache.HasImageRenderer( hash ):
                     
                     # we do qt safe to make sure the job is cancelled if we are destroyed
                     
-                    CG.client_controller.CallLaterQtSafe( self, delay, 'image pre-fetch', image_cache.PrefetchImageRenderer, media )
+                    CG.client_controller.CallLaterQtSafe( self, delay, 'image pre-fetch', images_cache.PrefetchImageRenderer, media.GetMediaResult() )
                     
                 
             

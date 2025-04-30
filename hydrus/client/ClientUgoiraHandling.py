@@ -4,9 +4,9 @@ from hydrus.core import HydrusConstants as HC
 from hydrus.core.files import HydrusUgoiraHandling
 from hydrus.core.files.images import HydrusImageHandling
 from hydrus.core.files import HydrusArchiveHandling
-from hydrus.client.media import ClientMediaResult
+
 from hydrus.client import ClientGlobals as CG
-from hydrus.client import ClientFiles
+from hydrus.client.media import ClientMediaResult
 
 import json
 import typing
@@ -15,7 +15,7 @@ UGOIRA_DEFAULT_FRAME_DURATION_MS = 125
 
 def GetFrameDurationsMSUgoira( media: ClientMediaResult.MediaResult ): 
     
-    client_files_manager: ClientFiles.ClientFilesManager = CG.client_controller.client_files_manager
+    client_files_manager = CG.client_controller.client_files_manager
     
     path = client_files_manager.GetFilePath( media.GetHash(), media.GetMime() )
     
@@ -165,7 +165,7 @@ class UgoiraRenderer(object):
 
 def ConvertUgoiraToBytesForAPI( media: ClientMediaResult.MediaResult, format: int, quality: int ):
     
-    client_files_manager: ClientFiles.ClientFilesManager = CG.client_controller.client_files_manager
+    client_files_manager = CG.client_controller.client_files_manager
     
     path = client_files_manager.GetFilePath( media.GetHash(), media.GetMime() )
     
