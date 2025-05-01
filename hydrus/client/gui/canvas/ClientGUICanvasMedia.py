@@ -40,6 +40,7 @@ from hydrus.client.gui.media import ClientGUIMediaControls
 from hydrus.client.gui.media import ClientGUIMediaVolume
 from hydrus.client.gui.widgets import ClientGUICommon
 from hydrus.client.media import ClientMedia
+from hydrus.client.media import ClientMediaResult
 
 ZOOM_CENTERPOINT_MEDIA_CENTER = 0
 ZOOM_CENTERPOINT_VIEWER_CENTER = 1
@@ -361,9 +362,9 @@ def ShouldHaveAnimationBar( media, show_action ):
     return False
     
 
-def WeAreExpectingToLoadThisMediaFile( media: ClientMedia.MediaSingleton, canvas_type: int ) -> bool:
+def WeAreExpectingToLoadThisMediaFile( media_result: ClientMediaResult.MediaResult, canvas_type: int ) -> bool:
     
-    ( media_show_action, media_start_paused, media_start_with_embed ) = ClientMedia.GetShowAction( media, canvas_type )
+    ( media_show_action, media_start_paused, media_start_with_embed ) = ClientMedia.GetShowAction( media_result, canvas_type )
     
     if media_show_action in ( CC.MEDIA_VIEWER_ACTION_SHOW_WITH_NATIVE, CC.MEDIA_VIEWER_ACTION_SHOW_WITH_MPV, CC.MEDIA_VIEWER_ACTION_SHOW_WITH_QMEDIAPLAYER ):
         
@@ -2378,7 +2379,7 @@ class MediaContainer( QW.QWidget ):
         
         self._media = media
         
-        ( self._show_action, self._start_paused, self._start_with_embed ) = ClientMedia.GetShowAction( self._media, self._canvas_type )
+        ( self._show_action, self._start_paused, self._start_with_embed ) = ClientMedia.GetShowAction( self._media.GetMediaResult(), self._canvas_type )
         
         if start_paused is not None:
             
@@ -2576,7 +2577,7 @@ class MediaContainer( QW.QWidget ):
         
         my_dpr = self.devicePixelRatio()
         
-        ( media_show_action, media_start_paused, media_start_with_embed ) = ClientMedia.GetShowAction( self._media, self._canvas_type )
+        ( media_show_action, media_start_paused, media_start_with_embed ) = ClientMedia.GetShowAction( self._media.GetMediaResult(), self._canvas_type )
         
         if media_show_action in ( CC.MEDIA_VIEWER_ACTION_DO_NOT_SHOW_ON_ACTIVATION_OPEN_EXTERNALLY, CC.MEDIA_VIEWER_ACTION_SHOW_OPEN_EXTERNALLY_BUTTON, CC.MEDIA_VIEWER_ACTION_DO_NOT_SHOW ):
             
@@ -2589,7 +2590,7 @@ class MediaContainer( QW.QWidget ):
         
         previous_current_zoom = self._current_zoom
         
-        ( previous_show_action, previous_start_paused, previous_start_with_embed ) = ClientMedia.GetShowAction( previous_media, self._canvas_type )
+        ( previous_show_action, previous_start_paused, previous_start_with_embed ) = ClientMedia.GetShowAction( previous_media.GetMediaResult(), self._canvas_type )
         
         previous_zoom_types_to_zooms = CalculateCanvasZooms( canvas_size, self._canvas_type, my_dpr, previous_media, previous_show_action )
         
@@ -2944,7 +2945,7 @@ class MediaContainer( QW.QWidget ):
         
         my_dpr = self.devicePixelRatio()
         
-        ( media_show_action, media_start_paused, media_start_with_embed ) = ClientMedia.GetShowAction( self._media, self._canvas_type )
+        ( media_show_action, media_start_paused, media_start_with_embed ) = ClientMedia.GetShowAction( self._media.GetMediaResult(), self._canvas_type )
         
         self._zoom_types_to_zooms = CalculateCanvasZooms( canvas_size, self._canvas_type, my_dpr, self._media, media_show_action )
         
