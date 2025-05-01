@@ -103,6 +103,11 @@ class MediaResult( object ):
         return self._locations_manager
         
     
+    def GetMediaResult( self ):
+        
+        return self
+        
+    
     def GetMime( self ):
         
         return self._file_info_manager.mime

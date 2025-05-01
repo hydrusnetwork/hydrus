@@ -1427,7 +1427,7 @@ class Canvas( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
             
             if self.CANVAS_TYPE == CC.CANVAS_PREVIEW:
                 
-                if not ClientMedia.UserWantsUsToDisplayMedia( media, self.CANVAS_TYPE ):
+                if not ClientMedia.UserWantsUsToDisplayMedia( media.GetMediaResult(), self.CANVAS_TYPE ):
                     
                     media = None
                     
@@ -3091,28 +3091,28 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
         
         other_media: ClientMedia.MediaSingleton = self._media_list.GetNext( self._current_media )
         
-        media_to_prefetch = [ other_media ]
+        media_results_to_prefetch = [ other_media.GetMediaResult() ]
         
         # this doesn't handle big skip events, but that's a job for later
         if self._GetNumRemainingDecisions() > 1: # i.e. more than the current one we are looking at
             
-            media_to_prefetch.extend( self._batch_of_pairs_to_process[ self._current_pair_index + 1 ] )
+            media_results_to_prefetch.extend( self._batch_of_pairs_to_process[ self._current_pair_index + 1 ] )
             
         
         images_cache = CG.client_controller.images_cache
         
-        for media in media_to_prefetch:
+        for media_result in media_results_to_prefetch:
             
-            hash = media.GetHash()
-            mime = media.GetMime()
+            hash = media_result.GetHash()
+            mime = media_result.GetMime()
             
-            if media.IsStaticImage() and ClientGUICanvasMedia.WeAreExpectingToLoadThisMediaFile( media, self.CANVAS_TYPE ):
+            if media_result.IsStaticImage() and ClientGUICanvasMedia.WeAreExpectingToLoadThisMediaFile( media_result, self.CANVAS_TYPE ):
                 
                 if not images_cache.HasImageRenderer( hash ):
                     
                     # we do qt safe to make sure the job is cancelled if we are destroyed
                     
-                    CG.client_controller.CallAfterQtSafe( self, 'image pre-fetch', images_cache.PrefetchImageRenderer, media.GetMediaResult() )
+                    CG.client_controller.CallAfterQtSafe( self, 'image pre-fetch', images_cache.PrefetchImageRenderer, media_result )
                     
                 
             
@@ -3865,7 +3865,7 @@ class CanvasMediaList( CanvasWithHovers ):
             hash = media.GetHash()
             mime = media.GetMime()
             
-            if media.IsStaticImage() and ClientGUICanvasMedia.WeAreExpectingToLoadThisMediaFile( media, self.CANVAS_TYPE ):
+            if media.IsStaticImage() and ClientGUICanvasMedia.WeAreExpectingToLoadThisMediaFile( media.GetMediaResult(), self.CANVAS_TYPE ):
                 
                 if not images_cache.HasImageRenderer( hash ):
                     
