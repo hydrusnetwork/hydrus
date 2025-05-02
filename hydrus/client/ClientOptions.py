@@ -388,6 +388,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         #
         
         from hydrus.client.gui.canvas import ClientGUICanvasMedia
+        from hydrus.client.gui.widgets import ClientGUIPainterShapes
         from hydrus.core.files.images import HydrusImageHandling
         
         self._dictionary[ 'integers' ] = {
@@ -576,7 +577,9 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             'default_suggested_tags_notebook_page' : 'related',
             'last_incremental_tagging_namespace' : 'page',
             'last_incremental_tagging_prefix' : '',
-            'last_incremental_tagging_suffix' : ''
+            'last_incremental_tagging_suffix' : '',
+            'draw_thumbnail_rating_icon_size_px' : str( ClientGUIPainterShapes.SIZE.width() ),
+            'media_viewer_rating_icon_size_px' : str( ClientGUIPainterShapes.SIZE.width() )
         }
         
         self._dictionary[ 'string_list' ] = {
