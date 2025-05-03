@@ -6,7 +6,7 @@ on:
 
 jobs:
   build-ubuntu:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-22.04
     steps:
       -
         name: Checkout
@@ -17,7 +17,7 @@ jobs:
         name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
+          python-version: '3.11'
           architecture: x64
       -
         name: APT Install
@@ -36,8 +36,11 @@ jobs:
         run: |
           cp hydrus/static/build_files/linux/hydrus_client.spec hydrus_client.spec
           cp hydrus/static/build_files/linux/hydrus_server.spec hydrus_server.spec
-          pyinstaller hydrus_server.spec
-          pyinstaller hydrus_client.spec
+          pyinstaller --log-level=DEBUG hydrus_server.spec
+          pyinstaller --log-level=DEBUG hydrus_client.spec
+          grep -i bz2 build/*/binaries.toc || true
+          find dist/ -name '*.so' -exec ldd {} \; | grep bz2 || true
+          ldd $(which python3) | grep bz2 || true
       -
         name: Remove Chonk
         run: |
