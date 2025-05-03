@@ -3027,7 +3027,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._use_nice_resolution_strings.setToolTip( ClientGUIFunctions.WrapToolTip( 'Use "1080p" instead of "1920x1080" for common resolutions.' ) )
             
             self._media_viewer_rating_icon_size_px = ClientGUICommon.BetterDoubleSpinBox( media_canvas_panel, min = 1.0, max = 255.0 )
-            tt = 'Set size in pixels for star and numerical inc/dec rating icons for clicking on. This will be used for both width and height of the square icons, inc/dec rectangles are 2x wide and get padded to be pixel-adjacent. If you want to set the size of ratings icons in thumbnails, check the \'thumbnails\' options page.'
+            tt = 'Set size in pixels for star, numerical, and inc/dec rating icons for clicking on. This will be used for both width and height of the square icons, inc/dec rectangles are 2x wide and get padded to be pixel-adjacent. If you want to set the size of ratings icons in thumbnails, check the \'thumbnails\' options page.'
             self._media_viewer_rating_icon_size_px.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
             
             #

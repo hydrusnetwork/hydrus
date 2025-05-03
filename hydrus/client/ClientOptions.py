@@ -579,7 +579,8 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             'last_incremental_tagging_prefix' : '',
             'last_incremental_tagging_suffix' : '',
             'draw_thumbnail_rating_icon_size_px' : str( ClientGUIPainterShapes.SIZE.width() ),
-            'media_viewer_rating_icon_size_px' : str( ClientGUIPainterShapes.SIZE.width() )
+            'media_viewer_rating_icon_size_px' : str( ClientGUIPainterShapes.SIZE.width() ),
+            'last_options_window_panel' : 'gui'
         }
         
         self._dictionary[ 'string_list' ] = {
