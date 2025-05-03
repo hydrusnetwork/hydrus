@@ -400,6 +400,21 @@ class RatingIncDecSubPanel( QW.QWidget ):
         
     
 
+file_command_target_actions = {
+    CAC.SIMPLE_COPY_FILES,
+    CAC.SIMPLE_COPY_FILE_PATHS,
+    CAC.SIMPLE_COPY_FILE_ID,
+    CAC.SIMPLE_COPY_FILE_HASHES,
+    CAC.SIMPLE_COPY_FILE_SERVICE_FILENAMES
+}
+
+zoom_command_actions = {
+    CAC.SIMPLE_ZOOM_TO_PERCENTAGE,
+    CAC.SIMPLE_ZOOM_TO_PERCENTAGE_CENTER,
+    CAC.SIMPLE_RESIZE_WINDOW_TO_MEDIA_ZOOMED,
+    CAC.SIMPLE_RESIZE_WINDOW_TO_MEDIA_ZOOMED_VIEWER_CENTER
+}
+
 class SimpleSubPanel( QW.QWidget ):
     
     def __init__( self, parent: QW.QWidget, shortcuts_name: str ):
@@ -525,6 +540,7 @@ class SimpleSubPanel( QW.QWidget ):
             ClientMediaFileFilter.FileFilter( ClientMediaFileFilter.FILE_FILTER_NONE ),
             ClientMediaFileFilter.FileFilter( ClientMediaFileFilter.FILE_FILTER_INBOX ),
             ClientMediaFileFilter.FileFilter( ClientMediaFileFilter.FILE_FILTER_ARCHIVE ),
+            ClientMediaFileFilter.FileFilter( ClientMediaFileFilter.FILE_FILTER_NOT_SELECTED ),
             ClientMediaFileFilter.FileFilter( ClientMediaFileFilter.FILE_FILTER_LOCAL ),
             ClientMediaFileFilter.FileFilter( ClientMediaFileFilter.FILE_FILTER_FILE_SERVICE, filter_data = CC.TRASH_SERVICE_KEY )
         ]:
@@ -650,6 +666,20 @@ class SimpleSubPanel( QW.QWidget ):
         
         #
         
+        self._zoom_panel = QW.QWidget( self )
+        
+        self._zoom_value = ClientGUICommon.BetterSpinBox( self._zoom_panel, initial = 100, min = 1, max = 1600 )
+        
+        rows = []
+        
+        rows.append( ( 'Zoom %:', self._zoom_value ) )
+        
+        gridbox = ClientGUICommon.WrapInGrid( self._zoom_panel, rows )
+        
+        self._zoom_panel.setLayout( gridbox )
+        
+        #
+        
         vbox = QP.VBoxLayout()
         
         QP.AddToLayout( vbox, self._simple_actions, CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -663,6 +693,7 @@ class SimpleSubPanel( QW.QWidget ):
         QP.AddToLayout( vbox, self._bitmap_type_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, self._hash_type_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, self._ipfs_service_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._zoom_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         vbox.addStretch( 0 )
         
@@ -677,14 +708,6 @@ class SimpleSubPanel( QW.QWidget ):
         
         action = self._simple_actions.GetValue()
         
-        file_command_target_actions = {
-            CAC.SIMPLE_COPY_FILES,
-            CAC.SIMPLE_COPY_FILE_PATHS,
-            CAC.SIMPLE_COPY_FILE_ID,
-            CAC.SIMPLE_COPY_FILE_HASHES,
-            CAC.SIMPLE_COPY_FILE_SERVICE_FILENAMES
-        }
-        
         self._thumbnail_rearrange_panel.setVisible( action == CAC.SIMPLE_REARRANGE_THUMBNAILS )
         self._duplicates_type_panel.setVisible( action == CAC.SIMPLE_SHOW_DUPLICATES )
         self._seek_panel.setVisible( action == CAC.SIMPLE_MEDIA_SEEK_DELTA )
@@ -693,8 +716,10 @@ class SimpleSubPanel( QW.QWidget ):
         self._hamming_distance_panel.setVisible( action == CAC.SIMPLE_OPEN_SIMILAR_LOOKING_FILES )
         self._hash_type_panel.setVisible( action == CAC.SIMPLE_COPY_FILE_HASHES )
         self._ipfs_service_panel.setVisible( action == CAC.SIMPLE_COPY_FILE_SERVICE_FILENAMES )
-        self._file_command_target_panel.setVisible( action in file_command_target_actions )
         self._bitmap_type_panel.setVisible( action == CAC.SIMPLE_COPY_FILE_BITMAP )
+        
+        self._zoom_panel.setVisible( action in zoom_command_actions )
+        self._file_command_target_panel.setVisible( action in file_command_target_actions )
         
     
     def GetValue( self ):
@@ -777,6 +802,14 @@ class SimpleSubPanel( QW.QWidget ):
                 hacky_ipfs_dict[ 'ipfs_service_key' ] = ipfs_service_key
                 
                 simple_data = hacky_ipfs_dict
+                
+            elif action in zoom_command_actions:
+                
+                zoom_value_integer = self._zoom_value.value()
+                
+                zoom_value_decimal = zoom_value_integer / 100
+                
+                simple_data = zoom_value_decimal
                 
             else:
                 
@@ -862,6 +895,19 @@ class SimpleSubPanel( QW.QWidget ):
             
             self._file_command_target.SetValue( hacky_ipfs_dict[ 'file_command_target' ] )
             self._ipfs_service_key.SetValue( hacky_ipfs_dict[ 'ipfs_service_key' ] )
+            
+        elif action in zoom_command_actions:
+            
+            zoom_value_decimal = command.GetSimpleData()
+            
+            if zoom_value_decimal is None:
+                
+                zoom_value_decimal = 1.0
+                
+            
+            zoom_value_integer = int( zoom_value_decimal * 100 )
+            
+            self._zoom_value.setValue( zoom_value_integer )
             
         
         self._UpdateControls()

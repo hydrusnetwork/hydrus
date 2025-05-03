@@ -3,8 +3,8 @@ import re
 import zipfile
 
 from hydrus.core import HydrusConstants as HC
-from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusText
 
 def ExtractSingleFileFromZip( path_to_zip, filename_to_extract, extract_into_file_path ):
     
@@ -41,7 +41,7 @@ def GetCoverPagePath( zip_handle: zipfile.ZipFile ):
     # this probably depth-first fails with a crazy multiple-nested-subdirectory structure, but we'll cross that bridge when we come to it
     all_file_paths = [ zip_info.filename for zip_info in zip_handle.infolist() if not zip_info.is_dir() ]
     
-    HydrusData.HumanTextSort( all_file_paths )
+    HydrusText.HumanTextSort( all_file_paths )
     
     for path in all_file_paths:
         

@@ -449,6 +449,11 @@ def GetFileInfo( path, mime = None, ok_to_look_for_hydrus_updates = False ):
         
         raise HydrusExceptions.UnsupportedFileException( 'Sorry, you need the pillow-heif library to support this filetype ({})! Please rebuild your venv.'.format( HC.mime_string_lookup[ mime ] ) )
         
+    
+    if mime in HC.PIL_AVIF_MIMES and not HydrusImageHandling.AVIF_OK:
+        
+        raise HydrusExceptions.UnsupportedFileException( 'Sorry, you need the pillow-avif-plugin library to support this filetype ({})! Please rebuild your venv.'.format( HC.mime_string_lookup[ mime ] ) )
+        
     if mime == HC.IMAGE_JXL and not HydrusImageHandling.JXL_OK:
         
         raise HydrusExceptions.UnsupportedFileException( 'Sorry, you need the pillow-jxl-plugin library to support this filetype ({})! Please rebuild your venv.'.format( HC.mime_string_lookup[ mime ] ) )
@@ -596,7 +601,7 @@ def GetFileInfo( path, mime = None, ok_to_look_for_hydrus_updates = False ):
         
         ( ( width, height ), duration_ms, num_frames ) = HydrusUgoiraHandling.GetUgoiraProperties( path )
         
-    elif mime in HC.VIDEO or mime in HC.HEIF_TYPE_SEQUENCES:
+    elif mime in HC.VIDEO or mime in HC.HEIF_TYPE_SEQUENCES or mime == HC.IMAGE_AVIF_SEQUENCE:
         
         ( ( width, height ), duration_ms, num_frames, has_audio ) = HydrusVideoHandling.GetFFMPEGVideoProperties( path )
         

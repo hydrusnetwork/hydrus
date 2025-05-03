@@ -1,7 +1,6 @@
 import typing
 
 from hydrus.core import HydrusSerialisable
-from hydrus.core import HydrusTags
 
 from hydrus.client import ClientStrings
 from hydrus.client.media import ClientMediaResult
@@ -12,7 +11,7 @@ class SingleFileMetadataRouter( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_METADATA_SINGLE_FILE_ROUTER
     SERIALISABLE_NAME = 'Metadata Single File Router'
-    SERIALISABLE_VERSION = 2
+    SERIALISABLE_VERSION = 3
     
     def __init__(
         self,
@@ -29,6 +28,15 @@ class SingleFileMetadataRouter( HydrusSerialisable.SerialisableBase ):
         if string_processor is None:
             
             string_processor = ClientStrings.StringProcessor()
+            
+            string_processor.SetProcessingSteps(
+                [
+                    ClientStrings.StringSorter(
+                        sort_type = ClientStrings.CONTENT_PARSER_SORT_TYPE_HUMAN_SORT,
+                        asc = True
+                    )
+                ]
+            )
             
         
         if exporter is None:
@@ -98,6 +106,32 @@ class SingleFileMetadataRouter( HydrusSerialisable.SerialisableBase ):
             new_serialisable_info = ( serialisable_importers, serialisable_string_processor, fixed_serialisable_exporter )
             
             return ( 2, new_serialisable_info )
+            
+        
+        if version == 2:
+            
+            # removing hardcoded sort in the Work call; now letting user handle it
+            
+            ( serialisable_importers, serialisable_string_processor, serialisable_exporter ) = old_serialisable_info
+            
+            string_processor = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_string_processor )
+            
+            string_processing_steps = string_processor.GetProcessingSteps()
+            
+            string_processing_steps.append(
+                ClientStrings.StringSorter(
+                    sort_type = ClientStrings.CONTENT_PARSER_SORT_TYPE_HUMAN_SORT,
+                    asc = True
+                )
+            )
+            
+            string_processor.SetProcessingSteps( string_processing_steps )
+            
+            serialisable_string_processor = string_processor.GetSerialisableTuple()
+            
+            new_serialisable_info = ( serialisable_importers, serialisable_string_processor, serialisable_exporter )
+            
+            return ( 3, new_serialisable_info )
             
         
     
@@ -185,17 +219,6 @@ class SingleFileMetadataRouter( HydrusSerialisable.SerialisableBase ):
             
         
         rows = self._string_processor.ProcessStrings( starting_strings = rows )
-        
-        # bruh maybe exporters should handle their own sort, like after processstrings? or before it?
-        # I just moved this to below processstrings because any potential joiner stuff would be messed with by the sort
-        if isinstance( self._exporter, ClientMetadataMigrationExporters.SingleFileMetadataExporterMediaTags ):
-            
-            rows = sorted( rows, key = HydrusTags.ConvertTagToSortable )
-            
-        else:
-            
-            rows = sorted( rows )
-            
         
         if len( rows ) == 0:
             

@@ -100,10 +100,10 @@ This URL Class will be assigned to any URL that matches the location, path, and 
 
 For instance, given:
 
-*   URL A: https://8ch.net/tv/res/1002432.html
-*   URL B: https://8ch.net/tv/res
-*   URL C: https://8ch.net/tv/res/1002432
-*   URL D: https://8ch.net/tv/res/1002432.json
+*   URL A: https://someimageboard.org/cool/res/12345.html
+*   URL B: https://someimageboard.org/cool/res
+*   URL C: https://someimageboard.org/cool/res/12345
+*   URL D: https://someimageboard.org/cool/res/12345.json
 *   URL Class that looks for "(characters)/res/(numbers).html" for the path
 
 Only URL A will match

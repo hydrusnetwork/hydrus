@@ -862,18 +862,35 @@ class EditJSONParsingRulePanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._parse_rule_type = ClientGUICommon.BetterChoice( self )
         
-        self._parse_rule_type.addItem( 'dictionary entry', ClientParsing.JSON_PARSE_RULE_TYPE_DICT_KEY )
+        self._parse_rule_type.addItem( 'dictionary entry by key', ClientParsing.JSON_PARSE_RULE_TYPE_DICT_KEY )
         self._parse_rule_type.addItem( 'all dictionary/list items', ClientParsing.JSON_PARSE_RULE_TYPE_ALL_ITEMS )
         self._parse_rule_type.addItem( 'indexed item', ClientParsing.JSON_PARSE_RULE_TYPE_INDEXED_ITEM )
+        self._parse_rule_type.addItem( 'filter strings/numbers/bools with string match', ClientParsing.JSON_PARSE_RULE_TYPE_TEST_STRING_ITEMS )
+        self._parse_rule_type.addItem( 'walk back up ancestors', ClientParsing.JSON_PARSE_RULE_TYPE_ASCEND )
         self._parse_rule_type.addItem( 'de-minify json', ClientParsing.JSON_PARSE_RULE_TYPE_DEMINIFY_JSON )
         
         string_match = ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FIXED, match_value = 'posts', example_string = 'posts' )
         
-        self._string_match = ClientGUIStringPanels.EditStringMatchPanel( self, string_match )
+        self._string_match_key = ClientGUIStringPanels.EditStringMatchPanel( self, string_match )
         
-        self._index = ClientGUICommon.BetterSpinBox( self, min=-65536, max=65535 )
+        string_match = ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FLEXIBLE, match_value = ClientStrings.FLEXIBLE_MATCH_NUMERIC, example_string = '123456' )
+        
+        self._string_match_value = ClientGUIStringPanels.EditStringMatchPanel( self, string_match )
+        
+        #
+        
+        self._index_panel = QW.QWidget( self )
+        
+        self._index = ClientGUICommon.BetterSpinBox( self._index_panel, min=-65536, max=65535 )
+        self._index.setValue( 0 )
         self._index.setToolTip( ClientGUIFunctions.WrapToolTip( 'You can make this negative to do negative indexing, i.e. "Select the second from last item".' ) )
         
+        #
+        
+        self._number_of_steps_panel = QW.QWidget( self )
+        
+        self._number_of_steps = ClientGUICommon.BetterSpinBox( self._number_of_steps_panel, min = 1, max = 64 )
+        self._number_of_steps.setValue( 1 )
         #
         
         ( parse_rule_type, parse_rule ) = rule
@@ -886,28 +903,50 @@ class EditJSONParsingRulePanel( ClientGUIScrolledPanels.EditPanel ):
             
         elif parse_rule_type == ClientParsing.JSON_PARSE_RULE_TYPE_DICT_KEY:
             
-            self._string_match.SetValue( parse_rule )
+            self._string_match_key.SetValue( parse_rule )
             
         elif parse_rule_type == ClientParsing.JSON_PARSE_RULE_TYPE_DEMINIFY_JSON:
             
             self._index.setValue( parse_rule )
             
-        
-        self._UpdateHideShow()
+        elif parse_rule_type == ClientParsing.JSON_PARSE_RULE_TYPE_ASCEND:
+            
+            self._number_of_steps.setValue( parse_rule )
+            
+        elif parse_rule_type == ClientParsing.JSON_PARSE_RULE_TYPE_TEST_STRING_ITEMS:
+            
+            self._string_match_value.SetValue( parse_rule )
+            
         
         #
-        
-        vbox = QP.VBoxLayout()
         
         rows = []
         
         rows.append( ( 'list index: ', self._index ) )
         
-        gridbox = ClientGUICommon.WrapInGrid( self, rows )
+        gridbox = ClientGUICommon.WrapInGrid( self._index_panel, rows )
+        
+        self._index_panel.setLayout( gridbox )
+        
+        #
+        
+        rows = []
+        
+        rows.append( ( 'steps to ascend: ', self._number_of_steps ) )
+        
+        gridbox = ClientGUICommon.WrapInGrid( self._number_of_steps_panel, rows )
+        
+        self._number_of_steps_panel.setLayout( gridbox )
+        
+        #
+        
+        vbox = QP.VBoxLayout()
         
         QP.AddToLayout( vbox, self._parse_rule_type, CC.FLAGS_EXPAND_PERPENDICULAR )
-        QP.AddToLayout( vbox, self._string_match, CC.FLAGS_EXPAND_BOTH_WAYS ) # TODO: update this to perp and a stretch(0) when this guy is a widget not a scrolling panel
-        QP.AddToLayout( vbox, gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._string_match_key, CC.FLAGS_EXPAND_BOTH_WAYS ) # TODO: update this to perp and a stretch(0) when this guy is a widget not a scrolling panel
+        QP.AddToLayout( vbox, self._string_match_value, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( vbox, self._index_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._number_of_steps_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         self.widget().setLayout( vbox )
         
@@ -915,26 +954,17 @@ class EditJSONParsingRulePanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._parse_rule_type.currentIndexChanged.connect( self._UpdateHideShow )
         
+        self._UpdateHideShow()
+        
     
     def _UpdateHideShow( self ):
         
-        self._string_match.setEnabled( False )
-        self._index.setEnabled( False )
-        
         parse_rule_type = self._parse_rule_type.GetValue()
         
-        if parse_rule_type == ClientParsing.JSON_PARSE_RULE_TYPE_DICT_KEY:
-            
-            self._string_match.setEnabled( True )
-            
-        elif parse_rule_type == ClientParsing.JSON_PARSE_RULE_TYPE_INDEXED_ITEM:
-            
-            self._index.setEnabled( True )
-            
-        elif parse_rule_type == ClientParsing.JSON_PARSE_RULE_TYPE_DEMINIFY_JSON:
-            
-            self._index.setEnabled( True )
-            
+        self._string_match_key.setVisible( parse_rule_type == ClientParsing.JSON_PARSE_RULE_TYPE_DICT_KEY )
+        self._string_match_value.setVisible( parse_rule_type == ClientParsing.JSON_PARSE_RULE_TYPE_TEST_STRING_ITEMS )
+        self._index_panel.setVisible( parse_rule_type in ( ClientParsing.JSON_PARSE_RULE_TYPE_INDEXED_ITEM, ClientParsing.JSON_PARSE_RULE_TYPE_DEMINIFY_JSON ) )
+        self._number_of_steps_panel.setVisible( parse_rule_type == ClientParsing.JSON_PARSE_RULE_TYPE_ASCEND )
         
     
     def GetValue( self ):
@@ -943,7 +973,7 @@ class EditJSONParsingRulePanel( ClientGUIScrolledPanels.EditPanel ):
         
         if parse_rule_type == ClientParsing.JSON_PARSE_RULE_TYPE_DICT_KEY:
             
-            parse_rule = self._string_match.GetValue()
+            parse_rule = self._string_match_key.GetValue()
             
         elif parse_rule_type == ClientParsing.JSON_PARSE_RULE_TYPE_INDEXED_ITEM:
             
@@ -957,10 +987,23 @@ class EditJSONParsingRulePanel( ClientGUIScrolledPanels.EditPanel ):
             
             parse_rule = self._index.value()
             
+        elif parse_rule_type == ClientParsing.JSON_PARSE_RULE_TYPE_ASCEND:
+            
+            parse_rule = self._number_of_steps.value()
+            
+        elif parse_rule_type == ClientParsing.JSON_PARSE_RULE_TYPE_TEST_STRING_ITEMS:
+            
+            parse_rule = self._string_match_value.GetValue()
+            
+        else:
+            
+            raise HydrusExceptions.CancelledException( 'Do not understand which parse rule type is set!' )
+            
         
         return ( parse_rule_type, parse_rule )
         
     
+
 class EditJSONFormulaPanel( EditSpecificFormulaPanel ):
     
     def __init__( self, parent: QW.QWidget, collapse_newlines: bool, formula: ClientParsing.ParseFormulaJSON, test_data: ClientParsing.ParsingTestData ):

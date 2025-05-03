@@ -259,7 +259,7 @@ class PreviewPanel( ClientGUICommon.StaticBox ):
             
         
         rule = self._value
-        selector = self._value.GetPairSelector()
+        selector = rule.GetPairSelector()
         
         fetched_pairs = self._fetched_pairs
         
@@ -281,7 +281,7 @@ class PreviewPanel( ClientGUICommon.StaticBox ):
                     
                 else:
                     
-                    ab_pairs_that_pass.append( pair )
+                    ab_pairs_that_pass.append( result )
                     
                 
             

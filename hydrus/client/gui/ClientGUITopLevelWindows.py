@@ -382,7 +382,12 @@ def SetInitialTLWSizeAndPosition( tlw: QW.QWidget, frame_key ):
             # https://github.com/hydrusnetwork/hydrus/issues/1673
             # https://github.com/hydrusnetwork/hydrus/issues/1681
             
-            CG.client_controller.CallLaterQtSafe( tlw, 0.1, 'macOS position fix', tlw.move, safe_position )
+            from hydrus.client.gui import ClientGUI
+            
+            if not isinstance( tlw, ClientGUI.FrameGUI ):
+                
+                CG.client_controller.CallLaterQtSafe( tlw, 0.1, 'macOS position fix', tlw.move, safe_position )
+                
             
         
     

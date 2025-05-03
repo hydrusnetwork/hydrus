@@ -15,8 +15,8 @@ from hydrus.core.files.images import HydrusImageHandling
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
-from hydrus.client import ClientImageHandling
 from hydrus.client import ClientLocation
+from hydrus.client.files.images import ClientImagePerceptualHashes
 from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIOptionsPanels
@@ -2761,7 +2761,7 @@ class PanelPredicateSystemSimilarToData( PanelPredicateSystemSingle ):
                 
                 pixel_hash = HydrusImageHandling.GetImagePixelHashNumPy( numpy_image )
                 
-                perceptual_hashes = ClientImageHandling.GenerateShapePerceptualHashesNumPy( numpy_image )
+                perceptual_hashes = ClientImagePerceptualHashes.GenerateShapePerceptualHashesNumPy( numpy_image )
                 
             except Exception as e:
                 
@@ -2813,7 +2813,7 @@ class PanelPredicateSystemSimilarToData( PanelPredicateSystemSingle ):
                         
                         pixel_hash = HydrusImageHandling.GetImagePixelHash( path, mime )
                         
-                        perceptual_hashes = ClientImageHandling.GenerateShapePerceptualHashes( path, mime )
+                        perceptual_hashes = ClientImagePerceptualHashes.GenerateShapePerceptualHashes( path, mime )
                         
                     else:
                         

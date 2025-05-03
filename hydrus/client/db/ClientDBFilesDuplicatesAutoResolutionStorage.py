@@ -561,6 +561,15 @@ class ClientDBFilesDuplicatesAutoResolutionStorage( ClientDBModule.ClientDBModul
         self._Reinit()
         
     
+    def MaintenanceRegenNumbers( self ):
+        
+        self._Execute( 'DELETE FROM duplicates_files_auto_resolution_rule_count_cache;' )
+        
+        HydrusData.ShowText( 'Cached auto-resolution numbers cleared!' )
+        
+        self._Reinit()
+        
+    
     def NotifyNewPotentialDuplicatePairsAdded( self, pairs_added ):
         
         if not self._have_initialised_rules:
@@ -775,14 +784,59 @@ class ClientDBFilesDuplicatesAutoResolutionStorage( ClientDBModule.ClientDBModul
         CG.client_controller.duplicates_auto_resolution_manager.Wake()
         
     
-    def SetRules( self, new_rules: typing.Collection[ ClientDuplicatesAutoResolution.DuplicatesAutoResolutionRule ], master_potential_duplicate_pairs_table_name = 'potential_duplicate_pairs' ):
+    def SetRules( self, rules_to_set: typing.Collection[ ClientDuplicatesAutoResolution.DuplicatesAutoResolutionRule ], master_potential_duplicate_pairs_table_name = 'potential_duplicate_pairs' ):
         
         if not self._have_initialised_rules:
             
             self._Reinit()
             
         
-        rules_to_add = [ rule for rule in new_rules if rule.GetId() == -1 ]
+        rule_ids_to_rules_to_set = { rule.GetId() : rule for rule in rules_to_set }
+        
+        existing_rule_ids = set( self._rule_ids_to_rules.keys() )
+        rule_ids_to_set = { rule.GetId() for rule in rules_to_set }
+        
+        rule_ids_to_delete = existing_rule_ids.difference( rule_ids_to_set )
+        rule_ids_to_update = existing_rule_ids.intersection( rule_ids_to_set )
+        
+        #
+        # we have to hop skip and jump to maneouvre around renames here since we work by id but the serialisable system uses names
+        #
+        
+        # important we do deletes first, before writing any new ones
+        for rule_id in rule_ids_to_update:
+            
+            existing_rule = self._rule_ids_to_rules[ rule_id ]
+            
+            self.modules_serialisable.DeleteJSONDumpNamed( HydrusSerialisable.SERIALISABLE_TYPE_DUPLICATES_AUTO_RESOLUTION_RULE, dump_name = existing_rule.GetName() )
+            
+        
+        for rule_id in rule_ids_to_delete:
+            
+            existing_rule = self._rule_ids_to_rules[ rule_id ]
+            
+            self._Execute( 'DELETE FROM duplicate_files_auto_resolution_rules WHERE rule_id = ?;', ( rule_id, ) )
+            self._Execute( 'DELETE FROM duplicates_files_auto_resolution_rule_count_cache WHERE rule_id = ?;', ( rule_id, ) )
+            
+            statuses_to_table_names = GenerateAutoResolutionQueueTableNames( rule_id )
+            
+            for table_name in statuses_to_table_names.values():
+                
+                self.modules_db_maintenance.DeferredDropTable( table_name )
+                
+            
+            actioned_pairs_table_name = GenerateResolutionActionedPairsTableName( rule_id )
+            
+            self.modules_db_maintenance.DeferredDropTable( actioned_pairs_table_name )
+            
+            del self._rule_ids_to_rules[ rule_id ]
+            
+            self.modules_serialisable.DeleteJSONDumpNamed( HydrusSerialisable.SERIALISABLE_TYPE_DUPLICATES_AUTO_RESOLUTION_RULE, dump_name = existing_rule.GetName() )
+            
+        
+        #
+        
+        rules_to_add = [ rule for rule in rules_to_set if rule.GetId() < 0 ]
         
         for rule in rules_to_add:
             
@@ -836,41 +890,15 @@ class ClientDBFilesDuplicatesAutoResolutionStorage( ClientDBModule.ClientDBModul
             self._Execute( 'REPLACE INTO duplicates_files_auto_resolution_rule_count_cache ( rule_id, status, status_count ) VALUES ( ?, ?, ? );', ( rule_id, ClientDuplicatesAutoResolution.DUPLICATE_STATUS_NOT_SEARCHED, num_added ) )
             
         
-        rule_ids_to_new_resolution_rules = { rule.GetId() : rule for rule in new_rules }
-        
-        existing_rule_ids = set( self._rule_ids_to_rules.keys() )
-        new_rule_ids = { rule.GetId() for rule in new_rules }
-        
-        rule_ids_to_delete = existing_rule_ids.difference( new_rule_ids )
-        rule_ids_to_update = new_rule_ids.intersection( existing_rule_ids )
-        
-        for rule_id in rule_ids_to_delete:
-            
-            rule = self._rule_ids_to_rules[ rule_id ]
-            
-            self._Execute( 'DELETE FROM duplicate_files_auto_resolution_rules WHERE rule_id = ?;', ( rule_id, ) )
-            
-            statuses_to_table_names = GenerateAutoResolutionQueueTableNames( rule_id )
-            
-            for table_name in statuses_to_table_names.values():
-                
-                self.modules_db_maintenance.DeferredDropTable( table_name )
-                
-            
-            del self._rule_ids_to_rules[ rule_id ]
-            
-            self.modules_serialisable.DeleteJSONDumpNamed( HydrusSerialisable.SERIALISABLE_TYPE_DUPLICATES_AUTO_RESOLUTION_RULE, dump_name = rule.GetName() )
-            
-            self._Execute( 'DELETE FROM duplicates_files_auto_resolution_rule_count_cache WHERE rule_id = ?;', ( rule_id, ) )
-            
-        
         for rule_id in rule_ids_to_update:
             
-            rule = rule_ids_to_new_resolution_rules[ rule_id ]
+            rule = rule_ids_to_rules_to_set[ rule_id ]
             
             existing_rule = self._rule_ids_to_rules[ rule_id ]
             
-            self.modules_serialisable.SetJSONDump( rule ) # got to save it lol
+            self.modules_serialisable.SetJSONDump( rule )
+            
+            self._rule_ids_to_rules[ rule_id ] = rule
             
             if rule.GetOperationMode() == ClientDuplicatesAutoResolution.DUPLICATES_AUTO_RESOLUTION_RULE_OPERATION_MODE_FULLY_AUTOMATIC:
                 
@@ -886,8 +914,6 @@ class ClientDBFilesDuplicatesAutoResolutionStorage( ClientDBModule.ClientDBModul
                 
                 self._ResetRuleSearchProgress( rule_id )
                 
-            
-            self._rule_ids_to_rules[ rule_id ] = rule
             
         
         CG.client_controller.duplicates_auto_resolution_manager.Wake()

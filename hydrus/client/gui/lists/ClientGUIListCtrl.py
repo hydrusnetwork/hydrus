@@ -496,33 +496,6 @@ class HydrusListItemModel( QC.QAbstractItemModel ):
         
     
 
-class HydrusListItemModelBridge( HydrusListItemModel ):
-    """
-    This guy is the 'temporary' bridge between the old model, which spits out both display and sort tuples in one go, and the future view, which intends to do this separately.
-    It is inefficient, but it is easy to deploy.
-    """
-    def __init__( self, parent: QW.QWidget, column_list_type: int, data_to_tuples_func: typing.Callable, column_types_to_name_overrides = None ):
-        
-        self._data_to_tuples_func = data_to_tuples_func
-        
-        def data_to_display_tuple_func( data ):
-            
-            ( display_tuple, sort_tuple ) = self._data_to_tuples_func( data )
-            
-            return display_tuple
-            
-        
-        def data_to_sort_tuple_func( data ):
-            
-            ( display_tuple, sort_tuple ) = self._data_to_tuples_func( data )
-            
-            return sort_tuple
-            
-        
-        super().__init__( parent, column_list_type, data_to_display_tuple_func, data_to_sort_tuple_func, column_types_to_name_overrides = column_types_to_name_overrides )
-        
-    
-
 class BetterListCtrlTreeView( QW.QTreeView ):
     
     columnListContentsChanged = QC.Signal()

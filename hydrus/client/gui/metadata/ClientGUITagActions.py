@@ -8,7 +8,6 @@ from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusThreading
-from hydrus.core import HydrusTags
 from hydrus.core import HydrusText
 
 from hydrus.client import ClientGlobals as CG
@@ -233,7 +232,7 @@ class TagPairActionContext( object ):
         
         pairs = list( pairs )
         
-        pairs.sort( key = lambda c_p1: HydrusTags.ConvertTagToSortable( c_p1[1] ) )
+        pairs.sort( key = lambda c_p1: HydrusText.HumanTextSortKey( c_p1[1] ) )
         
         pairs_to_pend = []
         pairs_to_petition = []

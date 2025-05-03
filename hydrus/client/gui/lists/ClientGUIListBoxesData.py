@@ -2,6 +2,7 @@ import typing
 
 from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusTags
+from hydrus.core import HydrusText
 
 from hydrus.client.metadata import ClientTags
 from hydrus.client.search import ClientSearchPredicate
@@ -195,7 +196,7 @@ class ListBoxItemTextTag( ListBoxItem ):
         
         if isinstance( other, ListBoxItemTextTag ):
             
-            return HydrusTags.ConvertTagToSortable( self.GetCopyableTexts()[0] ) < HydrusTags.ConvertTagToSortable( other.GetCopyableTexts()[0] )
+            return HydrusText.HumanTextSortKey( self.GetCopyableTexts()[0] ) < HydrusText.HumanTextSortKey( other.GetCopyableTexts()[0] )
             
         
         return NotImplemented
@@ -358,7 +359,7 @@ class ListBoxItemTextTagWithCounts( ListBoxItemTextTag ):
         
         if isinstance( other, ListBoxItemTextTagWithCounts ):
             
-            return HydrusTags.ConvertTagToSortable( self.GetCopyableTexts( with_counts = False )[0] ) < HydrusTags.ConvertTagToSortable( other.GetCopyableTexts( with_counts = False )[0] )
+            return HydrusText.HumanTextSortKey( self.GetCopyableTexts( with_counts = False )[0] ) < HydrusText.HumanTextSortKey( other.GetCopyableTexts( with_counts = False )[0] )
             
         
         return NotImplemented
@@ -500,7 +501,7 @@ class ListBoxItemPredicate( ListBoxItem ):
         
         if isinstance( other, ListBoxItem ):
             
-            return HydrusTags.ConvertTagToSortable( self.GetCopyableTexts()[0] ) < HydrusTags.ConvertTagToSortable( other.GetCopyableTexts()[0] )
+            return HydrusText.HumanTextSortKey( self.GetCopyableTexts()[0] ) < HydrusText.HumanTextSortKey( other.GetCopyableTexts()[0] )
             
         
         return NotImplemented

@@ -105,7 +105,7 @@ options = {}
 # Misc
 
 NETWORK_VERSION = 20
-SOFTWARE_VERSION = 618
+SOFTWARE_VERSION = 620
 CLIENT_API_VERSION = 79
 
 SERVER_THUMBNAIL_DIMENSIONS = ( 200, 200 )
@@ -884,7 +884,6 @@ VIEWABLE_ANIMATIONS = [
 ]
 
 HEIF_TYPE_SEQUENCES = [
-    IMAGE_AVIF_SEQUENCE,
     IMAGE_HEIC_SEQUENCE,
     IMAGE_HEIF_SEQUENCE
 ]
@@ -978,12 +977,15 @@ for ( general_mime_type, mimes_in_type ) in general_mimetypes_to_mime_groups.ite
         
     
 
-# AVIF sequence is not here since it doesn't rely on PIL
 PIL_HEIF_MIMES = {
     IMAGE_HEIF,
     IMAGE_HEIF_SEQUENCE,
     IMAGE_HEIC,
-    IMAGE_HEIC_SEQUENCE,
+    IMAGE_HEIC_SEQUENCE
+}
+
+# AVIF SEQUENCE is not here because we handle it with ffmpeg I think, not PIL
+PIL_AVIF_MIMES = {
     IMAGE_AVIF
 }
 
@@ -1447,7 +1449,6 @@ UNICODE_ELLIPSIS = '\u2026'
 UNICODE_NOT_EQUAL = '\u2260'
 UNICODE_REPLACEMENT_CHARACTER = '\ufffd'
 UNICODE_PLUS_OR_MINUS = '\u00B1'
-UNICODE_ZERO_WIDTH_SPACE = '\u200B'
 
 URL_TYPE_POST = 0
 URL_TYPE_API = 1

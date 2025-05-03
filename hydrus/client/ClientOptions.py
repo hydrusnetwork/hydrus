@@ -144,6 +144,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             'use_native_menubar' : HC.PLATFORM_MACOS,
             'shortcuts_merge_non_number_numpad' : True,
             'disable_get_safe_position_test' : False,
+            'save_window_size_and_position_on_close' : False,
             'freeze_message_manager_when_mouse_on_other_monitor' : False,
             'freeze_message_manager_when_main_gui_minimised' : False,
             'load_images_with_pil' : True,
@@ -241,6 +242,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             'draw_transparency_checkerboard_media_canvas' : False,
             'draw_transparency_checkerboard_media_canvas_duplicates' : True,
             'menu_choice_buttons_can_mouse_scroll' : True,
+            'remember_options_window_panel' : True,
             'focus_preview_on_ctrl_click' : False,
             'focus_preview_on_ctrl_click_only_static' : False,
             'focus_preview_on_shift_click' : False,
@@ -273,7 +275,9 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             'command_palette_show_media_menu' : False,
             'disallow_media_drags_on_duration_media' : False,
             'show_all_my_files_on_page_chooser' : True,
+            'show_all_my_files_on_page_chooser_at_top' : False,
             'show_local_files_on_page_chooser' : False,
+            'show_local_files_on_page_chooser_at_top' : False,
             'use_nice_resolution_strings' : True,
             'use_listbook_for_tag_service_panels' : False,
             'open_files_to_duplicate_filter_uses_all_my_files' : True,
@@ -293,6 +297,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             'confirm_all_page_closes' : False,
             'refresh_search_page_on_system_limited_sort_changed' : True,
             'do_not_setgeometry_on_an_mpv' : False,
+            'focus_media_thumb_on_viewer_close' : True,
         }
         
         #
@@ -470,7 +475,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             'ac_write_list_height_num_chars' : 11,
             'system_busy_cpu_percent' : 50,
             'human_bytes_sig_figs' : 3,
-            'ms_to_wait_between_physical_file_deletes' : 250,
+            'ms_to_wait_between_physical_file_deletes' : 600,
             'potential_duplicates_search_work_time_ms' : 500,
             'potential_duplicates_search_rest_percentage' : 100,
             'repository_processing_work_time_ms_very_idle' : 30000,

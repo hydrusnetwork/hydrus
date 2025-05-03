@@ -166,6 +166,8 @@ class ReviewActionsPanel( ClientGUIScrolledPanels.ReviewPanel ):
             return
             
         
+        earliest_selected_row_index = min( ( index.row() for index in indices ) )
+        
         if len( selected_pairs ) > 5:
             
             message = f'Are you sure you want to approve the {HydrusNumbers.ToHumanInt( len( selected_pairs ) )} pairs?'
@@ -190,7 +192,14 @@ class ReviewActionsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         if len( self._pending_action_pairs ) > 0:
             
-            self._pending_actions_pair_list.selectRow( 0 )
+            if len( self._pending_action_pairs ) > earliest_selected_row_index:
+                
+                self._pending_actions_pair_list.selectRow( earliest_selected_row_index )
+                
+            else:
+                
+                self._pending_actions_pair_list.selectRow( len( self._pending_action_pairs ) - 1 )
+                
             
         else:
             
@@ -230,6 +239,8 @@ class ReviewActionsPanel( ClientGUIScrolledPanels.ReviewPanel ):
             return
             
         
+        earliest_selected_row_index = min( ( index.row() for index in indices ) )
+        
         if len( selected_pairs ) > 5:
             
             message = f'Are you sure you want to deny the {HydrusNumbers.ToHumanInt( len( selected_pairs ) )} pairs?'
@@ -252,7 +263,14 @@ class ReviewActionsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         if len( self._pending_action_pairs ) > 0:
             
-            self._pending_actions_pair_list.selectRow( 0 )
+            if len( self._pending_action_pairs ) > earliest_selected_row_index:
+                
+                self._pending_actions_pair_list.selectRow( earliest_selected_row_index )
+                
+            else:
+                
+                self._pending_actions_pair_list.selectRow( len( self._pending_action_pairs ) - 1 )
+                
             
         else:
             

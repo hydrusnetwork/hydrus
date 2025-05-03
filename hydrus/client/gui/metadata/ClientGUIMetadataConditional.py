@@ -249,10 +249,28 @@ class AutoCompleteDropdownMetadataConditional( ClientGUIACDropdown.AutoCompleteD
         if parsed_autocomplete_text.IsEmpty():
             
             results = [
-                ClientSearchPredicate.Predicate( predicate_type )
+                ClientSearchPredicate.Predicate( predicate_type = predicate_type )
                 for predicate_type
-                in ClientSearchPredicate.PREDICATE_TYPES_WE_CAN_TEST_ON_MEDIA_RESULTS
+                in [
+                    ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_INBOX,
+                    ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_ARCHIVE,
+                    ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_MIME,
+                    ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_WIDTH,
+                    ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HEIGHT
+                ]
             ]
+            
+            # replace this with file properties at a convenient future juncture when we support has audio, duration, forced filetype, and transparency
+            results.extend(
+                [
+                    ClientSearchPredicate.Predicate( predicate_type = ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HAS_EXIF, value = True ),
+                    ClientSearchPredicate.Predicate( predicate_type = ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HAS_EXIF, value = False ),
+                    ClientSearchPredicate.Predicate( predicate_type = ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HAS_ICC_PROFILE, value = True ),
+                    ClientSearchPredicate.Predicate( predicate_type = ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HAS_ICC_PROFILE, value = False ),
+                    ClientSearchPredicate.Predicate( predicate_type = ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HAS_HUMAN_READABLE_EMBEDDED_METADATA, value = True ),
+                    ClientSearchPredicate.Predicate( predicate_type = ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HAS_HUMAN_READABLE_EMBEDDED_METADATA, value = False )
+                ]
+            )
             
         elif parsed_autocomplete_text.IsValidSystemPredicate():
             

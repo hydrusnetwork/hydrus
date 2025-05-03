@@ -29,13 +29,14 @@ from hydrus.core.networking import HydrusNetworking
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientDaemons
 from hydrus.client import ClientDefaults
-from hydrus.client import ClientFiles
 from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientOptions
 from hydrus.client import ClientServices
 from hydrus.client import ClientThreading
 from hydrus.client.caches import ClientCaches
 from hydrus.client.db import ClientDB
+from hydrus.client.files import ClientFilesMaintenance
+from hydrus.client.files import ClientFilesManager
 from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUISplash
 from hydrus.client.gui import QtPorting as QP
@@ -44,6 +45,7 @@ if not HG.twisted_is_broke:
     
     from twisted.internet import threads, reactor, defer
     
+
 PubSubEventType = QP.registerEventType()
 
 class PubSubEvent( QC.QEvent ):
@@ -210,7 +212,9 @@ class Controller( HydrusController.HydrusController ):
         self._previously_idle = False
         self._idle_started = None
         
-        self.client_files_manager = None
+        self.thumbnails_cache: typing.Optional[ ClientCaches.ThumbnailCache ] = None
+        
+        self.client_files_manager: typing.Optional[ ClientFilesManager.ClientFilesManager ] = None
         self.services_manager = None
         
         Controller.my_instance = self
@@ -623,6 +627,13 @@ class Controller( HydrusController.HydrusController ):
                 self.pub( 'set_status_bar_dirty' )
                 
             
+        
+    
+    def ClearCaches( self ) -> None:
+        
+        self.images_cache.Clear()
+        self.image_tiles_cache.Clear()
+        self.thumbnails_cache.Clear()
         
     
     def ClipboardHasImage( self ):
@@ -1136,7 +1147,7 @@ class Controller( HydrusController.HydrusController ):
                 
                 if dlg.exec() == QW.QDialog.DialogCode.Accepted:
                     
-                    self.client_files_manager = ClientFiles.ClientFilesManager( self )
+                    self.client_files_manager = ClientFilesManager.ClientFilesManager( self )
                     
                     missing_subfolders = self.client_files_manager.GetMissingSubfolders()
                     
@@ -1149,7 +1160,7 @@ class Controller( HydrusController.HydrusController ):
             return missing_subfolders
             
         
-        self.client_files_manager = ClientFiles.ClientFilesManager( self )
+        self.client_files_manager = ClientFilesManager.ClientFilesManager( self )
         
         missing_subfolders = self.client_files_manager.GetMissingSubfolders()
         
@@ -1201,9 +1212,9 @@ class Controller( HydrusController.HydrusController ):
         
         self.frame_splash_status.SetSubtext( 'image caches' )
         
-        self._caches[ 'images' ] = ClientCaches.ImageRendererCache( self )
-        self._caches[ 'image_tiles' ] = ClientCaches.ImageTileCache( self )
-        self._caches[ 'thumbnail' ] = ClientCaches.ThumbnailCache( self )
+        self.images_cache = ClientCaches.ImageRendererCache( self )
+        self.image_tiles_cache = ClientCaches.ImageTileCache( self )
+        self.thumbnails_cache = ClientCaches.ThumbnailCache( self )
         
         self.frame_splash_status.SetText( 'initialising managers' )
         
@@ -1450,7 +1461,7 @@ class Controller( HydrusController.HydrusController ):
         
         self.frame_splash_status.SetTitleText( 'booting gui' + HC.UNICODE_ELLIPSIS )
         
-        self.files_maintenance_manager = ClientFiles.FilesMaintenanceManager( self )
+        self.files_maintenance_manager = ClientFilesMaintenance.FilesMaintenanceManager( self )
         
         self._managers_with_mainloops.append( self.files_maintenance_manager )
         
@@ -2562,7 +2573,14 @@ class Controller( HydrusController.HydrusController ):
             
             ( media, optional_target_resolution_tuple ) = data
             
-            image_renderer = self.GetCache( 'images' ).GetImageRenderer( media )
+            display_media = media.GetDisplayMedia()
+            
+            if display_media is None:
+                
+                return
+                
+            
+            image_renderer = self.images_cache.GetImageRenderer( display_media.GetMediaResult() )
             
             def CopyToClipboard():
                 
@@ -2611,7 +2629,7 @@ class Controller( HydrusController.HydrusController ):
                 return
                 
             
-            thumbnail = self.GetCache( 'thumbnail' ).GetThumbnail( media.GetDisplayMedia().GetMediaResult() )
+            thumbnail = self.thumbnails_cache.GetThumbnail( media.GetDisplayMedia().GetMediaResult() )
             
             qt_image = thumbnail.GetQtImage().copy()
             
@@ -2636,9 +2654,9 @@ class Controller( HydrusController.HydrusController ):
     
     def WaitUntilThumbnailsFree( self ):
         
-        if 'thumbnail' in self._caches:
+        if self.thumbnails_cache is not None:
             
-            self._caches[ 'thumbnail' ].WaitUntilFree()
+            self.thumbnails_cache.WaitUntilFree()
             
         
     

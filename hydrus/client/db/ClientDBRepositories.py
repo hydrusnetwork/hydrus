@@ -11,7 +11,6 @@ from hydrus.core import HydrusLists
 from hydrus.core import HydrusTime
 from hydrus.core.networking import HydrusNetwork
 
-from hydrus.client import ClientFiles
 from hydrus.client.db import ClientDBMaintenance
 from hydrus.client.db import ClientDBDefinitionsCache
 from hydrus.client.db import ClientDBFilesMaintenanceQueue
@@ -19,6 +18,7 @@ from hydrus.client.db import ClientDBFilesMetadataBasic
 from hydrus.client.db import ClientDBFilesStorage
 from hydrus.client.db import ClientDBModule
 from hydrus.client.db import ClientDBServices
+from hydrus.client.files import ClientFilesMaintenance
 
 REPOSITORY_HASH_ID_MAP_PREFIX = 'repository_hash_id_map_'
 REPOSITORY_TAG_ID_MAP_PREFIX = 'repository_tag_id_map_'
@@ -170,8 +170,8 @@ class ClientDBRepositories( ClientDBModule.ClientDBModule ):
         
         self._ReprocessRepository( service_id, ( HC.CONTENT_TYPE_DEFINITIONS, ) )
         
-        self._ScheduleRepositoryUpdateFileMaintenance( service_id, ClientFiles.REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA_REMOVE_RECORD )
-        self._ScheduleRepositoryUpdateFileMaintenance( service_id, ClientFiles.REGENERATE_FILE_DATA_JOB_FILE_METADATA )
+        self._ScheduleRepositoryUpdateFileMaintenance( service_id, ClientFilesMaintenance.REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA_REMOVE_RECORD )
+        self._ScheduleRepositoryUpdateFileMaintenance( service_id, ClientFilesMaintenance.REGENERATE_FILE_DATA_JOB_FILE_METADATA )
         
         self._cursor_transaction_wrapper.CommitAndBegin()
         

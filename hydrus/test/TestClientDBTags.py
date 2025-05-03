@@ -403,7 +403,6 @@ IRL_SIBLING_PAIRS = {
     ( 'moira_(overwatch)', 'character:moira o’deorain' ),
     ( 'character:nova (starcraft)', 'character:nova terra' ),
     ( 'nova terra', 'character:nova terra' ),
-    ( 'nova terra‎', 'character:nova terra' ),
     ( 'nova_terra', 'character:nova terra' ),
     ( 'character:olivia colomar', 'character:olivia "sombra" colomar' ),
     ( 'character:sombra', 'character:olivia "sombra" colomar' ),
@@ -699,7 +698,7 @@ class TestClientDBTags( unittest.TestCase ):
         
         #
         
-        self.assertEqual( self._read( 'tag_siblings_and_parents_lookup', ( 'bodysuit', ) )[ 'bodysuit' ][ self._my_service_key ], ( {
+        self.assertEqual( self._read( 'tag_siblings_and_parents_lookup',  ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, ( 'bodysuit', ) )[ 'bodysuit' ][ self._my_service_key ], ( {
             'bodysuit',
             'clothing:bodysuit'
             }, 'clothing:bodysuit', {
@@ -746,7 +745,7 @@ class TestClientDBTags( unittest.TestCase ):
         
         #
         
-        self.assertEqual( self._read( 'tag_siblings_and_parents_lookup', ( 'samus aran', ) )[ 'samus aran' ][ self._my_service_key ], ( {
+        self.assertEqual( self._read( 'tag_siblings_and_parents_lookup', ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, ( 'samus aran', ) )[ 'samus aran' ][ self._my_service_key ], ( {
             'character:samus aran',
             'samus aran'
             }, 'character:samus aran', {
@@ -926,7 +925,7 @@ class TestClientDBTags( unittest.TestCase ):
                 
                 self._write( 'content_updates', ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( other_service_key, get_post_mapping_content_updates() ) )
                 
-                ( siblings, ideal_sibling, descendants, ancestors ) = self._read( 'tag_siblings_and_parents_lookup', ( child_tag_1, ) )[ child_tag_1 ][ other_service_key ]
+                ( siblings, ideal_sibling, descendants, ancestors ) = self._read( 'tag_siblings_and_parents_lookup', ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, ( child_tag_1, ) )[ child_tag_1 ][ other_service_key ]
                 # get ideal from here too
                 
                 self.assertEqual( siblings, { child_tag_1, child_tag_2, child_tag_3 } )
@@ -1032,7 +1031,7 @@ class TestClientDBTags( unittest.TestCase ):
         
         #
         
-        self.assertEqual( self._read( 'tag_siblings_and_parents_lookup', ( 'pharah', ) )[ 'pharah' ][ self._my_service_key ], ( {
+        self.assertEqual( self._read( 'tag_siblings_and_parents_lookup', ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, ( 'pharah', ) )[ 'pharah' ][ self._my_service_key ], ( {
             'character:fareeha "pharah" amari',
             'character:fareeha "pharah" amari (overwatch)',
             'character:pharah',
@@ -1049,7 +1048,7 @@ class TestClientDBTags( unittest.TestCase ):
             'studio:blizzard entertainment'
             } ) )
         
-        self.assertEqual( self._read( 'tag_siblings_and_parents_lookup', ( 'warcraft', ) )[ 'warcraft' ][ self._my_service_key ], ( {
+        self.assertEqual( self._read( 'tag_siblings_and_parents_lookup', ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, ( 'warcraft', ) )[ 'warcraft' ][ self._my_service_key ], ( {
             'series:warcraft',
             'copyright:warcraft',
             'warcraft',
@@ -1684,7 +1683,7 @@ class TestClientDBTags( unittest.TestCase ):
             'blonde'
         }
         
-        selected_tag_to_service_keys_to_siblings_and_parents = self._read( 'tag_siblings_and_parents_lookup', all_tags )
+        selected_tag_to_service_keys_to_siblings_and_parents = self._read( 'tag_siblings_and_parents_lookup', ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, all_tags )
         
         for ( tag, expected_descendants, expected_ancestors ) in (
             (
@@ -1741,7 +1740,7 @@ class TestClientDBTags( unittest.TestCase ):
             'artist'
         }
         
-        selected_tag_to_service_keys_to_siblings_and_parents = self._read( 'tag_siblings_and_parents_lookup', all_tags )
+        selected_tag_to_service_keys_to_siblings_and_parents = self._read( 'tag_siblings_and_parents_lookup', ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, all_tags )
         
         for ( tag, expected_descendants, expected_ancestors ) in (
             (
@@ -1860,7 +1859,7 @@ class TestClientDBTags( unittest.TestCase ):
             'lara croft'
         }
         
-        selected_tag_to_service_keys_to_siblings_and_parents = self._read( 'tag_siblings_and_parents_lookup', all_tags )
+        selected_tag_to_service_keys_to_siblings_and_parents = self._read( 'tag_siblings_and_parents_lookup', ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, all_tags )
         
         for ( tag, expected_descendants, expected_ancestors ) in (
             (
@@ -1885,7 +1884,7 @@ class TestClientDBTags( unittest.TestCase ):
             'myself'
         }
         
-        selected_tag_to_service_keys_to_siblings_and_parents = self._read( 'tag_siblings_and_parents_lookup', all_tags )
+        selected_tag_to_service_keys_to_siblings_and_parents = self._read( 'tag_siblings_and_parents_lookup', ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, all_tags )
         
         for ( tag, expected_descendants, expected_ancestors ) in (
             (
@@ -1949,7 +1948,7 @@ class TestClientDBTags( unittest.TestCase ):
             'lara croft'
         }
         
-        selected_tag_to_service_keys_to_siblings_and_parents = self._read( 'tag_siblings_and_parents_lookup', all_tags )
+        selected_tag_to_service_keys_to_siblings_and_parents = self._read( 'tag_siblings_and_parents_lookup', ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, all_tags )
         
         for ( tag, expected_descendants, expected_ancestors ) in (
             (
@@ -2014,7 +2013,7 @@ class TestClientDBTags( unittest.TestCase ):
             'myself'
         }
         
-        selected_tag_to_service_keys_to_siblings_and_parents = self._read( 'tag_siblings_and_parents_lookup', all_tags )
+        selected_tag_to_service_keys_to_siblings_and_parents = self._read( 'tag_siblings_and_parents_lookup', ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, all_tags )
         
         for ( tag, expected_descendants, expected_ancestors ) in (
             (
@@ -2222,7 +2221,7 @@ class TestClientDBTags( unittest.TestCase ):
             'character:samus aran'
         }
         
-        selected_tag_to_service_keys_to_siblings_and_parents = self._read( 'tag_siblings_and_parents_lookup', all_tags )
+        selected_tag_to_service_keys_to_siblings_and_parents = self._read( 'tag_siblings_and_parents_lookup', ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, all_tags )
         
         for tag in {
             'sameus aran',
@@ -2260,7 +2259,7 @@ class TestClientDBTags( unittest.TestCase ):
             'creator:splashbrush'
         }
         
-        selected_tag_to_service_keys_to_siblings_and_parents = self._read( 'tag_siblings_and_parents_lookup', all_tags )
+        selected_tag_to_service_keys_to_siblings_and_parents = self._read( 'tag_siblings_and_parents_lookup', ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, all_tags )
         
         for tag in {
             'bodysut',

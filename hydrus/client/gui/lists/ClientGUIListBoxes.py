@@ -3488,7 +3488,7 @@ class ListBoxTags( ListBox ):
                 
                 def sp_work_callable():
                     
-                    selected_tag_to_service_keys_to_siblings_and_parents = CG.client_controller.Read( 'tag_siblings_and_parents_lookup', ( selected_tag, ) )
+                    selected_tag_to_service_keys_to_siblings_and_parents = CG.client_controller.Read( 'tag_siblings_and_parents_lookup', ClientTags.TAG_DISPLAY_DISPLAY_IDEAL, ( selected_tag, ) )
                     
                     service_keys_to_siblings_and_parents = selected_tag_to_service_keys_to_siblings_and_parents[ selected_tag ]
                     
@@ -3629,7 +3629,7 @@ class ListBoxTags( ListBox ):
                         
                         ClientGUIMenus.AppendSeparator( siblings_menu )
                         
-                        ideals = sorted( ideals_to_service_keys.keys(), key = HydrusTags.ConvertTagToSortable )
+                        ideals = sorted( ideals_to_service_keys.keys(), key = HydrusText.HumanTextSortKey )
                         
                         for ideal in ideals:
                             

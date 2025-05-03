@@ -26,13 +26,14 @@ from hydrus.core.files import HydrusFileHandling
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientData
-from hydrus.client import ClientFiles
 from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientLocation
-from hydrus.client import ClientFilesPhysical
 from hydrus.client import ClientRendering
 from hydrus.client import ClientSerialisable
 from hydrus.client import ClientThreading
+from hydrus.client.files import ClientFiles
+from hydrus.client.files import ClientFilesMaintenance
+from hydrus.client.files import ClientFilesPhysical
 from hydrus.client.gui import ClientGUIAsync
 from hydrus.client.gui import ClientGUICharts
 from hydrus.client.gui import ClientGUIDialogsMessage
@@ -2112,9 +2113,9 @@ class ReviewFileMaintenance( ClientGUIScrolledPanels.ReviewPanel ):
         
         self._action_selector = ClientGUICommon.BetterChoice( self._action_panel )
         
-        for job_type in ClientFiles.ALL_REGEN_JOBS_IN_HUMAN_ORDER:
+        for job_type in ClientFilesMaintenance.ALL_REGEN_JOBS_IN_HUMAN_ORDER:
             
-            self._action_selector.addItem( ClientFiles.regen_file_enum_to_str_lookup[ job_type ], job_type )
+            self._action_selector.addItem( ClientFilesMaintenance.regen_file_enum_to_str_lookup[ job_type ], job_type )
             
         
         self._description_button = ClientGUICommon.BetterButton( self._action_panel, 'see description', self._SeeDescription )
@@ -2175,7 +2176,7 @@ class ReviewFileMaintenance( ClientGUIScrolledPanels.ReviewPanel ):
         
         if len( hash_ids ) > 1000:
             
-            message = 'Are you sure you want to schedule "{}" on {} files?'.format( ClientFiles.regen_file_enum_to_str_lookup[ job_type ], HydrusNumbers.ToHumanInt( len( hash_ids ) ) )
+            message = 'Are you sure you want to schedule "{}" on {} files?'.format( ClientFilesMaintenance.regen_file_enum_to_str_lookup[ job_type ], HydrusNumbers.ToHumanInt( len( hash_ids ) ) )
             
             result = ClientGUIDialogsQuick.GetYesNo( self, message, yes_label = 'do it', no_label = 'forget it' )
             
@@ -2210,7 +2211,7 @@ class ReviewFileMaintenance( ClientGUIScrolledPanels.ReviewPanel ):
     
     def _ConvertJobTypeToDisplayTuple( self, job_type ):
         
-        pretty_job_type = ClientFiles.regen_file_enum_to_str_lookup[ job_type ]
+        pretty_job_type = ClientFilesMaintenance.regen_file_enum_to_str_lookup[ job_type ]
         
         if job_type in self._job_types_to_due_counts:
             
@@ -2237,7 +2238,7 @@ class ReviewFileMaintenance( ClientGUIScrolledPanels.ReviewPanel ):
     
     def _ConvertJobTypeToSortTuple( self, job_type ):
         
-        pretty_job_type = ClientFiles.regen_file_enum_to_str_lookup[ job_type ]
+        pretty_job_type = ClientFilesMaintenance.regen_file_enum_to_str_lookup[ job_type ]
         sort_job_type = pretty_job_type
         
         if job_type in self._job_types_to_due_counts:
@@ -2367,9 +2368,9 @@ class ReviewFileMaintenance( ClientGUIScrolledPanels.ReviewPanel ):
         
         job_type = self._action_selector.GetValue()
         
-        message = ClientFiles.regen_file_enum_to_description_lookup[ job_type ]
+        message = ClientFilesMaintenance.regen_file_enum_to_description_lookup[ job_type ]
         message += '\n' * 2
-        message += 'This job has weight {}, where a normalised unit of file work has value {}.'.format( HydrusNumbers.ToHumanInt( ClientFiles.regen_file_enum_to_job_weight_lookup[ job_type ] ), HydrusNumbers.ToHumanInt( ClientFiles.NORMALISED_BIG_JOB_WEIGHT ) )
+        message += 'This job has weight {}, where a normalised unit of file work has value {}.'.format( HydrusNumbers.ToHumanInt( ClientFilesMaintenance.regen_file_enum_to_job_weight_lookup[ job_type ] ), HydrusNumbers.ToHumanInt( ClientFilesMaintenance.NORMALISED_BIG_JOB_WEIGHT ) )
         
         ClientGUIDialogsMessage.ShowInformation( self, message )
         
@@ -3360,41 +3361,43 @@ class ReviewLocalFileImports( ClientGUIScrolledPanels.ReviewPanel ):
             
             # ready to start, let's update ui on status
             
-            total_paths = num_files_done + len( unparsed_paths )
+            num_still_to_do = len( unparsed_paths )
+            num_bad_files = num_files_done - num_good_files
             
-            if num_good_files == 0:
+            num_total_paths = num_files_done + num_still_to_do
+            
+            if num_total_paths == 0:
                 
-                if num_files_done == 0:
-                    
-                    message = 'waiting for paths to parse'
-                    
-                else:
-                    
-                    message = 'none of the ' + HydrusNumbers.ToHumanInt( total_paths ) + ' files parsed successfully'
-                    
+                message = 'waiting for paths to parse'
+                
+            elif num_files_done < num_total_paths:
+                
+                message = f'{HydrusNumbers.ValueRangeToPrettyString( num_files_done, num_total_paths )} files parsed'
                 
             else:
                 
-                message = HydrusNumbers.ValueRangeToPrettyString( num_good_files, total_paths ) + ' files parsed successfully'
+                message = f'{HydrusNumbers.ToHumanInt( num_total_paths )} files parsed'
                 
             
-            if num_empty_files + num_missing_files + num_unimportable_mime_files + num_occupied_files + num_sidecars > 0:
+            if num_bad_files > 0:
                 
-                if num_good_files == 0:
+                message += ' - '
+                
+                if num_good_files > 0:
                     
-                    message += ': '
+                    message += f'{HydrusNumbers.ToHumanInt( num_good_files )} good | {HydrusNumbers.ToHumanInt( num_bad_files )} bad'
                     
-                else:
+                elif num_bad_files == num_files_done:
                     
-                    message += ', but '
+                    message += 'all bad'
                     
+                
+            
+            if num_empty_files + num_missing_files + num_unimportable_mime_files + num_occupied_files > 0:
+                
+                message += ': '
                 
                 bad_comments = []
-                
-                if num_sidecars > 0:
-                    
-                    bad_comments.append( '{} looked like txt/json/xml sidecars'.format( HydrusNumbers.ToHumanInt( num_sidecars ) ) )
-                    
                 
                 if num_empty_files > 0:
                     
@@ -3416,12 +3419,17 @@ class ReviewLocalFileImports( ClientGUIScrolledPanels.ReviewPanel ):
                     bad_comments.append( HydrusNumbers.ToHumanInt( num_occupied_files ) + ' were inaccessible (maybe in use by another process)' )
                     
                 
-                message += ' and '.join( bad_comments )
+                message += ', '.join( bad_comments )
+                
+            
+            if num_sidecars > 0:
+                
+                message += f' - and looks like {HydrusNumbers.ToHumanInt( num_sidecars )} txt/json/xml sidecars'
                 
             
             message += '.'
             
-            progress_updater.Update( message, num_files_done, total_paths )
+            progress_updater.Update( message, num_files_done, num_total_paths )
             
             # status updated, lets see what work there is to do
             
@@ -3465,7 +3473,7 @@ class ReviewLocalFileImports( ClientGUIScrolledPanels.ReviewPanel ):
                 try:
                     
                     raw_paths = unparsed_paths_queue.get( block = False )
-
+                    
                     ( paths, num_sidecars_this_loop ) = ClientFiles.GetAllFilePaths( raw_paths, do_human_sort = do_human_sort ) # convert any dirs to subpaths
                     
                     num_sidecars += num_sidecars_this_loop

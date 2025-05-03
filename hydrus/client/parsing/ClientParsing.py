@@ -41,6 +41,21 @@ except ImportError:
     LXML_IS_OK = False
     
 
+HTML_CONTENT_ATTRIBUTE = 0
+HTML_CONTENT_STRING = 1
+HTML_CONTENT_HTML = 2
+
+JSON_CONTENT_STRING = 0
+JSON_CONTENT_JSON = 1
+JSON_CONTENT_DICT_KEYS = 2
+
+JSON_PARSE_RULE_TYPE_DICT_KEY = 0
+JSON_PARSE_RULE_TYPE_ALL_ITEMS = 1
+JSON_PARSE_RULE_TYPE_INDEXED_ITEM = 2
+JSON_PARSE_RULE_TYPE_DEMINIFY_JSON = 3
+JSON_PARSE_RULE_TYPE_ASCEND = 4
+JSON_PARSE_RULE_TYPE_TEST_STRING_ITEMS = 5
+
 def GetHTMLTagString( tag: bs4.Tag ):
     
     # don't mess about with tag.string, tag.strings or tag.get_text
@@ -159,13 +174,27 @@ def RenderJSONParseRule( rule ):
         
     elif parse_rule_type == JSON_PARSE_RULE_TYPE_DICT_KEY:
         
-        s = 'get the entries that match "' + parse_rule.ToString() + '"'
+        s = f'get the entries that have keys matching "{parse_rule.ToString()}"'
+        
+    elif parse_rule_type == JSON_PARSE_RULE_TYPE_TEST_STRING_ITEMS:
+        
+        s = f'get the values that match "{parse_rule.ToString()}"'
         
     elif parse_rule_type == JSON_PARSE_RULE_TYPE_DEMINIFY_JSON:
         
         index = parse_rule
         
         s = 'de-minify json at the ' + HydrusNumbers.IndexToPrettyOrdinalString( index ) + ' item'
+        
+    elif parse_rule_type == JSON_PARSE_RULE_TYPE_ASCEND:
+        
+        number_of_steps = parse_rule
+        
+        s = f'walk back up {number_of_steps} ancestors'
+        
+    else:
+        
+        s = 'unknown rule!'
         
     
     return s
@@ -603,10 +632,6 @@ class ParseFormulaContextVariable( ParseFormula ):
     
 
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_PARSE_FORMULA_CONTEXT_VARIABLE ] = ParseFormulaContextVariable
-
-HTML_CONTENT_ATTRIBUTE = 0
-HTML_CONTENT_STRING = 1
-HTML_CONTENT_HTML = 2
 
 class ParseFormulaHTML( ParseFormula ):
     
@@ -1187,6 +1212,8 @@ class ParseRuleHTML( HydrusSerialisable.SerialisableBase ):
     
     def ToString( self ):
         
+        s = ''
+        
         if self._rule_type in [ HTML_RULE_TYPE_DESCENDING, HTML_RULE_TYPE_NEXT_SIBLINGS, HTML_RULE_TYPE_PREV_SIBLINGS ]:
             
             if self._rule_type == HTML_RULE_TYPE_DESCENDING:
@@ -1249,16 +1276,8 @@ class ParseRuleHTML( HydrusSerialisable.SerialisableBase ):
         return ( self._rule_type, self._tag_name, self._tag_attributes, self._tag_index, self._tag_depth, self._should_test_tag_string, self._tag_string_string_match )
         
     
+
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_PARSE_RULE_HTML ] = ParseRuleHTML
-
-JSON_CONTENT_STRING = 0
-JSON_CONTENT_JSON = 1
-JSON_CONTENT_DICT_KEYS = 2
-
-JSON_PARSE_RULE_TYPE_DICT_KEY = 0
-JSON_PARSE_RULE_TYPE_ALL_ITEMS = 1
-JSON_PARSE_RULE_TYPE_INDEXED_ITEM = 2
-JSON_PARSE_RULE_TYPE_DEMINIFY_JSON = 3
 
 class ParseFormulaJSON( ParseFormula ):
     
@@ -1299,27 +1318,30 @@ class ParseFormulaJSON( ParseFormula ):
     
     def _GetRawTextsFromJSON( self, j ):
         
-        roots = ( j, )
+        nodes_and_stacks = [ ( j, [] ) ]
         
         for ( parse_rule_type, parse_rule ) in self._parse_rules:
             
-            next_roots = []
+            next_nodes_and_stacks = []
             
-            for root in roots:
+            for ( node, stack ) in nodes_and_stacks:
+                
+                next_stack = list( stack )
+                next_stack.append( node )
                 
                 if parse_rule_type == JSON_PARSE_RULE_TYPE_ALL_ITEMS:
                     
-                    if isinstance( root, list ):
+                    if isinstance( node, list ):
                         
-                        next_roots.extend( root )
+                        next_nodes_and_stacks.extend( [ ( item, next_stack ) for item in node ] )
                         
-                    elif isinstance( root, dict ):
+                    elif isinstance( node, dict ):
                         
-                        pairs = sorted( root.items() )
+                        pairs = sorted( node.items() )
                         
                         for ( key, value ) in pairs:
                             
-                            next_roots.append( value )
+                            next_nodes_and_stacks.append( ( value, next_stack ) )
                             
                         
                     else:
@@ -1331,17 +1353,21 @@ class ParseFormulaJSON( ParseFormula ):
                     
                     index = parse_rule
                     
-                    if isinstance( root, ( list, dict ) ):
+                    if isinstance( node, ( list, dict ) ):
                         
-                        if isinstance( root, list ):
+                        if isinstance( node, list ):
                             
-                            list_to_index = root
+                            list_to_index = node
                             
-                        elif isinstance( root, dict ):
+                        elif isinstance( node, dict ):
                             
-                            list_to_index = list( root.keys() )
+                            list_to_index = list( node.keys() )
                             
-                            HydrusData.HumanTextSort( list_to_index )
+                            HydrusText.HumanTextSort( list_to_index )
+                            
+                        else:
+                            
+                            continue
                             
                         
                         try:
@@ -1353,13 +1379,13 @@ class ParseFormulaJSON( ParseFormula ):
                             continue
                             
                         
-                        if isinstance( root, list ):
+                        if isinstance( node, list ):
                             
-                            next_roots.append( indexed_item )
+                            next_nodes_and_stacks.append( ( indexed_item, next_stack ) )
                             
-                        elif isinstance( root, dict ):
+                        elif isinstance( node, dict ):
                             
-                            next_roots.append( root[ indexed_item ] )
+                            next_nodes_and_stacks.append( ( node[ indexed_item ], next_stack ) )
                             
                         
                     else:
@@ -1369,26 +1395,68 @@ class ParseFormulaJSON( ParseFormula ):
                     
                 elif parse_rule_type == JSON_PARSE_RULE_TYPE_DICT_KEY:
                     
-                    if not isinstance( root, dict ):
+                    if not isinstance( node, dict ):
                         
                         continue
                         
                     
                     string_match = parse_rule
                     
-                    pairs = sorted( root.items() )
+                    pairs = sorted( node.items() )
                     
                     for ( key, value ) in pairs:
                         
                         if string_match.Matches( key ):
                             
-                            next_roots.append( value )
+                            next_nodes_and_stacks.append( ( value, next_stack ) )
                             
+                        
+                    
+                elif parse_rule_type == JSON_PARSE_RULE_TYPE_TEST_STRING_ITEMS:
+                    
+                    if isinstance( node, ( list, dict ) ):
+                        
+                        continue
+                        
+                    
+                    if node is not None:
+                        
+                        try:
+                            
+                            text = str( node )
+                            
+                        except:
+                            
+                            continue
+                            
+                        
+                        string_match = parse_rule
+                        
+                        if string_match.Matches( text ):
+                            
+                            next_nodes_and_stacks.append( ( node, stack ) ) # stack, not next_stack--this is only a filtering step
+                            
+                        
+                    
+                elif parse_rule_type == JSON_PARSE_RULE_TYPE_ASCEND:
+                    
+                    number_of_steps = parse_rule
+                    
+                    if len( stack ) >= number_of_steps:
+                        
+                        ancestor_node = stack[ -number_of_steps ]
+                        ancestor_stack = stack[ : -number_of_steps ]
+                        
+                        next_nodes_and_stacks.append( ( ancestor_node, ancestor_stack ) )
+                        
+                    else:
+                        
+                        continue
                         
                     
                 elif parse_rule_type == JSON_PARSE_RULE_TYPE_DEMINIFY_JSON:
                     
-                    if not isinstance( root, list ):
+                    if not isinstance( node, list ):
                         
                         continue
                         
@@ -1414,12 +1482,12 @@ class ParseFormulaJSON( ParseFormula ):
                         elif isinstance( item, int ):
                             
                             # Don't convert topmost integer
-                            if isinstance( root[ item ], int ):
+                            if isinstance( node[ item ], int ):
                                 
-                                return root[ item ]
+                                return node[ item ]
                                 
                             
-                            return _deminify( root[ item ] )
+                            return _deminify( node[ item ] )
                             
                         else:
                             
@@ -1429,7 +1497,7 @@ class ParseFormulaJSON( ParseFormula ):
                     
                     try:
                         
-                        next_roots.append( _deminify( root[ index ] ) )
+                        next_nodes_and_stacks.append( ( _deminify( node[ index ] ), next_stack ) )
                         
                     except IndexError:
                         
@@ -1438,38 +1506,38 @@ class ParseFormulaJSON( ParseFormula ):
                     
                 
             
-            roots = next_roots
+            nodes_and_stacks = next_nodes_and_stacks
             
         
         raw_texts = []
         
-        for root in roots:
+        for ( node, stack ) in nodes_and_stacks:
             
             if self._content_to_fetch == JSON_CONTENT_STRING:
                 
-                if isinstance( root, ( list, dict ) ):
+                if isinstance( node, ( list, dict ) ):
                     
                     continue
                     
                 
-                if root is not None:
+                if node is not None:
                     
-                    raw_text = str( root )
+                    raw_text = str( node )
                     
                     raw_texts.append( raw_text )
                     
                 
             elif self._content_to_fetch == JSON_CONTENT_JSON:
                 
-                raw_text = json.dumps( root, ensure_ascii = False )
+                raw_text = json.dumps( node, ensure_ascii = False )
                 
                 raw_texts.append( raw_text )
                 
             elif self._content_to_fetch == JSON_CONTENT_DICT_KEYS:
                 
-                if isinstance( root, dict ):
+                if isinstance( node, dict ):
                     
-                    pairs = sorted( root.items() )
+                    pairs = sorted( node.items() )
                     
                     for ( key, value ) in pairs:
                         
@@ -1486,7 +1554,7 @@ class ParseFormulaJSON( ParseFormula ):
     
     def _GetSerialisableInfo( self ):
         
-        serialisable_parse_rules = [ ( parse_rule_type, parse_rule.GetSerialisableTuple() ) if parse_rule_type == JSON_PARSE_RULE_TYPE_DICT_KEY else ( parse_rule_type, parse_rule ) for ( parse_rule_type, parse_rule ) in self._parse_rules ]
+        serialisable_parse_rules = [ ( parse_rule_type, parse_rule.GetSerialisableTuple() ) if parse_rule_type in ( JSON_PARSE_RULE_TYPE_DICT_KEY, JSON_PARSE_RULE_TYPE_TEST_STRING_ITEMS ) else ( parse_rule_type, parse_rule ) for ( parse_rule_type, parse_rule ) in self._parse_rules ]
         serialisable_string_processor = self._string_processor.GetSerialisableTuple()
         
         return ( serialisable_parse_rules, self._content_to_fetch, self._name, serialisable_string_processor )
@@ -1496,7 +1564,7 @@ class ParseFormulaJSON( ParseFormula ):
         
         ( serialisable_parse_rules, self._content_to_fetch, self._name, serialisable_string_processor ) = serialisable_info
         
-        self._parse_rules = [ ( parse_rule_type, HydrusSerialisable.CreateFromSerialisableTuple( serialisable_parse_rule ) ) if parse_rule_type == JSON_PARSE_RULE_TYPE_DICT_KEY else ( parse_rule_type, serialisable_parse_rule ) for ( parse_rule_type, serialisable_parse_rule ) in serialisable_parse_rules ]
+        self._parse_rules = [ ( parse_rule_type, HydrusSerialisable.CreateFromSerialisableTuple( serialisable_parse_rule ) ) if parse_rule_type in ( JSON_PARSE_RULE_TYPE_DICT_KEY, JSON_PARSE_RULE_TYPE_TEST_STRING_ITEMS ) else ( parse_rule_type, serialisable_parse_rule ) for ( parse_rule_type, serialisable_parse_rule ) in serialisable_parse_rules ]
         self._string_processor = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_string_processor )
         
     

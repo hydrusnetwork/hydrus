@@ -27,7 +27,31 @@ re_leading_double_colon = re.compile( '^::(?!:)' )
 re_leading_colons = re.compile( '^:+' )
 re_leading_byte_order_mark = re.compile( '^' + HC.UNICODE_BYTE_ORDER_MARK ) # unicode .txt files prepend with this, wew
 
+# Control Character definitions
+# easy answer is they are all fairly horrible, but ZWNJ and ZWJ (zero-width joiner stuff) are useful for hangul and arabic rendering etc...
+
+# ZWNJ and ZWJ: [\u200C\u200D]
+
+# c0 and c1 (newline, tab, "ring bell", "start of selection"): [\u0000-\u001F\u007F-\u009F]
+# cf (right-to-left, "bidi", BOM), but allowing ZWNJ and ZWJ: [\u200B\u200E\u200F\u202A-\u202E\u2066-\u2069\ufeff]
+# co (private use): [\uE000-\uF8FF\U000F0000-\U000FFFFD\U00100000-\U0010FFFD]
+# cs (surrogates): [\uD800-\uDFFF]
+# there's also "unassigned", but to chase that up we have to test each char against unicodedata library. we'll never solve that perfectly, so let's just go breddy gud for now
+
+re_undesired_control_characters = re.compile( r'[\u0000-\u001F\u007F-\u009F\u200B\u200E\u200F\u202A-\u202E\u2066-\u2069\ufeff\uE000-\uF8FF\U000F0000-\U000FFFFD\U00100000-\U0010FFFD\uD800-\uDFFF]' )
+re_oops_all_zero_width_joiners = re.compile( r'^[\u200C\u200D]+$' )
+re_zero_width_joiners = re.compile( r'[\u200C\u200D]' )
+
 re_has_surrogate_garbage = re.compile( r'[\ud800-\udfff]' )
+
+re_this_is_all_latin_and_zero_width = re.compile( r'^[\u0020-\u007E\u00A0-\u024F\u200C\u200D]+$' ) # ascii block, normal symbols, and regular euro accented characters
+
+# korean uses these pretty much: [\u1100-\u11FF\uAC00-\uD7AF]
+
+re_looks_like_hangul = re.compile( r'[\u1100-\u11FF\uAC00-\uD7AF]' )
+HANGUL_FILLER_CHARACTER = '\u3164'
+
+# there's some more CJK, mongolian, and braille in the style of the hangul filler character if we want to keep at this
 
 HYDRUS_NOTE_NEWLINE = '\n'
 
@@ -264,6 +288,27 @@ def GetFirstLineSummary( text: typing.Optional[ str ] ) -> str:
         
         return ''
         
+    
+
+def GenerateHumanTextSortKey():
+    """
+    Solves the 19, 20, 200, 21, 22 issue when sorting 'Page 21.jpg' type strings.
+    Breaks the string into groups of text and int (i.e. ( ( "Page ", 0 ), ( '', 21 ), ( ".jpg", 0 ) ) ).
+    We declare that a number is earlier than text.
+    """
+    
+    convert = lambda t: ( '', int( t ) ) if t.isdecimal() else ( t, 0 )
+    
+    split_alphanum = lambda t: tuple( ( convert( sub_t ) for sub_t in re.split( '([0-9]+)', t.casefold() ) ) )
+    
+    return split_alphanum
+    
+
+HumanTextSortKey = GenerateHumanTextSortKey()
+
+def HumanTextSort( texts ):
+    
+    texts.sort( key = HumanTextSortKey ) 
     
 
 def LooksLikeHTML( file_data: typing.Union[ str, bytes ] ):

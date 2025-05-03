@@ -1532,8 +1532,6 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
         
         have_cross_referenced_file_locations = False
         
-        CG.client_controller.ResetIdleTimer()
-        
         system_predicates = file_search_context.GetSystemPredicates()
         
         system_limit = system_predicates.GetLimit( apply_implicit_limit = apply_implicit_limit )

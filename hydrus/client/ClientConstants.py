@@ -610,6 +610,8 @@ class GlobalPixmaps( object ):
         self.eye = QG.QPixmap( os.path.join( HC.STATIC_DIR, 'eye.png' ) )
         self.fullscreen_switch = QG.QPixmap( os.path.join( HC.STATIC_DIR, 'fullscreen_switch.png' ) )
         self.open_externally = QG.QPixmap( os.path.join( HC.STATIC_DIR, 'open_externally.png' ) )
+        self.move = QG.QPixmap( os.path.join( HC.STATIC_DIR, 'move.png' ) )
+        self.move_cursor = QG.QPixmap( os.path.join( HC.STATIC_DIR, 'move32x.png' ) )
         
         self.dump_ok = QG.QPixmap( os.path.join( HC.STATIC_DIR, 'dump_ok.png' ) )
         self.dump_recoverable = QG.QPixmap( os.path.join( HC.STATIC_DIR, 'dump_recoverable.png' ) )

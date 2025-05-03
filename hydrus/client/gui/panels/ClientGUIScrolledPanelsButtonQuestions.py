@@ -1,6 +1,7 @@
 from qtpy import QtWidgets as QW
 
 from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientGlobals as CG
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.panels import ClientGUIScrolledPanels
@@ -45,7 +46,7 @@ class QuestionYesNoPanel( ClientGUIScrolledPanels.ResizingScrolledPanel ):
 
 class QuestionYesNoNoPanel( ClientGUIScrolledPanels.ResizingScrolledPanel ):
     
-    def __init__( self, parent, message, yes_label = 'yes', no_tuples = None ):
+    def __init__( self, parent, message, yes_label = 'yes', no_tuples = None, disable_yes_initially = False ):
         
         super().__init__( parent )
         
@@ -93,6 +94,18 @@ class QuestionYesNoNoPanel( ClientGUIScrolledPanels.ResizingScrolledPanel ):
         self.widget().setLayout( vbox )
         
         ClientGUIFunctions.SetFocusLater( self._yes )
+        
+        if disable_yes_initially:
+            
+            def do_it():
+                
+                self._yes.setEnabled( True )
+                
+            
+            CG.client_controller.CallLaterQtSafe( self, 1.2, 'delayed button enable', do_it )
+            
+            self._yes.setEnabled( False )
+            
         
     
     def _DoNo( self, value ):

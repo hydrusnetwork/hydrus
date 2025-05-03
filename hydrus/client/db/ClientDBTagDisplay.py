@@ -434,7 +434,7 @@ class ClientDBTagDisplay( ClientDBModule.ClientDBModule ):
         return predicates
         
     
-    def GetSiblingsAndParentsForTags( self, tags ):
+    def GetSiblingsAndParentsForTags( self, tag_display_type: int, tags: typing.Collection[ str ] ):
         
         tag_services = self.modules_services.GetServices( HC.REAL_TAG_SERVICES )
         
@@ -462,14 +462,14 @@ class ClientDBTagDisplay( ClientDBModule.ClientDBModule ):
             
             existing_tag_ids = set( existing_tag_ids_to_tags.keys() )
             
-            tag_ids_to_ideal_tag_ids = self.modules_tag_siblings.GetTagIdsToIdealTagIds( ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, tag_service_id, existing_tag_ids )
+            tag_ids_to_ideal_tag_ids = self.modules_tag_siblings.GetTagIdsToIdealTagIds( tag_display_type, tag_service_id, existing_tag_ids )
             
             ideal_tag_ids = set( tag_ids_to_ideal_tag_ids.values() )
             
-            ideal_tag_ids_to_sibling_chain_ids = self.modules_tag_siblings.GetIdealTagIdsToChains( ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, tag_service_id, ideal_tag_ids )
+            ideal_tag_ids_to_sibling_chain_ids = self.modules_tag_siblings.GetIdealTagIdsToChains( tag_display_type, tag_service_id, ideal_tag_ids )
             
-            ideal_tag_ids_to_descendant_tag_ids = self.modules_tag_parents.GetTagsToDescendants( ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, tag_service_id, ideal_tag_ids )
-            ideal_tag_ids_to_ancestor_tag_ids = self.modules_tag_parents.GetTagsToAncestors( ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, tag_service_id, ideal_tag_ids )
+            ideal_tag_ids_to_descendant_tag_ids = self.modules_tag_parents.GetTagsToDescendants( tag_display_type, tag_service_id, ideal_tag_ids )
+            ideal_tag_ids_to_ancestor_tag_ids = self.modules_tag_parents.GetTagsToAncestors( tag_display_type, tag_service_id, ideal_tag_ids )
             
             all_tag_ids = set()
             

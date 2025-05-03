@@ -15,7 +15,10 @@ from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientThreading
 from hydrus.client.duplicates import ClientDuplicatesAutoResolution
+from hydrus.client.duplicates import ClientDuplicatesAutoResolutionComparators
 from hydrus.client.duplicates import ClientDuplicates
+from hydrus.client.search import ClientNumberTest
+from hydrus.client.search import ClientSearchPredicate
 from hydrus.client.gui import ClientGUIAsync
 from hydrus.client.gui import ClientGUICore as CGC
 from hydrus.client.gui import ClientGUIDialogsQuick
@@ -34,6 +37,7 @@ from hydrus.client.gui.metadata import ClientGUIMetadataConditional
 from hydrus.client.gui.panels import ClientGUIScrolledPanels
 from hydrus.client.gui.widgets import ClientGUICommon
 from hydrus.client.gui.widgets import ClientGUIMenuButton
+from hydrus.client.gui.widgets import ClientGUINumberTest
 
 class EditDuplicatesAutoResolutionRulesPanel( ClientGUIScrolledPanels.EditPanel ):
     
@@ -61,8 +65,8 @@ class EditDuplicatesAutoResolutionRulesPanel( ClientGUIScrolledPanels.EditPanel 
         
         self._duplicates_auto_resolution_rules_panel.SetListCtrl( self._duplicates_auto_resolution_rules )
         
-        #self._duplicates_auto_resolution_rules_panel.AddButton( 'add', self._Add )
         self._duplicates_auto_resolution_rules_panel.AddButton( 'add suggested', self._AddSuggested )
+        self._duplicates_auto_resolution_rules_panel.AddButton( 'add', self._Add )
         self._duplicates_auto_resolution_rules_panel.AddButton( 'edit', self._Edit, enabled_only_on_single_selection = True )
         self._duplicates_auto_resolution_rules_panel.AddDeleteButton()
         #self._duplicates_auto_resolution_rules_panel.AddImportExportButtons( ( ClientDuplicatesAutoResolution.DuplicatesAutoResolutionRule, ), self._ImportRule )
@@ -85,7 +89,7 @@ class EditDuplicatesAutoResolutionRulesPanel( ClientGUIScrolledPanels.EditPanel 
         st_warning.setAlignment( QC.Qt.AlignmentFlag.AlignCenter )
         QP.AddToLayout( vbox, st_warning, CC.FLAGS_EXPAND_PERPENDICULAR )
         
-        st = ClientGUICommon.BetterStaticText( self, 'Hey, I am launching this system, but only for the one test rule (hit "add suggested" to get it)! Let me know how it goes!' )
+        st = ClientGUICommon.BetterStaticText( self, 'Hey, this system is still launching, and not everything planned is available yet. Start with the suggested pixel duplicate jpg/png rule, and if it all makes sense to you, play with the other suggested rules and then perhaps making your own. Try to stick to pixel duplicates for now, and do semi-automatic before switching to automatic. Be careful. Let me know how it goes!' )
         st.setWordWrap( True )
         QP.AddToLayout( vbox, st, CC.FLAGS_EXPAND_PERPENDICULAR )
         
@@ -238,8 +242,6 @@ class EditDuplicatesAutoResolutionRulePanel( ClientGUIScrolledPanels.EditPanel )
         
         self._potential_duplicates_search_context = ClientGUIPotentialDuplicatesSearchContext.EditPotentialDuplicatesSearchContextPanel( self._search_panel, potential_duplicates_search_context, put_searches_side_by_side = True )
         
-        self._potential_duplicates_search_context.setEnabled( False )
-        
         #
         
         self._selector_panel = QW.QWidget( self._main_notebook )
@@ -247,8 +249,6 @@ class EditDuplicatesAutoResolutionRulePanel( ClientGUIScrolledPanels.EditPanel )
         pair_selector = duplicates_auto_resolution_rule.GetPairSelector()
         
         self._pair_selector = EditPairSelectorWidget( self._selector_panel, pair_selector )
-        
-        self._pair_selector.setEnabled( False )
         
         #
         
@@ -274,6 +274,8 @@ class EditDuplicatesAutoResolutionRulePanel( ClientGUIScrolledPanels.EditPanel )
         #
         
         label = 'First we have to find some duplicate pairs to test. This can be system:everything if you like, but it is best to narrow it down if you can.'
+        label += '\n\n'
+        label += 'It is a good idea to keep a "system:filetype is image" in here to ensure you do not include some PSD files by accident etc..'
         
         st = ClientGUICommon.BetterStaticText( self._search_panel, label = label )
         
@@ -362,7 +364,7 @@ class EditDuplicatesAutoResolutionRulePanel( ClientGUIScrolledPanels.EditPanel )
         
         vbox = QP.VBoxLayout()
         
-        st = ClientGUICommon.BetterStaticText( self, 'Hey, I am launching this system, but only for the one test rule! Most of this dialog is disabled, but check out the preview panel!' )
+        st = ClientGUICommon.BetterStaticText( self, 'Hey, this system is still launching, and not everything planned is available yet! You can now set basic relative pair comparison rules--try it out!' )
         st.setWordWrap( True )
         QP.AddToLayout( vbox, st, CC.FLAGS_EXPAND_PERPENDICULAR )
         
@@ -559,15 +561,15 @@ class EditPairActionsWidget( ClientGUICommon.StaticBox ):
 
 class EditPairComparatorOneFilePanel( ClientGUIScrolledPanels.EditPanel ):
     
-    def __init__( self, parent, pair_comparator: ClientDuplicatesAutoResolution.PairComparatorOneFile ):
+    def __init__( self, parent, pair_comparator: ClientDuplicatesAutoResolutionComparators.PairComparatorOneFile ):
         
         super().__init__( parent )
         
         self._looking_at = ClientGUICommon.BetterChoice( self )
         
-        self._looking_at.addItem( 'A will match these', ClientDuplicatesAutoResolution.LOOKING_AT_A )
-        self._looking_at.addItem( 'B will match these', ClientDuplicatesAutoResolution.LOOKING_AT_B )
-        self._looking_at.addItem( 'either will match these', ClientDuplicatesAutoResolution.LOOKING_AT_EITHER )
+        self._looking_at.addItem( 'A will match these', ClientDuplicatesAutoResolutionComparators.LOOKING_AT_A )
+        self._looking_at.addItem( 'B will match these', ClientDuplicatesAutoResolutionComparators.LOOKING_AT_B )
+        self._looking_at.addItem( 'either will match these', ClientDuplicatesAutoResolutionComparators.LOOKING_AT_EITHER )
         
         self._metadata_conditional = ClientGUIMetadataConditional.EditMetadataConditionalPanel( self, pair_comparator.GetMetadataConditional() )
         
@@ -594,7 +596,7 @@ class EditPairComparatorOneFilePanel( ClientGUIScrolledPanels.EditPanel ):
         looking_at = self._looking_at.GetValue()
         metadata_conditional = self._metadata_conditional.GetValue()
         
-        pair_comparator = ClientDuplicatesAutoResolution.PairComparatorOneFile()
+        pair_comparator = ClientDuplicatesAutoResolutionComparators.PairComparatorOneFile()
         
         pair_comparator.SetLookingAt( looking_at )
         pair_comparator.SetMetadataConditional( metadata_conditional )
@@ -603,9 +605,130 @@ class EditPairComparatorOneFilePanel( ClientGUIScrolledPanels.EditPanel ):
         
     
 
+class EditPairComparatorRelativeFileinfoPanel( ClientGUIScrolledPanels.EditPanel ):
+    
+    def __init__( self, parent, pair_comparator: ClientDuplicatesAutoResolutionComparators.PairComparatorRelativeFileInfo ):
+        
+        super().__init__( parent )
+        
+        # note in a label that for duration, the units is ms
+        
+        self._system_predicate = ClientGUICommon.BetterChoice( self )
+        
+        for predicate_type in ClientSearchPredicate.PREDICATE_TYPES_WE_CAN_EXTRACT_FROM_MEDIA_RESULTS:
+            
+            predicate = ClientSearchPredicate.Predicate( predicate_type = predicate_type )
+            
+            self._system_predicate.addItem( predicate.ToString(), predicate )
+            
+        
+        allowed_operators = [
+            ClientNumberTest.NUMBER_TEST_OPERATOR_LESS_THAN,
+            ClientNumberTest.NUMBER_TEST_OPERATOR_EQUAL,
+            ClientNumberTest.NUMBER_TEST_OPERATOR_NOT_EQUAL,
+            ClientNumberTest.NUMBER_TEST_OPERATOR_GREATER_THAN,
+            ClientNumberTest.NUMBER_TEST_OPERATOR_APPROXIMATE_ABSOLUTE,
+            ClientNumberTest.NUMBER_TEST_OPERATOR_APPROXIMATE_PERCENT
+        ]
+        
+        self._number_test = ClientGUINumberTest.NumberTestWidget(
+            self,
+            allowed_operators = allowed_operators,
+            swap_in_string_for_value = 'B'
+        )
+        
+        self._multiplier = QW.QDoubleSpinBox( self )
+        self._multiplier.setDecimals( 2 )
+        self._multiplier.setSingleStep( 0.01 )
+        self._multiplier.setMinimum( -10000 )
+        self._multiplier.setMaximum( 10000 )
+        
+        self._multiplier.setMinimumWidth( ClientGUIFunctions.ConvertTextToPixelWidth( self._multiplier, 11 ) )
+        
+        self._delta = ClientGUICommon.BetterSpinBox( self, min = -100000000, max = 100000000 )
+        
+        self._delta.setMinimumWidth( ClientGUIFunctions.ConvertTextToPixelWidth( self._delta, 13 ) )
+        
+        tt = 'If you dabble with this, the unit is usually obvious, but for duration, the unit is milliseconds!'
+        
+        self._delta.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
+        
+        self._live_value_st = ClientGUICommon.BetterStaticText( self )
+        
+        #
+        
+        self._system_predicate.SetValue( pair_comparator.GetSystemPredicate() )
+        self._number_test.SetValue( pair_comparator.GetNumberTest() )
+        self._multiplier.setValue( pair_comparator.GetMultiplier() )
+        self._delta.setValue( pair_comparator.GetDelta() )
+        
+        #
+        
+        vbox = QP.VBoxLayout()
+        
+        rows = []
+        
+        rows.append( ( 'value to test: ', self._system_predicate ) )
+        rows.append( ( 'operator: ', self._number_test ) )
+        rows.append( ( 'multiplier (optional): ', self._multiplier ) )
+        rows.append( ( 'delta (optional): ', self._delta ) )
+        
+        gridbox = ClientGUICommon.WrapInGrid( self, rows )
+        
+        QP.AddToLayout( vbox, gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        
+        QP.AddToLayout( vbox, self._live_value_st, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        self.widget().setLayout( vbox )
+        
+        self._system_predicate.currentIndexChanged.connect( self._UpdateLabel )
+        self._number_test.valueChanged.connect( self._UpdateLabel )
+        self._multiplier.valueChanged.connect( self._UpdateLabel )
+        self._delta.valueChanged.connect( self._UpdateLabel )
+        
+        self._UpdateLabel()
+        
+    
+    def _UpdateLabel( self ):
+        
+        try:
+            
+            value = self.GetValue()
+            
+            text = value.GetSummary()
+            
+        except:
+            
+            text = 'Could not calculate current value!'
+            
+        
+        self._live_value_st.setText( text )
+        
+    
+    def GetValue( self ):
+        
+        system_predicate = self._system_predicate.GetValue()
+        
+        number_test = self._number_test.GetValue()
+        number_test.value = 1
+        
+        multiplier = self._multiplier.value()
+        delta = self._delta.value()
+        
+        pair_comparator = ClientDuplicatesAutoResolutionComparators.PairComparatorRelativeFileInfo()
+        
+        pair_comparator.SetSystemPredicate( system_predicate )
+        pair_comparator.SetNumberTest( number_test )
+        pair_comparator.SetMultiplier( multiplier )
+        pair_comparator.SetDelta( delta )
+        
+        return pair_comparator
+        
+    
+
 class EditPairSelectorWidget( ClientGUICommon.StaticBox ):
     
-    def __init__( self, parent, pair_selector: ClientDuplicatesAutoResolution.PairSelector ):
+    def __init__( self, parent, pair_selector: ClientDuplicatesAutoResolutionComparators.PairSelector ):
         
         super().__init__( parent, 'pair comparison and selection' )
         
@@ -620,20 +743,50 @@ class EditPairSelectorWidget( ClientGUICommon.StaticBox ):
     
     def _Add( self ):
         
-        # presumably we could ask for the type of comparator here
+        choice_tuples = [
+            ( 'test A or B', ClientDuplicatesAutoResolutionComparators.PairComparatorOneFile(), 'A comparator that tests one file at a time using system predicates.' ),
+            ( 'test A against B using file info', ClientDuplicatesAutoResolutionComparators.PairComparatorRelativeFileInfo(), 'A comparator that performs a number test on the width, filesize, etc.. of A vs B.' )
+        ]
         
-        pair_comparator = ClientDuplicatesAutoResolution.PairComparatorOneFile()
+        comparator = ClientDuplicatesAutoResolutionComparators.PairComparatorRelativeHardcoded( hardcoded_type = ClientDuplicatesAutoResolutionComparators.HARDCODED_COMPARATOR_TYPE_FILETYPE_SAME )
         
-        return self._Edit( pair_comparator )
+        choice_tuples.append(
+            ( comparator.GetSummary(), comparator, comparator.GetSummary() )
+        )
+        
+        comparator = ClientDuplicatesAutoResolutionComparators.PairComparatorRelativeHardcoded( hardcoded_type = ClientDuplicatesAutoResolutionComparators.HARDCODED_COMPARATOR_TYPE_FILETYPE_DIFFERS )
+        
+        choice_tuples.append(
+            ( comparator.GetSummary(), comparator, comparator.GetSummary() )
+        )
+        
+        try:
+            
+            comparator = ClientGUIDialogsQuick.SelectFromListButtons( self, 'Which type of comparator?', choice_tuples )
+            
+        except HydrusExceptions.CancelledException:
+            
+            raise
+            
+        
+        return self._Edit( comparator )
         
     
-    def _Edit( self, comparator: ClientDuplicatesAutoResolution.PairComparator ):
+    def _Edit( self, comparator: ClientDuplicatesAutoResolutionComparators.PairComparator ):
         
         with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit comparator' ) as dlg:
             
-            if isinstance( comparator, ClientDuplicatesAutoResolution.PairComparatorOneFile ):
+            if isinstance( comparator, ClientDuplicatesAutoResolutionComparators.PairComparatorOneFile ):
                 
                 panel = EditPairComparatorOneFilePanel( dlg, comparator )
+                
+            elif isinstance( comparator, ClientDuplicatesAutoResolutionComparators.PairComparatorRelativeFileInfo ):
+                
+                panel = EditPairComparatorRelativeFileinfoPanel( dlg, comparator )
+                
+            elif isinstance( comparator, ClientDuplicatesAutoResolutionComparators.PairComparatorRelativeHardcoded ):
+                
+                return comparator
                 
             
             dlg.SetPanel( panel )
@@ -651,14 +804,14 @@ class EditPairSelectorWidget( ClientGUICommon.StaticBox ):
             
         
     
-    def _PairComparatorToPretty( self, pair_comparator: ClientDuplicatesAutoResolution.PairComparator ):
+    def _PairComparatorToPretty( self, pair_comparator: ClientDuplicatesAutoResolutionComparators.PairComparator ):
         
         return pair_comparator.GetSummary()
         
     
-    def GetValue( self ) -> ClientDuplicatesAutoResolution.PairSelector:
+    def GetValue( self ) -> ClientDuplicatesAutoResolutionComparators.PairSelector:
         
-        pair_selector = ClientDuplicatesAutoResolution.PairSelector()
+        pair_selector = ClientDuplicatesAutoResolutionComparators.PairSelector()
         
         comparators = self._comparators.GetData()
         
@@ -701,8 +854,8 @@ class ReviewDuplicatesAutoResolutionPanel( QW.QWidget ):
         
         self._duplicates_auto_resolution_rules_panel.SetListCtrl( self._duplicates_auto_resolution_rules )
         
-        self._duplicates_auto_resolution_rules_panel.AddButton( 'edit rules', self._Edit )
         self._duplicates_auto_resolution_rules_panel.AddButton( 'review actions', self._ReviewActions, enabled_only_on_selection = True )
+        self._duplicates_auto_resolution_rules_panel.AddButton( 'edit rules', self._Edit )
         self._duplicates_auto_resolution_rules_panel.AddButton( 'work hard', self._FlipWorkingHard, enabled_check_func = self._CanWorkHard )
         
         #
@@ -711,7 +864,7 @@ class ReviewDuplicatesAutoResolutionPanel( QW.QWidget ):
         
         QP.AddToLayout( vbox, help_hbox, CC.FLAGS_ON_RIGHT )
         
-        st = ClientGUICommon.BetterStaticText( self, 'Hey, I am launching this system, but only for the one test rule! Try it out and let me know how it goes!' )
+        st = ClientGUICommon.BetterStaticText( self, 'Hey, this system is still launching, and not everything planned is available yet! Start with the suggested pixel duplicate jpg/png rule, and if it all makes sense to you, play with the other suggested rules and then perhaps making your own. Try to stick to pixel duplicates for now, and do semi-automatic before switching to automatic. Be careful. Let me know how it goes!' )
         st.setWordWrap( True )
         
         QP.AddToLayout( vbox, st, CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -911,6 +1064,20 @@ class ReviewDuplicatesAutoResolutionPanel( QW.QWidget ):
         return updater
         
     
+    def _RegenNumbers( self ):
+        
+        text = f'This will delete all the cached pair counts for your rules. If it seems there is a miscount somewhere (e.g. a pending pair to search that never clears), try hitting this.'
+        
+        result = ClientGUIDialogsQuick.GetYesNo( self, text )
+        
+        if result == QW.QDialog.DialogCode.Accepted:
+            
+            CG.client_controller.Write( 'duplicate_auto_resolution_maintenance_regen_numbers' )
+            
+            self._rules_list_updater.update()
+            
+        
+    
     def _ResetDeclined( self ):
         
         rules = self._duplicates_auto_resolution_rules.GetData( only_selected = True )
@@ -1031,6 +1198,7 @@ class ReviewDuplicatesAutoResolutionPanel( QW.QWidget ):
         
         ClientGUIMenus.AppendMenuItem( menu, 'maintenance: delete orphan rules', 'Scan for rules that are partly missing (probably from hard drive damage) and delete them.', self._DeleteOrphanRules )
         ClientGUIMenus.AppendMenuItem( menu, 'maintenance: fix orphan potential pairs', 'Scan for potential pairs in your rule cache that are no longer pertinent and delete them.', self._DeleteOrphanPotentialPairs )
+        ClientGUIMenus.AppendMenuItem( menu, 'maintenance: regen cached numbers', 'Clear cached pair counts and regenerate from source.', self._RegenNumbers )
         
         CGC.core().PopupMenu( self._cog_button, menu )
         

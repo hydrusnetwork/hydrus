@@ -225,19 +225,19 @@ def GetMediasTagCount( pool, tag_service_key, tag_display_type ):
     return GetTagsManagersTagCount( tags_managers, tag_service_key, tag_display_type )
     
 
-def GetShowAction( media: "MediaSingleton", canvas_type: int ):
+def GetShowAction( media_result: ClientMediaResult.MediaResult, canvas_type: int ):
     
     start_paused = False
     start_with_embed = False
     
     bad_result = ( CC.MEDIA_VIEWER_ACTION_DO_NOT_SHOW, start_paused, start_with_embed )
     
-    if media is None:
+    if media_result is None:
         
         return bad_result
         
     
-    mime = media.GetMime()
+    mime = media_result.GetMime()
     
     if mime not in HC.ALLOWED_MIMES: # stopgap to catch a collection or application_unknown due to unusual import order/media moving
         
@@ -282,9 +282,9 @@ def GetTagsManagersTagCount( tags_managers, tag_service_key, tag_display_type ):
     return ( current_tags_to_count, deleted_tags_to_count, pending_tags_to_count, petitioned_tags_to_count )
     
 
-def UserWantsUsToDisplayMedia( media: "MediaSingleton", canvas_type: int ) -> bool:
+def UserWantsUsToDisplayMedia( media_result: ClientMediaResult.MediaResult, canvas_type: int ) -> bool:
     
-    ( media_show_action, media_start_paused, media_start_with_embed ) = GetShowAction( media, canvas_type )
+    ( media_show_action, media_start_paused, media_start_with_embed ) = GetShowAction( media_result, canvas_type )
     
     if media_show_action in ( CC.MEDIA_VIEWER_ACTION_DO_NOT_SHOW_ON_ACTIVATION_OPEN_EXTERNALLY, CC.MEDIA_VIEWER_ACTION_DO_NOT_SHOW ):
         
@@ -1107,7 +1107,7 @@ class MediaList( object ):
                 
                 if for_media_viewer:
                     
-                    if not UserWantsUsToDisplayMedia( media, CC.CANVAS_MEDIA_VIEWER ) or not CanDisplayMedia( media ):
+                    if not UserWantsUsToDisplayMedia( media.GetMediaResult(), CC.CANVAS_MEDIA_VIEWER ) or not CanDisplayMedia( media ):
                         
                         continue
                         

@@ -105,6 +105,13 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         self._listbook.AddPage( 'advanced', self._AdvancedPanel( self._listbook, self._new_options ) )
         
+        if self._new_options.GetBoolean( 'remember_options_window_panel' ):
+            
+            self._listbook.currentChanged.connect( self.SetCurrentOptionsPanel )
+            
+            self._listbook.SelectName( self._new_options.GetString( 'last_options_window_panel' ) )
+            
+        
         #
         
         vbox = QP.VBoxLayout()
@@ -1279,7 +1286,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._delete_to_recycle_bin = QW.QCheckBox( self )
             
-            self._ms_to_wait_between_physical_file_deletes = ClientGUICommon.BetterSpinBox( self, min=20, max = 5000 )
+            self._ms_to_wait_between_physical_file_deletes = ClientGUITime.TimeDeltaWidget( self, min = 0.02, days = False, hours = False, minutes = False, seconds = True, milliseconds = True )
             tt = 'Deleting a file from a hard disk can be resource expensive, so when files leave the trash, the actual physical file delete happens later, in the background. The operation is spread out so as not to give you lag spikes.'
             self._ms_to_wait_between_physical_file_deletes.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
             
@@ -1328,7 +1335,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._delete_to_recycle_bin.setChecked( HC.options[ 'delete_to_recycle_bin' ] )
             
-            self._ms_to_wait_between_physical_file_deletes.setValue( self._new_options.GetInteger( 'ms_to_wait_between_physical_file_deletes' ) )
+            self._ms_to_wait_between_physical_file_deletes.SetValue( HydrusTime.SecondiseMSFloat( self._new_options.GetInteger( 'ms_to_wait_between_physical_file_deletes' ) ) )
             
             self._confirm_trash.setChecked( HC.options[ 'confirm_trash' ] )
             tt = 'If there is only one place to delete the file from, you will get no delete dialog--it will just be deleted immediately. Applies the same way to undelete.'
@@ -1377,7 +1384,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows.append( ( 'Confirm when copying files across local file services: ', self._confirm_multiple_local_file_services_copy ) )
             rows.append( ( 'Confirm when moving files across local file services: ', self._confirm_multiple_local_file_services_move ) )
             rows.append( ( 'When physically deleting files or folders, send them to the OS\'s recycle bin: ', self._delete_to_recycle_bin ) )
-            rows.append( ( 'When maintenance physically deletes files, wait this many ms between each delete: ', self._ms_to_wait_between_physical_file_deletes ) )
+            rows.append( ( 'When maintenance physically deletes files, wait this long between each delete: ', self._ms_to_wait_between_physical_file_deletes ) )
             rows.append( ( 'When finishing filtering, always delete from all possible domains: ', self._only_show_delete_from_all_local_domains_when_filtering ) )
             rows.append( ( 'Remove files from view when they are archive/delete filtered: ', self._remove_filtered_files ) )
             rows.append( ( '--even skipped files: ', self._remove_filtered_files_even_when_skipped ) )
@@ -1480,7 +1487,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._new_options.SetBoolean( 'only_show_delete_from_all_local_domains_when_filtering', self._only_show_delete_from_all_local_domains_when_filtering.isChecked() )
             
-            self._new_options.SetInteger( 'ms_to_wait_between_physical_file_deletes', self._ms_to_wait_between_physical_file_deletes.value() )
+            self._new_options.SetInteger( 'ms_to_wait_between_physical_file_deletes', HydrusTime.MillisecondiseS( self._ms_to_wait_between_physical_file_deletes.GetValue() ) )
             
             self._new_options.SetBoolean( 'confirm_multiple_local_file_services_copy', self._confirm_multiple_local_file_services_copy.isChecked() )
             self._new_options.SetBoolean( 'confirm_multiple_local_file_services_move', self._confirm_multiple_local_file_services_move.isChecked() )
@@ -1767,12 +1774,18 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._use_qt_file_dialogs = QW.QCheckBox( self._misc_panel )
             self._use_qt_file_dialogs.setToolTip( ClientGUIFunctions.WrapToolTip( 'If you get crashes opening file/directory dialogs, try this.' ) )
             
+            self._remember_options_window_panel = QW.QCheckBox( self._misc_panel )
+            self._remember_options_window_panel.setToolTip( ClientGUIFunctions.WrapToolTip( 'This will cause the options window (this one) to reopen at the last panel you were looking at when it was closed.' ) )
+            
             #
             
             frame_locations_panel = ClientGUICommon.StaticBox( self, 'frame locations' )
             
             self._disable_get_safe_position_test = QW.QCheckBox( self._misc_panel )
             self._disable_get_safe_position_test.setToolTip( ClientGUIFunctions.WrapToolTip( 'If your windows keep getting \'rescued\' despite being in a good location, try this.' ) )
+            
+            self._save_window_size_and_position_on_close = QW.QCheckBox( self._misc_panel )
+            self._save_window_size_and_position_on_close.setToolTip( ClientGUIFunctions.WrapToolTip( 'If you want to save media viewer size when closing the window in addition to when it gets resized/moved normally, check this box. Can be useful behaviour when using multiple open media viewers.' ) )
             
             model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_FRAME_LOCATIONS.ID, self._GetPrettyFrameLocationInfo, self._GetPrettyFrameLocationInfo )
             
@@ -1812,7 +1825,11 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._use_qt_file_dialogs.setChecked( self._new_options.GetBoolean( 'use_qt_file_dialogs' ) )
             
+            self._remember_options_window_panel.setChecked( self._new_options.GetBoolean( 'remember_options_window_panel' ) )
+            
             self._disable_get_safe_position_test.setChecked( self._new_options.GetBoolean( 'disable_get_safe_position_test' ) )
+            
+            self._save_window_size_and_position_on_close.setChecked( self._new_options.GetBoolean( 'save_window_size_and_position_on_close' ) )
             
             for ( name, info ) in self._new_options.GetFrameLocations():
                 
@@ -1843,6 +1860,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows.append( ( 'EXPERIMENTAL: Bytes strings >1KB pseudo significant figures: ', self._human_bytes_sig_figs ) )
             rows.append( ( 'BUGFIX: If on macOS, show dialog menus in a debug menu: ', self._do_macos_debug_dialog_menus ) )
             rows.append( ( 'ANTI-CRASH BUGFIX: Use Qt file/directory selection dialogs, rather than OS native: ', self._use_qt_file_dialogs ) )
+            rows.append( ( 'Remember last open options panel in this window: ', self._remember_options_window_panel ) )
             
             gridbox = ClientGUICommon.WrapInGrid( self, rows )
             
@@ -1860,6 +1878,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows = []
             
             rows.append( ( 'BUGFIX: Disable off-screen window rescue: ', self._disable_get_safe_position_test ) )
+            
+            rows.append( ( 'Save media viewer window size and position on close: ', self._save_window_size_and_position_on_close ) )
             
             gridbox = ClientGUICommon.WrapInGrid( self, rows )
             
@@ -2018,8 +2038,10 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._new_options.SetBoolean( 'do_macos_debug_dialog_menus', self._do_macos_debug_dialog_menus.isChecked() )
             self._new_options.SetBoolean( 'use_qt_file_dialogs', self._use_qt_file_dialogs.isChecked() )
+            self._new_options.SetBoolean( 'remember_options_window_panel', self._remember_options_window_panel.isChecked() )
             
             self._new_options.SetBoolean( 'disable_get_safe_position_test', self._disable_get_safe_position_test.isChecked() )
+            self._new_options.SetBoolean( 'save_window_size_and_position_on_close', self._save_window_size_and_position_on_close.isChecked() )
             
             for listctrl_list in self._frame_locations.GetData():
                 
@@ -2062,8 +2084,13 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._show_all_my_files_on_page_chooser = QW.QCheckBox( self._pages_panel )
             self._show_all_my_files_on_page_chooser.setToolTip( ClientGUIFunctions.WrapToolTip( 'This will only show if you have more than one local file domain.' ) )
+            self._show_all_my_files_on_page_chooser_at_top = QW.QCheckBox( self._pages_panel )
+            self._show_all_my_files_on_page_chooser_at_top.setToolTip( ClientGUIFunctions.WrapToolTip( 'Put "all my files" at the top of the page chooser, to better see it if you have many local file domains.' ) )
+            
             self._show_local_files_on_page_chooser = QW.QCheckBox( self._pages_panel )
             self._show_local_files_on_page_chooser.setToolTip( ClientGUIFunctions.WrapToolTip( 'If you do not know what this is, you do not want it!' ) )
+            self._show_local_files_on_page_chooser_at_top = QW.QCheckBox( self._pages_panel )
+            self._show_local_files_on_page_chooser_at_top.setToolTip( ClientGUIFunctions.WrapToolTip( 'Put "local files" at the top of the page chooser (above "all my files" as well, if it is present).' ) )
             
             self._confirm_all_page_closes = QW.QCheckBox( self._pages_panel )
             self._confirm_all_page_closes.setToolTip( ClientGUIFunctions.WrapToolTip( 'With this, you will always be asked, even on single page closures of simple file pages.' ) )
@@ -2164,7 +2191,10 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._show_session_size_warnings.setChecked( self._new_options.GetBoolean( 'show_session_size_warnings' ) )
             
             self._show_all_my_files_on_page_chooser.setChecked( self._new_options.GetBoolean( 'show_all_my_files_on_page_chooser' ) )
+            self._show_all_my_files_on_page_chooser_at_top.setChecked( self._new_options.GetBoolean( 'show_all_my_files_on_page_chooser_at_top' ) )
             self._show_local_files_on_page_chooser.setChecked( self._new_options.GetBoolean( 'show_local_files_on_page_chooser' ) )
+            self._show_local_files_on_page_chooser_at_top.setChecked( self._new_options.GetBoolean( 'show_local_files_on_page_chooser_at_top' ) )
+            
             self._confirm_all_page_closes.setChecked( self._new_options.GetBoolean( 'confirm_all_page_closes' ) )
             self._confirm_non_empty_downloader_page_close.setChecked( self._new_options.GetBoolean( 'confirm_non_empty_downloader_page_close' ) )
             
@@ -2212,8 +2242,10 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             rows = []
             
-            rows.append( ( 'In new page chooser, show "all my files" if appropriate: ', self._show_all_my_files_on_page_chooser ) )
-            rows.append( ( 'In new page chooser, show "local files": ', self._show_local_files_on_page_chooser ) )
+            rows.append( ( 'In new page chooser, show "all my files" if appropriate:', self._show_all_my_files_on_page_chooser ) )
+            rows.append( ( '  Put it at the top:', self._show_all_my_files_on_page_chooser_at_top ) )
+            rows.append( ( 'In new page chooser, show "local files":', self._show_local_files_on_page_chooser ) )
+            rows.append( ( '  Put it at the top:', self._show_local_files_on_page_chooser_at_top ) )
             rows.append( ( 'Confirm when closing any page: ', self._confirm_all_page_closes ) )
             rows.append( ( 'Confirm when closing a non-empty downloader page: ', self._confirm_non_empty_downloader_page_close ) )
             rows.append( ( 'Put new page tabs on: ', self._default_new_page_goes ) )
@@ -2292,7 +2324,10 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._new_options.SetBoolean( 'only_save_last_session_during_idle', self._only_save_last_session_during_idle.isChecked() )
             
             self._new_options.SetBoolean( 'show_all_my_files_on_page_chooser', self._show_all_my_files_on_page_chooser.isChecked() )
+            self._new_options.SetBoolean( 'show_all_my_files_on_page_chooser_at_top', self._show_all_my_files_on_page_chooser_at_top.isChecked() )
             self._new_options.SetBoolean( 'show_local_files_on_page_chooser', self._show_local_files_on_page_chooser.isChecked() )
+            self._new_options.SetBoolean( 'show_local_files_on_page_chooser_at_top', self._show_local_files_on_page_chooser_at_top.isChecked() )
+            
             self._new_options.SetBoolean( 'confirm_all_page_closes', self._confirm_all_page_closes.isChecked() )
             self._new_options.SetBoolean( 'confirm_non_empty_downloader_page_close', self._confirm_non_empty_downloader_page_close.isChecked() )
             
@@ -2989,6 +3024,9 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._focus_media_tab_on_viewer_close_if_possible = QW.QCheckBox( window_panel )
             self._focus_media_tab_on_viewer_close_if_possible.setToolTip( ClientGUIFunctions.WrapToolTip( 'If the search page you opened a media viewer from is still open, re-focus it upon media viewer close. Useful if you use multiple media viewers launched from different pages. There is also a shortcut action to perform this on an individual basis.' ) )
             
+            self._focus_media_thumb_on_viewer_close = QW.QCheckBox( window_panel )
+            self._focus_media_thumb_on_viewer_close.setToolTip( ClientGUIFunctions.WrapToolTip( 'When you close a Media Viewer, it normally tells the original search page to change the current thumbnail selection to whatever you closed the media viewer on. If you prefer this not to happen, uncheck this!' ) )
+            
             #
             
             media_viewer_panel = ClientGUICommon.StaticBox( self, 'mouse and animations' )
@@ -3086,6 +3124,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             #
             
             self._focus_media_tab_on_viewer_close_if_possible.setChecked( self._new_options.GetBoolean( 'focus_media_tab_on_viewer_close_if_possible' ) )
+            self._focus_media_thumb_on_viewer_close.setChecked( self._new_options.GetBoolean( 'focus_media_thumb_on_viewer_close' ) )
             
             self._animated_scanbar_height.setValue( self._new_options.GetInteger( 'animated_scanbar_height' ) )
             self._animated_scanbar_nub_width.setValue( self._new_options.GetInteger( 'animated_scanbar_nub_width' ) )
@@ -3131,6 +3170,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows = []
             
             rows.append( ( 'Re-focus original search page when closing the media viewer: ', self._focus_media_tab_on_viewer_close_if_possible ) )
+            rows.append( ( 'Tell original search page to select exit media when closing the media viewer: ', self._focus_media_thumb_on_viewer_close ) )
             
             gridbox = ClientGUICommon.WrapInGrid( window_panel, rows )
             
@@ -3251,6 +3291,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         def UpdateOptions( self ):
             
             self._new_options.SetBoolean( 'focus_media_tab_on_viewer_close_if_possible', self._focus_media_tab_on_viewer_close_if_possible.isChecked() )
+            self._new_options.SetBoolean( 'focus_media_thumb_on_viewer_close', self._focus_media_thumb_on_viewer_close.isChecked() )
             
             self._new_options.SetBoolean( 'draw_tags_hover_in_media_viewer_background', self._draw_tags_hover_in_media_viewer_background.isChecked() )
             self._new_options.SetBoolean( 'disable_tags_hover_in_media_viewer', self._disable_tags_hover_in_media_viewer.isChecked() )
@@ -4790,6 +4831,11 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 self._close_client_to_system_tray.setEnabled( False )
                 self._start_client_in_system_tray.setEnabled( False )
                 
+                self._always_show_system_tray_icon.setChecked( False )
+                self._minimise_client_to_system_tray.setChecked( False )
+                self._close_client_to_system_tray.setChecked( False )
+                self._start_client_in_system_tray.setChecked( False )
+                
             elif not HC.PLATFORM_WINDOWS:
                 
                 if not CG.client_controller.new_options.GetBoolean( 'advanced_mode' ):
@@ -5287,7 +5333,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                     
                     if namespace != 'system':
                         
-                        namespace = HydrusTags.StripTextOfGumpf( namespace )
+                        namespace = HydrusTags.StripTagTextOfGumpf( namespace )
                         
                     
                     existing_namespaces = self._namespace_colours.GetNamespaceColours().keys()
@@ -6100,6 +6146,13 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._new_options.SetNoneableString( 'media_background_bmp_path', media_background_bmp_path )
             
+        
+    
+    def SetCurrentOptionsPanel ( self ):
+        
+        current_panel_name = self._listbook.tabText( self._listbook.GetCurrentPageIndex() )
+        
+        self._new_options.SetString( 'last_options_window_panel', current_panel_name )
         
     
     def CommitChanges( self ):

@@ -953,7 +953,7 @@ def ShowReasonsAndPagesConfirmationDialog( win: QW.QWidget, reasons_and_pages, m
         ( 'no, but show me the pages', 'show' )
     ]
     
-    ( result_code, data ) = ClientGUIDialogsQuick.GetYesNoNo( win, message, no_tuples = no_tuples, auto_yes_time = auto_yes_time )
+    ( result_code, data ) = ClientGUIDialogsQuick.GetYesNoNo( win, message, no_tuples = no_tuples, auto_yes_time = auto_yes_time, disable_yes_initially = True )
     
     if result_code == QW.QDialog.DialogCode.Accepted:
         
@@ -1510,7 +1510,9 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
             
             full_page_name = page.GetName()
             
-            full_page_name = full_page_name.replace( '\n', '' )
+            full_page_name = ''.join( full_page_name.splitlines() )
+            
+            full_page_name = full_page_name[:256]
             
         
         page_name = HydrusText.ElideText( full_page_name, max_page_name_chars )
@@ -2299,7 +2301,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         
         for ( reason, pages ) in reasons_to_pages.items():
             
-            pages.sort( key = lambda p: HydrusData.HumanTextSortKey( p.GetName() ) )
+            pages.sort( key = lambda p: HydrusText.HumanTextSortKey( p.GetName() ) )
             
         
         reasons_and_pages = sorted( reasons_to_pages.items(), key = lambda a: len( a[1] ) )
