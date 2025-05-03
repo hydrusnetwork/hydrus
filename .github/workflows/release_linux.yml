@@ -36,11 +36,12 @@ jobs:
         run: |
           cp hydrus/static/build_files/linux/hydrus_client.spec hydrus_client.spec
           cp hydrus/static/build_files/linux/hydrus_server.spec hydrus_server.spec
-          pyinstaller --log-level=DEBUG hydrus_server.spec
-          pyinstaller --log-level=DEBUG hydrus_client.spec
-          grep -i bz2 build/*/binaries.toc || true
-          find dist/ -name '*.so' -exec ldd {} \; | grep bz2 || true
-          ldd $(which python3) | grep bz2 || true
+          pyinstaller hydrus_server.spec
+          pyinstaller hydrus_client.spec
+      -
+        name: Remove Bad libbz2 version
+        run: |
+          find dist/hydrus_client \( -type f -o -type l \) -name 'libbz2-a273e504.so.1.0.6' -print -delete
       -
         name: Remove Chonk
         run: |
