@@ -36,9 +36,13 @@ default_incdec_colours[ ClientRatings.DISLIKE ] = ( ( 0, 0, 0 ), ( 255, 255, 255
 default_incdec_colours[ ClientRatings.NULL ] = ( ( 0, 0, 0 ), ( 191, 191, 191 ) )
 default_incdec_colours[ ClientRatings.MIXED ] = ( ( 0, 0, 0 ), ( 95, 95, 95 ) )
 
-INCDEC_SIZE = QC.QSize( 32, 16 )
+# -> QC.QSize
+#These are used as defaults for the Rating* classes icon sizes if not called with a size, e.g. for the standalone popup Manage Ratings panel 
+INCDEC_SIZE = ClientGUIPainterShapes.INCDEC_BACKGROUND_SIZE
+STAR_SIZE = ClientGUIPainterShapes.SIZE
+STAR_PAD  = ClientGUIPainterShapes.PAD
 
-def DrawIncDec( painter: QG.QPainter, x, y, service_key, rating_state, rating ):
+def DrawIncDec( painter: QG.QPainter, x, y, service_key, rating_state, rating, size: QC.QSize = INCDEC_SIZE, pad_size = STAR_PAD ):
     
     if rating is None:
         
@@ -51,7 +55,7 @@ def DrawIncDec( painter: QG.QPainter, x, y, service_key, rating_state, rating ):
     
     incdec_font = painter.font()
     
-    incdec_font.setPixelSize( 11 )
+    incdec_font.setPixelSize( size.height() - pad_size.height() / 2 )
     
     incdec_font.setStyleHint( QG.QFont.StyleHint.Monospace )
     
@@ -73,18 +77,24 @@ def DrawIncDec( painter: QG.QPainter, x, y, service_key, rating_state, rating ):
     
     painter.setRenderHint( QG.QPainter.RenderHint.Antialiasing, False )
     
-    painter.drawRect( x, y, INCDEC_SIZE.width() - 1, INCDEC_SIZE.height() - 1 )
+    ClientGUIPainterShapes.DrawShape( painter, ClientRatings.SQUARE, x, y, size.width(), size.height() )
     
     painter.setRenderHint( QG.QPainter.RenderHint.Antialiasing, True )
     
-    text_rect = QC.QRect( QC.QPoint( x + 1, y + 1 ), INCDEC_SIZE - QC.QSize( 4, 4 ) )
+    text_pos = QC.QPoint( x, y )
+    
+    if incdec_font.pixelSize() > 8:
+        
+        text_pos = QC.QPoint( x + 1, y + 1 )
+    
+    text_rect = QC.QRect( text_pos, size - pad_size )
     
     painter.drawText( text_rect, QC.Qt.AlignmentFlag.AlignRight | QC.Qt.AlignmentFlag.AlignVCenter, text )
     
     painter.setFont( original_font )
     
     
-def DrawLike( painter: QG.QPainter, x, y, service_key, rating_state ):
+def DrawLike( painter: QG.QPainter, x, y, service_key, rating_state, size: QC.QSize = STAR_SIZE ):
     
     painter.setRenderHint( QG.QPainter.RenderHint.Antialiasing, True )
     
@@ -94,18 +104,18 @@ def DrawLike( painter: QG.QPainter, x, y, service_key, rating_state ):
     
     painter.setPen( QG.QPen( pen_colour ) )
     painter.setBrush( QG.QBrush( brush_colour ) )
-    
-    ClientGUIPainterShapes.DrawShape( painter, shape, x, y )
+
+    ClientGUIPainterShapes.DrawShape( painter, shape, x, y, size.width(), size.height() )
     
 
-def DrawNumerical( painter: QG.QPainter, x, y, service_key, rating_state, rating ):
+def DrawNumerical( painter: QG.QPainter, x, y, service_key, rating_state, rating, size: QC.QSize = STAR_SIZE, pad_px = ClientGUIPainterShapes.PAD_PX ):
     
     painter.setRenderHint( QG.QPainter.RenderHint.Antialiasing, True )
     
     ( shape, stars ) = GetStars( service_key, rating_state, rating )
     
     x_delta = 0
-    x_step = ClientGUIPainterShapes.SIZE.width()
+    x_step = size.width() + pad_px
     
     for ( num_stars, pen_colour, brush_colour ) in stars:
         
@@ -114,13 +124,13 @@ def DrawNumerical( painter: QG.QPainter, x, y, service_key, rating_state, rating
         
         for i in range( num_stars ):
             
-            ClientGUIPainterShapes.DrawShape( painter, shape, x + x_delta, y )
+            ClientGUIPainterShapes.DrawShape( painter, shape, x + x_delta, y, size.width(), size.height() )
             
             x_delta += x_step
             
         
     
-def GetNumericalWidth( service_key ):
+def GetNumericalWidth( service_key, star_width, pad_px = ClientGUIPainterShapes.PAD_PX ):
     
     try:
         
@@ -133,7 +143,7 @@ def GetNumericalWidth( service_key ):
         num_stars = 1
         
     
-    return 4 + 12 * num_stars
+    return star_width * num_stars  +  pad_px * ( num_stars - 1 )
     
 def GetPenAndBrushColours( service_key, rating_state ):
     
@@ -200,7 +210,7 @@ class RatingIncDec( QW.QWidget ):
     
     valueChanged = QC.Signal()
     
-    def __init__( self, parent, service_key ):
+    def __init__( self, parent, service_key, icon_size = INCDEC_SIZE ):
         
         super().__init__( parent )
         
@@ -212,7 +222,7 @@ class RatingIncDec( QW.QWidget ):
         
         # middle down too? brings up a dialog for manual entry, sounds good
         
-        self.setMinimumSize( INCDEC_SIZE )
+        self.setMinimumSize( icon_size )
         
         self._rating_state = ClientRatings.SET
         self._rating = 0
@@ -398,7 +408,7 @@ class RatingLike( QW.QWidget ):
     
     valueChanged = QC.Signal()
     
-    def __init__( self, parent, service_key ):
+    def __init__( self, parent, service_key, icon_size = STAR_SIZE ):
         
         super().__init__( parent )
         
@@ -413,7 +423,7 @@ class RatingLike( QW.QWidget ):
         self._widget_event_filter.EVT_RIGHT_DOWN( self.EventRightDown )
         self._widget_event_filter.EVT_RIGHT_DCLICK( self.EventRightDown )
         
-        self.setMinimumSize( QC.QSize( 16, 16 ) )
+        self.setMinimumSize( icon_size + STAR_PAD )
         
         self._UpdateTooltip()
         
@@ -554,7 +564,7 @@ class RatingNumerical( QW.QWidget ):
     
     valueChanged = QC.Signal()
     
-    def __init__( self, parent, service_key ):
+    def __init__( self, parent, service_key, icon_size = STAR_SIZE ):
         
         super().__init__( parent )
         
@@ -573,7 +583,7 @@ class RatingNumerical( QW.QWidget ):
             self._allow_zero = False
             
         
-        my_width = GetNumericalWidth( self._service_key )
+        my_width = GetNumericalWidth( self._service_key, icon_size.width() )
         
         self._widget_event_filter = QP.WidgetEventFilter( self )
         
@@ -582,7 +592,7 @@ class RatingNumerical( QW.QWidget ):
         self._widget_event_filter.EVT_RIGHT_DOWN( self.EventRightDown )
         self._widget_event_filter.EVT_RIGHT_DCLICK( self.EventRightDown )
         
-        self.setMinimumSize( QC.QSize( my_width, 16 ) )
+        self.setMinimumSize( QC.QSize( my_width, icon_size.width() + STAR_PAD.width() ) )
         
         self._rating_state = ClientRatings.NULL
         self._rating = 0.0

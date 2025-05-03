@@ -2,10 +2,33 @@ from qtpy import QtCore as QC
 from qtpy import QtGui as QG
 
 from hydrus.client.metadata import ClientRatings
+from hydrus.client import ClientGlobals as CG
+
+_W = 12.0
+_H = 12.0
+
+_MIN_OUTLINE_PX = 1.0
+_MAX_OUTLINE_PX = 4.0 
+_TARGET_OUTLINE_THICKNESS = 12.0 # 1:12 ratio of pixel width to shape outline
+
+_FEATHER_IN = 0.25  #replace outer this% of outline pixels with 50% transparency (for SVG/QIcon)
+_MAX_FEATHER_PX = 2
+
+#
+
+PAD_PX = 4.0
+
+#do not use any padding inside paintershapes itself; it should only be used by parent widgets
+PAD = QC.QSize( PAD_PX, PAD_PX )
+
+SIZE = QC.QSize( _W, _H ) #width of this SIZE is used as default px value in options
+STAR_W = PAD.width() + _W
+STAR_H = PAD.height() + _H
+
+INCDEC_BACKGROUND_SIZE = QC.QSize( STAR_W * 2, STAR_H )
 
 # polygons
-
-SIZE = QC.QSize( 12, 12 )
+_ORIGINAL_PX_SCALE = 12.0
 
 PENTAGRAM_STAR_COORDS = [
     QC.QPointF( 6, 0 ), # top
@@ -179,16 +202,11 @@ CROSS_COORDS = [
 # paths
 
 HEART_PATH = QG.QPainterPath()
-HEART_PATH.moveTo(6, 12)
-HEART_PATH.lineTo(1.5,6)
-HEART_PATH.cubicTo(0,4, 3.5,0, 6, 4)
-HEART_PATH.cubicTo(8.5,0, 12,4, 10.5,6)
-HEART_PATH.lineTo(6, 12)
-#altn. heart that doesn't look good at 12x12
-# HEART_PATH.moveTo(6, 11.5)
-# HEART_PATH.cubicTo(0.5, 7, 0.5, 0.25, 6, 5.25)
-# HEART_PATH.cubicTo(11.5, 0.25, 11.5, 7, 6, 11.5)
-
+HEART_PATH.moveTo(6, 11)
+HEART_PATH.lineTo(1.5, 5)
+HEART_PATH.cubicTo(0, 3, 3.5, -1, 6, 3)
+HEART_PATH.cubicTo(8.5, -1, 12, 3, 10.5, 5)
+HEART_PATH.lineTo(6, 11)
 
 TEARDROP_PATH = QG.QPainterPath()
 TEARDROP_PATH.moveTo(6, 0)
@@ -227,48 +245,61 @@ SHAPE_COORDS_LOOKUP = {
 }
 
 SHAPE_DRAW_FN_LOOKUP = {
-    'circle' : lambda painter, x, y : painter.drawEllipse( QC.QPointF( x + 6, y + 6 ), 6, 6 ),
-    'square' : lambda painter, x, y : painter.drawRect( QC.QRectF( x, y, 12, 12 ) ),
-    'heart'         : lambda painter, x, y : _draw_path( painter, HEART_PATH, x, y ),
-    'teardrop'      : lambda painter, x, y : _draw_path( painter, TEARDROP_PATH, x, y ),
-    'crescent moon' : lambda painter, x, y : _draw_path( painter, MOON_CRESCENT_PATH, x, y )
+    'circle' : lambda painter, x, y, width = _W, height = _H : painter.drawEllipse( QC.QPointF( x + width / 2, y + height / 2 ), width / 2, height / 2 ),
+    'square' : lambda painter, x, y, width = _W, height = _H : painter.drawRect( QC.QRectF( x, y, width, height ) ),
+    'heart'         : lambda painter, x, y, width = _W, height = _H : _draw_path( painter, HEART_PATH, x, y, width, height ),
+    'teardrop'      : lambda painter, x, y, width = _W, height = _H : _draw_path( painter, TEARDROP_PATH, x, y, width, height ),
+    'crescent moon' : lambda painter, x, y, width = _W, height = _H : _draw_path( painter, MOON_CRESCENT_PATH, x, y, width, height )
 }
 
 SVG_PIXMAP_CACHE = {}  # (shape_name, QColor.name()) -> QPixmap
 
 # 
 
-def _draw_path( painter, path: QG.QPainterPath, x: float, y: float ):
+def _draw_path( painter, path: QG.QPainterPath, x, y, width = _W, height = _H ):
+    
+    scale_x = width / 12.0
+    scale_y = height / 12.0
+    
+    transform = QG.QTransform()
+    transform.scale( scale_x, scale_y )
+    
+    scaled_path = transform.map(path)
     
     painter.save()
     painter.translate( x, y )
-    painter.drawPath( path )
+    pen = painter.pen()
+    pen.setWidthF( GetOutlinePx( width ) )
+    painter.setPen( pen )
+    painter.drawPath( scaled_path )
     painter.restore()
     
-def _draw_svg_qicon( painter, shape_name: str, x: float, y: float ):
+def _draw_svg_qicon( painter, shape_name: str, x, y, width = _W, height = _H ):
     from hydrus.client import ClientConstants as CC
 
     icon = CC.global_icons().user_icons.get( shape_name )
     
     if icon is not None:
         
-        rect = QC.QRectF( x, y, 12, 12 )
+        rect = QC.QRectF( x, y, width, height )
         icon.paint( painter, rect.toRect() )
 
-def _draw_icon_coloured(painter, shape_name: str, x: float, y: float):
+def _draw_icon_coloured( painter, shape_name: str, x, y, width = _W, height = _H ):
     from hydrus.client import ClientConstants as CC
 
-    icon = CC.global_icons().user_icons.get(shape_name)
+    icon = CC.global_icons().user_icons.get( shape_name )
     if icon is None:
         return
 
     color = painter.brush().color()
-    cache_key = (shape_name, color.name())
+    cache_key = ( shape_name, color.name() )
 
     if cache_key in SVG_PIXMAP_CACHE:
-        pixmap = SVG_PIXMAP_CACHE[cache_key]
+        
+        pixmap = SVG_PIXMAP_CACHE[ cache_key ]
+    
     else:
-        base_pixmap = icon.pixmap(12, 12)
+        base_pixmap = icon.pixmap( width, height )
 
         # Create a tinted version
         tinted = QG.QPixmap(base_pixmap.size())
@@ -284,10 +315,11 @@ def _draw_icon_coloured(painter, shape_name: str, x: float, y: float):
 
         SVG_PIXMAP_CACHE[cache_key] = tinted
         pixmap = tinted
-
+    
     painter.drawPixmap(x, y, pixmap)
+    
 
-def _draw_icon_coloured_outlined(painter, shape_name: str, x: float, y: float):
+def _draw_icon_coloured_outlined( painter, shape_name: str, x, y, width = _W, height = _H ):
     from hydrus.client import ClientConstants as CC
     
     icon = CC.global_icons().user_icons.get( shape_name )
@@ -298,7 +330,7 @@ def _draw_icon_coloured_outlined(painter, shape_name: str, x: float, y: float):
     
     fill_colour = painter.brush().color()
     stroke_colour = painter.pen().color()
-    cache_key = ( shape_name, fill_colour.name(), stroke_colour.name() )
+    cache_key = ( shape_name, fill_colour.name(), stroke_colour.name(), width, height )
     
     if cache_key in SVG_PIXMAP_CACHE:
         
@@ -306,119 +338,126 @@ def _draw_icon_coloured_outlined(painter, shape_name: str, x: float, y: float):
         
     else:
         
-        base = icon.pixmap( SIZE )
-        #mask = base.createHeuristicMask()
-        mask = base.createMaskFromColor( QC.Qt.GlobalColor.transparent, QG.Qt.MaskMode.MaskOutColor )
+        size = QC.QSize( width, height )
+        base = icon.pixmap( size )
         
-        tinted = QG.QPixmap( SIZE )
+        tinted = QG.QPixmap( size )
         tinted.fill( QC.Qt.GlobalColor.transparent )
         
-        outline = QG.QPixmap( SIZE )
+        outline = QG.QPixmap( size )
         outline.fill( QC.Qt.GlobalColor.transparent )
         
-        final = QG.QPixmap( SIZE )
-        final.fill( QC.Qt.GlobalColor.transparent )
+        feathered = QG.QPixmap( size )
+        feathered.fill( QC.Qt.GlobalColor.transparent )
         
         #make colour version
-        p = QG.QPainter(tinted)
-        p.setCompositionMode( QG.QPainter.CompositionMode.CompositionMode_Source )
-        p.drawPixmap( 0, 0, base )
-        p.setCompositionMode( QG.QPainter.CompositionMode.CompositionMode_SourceIn )
-        p.fillRect( tinted.rect(), fill_colour )
+        p = QG.QPainter( tinted )        
+        p.setRenderHint( QG.QPainter.RenderHint.Antialiasing, True )
+        _painter_mask_opaque_pixels( p, base, fill_colour )
         p.end()
         
         po = QG.QPainter( outline )
         po.setRenderHint( QG.QPainter.RenderHint.Antialiasing, True )
-        
-        #make outline v1
-        # po.setPen( QG.QPen( stroke_colour, 1.5 ) )
-        # for dx in ( -1, 0, 1 ):
-        #     for dy in ( -1, 0, 1 ):
-        #         po.drawPixmap( dx, dy, mask )
-        # po.setCompositionMode( QG.QPainter.CompositionMode.CompositionMode_DestinationOut )
-        # po.drawPixmap( 0, 0, mask )
-        # po.setOpacity( 0.9 )
-        # po.setCompositionMode( QG.QPainter.CompositionMode.CompositionMode_SourceIn )
-        # po.fillRect( outline.rect(), stroke_colour )
-        # po.end()
-        
-        #make outline v2
-        mask_img = mask.toImage().convertToFormat( QG.QImage.Format.Format_ARGB32_Premultiplied )
-        
-        feather = 3
-        feathered = mask_img.scaled(
-            mask.width() + feather, mask.height() + feather,
-            QC.Qt.AspectRatioMode.IgnoreAspectRatio,
-            QC.Qt.TransformationMode.SmoothTransformation
-        )
-        feathered = feathered.copy( 1, 1, mask.width(), mask.height() )
-        feathered_pixmap = QG.QPixmap.fromImage( feathered )
-        
-        po.setRenderHint( QG.QPainter.RenderHint.Antialiasing, True )
-        po.setCompositionMode( QG.QPainter.CompositionMode.CompositionMode_Source )
-        
-        for dx in ( -1, 0, 1 ):
-            for dy in ( -1, 0, 1 ):
-                po.drawPixmap( dx, dy, feathered_pixmap )
-        
-        po.setCompositionMode( QG.QPainter.CompositionMode.CompositionMode_DestinationOut )
-        po.drawPixmap( 0, 0, mask )
-        
-        po.setOpacity( 0.9 )
-        po.setCompositionMode( QG.QPainter.CompositionMode.CompositionMode_SourceIn )
-        po.fillRect( outline.rect(), stroke_colour )
+        _painter_mask_opaque_pixels( po, base, stroke_colour )
         po.end()
         
-        #combine fill+outline
-        fp = QG.QPainter( final )
-        fp.setRenderHint( QG.QPainter.RenderHint.Antialiasing, True )
-        fp.drawPixmap(0, 0, outline)
-        fp.drawPixmap(0, 0, tinted)
-        fp.end()
+        pf = QG.QPainter( feathered )
         
-        SVG_PIXMAP_CACHE[ cache_key ] = final
-        pixmap = final
+        hard_radius = max( int( GetOutlinePx( width ) * ( 1 - _FEATHER_IN ) ), 1 )
+        feather = min( int( GetOutlinePx( width ) ), _MAX_FEATHER_PX )
+        
+        _painter_stamp_all_around( pf, hard_radius, outline )
+        pf.setOpacity( 0.5 )
+        _painter_stamp_all_around( pf, feather, outline )
+        pf.drawPixmap( 0, 0, tinted )
+        
+        SVG_PIXMAP_CACHE[ cache_key ] = feathered
+        pixmap = feathered
     
     painter.drawPixmap(x, y, pixmap)
 
 
-def DrawShape( painter, shape, x: float, y: float, text: str = None, text_colour: QG.QColor = None ):
+def _painter_mask_opaque_pixels( painter, input_pixels, colour ):
+    
+    painter.setCompositionMode( QG.QPainter.CompositionMode.CompositionMode_Source )
+    
+    painter.drawPixmap( 0, 0, input_pixels )
+    
+    painter.setCompositionMode( QG.QPainter.CompositionMode.CompositionMode_SourceIn )
+    
+    painter.fillRect( input_pixels.rect(), colour )
+    
+def _painter_stamp_all_around( painter, radius, pixels ):
+    
+    for px_x in range ( -radius, radius ):
+            
+            for px_y in range ( -radius, radius ):
+                
+                painter.drawPixmap( px_x , px_y, pixels )
+        
+    
+#used for dynamic sizing e.g. from set size in options
+#diameter = size (width or height) in px
+def GetOutlinePx( diameter, ratio = _TARGET_OUTLINE_THICKNESS, min_thickness = _MIN_OUTLINE_PX, max_thickness = _MAX_OUTLINE_PX ):
+    
+    return max( min( diameter / ratio, max_thickness ), min_thickness )
+    
+    
 
+def DrawShape( painter, shape, x, y, width = _W, height =_H, text: str = None, text_colour: QG.QColor = None ):
+    
     shape = ClientRatings.shape_to_str_lookup_dict.get( shape, None )
 
     if shape in SHAPE_DRAW_FN_LOOKUP:
         
-        SHAPE_DRAW_FN_LOOKUP[ shape ]( painter, x, y )
+        pen = painter.pen()
+        pen.setWidthF( GetOutlinePx( width ) )
+        painter.setPen(pen)
+        
+        SHAPE_DRAW_FN_LOOKUP[ shape ]( painter, x, y, width, height )
         
         
     elif shape in SHAPE_COORDS_LOOKUP:
         
+        scale_x = width / _ORIGINAL_PX_SCALE
+        scale_y = height / _ORIGINAL_PX_SCALE
+        
+        scaled_points = [
+            
+            QC.QPointF( point.x() * scale_x, point.y() * scale_y )
+            for point in SHAPE_COORDS_LOOKUP[ shape ]
+            
+        ]
+        
         painter.save()
+        pen = painter.pen()
+        pen.setWidthF( GetOutlinePx( width ) )
+        painter.setPen( pen )
         painter.translate( QC.QPointF( x, y ) )
-        painter.drawPolygon( QG.QPolygonF( SHAPE_COORDS_LOOKUP[ shape ] ) )
+        painter.drawPolygon( QG.QPolygonF( scaled_points ) )
         painter.restore()
     
     elif shape.startswith('svg:'):
     
         shape_name = shape[4:]
-    
-        #_draw_svg_qicon( painter, shape_name, x, y )
-        #_draw_icon_coloured(painter, shape_name, x, y)
-        _draw_icon_coloured_outlined(painter, shape_name, x, y)
+        
+        _draw_icon_coloured_outlined( painter, shape_name, x, y, width, height )
+        
     
     if text: 
         painter.save()
-
+        
         if text_colour is not None:
             
             painter.setPen( QG.QPen( text_colour ) )
-
+        
         font = painter.font()
         font.setBold( True )
-        font.setPixelSize( 10 )
+        font.setPixelSize( height - 2 )
         painter.setFont( font )
-
-        text_rect = QC.QRectF( x, y, 12, 12 )
+        
+        text_rect = QC.QRectF( x, y, width, height )
         painter.drawText( text_rect, QC.Qt.AlignmentFlag.AlignCenter, text )
-
+        
         painter.restore()
+    

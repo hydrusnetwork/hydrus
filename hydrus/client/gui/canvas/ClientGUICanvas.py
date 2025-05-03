@@ -44,6 +44,7 @@ from hydrus.client.gui.media import ClientGUIMediaMenus
 from hydrus.client.gui.panels import ClientGUIScrolledPanels
 from hydrus.client.gui.panels import ClientGUIScrolledPanelsCommitFiltering
 from hydrus.client.gui.panels import ClientGUIScrolledPanelsEdit
+from hydrus.client.gui.widgets import ClientGUIPainterShapes
 from hydrus.client.media import ClientMedia
 from hydrus.client.media import ClientMediaResult
 from hydrus.client.media import ClientMediaResultPrettyInfo
@@ -2200,13 +2201,19 @@ class CanvasWithHovers( Canvas ):
         
         # ratings
         
+        RATING_ICON_SET_SIZE = round( float( self._new_options.GetString( 'media_viewer_rating_icon_size_px' ) ) )
+        STAR_DX = RATING_ICON_SET_SIZE
+        STAR_DY = RATING_ICON_SET_SIZE
+        STAR_PAD = ClientGUIPainterShapes.PAD
+        
         services_manager = CG.client_controller.services_manager
+        
         
         like_services = services_manager.GetServices( ( HC.LOCAL_RATING_LIKE, ) )
         
         like_services.reverse()
         
-        like_rating_current_x = my_width - 16 - ( QFRAME_PADDING + VBOX_MARGIN )
+        like_rating_current_x = my_width - ( STAR_DX + STAR_PAD.width() / 2 ) - ( QFRAME_PADDING + VBOX_MARGIN )
         
         for like_service in like_services:
             
@@ -2214,15 +2221,16 @@ class CanvasWithHovers( Canvas ):
             
             rating_state = ClientRatings.GetLikeStateFromMedia( ( self._current_media, ), service_key )
             
-            ClientGUIRatings.DrawLike( painter, like_rating_current_x, current_y, service_key, rating_state )
+            ClientGUIRatings.DrawLike( painter, like_rating_current_x, current_y, service_key, rating_state, QC.QSize( STAR_DX, STAR_DY ))
             
-            like_rating_current_x -= 16
+            like_rating_current_x -= STAR_DX + STAR_PAD.width()
             
         
         if len( like_services ) > 0:
             
-            current_y += 16 + VBOX_SPACING
+            current_y += STAR_DY + STAR_PAD.height() + VBOX_SPACING
             
+        
         
         numerical_services = services_manager.GetServices( ( HC.LOCAL_RATING_NUMERICAL, ) )
         
@@ -2232,18 +2240,19 @@ class CanvasWithHovers( Canvas ):
             
             ( rating_state, rating ) = ClientRatings.GetNumericalStateFromMedia( ( self._current_media, ), service_key )
             
-            numerical_width = ClientGUIRatings.GetNumericalWidth( service_key )
+            numerical_width = ClientGUIRatings.GetNumericalWidth( service_key, RATING_ICON_SET_SIZE, STAR_PAD.width() )
             
-            ClientGUIRatings.DrawNumerical( painter, my_width - numerical_width - ( QFRAME_PADDING + VBOX_MARGIN ), current_y, service_key, rating_state, rating ) # -2 to line up exactly with the floating panel
+            ClientGUIRatings.DrawNumerical( painter, my_width - numerical_width - ( QFRAME_PADDING + VBOX_MARGIN ), current_y, service_key, rating_state, rating, QC.QSize( STAR_DX, STAR_DY ), STAR_PAD.width() )
             
-            current_y += 16 + VBOX_SPACING
+            current_y += STAR_DY + STAR_PAD.height() + VBOX_SPACING
             
+        
         
         incdec_services = services_manager.GetServices( ( HC.LOCAL_RATING_INCDEC, ) )
         
         incdec_services.reverse()
         
-        control_width = ClientGUIRatings.INCDEC_SIZE.width()
+        control_width = RATING_ICON_SET_SIZE * 2
         
         incdec_rating_current_x = my_width - control_width - ( QFRAME_PADDING + VBOX_MARGIN )
         
@@ -2253,14 +2262,14 @@ class CanvasWithHovers( Canvas ):
             
             ( rating_state, rating ) = ClientRatings.GetIncDecStateFromMedia( ( self._current_media, ), service_key )
             
-            ClientGUIRatings.DrawIncDec( painter, incdec_rating_current_x, current_y, service_key, rating_state, rating )
+            ClientGUIRatings.DrawIncDec( painter, incdec_rating_current_x, current_y, service_key, rating_state, rating, QC.QSize( RATING_ICON_SET_SIZE * 2, RATING_ICON_SET_SIZE ) )
             
             incdec_rating_current_x -= control_width
             
         
         if len( incdec_services ) > 0:
             
-            current_y += 16 + VBOX_SPACING
+            current_y += STAR_DY + VBOX_SPACING
             
         
         # icons
