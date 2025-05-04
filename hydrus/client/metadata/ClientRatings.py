@@ -12,13 +12,88 @@ CIRCLE = 0
 SQUARE = 1
 FAT_STAR = 2
 PENTAGRAM_STAR = 3
+SIX_POINT_STAR = 4
+EIGHT_POINT_STAR = 5
+X_SHAPE = 6
+CROSS = 7
+TRIANGLE_UP = 30
+TRIANGLE_DOWN = 31
+TRIANGLE_RIGHT = 32
+TRIANGLE_LEFT = 33
+DIAMOND = 40
+RHOMBUS_R = 42
+RHOMBUS_L = 43
+HOURGLASS = 44
+PENTAGON = 50
+HEXAGON = 60
+SMALL_HEXAGON = 61
+HEART = 101
+TEARDROP = 102
+MOON_CRESCENT = 103
 
 shape_to_str_lookup_dict = {
     CIRCLE : 'circle',
     SQUARE : 'square',
     FAT_STAR : 'fat star',
-    PENTAGRAM_STAR : 'pentagram star'
+    PENTAGRAM_STAR : 'pentagram star',
+    SIX_POINT_STAR : 'six point star',
+    EIGHT_POINT_STAR : 'eight point star',
+    X_SHAPE : 'x shape',
+    CROSS : 'square cross',
+    TRIANGLE_UP : 'triangle up',
+    TRIANGLE_DOWN : 'triangle down',
+    TRIANGLE_RIGHT : 'triangle right',
+    TRIANGLE_LEFT : 'triangle left',
+    DIAMOND : 'diamond',
+    RHOMBUS_R : 'rhombus right',
+    RHOMBUS_L : 'rhombus left',
+    HOURGLASS : 'hourglass',
+    PENTAGON : 'pentagon',
+    HEXAGON : 'hexagon',
+    SMALL_HEXAGON : 'small hexagon',
+    HEART : 'heart',
+    TEARDROP : 'teardrop',
+    MOON_CRESCENT : 'crescent moon'
 }
+
+#
+
+from hydrus.client import ClientConstants as CC
+
+def EncodeShapeNameToID(name: str) -> int:
+    
+    prefix = 900000000
+    base36 = "0123456789abcdefghijklmnopqrstuvwxyz"
+    value = 0
+    
+    for c in name.lower():
+        
+        if c not in base36:
+            
+            continue
+        
+        value *= 36
+        
+        value += base36.index(c)
+    
+    return prefix + value
+
+for name in CC.global_icons().user_icons.keys():
+    
+    if len( name ) > 6:
+        # limit to 6 character filenames to avoid running out of integer space
+        # perhaps we should warn the user if they have any unaccepted svgs here, but assuming we document this feature it'll be fine
+        continue
+    
+    shape_id = EncodeShapeNameToID( name )
+    
+    while shape_id in shape_to_str_lookup_dict:
+        # rare but safe fallback
+        shape_id += 1  
+    
+    shape_to_str_lookup_dict[ shape_id ] = f'svg:{name}'
+    
+#
 
 def ConvertRatingToStars( num_stars: int, allow_zero: bool, rating: float ) -> int:
     

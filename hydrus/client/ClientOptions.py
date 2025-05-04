@@ -393,6 +393,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         #
         
         from hydrus.client.gui.canvas import ClientGUICanvasMedia
+        from hydrus.client.gui.widgets import ClientGUIPainterShapes
         from hydrus.core.files.images import HydrusImageHandling
         
         self._dictionary[ 'integers' ] = {
@@ -582,6 +583,8 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             'last_incremental_tagging_namespace' : 'page',
             'last_incremental_tagging_prefix' : '',
             'last_incremental_tagging_suffix' : '',
+            'draw_thumbnail_rating_icon_size_px' : str( ClientGUIPainterShapes.SIZE.width() ),
+            'media_viewer_rating_icon_size_px' : str( ClientGUIPainterShapes.SIZE.width() ),
             'last_options_window_panel' : 'gui'
         }
         

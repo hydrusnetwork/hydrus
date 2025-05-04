@@ -2018,9 +2018,9 @@ class BetterListCtrlPanel( QW.QWidget ):
         self._UpdateButtons()
         
     
-    def AddSeparator( self ):
+    def AddSeparator( self, pixels = 12 ):
         
-        self._buttonbox.addSpacing( 12 )
+        self._buttonbox.addSpacing( pixels )
         
     
     def AddWindow( self, window ):

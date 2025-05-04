@@ -688,6 +688,19 @@ class GlobalIcons( object ):
         self.tumblr = QG.QIcon( os.path.join( HC.STATIC_DIR, 'tumblr.svg' ) )
         self.discord = QG.QIcon( os.path.join( HC.STATIC_DIR, 'discord.svg' ) )
         self.patreon = QG.QIcon( os.path.join( HC.STATIC_DIR, 'patreon.svg' ) )
+        self.user_icons = {}
+
+        user_icon_dir = os.path.join( HC.STATIC_DIR, 'star_shapes' )
+
+        if os.path.exists( user_icon_dir ):
+            for filename in os.listdir( user_icon_dir ):
+                if filename.lower().endswith( '.svg' ):
+                    
+                    name = os.path.splitext( filename )[0]
+                    path = os.path.join( user_icon_dir, filename )
+                    
+                    self.user_icons[ name ] = QG.QIcon( path )
+    
 
 
 global_icons = GlobalIcons.instance

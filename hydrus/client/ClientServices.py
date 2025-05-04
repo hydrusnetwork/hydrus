@@ -118,7 +118,7 @@ def GenerateDefaultServiceDictionary( service_type ):
         
         if service_type in HC.STAR_RATINGS_SERVICES:
             
-            dictionary[ 'shape' ] = ClientRatings.CIRCLE
+            dictionary[ 'shape' ] = ClientRatings.CIRCLE #change default to ClientRatings.HEART ?
             
             if service_type == HC.LOCAL_RATING_LIKE:
                 
