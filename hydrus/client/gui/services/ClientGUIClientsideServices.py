@@ -13,6 +13,7 @@ from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusPaths
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTags
+from hydrus.core import HydrusText
 from hydrus.core import HydrusTime
 from hydrus.core.networking import HydrusNetwork
 from hydrus.core.networking import HydrusNetworkVariableHandling
@@ -446,6 +447,7 @@ class EditClientServicePanel( ClientGUIScrolledPanels.EditPanel ):
         return ClientServices.GenerateService( self._service_key, self._service_type, name, dictionary )
         
     
+
 class EditServiceSubPanel( ClientGUICommon.StaticBox ):
     
     def __init__( self, parent, name ):
@@ -1449,6 +1451,29 @@ class EditServiceStarRatingsSubPanel( ClientGUICommon.StaticBox ):
         
         super().__init__( parent, 'rating shape' )
         
+        menu_items = []
+        
+        page_func = HydrusData.Call( ClientGUIDialogsQuick.OpenDocumentation, self, HC.DOCUMENTATION_RATINGS )
+        
+        menu_items.append( ( 'normal', 'open the ratings help', 'Open the help page for ratings.', page_func ) )
+        
+        help_button = ClientGUIMenuButton.MenuBitmapButton( self, CC.global_pixmaps().help, menu_items )
+        
+        help_hbox = ClientGUICommon.WrapInText( help_button, self, 'help -->', object_name = 'HydrusIndeterminate' )
+        
+        svg_ratings_are_ok = len( CC.global_icons().user_icons ) > 0
+        
+        choice_tuples = [
+            ( 'shapes', 'shape' )
+        ]
+        
+        if svg_ratings_are_ok:
+            
+            choice_tuples.append( ( 'svgs', 'rating_svg' ) )
+            
+        
+        self._shape_or_svg = ClientGUICommon.BetterRadioBox( self, choice_tuples, vertical = True )
+        
         self._shape = ClientGUICommon.BetterChoice( self )
         
         for ( shape, name ) in ClientRatings.shape_to_str_lookup_dict.items():
@@ -1456,26 +1481,114 @@ class EditServiceStarRatingsSubPanel( ClientGUICommon.StaticBox ):
             self._shape.addItem( name, shape )
             
         
+        self._rating_svg = ClientGUICommon.BetterChoice( self )
+        
+        if svg_ratings_are_ok:
+            
+            for name in sorted( CC.global_icons().user_icons.keys(), key = HydrusText.HumanTextSortKey ):
+                
+                self._rating_svg.addItem( name, name )
+                
+            
+        else:
+            
+            self._rating_svg.addItem( 'no svgs found', None )
+            
         #
         
-        self._shape.SetValue( dictionary[ 'shape' ] )
+        shape = dictionary[ 'shape' ]
+        
+        if shape is not None:
+            
+            self._shape_or_svg.SetValue( 'shape' )
+            
+            self._shape.SetValue( dictionary[ 'shape' ] )
+            
+        
+        if svg_ratings_are_ok:
+            
+            rating_svg = dictionary[ 'rating_svg' ]
+            
+            if rating_svg is not None:
+                
+                self._shape_or_svg.SetValue( 'rating_svg' )
+                
+                self._rating_svg.SetValue( rating_svg )
+                
+            
+        else:
+            
+            self._shape_or_svg.SetValue( 'shape' )
+            
+            self._shape_or_svg.setVisible( False )
+            self._rating_svg.setVisible( False )
+            
         
         #
         
         rows = []
         
+        if svg_ratings_are_ok:
+            
+            rows.append( ( 'type: ', self._shape_or_svg ) )
+            
+        
         rows.append( ( 'shape: ', self._shape ) )
+        
+        if svg_ratings_are_ok:
+            
+            rows.append( ( 'svg: ', self._rating_svg ) )
+            
+        
+        # preview here, ideally a manipulable fake control, or maybe we need to be more clever with num_stars in a numerical rating
+        # fake bitmaps can also be fine
+        # scaling size dynamically would also be nice, or at least showing what the current sizes are for media viewer, thumbs, and default 12px for anywhere else
         
         gridbox = ClientGUICommon.WrapInGrid( self, rows )
         
+        self.Add( help_hbox, CC.FLAGS_ON_RIGHT )
         self.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        
+        self._UpdateControls()
+        
+        self._shape_or_svg.radioBoxChanged.connect( self._UpdateControls )
+        
+    
+    def _UpdateControls( self ):
+        
+        selection = self._shape_or_svg.GetValue()
+        
+        self._shape.setEnabled( selection == 'shape' )
+        self._rating_svg.setEnabled( selection == 'rating_svg' )
         
     
     def GetValue( self ):
         
         dictionary_part = {}
         
-        dictionary_part[ 'shape' ] = self._shape.GetValue()
+        selection = self._shape_or_svg.GetValue()
+        
+        if selection == 'shape':
+            
+            shape = self._shape.GetValue()
+            
+        else:
+            
+            shape = None
+            
+        
+        dictionary_part[ 'shape' ] = shape
+        
+        if selection == 'rating_svg':
+            
+            rating_svg = self._rating_svg.GetValue()
+            
+        else:
+            
+            rating_svg = None
+            
+        
+        dictionary_part[ 'rating_svg' ] = rating_svg
         
         return dictionary_part
         

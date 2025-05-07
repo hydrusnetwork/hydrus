@@ -32,6 +32,20 @@ This is a simple counter. It can represent whatever you like, but most people us
 
 ![](images/ratings_incdec_canvas.png)
 
+## svg ratings
+
+We are experimenting with svg ratings:
+
+![](images/ratings_svg_experiment.png)
+
+There are some already in `install_dir/static/star_shapes`--feel free to try your own. Go for something simple that mostly fills a squarish, transparent background.
+
+The program will try to draw the sillhouette of the svg with the chosen colours:
+
+![](images/ratings_spiral_experiment.png)
+
+More complicated shapes obviously look better at higher resolution, which you can now set in `options->media viewer` and `options->thumbnails`. We are going to keep working on this, and I expect to migrate all the old polygons to nicer svg once we have this nailed down. 
+
 ## now what? { id="using_ratings" }
 
 Ratings are displayed in the top-right of the media viewer:

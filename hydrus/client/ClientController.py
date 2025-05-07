@@ -1202,11 +1202,11 @@ class Controller( HydrusController.HydrusController ):
         
         if self.new_options.GetBoolean( 'use_system_ffmpeg' ):
             
-            from hydrus.core.files import HydrusVideoHandling
+            from hydrus.core.files import HydrusFFMPEG
             
-            if HydrusVideoHandling.FFMPEG_PATH.startswith( HC.BIN_DIR ):
+            if HydrusFFMPEG.FFMPEG_PATH.startswith( HC.BIN_DIR ):
                 
-                HydrusVideoHandling.FFMPEG_PATH = os.path.basename( HydrusVideoHandling.FFMPEG_PATH )
+                HydrusFFMPEG.FFMPEG_PATH = os.path.basename( HydrusFFMPEG.FFMPEG_PATH )
                 
             
         

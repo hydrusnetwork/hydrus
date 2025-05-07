@@ -7,6 +7,63 @@ title: Changelog
 !!! note
     This is the new changelog, only the most recent builds. For all versions, see the [old changelog](old_changelog.html).
 
+## [Version 621](https://github.com/hydrusnetwork/hydrus/releases/tag/v621)
+
+### more ratings
+
+* thanks to a user, we have many new rating options--
+* `options->media viewer` and `options->thumbnails` now let you alter the size of ratings!
+* there are now many new rating shapes to choose from under `services->manage services`: triangles pointing up/down/left/right; diamond; rhombus pointing right/left; pentagon; hexagon and small hexagon; six point star; eight point starburst; hourglass; large + and X shapes
+* also, in an experiment, you can now also set a custom svg to your rating. there's a new folder, `install_dir/static/star_shapes`, that you can drop svgs into to have them available. I've put a couple of simple examples in already. try to do a squarish shape with a clear sillhouette on transparency. we will keep working on this, but feel free to try it out yourself and give feedback. I suspect we'll migrate all the existing custom polygons to nicer svgs in future if and when we nail nice svg border colours and stuff
+* I added a help button to the `manage services` edit panel here, linking to the ratings help, which has a new section on the svg rating shapes
+* I reworked some stuff behind the scenes to more neatly integrate this rating tech and allow for svg ratings. the 'edit service star shape' UI in `manage services` has two dropdowns now, too
+* we are experimenting with fractional pixel sizing and drawing here, so some of the new ratings may seem a little blurry in places and/or not line up well, including between the underlying canvas and the top-right hover pop-up. I'm going to work on this a bit and see what I can do to make it more pixel-perfect
+* we may figure out unicode character ratings in future also
+
+### misc
+
+* fixed a bug in the duplicates system's 'pixel hash' test. my current pixel hash is dimensionless, and thus, by accident, a completely flat-colour (or careful checkerboard etc..) image of 100x500 has the same pixel hash as the same colour of 200x250. it obviously doesn't come up much, but I regret the error. rather than recompute everyone's pixel hashes with dimension data, we are first patching the test code to double-check the images both have the same width. it seems ok here, but let me know if your 'must (not) be pixel duplicates' duplicate file searches are now interminably slow
+* split the prefetch settings in `options->speed and memory` into their own box, and updated the labels a bit
+* added a setting to this new box to govern how many pairs the duplicate filter will prefetch. previously this was hardcoded to 1, now it defaults to 5 and you can set whatever
+* when the client or server checks if it is already running, the 'client_running' file's 'process creation time' is now only tested to within a second's accuracy. if you have a bespoke backup workflow that involves creating your own client_running file, it should get caught better now despite float imprecision
+* updated the various Linux install/running-from-source stuff to talk about `libmpv2` as well as `libmpv1`.
+* I rolled out a v620a hotfix last week after my refactoring accidentally broke the manual duplicate filter. sorry for the trouble! I have improved my testing regime to catch this in future
+
+### duplicates auto-resolution
+
+* you can now add 'system:known url' and 'system:number of urls' predicates to the 'test A or B' comparators
+* you can now add 'system:number of urls' to the 'test A against B using file info' comparators
+* added unit tests for these, and cleaned up some of the unit tests in this area
+
+### avif
+
+* the `pillow-avif-plugin` test last week seemed to go well. this library is now folded into the main builds, and AVIF rendering should be more reliable for the time being (issue #1720)
+* if you run from source, you might like to rebuild your venv this week to get this
+
+### psd_tools replacement
+
+* `psd-tools` is no longer used by the program
+* thanks to a user report, we discovered that the Linux build was including an old and vulnerable version of a bz2 decoder. this thing was hanging around because of a drawing library included by a psd parser we use. I am not sure if the decoder was ever called, given what we use the library for. I did a test build of Linux with the bad file simply deleted, and it seemed to boot ok, but I wasn't sure if the file was bundled into a pyd on the Windows and macOS side, and I'm pretty sure it would be included in a source install, so I wasn't really happy
+* ultimately I decided I didn't like having this complicated psd library hanging around when we only needed to pull dimensions, icc profile existence, and pulling an embedded render preview file, so I cobbled together some other backup solutions we already mostly figured out, including an ffmpeg renderer, and wrote a simple file parser and replaced all the psd_tools stuff with our own calls
+* there are some psd files ffmpeg seems not to render as good as psd_tools did, but I'm fine with it for now
+* I seem to be detecting icc profiles that psd tools did not recognise, so I'm scheduling all psds for a 'has an icc profile?' check on update. maybe I'm false-positiving, but I'll make sure the existing store reflects current code at least
+* I also fixed some psd rendering for files that had weird 100% transparency
+* along the way I improved some PSD error messages and handling. PSDs that have no embedded preview should stop spamming that info to the log on thumbnail regen
+
+### swfrender removal
+
+* since cleaning was on my mind, I'm removing the swfrender exes too. new swf files you import will just get default 'flash' thumbnails from now on. having these ancient executables hanging around to load unknown flash files is not an excellent idea these days, even though it has been fun
+* the actively developed 'Ruffle' flash emulator seems to be working on a CLI executable that can render flash frames, which could be a much better and more reliable replacement in future
+* I haven't played with it properly yet, but ffmpeg can apparently thumbnail some flv-embed-style flash files, so I'll explore this too
+
+### refactoring and cleanup
+
+* moved some ffmpeg stuff from `HydrusVideoHandling` to the new `HydrusFFMPEG`
+* merged all 'ffmpeg was missing' and 'ffmpeg output no content' error handling to single calls and improved coverage
+* wrote some 'render to pipe' stuff for ffmpeg to make some of the ffmpeg based rendering work a little quicker and without the temp dir
+* deleted the `HydrusPSDTools` file
+* moved some more old network reporting mode code to a cleaner unified method
+
 ## [Version 620](https://github.com/hydrusnetwork/hydrus/releases/tag/v620)
 
 ### user gui improvements
@@ -462,231 +519,3 @@ title: Changelog
 * the auto-resolution rule object is now serialisable and _could_ be saved to disk if I enabled the edit UI
 * rules now report their correct search status, no longer a placeholder
 * the daemon now reports the correct running status, no longer a placeholder
-
-## [Version 611](https://github.com/hydrusnetwork/hydrus/releases/tag/v611)
-
-### misc
-
-* I am pretty sure I fixed the long-time 'hey why did the scrollbar on this page of thumbs reset to the start position sometime while the page was hidden?' issue. an importer that adds new rows of thumbs in the background should now retain its scroll position. a window resize or a mass file removal event will cause the scrollbar to stay at the same relative num_rows vertical position, which we may ultimately want to be more sophisticated, but this is a good step for now. let me know if any specific situation still resets the vertical position
-* fixed an interesting bug with two of the Drag and Drops in the program, when you DnD a page tab or a selection of thumbnaills, where if you released your left-click at just the right moment (about 100ms after click press), you could get a DnD state that persisted despite no mouse button being down. a subsequent click would clear it. it seems that the DnD was spawning while the click release was already behind it in the event queue. the program now recognises this state and cancels the DnD
-* I believe I fixed an issue with the `apply image ICC Profile colour adjustments` entry on the media viewer's 'eye' menu button, precisely when you were looking at a file. the static image's private tile cache was not clearing itself correctly, and not calling for an update after the clear, so old yes/no ICC-profile-adjusted tiles were hanging around and sometimes poisoning future calls. the whole system clears itself properly now and seems to flip good every time
-* I believe I have fixed a macOS issue (and I think X11, too, if you have a taskbar on the top of the screen) where the hydrus window position-recording system would move your windows down a little way on every save/load cycle
-* all the 'write/edit' tag autocomplete inputs that have a list above them now send a copy shortcut to that top list when there is nothing selected in the text box and there are no results in the list below. so, if you open the 'manage tags' dialog, and the first thing you do is hit ctrl+c, you'll copy everything in the big list of existing tags. hit ctrl+shift+c, and you'll get the parents too
-* all the hardcoded 'copy' shortcut detection now happens through the same location and counts ctrl+c or ctrl/insert
-* if the 'is user ok to ok/cancel' dialog pre-close checks raise an error, I now have a catch for it. it says 'hey user, these checks threw an exception, please contact hydev, the data was probably broken so here is what to do next depending on whether you were oking or cancelling'. previously, you could be stuck with an unclosable dialog and have to quit the whole process
-* same deal but for the dialog 'is the data in the panel valid?' check--there is now a special catch and it tells you what happened and what to do
-* fixed a regression from last week's "make sure the new note is focused when the current tab changes" call, which was throwing a spurious error when you deleted the last note (issue #1679)
-* fixed an issue with my mpv rewind-spam catching code when you force it to load a file without any duration
-
-### file sort
-
-* if you change the file sort on a search with an explicit system:limit, and the sort is one that can operate at the database level, the search will now refresh
-* added a checkbox to `options->file search` to turn this off if you prefer
-* the file sort widget now has a tooltip saying whether the current sort type is simple enough to work with system:limit
-
-### stopping accidental page close
-
-* if you try to close a downloader that has any items in it, you'll now be asked if you are sure. this doesn't apply to session exit, just manual user close events
-* you can turn this confirmation off under `options->gui pages`
-* another checkbox under `gui pages`, this time default off, allows you to confirm all page closes. this mostly catches middle-clicking single page tabs, be that file search pages or 'page of pages'
-* the routines that delete multiple pages in one step 'close other pages' etc..., now do the 'is user ok to close these' in one combined step for all closees before closing anything. previously it tested and closed each in turn, and a cancel event broke out of the loop
-* various 'close these pages?' messages now correctly add up the number of sub-pages in 'page of pages' to be closed
-
-### long-time bug with non-updating media viewer is fixed
-
-* for ages we've had a weird issue where the media viewer, on some random file, will suddenly update when you click on ratings and things. the content signals are going through, and you can watch the file's respective thumbnail in the main gui getting archived or whatever, but the media viewer will not show it. this is finally fixed! it was basically a rare maintenance update issue, where if, for instance, a 'regen file metadata' job occured on a file in a media viewer's list after the media viewer was spawned, the media object in the viewer list was falling out of sync; able to send content updates but no longer hooked into the update pipeline so it never received them back again
-* this is fixed for the 'force filetype' action. this job now propagates to the UI much faster than before, no longer needing a full media result load
-* this is fixed for the file maintenance jobs that regen file metadata, check for 'has icc profile' etc.., and regen pixel/blurhash. all these jobs now propagate in the same way much faster to the UI
-* this is fixed for the file maintenance job that refetches the file's modified time from disk. same deal it now updates in UI faster
-* also fixed in the case where a previously known-of file is imported and we discover our old file info was incorrect, and also this file was in view so we need to sync the media result. sounds like a crazy situation but that's exactly when you need this to work
-
-### tag context in media
-
-* the thumbnail grid is now aware of the current tag context of the search (where you set 'all known tags' or 'my tags' or whatever in the autocomplete dropdown). `system:number of tags` now follows the current tag context
-
-### shortcuts
-
-* in an experiment, you can now set the modifier keys as their own shortcuts, with no accompanying 'real' key. it'll mark it as 'ctrl+nothing', 'shift+alt+nothing', etc.. seems to work, but I can't promise it won't go crazy in the wrong place
-* the keyboard shortcut widget, where you enter a shortcut, now uses a shortcut catching routine that is one level higher than before, which matches the actual shortcut processing system that's in use. there's a chance that if your Qt hardcode maps some shortcut, not allowing it in a text edit box, it'll work now (issue #1674)
-* the keyboard shortcut widget no longer shows its caret. it also takes keyboard focus more reliably when the edit shortcut dialog boots. I kind of like this but also don't, let me know if it is jarring
-* the 'shortcut report mode' will now say some information about unmappable key presses
-* I have prepped some render code to show shortcuts on macOS in the form ⌘Z, but I have not enabled it yet because I don't know enough about macOS. if you want your shortcut labels to look like this everywhere, let me know. but if shortcuts should only look like that in menus, and it isn't appropriate for the shortcuts dialog and debug labels and stuff, I'll put it off until we actually have menu shortcut labels lol
-
-### parsing
-
-* I added a 'STATIC' formula type. it just spits out the same static text, every time, and repeated n times if you need it
-* added a little help documentation for the new STATIC formula type; the edit panel links to it like for the other formulae
-* if your parsing test panel gets something that doesn't seem to be html or json, it no longer puts the goofy quote marks around it
-
-### boring code cleanup
-
-* did some misc refactoring in the page close testing code because the method names were whack
-* cleaned some sidebar and autocomplete interactions to work with 'tag context' instead of 'tag service key', which means these guys are now sending a richer object with more tag display info in it
-* cleaned up some duplicate variable handling all through the sidebar stuff
-* a bunch of redundant location context emit spam from the sidebar is deleted. I don't think this will break any weird thumbnail grid or previuw canvas location stuff , but we'll see in the edge cases
-* cleaned up how query autocomplete dropdowns and sidebar panels were communicating search state changes
-* ratings that fail to draw for whatever reason now do so more safely
-* removed code that did the old and canvas-desyncing media object update routine
-
-## [Version 610](https://github.com/hydrusnetwork/hydrus/releases/tag/v610)
-
-### misc
-
-* files with an average colour with less than 3% saturation in the HSL colour space (i.e. completely greyscale, or otherwise averaging to grey) are now propagated to the end of the Hue sort, whether red or purple first
-* hitting ctrl+c on a taglist with no selected items now copies all items
-* updated the system predicate parser so it can read 'number of pixels'. previously, it could only handle 'num pixels'. this means you can copy/paste a 'system:number of pixels' pred back into the autocomplete and it should all work
-* fixed a problem with `system:num file relationships - (test) "not related/false positive"`, which was only every returning the results of one not-related alternates group, rather than all that matched the test
-* made some 'click below to copy to clipboard' menu labels bold
-* the client now says 'tag mappings' explicitly, rather than 'mappings', in a bunch of UI labels like shortcut action descriptions
-
-### notes
-
-* the 'start editing notes with the text cursor at the end' setting under `options->notes` now applies to all notes in an 'edit notes' panel with multiple notes
-* clicking a new note tab in 'edit notes' now immediately focuses the underlying note so you can start typing
-* if you have made changes, the 'edit notes' panel now confirms if you want to cancel. let me know if this produces false positives--there's some 'note cleaning' stuff I don't account for
-
-### file viewing statistics
-
-* the new 'client api' views are now integrated into the UI for search, sort, and view
-* the way file viewing stats are presented in the media right-click menu is simplified. the stuff under `options->file viewing statistics` is down from five different options to two (show the views summed with a stack of the components in a submenu, or just show the stack of separate count types up front), and there's a new checkbox list with media, preview, and client api views so you can select what you want to see
-* sorting files by media views now obeys the above 'what you want to see' setting, summing the respective values. previously it just did media views
-* `system:file viewing statistics` now allows for selection of 'client api views'
-* `system:file viewing statistics` now renders itself in the form `system:views/viewtime in (domains) (operator) (value)`, where 'domains' is a comma-separated combination of `media`, `preview` and `client api`. previously they were `system:media/preview/all views/viewtime (operator) (value)`
-* if domains is left blank, I substitute the above 'what you want to see' option, so you can now just type `system:views > 5` and you'll get something reasonable
-* the old forms still parse but are unchanged and won't support client api
-* added some new unit tests for this
-* as a side thing, I did the same pixel-perfect-height update that I did for multi-column lists to most of my checkbox lists across the program, including for canvas view selection around here. they just fit better now
-* I overhauled some file viewing stats db search code. the predicate still holds some stupid variables that I'll want to rework one day, but the meat of the db search code is now ok
-
-### advanced parsing logic and overhaul
-
-* subsidiary page parsers have a new 'sort posts by source time' checkbox, default off, which sorts what this subsidiary parser chops up according to any parsed source time, newest first. use this if you are, obviously, parsing things that each have a source time you'd like to sort by but which come in some other order, e.g. you have two individually sorted pages of results in one document and you'd like to interleave them
-* wrote up proper objects to hold 'parsable content description', 'parsed content', and 'parsed post'. previously this was a big mess of tuples upon tuples and 'all parse results' vs 'whole page parse results' semantic sludge
-* refactored `ClientParsing` to a new `parsing` module, added `ClientParsingResults` to handle the new objects, and split off old file lookup stuff to `ClientParsingLegacy`
-* all parsers now use the new objects to report what content they can parse
-* all parsers now use the new objects all along the parsing pipeline! the whole thing is done and much nicer
-* deleted a ton of old bad code that was navigating this before
-* deleted some old bytes/str error-handling back from the python 2 days
-* when a gallery url is worked, it now reports fully, in the gallery log note column, how many sub-gallery urls were parsed, and how many were previously hit this run, and how many next gallery page urls were parsed, and how many were previously hit this run, and whether a url class extrapolated next gallery page url was generated, and, the same deal, if it was previously hit this run. previously, this guy mostly just reported the latest interesting thing to happen--now it is comprehensive
-* fixed an odd bug where the gallery worker could add a sub-gallery urls that pointed to the API redirected URL that created it
-* fixed an odd bug where the gallery worker could skip the 'seen this url before in this parsing run?' check for an auto-generated 'next page' gallery url fallback step
-* cleaned up the gallery url 'work' code significantly
-* fixed a note parsing issue in the downloader where note texts were not always being cleaned on parse
-* overhauled the subsidiary parser test panel to use the actual code as-in the subsidiary parser, rather than a facsimile
-* got the page parser and subsidiary page parser test panels to recognise empty input rather than outputting errors on failed conversions of the empty string lol
-* all the 'raw data'/'post conversion'/'post separation' tabs in the parser test UI now show up to 64KB of data. previously, the latter two were still capped to 1KBs
-* fixed some bad layout in the edit subsidiary page parser panel
-* cleaned up some lazy variable names in the subsidiary page parser code
-* cleaned up how subsidiary page parsers initialise their edit panel
-* fixed a layout issue in the 'edit login step' panel where there were now two nested 'content parsers' static boxes
-
-### some subscription logic and UI
-
-* cleaned some of the subscription gallery search logic, especially the 'have we caught up to where we were despite the (large) gallery page not being finished yet?' test, which has a couple of false positive edge cases solved
-* cleaned some duplicate code out of here
-* subscription queries now have an editable 'compaction number', which governs how small they should trim themselves to. this was previously fixed at 250 items, but is now changeable for advanced debugging purposes under the edit subscription query panel
-* if you have a very large periodic file limit or the site produces a huge gallery page, the compaction number will now increase dynamically to ensure the subscription maintains a healthy cache of urls to consult for the size of our job
-* the edit subscription query panel gets a layout overhaul. the stack of widgets is now grouped into boxes
-* the `options->downloading` page now specifies that the two checker options buttons are for the subscription/watcher _defaults_
-* as a side thing, watcher check logs now record up to 500 entries before removing old items. used to be 100
-
-### weird thing
-
-* the tag autocomplete searches across the program that manage a `read/search` context (as opposed to a `write/edit` one), will now pass a keyboard copy event to their top list if there is no selected text in the text input and there are no results in the search list below. actually getting into this situation is tricky, but this is really prep for a future overhaul of the write context, where no results is the default situation on an empty input but which cannot actually talk to its top list yet
-
-## [Version 609](https://github.com/hydrusnetwork/hydrus/releases/tag/v609)
-
-### macOS app now comes in a zip
-
-* the macos-13 runner that we recently moved to has been taking way too long to build the App DMG. under ideal conditions it will take ~6 minutes, but sometimes it will be 45+. this is an unfortunate and widespread issue without an excellent fix
-* thus, the macOS App is now distributed in a zip (that takes about 30 seconds to build and is the same size as the DMG lol)
-* unfortunately this means we can't have the Applications shortcut or the ReadMe; you'll be double-clicking the zip to extract the App, and then dragging it to your Applications yourself
-* I have updated the 'getting started - installing' guide with the 'allow unsigned apps' stuff from the ReadMe
-* I am increasingly of the mind that macOS users should consider running from source. the App is built for intel chipsets, so if you are on Silicon, you definitely should: https://hydrusnetwork.github.io/hydrus/running_from_source.html
-
-### misc
-
-* INFO: reducing the 'too many events' mpv error-handling hook worked well. if you saw a bunch of these in the past few weeks, these were almost certainly false-positives. the files were likely not broken, they were just taxing your computer for a bit and the error was firing accidentally. if you set up a special workflow to isolate or deal with these files, please undo it
-* the new 'group by namespace (user)' list widget under `options->sort/collect` now accepts `:` to represent 'all other namespaced tags' if you would like to put them somewhere specific
-* fixed a typo in the new duplicate files 'has duration' comparison strings. it said 'the other has duration, the other does not' when the current file had no duration
-* the score for duration now scales from 1 to 50 depending on how much longer a vid is than the other on millisecond longer = 1, twice as long = 50 (cap). this is all still just hardcoded stuff I'm playing around with, and I expect it to formalise to something completely user-customisable as the tools from duplicates auto-resolution firm up
-* added a little section to 'help my db is broke.txt' talking about the sqlite3 terminal and how to get it on non-Windows
-
-### colour sorting
-
-* after talking with some users, and learning that our blurhash provides the average colour of image thumbnails, I went bananas and added five new 'average colour' file sorts--
-* `lightness` - sorts light-to-dark in the Lab colourspace
-* `hue` - sorts the standard red-orange-yellow-green-cyan-blue-purple colourwheel/rainbow in the HSL colourspace
-* `balance - blue-yellow` - sorts blue-yellow chromaticity in the Lab colourspace
-* `balance - green-red` - sorts green-red chromaticity in the Lab colourspace
-* `chromatic magnitude` - sorts the combined chroma value, which is basically 'is it grey or colourful' in the Lab colourspace
-* this works on any file with a thumbnail!
-* they all work with system:limit, also!
-* and the Client API--new `file_sort_type` definitions are in the Client API reference
-* I am extremely pleased with how this all worked out. there are some weird results because it is average colour, rather, say, than a carefully selected 'primary colour', and I think it could do with some more work, to perhaps, for instance, push remarkably grey images to the bottom of Hue sorts, but this really works and it simply looks cool to do and then scroll through. it is a good base and proof of concept for my original plan to make colour histograms for files and distinguish between images that are muddy all over versus white and red. let me know where this succeeds and fails, and we'll see what improvements we can think of
-
-### janitor stuff
-
-* in the petition processing page, when you process a petition, either the normal way or via the mass approve/deny buttons, the 'currently highlighted petition' moves to _after_ the current one (or the next available one if you process multiple at once). previously this was resetting to the 0 position on every mass approve/deny. it should ripple down a bit more naturally now
-* when you set to apply multiple petitions at once, the pertinent list rows now instantly to show 'uploading...' status
-* I wrote a whack of test code that loads up and processes fake petitions for the petition page, so I can test these workflows much easier now
-* I fixed the 'modify account that uploaded this tag' for tags that include the '+' character. sorry for the long-time trouble--it was a stupid GET args parsing issue I missed in early code
-
-### boring code cleanup
-
-* broke up the 'ManagementPanels' monolith, refactoring it to a bunch of smaller files more under the 'Sidebar' name
-* renamed the ambiguous 'management type' to 'page type', and 'management panel' to 'sidebar', and 'management controller' to 'page manager' across the program
-* cleaned up some old static superclass calls in here to `super()`
-* brushed up the code generally around here, ditching some bad ideas and scope design
-* fixed a small instability trigger in the main file query routine
-* cleaned up some more inartful controller scope code in page and downloader UI
-* cleaned some ugly `QLineEdit` initialisations across the program
-* updated the server requirements.txt, which isn't used for anything but a reference, to use the newer OpenCV; I just forgot to update it a while ago
-
-### pyproject.toml
-
-* a user made a 'pyproject.toml' file. this is basically a cleverer requirements.txt that allows for better dependency options. I learned a bit about these files this week and I quite like them. pip can handle them too, so this would be one way to simplify my setup_venv scripts to a single call and allow users to set up simple custom automated situations
-* so, just for now, there's a pyproject.toml in the base directory. if you use `uv`, feel free to play around with it. I will manually keep it updated and version-synced to our requirements txts, and I wouldn't be surprised if I switch to it as the master soon. I'm going to do some other work and research and testing first though
-
-### duplicates auto-resolution
-
-* I did a little work on the daemon, but I didn't feel great about it tbh. I know roughly the various things it needs to do, but I'm not firm on what should be the correct orientation of everything. I'll keep at it, and I may do more UI so I have better feedback while I am doing final integration here
-
-## [Version 608](https://github.com/hydrusnetwork/hydrus/releases/tag/v608)
-
-### mpv
-
-* my ill-fated mpv-choking error hook, which tries to catch when MPV is having a 100% CPU event and unloads the file in a big fuss, and which has unfortunately caused a whole bunch of false positives, is now flipped on its head. instead of catching all instances of the log output and trying to exclude 'oh that's fine' cases, the hook now precisely targets files that go irrevocably 100% CPU on loop, specifically by recognising files that reload too frequently in one second for their duration (e.g. a normal vid looping twenty times in one second). mpv will be back to being juddery sometimes, but whatever, that's better than what I was doing
-* the new 'DEBUG CAREFUL: Allow "too many events queued" files' checkbox no longer does anything and is removed
-* also, the mpv emergency dump-out code is back to being per mpv player. previously it would unload all players the client was managing
-* my mpv player now uses a little less CPU when mouse-drag-seeking
-
-### misc
-
-* I am changing the tag sort logic such that if you group by namespace, the namespace order stays as it is, no matter the underling asc/desc order of the actual sort. in simple english, this means that creator tags stay at the top whether you say 'most first' or 'fewest first'. we had success with the 'namespace (user)' just recently, and after talking about it with some guys, I think I agree that doing a full reverse of the whole list is not useful, and it isn't, fundamentally, what grouping is. let's try it like this, see how we like it
-* the various multi-column lists across the program, which generally set their minimum and initial height by a 'num rows' suggestion, now do so pixel-perfect in most cases, no matter the style (it was previously ok on windowsvista, with a bit of fuzzy padding, but on Fusion it was either too tall or short due to font height estimate stuff). the downloader and watcher lists, which dynamically size according to contents, also do so unerringly. I find this very slightly eerie tbh so I might add a couple pixels of whitespace on the end so your brain knows there isn't more to scroll. let's try it like this for a few weeks and see how it feels
-* added `--pause_network_traffic` launch parameter to the client, which hits `network->pause->all new network traffic` before the network engine initialises, to help debug when pending subscriptions or initial-session downloaders go crazy
-* in 'manage tag siblings/parents', if you import from a clipboard/txt that includes a `a->a` loop-pair, the dialog now yells at you
-* as a little hack, I added ctrl+shift+c to the taglist to say 'copy tags with parents' the default ctrl+c does not include the parents
-* removed a duplicate and blank entry for 'EXPERIMENTAL: Image path for thumbnail panel...' in `options->thumbnails`, whoops
-* I added a little safety code to the import folder, trying to catch a possible infinite loop we have seen. import folders now also take regular short breaks to give other threads like garbage collection a guaranteed moment to step in
-* fixed a bad buffer truncation calculation in the native video viewer
-
-### build/jpeg-xl stuff
-
-* in `help->about`, moved the Jpeg-XL and HEIF(/AVIF) support lines to the second tab, and together
-* if your client does not have Jpeg-XL support, the import error is now stated when you hit `help->about`. **if you are on macOS, you probably do not have Jpeg-XL support yet**, and the solution, whether on App or from source, is to run `brew install jpeg-xl` in the terminal, which is now also said in this message (issue #1670)
-* added a small note to the installing help docs to say Apple Silicon users should consider running from source. the App is Intel for the time being, and running from source will give you a much more pleasant experience all around
-
-### boring code cleanup
-
-* refactored the `ProcessContentUpdates` megacall and its friends to a new 'content updates' database module
-* refactored the duplicates file search stuff down to a new database module
-* and refactored the 'set duplicates' call down to a new database module
-* about 110KB of code is thus cleared out of the `ClientDB` monolith, which is down to 500KB, and we are ready to plug the duplicates auto-resolution module in as it now has scope on the various calls it needs
-* fleshed out the duplicates db module's master id definitions
-* cleaned up how I refer to file duration across the program. all the convenient-to-change duration or frame durations have a unified nomenclature and always say if they are in seconds or milliseconds
-
-### duplicates auto-resolution
-
-* the final difficult duplicates auto-resolution database problem (fast incremental duplicate pairs search) is solved. outside of at-scale testing and final integration, the database side of this is now complete. now just need to to figure out a daemon and a preview panel

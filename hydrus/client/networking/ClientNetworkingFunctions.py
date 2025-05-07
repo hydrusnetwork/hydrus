@@ -303,6 +303,7 @@ def ConvertURLIntoDomain( url ):
     
     return domain
     
+
 def ConvertURLIntoSecondLevelDomain( url ):
     
     domain = ConvertURLIntoDomain( url )

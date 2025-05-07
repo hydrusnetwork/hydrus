@@ -299,7 +299,16 @@ def GetServicesDict():
         
         if service.GetServiceType() in HC.STAR_RATINGS_SERVICES:
             
-            shape_label = ClientRatings.shape_to_str_lookup_dict[ service.GetShape() ]
+            star_type = service.GetStarType()
+            
+            if star_type.HasShape():
+                
+                shape_label = ClientRatings.shape_to_str_lookup_dict[ star_type.GetShape() ]
+                
+            else:
+                
+                shape_label = 'svg'
+                
             
             service_dict[ 'star_shape' ] =  shape_label
             

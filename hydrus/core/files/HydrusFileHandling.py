@@ -215,26 +215,7 @@ def GenerateThumbnailNumPy( path, target_resolution, mime, duration_ms, num_fram
             
             PrintMoreThumbErrorInfo( e, f'Problem generating thumbnail for "{path}".', extra_description = extra_description )
             
-            HydrusData.Print( 'Attempting ffmpeg PSD thumbnail fallback' )
-            
-            ( os_file_handle, temp_path ) = HydrusTemp.GetTempPath( suffix = '.png' )
-            
-            try:
-                
-                HydrusVideoHandling.RenderImageToImagePath( path, temp_path )
-                
-                thumbnail_numpy = HydrusImageHandling.GenerateThumbnailNumPyFromStaticImagePath( temp_path, target_resolution, HC.IMAGE_PNG )
-                
-            except Exception as e: 
-                
-                PrintMoreThumbErrorInfo( e, f'Secondary problem generating thumbnail for "{path}".', extra_description = extra_description )
-                
-                thumbnail_numpy = GenerateDefaultThumbnail(mime, target_resolution)
-                
-            finally:
-                
-                HydrusTemp.CleanUpTempPath( os_file_handle, temp_path )
-                
+            thumbnail_numpy = GenerateDefaultThumbnail( mime, target_resolution )
             
         
     elif mime == HC.IMAGE_SVG: 
@@ -282,24 +263,8 @@ def GenerateThumbnailNumPy( path, target_resolution, mime, duration_ms, num_fram
         
     elif mime == HC.APPLICATION_FLASH:
         
-        ( os_file_handle, temp_path ) = HydrusTemp.GetTempPath()
-        
-        try:
-            
-            HydrusFlashHandling.RenderPageToFile( path, temp_path, 1 )
-            
-            thumbnail_numpy = HydrusImageHandling.GenerateThumbnailNumPyFromStaticImagePath( temp_path, target_resolution, HC.IMAGE_PNG )
-            
-        except Exception as e:
-            
-            PrintMoreThumbErrorInfo( e, f'Problem generating thumbnail for "{path}".', extra_description = extra_description )
-            
-            thumbnail_numpy = GenerateDefaultThumbnail(mime, target_resolution)
-            
-        finally:
-            
-            HydrusTemp.CleanUpTempPath( os_file_handle, temp_path )
-            
+        # leaving this in place for now, rather than saying 'flash has no thumbs now', to keep legacy flash thumbs alive
+        thumbnail_numpy = GenerateDefaultThumbnail( mime, target_resolution )
         
     elif mime in HC.IMAGES or mime == HC.ANIMATION_WEBP:
         
@@ -591,9 +556,6 @@ def GetFileInfo( path, mime = None, ok_to_look_for_hydrus_updates = False ):
             
             HydrusData.Print( 'Problem calculating resolution for "{}":'.format( path ) )
             HydrusData.PrintException( e )
-            HydrusData.Print( 'Attempting PSD resolution fallback' )
-
-            ( width, height ) = HydrusPSDHandling.GetPSDResolutionFallback( path )
             
         
     # must be before VIEWABLE_ANIMATIONS

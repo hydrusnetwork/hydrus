@@ -185,8 +185,6 @@ class ClientDBURLMap( ClientDBModule.ClientDBModule ):
             # if we search for site.com, we also want artist.site.com or www.site.com or cdn2.site.com
             domain_ids = self.modules_urls.GetURLDomainAndSubdomainIds( domain )
             
-            result_hash_ids = set()
-            
             with self._MakeTemporaryIntegerTable( domain_ids, 'domain_id' ) as temp_domain_table_name:
                 
                 if hash_ids_table_name is not None and hash_ids is not None and len( hash_ids ) < 50000:

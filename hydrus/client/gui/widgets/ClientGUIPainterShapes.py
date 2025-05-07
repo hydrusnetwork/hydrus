@@ -1,8 +1,10 @@
+import typing
+
 from qtpy import QtCore as QC
 from qtpy import QtGui as QG
 
+from hydrus.client import ClientConstants as CC
 from hydrus.client.metadata import ClientRatings
-from hydrus.client import ClientGlobals as CG
 
 _W = 12.0
 _H = 12.0
@@ -225,31 +227,31 @@ MOON_CRESCENT_PATH.cubicTo(11.75, 1.8, 10.25, 1.2, 8, 1.1)
 # lookup dictionaries
 
 SHAPE_COORDS_LOOKUP = {
-    'fat star'        : FAT_STAR_COORDS,
-    'pentagram star'  : PENTAGRAM_STAR_COORDS,
-    'triangle up'     : TRIANGLE_UP_COORDS,
-    'triangle down'   : TRIANGLE_DOWN_COORDS,
-    'triangle right'  : TRIANGLE_RIGHT_COORDS,
-    'triangle left'   : TRIANGLE_LEFT_COORDS,
-    'hexagon'         : HEXAGON_COORDS,
-    'small hexagon'   : SMALL_HEXAGON_COORDS,
-    'six point star'  : SIX_POINT_STAR_COORDS,
-    'eight point star': EIGHT_POINT_STAR_COORDS,
-    'diamond'         : DIAMOND_COORDS,
-    'rhombus left'    : RHOMBUS_L_COORDS,
-    'rhombus right'   : RHOMBUS_R_COORDS,
-    'pentagon'        : PENTAGON_COORDS,
-    'hourglass'       : HOURGLASS_COORDS,
-    'x shape'         : X_SHAPE_COORDS,
-    'square cross'    : CROSS_COORDS,
+    ClientRatings.FAT_STAR : FAT_STAR_COORDS,
+    ClientRatings.PENTAGRAM_STAR : PENTAGRAM_STAR_COORDS,
+    ClientRatings.TRIANGLE_UP : TRIANGLE_UP_COORDS,
+    ClientRatings.TRIANGLE_DOWN : TRIANGLE_DOWN_COORDS,
+    ClientRatings.TRIANGLE_RIGHT : TRIANGLE_RIGHT_COORDS,
+    ClientRatings.TRIANGLE_LEFT : TRIANGLE_LEFT_COORDS,
+    ClientRatings.HEXAGON : HEXAGON_COORDS,
+    ClientRatings.SMALL_HEXAGON : SMALL_HEXAGON_COORDS,
+    ClientRatings.SIX_POINT_STAR : SIX_POINT_STAR_COORDS,
+    ClientRatings.EIGHT_POINT_STAR : EIGHT_POINT_STAR_COORDS,
+    ClientRatings.DIAMOND : DIAMOND_COORDS,
+    ClientRatings.RHOMBUS_L : RHOMBUS_L_COORDS,
+    ClientRatings.RHOMBUS_R : RHOMBUS_R_COORDS,
+    ClientRatings.PENTAGON : PENTAGON_COORDS,
+    ClientRatings.HOURGLASS : HOURGLASS_COORDS,
+    ClientRatings.X_SHAPE : X_SHAPE_COORDS,
+    ClientRatings.CROSS : CROSS_COORDS,
 }
 
 SHAPE_DRAW_FN_LOOKUP = {
-    'circle' : lambda painter, x, y, width = _W, height = _H : painter.drawEllipse( QC.QPointF( x + width / 2, y + height / 2 ), width / 2, height / 2 ),
-    'square' : lambda painter, x, y, width = _W, height = _H : painter.drawRect( QC.QRectF( x, y, width, height ) ),
-    'heart'         : lambda painter, x, y, width = _W, height = _H : _draw_path( painter, HEART_PATH, x, y, width, height ),
-    'teardrop'      : lambda painter, x, y, width = _W, height = _H : _draw_path( painter, TEARDROP_PATH, x, y, width, height ),
-    'crescent moon' : lambda painter, x, y, width = _W, height = _H : _draw_path( painter, MOON_CRESCENT_PATH, x, y, width, height )
+    ClientRatings.CIRCLE : lambda painter, x, y, width = _W, height = _H : painter.drawEllipse( QC.QPointF( x + width / 2, y + height / 2 ), width / 2, height / 2 ),
+    ClientRatings.SQUARE : lambda painter, x, y, width = _W, height = _H : painter.drawRect( QC.QRectF( x, y, width, height ) ),
+    ClientRatings.HEART : lambda painter, x, y, width = _W, height = _H : _draw_path( painter, HEART_PATH, x, y, width, height ),
+    ClientRatings.TEARDROP : lambda painter, x, y, width = _W, height = _H : _draw_path( painter, TEARDROP_PATH, x, y, width, height ),
+    ClientRatings.MOON_CRESCENT : lambda painter, x, y, width = _W, height = _H : _draw_path( painter, MOON_CRESCENT_PATH, x, y, width, height )
 }
 
 SVG_PIXMAP_CACHE = {}  # (shape_name, QColor.name()) -> QPixmap
@@ -274,8 +276,8 @@ def _draw_path( painter, path: QG.QPainterPath, x, y, width = _W, height = _H ):
     painter.drawPath( scaled_path )
     painter.restore()
     
+
 def _draw_svg_qicon( painter, shape_name: str, x, y, width = _W, height = _H ):
-    from hydrus.client import ClientConstants as CC
 
     icon = CC.global_icons().user_icons.get( shape_name )
     
@@ -283,54 +285,62 @@ def _draw_svg_qicon( painter, shape_name: str, x, y, width = _W, height = _H ):
         
         rect = QC.QRectF( x, y, width, height )
         icon.paint( painter, rect.toRect() )
+        
+    
 
 def _draw_icon_coloured( painter, shape_name: str, x, y, width = _W, height = _H ):
-    from hydrus.client import ClientConstants as CC
-
+    
     icon = CC.global_icons().user_icons.get( shape_name )
+    
     if icon is None:
+        
         return
-
+        
+    
     color = painter.brush().color()
     cache_key = ( shape_name, color.name() )
-
+    
     if cache_key in SVG_PIXMAP_CACHE:
         
         pixmap = SVG_PIXMAP_CACHE[ cache_key ]
-    
+        
     else:
+        
+        # TODO: there must be a nice way to draw a little border around this
+        
         base_pixmap = icon.pixmap( width, height )
-
+        
         # Create a tinted version
-        tinted = QG.QPixmap(base_pixmap.size())
-        tinted.fill(QC.Qt.GlobalColor.transparent)
-
-        p = QG.QPainter(tinted)
+        tinted = QG.QPixmap( base_pixmap.size() )
+        tinted.fill( QC.Qt.GlobalColor.transparent )
+        
+        p = QG.QPainter( tinted )
         p.setCompositionMode(QG.QPainter.CompositionMode.CompositionMode_Source)
         p.drawPixmap(0, 0, base_pixmap)
-
+        
         p.setCompositionMode(QG.QPainter.CompositionMode.CompositionMode_SourceIn)
-        p.fillRect(tinted.rect(), color)
+        p.fillRect( tinted.rect(), color )
         p.end()
-
+        
         SVG_PIXMAP_CACHE[cache_key] = tinted
         pixmap = tinted
+        
     
     painter.drawPixmap(x, y, pixmap)
     
 
-def _draw_icon_coloured_outlined( painter, shape_name: str, x, y, width = _W, height = _H ):
-    from hydrus.client import ClientConstants as CC
+def _draw_icon_coloured_outlined( painter, rating_svg: str, x, y, width = _W, height = _H ):
     
-    icon = CC.global_icons().user_icons.get( shape_name )
+    icon = CC.global_icons().user_icons.get( rating_svg )
     
     if icon is None:
         
         return
+        
     
     fill_colour = painter.brush().color()
     stroke_colour = painter.pen().color()
-    cache_key = ( shape_name, fill_colour.name(), stroke_colour.name(), width, height )
+    cache_key = ( rating_svg, fill_colour.name(), stroke_colour.name(), width, height )
     
     if cache_key in SVG_PIXMAP_CACHE:
         
@@ -373,9 +383,10 @@ def _draw_icon_coloured_outlined( painter, shape_name: str, x, y, width = _W, he
         
         SVG_PIXMAP_CACHE[ cache_key ] = feathered
         pixmap = feathered
+        
     
     painter.drawPixmap(x, y, pixmap)
-
+    
 
 def _painter_mask_opaque_pixels( painter, input_pixels, colour ):
     
@@ -387,6 +398,7 @@ def _painter_mask_opaque_pixels( painter, input_pixels, colour ):
     
     painter.fillRect( input_pixels.rect(), colour )
     
+
 def _painter_stamp_all_around( painter, radius, pixels ):
     
     for px_x in range ( -radius, radius ):
@@ -394,62 +406,82 @@ def _painter_stamp_all_around( painter, radius, pixels ):
             for px_y in range ( -radius, radius ):
                 
                 painter.drawPixmap( px_x , px_y, pixels )
+                
+            
         
     
+
 #used for dynamic sizing e.g. from set size in options
 #diameter = size (width or height) in px
 def GetOutlinePx( diameter, ratio = _TARGET_OUTLINE_THICKNESS, min_thickness = _MIN_OUTLINE_PX, max_thickness = _MAX_OUTLINE_PX ):
     
     return max( min( diameter / ratio, max_thickness ), min_thickness )
     
-    
 
-def DrawShape( painter, shape, x, y, width = _W, height =_H, text: str = None, text_colour: QG.QColor = None ):
+def DrawShape( painter, star_type: ClientRatings.StarType, x, y, width = _W, height =_H, text: typing.Optional[ str ] = None, text_colour: typing.Optional[ QG.QColor ] = None ):
     
-    shape = ClientRatings.shape_to_str_lookup_dict.get( shape, None )
-
-    if shape in SHAPE_DRAW_FN_LOOKUP:
+    if star_type.HasShape():
         
-        pen = painter.pen()
-        pen.setWidthF( GetOutlinePx( width ) )
-        painter.setPen(pen)
+        shape = star_type.GetShape()
         
-        SHAPE_DRAW_FN_LOOKUP[ shape ]( painter, x, y, width, height )
-        
-        
-    elif shape in SHAPE_COORDS_LOOKUP:
-        
-        scale_x = width / _ORIGINAL_PX_SCALE
-        scale_y = height / _ORIGINAL_PX_SCALE
-        
-        scaled_points = [
+        if shape not in SHAPE_DRAW_FN_LOOKUP and shape not in SHAPE_COORDS_LOOKUP:
             
-            QC.QPointF( point.x() * scale_x, point.y() * scale_y )
-            for point in SHAPE_COORDS_LOOKUP[ shape ]
+            shape = ClientRatings.FAT_STAR
             
-        ]
         
-        painter.save()
-        pen = painter.pen()
-        pen.setWidthF( GetOutlinePx( width ) )
-        painter.setPen( pen )
-        painter.translate( QC.QPointF( x, y ) )
-        painter.drawPolygon( QG.QPolygonF( scaled_points ) )
-        painter.restore()
-    
-    elif shape.startswith('svg:'):
-    
-        shape_name = shape[4:]
+        if shape in SHAPE_DRAW_FN_LOOKUP:
+            
+            pen = painter.pen()
+            pen.setWidthF( GetOutlinePx( width ) )
+            painter.setPen( pen )
+            
+            SHAPE_DRAW_FN_LOOKUP[ shape ]( painter, x, y, width, height )
+            
+        elif shape in SHAPE_COORDS_LOOKUP:
+            
+            scale_x = width / _ORIGINAL_PX_SCALE
+            scale_y = height / _ORIGINAL_PX_SCALE
+            
+            scaled_points = [
+                
+                QC.QPointF( point.x() * scale_x, point.y() * scale_y )
+                for point in SHAPE_COORDS_LOOKUP[ shape ]
+                
+            ]
+            
+            painter.save()
+            pen = painter.pen()
+            pen.setWidthF( GetOutlinePx( width ) )
+            painter.setPen( pen )
+            painter.translate( QC.QPointF( x, y ) )
+            painter.drawPolygon( QG.QPolygonF( scaled_points ) )
+            painter.restore()
+            
         
-        _draw_icon_coloured_outlined( painter, shape_name, x, y, width, height )
+    elif star_type.HasRatingSVG():
+        
+        rating_svg = star_type.GetRatingSVG()
+        
+        if rating_svg not in CC.global_icons().user_icons:
+            
+            default_star_type = ClientRatings.StarType( ClientRatings.FAT_STAR, None )
+            
+            DrawShape( painter, default_star_type, x, y, width = width, height = height, text = text, text_colour = text_colour )
+            
+            return
+            
+        
+        _draw_icon_coloured_outlined( painter, rating_svg, x, y, width, height )
         
     
-    if text: 
+    if text:
+        
         painter.save()
         
         if text_colour is not None:
             
             painter.setPen( QG.QPen( text_colour ) )
+            
         
         font = painter.font()
         font.setBold( True )
@@ -460,4 +492,5 @@ def DrawShape( painter, shape, x, y, width = _W, height =_H, text: str = None, t
         painter.drawText( text_rect, QC.Qt.AlignmentFlag.AlignCenter, text )
         
         painter.restore()
+        
     

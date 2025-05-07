@@ -2440,7 +2440,7 @@ class Thumbnail( Selectable ):
         locations_manager = media.GetLocationsManager()
         
         # ratings
-        THUMBNAIL_RATING_ICON_SET_SIZE = round( float( new_options.GetString( 'draw_thumbnail_rating_icon_size_px' ) ) )
+        THUMBNAIL_RATING_ICON_SET_SIZE = round( new_options.GetFloat( 'draw_thumbnail_rating_icon_size_px' ) )
         STAR_DX = THUMBNAIL_RATING_ICON_SET_SIZE
         STAR_DY = THUMBNAIL_RATING_ICON_SET_SIZE
         

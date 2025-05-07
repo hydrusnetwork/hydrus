@@ -9,7 +9,6 @@ from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusLists
 from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusSerialisable
-from hydrus.core.files import HydrusPSDHandling
 from hydrus.core.files.images import HydrusBlurhash
 
 from hydrus.client import ClientConstants as CC
@@ -251,12 +250,6 @@ def GetShowAction( media_result: ClientMediaResult.MediaResult, canvas_type: int
     else:
         
         action = CG.client_controller.new_options.GetMediaShowAction( mime )
-        
-    
-    if mime == HC.APPLICATION_PSD and action[0] == CC.MEDIA_VIEWER_ACTION_SHOW_WITH_NATIVE and not HydrusPSDHandling.PSD_TOOLS_OK:
-        
-        # fallback to open externally button when psd_tools not available 
-        action = ( CC.MEDIA_VIEWER_ACTION_SHOW_OPEN_EXTERNALLY_BUTTON, start_paused, start_with_embed )
         
     
     return action

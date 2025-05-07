@@ -676,6 +676,8 @@ class BetterSpinBox( QW.QSpinBox ):
             self.setMinimumWidth( width )
             
         
+    
+
 class BetterDoubleSpinBox( QW.QDoubleSpinBox ):
     
     def __init__( self, parent: QW.QWidget, initial = None, min = None, max = None, width = None ):
@@ -701,15 +703,6 @@ class BetterDoubleSpinBox( QW.QDoubleSpinBox ):
             
             self.setMinimumWidth( width )
             
-        
-    def setValue( self, val ):
-        
-        super().setValue( float( val ) )
-        
-    
-    def getString( self ):
-        
-        return str( self.value() )
         
     
 

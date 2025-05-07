@@ -226,7 +226,7 @@ def GenerateNumPyImage( path, mime, force_pil = False, human_file_description = 
             HydrusData.ShowText( 'Loading PSD' )
             
         
-        pil_image = HydrusPSDHandling.MergedPILImageFromPSD( path )
+        pil_image = HydrusPSDHandling.GeneratePILImageFromPSD( path )
         
         return GenerateNumPyImageFromPILImage( pil_image )
         
@@ -495,7 +495,7 @@ def GenerateThumbnailBytesFromNumPy( numpy_image ) -> bytes:
     if len( numpy_image.shape ) == 2:
         
         depth = 3
-                
+        
     else:
         
         ( im_height, im_width, depth ) = numpy_image.shape
@@ -549,6 +549,11 @@ def GetImagePixelHash( path, mime ) -> bytes:
 
 def GetImagePixelHashNumPy( numpy_image ):
     
+    # Yo, this does not take dimensions into account! flat colour images of differing dimensions but same num_pixels have the same hash!
+    # same for some carefully designed checkerboard patterns etc..
+    # _at some point_ we could change this and force a regen for all files, I guess
+    # don't do a 'newline at end of every line', since there may be other strange collisions. do 'encode big int width/height at start of pixel hash'
+    # is there anything else we want to encode?
     return hashlib.sha256( numpy_image.data.tobytes() ).digest()
     
 

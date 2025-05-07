@@ -455,6 +455,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             'media_viewer_prefetch_delay_base_ms' : 100,
             'media_viewer_prefetch_num_previous' : 2,
             'media_viewer_prefetch_num_next' : 3,
+            'duplicate_filter_prefetch_num_pairs' : 5,
             'thumbnail_border' : 1,
             'thumbnail_margin' : 2,
             'thumbnail_dpr_percent' : 100,
@@ -502,6 +503,11 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             'watcher_page_status_update_time_ratio_denominator' : 30,
             'media_viewer_default_zoom_type_override' : ClientGUICanvasMedia.MEDIA_VIEWER_ZOOM_TYPE_DEFAULT_FOR_FILETYPE,
             'preview_default_zoom_type_override' : ClientGUICanvasMedia.MEDIA_VIEWER_ZOOM_TYPE_DEFAULT_FOR_FILETYPE
+        }
+        
+        self._dictionary[ 'floats' ] = {
+            'draw_thumbnail_rating_icon_size_px' : ClientGUIPainterShapes.SIZE.width(),
+            'media_viewer_rating_icon_size_px' : ClientGUIPainterShapes.SIZE.width()
         }
         
         #
@@ -583,8 +589,6 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             'last_incremental_tagging_namespace' : 'page',
             'last_incremental_tagging_prefix' : '',
             'last_incremental_tagging_suffix' : '',
-            'draw_thumbnail_rating_icon_size_px' : str( ClientGUIPainterShapes.SIZE.width() ),
-            'media_viewer_rating_icon_size_px' : str( ClientGUIPainterShapes.SIZE.width() ),
             'last_options_window_panel' : 'gui'
         }
         
@@ -1296,6 +1300,14 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             
         
     
+    def GetFloat( self, name: str ):
+        
+        with self._lock:
+            
+            return self._dictionary[ 'floats' ][ name ]
+            
+        
+    
     def GetFrameLocation( self, frame_key ):
         
         with self._lock:
@@ -1881,6 +1893,14 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         with self._lock:
             
             self._dictionary[ 'favourite_tag_filters' ] = HydrusSerialisable.SerialisableDictionary( names_to_tag_filters )
+            
+        
+    
+    def SetFloat( self, name: str, value: float ):
+        
+        with self._lock:
+            
+            self._dictionary[ 'floats' ][ name ] = value
             
         
     

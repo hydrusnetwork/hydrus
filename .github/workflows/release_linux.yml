@@ -52,7 +52,6 @@ jobs:
         run: |
             sudo chown --recursive 1000:1000 dist/hydrus_client
             sudo find dist/hydrus_client -type d -exec chmod 0755 {} \;
-            sudo chmod +x dist/hydrus_client/hydrus_client dist/hydrus_client/hydrus_server dist/hydrus_client/bin/swfrender_linux
       -
         name: Compress Client
         run: |

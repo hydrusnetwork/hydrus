@@ -262,11 +262,18 @@ def IsAlreadyRunning( db_path, instance ):
                     return False
                     
                 
+                def time_matches( process_time: float, recorded_time: float ):
+                    
+                    # since some timestamps here can be just slightly off due to float gubbins, let's allow a broader test so other processes can force a lock by making their own 'I want the lock' running file
+                    
+                    return recorded_time - 0.5 < process_time < recorded_time + 0.5
+                    
+                
                 try:
                     
                     me = HydrusPSUtil.psutil.Process()
                     
-                    if me.pid == pid and me.create_time() == create_time:
+                    if me.pid == pid and time_matches( me.create_time(), create_time ):
                         
                         # this is me! there is no conflict, lol!
                         # this happens when a linux process restarts with os.execl(), for instance (unlike Windows, it keeps its pid)
@@ -278,7 +285,7 @@ def IsAlreadyRunning( db_path, instance ):
                         
                         p = HydrusPSUtil.psutil.Process( pid )
                         
-                        if p.create_time() == create_time and p.is_running():
+                        if time_matches( p.create_time(), create_time ) and p.is_running():
                             
                             return True
                             

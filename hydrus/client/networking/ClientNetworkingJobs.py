@@ -731,19 +731,8 @@ class NetworkJob( object ):
                 headers[ 'Range' ] = 'bytes={}-'.format( self._num_bytes_read )
                 
             
-            if HG.network_report_mode:
-                
-                message = f'Network Jobs Referral URLs for {url}:\nGiven: {self._referral_url}\nUsed: {referral_url}'
-                
-                if HG.network_report_mode_silent:
-                    
-                    HydrusData.Print( message )
-                    
-                else:
-                    
-                    HydrusData.ShowText( message )
-                    
-                
+            
+            ClientNetworkingFunctions.NetworkReportMode( f'Network Jobs Referral URLs for {url}:\nGiven: {self._referral_url}\nUsed: {referral_url}' )
             
             if referral_url is not None:
                 
@@ -765,19 +754,7 @@ class NetworkJob( object ):
                         referral_url = urllib.parse.quote( referral_url, "!#$%&'()*+,/:;=?@[]~" )
                         
                     
-                    if HG.network_report_mode:
-                        
-                        message = f'Network Jobs Quoted Referral URL for {url}:\n{referral_url}'
-                        
-                        if HG.network_report_mode_silent:
-                            
-                            HydrusData.Print( message )
-                            
-                        else:
-                            
-                            HydrusData.ShowText( message )
-                            
-                        
+                    ClientNetworkingFunctions.NetworkReportMode( f'Network Jobs Quoted Referral URL for {url}:\n{referral_url}' )
                     
                 
                 headers[ 'referer' ] = referral_url
@@ -811,14 +788,7 @@ class NetworkJob( object ):
                 message = 'No custom headers set by the network domain manager.'
                 
             
-            if HG.network_report_mode_silent:
-                
-                HydrusData.Print( message )
-                
-            else:
-                
-                HydrusData.ShowText( message )
-                
+            ClientNetworkingFunctions.NetworkReportMode( message )
             
         
         # note we do verify=session.verify here since it is an implicit inheritance and can be overwritten by internal requests ENV gubbins unless explicitly stated
@@ -843,14 +813,7 @@ class NetworkJob( object ):
             message += 'Response Headers:\n'
             message += '\n'.join( [ f'{key}: {value}' for ( key, value ) in sorted( response.headers.items() ) ] )
             
-            if HG.network_report_mode_silent:
-                
-                HydrusData.Print( message )
-                
-            else:
-                
-                HydrusData.ShowText( message )
-                
+            ClientNetworkingFunctions.NetworkReportMode( message )
             
         
         with self._lock:
@@ -1472,15 +1435,7 @@ class NetworkJob( object ):
                         
                         message = f'Network Jobs Redirect: {self._url} -> {self._actual_fetched_url}'
                         
-                        if HG.network_report_mode_silent:
-                            
-                            HydrusData.Print( message )
-                            
-                        else:
-                            
-                            HydrusData.ShowText( message )
-                            
-                        
+                        ClientNetworkingFunctions.NetworkReportMode( message )
                         
                     
                     self._ParseFirstResponseHeaders( response )

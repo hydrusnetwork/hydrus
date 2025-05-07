@@ -1493,7 +1493,7 @@ class CanvasHoverFrameTopRight( CanvasHoverFrame ):
         
         self._icon_panel.setLayout( icon_hbox )
         
-        self._rating_icon_size_px = float( CG.client_controller.new_options.GetString( 'media_viewer_rating_icon_size_px' ) )
+        self._rating_icon_size_px = CG.client_controller.new_options.GetFloat( 'media_viewer_rating_icon_size_px' )
         
         # repo strings
         

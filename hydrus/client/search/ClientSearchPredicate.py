@@ -1,4 +1,5 @@
 import datetime
+import re
 import typing
 
 from hydrus.core import HydrusConstants as HC
@@ -367,6 +368,8 @@ PREDICATE_TYPES_WE_CAN_TEST_ON_MEDIA_RESULTS = [
     PREDICATE_TYPE_SYSTEM_MIME,
     PREDICATE_TYPE_SYSTEM_WIDTH,
     PREDICATE_TYPE_SYSTEM_HEIGHT,
+    PREDICATE_TYPE_SYSTEM_NUM_URLS,
+    PREDICATE_TYPE_SYSTEM_KNOWN_URLS,
     PREDICATE_TYPE_SYSTEM_HAS_EXIF,
     PREDICATE_TYPE_SYSTEM_HAS_ICC_PROFILE,
     PREDICATE_TYPE_SYSTEM_HAS_HUMAN_READABLE_EMBEDDED_METADATA
@@ -380,7 +383,8 @@ PREDICATE_TYPES_WE_CAN_EXTRACT_FROM_MEDIA_RESULTS = [
     PREDICATE_TYPE_SYSTEM_HEIGHT,
     PREDICATE_TYPE_SYSTEM_NUM_PIXELS,
     PREDICATE_TYPE_SYSTEM_DURATION,
-    PREDICATE_TYPE_SYSTEM_NUM_FRAMES
+    PREDICATE_TYPE_SYSTEM_NUM_FRAMES,
+    PREDICATE_TYPE_SYSTEM_NUM_URLS
 ]
 
 class Predicate( HydrusSerialisable.SerialisableBase ):
@@ -873,6 +877,10 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
             
             return media_result.GetFileInfoManager().num_frames
             
+        elif self._predicate_type == PREDICATE_TYPE_SYSTEM_NUM_URLS:
+            
+            return len( media_result.GetLocationsManager().GetURLs() )
+            
         else:
             
             raise NotImplementedError( f'The given predicate, "{self.ToString()}", cannot extract a value from a media result! You should not be able to get into this situation, so please contact hydev with details.' )
@@ -1309,6 +1317,64 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
             inclusive_hack = self._value is None or self._value is True
             
             return media_result.GetFileInfoManager().has_human_readable_embedded_metadata == inclusive_hack
+            
+        elif self._predicate_type == PREDICATE_TYPE_SYSTEM_NUM_URLS:
+            
+            number_test: ClientNumberTest.NumberTest = self._value
+            
+            return number_test.Test( len( media_result.GetLocationsManager().GetURLs() ) )
+            
+        elif self._predicate_type == PREDICATE_TYPE_SYSTEM_KNOWN_URLS:
+            
+            ( operator, rule_type, rule, description ) = self._value
+            
+            urls = media_result.GetLocationsManager().GetURLs()
+            
+            if rule_type == 'url_class':
+                
+                from hydrus.client.networking import ClientNetworkingURLClass
+                
+                url_class: ClientNetworkingURLClass.URLClass = rule
+                
+                matches = True in ( url_class.Matches( url ) for url in urls )
+                
+            elif rule_type == 'regex':
+                
+                regex_rule: str = rule
+                
+                re_url_test = re.compile( regex_rule )
+                
+                matches = True in ( re_url_test.search( url ) is not None for url in urls )
+                
+            elif rule_type == 'exact_match':
+                
+                url: str = rule
+                
+                matches = url in urls
+                
+            elif rule_type == 'domain':
+                
+                from hydrus.client.networking import ClientNetworkingFunctions
+                
+                domain: str = rule
+                
+                domain = ClientNetworkingFunctions.RemoveWWWFromDomain( domain )
+                
+                matches = True in ( ClientNetworkingFunctions.ConvertURLIntoDomain( url ).endswith( domain ) for url in urls )
+                
+            else:
+                
+                return False
+                
+            
+            if operator: # this is a bool
+                
+                return matches
+                
+            else:
+                
+                return not matches
+                
             
         else:
             

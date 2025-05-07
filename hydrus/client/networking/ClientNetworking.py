@@ -10,6 +10,7 @@ from hydrus.core import HydrusGlobals as HG
 
 from hydrus.client import ClientGlobals as CG
 from hydrus.client.networking import ClientNetworkingBandwidth
+from hydrus.client.networking import ClientNetworkingFunctions
 from hydrus.client.networking import ClientNetworkingSessions
 from hydrus.client.networking import ClientNetworkingDomain
 from hydrus.client.networking import ClientNetworkingJobs
@@ -88,19 +89,7 @@ class NetworkEngine( object ):
     
     def AddJob( self, job: ClientNetworkingJobs.NetworkJob ):
         
-        if HG.network_report_mode:
-            
-            message = f'Network Job Added: {job._method}  {job._url}'
-            
-            if HG.network_report_mode_silent:
-                
-                HydrusData.Print( message )
-                
-            else:
-                
-                HydrusData.ShowText( message )
-                
-            
+        ClientNetworkingFunctions.NetworkReportMode( f'Network Job Added: {job._method}  {job._url}' )
         
         with self._lock:
             
@@ -419,19 +408,7 @@ class NetworkEngine( object ):
                     
                 else:
                     
-                    if HG.network_report_mode:
-                        
-                        message = f'Network Job Starting: {job._method} {job._url}'
-                        
-                        if HG.network_report_mode_silent:
-                            
-                            HydrusData.Print( message )
-                            
-                        else:
-                            
-                            HydrusData.ShowText( message )
-                            
-                        
+                    ClientNetworkingFunctions.NetworkReportMode( f'Network Job Starting: {job._method} {job._url}' )
                     
                     self._active_domains_counter[ job.GetSecondLevelDomain() ] += 1
                     
@@ -454,19 +431,7 @@ class NetworkEngine( object ):
             
             if job.IsDone():
                 
-                if HG.network_report_mode:
-                    
-                    message = f'Network Job Done: {job._method} {job._url}'
-                    
-                    if HG.network_report_mode_silent:
-                        
-                        HydrusData.Print( message )
-                        
-                    else:
-                        
-                        HydrusData.ShowText( message )
-                        
-                    
+                ClientNetworkingFunctions.NetworkReportMode( f'Network Job Done: {job._method} {job._url}' )
                 
                 second_level_domain = job.GetSecondLevelDomain()
                 

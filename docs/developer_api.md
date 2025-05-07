@@ -298,8 +298,7 @@ You won't see all of these, but the service `type` enum is:
 
 Rating services now have some extra data:
 
-- like/dislike and numerical services have `star_shape`, which is one of:
-` circle | square | fat star | pentagram star | six point star | eight point star | x shape | square cross | triangle up | triangle down | triangle right | triangle left | diamond | rhombus right | rhombus left | hourglass | pentagon | hexagon | small hexagon | heart | teardrop | crescent moon `
+- like/dislike and numerical services have `star_shape`, which is one of `circle | square | fat star | pentagram star | six point star | eight point star | x shape | square cross | triangle up | triangle down | triangle right | triangle left | diamond | rhombus right | rhombus left | hourglass | pentagon | hexagon | small hexagon | heart | teardrop | crescent moon` -or- `svg`, which means a custom user svg that cannot currently be fetched over the Client API.
 - numerical services have `min_stars` (0 or 1) and `max_stars` (1 to 20)
 
 If you are displaying ratings, don't feel crazy obligated to obey the shape! Show a 4/5, select from a dropdown list, do whatever you like!

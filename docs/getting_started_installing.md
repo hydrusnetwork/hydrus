@@ -72,8 +72,8 @@ I try to release a new version every Wednesday by 8pm EST and write an accompany
     
     *   Get the .tag.gz. Extract it somewhere useful and create shortcuts to 'client' and 'server' as you like. The build is made on Ubuntu, so if you run something else, compatibility is hit and miss.
     *   If you have problems running the Ubuntu build, [running from source](running_from_source.md) is usually an improvement, and it is easy to set up these days.
-    *   You might need to get 'libmpv1' to get mpv working and playing video/audio. This is the mpv _library_, not the necessarily the player. Check _help->about_ to see if it is available--if not, see if you can get it like so:
-        * `apt-get install libmpv1`
+    *   You might need to get 'libmpv1' or 'libmpv2' to get mpv working and playing video/audio. This is the mpv _library_, not the necessarily the player. Check _help->about_ to see if it is available--if not, see if you can get it like so:
+        * `apt-get install libmpv1` or `apt-get install libmpv2`
         * Use _options->media_ to set your audio/video/animations to 'show using mpv' once you have it installed.
         * If the about window provides you an mpv error popup like this:  
     ```

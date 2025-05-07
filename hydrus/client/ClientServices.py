@@ -119,6 +119,7 @@ def GenerateDefaultServiceDictionary( service_type ):
         if service_type in HC.STAR_RATINGS_SERVICES:
             
             dictionary[ 'shape' ] = ClientRatings.CIRCLE #change default to ClientRatings.HEART ?
+            dictionary[ 'rating_svg' ] = None
             
             if service_type == HC.LOCAL_RATING_LIKE:
                 
@@ -601,6 +602,7 @@ class ServiceLocalRatingStars( ServiceLocalRating ):
         dictionary = ServiceLocalRating._GetSerialisableDictionary( self )
         
         dictionary[ 'shape' ] = self._shape
+        dictionary[ 'rating_svg' ] = self._rating_svg
         
         return dictionary
         
@@ -610,6 +612,7 @@ class ServiceLocalRatingStars( ServiceLocalRating ):
         ServiceLocalRating._LoadFromDictionary( self, dictionary )
         
         self._shape = dictionary[ 'shape' ]
+        self._rating_svg = dictionary[ 'rating_svg' ]
         
     
     def ConvertNoneableRatingToString( self, rating: typing.Optional[ float ] ):
@@ -617,11 +620,11 @@ class ServiceLocalRatingStars( ServiceLocalRating ):
         raise NotImplementedError()
         
     
-    def GetShape( self ):
+    def GetStarType( self ) -> ClientRatings.StarType:
         
         with self._lock:
             
-            return self._shape
+            return ClientRatings.StarType( self._shape, self._rating_svg )
             
         
     

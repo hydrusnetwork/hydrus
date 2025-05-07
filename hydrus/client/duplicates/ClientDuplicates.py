@@ -91,6 +91,9 @@ def GetDuplicateComparisonStatements( shown_media_result: ClientMediaResult.Medi
         s_pixel_hash = shown_media_result.GetFileInfoManager().pixel_hash
         c_pixel_hash = comparison_media_result.GetFileInfoManager().pixel_hash
         
+        s_width = shown_media_result.GetFileInfoManager().width
+        c_width = comparison_media_result.GetFileInfoManager().width
+        
         if s_pixel_hash is None or c_pixel_hash is None:
             
             statement = 'could not determine if files were pixel-for-pixel duplicates!'
@@ -98,7 +101,7 @@ def GetDuplicateComparisonStatements( shown_media_result: ClientMediaResult.Medi
             
             statements_and_scores[ 'pixel_duplicates' ] = ( statement, score )
             
-        elif s_pixel_hash == c_pixel_hash:
+        elif s_pixel_hash == c_pixel_hash and s_width == c_width:
             
             # this is not appropriate for, say, PSD files
             other_file_is_pixel_png_appropriate_filetypes = {

@@ -1457,26 +1457,16 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
             
             url_to_fetch = self._GetURLToFetch( url )
             
-            if HG.network_report_mode:
+            if url_to_fetch != url:
                 
-                if url_to_fetch != url:
-                    
-                    message = f'Request for URL to fetch:\n{url}\n->\n{url_to_fetch}'
-                    
-                else:
-                    
-                    message = f'Request for URL to fetch:\n{url}\n->\n(no transformation)'
-                    
+                message = f'Request for URL to fetch:\n{url}\n->\n{url_to_fetch}'
                 
-                if HG.network_report_mode_silent:
-                    
-                    HydrusData.Print( message )
-                    
-                else:
-                    
-                    HydrusData.ShowText( message )
-                    
+            else:
                 
+                message = f'Request for URL to fetch:\n{url}\n->\n(no transformation)'
+                
+            
+            ClientNetworkingFunctions.NetworkReportMode( message )
             
             return url_to_fetch
             
@@ -1523,14 +1513,7 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
                     message = f'Request for URL to fetch and parser:\n{url} ({url_name})\n->\n(no transformation): {parser.GetName()}'
                     
                 
-                if HG.network_report_mode_silent:
-                    
-                    HydrusData.Print( message )
-                    
-                else:
-                    
-                    HydrusData.ShowText( message )
-                    
+                ClientNetworkingFunctions.NetworkReportMode( message )
                 
             
             return result

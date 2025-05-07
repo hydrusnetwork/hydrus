@@ -2241,7 +2241,7 @@ class CanvasWithHovers( Canvas ):
         
         # ratings
         
-        RATING_ICON_SET_SIZE = round( float( self._new_options.GetString( 'media_viewer_rating_icon_size_px' ) ) )
+        RATING_ICON_SET_SIZE = round( self._new_options.GetFloat( 'media_viewer_rating_icon_size_px' ) )
         STAR_DX = RATING_ICON_SET_SIZE
         STAR_DY = RATING_ICON_SET_SIZE
         STAR_PAD = ClientGUIPainterShapes.PAD
@@ -3102,15 +3102,29 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
         
         media_results_to_prefetch = [ other_media.GetMediaResult() ]
         
-        # this doesn't handle big skip events, but that's a job for later
-        if self._GetNumRemainingDecisions() > 1: # i.e. more than the current one we are looking at
+        duplicate_filter_prefetch_num_pairs = CG.client_controller.new_options.GetInteger( 'duplicate_filter_prefetch_num_pairs' )
+        
+        if duplicate_filter_prefetch_num_pairs > 0:
             
-            media_results_to_prefetch.extend( self._batch_of_pairs_to_process[ self._current_pair_index + 1 ] )
+            # this isn't clever enough to handle pending skip logic, but that's fine
             
+            start_pos = self._current_pair_index + 1
+            
+            pairs_to_do = self._batch_of_pairs_to_process[ start_pos : start_pos + duplicate_filter_prefetch_num_pairs ]
+            
+            for pair in pairs_to_do:
+                
+                media_results_to_prefetch.extend( pair )
+                
+            
+        
+        delay_base = HydrusTime.SecondiseMSFloat( CG.client_controller.new_options.GetInteger( 'media_viewer_prefetch_delay_base_ms' ) )
         
         images_cache = CG.client_controller.images_cache
         
-        for media_result in media_results_to_prefetch:
+        for ( i, media_result ) in enumerate( media_results_to_prefetch ):
+            
+            delay = i * delay_base
             
             hash = media_result.GetHash()
             mime = media_result.GetMime()
@@ -3119,9 +3133,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
                 
                 if not images_cache.HasImageRenderer( hash ):
                     
-                    # we do qt safe to make sure the job is cancelled if we are destroyed
-                    
-                    CG.client_controller.CallAfterQtSafe( self, 'image pre-fetch', images_cache.PrefetchImageRenderer, media_result )
+                    CG.client_controller.CallLaterQtSafe( self, delay, 'image pre-fetch', images_cache.PrefetchImageRenderer, media_result )
                     
                 
             

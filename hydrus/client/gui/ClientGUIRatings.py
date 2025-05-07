@@ -77,7 +77,9 @@ def DrawIncDec( painter: QG.QPainter, x, y, service_key, rating_state, rating, s
     
     painter.setRenderHint( QG.QPainter.RenderHint.Antialiasing, False )
     
-    ClientGUIPainterShapes.DrawShape( painter, ClientRatings.SQUARE, x, y, size.width(), size.height() )
+    star_type = ClientRatings.StarType( ClientRatings.SQUARE, None )
+    
+    ClientGUIPainterShapes.DrawShape( painter, star_type, x, y, size.width(), size.height() )
     
     painter.setRenderHint( QG.QPainter.RenderHint.Antialiasing, True )
     
@@ -93,26 +95,26 @@ def DrawIncDec( painter: QG.QPainter, x, y, service_key, rating_state, rating, s
     
     painter.setFont( original_font )
     
-    
+
 def DrawLike( painter: QG.QPainter, x, y, service_key, rating_state, size: QC.QSize = STAR_SIZE ):
     
     painter.setRenderHint( QG.QPainter.RenderHint.Antialiasing, True )
     
-    shape = ClientRatings.GetShape( service_key )
+    star_type = ClientRatings.GetStarType( service_key )
     
     ( pen_colour, brush_colour ) = GetPenAndBrushColours( service_key, rating_state )
     
     painter.setPen( QG.QPen( pen_colour ) )
     painter.setBrush( QG.QBrush( brush_colour ) )
-
-    ClientGUIPainterShapes.DrawShape( painter, shape, x, y, size.width(), size.height() )
+    
+    ClientGUIPainterShapes.DrawShape( painter, star_type, x, y, size.width(), size.height() )
     
 
 def DrawNumerical( painter: QG.QPainter, x, y, service_key, rating_state, rating, size: QC.QSize = STAR_SIZE, pad_px = ClientGUIPainterShapes.PAD_PX ):
     
     painter.setRenderHint( QG.QPainter.RenderHint.Antialiasing, True )
     
-    ( shape, stars ) = GetStars( service_key, rating_state, rating )
+    ( star_type, stars ) = GetStars( service_key, rating_state, rating )
     
     x_delta = 0
     x_step = size.width() + pad_px
@@ -124,12 +126,13 @@ def DrawNumerical( painter: QG.QPainter, x, y, service_key, rating_state, rating
         
         for i in range( num_stars ):
             
-            ClientGUIPainterShapes.DrawShape( painter, shape, x + x_delta, y, size.width(), size.height() )
+            ClientGUIPainterShapes.DrawShape( painter, star_type, x + x_delta, y, size.width(), size.height() )
             
             x_delta += x_step
             
         
     
+
 def GetNumericalWidth( service_key, star_width, pad_px = ClientGUIPainterShapes.PAD_PX ):
     
     try:
@@ -165,6 +168,7 @@ def GetPenAndBrushColours( service_key, rating_state ):
     
     return ( pen_colour, brush_colour )
     
+
 def GetStars( service_key, rating_state, rating ):
     
     try:
@@ -176,7 +180,7 @@ def GetStars( service_key, rating_state, rating ):
         return ( ClientRatings.FAT_STAR, 0 )
         
     
-    shape = service.GetShape()
+    star_type = service.GetStarType()
     
     num_stars = service.GetNumStars()
     
@@ -203,7 +207,7 @@ def GetStars( service_key, rating_state, rating ):
         stars.append( ( num_stars_off, pen_colour, brush_colour ) )
         
     
-    return ( shape, stars )
+    return ( star_type, stars )
     
 
 class RatingIncDec( QW.QWidget ):

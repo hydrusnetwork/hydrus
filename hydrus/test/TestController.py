@@ -813,7 +813,8 @@ class Controller( object ):
         ]
         
         module_lookup[ 'search' ] = [
-            TestClientSearch
+            TestClientSearch,
+            TestClientMetadataConditional
         ]
         
         module_lookup[ 'tags_fast' ] = [

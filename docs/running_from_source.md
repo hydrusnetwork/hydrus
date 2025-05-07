@@ -57,8 +57,6 @@ There are now setup scripts that make this easy on Windows and Linux. You do not
         
         Then, later, when you do the `git clone https://github.com/hydrusnetwork/hydrus` line, you will need to run `git checkout tags/v578`, which will rewind you to that point in time.
         
-        You will also need to navigate to `install_dir/static/requirements/advanced` and edit `requirements_core.txt`; remove the 'psd-tools' line before you run setup_venv.
-        
         I can't promise anything though. The requirements.txt isn't perfect, and something else may break in future! You may like to think about setting up a Linux instance.
         
 
@@ -128,7 +126,7 @@ There are three special external libraries. You just have to get them and put th
         
         Linux can provide what we need in a couple of different ways. It is important that we get `libmpv`, rather than just the `mpv` player. Some Linux installs of mpv do also bring libmpv, but others do not. If your package manager provides mpv and it says it comes with libmpv, you are probably good just to get that.
         
-        Otherwise, try just running `apt-get install libmpv1` in a new terminal. You can also try `apt show libmpv1` to see any current version. Or, if you use a different package manager, try searching `libmpv`, `libmpv1`, or again, just `mpv` on that.
+        Otherwise, try just running `apt-get install libmpv1` or `apt-get install libmpv2` in a new terminal. You can also try `apt show libmpv2` to see any current version. Or, if you use a different package manager, try searching `libmpv`, `libmpv1`, `libmpv2`, or again, just `mpv` on that.
         
         1. If you have earlier than 0.34.1, you will be looking at running the 'advanced' setup in the next section and selecting the 'old' mpv.
         2. If you have 0.34.1 or later, you can run the normal setup script.
@@ -373,13 +371,15 @@ If you want to set QT_API in a batch file, do this:
 
 MPV is optional and complicated, but it is great, so it is worth the time to figure out!
 
-As well as the python wrapper, 'python-mpv' (which is in the requirements.txt), you also need the underlying dev library. This is _not_ mpv the program, but 'libmpv', often called 'libmpv1'.
+As well as the python wrapper, 'python-mpv' (which is in the requirements.txt), you also need the underlying dev library. This is _not_ mpv the program, but `libmpv`, often called `libmpv1` or `libmpv2`.
 
 For Windows, the dll builds are [here](https://sourceforge.net/projects/mpv-player-windows/files/libmpv/), although getting a stable version can be difficult. Just put it in your hydrus base install directory. Check the links in the easy-setup guide above for good versions. You can also just grab the 'mpv-1.dll'/'mpv-2.dll' I bundle in my extractable Windows release.
 
-If you are on Linux, you can usually get 'libmpv1' like so:
+If you are on Linux, you can usually get `libmpv` like so:
 
 `apt-get install libmpv1`
+-or-
+`apt-get install libmpv2`
 
 On macOS, you should be able to get it with `brew install mpv`, but you are likely to find mpv crashes the program when it tries to load. Hydev is working on this, but it will probably need a completely different render API.
 

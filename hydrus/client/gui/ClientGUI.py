@@ -32,9 +32,8 @@ from hydrus.core import HydrusTemp
 from hydrus.core import HydrusText
 from hydrus.core import HydrusTime
 from hydrus.core.files import HydrusFileHandling
-from hydrus.core.files import HydrusPSDHandling
 from hydrus.core.files import HydrusOLEHandling
-from hydrus.core.files import HydrusVideoHandling
+from hydrus.core.files import HydrusFFMPEG
 from hydrus.core.files.images import HydrusImageHandling
 from hydrus.core.networking import HydrusNetwork
 
@@ -721,7 +720,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
             
         
         library_version_lines.append( 'python: {}'.format( v ) )
-        library_version_lines.append( 'FFMPEG: {}'.format( HydrusVideoHandling.GetFFMPEGVersion() ) )
+        library_version_lines.append( 'FFMPEG: {}'.format( HydrusFFMPEG.GetFFMPEGVersion() ) )
         
         if ClientGUIMPV.MPV_IS_AVAILABLE:
             
@@ -733,7 +732,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
             
             if HC.RUNNING_FROM_FROZEN_BUILD and HC.PLATFORM_MACOS:
                 
-                HydrusData.ShowText( 'The macOS App does not come with MPV support on its own, but if your system has the dev library, libmpv1, it will try to import it. It seems your system does not have this, or it failed to import. The specific error follows:' )
+                HydrusData.ShowText( 'The macOS App does not come with MPV support on its own, but if your system has the dev library, libmpv1 or libmpv2, it will try to import it. It seems your system does not have this, or it failed to import. The specific error follows:' )
                 
             else:
                 
@@ -891,7 +890,6 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         availability_lines.append( 'psutil present: {}'.format( HydrusPSUtil.PSUTIL_OK ) )
         availability_lines.append( 'pympler present: {}'.format( HydrusMemory.PYMPLER_OK ) )
         availability_lines.append( 'pyopenssl present: {}'.format( HydrusEncryption.OPENSSL_OK ) )
-        availability_lines.append( 'psd_tools present: {}'.format( HydrusPSDHandling.PSD_TOOLS_OK ) )
         availability_lines.append( 'show-in-file-manager present: {}'.format( ClientPaths.SHOW_IN_FILE_MANAGER_OK ) )
         availability_lines.append( 'speedcopy (experimental test) present: {}'.format( HydrusFileHandling.SPEEDCOPY_OK ) )
         

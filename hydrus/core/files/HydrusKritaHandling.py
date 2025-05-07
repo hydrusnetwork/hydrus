@@ -24,7 +24,7 @@ def MergedPILImageFromKra( path ):
         
     
 
-def ThumbnailPILImageFromKra(path):
+def ThumbnailPILImageFromKra( path ):
     
     try:
         

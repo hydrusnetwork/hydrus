@@ -1070,13 +1070,28 @@ class ClientDBFilesDuplicates( ClientDBModule.ClientDBModule ):
         
         if pixel_dupes_preference in ( ClientDuplicates.SIMILAR_FILES_PIXEL_DUPES_REQUIRED, ClientDuplicates.SIMILAR_FILES_PIXEL_DUPES_EXCLUDED ):
             
-            join_predicate_pixel_dupes = 'duplicate_files_smaller.king_hash_id = pixel_hash_map_smaller.hash_id AND duplicate_files_larger.king_hash_id = pixel_hash_map_larger.hash_id AND pixel_hash_map_smaller.pixel_hash_id = pixel_hash_map_larger.pixel_hash_id'
+            # OK we are adding the files_info gubbins here because my current pixel hash does not include dimension data!!!
+            # thus a purely black image of 100x500 is matching another of 200x250
+            # if and when we tuck the resolution into the start of the pixel hash and trigger a complete wipe and regen, we can remove the patch
+            
+            predicate_parts = [
+                'duplicate_files_smaller.king_hash_id = pixel_hash_map_smaller.hash_id',
+                'duplicate_files_larger.king_hash_id = pixel_hash_map_larger.hash_id',
+                'pixel_hash_map_smaller.pixel_hash_id = pixel_hash_map_larger.pixel_hash_id',
+                'duplicate_files_smaller.king_hash_id = pixel_files_info_smaller.hash_id',
+                'duplicate_files_larger.king_hash_id = pixel_files_info_larger.hash_id',
+                'pixel_files_info_smaller.width = pixel_files_info_larger.width'
+            ]
+            
+            join_predicate_pixel_dupes = ' AND '.join( predicate_parts )
             
             if pixel_dupes_preference == ClientDuplicates.SIMILAR_FILES_PIXEL_DUPES_REQUIRED:
                 
                 tables.extend( [
                     'pixel_hash_map AS pixel_hash_map_smaller',
-                    'pixel_hash_map AS pixel_hash_map_larger'
+                    'pixel_hash_map AS pixel_hash_map_larger',
+                    'files_info AS pixel_files_info_smaller',
+                    'files_info AS pixel_files_info_larger'
                 ] )
                 
                 join_predicates.append( join_predicate_pixel_dupes )
@@ -1085,7 +1100,7 @@ class ClientDBFilesDuplicates( ClientDBModule.ClientDBModule ):
                 
                 # can't do "AND NOT {}", or the join will just give you the million rows where it isn't true. we want 'AND NEVER {}', and quick
                 
-                select_statement = 'SELECT 1 FROM pixel_hash_map AS pixel_hash_map_smaller, pixel_hash_map as pixel_hash_map_larger ON ( {} )'.format( join_predicate_pixel_dupes )
+                select_statement = 'SELECT 1 FROM pixel_hash_map AS pixel_hash_map_smaller, pixel_hash_map as pixel_hash_map_larger, files_info AS pixel_files_info_smaller, files_info AS pixel_files_info_larger ON ( {} )'.format( join_predicate_pixel_dupes )
                 
                 join_predicates.append( 'NOT EXISTS ( {} )'.format( select_statement ) )
                 
