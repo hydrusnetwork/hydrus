@@ -2673,7 +2673,6 @@
 <p>For a long time, I supported Windows 7 via running from source. Unfortunately, as libraries and code inevitably updated, this finally seems to no longer be feasible. Python 3.8 will no longer run the program. I understand v582 is one of the last versions of the program to work.</p>
 <p>First, you will have to install the older <a href="https://www.python.org/downloads/release/python-3810/">Python 3.8</a>, since that is the latest version that you can run.</p>
 <p>Then, later, when you do the <code>git clone https://github.com/hydrusnetwork/hydrus</code> line, you will need to run <code>git checkout tags/v578</code>, which will rewind you to that point in time.</p>
-<p>You will also need to navigate to <code>install_dir/static/requirements/advanced</code> and edit <code>requirements_core.txt</code>; remove the 'psd-tools' line before you run setup_venv.</p>
 <p>I can't promise anything though. The requirements.txt isn't perfect, and something else may break in future! You may like to think about setting up a Linux instance.</p>
 </details>
 <p>Then you will need to install Python. Get 3.10 or 3.11 <a href="https://www.python.org/downloads/windows/">here</a>. During the install process, make sure it has something like 'Add Python to PATH' checked. This makes Python available everywhere in Windows.  </p>
@@ -2735,7 +2734,7 @@
 <li>
 <p>mpv  </p>
 <p>Linux can provide what we need in a couple of different ways. It is important that we get <code>libmpv</code>, rather than just the <code>mpv</code> player. Some Linux installs of mpv do also bring libmpv, but others do not. If your package manager provides mpv and it says it comes with libmpv, you are probably good just to get that.</p>
-<p>Otherwise, try just running <code>apt-get install libmpv1</code> in a new terminal. You can also try <code>apt show libmpv1</code> to see any current version. Or, if you use a different package manager, try searching <code>libmpv</code>, <code>libmpv1</code>, or again, just <code>mpv</code> on that.</p>
+<p>Otherwise, try just running <code>apt-get install libmpv1</code> or <code>apt-get install libmpv2</code> in a new terminal. You can also try <code>apt show libmpv2</code> to see any current version. Or, if you use a different package manager, try searching <code>libmpv</code>, <code>libmpv1</code>, <code>libmpv2</code>, or again, just <code>mpv</code> on that.</p>
 <ol>
 <li>If you have earlier than 0.34.1, you will be looking at running the 'advanced' setup in the next section and selecting the 'old' mpv.</li>
 <li>If you have 0.34.1 or later, you can run the normal setup script.</li>
@@ -2930,10 +2929,12 @@
 </div>
 <h3 id="mpv">mpv<a class="headerlink" href="#mpv" title="Permanent link">&para;</a></h3>
 <p>MPV is optional and complicated, but it is great, so it is worth the time to figure out!</p>
-<p>As well as the python wrapper, 'python-mpv' (which is in the requirements.txt), you also need the underlying dev library. This is <em>not</em> mpv the program, but 'libmpv', often called 'libmpv1'.</p>
+<p>As well as the python wrapper, 'python-mpv' (which is in the requirements.txt), you also need the underlying dev library. This is <em>not</em> mpv the program, but <code>libmpv</code>, often called <code>libmpv1</code> or <code>libmpv2</code>.</p>
 <p>For Windows, the dll builds are <a href="https://sourceforge.net/projects/mpv-player-windows/files/libmpv/">here</a>, although getting a stable version can be difficult. Just put it in your hydrus base install directory. Check the links in the easy-setup guide above for good versions. You can also just grab the 'mpv-1.dll'/'mpv-2.dll' I bundle in my extractable Windows release.</p>
-<p>If you are on Linux, you can usually get 'libmpv1' like so:</p>
-<p><code>apt-get install libmpv1</code></p>
+<p>If you are on Linux, you can usually get <code>libmpv</code> like so:</p>
+<p><code>apt-get install libmpv1</code>
+-or-
+<code>apt-get install libmpv2</code></p>
 <p>On macOS, you should be able to get it with <code>brew install mpv</code>, but you are likely to find mpv crashes the program when it tries to load. Hydev is working on this, but it will probably need a completely different render API.</p>
 <p>Hit <em>help-&gt;about</em> to see your mpv status. If you don't have it, it will present an error popup box with more info.</p>
 <h3 id="sqlite">SQLite<a class="headerlink" href="#sqlite" title="Permanent link">&para;</a></h3>
@@ -3009,7 +3010,7 @@ choco install -y windows-sdk-10.0
     <span class="md-icon" title="Last update">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 13.1c-.1 0-.3.1-.4.2l-1 1 2.1 2.1 1-1c.2-.2.2-.6 0-.8l-1.3-1.3c-.1-.1-.2-.2-.4-.2m-1.9 1.8-6.1 6V23h2.1l6.1-6.1zM12.5 7v5.2l4 2.4-1 1L11 13V7zM11 21.9c-5.1-.5-9-4.8-9-9.9C2 6.5 6.5 2 12 2c5.3 0 9.6 4.1 10 9.3-.3-.1-.6-.2-1-.2s-.7.1-1 .2C19.6 7.2 16.2 4 12 4c-4.4 0-8 3.6-8 8 0 4.1 3.1 7.5 7.1 7.9l-.1.2z"/></svg>
     </span>
-    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="January 8, 2025 20:54:35">January 8, 2025</span>
+    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="May 7, 2025 20:55:32">May 7, 2025</span>
   </span>
 
     
