@@ -35,6 +35,49 @@
             <h1 id="changelog"><a href="#changelog">changelog</a></h1>
             <ul>
                 <li>
+                    <h2 id="version_622"><a href="#version_622">version 622</a></h2>
+                    <ul>
+                        <li><h3>misc</h3></li>
+                        <li>fixed several sub-pixel problems with the new rating drawing when using PyQt6. in some cases it seems this was breaking boot. sorry for the trouble!</li>
+                        <li>fixed a 'The chosen db path "db_dir" is not writeable-to!' error when you try to boot two clients/servers at the same time, usually with cold memory (it seems like they were syncing into early bootup checking at the exact same time due to uncached dlls and then interfering with each other's directory write-test)</li>
+                        <li>if the 'selection tags' list is capped to only showing the first (by default) 4096 unselected files, it now says so in its box title</li>
+                        <li>if you hit paste (ctrl+v or shift+insert) on the text input in a write/edit tag autocomplete that has a paste button (e.g. in 'manage tags' dialog), and your clipboard has multiple lines of content, you now get a little yes/no dialog asking if you want to enter everything as separate tags (otherwise, as before, it munges all the lines into your input)</li>
+                        <li>a new checkbox in `options-&gt;tag editing` lets you skip the yes/no check in this case (i.e. always immediately pasting multiline content you enter)</li>
+                        <li>the manage tags dialog paste button is now beside the text input box. it still only does 'add only' actions</li>
+                        <li>all new clients, and all existing clients that don't have `Ctrl+Shift+O` set in `main_gui` shortcut set already, now get `Ctrl+Shift+O` as 'open options dialog'. the 'Use Native MenuBar' option's tooltip now highlights this shortcut (a couple of users have been soft-locked out options dialog to unset this when it borked out)</li>
+                        <li>. </li>
+                        <li><h3>duplicates</h3></li>
+                        <li>if you are in advanced mode, the manual duplicate filter will have a new "(not) visual duplicates" line with some numbers after it. this is the new "A and B are visual duplicates" test I have been working on, which uses a bunch of histogram statistics to programatically differentiate resizes/re-encodes from files with significant visual differences. if you do duplicate filtering this week, please look at this new line and let me know how its predictions hold up. I have tuned over about 100 real pairs, and I feel fairly good, but let's see on a larger scale. it sometimes false negatives (saying they are not visual duplicates when they actually are) when the pair has a particularly wide difference in scale or encoding quality, and I'm ok with that failure, but I do not get any false positives (saying they are visual duplicates when there is actually a watermark or something). I am most interested in false positives, since we hope to fold this tool into the duplicates auto-resolution system and I don't want a positive fail. the statement will also suggest a little more info if it thinks there is an obvious watermark or recolour. please send me any pairs that are reported wrong, and if you like you can look at the numbers. I will retune this tool as needed and fold it into the automatic system, and I'll launch this test as a real comparison statement for all users (but without the ugly debug numbers). thank you for testing!</li>
+                        <li>updated my 'A and B are visual duplicates' test to return a false when the files have resolution ratio that differs by more than 1%</li>
+                        <li>updated my 'A and B are visual duplicates' test to return a false when either file has resolution below (32x32)</li>
+                        <li>the duplicate filter comparison statements are now generated asynchronously. if and when the comparison statements need high CPU, they won't lag the initial pair load</li>
+                        <li>the 'this is a pixel-for-pixel duplicate png!' comparison statement and associated high score no longer applies to webp/png pairs. webp can be lossless, where this decision is less clear. if and when we get a nice 'this webp is lossy/lossless' detector, I'll bring this back</li>
+                        <li>the duplicates auto-resolution thumbnail pair lists should be less crazily tall if you have large thumbnails</li>
+                        <li>the cache that aids potential duplicate pair discovery has its cap (1 million search nodes) removed. on clients with many millions of files, ongoing similar files search will be I think around ~16-50% faster. each node is four numbers and an 8-byte hash, so this will add something in the range of 100-200MB of memory use for giganto clients. for interest, search distance 10 seems to cover a search space of ~40% of the entire tree, so on a db of a million images, that's 400,000 nodes to do hamming distance calculation on. thankfully each test is only about two microseconds, but it adds up, and search distance is the core determinant of search size, so keep it low!</li>
+                        <li><h3>png colours</h3></li>
+                        <li>PNG files are now scanned for gamma and chromaticity metadata on load. if they have this information (and no ICC Profile, which supercedes this info), it is applied much like an ICC Profile to colour-adjust the PNG to what was originally intended. usually these adjustments are very slight, just a shade one way or another</li>
+                        <li>all PNGs with this data (about one in twenty, I think?) should now render better. if any of your PNGs render crazy bright/dark/wrong this week, let me know!</li>
+                        <li>I did this in hopes of fixing some pixel hash stuff (no collision between a png and a non-png that should collide if this data is applied correctly), but my colour translation math seems to be slightly imperfect, so I may revisit this. I won't schedule mass pixel hash regen until I have this figured out</li>
+                        <li><h3>delete lock</h3></li>
+                        <li>added a new checkbox to `options-&gt;files and trash` that lets you say 'if the archive delete lock is on, then when I finish an archive/delete filter, ensure all the deletees are inboxed before the delete'</li>
+                        <li>added a similar checkbox that lets you say 'if the archive delete lock is on, then when I do a manual duplicate filter, ensure all the deletees from merge options are inboxed before the delete'</li>
+                        <li>I don't really want to write exceptions to the delete lock filter, but I hadn't thought about it from quite this angle before. lets see how this works as nice simple solution for this particular problem. if you use the delete lock and want to try this, make sure you are confident it is what you want</li>
+                        <li>if this ends up being a tangle of ugly logic, and/or if the delete lock extends to properties other than 'file is archived' in future, I may yank these options</li>
+                        <li><h3>client api</h3></li>
+                        <li>thanks to a user, the Client API now has calls to get/set the favourite tags. these calls use the existing 'add tags' permission (issue #311)</li>
+                        <li>updated the help and wrote some unit tests for this</li>
+                        <li>client api version is now 80</li>
+                        <li><h3>boring cleanup and weird stuff</h3></li>
+                        <li>fixed a couple places in the Client API documentation where it said a POST request didn't need a header; they all pretty much need `Content-Type: application/json`</li>
+                        <li>the duplicate comparison statements in the duplicate filter hover window are now center-aligned using the correct method/flag</li>
+                        <li>the operator radio buttons in the `NumberTest` widget (which appears in several places to manage 'X is &gt; Y', and the operators where it says &lt;, ≈, ≠, etc..) now have tooltips more clearly explaining what each is</li>
+                        <li>rejiggered some duplicate content update stuff to better separate the metadata updates from the delete file calls; I wasn't sure which order this stuff was happening, but now it is explicit and the delete happens at the end</li>
+                        <li>my 'merge directory' call now strictly does not delete anything from the source dir until it is finished copying with no problems. previously, it would move files as it went, so if the copy failed half way through due to an I/O failure, the source was left partial. this no longer happens</li>
+                        <li>fixed a couple of dumb path translation lines in my directory mirror/merge calls so they can better handle weird dirnames</li>
+                        <li>the advanced mode 'experimental' tag list menu that lets you change the tag display context now shows the 'single media views' option as well</li>
+                    </ul>
+                </li>
+                <li>
                     <h2 id="version_621"><a href="#version_621">version 621</a></h2>
                     <ul>
                         <li><h3>more ratings</h3></li>

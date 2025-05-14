@@ -20,7 +20,7 @@
       
       
       <link rel="icon" href="assets/favicon.svg">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.6.12">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.6.14">
     
     
       
@@ -28,7 +28,7 @@
       
     
     
-      <link rel="stylesheet" href="assets/stylesheets/main.2afb09e1.min.css">
+      <link rel="stylesheet" href="assets/stylesheets/main.342714a4.min.css">
       
         
         <link rel="stylesheet" href="assets/stylesheets/palette.06af60db.min.css">
@@ -2310,6 +2310,15 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#add_tags_get_favourite_tags" class="md-nav__link">
+    <span class="md-ellipsis">
+      GET /add_tags/get_favourite_tags
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#add_tags_get_siblings_and_parents" class="md-nav__link">
     <span class="md-ellipsis">
       GET /add_tags/get_siblings_and_parents
@@ -2331,6 +2340,15 @@
   <a href="#add_tags_add_tags" class="md-nav__link">
     <span class="md-ellipsis">
       POST /add_tags/add_tags
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#add_tags_set_favourite_tags" class="md-nav__link">
+    <span class="md-ellipsis">
+      POST /add_tags/set_favourite_tags
     </span>
   </a>
   
@@ -3601,6 +3619,15 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#add_tags_get_favourite_tags" class="md-nav__link">
+    <span class="md-ellipsis">
+      GET /add_tags/get_favourite_tags
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#add_tags_get_siblings_and_parents" class="md-nav__link">
     <span class="md-ellipsis">
       GET /add_tags/get_siblings_and_parents
@@ -3622,6 +3649,15 @@
   <a href="#add_tags_add_tags" class="md-nav__link">
     <span class="md-ellipsis">
       POST /add_tags/add_tags
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#add_tags_set_favourite_tags" class="md-nav__link">
+    <span class="md-ellipsis">
+      POST /add_tags/set_favourite_tags
     </span>
   </a>
   
@@ -5378,6 +5414,28 @@ Accept: application/json
 <p>Mostly, hydrus simply trims excess whitespace, but the other examples are rare issues you might run into. 'system' is an invalid namespace, tags cannot be prefixed with hyphens, and any tag starting with ':' is secretly dealt with internally as "[no namespace]:[colon-prefixed-subtag]". Again, you probably won't run into these, but if you see a mismatch somewhere and want to figure it out, or just want to sort some numbered tags, you might like to try this.</p>
 </dd>
 </dl>
+<h3 id="add_tags_get_favourite_tags"><strong>GET <code>/add_tags/get_favourite_tags</code></strong><a class="headerlink" href="#add_tags_get_favourite_tags" title="Permanent link">&para;</a></h3>
+<p><em>Fetch the client's favourite tags. This is the list of tags you see beneath an autocomplete input, under the 'favourites' tab. This is not the per-service 'most used' tab you see in <code>manage tags</code>.</em></p>
+<dl>
+<dt>Restricted access:</dt>
+<dd>YES. Add Tags permission needed.</dd>
+</dl>
+<p>Required Headers: n/a</p>
+<p>Arguments: n/a</p>
+<dl>
+<dt>Response:</dt>
+<dd>A simple JSON list of the tags.</dd>
+<dd><div class="highlight"><span class="filename">Example response</span><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;favourite_tags&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">    </span><span class="s2">&quot;blonde hair&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="s2">&quot;blue eyes&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="s2">&quot;bodysuit&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="s2">&quot;mecha&quot;</span>
+<span class="w">  </span><span class="p">]</span>
+<span class="p">}</span>
+</code></pre></div></dd>
+</dl>
+<p>They will probably be in 'human sorted' order, which is how they'll appear in most places in UI.</p>
 <h3 id="add_tags_get_siblings_and_parents"><strong>GET <code>/add_tags/get_siblings_and_parents</code></strong><a class="headerlink" href="#add_tags_get_siblings_and_parents" title="Permanent link">&para;</a></h3>
 <p><em>Ask the client about tags' sibling and parent relationships.</em></p>
 <dl>
@@ -5528,9 +5586,12 @@ Accept: application/json
 <dl>
 <dt>Restricted access:</dt>
 <dd>YES. Add Tags permission needed.</dd>
-</dl>
-<p>Required Headers: n/a</p>
-<dl>
+<dt>Required Headers:</dt>
+<dd>
+<ul>
+<li><code>Content-Type</code>: application/json</li>
+</ul>
+</dd>
 <dt>Arguments (in JSON):</dt>
 <dd>
 <ul>
@@ -5604,6 +5665,51 @@ Accept: application/json
 <p>Note also that hydrus tag actions are safely idempotent. You can pend a tag that is already pended, or add a tag that already exists, and not worry about an error--the surplus add action will be discarded. The same is true if you try to pend a tag that actually already exists, or rescinding a petition that doesn't. Any invalid actions will fail silently.</p>
 <p>It is fine to just throw your 'process this' tags at every file import and not have to worry about checking which files you already added them to.</p>
 </div>
+<h3 id="add_tags_set_favourite_tags"><strong>POST <code>/add_tags/set_favourite_tags</code></strong><a class="headerlink" href="#add_tags_set_favourite_tags" title="Permanent link">&para;</a></h3>
+<p><em>Edit the client's favourite tags. This is the complement to <a href="#add_tags_get_favourite_tags">/add_tags/get_favourite_tags</a>.</em></p>
+<dl>
+<dt>Restricted access:</dt>
+<dd>YES. Add Tags permission needed.</dd>
+<dt>Required Headers:</dt>
+<dd>
+<ul>
+<li><code>Content-Type</code>: application/json</li>
+</ul>
+</dd>
+<dt>Arguments (in JSON):</dt>
+<dd>
+<ul>
+<li><code>set</code> : (selective A, a list of tags)</li>
+<li><code>add</code> : (selective B, optional, a list of tags)</li>
+<li><code>remove</code> : (selective B, optional, a list of tags)</li>
+</ul>
+</dd>
+</dl>
+<p>If you send <code>set</code>, what you send will overwrite the existing list completely. If you send <code>add</code> and/or <code>remove</code>, the current list will be edited.</p>
+<dl>
+<dt>Example requests:</dt>
+<dd><div class="highlight"><span class="filename">Setting new list</span><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;set&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">    </span><span class="s2">&quot;1girl&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="s2">&quot;bobcut&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="s2">&quot;cornfield&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="s2">&quot;summer dress&quot;</span>
+<span class="w">  </span><span class="p">]</span>
+<span class="p">}</span>
+</code></pre></div>
+<div class="highlight"><span class="filename">Editing</span><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;add&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">    </span><span class="s2">&quot;black hair&quot;</span>
+<span class="w">  </span><span class="p">],</span>
+<span class="w">  </span><span class="nt">&quot;remove&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">    </span><span class="s2">&quot;blonde hair&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="s2">&quot;red hair&quot;</span>
+<span class="w">  </span><span class="p">]</span>
+<span class="p">}</span>
+</code></pre></div></dd>
+<dt>Response description:</dt>
+<dd>200 and the new list of favourite tags, just as <a href="#add_tags_get_favourite_tags">/add_tags/get_favourite_tags</a> gives.</dd>
+</dl>
 <h2 id="editing_file_ratings">Editing File Ratings<a class="headerlink" href="#editing_file_ratings" title="Permanent link">&para;</a></h2>
 <h3 id="edit_ratings_set_rating"><strong>POST <code>/edit_ratings/set_rating</code></strong><a class="headerlink" href="#edit_ratings_set_rating" title="Permanent link">&para;</a></h3>
 <p><em>Add or remove ratings associated with a file.</em></p>
@@ -7170,9 +7276,12 @@ Accept: application/json
 <dl>
 <dt>Restricted access:</dt>
 <dd>YES. Start Upload permission needed.</dd>
-</dl>
-<p>Required Headers: n/a</p>
-<dl>
+<dt>Required Headers:</dt>
+<dd>
+<ul>
+<li><code>Content-Type</code>: application/json</li>
+</ul>
+</dd>
 <dt>Arguments (in JSON):</dt>
 <dd>
 <ul>
@@ -7192,9 +7301,12 @@ Accept: application/json
 <dl>
 <dt>Restricted access:</dt>
 <dd>YES. Start Upload permission needed.</dd>
-</dl>
-<p>Required Headers: n/a</p>
-<dl>
+<dt>Required Headers:</dt>
+<dd>
+<ul>
+<li><code>Content-Type</code>: application/json</li>
+</ul>
+</dd>
 <dt>Arguments (in JSON):</dt>
 <dd>
 <ul>
@@ -8165,7 +8277,7 @@ This request will also return any cookies for subdomains. The session system in 
     <span class="md-icon" title="Last update">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 13.1c-.1 0-.3.1-.4.2l-1 1 2.1 2.1 1-1c.2-.2.2-.6 0-.8l-1.3-1.3c-.1-.1-.2-.2-.4-.2m-1.9 1.8-6.1 6V23h2.1l6.1-6.1zM12.5 7v5.2l4 2.4-1 1L11 13V7zM11 21.9c-5.1-.5-9-4.8-9-9.9C2 6.5 6.5 2 12 2c5.3 0 9.6 4.1 10 9.3-.3-.1-.6-.2-1-.2s-.7.1-1 .2C19.6 7.2 16.2 4 12 4c-4.4 0-8 3.6-8 8 0 4.1 3.1 7.5 7.1 7.9l-.1.2z"/></svg>
     </span>
-    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="May 7, 2025 20:55:32">May 7, 2025</span>
+    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="May 14, 2025 21:02:36">May 14, 2025</span>
   </span>
 
     
@@ -8291,10 +8403,10 @@ This request will also return any cookies for subdomains. The session system in 
     
     
       
-      <script id="__config" type="application/json">{"base": ".", "features": ["navigation.tracking", "navigation.sections", "navigation.tabs", "content.tabs.link", "navigation.top", "search.suggest", "content.code.annotate", "navigation.instant", "content.action.edit"], "search": "assets/javascripts/workers/search.f8cc74c7.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+      <script id="__config" type="application/json">{"base": ".", "features": ["navigation.tracking", "navigation.sections", "navigation.tabs", "content.tabs.link", "navigation.top", "search.suggest", "content.code.annotate", "navigation.instant", "content.action.edit"], "search": "assets/javascripts/workers/search.d50fe291.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
     
     
-      <script src="assets/javascripts/bundle.c8b220af.min.js"></script>
+      <script src="assets/javascripts/bundle.13a4f30d.min.js"></script>
       
     
   </body>
