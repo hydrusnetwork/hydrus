@@ -16,26 +16,11 @@ NUM_TILES_DIMENSIONS = ( 16, 16 )
 TILE_DIMENSIONS = ( int( HISTOGRAM_IMAGE_SIZE[0] / NUM_TILES_DIMENSIONS[0] ), int( HISTOGRAM_IMAGE_SIZE[1] / NUM_TILES_DIMENSIONS[1] ) )
 NUM_TILES = NUM_TILES_DIMENSIONS[0] * NUM_TILES_DIMENSIONS[1]
 
-def GenerateImageRGBHistogramsNumPy( numpy_image: numpy.array ):
-    
-    scaled_numpy = cv2.resize( numpy_image, HISTOGRAM_IMAGE_SIZE, interpolation = cv2.INTER_AREA )
-    
-    r = scaled_numpy[ :, :, 0 ]
-    g = scaled_numpy[ :, :, 1 ]
-    b = scaled_numpy[ :, :, 2 ]
-    
-    # ok the density here tells it to normalise, so images with greater saturation appear similar
-    ( r_hist, r_gubbins ) = numpy.histogram( r, bins = NUM_BINS, range = ( 0, 255 ), density = True )
-    ( g_hist, g_gubbins ) = numpy.histogram( g, bins = NUM_BINS, range = ( 0, 255 ), density = True )
-    ( b_hist, b_gubbins ) = numpy.histogram( b, bins = NUM_BINS, range = ( 0, 255 ), density = True )
-    
-    return ( r_hist, g_hist, b_hist )
-    
-
 class LabHistogram( ClientCachesBase.CacheableObject ):
     
-    def __init__( self, l_hist: numpy.array, a_hist: numpy.array, b_hist: numpy.array ):
+    def __init__( self, resolution, l_hist: numpy.array, a_hist: numpy.array, b_hist: numpy.array ):
         
+        self.resolution = resolution
         self.l_hist = l_hist
         self.a_hist = a_hist
         self.b_hist = b_hist
@@ -47,17 +32,28 @@ class LabHistogram( ClientCachesBase.CacheableObject ):
         return 2 * NUM_BINS * 3
         
     
+    def ResolutionIsTooLow( self ):
+        
+        return self.resolution[0] < 32 or self.resolution[1] < 32
+        
+    
 
 class LabTilesHistogram( ClientCachesBase.CacheableObject ):
     
-    def __init__( self, histograms: typing.List[ LabHistogram ] ):
+    def __init__( self, resolution, histograms: typing.List[ LabHistogram ] ):
         
+        self.resolution = resolution
         self.histograms = histograms
         
     
     def GetEstimatedMemoryFootprint( self ) -> int:
         
         return sum( ( histogram.GetEstimatedMemoryFootprint() for histogram in self.histograms ) )
+        
+    
+    def ResolutionIsTooLow( self ):
+        
+        return self.resolution[0] < 32 or self.resolution[1] < 32
         
     
 
@@ -101,97 +97,6 @@ class LabTilesHistogramStorage( ClientCachesBase.DataCache ):
         
         return LabTilesHistogramStorage.my_instance
         
-    
-
-def GenerateImageLabHistogramsNumPy( numpy_image: numpy.array ) -> LabHistogram:
-    
-    scaled_numpy = cv2.resize( numpy_image, HISTOGRAM_IMAGE_SIZE, interpolation = cv2.INTER_AREA )
-    
-    numpy_image_rgb = HydrusImageNormalisation.StripOutAnyAlphaChannel( scaled_numpy )
-    
-    numpy_image_lab = cv2.cvtColor( numpy_image_rgb, cv2.COLOR_RGB2Lab )
-    
-    l = numpy_image_lab[ :, :, 0 ]
-    a = numpy_image_lab[ :, :, 1 ]
-    b = numpy_image_lab[ :, :, 2 ]
-    
-    # just a note here, a and b are usually -128 to +128, but opencv normalises to 0-255, so we are good here
-    
-    ( l_hist, l_gubbins ) = numpy.histogram( l, bins = NUM_BINS, range = ( 0, 255 ), density = True )
-    ( a_hist, a_gubbins ) = numpy.histogram( a, bins = NUM_BINS, range = ( 0, 255 ), density = True )
-    ( b_hist, b_gubbins ) = numpy.histogram( b, bins = NUM_BINS, range = ( 0, 255 ), density = True )
-    
-    return LabHistogram( l_hist.astype( numpy.float16 ), a_hist.astype( numpy.float16 ), b_hist.astype( numpy.float16 ) )
-    
-
-def GenerateImageLabTilesHistogramsNumPy( numpy_image: numpy.array ) -> LabTilesHistogram:
-    
-    scaled_numpy = cv2.resize( numpy_image, HISTOGRAM_IMAGE_SIZE, interpolation = cv2.INTER_AREA )
-    
-    numpy_image_rgb = HydrusImageNormalisation.StripOutAnyAlphaChannel( scaled_numpy )
-    
-    numpy_image_lab = cv2.cvtColor( numpy_image_rgb, cv2.COLOR_RGB2Lab )
-    
-    l = numpy_image_lab[ :, :, 0 ]
-    a = numpy_image_lab[ :, :, 1 ]
-    b = numpy_image_lab[ :, :, 2 ]
-    
-    histograms = []
-    
-    ( tile_x, tile_y ) = TILE_DIMENSIONS
-    
-    for x in range( NUM_TILES_DIMENSIONS[0] ):
-        
-        for y in range( NUM_TILES_DIMENSIONS[ 1 ] ):
-            
-            l_tile = l[ y * tile_y : ( y + 1 ) * tile_y, x * tile_x : ( x + 1 ) * tile_x ]
-            a_tile = a[ y * tile_y : ( y + 1 ) * tile_y, x * tile_x : ( x + 1 ) * tile_x ]
-            b_tile = b[ y * tile_y : ( y + 1 ) * tile_y, x * tile_x : ( x + 1 ) * tile_x ]
-            
-            # just a note here, a and b are usually -128 to +128, but opencv normalises to 0-255, so we are good here but the average will usually be ~128
-            
-            ( l_hist, l_gubbins ) = numpy.histogram( l_tile, bins = NUM_BINS, range = ( 0, 255 ), density = True )
-            ( a_hist, a_gubbins ) = numpy.histogram( a_tile, bins = NUM_BINS, range = ( 0, 255 ), density = True )
-            ( b_hist, b_gubbins ) = numpy.histogram( b_tile, bins = NUM_BINS, range = ( 0, 255 ), density = True )
-            
-            histograms.append( LabHistogram( l_hist.astype( numpy.float16 ), a_hist.astype( numpy.float16 ), b_hist.astype( numpy.float16 ) ) )
-            
-        
-    
-    return LabTilesHistogram( histograms )
-    
-
-def GetHistogramNormalisedWassersteinDistance( hist_1: numpy.array, hist_2: numpy.array ) -> float:
-    
-    # Earth Movement Distance
-    # how much do we have to rejigger one hist to be the same as the other?
-    
-    hist_1_cdf = numpy.cumsum( hist_1 )
-    hist_2_cdf = numpy.cumsum( hist_2 )
-    
-    EMD = numpy.sum( numpy.abs( hist_1_cdf - hist_2_cdf ) )
-    
-    # 0 = no movement, 255 = max movement
-    
-    return float( EMD / ( NUM_BINS - 1 ) )
-    
-
-def GetLabHistogramWassersteinDistanceScore( lab_hist_1: LabHistogram, lab_hist_2: LabHistogram ):
-    
-    l_score = GetHistogramNormalisedWassersteinDistance( lab_hist_1.l_hist, lab_hist_2.l_hist )
-    a_score = GetHistogramNormalisedWassersteinDistance( lab_hist_1.a_hist, lab_hist_2.a_hist )
-    b_score = GetHistogramNormalisedWassersteinDistance( lab_hist_1.b_hist, lab_hist_2.b_hist )
-    
-    return 0.6 * l_score + 0.2 * a_score + 0.2 * b_score
-    
-
-def FilesHaveSimilarLightnessAndColourWD( lab_hist_1: LabHistogram, lab_hist_2: LabHistogram ):
-    
-    # this is useful to rule out easy false positives, but as expected it suffers from lack of fine resolution
-    
-    score = GetLabHistogramWassersteinDistanceScore( lab_hist_1, lab_hist_2 )
-    
-    return score < 0.003
     
 
 def skewness_numpy( values ):
@@ -241,55 +146,239 @@ def skewness_numpy( values ):
 # colour temp: max 0.087 / mean 0.035031 / variance 0.000473 / skew 0.181
 
 # therefore, I am choosing these decent defaults to start us off:
+#WD_MAX_REGIONAL_SCORE = 0.01
+#WD_MAX_MEAN = 0.003
+#WD_MAX_VARIANCE = 0.000002
+#WD_MAX_SKEW = 1.0
+
+# ok after some more IRL testing, we are adjusting to:
 WD_MAX_REGIONAL_SCORE = 0.01
 WD_MAX_MEAN = 0.003
-WD_MAX_VARIANCE = 0.000002
-WD_MAX_SKEW = 1.0
+WD_MAX_VARIANCE = 0.0000035
+WD_MAX_SKEW = 2.6
 
 # some future ideas:
 # if we discovered that >50% tiles were exact matches and the rest were pretty similar in colour or shape, we might have detected an alternate
 # if we did this in HSL, we might be able to detect trivial recolours specifically
 
-def FilesHaveSimilarRegionalLightnessAndColourWD( lab_tile_hist_1: LabTilesHistogram, lab_tile_hist_2: LabTilesHistogram ):
+def FilesAreVisuallySimilarRegional( lab_tile_hist_1: LabTilesHistogram, lab_tile_hist_2: LabTilesHistogram ):
     
-    #scores = [ GetLabHistogramWassersteinDistanceScore( lab_hist_1, lab_hist_2 ) for ( lab_hist_1, lab_hist_2 ) in zip( lab_tile_hist_1.histograms, lab_tile_hist_2.histograms ) ]
-    
-    #print( f'max {max( scores ):.3f} / mean {float( numpy.mean( scores ) ):.6f} / variance {float( numpy.var( scores ) ):.6f} / skew {skewness_numpy( scores ):.3f}' )
-    
-    scores = []
-    
-    for ( lab_hist_1, lab_hist_2 ) in zip( lab_tile_hist_1.histograms, lab_tile_hist_2.histograms ):
+    if FilesHaveDifferentRatio( lab_tile_hist_1.resolution, lab_tile_hist_2.resolution ):
         
-        score = GetLabHistogramWassersteinDistanceScore( lab_hist_1, lab_hist_2 )
+        return ( False, 'not visual duplicates (different ratio)' )
         
-        if score > WD_MAX_REGIONAL_SCORE:
+    
+    if lab_tile_hist_1.ResolutionIsTooLow() or lab_tile_hist_2.ResolutionIsTooLow():
+        
+        return ( False, 'cannot determine visual duplicates (too low resolution)' )
+        
+    
+    scores = [ GetLabHistogramWassersteinDistanceScore( lab_hist_1, lab_hist_2 ) for ( lab_hist_1, lab_hist_2 ) in zip( lab_tile_hist_1.histograms, lab_tile_hist_2.histograms ) ]
+    
+    max_regional_score = max( scores )
+    mean_score = float( numpy.mean( scores ) )
+    score_variance = float( numpy.var( scores ) )
+    score_skew = skewness_numpy( scores )
+    
+    exceeds_regional_score = max_regional_score > WD_MAX_REGIONAL_SCORE
+    exceeds_mean = mean_score > WD_MAX_MEAN
+    exceeds_variance = score_variance > WD_MAX_VARIANCE
+    exceeds_skew = max_regional_score > 0.001 and score_skew > WD_MAX_SKEW # for very low differences, skew is whack and not reliable
+    
+    debug_score_statement = f'max {max_regional_score:.3f} ({not exceeds_regional_score}) / mean {mean_score:.6f} ({not exceeds_mean})\nvariance {score_variance:.6f} ({not exceeds_variance}) / skew {score_skew:.3f} ({not exceeds_skew})'
+    
+    if exceeds_skew or exceeds_variance or exceeds_mean or exceeds_regional_score:
+        
+        they_are_similar = False
+        
+        if exceeds_skew and score_skew > 6.0:
             
-            return False
+            statement = 'not visual duplicates (alternate/watermark?)'
+            
+        elif score_skew < 1.5 and score_variance < 0.0005:
+            
+            statement = 'not visual duplicates (recolour?)'
+            
+        elif mean_score > 0.025:
+            
+            statement = 'not visual duplicates (alternates?)'
+            
+        else:
+            
+            if sum( ( 1 for x in ( exceeds_skew, exceeds_variance, exceeds_mean, exceeds_regional_score ) if x ) ) == 1:
+                
+                statement = 'probably not visual duplicates'
+                
+            else:
+                
+                statement = 'not visual duplicates'
+                
             
         
-        scores.append( score )
+    else:
+        
+        they_are_similar = True
+        
+        if max_regional_score < 0.001 and score_variance < 0.000001:
+            
+            statement = 'near-perfect visual duplicates'
+            
+        else:
+            
+            statement = 'visual duplicates'
+            
         
     
-    mean = float( numpy.mean( scores ) )
+    statement += f'\n{debug_score_statement}'
     
-    if mean > WD_MAX_MEAN:
-        
-        return False
-        
+    return ( they_are_similar, statement )
     
-    variance = float( numpy.var( scores ) )
+
+def FilesAreVisuallySimilarSimple( lab_hist_1: LabHistogram, lab_hist_2: LabHistogram ):
     
-    if variance > WD_MAX_VARIANCE:
+    if FilesHaveDifferentRatio( lab_hist_1.resolution, lab_hist_2.resolution ):
         
-        return False
+        return ( False, 'not visual duplicates (different ratio)' )
         
     
-    skew = skewness_numpy( scores )
-    
-    if skew > WD_MAX_SKEW:
+    if lab_hist_1.ResolutionIsTooLow() or lab_hist_2.ResolutionIsTooLow():
         
-        return False
+        return ( False, 'cannot determine visual duplicates (too low resolution)' )
         
     
-    return True
+    # this is useful to rule out easy false positives, but as expected it suffers from lack of fine resolution
+    
+    score = GetLabHistogramWassersteinDistanceScore( lab_hist_1, lab_hist_2 )
+    
+    # experimentally, I generally find that most are < 0.0008, but a couple of high-quality-range jpeg pairs are 0.0018
+    # so, let's allow this thing to examine deeper on this range of things but otherwise quickly discard
+    # a confident negative result but less confident positive result is the way around we want
+    
+    they_are_similar = score < 0.003
+    
+    if they_are_similar:
+        
+        statement = f'probably visual duplicates\n{score:.3f}'
+        
+    else:
+        
+        statement = f'not visual duplicates\n{score:.3f}'
+        
+    
+    return ( they_are_similar, statement )
+    
+
+def FilesHaveDifferentRatio( resolution_1, resolution_2 ):
+    
+    from hydrus.client.search import ClientNumberTest
+    
+    ( s_w, s_h ) = resolution_1
+    ( c_w, c_h ) = resolution_2
+    
+    s_ratio = s_w / s_h
+    c_ratio = c_w / c_h
+    
+    return not ClientNumberTest.NumberTest( operator = ClientNumberTest.NUMBER_TEST_OPERATOR_APPROXIMATE_PERCENT, value = 1 ).Test( s_ratio, c_ratio )
+    
+
+def GenerateImageLabHistogramsNumPy( numpy_image: numpy.array ) -> LabHistogram:
+    
+    resolution = ( numpy_image.shape[1], numpy_image.shape[0] )
+    
+    scaled_numpy = cv2.resize( numpy_image, HISTOGRAM_IMAGE_SIZE, interpolation = cv2.INTER_AREA )
+    
+    numpy_image_rgb = HydrusImageNormalisation.StripOutAnyAlphaChannel( scaled_numpy )
+    
+    numpy_image_lab = cv2.cvtColor( numpy_image_rgb, cv2.COLOR_RGB2Lab )
+    
+    l = numpy_image_lab[ :, :, 0 ]
+    a = numpy_image_lab[ :, :, 1 ]
+    b = numpy_image_lab[ :, :, 2 ]
+    
+    # just a note here, a and b are usually -128 to +128, but opencv normalises to 0-255, so we are good here
+    
+    ( l_hist, l_gubbins ) = numpy.histogram( l, bins = NUM_BINS, range = ( 0, 255 ), density = True )
+    ( a_hist, a_gubbins ) = numpy.histogram( a, bins = NUM_BINS, range = ( 0, 255 ), density = True )
+    ( b_hist, b_gubbins ) = numpy.histogram( b, bins = NUM_BINS, range = ( 0, 255 ), density = True )
+    
+    return LabHistogram( resolution, l_hist.astype( numpy.float16 ), a_hist.astype( numpy.float16 ), b_hist.astype( numpy.float16 ) )
+    
+
+def GenerateImageLabTilesHistogramsNumPy( numpy_image: numpy.array ) -> LabTilesHistogram:
+    
+    resolution = ( numpy_image.shape[1], numpy_image.shape[0] )
+    
+    scaled_numpy = cv2.resize( numpy_image, HISTOGRAM_IMAGE_SIZE, interpolation = cv2.INTER_AREA )
+    
+    numpy_image_rgb = HydrusImageNormalisation.StripOutAnyAlphaChannel( scaled_numpy )
+    
+    numpy_image_lab = cv2.cvtColor( numpy_image_rgb, cv2.COLOR_RGB2Lab )
+    
+    l = numpy_image_lab[ :, :, 0 ]
+    a = numpy_image_lab[ :, :, 1 ]
+    b = numpy_image_lab[ :, :, 2 ]
+    
+    histograms = []
+    
+    ( tile_x, tile_y ) = TILE_DIMENSIONS
+    
+    for x in range( NUM_TILES_DIMENSIONS[0] ):
+        
+        for y in range( NUM_TILES_DIMENSIONS[ 1 ] ):
+            
+            l_tile = l[ y * tile_y : ( y + 1 ) * tile_y, x * tile_x : ( x + 1 ) * tile_x ]
+            a_tile = a[ y * tile_y : ( y + 1 ) * tile_y, x * tile_x : ( x + 1 ) * tile_x ]
+            b_tile = b[ y * tile_y : ( y + 1 ) * tile_y, x * tile_x : ( x + 1 ) * tile_x ]
+            
+            # just a note here, a and b are usually -128 to +128, but opencv normalises to 0-255, so we are good here but the average will usually be ~128
+            
+            ( l_hist, l_gubbins ) = numpy.histogram( l_tile, bins = NUM_BINS, range = ( 0, 255 ), density = True )
+            ( a_hist, a_gubbins ) = numpy.histogram( a_tile, bins = NUM_BINS, range = ( 0, 255 ), density = True )
+            ( b_hist, b_gubbins ) = numpy.histogram( b_tile, bins = NUM_BINS, range = ( 0, 255 ), density = True )
+            
+            histograms.append( LabHistogram( resolution, l_hist.astype( numpy.float16 ), a_hist.astype( numpy.float16 ), b_hist.astype( numpy.float16 ) ) )
+            
+        
+    
+    return LabTilesHistogram( resolution, histograms )
+    
+
+def GenerateImageRGBHistogramsNumPy( numpy_image: numpy.array ):
+    
+    scaled_numpy = cv2.resize( numpy_image, HISTOGRAM_IMAGE_SIZE, interpolation = cv2.INTER_AREA )
+    
+    r = scaled_numpy[ :, :, 0 ]
+    g = scaled_numpy[ :, :, 1 ]
+    b = scaled_numpy[ :, :, 2 ]
+    
+    # ok the density here tells it to normalise, so images with greater saturation appear similar
+    ( r_hist, r_gubbins ) = numpy.histogram( r, bins = NUM_BINS, range = ( 0, 255 ), density = True )
+    ( g_hist, g_gubbins ) = numpy.histogram( g, bins = NUM_BINS, range = ( 0, 255 ), density = True )
+    ( b_hist, b_gubbins ) = numpy.histogram( b, bins = NUM_BINS, range = ( 0, 255 ), density = True )
+    
+    return ( r_hist, g_hist, b_hist )
+    
+
+def GetHistogramNormalisedWassersteinDistance( hist_1: numpy.array, hist_2: numpy.array ) -> float:
+    
+    # Earth Movement Distance
+    # how much do we have to rejigger one hist to be the same as the other?
+    
+    hist_1_cdf = numpy.cumsum( hist_1 )
+    hist_2_cdf = numpy.cumsum( hist_2 )
+    
+    EMD = numpy.sum( numpy.abs( hist_1_cdf - hist_2_cdf ) )
+    
+    # 0 = no movement, 255 = max movement
+    
+    return float( EMD / ( NUM_BINS - 1 ) )
+    
+
+def GetLabHistogramWassersteinDistanceScore( lab_hist_1: LabHistogram, lab_hist_2: LabHistogram ):
+    
+    l_score = GetHistogramNormalisedWassersteinDistance( lab_hist_1.l_hist, lab_hist_2.l_hist )
+    a_score = GetHistogramNormalisedWassersteinDistance( lab_hist_1.a_hist, lab_hist_2.a_hist )
+    b_score = GetHistogramNormalisedWassersteinDistance( lab_hist_1.b_hist, lab_hist_2.b_hist )
+    
+    return 0.6 * l_score + 0.2 * a_score + 0.2 * b_score
     

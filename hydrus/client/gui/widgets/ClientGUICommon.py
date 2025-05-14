@@ -784,9 +784,24 @@ class BetterRadioBox( QW.QFrame ):
         self._radio_buttons = []
         self._buttons_to_data = {}
         
-        for ( text, data ) in choice_tuples:
+        for tup in choice_tuples:
+            
+            if len( tup ) == 2:
+                
+                ( text, data ) = tup
+                tooltip = None
+                
+            else:
+                
+                ( text, data, tooltip ) = tup
+                
             
             radiobutton = QW.QRadioButton( text, self )
+            
+            if tooltip is not None:
+                
+                radiobutton.setToolTip( ClientGUIFunctions.WrapToolTip( tooltip ) ) 
+                
             
             self._radio_buttons.append( radiobutton )
             

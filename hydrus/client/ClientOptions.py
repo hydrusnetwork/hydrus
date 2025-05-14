@@ -232,6 +232,8 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             'show_sibling_decorators_on_storage_autocomplete_taglists' : True,
             'show_session_size_warnings' : True,
             'delete_lock_for_archived_files' : False,
+            'delete_lock_reinbox_deletees_after_archive_delete' : False,
+            'delete_lock_reinbox_deletees_after_duplicate_filter' : False,
             'remember_last_advanced_file_deletion_reason' : True,
             'remember_last_advanced_file_deletion_special_action' : False,
             'do_macos_debug_dialog_menus' : False,
@@ -298,6 +300,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             'refresh_search_page_on_system_limited_sort_changed' : True,
             'do_not_setgeometry_on_an_mpv' : False,
             'focus_media_thumb_on_viewer_close' : True,
+            'skip_yesno_on_write_autocomplete_multiline_paste' : False,
         }
         
         #

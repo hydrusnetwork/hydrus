@@ -70,11 +70,6 @@ def srgb_encode(c):
 
 def ConvertGammaChromaticityPNGToSRGB( pil_img ):
     
-    # OK this vomit is close. it seems to be slightly inaccurate, 3b3b40 instead of 3c3c41. maybe there's some float math
-    # Another option is a client hook to QColorSpace in Qt. it seems to be excellent and can output ICC Profile bytes
-    # important: the gamma here is like 0.45-something, which I am told is correct, but when Qt loads the png, it has a QColorSpace with gamma of like 2.2, so inverted?
-    # putting 0.45 in the math here gives a blown out white image, but the inverted one works, so???
-    
     gamma = 1 / pil_img.info[ 'gamma' ]
     chroma = pil_img.info[ 'chromaticity' ]
     
@@ -96,9 +91,9 @@ def ConvertGammaChromaticityPNGToSRGB( pil_img ):
     '''
     # Standard sRGB XYZ conversion matrix
     M_xyz_to_srgb = numpy.array( [
-        [ 3.2406, -1.5372, -0.4986],
-        [-0.9689,  1.8758,  0.0415],
-        [ 0.0557, -0.2040,  1.0570]
+        [ 3.2404542, -1.5371385, -0.4985314 ],
+        [ -0.9692660,  1.8760108,  0.0415560 ],
+        [ 0.0556434, -0.2040259,  1.0572252 ]
     ] )
     
     # Combine: src RGB → XYZ → sRGB
@@ -139,7 +134,7 @@ def ConvertGammaChromaticityPNGToSRGB( pil_img ):
         corrected = corrected_rgb
         
     
-    return PILImage.fromarray( ( corrected * 255 ).astype( numpy.uint8 ), mode = pil_img.mode )
+    return PILImage.fromarray( numpy.round( corrected * 255 ).astype( numpy.uint8 ), mode = pil_img.mode )
     
 
 def SetDoICCProfileNormalisation( value: bool ):
@@ -254,7 +249,22 @@ def DequantizePILImage( pil_image: PILImage.Image ) -> PILImage.Image:
             
             HydrusData.ShowException( e )
             
-            HydrusData.ShowText( 'Failed to normalise image ICC profile.' )
+            HydrusData.ShowText( 'Failed to normalise image with ICC profile.' )
+            
+        
+    elif pil_image.format == 'PNG' and pil_image.mode in ( 'RGB', 'RGBA' ) and 'gamma' in pil_image.info and 'chromaticity' in pil_image.info:
+        
+        # if a png has an ICC Profile, that overrides gamma/chromaticity, so this should be elif
+        
+        try:
+            
+            pil_image = ConvertGammaChromaticityPNGToSRGB( pil_image )
+            
+        except Exception as e:
+            
+            HydrusData.ShowException( e )
+            
+            HydrusData.ShowText( 'Failed to normalise PNG with gamma/chromaticity info.' )
             
         
     

@@ -84,7 +84,9 @@ class HydrusServiceClientAPI( HydrusClientService ):
         add_tags.putChild( b'clean_tags', ClientLocalServerResourcesAddTags.HydrusResourceClientAPIRestrictedAddTagsCleanTags( self._service, self._client_requests_domain ) )
         add_tags.putChild( b'search_tags', ClientLocalServerResourcesAddTags.HydrusResourceClientAPIRestrictedAddTagsSearchTags( self._service, self._client_requests_domain ) )
         add_tags.putChild( b'get_siblings_and_parents', ClientLocalServerResourcesAddTags.HydrusResourceClientAPIRestrictedAddTagsGetTagSiblingsParents( self._service, self._client_requests_domain ) )
-
+        add_tags.putChild( b'get_favourite_tags', ClientLocalServerResourcesManageFavouriteTags.HydrusResourceClientAPIRestrictedManageFavouriteTagsGetFavouriteTags( self._service, self._client_requests_domain ) )
+        add_tags.putChild( b'set_favourite_tags', ClientLocalServerResourcesManageFavouriteTags.HydrusResourceClientAPIRestrictedManageFavouriteTagsSetFavouriteTags( self._service, self._client_requests_domain ) )
+        
         add_urls = NoResource()
         
         root.putChild( b'add_urls', add_urls )
@@ -182,14 +184,7 @@ class HydrusServiceClientAPI( HydrusClientService ):
         manage_popups.putChild( b'call_user_callable', ClientLocalServerResourcesManagePopups.HydrusResourceClientAPIRestrictedManagePopupsCallUserCallable( self._service, self._client_requests_domain ) )
         manage_popups.putChild( b'add_popup', ClientLocalServerResourcesManagePopups.HydrusResourceClientAPIRestrictedManagePopupsAddPopup( self._service, self._client_requests_domain ) )
         manage_popups.putChild( b'update_popup', ClientLocalServerResourcesManagePopups.HydrusResourceClientAPIRestrictedManagePopupsUpdatePopup( self._service, self._client_requests_domain ) )
-
-        manage_favourite_tags = NoResource()
-
-        root.putChild( b'manage_favourite_tags', manage_favourite_tags )
-
-        manage_favourite_tags.putChild( b'get_favourite_tags', ClientLocalServerResourcesManageFavouriteTags.HydrusResourceClientAPIRestrictedManageFavouriteTagsGetFavouriteTags( self._service, self._client_requests_domain ) )
-        manage_favourite_tags.putChild( b'set_favourite_tags', ClientLocalServerResourcesManageFavouriteTags.HydrusResourceClientAPIRestrictedManageFavouriteTagsSetFavouriteTags( self._service, self._client_requests_domain ) )
-
+        
         return root
         
     

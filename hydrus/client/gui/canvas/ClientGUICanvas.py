@@ -3206,7 +3206,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
             file_deletion_reason = None
             
         
-        content_update_packages = [ duplicate_content_merge_options.ProcessPairIntoContentUpdatePackage( media_a.GetMediaResult(), media_b.GetMediaResult(), delete_a = delete_a, delete_b = delete_b, file_deletion_reason = file_deletion_reason ) ]
+        content_update_packages = duplicate_content_merge_options.ProcessPairIntoContentUpdatePackages( media_a.GetMediaResult(), media_b.GetMediaResult(), delete_a = delete_a, delete_b = delete_b, file_deletion_reason = file_deletion_reason )
         
         process_tuple = ( duplicate_type, media_a, media_b, content_update_packages, was_auto_skipped )
         
@@ -4036,6 +4036,17 @@ def CommitArchiveDelete( deletee_location_context: ClientLocation.LocationContex
         
         job_status.SetStatusText( f'Deleting - {HydrusNumbers.ValueRangeToPrettyString( i * BLOCK_SIZE, num_to_do )}' )
         job_status.SetVariable( 'popup_gauge_1', ( i * BLOCK_SIZE, num_to_do ) )
+        
+        if CG.client_controller.new_options.GetBoolean( 'delete_lock_for_archived_files' ) and CG.client_controller.new_options.GetBoolean( 'delete_lock_reinbox_deletees_after_archive_delete' ):
+            
+            block_of_deleted_hashes = [ m.GetHash() for m in block_of_deleted if not m.GetLocationsManager().inbox ]
+            
+            content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_INBOX, block_of_deleted_hashes ) )
+            
+            CG.client_controller.WriteSynchronous( 'content_updates', content_update_package )
+            
+            CG.client_controller.WaitUntilViewFree()
+            
         
         content_update_package = ClientContentUpdates.ContentUpdatePackage()
         

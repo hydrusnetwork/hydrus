@@ -8130,6 +8130,10 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 
                 self._SwitchBoolean( 'force_idle_mode' )
                 
+            elif action == CAC.SIMPLE_OPEN_OPTIONS:
+                
+                self._ManageOptions()
+                
             else:
                 
                 command_processed = False

@@ -1316,6 +1316,12 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._delete_lock_for_archived_files = QW.QCheckBox( delete_lock_panel )
             self._delete_lock_for_archived_files.setToolTip( ClientGUIFunctions.WrapToolTip( 'This will stop the client from physically deleting anything you have archived. You can still trash such files, but they cannot go further. It is a last-ditch catch to rescue accidentally deleted good files.' ) )
             
+            self._delete_lock_reinbox_deletees_after_archive_delete = QW.QCheckBox( delete_lock_panel )
+            self._delete_lock_reinbox_deletees_after_archive_delete.setToolTip( ClientGUIFunctions.WrapToolTip( 'Be careful with this!\n\nIf the delete lock is on, and you do an archive/delete filter, this will ensure that all deletee files are inboxed before being deleted.' ) )
+            
+            self._delete_lock_reinbox_deletees_after_duplicate_filter = QW.QCheckBox( delete_lock_panel )
+            self._delete_lock_reinbox_deletees_after_duplicate_filter.setToolTip( ClientGUIFunctions.WrapToolTip( 'Be careful with this!\n\nIf the delete lock is on, and you do a duplicate filter, this will ensure that all deletee files from merge options are inboxed before being deleted.' ) )
+            
             advanced_file_deletion_panel = ClientGUICommon.StaticBox( self, 'advanced file deletion and custom reasons' )
             
             self._use_advanced_file_deletion_dialog = QW.QCheckBox( advanced_file_deletion_panel )
@@ -1356,17 +1362,15 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._trash_max_size.SetValue( HC.options[ 'trash_max_size' ] )
             
             self._delete_lock_for_archived_files.setChecked( self._new_options.GetBoolean( 'delete_lock_for_archived_files' ) )
+            self._delete_lock_reinbox_deletees_after_archive_delete.setChecked( self._new_options.GetBoolean( 'delete_lock_reinbox_deletees_after_archive_delete' ) )
+            self._delete_lock_reinbox_deletees_after_duplicate_filter.setChecked( self._new_options.GetBoolean( 'delete_lock_reinbox_deletees_after_duplicate_filter' ) )
             
             self._use_advanced_file_deletion_dialog.setChecked( self._new_options.GetBoolean( 'use_advanced_file_deletion_dialog' ) )
-            
-            self._use_advanced_file_deletion_dialog.clicked.connect( self._UpdateAdvancedControls )
             
             self._remember_last_advanced_file_deletion_special_action.setChecked( CG.client_controller.new_options.GetBoolean( 'remember_last_advanced_file_deletion_special_action' ) )
             self._remember_last_advanced_file_deletion_reason.setChecked( CG.client_controller.new_options.GetBoolean( 'remember_last_advanced_file_deletion_reason' ) )
             
             self._advanced_file_deletion_reasons.AddDatas( self._new_options.GetStringList( 'advanced_file_deletion_reasons' ) )
-            
-            self._UpdateAdvancedControls()
             
             #
             
@@ -1402,6 +1406,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows = []
             
             rows.append( ( 'Do not permit archived files to be deleted from the trash: ', self._delete_lock_for_archived_files ) )
+            rows.append( ( 'After archive/delete filter, ensure deletees are inboxed before delete: ', self._delete_lock_reinbox_deletees_after_archive_delete ) )
+            rows.append( ( 'After duplicate filter, ensure deletees are inboxed before delete: ', self._delete_lock_reinbox_deletees_after_duplicate_filter ) )
             
             gridbox = ClientGUICommon.WrapInGrid( delete_lock_panel, rows )
             
@@ -1428,9 +1434,15 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self.setLayout( vbox )
             
+            self._delete_lock_for_archived_files.clicked.connect( self._UpdateLockControls )
+            
             self._remove_filtered_files.clicked.connect( self._UpdateRemoveFiltered )
             
+            self._use_advanced_file_deletion_dialog.clicked.connect( self._UpdateAdvancedControls )
+            
+            self._UpdateLockControls()
             self._UpdateRemoveFiltered()
+            self._UpdateAdvancedControls()
             
         
         def _AddAFDR( self ):
@@ -1471,6 +1483,12 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._remove_filtered_files_even_when_skipped.setEnabled( self._remove_filtered_files.isChecked() )
             
         
+        def _UpdateLockControls( self ):
+            
+            self._delete_lock_reinbox_deletees_after_archive_delete.setEnabled( self._delete_lock_for_archived_files.isChecked() )
+            self._delete_lock_reinbox_deletees_after_duplicate_filter.setEnabled( self._delete_lock_for_archived_files.isChecked() )
+            
+        
         def UpdateOptions( self ):
             
             self._new_options.SetBoolean( 'prefix_hash_when_copying', self._prefix_hash_when_copying.isChecked() )
@@ -1493,6 +1511,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._new_options.SetBoolean( 'confirm_multiple_local_file_services_move', self._confirm_multiple_local_file_services_move.isChecked() )
             
             self._new_options.SetBoolean( 'delete_lock_for_archived_files', self._delete_lock_for_archived_files.isChecked() )
+            self._new_options.SetBoolean( 'delete_lock_reinbox_deletees_after_archive_delete', self._delete_lock_reinbox_deletees_after_archive_delete.isChecked() )
+            self._new_options.SetBoolean( 'delete_lock_reinbox_deletees_after_duplicate_filter', self._delete_lock_reinbox_deletees_after_duplicate_filter.isChecked() )
             
             self._new_options.SetBoolean( 'use_advanced_file_deletion_dialog', self._use_advanced_file_deletion_dialog.isChecked() )
             
@@ -1762,7 +1782,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._menu_choice_buttons_can_mouse_scroll.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
             
             self._use_native_menubar = QW.QCheckBox( self._misc_panel )
-            tt = 'macOS and some Linux allows to embed the main GUI menubar into the OS. This can be buggy! Requires restart.'
+            tt = 'macOS and some Linux allows to embed the main GUI menubar into the OS. This can be buggy! Requires restart. Note that, in case this goes wrong, by default Ctrl+Shift+O should open this options dialog--confirm that before you try this!'
             self._use_native_menubar.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
             
             self._human_bytes_sig_figs = ClientGUICommon.BetterSpinBox( self._misc_panel, min = 1, max = 6 )
@@ -4984,7 +5004,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         def UpdateOptions( self ):
             
-            self._new_options.SetStringList( 'favourite_tags', list( self._favourites.GetTags() ) )
+            self._new_options.SetStringList( 'favourite_tags', sorted( self._favourites.GetTags(), key = HydrusText.HumanTextSortKey ) )
             
             #
             
@@ -5024,6 +5044,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._ac_select_first_with_count = QW.QCheckBox( self._write_autocomplete_panel )
             
+            self._skip_yesno_on_write_autocomplete_multiline_paste = QW.QCheckBox( self._write_autocomplete_panel )
+            
             self._ac_write_list_height_num_chars = ClientGUICommon.BetterSpinBox( self._write_autocomplete_panel, min = 1, max = 128 )
             
             self._expand_parents_on_storage_autocomplete_taglists = QW.QCheckBox( self._write_autocomplete_panel )
@@ -5054,6 +5076,9 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._expand_parents_on_storage_taglists.setChecked( self._new_options.GetBoolean( 'expand_parents_on_storage_taglists' ) )
             self._expand_parents_on_storage_taglists.setToolTip( ClientGUIFunctions.WrapToolTip( 'This affects taglists in places like the manage tags dialog, where you edit tags as they actually are, and implied parents hang below tags.' ) )
+            
+            self._skip_yesno_on_write_autocomplete_multiline_paste.setChecked( self._new_options.GetBoolean( 'skip_yesno_on_write_autocomplete_multiline_paste' ) )
+            self._skip_yesno_on_write_autocomplete_multiline_paste.setToolTip( ClientGUIFunctions.WrapToolTip( 'If you paste multiline content into the text box of an edit autocomplete that has a paste button, it will ask you if you want to add what you pasted as separate tags. Check this to skip that yes/no test and just do it every time.' ) )
             
             self._expand_parents_on_storage_autocomplete_taglists.setChecked( self._new_options.GetBoolean( 'expand_parents_on_storage_autocomplete_taglists' ) )
             self._expand_parents_on_storage_autocomplete_taglists.setToolTip( ClientGUIFunctions.WrapToolTip( 'This affects the autocomplete results taglist.' ) )
@@ -5097,6 +5122,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows = []
             
             rows.append( ( 'By default, select the first tag result with actual count in write-autocomplete: ', self._ac_select_first_with_count ) )
+            rows.append( ( 'When pasting multiline content into a write-autocomplete, skip the yes/no check: ', self._skip_yesno_on_write_autocomplete_multiline_paste ) )
             rows.append( ( 'Show parent info by default on edit/write autocomplete taglists: ', self._show_parent_decorators_on_storage_autocomplete_taglists ) )
             rows.append( ( 'Show parents expanded by default on edit/write autocomplete taglists: ', self._expand_parents_on_storage_autocomplete_taglists ) )
             rows.append( ( 'Show sibling info by default on edit/write autocomplete taglists: ', self._show_sibling_decorators_on_storage_autocomplete_taglists ) )
@@ -5137,6 +5163,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._new_options.SetBoolean( 'ac_select_first_with_count', self._ac_select_first_with_count.isChecked() )
             
             self._new_options.SetInteger( 'ac_write_list_height_num_chars', self._ac_write_list_height_num_chars.value() )
+            
+            self._new_options.SetBoolean( 'skip_yesno_on_write_autocomplete_multiline_paste', self._skip_yesno_on_write_autocomplete_multiline_paste.isChecked() )
             
             self._new_options.SetBoolean( 'show_parent_decorators_on_storage_taglists', self._show_parent_decorators_on_storage_taglists.isChecked() )
             self._new_options.SetBoolean( 'show_parent_decorators_on_storage_autocomplete_taglists', self._show_parent_decorators_on_storage_autocomplete_taglists.isChecked() )

@@ -223,7 +223,7 @@ class HydrusResourceClientAPIRestrictedManageFileRelationshipsSetRelationships( 
                 
                 duplicate_content_merge_options = CG.client_controller.new_options.GetDuplicateContentMergeOptions( duplicate_type )
                 
-                content_update_packages.append( duplicate_content_merge_options.ProcessPairIntoContentUpdatePackage( media_result_a, media_result_b, file_deletion_reason = file_deletion_reason, delete_a = delete_a, delete_b = delete_b ) )
+                content_update_packages.extend( duplicate_content_merge_options.ProcessPairIntoContentUpdatePackages( media_result_a, media_result_b, file_deletion_reason = file_deletion_reason, delete_a = delete_a, delete_b = delete_b ) )
                 
             elif delete_a or delete_b:
                 

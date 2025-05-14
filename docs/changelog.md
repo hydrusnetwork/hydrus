@@ -7,6 +7,57 @@ title: Changelog
 !!! note
     This is the new changelog, only the most recent builds. For all versions, see the [old changelog](old_changelog.html).
 
+## [Version 622](https://github.com/hydrusnetwork/hydrus/releases/tag/v622)
+
+### misc
+
+* fixed several sub-pixel problems with the new rating drawing when using PyQt6. in some cases it seems this was breaking boot. sorry for the trouble!
+* fixed a 'The chosen db path "db_dir" is not writeable-to!' error when you try to boot two clients/servers at the same time, usually with cold memory (it seems like they were syncing into early bootup checking at the exact same time due to uncached dlls and then interfering with each other's directory write-test)
+* if the 'selection tags' list is capped to only showing the first (by default) 4096 unselected files, it now says so in its box title
+* if you hit paste (ctrl+v or shift+insert) on the text input in a write/edit tag autocomplete that has a paste button (e.g. in 'manage tags' dialog), and your clipboard has multiple lines of content, you now get a little yes/no dialog asking if you want to enter everything as separate tags (otherwise, as before, it munges all the lines into your input)
+* a new checkbox in `options->tag editing` lets you skip the yes/no check in this case (i.e. always immediately pasting multiline content you enter)
+* the manage tags dialog paste button is now beside the text input box. it still only does 'add only' actions
+* all new clients, and all existing clients that don't have `Ctrl+Shift+O` set in `main_gui` shortcut set already, now get `Ctrl+Shift+O` as 'open options dialog'. the 'Use Native MenuBar' option's tooltip now highlights this shortcut (a couple of users have been soft-locked out options dialog to unset this when it borked out)
+* . 
+### duplicates
+
+* if you are in advanced mode, the manual duplicate filter will have a new "(not) visual duplicates" line with some numbers after it. this is the new "A and B are visual duplicates" test I have been working on, which uses a bunch of histogram statistics to programatically differentiate resizes/re-encodes from files with significant visual differences. if you do duplicate filtering this week, please look at this new line and let me know how its predictions hold up. I have tuned over about 100 real pairs, and I feel fairly good, but let's see on a larger scale. it sometimes false negatives (saying they are not visual duplicates when they actually are) when the pair has a particularly wide difference in scale or encoding quality, and I'm ok with that failure, but I do not get any false positives (saying they are visual duplicates when there is actually a watermark or something). I am most interested in false positives, since we hope to fold this tool into the duplicates auto-resolution system and I don't want a positive fail. the statement will also suggest a little more info if it thinks there is an obvious watermark or recolour. please send me any pairs that are reported wrong, and if you like you can look at the numbers. I will retune this tool as needed and fold it into the automatic system, and I'll launch this test as a real comparison statement for all users (but without the ugly debug numbers). thank you for testing!
+* updated my 'A and B are visual duplicates' test to return a false when the files have resolution ratio that differs by more than 1%
+* updated my 'A and B are visual duplicates' test to return a false when either file has resolution below (32x32)
+* the duplicate filter comparison statements are now generated asynchronously. if and when the comparison statements need high CPU, they won't lag the initial pair load
+* the 'this is a pixel-for-pixel duplicate png!' comparison statement and associated high score no longer applies to webp/png pairs. webp can be lossless, where this decision is less clear. if and when we get a nice 'this webp is lossy/lossless' detector, I'll bring this back
+* the duplicates auto-resolution thumbnail pair lists should be less crazily tall if you have large thumbnails
+* the cache that aids potential duplicate pair discovery has its cap (1 million search nodes) removed. on clients with many millions of files, ongoing similar files search will be I think around ~16-50% faster. each node is four numbers and an 8-byte hash, so this will add something in the range of 100-200MB of memory use for giganto clients. for interest, search distance 10 seems to cover a search space of ~40% of the entire tree, so on a db of a million images, that's 400,000 nodes to do hamming distance calculation on. thankfully each test is only about two microseconds, but it adds up, and search distance is the core determinant of search size, so keep it low!
+
+### png colours
+
+* PNG files are now scanned for gamma and chromaticity metadata on load. if they have this information (and no ICC Profile, which supercedes this info), it is applied much like an ICC Profile to colour-adjust the PNG to what was originally intended. usually these adjustments are very slight, just a shade one way or another
+* all PNGs with this data (about one in twenty, I think?) should now render better. if any of your PNGs render crazy bright/dark/wrong this week, let me know!
+* I did this in hopes of fixing some pixel hash stuff (no collision between a png and a non-png that should collide if this data is applied correctly), but my colour translation math seems to be slightly imperfect, so I may revisit this. I won't schedule mass pixel hash regen until I have this figured out
+
+### delete lock
+
+* added a new checkbox to `options->files and trash` that lets you say 'if the archive delete lock is on, then when I finish an archive/delete filter, ensure all the deletees are inboxed before the delete'
+* added a similar checkbox that lets you say 'if the archive delete lock is on, then when I do a manual duplicate filter, ensure all the deletees from merge options are inboxed before the delete'
+* I don't really want to write exceptions to the delete lock filter, but I hadn't thought about it from quite this angle before. lets see how this works as nice simple solution for this particular problem. if you use the delete lock and want to try this, make sure you are confident it is what you want
+* if this ends up being a tangle of ugly logic, and/or if the delete lock extends to properties other than 'file is archived' in future, I may yank these options
+
+### client api
+
+* thanks to a user, the Client API now has calls to get/set the favourite tags. these calls use the existing 'add tags' permission (issue #311)
+* updated the help and wrote some unit tests for this
+* client api version is now 80
+
+### boring cleanup and weird stuff
+
+* fixed a couple places in the Client API documentation where it said a POST request didn't need a header; they all pretty much need `Content-Type: application/json`
+* the duplicate comparison statements in the duplicate filter hover window are now center-aligned using the correct method/flag
+* the operator radio buttons in the `NumberTest` widget (which appears in several places to manage 'X is &gt; Y', and the operators where it says &lt;, ≈, ≠, etc..) now have tooltips more clearly explaining what each is
+* rejiggered some duplicate content update stuff to better separate the metadata updates from the delete file calls; I wasn't sure which order this stuff was happening, but now it is explicit and the delete happens at the end
+* my 'merge directory' call now strictly does not delete anything from the source dir until it is finished copying with no problems. previously, it would move files as it went, so if the copy failed half way through due to an I/O failure, the source was left partial. this no longer happens
+* fixed a couple of dumb path translation lines in my directory mirror/merge calls so they can better handle weird dirnames
+* the advanced mode 'experimental' tag list menu that lets you change the tag display context now shows the 'single media views' option as well
+
 ## [Version 621](https://github.com/hydrusnetwork/hydrus/releases/tag/v621)
 
 ### more ratings
@@ -482,40 +533,3 @@ title: Changelog
 * fixed a dumb typo in the as-yet-enabled `MetadataConditional` edit-panel
 * updated the faq with answers for why I work alone, do weekly releases, and use weird versioning
 * fixed a couple places where I had accidental `/n` in some label text lol, thanks to the user who pointed this out
-
-## [Version 612](https://github.com/hydrusnetwork/hydrus/releases/tag/v612)
-
-### misc
-
-* I added 'you can scan for this' flags for JXL for rotation EXIF, has EXIF, has non-EXIF, has transparency, and has ICC Profile, which we forgot to add when first rolling out JXL support. all existing JXL files will be scheduled for rescan of these properties on update, so if you have any wrongly rotated JXL, they should fix themselves soon after update (issue #1684)
-* the 'duration' duplicates filter comparison statement now says the +/-% difference in duration. if it is only +1%, it is now clearer
-* if a server gives a 429 (Too Many Requests) with a 'Retry-After' response header, hydrus now obeys this rather than its default server retry time as set in `options->connection` (issue #734)
-* added `help->debug->debug modes->macOS window position fix test` to test a fix for macOS windows always getting delta y position on init
-
-### drag-cancelling tech
-
-* the new drag-cancelling tech was false-positive cancelling fast drags where you moved the mouse outside of the window 200ms after the initial click press. this is fixed
-* the new drag-cancelling tech no longer occurs on macOS, since it was raising an error. it seems due to system policy you can't programatically cancel a drag on macOS in Qt (issue #1685)
-
-### sidecars in export folders
-
-* an export folder with sidecars will now fill in any sidecar gaps on every run. if a file should have a sidecar but currently does not, the sidecar will be generated (issue #1682)
-* an export folder set to 'synchronise' (which deletes files from the export destination if they are no longer in the export folder's search) will now be more careful not to delete sidecars
-
-### some running from source stuff
-
-* for users who run from source, the 'test' `PySide6` is updated from `6.8.1.1` to `6.8.2.1`, and the `qtpy` from `2.4.2` to `2.4.3`
-* added a `open_venv.ps1` script to easily activate the venv in powershell
-
-### duplicates auto-resolution
-
-* _my work this upcoming system grinds on. I successfully did the thing I stalled on a couple weeks ago, and now the only big thing I still have to do before advanced users can try it is a preview panel and a billion unit tests_
-* the database modules are live! they boot and will initialise their (as-yet empty) tables on update to v612
-* the daemon is now live! it runs its full mainloop and consults the database modules for work
-* rewrote some daemon-db interaction, mostly for KISS and deduplication of responsibility
-* figured out some tech to reset duplicates rule search progress on edits and user command
-* simplified the daemon workflow so that rules hold on to cached search counts and report their own search status
-* fixed some stuff in rule-setting and status fetching
-* the auto-resolution rule object is now serialisable and _could_ be saved to disk if I enabled the edit UI
-* rules now report their correct search status, no longer a placeholder
-* the daemon now reports the correct running status, no longer a placeholder

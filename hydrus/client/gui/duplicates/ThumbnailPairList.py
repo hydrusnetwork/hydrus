@@ -356,7 +356,10 @@ class ThumbnailPairList( QW.QTableView ):
         
         my_width = thumbnail_width * model.columnCount() + 24
         
-        self.setMinimumSize( QC.QSize( my_width, thumbnail_height * self.MIN_NUM_ROWS_HEIGHT ) )
+        # this was going bonkers dialog sizing for some users
+        max_thumbnail_height_for_min_height_calc = min( thumbnail_height, 200 )
+        
+        self.setMinimumSize( QC.QSize( my_width, max_thumbnail_height_for_min_height_calc * self.MIN_NUM_ROWS_HEIGHT ) )
         
     
     def SetData( self, tuples_of_data ):

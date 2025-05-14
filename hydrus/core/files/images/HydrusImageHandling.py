@@ -77,7 +77,7 @@ except:
                 
             except:
                 
-                HydrusData.Print( 'Could not register AVIF Opener with main or legacy library, despite legacy library seemingly being ok.' )
+                HydrusData.Print( 'Could not register AVIF Opener with main or legacy library.' )
                 
             
         

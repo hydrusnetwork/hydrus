@@ -55,7 +55,7 @@ def DrawIncDec( painter: QG.QPainter, x, y, service_key, rating_state, rating, s
     
     incdec_font = painter.font()
     
-    incdec_font.setPixelSize( size.height() - pad_size.height() / 2 )
+    incdec_font.setPixelSize( int( size.height() - pad_size.height() / 2 ) )
     
     incdec_font.setStyleHint( QG.QFont.StyleHint.Monospace )
     

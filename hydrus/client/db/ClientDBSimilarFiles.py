@@ -563,15 +563,8 @@ class ClientDBSimilarFiles( ClientDBModule.ClientDBModule ):
     
     def _TryToPopulatePerceptualHashToVPTreeNodeCache( self, perceptual_hash_ids: typing.Collection[ int ] ):
         
-        if len( self._perceptual_hash_id_to_vp_tree_node_cache ) > 1000000:
-            
-            if not isinstance( perceptual_hash_ids, set ):
-                
-                perceptual_hash_ids = set( perceptual_hash_ids )
-                
-            
-            self._perceptual_hash_id_to_vp_tree_node_cache = { perceptual_hash_id : phash for ( perceptual_hash_id, phash ) in self._perceptual_hash_id_to_vp_tree_node_cache.items() if perceptual_hash_id in perceptual_hash_ids }
-            
+        # the node cache used to limit itself to 1,000,000 nodes, but on clients with 13m files it was churning
+        # if you got a big client, I'm going to eat some ram, simple as
         
         uncached_perceptual_hash_ids = { perceptual_hash_id for perceptual_hash_id in perceptual_hash_ids if perceptual_hash_id not in self._perceptual_hash_id_to_vp_tree_node_cache and perceptual_hash_id not in self._non_vp_treed_perceptual_hash_ids }
         
@@ -1028,13 +1021,15 @@ class ClientDBSimilarFiles( ClientDBModule.ClientDBModule ):
                     
                     for node_perceptual_hash_id in current_potentials:
                         
-                        if node_perceptual_hash_id not in self._perceptual_hash_id_to_vp_tree_node_cache:
+                        result = self._perceptual_hash_id_to_vp_tree_node_cache.get( node_perceptual_hash_id, None )
+                        
+                        if result is None:
                             
                             # something crazy happened, probably a broken tree branch, move on
                             continue
                             
                         
-                        ( node_perceptual_hash, node_radius, inner_perceptual_hash_id, outer_perceptual_hash_id ) = self._perceptual_hash_id_to_vp_tree_node_cache[ node_perceptual_hash_id ]
+                        ( node_perceptual_hash, node_radius, inner_perceptual_hash_id, outer_perceptual_hash_id ) = result
                         
                         # first check the node itself--is it similar?
                         

@@ -1192,6 +1192,11 @@ class AutoCompleteDropdown( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
         raise NotImplementedError()
         
     
+    def _TryToProcessAPasteEvent( self ) -> bool:
+        
+        return False
+        
+    
     def _UpdateBackgroundColour( self ):
         
         bg_colour = self.GetColour( CC.COLOUR_AUTOCOMPLETE_BACKGROUND )
@@ -1281,6 +1286,18 @@ class AutoCompleteDropdown( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
                     
                     we_copying_the_results_list = we_copying_elsewhere and stuff_in_results_list
                     we_emitting_an_external_copy = we_copying_elsewhere and not stuff_in_results_list
+                    
+                    we_pasting = ClientGUIShortcuts.KeyPressEventIsAPaste( event )
+                    
+                    if we_pasting:
+                        
+                        processed = self._TryToProcessAPasteEvent()
+                        
+                        if processed:
+                            
+                            return True
+                            
+                        
                     
                     if we_emitting_an_external_copy:
                         
@@ -3337,6 +3354,7 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
         
         # don't touch this bro, trust me
         self._display_tag_service_key = tag_service_key
+        self._show_paste_button = show_paste_button
         
         self._chosen_tag_callable = chosen_tag_callable
         
@@ -3353,7 +3371,7 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
         self._paste_button = ClientGUICommon.BetterBitmapButton( self._text_input_panel, CC.global_pixmaps().paste, self._Paste )
         self._paste_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'Paste from the clipboard and quick-enter as if you had typed. This can take multiple newline-separated tags.' ) )
         
-        if not show_paste_button:
+        if not self._show_paste_button:
             
             self._paste_button.hide()
             
@@ -3517,6 +3535,71 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
         file_search_context = ClientSearchFileSearchContext.FileSearchContext( location_context = self._location_context_button.GetValue(), tag_context = self._tag_context_button.GetValue() )
         
         CG.client_controller.CallToThread( WriteFetch, self, job_status, self.SetPrefetchResults, self.SetFetchedResults, parsed_autocomplete_text, file_search_context, self._results_cache )
+        
+    
+    def _TryToProcessAPasteEvent( self ) -> bool:
+        
+        # ok we are going to eat a ctrl+v if we have a paste button and the current clipboard contains multiple lines
+        
+        if not self._show_paste_button:
+            
+            return False
+            
+        
+        try:
+            
+            raw_text = CG.client_controller.GetClipboardText()
+            
+        except HydrusExceptions.DataMissing as e:
+            
+            HydrusData.PrintException( e )
+            
+            ClientGUIDialogsMessage.ShowCritical( self, 'Problem pasting!', str(e) )
+            
+            return False
+            
+        
+        try:
+            
+            tags = [ text for text in HydrusText.DeserialiseNewlinedTexts( raw_text ) ]
+            
+            tags = HydrusTags.CleanTags( tags )
+            
+            if len( tags ) > 1:
+                
+                do_it = False
+                
+                if CG.client_controller.new_options.GetBoolean( 'skip_yesno_on_write_autocomplete_multiline_paste' ):
+                    
+                    do_it = True
+                    
+                else:
+                    
+                    message = 'You have pasted multiple lines of content. Want to enter them all as separate tags? You entered:'
+                    message += HydrusText.ConvertManyStringsToNiceInsertableHumanSummary( tags, do_sort = False, no_trailing_whitespace = True )
+                    
+                    result = ClientGUIDialogsQuick.GetYesNo( self, message, title = 'Want to paste everything?' )
+                    
+                    if result == QW.QDialog.DialogCode.Accepted:
+                        
+                        do_it = True
+                        
+                    
+                
+                if do_it:
+                    
+                    self._Paste()
+                    
+                    return True
+                    
+                
+            
+            return False
+            
+        except:
+            
+            return False
+            
         
     
     def RefreshFavouriteTags( self ):

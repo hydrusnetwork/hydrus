@@ -20,6 +20,15 @@ number_test_operator_to_str_lookup = {
     NUMBER_TEST_OPERATOR_APPROXIMATE_ABSOLUTE : HC.UNICODE_APPROX_EQUAL
 }
 
+number_test_operator_to_desc_lookup = {
+    NUMBER_TEST_OPERATOR_LESS_THAN : 'less than',
+    NUMBER_TEST_OPERATOR_GREATER_THAN : 'greater than',
+    NUMBER_TEST_OPERATOR_EQUAL : 'equal',
+    NUMBER_TEST_OPERATOR_APPROXIMATE_PERCENT : 'equal within a percentage range',
+    NUMBER_TEST_OPERATOR_NOT_EQUAL : 'not equal',
+    NUMBER_TEST_OPERATOR_APPROXIMATE_ABSOLUTE : 'equal within an absolute range'
+}
+
 legacy_str_operator_to_number_test_operator_lookup = { s : o for ( o, s ) in number_test_operator_to_str_lookup.items() }
 
 number_test_operator_to_pretty_str_lookup = {

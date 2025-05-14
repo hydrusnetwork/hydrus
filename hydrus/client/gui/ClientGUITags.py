@@ -2693,9 +2693,6 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
             self._copy_button = ClientGUICommon.BetterBitmapButton( self._tags_box_sorter, CC.global_pixmaps().copy, self._Copy )
             self._copy_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'Copy selected tags to the clipboard. If none are selected, copies all.' ) )
             
-            self._paste_button = ClientGUICommon.BetterBitmapButton( self._tags_box_sorter, CC.global_pixmaps().paste, self._Paste )
-            self._paste_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'Paste newline-separated tags from the clipboard into here.' ) )
-            
             self._show_deleted = False
             
             menu_items = []
@@ -2738,13 +2735,14 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
             
             #
             
-            self._add_tag_box = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( tags_panel, self.AddTags, self._location_context, self._tag_service_key )
+            self._add_tag_box = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( tags_panel, self.AddTags, self._location_context, self._tag_service_key, show_paste_button = True )
             
             self._add_tag_box.movePageLeft.connect( self.movePageLeft )
             self._add_tag_box.movePageRight.connect( self.movePageRight )
             self._add_tag_box.showPrevious.connect( self.showPrevious )
             self._add_tag_box.showNext.connect( self.showNext )
             self._add_tag_box.externalCopyKeyPressEvent.connect( self._tags_box.keyPressEvent )
+            self._add_tag_box.tagsPasted.connect( self._PasteComingFromAC )
             
             self._add_tag_box.nullEntered.connect( self.OK )
             
@@ -2760,7 +2758,6 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
             
             QP.AddToLayout( button_hbox, self._remove_tags, CC.FLAGS_CENTER_PERPENDICULAR )
             QP.AddToLayout( button_hbox, self._copy_button, CC.FLAGS_CENTER_PERPENDICULAR )
-            QP.AddToLayout( button_hbox, self._paste_button, CC.FLAGS_CENTER_PERPENDICULAR )
             QP.AddToLayout( button_hbox, self._incremental_tagging_button, CC.FLAGS_CENTER_PERPENDICULAR )
             QP.AddToLayout( button_hbox, self._cog_button, CC.FLAGS_CENTER )
             
@@ -3283,31 +3280,9 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
                 
             
         
-        def _Paste( self ):
+        def _PasteComingFromAC( self, tags: typing.List[ str ] ):
             
-            try:
-                
-                raw_text = CG.client_controller.GetClipboardText()
-                
-            except HydrusExceptions.DataMissing as e:
-                
-                ClientGUIDialogsMessage.ShowCritical( self, 'Problem pasting tags!', str(e) )
-                
-                return
-                
-            
-            try:
-                
-                tags = HydrusText.DeserialiseNewlinedTexts( raw_text )
-                
-                tags = HydrusTags.CleanTags( tags )
-                
-                self.AddTags( tags, only_add = True )
-                
-            except Exception as e:
-                
-                ClientGUIDialogsQuick.PresentClipboardParseError( self, raw_text, 'Lines of tags', e )
-                
+            self.AddTags( tags, only_add = True )
             
         
         def _RemoveTagsButton( self ):

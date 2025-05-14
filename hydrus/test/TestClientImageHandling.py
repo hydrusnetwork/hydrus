@@ -22,3 +22,4 @@ class TestImageHandling( unittest.TestCase ):
         
         self.assertEqual( perceptual_hashes, set( [ b'\xb4M\xc7\xb2M\xcb8\x1c' ] ) )
         
+    

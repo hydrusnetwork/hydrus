@@ -10,6 +10,7 @@ from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTags
+from hydrus.core import HydrusThreading
 from hydrus.core import HydrusTime
 from hydrus.core.files.images import HydrusImageMetadata
 from hydrus.core.files.images import HydrusImageOpening
@@ -19,6 +20,7 @@ from hydrus.client import ClientData
 from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientThreading
 from hydrus.client import ClientTime
+from hydrus.client.files.images import ClientImageHistograms
 from hydrus.client.importing.options import NoteImportOptions
 from hydrus.client.media import ClientMediaResult
 from hydrus.client.metadata import ClientContentUpdates
@@ -104,9 +106,9 @@ def GetDuplicateComparisonStatements( shown_media_result: ClientMediaResult.Medi
         elif s_pixel_hash == c_pixel_hash and s_width == c_width:
             
             # this is not appropriate for, say, PSD files
+            # TODO: if and when we get 'this webp is lossy/lossless' detection, we can do this for a webp
             other_file_is_pixel_png_appropriate_filetypes = {
-                HC.IMAGE_JPEG,
-                HC.IMAGE_WEBP
+                HC.IMAGE_JPEG
             }
             
             is_a_pixel_dupe = True
@@ -612,6 +614,102 @@ def GetDuplicateComparisonStatements( shown_media_result: ClientMediaResult.Medi
         statements_and_scores[ 'duration' ] = ( statement, score )
         
     
+    # test for the new statement
+    
+    if not is_a_pixel_dupe and CG.client_controller.new_options.GetBoolean( 'advanced_mode' ):
+        
+        if s_mime in HC.IMAGES and c_mime in HC.IMAGES:
+            
+            try:
+                
+                def get_lab_histogram( media_result: ClientMediaResult.MediaResult ) -> ClientImageHistograms.LabHistogram:
+                    
+                    hash = media_result.GetHash()
+                    
+                    lab_histogram_cache = ClientImageHistograms.LabHistogramStorage.instance()
+                    
+                    if not lab_histogram_cache.HasData( hash ):
+                        
+                        image_renderer = CG.client_controller.images_cache.GetImageRenderer( media_result )
+                        
+                        while not image_renderer.IsReady():
+                            
+                            if HydrusThreading.IsThreadShuttingDown():
+                                
+                                raise HydrusExceptions.ShutdownException( 'Seems like program is shutting down!' )
+                                
+                            
+                            time.sleep( 0.1 )
+                            
+                        
+                        numpy_image = image_renderer.GetNumPyImage()
+                        
+                        lab_histogram = ClientImageHistograms.GenerateImageLabHistogramsNumPy( numpy_image )
+                        
+                        lab_histogram_cache.AddData( hash, lab_histogram )
+                        
+                    
+                    return typing.cast( ClientImageHistograms.LabHistogram, lab_histogram_cache.GetData( hash ) )
+                    
+                
+                def get_lab_tiles_histogram( media_result: ClientMediaResult.MediaResult ) -> ClientImageHistograms.LabTilesHistogram:
+                    
+                    hash = media_result.GetHash()
+                    
+                    lab_tiles_histogram_cache = ClientImageHistograms.LabTilesHistogramStorage.instance()
+                    
+                    if not lab_tiles_histogram_cache.HasData( hash ):
+                        
+                        image_renderer = CG.client_controller.images_cache.GetImageRenderer( media_result )
+                        
+                        while not image_renderer.IsReady():
+                            
+                            if HydrusThreading.IsThreadShuttingDown():
+                                
+                                raise HydrusExceptions.ShutdownException( 'Seems like program is shutting down!' )
+                                
+                            
+                            time.sleep( 0.1 )
+                            
+                        
+                        numpy_image = image_renderer.GetNumPyImage()
+                        
+                        lab_tiles_histogram = ClientImageHistograms.GenerateImageLabTilesHistogramsNumPy( numpy_image )
+                        
+                        lab_tiles_histogram_cache.AddData( hash, lab_tiles_histogram )
+                        
+                    
+                    return typing.cast( ClientImageHistograms.LabTilesHistogram, lab_tiles_histogram_cache.GetData( hash ) )
+                    
+                
+                s_lab_histogram = get_lab_histogram( shown_media_result )
+                c_lab_histogram = get_lab_histogram( comparison_media_result )
+                
+                ( simple_seems_good, simple_score_statement ) = ClientImageHistograms.FilesAreVisuallySimilarSimple( s_lab_histogram, c_lab_histogram )
+                
+                if simple_seems_good:
+                    
+                    s_lab_tiles_histogram = get_lab_tiles_histogram( shown_media_result )
+                    c_lab_tiles_histogram = get_lab_tiles_histogram( comparison_media_result )
+                    
+                    ( regional_seems_good, regional_score_statement ) = ClientImageHistograms.FilesAreVisuallySimilarRegional( s_lab_tiles_histogram, c_lab_tiles_histogram )
+                    
+                    statements_and_scores[ 'a_is_exact_match_b_advanced_test' ] = ( regional_score_statement, 0 )
+                    
+                else:
+                    
+                    statements_and_scores[ 'a_is_exact_match_b_advanced_test' ] = ( simple_score_statement, 0 )
+                    
+                
+            except Exception as e:
+                
+                HydrusData.ShowException( e, do_wait = False )
+                
+                HydrusData.ShowText( 'The "A is exact match of B" detector threw an error! Please let hydev know the details.' )
+                
+            
+        
+    
     return statements_and_scores
     
 
@@ -1068,7 +1166,7 @@ class DuplicateContentMergeOptions( HydrusSerialisable.SerialisableBase ):
     def GetMergeSummaryOnPair( self, media_result_a: ClientMediaResult.MediaResult, media_result_b: ClientMediaResult.MediaResult, delete_a: bool, delete_b: bool, in_auto_resolution = False ):
         
         # do file delete; this guy only cares about the content merge
-        content_update_package = self.ProcessPairIntoContentUpdatePackage( media_result_a, media_result_b, delete_a = delete_a, delete_b = delete_b, in_auto_resolution = in_auto_resolution )
+        content_update_packages = self.ProcessPairIntoContentUpdatePackages( media_result_a, media_result_b, delete_a = delete_a, delete_b = delete_b, in_auto_resolution = in_auto_resolution )
         
         hash_a = media_result_a.GetHash()
         hash_b = media_result_b.GetHash()
@@ -1076,22 +1174,25 @@ class DuplicateContentMergeOptions( HydrusSerialisable.SerialisableBase ):
         a_work = collections.defaultdict( list )
         b_work = collections.defaultdict( list )
         
-        for ( service_key, content_updates ) in content_update_package.IterateContentUpdates():
+        for content_update_package in content_update_packages:
             
-            for content_update in content_updates:
+            for ( service_key, content_updates ) in content_update_package.IterateContentUpdates():
                 
-                hashes = content_update.GetHashes()
-                
-                s = content_update.ToActionSummary()
-                
-                if hash_a in hashes:
+                for content_update in content_updates:
                     
-                    a_work[ service_key ].append( s )
+                    hashes = content_update.GetHashes()
                     
-                
-                if hash_b in hashes:
+                    s = content_update.ToActionSummary()
                     
-                    b_work[ service_key ].append( s )
+                    if hash_a in hashes:
+                        
+                        a_work[ service_key ].append( s )
+                        
+                    
+                    if hash_b in hashes:
+                        
+                        b_work[ service_key ].append( s )
+                        
                     
                 
             
@@ -1199,7 +1300,7 @@ class DuplicateContentMergeOptions( HydrusSerialisable.SerialisableBase ):
         self._sync_urls_action = sync_urls_action
         
     
-    def ProcessPairIntoContentUpdatePackage(
+    def ProcessPairIntoContentUpdatePackages(
         self,
         media_result_a: ClientMediaResult.MediaResult,
         media_result_b: ClientMediaResult.MediaResult,
@@ -1208,7 +1309,7 @@ class DuplicateContentMergeOptions( HydrusSerialisable.SerialisableBase ):
         file_deletion_reason = None,
         do_not_do_deletes = False,
         in_auto_resolution = False
-    ) -> ClientContentUpdates.ContentUpdatePackage:
+    ) -> typing.List[ ClientContentUpdates.ContentUpdatePackage ]:
         
         # small note here, if we have BETTER/WORSE distinctions in any of the settings, A is better, B is worse. if we have HC.DUPLICATE_WORSE anywhere, which sets B as better, it must be flipped beforehand to BETTER and BA -> AB
         # TODO: since this is a crazy situation, maybe this guy should just take the duplicate action, and then it can convert to media_result_better as needed
@@ -1217,6 +1318,8 @@ class DuplicateContentMergeOptions( HydrusSerialisable.SerialisableBase ):
             
             file_deletion_reason = 'unknown reason'
             
+        
+        content_update_packages = []
         
         content_update_package = ClientContentUpdates.ContentUpdatePackage()
         
@@ -1432,8 +1535,7 @@ class DuplicateContentMergeOptions( HydrusSerialisable.SerialisableBase ):
         content_update_archive_first = ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, hash_a_set )
         content_update_archive_second = ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, hash_b_set )
         
-        # and not delete_a gubbins here to help out the delete lock lmao. don't want to archive and then try to delete
-        # TODO: this is obviously a bad solution, so better to refactor this function to return a list of content_update_packages and stick the delete command right up top, tested for locks on current info
+        # the "and not delete_a" gubbins here is to help out the delete lock lmao. don't want to archive and then try to delete
         
         action_to_actually_consult = self._sync_archive_action
         
@@ -1538,6 +1640,15 @@ class DuplicateContentMergeOptions( HydrusSerialisable.SerialisableBase ):
         
         #
         
+        if content_update_package.HasContent():
+            
+            content_update_packages.append( content_update_package )
+            
+            content_update_package = ClientContentUpdates.ContentUpdatePackage()
+            
+        
+        #
+        
         deletee_media_results = []
         
         if delete_a:
@@ -1559,6 +1670,18 @@ class DuplicateContentMergeOptions( HydrusSerialisable.SerialisableBase ):
             
             if CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY in media_result.GetLocationsManager().GetCurrent():
                 
+                if not in_auto_resolution and CG.client_controller.new_options.GetBoolean( 'delete_lock_for_archived_files' ) and CG.client_controller.new_options.GetBoolean( 'delete_lock_reinbox_deletees_after_duplicate_filter' ):
+                    
+                    if not media_result.GetLocationsManager().inbox:
+                        
+                        content_update_package.AddContentUpdate( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_INBOX, { media_result.GetHash() } ) )
+                        
+                        content_update_packages.append( content_update_package )
+                        
+                        content_update_package = ClientContentUpdates.ContentUpdatePackage()
+                        
+                    
+                
                 content_update = ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, { media_result.GetHash() }, reason = file_deletion_reason )
                 
                 content_update_package.AddContentUpdate( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY, content_update )
@@ -1567,7 +1690,13 @@ class DuplicateContentMergeOptions( HydrusSerialisable.SerialisableBase ):
         
         #
         
-        return content_update_package
+        if content_update_package.HasContent():
+            
+            content_update_packages.append( content_update_package )
+            
+        
+        return content_update_packages
         
     
+
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_DUPLICATE_CONTENT_MERGE_OPTIONS ] = DuplicateContentMergeOptions

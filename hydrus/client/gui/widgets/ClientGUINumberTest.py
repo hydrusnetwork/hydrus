@@ -47,7 +47,9 @@ class NumberTestWidget( QW.QWidget ):
                     text += '%'
                     
                 
-                choice_tuples.append( ( text, possible_operator ) )
+                tooltip = ClientNumberTest.number_test_operator_to_desc_lookup[ possible_operator ]
+                
+                choice_tuples.append( ( text, possible_operator, tooltip ) )
                 
             
         

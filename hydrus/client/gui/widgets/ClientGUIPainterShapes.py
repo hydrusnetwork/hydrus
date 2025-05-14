@@ -6,28 +6,28 @@ from qtpy import QtGui as QG
 from hydrus.client import ClientConstants as CC
 from hydrus.client.metadata import ClientRatings
 
-_W = 12.0
-_H = 12.0
+_W = 12
+_H = 12
 
-_MIN_OUTLINE_PX = 1.0
-_MAX_OUTLINE_PX = 4.0 
-_TARGET_OUTLINE_THICKNESS = 12.0 # 1:12 ratio of pixel width to shape outline
+_MIN_OUTLINE_PX = 1
+_MAX_OUTLINE_PX = 4
+_TARGET_OUTLINE_THICKNESS = 12 # 1:12 ratio of pixel width to shape outline
 
 _FEATHER_IN = 0.25  #replace outer this% of outline pixels with 50% transparency (for SVG/QIcon)
 _MAX_FEATHER_PX = 2
 
 #
 
-PAD_PX = 4.0
+PAD_PX = 4
 
 #do not use any padding inside paintershapes itself; it should only be used by parent widgets
-PAD = QC.QSize( PAD_PX, PAD_PX )
+PAD = QC.QSize( int( PAD_PX ), int( PAD_PX ) )
 
-SIZE = QC.QSize( _W, _H ) #width of this SIZE is used as default px value in options
+SIZE = QC.QSize( int( _W ), int( _H ) ) #width of this SIZE is used as default px value in options
 STAR_W = PAD.width() + _W
 STAR_H = PAD.height() + _H
 
-INCDEC_BACKGROUND_SIZE = QC.QSize( STAR_W * 2, STAR_H )
+INCDEC_BACKGROUND_SIZE = QC.QSize( int( STAR_W * 2 ), int( STAR_H ) )
 
 # polygons
 _ORIGINAL_PX_SCALE = 12.0
@@ -326,7 +326,7 @@ def _draw_icon_coloured( painter, shape_name: str, x, y, width = _W, height = _H
         pixmap = tinted
         
     
-    painter.drawPixmap(x, y, pixmap)
+    painter.drawPixmap( QC.QPointF( x, y ), pixmap )
     
 
 def _draw_icon_coloured_outlined( painter, rating_svg: str, x, y, width = _W, height = _H ):
@@ -348,7 +348,7 @@ def _draw_icon_coloured_outlined( painter, rating_svg: str, x, y, width = _W, he
         
     else:
         
-        size = QC.QSize( width, height )
+        size = QC.QSize( int( width ), int( height ) )
         base = icon.pixmap( size )
         
         tinted = QG.QPixmap( size )
@@ -385,7 +385,7 @@ def _draw_icon_coloured_outlined( painter, rating_svg: str, x, y, width = _W, he
         pixmap = feathered
         
     
-    painter.drawPixmap(x, y, pixmap)
+    painter.drawPixmap( QC.QPointF( x, y ), pixmap )
     
 
 def _painter_mask_opaque_pixels( painter, input_pixels, colour ):
@@ -405,7 +405,7 @@ def _painter_stamp_all_around( painter, radius, pixels ):
             
             for px_y in range ( -radius, radius ):
                 
-                painter.drawPixmap( px_x , px_y, pixels )
+                painter.drawPixmap( QC.QPointF( px_x , px_y ), pixels )
                 
             
         
@@ -418,7 +418,7 @@ def GetOutlinePx( diameter, ratio = _TARGET_OUTLINE_THICKNESS, min_thickness = _
     return max( min( diameter / ratio, max_thickness ), min_thickness )
     
 
-def DrawShape( painter, star_type: ClientRatings.StarType, x, y, width = _W, height =_H, text: typing.Optional[ str ] = None, text_colour: typing.Optional[ QG.QColor ] = None ):
+def DrawShape( painter, star_type: ClientRatings.StarType, x, y, width = _W, height = _H, text: typing.Optional[ str ] = None, text_colour: typing.Optional[ QG.QColor ] = None ):
     
     if star_type.HasShape():
         
@@ -485,7 +485,7 @@ def DrawShape( painter, star_type: ClientRatings.StarType, x, y, width = _W, hei
         
         font = painter.font()
         font.setBold( True )
-        font.setPixelSize( height - 2 )
+        font.setPixelSize( int( height - 2 ) )
         painter.setFont( font )
         
         text_rect = QC.QRectF( x, y, width, height )

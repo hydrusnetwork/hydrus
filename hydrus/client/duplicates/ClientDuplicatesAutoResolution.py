@@ -439,7 +439,7 @@ class DuplicatesAutoResolutionRule( HydrusSerialisable.SerialisableBaseNamed ):
         hash_a = media_result_a.GetHash()
         hash_b = media_result_b.GetHash()
         
-        content_update_packages = [ duplicate_content_merge_options.ProcessPairIntoContentUpdatePackage( media_result_a, media_result_b, delete_a = delete_a, delete_b = delete_b, file_deletion_reason = f'duplicates auto-resolution ({self._name})', in_auto_resolution = True ) ]
+        content_update_packages = duplicate_content_merge_options.ProcessPairIntoContentUpdatePackages( media_result_a, media_result_b, delete_a = delete_a, delete_b = delete_b, file_deletion_reason = f'duplicates auto-resolution ({self._name})', in_auto_resolution = True )
         
         # TODO: Make this an object bro
         return ( action, hash_a, hash_b, content_update_packages )

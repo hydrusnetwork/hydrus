@@ -3952,7 +3952,7 @@ class ListBoxTags( ListBox ):
             
             favourite_tags.update( tags )
             
-            CG.client_controller.new_options.SetStringList( 'favourite_tags', list( favourite_tags ) )
+            CG.client_controller.new_options.SetStringList( 'favourite_tags', sorted( favourite_tags, key = HydrusText.HumanTextSortKey ) )
             
             CG.client_controller.pub( 'notify_new_favourite_tags' )
             
@@ -3974,7 +3974,7 @@ class ListBoxTags( ListBox ):
             
             favourite_tags.difference_update( tags )
             
-            CG.client_controller.new_options.SetStringList( 'favourite_tags', list( favourite_tags ) )
+            CG.client_controller.new_options.SetStringList( 'favourite_tags', sorted( favourite_tags, key = HydrusText.HumanTextSortKey ) )
             
             CG.client_controller.pub( 'notify_new_favourite_tags' )
             
@@ -4525,6 +4525,11 @@ class ListBoxTagsDisplayCapable( ListBoxTags ):
         return set( self._GetTagsFromTerms( self._selected_terms ) )
         
     
+    def GetTagServiceKey( self ) -> bytes:
+        
+        return self._service_key
+        
+    
     def SetTagServiceKey( self, service_key ):
         
         self._service_key = service_key
@@ -4718,6 +4723,8 @@ class ListBoxTagsStringsAddRemove( ListBoxTagsStrings ):
         
     
 class ListBoxTagsMedia( ListBoxTagsDisplayCapable ):
+    
+    cappedDueToSetting = QC.Signal( bool )
     
     def __init__( self, parent: QW.QWidget, tag_display_type: int, tag_presentation_location: int, service_key = None, include_counts = True ):
         
@@ -4950,13 +4957,13 @@ class ListBoxTagsMedia( ListBoxTagsDisplayCapable ):
     
     def AddAdditionalMenuItems( self, menu: QW.QMenu ):
         
-        ListBoxTagsDisplayCapable.AddAdditionalMenuItems( self, menu )
+        super().AddAdditionalMenuItems( menu )
         
         if CG.client_controller.new_options.GetBoolean( 'advanced_mode' ):
             
             submenu = ClientGUIMenus.GenerateMenu( menu )
             
-            for tag_display_type in ( ClientTags.TAG_DISPLAY_SELECTION_LIST, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, ClientTags.TAG_DISPLAY_STORAGE ):
+            for tag_display_type in ( ClientTags.TAG_DISPLAY_SELECTION_LIST, ClientTags.TAG_DISPLAY_SINGLE_MEDIA, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, ClientTags.TAG_DISPLAY_STORAGE ):
                 
                 if tag_display_type == self._tag_display_type:
                     
@@ -5053,16 +5060,18 @@ class ListBoxTagsMedia( ListBoxTagsDisplayCapable ):
         self._DataHasChanged()
         
     
-    def SetTagsByMediaFromMediaResultsPanel( self, media, tags_changed ):
+    def SetTagsByMediaFromMediaResultsPanel( self, media, tags_changed, capped_due_to_setting ):
         
         flat_media = ClientMedia.FlattenMedia( media )
         
         media_results = [ m.GetMediaResult() for m in flat_media ]
         
-        self.SetTagsByMediaResultsFromMediaResultsPanel( media_results, tags_changed )
+        self.SetTagsByMediaResultsFromMediaResultsPanel( media_results, tags_changed, capped_due_to_setting )
         
     
-    def SetTagsByMediaResultsFromMediaResultsPanel( self, media_results, tags_changed ):
+    def SetTagsByMediaResultsFromMediaResultsPanel( self, media_results, tags_changed, capped_due_to_setting ):
+        
+        self.cappedDueToSetting.emit( capped_due_to_setting )
         
         if not isinstance( media_results, set ):
             
@@ -5134,7 +5143,7 @@ class ListBoxTagsMedia( ListBoxTagsDisplayCapable ):
     
     def SetTagServiceKey( self, service_key ):
         
-        ListBoxTagsDisplayCapable.SetTagServiceKey( self, service_key )
+        super().SetTagServiceKey( service_key )
         
         self.SetTagsByMediaResults( self._last_media_results )
         
@@ -5176,12 +5185,48 @@ class StaticBoxSorterForListBoxTags( ClientGUICommon.StaticBox ):
         
         self._tags_box = None
         
+        self._capped_due_to_setting = False
+        
         # make this its own panel
         self._tag_sort = ClientGUITagSorting.TagSortControl( self, CG.client_controller.new_options.GetDefaultTagSort( self._tag_presentation_location ), show_siblings = show_siblings_sort )
         
         self._tag_sort.valueChanged.connect( self.EventSort )
         
         self.Add( self._tag_sort, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+    
+    def _UpdateCappedDueToSetting( self, capped_due_to_setting ):
+        
+        self._capped_due_to_setting = capped_due_to_setting
+        
+        self._UpdateTitle()
+        
+    
+    def _UpdateTitle( self ):
+        
+        title = self._original_title
+        
+        if self._tags_box is not None:
+            
+            service_key = self._tags_box.GetTagServiceKey()
+            
+            if service_key != CC.COMBINED_TAG_SERVICE_KEY:
+                
+                title = '{} for {}'.format( title, CG.client_controller.services_manager.GetName( service_key ) )
+                
+            
+        
+        if self._capped_due_to_setting:
+            
+            max_number = CG.client_controller.new_options.GetNoneableInteger( 'number_of_unselected_medias_to_present_tags_for' )
+            
+            if max_number is not None:
+                
+                title = f'{title} (for first {HydrusNumbers.ToHumanInt(max_number)} files)'
+                
+            
+        
+        self.SetTitle( title )
         
     
     def SetTagContext( self, tag_context: ClientSearchTagContext.TagContext ):
@@ -5198,14 +5243,7 @@ class StaticBoxSorterForListBoxTags( ClientGUICommon.StaticBox ):
         
         self._tags_box.SetTagServiceKey( service_key )
         
-        title = self._original_title
-        
-        if service_key != CC.COMBINED_TAG_SERVICE_KEY:
-            
-            title = '{} for {}'.format( title, CG.client_controller.services_manager.GetName( service_key ) )
-            
-        
-        self.SetTitle( title )
+        self._UpdateTitle()
         
     
     def EventSort( self ):
@@ -5225,6 +5263,8 @@ class StaticBoxSorterForListBoxTags( ClientGUICommon.StaticBox ):
         self._tags_box = tags_box
         
         self.Add( self._tags_box, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        self._tags_box.cappedDueToSetting.connect( self._UpdateCappedDueToSetting )
         
     
     def SetTagsByMedia( self, media ):

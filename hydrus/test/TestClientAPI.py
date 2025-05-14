@@ -3292,6 +3292,109 @@ class TestClientAPI( unittest.TestCase ):
         HF.compare_content_update_packages( self, content_update_package, expected_content_update_package )
         
     
+    def _test_add_favourite_tags( self, connection, set_up_permissions ):
+        
+        api_permissions = set_up_permissions[ 'everything' ]
+        
+        access_key_hex = api_permissions.GetAccessKey().hex()
+        
+        #
+        
+        def test_favourite_tags( expected_tags ):
+            
+            path = '/add_tags/get_favourite_tags'
+            
+            headers = { 'Hydrus-Client-API-Access-Key' : access_key_hex }
+            
+            connection.request( 'GET', path, headers = headers )
+            
+            response = connection.getresponse()
+            
+            data = response.read()
+            
+            text = str( data, 'utf-8' )
+            
+            self.assertEqual( response.status, 200 )
+            
+            d = json.loads( text )
+            
+            self.assertEqual( expected_tags, d[ 'favourite_tags' ] )
+            
+        
+        test_favourite_tags( [] )
+        
+        #
+        
+        path = '/add_tags/set_favourite_tags'
+        
+        headers = { 'Hydrus-Client-API-Access-Key' : access_key_hex, 'Content-Type' : HC.mime_mimetype_string_lookup[ HC.APPLICATION_JSON ] }
+        
+        request_dict = {
+            'set' : [
+                "1",
+                "11",
+                "3",
+                "2"
+            ]
+        }
+        
+        expected_tags = [ "1", "2", "3", "11" ]
+        
+        request_body = json.dumps( request_dict )
+        
+        connection.request( 'POST', path, body = request_body, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        text = str( data, 'utf-8' )
+        
+        self.assertEqual( response.status, 200 )
+        
+        d = json.loads( text )
+        
+        self.assertEqual( expected_tags, d[ 'favourite_tags' ] )
+        
+        test_favourite_tags( expected_tags )
+        
+        #
+        
+        path = '/add_tags/set_favourite_tags'
+        
+        headers = { 'Hydrus-Client-API-Access-Key' : access_key_hex, 'Content-Type' : HC.mime_mimetype_string_lookup[ HC.APPLICATION_JSON ] }
+        
+        request_dict = {
+            'add' : [
+                "4"
+            ],
+            'remove' : [
+                "2",
+                "3"
+            ]
+        }
+        
+        expected_tags = [ "1", "4", "11" ]
+        
+        request_body = json.dumps( request_dict )
+        
+        connection.request( 'POST', path, body = request_body, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        text = str( data, 'utf-8' )
+        
+        self.assertEqual( response.status, 200 )
+        
+        d = json.loads( text )
+        
+        self.assertEqual( expected_tags, d[ 'favourite_tags' ] )
+        
+        test_favourite_tags( expected_tags )
+        
+    
     def _test_add_tags_get_tag_siblings_and_parents( self, connection, set_up_permissions ):
         
         db_data = {}
@@ -7591,6 +7694,7 @@ class TestClientAPI( unittest.TestCase ):
         self._test_add_tags( connection, set_up_permissions )
         self._test_add_tags_search_tags( connection, set_up_permissions )
         self._test_add_tags_get_tag_siblings_and_parents( connection, set_up_permissions )
+        self._test_add_favourite_tags( connection, set_up_permissions )
         self._test_add_urls( connection, set_up_permissions )
         self._test_associate_urls( connection, set_up_permissions )
         self._test_manage_services( connection, set_up_permissions )

@@ -15,6 +15,7 @@ from hydrus.client import ClientData
 from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientLocation
 from hydrus.client.duplicates import ClientDuplicates
+from hydrus.client.gui import ClientGUIAsync
 from hydrus.client.gui import ClientGUIDragDrop
 from hydrus.client.gui import ClientGUICore as CGC
 from hydrus.client.gui import ClientGUIFunctions
@@ -1493,7 +1494,7 @@ class CanvasHoverFrameTopRight( CanvasHoverFrame ):
         
         self._icon_panel.setLayout( icon_hbox )
         
-        self._rating_icon_size_px = CG.client_controller.new_options.GetFloat( 'media_viewer_rating_icon_size_px' )
+        self._rating_icon_size_px = round( CG.client_controller.new_options.GetFloat( 'media_viewer_rating_icon_size_px' ) )
         
         # repo strings
         
@@ -2216,7 +2217,7 @@ class CanvasHoverFrameRightDuplicates( CanvasHoverFrame ):
         
         QP.AddToLayout( self._comparison_statements_vbox, self._comparison_statement_score_summary, CC.FLAGS_EXPAND_PERPENDICULAR )
         
-        self._comparison_statement_names = [ 'filesize', 'resolution', 'ratio', 'mime', 'num_tags', 'time_imported', 'jpeg_quality', 'pixel_duplicates', 'has_transparency', 'exif_data', 'embedded_metadata', 'icc_profile', 'has_audio', 'duration' ]
+        self._comparison_statement_names = [ 'filesize', 'resolution', 'ratio', 'mime', 'num_tags', 'time_imported', 'jpeg_quality', 'pixel_duplicates', 'has_transparency', 'exif_data', 'embedded_metadata', 'icc_profile', 'has_audio', 'duration', 'a_is_exact_match_b_advanced_test' ]
         
         self._comparison_statements_sts = {}
         
@@ -2226,11 +2227,13 @@ class CanvasHoverFrameRightDuplicates( CanvasHoverFrame ):
             
             st = ClientGUICommon.BetterStaticText( panel, 'init' )
             
+            st.setAlignment( QC.Qt.AlignmentFlag.AlignCenter )
+            
             self._comparison_statements_sts[ name ] = ( panel, st )
             
             hbox = QP.HBoxLayout()
             
-            QP.AddToLayout( hbox, st, CC.FLAGS_CENTER )
+            QP.AddToLayout( hbox, st, CC.FLAGS_EXPAND_PERPENDICULAR )
             
             panel.setLayout( hbox )
             
@@ -2238,6 +2241,8 @@ class CanvasHoverFrameRightDuplicates( CanvasHoverFrame ):
             
             QP.AddToLayout( self._comparison_statements_vbox, panel, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
+        
+        self._comparison_statement_updater = self._InitialiseComparisonStatementUpdater()
         
         #
         
@@ -2368,68 +2373,109 @@ class CanvasHoverFrameRightDuplicates( CanvasHoverFrame ):
         return ( should_resize, ideal_size, ideal_position )
         
     
-    def _ResetComparisonStatements( self ):
+    def _InitialiseComparisonStatementUpdater( self ):
         
-        statements_and_scores = ClientDuplicates.GetDuplicateComparisonStatements( self._current_media.GetMediaResult(), self._comparison_media.GetMediaResult() )
-        
-        total_score = sum( ( score for ( statement, score ) in statements_and_scores.values() ) )
-        
-        if total_score > 0:
+        def loading_callable():
             
-            text = 'score: +' + HydrusNumbers.ToHumanInt( total_score )
-            object_name = 'HydrusValid'
-            
-        elif total_score < 0:
-            
-            text = 'score: ' + HydrusNumbers.ToHumanInt( total_score )
-            object_name = 'HydrusInvalid'
-            
-        else:
-            
-            text = 'no score difference'
-            object_name = 'HydrusIndeterminate'
-            
-        
-        self._comparison_statement_score_summary.setText( text )
-        
-        self._comparison_statement_score_summary.setObjectName( object_name )
-        
-        self._comparison_statement_score_summary.style().polish( self._comparison_statement_score_summary )
-        
-        for name in self._comparison_statement_names:
-            
-            ( panel, st ) = self._comparison_statements_sts[ name ]
-            
-            got_data = name in statements_and_scores
-            
-            show_panel = got_data
-            
-            panel.setVisible( show_panel )
-            
-            if got_data:
+            for ( panel, st ) in self._comparison_statements_sts.values():
                 
-                ( statement, score ) = statements_and_scores[ name ]
-                
-                st.setText( statement )
-                
-                if score > 0:
+                if panel.isVisible():
                     
-                    object_name = 'HydrusValid'
-                    
-                elif score < 0:
-                    
-                    object_name = 'HydrusInvalid'
-                    
-                else:
-                    
-                    object_name = 'HydrusIndeterminate'
+                    st.setText( '' )
                     
                 
-                st.setObjectName( object_name )
+            
+        
+        def pre_work_callable():
+            
+            return ( self._current_media.GetMediaResult(), self._comparison_media.GetMediaResult() )
+            
+        
+        def work_callable( args ):
+            
+            ( current_media_result, comparison_media_result ) = args
+            
+            statements_and_scores = ClientDuplicates.GetDuplicateComparisonStatements( current_media_result, comparison_media_result )
+            
+            return statements_and_scores
+            
+        
+        def publish_callable( result ):
+            
+            statements_and_scores = result
+            
+            total_score = sum( ( score for ( statement, score ) in statements_and_scores.values() ) )
+            
+            if total_score > 0:
                 
-                st.style().polish( st )
+                text = 'score: +' + HydrusNumbers.ToHumanInt( total_score )
+                object_name = 'HydrusValid'
+                
+            elif total_score < 0:
+                
+                text = 'score: ' + HydrusNumbers.ToHumanInt( total_score )
+                object_name = 'HydrusInvalid'
+                
+            else:
+                
+                text = 'no score difference'
+                object_name = 'HydrusIndeterminate'
                 
             
+            self._comparison_statement_score_summary.setText( text )
+            
+            self._comparison_statement_score_summary.setObjectName( object_name )
+            
+            self._comparison_statement_score_summary.style().polish( self._comparison_statement_score_summary )
+            
+            for name in self._comparison_statement_names:
+                
+                ( panel, st ) = self._comparison_statements_sts[ name ]
+                
+                got_data = name in statements_and_scores
+                
+                show_panel = got_data
+                
+                panel.setVisible( show_panel )
+                
+                if got_data:
+                    
+                    ( statement, score ) = statements_and_scores[ name ]
+                    
+                    st.setText( statement )
+                    
+                    if score > 0:
+                        
+                        object_name = 'HydrusValid'
+                        
+                    elif score < 0:
+                        
+                        object_name = 'HydrusInvalid'
+                        
+                    else:
+                        
+                        object_name = 'HydrusIndeterminate'
+                        
+                    
+                    st.setObjectName( object_name )
+                    
+                    st.style().polish( st )
+                    
+                    if name == 'a_is_exact_match_b_advanced_test':
+                        
+                        tt = 'This is a test comparison line from hydev for the duplicates auto-resolution system. It is supposed to detect exact duplicates that are only resizes or re-encodes. It will not consider a lighter/darker/recolour as a "visual duplicate". Is it making a correct prediction here? If not, hydev would like you to send the pair in so he can check it out.\n\nI mostly want to see false positives. It is fine if a particularly blurry/artifacty duplicate pair is not considered "visual duplicates", but if two actual alternates are considered "visual duplicates", I would like to see them! Thank you for testing.'
+                        st.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
+                        
+                    
+                
+            
+            # minimumsize is not immediately updated without this
+            self.layout().activate()
+            
+            self._SizeAndPosition()
+            
+        
+        return ClientGUIAsync.AsyncQtUpdater( self, loading_callable, work_callable, publish_callable, pre_work_callable = pre_work_callable )
         
     
     def SetDuplicatePair( self, canvas_key, shown_media, comparison_media ):
@@ -2441,7 +2487,7 @@ class CanvasHoverFrameRightDuplicates( CanvasHoverFrame ):
             
             self._EnableDisableButtons()
             
-            self._ResetComparisonStatements()
+            self._comparison_statement_updater.update()
             
             # minimumsize is not immediately updated without this
             self.layout().activate()
@@ -2463,7 +2509,7 @@ class CanvasHoverFrameRightDuplicates( CanvasHoverFrame ):
 class CanvasHoverFrameTags( CanvasHoverFrame ):
     
     def __init__( self, parent, my_canvas, top_hover: CanvasHoverFrameTop, canvas_key, location_context: ClientLocation.LocationContext ):
-
+        
         super().__init__( parent, my_canvas, canvas_key )
         
         self._top_hover = top_hover
@@ -2477,12 +2523,14 @@ class CanvasHoverFrameTags( CanvasHoverFrame ):
         self.setLayout( vbox )
         
         CG.client_controller.sub( self, 'ProcessContentUpdatePackage', 'content_updates_gui' )
+        
     
     def _GetIdealSizeAndPosition( self ):
-
+        
         if CG.client_controller.new_options.GetBoolean( 'disable_tags_hover_in_media_viewer' ):
-
+            
             return ( False, QC.QSize( 0, 0 ), QC.QPoint( 0, 0 ) )
+            
         
         parent_window = self.parentWidget().window()
         

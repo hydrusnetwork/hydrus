@@ -305,33 +305,29 @@ class TestSerialisables( unittest.TestCase ):
         
         #
         
-        result = duplicate_content_merge_options_delete_and_move.ProcessPairIntoContentUpdatePackage( local_media_result_has_values, local_media_result_empty, delete_b = True, file_deletion_reason = file_deletion_reason )
+        result = duplicate_content_merge_options_delete_and_move.ProcessPairIntoContentUpdatePackages( local_media_result_has_values, local_media_result_empty, delete_b = True, file_deletion_reason = file_deletion_reason )
         
         content_update_package = ClientContentUpdates.ContentUpdatePackage()
         
         content_update_package.AddContentUpdate( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY, ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, { local_hash_empty }, reason = file_deletion_reason ) )
         
-        HF.compare_content_update_packages( self, result, content_update_package )
+        HF.compare_content_update_packages( self, result[0], content_update_package )
         
         #
         
-        result = duplicate_content_merge_options_delete_and_move.ProcessPairIntoContentUpdatePackage( local_media_result_has_values, trashed_media_result_empty, delete_b = True, file_deletion_reason = file_deletion_reason )
+        result = duplicate_content_merge_options_delete_and_move.ProcessPairIntoContentUpdatePackages( local_media_result_has_values, trashed_media_result_empty, delete_b = True, file_deletion_reason = file_deletion_reason )
         
-        content_update_package = ClientContentUpdates.ContentUpdatePackage()
-        
-        HF.compare_content_update_packages( self, result, content_update_package )
+        self.assertEqual( result, [] )
         
         #
         
-        result = duplicate_content_merge_options_delete_and_move.ProcessPairIntoContentUpdatePackage( local_media_result_has_values, deleted_media_result_empty, delete_b = True, file_deletion_reason = file_deletion_reason )
+        result = duplicate_content_merge_options_delete_and_move.ProcessPairIntoContentUpdatePackages( local_media_result_has_values, deleted_media_result_empty, delete_b = True, file_deletion_reason = file_deletion_reason )
         
-        content_update_package = ClientContentUpdates.ContentUpdatePackage()
-        
-        HF.compare_content_update_packages( self, result, content_update_package )
+        self.assertEqual( result, [] )
         
         #
         
-        result = duplicate_content_merge_options_delete_and_move.ProcessPairIntoContentUpdatePackage( local_media_result_has_values, other_local_media_result_has_values, delete_b = True, file_deletion_reason = file_deletion_reason )
+        result = duplicate_content_merge_options_delete_and_move.ProcessPairIntoContentUpdatePackages( local_media_result_has_values, other_local_media_result_has_values, delete_b = True, file_deletion_reason = file_deletion_reason )
         
         content_update_package = ClientContentUpdates.ContentUpdatePackage()
         
@@ -339,13 +335,18 @@ class TestSerialisables( unittest.TestCase ):
         content_update_package.AddContentUpdate( TC.LOCAL_RATING_LIKE_SERVICE_KEY, ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( None, { other_local_hash_has_values } ) ) )
         content_update_package.AddContentUpdate( TC.LOCAL_RATING_NUMERICAL_SERVICE_KEY, ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( None, { other_local_hash_has_values } ) ) )
         content_update_package.AddContentUpdates( TC.LOCAL_RATING_INCDEC_SERVICE_KEY, [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( 12, { local_hash_has_values } ) ), ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( 0, { other_local_hash_has_values } ) ) ] )
+        
+        HF.compare_content_update_packages( self, result[0], content_update_package )
+        
+        content_update_package = ClientContentUpdates.ContentUpdatePackage()
+        
         content_update_package.AddContentUpdate( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY, ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, { other_local_hash_has_values }, reason = file_deletion_reason ) )
         
-        HF.compare_content_update_packages( self, result, content_update_package )
+        HF.compare_content_update_packages( self, result[1], content_update_package )
         
         #
         
-        result = duplicate_content_merge_options_delete_and_move.ProcessPairIntoContentUpdatePackage( local_media_result_empty, other_local_media_result_has_values, delete_b = True, file_deletion_reason = file_deletion_reason )
+        result = duplicate_content_merge_options_delete_and_move.ProcessPairIntoContentUpdatePackages( local_media_result_empty, other_local_media_result_has_values, delete_b = True, file_deletion_reason = file_deletion_reason )
         
         content_update_package = ClientContentUpdates.ContentUpdatePackage()
         
@@ -353,20 +354,25 @@ class TestSerialisables( unittest.TestCase ):
         content_update_package.AddContentUpdates( TC.LOCAL_RATING_LIKE_SERVICE_KEY, [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( 1.0, { local_hash_empty } ) ), ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( None, { other_local_hash_has_values } ) ) ] )
         content_update_package.AddContentUpdates( TC.LOCAL_RATING_NUMERICAL_SERVICE_KEY, [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( 0.8, { local_hash_empty } ) ), ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( None, { other_local_hash_has_values } ) )  ])
         content_update_package.AddContentUpdates( TC.LOCAL_RATING_INCDEC_SERVICE_KEY, [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( 6, { local_hash_empty } ) ), ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( 0, { other_local_hash_has_values } ) ) ] )
+        
+        HF.compare_content_update_packages( self, result[0], content_update_package )
+        
+        content_update_package = ClientContentUpdates.ContentUpdatePackage()
+        
         content_update_package.AddContentUpdate( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY, ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, { other_local_hash_has_values }, reason = file_deletion_reason ) )
         
-        HF.compare_content_update_packages( self, result, content_update_package )
+        HF.compare_content_update_packages( self, result[1], content_update_package )
         
         #
         #
         
-        result = duplicate_content_merge_options_copy.ProcessPairIntoContentUpdatePackage( local_media_result_has_values, local_media_result_empty, file_deletion_reason = file_deletion_reason )
+        result = duplicate_content_merge_options_copy.ProcessPairIntoContentUpdatePackages( local_media_result_has_values, local_media_result_empty, file_deletion_reason = file_deletion_reason )
         
-        HF.compare_content_update_packages( self, result, ClientContentUpdates.ContentUpdatePackage() )
+        self.assertEqual( result, [] )
         
         #
         
-        result = duplicate_content_merge_options_copy.ProcessPairIntoContentUpdatePackage( local_media_result_empty, other_local_media_result_has_values, file_deletion_reason = file_deletion_reason )
+        result = duplicate_content_merge_options_copy.ProcessPairIntoContentUpdatePackages( local_media_result_empty, other_local_media_result_has_values, file_deletion_reason = file_deletion_reason )
         
         content_update_package = ClientContentUpdates.ContentUpdatePackage()
         
@@ -375,12 +381,12 @@ class TestSerialisables( unittest.TestCase ):
         content_update_package.AddContentUpdate( TC.LOCAL_RATING_NUMERICAL_SERVICE_KEY, ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( 0.8, { local_hash_empty } ) ) )
         content_update_package.AddContentUpdate( TC.LOCAL_RATING_INCDEC_SERVICE_KEY, ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( 6, { local_hash_empty } ) ) )
         
-        HF.compare_content_update_packages( self, result, content_update_package )
+        HF.compare_content_update_packages( self, result[0], content_update_package )
         
         #
         #
         
-        result = duplicate_content_merge_options_merge.ProcessPairIntoContentUpdatePackage( local_media_result_has_values, local_media_result_empty, file_deletion_reason = file_deletion_reason )
+        result = duplicate_content_merge_options_merge.ProcessPairIntoContentUpdatePackages( local_media_result_has_values, local_media_result_empty, file_deletion_reason = file_deletion_reason )
         
         content_update_package = ClientContentUpdates.ContentUpdatePackage()
         
@@ -389,11 +395,11 @@ class TestSerialisables( unittest.TestCase ):
         content_update_package.AddContentUpdate( TC.LOCAL_RATING_NUMERICAL_SERVICE_KEY, ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( 0.8, { local_hash_empty } ) ) )
         content_update_package.AddContentUpdate( TC.LOCAL_RATING_INCDEC_SERVICE_KEY, ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( 6, { local_hash_empty } ) ) )
         
-        HF.compare_content_update_packages( self, result, content_update_package )
+        HF.compare_content_update_packages( self, result[0], content_update_package )
         
         #
         
-        result = duplicate_content_merge_options_merge.ProcessPairIntoContentUpdatePackage( local_media_result_empty, other_local_media_result_has_values, file_deletion_reason = file_deletion_reason )
+        result = duplicate_content_merge_options_merge.ProcessPairIntoContentUpdatePackages( local_media_result_empty, other_local_media_result_has_values, file_deletion_reason = file_deletion_reason )
         
         content_update_package = ClientContentUpdates.ContentUpdatePackage()
         
@@ -402,11 +408,11 @@ class TestSerialisables( unittest.TestCase ):
         content_update_package.AddContentUpdate( TC.LOCAL_RATING_NUMERICAL_SERVICE_KEY, ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( 0.8, { local_hash_empty } ) ) )
         content_update_package.AddContentUpdate( TC.LOCAL_RATING_INCDEC_SERVICE_KEY, ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( 6, { local_hash_empty } ) ) )
         
-        HF.compare_content_update_packages( self, result, content_update_package )
+        HF.compare_content_update_packages( self, result[0], content_update_package )
         
         #
         
-        result = duplicate_content_merge_options_merge.ProcessPairIntoContentUpdatePackage( one_media_result, two_media_result, file_deletion_reason = file_deletion_reason )
+        result = duplicate_content_merge_options_merge.ProcessPairIntoContentUpdatePackages( one_media_result, two_media_result, file_deletion_reason = file_deletion_reason )
         
         content_update_package = ClientContentUpdates.ContentUpdatePackage()
         
@@ -415,21 +421,17 @@ class TestSerialisables( unittest.TestCase ):
         content_update_package.AddContentUpdate( TC.LOCAL_RATING_NUMERICAL_SERVICE_KEY, ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( 0.8, { two_hash } ) ) )
         content_update_package.AddContentUpdates( TC.LOCAL_RATING_INCDEC_SERVICE_KEY, [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( 8, { one_hash } ) ), ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( 8, { two_hash } ) ) ] )
         
-        HF.compare_content_update_packages( self, result, content_update_package )
+        HF.compare_content_update_packages( self, result[0], content_update_package )
         
         #
         
-        result = duplicate_content_merge_options_empty.ProcessPairIntoContentUpdatePackage( one_media_result, two_media_result )
+        result = duplicate_content_merge_options_empty.ProcessPairIntoContentUpdatePackages( one_media_result, two_media_result )
         
-        content_update_package = ClientContentUpdates.ContentUpdatePackage()
+        self.assertEqual( result, [] )
         
-        HF.compare_content_update_packages( self, result, content_update_package )
+        result = duplicate_content_merge_options_empty.ProcessPairIntoContentUpdatePackages( two_media_result, one_media_result )
         
-        result = duplicate_content_merge_options_empty.ProcessPairIntoContentUpdatePackage( two_media_result, one_media_result )
-        
-        content_update_package = ClientContentUpdates.ContentUpdatePackage()
-        
-        HF.compare_content_update_packages( self, result, content_update_package )
+        self.assertEqual( result, [] )
         
     
     def test_SERIALISABLE_TYPE_SHORTCUT( self ):

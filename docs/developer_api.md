@@ -1058,6 +1058,34 @@ Response:
     Mostly, hydrus simply trims excess whitespace, but the other examples are rare issues you might run into. 'system' is an invalid namespace, tags cannot be prefixed with hyphens, and any tag starting with ':' is secretly dealt with internally as "\[no namespace\]:\[colon-prefixed-subtag\]". Again, you probably won't run into these, but if you see a mismatch somewhere and want to figure it out, or just want to sort some numbered tags, you might like to try this.
     
 
+### **GET `/add_tags/get_favourite_tags`** { id="add_tags_get_favourite_tags" }
+
+_Fetch the client's favourite tags. This is the list of tags you see beneath an autocomplete input, under the 'favourites' tab. This is not the per-service 'most used' tab you see in `manage tags`._
+
+Restricted access:
+:   YES. Add Tags permission needed.
+
+Required Headers: n/a
+
+Arguments: n/a
+
+Response:
+:   A simple JSON list of the tags.
+
+:   
+```json title="Example response"
+{
+  "favourite_tags" : [
+    "blonde hair",
+    "blue eyes",
+    "bodysuit",
+    "mecha"
+  ]
+}
+```
+
+They will probably be in 'human sorted' order, which is how they'll appear in most places in UI.
+
 ### **GET `/add_tags/get_siblings_and_parents`** { id="add_tags_get_siblings_and_parents" }
 
 _Ask the client about tags' sibling and parent relationships._
@@ -1220,8 +1248,10 @@ _Make changes to the tags that files have._
 Restricted access:
 :   YES. Add Tags permission needed.
     
-Required Headers: n/a
-    
+Required Headers:
+:   
+*   `Content-Type`: application/json
+
 Arguments (in JSON):
 :   
 *   [files](#parameters_files)
@@ -1304,6 +1334,52 @@ Response description:
     Note also that hydrus tag actions are safely idempotent. You can pend a tag that is already pended, or add a tag that already exists, and not worry about an error--the surplus add action will be discarded. The same is true if you try to pend a tag that actually already exists, or rescinding a petition that doesn't. Any invalid actions will fail silently.
     
     It is fine to just throw your 'process this' tags at every file import and not have to worry about checking which files you already added them to.
+
+### **POST `/add_tags/set_favourite_tags`** { id="add_tags_set_favourite_tags" }
+
+_Edit the client's favourite tags. This is the complement to [/add\_tags/get\_favourite\_tags](#add_tags_get_favourite_tags)._
+
+Restricted access:
+:   YES. Add Tags permission needed.
+
+Required Headers:
+:   
+*   `Content-Type`: application/json
+
+Arguments (in JSON):
+:   
+* `set` : (selective A, a list of tags)
+* `add` : (selective B, optional, a list of tags)
+* `remove` : (selective B, optional, a list of tags)
+
+If you send `set`, what you send will overwrite the existing list completely. If you send `add` and/or `remove`, the current list will be edited.
+
+Example requests:
+:   
+```json title="Setting new list"
+{
+  "set" : [
+    "1girl",
+    "bobcut",
+    "cornfield",
+    "summer dress"
+  ]
+}
+```
+```json title="Editing"
+{
+  "add" : [
+    "black hair"
+  ],
+  "remove" : [
+    "blonde hair",
+    "red hair"
+  ]
+}
+```
+
+Response description:
+:  200 and the new list of favourite tags, just as [/add\_tags/get\_favourite\_tags](#add_tags_get_favourite_tags) gives.
 
 ## Editing File Ratings
 
@@ -2987,7 +3063,9 @@ _Start the job to upload a service's pending content._
 Restricted access:
 :   YES. Start Upload permission needed.
 
-Required Headers: n/a
+Required Headers:
+:   
+*   `Content-Type`: application/json
 
 Arguments (in JSON):
 :   
@@ -3012,7 +3090,9 @@ _Forget all pending content for a service._
 Restricted access:
 :   YES. Start Upload permission needed.
 
-Required Headers: n/a
+Required Headers:
+:   
+*   `Content-Type`: application/json
 
 Arguments (in JSON):
 :   

@@ -61,7 +61,7 @@ if HC.PLATFORM_MACOS:
 
 class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.ListeningMediaList, QW.QScrollArea ):
     
-    selectedMediaTagPresentationChanged = QC.Signal( list, bool )
+    selectedMediaTagPresentationChanged = QC.Signal( list, bool, bool )
     selectedMediaTagPresentationIncremented = QC.Signal( list )
     statusTextChanged = QC.Signal( str )
     
@@ -1146,6 +1146,8 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.Liste
         
         if CG.client_controller.gui.IsCurrentPage( self._page_key ):
             
+            capped_due_to_setting = False
+            
             if len( self._selected_media ) == 0:
                 
                 number_of_unselected_medias_to_present_tags_for = CG.client_controller.new_options.GetNoneableInteger( 'number_of_unselected_medias_to_present_tags_for' )
@@ -1155,6 +1157,8 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.Liste
                     tags_media = self._sorted_media
                     
                 else:
+                    
+                    capped_due_to_setting = len( self._sorted_media ) > number_of_unselected_medias_to_present_tags_for
                     
                     tags_media = self._sorted_media[ :number_of_unselected_medias_to_present_tags_for ]
                     
@@ -1168,7 +1172,7 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.Liste
             
             tags_changed = tags_changed or self._had_changes_to_tag_presentation_while_hidden
             
-            self.selectedMediaTagPresentationChanged.emit( tags_media, tags_changed )
+            self.selectedMediaTagPresentationChanged.emit( tags_media, tags_changed, capped_due_to_setting )
             
             self.statusTextChanged.emit( self._GetPrettyStatusForStatusBar() )
             
@@ -1554,7 +1558,7 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.Liste
                     
                     # so the important part of this mess is here. we send the duplicated media, which is keeping up with content updates, to the method here
                     # original 'first_media' is not changed, and won't be until the database Write clears and publishes everything
-                    content_update_packages.append( duplicate_content_merge_options.ProcessPairIntoContentUpdatePackage( first_duplicated_media_result, second_duplicated_media_result, file_deletion_reason = file_deletion_reason, do_not_do_deletes = do_not_do_deletes ) )
+                    content_update_packages.extend( duplicate_content_merge_options.ProcessPairIntoContentUpdatePackages( first_duplicated_media_result, second_duplicated_media_result, file_deletion_reason = file_deletion_reason, do_not_do_deletes = do_not_do_deletes ) )
                     
                 
                 for content_update_package in content_update_packages:

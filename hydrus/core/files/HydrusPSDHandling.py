@@ -3,8 +3,6 @@ import re
 import subprocess
 import typing
 
-from PIL import Image as PILImage
-
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusProcess

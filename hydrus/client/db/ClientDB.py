@@ -9154,6 +9154,42 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
+        if version == 621:
+            
+            try:
+                
+                from hydrus.client.gui import ClientGUIShortcuts
+                from hydrus.client import ClientApplicationCommand as CAC
+                
+                main_gui_shortcuts_set: ClientGUIShortcuts.ShortcutSet = self.modules_serialisable.GetJSONDumpNamed( HydrusSerialisable.SERIALISABLE_TYPE_SHORTCUT_SET, 'main_gui' )
+                
+                jobs = [
+                    (
+                        ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_KEYBOARD_CHARACTER, ord( 'O' ), ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [ ClientGUIShortcuts.SHORTCUT_MODIFIER_CTRL, ClientGUIShortcuts.SHORTCUT_MODIFIER_SHIFT ] ),
+                        CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_OPEN_OPTIONS ) 
+                    )
+                ]
+                
+                for ( shortcut, command ) in jobs:
+                    
+                    if not main_gui_shortcuts_set.HasCommand( shortcut ):
+                        
+                        main_gui_shortcuts_set.SetCommand( shortcut, command )
+                        
+                    
+                
+                self.modules_serialisable.SetJSONDump( main_gui_shortcuts_set )
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to update some shortcuts failed! Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
+                
+            
+        
         self._controller.frame_splash_status.SetTitleText( 'updated db to v{}'.format( HydrusNumbers.ToHumanInt( version + 1 ) ) )
         
         self._Execute( 'UPDATE version SET version = ?;', ( version + 1, ) )

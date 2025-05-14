@@ -186,11 +186,11 @@ def DirectoryIsWriteable( path ):
         # also, using tempfile.TemporaryFile actually loops on PermissionError from Windows lmaaaooooo, thinking this is an already existing file
         # so, just do it manually!
         
-        test_path = os.path.join( path, 'hydrus_permission_test' )
+        test_path = os.path.join( path, f'hpt_{os.urandom(12).hex()}.txt' )
         
         with open( test_path, 'wb' ) as f:
             
-            f.write( b'If this file still exists, this directory can be written to but not deleted from.' )
+            f.write( b'Hydrus tested this directory for write permissions. If this file still exists, this directory can be written to but not deleted from.' )
             
         
         os.unlink( test_path )
@@ -742,7 +742,7 @@ def MergeFile( source, dest ) -> bool:
     return True
     
 
-def MergeTree( source, dest, text_update_hook = None ):
+def MergeTree( source: str, dest: str, text_update_hook = None ):
     """
     Moves everything in the source to the dest using fast MergeFile tech.
     """
@@ -772,6 +772,8 @@ def MergeTree( source, dest, text_update_hook = None ):
     
     if not os.path.exists( dest ):
         
+        # ok, nothing to merge, so simple move operation
+        
         try:
             
             retry_blocking_io_call( shutil.move, source, dest, copy_function = safe_copy2 )
@@ -788,7 +790,10 @@ def MergeTree( source, dest, text_update_hook = None ):
         
     else:
         
+        # ok we have a populated dest, let's merge cleverly
+        
         # I had a thing here that tried to optimise if dest existed but was empty, but it wasn't neat
+        # also this guy used to do mergefile; now it does mirrorfile so as not to delete the source until the merge is done
         
         for ( root, dirnames, filenames ) in os.walk( source ):
             
@@ -797,7 +802,8 @@ def MergeTree( source, dest, text_update_hook = None ):
                 text_update_hook( 'Copying ' + root + '.' )
                 
             
-            dest_root = root.replace( source, dest )
+            relative_path = os.path.relpath( root, source )
+            dest_root = os.path.normpath( os.path.join( dest, relative_path ) )
             
             for dirname in dirnames:
                 
@@ -820,7 +826,7 @@ def MergeTree( source, dest, text_update_hook = None ):
                 
                 try:
                     
-                    MergeFile( source_path, dest_path )
+                    MirrorFile( source_path, dest_path )
                     
                 except Exception as e:
                     
@@ -899,7 +905,7 @@ def MirrorFile( source, dest ) -> bool:
         
     
 
-def MirrorTree( source, dest, text_update_hook = None, is_cancelled_hook = None ):
+def MirrorTree( source: str, dest: str, text_update_hook = None, is_cancelled_hook = None ):
     """
     Makes the destination directory look exactly like the source using fast MirrorFile tech.
     It deletes surplus stuff in the dest!
@@ -941,7 +947,8 @@ def MirrorTree( source, dest, text_update_hook = None, is_cancelled_hook = None 
             text_update_hook( 'Copying ' + root + '.' )
             
         
-        dest_root = root.replace( source, dest )
+        relative_path = os.path.relpath( root, source )
+        dest_root = os.path.normpath( os.path.join( dest, relative_path ) )
         
         surplus_dest_paths = { os.path.join( dest_root, dest_filename ) for dest_filename in os.listdir( dest_root ) }
         
