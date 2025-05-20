@@ -1,6 +1,7 @@
 import hashlib
 import os
 
+import gallery_dl
 import signal
 import sys
 import threading
@@ -1941,7 +1942,8 @@ class Controller( HydrusController.HydrusController ):
                 
                 pass
                 
-            
+
+        gallery_dl.config.load()
         
         self.app = App( self._pubsub, sys.argv )
         
