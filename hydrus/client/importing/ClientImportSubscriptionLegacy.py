@@ -617,8 +617,9 @@ class SubscriptionLegacy( HydrusSerialisable.SerialisableBaseNamed ):
         
         subscription_key = query.GetNetworkJobSubscriptionKey( self._name )
         
-        def network_job_factory( *args, **kwargs ):
-            
+        def network_job_factory( downloader_type, *args, **kwargs ):
+
+            # TODO
             network_job = ClientNetworkingJobs.NetworkJobSubscription( subscription_key, *args, **kwargs )
             
             network_job.OverrideBandwidth( 30 )

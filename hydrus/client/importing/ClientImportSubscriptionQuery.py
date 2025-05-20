@@ -131,8 +131,9 @@ class SubscriptionQueryHeader( HydrusSerialisable.SerialisableBase ):
         
         subscription_key = self._GenerateNetworkJobSubscriptionKey( subscription_name )
         
-        def network_job_factory( *args, **kwargs ):
-            
+        def network_job_factory( downloader_type, *args, **kwargs ):
+
+            # TODO
             network_job = ClientNetworkingJobs.NetworkJobSubscription( subscription_key, *args, **kwargs )
             
             network_job.OverrideBandwidth( 30 )

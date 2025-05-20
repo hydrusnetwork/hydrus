@@ -31,3 +31,5 @@ mpv==1.0.7
 
 QtPy==2.4.1
 PySide6==6.7.3
+
+gallery-dl>=1.29.0

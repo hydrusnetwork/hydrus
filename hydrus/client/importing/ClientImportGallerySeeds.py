@@ -324,7 +324,7 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
             url_to_check = self.url
             
         
-        network_job = network_job_factory( 'GET', url_to_check )
+        network_job = network_job_factory( 'hydrus', 'GET', url_to_check )
         
         return network_job
         
@@ -426,7 +426,7 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
                 referral_url = None
                 
             
-            network_job = network_job_factory( 'GET', url_to_check, referral_url = referral_url )
+            network_job = network_job_factory( 'hydrus', 'GET', url_to_check, referral_url = referral_url )
             
             for ( key, value ) in self._request_headers.items():
                 

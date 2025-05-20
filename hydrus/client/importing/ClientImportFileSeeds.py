@@ -733,7 +733,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
             
             url_to_fetch = CG.client_controller.network_engine.domain_manager.GetURLToFetch( file_url )
             
-            network_job = network_job_factory( 'GET', url_to_fetch, temp_path = temp_path, referral_url = referral_url )
+            network_job = network_job_factory( 'hydrus', 'GET', url_to_fetch, temp_path = temp_path, referral_url = referral_url )
             
             for ( key, value ) in self._request_headers.items():
                 
@@ -878,7 +878,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
             url_to_check = self.file_seed_data
             
         
-        network_job = network_job_factory( 'GET', url_to_check )
+        network_job = network_job_factory( 'hydrus', 'GET', url_to_check )
         
         return network_job
         
@@ -1495,7 +1495,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
                         referral_url = None
                         
                     
-                    network_job = network_job_factory( 'GET', url_to_check, referral_url = referral_url )
+                    network_job = network_job_factory( 'hydrus', 'GET', url_to_check, referral_url = referral_url )
                     
                     for ( key, value ) in self._request_headers.items():
                         

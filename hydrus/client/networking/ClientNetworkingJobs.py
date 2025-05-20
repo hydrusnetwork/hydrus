@@ -3,6 +3,7 @@ import io
 import os
 import typing
 
+import gallery_dl
 import requests
 import threading
 import traceback
@@ -127,12 +128,23 @@ def ConvertStatusCodeAndDataIntoExceptionInfo( status_code, data, is_hydrus_serv
     e = eclass( '{}: {}'.format( status_code, error_text ) )
     
     return ( e, error_text )
+
+def GetNetworkJobForDownloaderType( downloader_type, *args, **kwargs ):
+
+    if downloader_type == 'gallery-dl':
+
+        return NetworkJobGalleryDL( *args, **kwargs )
+
+    else:
+
+        return NetworkJob( *args, **kwargs )
     
 class NetworkJob( object ):
     
     WILLING_TO_WAIT_ON_INVALID_LOGIN = True
     IS_HYDRUS_SERVICE = False
     IS_IPFS_SERVICE = False
+    IS_GALLERY_DL_SERVICE = False
     
     def __init__( self, method: str, url: str, body = None, referral_url = None, temp_path = None, file_body_path = None ):
         
@@ -1397,9 +1409,152 @@ class NetworkJob( object ):
         with self._lock:
             
             self._Sleep( seconds )
+
+
+
+    def _SendRequestGetAndHandleResponse( self ):
+
+        response = self._SendRequestAndGetResponse()
+
+        # I think tbh I would rather tell requests not to do 3XX, which is possible with allow_redirects = False on request, and then just raise various 3XX exceptions with url info, so I can requeue easier and keep a record
+        # figuring out correct new url seems a laugh, requests has slight helpers, but lots of exceptions
+        # SessionRedirectMixin here https://requests.readthedocs.io/en/latest/_modules/requests/sessions/
+        # but this will do as a patch for now
+        self._actual_fetched_url = response.url
+
+        if HG.network_report_mode and self._actual_fetched_url != self._url:
+
+            message = f'Network Jobs Redirect: {self._url} -> {self._actual_fetched_url}'
+
+            ClientNetworkingFunctions.NetworkReportMode( message )
+
+
+        self._ParseFirstResponseHeaders( response )
+
+        if response.ok:
+
+            with self._lock:
+
+                self._status_text = 'downloading' + HC.UNICODE_ELLIPSIS
+
+
+            if self._temp_path is None:
+
+                stream_dest = self._stream_io
+
+            else:
+
+                stream_dest = open( self._temp_path, 'wb' )
+
+
+            try:
+
+                more_to_download = True
+
+                while more_to_download:
+
+                    more_to_download = self._ReadResponse( response, stream_dest )
+
+                    if more_to_download:
+
+                        with self._lock:
+
+                            self._status_text = 'downloading next part' + HC.UNICODE_ELLIPSIS
+
+
+                        # this will magically have new Range header
+                        response = self._SendRequestAndGetResponse()
+
+                        if not response.ok:
+
+                            raise HydrusExceptions.NetworkException( 'Ranged response failed {}'.format( response.status_code ) )
+
+
+
+
+            finally:
+
+                if self._temp_path is not None:
+
+                    stream_dest.close()
+
+
+
+            with self._lock:
+
+                # we are complete here and worked ok
+
+                self._GenerateModifiedDate( response )
+
+                if 'Server' in response.headers:
+
+                    self._response_server_header = response.headers[ 'Server' ]
+
+
+                self._status_text = 'done!'
+
+
+        else:
+
+            with self._lock:
+
+                self._status_text = str( response.status_code ) + ' - ' + str( response.reason )
+
+
+            # don't care about 'more_to_download' here. lmao if some server ever tried to pull it off anyway
+            self._ReadResponse( response, self._stream_io )
+
+            data = self.GetContentBytes()
+
+            with self._lock:
+
+                ( e, error_text ) = ConvertStatusCodeAndDataIntoExceptionInfo( response.status_code, data, self.IS_HYDRUS_SERVICE )
+
+                if isinstance( e, ( HydrusExceptions.BandwidthException, HydrusExceptions.ShouldReattemptNetworkException ) ):
+
+                    raise e
+
+
+                self._SetError( e, error_text )
+
+
+
+    def _GetNumSecondsToWait( self, response ):
+
+        num_seconds_to_wait = None
+
+        if response is not None:
+
+            if 'Retry-After' in response.headers:
+
+                retry_after = response.headers[ 'Retry-After' ]
+
+                try:
+
+                    num_seconds_to_wait = int( retry_after )
+
+                except:
+
+                    try:
+
+                        timestamp = ClientTime.ParseDate( retry_after )
+
+                        num_seconds_to_wait = min( max( 60, timestamp - HydrusTime.GetNow() ), 86400 )
+
+                    except:
+
+                        HydrusData.Print( f'Was given an unparsable Retry-After of {retry_after}!' )
+
+        return num_seconds_to_wait
+
+
+
+    def _CloseResponse( self, response ):
+
+        response.close()
+
             
         
-    
     def Start( self ):
         
         try:
@@ -1423,110 +1578,7 @@ class NetworkJob( object ):
                 
                 try:
                     
-                    response = self._SendRequestAndGetResponse()
-                    
-                    # I think tbh I would rather tell requests not to do 3XX, which is possible with allow_redirects = False on request, and then just raise various 3XX exceptions with url info, so I can requeue easier and keep a record
-                    # figuring out correct new url seems a laugh, requests has slight helpers, but lots of exceptions
-                    # SessionRedirectMixin here https://requests.readthedocs.io/en/latest/_modules/requests/sessions/
-                    # but this will do as a patch for now
-                    self._actual_fetched_url = response.url
-                    
-                    if HG.network_report_mode and self._actual_fetched_url != self._url:
-                        
-                        message = f'Network Jobs Redirect: {self._url} -> {self._actual_fetched_url}'
-                        
-                        ClientNetworkingFunctions.NetworkReportMode( message )
-                        
-                    
-                    self._ParseFirstResponseHeaders( response )
-                    
-                    if response.ok:
-                        
-                        with self._lock:
-                            
-                            self._status_text = 'downloading' + HC.UNICODE_ELLIPSIS
-                            
-                        
-                        if self._temp_path is None:
-                            
-                            stream_dest = self._stream_io
-                            
-                        else:
-                            
-                            stream_dest = open( self._temp_path, 'wb' )
-                            
-                        
-                        try:
-                            
-                            more_to_download = True
-                            
-                            while more_to_download:
-                                
-                                more_to_download = self._ReadResponse( response, stream_dest )
-                                
-                                if more_to_download:
-                                    
-                                    with self._lock:
-                                        
-                                        self._status_text = 'downloading next part' + HC.UNICODE_ELLIPSIS
-                                        
-                                    
-                                    # this will magically have new Range header
-                                    response = self._SendRequestAndGetResponse()
-                                    
-                                    if not response.ok:
-                                        
-                                        raise HydrusExceptions.NetworkException( 'Ranged response failed {}'.format( response.status_code ) )
-                                        
-                                    
-                                
-                            
-                        finally:
-                            
-                            if self._temp_path is not None:
-                                
-                                stream_dest.close()
-                                
-                            
-                        
-                        with self._lock:
-                            
-                            # we are complete here and worked ok
-                            
-                            self._GenerateModifiedDate( response )
-                            
-                            if 'Server' in response.headers:
-                                
-                                self._response_server_header = response.headers[ 'Server' ]
-                                
-                            
-                            self._status_text = 'done!'
-                            
-                        
-                    else:
-                        
-                        with self._lock:
-                            
-                            self._status_text = str( response.status_code ) + ' - ' + str( response.reason )
-                            
-                        
-                        # don't care about 'more_to_download' here. lmao if some server ever tried to pull it off anyway
-                        self._ReadResponse( response, self._stream_io )
-                        
-                        data = self.GetContentBytes()
-                        
-                        with self._lock:
-                            
-                            ( e, error_text ) = ConvertStatusCodeAndDataIntoExceptionInfo( response.status_code, data, self.IS_HYDRUS_SERVICE )
-                            
-                            if isinstance( e, ( HydrusExceptions.BandwidthException, HydrusExceptions.ShouldReattemptNetworkException ) ):
-                                
-                                raise e
-                                
-                            
-                            self._SetError( e, error_text )
-                            
-                        
+                    response = self._SendRequestGetAndHandleResponse()
                     
                     request_completed = True
                     
@@ -1541,34 +1593,8 @@ class NetworkJob( object ):
                     
                 except HydrusExceptions.BandwidthException as e:
                     
-                    num_seconds_to_wait = None
-                    
-                    if response is not None:
-                        
-                        if 'Retry-After' in response.headers:
-                            
-                            retry_after = response.headers[ 'Retry-After' ]
-                            
-                            try:
-                                
-                                num_seconds_to_wait = int( retry_after )
-                                
-                            except:
-                                
-                                try:
-                                    
-                                    timestamp = ClientTime.ParseDate( retry_after )
-                                    
-                                    num_seconds_to_wait = min( max( 60, timestamp - HydrusTime.GetNow() ), 86400 )
-                                    
-                                except:
-                                    
-                                    HydrusData.Print( f'Was given an unparsable Retry-After of {retry_after}!' )
-                                    
-                                
-                            
-                        
-                    
+                    num_seconds_to_wait = self._GetNumSecondsToWait( response )
+
                     self._ResetForAnotherAttempt()
                     
                     if self._CanReattemptRequest():
@@ -1689,8 +1715,8 @@ class NetworkJob( object ):
                         
                         # if full data was not read, the response will hang around in connection pool longer than we want
                         # so just an explicit close here
-                        response.close()
-                        
+                        self._CloseResponse( response )
+
                     
                 
             
@@ -2111,5 +2137,100 @@ class NetworkJobWatcherPage( NetworkJob ):
         network_contexts.append( ClientNetworkingContexts.NetworkContext( CC.NETWORK_CONTEXT_WATCHER_PAGE, self._watcher_key ) )
         
         return network_contexts
-        
-    
+
+
+class NetworkJobGalleryDL( NetworkJob ):
+
+    IS_GALLERY_DL_SERVICE = True
+
+    def __init__( self, method, url, body = None, referral_url = None, temp_path = None ):
+
+        super().__init__( method, url, body = body, referral_url = referral_url, temp_path = temp_path )
+
+        # self.OnlyTryConnectionOnce()
+        self.OverrideBandwidth()
+
+
+    def _SendRequestGetAndHandleResponse( self ):
+
+        with self._lock:
+
+            url_to_fetch = self._url # Use the stored URL for the job
+
+            self._status_text = 'requesting via gallery-dl:' + url_to_fetch + HC.UNICODE_ELLIPSIS
+
+        json_output_buffer = io.StringIO()
+
+        try:
+
+            gdl_extractor_instance = gallery_dl.extractor.find(url_to_fetch)
+
+            if not gdl_extractor_instance:
+
+                error_message = f"gallery-dl has no extractor for URL: {url_to_fetch}"
+
+                raise HydrusExceptions.NotFoundException(error_message)
+
+            gdl_job = gallery_dl.job.DataJob(gdl_extractor_instance, file=json_output_buffer, ensure_ascii=False)
+
+            gdl_job.run()
+
+            json_data_str = json_output_buffer.getvalue()
+
+            json_data_bytes = json_data_str.encode('utf-8')
+
+            self._stream_io.write(json_data_bytes)
+
+            self._stream_io.seek(0)
+
+            with self._lock:
+
+                self._num_bytes_read = len(json_data_bytes)
+
+                self._num_bytes_to_read = self._num_bytes_read
+
+                self._content_type = 'application/json'
+
+                # Potentially set self._actual_fetched_url if gallery-dl provides it.
+                # For now, assume it's the same as input.
+                self._actual_fetched_url = url_to_fetch
+
+                self._status_text = 'done!'
+
+        except Exception as e:
+
+            raise
+
+        # except gallery_dl.exception.NoExtractorError as e:
+
+        #     error_text = f"gallery-dl: No extractor found for {url_to_fetch}. Original error: {str(e)}"
+
+        #     self._SetError(HydrusExceptions.NotFoundException(error_text), error_text)
+
+        # except gallery_dl.exception.StopExtraction as e:
+
+        #     error_text = f"gallery-dl: Extraction stopped for {url_to_fetch}. Reason: {e.message or 'Not specified'}"
+
+        #     if e.code != 0 : # Non-zero code might indicate an actual error condition
+        #          self._SetError(HydrusExceptions.NetworkException(error_text), error_text)
+        #     else: # Code 0 often means a graceful stop (e.g. --range)
+        #          self._SetError(HydrusExceptions.NotFoundException(error_text), error_text) # Or a custom "NoDataException"
+
+        # except gallery_dl.exception.GalleryDLException as e:
+        #     # Catch other specific gallery-dl errors.
+        #     error_text = f"gallery-dl error for {url_to_fetch}: {e.__class__.__name__} - {str(e)}"
+        #     # Map to a generic Hydrus network exception.
+        #     self._SetError(HydrusExceptions.NetworkException(error_text), error_text)
+        # except HydrusExceptions.NotFoundException as e: # Propagate if we raised it
+        #     error_text = str(e)
+        #     self._SetError(e, error_text)
+        # except Exception as e:
+        #     # Catch-all for other unexpected errors during gallery-dl processing.
+        #     error_trace = traceback.format_exc()
+        #     error_text = f"Unexpected error during gallery-dl processing for {url_to_fetch}: {str(e)}"
+        #     HydrusData.Print(f"gallery-dl job error: {error_text}\n{error_trace}") # Log the full traceback for Hydrus.
+        #     self._SetError(HydrusExceptions.NetworkException(error_text), error_trace)
+
+        finally:
+
+            json_output_buffer.close()

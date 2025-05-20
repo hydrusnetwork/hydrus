@@ -2464,9 +2464,9 @@ class PageParser( HydrusSerialisable.SerialisableBaseNamed ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_PAGE_PARSER
     SERIALISABLE_NAME = 'Page Parser'
-    SERIALISABLE_VERSION = 3
+    SERIALISABLE_VERSION = 4
     
-    def __init__( self, name, parser_key = None, string_converter = None, subsidiary_page_parsers = None, content_parsers = None, example_urls = None, example_parsing_context = None ):
+    def __init__( self, name, parser_key = None, string_converter = None, subsidiary_page_parsers = None, content_parsers = None, example_urls = None, example_parsing_context = None, downloader_type = None ):
         
         if parser_key is None:
             
@@ -2498,6 +2498,10 @@ class PageParser( HydrusSerialisable.SerialisableBaseNamed ):
             example_parsing_context = {}
             
             example_parsing_context[ 'url' ] = 'https://example.com/posts/index.php?id=123456'
+
+        if downloader_type is None:
+
+            downloader_type = 'hydrus'
             
         
         super().__init__( name )
@@ -2508,6 +2512,7 @@ class PageParser( HydrusSerialisable.SerialisableBaseNamed ):
         self._content_parsers: typing.List[ ContentParser ] = content_parsers
         self._example_urls: typing.Collection[ str ] = example_urls
         self._example_parsing_context: dict = example_parsing_context
+        self._downloader_type = downloader_type
         
     
     def _GetSerialisableInfo( self ):
@@ -2519,18 +2524,18 @@ class PageParser( HydrusSerialisable.SerialisableBaseNamed ):
         
         serialisable_content_parsers = HydrusSerialisable.SerialisableList( sorted( self._content_parsers, key = lambda p: p.GetName().casefold() ) ).GetSerialisableTuple()
         
-        return ( self._name, serialisable_parser_key, serialisable_string_converter, serialisable_subsidiary_page_parsers, serialisable_content_parsers, self._example_urls, self._example_parsing_context )
+        return ( self._name, serialisable_parser_key, serialisable_string_converter, serialisable_subsidiary_page_parsers, serialisable_content_parsers, self._example_urls, self._example_parsing_context, self._downloader_type )
         
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
-        ( self._name, serialisable_parser_key, serialisable_string_converter, serialisable_subsidiary_page_parsers, serialisable_content_parsers, self._example_urls, self._example_parsing_context ) = serialisable_info
+        ( self._name, serialisable_parser_key, serialisable_string_converter, serialisable_subsidiary_page_parsers, serialisable_content_parsers, self._example_urls, self._example_parsing_context, self._downloader_type ) = serialisable_info
         
         self._parser_key = bytes.fromhex( serialisable_parser_key )
         self._string_converter = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_string_converter )
         self._subsidiary_page_parsers = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_subsidiary_page_parsers )
         self._content_parsers = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_content_parsers )
-        
+
     
     def _UpdateSerialisableInfo( self, version, old_serialisable_info ):
         
@@ -2560,6 +2565,17 @@ class PageParser( HydrusSerialisable.SerialisableBaseNamed ):
             new_serialisable_info = ( name, serialisable_parser_key, serialisable_string_converter, serialisable_subsidiary_page_parsers, serialisable_content_parsers, example_urls, example_parsing_context )
             
             return ( 3, new_serialisable_info )
+
+
+        if version == 3:
+
+            ( name, serialisable_parser_key, serialisable_string_converter, serialisable_subsidiary_page_parsers, serialisable_content_parsers, example_urls, example_parsing_context ) = old_serialisable_info
+
+            downloader_type = 'hydrus'
+
+            new_serialisable_info = ( name, serialisable_parser_key, serialisable_string_converter, serialisable_subsidiary_page_parsers, serialisable_content_parsers, example_urls, example_parsing_context, downloader_type )
+
+            return ( 4, new_serialisable_info )
             
         
     
@@ -2660,6 +2676,11 @@ class PageParser( HydrusSerialisable.SerialisableBaseNamed ):
     def GetStringConverter( self ):
         
         return self._string_converter
+
+
+    def GetDownloaderType( self ):
+
+        return self._downloader_type
         
     
     def NullifyTestData( self ):
