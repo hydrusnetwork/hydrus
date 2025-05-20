@@ -129,6 +129,16 @@ def ConvertStatusCodeAndDataIntoExceptionInfo( status_code, data, is_hydrus_serv
     
     return ( e, error_text )
 
+def GetNetworkJobForDownloaderType( downloader_type, *args, **kwargs ):
+
+    if downloader_type == 'gallery-dl':
+
+        return NetworkJobGalleryDL( *args, **kwargs )
+
+    else:
+
+        return NetworkJob( *args, **kwargs )
+
 def GetNetworkJobDownloaderForDownloaderType( downloader_type, *args, **kwargs ):
 
     if downloader_type == 'gallery-dl':
@@ -139,15 +149,15 @@ def GetNetworkJobDownloaderForDownloaderType( downloader_type, *args, **kwargs )
 
         return NetworkJobDownloader( *args, **kwargs )
 
-def GetNetworkJobForDownloaderType( downloader_type, *args, **kwargs ):
+def GetNetworkJobSubscriptionForDownloaderType( downloader_type, *args, **kwargs ):
 
     if downloader_type == 'gallery-dl':
 
-        return NetworkJobGalleryDL( *args, **kwargs )
+        return NetworkJobSubscriptionGalleryDL( *args, **kwargs )
 
     else:
 
-        return NetworkJob( *args, **kwargs )
+        return NetworkJobSubscription( *args, **kwargs )
     
 class NetworkJob( object ):
     
@@ -2149,6 +2159,9 @@ class NetworkJobWatcherPage( NetworkJob ):
         return network_contexts
 
 
+
+# This job uses gallery-dl JSON info-dump mode (-j) to provide metadata on post and gallery files
+# Expectation is user will then parse/download metadata and files with hydrus built-in tools
 class NetworkJobGalleryDL( NetworkJob ):
 
     IS_GALLERY_DL_SERVICE = True
@@ -2167,7 +2180,7 @@ class NetworkJobGalleryDL( NetworkJob ):
 
             url_to_fetch = self._url # Use the stored URL for the job
 
-            self._status_text = 'requesting via gallery-dl:' + url_to_fetch + HC.UNICODE_ELLIPSIS
+            self._status_text = 'requesting via gallery-dl: ' + url_to_fetch + HC.UNICODE_ELLIPSIS
 
         json_output_buffer = io.StringIO()
 
@@ -2177,7 +2190,7 @@ class NetworkJobGalleryDL( NetworkJob ):
 
             if not gdl_extractor_instance:
 
-                error_message = f"gallery-dl has no extractor for URL: {url_to_fetch}"
+                error_message = f"gallery-dl has no extractor for URL! {url_to_fetch}"
 
                 raise HydrusExceptions.NotFoundException(error_message)
 
@@ -2211,39 +2224,10 @@ class NetworkJobGalleryDL( NetworkJob ):
 
             raise
 
-        # except gallery_dl.exception.NoExtractorError as e:
-
-        #     error_text = f"gallery-dl: No extractor found for {url_to_fetch}. Original error: {str(e)}"
-
-        #     self._SetError(HydrusExceptions.NotFoundException(error_text), error_text)
-
-        # except gallery_dl.exception.StopExtraction as e:
-
-        #     error_text = f"gallery-dl: Extraction stopped for {url_to_fetch}. Reason: {e.message or 'Not specified'}"
-
-        #     if e.code != 0 : # Non-zero code might indicate an actual error condition
-        #          self._SetError(HydrusExceptions.NetworkException(error_text), error_text)
-        #     else: # Code 0 often means a graceful stop (e.g. --range)
-        #          self._SetError(HydrusExceptions.NotFoundException(error_text), error_text) # Or a custom "NoDataException"
-
-        # except gallery_dl.exception.GalleryDLException as e:
-        #     # Catch other specific gallery-dl errors.
-        #     error_text = f"gallery-dl error for {url_to_fetch}: {e.__class__.__name__} - {str(e)}"
-        #     # Map to a generic Hydrus network exception.
-        #     self._SetError(HydrusExceptions.NetworkException(error_text), error_text)
-        # except HydrusExceptions.NotFoundException as e: # Propagate if we raised it
-        #     error_text = str(e)
-        #     self._SetError(e, error_text)
-        # except Exception as e:
-        #     # Catch-all for other unexpected errors during gallery-dl processing.
-        #     error_trace = traceback.format_exc()
-        #     error_text = f"Unexpected error during gallery-dl processing for {url_to_fetch}: {str(e)}"
-        #     HydrusData.Print(f"gallery-dl job error: {error_text}\n{error_trace}") # Log the full traceback for Hydrus.
-        #     self._SetError(HydrusExceptions.NetworkException(error_text), error_trace)
-
         finally:
 
             json_output_buffer.close()
+
 
 
 class NetworkJobDownloaderGalleryDL( NetworkJobGalleryDL ):
@@ -2260,5 +2244,26 @@ class NetworkJobDownloaderGalleryDL( NetworkJobGalleryDL ):
         network_contexts = NetworkJob._GenerateNetworkContexts( self )
 
         network_contexts.append( ClientNetworkingContexts.NetworkContext( CC.NETWORK_CONTEXT_DOWNLOADER_PAGE, self._downloader_page_key ) )
+
+        return network_contexts
+
+
+
+class NetworkJobSubscriptionGalleryDL( NetworkJobGalleryDL ):
+
+    WILLING_TO_WAIT_ON_INVALID_LOGIN = False
+
+    def __init__( self, subscription_key, method, url, body = None, referral_url = None, temp_path = None ):
+
+        self._subscription_key = subscription_key
+
+        super().__init__( method, url, body = body, referral_url = referral_url, temp_path = temp_path )
+
+
+    def _GenerateNetworkContexts( self ):
+
+        network_contexts = NetworkJob._GenerateNetworkContexts( self )
+
+        network_contexts.append( ClientNetworkingContexts.NetworkContext( CC.NETWORK_CONTEXT_SUBSCRIPTION, self._subscription_key ) )
 
         return network_contexts

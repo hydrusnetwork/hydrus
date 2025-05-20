@@ -731,9 +731,10 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
             
             status_hook( 'downloading file' )
 
-            # TODO this never goes through gallery-dl raw download
             (url_to_fetch, downloader_type) = CG.client_controller.network_engine.domain_manager.GetURLToFetchAndDownloaderType( file_url )
 
+            # TODO this never goes through gallery-dl raw download
+            # If raw file request requires cookies from gallery-dl, this may fail !
             network_job = network_job_factory( downloader_type, 'GET', url_to_fetch, temp_path = temp_path, referral_url = referral_url )
             
             for ( key, value ) in self._request_headers.items():
