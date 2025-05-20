@@ -1943,6 +1943,9 @@ class Controller( HydrusController.HydrusController ):
                 pass
                 
 
+        # Load user ~/.gallery-dl.conf in case its available
+        # This will be used for all gallery-dl operations !
+        # example: setting --cookies-from-browser
         gallery_dl.config.load()
         
         self.app = App( self._pubsub, sys.argv )

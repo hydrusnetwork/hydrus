@@ -1589,6 +1589,7 @@ class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
 
         current_parser = self._GetPageParser()
 
+        # In case we use gallery-dl, make sure test data is fetched using it !
         downloader_type = current_parser.GetDownloaderType()
 
         network_job = ClientNetworkingJobs.GetNetworkJobForDownloaderType( downloader_type, 'GET', url, referral_url = referral_url )

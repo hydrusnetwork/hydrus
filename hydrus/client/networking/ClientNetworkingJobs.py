@@ -130,6 +130,7 @@ def ConvertStatusCodeAndDataIntoExceptionInfo( status_code, data, is_hydrus_serv
     return ( e, error_text )
 
 def GetNetworkJobForDownloaderType( downloader_type, *args, **kwargs ):
+    """Creates network job based on parser object configured downloader type"""
 
     if downloader_type == 'gallery-dl':
 
@@ -140,6 +141,7 @@ def GetNetworkJobForDownloaderType( downloader_type, *args, **kwargs ):
         return NetworkJob( *args, **kwargs )
 
 def GetNetworkJobDownloaderForDownloaderType( downloader_type, *args, **kwargs ):
+    """Creates network job based on parser object configured downloader type"""
 
     if downloader_type == 'gallery-dl':
 
@@ -150,6 +152,7 @@ def GetNetworkJobDownloaderForDownloaderType( downloader_type, *args, **kwargs )
         return NetworkJobDownloader( *args, **kwargs )
 
 def GetNetworkJobSubscriptionForDownloaderType( downloader_type, *args, **kwargs ):
+    """Creates network job based on parser object configured downloader type"""
 
     if downloader_type == 'gallery-dl':
 
@@ -2160,9 +2163,11 @@ class NetworkJobWatcherPage( NetworkJob ):
 
 
 
-# This job uses gallery-dl JSON info-dump mode (-j) to provide metadata on post and gallery files
-# Expectation is user will then parse/download metadata and files with hydrus built-in tools
 class NetworkJobGalleryDL( NetworkJob ):
+    """
+    This job uses gallery-dl JSON info-dump mode (-j) to provide metadata on post and gallery files
+    Expectation is user will then parse/download metadata and files with hydrus built-in tools
+    """
 
     IS_GALLERY_DL_SERVICE = True
 
@@ -2170,7 +2175,6 @@ class NetworkJobGalleryDL( NetworkJob ):
 
         super().__init__( method, url, body = body, referral_url = referral_url, temp_path = temp_path )
 
-        # self.OnlyTryConnectionOnce()
         self.OverrideBandwidth()
 
 
@@ -2182,10 +2186,12 @@ class NetworkJobGalleryDL( NetworkJob ):
 
             self._status_text = 'requesting via gallery-dl: ' + url_to_fetch + HC.UNICODE_ELLIPSIS
 
+        # gallery-dl usually outputs JSON to a file, instead we capture thru StringIO
         json_output_buffer = io.StringIO()
 
         try:
 
+            # Ask gallery-dl for the extractor for a URL
             gdl_extractor_instance = gallery_dl.extractor.find(url_to_fetch)
 
             if not gdl_extractor_instance:
@@ -2194,10 +2200,12 @@ class NetworkJobGalleryDL( NetworkJob ):
 
                 raise HydrusExceptions.NotFoundException(error_message)
 
+            # DataJob is JSON infodump mode (-j flag)
             gdl_job = gallery_dl.job.DataJob(gdl_extractor_instance, file=json_output_buffer, ensure_ascii=False)
 
             gdl_job.run()
 
+            # Some processing for content body output hydrus expects
             json_data_str = json_output_buffer.getvalue()
 
             json_data_bytes = json_data_str.encode('utf-8')
@@ -2212,6 +2220,7 @@ class NetworkJobGalleryDL( NetworkJob ):
 
                 self._num_bytes_to_read = self._num_bytes_read
 
+                # gallery-dl always returns JSON in this mode
                 self._content_type = 'application/json'
 
                 # Potentially set self._actual_fetched_url if gallery-dl provides it.
@@ -2222,6 +2231,9 @@ class NetworkJobGalleryDL( NetworkJob ):
 
         except Exception as e:
 
+            # For now abort
+            # TODO like NetworkJob, there may be special cases need handling !
+
             raise
 
         finally:
@@ -2231,6 +2243,9 @@ class NetworkJobGalleryDL( NetworkJob ):
 
 
 class NetworkJobDownloaderGalleryDL( NetworkJobGalleryDL ):
+    """
+    Is similar to NetworkJobGalleryDL but for downloader-type jobs
+    """
 
     def __init__( self, downloader_page_key, method, url, body = None, referral_url = None, temp_path = None ):
 
@@ -2250,6 +2265,9 @@ class NetworkJobDownloaderGalleryDL( NetworkJobGalleryDL ):
 
 
 class NetworkJobSubscriptionGalleryDL( NetworkJobGalleryDL ):
+    """
+    Is similar to NetworkJobGalleryDL but for subscription-type jobs
+    """
 
     WILLING_TO_WAIT_ON_INVALID_LOGIN = False
 

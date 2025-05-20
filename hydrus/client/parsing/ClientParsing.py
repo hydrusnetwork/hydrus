@@ -2499,6 +2499,9 @@ class PageParser( HydrusSerialisable.SerialisableBaseNamed ):
             
             example_parsing_context[ 'url' ] = 'https://example.com/posts/index.php?id=123456'
 
+        # How to download the URL, 'hydrus' or 'gallery-dl'
+        # 'hydrus': downloads raw HTML
+        # 'gallery-dl': parses gallery page and returns JSON info from gallery-dl lib
         if downloader_type is None:
 
             downloader_type = 'hydrus'

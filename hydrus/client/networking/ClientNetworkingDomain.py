@@ -1521,6 +1521,10 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
 
 
     def GetURLToFetchAndDownloaderType( self, url ):
+        """
+        For the passed url, get the url to fetch and the method of fetching from the found parser
+        Example: x.com posts go through gallery-dl extractor, others use the hydrus downloader
+        """
 
         with self._lock:
 
@@ -1537,6 +1541,9 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
 
             if parser is None:
 
+                # There is no parser configured, hence no special downloader type
+                # Usually means this is a raw file URL with no extra handling needed
+                # So just use hydrus downloader
                 downloader_type = 'hydrus'
 
             else:
