@@ -294,7 +294,7 @@ class SimpleDownloaderImport( HydrusSerialisable.SerialisableBase ):
                 
                 try:
                     
-                    network_job = self._NetworkJobFactory( 'GET', url )
+                    network_job = self._NetworkJobFactory( 'hydrus', 'GET', url )
                     
                     network_job.OverrideBandwidth( 30 )
                     
