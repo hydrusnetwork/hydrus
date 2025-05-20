@@ -88,8 +88,10 @@ class NetworkEngine( object ):
         
     
     def AddJob( self, job: ClientNetworkingJobs.NetworkJob ):
+
+        job_class = job.__class__.__name__
         
-        ClientNetworkingFunctions.NetworkReportMode( f'Network Job Added: {job._method}  {job._url}' )
+        ClientNetworkingFunctions.NetworkReportMode( f'Network Job Added: {job_class} {job._method}  {job._url}' )
         
         with self._lock:
             
@@ -407,8 +409,10 @@ class NetworkEngine( object ):
                     return True
                     
                 else:
+
+                    job_class = job.__class__.__name__
                     
-                    ClientNetworkingFunctions.NetworkReportMode( f'Network Job Starting: {job._method} {job._url}' )
+                    ClientNetworkingFunctions.NetworkReportMode( f'Network Job Starting: {job_class} {job._method} {job._url}' )
                     
                     self._active_domains_counter[ job.GetSecondLevelDomain() ] += 1
                     
@@ -430,8 +434,10 @@ class NetworkEngine( object ):
         def ProcessRunningJob( job: ClientNetworkingJobs.NetworkJob ):
             
             if job.IsDone():
+
+                job_class = job.__class__.__name__
                 
-                ClientNetworkingFunctions.NetworkReportMode( f'Network Job Done: {job._method} {job._url}' )
+                ClientNetworkingFunctions.NetworkReportMode( f'Network Job Done: {job_class} {job._method} {job._url}' )
                 
                 second_level_domain = job.GetSecondLevelDomain()
                 

@@ -913,10 +913,10 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
         return ClientImporting.NetworkJobPresentationContext( enter_call, exit_call )
         
     
-    def _NetworkJobFactory( self, *args, **kwargs ):
-        
-        network_job = ClientNetworkingJobs.NetworkJobWatcherPage( self._watcher_key, *args, **kwargs )
-        
+    def _NetworkJobFactory( self, downloader_type, *args, **kwargs ):
+
+        network_job = ClientNetworkingJobs.GetNetworkJobDownloaderForDownloaderType( downloader_type, self._watcher_key, *args, **kwargs )
+
         return network_job
         
     

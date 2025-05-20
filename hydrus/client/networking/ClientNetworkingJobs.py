@@ -129,6 +129,16 @@ def ConvertStatusCodeAndDataIntoExceptionInfo( status_code, data, is_hydrus_serv
     
     return ( e, error_text )
 
+def GetNetworkJobDownloaderForDownloaderType( downloader_type, *args, **kwargs ):
+
+    if downloader_type == 'gallery-dl':
+
+        return NetworkJobDownloaderGalleryDL( *args, **kwargs )
+
+    else:
+
+        return NetworkJobDownloader( *args, **kwargs )
+
 def GetNetworkJobForDownloaderType( downloader_type, *args, **kwargs ):
 
     if downloader_type == 'gallery-dl':
@@ -2234,3 +2244,21 @@ class NetworkJobGalleryDL( NetworkJob ):
         finally:
 
             json_output_buffer.close()
+
+
+class NetworkJobDownloaderGalleryDL( NetworkJobGalleryDL ):
+
+    def __init__( self, downloader_page_key, method, url, body = None, referral_url = None, temp_path = None ):
+
+        self._downloader_page_key = downloader_page_key
+
+        super().__init__( method, url, body = body, referral_url = referral_url, temp_path = temp_path )
+
+
+    def _GenerateNetworkContexts( self ):
+
+        network_contexts = NetworkJob._GenerateNetworkContexts( self )
+
+        network_contexts.append( ClientNetworkingContexts.NetworkContext( CC.NETWORK_CONTEXT_DOWNLOADER_PAGE, self._downloader_page_key ) )
+
+        return network_contexts

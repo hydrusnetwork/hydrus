@@ -1517,7 +1517,45 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
                 
             
             return result
-            
+
+
+
+    def GetURLToFetchAndDownloaderType( self, url ):
+
+        with self._lock:
+
+            try:
+
+                (url_to_fetch, parser) = self._GetURLToFetchAndParser( url )
+
+            except HydrusExceptions.URLClassException as e:
+
+                url_to_fetch = self._GetURLToFetch( url )
+
+                parser = None
+
+
+            if parser is None:
+
+                downloader_type = 'hydrus'
+
+            else:
+
+                downloader_type = parser.GetDownloaderType()
+
+
+            if url_to_fetch != url:
+
+                message = f'Request for URL to fetch and downloader type:\n{url}\n->\n{url_to_fetch}, {downloader_type}'
+
+            else:
+
+                message = f'Request for URL to fetch and downloader type:\n{url}\n->\n(no transformation), {downloader_type}'
+
+
+            ClientNetworkingFunctions.NetworkReportMode( message )
+
+            return (url_to_fetch, downloader_type)
         
     
     def HasCustomHeaders( self, network_context ):

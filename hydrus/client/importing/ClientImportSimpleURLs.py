@@ -118,9 +118,9 @@ class SimpleDownloaderImport( HydrusSerialisable.SerialisableBase ):
         self._file_import_options = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_file_import_options )
         
     
-    def _NetworkJobFactory( self, *args, **kwargs ):
+    def _NetworkJobFactory( self, downloader_type, *args, **kwargs ):
         
-        network_job = ClientNetworkingJobs.NetworkJobDownloader( self._downloader_key, *args, **kwargs )
+        network_job = ClientNetworkingJobs.GetNetworkJobDownloaderForDownloaderType( downloader_type, self._downloader_key, *args, **kwargs )
         
         return network_job
         
@@ -1002,10 +1002,10 @@ class URLsImport( HydrusSerialisable.SerialisableBase ):
         self._note_import_options = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_note_import_options )
         
     
-    def _NetworkJobFactory( self, *args, **kwargs ):
-        
-        network_job = ClientNetworkingJobs.NetworkJobDownloader( self._downloader_key, *args, **kwargs )
-        
+    def _NetworkJobFactory( self, downloader_type, *args, **kwargs ):
+
+        network_job = ClientNetworkingJobs.GetNetworkJobDownloaderForDownloaderType( downloader_type, self._downloader_key, *args, **kwargs )
+
         return network_job
         
     

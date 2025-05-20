@@ -1591,7 +1591,7 @@ class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
 
         downloader_type = current_parser.GetDownloaderType()
 
-        network_job = ClientNetworkingJobs.GetNetworkJobForDownloaderType( downloader_type, url, referral_url = referral_url )
+        network_job = ClientNetworkingJobs.GetNetworkJobForDownloaderType( downloader_type, 'GET', url, referral_url = referral_url )
 
         network_job.OnlyTryConnectionOnce()
         
