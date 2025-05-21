@@ -4,6 +4,7 @@ import os
 import typing
 
 import gallery_dl
+import logging
 import requests
 import threading
 import traceback
@@ -2163,6 +2164,40 @@ class NetworkJobWatcherPage( NetworkJob ):
 
 
 
+class GalleryDLStatusLogHandler(logging.Handler):
+    """
+    A custom logging handler that updates the status text of a
+    NetworkJobGalleryDL instance with messages from gallery-dl.
+    """
+
+    def __init__(self, network_job_instance):
+
+        super().__init__()
+
+        self.network_job_instance = network_job_instance
+
+    def emit(self, record):
+
+        try:
+
+            msg = record.getMessage()
+
+            ClientNetworkingFunctions.NetworkReportMode( f"gallery-dl status: {self.network_job_instance.url} {msg}" )
+
+            if self.network_job_instance:
+
+                with self.network_job_instance._lock:
+
+                    self.network_job_instance._status_text = f"gallery-dl: {msg}"
+
+        except Exception:
+
+            # Default error handling for logging.Handler
+
+            self.handleError(record)
+
+
+
 class NetworkJobGalleryDL( NetworkJob ):
     """
     This job uses gallery-dl JSON info-dump mode (-j) to provide metadata on post and gallery files
@@ -2199,6 +2234,11 @@ class NetworkJobGalleryDL( NetworkJob ):
                 error_message = f"gallery-dl has no extractor for URL! {url_to_fetch}"
 
                 raise HydrusExceptions.NotFoundException(error_message)
+
+            # Add custom log handler
+            gdl_status_handler = GalleryDLStatusLogHandler(self)
+
+            gdl_extractor_instance.log.addHandler(gdl_status_handler)
 
             # DataJob is JSON infodump mode (-j flag)
             gdl_job = gallery_dl.job.DataJob(gdl_extractor_instance, file=json_output_buffer, ensure_ascii=False)

@@ -614,6 +614,12 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             checker_options = self._new_options.GetDefaultWatcherCheckerOptions()
             
             self._watcher_checker_options = ClientGUIImport.CheckerOptionsButton( watchers, checker_options )
+
+            #
+
+            gallery_dl_options = ClientGUICommon.StaticBox( self, 'gallery-dl' )
+
+            self._gallery_dl_conf_path = QP.FilePickerCtrl( gallery_dl_options, starting_directory = os.path.join( HC.STATIC_DIR, 'gallery-dl-conf' ) )
             
             #
             
@@ -716,6 +722,16 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             gridbox = ClientGUICommon.WrapInGrid( watchers, rows )
             
             watchers.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+
+            #
+
+            rows = []
+
+            rows.append( ( 'Set a new gallery-dl.conf on dialog ok?:', self._gallery_dl_conf_path ) )
+
+            gridbox = ClientGUICommon.WrapInGrid( gallery_dl_options, rows )
+
+            gallery_dl_options.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
             #
             
@@ -740,6 +756,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             QP.AddToLayout( vbox, gallery_downloader, CC.FLAGS_EXPAND_PERPENDICULAR )
             QP.AddToLayout( vbox, subscriptions, CC.FLAGS_EXPAND_PERPENDICULAR )
             QP.AddToLayout( vbox, watchers, CC.FLAGS_EXPAND_PERPENDICULAR )
+            QP.AddToLayout( vbox, gallery_dl_options, CC.FLAGS_EXPAND_PERPENDICULAR )
             QP.AddToLayout( vbox, misc, CC.FLAGS_EXPAND_PERPENDICULAR )
             vbox.addStretch( 0 )
             
@@ -764,7 +781,13 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._new_options.SetDefaultWatcherCheckerOptions( self._watcher_checker_options.GetValue() )
             self._new_options.SetDefaultSubscriptionCheckerOptions( self._subscription_checker_options.GetValue() )
-            
+
+            gallery_dl_conf_path = self._gallery_dl_conf_path.GetPath()
+
+            if gallery_dl_conf_path is not None and gallery_dl_conf_path != '' and os.path.exists( gallery_dl_conf_path ) and os.path.isfile( gallery_dl_conf_path ):
+
+                CG.client_controller.SetGalleryDLConfigPath( gallery_dl_conf_path )
+
             self._new_options.SetString( 'pause_character', self._pause_character.text() )
             self._new_options.SetString( 'stop_character', self._stop_character.text() )
             self._new_options.SetBoolean( 'show_new_on_file_seed_short_summary', self._show_new_on_file_seed_short_summary.isChecked() )
@@ -773,7 +796,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._new_options.SetInteger( 'subscription_network_error_delay', self._subscription_network_error_delay.GetValue() )
             self._new_options.SetInteger( 'subscription_other_error_delay', self._subscription_other_error_delay.GetValue() )
             self._new_options.SetInteger( 'downloader_network_error_delay', self._downloader_network_error_delay.GetValue() )
-            
+
         
     
     class _DuplicatesPanel( OptionsPagePanel ):

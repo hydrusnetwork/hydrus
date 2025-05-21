@@ -19,6 +19,7 @@ from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusNumbers
+from hydrus.core import HydrusPaths
 from hydrus.core import HydrusProcess
 from hydrus.core import HydrusPSUtil
 from hydrus.core import HydrusSerialisable
@@ -1076,6 +1077,11 @@ class Controller( HydrusController.HydrusController ):
     def GetDefaultMPVConfPath( self ):
         
         return os.path.join( HC.STATIC_DIR, 'mpv-conf', 'default_mpv.conf' )
+
+
+    def GetDefaultGalleryDLConfPath( self ):
+
+        return os.path.join( HC.STATIC_DIR, 'gallery-dl-conf', 'default_gallery-dl.conf' )
         
     
     def GetIdleShutdownWorkDue( self, time_to_stop ):
@@ -1116,6 +1122,11 @@ class Controller( HydrusController.HydrusController ):
     def GetMPVConfPath( self ):
         
         return os.path.join( self.db_dir, 'mpv.conf' )
+
+
+    def GetGalleryDLConfPath( self ):
+
+        return os.path.join( self.db_dir, 'gallery-dl.conf' )
         
     
     def GetNewOptions( self ):
@@ -1424,6 +1435,10 @@ class Controller( HydrusController.HydrusController ):
         self._managers[ 'undo' ] = ClientManagers.UndoManager( self )
         
         self.sub( self, 'ToClipboard', 'clipboard' )
+
+        #
+
+        self.UpdateGalleryDLConfig()
         
     
     def InitView( self ):
@@ -1943,11 +1958,6 @@ class Controller( HydrusController.HydrusController ):
                 pass
                 
 
-        # Load user ~/.gallery-dl.conf in case its available
-        # This will be used for all gallery-dl operations !
-        # example: setting --cookies-from-browser
-        gallery_dl.config.load()
-        
         self.app = App( self._pubsub, sys.argv )
         
         self.main_qt_thread = self.app.thread()
@@ -2647,6 +2657,67 @@ class Controller( HydrusController.HydrusController ):
         with self._page_key_lock:
             
             self._closed_page_keys.difference_update( page_keys )
+
+
+
+    def SetGalleryDLConfigPath( self, gallery_dl_config_path ):
+
+        dest_gallery_dl_config_path = CG.client_controller.GetGalleryDLConfPath()
+
+        try:
+
+            HydrusPaths.MirrorFile( gallery_dl_config_path, dest_gallery_dl_config_path )
+
+        except Exception as e:
+
+            HydrusData.ShowText( 'Could not set the gallery-dl conf path "{}" to "{}"! Error follows!'.format( gallery_dl_config_path, dest_gallery_dl_config_path ) )
+            HydrusData.ShowException( e )
+
+            return
+
+        try:
+
+            gallery_dl.config.clear()
+
+            gallery_dl.config.load( files = [ dest_gallery_dl_config_path ] )
+
+        except Exception as e:
+
+            HydrusData.ShowText( 'gallery-dl could not load its configuration file! This was probably due to an invalid parameter value inside the conf. The error follows:' )
+
+            HydrusData.ShowException( e )
+
+
+
+    def UpdateGalleryDLConfig( self ):
+
+        dest_gallery_dl_config_path = CG.client_controller.GetGalleryDLConfPath()
+
+        if not os.path.exists( dest_gallery_dl_config_path ):
+
+            default_gallery_dl_config_path = CG.client_controller.GetDefaultGalleryDLConfPath()
+
+            if not os.path.exists( default_gallery_dl_config_path ):
+
+                HydrusData.ShowText( 'There is no default gallery-dl configuration file to load! Perhaps there is a problem with your install?' )
+
+                return
+
+            else:
+
+                HydrusPaths.MirrorFile( default_gallery_dl_config_path, dest_gallery_dl_config_path )
+
+        try:
+
+            gallery_dl.config.clear()
+
+            gallery_dl.config.load( files = [ dest_gallery_dl_config_path ] )
+
+        except Exception as e:
+
+            HydrusData.ShowText( 'gallery-dl could not load its configuration file! This was probably due to an invalid parameter value inside the conf. The error follows:' )
+
+            HydrusData.ShowException( e )
             
         
     
