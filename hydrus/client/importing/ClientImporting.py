@@ -139,10 +139,10 @@ def THREADDownloadURL( job_status, url, url_string ):
     file_import_options = FileImportOptions.FileImportOptions()
     file_import_options.SetIsDefault( True )
     
-    def network_job_factory( *args, **kwargs ):
-        
-        network_job = ClientNetworkingJobs.NetworkJob( *args, **kwargs )
-        
+    def network_job_factory( downloader_type, *args, **kwargs ):
+
+        network_job = ClientNetworkingJobs.GetNetworkJobForDownloaderType( downloader_type, *args, **kwargs )
+
         network_job.OverrideBandwidth( 30 )
         
         return network_job
@@ -209,9 +209,9 @@ def THREADDownloadURLs( job_status: ClientThreading.JobStatus, urls, title ):
     file_import_options = FileImportOptions.FileImportOptions()
     file_import_options.SetIsDefault( True )
     
-    def network_job_factory( *args, **kwargs ):
+    def network_job_factory( downloader_type, *args, **kwargs ):
         
-        network_job = ClientNetworkingJobs.NetworkJob( *args, **kwargs )
+        network_job = ClientNetworkingJobs.GetNetworkJobForDownloaderType( downloader_type, *args, **kwargs )
         
         network_job.OverrideBandwidth()
         

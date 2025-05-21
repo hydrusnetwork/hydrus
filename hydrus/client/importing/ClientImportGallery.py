@@ -201,10 +201,10 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
         self._file_seed_cache = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_file_seed_cache )
         
     
-    def _NetworkJobFactory( self, *args, **kwargs ):
-        
-        network_job = ClientNetworkingJobs.NetworkJobDownloader( self._gallery_import_key, *args, **kwargs )
-        
+    def _NetworkJobFactory( self, downloader_type, *args, **kwargs ):
+
+        network_job = ClientNetworkingJobs.GetNetworkJobDownloaderForDownloaderType( downloader_type, self._gallery_import_key, *args, **kwargs )
+
         return network_job
         
     

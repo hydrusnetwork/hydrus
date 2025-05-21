@@ -1517,7 +1517,52 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
                 
             
             return result
-            
+
+
+
+    def GetURLToFetchAndDownloaderType( self, url ):
+        """
+        For the passed url, get the url to fetch and the method of fetching from the found parser
+        Example: x.com posts go through gallery-dl extractor, others use the hydrus downloader
+        """
+
+        with self._lock:
+
+            try:
+
+                (url_to_fetch, parser) = self._GetURLToFetchAndParser( url )
+
+            except HydrusExceptions.URLClassException as e:
+
+                url_to_fetch = self._GetURLToFetch( url )
+
+                parser = None
+
+
+            if parser is None:
+
+                # There is no parser configured, hence no special downloader type
+                # Usually means this is a raw file URL with no extra handling needed
+                # So just use hydrus downloader
+                downloader_type = 'hydrus'
+
+            else:
+
+                downloader_type = parser.GetDownloaderType()
+
+
+            if url_to_fetch != url:
+
+                message = f'Request for URL to fetch and downloader type:\n{url}\n->\n{url_to_fetch}, {downloader_type}'
+
+            else:
+
+                message = f'Request for URL to fetch and downloader type:\n{url}\n->\n(no transformation), {downloader_type}'
+
+
+            ClientNetworkingFunctions.NetworkReportMode( message )
+
+            return (url_to_fetch, downloader_type)
         
     
     def HasCustomHeaders( self, network_context ):

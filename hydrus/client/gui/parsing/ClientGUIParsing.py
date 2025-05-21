@@ -1190,7 +1190,18 @@ class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
         main_panel = QW.QWidget( edit_notebook )
         
         self._name = QW.QLineEdit( main_panel )
-        
+
+        self._downloader_type_dropdown = ClientGUICommon.BetterChoice( edit_panel )
+
+        self._downloader_type_dropdown.addItem( 'hydrus', 'hydrus' )
+        self._downloader_type_dropdown.addItem( 'gallery-dl', 'gallery-dl' )
+
+        tt = 'Which downloader to use when initially fetching the URL.'
+        tt += '\n' * 2
+        tt += 'You should use hydrus\' built-in downloader unless special authentication is required (x.com).'
+
+        self._downloader_type_dropdown.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
+
         self._sort_posts_by_source_time = QW.QCheckBox( main_panel )
         tt = 'If you are fetching posts from an unusually ordered source (e.g. "bookmarked time" or similar), but you are able to parse a source time for each separate post with a content parser in here, this will tell the parser to sort them by that timestamp you parsed, obviously newest first.'
         self._sort_posts_by_source_time.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
@@ -1281,6 +1292,8 @@ class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
         ( subsidiary_page_parsers, content_parsers ) = parser.GetContentParsers()
         
         example_urls = parser.GetExampleURLs( encoded = False )
+
+        downloader_type = parser.GetDownloaderType()
         
         if len( example_urls ) > 0:
             
@@ -1301,6 +1314,8 @@ class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
         self._content_parsers.AddDatas( content_parsers )
         
         self._example_urls.AddDatas( example_urls )
+
+        self._downloader_type_dropdown.SetValue( downloader_type )
         
         #
         
@@ -1318,7 +1333,8 @@ class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
         rows = []
         
         rows.append( ( 'name or description (optional): ', self._name ) )
-        
+        rows.append( ( 'downloader type', self._downloader_type_dropdown ) )
+
         if sort_posts_by_source_time is None:
             
             self._sort_posts_by_source_time.setVisible( False )
@@ -1569,10 +1585,15 @@ class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
         if referral_url == '':
             
             referral_url = None
-            
-        
-        network_job = ClientNetworkingJobs.NetworkJob( 'GET', url, referral_url = referral_url )
-        
+
+
+        current_parser = self._GetPageParser()
+
+        # In case we use gallery-dl, make sure test data is fetched using it !
+        downloader_type = current_parser.GetDownloaderType()
+
+        network_job = ClientNetworkingJobs.GetNetworkJobForDownloaderType( downloader_type, 'GET', url, referral_url = referral_url )
+
         network_job.OnlyTryConnectionOnce()
         
         self._test_network_job_control.ClearError()
@@ -1600,8 +1621,10 @@ class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
         example_urls = self._example_urls.GetData()
         
         example_parsing_context = self._test_panel.GetExampleParsingContext()
+
+        downloader_type = self._downloader_type_dropdown.GetValue()
         
-        page_parser = ClientParsing.PageParser( name, parser_key = parser_key, string_converter = string_converter, subsidiary_page_parsers = subsidiary_page_parsers, content_parsers = content_parsers, example_urls = example_urls, example_parsing_context = example_parsing_context )
+        page_parser = ClientParsing.PageParser( name, parser_key = parser_key, string_converter = string_converter, subsidiary_page_parsers = subsidiary_page_parsers, content_parsers = content_parsers, example_urls = example_urls, example_parsing_context = example_parsing_context, downloader_type = downloader_type )
         
         return page_parser
         

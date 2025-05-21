@@ -322,9 +322,11 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
         except HydrusExceptions.URLClassException:
             
             url_to_check = self.url
-            
+
+
+        downloader_type = parser.GetDownloaderType()
         
-        network_job = network_job_factory( 'GET', url_to_check )
+        network_job = network_job_factory( downloader_type, 'GET', url_to_check )
         
         return network_job
         
@@ -424,9 +426,11 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
             else:
                 
                 referral_url = None
-                
+
+            downloader_type = parser.GetDownloaderType()
+
             
-            network_job = network_job_factory( 'GET', url_to_check, referral_url = referral_url )
+            network_job = network_job_factory( downloader_type, 'GET', url_to_check, referral_url = referral_url )
             
             for ( key, value ) in self._request_headers.items():
                 

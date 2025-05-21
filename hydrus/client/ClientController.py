@@ -1,6 +1,8 @@
 import hashlib
 import os
 
+import gallery_dl
+import logging
 import signal
 import sys
 import threading
@@ -18,6 +20,7 @@ from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusNumbers
+from hydrus.core import HydrusPaths
 from hydrus.core import HydrusProcess
 from hydrus.core import HydrusPSUtil
 from hydrus.core import HydrusSerialisable
@@ -91,6 +94,30 @@ class PubSubEventCatcher( QC.QObject ):
             
         
         return False
+
+
+
+class GalleryDLLogHandler( logging.Handler ):
+    """
+    Python logging handler that redirects gallery-dl information
+    to hydrus 'gallery-dl report' mode
+    """
+
+    def emit(self, record):
+
+        try:
+
+            if HG.gallery_dl_report_mode:
+
+                msg = record.getMessage()
+
+                HydrusData.Print( f"[gallery-dl] [{record.levelname}] {msg}" )
+
+        except Exception:
+
+            # Default error handling for logging.Handler
+
+            self.handleError(record)
         
     
 
@@ -1075,6 +1102,11 @@ class Controller( HydrusController.HydrusController ):
     def GetDefaultMPVConfPath( self ):
         
         return os.path.join( HC.STATIC_DIR, 'mpv-conf', 'default_mpv.conf' )
+
+
+    def GetDefaultGalleryDLConfPath( self ):
+
+        return os.path.join( HC.STATIC_DIR, 'gallery-dl-conf', 'default_gallery-dl.conf' )
         
     
     def GetIdleShutdownWorkDue( self, time_to_stop ):
@@ -1115,6 +1147,11 @@ class Controller( HydrusController.HydrusController ):
     def GetMPVConfPath( self ):
         
         return os.path.join( self.db_dir, 'mpv.conf' )
+
+
+    def GetGalleryDLConfPath( self ):
+
+        return os.path.join( self.db_dir, 'gallery-dl.conf' )
         
     
     def GetNewOptions( self ):
@@ -1423,6 +1460,12 @@ class Controller( HydrusController.HydrusController ):
         self._managers[ 'undo' ] = ClientManagers.UndoManager( self )
         
         self.sub( self, 'ToClipboard', 'clipboard' )
+
+        #
+
+        self.SetGalleryDLGlobals()
+
+        self.UpdateGalleryDLConfig()
         
     
     def InitView( self ):
@@ -1943,8 +1986,7 @@ class Controller( HydrusController.HydrusController ):
                 
                 pass
                 
-            
-        
+
         self.app = App( self._pubsub, sys.argv )
         
         self.main_qt_thread = self.app.thread()
@@ -2644,6 +2686,87 @@ class Controller( HydrusController.HydrusController ):
         with self._page_key_lock:
             
             self._closed_page_keys.difference_update( page_keys )
+
+
+
+    def SetGalleryDLGlobals( self ):
+
+        # gallery-dl uses python logging
+        # We want to redirect into hydrus reporting instead
+        # For the time being we will ensure all logging is enabled and remove default handlers
+        # Then insert our own custom handler
+        logging.basicConfig(level=logging.DEBUG)
+
+        gallery_dl_log_handler = GalleryDLLogHandler()
+
+        logging.getLogger().handlers.clear()
+
+        logging.getLogger().addHandler( gallery_dl_log_handler )
+
+        # We do not want gallery-dl asking for user input on TTY
+        # Setting it like this will cause gallery-dl to raise StopExtraction if input is requested
+        gallery_dl.output.TTY_STDIN = False
+
+
+
+    def SetGalleryDLConfigPath( self, gallery_dl_config_path ):
+
+        dest_gallery_dl_config_path = CG.client_controller.GetGalleryDLConfPath()
+
+        try:
+
+            HydrusPaths.MirrorFile( gallery_dl_config_path, dest_gallery_dl_config_path )
+
+        except Exception as e:
+
+            HydrusData.ShowText( 'Could not set the gallery-dl conf path "{}" to "{}"! Error follows!'.format( gallery_dl_config_path, dest_gallery_dl_config_path ) )
+            HydrusData.ShowException( e )
+
+            return
+
+        try:
+
+            gallery_dl.config.clear()
+
+            gallery_dl.config.load( files = [ dest_gallery_dl_config_path ] )
+
+        except Exception as e:
+
+            HydrusData.ShowText( 'gallery-dl could not load its configuration file! This was probably due to an invalid parameter value inside the conf. The error follows:' )
+
+            HydrusData.ShowException( e )
+
+
+
+    def UpdateGalleryDLConfig( self ):
+
+        dest_gallery_dl_config_path = CG.client_controller.GetGalleryDLConfPath()
+
+        if not os.path.exists( dest_gallery_dl_config_path ):
+
+            default_gallery_dl_config_path = CG.client_controller.GetDefaultGalleryDLConfPath()
+
+            if not os.path.exists( default_gallery_dl_config_path ):
+
+                HydrusData.ShowText( 'There is no default gallery-dl configuration file to load! Perhaps there is a problem with your install?' )
+
+                return
+
+            else:
+
+                HydrusPaths.MirrorFile( default_gallery_dl_config_path, dest_gallery_dl_config_path )
+
+        try:
+
+            gallery_dl.config.clear()
+
+            gallery_dl.config.load( files = [ dest_gallery_dl_config_path ] )
+
+        except Exception as e:
+
+            HydrusData.ShowText( 'gallery-dl could not load its configuration file! This was probably due to an invalid parameter value inside the conf. The error follows:' )
+
+            HydrusData.ShowException( e )
             
         
     

@@ -2892,6 +2892,7 @@ class DB( HydrusDB.HydrusDB ):
         paths = HydrusDB.HydrusDB._GetPossibleAdditionalDBFilenames( self )
         
         paths.append( 'mpv.conf' )
+        paths.append( 'gallery-dl.conf' )
         
         return paths
         
