@@ -59,7 +59,9 @@ class RatingIncDecCanvas( ClientGUIRatings.RatingIncDec ):
     
     def _Draw( self, painter ):
         
+        painter.setBackground( QG.QBrush( QP.GetBackgroundColour( self.parentWidget() ) ) )
         
+        painter.eraseRect( painter.viewport() )
         
         if self._current_media is not None:
             
