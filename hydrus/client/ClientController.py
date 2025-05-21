@@ -2,6 +2,7 @@ import hashlib
 import os
 
 import gallery_dl
+import logging
 import signal
 import sys
 import threading
@@ -93,6 +94,32 @@ class PubSubEventCatcher( QC.QObject ):
             
         
         return False
+
+
+
+class GalleryDLLogHandler( logging.Handler ):
+    """
+    Python logging handler that redirects gallery-dl information
+    to hydrus 'gallery-dl report' mode
+    """
+
+    def emit(self, record):
+
+        try:
+
+            if HG.gallery_dl_report_mode:
+
+                msg = record.getMessage()
+
+                log_level = logging.getLevelName(record.level)
+
+                HydrusData.Print( f"[gallery-dl] [{log_level}] {msg}" )
+
+        except Exception:
+
+            # Default error handling for logging.Handler
+
+            self.handleError(record)
         
     
 
@@ -2663,6 +2690,18 @@ class Controller( HydrusController.HydrusController ):
 
 
     def SetGalleryDLGlobals( self ):
+
+        # gallery-dl uses python logging
+        # We want to redirect into hydrus reporting instead
+        # For the time being we will ensure all logging is enabled and remove default handlers
+        # Then insert our own custom handler
+        logging.basicConfig(level=logging.DEBUG)
+
+        gallery_dl_log_handler = GalleryDLLogHandler()
+
+        logging.getLogger().handlers.clear()
+
+        logging.getLogger().addHandler( gallery_dl_log_handler )
 
         # We do not want gallery-dl asking for user input on TTY
         # Setting it like this will cause gallery-dl to raise StopExtraction if input is requested

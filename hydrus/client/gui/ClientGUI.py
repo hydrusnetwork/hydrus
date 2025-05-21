@@ -1,4 +1,5 @@
 import hashlib
+import logging
 import os
 import random
 import re
@@ -3636,6 +3637,7 @@ ATTACH "client.mappings.db" as external_mappings;'''
         ClientGUIMenus.AppendMenuCheckItem( report_modes, 'file report mode', 'Have the file manager report file request information, where supported.', HG.file_report_mode, self._SwitchBoolean, 'file_report_mode' )
         ClientGUIMenus.AppendMenuCheckItem( report_modes, 'file import report mode', 'Have the db and file manager report file import progress.', HG.file_import_report_mode, self._SwitchBoolean, 'file_import_report_mode' )
         ClientGUIMenus.AppendMenuCheckItem( report_modes, 'file sort report mode', 'Have the file sorter spam you with sort key results.', HG.file_sort_report_mode, self._SwitchBoolean, 'file_sort_report_mode' )
+        ClientGUIMenus.AppendMenuCheckItem( report_modes, 'gallery-dl report mode', 'Have the client report significant gallery-dl debug information.', HG.gallery_dl_report_mode, self._SwitchBoolean, 'gallery_dl_report_mode' )
         ClientGUIMenus.AppendMenuCheckItem( report_modes, 'gui report mode', 'Have the gui report inside information, where supported.', HG.gui_report_mode, self._SwitchBoolean, 'gui_report_mode' )
         ClientGUIMenus.AppendMenuCheckItem( report_modes, 'hover window report mode', 'Have the hover windows report their show/hide logic.', HG.hover_window_report_mode, self._SwitchBoolean, 'hover_window_report_mode' )
         ClientGUIMenus.AppendMenuCheckItem( report_modes, 'media load report mode', 'Have the client report media load information, where supported.', HG.media_load_report_mode, self._SwitchBoolean, 'media_load_report_mode' )
@@ -6962,7 +6964,11 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         elif name == 'file_sort_report_mode':
             
             HG.file_sort_report_mode = not HG.file_sort_report_mode
-            
+
+        elif name == 'gallery_dl_report_mode':
+
+            HG.gallery_dl_report_mode = not HG.gallery_dl_report_mode
+
         elif name == 'gui_report_mode':
             
             HG.gui_report_mode = not HG.gui_report_mode
@@ -6982,7 +6988,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             level = 'debug' if HG.mpv_report_mode else 'fatal'
             
             self._controller.pub( 'set_mpv_log_level', level )
-            
+
         elif name == 'network_report_mode':
             
             HG.network_report_mode = not HG.network_report_mode

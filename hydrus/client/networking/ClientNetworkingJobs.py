@@ -2182,8 +2182,6 @@ class GalleryDLStatusLogHandler(logging.Handler):
 
             msg = record.getMessage()
 
-            ClientNetworkingFunctions.NetworkReportMode( f"gallery-dl status: {self.network_job_instance.url} {msg}" )
-
             if self.network_job_instance:
 
                 with self.network_job_instance._lock:

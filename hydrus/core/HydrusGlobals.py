@@ -84,6 +84,7 @@ network_report_mode_silent = False
 pubsub_report_mode = False
 daemon_report_mode = False
 mpv_report_mode = False
+gallery_dl_report_mode = False
 
 fake_petition_mode = False
 
