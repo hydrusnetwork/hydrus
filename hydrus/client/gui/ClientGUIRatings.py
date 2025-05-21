@@ -146,7 +146,7 @@ def GetNumericalWidth( service_key, star_width, pad_px = ClientGUIPainterShapes.
         num_stars = 1
         
     
-    return star_width * num_stars  +  pad_px * ( num_stars - 1 )
+    return ( star_width +  pad_px ) * num_stars
     
 def GetPenAndBrushColours( service_key, rating_state ):
     
