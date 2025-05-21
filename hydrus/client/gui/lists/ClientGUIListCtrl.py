@@ -449,6 +449,9 @@ class HydrusListItemModel( QC.QAbstractItemModel ):
             
             if the_data_is_actually_a_different_object:
                 
+                # in this careful case, there's an optimisation that doesn't update to new 'is' object when __eq__ True wew
+                del self._data_to_indices[ data ]
+                
                 self._data_to_indices[ data ] = index
                 self._indices_to_data[ index ] = data
                 
@@ -1028,6 +1031,11 @@ class BetterListCtrlTreeView( QW.QTreeView ):
         return min_size_hint
         
     
+    def model( self ) -> HydrusListItemModel:
+        
+        return typing.cast( HydrusListItemModel, super().model() )
+        
+    
     def mouseDoubleClickEvent( self, event: QG.QMouseEvent ):
         
         if event.button() == QC.Qt.MouseButton.LeftButton:
@@ -1583,11 +1591,11 @@ class BetterListCtrlPanel( QW.QWidget ):
             
         
     
-    def _GetExportObject( self ):
+    def _GetExportObject( self ) -> typing.Optional[ HydrusSerialisable.SerialisableBase ]:
+        
+        to_export = HydrusSerialisable.SerialisableList()
         
         if self._custom_get_callable is None:
-            
-            to_export = HydrusSerialisable.SerialisableList()
             
             for obj in self._listctrl.GetData( only_selected = True ):
                 
@@ -1596,7 +1604,7 @@ class BetterListCtrlPanel( QW.QWidget ):
             
         else:
             
-            to_export = [ self._custom_get_callable() ]
+            to_export.append( self._custom_get_callable() )
             
         
         if len( to_export ) == 0:

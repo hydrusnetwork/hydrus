@@ -2,6 +2,7 @@ import collections
 import json
 import threading
 import time
+import typing
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusExceptions
@@ -139,11 +140,20 @@ class ImageRendererCache( object ):
         
         self._controller.sub( self, 'NotifyNewOptions', 'notify_new_options' )
         self._controller.sub( self, 'Clear', 'clear_image_cache' )
+        self._controller.sub( self, 'ClearSpecificFiles', 'notify_files_need_cache_clear' )
         
     
     def Clear( self ):
         
         self._data_cache.Clear()
+        
+    
+    def ClearSpecificFiles( self, hashes ):
+        
+        for hash in hashes:
+            
+            self._data_cache.DeleteData( hash )
+            
         
     
     def GetImageRenderer( self, media_result: ClientMediaResult.MediaResult ) -> ClientRendering.ImageRenderer:
@@ -217,11 +227,30 @@ class ImageTileCache( object ):
         
         self._controller.sub( self, 'NotifyNewOptions', 'notify_new_options' )
         self._controller.sub( self, 'Clear', 'clear_image_tile_cache' )
+        self._controller.sub( self, 'ClearSpecificFiles', 'notify_files_need_cache_clear' )
         
     
     def Clear( self ):
         
         self._data_cache.Clear()
+        
+    
+    def ClearSpecificFiles( self, hashes ):
+        
+        for hash in hashes:
+            
+            keys = self._data_cache.GetAllKeys()
+            
+            for key in keys:
+                
+                key = typing.cast( tuple, key )
+                
+                if key[0] == hash:
+                    
+                    self._data_cache.DeleteData( key )
+                    
+                
+            
         
     
     def GetTile( self, image_renderer: ClientRendering.ImageRenderer, media_result: ClientMediaResult.MediaResult, clip_rect, target_resolution ) -> ClientRendering.ImageTile:

@@ -259,6 +259,7 @@ class Controller( object ):
         services.append( ClientServices.GenerateService( LOCAL_RATING_NUMERICAL_SERVICE_KEY, HC.LOCAL_RATING_NUMERICAL, 'example local rating numerical service' ) )
         services.append( ClientServices.GenerateService( LOCAL_RATING_INCDEC_SERVICE_KEY, HC.LOCAL_RATING_INCDEC, 'example local rating inc/dec service' ) )
         services.append( ClientServices.GenerateService( self.example_ipfs_service_key, HC.IPFS, 'example ipfs service' ) )
+        services.append( ClientServices.GenerateService( CC.COMBINED_DELETED_FILE_SERVICE_KEY, HC.COMBINED_DELETED_FILE, 'deleted from anywhere' ) ),
         
         self._name_read_responses[ 'services' ] = services
         

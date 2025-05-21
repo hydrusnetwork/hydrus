@@ -110,7 +110,7 @@ class LocationContext( HydrusSerialisable.SerialisableBase ):
     SERIALISABLE_NAME = 'Location Search Context'
     SERIALISABLE_VERSION = 1
     
-    def __init__( self, current_service_keys = None, deleted_service_keys = None ):
+    def __init__( self, current_service_keys: typing.Optional[ typing.Collection[ bytes ] ] = None, deleted_service_keys: typing.Optional[ typing.Collection[ bytes ] ] = None ):
         
         # note this is pretty much a read-only class
         # sometimes we'll run FixMissingServices, but usually only on load and who cares if that fix is propagated around
@@ -334,7 +334,7 @@ class LocationContext( HydrusSerialisable.SerialisableBase ):
         
     
     def ToDictForAPI( self ):
-
+        
         return {
             'current_service_keys' : [ service_key.hex() for service_key in self.current_service_keys ],
             'deleted_service_keys' : [ service_key.hex() for service_key in self.deleted_service_keys ]

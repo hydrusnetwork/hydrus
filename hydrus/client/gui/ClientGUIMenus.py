@@ -25,9 +25,14 @@ def AddLastClickMemory( menu: QW.QMenu ):
             
             if event.type() == QC.QEvent.Type.MouseButtonPress:
                 
+                event = typing.cast( QG.QMouseEvent, event )
+                
                 HG.last_mouse_click_button = event.button()
-                    
+                
+            
             return False
+            
+        
 
     filter_obj = _ClickMemoryFilter(menu)
     

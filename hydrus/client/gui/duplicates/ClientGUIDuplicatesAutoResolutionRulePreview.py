@@ -333,6 +333,8 @@ class PreviewPanel( ClientGUICommon.StaticBox ):
         
         canvas_window = ClientGUICanvas.CanvasMediaListBrowser( canvas_frame, page_key, location_context, media_results, first_hash )
         
+        canvas_window.canvasWithHoversExiting.connect( CG.client_controller.gui.NotifyMediaViewerExiting )
+        
         canvas_frame.SetCanvas( canvas_window )
         
     

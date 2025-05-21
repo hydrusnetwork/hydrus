@@ -269,25 +269,51 @@ class NetworkJob( object ):
             # these are always in GMT
             last_modified_string = response.headers[ 'Last-Modified' ]
             
-            if last_modified_string.endswith( ' GMT' ):
+            we_did_it = False
+            
+            if ClientTime.DATEPARSER_OK:
                 
-                last_modified_string = last_modified_string[:-4]
+                try:
+                    
+                    last_modified_time = ClientTime.ParseDate( last_modified_string )
+                    
+                    if ClientTime.TimestampIsSensible( last_modified_time ):
+                        
+                        self._response_last_modified = last_modified_time
+                        
+                        we_did_it = True
+                        
+                    
+                except:
+                    
+                    pass
+                    
                 
             
-            try:
+            if not we_did_it:
                 
-                dt = datetime.datetime.strptime( last_modified_string, '%a, %d %b %Y %H:%M:%S' )
-                
-                last_modified_time = HydrusTime.DateTimeToTimestamp( dt )
-                
-                if ClientTime.TimestampIsSensible( last_modified_time ):
+                try:
                     
-                    self._response_last_modified = last_modified_time
+                    if last_modified_string.endswith( ' GMT' ):
+                        
+                        last_modified_string = last_modified_string[:-4]
+                        
                     
-                
-            except:
-                
-                pass
+                    dt = datetime.datetime.strptime( last_modified_string, '%a, %d %b %Y %H:%M:%S' )
+                    
+                    last_modified_time = HydrusTime.DateTimeToTimestamp( dt )
+                    
+                    if ClientTime.TimestampIsSensible( last_modified_time ):
+                        
+                        self._response_last_modified = last_modified_time
+                        
+                        we_did_it = True
+                        
+                    
+                except:
+                    
+                    pass
+                    
                 
             
         

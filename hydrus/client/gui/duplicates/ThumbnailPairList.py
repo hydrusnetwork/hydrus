@@ -1,4 +1,7 @@
+import typing
+
 from qtpy import QtCore as QC
+from qtpy import QtGui as QG
 from qtpy import QtWidgets as QW
 
 from hydrus.core import HydrusConstants as HC
@@ -362,6 +365,11 @@ class ThumbnailPairList( QW.QTableView ):
         self.setMinimumSize( QC.QSize( my_width, max_thumbnail_height_for_min_height_calc * self.MIN_NUM_ROWS_HEIGHT ) )
         
     
+    def model( self ) -> ThumbnailPairListModel:
+        
+        return typing.cast( ThumbnailPairListModel, super().model() )
+        
+    
     def SetData( self, tuples_of_data ):
         
         self.model().SetData( tuples_of_data )
@@ -383,6 +391,11 @@ class ThumbnailPairListPreviewPendingAutoResolutionAction( ThumbnailPairList ):
     def __init__( self, parent, rule: ClientDuplicatesAutoResolution.DuplicatesAutoResolutionRule ):
         
         super().__init__( parent, ThumbnailPairListModelPendingAutoResolutionAction( rule, True ) )
+        
+    
+    def model( self ) -> ThumbnailPairListModelPendingAutoResolutionAction:
+        
+        return typing.cast( ThumbnailPairListModelPendingAutoResolutionAction, super().model() )
         
     
 
@@ -427,6 +440,8 @@ class ListEnterCatcher( QC.QObject ):
         # this signals to stop event propagation
         
         if event.type() == QC.QEvent.Type.KeyPress:
+            
+            event = typing.cast( QG.QKeyEvent, event )
             
             if event.key() in ( QC.Qt.Key.Key_Return, QC.Qt.Key.Key_Enter ):
                 

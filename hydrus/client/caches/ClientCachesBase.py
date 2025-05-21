@@ -148,6 +148,14 @@ class DataCache( object ):
             
         
     
+    def GetAllKeys( self ) -> typing.List[ object ]:
+        
+        with self._lock:
+            
+            return list( self._keys_to_data.keys() )
+            
+        
+    
     def GetData( self, key ) -> CacheableObject:
         
         with self._lock:

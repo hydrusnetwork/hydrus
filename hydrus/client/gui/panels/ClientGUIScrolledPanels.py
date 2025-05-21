@@ -1,4 +1,7 @@
+import typing
+
 from qtpy import QtCore as QC
+from qtpy import QtGui as QG
 from qtpy import QtWidgets as QW
 
 from hydrus.core import HydrusData
@@ -18,6 +21,8 @@ class ResizingEventFilter( QC.QObject ):
         try:
             
             if event.type() == QC.QEvent.Type.Resize:
+                
+                event = typing.cast( QG.QResizeEvent, event )
                 
                 parent = self.parent()
                 

@@ -281,6 +281,8 @@ class SidebarDuplicateFilter( ClientGUISidebarCore.Sidebar ):
         
         canvas_window.showPairInPage.connect( self._ShowPairInPage )
         
+        canvas_window.canvasWithHoversExiting.connect( CG.client_controller.gui.NotifyMediaViewerExiting )
+        
         canvas_frame.SetCanvas( canvas_window )
         
     

@@ -215,17 +215,19 @@ Then run the 'setup_help' script to build the help. This isn't necessary, but it
 
     !!! note "Qt compatibility"
         
-        If you run into trouble running newer versions of Qt6, some users have fixed it by installing one or more of these additional packages:
+        If the program fails to run, and from terminal it says something like this:
+        
+        `qt.qpa.plugin: From 6.5.0, xcb-cursor0 or libxcb-cursor0 is needed to load the Qt xcb platform plugin`
+        
+        Then Qt6 may need a couple additional packages:
         
         * `libicu-dev`
         * `libxcb-cursor-dev`
-        * `libgthread`
         
-        With `apt` that will be:
+        With `apt`, that will be:
         
         * `sudo apt-get install libicu-dev`
         * `sudo apt-get install libxcb-cursor-dev`
-        * `sudo apt-get install libgthread2.0-0`
         
         Or check your OS's package manager.
         
@@ -233,6 +235,7 @@ Then run the 'setup_help' script to build the help. This isn't necessary, but it
         
     
     Run 'hydrus_client.sh' to start the client. Don't forget to set `chmod +x hydrus_client.sh` if you need it.
+    
 
 === "macOS"
 

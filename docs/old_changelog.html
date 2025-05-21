@@ -35,6 +35,46 @@
             <h1 id="changelog"><a href="#changelog">changelog</a></h1>
             <ul>
                 <li>
+                    <h2 id="version_623"><a href="#version_623">version 623</a></h2>
+                    <ul>
+                        <li><h3>misc</h3></li>
+                        <li>thanks to a user, we have a new `Paper_Dark` stylesheet. it has many custom svg assets that will redraw checkboxes and so on</li>
+                        <li>the client now tries to adjust for timezone when it parses a modified date from a server response. some downloaders will now get a more precise 'modified date' for their domains</li>
+                        <li>fixed a typo bug that was causing existing 'set numerical or inc/dec rating' commands to fail to initialise in the shortcut panel on edit (staying as the default 'simple command, archive file')</li>
+                        <li>a new `DEBUG: Activate Main GUI when closing the media viewer` checkbox under `options-&gt;media viewer`, default fa!se, lets you force an "activate" call on the Main GUI (bringing it to the front and setting keyboard focus) on any media viewer close</li>
+                        <li>the hydrus server now better tries to clear out ongoing file downloads when the connection is disconnected early. if you noticed in Hydrus Web or similar that scrubbing through a bunch of big videos one after another could get laggy, let me know if it is any better now</li>
+                        <li><h3>duplicates</h3></li>
+                        <li>all duplicate filters now have the 'A and B are visual duplicates' comparison statement. this is a custom algorthim that inspects the images and attempts to differentiate resizes/re-encodes from recolours/alternates. please rely on it as you do normal duplicate filtering of images from now on, and if it produces any false positives, I'd love to see the files!</li>
+                        <li>I improved this 'A and B are visual duplicates' algorithm after our test. overall it went very well, with only a couple false positives found. thank you for your feedback, everyone. I improved the 'skewness' test to reduce the number of false negatives, and I added a new special test to catch the false positives submitted. further, I have softened the 'no' result texts and categorised the 'yes' results into three clear 'very probably'/'definitely'/'perfectly' lines so you can better recognise edge cases. when this test is integrated into the auto-resolution system, I will default to just definitely/perfectly results to start</li>
+                        <li>fixed the bug in auto-resolution where when you edited a rule, its labels would sometimes would not update in the main duplicates page review list (the rule was working fine, and opening a new duplicates page would show the rule correct). this was a bug in the list update code itself when dealing with a special case of very similar objects. I don't think anywhere else in the program was affected, but it is sorted now</li>
+                        <li>the right-hand duplicates hover window should be less jittery as it lays out the new asynchronously loading comparison statements. in a couple of cases, the buttons were getting squashed and snapping to different sizes on window resize and so on--should be better now</li>
+                        <li><h3>AVIF note</h3></li>
+                        <li>some AVIF files may have weird rotation since the recent shift to `pillow-avif-plugn`. sorry for the trouble! there is no easy fix here. since Pillow proper will hopefully be getting native AVIF support in 11.3 sometime in July, I am delaying doing a hacky fix here until we see how 'real' Pillow handles this issue (issue #1728)</li>
+                        <li>due to some recent definition reshuffling, new AVIF files were accidentally not being scanned for icc profiles, exif data, or human-readable metadata. I've turned these flags back on for now, and when we are settled into happy stable Pillow land and know it is all working right, I'll schedule a full rescan for all existing AVIFs</li>
+                        <li><h3>pngs with gamma/chromaticity info</h3></li>
+                        <li>my new gamma/chromaticity png correction code now uses much less memory--somewhere around one twelfth and one sixteenth of what it did. sorry about the decompression bombs on loading certain large (&gt;4k) pngs! it still runs a little slow, so there is more work to do here</li>
+                        <li>fixed a divide by zero error when a png provides invalid gamma/chromaticity info</li>
+                        <li>I dumped a ton of time into trying to convert this info to an ICC Profile, as GIMP and Qt are able to do, but I couldn't quite figure out how they did some whitepoint and colourspace translations. I expect to revisit this, since if we could merge all colourspace conversions to one fast and low-memory pipeline, that's better than me maintaining a dozen math hacks. if you are an enterprising programmer with ICC Profile experience who wants to help out, please feel free to check my work under the new `HydrusImageICCProfiles.py`, and the Dequanitze caller in `HydrusImageNormalisation.py`--what's the correct translation/value for the `wtpt` and `chad` ICC Profile tags, and how should the `rgbXYZ` and `rgbRTC` tags be modified from the original gamma and chromaticity stuff?</li>
+                        <li><h3>better file maintenance jobs cascade</h3></li>
+                        <li>this was happening in patches before, but it is now formalised--</li>
+                        <li>if the exif status of a file changes during file maintenance, this now auto-triggers a file metadata call to check for rotation changes</li>
+                        <li>if the previously understood appearance of a file changes in file metadata, has icc profile, or has transparency file maintenance, this now triggers a thumbnail regen, a pixel hash regen, and perceptual hash regen</li>
+                        <li>if a thumb is regenned in file maintenance, this now triggers a blurhash regen</li>
+                        <li>when files are told they have new display data because of file maintenance, the image cache and image tiles cache now explicitly remove all data related to the files so they can be quickly regenned if looked at currently or in the near future (this was spotty before)</li>
+                        <li><h3>boring cleanup</h3></li>
+                        <li>bit of type cleaning in my List code (my IDE updated and new linting rules went bananas)</li>
+                        <li>cleaned up several dozen type defs, mostly QEvent stuff, that turned up in project linting</li>
+                        <li>fixed up numpy array type hints across the program</li>
+                        <li>fixed a unit test that had a very small chance of failing with some improved setup code</li>
+                        <li><h3>future build</h3></li>
+                        <li>there's a future build this week for Windows and Linux. they both have important changes, but both ran for me and neither needed a clean install when upgrading from v622. I _think_ this will run on a reasonably updated version of Windows 10, but we are now pushing this so that's the top concern. if you are an advanced user and would like to help me test, please check it out</li>
+                        <li>the changes are--</li>
+                        <li>Windows and Linux: moved from python 3.11 to python 3.12</li>
+                        <li>Windows and Linux: moved from PySide6 (Qt) 6.7.3 to 6.8.2.1</li>
+                        <li>Windows: moved from windows-2019 runner to windows-2022 (2019 runner is being retired next month)</li>
+                    </ul>
+                </li>
+                <li>
                     <h2 id="version_622"><a href="#version_622">version 622</a></h2>
                     <ul>
                         <li><h3>misc</h3></li>
@@ -45,7 +85,6 @@
                         <li>a new checkbox in `options-&gt;tag editing` lets you skip the yes/no check in this case (i.e. always immediately pasting multiline content you enter)</li>
                         <li>the manage tags dialog paste button is now beside the text input box. it still only does 'add only' actions</li>
                         <li>all new clients, and all existing clients that don't have `Ctrl+Shift+O` set in `main_gui` shortcut set already, now get `Ctrl+Shift+O` as 'open options dialog'. the 'Use Native MenuBar' option's tooltip now highlights this shortcut (a couple of users have been soft-locked out options dialog to unset this when it borked out)</li>
-                        <li>. </li>
                         <li><h3>duplicates</h3></li>
                         <li>if you are in advanced mode, the manual duplicate filter will have a new "(not) visual duplicates" line with some numbers after it. this is the new "A and B are visual duplicates" test I have been working on, which uses a bunch of histogram statistics to programatically differentiate resizes/re-encodes from files with significant visual differences. if you do duplicate filtering this week, please look at this new line and let me know how its predictions hold up. I have tuned over about 100 real pairs, and I feel fairly good, but let's see on a larger scale. it sometimes false negatives (saying they are not visual duplicates when they actually are) when the pair has a particularly wide difference in scale or encoding quality, and I'm ok with that failure, but I do not get any false positives (saying they are visual duplicates when there is actually a watermark or something). I am most interested in false positives, since we hope to fold this tool into the duplicates auto-resolution system and I don't want a positive fail. the statement will also suggest a little more info if it thinks there is an obvious watermark or recolour. please send me any pairs that are reported wrong, and if you like you can look at the numbers. I will retune this tool as needed and fold it into the automatic system, and I'll launch this test as a real comparison statement for all users (but without the ugly debug numbers). thank you for testing!</li>
                         <li>updated my 'A and B are visual duplicates' test to return a false when the files have resolution ratio that differs by more than 1%</li>

@@ -1036,10 +1036,11 @@ class BufferedWindowIcon( BufferedWindow ):
         
         painter.setRenderHint( QG.QPainter.RenderHint.SmoothPixmapTransform, True ) # makes any scaling here due to jank thumbs look good
         
-        device_independant_pixmap_size = self._pixmap.size() / self._pixmap.devicePixelRatio()
+        device_independant_pixmap_width = self._pixmap.width() / self._pixmap.devicePixelRatio()
+        device_independant_pixmap_height = self._pixmap.height() / self._pixmap.devicePixelRatio()
         
-        x_offset = int( ( self.width() - device_independant_pixmap_size.width() ) / 2 )
-        y_offset = int( ( self.height() - device_independant_pixmap_size.height() ) / 2 )
+        x_offset = int( ( self.width() - device_independant_pixmap_width ) / 2 )
+        y_offset = int( ( self.height() - device_independant_pixmap_height ) / 2 )
         
         if isinstance( self._pixmap, QG.QImage ):
             
@@ -1852,13 +1853,18 @@ class TextCatchEnterEventFilter( QC.QObject ):
         
         try:
             
-            if event.type() == QC.QEvent.Type.KeyPress and event.key() in ( QC.Qt.Key.Key_Enter, QC.Qt.Key.Key_Return ):
+            if event.type() == QC.QEvent.Type.KeyPress:
                 
-                self._callable()
+                event = typing.cast( QG.QKeyEvent, event )
                 
-                event.accept()
-                
-                return True
+                if event.key() in ( QC.Qt.Key.Key_Enter, QC.Qt.Key.Key_Return ):
+                    
+                    self._callable()
+                    
+                    event.accept()
+                    
+                    return True
+                    
                 
             
         except Exception as e:

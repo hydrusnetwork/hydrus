@@ -2,7 +2,7 @@ import numpy
 
 from PIL import Image as PILImage
 
-def GetNumPyAlphaChannel( numpy_image: numpy.array ) -> numpy.array:
+def GetNumPyAlphaChannel( numpy_image: numpy.ndarray ) -> numpy.ndarray:
     
     if not NumPyImageHasAlphaChannel( numpy_image ):
         
@@ -16,7 +16,7 @@ def GetNumPyAlphaChannel( numpy_image: numpy.array ) -> numpy.array:
     return alpha_channel
     
 
-def GetNumPyAlphaChannelNumber( numpy_image: numpy.array ):
+def GetNumPyAlphaChannelNumber( numpy_image: numpy.ndarray ):
     
     shape = numpy_image.shape
     
@@ -29,7 +29,7 @@ def GetNumPyAlphaChannelNumber( numpy_image: numpy.array ):
     return shape[2] - 1
     
 
-def NumPyImageHasAllCellsTheSame( numpy_image: numpy.array, value: int ):
+def NumPyImageHasAllCellsTheSame( numpy_image: numpy.ndarray, value: int ):
     
     # I looked around for ways to do this iteratively at the c++ level but didn't have huge luck.
     # unless some magic is going on, the '==' actually creates the bool array
@@ -40,7 +40,7 @@ def NumPyImageHasAllCellsTheSame( numpy_image: numpy.array, value: int ):
     # alpha_channel == numpy.full( ( shape[0], shape[1] ), 255, dtype = 'uint8' ) ).all()
     
 
-def NumPyImageHasUsefulAlphaChannel( numpy_image: numpy.array ) -> bool:
+def NumPyImageHasUsefulAlphaChannel( numpy_image: numpy.ndarray ) -> bool:
     
     if not NumPyImageHasAlphaChannel( numpy_image ):
         
@@ -66,7 +66,7 @@ def NumPyImageHasUsefulAlphaChannel( numpy_image: numpy.array ) -> bool:
     return True
     
 
-def NumPyImageHasUselessAlphaChannel( numpy_image: numpy.array ) -> bool:
+def NumPyImageHasUselessAlphaChannel( numpy_image: numpy.ndarray ) -> bool:
     
     if not NumPyImageHasAlphaChannel( numpy_image ):
         
@@ -92,7 +92,7 @@ def NumPyImageHasUselessAlphaChannel( numpy_image: numpy.array ) -> bool:
     return False
     
 
-def NumPyImageHasOpaqueAlphaChannel( numpy_image: numpy.array ) -> bool:
+def NumPyImageHasOpaqueAlphaChannel( numpy_image: numpy.ndarray ) -> bool:
     
     if not NumPyImageHasAlphaChannel( numpy_image ):
         
@@ -107,7 +107,7 @@ def NumPyImageHasOpaqueAlphaChannel( numpy_image: numpy.array ) -> bool:
     return NumPyImageHasAllCellsTheSame( alpha_channel, 255 )
     
 
-def NumPyImageHasAlphaChannel( numpy_image: numpy.array ) -> bool:
+def NumPyImageHasAlphaChannel( numpy_image: numpy.ndarray ) -> bool:
     
     # note this does not test how useful the channel is, just if it exists
     
@@ -122,7 +122,7 @@ def NumPyImageHasAlphaChannel( numpy_image: numpy.array ) -> bool:
     return shape[2] in ( 2, 4 )
     
 
-def NumPyImageHasTransparentAlphaChannel( numpy_image: numpy.array ) -> bool:
+def NumPyImageHasTransparentAlphaChannel( numpy_image: numpy.ndarray ) -> bool:
     
     if not NumPyImageHasAlphaChannel( numpy_image ):
         

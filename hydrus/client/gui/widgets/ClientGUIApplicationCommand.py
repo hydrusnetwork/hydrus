@@ -1122,7 +1122,7 @@ class ApplicationCommandWidget( ClientGUIScrolledPanels.EditPanel ):
                 
                 self._panel_choice.SetValue( self.PANEL_RATING_LIKE )
                 
-            elif service_type == ( HC.LOCAL_RATING_NUMERICAL, HC.LOCAL_RATING_INCDEC ):
+            elif service_type in ( HC.LOCAL_RATING_NUMERICAL, HC.LOCAL_RATING_INCDEC ):
                 
                 if action in ( HC.CONTENT_UPDATE_SET, HC.CONTENT_UPDATE_FLIP ):
                     

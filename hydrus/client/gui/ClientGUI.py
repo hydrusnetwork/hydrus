@@ -6,6 +6,7 @@ import ssl
 import sys
 import threading
 import time
+import typing
 
 import cv2
 import PIL
@@ -785,7 +786,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         try:
             
             actual_platform_name = QG.QGuiApplication.platformName()
-            running_platform_name = QW.QApplication.instance().platformName()
+            running_platform_name = typing.cast( QW.QApplication, QW.QApplication.instance() ).platformName()
             
             if actual_platform_name != running_platform_name:
                 
@@ -7440,6 +7441,8 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 
                 if event.type() == QC.QEvent.Type.WindowStateChange:
                     
+                    event = typing.cast( QG.QWindowStateChangeEvent, event )
+                    
                     was_minimised = event.oldState() == QC.Qt.WindowState.WindowMinimized
                     is_minimised = self.isMinimized()
                     
@@ -7900,9 +7903,12 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         self._menu_updater_pages.update()
         
     
-    def NotifyRefreshNetworkMenu( self ):
+    def NotifyMediaViewerExiting( self ):
         
-        self._menu_updater_network.update()
+        if CG.client_controller.new_options.GetBoolean( 'activate_main_gui_on_viewer_close' ):
+            
+            self.activateWindow()
+            
         
     
     def NotifyNewExportFolders( self ):
@@ -7964,6 +7970,11 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         self._currently_uploading_pending.discard( service_key )
         
         self._menu_updater_pending.update()
+        
+    
+    def NotifyRefreshNetworkMenu( self ):
+        
+        self._menu_updater_network.update()
         
     
     def PresentImportedFilesToPage( self, hashes, page_name ):

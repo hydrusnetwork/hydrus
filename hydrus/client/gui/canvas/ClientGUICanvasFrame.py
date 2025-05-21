@@ -60,10 +60,11 @@ class CanvasFrame( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindow
                 if CG.client_controller.new_options.GetBoolean( 'save_window_size_and_position_on_close' ):
                     
                     ClientGUITopLevelWindows.SaveTLWSizeAndPosition( self, self._frame_key )
+                    
                 
                 self._canvas_window.CleanBeforeDestroy()
                 
-                ClientGUITopLevelWindows.FrameThatResizes.closeEvent( self, event )
+                super().closeEvent( event )
                 
             else:
                 
@@ -72,7 +73,7 @@ class CanvasFrame( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindow
             
         else:
             
-            ClientGUITopLevelWindows.FrameThatResizes.closeEvent( self, event )
+            super().closeEvent( event )
             
         
     

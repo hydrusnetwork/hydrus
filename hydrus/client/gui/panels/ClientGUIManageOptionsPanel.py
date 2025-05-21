@@ -3047,6 +3047,9 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._focus_media_thumb_on_viewer_close = QW.QCheckBox( window_panel )
             self._focus_media_thumb_on_viewer_close.setToolTip( ClientGUIFunctions.WrapToolTip( 'When you close a Media Viewer, it normally tells the original search page to change the current thumbnail selection to whatever you closed the media viewer on. If you prefer this not to happen, uncheck this!' ) )
             
+            self._activate_main_gui_on_viewer_close = QW.QCheckBox( window_panel )
+            self._activate_main_gui_on_viewer_close.setToolTip( ClientGUIFunctions.WrapToolTip( 'This will "activate" the Main GUI Window when any Media Viewer closes, which should bring it to the front and give it keyboard focus. Try this if your OS is playing funny games with focus when a media viewer closes.' ) )
+            
             #
             
             media_viewer_panel = ClientGUICommon.StaticBox( self, 'mouse and animations' )
@@ -3145,6 +3148,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._focus_media_tab_on_viewer_close_if_possible.setChecked( self._new_options.GetBoolean( 'focus_media_tab_on_viewer_close_if_possible' ) )
             self._focus_media_thumb_on_viewer_close.setChecked( self._new_options.GetBoolean( 'focus_media_thumb_on_viewer_close' ) )
+            self._activate_main_gui_on_viewer_close.setChecked( self._new_options.GetBoolean( 'activate_main_gui_on_viewer_close' ) )
             
             self._animated_scanbar_height.setValue( self._new_options.GetInteger( 'animated_scanbar_height' ) )
             self._animated_scanbar_nub_width.setValue( self._new_options.GetInteger( 'animated_scanbar_nub_width' ) )
@@ -3191,6 +3195,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             rows.append( ( 'Re-focus original search page when closing the media viewer: ', self._focus_media_tab_on_viewer_close_if_possible ) )
             rows.append( ( 'Tell original search page to select exit media when closing the media viewer: ', self._focus_media_thumb_on_viewer_close ) )
+            rows.append( ( 'DEBUG: Activate Main GUI when closing the media viewer: ', self._activate_main_gui_on_viewer_close ) )
             
             gridbox = ClientGUICommon.WrapInGrid( window_panel, rows )
             
@@ -3312,6 +3317,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._new_options.SetBoolean( 'focus_media_tab_on_viewer_close_if_possible', self._focus_media_tab_on_viewer_close_if_possible.isChecked() )
             self._new_options.SetBoolean( 'focus_media_thumb_on_viewer_close', self._focus_media_thumb_on_viewer_close.isChecked() )
+            self._new_options.SetBoolean( 'activate_main_gui_on_viewer_close', self._activate_main_gui_on_viewer_close.isChecked() )
             
             self._new_options.SetBoolean( 'draw_tags_hover_in_media_viewer_background', self._draw_tags_hover_in_media_viewer_background.isChecked() )
             self._new_options.SetBoolean( 'disable_tags_hover_in_media_viewer', self._disable_tags_hover_in_media_viewer.isChecked() )
@@ -4698,7 +4704,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             text = 'The current styles are what your Qt has available, the stylesheets are what .css and .qss files are currently in install_dir/static/qss.'
             text += '\n' * 2
-            text += 'If you run from source and you select e621 or another stylesheet that includes external (svg) assets, you must make sure that your CWD is the hydrus install folder when you boot.'
+            text += 'If you run from source and you select e621, Paper_Dark, or another stylesheet that includes external (svg) assets, you must make sure that your CWD is the hydrus install folder when you boot.'
             
             st = ClientGUICommon.BetterStaticText( self, label = text )
             
