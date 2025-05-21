@@ -1630,9 +1630,12 @@ class ShortcutsHandler( QC.QObject ):
                     
                     if event.type() == QC.QEvent.Type.MouseButtonPress:
                         
+                        event = typing.cast( QG.QMouseEvent, event )
+                        
                         self._last_click_down_position = event.globalPosition().toPoint()
                         
                         CUMULATIVE_MOUSEWARP_MANHATTAN_LENGTH = 0
+                        
                     
                     #if event.type() != QC.QEvent.Type.Wheel and self._ignore_activating_mouse_click and not HydrusTime.TimeHasPassedPrecise( self._frame_activated_time + 0.017 ):
                     if event.type() != QC.QEvent.Type.Wheel and self._ignore_activating_mouse_click and not self._parent_currently_activated:
@@ -1649,6 +1652,8 @@ class ShortcutsHandler( QC.QObject ):
                         
                     
                     if event.type() == QC.QEvent.Type.MouseButtonRelease:
+                        
+                        event = typing.cast( QG.QMouseEvent, event )
                         
                         release_press_pos = event.globalPosition().toPoint()
                         

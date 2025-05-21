@@ -48,7 +48,7 @@ hashes_to_jpeg_quality = {}
 
 def GetDuplicateComparisonScore( shown_media_result: ClientMediaResult.MediaResult, comparison_media_result: ClientMediaResult.MediaResult ):
     
-    statements_and_scores = GetDuplicateComparisonStatements( shown_media_result, comparison_media_result )
+    statements_and_scores = GetDuplicateComparisonStatements( shown_media_result, comparison_media_result, only_for_scores = True )
     
     total_score = sum( ( score for ( statement, score ) in statements_and_scores.values() ) )
     
@@ -56,7 +56,7 @@ def GetDuplicateComparisonScore( shown_media_result: ClientMediaResult.MediaResu
     
 
 # TODO: All this will be replaced by tools being developed for the duplicates auto-resolution system
-def GetDuplicateComparisonStatements( shown_media_result: ClientMediaResult.MediaResult, comparison_media_result: ClientMediaResult.MediaResult ):
+def GetDuplicateComparisonStatements( shown_media_result: ClientMediaResult.MediaResult, comparison_media_result: ClientMediaResult.MediaResult, only_for_scores = False ):
     
     new_options = CG.client_controller.new_options
     
@@ -614,9 +614,9 @@ def GetDuplicateComparisonStatements( shown_media_result: ClientMediaResult.Medi
         statements_and_scores[ 'duration' ] = ( statement, score )
         
     
-    # test for the new statement
+    # visual duplicates
     
-    if not is_a_pixel_dupe and CG.client_controller.new_options.GetBoolean( 'advanced_mode' ):
+    if not is_a_pixel_dupe and not only_for_scores:
         
         if s_mime in HC.IMAGES and c_mime in HC.IMAGES:
             
@@ -685,27 +685,27 @@ def GetDuplicateComparisonStatements( shown_media_result: ClientMediaResult.Medi
                 s_lab_histogram = get_lab_histogram( shown_media_result )
                 c_lab_histogram = get_lab_histogram( comparison_media_result )
                 
-                ( simple_seems_good, simple_score_statement ) = ClientImageHistograms.FilesAreVisuallySimilarSimple( s_lab_histogram, c_lab_histogram )
+                ( simple_seems_good, simple_result, simple_score_statement ) = ClientImageHistograms.FilesAreVisuallySimilarSimple( s_lab_histogram, c_lab_histogram )
                 
                 if simple_seems_good:
                     
                     s_lab_tiles_histogram = get_lab_tiles_histogram( shown_media_result )
                     c_lab_tiles_histogram = get_lab_tiles_histogram( comparison_media_result )
                     
-                    ( regional_seems_good, regional_score_statement ) = ClientImageHistograms.FilesAreVisuallySimilarRegional( s_lab_tiles_histogram, c_lab_tiles_histogram )
+                    ( regional_seems_good, regional_result, regional_score_statement ) = ClientImageHistograms.FilesAreVisuallySimilarRegional( s_lab_tiles_histogram, c_lab_tiles_histogram )
                     
-                    statements_and_scores[ 'a_is_exact_match_b_advanced_test' ] = ( regional_score_statement, 0 )
+                    statements_and_scores[ 'a_and_b_are_visual_duplicates' ] = ( regional_score_statement, 0 )
                     
                 else:
                     
-                    statements_and_scores[ 'a_is_exact_match_b_advanced_test' ] = ( simple_score_statement, 0 )
+                    statements_and_scores[ 'a_and_b_are_visual_duplicates' ] = ( simple_score_statement, 0 )
                     
                 
             except Exception as e:
                 
                 HydrusData.ShowException( e, do_wait = False )
                 
-                HydrusData.ShowText( 'The "A is exact match of B" detector threw an error! Please let hydev know the details.' )
+                HydrusData.ShowText( 'The "A and B are visual duplicates" test threw an error! Please let hydev know the details.' )
                 
             
         

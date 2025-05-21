@@ -38,7 +38,7 @@ def GenerateShapePerceptualHashes( path, mime ):
         
     
 
-def PILDCT( greyscale_numpy_image: numpy.array ):
+def PILDCT( greyscale_numpy_image: numpy.ndarray ) -> numpy.ndarray:
     # this emulates cv2.dct and was figured out by prkc. there is some OpenCV secret magic that differs from 'typical' DCT
     # it should be a complete drop-in other than tiny floating-point calc differences 3.9204849e+02 vs 3.92048486e+02
     # experimentally, I ran the final phash on 500 different files and every single one was exactly the same!

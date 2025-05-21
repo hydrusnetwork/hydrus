@@ -118,6 +118,7 @@ class ClientDBMediaResults( ClientDBModule.ClientDBModule ):
         
         updated_hashes = [ media_result.GetHash() for media_result in cached_hash_ids_to_media_results.values() ]
         
+        CG.client_controller.pub( 'notify_files_need_cache_clear', updated_hashes )
         CG.client_controller.pub( 'notify_files_need_redraw', updated_hashes )
         
     

@@ -28,7 +28,7 @@ class AnimationRendererPIL( object ):
         self._Initialise()
         
     
-    def _GetRecoveryFrame( self ) -> numpy.array:
+    def _GetRecoveryFrame( self ) -> numpy.ndarray:
         
         if self._last_valid_numpy_frame is None:
             
@@ -114,7 +114,7 @@ class AnimationRendererPIL( object ):
             
         
     
-    def _RenderCurrentFrameAndResizeIt( self ) -> numpy.array:
+    def _RenderCurrentFrameAndResizeIt( self ) -> numpy.ndarray:
         
         we_are_in_the_dangerzone = self._cannot_seek_to_or_beyond_this_index is not None and self._current_render_index >= self._cannot_seek_to_or_beyond_this_index
         

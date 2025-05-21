@@ -1,3 +1,5 @@
+import typing
+
 from qtpy import QtCore as QC
 from qtpy import QtGui as QG
 from qtpy import QtWidgets as QW
@@ -226,6 +228,11 @@ class CollectComboCtrl( QW.QComboBox ):
             
         
     
+    def model( self ) -> QG.QStandardItemModel:
+        
+        return typing.cast( QG.QStandardItemModel, super().model() )
+        
+    
     def paintEvent( self, e ):
         
         painter = QW.QStylePainter( self )
@@ -401,11 +408,16 @@ class MediaCollectControl( QW.QWidget ):
             
             if watched == self._collect_comboctrl:
                 
-                if event.type() == QC.QEvent.Type.MouseButtonPress and event.button() == QC.Qt.MouseButton.MiddleButton:
+                if event.type() == QC.QEvent.Type.MouseButtonPress:
                     
-                    self.SetCollect( ClientMedia.MediaCollect( collect_unmatched = self._media_collect.collect_unmatched ) )
+                    event = typing.cast( QG.QMouseEvent, event )
                     
-                    return True
+                    if event.button() == QC.Qt.MouseButton.MiddleButton:
+                        
+                        self.SetCollect( ClientMedia.MediaCollect( collect_unmatched = self._media_collect.collect_unmatched ) )
+                        
+                        return True
+                        
                     
                 
             

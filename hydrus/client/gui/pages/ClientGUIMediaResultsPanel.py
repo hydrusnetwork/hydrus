@@ -187,6 +187,8 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.Liste
             
             canvas_window.exitFocusMedia.connect( self.SetFocusedMedia )
             canvas_window.userRemovedMedia.connect( self.RemoveMedia )
+            canvas_window.canvasWithHoversExiting.connect( CG.client_controller.gui.NotifyMediaViewerExiting )
+            
             
         
     
@@ -895,6 +897,8 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.Liste
             canvas_frame = ClientGUICanvasFrame.CanvasFrame( self.window() )
             
             canvas_window = ClientGUICanvas.CanvasMediaListBrowser( canvas_frame, self._page_key, self._location_context, media_results, first_hash )
+            
+            canvas_window.canvasWithHoversExiting.connect( CG.client_controller.gui.NotifyMediaViewerExiting )
             
             canvas_frame.SetCanvas( canvas_window )
             

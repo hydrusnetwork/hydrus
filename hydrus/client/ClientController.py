@@ -1784,7 +1784,9 @@ class Controller( HydrusController.HydrusController ):
         
         HydrusController.HydrusController.pub( self, *args, **kwargs )
         
-        QW.QApplication.instance().postEvent( QW.QApplication.instance().pubsub_catcher, PubSubEvent() )
+        app = typing.cast( App, QW.QApplication.instance() )
+        
+        app.postEvent( app.pubsub_catcher, PubSubEvent() )
         
     
     def RefreshServices( self ):

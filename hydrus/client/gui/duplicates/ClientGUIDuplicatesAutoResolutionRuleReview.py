@@ -180,6 +180,7 @@ class ReviewActionsPanel( ClientGUIScrolledPanels.ReviewPanel ):
                 
             
         
+        # this is safe to run on a bunch of related pairs like AB, AC, DB--the db figures that out
         CG.client_controller.WriteSynchronous( 'duplicate_auto_resolution_approve_pending_pairs', self._rule, selected_pairs )
         
         self._pending_action_pairs = [ pair for pair in self._pending_action_pairs if pair not in selected_pairs ]
@@ -381,6 +382,8 @@ class ReviewActionsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         first_hash = media_result_1.GetHash()
         
         canvas_window = ClientGUICanvas.CanvasMediaListBrowser( canvas_frame, page_key, location_context, media_results, first_hash )
+        
+        canvas_window.canvasWithHoversExiting.connect( CG.client_controller.gui.NotifyMediaViewerExiting )
         
         canvas_frame.SetCanvas( canvas_window )
         

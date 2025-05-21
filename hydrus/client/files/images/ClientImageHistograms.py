@@ -1,3 +1,4 @@
+import math
 import numpy
 
 import cv2
@@ -18,7 +19,7 @@ NUM_TILES = NUM_TILES_DIMENSIONS[0] * NUM_TILES_DIMENSIONS[1]
 
 class LabHistogram( ClientCachesBase.CacheableObject ):
     
-    def __init__( self, resolution, l_hist: numpy.array, a_hist: numpy.array, b_hist: numpy.array ):
+    def __init__( self, resolution, l_hist: numpy.ndarray, a_hist: numpy.ndarray, b_hist: numpy.ndarray ):
         
         self.resolution = resolution
         self.l_hist = l_hist
@@ -119,6 +120,202 @@ def skewness_numpy( values ):
     return float( skewness )
     
 
+# I tried detecting bimodality coefficient with this, but it didn't work for the sort of bump we were looking for
+def kurtosis_numpy( values ):
+    
+    values = numpy.asarray( values )
+    
+    mean = numpy.mean( values )
+    
+    variance = numpy.var( values )
+    
+    if variance == 0:
+        
+        return 0
+        
+    
+    m4 = numpy.mean( ( values - mean ) ** 4)
+    
+    kurt = m4 / ( variance ** 2 )
+    
+    return kurt
+    
+
+def log_gaussian(x, mean, var):
+    
+    return -0.5 * numpy.log( 2 * numpy.pi * var ) - 0.5 * ( ( x - mean ) ** 2 ) / var
+    
+
+# gaussian mixture modelling--how well does this distribution fit with n modes?
+# it does its job well, but it is a liklihood based model that basically goes for maximising surface area
+# so when it says 'yeah, this most looks bimodal, the means are here and here', it'll generally preference the bumps in the main blob and skip the tiny blob we are really looking for
+def fit_gmm_1d( data, n_components=2, n_iter=100, tol=1e-6 ):
+    
+    data = numpy.asarray( data ).flatten()
+    
+    n = len( data )
+    
+    # Init: random means, uniform weights, global variance
+    rng = numpy.random.default_rng()
+    means = rng.choice( data, size=n_components, replace=False)
+    variances = numpy.full( n_components, numpy.var(  data ) )
+    weights = numpy.full( n_components, 1 / n_components )
+    
+    log_likelihoods = []
+    
+    for _ in range( n_iter ):
+        
+        # E-step: compute responsibilities
+        log_probs = numpy.array( [
+            numpy.log( weights[k] ) + log_gaussian( data, means[k], variances[k] )
+            for k in range( n_components )
+        ] )
+        
+        log_sum = numpy.logaddexp.reduce( log_probs, axis=0 )
+        responsibilities = numpy.exp( log_probs - log_sum )
+        
+        # M-step: update parameters
+        Nk = responsibilities.sum( axis=1 )
+        weights = Nk / n
+        means = numpy.sum( responsibilities * data, axis=1 ) / Nk
+        variances = numpy.sum( responsibilities * ( data - means[:, numpy.newaxis] )**2, axis=1 ) / Nk
+
+        # Log-likelihood
+        ll = numpy.sum( log_sum )
+        log_likelihoods.append( ll )
+        if len( log_likelihoods ) > 1 and abs( log_likelihoods[-1] - log_likelihoods[-2] ) < tol:
+            
+            break
+            
+        
+    
+    # BIC = -2 * LL + p * log(n)
+    # bayesian information criterion
+    p = n_components * 3 - 1  # means, variances, weights (sum to 1)
+    bic = -2 * log_likelihoods[-1] + p * numpy.log(n)
+    
+    return {
+        'weights': weights,
+        'means': means,
+        'variances': variances,
+        'log_likelihood': log_likelihoods[-1],
+        'bic': bic
+    }
+    
+
+def gaussian_pdf( x, mean, variance ):
+    
+    coef = 1 / math.sqrt( 2 * math.pi * variance )
+    
+    return coef * numpy.exp( -0.5 * ( ( x - mean ) ** 2) / variance )
+    
+
+def aberrant_bump_detected_giganto_brain( values ):
+    """
+    detect a second bump in our score list
+    """
+    
+    '''
+    Assuming we are generally talking about 1 curve here in a good situation, let's fit a gaussian to the main guy and then see if the latter section of our histogram still has any grass standing tall
+    
+    Ok this worked kiiiind of ok, but it catches a bunch of false positives of later bumps. some bumps are ok, some are not! ultimately not easy to differentiate
+    '''
+    
+    gmm_result = fit_gmm_1d( values, n_components = 1 )
+    mean = gmm_result[ 'means' ][0]
+    variance = gmm_result[ 'variances' ][0]
+    
+    ( values_histogram, bin_edges ) = numpy.histogram( values, bins = 50, range = ( 0, WD_MAX_REGIONAL_SCORE ), density = True )
+    
+    bin_centers = ( bin_edges[ : -1 ] + bin_edges[ 1 : ] ) / 2
+    
+    pdf = gaussian_pdf( bin_centers, mean, variance )
+    
+    bin_width = ( bin_edges[1] - bin_edges[0] )
+    
+    model_histogram = pdf * numpy.sum( values_histogram ) * bin_width
+    
+    residual_histogram = values_histogram - model_histogram
+    
+    # what's >0 was above what is expected by the model
+    
+    tail_start_position = round( ( mean + ( variance ** 0.5 ) * 2 ) / bin_width )
+    
+    tail = residual_histogram[ tail_start_position : ]
+    
+    return numpy.any( tail > 10 )
+    
+
+def aberrant_bump_detected( values ):
+    """
+    detect a second bump in our score list
+    """
+    
+    '''
+    ok here is what we want to detect:
+    
+    array([176.47058824,  58.82352941, 137.25490196, 215.68627451,
+       333.33333333, 294.11764706, 588.23529412, 549.01960784,
+       588.23529412, 607.84313725, 352.94117647, 333.33333333,
+       156.8627451 , 156.8627451 ,  58.82352941, 156.8627451 ,
+        58.82352941,  78.43137255,  58.82352941,  19.60784314,
+         0.        ,   0.        ,   0.        ,   0.        ,
+         0.        ,   0.        ,   0.        ,   0.        ,
+         0.        ,   0.        ,   0.        ,   0.        ,
+         0.        ,   0.        ,   0.        ,   0.        ,
+         0.        ,   0.        ,   0.        ,   0.        ,
+         0.        ,  19.60784314,   0.        ,   0.        ,
+         0.        ,   0.        ,   0.        ,   0.        ,
+         0.        ,   0.        ])
+    
+    basically, a nice big bump and then a small bump--that's our weird change
+    skew does not catch this reliably since the large bump is so large
+    
+    I tried some algorithms to detect bimodality and such, but really I think the simple solution is just to say 'if there are a bunch of zeroes and then data, that's an odd little bump mate'
+    EDIT: After thinking about this more, maybe we need to massage the data coming in more. since we now know that tiles are not equal when it comes to jpeg artifact differences
+        perhaps we should be thinking about getting higher quality scores before trying harder to hunt for odd bumps--some of our bumps are currently good! 
+    '''
+    
+    values_histogram = numpy.histogram( values, bins = 50, range = ( 0, WD_MAX_REGIONAL_SCORE ), density = True )[0]
+    
+    NUM_ZEROES_THRESHOLD = 6
+    
+    have_hit_main_bump = False
+    current_num_zeroes = 0
+    
+    for i in range( len( values_histogram ) ):
+        
+        value = values_histogram[ i ]
+        
+        if not have_hit_main_bump:
+            
+            if value > 0:
+                
+                have_hit_main_bump = True
+                
+            
+        else:
+            
+            if value == 0:
+                
+                current_num_zeroes += 1
+                
+            else:
+                
+                # ok, we hit the main bump, did some zeroes, and now hit new data!!
+                if current_num_zeroes >= NUM_ZEROES_THRESHOLD:
+                    
+                    return True
+                    
+                
+                current_num_zeroes = 0
+                
+            
+        
+    
+    return False
+    
+
 # I tried a bunch of stuff, and it seems like we want to look at multiple variables to catch our different situations
 # detecting jpeg artifacts is difficult! they are pretty noisy from certain perspectives, and differentiating that noise from other edits is not simple. however they are _uniform_
 # I tried with some correlation coefficient and chi squared stuff, but it wasn't smoothing out the noise nicely. I could fit the numbers to detect original from artist correction, but 70% vs artist correction was false positive
@@ -155,22 +352,51 @@ def skewness_numpy( values ):
 WD_MAX_REGIONAL_SCORE = 0.01
 WD_MAX_MEAN = 0.003
 WD_MAX_VARIANCE = 0.0000035
-WD_MAX_SKEW = 2.6
+WD_MAX_ABSOLUTE_SKEW_PULL = 50
+
+# and, additionally, after visual score histogram inspection...
+WD_VERY_GOOD_MAX_REGIONAL_SCORE = 0.004
+WD_VERY_GOOD_MAX_MEAN = 0.0015
+WD_VERY_GOOD_MAX_VARIANCE = 0.000001
+
+WD_PERFECT_MAX_REGIONAL_SCORE = 0.001
+WD_PERFECT_MAX_MEAN = 0.0001
+WD_PERFECT_MAX_VARIANCE = 0.000001
+
 
 # some future ideas:
-# if we discovered that >50% tiles were exact matches and the rest were pretty similar in colour or shape, we might have detected an alternate
+
+# set up a really nice test suite with lots of good example pairs and perform some sort of multi-factor analysis on these output weights
+    # then, instead of doing separate bools, have coefficients (or more complicated weights) that we multiply the inputs by to make a total weight and test against one threshold value
+    # this would be far more precise than bool gubbins, but we'd have to do research and do it right
+
+# we could adjust our skew detection for how skewed the original file is. jpeg artifacts are focused around borders
+    # if a tile has a lot of borders (messy hair) but the rest of the image is simple, we get a relatively high skew despite low mean and such
+    # i.e. in this case, jpeg artifacts are not equally distributed across the image
+    # so, perhaps a tile histogram could also have some edge/busy-ness detection as well
+        # either we reduce the score by the busy-ness (yeah probably this)
+        # or we bin the histograms by busy-ness and compare separately (probably convoluted and no better results than a busy-ness weight)
+
+# train an ML to do it lol
+
 # if we did this in HSL, we might be able to detect trivial recolours specifically
+
+VISUAL_DUPLICATES_RESULT_NOT = 0
+VISUAL_DUPLICATES_RESULT_PROBABLY = 1
+VISUAL_DUPLICATES_RESULT_VERY_PROBABLY = 2
+VISUAL_DUPLICATES_RESULT_DEFINITELY = 3
+VISUAL_DUPLICATES_RESULT_PERFECTLY = 4
 
 def FilesAreVisuallySimilarRegional( lab_tile_hist_1: LabTilesHistogram, lab_tile_hist_2: LabTilesHistogram ):
     
     if FilesHaveDifferentRatio( lab_tile_hist_1.resolution, lab_tile_hist_2.resolution ):
         
-        return ( False, 'not visual duplicates (different ratio)' )
+        return ( False, VISUAL_DUPLICATES_RESULT_NOT, 'not visual duplicates (different ratio)' )
         
     
     if lab_tile_hist_1.ResolutionIsTooLow() or lab_tile_hist_2.ResolutionIsTooLow():
         
-        return ( False, 'cannot determine visual duplicates (too low resolution)' )
+        return ( False, VISUAL_DUPLICATES_RESULT_NOT, 'cannot determine visual duplicates (too low resolution)' )
         
     
     scores = [ GetLabHistogramWassersteinDistanceScore( lab_hist_1, lab_hist_2 ) for ( lab_hist_1, lab_hist_2 ) in zip( lab_tile_hist_1.histograms, lab_tile_hist_2.histograms ) ]
@@ -180,70 +406,71 @@ def FilesAreVisuallySimilarRegional( lab_tile_hist_1: LabTilesHistogram, lab_til
     score_variance = float( numpy.var( scores ) )
     score_skew = skewness_numpy( scores )
     
+    # ok so skew alone is normalised and can thus be whack when we have a really tight, low variance distribution
+    # so, let's multiply it by the maximum value we saw, and that gives us a nicer thing that scales to relevance with a decent sized distribution
+    absolute_skew_pull = score_skew * max_regional_score * 1000
+    
     exceeds_regional_score = max_regional_score > WD_MAX_REGIONAL_SCORE
     exceeds_mean = mean_score > WD_MAX_MEAN
     exceeds_variance = score_variance > WD_MAX_VARIANCE
-    exceeds_skew = max_regional_score > 0.001 and score_skew > WD_MAX_SKEW # for very low differences, skew is whack and not reliable
+    exceeds_skew = absolute_skew_pull > WD_MAX_ABSOLUTE_SKEW_PULL
     
-    debug_score_statement = f'max {max_regional_score:.3f} ({not exceeds_regional_score}) / mean {mean_score:.6f} ({not exceeds_mean})\nvariance {score_variance:.6f} ({not exceeds_variance}) / skew {score_skew:.3f} ({not exceeds_skew})'
+    we_saw_an_aberrant_bump = aberrant_bump_detected( scores )
     
-    if exceeds_skew or exceeds_variance or exceeds_mean or exceeds_regional_score:
+    debug_score_statement = f'max {max_regional_score:.3f} ({not exceeds_regional_score}) / mean {mean_score:.6f} ({not exceeds_mean})\nvariance {score_variance:.7f} ({not exceeds_variance}) / skew {score_skew:.3f}/{absolute_skew_pull:.2f} ({not exceeds_skew})\naberrant bump: {not aberrant_bump_detected}'
+    
+    if exceeds_skew or exceeds_variance or exceeds_mean or exceeds_regional_score or we_saw_an_aberrant_bump:
         
         they_are_similar = False
+        result = VISUAL_DUPLICATES_RESULT_NOT
         
-        if exceeds_skew and score_skew > 6.0:
+        if exceeds_skew:
             
-            statement = 'not visual duplicates (alternate/watermark?)'
+            statement = 'not visual duplicates\n(alternate/watermark?)'
             
-        elif score_skew < 1.5 and score_variance < 0.0005:
+        elif not exceeds_variance:
             
-            statement = 'not visual duplicates (recolour?)'
-            
-        elif mean_score > 0.025:
-            
-            statement = 'not visual duplicates (alternates?)'
+            statement = 'probably not visual duplicates\n(alternate/severe re-encode?)'
             
         else:
             
-            if sum( ( 1 for x in ( exceeds_skew, exceeds_variance, exceeds_mean, exceeds_regional_score ) if x ) ) == 1:
-                
-                statement = 'probably not visual duplicates'
-                
-            else:
-                
-                statement = 'not visual duplicates'
-                
+            statement = 'probably not visual duplicates'
             
         
     else:
         
         they_are_similar = True
         
-        if max_regional_score < 0.001 and score_variance < 0.000001:
+        if max_regional_score < WD_PERFECT_MAX_REGIONAL_SCORE and mean_score < WD_PERFECT_MAX_MEAN and score_variance < WD_PERFECT_MAX_VARIANCE:
             
             statement = 'near-perfect visual duplicates'
+            result = VISUAL_DUPLICATES_RESULT_PERFECTLY
+            
+        elif max_regional_score < WD_VERY_GOOD_MAX_REGIONAL_SCORE and mean_score < WD_VERY_GOOD_MAX_MEAN and score_variance < WD_VERY_GOOD_MAX_VARIANCE:
+            
+            statement = 'definitely visual duplicates'
+            result = VISUAL_DUPLICATES_RESULT_DEFINITELY
             
         else:
             
-            statement = 'visual duplicates'
+            statement = 'very probably visual duplicates'
+            result = VISUAL_DUPLICATES_RESULT_VERY_PROBABLY
             
         
     
-    statement += f'\n{debug_score_statement}'
-    
-    return ( they_are_similar, statement )
+    return ( they_are_similar, result, statement )
     
 
 def FilesAreVisuallySimilarSimple( lab_hist_1: LabHistogram, lab_hist_2: LabHistogram ):
     
     if FilesHaveDifferentRatio( lab_hist_1.resolution, lab_hist_2.resolution ):
         
-        return ( False, 'not visual duplicates (different ratio)' )
+        return ( False, VISUAL_DUPLICATES_RESULT_NOT, 'not visual duplicates (different ratio)' )
         
     
     if lab_hist_1.ResolutionIsTooLow() or lab_hist_2.ResolutionIsTooLow():
         
-        return ( False, 'cannot determine visual duplicates (too low resolution)' )
+        return ( False, VISUAL_DUPLICATES_RESULT_NOT, 'cannot determine visual duplicates (too low resolution)' )
         
     
     # this is useful to rule out easy false positives, but as expected it suffers from lack of fine resolution
@@ -258,14 +485,16 @@ def FilesAreVisuallySimilarSimple( lab_hist_1: LabHistogram, lab_hist_2: LabHist
     
     if they_are_similar:
         
-        statement = f'probably visual duplicates\n{score:.3f}'
+        statement = f'probably visual duplicates'
+        result = VISUAL_DUPLICATES_RESULT_PROBABLY
         
     else:
         
-        statement = f'not visual duplicates\n{score:.3f}'
+        statement = f'not visual duplicates'
+        result = VISUAL_DUPLICATES_RESULT_NOT
         
     
-    return ( they_are_similar, statement )
+    return ( they_are_similar, result, statement )
     
 
 def FilesHaveDifferentRatio( resolution_1, resolution_2 ):
@@ -281,7 +510,7 @@ def FilesHaveDifferentRatio( resolution_1, resolution_2 ):
     return not ClientNumberTest.NumberTest( operator = ClientNumberTest.NUMBER_TEST_OPERATOR_APPROXIMATE_PERCENT, value = 1 ).Test( s_ratio, c_ratio )
     
 
-def GenerateImageLabHistogramsNumPy( numpy_image: numpy.array ) -> LabHistogram:
+def GenerateImageLabHistogramsNumPy( numpy_image: numpy.ndarray ) -> LabHistogram:
     
     resolution = ( numpy_image.shape[1], numpy_image.shape[0] )
     
@@ -304,7 +533,7 @@ def GenerateImageLabHistogramsNumPy( numpy_image: numpy.array ) -> LabHistogram:
     return LabHistogram( resolution, l_hist.astype( numpy.float16 ), a_hist.astype( numpy.float16 ), b_hist.astype( numpy.float16 ) )
     
 
-def GenerateImageLabTilesHistogramsNumPy( numpy_image: numpy.array ) -> LabTilesHistogram:
+def GenerateImageLabTilesHistogramsNumPy( numpy_image: numpy.ndarray ) -> LabTilesHistogram:
     
     resolution = ( numpy_image.shape[1], numpy_image.shape[0] )
     
@@ -343,7 +572,7 @@ def GenerateImageLabTilesHistogramsNumPy( numpy_image: numpy.array ) -> LabTiles
     return LabTilesHistogram( resolution, histograms )
     
 
-def GenerateImageRGBHistogramsNumPy( numpy_image: numpy.array ):
+def GenerateImageRGBHistogramsNumPy( numpy_image: numpy.ndarray ):
     
     scaled_numpy = cv2.resize( numpy_image, HISTOGRAM_IMAGE_SIZE, interpolation = cv2.INTER_AREA )
     
@@ -359,7 +588,7 @@ def GenerateImageRGBHistogramsNumPy( numpy_image: numpy.array ):
     return ( r_hist, g_hist, b_hist )
     
 
-def GetHistogramNormalisedWassersteinDistance( hist_1: numpy.array, hist_2: numpy.array ) -> float:
+def GetHistogramNormalisedWassersteinDistance( hist_1: numpy.ndarray, hist_2: numpy.ndarray ) -> float:
     
     # Earth Movement Distance
     # how much do we have to rejigger one hist to be the same as the other?

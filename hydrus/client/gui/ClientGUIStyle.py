@@ -1,4 +1,5 @@
 import os
+import typing
 
 from qtpy import QtWidgets as QW
 
@@ -75,13 +76,15 @@ def InitialiseDefaults():
     global ORIGINAL_STYLE_NAME
     global CURRENT_STYLE_NAME
     
+    app_instance = typing.cast( QW.QApplication, QW.QApplication.instance() )
+    
     if QtInit.WE_ARE_QT5:
         
-        ORIGINAL_STYLE_NAME  = QW.QApplication.instance().style().objectName()
+        ORIGINAL_STYLE_NAME  = app_instance.style().objectName()
         
     else:
         
-        ORIGINAL_STYLE_NAME  = QW.QApplication.instance().style().name()
+        ORIGINAL_STYLE_NAME  = app_instance.style().name()
         
     
     BETTER_SUPPORT_FOR_NOW = 'windowsvista'
@@ -98,7 +101,7 @@ def InitialiseDefaults():
     global ORIGINAL_STYLESHEET
     global CURRENT_STYLESHEET
     
-    ORIGINAL_STYLESHEET = QW.QApplication.instance().styleSheet()
+    ORIGINAL_STYLESHEET = app_instance.styleSheet()
     CURRENT_STYLESHEET = ORIGINAL_STYLESHEET
     
 
@@ -116,13 +119,15 @@ def ReloadStyleSheet():
 
 def SetStyleFromName( name: str ):
     
+    app_instance = typing.cast( QW.QApplication, QW.QApplication.instance() )
+    
     if QtInit.WE_ARE_QT5:
         
-        current_style_name  = QW.QApplication.instance().style().objectName()
+        current_style_name  = app_instance.style().objectName()
         
     else:
         
-        current_style_name  = QW.QApplication.instance().style().name()
+        current_style_name  = app_instance.style().name()
         
     
     if name.casefold() == current_style_name.casefold():
@@ -132,7 +137,7 @@ def SetStyleFromName( name: str ):
     
     try:
         
-        new_style = QW.QApplication.instance().setStyle( name )
+        new_style = app_instance.setStyle( name )
         
         global CURRENT_STYLE_NAME
         
@@ -168,7 +173,9 @@ def SetStyleSheet( stylesheet, name, prepend_hydrus = True ):
     
     if CURRENT_STYLESHEET != stylesheet_to_use:
         
-        QW.QApplication.instance().setStyleSheet( stylesheet_to_use )
+        app_instance = typing.cast( QW.QApplication, QW.QApplication.instance() )
+        
+        app_instance.setStyleSheet( stylesheet_to_use )
         
         CURRENT_STYLESHEET = stylesheet_to_use
         

@@ -160,7 +160,7 @@ CV_IMREAD_FLAGS_WEIRD = CV_IMREAD_FLAGS_PNG
 CV_JPEG_THUMBNAIL_ENCODE_PARAMS = [ cv2.IMWRITE_JPEG_QUALITY, 92 ]
 CV_PNG_THUMBNAIL_ENCODE_PARAMS = [ cv2.IMWRITE_PNG_COMPRESSION, 9 ]
 
-PIL_ONLY_MIMETYPES = { HC.ANIMATION_GIF, HC.IMAGE_ICON, HC.IMAGE_WEBP, HC.IMAGE_QOI, HC.IMAGE_BMP, HC.ANIMATION_WEBP, HC.IMAGE_JXL }.union( HC.PIL_HEIF_MIMES )
+PIL_ONLY_MIMETYPES = { HC.ANIMATION_GIF, HC.IMAGE_ICON, HC.IMAGE_WEBP, HC.IMAGE_QOI, HC.IMAGE_BMP, HC.ANIMATION_WEBP, HC.IMAGE_JXL, HC.IMAGE_AVIF }.union( HC.PIL_HEIF_MIMES )
 
 def MakeClipRectFit( image_resolution, clip_rect ):
     
@@ -185,7 +185,7 @@ def MakeClipRectFit( image_resolution, clip_rect ):
     
     return ( x, y, clip_width, clip_height )
     
-def ClipNumPyImage( numpy_image: numpy.array, clip_rect ):
+def ClipNumPyImage( numpy_image: numpy.ndarray, clip_rect ):
     
     if len( numpy_image.shape ) == 3:
         
@@ -210,7 +210,7 @@ def ClipPILImage( pil_image: PILImage.Image, clip_rect ):
 
 FORCE_PIL_ALWAYS = True
 
-def GenerateNumPyImage( path, mime, force_pil = False, human_file_description = None ) -> numpy.array:
+def GenerateNumPyImage( path, mime, force_pil = False, human_file_description = None ) -> numpy.ndarray:
     
     force_pil = force_pil or FORCE_PIL_ALWAYS
     
@@ -322,7 +322,7 @@ def GenerateNumPyImage( path, mime, force_pil = False, human_file_description = 
     
     return numpy_image
     
-def GenerateNumPyImageFromPILImage( pil_image: PILImage.Image, strip_useless_alpha = True ) -> numpy.array:
+def GenerateNumPyImageFromPILImage( pil_image: PILImage.Image, strip_useless_alpha = True ) -> numpy.ndarray:
     
     try:
         
@@ -384,7 +384,7 @@ def GeneratePILImage( path: typing.Union[ str, typing.BinaryIO ], dequantize = T
         
     
 
-def GeneratePILImageFromNumPyImage( numpy_image: numpy.array ) -> PILImage.Image:
+def GeneratePILImageFromNumPyImage( numpy_image: numpy.ndarray ) -> PILImage.Image:
     
     if len( numpy_image.shape ) == 2:
         
@@ -736,7 +736,7 @@ def IsDecompressionBomb( path, human_file_description = None ) -> bool:
     return False
     
 
-def ResizeNumPyImage( numpy_image: numpy.array, target_resolution, forced_interpolation = None ) -> numpy.array:
+def ResizeNumPyImage( numpy_image: numpy.ndarray, target_resolution, forced_interpolation = None ) -> numpy.ndarray:
     
     ( target_width, target_height ) = target_resolution
     ( image_width, image_height ) = GetResolutionNumPy( numpy_image )

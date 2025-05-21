@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   width="128"
+   height="128"
+   viewBox="0 0 128 128"
+   version="1.1"
+   id="svg8"
+   inkscape:export-filename="D:\Bethesda Game Modding\Mod Organizer 2\stylesheets\Paper\Dark\dots.png"
+   inkscape:export-xdpi="307.20001"
+   inkscape:export-ydpi="307.20001"
+   inkscape:version="0.92.1 r15371"
+   sodipodi:docname="profiles.svg">
+  <defs
+     id="defs2" />
+  <sodipodi:namedview
+     id="base"
+     pagecolor="#505050"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:pageopacity="0"
+     inkscape:pageshadow="2"
+     inkscape:zoom="3.7735292"
+     inkscape:cx="65.045731"
+     inkscape:cy="44.931547"
+     inkscape:document-units="px"
+     inkscape:current-layer="layer25"
+     showgrid="false"
+     units="px"
+     borderlayer="true"
+     inkscape:showpageshadow="false"
+     inkscape:snap-page="true"
+     inkscape:snap-bbox="true"
+     inkscape:bbox-nodes="true"
+     inkscape:snap-bbox-edge-midpoints="true"
+     inkscape:snap-bbox-midpoints="true"
+     showguides="true"
+     inkscape:guide-bbox="true"
+     inkscape:window-width="1920"
+     inkscape:window-height="1027"
+     inkscape:window-x="-8"
+     inkscape:window-y="-8"
+     inkscape:window-maximized="1"
+     inkscape:snap-center="true"
+     inkscape:snap-object-midpoints="true"
+     inkscape:measure-start="64,11.9981"
+     inkscape:measure-end="64,7.93514"
+     inkscape:snap-intersection-paths="true"
+     inkscape:object-paths="true"
+     inkscape:snap-smooth-nodes="true"
+     inkscape:snap-midpoints="true"
+     inkscape:snap-global="true"
+     inkscape:lockguides="true"
+     inkscape:snap-nodes="false">
+    <sodipodi:guide
+       position="64,64"
+       orientation="1,0"
+       id="guide4039"
+       inkscape:locked="true" />
+    <sodipodi:guide
+       position="64,64"
+       orientation="0,1"
+       id="guide3935"
+       inkscape:locked="true"
+       inkscape:label=""
+       inkscape:color="rgb(0,0,255)" />
+  </sodipodi:namedview>
+  <metadata
+     id="metadata5">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+        <dc:title />
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+  <g
+     inkscape:groupmode="layer"
+     id="layer25"
+     inkscape:label="Content"
+     transform="translate(0,108)">
+    <g
+       id="g3856"
+       style="fill:#d3d3d3;fill-opacity:1;stroke-width:0.81111115"
+       transform="matrix(1.2328767,0,0,1.2328767,-14.376763,-8.863014)">
+      <circle
+         r="21"
+         cy="-44"
+         cx="64"
+         id="path3874"
+         style="opacity:1;fill:#d3d3d3;fill-opacity:1;fill-rule:nonzero;stroke:none;stroke-width:3.24444389;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:120;stroke-opacity:1;paint-order:stroke fill markers" />
+      <path
+         sodipodi:nodetypes="ccsscc"
+         inkscape:connector-curvature="0"
+         id="path3858"
+         transform="translate(0,-108)"
+         d="M 63.421875,89.005859 C 48.016021,89.029098 33.691706,97.71624 25.455078,112.03125 29.673503,114.55644 34.640748,116 40,116 h 48 c 5.001681,0 9.660535,-1.26009 13.68945,-3.48047 C 93.502774,97.918077 79.022242,89.020453 63.421875,89.005859 Z"
+         style="opacity:1;fill:#d3d3d3;fill-opacity:1;fill-rule:nonzero;stroke:none;stroke-width:0.40555558;stroke-linecap:round;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:120;stroke-opacity:1;paint-order:normal" />
+    </g>
+  </g>
+</svg>

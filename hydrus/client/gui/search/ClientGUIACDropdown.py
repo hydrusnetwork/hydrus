@@ -1254,6 +1254,8 @@ class AutoCompleteDropdown( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
                 
                 if event.type() == QC.QEvent.Type.KeyPress and self._can_intercept_unusual_key_events:
                     
+                    event = typing.cast( QG.QKeyEvent, event )
+                    
                     # ok for a while this thing was a mis-mash of logical tests and basically sending anything not explicitly caught to the list
                     # this resulted in annoying miss-cases where ctrl+c et al were being passed to the list and so you couldn't copy text from the text input
                     # THUS we are moving to a strict whitelist. a handful of events will pass down to the list, everything else we jealously keep
@@ -1352,6 +1354,8 @@ class AutoCompleteDropdown( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
                         
                     
                 elif event.type() == QC.QEvent.Type.Wheel:
+                    
+                    event = typing.cast( QG.QWheelEvent, event )
                     
                     current_results_list = typing.cast( ClientGUIListBoxes.ListBoxTags, self._dropdown_notebook.currentWidget() )
                     

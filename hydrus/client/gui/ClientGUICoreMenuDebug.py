@@ -1,3 +1,5 @@
+import typing
+
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
 
@@ -55,6 +57,8 @@ def ShowMenuDialog( window: QW.QWidget, menu: QW.QMenu ):
                     job_parent.addTopLevelItem( twi )
                     
                 else:
+                    
+                    job_parent = typing.cast( QW.QTreeWidgetItem, job_parent )
                     
                     job_parent.addChild( twi )
                     

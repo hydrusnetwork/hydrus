@@ -503,7 +503,7 @@ def UpdateAppDisplayName():
     
     app_display_name = CG.client_controller.new_options.GetString( 'app_display_name' )
     
-    QW.QApplication.instance().setApplicationDisplayName( '{} {}'.format( app_display_name, HC.SOFTWARE_VERSION ) )
+    typing.cast( QW.QApplication, QW.QApplication.instance() ).setApplicationDisplayName( '{} {}'.format( app_display_name, HC.SOFTWARE_VERSION ) )
     
     for tlw in QW.QApplication.topLevelWidgets():
         

@@ -301,6 +301,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             'do_not_setgeometry_on_an_mpv' : False,
             'focus_media_thumb_on_viewer_close' : True,
             'skip_yesno_on_write_autocomplete_multiline_paste' : False,
+            'activate_main_gui_on_viewer_close' : False
         }
         
         #

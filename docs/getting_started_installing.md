@@ -55,22 +55,24 @@ I try to release a new version every Wednesday by 8pm EST and write an accompany
     
     !!! note "Qt compatibility"
         
-        If you run into trouble running newer versions of Qt6, some users have fixed it by installing one or more of these additional packages:
+        If `hydrus_client` fails to run, and from terminal it says something like this:
+        
+        `qt.qpa.plugin: From 6.5.0, xcb-cursor0 or libxcb-cursor0 is needed to load the Qt xcb platform plugin`
+        
+        Then Qt6 may need a couple additional packages:
         
         * `libicu-dev`
         * `libxcb-cursor-dev`
-        * `libgthread`
         
         With `apt` that will be:
         
         * `sudo apt-get install libicu-dev`
         * `sudo apt-get install libxcb-cursor-dev`
-        * `sudo apt-get install libgthread2.0-0`
         
         Or check your OS's package manager.
         
     
-    *   Get the .tag.gz. Extract it somewhere useful and create shortcuts to 'client' and 'server' as you like. The build is made on Ubuntu, so if you run something else, compatibility is hit and miss.
+    *   Get the .tag.gz. Extract it somewhere useful and create shortcuts to 'hydrus_client' and 'hydrus_server' as you like. The build is made on Ubuntu, so if you run something else, compatibility is hit and miss.
     *   If you have problems running the Ubuntu build, [running from source](running_from_source.md) is usually an improvement, and it is easy to set up these days.
     *   You might need to get 'libmpv1' or 'libmpv2' to get mpv working and playing video/audio. This is the mpv _library_, not the necessarily the player. Check _help->about_ to see if it is available--if not, see if you can get it like so:
         * `apt-get install libmpv1` or `apt-get install libmpv2`

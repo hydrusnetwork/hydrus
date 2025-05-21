@@ -229,6 +229,7 @@ def GetPayloadDescriptionAndBytes( payload_obj ):
     
     return ( payload_description, payload_bytes )
     
+
 def LoadFromQtImage( qt_image: QG.QImage ):
     
     numpy_image = ClientGUIFunctions.ConvertQtImageToNumPy( qt_image )
@@ -283,7 +284,7 @@ def LoadFromPNG( path ):
     return LoadFromNumPyImage( numpy_image )
     
 
-def LoadFromNumPyImage( numpy_image: numpy.array ):
+def LoadFromNumPyImage( numpy_image: numpy.ndarray ):
     
     try:
         
@@ -302,7 +303,7 @@ def LoadFromNumPyImage( numpy_image: numpy.array ):
         
         try:
             
-            complete_data = numpy_image.tostring()
+            complete_data = numpy_image.tobytes()
             
             top_height_header = complete_data[:2]
             

@@ -161,7 +161,7 @@ def GetAverageColourFromBlurhash( blurhash: str ):
     return ( r, g, b )
     
 
-def GetBlurhashFromNumPy( numpy_image: numpy.array ) -> str:
+def GetBlurhashFromNumPy( numpy_image: numpy.ndarray ) -> str:
     
     media_height = numpy_image.shape[0]
     media_width = numpy_image.shape[1]
@@ -199,7 +199,7 @@ def GetBlurhashFromNumPy( numpy_image: numpy.array ) -> str:
     return external_blurhash.blurhash_encode( numpy_image, components_x, components_y )
     
 
-def GetNumpyFromBlurhash( blurhash, width, height ) -> numpy.array:
+def GetNumpyFromBlurhash( blurhash, width, height ) -> numpy.ndarray:
     
     # this thing is super slow, they recommend even in the documentation to render small and scale up
     if width > 32 or height > 32:

@@ -1,4 +1,5 @@
 import os
+import typing
 
 from qtpy import QtCore as QC
 from qtpy import QtGui as QG
@@ -217,7 +218,7 @@ def DoFileExportDragDrop( drag_object: QG.QDrag, page_key, media, alt_down ):
 
 class FileDropTarget( QC.QObject ):
     
-    def __init__( self, parent, filenames_callable = None, url_callable = None, media_callable = None ):
+    def __init__( self, parent: QW.QWidget, filenames_callable = None, url_callable = None, media_callable = None ):
         
         super().__init__( parent )
         
@@ -238,6 +239,8 @@ class FileDropTarget( QC.QObject ):
         try:
             
             if event.type() == QC.QEvent.Type.Drop:
+                
+                event = typing.cast( QG.QDropEvent, event )
                 
                 if self.OnDrop( event.position().toPoint().x(), event.position().toPoint().y() ):
                     

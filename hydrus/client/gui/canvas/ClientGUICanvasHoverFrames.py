@@ -1,3 +1,5 @@
+import typing
+
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
 from qtpy import QtGui as QG
@@ -1826,6 +1828,8 @@ class NotePanel( QW.QWidget ):
             
             if event.type() == QC.QEvent.Type.MouseButtonPress:
                 
+                event = typing.cast( QG.QMouseEvent, event )
+                
                 if event.button() == QC.Qt.MouseButton.LeftButton:
                     
                     self.editNote.emit( self._name )
@@ -2217,7 +2221,7 @@ class CanvasHoverFrameRightDuplicates( CanvasHoverFrame ):
         
         QP.AddToLayout( self._comparison_statements_vbox, self._comparison_statement_score_summary, CC.FLAGS_EXPAND_PERPENDICULAR )
         
-        self._comparison_statement_names = [ 'filesize', 'resolution', 'ratio', 'mime', 'num_tags', 'time_imported', 'jpeg_quality', 'pixel_duplicates', 'has_transparency', 'exif_data', 'embedded_metadata', 'icc_profile', 'has_audio', 'duration', 'a_is_exact_match_b_advanced_test' ]
+        self._comparison_statement_names = [ 'filesize', 'resolution', 'ratio', 'mime', 'num_tags', 'time_imported', 'jpeg_quality', 'pixel_duplicates', 'has_transparency', 'exif_data', 'embedded_metadata', 'icc_profile', 'has_audio', 'duration', 'a_and_b_are_visual_duplicates' ]
         
         self._comparison_statements_sts = {}
         
@@ -2225,6 +2229,7 @@ class CanvasHoverFrameRightDuplicates( CanvasHoverFrame ):
             
             panel = QW.QWidget( self )
             
+            # don't set tooltip here, we do it later
             st = ClientGUICommon.BetterStaticText( panel, 'init' )
             
             st.setAlignment( QC.Qt.AlignmentFlag.AlignCenter )
@@ -2385,6 +2390,11 @@ class CanvasHoverFrameRightDuplicates( CanvasHoverFrame ):
                     
                 
             
+            # minimumsize is not immediately updated without this
+            self.layout().activate()
+            
+            self._SizeAndPosition()
+            
         
         def pre_work_callable():
             
@@ -2461,10 +2471,14 @@ class CanvasHoverFrameRightDuplicates( CanvasHoverFrame ):
                     
                     st.style().polish( st )
                     
-                    if name == 'a_is_exact_match_b_advanced_test':
+                    if name == 'a_and_b_are_visual_duplicates':
                         
-                        tt = 'This is a test comparison line from hydev for the duplicates auto-resolution system. It is supposed to detect exact duplicates that are only resizes or re-encodes. It will not consider a lighter/darker/recolour as a "visual duplicate". Is it making a correct prediction here? If not, hydev would like you to send the pair in so he can check it out.\n\nI mostly want to see false positives. It is fine if a particularly blurry/artifacty duplicate pair is not considered "visual duplicates", but if two actual alternates are considered "visual duplicates", I would like to see them! Thank you for testing.'
+                        tt = f'{statement}\n\nThis uses a custom visual inspection algorithm to try to differentiate resizes/re-encodes vs recolours/alternates. It is pretty good and you can generally trust it. On edge cases, it intentionally errs on the side of false negative.'
                         st.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
+                        
+                    else:
+                        
+                        st.setToolTip( ClientGUIFunctions.WrapToolTip( statement ) )
                         
                     
                 

@@ -643,7 +643,7 @@ class HydrusResource( Resource ):
                     
                     producer = NoRangeStaticProducer( request, fileObject )
                     
-                elif len( offset_and_block_size_pairs ) == 1:
+                else:
                     
                     ( range_start, range_end, offset, block_size ) = offset_and_block_size_pairs[0]
                     
@@ -702,7 +702,7 @@ class HydrusResource( Resource ):
                 
                 request.setHeader( 'Content-Length', str( content_length ) )
                 
-        
+            
         
         self._reportDataUsed( request, content_length )
         self._reportRequestUsed( request )
@@ -786,7 +786,20 @@ class HydrusResource( Resource ):
     def _errbackDisconnected( self, failure, request: HydrusServerRequest.HydrusRequest, request_deferred: defer.Deferred ):
         
         request_deferred.cancel()
-
+        
+        try:
+            
+            # this is a streaming file download etc.., we'll tell it to clean itself up
+            if request.producer is not None:
+                
+                request.producer.stopProducing()
+                
+            
+        except:
+            
+            pass
+            
+        
         request.disconnected = True
         
         for c in request.disconnect_callables:

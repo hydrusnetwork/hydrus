@@ -1567,13 +1567,23 @@ class MediaContainerDragClickReportingFilter( QC.QObject ):
         
         try:
             
-            if event.type() == QC.QEvent.Type.MouseButtonPress and event.button() == QC.Qt.MouseButton.LeftButton:
+            if event.type() == QC.QEvent.Type.MouseButtonPress:
                 
-                self._canvas.BeginDrag()
+                event = typing.cast( QG.QMouseEvent, event )
                 
-            elif event.type() == QC.QEvent.Type.MouseButtonRelease and event.button() == QC.Qt.MouseButton.LeftButton:
+                if event.button() == QC.Qt.MouseButton.LeftButton:
+                    
+                    self._canvas.BeginDrag()
+                    
                 
-                self._canvas.EndDrag()
+            elif event.type() == QC.QEvent.Type.MouseButtonRelease:
+                
+                event = typing.cast( QG.QMouseEvent, event )
+                
+                if event.button() == QC.Qt.MouseButton.LeftButton:
+                    
+                    self._canvas.EndDrag()
+                    
                 
             
         except Exception as e:
@@ -1833,6 +1843,8 @@ class CanvasPanel( Canvas ):
     
 
 class CanvasWithHovers( Canvas ):
+    
+    canvasWithHoversExiting = QC.Signal()
     
     def __init__( self, parent, location_context ):
         
@@ -2495,6 +2507,8 @@ class CanvasWithHovers( Canvas ):
     def CleanBeforeDestroy( self ):
         
         self.setCursor( QG.QCursor( QC.Qt.CursorShape.ArrowCursor ) )
+        
+        self.canvasWithHoversExiting.emit()
         
         super().CleanBeforeDestroy()
         
