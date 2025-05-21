@@ -111,9 +111,7 @@ class GalleryDLLogHandler( logging.Handler ):
 
                 msg = record.getMessage()
 
-                log_level = logging.getLevelName(record.level)
-
-                HydrusData.Print( f"[gallery-dl] [{log_level}] {msg}" )
+                HydrusData.Print( f"[gallery-dl] [{record.levelname}] {msg}" )
 
         except Exception:
 
