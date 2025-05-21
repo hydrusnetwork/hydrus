@@ -377,7 +377,7 @@ def _draw_icon_coloured_outlined( painter, rating_svg: str, x, y, width = _W, he
         feather = min( int( GetOutlinePx( width ) ), _MAX_FEATHER_PX )
         
         _painter_stamp_all_around( pf, hard_radius, outline )
-        pf.setOpacity( 0.5 )
+        #pf.setOpacity( 0.5 )
         _painter_stamp_all_around( pf, feather, outline )
         pf.drawPixmap( 0, 0, tinted )
         
