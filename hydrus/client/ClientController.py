@@ -1438,6 +1438,8 @@ class Controller( HydrusController.HydrusController ):
 
         #
 
+        self.SetGalleryDLGlobals()
+
         self.UpdateGalleryDLConfig()
         
     
@@ -2657,6 +2659,14 @@ class Controller( HydrusController.HydrusController ):
         with self._page_key_lock:
             
             self._closed_page_keys.difference_update( page_keys )
+
+
+
+    def SetGalleryDLGlobals( self ):
+
+        # We do not want gallery-dl asking for user input on TTY
+        # Setting it like this will cause gallery-dl to raise StopExtraction if input is requested
+        gallery_dl.output.TTY_STDIN = False
 
 
 
