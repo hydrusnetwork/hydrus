@@ -2249,7 +2249,7 @@ class CanvasWithHovers( Canvas ):
             ( VBOX_SPACING, VBOX_MARGIN ) = ( 2, 2 )
             
         
-        current_y = QFRAME_PADDING + VBOX_MARGIN
+        current_y = QFRAME_PADDING + VBOX_MARGIN + ClientGUIPainterShapes.PAD_PX / 2
         
         # ratings
         
@@ -2294,7 +2294,7 @@ class CanvasWithHovers( Canvas ):
             
             numerical_width = ClientGUIRatings.GetNumericalWidth( service_key, RATING_ICON_SET_SIZE, STAR_PAD.width() )
             
-            ClientGUIRatings.DrawNumerical( painter, my_width - numerical_width - ( QFRAME_PADDING + VBOX_MARGIN ), current_y, service_key, rating_state, rating, QC.QSize( STAR_DX, STAR_DY ), STAR_PAD.width() )
+            ClientGUIRatings.DrawNumerical( painter, my_width - numerical_width - ( QFRAME_PADDING + VBOX_MARGIN ) + STAR_PAD.width() / 2, current_y, service_key, rating_state, rating, QC.QSize( STAR_DX, STAR_DY ), STAR_PAD.width() )
             
             current_y += STAR_DY + STAR_PAD.height() + VBOX_SPACING
             
@@ -2306,7 +2306,7 @@ class CanvasWithHovers( Canvas ):
         
         control_width = RATING_ICON_SET_SIZE * 2
         
-        incdec_rating_current_x = my_width - control_width - ( QFRAME_PADDING + VBOX_MARGIN )
+        incdec_rating_current_x = my_width - ( control_width + STAR_PAD.width() / 2 ) - ( QFRAME_PADDING + VBOX_MARGIN )
         
         for incdec_service in incdec_services:
             
@@ -2316,12 +2316,12 @@ class CanvasWithHovers( Canvas ):
             
             ClientGUIRatings.DrawIncDec( painter, incdec_rating_current_x, current_y, service_key, rating_state, rating, QC.QSize( RATING_ICON_SET_SIZE * 2, RATING_ICON_SET_SIZE ) )
             
-            incdec_rating_current_x -= control_width
+            incdec_rating_current_x -= control_width + STAR_PAD.width()
             
         
         if len( incdec_services ) > 0:
             
-            current_y += STAR_DY + VBOX_SPACING
+            current_y += STAR_DY + STAR_PAD.height() / 2 + VBOX_SPACING
             
         
         # icons

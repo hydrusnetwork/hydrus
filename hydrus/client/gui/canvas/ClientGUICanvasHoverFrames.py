@@ -67,7 +67,7 @@ class RatingIncDecCanvas( ClientGUIRatings.RatingIncDec ):
         
         if self._current_media is not None:
             
-            ClientGUIRatings.DrawIncDec( painter, 0, 0, self._service_key, self._rating_state, self._rating, self._iconsize )
+            ClientGUIRatings.DrawIncDec( painter, ClientGUIPainterShapes.PAD_PX / 2, ClientGUIPainterShapes.PAD_PX / 2, self._service_key, self._rating_state, self._rating, self._iconsize )
             
         
     
@@ -141,6 +141,12 @@ class RatingIncDecCanvas( ClientGUIRatings.RatingIncDec ):
         self._UpdateTooltip()    
         
     
+    def sizeHint( self ):
+        
+        pad = ClientGUIPainterShapes.PAD_PX
+        
+        return QC.QSize( self._iconsize.width() + pad, self._iconsize.height() + pad )
+    
 
 class RatingLikeCanvas( ClientGUIRatings.RatingLike ):
     
@@ -164,7 +170,7 @@ class RatingLikeCanvas( ClientGUIRatings.RatingLike ):
         
         if self._current_media is not None:
             
-            ClientGUIRatings.DrawLike( painter, ClientGUIPainterShapes.PAD_PX / 2, 0, self._service_key, self._rating_state, self._iconsize )
+            ClientGUIRatings.DrawLike( painter, ClientGUIPainterShapes.PAD_PX / 2, ClientGUIPainterShapes.PAD_PX / 2, self._service_key, self._rating_state, self._iconsize )
             
         
     
@@ -299,7 +305,7 @@ class RatingNumericalCanvas( ClientGUIRatings.RatingNumerical ):
         
         if self._current_media is not None:
             
-            ClientGUIRatings.DrawNumerical( painter, 0, 0, self._service_key, self._rating_state, self._rating, self._iconsize )
+            ClientGUIRatings.DrawNumerical( painter, ClientGUIPainterShapes.PAD_PX / 2, ClientGUIPainterShapes.PAD_PX / 2, self._service_key, self._rating_state, self._rating, self._iconsize )
             
         
     
@@ -1554,7 +1560,7 @@ class CanvasHoverFrameTopRight( CanvasHoverFrame ):
         
         # now incdec
         
-        incdec_hbox = QP.HBoxLayout( spacing = 0 )
+        incdec_hbox = QP.HBoxLayout( spacing = 0, margin = ClientGUIPainterShapes.PAD_PX )
         
         incdec_services = CG.client_controller.services_manager.GetServices( ( HC.LOCAL_RATING_INCDEC, ) )
         
