@@ -147,8 +147,10 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             #
             
             self._advanced_mode_box = ClientGUICommon.StaticBox( self, 'advanced mode stuff' )
+            self._advanced_mode_box.setToolTip( ClientGUIFunctions.WrapToolTip( 'Enabled after you tick the global advanced mode box. Surely some future advanced options will find their way here...' ) )
             
             self._shortcuts_button = ClientGUICommon.BetterButton( self._advanced_mode_box, 'open \'file->shortcuts...\'', self._PopupManageShortcuts )
+            self._shortcuts_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'If you accidentally opened the \'options\' window instead of \'shortcuts\', this button is for you.' ) )
             
             advanced_gridbox = QP.GridLayout( cols = 2 )
             
@@ -2208,14 +2210,16 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._import_page_progress_display = QW.QCheckBox( self._page_names_panel )
             
             self._rename_page_of_pages_on_pick_new = QW.QCheckBox( self._page_names_panel )
+            self._rename_page_of_pages_on_pick_new.setToolTip( ClientGUIFunctions.WrapToolTip( 'When you create a new \'page of pages\' from the new page picker, should it automatically prompt you to give it a name other than \'pages\'?' ) )
             self._rename_page_of_pages_on_send = QW.QCheckBox( self._page_names_panel )
+            self._rename_page_of_pages_on_send.setToolTip( ClientGUIFunctions.WrapToolTip( 'When you \'send this page down\' or \'send pages to the right\' to a new page of pages, should it also automatically prompt you to rename it?' ) )
             
             #
             
             self._controls_panel = ClientGUICommon.StaticBox( self, 'controls and preview' )
             
             self._set_search_focus_on_page_change = QW.QCheckBox( self._controls_panel )
-            self._set_search_focus_on_page_change.setToolTip( 'Set it so whenever you switch between pages, the keyboard focus immediately moves to the tag autocomplete or search text input.' )
+            self._set_search_focus_on_page_change.setToolTip( ClientGUIFunctions.WrapToolTip( 'Set it so whenever you switch between pages, the keyboard focus immediately moves to the tag autocomplete or search text input.' ) )
             
             self._hide_preview = QW.QCheckBox( self._controls_panel )
             
@@ -2325,8 +2329,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows.append( ( 'When there are too many tabs to fit, \'...\' elide their names so they fit: ', self._elide_page_tab_names ) )
             rows.append( ( 'Show page file count after its name: ', self._page_file_count_display ) )
             rows.append( ( 'Show import page x/y progress after its name: ', self._import_page_progress_display ) )
-            rows.append( ( 'Automatically prompt to rename a \'page of pages\' when one is created: ', self._rename_page_of_pages_on_pick_new ) )
-            rows.append( ( '    Also automatically prompt when sending some pages to one: ', self._rename_page_of_pages_on_send ) )
+            rows.append( ( 'Automatically prompt to rename new \'page of pages\' after creation: ', self._rename_page_of_pages_on_pick_new ) )
+            rows.append( ( '  Also automatically prompt when sending some pages to one: ', self._rename_page_of_pages_on_send ) )
             
             page_names_gridbox = ClientGUICommon.WrapInGrid( self._page_names_panel, rows )
             
