@@ -2207,6 +2207,9 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._import_page_progress_display = QW.QCheckBox( self._page_names_panel )
             
+            self._rename_page_of_pages_on_pick_new = QW.QCheckBox( self._page_names_panel )
+            self._rename_page_of_pages_on_send = QW.QCheckBox( self._page_names_panel )
+            
             #
             
             self._controls_panel = ClientGUICommon.StaticBox( self, 'controls and preview' )
@@ -2262,6 +2265,9 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._page_file_count_display.SetValue( self._new_options.GetInteger( 'page_file_count_display' ) )
             
             self._import_page_progress_display.setChecked( self._new_options.GetBoolean( 'import_page_progress_display' ) )
+            
+            self._rename_page_of_pages_on_pick_new.setChecked( self._new_options.GetBoolean( 'rename_page_of_pages_on_pick_new' ) )
+            self._rename_page_of_pages_on_send.setChecked( self._new_options.GetBoolean( 'rename_page_of_pages_on_send' ) )
             
             self._page_drop_chase_normally.setChecked( self._new_options.GetBoolean( 'page_drop_chase_normally' ) )
             self._page_drop_chase_with_shift.setChecked( self._new_options.GetBoolean( 'page_drop_chase_with_shift' ) )
@@ -2319,6 +2325,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows.append( ( 'When there are too many tabs to fit, \'...\' elide their names so they fit: ', self._elide_page_tab_names ) )
             rows.append( ( 'Show page file count after its name: ', self._page_file_count_display ) )
             rows.append( ( 'Show import page x/y progress after its name: ', self._import_page_progress_display ) )
+            rows.append( ( 'Automatically prompt to rename a \'page of pages\' when one is created: ', self._rename_page_of_pages_on_pick_new ) )
+            rows.append( ( '    Also automatically prompt when sending some pages to one: ', self._rename_page_of_pages_on_send ) )
             
             page_names_gridbox = ClientGUICommon.WrapInGrid( self._page_names_panel, rows )
             
@@ -2392,6 +2400,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._new_options.SetInteger( 'page_file_count_display', self._page_file_count_display.GetValue() )
             self._new_options.SetBoolean( 'import_page_progress_display', self._import_page_progress_display.isChecked() )
+            self._new_options.SetBoolean( 'rename_page_of_pages_on_pick_new', self._rename_page_of_pages_on_pick_new.isChecked() )
+            self._new_options.SetBoolean( 'rename_page_of_pages_on_send', self._rename_page_of_pages_on_send.isChecked() )
             
             self._new_options.SetBoolean( 'disable_page_tab_dnd', self._disable_page_tab_dnd.isChecked() )
             self._new_options.SetBoolean( 'force_hide_page_signal_on_new_page', self._force_hide_page_signal_on_new_page.isChecked() )

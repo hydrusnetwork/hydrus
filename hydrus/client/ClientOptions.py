@@ -167,6 +167,8 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             'anchor_and_hide_canvas_drags' : HC.PLATFORM_WINDOWS,
             'touchscreen_canvas_drags_unanchor' : False,
             'import_page_progress_display' : True,
+            'rename_page_of_pages_on_pick_new' : False,
+            'rename_page_of_pages_on_send' : False,
             'process_subs_in_random_order' : True,
             'ac_select_first_with_count' : False,
             'saving_sash_positions_on_exit' : True,
