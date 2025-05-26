@@ -144,11 +144,43 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             gridbox = ClientGUICommon.WrapInGrid( self, rows )
             
+            #
+            
+            self._advanced_mode_box = ClientGUICommon.StaticBox( self, 'advanced mode stuff' )
+            
+            self._shortcuts_button = ClientGUICommon.BetterButton( self._advanced_mode_box, 'open \'file->shortcuts...\'', self._PopupManageShortcuts )
+            
+            advanced_gridbox = QP.GridLayout( cols = 2 )
+            
+            shortcut_bar = ClientGUICommon.BetterStaticText( self._advanced_mode_box, 'Shortcuts: ' )
+            QP.AddToLayout( advanced_gridbox, shortcut_bar, CC.FLAGS_ON_LEFT )
+            QP.AddToLayout( advanced_gridbox, self._shortcuts_button, CC.FLAGS_CENTER_PERPENDICULAR )
+            
+            self._advanced_mode_box.Add( advanced_gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            
+            #
+            
             QP.AddToLayout( vbox, gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            QP.AddToLayout( vbox, self._advanced_mode_box, CC.FLAGS_EXPAND_BOTH_WAYS )
             vbox.addStretch( 0 )
             
             self.setLayout( vbox )
             
+            self._advanced_mode.clicked.connect( self._UpdateOverride )
+            self._UpdateOverride()
+            
+        
+        def _PopupManageShortcuts( self ):
+        
+            from hydrus.client.gui import ClientGUIShortcutControls
+            
+            panel = ClientGUIShortcutControls.ManageShortcuts( self )
+            
+        
+        def _UpdateOverride( self ):
+            
+            self._advanced_mode_box.setEnabled( self._advanced_mode.isChecked() )
+        
         
         def UpdateOptions( self ):
             
