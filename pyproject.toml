@@ -29,7 +29,7 @@ dependencies = [
     "requests==2.32.3",
     "send2trash>=1.5.0",
     "service-identity>=18.1.0",
-    "setuptools==70.3.0",
+    "setuptools==78.1.1",
     "show-in-file-manager>=1.1.5",
     "twisted[http2,tls]>=20.3.0",
     # requirements_macos.txt
