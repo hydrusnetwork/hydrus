@@ -3834,6 +3834,7 @@ class DB( HydrusDB.HydrusDB ):
         
         self._read_commands_to_methods.update(
             {
+                'all_potential_duplicate_pairs_and_distances' : self.modules_files_duplicates.GetAllPotentialDuplicatePairsAndDistances,
                 'autocomplete_predicates' : self.modules_tag_search.GetAutocompletePredicates,
                 'client_files_subfolders' : self.modules_files_physical_storage.GetClientFilesSubfolders,
                 'deferred_delete_data' : self.modules_db_maintenance.GetDeferredDeleteTableData,
@@ -3861,7 +3862,7 @@ class DB( HydrusDB.HydrusDB ):
                 'missing_archive_timestamps_legacy_test' : self.modules_files_inbox.WeHaveMissingLegacyArchiveTimestamps,
                 'missing_repository_update_hashes' : self.modules_repositories.GetRepositoryUpdateHashesIDoNotHave,
                 'num_deferred_file_deletes' : self.modules_files_storage.GetDeferredPhysicalDeleteCounts,
-                'potential_duplicate_pairs' : self.modules_files_duplicates_file_query.GetPotentialDuplicatePairs,
+                'potential_duplicate_pairs_fragmentary' : self.modules_files_duplicates_file_query.GetPotentialDuplicatePairsForAutoResolutionMediaResults,
                 'recent_tags' : self.modules_recent_tags.GetRecentTags,
                 'repository_progress' : self.modules_repositories.GetRepositoryProgress,
                 'repository_update_hashes_to_process' : self.modules_repositories.GetRepositoryUpdateHashesICanProcess,
@@ -9179,6 +9180,46 @@ class DB( HydrusDB.HydrusDB ):
                     
                 
                 self.modules_serialisable.SetJSONDump( main_gui_shortcuts_set )
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to update some shortcuts failed! Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
+                
+            
+        
+        if version == 623:
+            
+            try:
+                
+                from hydrus.client.gui import ClientGUIShortcuts
+                from hydrus.client import ClientApplicationCommand as CAC
+                
+                media_shortcuts_set: ClientGUIShortcuts.ShortcutSet = self.modules_serialisable.GetJSONDumpNamed( HydrusSerialisable.SERIALISABLE_TYPE_SHORTCUT_SET, 'media' )
+                
+                jobs = [
+                    (
+                        ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_KEYBOARD_CHARACTER, ord( 'C' ), ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [ ClientGUIShortcuts.SHORTCUT_MODIFIER_CTRL ] ),
+                        CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_COPY_FILES ),
+                        CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_COPY_FILES, simple_data = CAC.FILE_COMMAND_TARGET_SELECTED_FILES ) 
+                    )
+                ]
+                
+                for ( shortcut, bad_command, good_command ) in jobs:
+                    
+                    if media_shortcuts_set.HasCommand( shortcut ):
+                        
+                        if media_shortcuts_set.GetCommand( shortcut ) == bad_command:
+                            
+                            media_shortcuts_set.SetCommand( shortcut, good_command )
+                            
+                        
+                    
+                
+                self.modules_serialisable.SetJSONDump( media_shortcuts_set )
                 
             except Exception as e:
                 

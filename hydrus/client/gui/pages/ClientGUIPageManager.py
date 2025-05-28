@@ -163,9 +163,7 @@ def CreatePageManagerPetitions( petition_service_key ):
     return page_manager
     
 
-def CreatePageManagerQuery( page_name, file_search_context: ClientSearchFileSearchContext.FileSearchContext ):
-    
-    location_context = file_search_context.GetLocationContext()
+def CreatePageManagerQuery( page_name, file_search_context: ClientSearchFileSearchContext.FileSearchContext, start_system_hash_locked = False ):
     
     page_manager = CreatePageManager( page_name, ClientGUIPagesCore.PAGE_TYPE_QUERY )
     
@@ -173,6 +171,9 @@ def CreatePageManagerQuery( page_name, file_search_context: ClientSearchFileSear
     
     page_manager.SetVariable( 'file_search_context', file_search_context )
     page_manager.SetVariable( 'synchronised', synchronised )
+    page_manager.SetVariable( 'system_hash_locked', start_system_hash_locked )
+    page_manager.SetVariable( 'system_hash_locked_syncs_new', True )
+    page_manager.SetVariable( 'system_hash_locked_syncs_removes', True ) # maybe this is an option in future
     
     return page_manager
     
@@ -181,7 +182,7 @@ class PageManager( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_MANAGEMENT_CONTROLLER
     SERIALISABLE_NAME = 'Client Page Management Controller'
-    SERIALISABLE_VERSION = 14
+    SERIALISABLE_VERSION = 15
     
     def __init__( self, page_name = 'page' ):
         
@@ -202,9 +203,6 @@ class PageManager( HydrusSerialisable.SerialisableBase ):
         
     
     def _GetSerialisableInfo( self ):
-        
-        # don't save these
-        TRANSITORY_KEYS = { 'page' }
         
         serialisable_variables = self._variables.GetSerialisableTuple()
         
@@ -598,6 +596,26 @@ class PageManager( HydrusSerialisable.SerialisableBase ):
             new_serialisable_info = ( page_name, page_type, serialisable_variables )
             
             return ( 14, new_serialisable_info )
+            
+        
+        if version == 14:
+            
+            ( page_name, page_type, serialisable_variables ) = old_serialisable_info
+            
+            if page_type == ClientGUIPagesCore.PAGE_TYPE_QUERY:
+                
+                variables: HydrusSerialisable.SerialisableDictionary = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_variables )
+                
+                variables[ 'system_hash_locked' ] = False
+                variables[ 'system_hash_locked_syncs_new' ] = True
+                variables[ 'system_hash_locked_syncs_removes' ] = True
+                
+                serialisable_variables = variables.GetSerialisableTuple()
+                
+            
+            new_serialisable_info = ( page_name, page_type, serialisable_variables )
+            
+            return ( 15, new_serialisable_info )
             
         
     

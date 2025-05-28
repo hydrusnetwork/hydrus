@@ -94,9 +94,31 @@ class ClientDBFilesDuplicatesAutoResolutionSearch( ClientDBModule.ClientDBModule
             return self.modules_files_duplicates_auto_resolution_storage.GetMatchingUntestedPair( rule )
             
         
+        current_num_pending_pairs = rule.GetCountsCacheDuplicate()[ ClientDuplicatesAutoResolution.DUPLICATE_STATUS_MATCHES_SEARCH_PASSED_TEST_READY_TO_ACTION ]
+        
+        def pending_pairs_full_up():
+            
+            if rule.GetOperationMode() == ClientDuplicatesAutoResolution.DUPLICATES_AUTO_RESOLUTION_RULE_OPERATION_MODE_WORK_BUT_NO_ACTION:
+                
+                max_pending_pairs = rule.GetMaxPendingPairs()
+                
+                if max_pending_pairs is not None and current_num_pending_pairs >= max_pending_pairs:
+                    
+                    return True
+                    
+                
+            
+            return False
+            
+        
         pair_to_work = get_row()
         
         while pair_to_work is not None:
+            
+            if pending_pairs_full_up():
+                
+                return False
+                
             
             ( smaller_media_id, larger_media_id ) = pair_to_work
             
@@ -144,6 +166,8 @@ class ClientDBFilesDuplicatesAutoResolutionSearch( ClientDBModule.ClientDBModule
             operation_mode = rule.GetOperationMode()
             
             if operation_mode == ClientDuplicatesAutoResolution.DUPLICATES_AUTO_RESOLUTION_RULE_OPERATION_MODE_WORK_BUT_NO_ACTION:
+                
+                current_num_pending_pairs += 1
                 
                 self.modules_files_duplicates_auto_resolution_storage.SetPairToPendingAction( rule, smaller_media_id, larger_media_id, hash_id_a, hash_id_b )
                 

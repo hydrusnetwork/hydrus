@@ -15,7 +15,17 @@ class PairComparator( HydrusSerialisable.SerialisableBase ):
         raise NotImplementedError()
         
     
+    def IsFast( self ) -> bool:
+        
+        raise NotImplementedError()
+        
+    
     def GetSummary( self ) -> str:
+        
+        raise NotImplementedError()
+        
+    
+    def OrderDoesNotMatter( self ) -> bool:
         
         raise NotImplementedError()
         
@@ -102,6 +112,16 @@ class PairComparatorOneFile( PairComparator ):
             
             return 'unknown comparator rule!'
             
+        
+    
+    def IsFast( self ) -> bool:
+        
+        return True
+        
+    
+    def OrderDoesNotMatter( self ) -> bool:
+        
+        return self._looking_at == LOOKING_AT_EITHER
         
     
     def SetLookingAt( self, looking_at: int ):
@@ -218,6 +238,16 @@ class PairComparatorRelativeFileInfo( PairComparator ):
         return f'A has {pred_string} {number_test_string}'
         
     
+    def IsFast( self ) -> bool:
+        
+        return True
+        
+    
+    def OrderDoesNotMatter( self ) -> bool:
+        
+        return self._number_test.operator in ( ClientNumberTest.NUMBER_TEST_OPERATOR_EQUAL, ClientNumberTest.NUMBER_TEST_OPERATOR_NOT_EQUAL ) and self._multiplier == 1.0 and self._delta == 0
+        
+    
     def SetMultiplier( self, multiplier: float ):
         
         self._multiplier = multiplier
@@ -299,6 +329,16 @@ class PairComparatorRelativeHardcoded( PairComparator ):
     def GetSummary( self ):
         
         return hardcoded_comparator_type_str_lookup[ self._hardcoded_type ]
+        
+    
+    def IsFast( self ) -> bool:
+        
+        return True
+        
+    
+    def OrderDoesNotMatter( self ):
+        
+        return True
         
     
     def Test( self, media_result_a: ClientMediaResult.MediaResult, media_result_b: ClientMediaResult.MediaResult ) -> bool:
@@ -396,18 +436,78 @@ class PairSelector( HydrusSerialisable.SerialisableBase ):
             return ( media_result_1, media_result_2 )
             
         
-        if False not in ( comparator.Test( media_result_1, media_result_2 ) for comparator in self._comparators ):
+        # ok we are splaying the logic out here to optimise
+        
+        fast_comparators = [ comparator for comparator in self._comparators if comparator.IsFast() ]
+        slow_comparators = [ comparator for comparator in self._comparators if not comparator.IsFast() ]
+        
+        fast_comparators_where_order_may_matter = [ comparator for comparator in fast_comparators if not comparator.OrderDoesNotMatter() ]
+        fast_comparators_where_order_matters_not = [ comparator for comparator in fast_comparators if comparator.OrderDoesNotMatter() ]
+        
+        slow_comparators_where_order_may_matter = [ comparator for comparator in slow_comparators if not comparator.OrderDoesNotMatter() ]
+        slow_comparators_where_order_matters_not = [ comparator for comparator in slow_comparators if comparator.OrderDoesNotMatter() ]
+        
+        one_two_ok = True
+        two_one_ok = test_both_ways_around
+        
+        if False in ( comparator.Test( media_result_1, media_result_2 ) for comparator in fast_comparators_where_order_matters_not ):
+            
+            one_two_ok = False
+            two_one_ok = False
+            
+        
+        if one_two_ok:
+            
+            if False in ( comparator.Test( media_result_1, media_result_2 ) for comparator in fast_comparators_where_order_may_matter ):
+                
+                one_two_ok = False
+                
+            
+        
+        if two_one_ok:
+            
+            if False in ( comparator.Test( media_result_2, media_result_1 ) for comparator in fast_comparators_where_order_may_matter ):
+                
+                two_one_ok = False
+                
+            
+        
+        if one_two_ok or two_one_ok:
+            
+            if False in ( comparator.Test( media_result_1, media_result_2 ) for comparator in slow_comparators_where_order_matters_not ):
+                
+                one_two_ok = False
+                two_one_ok = False
+                
+            
+        
+        if one_two_ok:
+            
+            if False in ( comparator.Test( media_result_1, media_result_2 ) for comparator in slow_comparators_where_order_may_matter ):
+                
+                one_two_ok = False
+                
+            
+        
+        if one_two_ok:
             
             return ( media_result_1, media_result_2 )
             
-        elif test_both_ways_around and False not in ( comparator.Test( media_result_2, media_result_1 ) for comparator in self._comparators ):
+        
+        if two_one_ok:
+            
+            if False in ( comparator.Test( media_result_2, media_result_1 ) for comparator in slow_comparators_where_order_may_matter ):
+                
+                two_one_ok = False
+                
+            
+        
+        if two_one_ok:
             
             return ( media_result_2, media_result_1 )
             
-        else:
-            
-            return None
-            
+        
+        return None
         
     
     def GetSummary( self ) -> str:
@@ -417,9 +517,24 @@ class PairSelector( HydrusSerialisable.SerialisableBase ):
         return ', '.join( comparator_strings )
         
     
-    def PairMatchesBothWaysAround( self, media_result_1: ClientMediaResult.MediaResult, media_result_2: ClientMediaResult.MediaResult ) -> bool:
+    def MatchingPairMatchesBothWaysAround( self, media_result_1: ClientMediaResult.MediaResult, media_result_2: ClientMediaResult.MediaResult ) -> bool:
+        """This presumes the pair DO match as 1,2."""
         
-        return self.GetMatchingAB( media_result_1, media_result_2, test_both_ways_around = False ) is not None and self.GetMatchingAB( media_result_2, media_result_1, test_both_ways_around = False ) is not None
+        fast_comparators_where_order_may_matter = [ comparator for comparator in self._comparators if comparator.IsFast() and not comparator.OrderDoesNotMatter() ]
+        
+        slow_comparators_where_order_may_matter = [ comparator for comparator in self._comparators if not comparator.IsFast() and not comparator.OrderDoesNotMatter() ]
+        
+        if False in ( comparator.Test( media_result_2, media_result_1 ) for comparator in fast_comparators_where_order_may_matter ):
+            
+            return False
+            
+        
+        if False in ( comparator.Test( media_result_2, media_result_1 ) for comparator in slow_comparators_where_order_may_matter ):
+            
+            return False
+            
+        
+        return True
         
     
     def SetComparators( self, comparators: typing.Collection[ PairComparator ] ):

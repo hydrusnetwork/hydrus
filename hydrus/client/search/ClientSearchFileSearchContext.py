@@ -738,9 +738,15 @@ class FileSearchContext( HydrusSerialisable.SerialisableBase ):
         
     
     def GetNamespacesToExclude( self ): return self._namespaces_to_exclude
+    
     def GetNamespacesToInclude( self ): return self._namespaces_to_include
+    
     def GetORPredicates( self ): return self._or_predicates
-    def GetPredicates( self ): return self._predicates
+    
+    def GetPredicates( self ) -> typing.List[ ClientSearchPredicate.Predicate ]:
+        
+        return self._predicates
+        
     
     def GetSummary( self ):
         

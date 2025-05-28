@@ -10,7 +10,7 @@ class TestImageHandling( unittest.TestCase ):
     
     def test_perceptual_hash( self ):
         
-        perceptual_hashes = ClientImagePerceptualHashes.GenerateShapePerceptualHashes( os.path.join( HC.STATIC_DIR, 'hydrus.png' ), HC.IMAGE_PNG )
+        perceptual_hashes = ClientImagePerceptualHashes.GenerateUsefulShapePerceptualHashes( os.path.join( HC.STATIC_DIR, 'hydrus.png' ), HC.IMAGE_PNG )
         
         self.assertEqual( perceptual_hashes, set( [ b'\xb4M\xc7\xb2M\xcb8\x1c' ] ) )
         

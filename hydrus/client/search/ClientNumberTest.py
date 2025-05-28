@@ -10,6 +10,8 @@ NUMBER_TEST_OPERATOR_EQUAL = 2
 NUMBER_TEST_OPERATOR_APPROXIMATE_PERCENT = 3
 NUMBER_TEST_OPERATOR_NOT_EQUAL = 4
 NUMBER_TEST_OPERATOR_APPROXIMATE_ABSOLUTE = 5
+NUMBER_TEST_OPERATOR_LESS_THAN_OR_EQUAL_TO = 6
+NUMBER_TEST_OPERATOR_GREATER_THAN_OR_EQUAL_TO = 7
 
 number_test_operator_to_str_lookup = {
     NUMBER_TEST_OPERATOR_LESS_THAN : '<',
@@ -17,7 +19,9 @@ number_test_operator_to_str_lookup = {
     NUMBER_TEST_OPERATOR_EQUAL : '=',
     NUMBER_TEST_OPERATOR_APPROXIMATE_PERCENT : HC.UNICODE_APPROX_EQUAL,
     NUMBER_TEST_OPERATOR_NOT_EQUAL : HC.UNICODE_NOT_EQUAL,
-    NUMBER_TEST_OPERATOR_APPROXIMATE_ABSOLUTE : HC.UNICODE_APPROX_EQUAL
+    NUMBER_TEST_OPERATOR_APPROXIMATE_ABSOLUTE : HC.UNICODE_APPROX_EQUAL,
+    NUMBER_TEST_OPERATOR_LESS_THAN_OR_EQUAL_TO : HC.UNICODE_LESS_THAN_OR_EQUAL_TO,
+    NUMBER_TEST_OPERATOR_GREATER_THAN_OR_EQUAL_TO : HC.UNICODE_GREATER_THAN_OR_EQUAL_TO
 }
 
 number_test_operator_to_desc_lookup = {
@@ -26,7 +30,9 @@ number_test_operator_to_desc_lookup = {
     NUMBER_TEST_OPERATOR_EQUAL : 'equal',
     NUMBER_TEST_OPERATOR_APPROXIMATE_PERCENT : 'equal within a percentage range',
     NUMBER_TEST_OPERATOR_NOT_EQUAL : 'not equal',
-    NUMBER_TEST_OPERATOR_APPROXIMATE_ABSOLUTE : 'equal within an absolute range'
+    NUMBER_TEST_OPERATOR_APPROXIMATE_ABSOLUTE : 'equal within an absolute range',
+    NUMBER_TEST_OPERATOR_LESS_THAN_OR_EQUAL_TO : 'less than or equal to',
+    NUMBER_TEST_OPERATOR_GREATER_THAN_OR_EQUAL_TO : 'greater than or equal to',
 }
 
 legacy_str_operator_to_number_test_operator_lookup = { s : o for ( o, s ) in number_test_operator_to_str_lookup.items() }
@@ -37,7 +43,9 @@ number_test_operator_to_pretty_str_lookup = {
     NUMBER_TEST_OPERATOR_EQUAL : 'is',
     NUMBER_TEST_OPERATOR_APPROXIMATE_PERCENT : 'is about',
     NUMBER_TEST_OPERATOR_NOT_EQUAL : 'is not',
-    NUMBER_TEST_OPERATOR_APPROXIMATE_ABSOLUTE : 'is about'
+    NUMBER_TEST_OPERATOR_APPROXIMATE_ABSOLUTE : 'is about',
+    NUMBER_TEST_OPERATOR_LESS_THAN_OR_EQUAL_TO : 'less than or equal to',
+    NUMBER_TEST_OPERATOR_GREATER_THAN_OR_EQUAL_TO : 'more than or equal to'
 }
 
 number_test_str_to_operator_lookup = { value : key for ( key, value ) in number_test_operator_to_str_lookup.items() if key != NUMBER_TEST_OPERATOR_APPROXIMATE_ABSOLUTE }
@@ -149,6 +157,17 @@ class NumberTest( HydrusSerialisable.SerialisableBase ):
                 return lambda x: x is not None and x < value_to_test
                 
             
+        elif self.operator == NUMBER_TEST_OPERATOR_LESS_THAN_OR_EQUAL_TO:
+            
+            if value_to_test >= 0:
+                
+                return lambda x: x is None or x <= value_to_test
+                
+            else:
+                
+                return lambda x: x is not None and x <= value_to_test
+                
+            
         elif self.operator == NUMBER_TEST_OPERATOR_GREATER_THAN:
             
             if value_to_test < 0:
@@ -158,6 +177,17 @@ class NumberTest( HydrusSerialisable.SerialisableBase ):
             else:
                 
                 return lambda x: x is not None and x > value_to_test
+                
+            
+        elif self.operator == NUMBER_TEST_OPERATOR_GREATER_THAN_OR_EQUAL_TO:
+            
+            if value_to_test <= 0:
+                
+                return lambda x: x is None or x >= value_to_test
+                
+            else:
+                
+                return lambda x: x is not None and x >= value_to_test
                 
             
         elif self.operator == NUMBER_TEST_OPERATOR_EQUAL:
@@ -211,6 +241,8 @@ class NumberTest( HydrusSerialisable.SerialisableBase ):
                 
             
         
+        return lambda x: False
+        
     
     def GetSQLitePredicates( self, variable_name ):
         
@@ -225,6 +257,17 @@ class NumberTest( HydrusSerialisable.SerialisableBase ):
                 return [ f'{variable_name} < {self.value}' ]
                 
             
+        elif self.operator == NUMBER_TEST_OPERATOR_LESS_THAN_OR_EQUAL_TO:
+            
+            if self.value >= 0:
+                
+                return [ f'( {variable_name} IS NULL OR {variable_name} <= {self.value} )' ]
+                
+            else:
+                
+                return [ f'{variable_name} <= {self.value}' ]
+                
+            
         elif self.operator == NUMBER_TEST_OPERATOR_GREATER_THAN:
             
             if self.value < 0:
@@ -234,6 +277,17 @@ class NumberTest( HydrusSerialisable.SerialisableBase ):
             else:
                 
                 return [ f'{variable_name} > {self.value}' ]
+                
+            
+        elif self.operator == NUMBER_TEST_OPERATOR_GREATER_THAN_OR_EQUAL_TO:
+            
+            if self.value <= 0:
+                
+                return [ f'( {variable_name} IS NULL OR {variable_name} >= {self.value} )' ]
+                
+            else:
+                
+                return [ f'{variable_name} >= {self.value}' ]
                 
             
         elif self.operator == NUMBER_TEST_OPERATOR_EQUAL:
@@ -299,8 +353,9 @@ class NumberTest( HydrusSerialisable.SerialisableBase ):
         
         actually_zero = self.operator == NUMBER_TEST_OPERATOR_EQUAL and self.value == 0
         less_than_one = self.operator == NUMBER_TEST_OPERATOR_LESS_THAN and self.value == 1
+        less_than_or_equal_to_zero = self.operator == NUMBER_TEST_OPERATOR_LESS_THAN_OR_EQUAL_TO and self.value == 0
         
-        return actually_zero or less_than_one
+        return actually_zero or less_than_one or less_than_or_equal_to_zero
         
     
     def ToString( self, absolute_number_renderer: typing.Optional[ typing.Callable ] = None, replacement_value_string: typing.Optional[ str ] = None ) -> str:

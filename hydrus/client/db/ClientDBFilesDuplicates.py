@@ -521,6 +521,11 @@ class ClientDBFilesDuplicates( ClientDBModule.ClientDBModule ):
         return existing_pairs
         
     
+    def GetAllPotentialDuplicatePairsAndDistances( self ):
+        
+        return self._Execute( 'SELECT smaller_media_id, larger_media_id, distance FROM potential_duplicate_pairs;' ).fetchall()
+        
+    
     def GetAlternatesGroupId( self, media_id, do_not_create = False ):
         
         result = self._Execute( 'SELECT alternates_group_id FROM alternate_file_group_members WHERE media_id = ?;', ( media_id, ) ).fetchone()

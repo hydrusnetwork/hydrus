@@ -109,6 +109,22 @@ class ThumbnailPairListModel( QC.QAbstractTableModel ):
         job.start()
         
     
+    def AppendData( self, data_row ):
+        
+        self.AppendDatas( ( data_row, ) )
+        
+    
+    def AppendDatas( self, data_rows ):
+        
+        row = self.rowCount()
+        
+        self.beginInsertRows( QC.QModelIndex(), row, row + ( len( data_rows ) - 1 ) )
+        
+        self._data_rows.extend( data_rows )
+        
+        self.endInsertRows()
+        
+    
     def GetMediaResultPair( self, row: int ):
         
         r = self._data_rows[ row ]
@@ -216,7 +232,7 @@ class ThumbnailPairListModelPendingAutoResolutionAction( ThumbnailPairListModel 
         
         def work_callable():
             
-            summary_string = rule.GetActionSummaryOnPair( media_result_a, media_result_b, do_either_way_test = do_either_way_test )
+            summary_string = rule.GetActionSummaryOnMatchingPair( media_result_a, media_result_b, do_either_way_test = do_either_way_test )
             
             return summary_string
             

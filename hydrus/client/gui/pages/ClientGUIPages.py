@@ -3246,10 +3246,13 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
             initial_hashes = []
             
         
+        start_system_hash_locked = False
+        
         if initial_predicates is None:
             
             if len( initial_hashes ) > 0:
                 
+                start_system_hash_locked = True
                 initial_predicates = [ ClientSearchPredicate.Predicate( predicate_type = ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HASH, value = ( tuple( initial_hashes ), 'sha256' ) ) ]
                 
             else:
@@ -3287,7 +3290,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
             file_search_context.SetComplete()
             
         
-        page_manager = ClientGUIPageManager.CreatePageManagerQuery( page_name, file_search_context )
+        page_manager = ClientGUIPageManager.CreatePageManagerQuery( page_name, file_search_context, start_system_hash_locked = start_system_hash_locked )
         
         if initial_sort is not None:
             

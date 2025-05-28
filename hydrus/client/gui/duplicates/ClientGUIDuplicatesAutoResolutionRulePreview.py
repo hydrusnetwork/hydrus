@@ -11,6 +11,7 @@ from hydrus.core import HydrusNumbers
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientLocation
+from hydrus.client import ClientThreading
 from hydrus.client.duplicates import ClientDuplicatesAutoResolution
 from hydrus.client.gui import ClientGUIAsync
 from hydrus.client.gui import ClientGUIFunctions
@@ -31,10 +32,27 @@ class PreviewPanel( ClientGUICommon.StaticBox ):
         
         self._value: typing.Optional[ ClientDuplicatesAutoResolution.DuplicatesAutoResolutionRule ] = None
         
-        self._num_pairs = 0
+        self._all_potential_duplicate_pairs_and_distances = []
+        self._all_potential_duplicate_pairs_and_distances_initialised = False
+        self._all_potential_duplicate_pairs_and_distances_fetch_started = False
+        
+        self._fetch_pairs_job_status = ClientThreading.JobStatus( cancellable = True )
+        self._potential_duplicate_pairs_and_distances_still_to_search = []
+        
         self._fetched_pairs = []
+        
+        self._test_pairs_job_status = ClientThreading.JobStatus( cancellable = True )
+        self._fetched_pairs_still_to_test = []
+        
         self._ab_pairs_that_pass = []
         self._pairs_that_fail = []
+        
+        self._search_paused = False
+        self._testing_paused = False
+        self._page_currently_shown = False
+        
+        self._search_work_updater = self._InitialiseSearchWorkUpdater()
+        self._test_work_updater = self._InitialiseTestWorkUpdater()
         
         self._search_panel = ClientGUICommon.StaticBox( self, 'search' )
         
@@ -42,16 +60,17 @@ class PreviewPanel( ClientGUICommon.StaticBox ):
         self._search_results_label.setWordWrap( True )
         self._num_to_fetch = ClientGUICommon.NoneableSpinCtrl( self._search_panel, 256, min = 1, none_phrase = 'fetch all' )
         
-        self._fetch_count_button = ClientGUICommon.BetterBitmapButton( self._search_panel, CC.global_pixmaps().refresh, self._RefetchCount )
-        self._fetch_count_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'Refresh the whole search' ) )
+        self._pause_search_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().pause, self._PausePlaySearch )
         
-        self._fetch_pairs_button = ClientGUICommon.BetterBitmapButton( self._search_panel, CC.global_pixmaps().refresh, self._RefetchPairs )
-        self._fetch_pairs_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'Fetch a sample of pairs' ) )
+        self._refetch_pairs_button = ClientGUICommon.BetterBitmapButton( self._search_panel, CC.global_pixmaps().refresh, self._RefetchPairs )
+        self._refetch_pairs_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'Fetch a sample of pairs' ) )
         
         #
         
-        self._test_pairs_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().refresh, self._RetestPairs )
-        self._test_pairs_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'Retest the fetched pairs' ) )
+        self._pause_testing_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().pause, self._PausePlayTesting )
+        
+        self._retest_pairs_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().refresh, self._RetestPairs )
+        self._retest_pairs_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'Retest the fetched pairs' ) )
         
         #
         
@@ -73,14 +92,7 @@ class PreviewPanel( ClientGUICommon.StaticBox ):
         
         #
         
-        self._test_pairs_button.setEnabled( False )
-        
-        hbox = QP.HBoxLayout()
-        
-        QP.AddToLayout( hbox, self._search_results_label, CC.FLAGS_CENTER_PERPENDICULAR_EXPAND_DEPTH )
-        QP.AddToLayout( hbox, self._fetch_count_button, CC.FLAGS_CENTER )
-        
-        self._search_panel.Add( hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._search_panel.Add( self._search_results_label, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         hbox = QP.HBoxLayout()
         
@@ -91,7 +103,8 @@ class PreviewPanel( ClientGUICommon.StaticBox ):
         gridbox = ClientGUICommon.WrapInGrid( self, rows )
         
         QP.AddToLayout( hbox, gridbox, CC.FLAGS_CENTER_PERPENDICULAR_EXPAND_DEPTH )
-        QP.AddToLayout( hbox, self._fetch_pairs_button, CC.FLAGS_CENTER )
+        QP.AddToLayout( hbox, self._pause_search_button, CC.FLAGS_CENTER )
+        QP.AddToLayout( hbox, self._refetch_pairs_button, CC.FLAGS_CENTER )
         
         self._search_panel.Add( hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
         
@@ -107,8 +120,13 @@ class PreviewPanel( ClientGUICommon.StaticBox ):
         
         #
         
+        hbox = QP.HBoxLayout()
+        
+        QP.AddToLayout( hbox, self._pause_testing_button, CC.FLAGS_CENTER )
+        QP.AddToLayout( hbox, self._retest_pairs_button, CC.FLAGS_CENTER )
+        
         self.Add( self._search_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self.Add( self._test_pairs_button, CC.FLAGS_ON_RIGHT )
+        self.Add( hbox, CC.FLAGS_ON_RIGHT )
         self.Add( self._pass_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         self.Add( self._fail_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         
@@ -119,6 +137,19 @@ class PreviewPanel( ClientGUICommon.StaticBox ):
         
         self._enter_catcher_pass = ThumbnailPairList.ListEnterCatcher( self, self._pass_pairs_list )
         self._enter_catcher_fail = ThumbnailPairList.ListEnterCatcher( self, self._fail_pairs_list )
+        
+        self._num_to_fetch.valueChanged.connect( self._DoSearchWork )
+        self._num_to_fetch.valueChanged.connect( self._DoTestWork )
+        
+    
+    def _DoSearchWork( self ):
+        
+        self._search_work_updater.update()
+        
+    
+    def _DoTestWork( self ):
+        
+        self._test_work_updater.update()
         
     
     def _FailRowActivated( self, model_index: QC.QModelIndex ):
@@ -135,6 +166,182 @@ class PreviewPanel( ClientGUICommon.StaticBox ):
         self._ShowMediaViewer( media_result_1, media_result_2 )
         
     
+    def _InitialisePotentialDuplicatePairs( self ):
+        
+        if self._all_potential_duplicate_pairs_and_distances_initialised or self._all_potential_duplicate_pairs_and_distances_fetch_started:
+            
+            return
+            
+        
+        self._all_potential_duplicate_pairs_and_distances_fetch_started = True
+        
+        def work_callable():
+            
+            all_potential_duplicate_pairs_and_distances = CG.client_controller.Read( 'all_potential_duplicate_pairs_and_distances' )
+            
+            return all_potential_duplicate_pairs_and_distances
+            
+        
+        def publish_callable( all_potential_duplicate_pairs_and_distances ):
+            
+            self._all_potential_duplicate_pairs_and_distances = all_potential_duplicate_pairs_and_distances
+            
+            self._all_potential_duplicate_pairs_and_distances_initialised = True
+            
+            self._RefetchPairs()
+            
+        
+        self._UpdateSearchLabels()
+        
+        async_job = ClientGUIAsync.AsyncQtJob( self, work_callable, publish_callable )
+        
+        async_job.start()
+        
+    
+    def _InitialiseSearchWorkUpdater( self ):
+        
+        def loading_callable():
+            
+            pass
+            
+        
+        def pre_work_callable():
+            
+            if self._WeHaveSearchedEnough() or self._value is None or len( self._potential_duplicate_pairs_and_distances_still_to_search ) == 0 or self._search_paused or not self._page_currently_shown:
+                
+                self._UpdateSearchLabels()
+                
+                raise HydrusExceptions.CancelledException()
+                
+            
+            potential_duplicates_search_context = self._value.GetPotentialDuplicatesSearchContext()
+            
+            BLOCK_SIZE = 1024
+            
+            block_of_pairs_and_distances = self._potential_duplicate_pairs_and_distances_still_to_search[ : BLOCK_SIZE ]
+            
+            self._potential_duplicate_pairs_and_distances_still_to_search = self._potential_duplicate_pairs_and_distances_still_to_search[ BLOCK_SIZE : ]
+            
+            return ( potential_duplicates_search_context, block_of_pairs_and_distances, self._fetch_pairs_job_status )
+            
+        
+        def work_callable( args ):
+            
+            ( potential_duplicates_search_context, block_of_pairs_and_distances, job_status ) = args
+            
+            if job_status.IsCancelled():
+                
+                return ( [], job_status )
+                
+            
+            fetched_pairs = CG.client_controller.Read( 'potential_duplicate_pairs_fragmentary', potential_duplicates_search_context, block_of_pairs_and_distances )
+            
+            return ( fetched_pairs, job_status )
+            
+        
+        def publish_callable( result ):
+            
+            ( some_fetched_pairs, job_status ) = result
+            
+            if job_status != self._fetch_pairs_job_status:
+                
+                return
+                
+            
+            self._fetched_pairs.extend( some_fetched_pairs )
+            self._fetched_pairs_still_to_test.extend( some_fetched_pairs )
+            
+            self._UpdateSearchLabels()
+            
+            self._DoSearchWork()
+            self._DoTestWork()
+            
+        
+        return ClientGUIAsync.AsyncQtUpdater( self, loading_callable, work_callable, publish_callable, pre_work_callable = pre_work_callable )
+        
+    
+    def _InitialiseTestWorkUpdater( self ):
+        
+        def loading_callable():
+            
+            pass
+            
+        
+        def pre_work_callable():
+            
+            if self._value is None or len( self._fetched_pairs_still_to_test ) == 0 or self._WeHaveTestedEnough() or self._testing_paused or not self._page_currently_shown:
+                
+                self._UpdateTestLabels()
+                
+                raise HydrusExceptions.CancelledException()
+                
+            
+            rule = self._value
+            
+            pair = self._fetched_pairs_still_to_test.pop( 0 )
+            
+            selector = rule.GetPairSelector()
+            
+            return ( pair, selector, self._test_pairs_job_status )
+            
+        
+        def work_callable( args ):
+            
+            ( pair, selector, job_status ) = args
+            
+            ab_pair_that_passed = None
+            pair_that_failed = None
+            
+            if job_status.IsCancelled():
+                
+                return ( ab_pair_that_passed, pair_that_failed, job_status )
+                
+            
+            ( media_result_one, media_result_two ) = pair
+            
+            result = selector.GetMatchingAB( media_result_one, media_result_two )
+            
+            if result is None:
+                
+                pair_that_failed = pair
+                
+            else:
+                
+                ab_pair_that_passed = result
+                
+            
+            return ( ab_pair_that_passed, pair_that_failed, job_status )
+            
+        
+        def publish_callable( result ):
+            
+            ( ab_pair_that_passed, pair_that_failed, job_status ) = result
+            
+            if job_status != self._test_pairs_job_status:
+                
+                return
+                
+            
+            if ab_pair_that_passed is not None:
+                
+                self._ab_pairs_that_pass.append( ab_pair_that_passed )
+                self._pass_pairs_list.model().AppendData( ab_pair_that_passed )
+                
+            
+            if pair_that_failed is not None:
+                
+                self._pairs_that_fail.append( pair_that_failed )
+                self._fail_pairs_list.model().AppendData( pair_that_failed )
+                
+            
+            self._UpdateTestLabels()
+            
+            self._DoTestWork()
+            
+        
+        return ClientGUIAsync.AsyncQtUpdater( self, loading_callable, work_callable, publish_callable, pre_work_callable = pre_work_callable )
+        
+    
     def _PassRowActivated( self, model_index: QC.QModelIndex ):
         
         if not model_index.isValid():
@@ -149,40 +356,36 @@ class PreviewPanel( ClientGUICommon.StaticBox ):
         self._ShowMediaViewer( media_result_1, media_result_2 )
         
     
-    def _RefetchCount( self ):
+    def _PausePlaySearch( self ):
         
-        if self._value is None:
-            
-            return
-            
+        self._search_paused = not self._search_paused
         
-        # if and when the search tab gets and caches this, we could just ask that guy
-        
-        potential_duplicates_search_context = self._value.GetPotentialDuplicatesSearchContext()
-        
-        def work_callable():
+        if self._search_paused:
             
-            num_pairs = CG.client_controller.Read( 'potential_duplicates_count', potential_duplicates_search_context )
+            ClientGUIFunctions.SetBitmapButtonBitmap( self._pause_search_button, CC.global_pixmaps().play )
             
-            return num_pairs
+        else:
+            
+            ClientGUIFunctions.SetBitmapButtonBitmap( self._pause_search_button, CC.global_pixmaps().pause )
             
         
-        def publish_callable( num_pairs ):
+        self._DoSearchWork()
+        
+    
+    def _PausePlayTesting( self ):
+        
+        self._testing_paused = not self._testing_paused
+        
+        if self._testing_paused:
             
-            self._num_pairs = num_pairs
+            ClientGUIFunctions.SetBitmapButtonBitmap( self._pause_testing_button, CC.global_pixmaps().play )
             
-            self._UpdateSearchLabel()
+        else:
             
-            self._RefetchPairs()
+            ClientGUIFunctions.SetBitmapButtonBitmap( self._pause_testing_button, CC.global_pixmaps().pause )
             
         
-        self._ResetSearchAppearance()
-        
-        self._search_results_label.setText( f'fetching count{HC.UNICODE_ELLIPSIS}' )
-        
-        async_job = ClientGUIAsync.AsyncQtJob( self, work_callable, publish_callable )
-        
-        async_job.start()
+        self._DoTestWork()
         
     
     def _RefetchPairs( self ):
@@ -192,63 +395,30 @@ class PreviewPanel( ClientGUICommon.StaticBox ):
             return
             
         
-        fetch_limit = self._num_to_fetch.GetValue()
-        
-        potential_duplicates_search_context = self._value.GetPotentialDuplicatesSearchContext()
-        
-        def work_callable():
+        if not self._all_potential_duplicate_pairs_and_distances_initialised:
             
-            fetched_pairs = CG.client_controller.Read( 'potential_duplicate_pairs', potential_duplicates_search_context, fetch_limit = fetch_limit )
+            if not self._all_potential_duplicate_pairs_and_distances_fetch_started:
+                
+                self._InitialisePotentialDuplicatePairs()
+                
             
-            return fetched_pairs
-            
-        
-        def publish_callable( fetched_pairs ):
-            
-            self._fetched_pairs = fetched_pairs
-            
-            self._UpdateSearchLabel()
-            
-            self._RetestPairs()
+            return
             
         
-        self._ResetFetchPairsAppearance()
+        self._fetched_pairs = []
+        self._fetched_pairs_still_to_test = []
+        
+        self._potential_duplicate_pairs_and_distances_still_to_search = list( self._all_potential_duplicate_pairs_and_distances )
+        
+        self._fetch_pairs_job_status.Cancel()
+        
+        self._fetch_pairs_job_status = ClientThreading.JobStatus( cancellable = True )
+        
+        self._RetestPairs()
         
         self._search_results_label.setText( f'fetching pairs{HC.UNICODE_ELLIPSIS}' )
         
-        async_job = ClientGUIAsync.AsyncQtJob( self, work_callable, publish_callable )
-        
-        async_job.start()
-        
-    
-    def _ResetFetchPairsAppearance( self ):
-        
-        self._fetched_pairs = []
-        
-        self._ResetTestPairsAppearance()
-        
-    
-    def _ResetSearchAppearance( self ):
-        
-        self._num_pairs = 0
-        self._search_results_label.setText( '' )
-        
-        self._ResetFetchPairsAppearance()
-        
-    
-    def _ResetTestPairsAppearance( self ):
-        
-        self._ab_pairs_that_pass = []
-        self._pairs_that_fail = []
-        
-        self._pass_pairs_list.SetData( [] )
-        self._fail_pairs_list.SetData( [] )
-        
-        self._fetch_pairs_button.setEnabled( False )
-        self._test_pairs_button.setEnabled( False )
-        
-        self._pass_pairs_label.setText( '' )
-        self._fail_pairs_label.setText( '' )
+        self._DoSearchWork()
         
     
     def _RetestPairs( self ):
@@ -258,58 +428,29 @@ class PreviewPanel( ClientGUICommon.StaticBox ):
             return
             
         
-        rule = self._value
-        selector = rule.GetPairSelector()
-        
-        fetched_pairs = self._fetched_pairs
-        
-        def work_callable():
+        if not self._all_potential_duplicate_pairs_and_distances_initialised:
             
-            ab_pairs_that_pass = []
-            pairs_that_fail = []
-            
-            for pair in fetched_pairs:
+            if not self._all_potential_duplicate_pairs_and_distances_fetch_started:
                 
-                ( media_result_one, media_result_two ) = pair
-                
-                # TODO: Argh this will be slow. We need to figure out a better stream here then. incremental addition or something like it
-                result = selector.GetMatchingAB( media_result_one, media_result_two )
-                
-                if result is None:
-                    
-                    pairs_that_fail.append( pair )
-                    
-                else:
-                    
-                    ab_pairs_that_pass.append( result )
-                    
+                self._InitialisePotentialDuplicatePairs()
                 
             
-            return ( ab_pairs_that_pass, pairs_that_fail )
+            return
             
         
-        def publish_callable( result ):
-            
-            ( self._ab_pairs_that_pass, self._pairs_that_fail ) = result
-            
-            self._pass_pairs_list.model().SetRule( self._value )
-            self._pass_pairs_list.SetData( self._ab_pairs_that_pass )
-            self._fail_pairs_list.SetData( self._pairs_that_fail )
-            
-            self._UpdateTestLabels()
-            
-            self._fetch_pairs_button.setEnabled( True )
-            self._test_pairs_button.setEnabled( True )
-            
+        self._fetched_pairs_still_to_test = list( self._fetched_pairs )
+        self._ab_pairs_that_pass = []
+        self._pairs_that_fail = []
         
-        self._ResetTestPairsAppearance()
+        self._pass_pairs_list.SetData( [] )
+        self._fail_pairs_list.SetData( [] )
+        
+        self._pass_pairs_list.model().SetRule( self._value )
         
         self._pass_pairs_label.setText( f'testing pairs{HC.UNICODE_ELLIPSIS}' )
         self._fail_pairs_label.setText( f'testing pairs{HC.UNICODE_ELLIPSIS}' )
         
-        async_job = ClientGUIAsync.AsyncQtJob( self, work_callable, publish_callable )
-        
-        async_job.start()
+        self._DoTestWork()
         
     
     def _ShowMediaViewer( self, media_result_1, media_result_2 ):
@@ -338,25 +479,27 @@ class PreviewPanel( ClientGUICommon.StaticBox ):
         canvas_frame.SetCanvas( canvas_window )
         
     
-    def _UpdateSearchLabel( self ):
+    def _UpdateSearchLabels( self ):
         
-        if self._value is None:
+        if not self._all_potential_duplicate_pairs_and_distances_initialised:
             
-            label = 'unknown rule'
+            self._search_results_label.setText( f'initialising{HC.UNICODE_ELLIPSIS}' )
+            
+        elif len( self._all_potential_duplicate_pairs_and_distances ) == 0:
+            
+            self._search_results_label.setText( f'no potential pairs in this database!' )
+            
+        elif len( self._potential_duplicate_pairs_and_distances_still_to_search ) == 0:
+            
+            self._search_results_label.setText( f'{HydrusNumbers.ToHumanInt(len( self._all_potential_duplicate_pairs_and_distances))} potentials searched; found {HydrusNumbers.ToHumanInt( len( self._fetched_pairs ) )} pairs' )
             
         else:
             
-            if self._num_pairs == 0:
-                
-                label = 'no pairs found with this search'
-                
-            else:
-                
-                label = f'{HydrusNumbers.ToHumanInt( self._num_pairs )} pairs found'
-                
+            value = len( self._all_potential_duplicate_pairs_and_distances ) - len( self._potential_duplicate_pairs_and_distances_still_to_search )
+            range = len( self._all_potential_duplicate_pairs_and_distances )
             
-        
-        self._search_results_label.setText( label )
+            self._search_results_label.setText( f'{HydrusNumbers.ValueRangeToPrettyString(value, range)} potentials searched; found {HydrusNumbers.ToHumanInt( len( self._fetched_pairs ) )} pairs{HC.UNICODE_ELLIPSIS}' )
+            
         
     
     def _UpdateTestLabels( self ):
@@ -384,7 +527,38 @@ class PreviewPanel( ClientGUICommon.StaticBox ):
         self._fail_pairs_label.setText( label )
         
     
+    def _WeHaveSearchedEnough( self ):
+        
+        num_to_fetch = self._num_to_fetch.GetValue()
+        
+        if num_to_fetch is not None and len( self._fetched_pairs ) >= num_to_fetch:
+            
+            return True
+            
+        
+        return False
+        
+    
+    def _WeHaveTestedEnough( self ):
+        
+        num_to_fetch = self._num_to_fetch.GetValue()
+        
+        if num_to_fetch is not None and len( self._ab_pairs_that_pass ) + len( self._pairs_that_fail ) >= num_to_fetch:
+            
+            return True
+            
+        
+        return False
+        
+    
+    def PageIsHidden( self ):
+        
+        self._page_currently_shown = False
+        
+    
     def PageShown( self ):
+        
+        self._page_currently_shown = True
         
         old_value = self._value
         
@@ -401,11 +575,6 @@ class PreviewPanel( ClientGUICommon.StaticBox ):
             
             self._value = None
             
-            self._fetch_pairs_button.setEnabled( False )
-            self._test_pairs_button.setEnabled( False )
-            
-            self._ResetSearchAppearance()
-            
             self._search_results_label.setText( f'Problem fetching the current rule! {e}' )
             
             return
@@ -415,7 +584,7 @@ class PreviewPanel( ClientGUICommon.StaticBox ):
         
         if old_value is None:
             
-            self._RefetchCount()
+            self._RefetchPairs()
             
         else:
             
@@ -424,7 +593,7 @@ class PreviewPanel( ClientGUICommon.StaticBox ):
             
             if new_search.DumpToString() != old_search.DumpToString():
                 
-                self._RefetchCount()
+                self._RefetchPairs()
                 
             else:
                 
@@ -437,5 +606,8 @@ class PreviewPanel( ClientGUICommon.StaticBox ):
                     
                 
             
+        
+        self._DoSearchWork()
+        self._DoTestWork()
         
     

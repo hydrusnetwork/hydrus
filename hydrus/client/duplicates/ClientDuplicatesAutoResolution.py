@@ -64,7 +64,7 @@ class DuplicatesAutoResolutionRule( HydrusSerialisable.SerialisableBaseNamed ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_DUPLICATES_AUTO_RESOLUTION_RULE
     SERIALISABLE_NAME = 'Duplicates Auto-Resolution Rule'
-    SERIALISABLE_VERSION = 1
+    SERIALISABLE_VERSION = 2
     
     def __init__( self, name ):
         """
@@ -82,6 +82,8 @@ class DuplicatesAutoResolutionRule( HydrusSerialisable.SerialisableBaseNamed ):
         NEW_RULE_SESSION_ID -= 1
         
         self._operation_mode = DUPLICATES_AUTO_RESOLUTION_RULE_OPERATION_MODE_WORK_BUT_NO_ACTION
+        
+        self._max_pending_pairs = 512
         
         self._potential_duplicates_search_context = ClientPotentialDuplicatesSearchContext.PotentialDuplicatesSearchContext()
         
@@ -122,12 +124,13 @@ class DuplicatesAutoResolutionRule( HydrusSerialisable.SerialisableBaseNamed ):
         return (
             self._id,
             self._operation_mode,
+            self._max_pending_pairs,
             serialisable_potential_duplicates_search_context,
             serialisable_pair_selector,
             self._action,
             self._delete_a,
             self._delete_b,
-            serialisable_custom_duplicate_content_merge_options 
+            serialisable_custom_duplicate_content_merge_options
         )
         
     
@@ -136,17 +139,51 @@ class DuplicatesAutoResolutionRule( HydrusSerialisable.SerialisableBaseNamed ):
         (
             self._id,
             self._operation_mode,
+            self._max_pending_pairs,
             serialisable_potential_duplicates_search_context,
             serialisable_pair_selector,
             self._action,
             self._delete_a,
             self._delete_b,
-            serialisable_custom_duplicate_content_merge_options 
+            serialisable_custom_duplicate_content_merge_options
         ) = serialisable_info
         
         self._potential_duplicates_search_context = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_potential_duplicates_search_context )
         self._pair_selector = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_pair_selector )
         self._custom_duplicate_content_merge_options = None if serialisable_custom_duplicate_content_merge_options is None else HydrusSerialisable.CreateFromSerialisableTuple( serialisable_custom_duplicate_content_merge_options )
+        
+    
+    def _UpdateSerialisableInfo( self, version, old_serialisable_info ):
+        
+        if version == 1:
+            
+            (
+                id,
+                operation_mode,
+                serialisable_potential_duplicates_search_context,
+                serialisable_pair_selector,
+                action,
+                delete_a,
+                delete_b,
+                serialisable_custom_duplicate_content_merge_options
+            ) = old_serialisable_info
+            
+            max_pending_pairs = 512
+            
+            new_serialisable_info = (
+                id,
+                operation_mode,
+                max_pending_pairs,
+                serialisable_potential_duplicates_search_context,
+                serialisable_pair_selector,
+                action,
+                delete_a,
+                delete_b,
+                serialisable_custom_duplicate_content_merge_options
+            )
+            
+            return ( 2, new_serialisable_info )
+            
         
     
     def CanWorkHard( self ):
@@ -185,20 +222,13 @@ class DuplicatesAutoResolutionRule( HydrusSerialisable.SerialisableBaseNamed ):
         return s
         
     
-    def GetActionSummaryOnPair( self, media_result_a: ClientMediaResult.MediaResult, media_result_b: ClientMediaResult.MediaResult, do_either_way_test = True ) -> str:
+    def GetActionSummaryOnMatchingPair( self, media_result_a: ClientMediaResult.MediaResult, media_result_b: ClientMediaResult.MediaResult, do_either_way_test = True ) -> str:
         
         components = []
         
         if do_either_way_test:
             
-            result = self._pair_selector.GetMatchingAB( media_result_a, media_result_b )
-            
-            if result is None:
-                
-                return 'pair do not pass the test'
-                
-            
-            if self._pair_selector.PairMatchesBothWaysAround( media_result_a, media_result_b ):
+            if self._pair_selector.MatchingPairMatchesBothWaysAround( media_result_a, media_result_b ):
                 
                 components.append( 'either way around' )
                 
@@ -257,6 +287,11 @@ class DuplicatesAutoResolutionRule( HydrusSerialisable.SerialisableBaseNamed ):
     def GetId( self ) -> int:
         
         return self._id
+        
+    
+    def GetMaxPendingPairs( self ) -> typing.Optional[ int ]:
+        
+        return self._max_pending_pairs
         
     
     def GetOperationMode( self ) -> int:
@@ -343,6 +378,14 @@ class DuplicatesAutoResolutionRule( HydrusSerialisable.SerialisableBaseNamed ):
     
     def HasResolutionWorkToDo( self ):
         
+        if self._operation_mode == DUPLICATES_AUTO_RESOLUTION_RULE_OPERATION_MODE_WORK_BUT_NO_ACTION:
+            
+            if self._max_pending_pairs is not None and self._counts_cache[ DUPLICATE_STATUS_MATCHES_SEARCH_PASSED_TEST_READY_TO_ACTION ] > self._max_pending_pairs:
+                
+                return False
+                
+            
+        
         return self._counts_cache[ DUPLICATE_STATUS_MATCHES_SEARCH_BUT_NOT_TESTED ] > 0
         
     
@@ -385,6 +428,11 @@ class DuplicatesAutoResolutionRule( HydrusSerialisable.SerialisableBaseNamed ):
     def SetOperationMode( self, value: int ):
         
         self._operation_mode = value
+        
+    
+    def SetMaxPendingPairs( self, value: typing.Optional[ int ] ):
+        
+        self._max_pending_pairs = value
         
     
     def SetPotentialDuplicatesSearchContext( self, value: ClientPotentialDuplicatesSearchContext.PotentialDuplicatesSearchContext ):
@@ -673,9 +721,9 @@ class DuplicatesAutoResolutionManager( ClientDaemons.ManagerWithMainLoop ):
     
     def __init__( self, controller: "CG.ClientController.Controller" ):
         """
-        This guy is going to be the mainloop daemon that runs all this gubbins.
+        This guy is the mainloop daemon that runs all this gubbins.
         
-        Needs some careful locking for when the edit dialog is open, like import folders manager etc..
+        He has some careful locking as the dialog opens etc..
         """
         
         super().__init__( controller, 15 )

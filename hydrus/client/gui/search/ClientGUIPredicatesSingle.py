@@ -829,9 +829,11 @@ class PanelPredicateSystemDuration( PanelPredicateSystemSingle ):
         
         allowed_operators = [
             ClientNumberTest.NUMBER_TEST_OPERATOR_LESS_THAN,
+            ClientNumberTest.NUMBER_TEST_OPERATOR_LESS_THAN_OR_EQUAL_TO,
             ClientNumberTest.NUMBER_TEST_OPERATOR_APPROXIMATE_ABSOLUTE,
             ClientNumberTest.NUMBER_TEST_OPERATOR_APPROXIMATE_PERCENT,
-            ClientNumberTest.NUMBER_TEST_OPERATOR_GREATER_THAN
+            ClientNumberTest.NUMBER_TEST_OPERATOR_GREATER_THAN,
+            ClientNumberTest.NUMBER_TEST_OPERATOR_GREATER_THAN_OR_EQUAL_TO,
         ]
         
         self._number_test = ClientGUITime.NumberTestWidgetDuration( self, allowed_operators = allowed_operators, appropriate_absolute_plus_or_minus_default = 30000, appropriate_percentage_plus_or_minus_default = 5 )
@@ -1098,9 +1100,11 @@ class PanelPredicateSystemFramerate( PanelPredicateSystemSingle ):
         
         allowed_operators = [
             ClientNumberTest.NUMBER_TEST_OPERATOR_LESS_THAN,
+            ClientNumberTest.NUMBER_TEST_OPERATOR_LESS_THAN_OR_EQUAL_TO,
             ClientNumberTest.NUMBER_TEST_OPERATOR_APPROXIMATE_ABSOLUTE,
             ClientNumberTest.NUMBER_TEST_OPERATOR_APPROXIMATE_PERCENT,
-            ClientNumberTest.NUMBER_TEST_OPERATOR_GREATER_THAN
+            ClientNumberTest.NUMBER_TEST_OPERATOR_GREATER_THAN,
+            ClientNumberTest.NUMBER_TEST_OPERATOR_GREATER_THAN_OR_EQUAL_TO
         ]
         
         self._number_test = ClientGUINumberTest.NumberTestWidget( self, allowed_operators = allowed_operators, max = 1000000, unit_string = 'fps', appropriate_absolute_plus_or_minus_default = 1, appropriate_percentage_plus_or_minus_default = 5 )
@@ -1342,11 +1346,13 @@ class PanelPredicateSystemHeight( PanelPredicateSystemSingle ):
         
         allowed_operators = [
             ClientNumberTest.NUMBER_TEST_OPERATOR_LESS_THAN,
+            ClientNumberTest.NUMBER_TEST_OPERATOR_LESS_THAN_OR_EQUAL_TO,
             ClientNumberTest.NUMBER_TEST_OPERATOR_APPROXIMATE_ABSOLUTE,
             ClientNumberTest.NUMBER_TEST_OPERATOR_APPROXIMATE_PERCENT,
             ClientNumberTest.NUMBER_TEST_OPERATOR_EQUAL,
             ClientNumberTest.NUMBER_TEST_OPERATOR_NOT_EQUAL,
-            ClientNumberTest.NUMBER_TEST_OPERATOR_GREATER_THAN
+            ClientNumberTest.NUMBER_TEST_OPERATOR_GREATER_THAN,
+            ClientNumberTest.NUMBER_TEST_OPERATOR_GREATER_THAN_OR_EQUAL_TO
         ]
         
         self._number_test = ClientGUINumberTest.NumberTestWidget( self, allowed_operators = allowed_operators, unit_string = 'px', appropriate_absolute_plus_or_minus_default = 200 )
@@ -1871,11 +1877,13 @@ class PanelPredicateSystemNumFrames( PanelPredicateSystemSingle ):
         
         allowed_operators = [
             ClientNumberTest.NUMBER_TEST_OPERATOR_LESS_THAN,
+            ClientNumberTest.NUMBER_TEST_OPERATOR_LESS_THAN_OR_EQUAL_TO,
             ClientNumberTest.NUMBER_TEST_OPERATOR_APPROXIMATE_ABSOLUTE,
             ClientNumberTest.NUMBER_TEST_OPERATOR_APPROXIMATE_PERCENT,
             ClientNumberTest.NUMBER_TEST_OPERATOR_EQUAL,
             ClientNumberTest.NUMBER_TEST_OPERATOR_NOT_EQUAL,
-            ClientNumberTest.NUMBER_TEST_OPERATOR_GREATER_THAN
+            ClientNumberTest.NUMBER_TEST_OPERATOR_GREATER_THAN,
+            ClientNumberTest.NUMBER_TEST_OPERATOR_GREATER_THAN_OR_EQUAL_TO
         ]
         
         self._number_test = ClientGUINumberTest.NumberTestWidget( self, allowed_operators = allowed_operators, max = 1000000, appropriate_absolute_plus_or_minus_default = 300 )
@@ -2015,9 +2023,11 @@ class PanelPredicateSystemNumNotes( PanelPredicateSystemSingle ):
         
         allowed_operators = [
             ClientNumberTest.NUMBER_TEST_OPERATOR_LESS_THAN,
+            ClientNumberTest.NUMBER_TEST_OPERATOR_LESS_THAN_OR_EQUAL_TO,
             ClientNumberTest.NUMBER_TEST_OPERATOR_EQUAL,
             ClientNumberTest.NUMBER_TEST_OPERATOR_NOT_EQUAL,
-            ClientNumberTest.NUMBER_TEST_OPERATOR_GREATER_THAN
+            ClientNumberTest.NUMBER_TEST_OPERATOR_GREATER_THAN,
+            ClientNumberTest.NUMBER_TEST_OPERATOR_GREATER_THAN_OR_EQUAL_TO
         ]
         
         self._number_test = ClientGUINumberTest.NumberTestWidget( self, allowed_operators = allowed_operators )
@@ -2069,9 +2079,11 @@ class PanelPredicateSystemNumURLs( PanelPredicateSystemSingle ):
         
         allowed_operators = [
             ClientNumberTest.NUMBER_TEST_OPERATOR_LESS_THAN,
+            ClientNumberTest.NUMBER_TEST_OPERATOR_LESS_THAN_OR_EQUAL_TO,
             ClientNumberTest.NUMBER_TEST_OPERATOR_EQUAL,
             ClientNumberTest.NUMBER_TEST_OPERATOR_NOT_EQUAL,
-            ClientNumberTest.NUMBER_TEST_OPERATOR_GREATER_THAN
+            ClientNumberTest.NUMBER_TEST_OPERATOR_GREATER_THAN,
+            ClientNumberTest.NUMBER_TEST_OPERATOR_GREATER_THAN_OR_EQUAL_TO
         ]
         
         self._number_test = ClientGUINumberTest.NumberTestWidget( self, allowed_operators = allowed_operators )
@@ -2123,11 +2135,13 @@ class PanelPredicateSystemNumWords( PanelPredicateSystemSingle ):
         
         allowed_operators = [
             ClientNumberTest.NUMBER_TEST_OPERATOR_LESS_THAN,
+            ClientNumberTest.NUMBER_TEST_OPERATOR_LESS_THAN_OR_EQUAL_TO,
             ClientNumberTest.NUMBER_TEST_OPERATOR_APPROXIMATE_ABSOLUTE,
             ClientNumberTest.NUMBER_TEST_OPERATOR_APPROXIMATE_PERCENT,
             ClientNumberTest.NUMBER_TEST_OPERATOR_EQUAL,
             ClientNumberTest.NUMBER_TEST_OPERATOR_NOT_EQUAL,
-            ClientNumberTest.NUMBER_TEST_OPERATOR_GREATER_THAN
+            ClientNumberTest.NUMBER_TEST_OPERATOR_GREATER_THAN,
+            ClientNumberTest.NUMBER_TEST_OPERATOR_GREATER_THAN_OR_EQUAL_TO
         ]
         
         self._number_test = ClientGUINumberTest.NumberTestWidget( self, allowed_operators = allowed_operators, max = 100000000, appropriate_absolute_plus_or_minus_default = 5000 )
@@ -2761,7 +2775,7 @@ class PanelPredicateSystemSimilarToData( PanelPredicateSystemSingle ):
                 
                 pixel_hash = HydrusImageHandling.GetImagePixelHashNumPy( numpy_image )
                 
-                perceptual_hashes = ClientImagePerceptualHashes.GenerateShapePerceptualHashesNumPy( numpy_image )
+                perceptual_hashes = ClientImagePerceptualHashes.GenerateUsefulShapePerceptualHashesNumPy( numpy_image )
                 
             except Exception as e:
                 
@@ -2813,7 +2827,7 @@ class PanelPredicateSystemSimilarToData( PanelPredicateSystemSingle ):
                         
                         pixel_hash = HydrusImageHandling.GetImagePixelHash( path, mime )
                         
-                        perceptual_hashes = ClientImagePerceptualHashes.GenerateShapePerceptualHashes( path, mime )
+                        perceptual_hashes = ClientImagePerceptualHashes.GenerateUsefulShapePerceptualHashes( path, mime )
                         
                     else:
                         
@@ -3237,11 +3251,13 @@ class PanelPredicateSystemWidth( PanelPredicateSystemSingle ):
         
         allowed_operators = [
             ClientNumberTest.NUMBER_TEST_OPERATOR_LESS_THAN,
+            ClientNumberTest.NUMBER_TEST_OPERATOR_LESS_THAN_OR_EQUAL_TO,
             ClientNumberTest.NUMBER_TEST_OPERATOR_APPROXIMATE_ABSOLUTE,
             ClientNumberTest.NUMBER_TEST_OPERATOR_APPROXIMATE_PERCENT,
             ClientNumberTest.NUMBER_TEST_OPERATOR_EQUAL,
             ClientNumberTest.NUMBER_TEST_OPERATOR_NOT_EQUAL,
-            ClientNumberTest.NUMBER_TEST_OPERATOR_GREATER_THAN
+            ClientNumberTest.NUMBER_TEST_OPERATOR_GREATER_THAN,
+            ClientNumberTest.NUMBER_TEST_OPERATOR_GREATER_THAN_OR_EQUAL_TO
         ]
         
         self._number_test = ClientGUINumberTest.NumberTestWidget( self, allowed_operators = allowed_operators, unit_string = 'px',  appropriate_absolute_plus_or_minus_default = 200 )

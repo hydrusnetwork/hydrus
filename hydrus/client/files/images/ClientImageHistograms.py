@@ -11,11 +11,13 @@ from hydrus.client.caches import ClientCachesBase
 
 # TODO: rework the cv2 stuff here to PIL or custom methods or whatever!
 
-HISTOGRAM_IMAGE_SIZE = ( 1024, 1024 )
+NORMALISE_SCALE_FOR_PROCESSING = True
+NORMALISED_RESOLUTION = ( 1024, 1024 )
+
 NUM_BINS = 256
-NUM_TILES_DIMENSIONS = ( 16, 16 )
-TILE_DIMENSIONS = ( int( HISTOGRAM_IMAGE_SIZE[0] / NUM_TILES_DIMENSIONS[0] ), int( HISTOGRAM_IMAGE_SIZE[1] / NUM_TILES_DIMENSIONS[1] ) )
-NUM_TILES = NUM_TILES_DIMENSIONS[0] * NUM_TILES_DIMENSIONS[1]
+NUM_TILES_PER_DIMENSION = 16
+NUM_TILES_DIMENSIONS = ( NUM_TILES_PER_DIMENSION, NUM_TILES_PER_DIMENSION )
+NUM_TILES = NUM_TILES_PER_DIMENSION * NUM_TILES_PER_DIMENSION
 
 class LabHistogram( ClientCachesBase.CacheableObject ):
     
@@ -29,8 +31,13 @@ class LabHistogram( ClientCachesBase.CacheableObject ):
     
     def GetEstimatedMemoryFootprint( self ) -> int:
         
-        # I convert to float16, which has no impact on our needed resolution
-        return 2 * NUM_BINS * 3
+        # float32
+        return 4 * NUM_BINS * 3
+        
+    
+    def IsInteresting( self ):
+        # a flat colour, or a png with very very flat straight colours, is not going to have much in the L histogram
+        return numpy.count_nonzero( self.l_hist ) + numpy.count_nonzero( self.a_hist ) + numpy.count_nonzero( self.b_hist ) > 24
         
     
     def ResolutionIsTooLow( self ):
@@ -210,7 +217,14 @@ def gaussian_pdf( x, mean, variance ):
     return coef * numpy.exp( -0.5 * ( ( x - mean ) ** 2) / variance )
     
 
-def aberrant_bump_detected_giganto_brain( values ):
+def gaussian_cdf(x, mean, std ):
+    
+    z = ( x - mean ) / ( std * math.sqrt(2) )
+    
+    return 0.5 * ( 1 + math.erf( z ) )
+    
+
+def aberrant_bump_in_scores_giganto_brain( values ):
     """
     detect a second bump in our score list
     """
@@ -218,35 +232,73 @@ def aberrant_bump_detected_giganto_brain( values ):
     '''
     Assuming we are generally talking about 1 curve here in a good situation, let's fit a gaussian to the main guy and then see if the latter section of our histogram still has any grass standing tall
     
-    Ok this worked kiiiind of ok, but it catches a bunch of false positives of later bumps. some bumps are ok, some are not! ultimately not easy to differentiate
+    Ok I worked on this and added p-values, but it still wasn't nicely differentiating good from bad! I think the scoring still is the baseline thing we need to hunt here, oh well
     '''
+    
+    n = len( values )
     
     gmm_result = fit_gmm_1d( values, n_components = 1 )
     mean = gmm_result[ 'means' ][0]
     variance = gmm_result[ 'variances' ][0]
     
-    ( values_histogram, bin_edges ) = numpy.histogram( values, bins = 50, range = ( 0, WD_MAX_REGIONAL_SCORE ), density = True )
+    std = variance ** 0.5
+    
+    # Scott's Rule
+    bin_width = 3.5 * std / ( n ** ( 1 / 3 ) )
+    num_bins = max( 1, min( round( WD_MAX_REGIONAL_SCORE / bin_width ), 2000 ) )
+    
+    ( values_histogram, bin_edges ) = numpy.histogram( values, bins = num_bins, range = ( 0, WD_MAX_REGIONAL_SCORE ), density = True )
     
     bin_centers = ( bin_edges[ : -1 ] + bin_edges[ 1 : ] ) / 2
     
     pdf = gaussian_pdf( bin_centers, mean, variance )
     
-    bin_width = ( bin_edges[1] - bin_edges[0] )
-    
     model_histogram = pdf * numpy.sum( values_histogram ) * bin_width
     
     residual_histogram = values_histogram - model_histogram
     
-    # what's >0 was above what is expected by the model
+    # ok previously we set the num_bins to 50 and just tested against a flat >10? value
+    # we are now going bananas and doing P-values
     
-    tail_start_position = round( ( mean + ( variance ** 0.5 ) * 2 ) / bin_width )
+    results = []
     
-    tail = residual_histogram[ tail_start_position : ]
+    for ( x, residual ) in zip( bin_centers, residual_histogram ):
+        
+        if x < mean:
+            
+            continue  # optional: ignore left tail
+            
+        
+        # what is the probability that tha residual is >0 here?
+        p = 1 - gaussian_cdf( x , mean, std )
+        
+        # if the liklihood is greater than x%, we won't consider that suspicious
+        if p > 0.05:
+            
+            continue
+            
+        
+        # now let's make a normalised 'residual mass' amount that normalises for our dynamic bin width
+        
+        residual_mass = residual * bin_width
+        
+        log_score = residual_mass * - math.log( p + 1e-10 )
+        
+        if log_score > 0:
+            
+            print( (p, log_score ) )
+            
+        
+        if log_score > 0.07:
+            
+            print( 'anomaly_detected' )
+            
+        
     
-    return numpy.any( tail > 10 )
+    return True
     
 
-def aberrant_bump_detected( values ):
+def aberrant_bump_in_scores( values ):
     """
     detect a second bump in our score list
     """
@@ -399,12 +451,24 @@ def FilesAreVisuallySimilarRegional( lab_tile_hist_1: LabTilesHistogram, lab_til
         return ( False, VISUAL_DUPLICATES_RESULT_NOT, 'cannot determine visual duplicates (too low resolution)' )
         
     
-    scores = [ GetLabHistogramWassersteinDistanceScore( lab_hist_1, lab_hist_2 ) for ( lab_hist_1, lab_hist_2 ) in zip( lab_tile_hist_1.histograms, lab_tile_hist_2.histograms ) ]
+    data = []
+    
+    for ( i, ( lab_hist_1, lab_hist_2 ) ) in enumerate( zip( lab_tile_hist_1.histograms, lab_tile_hist_2.histograms ) ):
+        
+        data.append( GetLabHistogramWassersteinDistanceScore( lab_hist_1, lab_hist_2 ) )
+        
+    
+    we_have_no_interesting_tiles = True not in ( interesting_tile for ( interesting_tile, lab_score ) in data )
+    we_have_an_interesting_tile_that_matches_perfectly = True in ( interesting_tile and lab_score < 0.0000001 for ( interesting_tile, lab_score ) in data )
+    
+    scores = [ lab_score for ( interesting_tile, lab_score ) in data ]
     
     max_regional_score = max( scores )
     mean_score = float( numpy.mean( scores ) )
     score_variance = float( numpy.var( scores ) )
     score_skew = skewness_numpy( scores )
+    
+    we_have_a_mix_of_perfect_and_non_perfect_matches = we_have_an_interesting_tile_that_matches_perfectly and max_regional_score > 0.0001
     
     # ok so skew alone is normalised and can thus be whack when we have a really tight, low variance distribution
     # so, let's multiply it by the maximum value we saw, and that gives us a nicer thing that scales to relevance with a decent sized distribution
@@ -415,16 +479,30 @@ def FilesAreVisuallySimilarRegional( lab_tile_hist_1: LabTilesHistogram, lab_til
     exceeds_variance = score_variance > WD_MAX_VARIANCE
     exceeds_skew = absolute_skew_pull > WD_MAX_ABSOLUTE_SKEW_PULL
     
-    we_saw_an_aberrant_bump = aberrant_bump_detected( scores )
+    we_saw_an_aberrant_bump = aberrant_bump_in_scores( scores )
     
-    debug_score_statement = f'max {max_regional_score:.3f} ({not exceeds_regional_score}) / mean {mean_score:.6f} ({not exceeds_mean})\nvariance {score_variance:.7f} ({not exceeds_variance}) / skew {score_skew:.3f}/{absolute_skew_pull:.2f} ({not exceeds_skew})\naberrant bump: {not aberrant_bump_detected}'
+    debug_score_statement = f'max {max_regional_score:.3f} ({"ok" if not exceeds_regional_score else "bad"}) / mean {mean_score:.6f} ({"ok" if not exceeds_mean else "bad"})'
+    debug_score_statement += '\n'
+    debug_score_statement += f'variance {score_variance:.7f} ({"ok" if not exceeds_variance else "bad"}) / skew {score_skew:.3f}/{absolute_skew_pull:.2f} ({"ok" if not exceeds_skew else "bad"})'
+    debug_score_statement += '\n'
+    debug_score_statement += f'bump test: {"ok" if not we_saw_an_aberrant_bump else "bad"} / perfect/imperfect: {we_have_an_interesting_tile_that_matches_perfectly} {"ok" if not we_have_a_mix_of_perfect_and_non_perfect_matches else "bad"}'
     
-    if exceeds_skew or exceeds_variance or exceeds_mean or exceeds_regional_score or we_saw_an_aberrant_bump:
+    #print( debug_score_statement )
+    
+    if exceeds_skew or exceeds_variance or exceeds_mean or exceeds_regional_score or we_saw_an_aberrant_bump or we_have_a_mix_of_perfect_and_non_perfect_matches or we_have_no_interesting_tiles:
         
         they_are_similar = False
         result = VISUAL_DUPLICATES_RESULT_NOT
         
-        if exceeds_skew:
+        if we_have_no_interesting_tiles:
+            
+            statement = f'too simple to compare'
+            
+        elif we_have_a_mix_of_perfect_and_non_perfect_matches:
+            
+            statement = 'probably not visual duplicates\n(small difference?)'
+            
+        elif exceeds_skew:
             
             statement = 'not visual duplicates\n(alternate/watermark?)'
             
@@ -463,6 +541,9 @@ def FilesAreVisuallySimilarRegional( lab_tile_hist_1: LabTilesHistogram, lab_til
 
 def FilesAreVisuallySimilarSimple( lab_hist_1: LabHistogram, lab_hist_2: LabHistogram ):
     
+    # if I do not scale images to be the same size, this guy falls over!
+    # I guess the INTER_AREA or something is doing an implicit gaussian of some sort and my tuned numbers assume that
+    
     if FilesHaveDifferentRatio( lab_hist_1.resolution, lab_hist_2.resolution ):
         
         return ( False, VISUAL_DUPLICATES_RESULT_NOT, 'not visual duplicates (different ratio)' )
@@ -475,15 +556,20 @@ def FilesAreVisuallySimilarSimple( lab_hist_1: LabHistogram, lab_hist_2: LabHist
     
     # this is useful to rule out easy false positives, but as expected it suffers from lack of fine resolution
     
-    score = GetLabHistogramWassersteinDistanceScore( lab_hist_1, lab_hist_2 )
+    ( interesting_tile, lab_score ) = GetLabHistogramWassersteinDistanceScore( lab_hist_1, lab_hist_2 )
     
     # experimentally, I generally find that most are < 0.0008, but a couple of high-quality-range jpeg pairs are 0.0018
     # so, let's allow this thing to examine deeper on this range of things but otherwise quickly discard
     # a confident negative result but less confident positive result is the way around we want
     
-    they_are_similar = score < 0.003
+    they_are_similar = lab_score < 0.003
     
-    if they_are_similar:
+    if not interesting_tile:
+        
+        statement = f'too simple to compare'
+        result = VISUAL_DUPLICATES_RESULT_NOT
+        
+    elif they_are_similar:
         
         statement = f'probably visual duplicates'
         result = VISUAL_DUPLICATES_RESULT_PROBABLY
@@ -510,13 +596,61 @@ def FilesHaveDifferentRatio( resolution_1, resolution_2 ):
     return not ClientNumberTest.NumberTest( operator = ClientNumberTest.NUMBER_TEST_OPERATOR_APPROXIMATE_PERCENT, value = 1 ).Test( s_ratio, c_ratio )
     
 
+def GenerateEdgeMapNumPy( numpy_image: numpy.ndarray, original_resolution ) -> numpy.ndarray:
+    
+    '''
+    This can work exceptionally well to detect lines, but if we scale images down, we lose data!!!
+    So, we feed the image into here as a 100% grayscale.
+    Then we have two objectives:
+        - filter out jpeg and other scaling fuzz, the size of which is resolution independant
+        - recognise similar edges, the size of which which are resolution dependant
+    So, our sigma1 is fixed size, but our sigma2 is scaled to a perceptual size.
+    
+    I tried creating a histogram, but it was not helpful--we have to retain and compare position data! 
+    '''
+    
+    # ok regardless of this tile size, we imagine the full image were zoomed to 2048x2048 size. what's a thin line edge look like at this scale?
+    perceptual_scale = ( ( 2048 / original_resolution[0] ) * ( 2048 / original_resolution[1] ) ) ** 0.5
+    
+    img = numpy_image.astype( numpy.float32 )
+    
+    # Compute Difference of Gaussians
+    blur1 = cv2.GaussianBlur(img, (0, 0), sigmaX = 1.7 )
+    blur2 = cv2.GaussianBlur(img, (0, 0), sigmaX = 2.5 / perceptual_scale )
+    dog = blur1 - blur2
+    
+    # generally we rarely see edges stronger than +/-8. sometimes 20-32, but '1' is a useful threshold in testing
+    threshold = 1.0
+    
+    # emphasise yet again what is important, disregard noise
+    dog_important = numpy.where( numpy.abs( dog ) > threshold, dog, 0 )
+    
+    # ok collapse to something smaller, using mean average
+    edge_map = cv2.resize( dog_important, ( 32, 32 ), interpolation = cv2.INTER_AREA ).astype( numpy.float32 )
+    
+    edge_map_normalised_image = ( ( edge_map + 8 ) * 16 ).astype( numpy.uint8 )
+    
+    return edge_map
+    
+    # this was another thought--to phash the guy so we'd 'see' the differences
+    # no dice, too many false positives because of fuzz
+    #return ClientImagePerceptualHashes.GenerateShapePerceptualHashNumPy( edge_map_normalised_image )
+    
+
 def GenerateImageLabHistogramsNumPy( numpy_image: numpy.ndarray ) -> LabHistogram:
     
-    resolution = ( numpy_image.shape[1], numpy_image.shape[0] )
+    ( width, height ) = ( numpy_image.shape[1], numpy_image.shape[0] )
     
-    scaled_numpy = cv2.resize( numpy_image, HISTOGRAM_IMAGE_SIZE, interpolation = cv2.INTER_AREA )
+    resolution = ( width, height )
     
-    numpy_image_rgb = HydrusImageNormalisation.StripOutAnyAlphaChannel( scaled_numpy )
+    numpy_image_rgb = HydrusImageNormalisation.StripOutAnyAlphaChannel( numpy_image )
+    
+    #numpy_image_gray = cv2.cvtColor( numpy_image_rgb, cv2.COLOR_RGB2GRAY )
+    
+    if NORMALISE_SCALE_FOR_PROCESSING:
+        
+        numpy_image_rgb = cv2.resize( numpy_image_rgb, NORMALISED_RESOLUTION, interpolation = cv2.INTER_AREA )
+        
     
     numpy_image_lab = cv2.cvtColor( numpy_image_rgb, cv2.COLOR_RGB2Lab )
     
@@ -530,18 +664,39 @@ def GenerateImageLabHistogramsNumPy( numpy_image: numpy.ndarray ) -> LabHistogra
     ( a_hist, a_gubbins ) = numpy.histogram( a, bins = NUM_BINS, range = ( 0, 255 ), density = True )
     ( b_hist, b_gubbins ) = numpy.histogram( b, bins = NUM_BINS, range = ( 0, 255 ), density = True )
     
-    return LabHistogram( resolution, l_hist.astype( numpy.float16 ), a_hist.astype( numpy.float16 ), b_hist.astype( numpy.float16 ) )
+    #edge_map = GenerateEdgeMapNumPy( numpy_image_gray, resolution )
+    
+    return LabHistogram( resolution, l_hist.astype( numpy.float32 ), a_hist.astype( numpy.float32 ), b_hist.astype( numpy.float32 ) )
     
 
 def GenerateImageLabTilesHistogramsNumPy( numpy_image: numpy.ndarray ) -> LabTilesHistogram:
     
-    resolution = ( numpy_image.shape[1], numpy_image.shape[0] )
+    ( width, height ) = ( numpy_image.shape[1], numpy_image.shape[0] )
     
-    scaled_numpy = cv2.resize( numpy_image, HISTOGRAM_IMAGE_SIZE, interpolation = cv2.INTER_AREA )
+    resolution = ( width, height )
     
-    numpy_image_rgb = HydrusImageNormalisation.StripOutAnyAlphaChannel( scaled_numpy )
+    numpy_image_rgb = HydrusImageNormalisation.StripOutAnyAlphaChannel( numpy_image )
     
-    numpy_image_lab = cv2.cvtColor( numpy_image_rgb, cv2.COLOR_RGB2Lab )
+    # ok scale the image up to the nearest multiple of 16
+    tile_fitting_width = ( ( width + NUM_TILES_PER_DIMENSION - 1 ) // NUM_TILES_PER_DIMENSION ) * NUM_TILES_PER_DIMENSION
+    tile_fitting_height = ( ( height + NUM_TILES_PER_DIMENSION - 1 ) // NUM_TILES_PER_DIMENSION ) * NUM_TILES_PER_DIMENSION
+    
+    if NORMALISE_SCALE_FOR_PROCESSING:
+        
+        lab_size_we_will_scale_to = NORMALISED_RESOLUTION
+        
+    else:
+        
+        lab_size_we_will_scale_to = ( tile_fitting_width, tile_fitting_height )
+        
+    
+    gray_size_we_will_scale_to = ( tile_fitting_width, tile_fitting_height )
+    
+    #gray_scaled_numpy = cv2.resize( cv2.cvtColor( numpy_image_rgb, cv2.COLOR_RGB2GRAY ), gray_size_we_will_scale_to, interpolation = cv2.INTER_AREA )
+    
+    scaled_numpy = cv2.resize( numpy_image_rgb, lab_size_we_will_scale_to, interpolation = cv2.INTER_AREA )
+    
+    numpy_image_lab = cv2.cvtColor( scaled_numpy, cv2.COLOR_RGB2Lab )
     
     l = numpy_image_lab[ :, :, 0 ]
     a = numpy_image_lab[ :, :, 1 ]
@@ -549,15 +704,16 @@ def GenerateImageLabTilesHistogramsNumPy( numpy_image: numpy.ndarray ) -> LabTil
     
     histograms = []
     
-    ( tile_x, tile_y ) = TILE_DIMENSIONS
+    ( lab_tile_x, lab_tile_y ) = ( lab_size_we_will_scale_to[0] // NUM_TILES_PER_DIMENSION, lab_size_we_will_scale_to[1] // NUM_TILES_PER_DIMENSION )
+    ( gray_tile_x, gray_tile_y ) = ( gray_size_we_will_scale_to[0] // NUM_TILES_PER_DIMENSION, gray_size_we_will_scale_to[1] // NUM_TILES_PER_DIMENSION )
     
-    for x in range( NUM_TILES_DIMENSIONS[0] ):
+    for x in range( NUM_TILES_PER_DIMENSION ):
         
-        for y in range( NUM_TILES_DIMENSIONS[ 1 ] ):
+        for y in range( NUM_TILES_PER_DIMENSION ):
             
-            l_tile = l[ y * tile_y : ( y + 1 ) * tile_y, x * tile_x : ( x + 1 ) * tile_x ]
-            a_tile = a[ y * tile_y : ( y + 1 ) * tile_y, x * tile_x : ( x + 1 ) * tile_x ]
-            b_tile = b[ y * tile_y : ( y + 1 ) * tile_y, x * tile_x : ( x + 1 ) * tile_x ]
+            l_tile = l[ y * lab_tile_y : ( y + 1 ) * lab_tile_y, x * lab_tile_x : ( x + 1 ) * lab_tile_x ]
+            a_tile = a[ y * lab_tile_y : ( y + 1 ) * lab_tile_y, x * lab_tile_x : ( x + 1 ) * lab_tile_x ]
+            b_tile = b[ y * lab_tile_y : ( y + 1 ) * lab_tile_y, x * lab_tile_x : ( x + 1 ) * lab_tile_x ]
             
             # just a note here, a and b are usually -128 to +128, but opencv normalises to 0-255, so we are good here but the average will usually be ~128
             
@@ -565,7 +721,11 @@ def GenerateImageLabTilesHistogramsNumPy( numpy_image: numpy.ndarray ) -> LabTil
             ( a_hist, a_gubbins ) = numpy.histogram( a_tile, bins = NUM_BINS, range = ( 0, 255 ), density = True )
             ( b_hist, b_gubbins ) = numpy.histogram( b_tile, bins = NUM_BINS, range = ( 0, 255 ), density = True )
             
-            histograms.append( LabHistogram( resolution, l_hist.astype( numpy.float16 ), a_hist.astype( numpy.float16 ), b_hist.astype( numpy.float16 ) ) )
+            #gray_tile = gray_scaled_numpy[ y * gray_tile_y : ( y + 1 ) * gray_tile_y, x * gray_tile_x : ( x + 1 ) * gray_tile_x ]
+            
+            #edge_map = GenerateEdgeMapNumPy( gray_tile, resolution )
+            
+            histograms.append( LabHistogram( resolution, l_hist.astype( numpy.float32 ), a_hist.astype( numpy.float32 ), b_hist.astype( numpy.float32 ) ) )
             
         
     
@@ -574,11 +734,11 @@ def GenerateImageLabTilesHistogramsNumPy( numpy_image: numpy.ndarray ) -> LabTil
 
 def GenerateImageRGBHistogramsNumPy( numpy_image: numpy.ndarray ):
     
-    scaled_numpy = cv2.resize( numpy_image, HISTOGRAM_IMAGE_SIZE, interpolation = cv2.INTER_AREA )
+    numpy_image_rgb = HydrusImageNormalisation.StripOutAnyAlphaChannel( numpy_image )
     
-    r = scaled_numpy[ :, :, 0 ]
-    g = scaled_numpy[ :, :, 1 ]
-    b = scaled_numpy[ :, :, 2 ]
+    r = numpy_image_rgb[ :, :, 0 ]
+    g = numpy_image_rgb[ :, :, 1 ]
+    b = numpy_image_rgb[ :, :, 2 ]
     
     # ok the density here tells it to normalise, so images with greater saturation appear similar
     ( r_hist, r_gubbins ) = numpy.histogram( r, bins = NUM_BINS, range = ( 0, 255 ), density = True )
@@ -593,14 +753,26 @@ def GetHistogramNormalisedWassersteinDistance( hist_1: numpy.ndarray, hist_2: nu
     # Earth Movement Distance
     # how much do we have to rejigger one hist to be the same as the other?
     
-    hist_1_cdf = numpy.cumsum( hist_1 )
-    hist_2_cdf = numpy.cumsum( hist_2 )
-    
-    EMD = numpy.sum( numpy.abs( hist_1_cdf - hist_2_cdf ) )
+    EMD = numpy.sum( numpy.abs( numpy.cumsum( hist_1 - hist_2 ) ) )
     
     # 0 = no movement, 255 = max movement
     
-    return float( EMD / ( NUM_BINS - 1 ) )
+    return float( EMD / ( len( hist_1 ) - 1 ) )
+    
+
+def GetEdgeMapSlicedWasstersteinDistanceScore( edge_map_1: numpy.ndarray, edge_map_2: numpy.ndarray ):
+    
+    # this is a fast alternate of a 2D wasserstein distance
+    
+    def wasserstein_1d(p, q):
+        
+        return numpy.sum( numpy.abs( numpy.cumsum( p - q ) ) )
+        
+    
+    row_diff = sum( wasserstein_1d( edge_map_1[i], edge_map_2[i] ) for i in range( edge_map_1.shape[0] ) )
+    col_diff = sum( wasserstein_1d( edge_map_1[:, j], edge_map_2[:, j] ) for j in range( edge_map_1.shape[1] ) )
+    
+    return row_diff + col_diff
     
 
 def GetLabHistogramWassersteinDistanceScore( lab_hist_1: LabHistogram, lab_hist_2: LabHistogram ):
@@ -609,5 +781,7 @@ def GetLabHistogramWassersteinDistanceScore( lab_hist_1: LabHistogram, lab_hist_
     a_score = GetHistogramNormalisedWassersteinDistance( lab_hist_1.a_hist, lab_hist_2.a_hist )
     b_score = GetHistogramNormalisedWassersteinDistance( lab_hist_1.b_hist, lab_hist_2.b_hist )
     
-    return 0.6 * l_score + 0.2 * a_score + 0.2 * b_score
+    interesting_tile = lab_hist_1.IsInteresting() or lab_hist_2.IsInteresting()
+    
+    return ( interesting_tile, 0.6 * l_score + 0.2 * a_score + 0.2 * b_score )
     

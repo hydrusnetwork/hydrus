@@ -72,6 +72,9 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.Liste
     
     newMediaAdded = QC.Signal()
     
+    filesAdded = QC.Signal( list )
+    filesRemoved = QC.Signal( list )
+    
     def __init__( self, parent, page_key, page_manager: ClientGUIPageManager.PageManager, media_results ):
         
         self._qss_colours = {
@@ -1217,16 +1220,6 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.Liste
         pass
         
     
-    def _Remove( self, file_filter: ClientMediaFileFilter.FileFilter ):
-        
-        hashes = file_filter.GetMediaListHashes( self )
-        
-        if len( hashes ) > 0:
-            
-            self._RemoveMediaByHashes( hashes )
-            
-        
-    
     def _RegenerateFileData( self, job_type ):
         
         flat_media = self._GetSelectedFlatMedia()
@@ -1304,6 +1297,27 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.Liste
                 CG.client_controller.CallToThread( CG.client_controller.files_maintenance_manager.ScheduleJob, hashes, job_type )
                 
             
+        
+    
+    def _Remove( self, file_filter: ClientMediaFileFilter.FileFilter ):
+        
+        hashes = file_filter.GetMediaListHashes( self )
+        
+        if len( hashes ) > 0:
+            
+            self._RemoveMediaByHashes( hashes )
+            
+        
+    
+    def _RemoveMediaDirectly( self, singleton_media, collected_media ):
+        
+        super()._RemoveMediaDirectly( singleton_media, collected_media )
+        
+        flat_media = list( singleton_media ) + ClientMedia.FlattenMedia( collected_media )
+        
+        hashes = [ m.GetHash() for m in flat_media ]
+        
+        self.filesRemoved.emit( hashes )
         
     
     def _RescindDownloadSelected( self ):
@@ -1889,14 +1903,20 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.Liste
             
             CG.client_controller.pub( 'refresh_page_name', self._page_key )
             
-            result = ClientMedia.ListeningMediaList.AddMediaResults( self, media_results )
+            new_media = ClientMedia.ListeningMediaList.AddMediaResults( self, media_results )
             
             self.newMediaAdded.emit()
             
+            hashes = [ m.GetHash() for m in ClientMedia.FlattenMedia( new_media ) ]
+            
+            self.filesAdded.emit( hashes )
+            
             CG.client_controller.pub( 'notify_new_pages_count' )
             
-            return result
+            return new_media
             
+        
+        return []
         
     
     def CleanBeforeDestroy( self ):

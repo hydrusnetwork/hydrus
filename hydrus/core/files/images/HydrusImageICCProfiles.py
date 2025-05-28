@@ -4,8 +4,9 @@ import struct
 
 def make_icc_header( profile_size: int ) -> bytes:
     
-    # Here's how Qt does it: https://codebrowser.dev/qt6/qtbase/src/gui/painting/qicc.cpp.html
-    # and reads a PNG: https://codebrowser.dev/qt6/qtbase/src/gui/image/qpnghandler.cpp.html
+    # Here's how Qt does it: https://codebrowser.dev/qt6/qtbase/src/gui/painting/qicc.cpp.html#484
+    # QColorSpace: https://codebrowser.dev/qt6/qtbase/src/gui/painting/qcolorspace.cpp.html#734
+    # and reads a PNG: https://codebrowser.dev/qt6/qtbase/src/gui/image/qpnghandler.cpp.html#890
     # ICC Spec: https://www.color.org/specification/ICC.1-2022-05.pdf
     
     # ONE OPTION HERE IS JUST TO HAVE A HOOK THAT LOADS IT FROM QT QColorSpace
@@ -142,13 +143,64 @@ def make_chad_tag_D65_to_D50():
     
     for value in bradford_d65_to_d50:
         
-        tag += float_to_s15Fixed16( value ).to_bytes( 4, 'big', signed = True )
+        tag += struct.pack( '>f', float( value ) )
         
     
     return tag
     
 
-def make_gamma_and_chromaticity_icc_profile( gamma: float, chromaticity_xyz_matrix: numpy.ndarray ) -> bytes:
+def xy_to_xyz(x, y):
+    
+    return numpy.array( [x / y, 1.0, (1 - x - y) / y] )
+    
+
+def generate_chromatic_adaptation_matrix( src_xy, dst_xy = (0.34567, 0.35850) ):
+    """Compute Bradford chromatic adaptation matrix from src_xy to dst_xy, default dest is D50"""
+    
+    # I think this matrix is flipped wrong somehow, not sure if this method works correctly or provides the inverse result wew
+    # Bradford cone response matrix
+    M = numpy.array( [
+        [ 0.8951,  0.2664, -0.1614],
+        [-0.7502,  1.7135,  0.0367],
+        [ 0.0389, -0.0685,  1.0296],
+    ] )
+    
+    M_inv = numpy.linalg.inv( M )
+    
+    # Convert source and destination xy to XYZ
+    src_xyz = xy_to_xyz(*src_xy)
+    dst_xyz = xy_to_xyz(*dst_xy)
+    
+    # Compute cone responses
+    src_cone = M @ src_xyz
+    dst_cone = M @ dst_xyz
+    
+    # Diagonal scaling matrix
+    scale = numpy.diag( dst_cone / src_cone )
+    
+    # Final adaptation matrix
+    return M_inv @ scale @ M
+    
+
+def make_chad_tag_arbitrary_to_D50( src_white_xy ):
+    
+    chad_matrix = generate_chromatic_adaptation_matrix( src_white_xy )
+    
+    tag = b'sf32' + b'\x00\x00\x00\x00'
+
+    # Write matrix values row by row as 32-bit IEEE big-endian floats
+    for row in chad_matrix:
+        
+        for value in row:
+            
+            tag += struct.pack( '>f', float( value ) )
+            
+        
+
+    return tag
+    
+
+def make_gamma_and_chromaticity_icc_profile( gamma: float, white_xy: tuple, chromaticity_xyz_matrix: numpy.ndarray ) -> bytes:
     
     desc = make_desc_tag( 'iccp' )
     rXYZ, gXYZ, bXYZ = make_xyz_matrix_tags( chromaticity_xyz_matrix )
@@ -174,7 +226,7 @@ def make_gamma_and_chromaticity_icc_profile( gamma: float, chromaticity_xyz_matr
         
     
     add_tag( 'wtpt', make_wtpt_tag_D65() )
-    add_tag( 'chad', make_chad_tag_D65_to_D50() )
+    add_tag( 'chad', make_chad_tag_arbitrary_to_D50( white_xy ) )
     add_tag( 'desc', desc )
     add_tag( 'rXYZ', rXYZ )
     add_tag( 'gXYZ', gXYZ )

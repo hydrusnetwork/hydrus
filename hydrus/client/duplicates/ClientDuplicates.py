@@ -701,6 +701,10 @@ def GetDuplicateComparisonStatements( shown_media_result: ClientMediaResult.Medi
                     statements_and_scores[ 'a_and_b_are_visual_duplicates' ] = ( simple_score_statement, 0 )
                     
                 
+            except HydrusExceptions.ShutdownException:
+                
+                pass
+                
             except Exception as e:
                 
                 HydrusData.ShowException( e, do_wait = False )

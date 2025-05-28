@@ -19,7 +19,7 @@ def DiscardBlankPerceptualHashes( perceptual_hashes ):
     return perceptual_hashes
     
 
-def GenerateShapePerceptualHashes( path, mime ):
+def GenerateUsefulShapePerceptualHashes( path, mime ):
     
     if HG.phash_generation_report_mode:
         
@@ -30,7 +30,7 @@ def GenerateShapePerceptualHashes( path, mime ):
         
         numpy_image = HydrusImageHandling.GenerateNumPyImage( path, mime )
         
-        return GenerateShapePerceptualHashesNumPy( numpy_image )
+        return GenerateUsefulShapePerceptualHashesNumPy( numpy_image )
         
     except:
         
@@ -55,57 +55,77 @@ def PILDCT( greyscale_numpy_image: numpy.ndarray ) -> numpy.ndarray:
     return numpy.real(numpy.multiply(Norm,dct_))
     
 
-def GenerateShapePerceptualHashesNumPy( numpy_image ):
+def GenerateShapePerceptualHashNumPy( numpy_image: numpy.ndarray, phash_length = 64 ):
+    
+    if phash_length == 64:
+        
+        phash_dimension = 8
+        
+    elif phash_length == 256:
+        
+        phash_dimension = 16
+        
+    else:
+        
+        raise NotImplementedError( 'Unknown phash length!' )
+        
     
     if HG.phash_generation_report_mode:
         
         HydrusData.ShowText( 'phash generation: image shape: {}'.format( numpy_image.shape ) )
         
     
-    ( y, x, depth ) = numpy_image.shape
-    
-    if depth == 4:
-        
-        # doing this on 10000x10000 pngs eats ram like mad
-        # we don't want to do GetThumbnailResolution as for extremely wide or tall images, we'll then scale below 32 pixels for one dimension, losing information!
-        # however, it does not matter if we stretch the image a bit, since we'll be coercing 32x32 in a minute
-        
-        new_x = min( 256, x )
-        new_y = min( 256, y )
-        
-        numpy_image = cv2.resize( numpy_image, ( new_x, new_y ), interpolation = cv2.INTER_AREA )
+    if len( numpy_image.shape ) == 3:
         
         ( y, x, depth ) = numpy_image.shape
         
-        # create weight and transform numpy_image to greyscale
-        
-        numpy_alpha = numpy_image[ :, :, 3 ]
-        
-        numpy_image_rgb = numpy_image[ :, :, :3 ]
-        
-        numpy_image_gray_bare = cv2.cvtColor( numpy_image_rgb, cv2.COLOR_RGB2GRAY )
-        
-        # create a white greyscale canvas
-        
-        white = numpy.full( ( y, x ), 255.0 )
-        
-        # paste the grayscale image onto the white canvas using: pixel * alpha_float + white * ( 1 - alpha_float )
-        
-        # note alpha 255 = opaque, alpha 0 = transparent
-        
-        # also, note:
-        # white * ( 1 - alpha_float )
-        # =
-        # 255 * ( 1 - ( alpha / 255 ) )
-        # =
-        # 255 - alpha
-        
-        numpy_image_gray = numpy.uint8( ( numpy_image_gray_bare * ( numpy_alpha / 255.0 ) ) + ( white - numpy_alpha ) )
+        if depth == 4:
+            
+            # doing this on 10000x10000 pngs eats ram like mad
+            # we don't want to do GetThumbnailResolution as for extremely wide or tall images, we'll then scale below 32 pixels for one dimension, losing information!
+            # however, it does not matter if we stretch the image a bit, since we'll be coercing 32x32 in a minute
+            
+            new_x = min( 256, x )
+            new_y = min( 256, y )
+            
+            numpy_image = cv2.resize( numpy_image, ( new_x, new_y ), interpolation = cv2.INTER_AREA )
+            
+            ( y, x, depth ) = numpy_image.shape
+            
+            # create weight and transform numpy_image to greyscale
+            
+            numpy_alpha = numpy_image[ :, :, 3 ]
+            
+            numpy_image_rgb = numpy_image[ :, :, :3 ]
+            
+            numpy_image_gray_bare = cv2.cvtColor( numpy_image_rgb, cv2.COLOR_RGB2GRAY )
+            
+            # create a white greyscale canvas
+            
+            white = numpy.full( ( y, x ), 255.0 )
+            
+            # paste the grayscale image onto the white canvas using: pixel * alpha_float + white * ( 1 - alpha_float )
+            
+            # note alpha 255 = opaque, alpha 0 = transparent
+            
+            # also, note:
+            # white * ( 1 - alpha_float )
+            # =
+            # 255 * ( 1 - ( alpha / 255 ) )
+            # =
+            # 255 - alpha
+            
+            numpy_image_gray = numpy.uint8( ( numpy_image_gray_bare * ( numpy_alpha / 255.0 ) ) + ( white - numpy_alpha ) )
+            
+        elif depth == 3:
+            
+            # this single step is nice and fast, so we won't scale to 256x256 beforehand
+            numpy_image_gray = cv2.cvtColor( numpy_image, cv2.COLOR_RGB2GRAY )
+            
         
     else:
         
-        # this single step is nice and fast, so we won't scale to 256x256 beforehand
-        numpy_image_gray = cv2.cvtColor( numpy_image, cv2.COLOR_RGB2GRAY )
+        numpy_image_gray = numpy_image
         
     
     if HG.phash_generation_report_mode:
@@ -113,7 +133,9 @@ def GenerateShapePerceptualHashesNumPy( numpy_image ):
         HydrusData.ShowText( 'phash generation: grey image shape: {}'.format( numpy_image_gray.shape ) )
         
     
-    numpy_image_tiny = cv2.resize( numpy_image_gray, ( 32, 32 ), interpolation = cv2.INTER_AREA )
+    tiny_dimension = phash_dimension * 4
+    
+    numpy_image_tiny = cv2.resize( numpy_image_gray, ( tiny_dimension, tiny_dimension ), interpolation = cv2.INTER_AREA )
     
     if HG.phash_generation_report_mode:
         
@@ -130,11 +152,11 @@ def GenerateShapePerceptualHashesNumPy( numpy_image ):
         HydrusData.ShowText( 'phash generation: generating dct' )
         
     
-    dct = PILDCT( numpy_image_tiny_float )
+    dct_full = PILDCT( numpy_image_tiny_float )
     
-    # take top left 8x8 of dct
+    # take top left square (8x8 for 64bit) of dct
     
-    dct_88 = dct[:8,:8]
+    dct_useful = dct_full[:phash_dimension,:phash_dimension]
     
     # get median of dct
     # exclude [0,0], which represents flat colour
@@ -143,9 +165,9 @@ def GenerateShapePerceptualHashesNumPy( numpy_image ):
     # old mean code
     # mask = numpy.ones( ( 8, 8 ) )
     # mask[0,0] = 0
-    # average = numpy.average( dct_88, weights = mask )
+    # average = numpy.average( dct_useful, weights = mask )
     
-    median = numpy.median( dct_88.reshape( 64 )[1:] )
+    median = numpy.median( dct_useful.reshape( phash_dimension * phash_dimension )[1:] )
     
     if HG.phash_generation_report_mode:
         
@@ -154,7 +176,7 @@ def GenerateShapePerceptualHashesNumPy( numpy_image ):
     
     # make a monochromatic, 64-bit hash of whether the entry is above or below the median
     
-    dct_88_boolean = dct_88 > median
+    dct_useful_boolean = dct_useful > median
     
     if HG.phash_generation_report_mode:
         
@@ -171,37 +193,55 @@ def GenerateShapePerceptualHashesNumPy( numpy_image ):
     
     list_of_bytes = []
     
-    for i in range( 8 ):
+    if phash_dimension == 8:
         
-        '''
-        # old way of doing it, which compared value to median every time
-        byte = 0
-        
-        for j in range( 8 ):
+        for i in range( 8 ):
             
-            byte <<= 1 # shift byte one left
+            '''
+            # old way of doing it, which compared value to median every time
+            byte = 0
             
-            value = dct_88[i,j]
-            
-            if value > median:
+            for j in range( 8 ):
                 
-                byte |= 1
+                byte <<= 1 # shift byte one left
                 
+                value = dct_useful[i,j]
+                
+                if value > median:
+                    
+                    byte |= 1
+                    
+                
+            '''
             
-        '''
+            # this is a 0-255 int
+            byte = reduce( collapse_bools_to_binary_uint, dct_useful_boolean[i], 0 )
+            
+            list_of_bytes.append( byte )
+            
         
-        # this is a 0-255 int
-        byte = reduce( collapse_bools_to_binary_uint, dct_88_boolean[i], 0 )
+        perceptual_hash = bytes( list_of_bytes ) # this works!
         
-        list_of_bytes.append( byte )
+    else:
         
-    
-    perceptual_hash = bytes( list_of_bytes ) # this works!
+        bits = dct_useful_boolean.astype( numpy.uint ).reshape( -1, 8 )
+        
+        byte_values = numpy.packbits( bits, axis = 1 )
+        
+        perceptual_hash = byte_values.flatten().tobytes()
+        
     
     if HG.phash_generation_report_mode:
         
         HydrusData.ShowText( 'phash generation: perceptual_hash: {}'.format( perceptual_hash.hex() ) )
         
+    
+    return perceptual_hash
+    
+
+def GenerateUsefulShapePerceptualHashesNumPy( numpy_image: numpy.ndarray ):
+    
+    perceptual_hash = GenerateShapePerceptualHashNumPy( numpy_image )
     
     # now discard the blank hash, which is 1000000... and not useful
     

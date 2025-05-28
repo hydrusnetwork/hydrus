@@ -209,7 +209,7 @@ def GenerateICCProfileBytesFromGammaAndChromaticityPNG( pil_image: PILImage.Imag
     # Compute RGB→XYZ matrix for source
     M_src_rgb_to_xyz = chromaticities_to_rgb_to_xyz( white_xy, red_xy, green_xy, blue_xy )
     
-    icc_profile_bytes = HydrusImageICCProfiles.make_gamma_and_chromaticity_icc_profile( display_gamma, M_src_rgb_to_xyz )
+    icc_profile_bytes = HydrusImageICCProfiles.make_gamma_and_chromaticity_icc_profile( display_gamma, white_xy, M_src_rgb_to_xyz )
     
     return icc_profile_bytes
     
@@ -381,8 +381,8 @@ def DequantizePILImage( pil_image: PILImage.Image ) -> PILImage.Image:
             
             HydrusData.ShowText( 'Failed to normalise image with ICC profile.' )
             
-        '''
         
+        '''
         try:
             
             pil_image = ConvertGammaChromaticityPNGToSRGB( pil_image )

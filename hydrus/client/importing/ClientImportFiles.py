@@ -356,7 +356,7 @@ class FileImportJob( object ):
                 HydrusData.ShowText( 'File import job generating perceptual_hashes' )
                 
             
-            self._perceptual_hashes = ClientImagePerceptualHashes.GenerateShapePerceptualHashes( self._temp_path, mime )
+            self._perceptual_hashes = ClientImagePerceptualHashes.GenerateUsefulShapePerceptualHashes( self._temp_path, mime )
             
             if HG.file_import_report_mode:
                 

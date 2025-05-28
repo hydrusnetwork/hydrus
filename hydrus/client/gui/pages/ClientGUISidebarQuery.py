@@ -1,10 +1,20 @@
+import typing
+
+from qtpy import QtCore as QC
+from qtpy import QtWidgets as QW
+
+from hydrus.core import HydrusData
 from hydrus.core import HydrusLists
+from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientThreading
+from hydrus.client.gui import ClientGUICore as CGC
 from hydrus.client.gui import ClientGUIFunctions
+from hydrus.client.gui import ClientGUIDialogsQuick
+from hydrus.client.gui import ClientGUIMenus
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.lists import ClientGUIListBoxes
 from hydrus.client.gui.pages import ClientGUIPageManager
@@ -16,6 +26,84 @@ from hydrus.client.gui.search import ClientGUIACDropdown
 from hydrus.client.gui.widgets import ClientGUICommon
 from hydrus.client.media import ClientMedia
 from hydrus.client.search import ClientSearchFileSearchContext
+from hydrus.client.search import ClientSearchPredicate
+
+class SystemHashLockPanel( ClientGUICommon.StaticBox ):
+    
+    unlockSearch = QC.Signal()
+    newSettings = QC.Signal()
+    
+    def __init__( self, parent: QW.QWidget, syncs_new: bool, syncs_removes: bool, num_files: int ):
+        
+        super().__init__( parent, 'search locked' )
+        
+        desc_tt = 'The page\'s search is locked. If you click here, the page will unlock and the search will become a system:hash.'
+        
+        self._unlock_button = ClientGUICommon.BetterButton( self, 'initialising', self.unlockSearch.emit )
+        self._unlock_button.setToolTip( ClientGUIFunctions.WrapToolTip( desc_tt ) )
+        
+        self._cog_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().cog, self._ShowCogMenu )
+        
+        self._syncs_new = syncs_new
+        self._syncs_removes = syncs_removes
+        self._num_files = num_files
+        
+        hbox = QP.HBoxLayout()
+        
+        QP.AddToLayout( hbox, self._unlock_button, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( hbox, self._cog_button, CC.FLAGS_CENTER )
+        
+        self.Add( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        
+        self._UpdateLabel()
+        
+    
+    def _FlipSyncsNew( self ):
+        
+        self._syncs_new = not self._syncs_new
+        
+        self.newSettings.emit()
+        
+    
+    def _FlipSyncsRemoves( self ):
+        
+        self._syncs_removes = not self._syncs_removes
+        
+        self.newSettings.emit()
+        
+    
+    def _ShowCogMenu( self ):
+        
+        menu = ClientGUIMenus.GenerateMenu( self )
+        
+        ClientGUIMenus.AppendMenuCheckItem( menu, 'update when files added to page', 'If this is checked, then the underlying system:hash behind this page will add new files that are added here.', self._syncs_new, self._FlipSyncsNew )
+        ClientGUIMenus.AppendMenuCheckItem( menu, 'update when files removed from page', 'If this is checked, then the underlying system:hash behind this page will remove files that are removed from here. If you want to remove files temporarily and then re-run the query to get them back again, uncheck this.', self._syncs_removes, self._FlipSyncsRemoves )
+        
+        CGC.core().PopupMenu( self._cog_button, menu )
+        
+    
+    def _UpdateLabel( self ):
+        
+        self._unlock_button.setText( f'Locked at {HydrusNumbers.ToHumanInt( self._num_files )} files.' )
+        
+    
+    def GetSyncsNew( self ):
+        
+        return self._syncs_new
+        
+    
+    def GetSyncsRemoves( self ):
+        
+        return self._syncs_removes
+        
+    
+    def SetNumFiles( self, num_files: int ):
+        
+        self._num_files = num_files
+        
+        self._UpdateLabel()
+        
+    
 
 class SidebarQuery( ClientGUISidebarCore.Sidebar ):
     
@@ -35,11 +123,17 @@ class SidebarQuery( ClientGUISidebarCore.Sidebar ):
         
         synchronised = self._page_manager.GetVariable( 'synchronised' )
         
-        self._tag_autocomplete = ClientGUIACDropdown.AutoCompleteDropdownTagsRead( self._search_panel, self._page_key, file_search_context, media_sort_widget = self._media_sort_widget, media_collect_widget = self._media_collect_widget, media_callable = self._page.GetMedia, synchronised = synchronised )
+        self._tag_autocomplete = ClientGUIACDropdown.AutoCompleteDropdownTagsRead( self._search_panel, self._page_key, file_search_context, media_sort_widget = self._media_sort_widget, media_collect_widget = self._media_collect_widget, media_callable = self._page.GetMedia, synchronised = synchronised, show_lock_search_button = True )
         
         self._tag_autocomplete.searchCancelled.connect( self._CancelSearch )
         
+        system_hash_locked_syncs_new = self._page_manager.GetVariable( 'system_hash_locked_syncs_new' )
+        system_hash_locked_syncs_removes = self._page_manager.GetVariable( 'system_hash_locked_syncs_removes' )
+        
+        self._system_hash_lock_panel = SystemHashLockPanel( self._search_panel, system_hash_locked_syncs_new, system_hash_locked_syncs_removes, 0 )
+        
         self._search_panel.Add( self._tag_autocomplete, CC.FLAGS_EXPAND_BOTH_WAYS )
+        self._search_panel.Add( self._system_hash_lock_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         vbox = QP.VBoxLayout()
         
@@ -58,12 +152,16 @@ class SidebarQuery( ClientGUISidebarCore.Sidebar ):
         
         self._tag_autocomplete.tagContextChanged.connect( self.tagContextChanged )
         
+        self._tag_autocomplete.lockSearch.connect( self.LockSearch )
+        self._system_hash_lock_panel.unlockSearch.connect( self.UnlockSearch )
+        self._system_hash_lock_panel.newSettings.connect( self._UpdateNewLockSettings )
+        
+        self._UpdateSystemLockedVisibilityAndControls()
+        
     
     def _CancelSearch( self ):
         
         self._query_job_status.Cancel()
-        
-        file_search_context = self._tag_autocomplete.GetFileSearchContext()
         
         panel = ClientGUIMediaResultsPanelThumbnails.MediaResultsPanelThumbnails( self._page, self._page_key, self._page_manager, [] )
         
@@ -79,6 +177,33 @@ class SidebarQuery( ClientGUISidebarCore.Sidebar ):
     def _GetDefaultEmptyPageStatusOverride( self ) -> str:
         
         return 'no search done yet'
+        
+    
+    def _GetExistingLockHashes( self ):
+        
+        file_search_context = self._tag_autocomplete.GetFileSearchContext()
+        
+        predicates = file_search_context.GetPredicates()
+        
+        if len( predicates ) == 1:
+            
+            ( predicate, ) = predicates
+            
+            if predicate.GetType() == ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HASH:
+                
+                if predicate.IsInclusive():
+                    
+                    ( existing_hashes, hash_type ) = predicate.GetValue()
+                    
+                    if hash_type == 'sha256':
+                        
+                        return list( existing_hashes )
+                        
+                    
+                
+            
+        
+        return []
         
     
     def _MakeCurrentSelectionTagsBox( self, sizer, **kwargs ):
@@ -106,6 +231,11 @@ class SidebarQuery( ClientGUISidebarCore.Sidebar ):
         
         CG.client_controller.ResetIdleTimer()
         
+        if self._page_manager.GetVariable( 'system_hash_locked' ):
+            
+            return
+            
+        
         file_search_context = self._tag_autocomplete.GetFileSearchContext()
         
         synchronised = self._tag_autocomplete.IsSynchronised()
@@ -118,8 +248,6 @@ class SidebarQuery( ClientGUISidebarCore.Sidebar ):
             
             return
             
-        
-        interrupting_current_search = not self._query_job_status.IsDone()
         
         self._query_job_status.Cancel()
         
@@ -178,11 +306,64 @@ class SidebarQuery( ClientGUISidebarCore.Sidebar ):
             
         
     
+    def _UpdateNewLockSettings( self ):
+        
+        self._page_manager.SetVariable( 'system_hash_locked_syncs_new', self._system_hash_lock_panel.GetSyncsNew() )
+        self._page_manager.SetVariable( 'system_hash_locked_syncs_removes', self._system_hash_lock_panel.GetSyncsRemoves() )
+        
+    
+    def _UpdateSystemLockedVisibilityAndControls( self ):
+        
+        system_hash_locked = self._page_manager.GetVariable( 'system_hash_locked' )
+        
+        self._tag_autocomplete.setVisible( not system_hash_locked )
+        self._system_hash_lock_panel.setVisible( system_hash_locked )
+        
+        if system_hash_locked:
+            
+            file_search_context = self._tag_autocomplete.GetFileSearchContext()
+            
+            predicates = file_search_context.GetPredicates()
+            
+            if len( predicates ) == 1:
+                
+                ( predicate, ) = predicates
+                
+                predicate = typing.cast( ClientSearchPredicate.Predicate, predicate )
+                
+                if predicate.GetType() == ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HASH:
+                    
+                    if predicate.IsInclusive():
+                        
+                        ( existing_hashes, hash_type ) = predicate.GetValue()
+                        
+                        self._system_hash_lock_panel.SetNumFiles( len( existing_hashes ) )
+                        
+                    
+                
+            
+        
+    
+    def _UpdateSystemLockFiles( self, hashes ):
+        
+        file_search_context = self._tag_autocomplete.GetFileSearchContext().Duplicate()
+        
+        predicate = ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HASH, ( tuple( hashes ), 'sha256' ) )
+        
+        file_search_context.SetPredicates( ( predicate, ) )
+        
+        self._tag_autocomplete.SetFileSearchContext( file_search_context )
+        
+        self._UpdateSystemLockedVisibilityAndControls()
+        
+    
     def ConnectMediaResultsPanelSignals( self, media_panel: ClientGUIMediaResultsPanel.MediaResultsPanel ):
         
         super().ConnectMediaResultsPanelSignals( media_panel )
         
         media_panel.newMediaAdded.connect( self.PauseSearching )
+        media_panel.filesAdded.connect( self.NotifyFilesAdded )
+        media_panel.filesRemoved.connect( self.NotifyFilesRemoved )
         
     
     def CleanBeforeClose( self ):
@@ -208,6 +389,95 @@ class SidebarQuery( ClientGUISidebarCore.Sidebar ):
         return self._tag_autocomplete.GetPredicates()
         
     
+    def LockSearch( self ):
+        
+        file_search_context = self._tag_autocomplete.GetFileSearchContext()
+        
+        predicates = file_search_context.GetPredicates()
+        
+        do_yes_no = True
+        
+        hashes = [ m.GetHash() for m in ClientMedia.FlattenMedia( self._page.GetMedia() ) ]
+        
+        if len( predicates ) == 0:
+            
+            do_yes_no = False
+            
+        elif len( predicates ) == 1:
+            
+            ( predicate, ) = predicates
+            
+            predicate = typing.cast( ClientSearchPredicate.Predicate, predicate )
+            
+            if predicate.GetType() == ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HASH:
+                
+                if predicate.IsInclusive():
+                    
+                    ( existing_hashes, hash_type ) = predicate.GetValue()
+                    
+                    if hash_type == 'sha256':
+                        
+                        do_yes_no = False
+                        
+                        if set( existing_hashes ) != set( hashes ):
+                            
+                            text = 'This will lock the page, collapsing the current search to a system:hash of the current files.\n\nYour search already has a system:hash, but its files are different than what is currently in view. If you want to lock your current system:hash, not what is currently in view, click no and refresh the search to reset you back to what the existing system:hash says, and then try locking again.'
+                            
+                            result = ClientGUIDialogsQuick.GetYesNo( self, text )
+                            
+                            if result != QW.QDialog.DialogCode.Accepted:
+                                
+                                return
+                                
+                            
+                        
+                    
+                
+            
+        
+        if do_yes_no:
+            
+            text = 'This will lock the page, collapsing the current search to a system:hash of the current files. Is this ok?'
+            
+            result = ClientGUIDialogsQuick.GetYesNo( self, text )
+            
+            if result != QW.QDialog.DialogCode.Accepted:
+                
+                return
+                
+            
+        
+        self._page_manager.SetVariable( 'system_hash_locked', True )
+        
+        self._UpdateSystemLockFiles( hashes )
+        
+    
+    def NotifyFilesAdded( self, hashes ):
+        
+        if self._page_manager.GetVariable( 'system_hash_locked' ) and self._page_manager.GetVariable( 'system_hash_locked_syncs_new' ):
+            
+            existing_lock_hashes = self._GetExistingLockHashes()
+            
+            updated_hashes = HydrusData.DedupeList( existing_lock_hashes + hashes )
+            
+            self._UpdateSystemLockFiles( updated_hashes )
+            
+        
+    
+    def NotifyFilesRemoved( self, hashes ):
+        
+        if self._page_manager.GetVariable( 'system_hash_locked' ) and self._page_manager.GetVariable( 'system_hash_locked_syncs_removes' ):
+            
+            existing_lock_hashes = self._GetExistingLockHashes()
+            
+            fast_hashes = set( hashes )
+            
+            updated_hashes = [ hash for hash in existing_lock_hashes if hash not in fast_hashes ]
+            
+            self._UpdateSystemLockFiles( updated_hashes )
+            
+        
+    
     def PageHidden( self ):
         
         super().PageHidden()
@@ -224,7 +494,10 @@ class SidebarQuery( ClientGUISidebarCore.Sidebar ):
     
     def PauseSearching( self ):
         
-        self._tag_autocomplete.SetSynchronised( False )
+        if not self._page_manager.GetVariable( 'system_hash_locked' ):
+            
+            self._tag_autocomplete.SetSynchronised( False )
+            
         
     
     def RefreshQuery( self ):
@@ -302,6 +575,13 @@ class SidebarQuery( ClientGUISidebarCore.Sidebar ):
             
             QP.CallAfter( self.RefreshQuery )
             
+        
+    
+    def UnlockSearch( self ):
+        
+        self._page_manager.SetVariable( 'system_hash_locked', False )
+        
+        self._UpdateSystemLockedVisibilityAndControls()
         
     
     def THREADDoQuery( self, page_manager, page_key, query_job_status, file_search_context: ClientSearchFileSearchContext.FileSearchContext, sort_by ):

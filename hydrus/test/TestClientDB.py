@@ -509,7 +509,7 @@ class TestClientDB( unittest.TestCase ):
         tests.append( ( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_SIMILAR_TO_DATA, ( ( pixel_hash, ), (), 0 ), 1 ) )
         tests.append( ( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_SIMILAR_TO_DATA, ( ( os.urandom( 32 ), ), (), 0 ), 0 ) )
         
-        perceptual_hashes = ClientImagePerceptualHashes.GenerateShapePerceptualHashes( path, HC.IMAGE_PNG )
+        perceptual_hashes = ClientImagePerceptualHashes.GenerateUsefulShapePerceptualHashes( path, HC.IMAGE_PNG )
         
         tests.append( ( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_SIMILAR_TO_DATA, ( (), tuple( perceptual_hashes ), 0 ), 1 ) )
         tests.append( ( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_SIMILAR_TO_DATA, ( (), ( os.urandom( 32 ), ), 0 ), 0 ) )

@@ -338,7 +338,7 @@ class HydrusResourceClientAPIRestrictedAddFilesGenerateHashes( HydrusResourceCli
             
             if mime in HC.FILES_THAT_HAVE_PERCEPTUAL_HASH:
                 
-                perceptual_hashes = ClientImagePerceptualHashes.GenerateShapePerceptualHashesNumPy( numpy_image )
+                perceptual_hashes = ClientImagePerceptualHashes.GenerateUsefulShapePerceptualHashes( numpy_image )
                 
                 body_dict['perceptual_hashes'] = [ perceptual_hash.hex() for perceptual_hash in perceptual_hashes ]
                 

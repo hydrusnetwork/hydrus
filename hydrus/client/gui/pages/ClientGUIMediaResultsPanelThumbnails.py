@@ -2273,6 +2273,8 @@ class Thumbnail( Selectable ):
         # this line magically fixes the bad text, as above
         f.setStyleStrategy( QG.QFont.StyleStrategy.PreferAntialias )
         
+        f.setBold( False )
+        
         painter.setFont( f )
         
         qss_window_colour = media_panel.palette().color( QG.QPalette.ColorRole.Window )

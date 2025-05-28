@@ -469,8 +469,8 @@ class TestSelector( unittest.TestCase ):
         
         selector = ClientDuplicatesAutoResolutionComparators.PairSelector()
         
-        self.assertTrue( selector.PairMatchesBothWaysAround( media_result_1, media_result_2 ) )
-        self.assertTrue( selector.PairMatchesBothWaysAround( media_result_2, media_result_1 ) )
+        self.assertTrue( selector.MatchingPairMatchesBothWaysAround( media_result_1, media_result_2 ) )
+        self.assertTrue( selector.MatchingPairMatchesBothWaysAround( media_result_2, media_result_1 ) )
         
         self.assertEqual( { media_result_1, media_result_2 }, set( selector.GetMatchingAB( media_result_1, media_result_2 ) ) )
         self.assertEqual( { media_result_1, media_result_2 }, set( selector.GetMatchingAB( media_result_2, media_result_1 ) ) )
@@ -501,8 +501,7 @@ class TestSelector( unittest.TestCase ):
         
         selector.SetComparators( [ comparator ] )
         
-        self.assertFalse( selector.PairMatchesBothWaysAround( media_result_1, media_result_2 ) )
-        self.assertFalse( selector.PairMatchesBothWaysAround( media_result_2, media_result_1 ) )
+        self.assertFalse( selector.MatchingPairMatchesBothWaysAround( media_result_1, media_result_2 ) )
         
         self.assertEqual( [ media_result_1, media_result_2 ], list( selector.GetMatchingAB( media_result_1, media_result_2 ) ) )
         self.assertEqual( [ media_result_1, media_result_2 ], list( selector.GetMatchingAB( media_result_2, media_result_1 ) ) )
@@ -533,8 +532,8 @@ class TestSelector( unittest.TestCase ):
         
         selector.SetComparators( [ comparator ] )
         
-        self.assertTrue( selector.PairMatchesBothWaysAround( media_result_1, media_result_2 ) )
-        self.assertTrue( selector.PairMatchesBothWaysAround( media_result_2, media_result_1 ) )
+        self.assertTrue( selector.MatchingPairMatchesBothWaysAround( media_result_1, media_result_2 ) )
+        self.assertTrue( selector.MatchingPairMatchesBothWaysAround( media_result_2, media_result_1 ) )
         
         self.assertEqual( { media_result_1, media_result_2 }, set( selector.GetMatchingAB( media_result_1, media_result_2 ) ) )
         self.assertEqual( { media_result_1, media_result_2 }, set( selector.GetMatchingAB( media_result_2, media_result_1 ) ) )
@@ -564,9 +563,6 @@ class TestSelector( unittest.TestCase ):
         comparator.SetMetadataConditional( mc )
         
         selector.SetComparators( [ comparator ] )
-        
-        self.assertFalse( selector.PairMatchesBothWaysAround( media_result_1, media_result_2 ) )
-        self.assertFalse( selector.PairMatchesBothWaysAround( media_result_2, media_result_1 ) )
         
         self.assertEqual( None, selector.GetMatchingAB( media_result_1, media_result_2 ) )
         self.assertEqual( None, selector.GetMatchingAB( media_result_2, media_result_1 ) )
@@ -613,9 +609,6 @@ class TestSelector( unittest.TestCase ):
         
         selector.SetComparators( [ comparator_1, comparator_2 ] )
         
-        self.assertFalse( selector.PairMatchesBothWaysAround( media_result_1, media_result_2 ) )
-        self.assertFalse( selector.PairMatchesBothWaysAround( media_result_2, media_result_1 ) )
-        
         self.assertEqual( None, selector.GetMatchingAB( media_result_1, media_result_2 ) )
         self.assertEqual( None, selector.GetMatchingAB( media_result_2, media_result_1 ) )
         
@@ -661,8 +654,7 @@ class TestSelector( unittest.TestCase ):
         
         selector.SetComparators( [ comparator_1, comparator_2 ] )
         
-        self.assertFalse( selector.PairMatchesBothWaysAround( media_result_1, media_result_2 ) )
-        self.assertFalse( selector.PairMatchesBothWaysAround( media_result_2, media_result_1 ) )
+        self.assertFalse( selector.MatchingPairMatchesBothWaysAround( media_result_1, media_result_2 ) )
         
         self.assertEqual( [ media_result_1, media_result_2 ], list( selector.GetMatchingAB( media_result_1, media_result_2 ) ) )    
         self.assertEqual( [ media_result_1, media_result_2 ], list( selector.GetMatchingAB( media_result_2, media_result_1 ) ) )

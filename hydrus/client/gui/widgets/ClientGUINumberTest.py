@@ -31,10 +31,12 @@ class NumberTestWidget( QW.QWidget ):
         
         for possible_operator in [
             ClientNumberTest.NUMBER_TEST_OPERATOR_LESS_THAN,
+            ClientNumberTest.NUMBER_TEST_OPERATOR_LESS_THAN_OR_EQUAL_TO,
             ClientNumberTest.NUMBER_TEST_OPERATOR_APPROXIMATE_ABSOLUTE,
             ClientNumberTest.NUMBER_TEST_OPERATOR_APPROXIMATE_PERCENT,
             ClientNumberTest.NUMBER_TEST_OPERATOR_EQUAL,
             ClientNumberTest.NUMBER_TEST_OPERATOR_NOT_EQUAL,
+            ClientNumberTest.NUMBER_TEST_OPERATOR_GREATER_THAN_OR_EQUAL_TO,
             ClientNumberTest.NUMBER_TEST_OPERATOR_GREATER_THAN
         ]:
             

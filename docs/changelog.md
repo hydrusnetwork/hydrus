@@ -7,6 +7,60 @@ title: Changelog
 !!! note
     This is the new changelog, only the most recent builds. For all versions, see the [old changelog](old_changelog.html).
 
+## [Version 624](https://github.com/hydrusnetwork/hydrus/releases/tag/v624)
+
+### locked pages
+
+* the search page state where it could hold files but have no active search is back with some bells and whistles. it is now much easier to manage a 'scratchpad' file page that won't suddenly get messed up if you hit F5 (issue #1602, and likely others in different ways)
+* all normal file search pages now have a padlock icon beside the autocomplete text input. clicking this collapses the current search to a single system:hash of the current media in view and swaps the search panel for an 'unlock' button. this page will not refresh its query until unlocked, at which point you are given the system:hash back
+* if you add files to or remove files from the page, the underlying system:hash will update to the new contents of the page
+* lock status is saved in the session, so it persists through restart etc..
+* any time you create a page with files, which typically means, 'open files in a new page' and subscription file-popups, they now start in the locked state. since the system:hash updates for new files, you can drag and drop new files onto the page, or add more subscription files from a later sync, and the underlying system:hash now stays updated. play around with it--you'll see how it works
+* if you are big brain and wish in some cases _not_ to sync the underlying system:hash on add/remove file events, a cog icon beside the unlock button lets you set this
+* if you have a bunch of existing subscription landing pages and other 'I'll process this later' pages, please go through them after update and lock them. it'll say 'hey, you already have a system:hash but it differs to what is currently in view, do you want to overwrite this old one with one for the current files?' and you do, so click yes
+* next step here is to finally figure out some sort of 'sort files by system:hash/downloader' sort type so these sorts of pages can restore original sort
+
+### duplicates
+
+* the 'preview' panel of an auto-resolution rule has had a complete pipeline overhaul. after a much, much, briefer one-time initialisation, it now loads results in fast small batches and streams pass/fail pairs to the lists one by one. it shows search progress and presents ongoing count of pairs. it no longer gets the total count of the search every time--unless you let it run all the way and get everything. the refresh buttons are more efficient, the 'only sample this many' widget updates the dialog live as you edit it, and there are pause buttons for both search and testing. it also cancels work faster if the dialog is closed amidst work. this dialog is now ready for the relatively CPU-expensive 'A and B are visual duplicates' integration
+* when the core duplicate file searches they rely on are CPU-expensive, the duplicates filter batch pair fetch, duplicates filter count fetch, duplicates 'show some random pairs', and duplicates auto-resolution rule preview now load up faster, particularly when you have few potential pairs remaining
+* auto-resolution rules that are in semi-automatic mode now only queue up a max of 512 files in the 'pending' queue. it can take some CPU to run these tests, so it is good to keep the queue short and snappy in case you need to change anything (thus resetting the queue) in future. you can alter the 512 limit, including removing it completely, in the edit rule panel
+* auto-resolution rules now categorise their comparators into a cross-reference of fast + order-possibly-important. the main testing routine and 'can this pair fit either way' test now cascades through some logic to get a dispositive true negative result faster
+* the program now recognises and gracefully handles the situation where the duplicate filter is closed and program shut down initiated before a slow-loading visual duplicate pair can finish (it was outputting some mysterious error lines to the log)
+
+### a and b are visual duplicates
+
+* if the images are very simple, e.g. just one or two flat colours, they are now considered 'too simple to compare' and not visual duplicates. these edge cases are often deceptively tricky
+* if the images have a perfectly matching interesting tile, the presence of any non-matching tile now results in 'probably not visual duplicates/(small difference?)'
+* I experimented with many new techniques: pre-decimation histogram population, histogram absolute difference comparison, tile phashes, longer tile phashes, gaussian edge detection histograms, gaussian edge map average block 2d wasserstein scoring, and even gaussian edge map phashes, but unfortunately these all pretty much failed. the algorithm as-is is good, but there are still a couple of false positive situations it cannot catch. the delicate edge detection is the main thing--a difference with a subtle shade (e.g. a soft line, or a transparent water droplet) that is clear to the human eye can still be missed. please keep sending in any false positives, and I'll keep thinking about all this
+* cleaned and polished a bunch of this code
+
+### misc
+
+* thanks to a user, the new resizable ratings have improved visuals! the little padding clipping bugs are fixed and everything lines up nice
+* 'less than or equal to' and 'greater than or equal to' are added to all the modernised places you can set a number comparison, such as `system:height` or duplicates auto-resolution comparison statements
+* fixed the broken `Ctrl+C = copy selected files` default 'media' shortcut for newer users--if it is broken for you (it'll say 'Unknown Application Command' in the shortcut UI), it will fix itself on update
+
+### updated Linux and Windows builds
+
+* the 'future build' last week went without any reports of problems, so I am folding the changes into today's normal build. both Windows and Linux are updating several core components and will gain a host of small and large bug fixes and performance improvements. It does not seem that a clean install is needed this week, but if you use the zip or tar.zst extracts, you might like to take this opportunity to do one anyway: https://hydrusnetwork.github.io/hydrus/getting_started_installing.html#clean_installs
+* the WIndows installer basically does a clean install every week, so no special instructions there
+* the changes are--
+* Windows and Linux: moved from python 3.11 to python 3.12
+* Windows and Linux: moved from PySide6 (Qt) 6.7.3 to 6.8.2.1
+* Windows: moved from windows-2019 runner to windows-2022 (2019 runner is being retired next month)
+* if you use a particularly old, un-updated version of Windows 10, it is possible the new Windows builds will not run for you. try running from source and choosing an older Qt version: https://hydrusnetwork.github.io/hydrus/running_from_source.html
+* if you already run from source, you might like to rebuild your venv this week to get the new Qt. users on Python 3.13 no longer have to choose the (a)dvanced mode for the (t)est Qt version-- on a typical OS, all pythons from 3.10-13 should now work with (s) out of the box!
+
+### weird/boring stuff
+
+* I fixed some encoding in my png gamma/chromaticity ICC Profile generator. it still isn't there, but I know where to look. also wangled the `wtpt` and `chad` to handle non-D65 source whitepoints
+* I may have fixed an issue where the thumbnail banners could be drawn with bold text
+* my asynchronous updater object can now deal with several mid-job cancel events
+* my thumbnail pair list can now handle streaming appends
+* deleted the monolith 'get potential pairs that match this duplicate context' routine the preview panel was relying on. I'll migrate more duplicates stuff to incremental fetches like this, and I feel good we can make the duplicate filter and so on initialise much quicker
+* updated the client api help's Hydrus Video Deduplicator link to https://github.com/hydrusvideodeduplicator/hydrus-video-deduplicator
+
 ## [Version 623](https://github.com/hydrusnetwork/hydrus/releases/tag/v623)
 
 ### misc
@@ -15,7 +69,7 @@ title: Changelog
 * the client now tries to adjust for timezone when it parses a modified date from a server response. some downloaders will now get a more precise 'modified date' for their domains
 * fixed a typo bug that was causing existing 'set numerical or inc/dec rating' commands to fail to initialise in the shortcut panel on edit (staying as the default 'simple command, archive file')
 * a new `DEBUG: Activate Main GUI when closing the media viewer` checkbox under `options->media viewer`, default fa!se, lets you force an "activate" call on the Main GUI (bringing it to the front and setting keyboard focus) on any media viewer close
-* the hydrus server now better tries to clear out ongoing file downloads when the connection is disconnected early. if you noticed in Hydrus Web or similar that scrubbing through a bunch of big videos one after another could get laggy, let me know if it is any better now
+* the core hydrus server/client api response object now better tries to clear out ongoing file downloads when the connection is disconnected early. if you noticed in Hydrus Web or similar that scrubbing through a bunch of big videos one after another could get laggy, let me know if it is any better now
 
 ### duplicates
 
@@ -490,57 +544,3 @@ title: Changelog
 
 * cleared out a surplus entry in db init related to duplicates auto-resolution
 * tweaked the 'don't show hovers/hide cursor if a dialog is open' tests in the media viewer, ignoring them if we are the child of one lol
-
-## [Version 614](https://github.com/hydrusnetwork/hydrus/releases/tag/v614)
-
-### misc
-
-* the new `system:tag (advanced)` edit panel now has a 'write/edit' tag autocomplete to help you quickly enter what you want to search
-* the `system:tag (advanced)` predicate now works in the system predicate parser. everything it produces should be pastable back into the tag autocomplete and it'll all just work (I believe even crazy situations, but let me know how you get on). it is somewhat error tolerant, so you can type just 'pending' instead of 'status is pending' etc.., but it is best if you get the colons, commas and quotes correct
-* reworded the labels in `system:tag (advanced)` to say 'ignoring siblings/parents' rather than just 'siblings'. I was thinking about this the wrong way when I first implemented it and forgot to realise and mention that when searching in the 'storage' domain, you are missing tag mappings that would be implicated by parent relationships too
-* thanks to a user, we have two new QSS styles--'catmocchin blue' and 'catmocchin lavender'. there are additional style and colour suggestions inside the QSS files themselves
-* the default image cache size under `options->speed and memory` is raised from 384MB to 1GB, which means by default the cache will hold on to a ~12,600x7,000px image and prefetch a ~9,700x5,500px one. it was previously tuned for 4k, but we are going to push a little further
-* `speed and memory` also lets you raise the prefetch cache percentage up to 25% (from 20%) (issue #1693)
-* I discovered that the bug in the media viewer where a static image will do a flickery resize--where on zoom it will move to position and then scale in two discrete frames--is triggered by loading the mpv window in that media viewer! it seems like mpv sets some deep 'immediate render' flag on the window. I hacked around a bit and believe I have fixed this bug. a rewrite of the entire media viewer layout system remains pending, but I think we fixed this very annoying thing!
-* I may have also fixed some other change-media flicker too, let me know how you get on
-* the 'macOS window position fix test' debug mode is now default behaviour. if you noticed your dialog windows were moving down like 26 pixels on every open in macOS, it should be better now! (issues #1681, #1673)
-* fixed a bug when searching files with 0 width or height (this is mostly a legacy issue) with a file-sort set to image ratio
-* if you try to run `profile mode` on python 3.12+, you now get a popup saying it is broke atm and hydev will fix
-
-### new media viewer tech
-
-* thanks to a user, we have some great new media viewer zoom and display options
-* there's a new zoom icon button in the top hover that lets you set some new zoom types: default for filetype, 100% zoom, canvas fit, fit horizontally, fit vertically, and canvas fill
-* also, we now have 'lock current zoom type'! so, you can switch to 'view this image as 100%', and that will stick for the next file as you browse back and forth
-* also, there's 'lock current pan'! useful for comparing duplicates at high zoom
-* _and_ there's 'try to lock current size', which copies my duplicate filter's 'lock zoom amount' tech for the normal media viewer
-* these three 'lock' options are saved, not per-media-viewer-session
-* you can say in `options->media playback` what zoom type you would like the viewer to default to. the default is 'default for filetype', lol, which I generally recommend, but you can set to always override all filetypes with 'canvas fill' or something if you like, particularly, say, on the preview viewer
-* also, under the 'eye' icon, or `options->media viewer`, you can now set the tags hover and/or top-right hover to not appear on mouseover!
-* the 'media viewer' shortcut set gets actions for the new zoom types, a new three-way zoom switch, and a new 'recenter media' action
-* I fixed a couple things with this for weird stuff like excepting audio and open externally panels. I also span out the duplicate filter zoom maintenance into its own thing and added it to the new menu as the 'lock current size' choice, reworked the options stuff a little to fit in with the existing per-filetype zoom settings, added some checkboxes to the menu for feedback, added the 'recenter-pan' action, and since graphics design is my passion I made a new icon for the advanced zoom settings icon button, yes it is a cog icon placed expertly over a magnifying glass
-* I think I fixed some zoom bugs in the duplicate filter with 'open externally' and audio panels
-
-### duplicates auto-resolution
-
-* _everything went great. should be launching the initial test for advanced users next week_
-* extended the new preview panel a bit--added a 'only sample this many' number widget, defaulting to 256, so you only start looking at a fast preview of the potentially tens of thousands of results; made sure the results always sort the same way (pseudorandom, but fixed); and added a third column to the 'pairs that will be actioned' list to show if the AB pair is fixed as you see or could be either way around
-* wired the potential duplicates storage module up to the auto-resolution storage module. when a potential pair is added or removed, the auto-resolution rules are now synced in the same transaction
-* buffed the 'add pairs' tech here to ensure even if the two modules get desynced somehow, the auto-resolution guy won't add dupes by accident
-* hooked the 'delete orphan rules' and 'fix orphan potential pairs' auto-resolution maintenance jobs up to the cog icon menu button in the auto-resolution sidebar panel
-* wrote some async code to handle waiting for any current work to finish before launching the edit dialog, and only allowing one edit dialog at a time
-* added a refresh button to the review panel
-* fixed up and finished the main 'set rules' pipeline, including generation and propagation of rule_id and counts cache
-* reworded the rule status summary text to put pertinent info at the front
-* hooked up the main search and resolution worker db calls
-* fixed a ton of stupid typos in the auto-resolution db code
-* enabled the UI, tried it out; the whole system works!
-* the UI is enabled for today, but the edit rules dialog will not save anything. non-advanced-mode users can also see the new tab now. I will take another week to write up some unit tests and help and do a more complicated IRL test. I also didn't have time to add the media viewer so I'll make sure that gets done. otherwise, we appear to be basically ready here. I'm feeling good about it, but I still want to be quite careful
-
-### boring cleanup
-
-* I cleared out some bad old and duplicated canvas zoom code, and I migrated some variable handling to use the smarter stuff in the new commit
-* replaced some laborious resolution validity-testing code with a single call in media result
-* cleaned up how potential duplicate pairs are deleted in the main duplicate files db module. it now happens through a handful of central locations rather than spammed all over the place, so the signalling to the auto-resolution module is a good bit simpler
-* fixed the permalink id in the client api help for `/get_files/thumbnail_path`. also fixed the example requests, which were also a sloppy copy/paste job from the 'thumbnail' command haha
-* fixed some `None` to `null` in the client api help response examples

@@ -40,92 +40,16 @@ class ClientDBFilesDuplicatesFileSearch( ClientDBModule.ClientDBModule ):
         self.modules_media_results = modules_media_results
         
     
-    def GetPotentialDuplicatePairs( self, potential_duplicates_search_context: ClientPotentialDuplicatesSearchContext.PotentialDuplicatesSearchContext, fetch_limit = None ):
+    def _GetAllKingHashIds( self, db_location_context: ClientDBFilesStorage.DBLocationContext ):
         
-        potential_duplicates_search_context = potential_duplicates_search_context.Duplicate()
-        
-        potential_duplicates_search_context.OptimiseForSearch()
-        
-        file_search_context_1 = potential_duplicates_search_context.GetFileSearchContext1()
-        file_search_context_2 = potential_duplicates_search_context.GetFileSearchContext2()
-        dupe_search_type = potential_duplicates_search_context.GetDupeSearchType()
-        pixel_dupes_preference = potential_duplicates_search_context.GetPixelDupesPreference()
-        max_hamming_distance = potential_duplicates_search_context.GetMaxHammingDistance()
-        
-        db_location_context = self.modules_files_storage.GetDBLocationContext( file_search_context_1.GetLocationContext() )
-        
-        # I had a decent idea to say 'if fetch_limit is not None, then make a double-column temp int table and then read (fetch_limit x 10) pairs from potential dupes and just work on them
-        # but of course that caused low hit-rate searches to produce few results and gave a gonk 'num_pairs' final result
-        # maybe we can revisit when the search tab shows total count and the preview tab is just about showing 'some stuff'
-        # and maybe we can and should optimise the big table joins here
-        
-        with self._MakeTemporaryIntegerTable( [], 'hash_id' ) as temp_table_name_1:
+        if db_location_context.SingleTableIsFast():
             
-            with self._MakeTemporaryIntegerTable( [], 'hash_id' ) as temp_table_name_2:
-                
-                if dupe_search_type == ClientDuplicates.DUPE_SEARCH_BOTH_FILES_MATCH_DIFFERENT_SEARCHES:
-                    
-                    self.modules_files_query.PopulateSearchIntoTempTable( file_search_context_1, temp_table_name_1 )
-                    self.modules_files_query.PopulateSearchIntoTempTable( file_search_context_2, temp_table_name_2 )
-                    
-                    table_join = self.modules_files_duplicates.GetPotentialDuplicatePairsTableJoinOnSeparateSearchResults( temp_table_name_1, temp_table_name_2, pixel_dupes_preference, max_hamming_distance )
-                    
-                else:
-                    
-                    if file_search_context_1.IsJustSystemEverything() or file_search_context_1.HasNoPredicates():
-                        
-                        table_join = self.modules_files_duplicates.GetPotentialDuplicatePairsTableJoinOnEverythingSearchResults( db_location_context, pixel_dupes_preference, max_hamming_distance )
-                        
-                    else:
-                        
-                        self.modules_files_query.PopulateSearchIntoTempTable( file_search_context_1, temp_table_name_1 )
-                        
-                        if dupe_search_type == ClientDuplicates.DUPE_SEARCH_BOTH_FILES_MATCH_ONE_SEARCH:
-                            
-                            table_join = self.modules_files_duplicates.GetPotentialDuplicatePairsTableJoinOnSearchResultsBothFiles( temp_table_name_1, pixel_dupes_preference, max_hamming_distance )
-                            
-                        else:
-                            
-                            table_join = self.modules_files_duplicates.GetPotentialDuplicatePairsTableJoinOnSearchResults( db_location_context, temp_table_name_1, pixel_dupes_preference, max_hamming_distance )
-                            
-                        
-                    
-                
-                if fetch_limit is None:
-                    
-                    # distinct important here for the search results table join
-                    pairs_of_hash_ids = self._Execute( 'SELECT DISTINCT duplicate_files_smaller.king_hash_id, duplicate_files_larger.king_hash_id FROM {};'.format( table_join ) ).fetchall()
-                    
-                else:
-                    
-                    # distinct important here for the search results table join
-                    pairs_of_hash_ids = self._Execute( 'SELECT DISTINCT duplicate_files_smaller.king_hash_id, duplicate_files_larger.king_hash_id FROM {} LIMIT ?;'.format( table_join ), ( fetch_limit * 10, ) ).fetchall()
-                    
-                
+            files_table_name = db_location_context.GetSingleFilesTableName()
+            
+            return self._STS( self._Execute( f'SELECT king_hash_id FROM duplicate_files CROSS JOIN {files_table_name} ON ( duplicate_files.king_hash_id = {files_table_name}.hash_id );' ) )
             
         
-        seen_hash_ids = set()
-        
-        if fetch_limit is not None and len( pairs_of_hash_ids ) >= fetch_limit:
-            
-            pairs_of_hash_ids = random.sample( pairs_of_hash_ids, fetch_limit )
-            
-        
-        pairs_of_hash_ids.sort()
-        
-        for ( smaller_media_king_hash_id, larger_media_king_hash_id ) in pairs_of_hash_ids:
-            
-            seen_hash_ids.add( smaller_media_king_hash_id )
-            seen_hash_ids.add( larger_media_king_hash_id )
-            
-        
-        media_results = self.modules_media_results.GetMediaResults( seen_hash_ids )
-        
-        hash_ids_to_media_results = { media_result.GetHashId() : media_result for media_result in media_results }
-        
-        pairs_of_media_results = [ ( hash_ids_to_media_results[ smaller_media_king_hash_id ], hash_ids_to_media_results[ larger_media_king_hash_id ] ) for ( smaller_media_king_hash_id, larger_media_king_hash_id ) in pairs_of_hash_ids ]
-        
-        return pairs_of_media_results
+        return self._STS( self._Execute( 'SELECT king_hash_id FROM duplicate_files;' ) )
         
     
     def GetPotentialDuplicatePairsForAutoResolution( self, potential_duplicates_search_context: ClientPotentialDuplicatesSearchContext.PotentialDuplicatesSearchContext, relevant_pairs_and_distances: typing.Collection[ typing.Tuple[ int, int, int ] ] ):
@@ -170,6 +94,9 @@ class ClientDBFilesDuplicatesFileSearch( ClientDBModule.ClientDBModule ):
                         self.modules_files_query.PopulateSearchIntoTempTable( file_search_context_1, temp_table_name_1, query_hash_ids = required_hash_ids )
                         self.modules_files_query.PopulateSearchIntoTempTable( file_search_context_2, temp_table_name_2, query_hash_ids = required_hash_ids )
                         
+                        self._Execute( f'ANALYZE {temp_table_name_1};')
+                        self._Execute( f'ANALYZE {temp_table_name_2};')
+                        
                         table_join = self.modules_files_duplicates.GetPotentialDuplicatePairsTableJoinOnSeparateSearchResults( temp_table_name_1, temp_table_name_2, pixel_dupes_preference, max_hamming_distance, master_potential_duplicate_pairs_table_name = temp_media_ids_table_name )
                         
                     else:
@@ -181,6 +108,8 @@ class ClientDBFilesDuplicatesFileSearch( ClientDBModule.ClientDBModule ):
                         else:
                             
                             self.modules_files_query.PopulateSearchIntoTempTable( file_search_context_1, temp_table_name_1, query_hash_ids = required_hash_ids )
+                            
+                            self._Execute( f'ANALYZE {temp_table_name_1};')
                             
                             if dupe_search_type == ClientDuplicates.DUPE_SEARCH_BOTH_FILES_MATCH_ONE_SEARCH:
                                 
@@ -200,6 +129,25 @@ class ClientDBFilesDuplicatesFileSearch( ClientDBModule.ClientDBModule ):
             
         
         return matching_pairs
+        
+    
+    def GetPotentialDuplicatePairsForAutoResolutionMediaResults( self, potential_duplicates_search_context: ClientPotentialDuplicatesSearchContext.PotentialDuplicatesSearchContext, relevant_pairs_and_distances: typing.Collection[ typing.Tuple[ int, int, int ] ] ):
+        
+        pairs_of_media_ids = self.GetPotentialDuplicatePairsForAutoResolution( potential_duplicates_search_context, relevant_pairs_and_distances )
+        
+        all_media_ids = set()
+        
+        for ( smaller_media_id, larger_media_id ) in pairs_of_media_ids:
+            
+            all_media_ids.add( smaller_media_id )
+            all_media_ids.add( larger_media_id )
+            
+        
+        media_ids_to_king_hash_ids = { media_id : self.modules_files_duplicates.GetKingHashId( media_id ) for media_id in all_media_ids }
+        
+        pairs_of_hash_ids = [ ( media_ids_to_king_hash_ids[ smaller_media_id ], media_ids_to_king_hash_ids[ larger_media_id ] ) for ( smaller_media_id, larger_media_id ) in pairs_of_media_ids ]
+        
+        return self.modules_media_results.GetMediaResultPairs( pairs_of_hash_ids )
         
     
     def GetPotentialDuplicatePairsForFiltering( self, potential_duplicates_search_context: ClientPotentialDuplicatesSearchContext.PotentialDuplicatesSearchContext, max_num_pairs: typing.Optional[ int ] = None ):
@@ -237,8 +185,13 @@ class ClientDBFilesDuplicatesFileSearch( ClientDBModule.ClientDBModule ):
                 
                 if dupe_search_type == ClientDuplicates.DUPE_SEARCH_BOTH_FILES_MATCH_DIFFERENT_SEARCHES:
                     
-                    query_hash_ids_1 = set( self.modules_files_query.PopulateSearchIntoTempTable( file_search_context_1, temp_table_name_1 ) )
-                    query_hash_ids_2 = set( self.modules_files_query.PopulateSearchIntoTempTable( file_search_context_2, temp_table_name_2 ) )
+                    all_possible_king_hash_ids = self._GetAllKingHashIds( db_location_context )
+                    
+                    query_hash_ids_1 = set( self.modules_files_query.PopulateSearchIntoTempTable( file_search_context_1, temp_table_name_1, query_hash_ids = all_possible_king_hash_ids ) )
+                    query_hash_ids_2 = set( self.modules_files_query.PopulateSearchIntoTempTable( file_search_context_2, temp_table_name_2, query_hash_ids = all_possible_king_hash_ids ) )
+                    
+                    self._Execute( f'ANALYZE {temp_table_name_1};')
+                    self._Execute( f'ANALYZE {temp_table_name_2};')
                     
                     # we always want pairs where one is in one and the other is in the other, we don't want king-selection-trickery giving us a jpeg vs a jpeg
                     chosen_allowed_hash_ids = query_hash_ids_1
@@ -254,7 +207,11 @@ class ClientDBFilesDuplicatesFileSearch( ClientDBModule.ClientDBModule ):
                         
                     else:
                         
-                        query_hash_ids = set( self.modules_files_query.PopulateSearchIntoTempTable( file_search_context_1, temp_table_name_1 ) )
+                        all_possible_king_hash_ids = self._GetAllKingHashIds( db_location_context )
+                        
+                        query_hash_ids = set( self.modules_files_query.PopulateSearchIntoTempTable( file_search_context_1, temp_table_name_1, query_hash_ids = all_possible_king_hash_ids ) )
+                        
+                        self._Execute( f'ANALYZE {temp_table_name_1};')
                         
                         if dupe_search_type == ClientDuplicates.DUPE_SEARCH_BOTH_FILES_MATCH_ONE_SEARCH:
                             
@@ -435,8 +392,13 @@ class ClientDBFilesDuplicatesFileSearch( ClientDBModule.ClientDBModule ):
                 
                 if dupe_search_type == ClientDuplicates.DUPE_SEARCH_BOTH_FILES_MATCH_DIFFERENT_SEARCHES:
                     
-                    self.modules_files_query.PopulateSearchIntoTempTable( file_search_context_1, temp_table_name_1 )
-                    self.modules_files_query.PopulateSearchIntoTempTable( file_search_context_2, temp_table_name_2 )
+                    all_possible_king_hash_ids = self._GetAllKingHashIds( db_location_context )
+                    
+                    self.modules_files_query.PopulateSearchIntoTempTable( file_search_context_1, temp_table_name_1, query_hash_ids = all_possible_king_hash_ids )
+                    self.modules_files_query.PopulateSearchIntoTempTable( file_search_context_2, temp_table_name_2, query_hash_ids = all_possible_king_hash_ids )
+                    
+                    self._Execute( f'ANALYZE {temp_table_name_1};')
+                    self._Execute( f'ANALYZE {temp_table_name_2};')
                     
                     table_join = self.modules_files_duplicates.GetPotentialDuplicatePairsTableJoinOnSeparateSearchResults( temp_table_name_1, temp_table_name_2, pixel_dupes_preference, max_hamming_distance )
                     
@@ -448,7 +410,11 @@ class ClientDBFilesDuplicatesFileSearch( ClientDBModule.ClientDBModule ):
                         
                     else:
                         
-                        self.modules_files_query.PopulateSearchIntoTempTable( file_search_context_1, temp_table_name_1 )
+                        all_possible_king_hash_ids = self._GetAllKingHashIds( db_location_context )
+                        
+                        self.modules_files_query.PopulateSearchIntoTempTable( file_search_context_1, temp_table_name_1, query_hash_ids = all_possible_king_hash_ids )
+                        
+                        self._Execute( f'ANALYZE {temp_table_name_1};')
                         
                         if dupe_search_type == ClientDuplicates.DUPE_SEARCH_BOTH_FILES_MATCH_ONE_SEARCH:
                             
@@ -496,8 +462,13 @@ class ClientDBFilesDuplicatesFileSearch( ClientDBModule.ClientDBModule ):
                 
                 if dupe_search_type == ClientDuplicates.DUPE_SEARCH_BOTH_FILES_MATCH_DIFFERENT_SEARCHES:
                     
-                    query_hash_ids_1 = set( self.modules_files_query.PopulateSearchIntoTempTable( file_search_context_1, temp_table_name_1 ) )
-                    query_hash_ids_2 = set( self.modules_files_query.PopulateSearchIntoTempTable( file_search_context_2, temp_table_name_2 ) )
+                    all_possible_king_hash_ids = self._GetAllKingHashIds( db_location_context )
+                    
+                    query_hash_ids_1 = set( self.modules_files_query.PopulateSearchIntoTempTable( file_search_context_1, temp_table_name_1, query_hash_ids = all_possible_king_hash_ids ) )
+                    query_hash_ids_2 = set( self.modules_files_query.PopulateSearchIntoTempTable( file_search_context_2, temp_table_name_2, query_hash_ids = all_possible_king_hash_ids ) )
+                    
+                    self._Execute( f'ANALYZE {temp_table_name_1};')
+                    self._Execute( f'ANALYZE {temp_table_name_2};')
                     
                     # we are going to say our 'master' king for the pair(s) returned here is always from search 1
                     chosen_allowed_hash_ids = query_hash_ids_1
@@ -513,7 +484,11 @@ class ClientDBFilesDuplicatesFileSearch( ClientDBModule.ClientDBModule ):
                         
                     else:
                         
-                        query_hash_ids = set( self.modules_files_query.PopulateSearchIntoTempTable( file_search_context_1, temp_table_name_1 ) )
+                        all_possible_king_hash_ids = self._GetAllKingHashIds( db_location_context )
+                        
+                        query_hash_ids = set( self.modules_files_query.PopulateSearchIntoTempTable( file_search_context_1, temp_table_name_1, query_hash_ids = all_possible_king_hash_ids ) )
+                        
+                        self._Execute( f'ANALYZE {temp_table_name_1};')
                         
                         if dupe_search_type == ClientDuplicates.DUPE_SEARCH_BOTH_FILES_MATCH_ONE_SEARCH:
                             

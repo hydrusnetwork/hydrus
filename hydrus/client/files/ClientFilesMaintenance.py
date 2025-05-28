@@ -1067,7 +1067,7 @@ class FilesMaintenanceManager( ClientDaemons.ManagerWithMainLoop ):
             return None
             
         
-        perceptual_hashes = ClientImagePerceptualHashes.GenerateShapePerceptualHashes( path, mime )
+        perceptual_hashes = ClientImagePerceptualHashes.GenerateUsefulShapePerceptualHashes( path, mime )
         
         return perceptual_hashes
         

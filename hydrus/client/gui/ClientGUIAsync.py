@@ -179,9 +179,20 @@ class AsyncQtUpdater( object ):
                     
                     return
                     
+                except HydrusExceptions.CancelledException:
+                    
+                    return
+                    
                 
             
-            result = self._work_callable( pre_work_args )
+            try:
+                
+                result = self._work_callable( pre_work_args )
+                
+            except HydrusExceptions.CancelledException:
+                
+                return
+                
             
             try:
                 

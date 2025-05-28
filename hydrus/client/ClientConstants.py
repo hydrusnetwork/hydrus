@@ -640,6 +640,9 @@ class GlobalPixmaps( object ):
         self.highlight = QG.QPixmap( os.path.join( HC.STATIC_DIR, 'highlight.png' ) )
         self.clear_highlight = QG.QPixmap( os.path.join( HC.STATIC_DIR, 'clear_highlight.png' ) )
         
+        self.lock = QG.QPixmap( os.path.join( HC.STATIC_DIR, 'lock.png' ) )
+        self.lock_open = QG.QPixmap( os.path.join( HC.STATIC_DIR, 'lock_open.png' ) )
+        
         self.star = QG.QPixmap( os.path.join( HC.STATIC_DIR, 'star.png' ) )
         
         #self.listctrl = QG.QPixmap( os.path.join( HC.STATIC_DIR, 'listctrl.png' ) )

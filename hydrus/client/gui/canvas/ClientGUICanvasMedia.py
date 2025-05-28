@@ -2045,11 +2045,11 @@ class MediaContainer( QW.QWidget ):
             
         elif pan_type == CAC.SIMPLE_PAN_VERTICAL_CENTER:
             
-            delta_y = ( canvas_size.height() / 2 ) - ( my_pos.y() + ( my_size.height() / 2 ) )
+            delta_y = int( canvas_size.height() / 2 ) - ( my_pos.y() + int( my_size.height() / 2 ) )
             
         elif pan_type == CAC.SIMPLE_PAN_HORIZONTAL_CENTER:
             
-            delta_x = ( canvas_size.width() / 2 ) - ( my_pos.x() + ( my_size.width() / 2 ) )
+            delta_x = int( canvas_size.width() / 2 ) - ( my_pos.x() + int( my_size.width() / 2 ) )
             
         
         delta = QC.QPoint( delta_x, delta_y )
