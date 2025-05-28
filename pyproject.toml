@@ -86,8 +86,8 @@ other-future = [
 other-normal = [
 ]
 qt6-new = [
-    "pyside6==6.7.3",
-    "qtpy==2.4.1",
+    "pyside6==6.8.2.1",
+    "qtpy==2.4.3",
 ]
 qt6-new-pyqt6 = [
     "pyqt6",
@@ -99,6 +99,6 @@ qt6-older = [
     "qtpy==2.3.1",
 ]
 qt6-test = [
-    "pyside6==6.8.2.1",
+    "pyside6==6.9.0",
     "qtpy==2.4.3",
 ]

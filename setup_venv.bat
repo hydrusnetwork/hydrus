@@ -88,7 +88,7 @@ IF EXIST "%venv_location%\" (
 :questions
 
 ECHO --------
-ECHO Users on older Windows need the advanced install. Python 3.13 will need the advanced install for newer '(t)est' Qt.
+ECHO Users on older Windows need the advanced install.
 ECHO:
 ECHO Your Python version is:
 %python_bin% --version
@@ -128,7 +128,7 @@ ECHO - For Python 3.11, your earliest available version is 6.4.0.1
 ECHO - For Python 3.12, your earliest available version is 6.6.0
 ECHO - For Python 3.13, your earliest available version is 6.8.0.2
 SET /P qt_custom_pyside6="Version: "
-SET /P qt_custom_qtpy="Enter the exact qtpy version you want (probably '2.4.1'; if older try '2.3.1'): "
+SET /P qt_custom_qtpy="Enter the exact qtpy version you want (probably '2.4.3'; if older try '2.3.1'): "
 
 :question_qt_custom_done
 :question_qt_advanced_done
