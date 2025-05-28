@@ -50,7 +50,7 @@ if [ -d "venv" ]; then
 fi
 
 echo "--------"
-echo "If your macOS is old (Python 3.9), do the advanced install. Python 3.13 will need the advanced install for newer '(t)est' Qt."
+echo "If your macOS is old (Python 3.9), do the advanced install."
 echo
 echo "Your Python version is:"
 $py_command --version
@@ -94,7 +94,7 @@ elif [ "$install_type" = "a" ]; then
         echo "- For Python 3.13, your earliest available version is 6.8.0.2"
         echo "Version: "
         read -r qt_custom_pyside6
-        echo "Enter the exact qtpy version you want (probably '2.4.1'; if older try '2.3.1'): "
+        echo "Enter the exact qtpy version you want (probably '2.4.3'; if older try '2.3.1'): "
         read -r qt_custom_qtpy
     fi
 
