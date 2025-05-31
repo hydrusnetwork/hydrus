@@ -2297,11 +2297,15 @@ class CanvasWithHovers( Canvas ):
             
             service_key = numerical_service.GetServiceKey()
             
+            custom_pad = numerical_service.GetCustomPad()
+            
             ( rating_state, rating ) = ClientRatings.GetNumericalStateFromMedia( ( self._current_media, ), service_key )
             
-            numerical_width = ClientGUIRatings.GetNumericalWidth( service_key, RATING_ICON_SET_SIZE, STAR_PAD.width() )
+            numerical_width = ClientGUIRatings.GetNumericalWidth( service_key, RATING_ICON_SET_SIZE, custom_pad )
             
-            ClientGUIRatings.DrawNumerical( painter, my_width - numerical_width - ( QFRAME_PADDING + VBOX_MARGIN ) + int( STAR_PAD.width() / 2 ), current_y, service_key, rating_state, rating, QC.QSize( STAR_DX, STAR_DY ), STAR_PAD.width() )
+            current_x = my_width - numerical_width - ( QFRAME_PADDING + VBOX_MARGIN ) + STAR_PAD.width() / 2
+            
+            ClientGUIRatings.DrawNumerical( painter, current_x, current_y, service_key, rating_state, rating, QC.QSize( STAR_DX, STAR_DY ), custom_pad )
             
             current_y += STAR_DY + STAR_PAD.height() + VBOX_SPACING
             

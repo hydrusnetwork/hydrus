@@ -305,7 +305,7 @@ class RatingNumericalCanvas( ClientGUIRatings.RatingNumerical ):
         
         if self._current_media is not None:
             
-            ClientGUIRatings.DrawNumerical( painter, int( ClientGUIPainterShapes.PAD_PX / 2 ), int( ClientGUIPainterShapes.PAD_PX / 2 ), self._service_key, self._rating_state, self._rating, self._iconsize )
+            ClientGUIRatings.DrawNumerical( painter, ClientGUIPainterShapes.PAD_PX / 2, ClientGUIPainterShapes.PAD_PX / 2, self._service_key, self._rating_state, self._rating, self._iconsize )
             
         
     

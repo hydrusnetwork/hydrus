@@ -2502,9 +2502,11 @@ class Thumbnail( Selectable ):
             
             service_key = numerical_service.GetServiceKey()
             
+            custom_pad = numerical_service.GetCustomPad()
+            
             ( rating_state, rating ) = ClientRatings.GetNumericalStateFromMedia( ( media, ), service_key )
             
-            numerical_width = ClientGUIRatings.GetNumericalWidth( service_key, STAR_DX, ICON_PAD )
+            numerical_width = ClientGUIRatings.GetNumericalWidth( service_key, STAR_DX )
             
             rect_width = numerical_width + ( ICON_MARGIN * 2 ) #icon padding is included in GetNumericalWidth
             rect_height = STAR_DY + ICON_PAD + ( ICON_MARGIN * 2 )
@@ -2520,7 +2522,7 @@ class Thumbnail( Selectable ):
             numerical_rating_current_x = rect_x + ICON_PAD / 2
             numerical_rating_current_y = rect_y + ICON_PAD / 2
             
-            ClientGUIRatings.DrawNumerical( painter, numerical_rating_current_x, numerical_rating_current_y, service_key, rating_state, rating, QC.QSize( STAR_DX, STAR_DY ), ICON_PAD )
+            ClientGUIRatings.DrawNumerical( painter, numerical_rating_current_x, numerical_rating_current_y, service_key, rating_state, rating, QC.QSize( STAR_DX, STAR_DY ) )
             
             current_top_right_y += rect_height
             
