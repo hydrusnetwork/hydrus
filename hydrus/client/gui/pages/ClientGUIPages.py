@@ -1097,7 +1097,21 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
                 
                 if page_type == 'pages':
                     
-                    self.NewPagesNotebook()
+                    new_notebook = self.NewPagesNotebook()
+                    
+                    if CG.client_controller.new_options.GetBoolean( 'rename_page_of_pages_on_pick_new' ):
+                        
+                        with ClientGUIDialogs.DialogTextEntry( self, 'Enter the name for the new page of pages.', default = 'pages', allow_blank = False ) as dlg:
+                            
+                            if dlg.exec() == QW.QDialog.DialogCode.Accepted:
+                                
+                                new_name = dlg.GetValue()
+                                
+                                new_notebook.SetName( new_name )
+                                
+                                CG.client_controller.pub( 'refresh_page_name', new_notebook.GetPageKey() )
+                                
+                            
                     
                 elif page_type == 'page':
                     
@@ -1603,6 +1617,19 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
             
             self._MovePage( page, dest_notebook, 0 )
             
+            if CG.client_controller.new_options.GetBoolean( 'rename_page_of_pages_on_send' ):
+                
+                with ClientGUIDialogs.DialogTextEntry( self, 'Enter the name for the new page of pages.', default = 'pages', allow_blank = False ) as dlg:
+                    
+                    if dlg.exec() == QW.QDialog.DialogCode.Accepted:
+                        
+                        new_name = dlg.GetValue()
+                        
+                        dest_notebook.SetName( new_name )
+                        
+                        CG.client_controller.pub( 'refresh_page_name', dest_notebook.GetPageKey() )
+                
+            
         
     
     def _SendRightPagesToNewNotebook( self, from_index ):
@@ -1628,6 +1655,20 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
                 self._MovePage( page, dest_notebook, 0 )
                 
             
+            if CG.client_controller.new_options.GetBoolean( 'rename_page_of_pages_on_send' ):
+                
+                with ClientGUIDialogs.DialogTextEntry( self, 'Enter the name for the new page of pages.', default = 'pages', allow_blank = False ) as dlg:
+                    
+                    if dlg.exec() == QW.QDialog.DialogCode.Accepted:
+                        
+                        new_name = dlg.GetValue()
+                        
+                        dest_notebook.SetName( new_name )
+                        
+                        CG.client_controller.pub( 'refresh_page_name', dest_notebook.GetPageKey() )
+                        
+                    
+                
         
     
     def _ShiftPage( self, page_index, delta = None, new_index = None ):

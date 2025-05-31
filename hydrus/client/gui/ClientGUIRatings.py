@@ -111,7 +111,21 @@ def DrawLike( painter: QG.QPainter, x, y, service_key, rating_state, size: QC.QS
     ClientGUIPainterShapes.DrawShape( painter, star_type, x, y, size.width(), size.height() )
     
 
-def DrawNumerical( painter: QG.QPainter, x, y, service_key, rating_state, rating, size: QC.QSize = STAR_SIZE, pad_px = ClientGUIPainterShapes.PAD_PX ):
+def DrawNumerical( painter: QG.QPainter, x, y, service_key, rating_state, rating, size: QC.QSize = STAR_SIZE, pad_px = None ):
+    
+    if pad_px is None:
+        
+        try:
+            
+            service = CG.client_controller.services_manager.GetService( service_key )
+            
+            pad_px = service.GetCustomPad()
+            
+        except HydrusExceptions.DataMissing:
+            
+            pad_px = ClientGUIPainterShapes.PAD_PX
+            
+        
     
     painter.setRenderHint( QG.QPainter.RenderHint.Antialiasing, True )
     
@@ -134,7 +148,7 @@ def DrawNumerical( painter: QG.QPainter, x, y, service_key, rating_state, rating
         
     
 
-def GetNumericalWidth( service_key, star_width, pad_px = ClientGUIPainterShapes.PAD_PX ):
+def GetNumericalWidth( service_key, star_width, pad_px = None ):
     
     try:
         
@@ -142,12 +156,23 @@ def GetNumericalWidth( service_key, star_width, pad_px = ClientGUIPainterShapes.
         
         num_stars = service.GetNumStars()
         
+        if pad_px is None:
+            
+            try:
+                
+                pad_px = service.GetCustomPad()
+                
+            except HydrusExceptions.DataMissing: 
+                
+                pad_px = ClientGUIPainterShapes.PAD_PX
+                
+            
     except HydrusExceptions.DataMissing:
         
         num_stars = 1
         
     
-    return ( star_width +  pad_px ) * num_stars
+    return ( ( star_width + pad_px ) * num_stars - 1 ) + ( ClientGUIPainterShapes.PAD_PX ) - ( pad_px if pad_px < 0 else 0 )
     
 def GetPenAndBrushColours( service_key, rating_state ):
     
@@ -581,14 +606,16 @@ class RatingNumerical( QW.QWidget ):
             
             self._num_stars = service.GetNumStars()
             self._allow_zero = service.AllowZero()
+            self._custom_pad = service.GetCustomPad()
             
         except HydrusExceptions.DataMissing:
             
             self._num_stars = 5
             self._allow_zero = False
+            self._custom_pad = ClientGUIPainterShapes.PAD_PX
             
         
-        my_width = GetNumericalWidth( self._service_key, icon_size.width() )
+        my_width = GetNumericalWidth( self._service_key, icon_size.width(), self._custom_pad )
         
         self._widget_event_filter = QP.WidgetEventFilter( self )
         
@@ -597,7 +624,7 @@ class RatingNumerical( QW.QWidget ):
         self._widget_event_filter.EVT_RIGHT_DOWN( self.EventRightDown )
         self._widget_event_filter.EVT_RIGHT_DCLICK( self.EventRightDown )
         
-        self.setMinimumSize( QC.QSize( my_width, icon_size.width() + STAR_PAD.width() ) )
+        self.setMinimumSize( QC.QSize( my_width, icon_size.height() + STAR_PAD.height() ) )
         
         self._rating_state = ClientRatings.NULL
         self._rating = 0.0
@@ -777,7 +804,8 @@ class RatingNumerical( QW.QWidget ):
         self._UpdateTooltip()
         
     
-class RatingNumericalDialog( RatingNumerical ):
+
+class RatingNumericalControl( RatingNumerical ):
     
     def _ClearRating( self ):
         
@@ -786,22 +814,6 @@ class RatingNumericalDialog( RatingNumerical ):
         self._rating_state = ClientRatings.NULL
         
         self.update()
-        
-    
-    def _Draw( self, painter ):
-        
-        painter.setBackground( QG.QBrush( QP.GetBackgroundColour( self.parentWidget() ) ) )
-        
-        painter.eraseRect( painter.viewport() )
-        
-        if self.isEnabled():
-            
-            DrawNumerical( painter, 0, 0, self._service_key, self._rating_state, self._rating )
-            
-        else:
-            
-            DrawNumerical( painter, 0, 0, self._service_key, ClientRatings.NULL, 0.0 )
-            
         
     
     def _SetRating( self, rating ):
@@ -844,5 +856,23 @@ class RatingNumericalDialog( RatingNumerical ):
         self.update()
         
         self._UpdateTooltip()
+        
+    
+class RatingNumericalDialog( RatingNumericalControl ):
+    
+    def _Draw( self, painter ):
+        
+        painter.setBackground( QG.QBrush( QP.GetBackgroundColour( self.parentWidget() ) ) )
+        
+        painter.eraseRect( painter.viewport() )
+        
+        if self.isEnabled():
+            
+            DrawNumerical( painter, 1, 1, self._service_key, self._rating_state, self._rating )
+            
+        else:
+            
+            DrawNumerical( painter, 1, 1, self._service_key, ClientRatings.NULL, 0.0 )
+            
         
     

@@ -21,6 +21,9 @@ This is '3 out of 5 stars' or '8/10'. You can set the range to whatever whole nu
 ![](images/ratings_numerical.png)
 
 As well as the shape and colour options, you can set how many 'stars' to display and whether 0/10 is permitted.
+You can also set a custom distance between 'stars' in the row. This used to be 0 and now has a default padding of 4 pixels with the new draw system. You can also now set it to negative.
+As an example the square 3/5 rating below is using 0 padding and the 4/5 'crescent moon' shape rating is using -4 padding.
+![](images/ratings_pad_examples.png)
 
 If you change the star range at a later date, any existing ratings will be 'stretched' across the new range. As values are collapsed to the nearest integer, this is best done for scales that are multiples. 2/5 will neatly become 4/10 on a zero-allowed service, for instance, and 0/4 can nicely become 1/5 if you disallow zero ratings in the same step. If you didn't intuitively understand that, just don't touch the number of stars or zero rating checkbox after you have created the numerical rating service!
 

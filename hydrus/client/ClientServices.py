@@ -130,6 +130,7 @@ def GenerateDefaultServiceDictionary( service_type ):
                 dictionary[ 'colours' ] = list( ClientGUIRatings.default_numerical_colours.items() )
                 dictionary[ 'num_stars' ] = 5
                 dictionary[ 'allow_zero' ] = True
+                dictionary[ 'custom_pad' ] = ClientGUIRatings.STAR_PAD.width()
                 
             
         
@@ -683,6 +684,7 @@ class ServiceLocalRatingNumerical( ServiceLocalRatingStars ):
         
         dictionary[ 'num_stars' ] = self._num_stars
         dictionary[ 'allow_zero' ] = self._allow_zero
+        dictionary[ 'custom_pad' ] = self._custom_pad
         
         return dictionary
         
@@ -693,6 +695,7 @@ class ServiceLocalRatingNumerical( ServiceLocalRatingStars ):
         
         self._num_stars = dictionary[ 'num_stars' ]
         self._allow_zero = dictionary[ 'allow_zero' ]
+        self._custom_pad = dictionary[ 'custom_pad' ]
         
     
     def AllowZero( self ):
@@ -758,6 +761,13 @@ class ServiceLocalRatingNumerical( ServiceLocalRatingStars ):
             
         
     
+    def GetCustomPad( self ):
+        
+        with self._lock:
+            
+            return self._custom_pad
+            
+        
     def GetOneStarValue( self ):
         
         num_choices = self._num_stars
