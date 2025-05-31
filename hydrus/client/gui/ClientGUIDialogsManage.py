@@ -489,6 +489,7 @@ class DialogManageRatings( CAC.ApplicationCommandProcessorMixin, ClientGUIDialog
                 ( rating_state, rating ) = ClientRatings.GetNumericalStateFromMedia( self._media, service_key )
                 
                 control = ClientGUIRatings.RatingNumericalDialog( self, service_key )
+                control.setSizePolicy( QW.QSizePolicy.Fixed, QW.QSizePolicy.Fixed )
                 
                 if rating_state != ClientRatings.SET:
                     
@@ -506,6 +507,7 @@ class DialogManageRatings( CAC.ApplicationCommandProcessorMixin, ClientGUIDialog
                 
             
             gridbox = ClientGUICommon.WrapInGrid( self, rows, expand_text = True )
+            gridbox.setColumnStretch( 1, 0 )
             
             self.setLayout( gridbox )
             

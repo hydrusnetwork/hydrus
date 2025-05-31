@@ -804,7 +804,8 @@ class RatingNumerical( QW.QWidget ):
         self._UpdateTooltip()
         
     
-class RatingNumericalDialog( RatingNumerical ):
+
+class RatingNumericalControl( RatingNumerical ):
     
     def _ClearRating( self ):
         
@@ -813,22 +814,6 @@ class RatingNumericalDialog( RatingNumerical ):
         self._rating_state = ClientRatings.NULL
         
         self.update()
-        
-    
-    def _Draw( self, painter ):
-        
-        painter.setBackground( QG.QBrush( QP.GetBackgroundColour( self.parentWidget() ) ) )
-        
-        painter.eraseRect( painter.viewport() )
-        
-        if self.isEnabled():
-            
-            DrawNumerical( painter, 0, 0, self._service_key, self._rating_state, self._rating )
-            
-        else:
-            
-            DrawNumerical( painter, 0, 0, self._service_key, ClientRatings.NULL, 0.0 )
-            
         
     
     def _SetRating( self, rating ):
@@ -871,5 +856,23 @@ class RatingNumericalDialog( RatingNumerical ):
         self.update()
         
         self._UpdateTooltip()
+        
+    
+class RatingNumericalDialog( RatingNumericalControl ):
+    
+    def _Draw( self, painter ):
+        
+        painter.setBackground( QG.QBrush( QP.GetBackgroundColour( self.parentWidget() ) ) )
+        
+        painter.eraseRect( painter.viewport() )
+        
+        if self.isEnabled():
+            
+            DrawNumerical( painter, 1, 1, self._service_key, self._rating_state, self._rating )
+            
+        else:
+            
+            DrawNumerical( painter, 1, 1, self._service_key, ClientRatings.NULL, 0.0 )
+            
         
     

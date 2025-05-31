@@ -266,7 +266,7 @@ class RatingLikeCanvas( ClientGUIRatings.RatingLike ):
         
     
 
-class RatingNumericalCanvas( ClientGUIRatings.RatingNumerical ):
+class RatingNumericalCanvas( ClientGUIRatings.RatingNumericalControl ):
 
     def __init__( self, parent, service_key, canvas_key, icon_size ):
         
