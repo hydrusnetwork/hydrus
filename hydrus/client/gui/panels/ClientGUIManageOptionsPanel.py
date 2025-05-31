@@ -144,11 +144,45 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             gridbox = ClientGUICommon.WrapInGrid( self, rows )
             
+            #
+            
+            self._advanced_mode_box = ClientGUICommon.StaticBox( self, 'advanced mode stuff' )
+            self._advanced_mode_box.setToolTip( ClientGUIFunctions.WrapToolTip( 'Enabled after you tick the global advanced mode box. Surely some future advanced options will find their way here...' ) )
+            
+            self._shortcuts_button = ClientGUICommon.BetterButton( self._advanced_mode_box, 'open \'file->shortcuts...\'', self._PopupManageShortcuts )
+            self._shortcuts_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'If you accidentally opened the \'options\' window instead of \'shortcuts\', this button is for you.' ) )
+            
+            advanced_gridbox = QP.GridLayout( cols = 2 )
+            
+            shortcut_bar = ClientGUICommon.BetterStaticText( self._advanced_mode_box, 'Shortcuts: ' )
+            QP.AddToLayout( advanced_gridbox, shortcut_bar, CC.FLAGS_ON_LEFT )
+            QP.AddToLayout( advanced_gridbox, self._shortcuts_button, CC.FLAGS_CENTER_PERPENDICULAR )
+            
+            self._advanced_mode_box.Add( advanced_gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            
+            #
+            
             QP.AddToLayout( vbox, gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            QP.AddToLayout( vbox, self._advanced_mode_box, CC.FLAGS_EXPAND_BOTH_WAYS )
             vbox.addStretch( 0 )
             
             self.setLayout( vbox )
             
+            self._advanced_mode.clicked.connect( self._UpdateOverride )
+            self._UpdateOverride()
+            
+        
+        def _PopupManageShortcuts( self ):
+        
+            from hydrus.client.gui import ClientGUIShortcutControls
+            
+            panel = ClientGUIShortcutControls.ManageShortcuts( self )
+            
+        
+        def _UpdateOverride( self ):
+            
+            self._advanced_mode_box.setEnabled( self._advanced_mode.isChecked() )
+        
         
         def UpdateOptions( self ):
             
@@ -2175,12 +2209,17 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._import_page_progress_display = QW.QCheckBox( self._page_names_panel )
             
+            self._rename_page_of_pages_on_pick_new = QW.QCheckBox( self._page_names_panel )
+            self._rename_page_of_pages_on_pick_new.setToolTip( ClientGUIFunctions.WrapToolTip( 'When you create a new \'page of pages\' from the new page picker, should it automatically prompt you to give it a name other than \'pages\'?' ) )
+            self._rename_page_of_pages_on_send = QW.QCheckBox( self._page_names_panel )
+            self._rename_page_of_pages_on_send.setToolTip( ClientGUIFunctions.WrapToolTip( 'When you \'send this page down\' or \'send pages to the right\' to a new page of pages, should it also automatically prompt you to rename it?' ) )
+            
             #
             
             self._controls_panel = ClientGUICommon.StaticBox( self, 'controls and preview' )
             
             self._set_search_focus_on_page_change = QW.QCheckBox( self._controls_panel )
-            self._set_search_focus_on_page_change.setToolTip( 'Set it so whenever you switch between pages, the keyboard focus immediately moves to the tag autocomplete or search text input.' )
+            self._set_search_focus_on_page_change.setToolTip( ClientGUIFunctions.WrapToolTip( 'Set it so whenever you switch between pages, the keyboard focus immediately moves to the tag autocomplete or search text input.' ) )
             
             self._hide_preview = QW.QCheckBox( self._controls_panel )
             
@@ -2230,6 +2269,9 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._page_file_count_display.SetValue( self._new_options.GetInteger( 'page_file_count_display' ) )
             
             self._import_page_progress_display.setChecked( self._new_options.GetBoolean( 'import_page_progress_display' ) )
+            
+            self._rename_page_of_pages_on_pick_new.setChecked( self._new_options.GetBoolean( 'rename_page_of_pages_on_pick_new' ) )
+            self._rename_page_of_pages_on_send.setChecked( self._new_options.GetBoolean( 'rename_page_of_pages_on_send' ) )
             
             self._page_drop_chase_normally.setChecked( self._new_options.GetBoolean( 'page_drop_chase_normally' ) )
             self._page_drop_chase_with_shift.setChecked( self._new_options.GetBoolean( 'page_drop_chase_with_shift' ) )
@@ -2287,6 +2329,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows.append( ( 'When there are too many tabs to fit, \'...\' elide their names so they fit: ', self._elide_page_tab_names ) )
             rows.append( ( 'Show page file count after its name: ', self._page_file_count_display ) )
             rows.append( ( 'Show import page x/y progress after its name: ', self._import_page_progress_display ) )
+            rows.append( ( 'Automatically prompt to rename new \'page of pages\' after creation: ', self._rename_page_of_pages_on_pick_new ) )
+            rows.append( ( '  Also automatically prompt when sending some pages to one: ', self._rename_page_of_pages_on_send ) )
             
             page_names_gridbox = ClientGUICommon.WrapInGrid( self._page_names_panel, rows )
             
@@ -2360,6 +2404,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._new_options.SetInteger( 'page_file_count_display', self._page_file_count_display.GetValue() )
             self._new_options.SetBoolean( 'import_page_progress_display', self._import_page_progress_display.isChecked() )
+            self._new_options.SetBoolean( 'rename_page_of_pages_on_pick_new', self._rename_page_of_pages_on_pick_new.isChecked() )
+            self._new_options.SetBoolean( 'rename_page_of_pages_on_send', self._rename_page_of_pages_on_send.isChecked() )
             
             self._new_options.SetBoolean( 'disable_page_tab_dnd', self._disable_page_tab_dnd.isChecked() )
             self._new_options.SetBoolean( 'force_hide_page_signal_on_new_page', self._force_hide_page_signal_on_new_page.isChecked() )
