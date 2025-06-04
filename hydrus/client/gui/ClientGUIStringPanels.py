@@ -1,3 +1,4 @@
+import collections.abc
 import re
 import typing
 
@@ -1189,7 +1190,7 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
 
 class EditStringJoinerPanel( ClientGUIScrolledPanels.EditPanel ):
     
-    def __init__( self, parent, string_joiner: ClientStrings.StringJoiner, test_data: typing.Optional[ typing.Sequence[ str ] ] = None ):
+    def __init__( self, parent, string_joiner: ClientStrings.StringJoiner, test_data: typing.Optional[ collections.abc.Sequence[ str ] ] = None ):
         
         if test_data is None:
             
@@ -1575,7 +1576,7 @@ SELECT_RANGE = 1
 
 class EditStringSlicerPanel( ClientGUIScrolledPanels.EditPanel ):
     
-    def __init__( self, parent, string_slicer: ClientStrings.StringSlicer, test_data: typing.Optional[ typing.Sequence[ str ] ] = None ):
+    def __init__( self, parent, string_slicer: ClientStrings.StringSlicer, test_data: typing.Optional[ collections.abc.Sequence[ str ] ] = None ):
         
         if test_data is None:
             
@@ -1771,7 +1772,7 @@ class EditStringSlicerPanel( ClientGUIScrolledPanels.EditPanel ):
 
 class EditStringSorterPanel( ClientGUIScrolledPanels.EditPanel ):
     
-    def __init__( self, parent, string_sorter: ClientStrings.StringSorter, test_data: typing.Optional[ typing.Sequence[ str ] ] = None ):
+    def __init__( self, parent, string_sorter: ClientStrings.StringSorter, test_data: typing.Optional[ collections.abc.Sequence[ str ] ] = None ):
         
         if test_data is None:
             

@@ -82,7 +82,7 @@
 #                                  TURN BACK NOW
 #
 
-import collections
+import collections.abc
 
 column_list_type_name_lookup = {}
 

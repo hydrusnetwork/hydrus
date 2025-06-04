@@ -1,6 +1,6 @@
 import collections
+import collections.abc
 import sqlite3
-import typing
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusDBBase
@@ -266,7 +266,7 @@ class ClientDBMappingsCounts( ClientDBModule.ClientDBModule ):
         return self._STS( self._Execute( 'SELECT tag_id FROM {} CROSS JOIN {} USING ( tag_id );'.format( tag_ids_table_name, counts_cache_table_name ) ) )
         
     
-    def GetAutocompleteCountEstimate( self, tag_display_type: int, tag_service_id: int, file_service_id: int, tag_ids: typing.Collection[ int ], include_current_tags: bool, include_pending_tags: bool ):
+    def GetAutocompleteCountEstimate( self, tag_display_type: int, tag_service_id: int, file_service_id: int, tag_ids: collections.abc.Collection[ int ], include_current_tags: bool, include_pending_tags: bool ):
         
         count = 0
         
@@ -290,7 +290,7 @@ class ClientDBMappingsCounts( ClientDBModule.ClientDBModule ):
         return count
         
     
-    def GetAutocompleteCountEstimateStatuses( self, tag_display_type: int, tag_service_id: int, file_service_id: int, tag_ids: typing.Collection[ int ] ):
+    def GetAutocompleteCountEstimateStatuses( self, tag_display_type: int, tag_service_id: int, file_service_id: int, tag_ids: collections.abc.Collection[ int ] ):
         
         include_current_tags = True
         include_pending_tags = True
@@ -452,7 +452,7 @@ class ClientDBMappingsCounts( ClientDBModule.ClientDBModule ):
         return counts_cache_table_name
         
     
-    def GetCountsEstimate( self, tag_display_type: int, tag_service_id: int, file_service_id: int, tag_ids: typing.Collection[ int ], include_current_tags: bool, include_pending_tags: bool ):
+    def GetCountsEstimate( self, tag_display_type: int, tag_service_id: int, file_service_id: int, tag_ids: collections.abc.Collection[ int ], include_current_tags: bool, include_pending_tags: bool ):
         
         ids_to_count = collections.Counter()
         
@@ -483,7 +483,7 @@ class ClientDBMappingsCounts( ClientDBModule.ClientDBModule ):
         return ids_to_count
         
     
-    def GetCountsEstimateStatuses( self, tag_display_type: int, tag_service_id: int, file_service_id: int, tag_ids: typing.Collection[ int ] ):
+    def GetCountsEstimateStatuses( self, tag_display_type: int, tag_service_id: int, file_service_id: int, tag_ids: collections.abc.Collection[ int ] ):
         
         include_current_tags = True
         include_pending_tags = True
@@ -557,7 +557,7 @@ class ClientDBMappingsCounts( ClientDBModule.ClientDBModule ):
         return 'SELECT tag_id FROM {} WHERE current_count > 0'.format( counts_cache_table_name )
     
     
-    def GetTablesAndColumnsThatUseDefinitions( self, content_type: int ) -> typing.List[ typing.Tuple[ str, str ] ]:
+    def GetTablesAndColumnsThatUseDefinitions( self, content_type: int ) -> list[ tuple[ str, str ] ]:
         
         tables_and_columns = []
         

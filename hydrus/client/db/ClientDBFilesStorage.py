@@ -1,4 +1,5 @@
 import collections
+import collections.abc
 import sqlite3
 import typing
 
@@ -22,7 +23,7 @@ FILES_DELETED_PREFIX = 'deleted_files_'
 FILES_PENDING_PREFIX = 'pending_files_'
 FILES_PETITIONED_PREFIX = 'petitioned_files_'
 
-def GenerateFilesTableNames( service_id: int ) -> typing.Tuple[ str, str, str, str ]:
+def GenerateFilesTableNames( service_id: int ) -> tuple[ str, str, str, str ]:
     
     suffix = str( service_id )
     
@@ -152,7 +153,7 @@ class DBLocationContextBranch( DBLocationContext, ClientDBModule.ClientDBModule 
     # this still sucks and should be random and then dropped neatly by a manager or something so we can have more than one of these guys at once
     SINGLE_TABLE_NAME = 'mem.temp_file_storage_hash_id'
     
-    def __init__( self, cursor: sqlite3.Cursor, location_context: ClientLocation.LocationContext, files_table_names: typing.Collection[ str ] ):
+    def __init__( self, cursor: sqlite3.Cursor, location_context: ClientLocation.LocationContext, files_table_names: collections.abc.Collection[ str ] ):
         
         super().__init__( location_context, 'db location (branch)', cursor )
         
@@ -232,7 +233,7 @@ class DBLocationContextBranch( DBLocationContext, ClientDBModule.ClientDBModule 
         return '{} CROSS JOIN {} USING ( hash_id )'.format( table_phrase, self.SINGLE_TABLE_NAME )
         
     
-    def GetTablesAndColumnsThatUseDefinitions( self, content_type: int ) -> typing.List[ typing.Tuple[ str, str ] ]:
+    def GetTablesAndColumnsThatUseDefinitions( self, content_type: int ) -> list[ tuple[ str, str ] ]:
         
         return []
         
@@ -658,7 +659,7 @@ class ClientDBFilesStorage( ClientDBModule.ClientDBModule ):
         return filtered_hash_ids
         
     
-    def FilterHashIdsToStatus( self, service_id, hash_ids, status ) -> typing.Set[ int ]:
+    def FilterHashIdsToStatus( self, service_id, hash_ids, status ) -> set[ int ]:
         
         if service_id == self.modules_services.combined_file_service_id:
             
@@ -1117,7 +1118,7 @@ class ClientDBFilesStorage( ClientDBModule.ClientDBModule ):
         return count
         
     
-    def GetServiceIdCounts( self, hash_ids ) -> typing.Dict[ int, int ]:
+    def GetServiceIdCounts( self, hash_ids ) -> dict[ int, int ]:
         
         with self._MakeTemporaryIntegerTable( hash_ids, 'hash_id' ) as temp_hash_ids_table_name:
             
@@ -1160,7 +1161,7 @@ class ClientDBFilesStorage( ClientDBModule.ClientDBModule ):
         return '{} CROSS JOIN {} USING ( hash_id )'.format( table_name, files_table_name )
         
     
-    def GetTablesAndColumnsThatUseDefinitions( self, content_type: int ) -> typing.List[ typing.Tuple[ str, str ] ]:
+    def GetTablesAndColumnsThatUseDefinitions( self, content_type: int ) -> list[ tuple[ str, str ] ]:
         
         tables_and_columns = []
         
@@ -1349,7 +1350,7 @@ class ClientDBFilesStorage( ClientDBModule.ClientDBModule ):
         self._ExecuteMany( 'REPLACE INTO local_file_deletion_reasons ( hash_id, reason_id ) VALUES ( ?, ? );', ( ( hash_id, reason_id ) for hash_id in hash_ids ) )
         
     
-    def SetTime( self, hash_ids: typing.Collection[ int ], timestamp_data: ClientTime.TimestampData ):
+    def SetTime( self, hash_ids: collections.abc.Collection[ int ], timestamp_data: ClientTime.TimestampData ):
         
         if timestamp_data.location is None:
             

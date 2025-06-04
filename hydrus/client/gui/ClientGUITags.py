@@ -1,4 +1,5 @@
 import collections
+import collections.abc
 import itertools
 import random
 import re
@@ -440,7 +441,7 @@ class EditTagDisplayApplication( ClientGUIScrolledPanels.EditPanel ):
     
     class _Panel( QW.QWidget ):
         
-        def __init__( self, parent: QW.QWidget, master_service_key: bytes, sibling_applicable_service_keys: typing.Sequence[ bytes ], parent_applicable_service_keys: typing.Sequence[ bytes ] ):
+        def __init__( self, parent: QW.QWidget, master_service_key: bytes, sibling_applicable_service_keys: collections.abc.Sequence[ bytes ], parent_applicable_service_keys: collections.abc.Sequence[ bytes ] ):
             
             super().__init__( parent )
             
@@ -2015,7 +2016,7 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
 
 class IncrementalTaggingPanel( ClientGUIScrolledPanels.EditPanel ):
     
-    def __init__( self, parent: QW.QWidget, service_key: bytes, medias: typing.List[ ClientMedia.MediaSingleton ] ):
+    def __init__( self, parent: QW.QWidget, service_key: bytes, medias: list[ ClientMedia.MediaSingleton ] ):
         
         super().__init__( parent )
         
@@ -2121,7 +2122,7 @@ class IncrementalTaggingPanel( ClientGUIScrolledPanels.EditPanel ):
         return 1
         
     
-    def _GetMediaAndTagPairs( self ) -> typing.List[ typing.Tuple[ ClientMedia.MediaSingleton, str ] ]:
+    def _GetMediaAndTagPairs( self ) -> list[ tuple[ ClientMedia.MediaSingleton, str ] ]:
         
         tag_template = self._GetTagTemplate()
         start = self._start.value()
@@ -2328,7 +2329,7 @@ class IncrementalTaggingPanel( ClientGUIScrolledPanels.EditPanel ):
 
 class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPanels.ManagePanel ):
     
-    def __init__( self, parent, location_context: ClientLocation.LocationContext, tag_presentation_location: int, medias: typing.List[ ClientMedia.MediaSingleton ], immediate_commit = False, canvas_key = None ):
+    def __init__( self, parent, location_context: ClientLocation.LocationContext, tag_presentation_location: int, medias: list[ ClientMedia.MediaSingleton ], immediate_commit = False, canvas_key = None ):
         
         super().__init__( parent )
         
@@ -2651,7 +2652,7 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
         showNext = QC.Signal()
         valueChanged = QC.Signal()
         
-        def __init__( self, parent, location_context: ClientLocation.LocationContext, tag_service_key, tag_presentation_location: int, media: typing.List[ ClientMedia.MediaSingleton ], immediate_commit, canvas_key = None ):
+        def __init__( self, parent, location_context: ClientLocation.LocationContext, tag_service_key, tag_presentation_location: int, media: list[ ClientMedia.MediaSingleton ], immediate_commit, canvas_key = None ):
             
             super().__init__( parent )
             
@@ -3280,7 +3281,7 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
                 
             
         
-        def _PasteComingFromAC( self, tags: typing.List[ str ] ):
+        def _PasteComingFromAC( self, tags: list[ str ] ):
             
             self.AddTags( tags, only_add = True )
             

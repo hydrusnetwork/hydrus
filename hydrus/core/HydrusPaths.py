@@ -1,3 +1,4 @@
+import collections.abc
 import functools
 import os
 import time
@@ -337,7 +338,7 @@ def FilterFreePaths( paths ):
     return free_paths
     
 
-def FilterOlderModifiedFiles( paths: typing.Collection[ str ], grace_period: int ) -> typing.List[ str ]:
+def FilterOlderModifiedFiles( paths: collections.abc.Collection[ str ], grace_period: int ) -> list[ str ]:
     
     only_older_than = HydrusTime.GetNow() - grace_period
     
@@ -1115,6 +1116,7 @@ def ReadFileLikeAsBlocks( f ):
         next_block = f.read( HC.READ_BLOCK_SIZE )
         
     
+
 def RecyclePath( path ):
     
     if HG.file_report_mode:
@@ -1124,26 +1126,50 @@ def RecyclePath( path ):
         HydrusData.ShowText( ''.join( traceback.format_stack() ) )
         
     
+    MAX_NUM_ATTEMPTS = 3
+    
     if os.path.lexists( path ):
         
         TryToMakeFileWriteable( path )
         
-        try:
+        for i in range( MAX_NUM_ATTEMPTS ):
             
-            send2trash.send2trash( path )
+            try:
+                
+                send2trash.send2trash( path )
+                
+            except Exception as e:
+                
+                if getattr( e, 'winerror', None ) == -2144927711: # 0x80270021, mystery error that can be for many things but could be about sharing violation parallel access blah or megalag from a huge trash
+                    
+                    if i < MAX_NUM_ATTEMPTS - 1:
+                        
+                        time.sleep( 0.5 )
+                        
+                        continue
+                        
+                    else:
+                        
+                        HydrusData.Print( f'I keep getting the 0x80270021 error when trying to recycle {path}!' )
+                        
+                    
+                else:
+                    
+                    HydrusData.Print( 'Trying to recycle {path} created this error:' )
+                    
+                
+                HydrusData.PrintException( e, do_wait = False )
+                
+                HydrusData.Print( 'I will fully delete it instead.' )
+                
+                DeletePath( path )
+                
             
-        except:
-            
-            HydrusData.Print( 'Trying to recycle ' + path + ' created this error:' )
-            
-            HydrusData.DebugPrint( traceback.format_exc() )
-            
-            HydrusData.Print( 'It has been fully deleted instead.' )
-            
-            DeletePath( path )
+            break
             
         
     
+
 def SanitizeFilename( filename, force_ntfs = False ) -> str:
     
     if HC.PLATFORM_WINDOWS or force_ntfs:

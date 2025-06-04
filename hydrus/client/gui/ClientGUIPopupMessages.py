@@ -1,4 +1,5 @@
 import collections
+import collections.abc
 import sys
 import threading
 import traceback
@@ -644,7 +645,7 @@ class JobStatusPopupQueue( object ):
         
         self._job_status_ordered_dict_queue: typing.OrderedDict[ bytes, ClientThreading.JobStatus ] = collections.OrderedDict()
         
-        self._job_statuses_in_view: typing.Set[ ClientThreading.JobStatus ] = set()
+        self._job_statuses_in_view: set[ ClientThreading.JobStatus ] = set()
         
         self._lock = threading.Lock()
         
@@ -710,7 +711,7 @@ class JobStatusPopupQueue( object ):
             
         
     
-    def GetJobStatuses( self, only_in_view = False ) -> typing.List[ ClientThreading.JobStatus ]:
+    def GetJobStatuses( self, only_in_view = False ) -> list[ ClientThreading.JobStatus ]:
         
         with self._lock:
             

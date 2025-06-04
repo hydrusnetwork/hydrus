@@ -1,7 +1,7 @@
 import collections
+import collections.abc
 import itertools
 import sqlite3
-import typing
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
@@ -423,7 +423,7 @@ class ClientDBTagSiblings( ClientDBModule.ClientDBModule ):
         return ( actual_sibling_rows, ideal_sibling_rows, sibling_rows_to_add, sibling_rows_to_remove )
         
     
-    def GetChainMembersFromIdeal( self, display_type, tag_service_id, ideal_tag_id ) -> typing.Set[ int ]:
+    def GetChainMembersFromIdeal( self, display_type, tag_service_id, ideal_tag_id ) -> set[ int ]:
         
         cache_tag_siblings_lookup_table_name = GenerateTagSiblingsLookupCacheTableName( display_type, tag_service_id )
         
@@ -434,7 +434,7 @@ class ClientDBTagSiblings( ClientDBModule.ClientDBModule ):
         return sibling_tag_ids
         
     
-    def GetChainsMembersFromIdeals( self, display_type, tag_service_id, ideal_tag_ids ) -> typing.Set[ int ]:
+    def GetChainsMembersFromIdeals( self, display_type, tag_service_id, ideal_tag_ids ) -> set[ int ]:
         
         if len( ideal_tag_ids ) == 0:
             
@@ -470,7 +470,7 @@ class ClientDBTagSiblings( ClientDBModule.ClientDBModule ):
         self._Execute( 'INSERT OR IGNORE INTO {} ( tag_id ) SELECT bad_tag_id FROM {} CROSS JOIN {} USING ( ideal_tag_id );'.format( results_table_name, ideal_tag_ids_table_name, cache_tag_siblings_lookup_table_name ) )
         
     
-    def GetIdeals( self, tag_display_type, service_key, tags ) -> typing.Set[ str ]:
+    def GetIdeals( self, tag_display_type, service_key, tags ) -> set[ str ]:
         
         if service_key == CC.COMBINED_TAG_SERVICE_KEY:
             
@@ -527,7 +527,7 @@ class ClientDBTagSiblings( ClientDBModule.ClientDBModule ):
             
         
     
-    def GetIdealTagIds( self, display_type, tag_service_id, tag_ids ) -> typing.Set[ int ]:
+    def GetIdealTagIds( self, display_type, tag_service_id, tag_ids ) -> set[ int ]:
         
         if not isinstance( tag_ids, set ):
             
@@ -663,7 +663,7 @@ class ClientDBTagSiblings( ClientDBModule.ClientDBModule ):
         return info
         
     
-    def GetTablesAndColumnsThatUseDefinitions( self, content_type: int ) -> typing.List[ typing.Tuple[ str, str ] ]:
+    def GetTablesAndColumnsThatUseDefinitions( self, content_type: int ) -> list[ tuple[ str, str ] ]:
         
         tables_and_columns = []
         
@@ -726,7 +726,7 @@ class ClientDBTagSiblings( ClientDBModule.ClientDBModule ):
         return tag_ids_to_ideal_tag_ids
         
     
-    def GetTagSiblingsForTags( self, service_key, tags ) -> typing.Dict[ str, typing.Set[ str ] ]:
+    def GetTagSiblingsForTags( self, service_key, tags ) -> dict[ str, set[ str ] ]:
         
         if service_key == CC.COMBINED_TAG_SERVICE_KEY:
             

@@ -1,5 +1,5 @@
 import collections
-import typing
+import collections.abc
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusExceptions
@@ -328,7 +328,7 @@ class ContentUpdatePackage( object ):
             
         
     
-    def AddContentUpdates( self, service_key: bytes, content_updates: typing.Collection[ ContentUpdate ] ):
+    def AddContentUpdates( self, service_key: bytes, content_updates: collections.abc.Collection[ ContentUpdate ] ):
         
         self._service_keys_to_content_updates[ service_key ].extend( content_updates )
         
@@ -366,7 +366,7 @@ class ContentUpdatePackage( object ):
             
         
     
-    def FilterToHashes( self, hashes: typing.Collection[ bytes ] ) -> "ContentUpdatePackage":
+    def FilterToHashes( self, hashes: collections.abc.Collection[ bytes ] ) -> "ContentUpdatePackage":
         
         filtered_content_update_package = ContentUpdatePackage()
         
@@ -385,7 +385,7 @@ class ContentUpdatePackage( object ):
         return filtered_content_update_package
         
     
-    def GetContentUpdates( self, service_key ) -> typing.List[ ContentUpdate ]:
+    def GetContentUpdates( self, service_key ) -> list[ ContentUpdate ]:
         
         return self._service_keys_to_content_updates[ service_key ]
         
@@ -405,7 +405,7 @@ class ContentUpdatePackage( object ):
         return False
         
     
-    def IterateContentUpdates( self ) -> typing.Iterator[ typing.Tuple[ bytes, typing.List[ ContentUpdate ] ] ]:
+    def IterateContentUpdates( self ) -> collections.abc.Iterator[ tuple[ bytes, list[ ContentUpdate ] ] ]:
         
         for ( service_key, content_updates ) in self._service_keys_to_content_updates.items():
             

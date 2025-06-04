@@ -1,3 +1,4 @@
+import collections.abc
 import sqlite3
 import typing
 
@@ -82,7 +83,7 @@ class ClientDBFilesMetadataBasic( ClientDBModule.ClientDBModule ):
         return result is not None
         
     
-    def GetHasEXIFHashIds( self, hash_ids_table_name: str ) -> typing.Set[ int ]:
+    def GetHasEXIFHashIds( self, hash_ids_table_name: str ) -> set[ int ]:
         
         has_exif_hash_ids = self._STS( self._Execute( 'SELECT hash_id FROM {} CROSS JOIN has_exif USING ( hash_id );'.format( hash_ids_table_name ) ) )
         
@@ -96,7 +97,7 @@ class ClientDBFilesMetadataBasic( ClientDBModule.ClientDBModule ):
         return result is not None
         
     
-    def GetHasHumanReadableEmbeddedMetadataHashIds( self, hash_ids_table_name: str ) -> typing.Set[ int ]:
+    def GetHasHumanReadableEmbeddedMetadataHashIds( self, hash_ids_table_name: str ) -> set[ int ]:
         
         has_human_readable_embedded_metadata_hash_ids = self._STS( self._Execute( 'SELECT hash_id FROM {} CROSS JOIN has_human_readable_embedded_metadata USING ( hash_id );'.format( hash_ids_table_name ) ) )
         
@@ -120,7 +121,7 @@ class ClientDBFilesMetadataBasic( ClientDBModule.ClientDBModule ):
         return result is not None
         
     
-    def GetHasICCProfileHashIds( self, hash_ids_table_name: str ) -> typing.Set[ int ]:
+    def GetHasICCProfileHashIds( self, hash_ids_table_name: str ) -> set[ int ]:
         
         has_icc_profile_hash_ids = self._STS( self._Execute( 'SELECT hash_id FROM {} CROSS JOIN has_icc_profile USING ( hash_id );'.format( hash_ids_table_name ) ) )
         
@@ -134,7 +135,7 @@ class ClientDBFilesMetadataBasic( ClientDBModule.ClientDBModule ):
         return result is not None
         
     
-    def GetHasTransparencyHashIds( self, hash_ids_table_name: str ) -> typing.Set[ int ]:
+    def GetHasTransparencyHashIds( self, hash_ids_table_name: str ) -> set[ int ]:
         
         has_transparency_hash_ids = self._STS( self._Execute( 'SELECT hash_id FROM {} CROSS JOIN has_transparency USING ( hash_id );'.format( hash_ids_table_name ) ) )
         
@@ -155,7 +156,7 @@ class ClientDBFilesMetadataBasic( ClientDBModule.ClientDBModule ):
         return mime
         
     
-    def GetNumViewable( self, hash_ids: typing.Collection[ int ] ) -> int:
+    def GetNumViewable( self, hash_ids: collections.abc.Collection[ int ] ) -> int:
         
         if len( hash_ids ) == 1:
             
@@ -186,7 +187,7 @@ class ClientDBFilesMetadataBasic( ClientDBModule.ClientDBModule ):
         return result
         
     
-    def GetTablesAndColumnsThatUseDefinitions( self, content_type: int ) -> typing.List[ typing.Tuple[ str, str ] ]:
+    def GetTablesAndColumnsThatUseDefinitions( self, content_type: int ) -> list[ tuple[ str, str ] ]:
         
         if content_type == HC.CONTENT_TYPE_HASH:
             
@@ -204,7 +205,7 @@ class ClientDBFilesMetadataBasic( ClientDBModule.ClientDBModule ):
         return []
         
     
-    def GetTotalSize( self, hash_ids: typing.Collection[ int ] ) -> int:
+    def GetTotalSize( self, hash_ids: collections.abc.Collection[ int ] ) -> int:
         
         if len( hash_ids ) == 1:
             

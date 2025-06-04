@@ -1,3 +1,4 @@
+import collections.abc
 import json
 import os
 import typing
@@ -32,7 +33,7 @@ class SingleFileMetadataExporter( ClientMetadataMigrationCore.ImporterExporterNo
 
 class SingleFileMetadataExporterMedia( SingleFileMetadataExporter ):
     
-    def Export( self, hash: bytes, rows: typing.Collection[ str ] ):
+    def Export( self, hash: bytes, rows: collections.abc.Collection[ str ] ):
         
         raise NotImplementedError()
         
@@ -80,7 +81,7 @@ class SingleFileMetadataExporterMediaNotes( SingleFileMetadataExporterMedia, Hyd
             
         
     
-    def Export( self, hash: bytes, rows: typing.Collection[ str ] ):
+    def Export( self, hash: bytes, rows: collections.abc.Collection[ str ] ):
         
         if len( rows ) == 0:
             
@@ -209,7 +210,7 @@ class SingleFileMetadataExporterMediaTags( SingleFileMetadataExporterMedia, Hydr
         return self._service_key
         
     
-    def Export( self, hash: bytes, rows: typing.Collection[ str ] ):
+    def Export( self, hash: bytes, rows: collections.abc.Collection[ str ] ):
         
         if len( rows ) == 0:
             
@@ -289,7 +290,7 @@ class SingleFileMetadataExporterMediaTimestamps( SingleFileMetadataExporterMedia
         self._timestamp_data_stub = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_timestamp_data_stub )
         
     
-    def Export( self, hash: bytes, rows: typing.Collection[ str ] ):
+    def Export( self, hash: bytes, rows: collections.abc.Collection[ str ] ):
         
         if len( rows ) == 0:
             
@@ -369,7 +370,7 @@ class SingleFileMetadataExporterMediaURLs( SingleFileMetadataExporterMedia, Hydr
         gumpf = serialisable_info
         
     
-    def Export( self, hash: bytes, rows: typing.Collection[ str ] ):
+    def Export( self, hash: bytes, rows: collections.abc.Collection[ str ] ):
         
         if len( rows ) == 0:
             
@@ -437,7 +438,7 @@ class SingleFileMetadataExporterSidecar( SingleFileMetadataExporter, ClientMetad
         return ClientMetadataMigrationCore.GetSidecarPath( actual_file_path, self._remove_actual_filename_ext, self._suffix, self._filename_string_converter, self._sidecar_file_extension )
         
     
-    def Export( self, actual_file_path: str, rows: typing.Collection[ str ] ):
+    def Export( self, actual_file_path: str, rows: collections.abc.Collection[ str ] ):
         
         raise NotImplementedError()
         
@@ -517,7 +518,7 @@ class SingleFileMetadataExporterJSON( SingleFileMetadataExporterSidecar, HydrusS
             
         
     
-    def Export( self, actual_file_path: str, rows: typing.Collection[ str ] ):
+    def Export( self, actual_file_path: str, rows: collections.abc.Collection[ str ] ):
         
         if len( rows ) == 0:
             
@@ -589,12 +590,12 @@ class SingleFileMetadataExporterJSON( SingleFileMetadataExporterSidecar, HydrusS
             
         
     
-    def GetNestedObjectNames( self ) -> typing.List[ str ]:
+    def GetNestedObjectNames( self ) -> list[ str ]:
         
         return list( self._nested_object_names )
         
     
-    def SetNestedObjectNames( self, nested_object_names: typing.List[ str ] ):
+    def SetNestedObjectNames( self, nested_object_names: list[ str ] ):
         
         self._nested_object_names = list( nested_object_names )
         
@@ -686,7 +687,7 @@ class SingleFileMetadataExporterTXT( SingleFileMetadataExporterSidecar, HydrusSe
             
         
     
-    def Export( self, actual_file_path: str, rows: typing.Collection[ str ] ):
+    def Export( self, actual_file_path: str, rows: collections.abc.Collection[ str ] ):
         
         if len( rows ) == 0:
             

@@ -1,3 +1,4 @@
+import collections.abc
 import random
 import sqlite3
 import typing
@@ -35,7 +36,7 @@ from hydrus.client.search import ClientSearchFileSearchContext
 from hydrus.client.search import ClientSearchPredicate
 from hydrus.client.search import ClientSearchTagContext
 
-def intersection_update_qhi( query_hash_ids: typing.Optional[ typing.Set[ int ] ], some_hash_ids: typing.Collection[ int ], force_create_new_set = False ) -> typing.Set[ int ]:
+def intersection_update_qhi( query_hash_ids: typing.Optional[ set[ int ] ], some_hash_ids: collections.abc.Collection[ int ], force_create_new_set = False ) -> set[ int ]:
     
     if query_hash_ids is None:
         
@@ -119,7 +120,7 @@ def GetFilesInfoPredicates( system_predicates: ClientSearchFileSearchContext.Fil
     
     if ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_WIDTH in simple_preds:
         
-        number_tests: typing.List[ ClientNumberTest.NumberTest ] = simple_preds[ ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_WIDTH ]
+        number_tests: list[ ClientNumberTest.NumberTest ] = simple_preds[ ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_WIDTH ]
         
         for number_test in number_tests:
             
@@ -129,7 +130,7 @@ def GetFilesInfoPredicates( system_predicates: ClientSearchFileSearchContext.Fil
     
     if ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HEIGHT in simple_preds:
         
-        number_tests: typing.List[ ClientNumberTest.NumberTest ] = simple_preds[ ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HEIGHT ]
+        number_tests: list[ ClientNumberTest.NumberTest ] = simple_preds[ ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HEIGHT ]
         
         for number_test in number_tests:
             
@@ -181,7 +182,7 @@ def GetFilesInfoPredicates( system_predicates: ClientSearchFileSearchContext.Fil
     
     if ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_NUM_WORDS in simple_preds:
         
-        number_tests: typing.List[ ClientNumberTest.NumberTest ] = simple_preds[ ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_NUM_WORDS ]
+        number_tests: list[ ClientNumberTest.NumberTest ] = simple_preds[ ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_NUM_WORDS ]
         
         for number_test in number_tests:
             
@@ -191,7 +192,7 @@ def GetFilesInfoPredicates( system_predicates: ClientSearchFileSearchContext.Fil
     
     if ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_DURATION in simple_preds:
         
-        number_tests: typing.List[ ClientNumberTest.NumberTest ] = simple_preds[ ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_DURATION ]
+        number_tests: list[ ClientNumberTest.NumberTest ] = simple_preds[ ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_DURATION ]
         
         for number_test in number_tests:
             
@@ -201,7 +202,7 @@ def GetFilesInfoPredicates( system_predicates: ClientSearchFileSearchContext.Fil
     
     if ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_FRAMERATE in simple_preds:
         
-        number_tests: typing.List[ ClientNumberTest.NumberTest ] = simple_preds[ ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_FRAMERATE ]
+        number_tests: list[ ClientNumberTest.NumberTest ] = simple_preds[ ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_FRAMERATE ]
         
         for number_test in number_tests:
             
@@ -211,7 +212,7 @@ def GetFilesInfoPredicates( system_predicates: ClientSearchFileSearchContext.Fil
     
     if ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_NUM_FRAMES in simple_preds:
         
-        number_tests: typing.List[ ClientNumberTest.NumberTest ] = simple_preds[ ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_NUM_FRAMES ]
+        number_tests: list[ ClientNumberTest.NumberTest ] = simple_preds[ ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_NUM_FRAMES ]
         
         for number_test in number_tests:
             
@@ -426,7 +427,7 @@ class ClientDBFilesSearchTags( ClientDBModule.ClientDBModule ):
         return results
         
     
-    def GetHashIdsFromTagAdvanced( self, tag: str, tag_display_type: int, statuses: typing.Collection[ int ], tag_service_keys: typing.Collection[ bytes ], location_context: ClientLocation.LocationContext, hash_ids = None, hash_ids_table_name = None, job_status = None ):
+    def GetHashIdsFromTagAdvanced( self, tag: str, tag_display_type: int, statuses: collections.abc.Collection[ int ], tag_service_keys: collections.abc.Collection[ bytes ], location_context: ClientLocation.LocationContext, hash_ids = None, hash_ids_table_name = None, job_status = None ):
         
         # This search routine and its predicate caller were brought to you by: cheap booze and hololive 6th fes. ~Color Rise Harmony~ STAGE 3
         
@@ -576,7 +577,7 @@ class ClientDBFilesSearchTags( ClientDBModule.ClientDBModule ):
         return result_hash_ids
         
     
-    def GetHashIdsFromTagIds( self, tag_display_type: int, file_service_key: bytes, tag_context: ClientSearchTagContext.TagContext, tag_ids: typing.Collection[ int ], hash_ids = None, hash_ids_table_name = None, job_status = None ):
+    def GetHashIdsFromTagIds( self, tag_display_type: int, file_service_key: bytes, tag_context: ClientSearchTagContext.TagContext, tag_ids: collections.abc.Collection[ int ], hash_ids = None, hash_ids_table_name = None, job_status = None ):
         
         do_hash_table_join = False
         
@@ -651,7 +652,7 @@ class ClientDBFilesSearchTags( ClientDBModule.ClientDBModule ):
         return result_hash_ids
         
     
-    def GetHashIdsFromTagIdsTables( self, tag_display_type: int, file_service_key: bytes, tag_context: ClientSearchTagContext.TagContext, tag_ids: typing.Collection[ int ], hash_ids = None, hash_ids_table_name = None, job_status = None ):
+    def GetHashIdsFromTagIdsTables( self, tag_display_type: int, file_service_key: bytes, tag_context: ClientSearchTagContext.TagContext, tag_ids: collections.abc.Collection[ int ], hash_ids = None, hash_ids_table_name = None, job_status = None ):
         
         do_hash_table_join = False
         
@@ -1003,7 +1004,7 @@ class ClientDBFilesSearchTags( ClientDBModule.ClientDBModule ):
         return nonzero_tag_hash_ids
         
     
-    def GetTablesAndColumnsThatUseDefinitions( self, content_type: int ) -> typing.List[ typing.Tuple[ str, str ] ]:
+    def GetTablesAndColumnsThatUseDefinitions( self, content_type: int ) -> list[ tuple[ str, str ] ]:
         
         tables_and_columns = []
         
@@ -1062,7 +1063,7 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
         file_search_context: ClientSearchFileSearchContext.FileSearchContext,
         job_status: ClientThreading.JobStatus,
         pred: ClientSearchPredicate.Predicate,
-        query_hash_ids: typing.Optional[ typing.Set[ int ] ]
+        query_hash_ids: typing.Optional[ set[ int ] ]
     ):
         
         ( service_key_or_none, tag_display_type, statuses, tag ) = pred.GetValue()
@@ -1122,7 +1123,7 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
         return result
         
     
-    def _DoNotePreds( self, system_predicates: ClientSearchFileSearchContext.FileSystemPredicates, query_hash_ids: typing.Optional[ typing.Set[ int ] ], job_status: typing.Optional[ ClientThreading.JobStatus ] = None ) -> typing.Optional[ typing.Set[ int ] ]:
+    def _DoNotePreds( self, system_predicates: ClientSearchFileSearchContext.FileSystemPredicates, query_hash_ids: typing.Optional[ set[ int ] ], job_status: typing.Optional[ ClientThreading.JobStatus ] = None ) -> typing.Optional[ set[ int ] ]:
         
         simple_preds = system_predicates.GetSimpleInfo()
         
@@ -1181,9 +1182,9 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
         self,
         file_search_context: ClientSearchFileSearchContext.FileSearchContext,
         job_status: typing.Optional[ ClientThreading.JobStatus ],
-        or_predicates: typing.Collection[ ClientSearchPredicate.Predicate ],
-        query_hash_ids: typing.Optional[ typing.Set[ int ] ]
-    ) -> typing.Optional[ typing.Set[ int ] ]:
+        or_predicates: collections.abc.Collection[ ClientSearchPredicate.Predicate ],
+        query_hash_ids: typing.Optional[ set[ int ] ]
+    ) -> typing.Optional[ set[ int ] ]:
             
             # better typically to sort by fewest num of preds first, establishing query_hash_ids for longer chains
             def or_sort_key( p ):
@@ -1227,7 +1228,7 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
             
         
     
-    def _DoSimpleRatingPreds( self, file_search_context: ClientSearchFileSearchContext.FileSearchContext, query_hash_ids: typing.Optional[ typing.Set[ int ] ], job_status: typing.Optional[ ClientThreading.JobStatus ] = None ) -> typing.Optional[ typing.Set[ int ] ]:
+    def _DoSimpleRatingPreds( self, file_search_context: ClientSearchFileSearchContext.FileSearchContext, query_hash_ids: typing.Optional[ set[ int ] ], job_status: typing.Optional[ ClientThreading.JobStatus ] = None ) -> typing.Optional[ set[ int ] ]:
         
         cancelled_hook = None
         
@@ -1339,7 +1340,7 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
         return query_hash_ids
         
     
-    def _DoSpecificKnownURLPreds( self, file_search_context: ClientSearchFileSearchContext.FileSearchContext, query_hash_ids: typing.Optional[ typing.Set[ int ] ], allowed_rule_types: typing.Collection[ str ] ) -> typing.Optional[ typing.Set[ int ] ]:
+    def _DoSpecificKnownURLPreds( self, file_search_context: ClientSearchFileSearchContext.FileSearchContext, query_hash_ids: typing.Optional[ set[ int ] ], allowed_rule_types: collections.abc.Collection[ str ] ) -> typing.Optional[ set[ int ] ]:
         
         system_predicates = file_search_context.GetSystemPredicates()
         
@@ -1410,7 +1411,7 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
         return query_hash_ids
         
     
-    def _DoTimestampPreds( self, file_search_context: ClientSearchFileSearchContext.FileSearchContext, query_hash_ids: typing.Optional[ typing.Set[ int ] ], have_cross_referenced_file_locations: bool, job_status: typing.Optional[ ClientThreading.JobStatus ] = None ) -> typing.Tuple[ typing.Optional[ typing.Set[ int ] ], bool ]:
+    def _DoTimestampPreds( self, file_search_context: ClientSearchFileSearchContext.FileSearchContext, query_hash_ids: typing.Optional[ set[ int ] ], have_cross_referenced_file_locations: bool, job_status: typing.Optional[ ClientThreading.JobStatus ] = None ) -> tuple[ typing.Optional[ set[ int ] ], bool ]:
         
         system_predicates = file_search_context.GetSystemPredicates()
         
@@ -1518,7 +1519,7 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
         apply_implicit_limit: bool = True,
         sort_by: typing.Optional[ ClientMedia.MediaSort ] = None,
         limit_sort_by: typing.Optional[ ClientMedia.MediaSort ] = None
-    ) -> typing.List[ int ]:
+    ) -> list[ int ]:
         
         if job_status is None:
             
@@ -2621,14 +2622,14 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
         return query_hash_ids
         
     
-    def GetTablesAndColumnsThatUseDefinitions( self, content_type: int ) -> typing.List[ typing.Tuple[ str, str ] ]:
+    def GetTablesAndColumnsThatUseDefinitions( self, content_type: int ) -> list[ tuple[ str, str ] ]:
         
         tables_and_columns = []
         
         return tables_and_columns
         
     
-    def PopulateSearchIntoTempTable( self, file_search_context: ClientSearchFileSearchContext.FileSearchContext, temp_table_name: str, query_hash_ids = None ) -> typing.List[ int ]:
+    def PopulateSearchIntoTempTable( self, file_search_context: ClientSearchFileSearchContext.FileSearchContext, temp_table_name: str, query_hash_ids = None ) -> list[ int ]:
         
         query_hash_ids = self.GetHashIdsFromQuery( file_search_context, apply_implicit_limit = False, query_hash_ids = query_hash_ids )
         

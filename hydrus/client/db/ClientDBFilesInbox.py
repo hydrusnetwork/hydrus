@@ -1,3 +1,4 @@
+import collections.abc
 import sqlite3
 import typing
 
@@ -91,7 +92,7 @@ class ClientDBFilesInbox( ClientDBModule.ClientDBModule ):
             
         
     
-    def GetTablesAndColumnsThatUseDefinitions( self, content_type: int ) -> typing.List[ typing.Tuple[ str, str ] ]:
+    def GetTablesAndColumnsThatUseDefinitions( self, content_type: int ) -> list[ tuple[ str, str ] ]:
         
         tables_and_columns = []
         
@@ -103,7 +104,7 @@ class ClientDBFilesInbox( ClientDBModule.ClientDBModule ):
         return tables_and_columns
         
     
-    def InboxFiles( self, hash_ids: typing.Collection[ int ] ):
+    def InboxFiles( self, hash_ids: collections.abc.Collection[ int ] ):
         
         if not isinstance( hash_ids, set ):
             

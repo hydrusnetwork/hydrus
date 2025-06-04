@@ -1,5 +1,5 @@
+import collections.abc
 import sqlite3
-import typing
 
 from hydrus.client import ClientGlobals as CG
 from hydrus.client.db import ClientDBFilesInbox
@@ -16,7 +16,7 @@ class ClientDBFileDeleteLock( ClientDBModule.ClientDBModule ):
         super().__init__( 'client file delete lock', cursor )
         
     
-    def FilterForPhysicalFileDeleteLock( self, hash_ids: typing.Collection[ int ] ):
+    def FilterForPhysicalFileDeleteLock( self, hash_ids: collections.abc.Collection[ int ] ):
         
         # IN ORDER TO KISS, WE MUST NEVER MAKE THIS TOO COMPLICATED BRO
         # If we introduce the Metadata Conditional to the delete file lock, it must be a subset of MCs that support instant quick database lookup predicate generation 
@@ -51,7 +51,7 @@ class ClientDBFileDeleteLock( ClientDBModule.ClientDBModule ):
         return predicates
         
     
-    def GetTablesAndColumnsThatUseDefinitions( self, content_type: int ) -> typing.List[ typing.Tuple[ str, str ] ]:
+    def GetTablesAndColumnsThatUseDefinitions( self, content_type: int ) -> list[ tuple[ str, str ] ]:
         
         tables_and_columns = []
         

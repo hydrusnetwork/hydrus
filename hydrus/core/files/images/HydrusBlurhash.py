@@ -193,7 +193,7 @@ def GetBlurhashFromNumPy( numpy_image: numpy.ndarray ) -> str:
     
     if numpy_image.shape[0] > CUTOFF_DIMENSION or numpy_image.shape[1] > CUTOFF_DIMENSION:
         
-        numpy_image = HydrusImageHandling.ResizeNumPyImage( numpy_image, (CUTOFF_DIMENSION, CUTOFF_DIMENSION), forced_interpolation = cv2.INTER_LINEAR )
+        numpy_image = HydrusImageHandling.ResizeNumPyImage( numpy_image, ( CUTOFF_DIMENSION, CUTOFF_DIMENSION ), forced_interpolation = cv2.INTER_LINEAR )
         
     
     return external_blurhash.blurhash_encode( numpy_image, components_x, components_y )

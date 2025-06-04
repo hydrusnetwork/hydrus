@@ -1,4 +1,5 @@
 import collections
+import collections.abc
 
 from hydrus.core import HydrusData
 from hydrus.core import HydrusSerialisable

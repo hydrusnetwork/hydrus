@@ -206,7 +206,7 @@ class Controller( HydrusController.HydrusController ):
         
         self._last_last_session_hash = None
         
-        self._managers_with_mainloops: typing.List[ ClientDaemons.ManagerWithMainLoop ] = []
+        self._managers_with_mainloops: list[ ClientDaemons.ManagerWithMainLoop ] = []
         
         self._last_mouse_position = None
         self._previously_idle = False
@@ -1540,9 +1540,8 @@ class Controller( HydrusController.HydrusController ):
             
             from hydrus.client.gui import ClientGUIShortcuts
             
+            # initialises singleton
             ClientGUIShortcuts.ShortcutsManager( shortcut_sets = shortcut_sets )
-            
-            ClientGUIShortcuts.SetMouseLabels( self.new_options.GetBoolean( 'call_mouse_buttons_primary_secondary' ) )
             
         
         self.CallBlockingToQt( self._splash, qt_code_pregui )

@@ -1,11 +1,11 @@
 import collections
+import collections.abc
 import hashlib
 import os
 import sqlite3
 import sys
 import time
 import traceback
-import typing
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
@@ -1934,7 +1934,7 @@ class DB( HydrusDB.HydrusDB ):
         self._RepositoryUpdateServiceInfo( service_id, HC.SERVICE_INFO_NUM_TAG_SIBLINGS, self._GetRowCount() )
         
     
-    def _RepositoryConvertPetitionIdsToSummary( self, content_type: int, status: int, petition_ids: typing.Collection[ typing.Tuple[ int, int ] ], limit: int ) -> typing.List[ HydrusNetwork.PetitionHeader ]:
+    def _RepositoryConvertPetitionIdsToSummary( self, content_type: int, status: int, petition_ids: collections.abc.Collection[ tuple[ int, int ] ], limit: int ) -> list[ HydrusNetwork.PetitionHeader ]:
         
         if len( petition_ids ) > limit:
             
@@ -2312,7 +2312,7 @@ class DB( HydrusDB.HydrusDB ):
         self._RepositoryUpdateServiceInfo( service_id, HC.SERVICE_INFO_NUM_ACTIONABLE_SIBLING_ADD_PETITIONS, post_change_count - pre_change_count )
         
     
-    def _RepositoryDeleteRawPetitionedFileRows( self, service_id: int, service_hash_ids: typing.Collection[ int ] ):
+    def _RepositoryDeleteRawPetitionedFileRows( self, service_id: int, service_hash_ids: collections.abc.Collection[ int ] ):
         
         ( current_files_table_name, deleted_files_table_name, pending_files_table_name, petitioned_files_table_name, ip_addresses_table_name ) = GenerateRepositoryFilesTableNames( service_id )
         
@@ -2332,7 +2332,7 @@ class DB( HydrusDB.HydrusDB ):
         self._RepositoryUpdateServiceInfo( service_id, HC.SERVICE_INFO_NUM_ACTIONABLE_FILE_DELETE_PETITIONS, post_change_count - pre_change_count )
         
     
-    def _RepositoryDeleteRawPetitionedMappingRows( self, service_id: int, service_tag_id: int, service_hash_ids: typing.Collection[ int ] ):
+    def _RepositoryDeleteRawPetitionedMappingRows( self, service_id: int, service_tag_id: int, service_hash_ids: collections.abc.Collection[ int ] ):
         
         ( current_mappings_table_name, deleted_mappings_table_name, pending_mappings_table_name, petitioned_mappings_table_name ) = GenerateRepositoryMappingsTableNames( service_id )
         
@@ -2784,7 +2784,7 @@ class DB( HydrusDB.HydrusDB ):
         return account_info
         
     
-    def _RepositoryGetCountOfActionableAddTagParentPetitionsForAccounts( self, service_id: int, account_ids: typing.Collection[ int ] ):
+    def _RepositoryGetCountOfActionableAddTagParentPetitionsForAccounts( self, service_id: int, account_ids: collections.abc.Collection[ int ] ):
         
         ( current_tag_parents_table_name, deleted_tag_parents_table_name, pending_tag_parents_table_name, petitioned_tag_parents_table_name ) = GenerateRepositoryTagParentsTableNames( service_id )
         
@@ -2800,7 +2800,7 @@ class DB( HydrusDB.HydrusDB ):
         return total
         
     
-    def _RepositoryGetCountOfActionableAddTagSiblingPetitionsForAccounts( self, service_id: int, account_ids: typing.Collection[ int ] ):
+    def _RepositoryGetCountOfActionableAddTagSiblingPetitionsForAccounts( self, service_id: int, account_ids: collections.abc.Collection[ int ] ):
         
         ( current_tag_siblings_table_name, deleted_tag_siblings_table_name, pending_tag_siblings_table_name, petitioned_tag_siblings_table_name ) = GenerateRepositoryTagSiblingsTableNames( service_id )
         
@@ -2816,7 +2816,7 @@ class DB( HydrusDB.HydrusDB ):
         return total
         
     
-    def _RepositoryGetCountOfActionableDeleteFilePetitionsForAccounts( self, service_id: int, account_ids: typing.Collection[ int ] ):
+    def _RepositoryGetCountOfActionableDeleteFilePetitionsForAccounts( self, service_id: int, account_ids: collections.abc.Collection[ int ] ):
         
         ( current_files_table_name, deleted_files_table_name, pending_files_table_name, petitioned_files_table_name, ip_addresses_table_name ) = GenerateRepositoryFilesTableNames( service_id )
         
@@ -2832,7 +2832,7 @@ class DB( HydrusDB.HydrusDB ):
         return total
         
     
-    def _RepositoryGetCountOfActionableDeleteMappingPetitionsForAccounts( self, service_id: int, service_tag_id: int, account_ids: typing.Collection[ int ] ):
+    def _RepositoryGetCountOfActionableDeleteMappingPetitionsForAccounts( self, service_id: int, service_tag_id: int, account_ids: collections.abc.Collection[ int ] ):
         
         ( current_mappings_table_name, deleted_mappings_table_name, pending_mappings_table_name, petitioned_mappings_table_name ) = GenerateRepositoryMappingsTableNames( service_id )
         
@@ -2848,7 +2848,7 @@ class DB( HydrusDB.HydrusDB ):
         return total
         
     
-    def _RepositoryGetCountOfActionableDeleteTagParentPetitionsForAccounts( self, service_id: int, account_ids: typing.Collection[ int ] ):
+    def _RepositoryGetCountOfActionableDeleteTagParentPetitionsForAccounts( self, service_id: int, account_ids: collections.abc.Collection[ int ] ):
         
         ( current_tag_parents_table_name, deleted_tag_parents_table_name, pending_tag_parents_table_name, petitioned_tag_parents_table_name ) = GenerateRepositoryTagParentsTableNames( service_id )
         
@@ -2864,7 +2864,7 @@ class DB( HydrusDB.HydrusDB ):
         return total
         
     
-    def _RepositoryGetCountOfActionableDeleteTagSiblingPetitionsForAccounts( self, service_id: int, account_ids: typing.Collection[ int ] ):
+    def _RepositoryGetCountOfActionableDeleteTagSiblingPetitionsForAccounts( self, service_id: int, account_ids: collections.abc.Collection[ int ] ):
         
         ( current_tag_siblings_table_name, deleted_tag_siblings_table_name, pending_tag_siblings_table_name, petitioned_tag_siblings_table_name ) = GenerateRepositoryTagSiblingsTableNames( service_id )
         
@@ -2950,7 +2950,7 @@ class DB( HydrusDB.HydrusDB ):
         return HydrusNetwork.Petition( petitioner_account = petitioner_account, petition_header = petition_header, actions_and_contents = actions_and_contents )
         
     
-    def _RepositoryGetFilePetitionsSummary( self, service_id, limit = 100, account_id = None, reason_id = None ) -> typing.List:
+    def _RepositoryGetFilePetitionsSummary( self, service_id, limit = 100, account_id = None, reason_id = None ) -> list:
         
         ( current_files_table_name, deleted_files_table_name, pending_files_table_name, petitioned_files_table_name, ip_addresses_table_name ) = GenerateRepositoryFilesTableNames( service_id )
         
@@ -3059,7 +3059,7 @@ class DB( HydrusDB.HydrusDB ):
         return HydrusNetwork.Petition( petitioner_account = petitioner_account, petition_header = petition_header, actions_and_contents = actions_and_contents )
         
     
-    def _RepositoryGetMappingPetitionsSummary( self, service_id, limit = 100, account_id = None, reason_id = None ) -> typing.List:
+    def _RepositoryGetMappingPetitionsSummary( self, service_id, limit = 100, account_id = None, reason_id = None ) -> list:
         
         ( current_mappings_table_name, deleted_mappings_table_name, pending_mappings_table_name, petitioned_mappings_table_name ) = GenerateRepositoryMappingsTableNames( service_id )
         
@@ -3241,7 +3241,7 @@ class DB( HydrusDB.HydrusDB ):
         return petition
         
     
-    def _RepositoryGetPetitionsSummary( self, service_key, account, content_type, status, limit = 100, subject_account_key = None, reason = None ) -> typing.List:
+    def _RepositoryGetPetitionsSummary( self, service_key, account, content_type, status, limit = 100, subject_account_key = None, reason = None ) -> list:
         
         service_id = self._GetServiceId( service_key )
         
@@ -3586,7 +3586,7 @@ class DB( HydrusDB.HydrusDB ):
         return HydrusNetwork.Petition( petitioner_account = petitioner_account, petition_header = petition_header, actions_and_contents = actions_and_contents )
         
     
-    def _RepositoryGetTagParentPendsSummary( self, service_id, limit = 100, account_id = None, reason_id = None ) -> typing.List:
+    def _RepositoryGetTagParentPendsSummary( self, service_id, limit = 100, account_id = None, reason_id = None ) -> list:
         
         ( current_tag_parents_table_name, deleted_tag_parents_table_name, pending_tag_parents_table_name, petitioned_tag_parents_table_name ) = GenerateRepositoryTagParentsTableNames( service_id )
         
@@ -3683,7 +3683,7 @@ class DB( HydrusDB.HydrusDB ):
         return HydrusNetwork.Petition( petitioner_account = petitioner_account, petition_header = petition_header, actions_and_contents = actions_and_contents )
         
     
-    def _RepositoryGetTagParentPetitionsSummary( self, service_id, limit = 100, account_id = None, reason_id = None ) -> typing.List:
+    def _RepositoryGetTagParentPetitionsSummary( self, service_id, limit = 100, account_id = None, reason_id = None ) -> list:
         
         ( current_tag_parents_table_name, deleted_tag_parents_table_name, pending_tag_parents_table_name, petitioned_tag_parents_table_name ) = GenerateRepositoryTagParentsTableNames( service_id )
         
@@ -3755,7 +3755,7 @@ class DB( HydrusDB.HydrusDB ):
         return HydrusNetwork.Petition( petitioner_account = petitioner_account, petition_header = petition_header, actions_and_contents = actions_and_contents )
         
     
-    def _RepositoryGetTagSiblingPendsSummary( self, service_id, limit = 100, account_id = None, reason_id = None ) -> typing.List:
+    def _RepositoryGetTagSiblingPendsSummary( self, service_id, limit = 100, account_id = None, reason_id = None ) -> list:
         
         ( current_tag_siblings_table_name, deleted_tag_siblings_table_name, pending_tag_siblings_table_name, petitioned_tag_siblings_table_name ) = GenerateRepositoryTagSiblingsTableNames( service_id )
         
@@ -3852,7 +3852,7 @@ class DB( HydrusDB.HydrusDB ):
         return HydrusNetwork.Petition( petitioner_account = petitioner_account, petition_header = petition_header, actions_and_contents = actions_and_contents )
         
     
-    def _RepositoryGetTagSiblingPetitionsSummary( self, service_id, limit = 100, account_id = None, reason_id = None ) -> typing.List:
+    def _RepositoryGetTagSiblingPetitionsSummary( self, service_id, limit = 100, account_id = None, reason_id = None ) -> list:
         
         ( current_tag_siblings_table_name, deleted_tag_siblings_table_name, pending_tag_siblings_table_name, petitioned_tag_siblings_table_name ) = GenerateRepositoryTagSiblingsTableNames( service_id )
         
@@ -4586,7 +4586,7 @@ class DB( HydrusDB.HydrusDB ):
         HG.server_busy.release()
         
     
-    def _RepositoryRegenerateServiceInfoSpecific( self, service_id: int, info_types: typing.Collection[ int ] ):
+    def _RepositoryRegenerateServiceInfoSpecific( self, service_id: int, info_types: collections.abc.Collection[ int ] ):
         
         self._ExecuteMany( 'DELETE FROM service_info WHERE service_id = ? AND info_type = ?;', ( ( service_id, info_type ) for info_type in info_types ) )
         

@@ -39,17 +39,17 @@ class ListBoxItem( object ):
         return False
         
     
-    def GetCopyableTexts( self, with_counts: bool = False, include_parents = False, collapse_ors = False ) -> typing.List[ str ]:
+    def GetCopyableTexts( self, with_counts: bool = False, include_parents = False, collapse_ors = False ) -> list[ str ]:
         
         raise NotImplementedError()
         
     
-    def GetSearchPredicates( self ) -> typing.List[ ClientSearchPredicate.Predicate ]:
+    def GetSearchPredicates( self ) -> list[ ClientSearchPredicate.Predicate ]:
         
         raise NotImplementedError()
         
     
-    def GetRowsOfPresentationTextsWithNamespaces( self, render_for_user: bool, sibling_decoration_allowed: bool, sibling_connector_string: str, sibling_connector_namespace: typing.Optional[ str ], parent_decoration_allowed: bool, show_parent_rows: bool ) -> typing.List[ typing.List[ typing.Tuple[ str, str, str ] ] ]:
+    def GetRowsOfPresentationTextsWithNamespaces( self, render_for_user: bool, sibling_decoration_allowed: bool, sibling_connector_string: str, sibling_connector_namespace: typing.Optional[ str ], parent_decoration_allowed: bool, show_parent_rows: bool ) -> list[ list[ tuple[ str, str, str ] ] ]:
         
         raise NotImplementedError()
         
@@ -59,7 +59,7 @@ class ListBoxItem( object ):
         return 1
         
     
-    def GetTags( self ) -> typing.Set[ str ]:
+    def GetTags( self ) -> set[ str ]:
         
         raise NotImplementedError()
         
@@ -83,17 +83,17 @@ class ListBoxItemTagSlice( ListBoxItem ):
         return self._tag_slice.__hash__()
         
     
-    def GetCopyableTexts( self, with_counts: bool = False, include_parents = False, collapse_ors = False ) -> typing.List[ str ]:
+    def GetCopyableTexts( self, with_counts: bool = False, include_parents = False, collapse_ors = False ) -> list[ str ]:
         
         return [ self._tag_slice ]
         
     
-    def GetSearchPredicates( self ) -> typing.List[ ClientSearchPredicate.Predicate ]:
+    def GetSearchPredicates( self ) -> list[ ClientSearchPredicate.Predicate ]:
         
         return []
         
     
-    def GetRowsOfPresentationTextsWithNamespaces( self, render_for_user: bool, sibling_decoration_allowed: bool, sibling_connector_string: str, sibling_connector_namespace: typing.Optional[ str ], parent_decoration_allowed: bool, show_parent_rows: bool ) -> typing.List[ typing.List[ typing.Tuple[ str, str, str ] ] ]:
+    def GetRowsOfPresentationTextsWithNamespaces( self, render_for_user: bool, sibling_decoration_allowed: bool, sibling_connector_string: str, sibling_connector_namespace: typing.Optional[ str ], parent_decoration_allowed: bool, show_parent_rows: bool ) -> list[ list[ tuple[ str, str, str ] ] ]:
         
         presentation_text = HydrusTags.ConvertTagSliceToPrettyString( self._tag_slice )
         
@@ -109,7 +109,7 @@ class ListBoxItemTagSlice( ListBoxItem ):
         return [ [ ( presentation_text, 'namespace', namespace ) ] ]
         
     
-    def GetTags( self ) -> typing.Set[ str ]:
+    def GetTags( self ) -> set[ str ]:
         
         return set()
         
@@ -122,7 +122,7 @@ class ListBoxItemTagSlice( ListBoxItem ):
 
 class ListBoxItemNamespaceColour( ListBoxItem ):
     
-    def __init__( self, namespace: str, colour: typing.Tuple[ int, int, int ] ):
+    def __init__( self, namespace: str, colour: tuple[ int, int, int ] ):
         
         super().__init__()
         
@@ -135,7 +135,7 @@ class ListBoxItemNamespaceColour( ListBoxItem ):
         return self._namespace.__hash__()
         
     
-    def GetCopyableTexts( self, with_counts: bool = False, include_parents = False, collapse_ors = False ) -> typing.List[ str ]:
+    def GetCopyableTexts( self, with_counts: bool = False, include_parents = False, collapse_ors = False ) -> list[ str ]:
         
         if self._namespace is None:
             
@@ -161,17 +161,17 @@ class ListBoxItemNamespaceColour( ListBoxItem ):
         return ( self._namespace, self._colour )
         
     
-    def GetSearchPredicates( self ) -> typing.List[ ClientSearchPredicate.Predicate ]:
+    def GetSearchPredicates( self ) -> list[ ClientSearchPredicate.Predicate ]:
         
         return []
         
     
-    def GetRowsOfPresentationTextsWithNamespaces( self, render_for_user: bool, sibling_decoration_allowed: bool, sibling_connector_string: str, sibling_connector_namespace: typing.Optional[ str ], parent_decoration_allowed: bool, show_parent_rows: bool ) -> typing.List[ typing.List[ typing.Tuple[ str, str, str ] ] ]:
+    def GetRowsOfPresentationTextsWithNamespaces( self, render_for_user: bool, sibling_decoration_allowed: bool, sibling_connector_string: str, sibling_connector_namespace: typing.Optional[ str ], parent_decoration_allowed: bool, show_parent_rows: bool ) -> list[ list[ tuple[ str, str, str ] ] ]:
         
         return [ [ ( self.GetCopyableTexts()[0], 'namespace', self._namespace ) ] ]
         
     
-    def GetTags( self ) -> typing.Set[ str ]:
+    def GetTags( self ) -> set[ str ]:
         
         return set()
         
@@ -248,7 +248,7 @@ class ListBoxItemTextTag( ListBoxItem ):
         return self._ideal_tag
         
     
-    def GetCopyableTexts( self, with_counts: bool = False, include_parents = False, collapse_ors = False ) -> typing.List[ str ]:
+    def GetCopyableTexts( self, with_counts: bool = False, include_parents = False, collapse_ors = False ) -> list[ str ]:
         
         rows = [ self._tag ]
         
@@ -260,7 +260,7 @@ class ListBoxItemTextTag( ListBoxItem ):
         return rows
         
     
-    def GetSearchPredicates( self ) -> typing.List[ ClientSearchPredicate.Predicate ]:
+    def GetSearchPredicates( self ) -> list[ ClientSearchPredicate.Predicate ]:
         
         return [ ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_TAG, value = self._tag ) ]
         
@@ -277,7 +277,7 @@ class ListBoxItemTextTag( ListBoxItem ):
             
         
     
-    def GetRowsOfPresentationTextsWithNamespaces( self, render_for_user: bool, sibling_decoration_allowed: bool, sibling_connector_string: str, sibling_connector_namespace: typing.Optional[ str ], parent_decoration_allowed: bool, show_parent_rows: bool ) -> typing.List[ typing.List[ typing.Tuple[ str, str, str ] ] ]:
+    def GetRowsOfPresentationTextsWithNamespaces( self, render_for_user: bool, sibling_decoration_allowed: bool, sibling_connector_string: str, sibling_connector_namespace: typing.Optional[ str ], parent_decoration_allowed: bool, show_parent_rows: bool ) -> list[ list[ tuple[ str, str, str ] ] ]:
         
         # this should be with counts or whatever, but we need to think about this more lad
         
@@ -309,7 +309,7 @@ class ListBoxItemTextTag( ListBoxItem ):
         return rows_of_texts_with_namespaces
         
     
-    def GetSimpleSortText( self ) -> typing.Set[ str ]:
+    def GetSimpleSortText( self ) -> set[ str ]:
         
         pass
         
@@ -319,7 +319,7 @@ class ListBoxItemTextTag( ListBoxItem ):
         return self._tag
         
     
-    def GetTags( self ) -> typing.Set[ str ]:
+    def GetTags( self ) -> set[ str ]:
         
         return { self._tag }
         
@@ -365,7 +365,7 @@ class ListBoxItemTextTagWithCounts( ListBoxItemTextTag ):
         return NotImplemented
         
     
-    def GetCopyableTexts( self, with_counts: bool = False, include_parents = False, collapse_ors = False ) -> typing.List[ str ]:
+    def GetCopyableTexts( self, with_counts: bool = False, include_parents = False, collapse_ors = False ) -> list[ str ]:
         
         if with_counts:
             
@@ -394,14 +394,14 @@ class ListBoxItemTextTagWithCounts( ListBoxItemTextTag ):
             
         
     
-    def GetSearchPredicates( self ) -> typing.List[ ClientSearchPredicate.Predicate ]:
+    def GetSearchPredicates( self ) -> list[ ClientSearchPredicate.Predicate ]:
         
         # with counts? or just merge this into texttag???
         
         return [ ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_TAG, value = self._tag ) ]
         
     
-    def GetRowsOfPresentationTextsWithNamespaces( self, render_for_user: bool, sibling_decoration_allowed: bool, sibling_connector_string: str, sibling_connector_namespace: typing.Optional[ str ], parent_decoration_allowed: bool, show_parent_rows: bool ) -> typing.List[ typing.List[ typing.Tuple[ str, str, str ] ] ]:
+    def GetRowsOfPresentationTextsWithNamespaces( self, render_for_user: bool, sibling_decoration_allowed: bool, sibling_connector_string: str, sibling_connector_namespace: typing.Optional[ str ], parent_decoration_allowed: bool, show_parent_rows: bool ) -> list[ list[ tuple[ str, str, str ] ] ]:
         
         # this should be with counts or whatever, but we need to think about this more lad
         
@@ -512,7 +512,7 @@ class ListBoxItemPredicate( ListBoxItem ):
         return not self._predicate.IsORPredicate()
         
     
-    def GetCopyableTexts( self, with_counts: bool = False, include_parents = False, collapse_ors = False ) -> typing.List[ str ]:
+    def GetCopyableTexts( self, with_counts: bool = False, include_parents = False, collapse_ors = False ) -> list[ str ]:
         
         if self._predicate.IsORPredicate():
             
@@ -576,7 +576,7 @@ class ListBoxItemPredicate( ListBoxItem ):
             
         
     
-    def GetRowsOfPresentationTextsWithNamespaces( self, render_for_user: bool, sibling_decoration_allowed: bool, sibling_connector_string: str, sibling_connector_namespace: typing.Optional[ str ], parent_decoration_allowed: bool, show_parent_rows: bool ) -> typing.List[ typing.List[ typing.Tuple[ str, str, str ] ] ]:
+    def GetRowsOfPresentationTextsWithNamespaces( self, render_for_user: bool, sibling_decoration_allowed: bool, sibling_connector_string: str, sibling_connector_namespace: typing.Optional[ str ], parent_decoration_allowed: bool, show_parent_rows: bool ) -> list[ list[ tuple[ str, str, str ] ] ]:
         
         rows_of_texts_and_namespaces = []
         
@@ -629,7 +629,7 @@ class ListBoxItemPredicate( ListBoxItem ):
         return rows_of_texts_and_namespaces
         
     
-    def GetSearchPredicates( self ) -> typing.List[ ClientSearchPredicate.Predicate ]:
+    def GetSearchPredicates( self ) -> list[ ClientSearchPredicate.Predicate ]:
         
         if self._predicate.GetType() in ( ClientSearchPredicate.PREDICATE_TYPE_LABEL, ClientSearchPredicate.PREDICATE_TYPE_PARENT ):
             
@@ -641,7 +641,7 @@ class ListBoxItemPredicate( ListBoxItem ):
             
         
     
-    def GetTags( self ) -> typing.Set[ str ]:
+    def GetTags( self ) -> set[ str ]:
         
         if self._predicate.GetType() == ClientSearchPredicate.PREDICATE_TYPE_TAG:
             

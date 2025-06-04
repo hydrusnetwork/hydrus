@@ -1,4 +1,5 @@
 import collections
+import collections.abc
 import itertools
 import threading
 import typing
@@ -51,7 +52,7 @@ class BetterQListWidget( QW.QListWidget ):
         super().__init__( parent )
         
     
-    def _DeleteIndices( self, indices: typing.Iterable[ int ] ):
+    def _DeleteIndices( self, indices: collections.abc.Iterable[ int ] ):
         
         indices = sorted( indices, reverse = True )
         
@@ -63,7 +64,7 @@ class BetterQListWidget( QW.QListWidget ):
             
         
     
-    def _GetDataIndices( self, datas: typing.Collection[ object ] ) -> typing.List[ int ]:
+    def _GetDataIndices( self, datas: collections.abc.Collection[ object ] ) -> list[ int ]:
         
         indices = []
         
@@ -82,7 +83,7 @@ class BetterQListWidget( QW.QListWidget ):
         return indices
         
     
-    def _GetListWidgetItems( self, only_selected = False ) -> typing.Collection[ QW.QListWidgetItem ]:
+    def _GetListWidgetItems( self, only_selected = False ) -> collections.abc.Collection[ QW.QListWidgetItem ]:
         
         # not sure if selectedItems is always sorted, so just do it manually
         
@@ -149,7 +150,7 @@ class BetterQListWidget( QW.QListWidget ):
             
         
     
-    def DeleteData( self, datas: typing.Collection[ object ] ):
+    def DeleteData( self, datas: collections.abc.Collection[ object ] ):
         
         indices = self._GetDataIndices( datas )
         
@@ -163,7 +164,7 @@ class BetterQListWidget( QW.QListWidget ):
         self._DeleteIndices( indices )
         
     
-    def GetData( self, only_selected: bool = False ) -> typing.List[ typing.Any ]:
+    def GetData( self, only_selected: bool = False ) -> list[ typing.Any ]:
         
         datas = []
         
@@ -286,7 +287,7 @@ class BetterQListWidget( QW.QListWidget ):
         return data
         
     
-    def SelectData( self, datas: typing.Collection[ object ] ):
+    def SelectData( self, datas: collections.abc.Collection[ object ] ):
         
         datas = set( datas )
         
@@ -1537,7 +1538,7 @@ class ListBox( QW.QScrollArea ):
         pass
         
     
-    def _ApplyAsyncInfoToTerm( self, term, info ) -> typing.Tuple[ bool, bool ]:
+    def _ApplyAsyncInfoToTerm( self, term, info ) -> tuple[ bool, bool ]:
         
         # this guy comes with the lock
         
@@ -1793,7 +1794,7 @@ class ListBox( QW.QScrollArea ):
         return positional_index
         
     
-    def _GetPredicatesFromTerms( self, terms: typing.Collection[ ClientGUIListBoxesData.ListBoxItem ] ):
+    def _GetPredicatesFromTerms( self, terms: collections.abc.Collection[ ClientGUIListBoxesData.ListBoxItem ] ):
         
         return list( itertools.chain.from_iterable( ( term.GetSearchPredicates() for term in terms ) ) )
         
@@ -1875,7 +1876,7 @@ class ListBox( QW.QScrollArea ):
         return logical_index
         
     
-    def _GetTagsFromTerms( self, terms: typing.Collection[ ClientGUIListBoxesData.ListBoxItem ] ):
+    def _GetTagsFromTerms( self, terms: collections.abc.Collection[ ClientGUIListBoxesData.ListBoxItem ] ):
         
         return list( itertools.chain.from_iterable( ( term.GetTags() for term in terms ) ) )
         
@@ -2990,7 +2991,7 @@ class ListBoxTags( ListBox ):
         return ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY )
         
     
-    def _GetCurrentPagePredicates( self ) -> typing.Set[ ClientSearchPredicate.Predicate ]:
+    def _GetCurrentPagePredicates( self ) -> set[ ClientSearchPredicate.Predicate ]:
         
         return set()
         
@@ -4057,7 +4058,7 @@ class ListBoxTags( ListBox ):
             
             ClientGUIMenus.AppendMenu( menu, submenu, 'maintenance' )
             
-            tag_repos: typing.Collection[ ClientServices.ServiceRepository ] = CG.client_controller.services_manager.GetServices( ( HC.TAG_REPOSITORY, ) )
+            tag_repos: collections.abc.Collection[ ClientServices.ServiceRepository ] = CG.client_controller.services_manager.GetServices( ( HC.TAG_REPOSITORY, ) )
             
             we_are_admin = True in ( tag_repo.HasPermission( HC.CONTENT_TYPE_MAPPINGS, HC.PERMISSION_ACTION_MODERATE ) for tag_repo in tag_repos )
             
@@ -4177,7 +4178,7 @@ class ListBoxTagsPredicates( ListBoxTags ):
         return True
         
     
-    def GetPredicates( self ) -> typing.Set[ ClientSearchPredicate.Predicate ]:
+    def GetPredicates( self ) -> set[ ClientSearchPredicate.Predicate ]:
         
         return set( self._GetPredicatesFromTerms( self._ordered_terms ) )
         
@@ -4427,7 +4428,7 @@ class ListBoxTagsDisplayCapable( ListBoxTags ):
         self.listBoxChanged.connect( self._NotifyListBoxChanged )
         
     
-    def _ApplyAsyncInfoToTerm( self, term, info ) -> typing.Tuple[ bool, bool ]:
+    def _ApplyAsyncInfoToTerm( self, term, info ) -> tuple[ bool, bool ]:
         
         # this guy comes with the lock
         

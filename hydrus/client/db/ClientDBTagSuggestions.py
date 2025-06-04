@@ -1,5 +1,4 @@
 import sqlite3
-import typing
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusTime
@@ -71,7 +70,7 @@ class ClientDBRecentTags( ClientDBModule.ClientDBModule ):
         return sorted_recent_tags
         
     
-    def GetTablesAndColumnsThatUseDefinitions( self, content_type: int ) -> typing.List[ typing.Tuple[ str, str ] ]:
+    def GetTablesAndColumnsThatUseDefinitions( self, content_type: int ) -> list[ tuple[ str, str ] ]:
         
         tables_and_columns = []
         

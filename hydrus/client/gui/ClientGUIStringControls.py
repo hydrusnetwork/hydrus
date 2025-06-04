@@ -1,4 +1,4 @@
-import typing
+import collections.abc
 
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
@@ -144,7 +144,7 @@ class StringProcessorButton( ClientGUICommon.BetterButton ):
     
     valueChanged = QC.Signal()
     
-    def __init__( self, parent: QW.QWidget, string_processor: ClientStrings.StringProcessor, test_data_callable: typing.Callable[ [], ClientParsing.ParsingTestData ] ):
+    def __init__( self, parent: QW.QWidget, string_processor: ClientStrings.StringProcessor, test_data_callable: collections.abc.Callable[ [], ClientParsing.ParsingTestData ] ):
         
         super().__init__( parent, 'edit string processor', self._Edit )
         
@@ -212,7 +212,7 @@ class StringProcessorWidget( QW.QWidget ):
     
     valueChanged = QC.Signal()
     
-    def __init__( self, parent: QW.QWidget, string_processor: ClientStrings.StringProcessor, test_data_callable: typing.Callable[ [], ClientParsing.ParsingTestData ] ):
+    def __init__( self, parent: QW.QWidget, string_processor: ClientStrings.StringProcessor, test_data_callable: collections.abc.Callable[ [], ClientParsing.ParsingTestData ] ):
         
         super().__init__( parent )
         
@@ -298,7 +298,7 @@ class StringProcessorWidget( QW.QWidget ):
 
 class StringMatchToStringMatchDictControl( QW.QWidget ):
     
-    def __init__( self, parent, initial_dict: typing.Dict[ ClientStrings.StringMatch, ClientStrings.StringMatch ], min_height = 10, key_name = 'key' ):
+    def __init__( self, parent, initial_dict: dict[ ClientStrings.StringMatch, ClientStrings.StringMatch ], min_height = 10, key_name = 'key' ):
         
         super().__init__( parent )
         
@@ -432,7 +432,7 @@ class StringMatchToStringMatchDictControl( QW.QWidget ):
         self._listctrl.ReplaceData( data, edited_data, sort_and_scroll = True )
         
     
-    def GetValue( self ) -> typing.Dict[ str, ClientStrings.StringMatch ]:
+    def GetValue( self ) -> dict[ str, ClientStrings.StringMatch ]:
         
         value_dict = dict( self._listctrl.GetData() )
         
@@ -467,7 +467,7 @@ class StringToStringDictButton( ClientGUICommon.BetterButton ):
             
         
     
-    def GetValue( self ) -> typing.Dict[ str, str ]:
+    def GetValue( self ) -> dict[ str, str ]:
         
         return self._value
         
@@ -481,7 +481,7 @@ class StringToStringDictControl( QW.QWidget ):
     
     columnListContentsChanged = QC.Signal()
     
-    def __init__( self, parent, initial_dict: typing.Dict[ str, str ], min_height = 10, key_name = 'key', value_name = 'value', allow_add_delete = True, edit_keys = True ):
+    def __init__( self, parent, initial_dict: dict[ str, str ], min_height = 10, key_name = 'key', value_name = 'value', allow_add_delete = True, edit_keys = True ):
         
         super().__init__( parent )
         
@@ -626,7 +626,7 @@ class StringToStringDictControl( QW.QWidget ):
         return { key for ( key, value ) in self._listctrl.GetData() }
         
     
-    def _SetValue( self, str_to_str_dict: typing.Dict[ str, str ] ):
+    def _SetValue( self, str_to_str_dict: dict[ str, str ] ):
         
         self._listctrl.SetData( [ ( str( key ), str( value ) ) for ( key, value ) in str_to_str_dict.items() ] )
         
@@ -638,14 +638,14 @@ class StringToStringDictControl( QW.QWidget ):
         self._listctrl.DeleteDatas( self._listctrl.GetData() )
         
     
-    def GetValue( self ) -> typing.Dict[ str, str ]:
+    def GetValue( self ) -> dict[ str, str ]:
         
         value_dict = dict( self._listctrl.GetData() )
         
         return value_dict
         
     
-    def SetValue( self, str_to_str_dict: typing.Dict[ str, str ] ):
+    def SetValue( self, str_to_str_dict: dict[ str, str ] ):
         
         self._SetValue( str_to_str_dict )
         
@@ -653,7 +653,7 @@ class StringToStringDictControl( QW.QWidget ):
 
 class StringToStringMatchDictControl( QW.QWidget ):
     
-    def __init__( self, parent, initial_dict: typing.Dict[ str, ClientStrings.StringMatch ], min_height = 10, key_name = 'key' ):
+    def __init__( self, parent, initial_dict: dict[ str, ClientStrings.StringMatch ], min_height = 10, key_name = 'key' ):
         
         super().__init__( parent )
         
@@ -793,7 +793,7 @@ class StringToStringMatchDictControl( QW.QWidget ):
         return { key for ( key, value ) in self._listctrl.GetData() }
         
     
-    def GetValue( self ) -> typing.Dict[ str, ClientStrings.StringMatch ]:
+    def GetValue( self ) -> dict[ str, ClientStrings.StringMatch ]:
         
         value_dict = dict( self._listctrl.GetData() )
         

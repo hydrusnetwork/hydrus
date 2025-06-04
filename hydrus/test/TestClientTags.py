@@ -1,4 +1,5 @@
 import collections
+import collections.abc
 import unittest
 
 from hydrus.core import HydrusConstants as HC

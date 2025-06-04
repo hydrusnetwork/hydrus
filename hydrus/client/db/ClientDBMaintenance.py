@@ -16,7 +16,7 @@ from hydrus.client.db import ClientDBModule
 
 class ClientDBMaintenance( ClientDBModule.ClientDBModule ):
     
-    def __init__( self, cursor: sqlite3.Cursor, db_dir: str, db_filenames: typing.Dict[ str, str ], cursor_transaction_wrapper: HydrusDBBase.DBCursorTransactionWrapper, modules: typing.List[ HydrusDBModule.HydrusDBModule ] ):
+    def __init__( self, cursor: sqlite3.Cursor, db_dir: str, db_filenames: dict[ str, str ], cursor_transaction_wrapper: HydrusDBBase.DBCursorTransactionWrapper, modules: list[ HydrusDBModule.HydrusDBModule ] ):
         
         super().__init__( 'client db maintenance', cursor )
         
@@ -35,7 +35,7 @@ class ClientDBMaintenance( ClientDBModule.ClientDBModule ):
         HydrusData.Print( f'Deferred delete table {deletee_table_name} successfully dropped.' )
         
     
-    def _GetDeferredDeleteTableName( self ) -> typing.Tuple[ typing.Optional[ str ], typing.Optional[ int ] ]:
+    def _GetDeferredDeleteTableName( self ) -> tuple[ typing.Optional[ str ], typing.Optional[ int ] ]:
         
         result = self._Execute( 'SELECT name, num_rows FROM deferred_delete_tables WHERE num_rows IS NOT NULL ORDER BY num_rows ASC;' ).fetchone()
         
@@ -584,7 +584,7 @@ class ClientDBMaintenance( ClientDBModule.ClientDBModule ):
         return last_shutdown_work_time
         
     
-    def GetTableNamesDueAnalysis( self, force_reanalyze = False ) -> typing.List:
+    def GetTableNamesDueAnalysis( self, force_reanalyze = False ) -> list:
         
         db_names = [ name for ( index, name, path ) in self._Execute( 'PRAGMA database_list;' ) if name not in ( 'mem', 'temp', 'durable_temp' ) ]
         
@@ -667,7 +667,7 @@ class ClientDBMaintenance( ClientDBModule.ClientDBModule ):
         return names_to_analyze
         
     
-    def GetTablesAndColumnsThatUseDefinitions( self, content_type: int ) -> typing.List[ typing.Tuple[ str, str ] ]:
+    def GetTablesAndColumnsThatUseDefinitions( self, content_type: int ) -> list[ tuple[ str, str ] ]:
         
         tables_and_columns = []
         

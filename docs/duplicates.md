@@ -66,7 +66,7 @@ There are three ways a file can be related to another in the current duplicates 
 
 **Duplicate** files are of **the exact same thing**. They may be different resolutions, file formats, encoding quality, or one might even have watermark, but they are fundamentally different views on the exact same art. As you can see with the buttons, you can select one file as the 'better' or say they are about the same. If the files are basically the same, there is no point stressing about which is 0.2% better--just click 'they are the same'. For better/worse pairs, you might have reason to keep both, but most of the time I recommend you delete the worse.
 
-You can customise the shortcuts under _file->shortcuts->duplicate_filter_. The defaults are:
+You can customise the shortcuts under _file->options->shortcuts->duplicate_filter_. The defaults are:
 
 *   Left-click: **this is better, delete the other**.
     

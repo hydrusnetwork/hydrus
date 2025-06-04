@@ -1,6 +1,6 @@
 import collections
+import collections.abc
 import threading
-import typing
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
@@ -573,7 +573,7 @@ class NetworkBandwidthManager( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def SetTrackerContainers( self, tracker_containers: typing.Collection[ NetworkBandwidthManagerTrackerContainer ], set_all_trackers_dirty = False ):
+    def SetTrackerContainers( self, tracker_containers: collections.abc.Collection[ NetworkBandwidthManagerTrackerContainer ], set_all_trackers_dirty = False ):
         
         with self._lock:
             

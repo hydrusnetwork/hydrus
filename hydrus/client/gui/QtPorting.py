@@ -5,8 +5,8 @@
 # and we are, of course, now many years later
 # so, if I just got hit by a bus and you are wondering what the hell is going on here, that's what's going on here
 
+import collections.abc
 import os
-import typing
 
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
@@ -1319,7 +1319,7 @@ def ToKeySequence( modifiers, key ):
         
     
 
-def AddShortcut( widget, modifier, key, func: typing.Callable, *args ):
+def AddShortcut( widget, modifier, key, func: collections.abc.Callable, *args ):
     
     shortcut = QW.QShortcut( widget )
     
@@ -1948,7 +1948,7 @@ class TreeWidgetWithInheritedCheckState( QW.QTreeWidget ):
         self.itemChanged.connect( self._HandleItemCheckStateUpdate )
         
     
-    def _GetChildren( self, item: QW.QTreeWidgetItem ) -> typing.List[ QW.QTreeWidgetItem ]:
+    def _GetChildren( self, item: QW.QTreeWidgetItem ) -> list[ QW.QTreeWidgetItem ]:
         
         children = [ item.child( i ) for i in range( item.childCount() ) ]
         

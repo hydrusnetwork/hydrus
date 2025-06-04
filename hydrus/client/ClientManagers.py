@@ -1,4 +1,5 @@
 import collections
+import collections.abc
 import threading
 
 from qtpy import QtGui as QG

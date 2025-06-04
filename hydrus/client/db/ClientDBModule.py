@@ -1,4 +1,4 @@
-import typing
+import collections.abc
 
 from hydrus.core import HydrusData
 from hydrus.core import HydrusDBModule
@@ -18,7 +18,7 @@ class ClientDBModule( HydrusDBModule.HydrusDBModule ):
         CG.client_controller.BlockingSafeShowCriticalMessage( 'hydrus db failed', message )
         
     
-    def _PresentMissingIndicesWarningToUser( self, index_names: typing.Collection[ str ] ):
+    def _PresentMissingIndicesWarningToUser( self, index_names: collections.abc.Collection[ str ] ):
         
         index_names = sorted( index_names )
         
@@ -32,7 +32,7 @@ class ClientDBModule( HydrusDBModule.HydrusDBModule ):
         CG.client_controller.frame_splash_status.SetText( 'recreating indices' )
         
     
-    def _PresentMissingTablesWarningToUser( self, table_names: typing.Collection[ str ] ):
+    def _PresentMissingTablesWarningToUser( self, table_names: collections.abc.Collection[ str ] ):
         
         table_names = sorted( table_names )
         
@@ -71,7 +71,7 @@ class ClientDBModule( HydrusDBModule.HydrusDBModule ):
         CG.client_controller.frame_splash_status.SetText( 'recreating tables' )
         
     
-    def GetTablesAndColumnsThatUseDefinitions( self, content_type: int ) -> typing.List[ typing.Tuple[ str, str ] ]:
+    def GetTablesAndColumnsThatUseDefinitions( self, content_type: int ) -> list[ tuple[ str, str ] ]:
         
         raise NotImplementedError()
         

@@ -21,6 +21,12 @@ from hydrus.client.search import ClientSearchPredicate
 from hydrus.test import TestController
 from hydrus.test import TestGlobals as TG
 
+# this test suite is a nightmare. it was originally a monolith hell with all sorts of math adjustment trying to keep track of this twisting path. very difficult to edit/comprehend, and how it ever actually passed I do not know
+# I made a big push to atomise it, but there remains a bunch of fluff and weirdness. I have not got through them rigorously to ensure they are still testing relevent stuff everywhere
+# _get_group_potential_count in particular could do with a significant rework
+# _expected_num_potentials too is a mess
+# probably better if each _InitialiseState is created with a list of hashes just for that test and we test numbers hardcoded
+
 class TestClientDBDuplicates( unittest.TestCase ):
     
     _db: typing.Any = None
@@ -73,6 +79,50 @@ class TestClientDBDuplicates( unittest.TestCase ):
     def _read( self, action, *args, **kwargs ): return TestClientDBDuplicates._db.Read( action, *args, **kwargs )
     def _write( self, action, *args, **kwargs ): return TestClientDBDuplicates._db.Write( action, True, *args, **kwargs )
     
+    def _InitialiseState( self ):
+        
+        self._clear_db()
+        
+        self._dupe_hashes = [ HydrusData.GenerateKey() for i in range( 16 ) ]
+        self._second_group_dupe_hashes = [ HydrusData.GenerateKey() for i in range( 4 ) ]
+        self._similar_looking_alternate_hashes = [ HydrusData.GenerateKey() for i in range( 5 ) ]
+        self._similar_looking_false_positive_hashes = [ HydrusData.GenerateKey() for i in range( 5 ) ]
+        
+        self._all_hashes = set()
+        
+        self._all_hashes.update( self._dupe_hashes )
+        self._all_hashes.update( self._second_group_dupe_hashes )
+        self._all_hashes.update( self._similar_looking_alternate_hashes )
+        self._all_hashes.update( self._similar_looking_false_positive_hashes )
+        
+        self._king_hash = self._dupe_hashes[0]
+        self._second_group_king_hash = self._second_group_dupe_hashes[0]
+        self._false_positive_king_hash = self._similar_looking_false_positive_hashes[0]
+        self._alternate_king_hash = self._similar_looking_alternate_hashes[0]
+        
+        self._our_main_dupe_group_hashes = { self._king_hash }
+        self._our_second_dupe_group_hashes = { self._second_group_king_hash }
+        self._our_alt_dupe_group_hashes = { self._alternate_king_hash }
+        self._our_fp_dupe_group_hashes = { self._false_positive_king_hash }
+        
+        n = len( self._all_hashes )
+        
+        self._num_free_agents = n
+        
+        # initial number pair combinations is (n(n-1))/2
+        self._expected_num_potentials = int( n * ( n - 1 ) / 2 )
+        
+        size_pred = ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_SIZE, ( '=', 65535, HydrusNumbers.UnitToInt( 'B' ) ) )
+        png_pred = ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_MIME, ( HC.IMAGE_PNG, ) )
+        
+        location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY )
+        
+        self._file_search_context_1 = ClientSearchFileSearchContext.FileSearchContext( location_context = location_context, predicates = [ size_pred ] )
+        self._file_search_context_2 = ClientSearchFileSearchContext.FileSearchContext( location_context = location_context, predicates = [ png_pred ] )
+        
+        self._import_and_find_dupes()
+        
+    
     def _get_group_potential_count( self, file_duplicate_types_to_counts ):
         
         num_potentials = len( self._all_hashes ) - 1
@@ -98,6 +148,7 @@ class TestClientDBDuplicates( unittest.TestCase ):
     
     def _import_and_find_dupes( self ):
         
+        # they all share the same phash so are all dupes
         perceptual_hash = os.urandom( 8 )
         
         # fake-import the files with the perceptual_hash
@@ -126,7 +177,9 @@ class TestClientDBDuplicates( unittest.TestCase ):
         self._write( 'maintain_similar_files_search_for_potential_duplicates', 0 )
         
     
-    def _test_initial_state( self ):
+    def test_aaa_initial_state( self ):
+        
+        self._InitialiseState()
         
         pixel_dupes_preference = ClientDuplicates.SIMILAR_FILES_PIXEL_DUPES_ALLOWED
         max_hamming_distance = 4
@@ -175,7 +228,9 @@ class TestClientDBDuplicates( unittest.TestCase ):
         self.assertEqual( set( result ), self._all_hashes )
         
     
-    def _test_initial_better_worse( self ):
+    def test_bbb_better_worse( self ):
+        
+        self._InitialiseState()
         
         row = ( HC.DUPLICATE_BETTER, self._king_hash, self._dupe_hashes[1], [ ClientContentUpdates.ContentUpdatePackage() ] )
         
@@ -183,11 +238,19 @@ class TestClientDBDuplicates( unittest.TestCase ):
         
         self._our_main_dupe_group_hashes.add( self._dupe_hashes[1] )
         
+        self._num_free_agents -= 1
+        
+        self._expected_num_potentials -= self._num_free_agents
+        
         row = ( HC.DUPLICATE_BETTER, self._dupe_hashes[1], self._dupe_hashes[2], [ ClientContentUpdates.ContentUpdatePackage() ] )
         
         self._write( 'duplicate_pair_status', [ row ] )
         
         self._our_main_dupe_group_hashes.add( self._dupe_hashes[2] )
+        
+        self._num_free_agents -= 1
+        
+        self._expected_num_potentials -= self._num_free_agents
         
         pixel_dupes_preference = ClientDuplicates.SIMILAR_FILES_PIXEL_DUPES_ALLOWED
         max_hamming_distance = 4
@@ -202,14 +265,6 @@ class TestClientDBDuplicates( unittest.TestCase ):
         potential_duplicates_search_context.SetMaxHammingDistance( max_hamming_distance )
         
         num_potentials = self._read( 'potential_duplicates_count', potential_duplicates_search_context )
-        
-        self._num_free_agents -= 1
-        
-        self._expected_num_potentials -= self._num_free_agents
-        
-        self._num_free_agents -= 1
-        
-        self._expected_num_potentials -= self._num_free_agents
         
         self.assertEqual( num_potentials, self._expected_num_potentials )
         
@@ -274,7 +329,29 @@ class TestClientDBDuplicates( unittest.TestCase ):
         self.assertEqual( set( result ), self._our_main_dupe_group_hashes )
         
     
-    def _test_initial_king_usurp( self ):
+    def test_bbb_king_usurp( self ):
+        
+        self._InitialiseState()
+        
+        row = ( HC.DUPLICATE_BETTER, self._king_hash, self._dupe_hashes[1], [ ClientContentUpdates.ContentUpdatePackage() ] )
+        
+        self._write( 'duplicate_pair_status', [ row ] )
+        
+        self._our_main_dupe_group_hashes.add( self._dupe_hashes[1] )
+        
+        self._num_free_agents -= 1
+        
+        self._expected_num_potentials -= self._num_free_agents
+        
+        row = ( HC.DUPLICATE_BETTER, self._dupe_hashes[1], self._dupe_hashes[2], [ ClientContentUpdates.ContentUpdatePackage() ] )
+        
+        self._write( 'duplicate_pair_status', [ row ] )
+        
+        self._our_main_dupe_group_hashes.add( self._dupe_hashes[2] )
+        
+        self._num_free_agents -= 1
+        
+        self._expected_num_potentials -= self._num_free_agents
         
         self._old_king_hash = self._king_hash
         self._king_hash = self._dupe_hashes[3]
@@ -284,6 +361,10 @@ class TestClientDBDuplicates( unittest.TestCase ):
         self._write( 'duplicate_pair_status', [ row ] )
         
         self._our_main_dupe_group_hashes.add( self._king_hash )
+        
+        self._num_free_agents -= 1
+        
+        self._expected_num_potentials -= self._num_free_agents
         
         pixel_dupes_preference = ClientDuplicates.SIMILAR_FILES_PIXEL_DUPES_ALLOWED
         max_hamming_distance = 4
@@ -298,10 +379,6 @@ class TestClientDBDuplicates( unittest.TestCase ):
         potential_duplicates_search_context.SetMaxHammingDistance( max_hamming_distance )
         
         num_potentials = self._read( 'potential_duplicates_count', potential_duplicates_search_context )
-        
-        self._num_free_agents -= 1
-        
-        self._expected_num_potentials -= self._num_free_agents
         
         self.assertEqual( num_potentials, self._expected_num_potentials )
         
@@ -346,7 +423,9 @@ class TestClientDBDuplicates( unittest.TestCase ):
         self.assertEqual( set( result ), self._our_main_dupe_group_hashes )
         
     
-    def _test_initial_same_quality( self ):
+    def test_bbb_same_quality( self ):
+        
+        self._InitialiseState()
         
         row = ( HC.DUPLICATE_SAME_QUALITY, self._king_hash, self._dupe_hashes[4], [ ClientContentUpdates.ContentUpdatePackage() ] )
         
@@ -354,11 +433,19 @@ class TestClientDBDuplicates( unittest.TestCase ):
         
         self._our_main_dupe_group_hashes.add( self._dupe_hashes[4] )
         
-        row = ( HC.DUPLICATE_SAME_QUALITY, self._old_king_hash, self._dupe_hashes[5], [ ClientContentUpdates.ContentUpdatePackage() ] )
+        self._num_free_agents -= 1
+        
+        self._expected_num_potentials -= self._num_free_agents
+        
+        row = ( HC.DUPLICATE_SAME_QUALITY, self._dupe_hashes[4], self._dupe_hashes[5], [ ClientContentUpdates.ContentUpdatePackage() ] )
         
         self._write( 'duplicate_pair_status', [ row ] )
         
         self._our_main_dupe_group_hashes.add( self._dupe_hashes[5] )
+        
+        self._num_free_agents -= 1
+        
+        self._expected_num_potentials -= self._num_free_agents
         
         pixel_dupes_preference = ClientDuplicates.SIMILAR_FILES_PIXEL_DUPES_ALLOWED
         max_hamming_distance = 4
@@ -373,14 +460,6 @@ class TestClientDBDuplicates( unittest.TestCase ):
         potential_duplicates_search_context.SetMaxHammingDistance( max_hamming_distance )
         
         num_potentials = self._read( 'potential_duplicates_count', potential_duplicates_search_context )
-        
-        self._num_free_agents -= 1
-        
-        self._expected_num_potentials -= self._num_free_agents
-        
-        self._num_free_agents -= 1
-        
-        self._expected_num_potentials -= self._num_free_agents
         
         self.assertEqual( num_potentials, self._expected_num_potentials )
         
@@ -445,19 +524,29 @@ class TestClientDBDuplicates( unittest.TestCase ):
         self.assertEqual( set( result ), self._our_main_dupe_group_hashes )
         
     
-    def _test_explicit_set_new_king( self ):
+    def test_bbb_explicit_set_new_king( self ):
         
-        self._write( 'duplicate_set_king', self._dupe_hashes[5] )
+        self._InitialiseState()
         
-        self._king_hash = self._dupe_hashes[5]
+        row = ( HC.DUPLICATE_BETTER, self._king_hash, self._dupe_hashes[1], [ ClientContentUpdates.ContentUpdatePackage() ] )
         
-        result = self._read( 'file_duplicate_hashes', ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY ), self._king_hash, HC.DUPLICATE_KING )
+        self._write( 'duplicate_pair_status', [ row ] )
         
-        self.assertEqual( result, [ self._king_hash ] )
+        self._our_main_dupe_group_hashes.add( self._dupe_hashes[1] )
         
-        result = self._read( 'file_duplicate_hashes', ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY ), self._king_hash, HC.DUPLICATE_MEMBER )
+        self._num_free_agents -= 1
         
-        self.assertEqual( result[0], self._king_hash )
+        self._expected_num_potentials -= self._num_free_agents
+        
+        self._write( 'duplicate_set_king', self._dupe_hashes[1] )
+        
+        result = self._read( 'file_duplicate_hashes', ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY ), self._dupe_hashes[1], HC.DUPLICATE_KING )
+        
+        self.assertEqual( result, [ self._dupe_hashes[1] ] )
+        
+        result = self._read( 'file_duplicate_hashes', ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY ), self._dupe_hashes[1], HC.DUPLICATE_MEMBER )
+        
+        self.assertEqual( result[0], self._dupe_hashes[1] )
         self.assertEqual( set( result ), self._our_main_dupe_group_hashes )
         
     
@@ -476,7 +565,11 @@ class TestClientDBDuplicates( unittest.TestCase ):
         self._our_second_dupe_group_hashes.add( self._second_group_dupe_hashes[3] )
         
     
-    def _test_poach_better( self ):
+    def test_poach_better( self ):
+        
+        self._InitialiseState()
+        
+        self._test_establish_second_group()
         
         # better than not the king
         
@@ -538,11 +631,25 @@ class TestClientDBDuplicates( unittest.TestCase ):
         self.assertEqual( set( result ), self._our_second_dupe_group_hashes )
         
     
-    def _test_poach_same( self ):
+    def test_poach_same( self ):
         
-        # not the king is the same as not the king
+        self._InitialiseState()
         
-        row = ( HC.DUPLICATE_SAME_QUALITY, self._old_king_hash, self._second_group_dupe_hashes[2], [ ClientContentUpdates.ContentUpdatePackage() ] )
+        row = ( HC.DUPLICATE_BETTER, self._king_hash, self._dupe_hashes[1], [ ClientContentUpdates.ContentUpdatePackage() ] )
+        
+        self._write( 'duplicate_pair_status', [ row ] )
+        
+        self._our_main_dupe_group_hashes.add( self._dupe_hashes[1] )
+        
+        self._num_free_agents -= 1
+        
+        self._expected_num_potentials -= self._num_free_agents
+        
+        self._test_establish_second_group()
+        
+        # setting a not-king the same as a not-king
+        
+        row = ( HC.DUPLICATE_SAME_QUALITY, self._dupe_hashes[1], self._second_group_dupe_hashes[2], [ ClientContentUpdates.ContentUpdatePackage() ] )
         
         self._write( 'duplicate_pair_status', [ row ] )
         
@@ -618,7 +725,19 @@ class TestClientDBDuplicates( unittest.TestCase ):
         self.assertEqual( set( result ), self._our_second_dupe_group_hashes )
         
     
-    def _test_group_merge( self ):
+    def test_group_merge( self ):
+        
+        self._InitialiseState()
+        
+        row = ( HC.DUPLICATE_BETTER, self._king_hash, self._dupe_hashes[1], [ ClientContentUpdates.ContentUpdatePackage() ] )
+        
+        self._write( 'duplicate_pair_status', [ row ] )
+        
+        self._our_main_dupe_group_hashes.add( self._dupe_hashes[1] )
+        
+        self._num_free_agents -= 1
+        
+        self._expected_num_potentials -= self._num_free_agents
         
         rows = []
         
@@ -631,9 +750,9 @@ class TestClientDBDuplicates( unittest.TestCase ):
         
         rows = []
         
-        rows.append( ( HC.DUPLICATE_SAME_QUALITY, self._old_king_hash, self._dupe_hashes[6], [ ClientContentUpdates.ContentUpdatePackage() ] ) )
+        rows.append( ( HC.DUPLICATE_SAME_QUALITY, self._dupe_hashes[1], self._dupe_hashes[6], [ ClientContentUpdates.ContentUpdatePackage() ] ) )
         rows.append( ( HC.DUPLICATE_SAME_QUALITY, self._king_hash, self._dupe_hashes[8], [ ClientContentUpdates.ContentUpdatePackage() ] ) )
-        rows.append( ( HC.DUPLICATE_BETTER, self._old_king_hash, self._dupe_hashes[10], [ ClientContentUpdates.ContentUpdatePackage() ] ) )
+        rows.append( ( HC.DUPLICATE_BETTER, self._dupe_hashes[1], self._dupe_hashes[10], [ ClientContentUpdates.ContentUpdatePackage() ] ) )
         rows.append( ( HC.DUPLICATE_BETTER, self._king_hash, self._dupe_hashes[12], [ ClientContentUpdates.ContentUpdatePackage() ] ) )
         
         self._write( 'duplicate_pair_status', rows )
@@ -712,7 +831,11 @@ class TestClientDBDuplicates( unittest.TestCase ):
         self._our_fp_dupe_group_hashes.add( self._similar_looking_false_positive_hashes[2] )
         
     
-    def _test_false_positive( self ):
+    def test_false_positive( self ):
+        
+        self._InitialiseState()
+        
+        self._test_establish_false_positive_group()
         
         row = ( HC.DUPLICATE_FALSE_POSITIVE, self._king_hash, self._false_positive_king_hash, {} )
         
@@ -742,12 +865,11 @@ class TestClientDBDuplicates( unittest.TestCase ):
         
         file_duplicate_types_to_counts = result[ 'counts' ]
         
-        self.assertEqual( len( file_duplicate_types_to_counts ), 3 )
+        self.assertEqual( len( file_duplicate_types_to_counts ), 2 )
         
         expected = self._get_group_potential_count( file_duplicate_types_to_counts )
         
         self.assertIn( file_duplicate_types_to_counts[ HC.DUPLICATE_POTENTIAL ], ( expected, expected - 1 ) )
-        self.assertEqual( file_duplicate_types_to_counts[ HC.DUPLICATE_MEMBER ], len( self._our_main_dupe_group_hashes ) - 1 )
         self.assertEqual( file_duplicate_types_to_counts[ HC.DUPLICATE_FALSE_POSITIVE ], 1 )
         
         result = self._read( 'file_duplicate_info', ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY ), self._false_positive_king_hash )
@@ -804,7 +926,11 @@ class TestClientDBDuplicates( unittest.TestCase ):
         self._our_alt_dupe_group_hashes.add( self._similar_looking_alternate_hashes[2] )
         
     
-    def _test_alt( self ):
+    def test_alt( self ):
+        
+        self._InitialiseState()
+        
+        self._test_establish_alt_group()
         
         row = ( HC.DUPLICATE_ALTERNATE, self._king_hash, self._alternate_king_hash, {} )
         
@@ -834,14 +960,85 @@ class TestClientDBDuplicates( unittest.TestCase ):
         
         file_duplicate_types_to_counts = result[ 'counts' ]
         
-        self.assertEqual( len( file_duplicate_types_to_counts ), 5 )
+        self.assertEqual( len( file_duplicate_types_to_counts ), 3 )
         
         expected = self._get_group_potential_count( file_duplicate_types_to_counts )
         
         self.assertIn( file_duplicate_types_to_counts[ HC.DUPLICATE_POTENTIAL ], ( expected, expected - 1 ) )
-        self.assertEqual( file_duplicate_types_to_counts[ HC.DUPLICATE_MEMBER ], len( self._our_main_dupe_group_hashes ) - 1 )
-        self.assertEqual( file_duplicate_types_to_counts[ HC.DUPLICATE_FALSE_POSITIVE ], 1 )
         self.assertEqual( file_duplicate_types_to_counts[ HC.DUPLICATE_ALTERNATE ], 1 )
+        self.assertEqual( file_duplicate_types_to_counts[ HC.DUPLICATE_CONFIRMED_ALTERNATE ], 1 )
+        
+        result = self._read( 'file_duplicate_hashes', ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY ), self._alternate_king_hash, HC.DUPLICATE_POTENTIAL )
+        
+        result = self._read( 'file_duplicate_info', ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY ), self._alternate_king_hash )
+        
+        self.assertEqual( result[ 'is_king' ], True )
+        
+        file_duplicate_types_to_counts = result[ 'counts' ]
+        
+        self.assertEqual( len( file_duplicate_types_to_counts ), 4 )
+        
+        expected = self._get_group_potential_count( file_duplicate_types_to_counts )
+        
+        self.assertIn( file_duplicate_types_to_counts[ HC.DUPLICATE_POTENTIAL ], ( expected, expected - 1 ) )
+        self.assertEqual( file_duplicate_types_to_counts[ HC.DUPLICATE_MEMBER ], len( self._our_alt_dupe_group_hashes ) - 1 )
+        self.assertEqual( file_duplicate_types_to_counts[ HC.DUPLICATE_ALTERNATE ], 1 )
+        self.assertEqual( file_duplicate_types_to_counts[ HC.DUPLICATE_CONFIRMED_ALTERNATE ], 1 )
+        
+        result = self._read( 'file_duplicate_hashes', ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY ), self._king_hash, HC.DUPLICATE_ALTERNATE )
+        
+        self.assertEqual( result, [ self._king_hash, self._alternate_king_hash ] )
+        
+        result = self._read( 'file_duplicate_hashes', ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY ), self._alternate_king_hash, HC.DUPLICATE_ALTERNATE )
+        
+        self.assertEqual( result, [ self._alternate_king_hash, self._king_hash ] )
+        
+    
+    def test_alt_with_fp( self ):
+        
+        self._InitialiseState()
+        
+        self._test_establish_alt_group()
+        
+        row = ( HC.DUPLICATE_ALTERNATE, self._king_hash, self._alternate_king_hash, {} )
+        
+        self._write( 'duplicate_pair_status', [ row ] )
+        
+        row = ( HC.DUPLICATE_FALSE_POSITIVE, self._king_hash, self._false_positive_king_hash, {} )
+        
+        self._write( 'duplicate_pair_status', [ row ] )
+        
+        pixel_dupes_preference = ClientDuplicates.SIMILAR_FILES_PIXEL_DUPES_ALLOWED
+        max_hamming_distance = 4
+        dupe_search_type = ClientDuplicates.DUPE_SEARCH_BOTH_FILES_MATCH_ONE_SEARCH
+        
+        potential_duplicates_search_context = ClientPotentialDuplicatesSearchContext.PotentialDuplicatesSearchContext()
+        
+        potential_duplicates_search_context.SetFileSearchContext1( self._file_search_context_1 )
+        potential_duplicates_search_context.SetFileSearchContext2( self._file_search_context_2 )
+        potential_duplicates_search_context.SetDupeSearchType( dupe_search_type )
+        potential_duplicates_search_context.SetPixelDupesPreference( pixel_dupes_preference )
+        potential_duplicates_search_context.SetMaxHammingDistance( max_hamming_distance )
+        
+        num_potentials = self._read( 'potential_duplicates_count', potential_duplicates_search_context )
+        
+        self.assertLess( num_potentials, self._expected_num_potentials )
+        
+        self._expected_num_potentials = num_potentials
+        
+        result = self._read( 'file_duplicate_info', ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY ), self._king_hash )
+        
+        self.assertEqual( result[ 'is_king' ], True )
+        
+        file_duplicate_types_to_counts = result[ 'counts' ]
+        
+        self.assertEqual( len( file_duplicate_types_to_counts ), 4 )
+        
+        expected = self._get_group_potential_count( file_duplicate_types_to_counts )
+        
+        self.assertIn( file_duplicate_types_to_counts[ HC.DUPLICATE_POTENTIAL ], ( expected, expected - 1 ) )
+        self.assertEqual( file_duplicate_types_to_counts[ HC.DUPLICATE_ALTERNATE ], 1 )
+        self.assertEqual( file_duplicate_types_to_counts[ HC.DUPLICATE_FALSE_POSITIVE ], 1 )
         self.assertEqual( file_duplicate_types_to_counts[ HC.DUPLICATE_CONFIRMED_ALTERNATE ], 1 )
         
         result = self._read( 'file_duplicate_hashes', ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY ), self._alternate_king_hash, HC.DUPLICATE_POTENTIAL )
@@ -858,8 +1055,8 @@ class TestClientDBDuplicates( unittest.TestCase ):
         
         self.assertIn( file_duplicate_types_to_counts[ HC.DUPLICATE_POTENTIAL ], ( expected, expected - 1 ) )
         self.assertEqual( file_duplicate_types_to_counts[ HC.DUPLICATE_MEMBER ], len( self._our_alt_dupe_group_hashes ) - 1 )
-        self.assertEqual( file_duplicate_types_to_counts[ HC.DUPLICATE_FALSE_POSITIVE ], 1 )
         self.assertEqual( file_duplicate_types_to_counts[ HC.DUPLICATE_ALTERNATE ], 1 )
+        self.assertEqual( file_duplicate_types_to_counts[ HC.DUPLICATE_FALSE_POSITIVE ], 1 )
         self.assertEqual( file_duplicate_types_to_counts[ HC.DUPLICATE_CONFIRMED_ALTERNATE ], 1 )
         
         result = self._read( 'file_duplicate_hashes', ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY ), self._king_hash, HC.DUPLICATE_ALTERNATE )
@@ -871,163 +1068,19 @@ class TestClientDBDuplicates( unittest.TestCase ):
         self.assertEqual( result, [ self._alternate_king_hash, self._king_hash ] )
         
     
-    def _test_expand_false_positive( self ):
+    def test_remove_potentials( self ):
         
-        rows = []
-        
-        rows.append( ( HC.DUPLICATE_BETTER, self._false_positive_king_hash, self._similar_looking_false_positive_hashes[3], [ ClientContentUpdates.ContentUpdatePackage() ] ) )
-        rows.append( ( HC.DUPLICATE_SAME_QUALITY, self._false_positive_king_hash, self._similar_looking_false_positive_hashes[4], [ ClientContentUpdates.ContentUpdatePackage() ] ) )
-        
-        self._write( 'duplicate_pair_status', rows )
-        
-        pixel_dupes_preference = ClientDuplicates.SIMILAR_FILES_PIXEL_DUPES_ALLOWED
-        max_hamming_distance = 4
-        dupe_search_type = ClientDuplicates.DUPE_SEARCH_BOTH_FILES_MATCH_ONE_SEARCH
-        
-        potential_duplicates_search_context = ClientPotentialDuplicatesSearchContext.PotentialDuplicatesSearchContext()
-        
-        potential_duplicates_search_context.SetFileSearchContext1( self._file_search_context_1 )
-        potential_duplicates_search_context.SetFileSearchContext2( self._file_search_context_2 )
-        potential_duplicates_search_context.SetDupeSearchType( dupe_search_type )
-        potential_duplicates_search_context.SetPixelDupesPreference( pixel_dupes_preference )
-        potential_duplicates_search_context.SetMaxHammingDistance( max_hamming_distance )
-        
-        num_potentials = self._read( 'potential_duplicates_count', potential_duplicates_search_context )
-        
-        self.assertLess( num_potentials, self._expected_num_potentials )
-        
-        self._expected_num_potentials = num_potentials
-        
-        self._our_fp_dupe_group_hashes.add( self._similar_looking_false_positive_hashes[3] )
-        self._our_fp_dupe_group_hashes.add( self._similar_looking_false_positive_hashes[4] )
-        
-        result = self._read( 'file_duplicate_info', ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY ), self._king_hash )
-        
-        self.assertEqual( result[ 'is_king' ], True )
-        
-        file_duplicate_types_to_counts = result[ 'counts' ]
-        
-        self.assertEqual( len( file_duplicate_types_to_counts ), 5 )
-        
-        expected = self._get_group_potential_count( file_duplicate_types_to_counts )
-        
-        self.assertIn( file_duplicate_types_to_counts[ HC.DUPLICATE_POTENTIAL ], ( expected, expected - 1 ) )
-        self.assertEqual( file_duplicate_types_to_counts[ HC.DUPLICATE_MEMBER ], len( self._our_main_dupe_group_hashes ) - 1 )
-        self.assertEqual( file_duplicate_types_to_counts[ HC.DUPLICATE_FALSE_POSITIVE ], 1 )
-        self.assertEqual( file_duplicate_types_to_counts[ HC.DUPLICATE_ALTERNATE ], 1 )
-        self.assertEqual( file_duplicate_types_to_counts[ HC.DUPLICATE_CONFIRMED_ALTERNATE ], 1 )
-        
-        result = self._read( 'file_duplicate_info', ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY ), self._false_positive_king_hash )
-        
-        self.assertEqual( result[ 'is_king' ], True )
-        
-        file_duplicate_types_to_counts = result[ 'counts' ]
-        
-        self.assertEqual( len( file_duplicate_types_to_counts ), 3 )
-        
-        expected = self._get_group_potential_count( file_duplicate_types_to_counts )
-        
-        self.assertIn( file_duplicate_types_to_counts[ HC.DUPLICATE_POTENTIAL ], ( expected, expected - 1 ) )
-        self.assertEqual( file_duplicate_types_to_counts[ HC.DUPLICATE_MEMBER ], len( self._our_fp_dupe_group_hashes ) - 1 )
-        self.assertEqual( file_duplicate_types_to_counts[ HC.DUPLICATE_FALSE_POSITIVE ], 2 )
-        
-        result = self._read( 'file_duplicate_hashes', ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY ), self._king_hash, HC.DUPLICATE_FALSE_POSITIVE )
-        
-        self.assertEqual( result[0], self._king_hash )
-        self.assertEqual( set( result ), { self._king_hash, self._false_positive_king_hash } )
-        
-        result = self._read( 'file_duplicate_hashes', ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY ), self._false_positive_king_hash, HC.DUPLICATE_FALSE_POSITIVE )
-        
-        self.assertEqual( result[0], self._false_positive_king_hash )
-        self.assertEqual( set( result ), { self._false_positive_king_hash, self._king_hash, self._alternate_king_hash } )
-        
-    
-    def _test_expand_alt( self ):
-        
-        rows = []
-        
-        rows.append( ( HC.DUPLICATE_BETTER, self._alternate_king_hash, self._similar_looking_alternate_hashes[3], [ ClientContentUpdates.ContentUpdatePackage() ] ) )
-        rows.append( ( HC.DUPLICATE_SAME_QUALITY, self._alternate_king_hash, self._similar_looking_alternate_hashes[4], [ ClientContentUpdates.ContentUpdatePackage() ] ) )
-        
-        self._write( 'duplicate_pair_status', rows )
-        
-        pixel_dupes_preference = ClientDuplicates.SIMILAR_FILES_PIXEL_DUPES_ALLOWED
-        max_hamming_distance = 4
-        dupe_search_type = ClientDuplicates.DUPE_SEARCH_BOTH_FILES_MATCH_ONE_SEARCH
-        
-        potential_duplicates_search_context = ClientPotentialDuplicatesSearchContext.PotentialDuplicatesSearchContext()
-        
-        potential_duplicates_search_context.SetFileSearchContext1( self._file_search_context_1 )
-        potential_duplicates_search_context.SetFileSearchContext2( self._file_search_context_2 )
-        potential_duplicates_search_context.SetDupeSearchType( dupe_search_type )
-        potential_duplicates_search_context.SetPixelDupesPreference( pixel_dupes_preference )
-        potential_duplicates_search_context.SetMaxHammingDistance( max_hamming_distance )
-        
-        num_potentials = self._read( 'potential_duplicates_count', potential_duplicates_search_context )
-        
-        self.assertLess( num_potentials, self._expected_num_potentials )
-        
-        self._expected_num_potentials = num_potentials
-        
-        self._our_alt_dupe_group_hashes.add( self._similar_looking_alternate_hashes[3] )
-        self._our_alt_dupe_group_hashes.add( self._similar_looking_alternate_hashes[4] )
-        
-        result = self._read( 'file_duplicate_info', ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY ), self._king_hash )
-        
-        self.assertEqual( result[ 'is_king' ], True )
-        
-        file_duplicate_types_to_counts = result[ 'counts' ]
-        
-        self.assertEqual( len( file_duplicate_types_to_counts ), 5 )
-        
-        expected = self._get_group_potential_count( file_duplicate_types_to_counts )
-        
-        self.assertIn( file_duplicate_types_to_counts[ HC.DUPLICATE_POTENTIAL ], ( expected, expected - 1 ) )
-        self.assertEqual( file_duplicate_types_to_counts[ HC.DUPLICATE_MEMBER ], len( self._our_main_dupe_group_hashes ) - 1 )
-        self.assertEqual( file_duplicate_types_to_counts[ HC.DUPLICATE_FALSE_POSITIVE ], 1 )
-        self.assertEqual( file_duplicate_types_to_counts[ HC.DUPLICATE_ALTERNATE ], 1 )
-        self.assertEqual( file_duplicate_types_to_counts[ HC.DUPLICATE_CONFIRMED_ALTERNATE ], 1 )
-        
-        result = self._read( 'file_duplicate_info', ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY ), self._alternate_king_hash )
-        
-        self.assertEqual( result[ 'is_king' ], True )
-        
-        file_duplicate_types_to_counts = result[ 'counts' ]
-        
-        self.assertEqual( len( file_duplicate_types_to_counts ), 5 )
-        
-        expected = self._get_group_potential_count( file_duplicate_types_to_counts )
-        
-        self.assertIn( file_duplicate_types_to_counts[ HC.DUPLICATE_POTENTIAL ], ( expected, expected - 1 ) )
-        self.assertEqual( file_duplicate_types_to_counts[ HC.DUPLICATE_MEMBER ], len( self._our_alt_dupe_group_hashes ) - 1 )
-        self.assertEqual( file_duplicate_types_to_counts[ HC.DUPLICATE_FALSE_POSITIVE ], 1 )
-        self.assertEqual( file_duplicate_types_to_counts[ HC.DUPLICATE_ALTERNATE ], 1 )
-        self.assertEqual( file_duplicate_types_to_counts[ HC.DUPLICATE_CONFIRMED_ALTERNATE ], 1 )
-        
-        result = self._read( 'file_duplicate_hashes', ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY ), self._king_hash, HC.DUPLICATE_ALTERNATE )
-        
-        self.assertEqual( result, [ self._king_hash, self._alternate_king_hash ] )
-        
-        result = self._read( 'file_duplicate_hashes', ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY ), self._alternate_king_hash, HC.DUPLICATE_ALTERNATE )
-        
-        self.assertEqual( result, [ self._alternate_king_hash, self._king_hash ] )
-        
-    
-    def _test_dissolve( self ):
+        self._InitialiseState()
         
         result = self._read( 'file_duplicate_info', ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY ), self._king_hash )
         
         file_duplicate_types_to_counts = result[ 'counts' ]
         
-        self.assertEqual( len( file_duplicate_types_to_counts ), 5 )
+        self.assertEqual( len( file_duplicate_types_to_counts ), 1 )
         
         expected = self._get_group_potential_count( file_duplicate_types_to_counts )
         
         self.assertIn( file_duplicate_types_to_counts[ HC.DUPLICATE_POTENTIAL ], ( expected, expected - 1 ) )
-        self.assertEqual( file_duplicate_types_to_counts[ HC.DUPLICATE_MEMBER ], len( self._our_main_dupe_group_hashes ) - 1 )
-        self.assertEqual( file_duplicate_types_to_counts[ HC.DUPLICATE_FALSE_POSITIVE ], 1 )
-        self.assertEqual( file_duplicate_types_to_counts[ HC.DUPLICATE_ALTERNATE ], 1 )
-        self.assertEqual( file_duplicate_types_to_counts[ HC.DUPLICATE_CONFIRMED_ALTERNATE ], 1 )
         
         # remove potentials
         
@@ -1037,97 +1090,75 @@ class TestClientDBDuplicates( unittest.TestCase ):
         
         file_duplicate_types_to_counts = result[ 'counts' ]
         
-        self.assertEqual( len( file_duplicate_types_to_counts ), 4 )
-        
-        self.assertEqual( file_duplicate_types_to_counts[ HC.DUPLICATE_MEMBER ], len( self._our_main_dupe_group_hashes ) - 1 )
-        self.assertEqual( file_duplicate_types_to_counts[ HC.DUPLICATE_FALSE_POSITIVE ], 1 )
-        self.assertEqual( file_duplicate_types_to_counts[ HC.DUPLICATE_ALTERNATE ], 1 )
-        self.assertEqual( file_duplicate_types_to_counts[ HC.DUPLICATE_CONFIRMED_ALTERNATE ], 1 )
-        
-        # remove member
-        
-        self._write( 'remove_duplicates_member', ( self._dupe_hashes[7], ) )
-        
-        self._our_main_dupe_group_hashes.discard( self._dupe_hashes[7] )
-        
-        result = self._read( 'file_duplicate_info', ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY ), self._king_hash )
-        
-        file_duplicate_types_to_counts = result[ 'counts' ]
-        
-        self.assertEqual( len( file_duplicate_types_to_counts ), 4 )
-        
-        self.assertEqual( file_duplicate_types_to_counts[ HC.DUPLICATE_MEMBER ], len( self._our_main_dupe_group_hashes ) - 1 )
-        self.assertEqual( file_duplicate_types_to_counts[ HC.DUPLICATE_FALSE_POSITIVE ], 1 )
-        self.assertEqual( file_duplicate_types_to_counts[ HC.DUPLICATE_ALTERNATE ], 1 )
-        self.assertEqual( file_duplicate_types_to_counts[ HC.DUPLICATE_CONFIRMED_ALTERNATE ], 1 )
-        
-        # clear fps
-        
-        self._write( 'clear_false_positive_relations', ( self._king_hash, ) )
-        
-        result = self._read( 'file_duplicate_info', ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY ), self._king_hash )
-        
-        file_duplicate_types_to_counts = result[ 'counts' ]
-        
-        self.assertEqual( len( file_duplicate_types_to_counts ), 3 )
-        
-        self.assertEqual( file_duplicate_types_to_counts[ HC.DUPLICATE_MEMBER ], len( self._our_main_dupe_group_hashes ) - 1 )
-        self.assertEqual( file_duplicate_types_to_counts[ HC.DUPLICATE_ALTERNATE ], 1 )
-        self.assertEqual( file_duplicate_types_to_counts[ HC.DUPLICATE_CONFIRMED_ALTERNATE ], 1 )
-        
-        # remove alt
-        
-        rows = []
-        
-        rows.append( ( HC.DUPLICATE_ALTERNATE, self._king_hash, self._false_positive_king_hash, [ ClientContentUpdates.ContentUpdatePackage() ] ) )
-        
-        self._write( 'duplicate_pair_status', rows )
-        
-        result = self._read( 'file_duplicate_info', ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY ), self._king_hash )
-        
-        file_duplicate_types_to_counts = result[ 'counts' ]
-        
-        self.assertEqual( len( file_duplicate_types_to_counts ), 3 )
-        
-        self.assertEqual( file_duplicate_types_to_counts[ HC.DUPLICATE_MEMBER ], len( self._our_main_dupe_group_hashes ) - 1 )
-        self.assertEqual( file_duplicate_types_to_counts[ HC.DUPLICATE_ALTERNATE ], 2 )
-        self.assertEqual( file_duplicate_types_to_counts[ HC.DUPLICATE_CONFIRMED_ALTERNATE ], 2 )
-        
-        self._write( 'remove_alternates_member', ( self._false_positive_king_hash, ) )
-        
-        result = self._read( 'file_duplicate_info', ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY ), self._king_hash )
-        
-        file_duplicate_types_to_counts = result[ 'counts' ]
-        
-        self.assertEqual( len( file_duplicate_types_to_counts ), 3 )
-        
-        self.assertEqual( file_duplicate_types_to_counts[ HC.DUPLICATE_MEMBER ], len( self._our_main_dupe_group_hashes ) - 1 )
-        self.assertEqual( file_duplicate_types_to_counts[ HC.DUPLICATE_ALTERNATE ], 1 )
-        self.assertEqual( file_duplicate_types_to_counts[ HC.DUPLICATE_CONFIRMED_ALTERNATE ], 1 )
-        
-        # dissolve alt
-        
-        rows = []
-        
-        rows.append( ( HC.DUPLICATE_ALTERNATE, self._king_hash, self._false_positive_king_hash, [ ClientContentUpdates.ContentUpdatePackage() ] ) )
-        
-        self._write( 'duplicate_pair_status', rows )
-        
-        self._write( 'dissolve_alternates_group', ( self._king_hash, ) )
-        
-        result = self._read( 'file_duplicate_info', ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY ), self._king_hash )
-        
-        file_duplicate_types_to_counts = result[ 'counts' ]
-        
         self.assertEqual( len( file_duplicate_types_to_counts ), 0 )
         
-        # dissolve group
+    
+    def test_remove_member( self ):
         
-        rows = []
+        self._InitialiseState()
         
-        rows.append( ( HC.DUPLICATE_BETTER, self._king_hash, self._dupe_hashes[1], [ ClientContentUpdates.ContentUpdatePackage() ] ) )
+        row = ( HC.DUPLICATE_BETTER, self._king_hash, self._dupe_hashes[1], [ ClientContentUpdates.ContentUpdatePackage() ] )
         
-        self._write( 'duplicate_pair_status', rows )
+        self._write( 'duplicate_pair_status', [ row ] )
+        
+        self._our_main_dupe_group_hashes.add( self._dupe_hashes[1] )
+        
+        self._num_free_agents -= 1
+        
+        self._expected_num_potentials -= self._num_free_agents
+        
+        row = ( HC.DUPLICATE_BETTER, self._king_hash, self._dupe_hashes[2], [ ClientContentUpdates.ContentUpdatePackage() ] )
+        
+        self._write( 'duplicate_pair_status', [ row ] )
+        
+        self._our_main_dupe_group_hashes.add( self._dupe_hashes[2] )
+        
+        self._num_free_agents -= 1
+        
+        self._expected_num_potentials -= self._num_free_agents
+        
+        result = self._read( 'file_duplicate_info', ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY ), self._king_hash )
+        
+        file_duplicate_types_to_counts = result[ 'counts' ]
+        
+        self.assertEqual( len( file_duplicate_types_to_counts ), 2 )
+        
+        self._write( 'maintain_similar_files_search_for_potential_duplicates', 0 )
+        
+        expected = self._get_group_potential_count( file_duplicate_types_to_counts )
+        
+        self.assertIn( file_duplicate_types_to_counts[ HC.DUPLICATE_POTENTIAL ], ( expected, expected - 1 ) )
+        self.assertEqual( file_duplicate_types_to_counts[ HC.DUPLICATE_MEMBER ], len( self._our_main_dupe_group_hashes ) - 1 )
+        
+        self._write( 'remove_duplicates_member', ( self._dupe_hashes[1], ) )
+        
+        self._our_main_dupe_group_hashes.discard( self._dupe_hashes[1] )
+        
+        self._write( 'maintain_similar_files_search_for_potential_duplicates', 0 )
+        
+        result = self._read( 'file_duplicate_info', ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY ), self._king_hash )
+        
+        file_duplicate_types_to_counts = result[ 'counts' ]
+        
+        self.assertEqual( len( file_duplicate_types_to_counts ), 2 )
+        
+        expected = self._get_group_potential_count( file_duplicate_types_to_counts )
+        
+        self.assertIn( file_duplicate_types_to_counts[ HC.DUPLICATE_POTENTIAL ], ( expected, expected - 1 ) )
+        self.assertEqual( file_duplicate_types_to_counts[ HC.DUPLICATE_MEMBER ], len( self._our_main_dupe_group_hashes ) - 1 )
+        
+    
+    def test_remove_fp( self ):
+        
+        self._InitialiseState()
+        
+        row = ( HC.DUPLICATE_FALSE_POSITIVE, self._king_hash, self._false_positive_king_hash, {} )
+        
+        self._write( 'duplicate_pair_status', [ row ] )
+        
+        num_cleared = self._write( 'clear_all_false_positive_relations', ( self._king_hash, ) )
+        
+        self.assertEqual( num_cleared, 1 )
         
         result = self._read( 'file_duplicate_info', ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY ), self._king_hash )
         
@@ -1135,78 +1166,224 @@ class TestClientDBDuplicates( unittest.TestCase ):
         
         self.assertEqual( len( file_duplicate_types_to_counts ), 1 )
         
-        self._write( 'dissolve_duplicates_group', ( self._king_hash, ) )
+        expected = self._get_group_potential_count( file_duplicate_types_to_counts )
+        
+        self.assertIn( file_duplicate_types_to_counts[ HC.DUPLICATE_POTENTIAL ], ( expected, expected - 1 ) )
+        
+    
+    def test_remove_fp_within_fail( self ):
+        
+        self._InitialiseState()
+        
+        row = ( HC.DUPLICATE_FALSE_POSITIVE, self._king_hash, self._false_positive_king_hash, {} )
+        
+        self._write( 'duplicate_pair_status', [ row ] )
+        
+        num_cleared = self._write( 'clear_internal_false_positive_relations', ( self._king_hash, self._dupe_hashes[1] ) )
+        
+        self.assertEqual( num_cleared, 0 )
         
         result = self._read( 'file_duplicate_info', ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY ), self._king_hash )
         
         file_duplicate_types_to_counts = result[ 'counts' ]
         
-        self.assertEqual( len( file_duplicate_types_to_counts ), 0 )
+        self.assertEqual( len( file_duplicate_types_to_counts ), 2 )
+        
+        expected = self._get_group_potential_count( file_duplicate_types_to_counts )
+        
+        self.assertIn( file_duplicate_types_to_counts[ HC.DUPLICATE_POTENTIAL ], ( expected, expected - 1 ) )
+        self.assertEqual( file_duplicate_types_to_counts[ HC.DUPLICATE_FALSE_POSITIVE ], 1 )
         
     
-    def test_duplicates( self ):
+    def test_remove_fp_within_success( self ):
         
-        self._dupe_hashes = [ HydrusData.GenerateKey() for i in range( 16 ) ]
-        self._second_group_dupe_hashes = [ HydrusData.GenerateKey() for i in range( 4 ) ]
-        self._similar_looking_alternate_hashes = [ HydrusData.GenerateKey() for i in range( 5 ) ]
-        self._similar_looking_false_positive_hashes = [ HydrusData.GenerateKey() for i in range( 5 ) ]
+        self._InitialiseState()
         
-        self._all_hashes = set()
+        row = ( HC.DUPLICATE_FALSE_POSITIVE, self._king_hash, self._false_positive_king_hash, {} )
         
-        self._all_hashes.update( self._dupe_hashes )
-        self._all_hashes.update( self._second_group_dupe_hashes )
-        self._all_hashes.update( self._similar_looking_alternate_hashes )
-        self._all_hashes.update( self._similar_looking_false_positive_hashes )
+        self._write( 'duplicate_pair_status', [ row ] )
         
-        self._king_hash = self._dupe_hashes[0]
-        self._second_group_king_hash = self._second_group_dupe_hashes[0]
-        self._false_positive_king_hash = self._similar_looking_false_positive_hashes[0]
-        self._alternate_king_hash = self._similar_looking_alternate_hashes[0]
+        num_cleared = self._write( 'clear_internal_false_positive_relations', ( self._king_hash, self._false_positive_king_hash ) )
         
-        self._our_main_dupe_group_hashes = { self._king_hash }
-        self._our_second_dupe_group_hashes = { self._second_group_king_hash }
-        self._our_alt_dupe_group_hashes = { self._alternate_king_hash }
-        self._our_fp_dupe_group_hashes = { self._false_positive_king_hash }
+        self.assertEqual( num_cleared, 1 )
         
-        n = len( self._all_hashes )
+        result = self._read( 'file_duplicate_info', ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY ), self._king_hash )
         
-        self._num_free_agents = n
+        file_duplicate_types_to_counts = result[ 'counts' ]
         
-        # initial number pair combinations is (n(n-1))/2
-        self._expected_num_potentials = int( n * ( n - 1 ) / 2 )
+        self.assertEqual( len( file_duplicate_types_to_counts ), 1 )
         
-        size_pred = ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_SIZE, ( '=', 65535, HydrusNumbers.UnitToInt( 'B' ) ) )
-        png_pred = ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_MIME, ( HC.IMAGE_PNG, ) )
+        expected = self._get_group_potential_count( file_duplicate_types_to_counts )
         
-        location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY )
+        self.assertIn( file_duplicate_types_to_counts[ HC.DUPLICATE_POTENTIAL ], ( expected, expected - 1 ) )
         
-        self._file_search_context_1 = ClientSearchFileSearchContext.FileSearchContext( location_context = location_context, predicates = [ size_pred ] )
-        self._file_search_context_2 = ClientSearchFileSearchContext.FileSearchContext( location_context = location_context, predicates = [ png_pred ] )
+    
+    def test_remove_alt( self ):
         
-        self._import_and_find_dupes()
+        self._InitialiseState()
         
-        self._test_initial_state()
+        rows = []
         
-        self._test_initial_better_worse()
-        self._test_initial_king_usurp()
-        self._test_initial_same_quality()
+        rows.append( ( HC.DUPLICATE_ALTERNATE, self._king_hash, self._dupe_hashes[1], [ ClientContentUpdates.ContentUpdatePackage() ] ) )
         
-        self._test_explicit_set_new_king()
+        self._write( 'duplicate_pair_status', rows )
         
-        self._test_establish_second_group()
-        self._test_poach_better()
-        self._test_poach_same()
-        self._test_group_merge()
+        rows = []
         
-        self._test_establish_false_positive_group()
-        self._test_false_positive()
+        rows.append( ( HC.DUPLICATE_ALTERNATE, self._king_hash, self._dupe_hashes[2], [ ClientContentUpdates.ContentUpdatePackage() ] ) )
         
-        self._test_establish_alt_group()
-        self._test_alt()
+        self._write( 'duplicate_pair_status', rows )
         
-        self._test_expand_false_positive()
-        self._test_expand_alt()
+        result = self._read( 'file_duplicate_info', ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY ), self._king_hash )
         
-        self._test_dissolve()
+        file_duplicate_types_to_counts = result[ 'counts' ]
+        
+        self.assertEqual( len( file_duplicate_types_to_counts ), 3 )
+        
+        expected = self._get_group_potential_count( file_duplicate_types_to_counts )
+        
+        self.assertIn( file_duplicate_types_to_counts[ HC.DUPLICATE_POTENTIAL ], ( expected, expected - 1 ) )
+        self.assertEqual( file_duplicate_types_to_counts[ HC.DUPLICATE_ALTERNATE ], 2 )
+        self.assertEqual( file_duplicate_types_to_counts[ HC.DUPLICATE_CONFIRMED_ALTERNATE ], 2 )
+        
+        self._write( 'remove_alternates_member', ( self._dupe_hashes[1], ) )
+        
+        self._write( 'maintain_similar_files_search_for_potential_duplicates', 0 )
+        
+        result = self._read( 'file_duplicate_info', ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY ), self._king_hash )
+        
+        file_duplicate_types_to_counts = result[ 'counts' ]
+        
+        self.assertEqual( len( file_duplicate_types_to_counts ), 3 )
+        
+        expected = self._get_group_potential_count( file_duplicate_types_to_counts )
+        
+        self.assertIn( file_duplicate_types_to_counts[ HC.DUPLICATE_POTENTIAL ], ( expected, expected - 1 ) )
+        self.assertEqual( file_duplicate_types_to_counts[ HC.DUPLICATE_ALTERNATE ], 1 )
+        self.assertEqual( file_duplicate_types_to_counts[ HC.DUPLICATE_CONFIRMED_ALTERNATE ], 1 )
+        
+    
+    def test_dissolve_alt( self ):
+        
+        self._InitialiseState()
+        
+        row = ( HC.DUPLICATE_BETTER, self._king_hash, self._dupe_hashes[3], [ ClientContentUpdates.ContentUpdatePackage() ] )
+        
+        self._write( 'duplicate_pair_status', [ row ] )
+        
+        self._our_main_dupe_group_hashes.add( self._dupe_hashes[3] )
+        
+        self._num_free_agents -= 1
+        
+        self._expected_num_potentials -= self._num_free_agents
+        
+        rows = []
+        
+        rows.append( ( HC.DUPLICATE_ALTERNATE, self._king_hash, self._dupe_hashes[1], [ ClientContentUpdates.ContentUpdatePackage() ] ) )
+        
+        self._write( 'duplicate_pair_status', rows )
+        
+        rows = []
+        
+        rows.append( ( HC.DUPLICATE_ALTERNATE, self._king_hash, self._dupe_hashes[2], [ ClientContentUpdates.ContentUpdatePackage() ] ) )
+        
+        self._write( 'duplicate_pair_status', rows )
+        
+        result = self._read( 'file_duplicate_info', ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY ), self._king_hash )
+        
+        file_duplicate_types_to_counts = result[ 'counts' ]
+        
+        self.assertEqual( len( file_duplicate_types_to_counts ), 4 )
+        
+        expected = self._get_group_potential_count( file_duplicate_types_to_counts )
+        
+        self.assertIn( file_duplicate_types_to_counts[ HC.DUPLICATE_POTENTIAL ], ( expected, expected - 1 ) )
+        self.assertEqual( file_duplicate_types_to_counts[ HC.DUPLICATE_MEMBER ], len( self._our_main_dupe_group_hashes ) - 1 )
+        self.assertEqual( file_duplicate_types_to_counts[ HC.DUPLICATE_ALTERNATE ], 2 )
+        self.assertEqual( file_duplicate_types_to_counts[ HC.DUPLICATE_CONFIRMED_ALTERNATE ], 2 )
+        
+        self._write( 'dissolve_alternates_group', ( self._king_hash, ) )
+        
+        self._our_main_dupe_group_hashes.discard( self._dupe_hashes[3] )
+        
+        self._write( 'maintain_similar_files_search_for_potential_duplicates', 0 )
+        
+        result = self._read( 'file_duplicate_info', ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY ), self._king_hash )
+        
+        file_duplicate_types_to_counts = result[ 'counts' ]
+        
+        self.assertEqual( len( file_duplicate_types_to_counts ), 1 )
+        
+        expected = self._get_group_potential_count( file_duplicate_types_to_counts )
+        
+        self.assertIn( file_duplicate_types_to_counts[ HC.DUPLICATE_POTENTIAL ], ( expected, expected - 1 ) )
+        
+    
+    def test_dissolve_group( self ):
+        
+        self._InitialiseState()
+        
+        row = ( HC.DUPLICATE_BETTER, self._king_hash, self._dupe_hashes[3], [ ClientContentUpdates.ContentUpdatePackage() ] )
+        
+        self._write( 'duplicate_pair_status', [ row ] )
+        
+        self._our_main_dupe_group_hashes.add( self._dupe_hashes[3] )
+        
+        self._num_free_agents -= 1
+        
+        self._expected_num_potentials -= self._num_free_agents
+        
+        rows = []
+        
+        rows.append( ( HC.DUPLICATE_ALTERNATE, self._king_hash, self._dupe_hashes[1], [ ClientContentUpdates.ContentUpdatePackage() ] ) )
+        
+        self._write( 'duplicate_pair_status', rows )
+        
+        rows = []
+        
+        rows.append( ( HC.DUPLICATE_ALTERNATE, self._king_hash, self._dupe_hashes[2], [ ClientContentUpdates.ContentUpdatePackage() ] ) )
+        
+        self._write( 'duplicate_pair_status', rows )
+        
+        result = self._read( 'file_duplicate_info', ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY ), self._king_hash )
+        
+        file_duplicate_types_to_counts = result[ 'counts' ]
+        
+        self.assertEqual( len( file_duplicate_types_to_counts ), 4 )
+        
+        expected = self._get_group_potential_count( file_duplicate_types_to_counts )
+        
+        self.assertIn( file_duplicate_types_to_counts[ HC.DUPLICATE_POTENTIAL ], ( expected, expected - 1 ) )
+        self.assertEqual( file_duplicate_types_to_counts[ HC.DUPLICATE_MEMBER ], len( self._our_main_dupe_group_hashes ) - 1 )
+        self.assertEqual( file_duplicate_types_to_counts[ HC.DUPLICATE_ALTERNATE ], 2 )
+        self.assertEqual( file_duplicate_types_to_counts[ HC.DUPLICATE_CONFIRMED_ALTERNATE ], 2 )
+        
+        self._write( 'dissolve_duplicates_group', ( self._king_hash, ) )
+        
+        self._our_main_dupe_group_hashes.discard( self._dupe_hashes[3] )
+        
+        self._write( 'maintain_similar_files_search_for_potential_duplicates', 0 )
+        
+        result = self._read( 'file_duplicate_info', ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY ), self._king_hash )
+        
+        file_duplicate_types_to_counts = result[ 'counts' ]
+        
+        self.assertEqual( len( file_duplicate_types_to_counts ), 1 )
+        
+        expected = self._get_group_potential_count( file_duplicate_types_to_counts )
+        
+        self.assertIn( file_duplicate_types_to_counts[ HC.DUPLICATE_POTENTIAL ], ( expected, expected - 1 ) )
+        
+        result = self._read( 'file_duplicate_info', ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY ), self._dupe_hashes[1] )
+        
+        file_duplicate_types_to_counts = result[ 'counts' ]
+        
+        self.assertEqual( len( file_duplicate_types_to_counts ), 2 )
+        
+        expected = self._get_group_potential_count( file_duplicate_types_to_counts )
+        
+        self.assertIn( file_duplicate_types_to_counts[ HC.DUPLICATE_POTENTIAL ], ( expected, expected - 1 ) )
+        self.assertEqual( file_duplicate_types_to_counts[ HC.DUPLICATE_ALTERNATE ], 1 )
+        # ~no confirmed alternate~
         
     

@@ -1,4 +1,4 @@
-import typing
+import collections.abc
 
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
@@ -26,7 +26,7 @@ from hydrus.client.metadata import ClientTagSorting
 from hydrus.client.parsing import ClientParsingLegacy
 from hydrus.client.search import ClientSearchPredicate
 
-def FilterSuggestedPredicatesForMedia( predicates: typing.Sequence[ ClientSearchPredicate.Predicate ], medias: typing.Collection[ ClientMedia.Media ], service_key: bytes ) -> typing.List[ ClientSearchPredicate.Predicate ]:
+def FilterSuggestedPredicatesForMedia( predicates: collections.abc.Sequence[ ClientSearchPredicate.Predicate ], medias: collections.abc.Collection[ ClientMedia.Media ], service_key: bytes ) -> list[ ClientSearchPredicate.Predicate ]:
     
     tags = [ predicate.GetValue() for predicate in predicates ]
     
@@ -37,7 +37,7 @@ def FilterSuggestedPredicatesForMedia( predicates: typing.Sequence[ ClientSearch
     return predicates
     
 
-def FilterSuggestedTagsForMedia( tags: typing.Sequence[ str ], medias: typing.Collection[ ClientMedia.Media ], service_key: bytes ) -> typing.List[ str ]:
+def FilterSuggestedTagsForMedia( tags: collections.abc.Sequence[ str ], medias: collections.abc.Collection[ ClientMedia.Media ], service_key: bytes ) -> list[ str ]:
     
     num_media = len( medias )
     

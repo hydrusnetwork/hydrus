@@ -1,3 +1,4 @@
+import collections.abc
 import sqlite3
 import typing
 
@@ -59,7 +60,7 @@ class ClientDBNotesMap( ClientDBModule.ClientDBModule ):
         return self._STS( self._ExecuteCancellable( 'SELECT hash_id FROM file_notes CROSS JOIN {} USING ( hash_id ) WHERE name_id = ?;'.format( hash_ids_table_name ), ( label_id, ), cancelled_hook ) )
         
     
-    def GetHashIdsFromNumNotes( self, number_tests: typing.List[ ClientNumberTest.NumberTest ], hash_ids: typing.Collection[ int ], hash_ids_table_name: str, job_status: typing.Optional[ ClientThreading.JobStatus ] = None ):
+    def GetHashIdsFromNumNotes( self, number_tests: list[ ClientNumberTest.NumberTest ], hash_ids: collections.abc.Collection[ int ], hash_ids_table_name: str, job_status: typing.Optional[ ClientThreading.JobStatus ] = None ):
         
         result_hash_ids = set( hash_ids )
         
@@ -156,7 +157,7 @@ class ClientDBNotesMap( ClientDBModule.ClientDBModule ):
         return hash_ids_to_names_and_notes
         
     
-    def GetTablesAndColumnsThatUseDefinitions( self, content_type: int ) -> typing.List[ typing.Tuple[ str, str ] ]:
+    def GetTablesAndColumnsThatUseDefinitions( self, content_type: int ) -> list[ tuple[ str, str ] ]:
         
         # if content type is a domain, then give urls? bleh
         

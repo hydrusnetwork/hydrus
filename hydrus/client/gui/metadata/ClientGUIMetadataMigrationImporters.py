@@ -1,4 +1,4 @@
-import typing
+import collections.abc
 
 from qtpy import QtWidgets as QW
 
@@ -435,7 +435,7 @@ def convert_importer_to_pretty_string( importer: ClientMetadataMigrationImporter
 
 class SingleFileMetadataImportersControl( ClientGUIListBoxes.AddEditDeleteListBox ):
     
-    def __init__( self, parent: QW.QWidget, importers: typing.Collection[ ClientMetadataMigrationImporters.SingleFileMetadataImporter ], allowed_importer_classes: list, test_context_factory: ClientGUIMetadataMigrationTest.MigrationTestContextFactory ):
+    def __init__( self, parent: QW.QWidget, importers: collections.abc.Collection[ ClientMetadataMigrationImporters.SingleFileMetadataImporter ], allowed_importer_classes: list, test_context_factory: ClientGUIMetadataMigrationTest.MigrationTestContextFactory ):
         
         super().__init__( parent, 5, convert_importer_to_pretty_string, self._AddImporter, self._EditImporter )
         

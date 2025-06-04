@@ -1,4 +1,5 @@
 import collections
+import collections.abc
 import cv2
 import numpy
 import struct

@@ -1,5 +1,3 @@
-import typing
-
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTags
 from hydrus.core import HydrusText
@@ -213,7 +211,7 @@ def namespace_user_key_factory():
     return namespace_user_key
     
 
-def SortTags( tag_sort: TagSort, list_of_tag_items: typing.List, tag_items_to_count = None, item_to_tag_key_wrapper = None, item_to_sibling_key_wrapper = None ):
+def SortTags( tag_sort: TagSort, list_of_tag_items: list, tag_items_to_count = None, item_to_tag_key_wrapper = None, item_to_sibling_key_wrapper = None ):
     
     def incidence_key( tag_item ):
         

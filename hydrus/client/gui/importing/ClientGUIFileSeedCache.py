@@ -1,4 +1,4 @@
-import typing
+import collections.abc
 
 from qtpy import QtWidgets as QW
 
@@ -75,7 +75,7 @@ def GetSourcesFromSourcesString( sources_string ):
     return sources
     
 
-def ExportFileSeedsToClipboard( file_seeds: typing.Collection[ ClientImportFileSeeds.FileSeed ] ):
+def ExportFileSeedsToClipboard( file_seeds: collections.abc.Collection[ ClientImportFileSeeds.FileSeed ] ):
     
     file_seeds = HydrusSerialisable.SerialisableList( file_seeds )
     
@@ -245,7 +245,7 @@ def ShowFilesInNewPage( file_seed_cache: ClientImportFileSeeds.FileSeedCache, sh
         
     
 
-def PopulateFileSeedCacheMenu( win: QW.QWidget, menu: QW.QMenu, file_seed_cache: ClientImportFileSeeds.FileSeedCache, selected_file_seeds: typing.List[ ClientImportFileSeeds.FileSeed ] ):
+def PopulateFileSeedCacheMenu( win: QW.QWidget, menu: QW.QMenu, file_seed_cache: ClientImportFileSeeds.FileSeedCache, selected_file_seeds: list[ ClientImportFileSeeds.FileSeed ] ):
     
     num_already_in = file_seed_cache.GetFileSeedCount( CC.STATUS_SUCCESSFUL_BUT_REDUNDANT )
     num_successful = file_seed_cache.GetFileSeedCount( CC.STATUS_SUCCESSFUL_AND_NEW ) + num_already_in

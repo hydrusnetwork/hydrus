@@ -127,8 +127,8 @@ SIMPLE_DUPLICATE_MEDIA_RESET_POTENTIAL_SEARCH = 114
 SIMPLE_DUPLICATE_MEDIA_REMOVE_FOCUSED_POTENTIALS = 115
 SIMPLE_DUPLICATE_MEDIA_REMOVE_POTENTIALS = 116
 SIMPLE_DUPLICATE_MEDIA_SET_POTENTIAL = 117
-SIMPLE_DUPLICATE_MEDIA_CLEAR_FALSE_POSITIVES = 118
-SIMPLE_DUPLICATE_MEDIA_CLEAR_FOCUSED_FALSE_POSITIVES = 119
+SIMPLE_DUPLICATE_MEDIA_CLEAR_ALL_FALSE_POSITIVES = 118
+SIMPLE_DUPLICATE_MEDIA_CLEAR_ALL_FOCUSED_FALSE_POSITIVES = 119
 SIMPLE_RUN_ALL_EXPORT_FOLDERS = 120
 SIMPLE_MOVE_PAGES_SELECTION_LEFT = 121
 SIMPLE_MOVE_PAGES_SELECTION_RIGHT = 122
@@ -193,6 +193,7 @@ SIMPLE_RESIZE_WINDOW_TO_MEDIA_VIEWER_CENTER = 180
 SIMPLE_RESIZE_WINDOW_TO_MEDIA_ZOOMED = 181
 SIMPLE_RESIZE_WINDOW_TO_MEDIA_ZOOMED_VIEWER_CENTER = 182
 SIMPLE_OPEN_OPTIONS = 183
+SIMPLE_DUPLICATE_MEDIA_CLEAR_INTERNAL_FALSE_POSITIVES = 184
 
 REARRANGE_THUMBNAILS_TYPE_FIXED = 0
 REARRANGE_THUMBNAILS_TYPE_COMMAND = 1
@@ -397,19 +398,20 @@ simple_enum_to_str_lookup = {
     SIMPLE_SWITCH_BETWEEN_100_PERCENT_AND_CANVAS_FIT_AND_FILL_ZOOM : 'zoom: switch 100% and canvas fit/fill',
     SIMPLE_SWITCH_BETWEEN_100_PERCENT_AND_CANVAS_FIT_AND_FILL_ZOOM_VIEWER_CENTER : 'zoom: switch 100% and canvas fit/fill with forced media viewer center',
     SIMPLE_SHOW_DUPLICATES : 'file relationships: show',
-    SIMPLE_DUPLICATE_MEDIA_DISSOLVE_FOCUSED_ALTERNATE_GROUP : 'file relationships: dissolve focused file alternate group',
+    SIMPLE_DUPLICATE_MEDIA_DISSOLVE_FOCUSED_ALTERNATE_GROUP : 'file relationships: dissolve alternate group (just focused file)',
     SIMPLE_DUPLICATE_MEDIA_DISSOLVE_ALTERNATE_GROUP : 'file relationships: completely dissolve alternate groups',
-    SIMPLE_DUPLICATE_MEDIA_DISSOLVE_FOCUSED_DUPLICATE_GROUP : 'file relationships: dissolve focused file duplicate group',
+    SIMPLE_DUPLICATE_MEDIA_DISSOLVE_FOCUSED_DUPLICATE_GROUP : 'file relationships: dissolve duplicate group (just focused file)',
     SIMPLE_DUPLICATE_MEDIA_DISSOLVE_DUPLICATE_GROUP : 'file relationships: completely dissolve duplicate groups',
-    SIMPLE_DUPLICATE_MEDIA_REMOVE_FOCUSED_FROM_ALTERNATE_GROUP : 'file relationships: remove focused file from alternate group',
-    SIMPLE_DUPLICATE_MEDIA_REMOVE_FOCUSED_FROM_DUPLICATE_GROUP : 'file relationships: remove focused file from duplicate group',
-    SIMPLE_DUPLICATE_MEDIA_RESET_FOCUSED_POTENTIAL_SEARCH : 'file relationships: reset focused file potential search',
+    SIMPLE_DUPLICATE_MEDIA_REMOVE_FOCUSED_FROM_ALTERNATE_GROUP : 'file relationships: remove from alternate group (just focused file)',
+    SIMPLE_DUPLICATE_MEDIA_REMOVE_FOCUSED_FROM_DUPLICATE_GROUP : 'file relationships: remove from duplicate group (just focused file)',
+    SIMPLE_DUPLICATE_MEDIA_RESET_FOCUSED_POTENTIAL_SEARCH : 'file relationships: reset potential search (just focused file)',
     SIMPLE_DUPLICATE_MEDIA_RESET_POTENTIAL_SEARCH : 'file relationships: reset potential searches',
-    SIMPLE_DUPLICATE_MEDIA_REMOVE_FOCUSED_POTENTIALS : 'file relationships: remove focused file from potential duplicate pairs',
+    SIMPLE_DUPLICATE_MEDIA_REMOVE_FOCUSED_POTENTIALS : 'file relationships: remove from potential duplicate pairs (just focused file)',
     SIMPLE_DUPLICATE_MEDIA_REMOVE_POTENTIALS : 'file relationships: remove files from potential duplicate pairs',
     SIMPLE_DUPLICATE_MEDIA_SET_POTENTIAL : 'file relationships: set files as potential duplicates',
-    SIMPLE_DUPLICATE_MEDIA_CLEAR_FALSE_POSITIVES : 'file relationships: delete false positives',
-    SIMPLE_DUPLICATE_MEDIA_CLEAR_FOCUSED_FALSE_POSITIVES : 'file relationships: clear focused file false positives',
+    SIMPLE_DUPLICATE_MEDIA_CLEAR_ALL_FALSE_POSITIVES : 'file relationships: delete all false positives',
+    SIMPLE_DUPLICATE_MEDIA_CLEAR_ALL_FOCUSED_FALSE_POSITIVES : 'file relationships: clear all false positives (just focused file)',
+    SIMPLE_DUPLICATE_MEDIA_CLEAR_INTERNAL_FALSE_POSITIVES : 'file relationships: delete false positives within selection',
     SIMPLE_AUTOCOMPLETE_FORCE_FETCH : 'force-fetch tag autocomplete results',
     SIMPLE_AUTOCOMPLETE_IME_MODE : 'flip IME-friendly mode on/off (this disables extra shortcut processing so you can do IME popup stuff)',
     SIMPLE_AUTOCOMPLETE_IF_EMPTY_TAB_LEFT : 'if input is empty, move left one autocomplete dropdown tab',

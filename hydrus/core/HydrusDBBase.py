@@ -1,4 +1,5 @@
 import collections
+import collections.abc
 import threading
 import time
 import typing
@@ -163,7 +164,7 @@ class TemporaryIntegerTableNameCache( object ):
         self._column_name_tuples_counter = collections.Counter()
         
     
-    def GetName( self, column_names: typing.Tuple[ str ] ):
+    def GetName( self, column_names: tuple[ str ] ):
         
         if isinstance( column_names, str ):
             
@@ -192,7 +193,7 @@ class TemporaryIntegerTableNameCache( object ):
         return ( initialised, table_name )
         
     
-    def ReleaseName( self, column_names: typing.Tuple[ str ], table_name: str ):
+    def ReleaseName( self, column_names: tuple[ str ], table_name: str ):
         
         if isinstance( column_names, str ):
             
@@ -444,7 +445,7 @@ class DBBase( object ):
         return self._c.execute( query, *query_args )
         
     
-    def _ExecuteCancellable( self, query, query_args, cancelled_hook: typing.Callable[ [], bool ] ):
+    def _ExecuteCancellable( self, query, query_args, cancelled_hook: collections.abc.Callable[ [], bool ] ):
         
         cursor = self._Execute( query, query_args )
         
@@ -510,7 +511,7 @@ class DBBase( object ):
             
         
     
-    def _GetSumResult( self, result: typing.Optional[ typing.Tuple[ typing.Optional[ int ] ] ] ) -> int:
+    def _GetSumResult( self, result: typing.Optional[ tuple[ typing.Optional[ int ] ] ] ) -> int:
         
         if result is None or result[0] is None:
             

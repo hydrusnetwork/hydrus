@@ -1,4 +1,4 @@
-import typing
+import collections.abc
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
@@ -13,9 +13,9 @@ from hydrus.client import ClientUgoiraHandling
 from hydrus.client.media import ClientMediaResult
 from hydrus.client.media import ClientMediaResultPrettyInfoObjects
 
-def ConvertInfoLinesToTextBlock( info_lines: typing.Collection[ ClientMediaResultPrettyInfoObjects.PrettyMediaResultInfoLine ] ) -> str:
+def ConvertInfoLinesToTextBlock( info_lines: collections.abc.Collection[ ClientMediaResultPrettyInfoObjects.PrettyMediaResultInfoLine ] ) -> str:
     
-    def convert_to_block_lines( lines, indent = '' ) -> typing.List[ str ]:
+    def convert_to_block_lines( lines, indent = '' ) -> list[ str ]:
         
         my_lines = []
         
@@ -41,7 +41,7 @@ def ConvertInfoLinesToTextBlock( info_lines: typing.Collection[ ClientMediaResul
     return '\n'.join( block_lines )
     
 
-def GetPrettyMediaResultInfoLines( media_result: ClientMediaResult.MediaResult, only_interesting_lines = False ) -> typing.List[ ClientMediaResultPrettyInfoObjects.PrettyMediaResultInfoLine ]:
+def GetPrettyMediaResultInfoLines( media_result: ClientMediaResult.MediaResult, only_interesting_lines = False ) -> list[ ClientMediaResultPrettyInfoObjects.PrettyMediaResultInfoLine ]:
     
     def timestamp_ms_is_interesting( timestamp_ms_1, timestamp_ms_2 ):
         

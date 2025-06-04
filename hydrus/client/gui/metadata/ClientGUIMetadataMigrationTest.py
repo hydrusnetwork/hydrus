@@ -1,4 +1,4 @@
-import typing
+import collections.abc
 
 from hydrus.client.media import ClientMediaResult
 from hydrus.client.metadata import ClientMetadataMigrationImporters
@@ -42,7 +42,7 @@ class MigrationTestContextFactory( object ):
             
         
     
-    def GetTestObjects( self ) -> typing.Collection[ object ]:
+    def GetTestObjects( self ) -> collections.abc.Collection[ object ]:
         
         raise NotImplementedError()
         
@@ -55,14 +55,14 @@ class MigrationTestContextFactory( object ):
 
 class MigrationTestContextFactorySidecar( MigrationTestContextFactory ):
     
-    def __init__( self, example_file_paths: typing.Collection[ str ] ):
+    def __init__( self, example_file_paths: collections.abc.Collection[ str ] ):
         
         super().__init__()
         
         self._example_file_paths = example_file_paths
         
     
-    def GetExampleFilePaths( self ) -> typing.List[ str ]:
+    def GetExampleFilePaths( self ) -> list[ str ]:
         
         return list( self._example_file_paths )
         
@@ -72,7 +72,7 @@ class MigrationTestContextFactorySidecar( MigrationTestContextFactory ):
         return super().GetExampleTestStringsForTestObject( importer, test_object, sans_string_processing = sans_string_processing )
         
     
-    def GetTestObjects( self ) -> typing.Collection[ str ]:
+    def GetTestObjects( self ) -> collections.abc.Collection[ str ]:
         
         return self._example_file_paths
         
@@ -82,7 +82,7 @@ class MigrationTestContextFactorySidecar( MigrationTestContextFactory ):
         return test_object
         
     
-    def SetExampleFilePaths( self, paths: typing.Collection[ str ] ):
+    def SetExampleFilePaths( self, paths: collections.abc.Collection[ str ] ):
         
         self._example_file_paths = paths
         
@@ -90,7 +90,7 @@ class MigrationTestContextFactorySidecar( MigrationTestContextFactory ):
 
 class MigrationTestContextFactoryMedia( MigrationTestContextFactory ):
     
-    def __init__( self, example_media_results: typing.Collection[ ClientMediaResult.MediaResult ] ):
+    def __init__( self, example_media_results: collections.abc.Collection[ ClientMediaResult.MediaResult ] ):
         
         super().__init__()
         
@@ -102,7 +102,7 @@ class MigrationTestContextFactoryMedia( MigrationTestContextFactory ):
         return super().GetExampleTestStringsForTestObject( importer, test_object, sans_string_processing = sans_string_processing )
         
     
-    def GetTestObjects( self ) -> typing.Collection[ ClientMediaResult.MediaResult ]:
+    def GetTestObjects( self ) -> collections.abc.Collection[ ClientMediaResult.MediaResult ]:
         
         return self._example_media_results
         
@@ -112,7 +112,7 @@ class MigrationTestContextFactoryMedia( MigrationTestContextFactory ):
         return test_object.GetHash().hex()
         
     
-    def SetExampleMediaResults( self, media_results: typing.Collection[ ClientMediaResult.MediaResult ] ):
+    def SetExampleMediaResults( self, media_results: collections.abc.Collection[ ClientMediaResult.MediaResult ] ):
         
         self._example_media_results = media_results
         

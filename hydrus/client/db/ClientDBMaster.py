@@ -1,6 +1,6 @@
+import collections.abc
 import os
 import sqlite3
-import typing
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
@@ -20,7 +20,7 @@ class ClientDBMasterHashes( ClientDBModule.ClientDBModule ):
         self._hash_ids_to_hashes_cache = {}
         
     
-    def _GetCriticalTableNames( self ) -> typing.Collection[ str ]:
+    def _GetCriticalTableNames( self ) -> collections.abc.Collection[ str ]:
         
         return {
             'external_master.hashes'
@@ -166,7 +166,7 @@ class ClientDBMasterHashes( ClientDBModule.ClientDBModule ):
         return hash
         
     
-    def GetFileHashes( self, given_hashes, given_hash_type, desired_hash_type ) -> typing.Dict[ bytes, bytes ]:
+    def GetFileHashes( self, given_hashes, given_hash_type, desired_hash_type ) -> dict[ bytes, bytes ]:
         
         if given_hash_type == 'sha256':
             
@@ -220,7 +220,7 @@ class ClientDBMasterHashes( ClientDBModule.ClientDBModule ):
         return self._hash_ids_to_hashes_cache[ hash_id ]
         
     
-    def GetHashes( self, hash_ids ) -> typing.List[ bytes ]:
+    def GetHashes( self, hash_ids ) -> list[ bytes ]:
         
         self._PopulateHashIdsToHashesCache( hash_ids )
         
@@ -274,7 +274,7 @@ class ClientDBMasterHashes( ClientDBModule.ClientDBModule ):
         return hash_id
         
     
-    def GetHashIds( self, hashes ) -> typing.Set[ int ]:
+    def GetHashIds( self, hashes ) -> set[ int ]:
         
         hash_ids = set()
         hashes_not_in_db = set()
@@ -335,7 +335,7 @@ class ClientDBMasterHashes( ClientDBModule.ClientDBModule ):
         return hash_ids_to_hashes
         
     
-    def GetTablesAndColumnsThatUseDefinitions( self, content_type: int ) -> typing.List[ typing.Tuple[ str, str ] ]:
+    def GetTablesAndColumnsThatUseDefinitions( self, content_type: int ) -> list[ tuple[ str, str ] ]:
         
         if content_type == HC.CONTENT_TYPE_HASH:
             
@@ -437,7 +437,7 @@ class ClientDBMasterTexts( ClientDBModule.ClientDBModule ):
         return note_id
         
     
-    def GetTablesAndColumnsThatUseDefinitions( self, content_type: int ) -> typing.List[ typing.Tuple[ str, str ] ]:
+    def GetTablesAndColumnsThatUseDefinitions( self, content_type: int ) -> list[ tuple[ str, str ] ]:
         
         # maaaybe a note content_type in the end
         
@@ -487,7 +487,7 @@ class ClientDBMasterTags( ClientDBModule.ClientDBModule ):
         self._tag_ids_to_tags_cache = {}
         
     
-    def _GetCriticalTableNames( self ) -> typing.Collection[ str ]:
+    def _GetCriticalTableNames( self ) -> collections.abc.Collection[ str ]:
         
         return {
             'external_master.namespaces',
@@ -620,7 +620,7 @@ class ClientDBMasterTags( ClientDBModule.ClientDBModule ):
         return subtag_id
         
     
-    def GetTablesAndColumnsThatUseDefinitions( self, content_type: int ) -> typing.List[ typing.Tuple[ str, str ] ]:
+    def GetTablesAndColumnsThatUseDefinitions( self, content_type: int ) -> list[ tuple[ str, str ] ]:
         
         # maybe content type subtag/namespace, which would useful for bad subtags, although that's tricky because then the knock-on is killing tag definition rows
         
@@ -672,7 +672,7 @@ class ClientDBMasterTags( ClientDBModule.ClientDBModule ):
         return tag_id
         
     
-    def GetTagIdsToTags( self, tag_ids = None, tags = None ) -> typing.Dict[ int, str ]:
+    def GetTagIdsToTags( self, tag_ids = None, tags = None ) -> dict[ int, str ]:
         
         if tag_ids is not None:
             
@@ -822,7 +822,7 @@ class ClientDBMasterURLs( ClientDBModule.ClientDBModule ):
         }
         
     
-    def GetTablesAndColumnsThatUseDefinitions( self, content_type: int ) -> typing.List[ typing.Tuple[ str, str ] ]:
+    def GetTablesAndColumnsThatUseDefinitions( self, content_type: int ) -> list[ tuple[ str, str ] ]:
         
         # if content type is a domain, then give urls? bleh
         

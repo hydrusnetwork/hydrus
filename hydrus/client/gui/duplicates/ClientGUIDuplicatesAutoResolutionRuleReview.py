@@ -180,32 +180,50 @@ class ReviewActionsPanel( ClientGUIScrolledPanels.ReviewPanel ):
                 
             
         
-        # this is safe to run on a bunch of related pairs like AB, AC, DB--the db figures that out
-        CG.client_controller.WriteSynchronous( 'duplicate_auto_resolution_approve_pending_pairs', self._rule, selected_pairs )
+        rule = self._rule
         
-        self._pending_action_pairs = [ pair for pair in self._pending_action_pairs if pair not in selected_pairs ]
-        
-        self._pending_actions_label.setText( f'{HydrusNumbers.ToHumanInt(len(self._pending_action_pairs))} pairs remaining.' )
-        
-        self._pending_actions_pair_list.SetData( self._pending_action_pairs )
-        
-        self._actioned_pairs_with_info = [] # trigger a refresh
-        
-        if len( self._pending_action_pairs ) > 0:
+        def work_callable():
             
-            if len( self._pending_action_pairs ) > earliest_selected_row_index:
+            # this is safe to run on a bunch of related pairs like AB, AC, DB--the db figures that out
+            CG.client_controller.WriteSynchronous( 'duplicate_auto_resolution_approve_pending_pairs', rule, selected_pairs )
+            
+            return 1
+            
+        
+        def publish_callable( _ ):
+            
+            self._pending_actions_panel.setEnabled( True )
+            
+            self._pending_action_pairs = [ pair for pair in self._pending_action_pairs if pair not in selected_pairs ]
+            
+            self._pending_actions_label.setText( f'{HydrusNumbers.ToHumanInt(len(self._pending_action_pairs))} pairs remaining.' )
+            
+            self._pending_actions_pair_list.SetData( self._pending_action_pairs )
+            
+            self._actioned_pairs_with_info = [] # trigger a refresh
+            
+            if len( self._pending_action_pairs ) > 0:
                 
-                self._pending_actions_pair_list.selectRow( earliest_selected_row_index )
+                if len( self._pending_action_pairs ) > earliest_selected_row_index:
+                    
+                    self._pending_actions_pair_list.selectRow( earliest_selected_row_index )
+                    
+                else:
+                    
+                    self._pending_actions_pair_list.selectRow( len( self._pending_action_pairs ) - 1 )
+                    
                 
             else:
                 
-                self._pending_actions_pair_list.selectRow( len( self._pending_action_pairs ) - 1 )
+                self._RefetchPendingActionPairs()
                 
             
-        else:
-            
-            self._RefetchPendingActionPairs()
-            
+        
+        self._pending_actions_panel.setEnabled( False )
+        
+        job = ClientGUIAsync.AsyncQtJob( self, work_callable, publish_callable )
+        
+        job.start()
         
     
     def _CurrentPageChanged( self ):
@@ -254,29 +272,47 @@ class ReviewActionsPanel( ClientGUIScrolledPanels.ReviewPanel ):
                 
             
         
-        CG.client_controller.WriteSynchronous( 'duplicate_auto_resolution_deny_pending_pairs', self._rule, selected_pairs )
+        rule = self._rule
         
-        self._pending_action_pairs = [ pair for pair in self._pending_action_pairs if pair not in selected_pairs ]
-        
-        self._pending_actions_label.setText( f'{HydrusNumbers.ToHumanInt(len(self._pending_action_pairs))} pairs remaining.' )
-        
-        self._pending_actions_pair_list.SetData( self._pending_action_pairs )
-        
-        if len( self._pending_action_pairs ) > 0:
+        def work_callable():
             
-            if len( self._pending_action_pairs ) > earliest_selected_row_index:
+            CG.client_controller.WriteSynchronous( 'duplicate_auto_resolution_deny_pending_pairs', rule, selected_pairs )
+            
+            return 1
+            
+        
+        def publish_callable( _ ):
+            
+            self._pending_actions_panel.setEnabled( True )
+            
+            self._pending_action_pairs = [ pair for pair in self._pending_action_pairs if pair not in selected_pairs ]
+            
+            self._pending_actions_label.setText( f'{HydrusNumbers.ToHumanInt(len(self._pending_action_pairs))} pairs remaining.' )
+            
+            self._pending_actions_pair_list.SetData( self._pending_action_pairs )
+            
+            if len( self._pending_action_pairs ) > 0:
                 
-                self._pending_actions_pair_list.selectRow( earliest_selected_row_index )
+                if len( self._pending_action_pairs ) > earliest_selected_row_index:
+                    
+                    self._pending_actions_pair_list.selectRow( earliest_selected_row_index )
+                    
+                else:
+                    
+                    self._pending_actions_pair_list.selectRow( len( self._pending_action_pairs ) - 1 )
+                    
                 
             else:
                 
-                self._pending_actions_pair_list.selectRow( len( self._pending_action_pairs ) - 1 )
+                self._RefetchPendingActionPairs()
                 
             
-        else:
-            
-            self._RefetchPendingActionPairs()
-            
+        
+        self._pending_actions_panel.setEnabled( False )
+        
+        job = ClientGUIAsync.AsyncQtJob( self, work_callable, publish_callable )
+        
+        job.start()
         
     
     def _PendingRowActivated( self, model_index: QC.QModelIndex ):

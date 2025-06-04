@@ -1,4 +1,4 @@
-import collections
+import collections.abc
 import hashlib
 import os
 import typing
@@ -96,7 +96,7 @@ mimes_to_default_thumbnail_paths[ HC.APPLICATION_PROCREATE ] = os.path.join( HC.
 mimes_to_default_thumbnail_paths[ HC.APPLICATION_RTF ] = os.path.join( HC.STATIC_DIR, 'rtf.png' )
 mimes_to_default_thumbnail_paths[ HC.IMAGE_SVG ] = os.path.join( HC.STATIC_DIR, 'svg.png' )
 
-def GenerateDefaultThumbnail( mime: int, target_resolution: typing.Tuple[ int, int ] ):
+def GenerateDefaultThumbnail( mime: int, target_resolution: tuple[ int, int ] ):
     
     thumb_path = mimes_to_default_thumbnail_paths[ mime ]
     

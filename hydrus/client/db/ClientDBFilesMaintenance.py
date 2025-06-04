@@ -1,5 +1,4 @@
 import sqlite3
-import typing
 
 from hydrus.core import HydrusConstants as HC
 
@@ -263,7 +262,7 @@ class ClientDBFilesMaintenance( ClientDBModule.ClientDBModule ):
             
         
     
-    def GetTablesAndColumnsThatUseDefinitions( self, content_type: int ) -> typing.List[ typing.Tuple[ str, str ] ]:
+    def GetTablesAndColumnsThatUseDefinitions( self, content_type: int ) -> list[ tuple[ str, str ] ]:
         
         return []
         

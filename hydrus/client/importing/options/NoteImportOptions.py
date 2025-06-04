@@ -1,3 +1,4 @@
+import collections.abc
 import typing
 
 from hydrus.core import HydrusConstants as HC
@@ -75,7 +76,7 @@ class NoteImportOptions( HydrusSerialisable.SerialisableBase ):
         return self._get_notes
         
     
-    def GetNamesToNameOverrides( self ) -> typing.Dict[ str, str ]:
+    def GetNamesToNameOverrides( self ) -> dict[ str, str ]:
         
         return dict( self._names_to_name_overrides )
         
@@ -85,7 +86,7 @@ class NoteImportOptions( HydrusSerialisable.SerialisableBase ):
         return set( self._name_whitelist )
         
     
-    def GetContentUpdatePackage( self, media_result: ClientMediaResult.MediaResult, names_and_notes: typing.Collection[ typing.Tuple[ str, str ] ] ) -> ClientContentUpdates.ContentUpdatePackage:
+    def GetContentUpdatePackage( self, media_result: ClientMediaResult.MediaResult, names_and_notes: collections.abc.Collection[ tuple[ str, str ] ] ) -> ClientContentUpdates.ContentUpdatePackage:
         
         content_update_package = ClientContentUpdates.ContentUpdatePackage()
         
@@ -335,12 +336,12 @@ class NoteImportOptions( HydrusSerialisable.SerialisableBase ):
         self._is_default = value
         
     
-    def SetNamesToNameOverrides( self, names_to_name_overrides: typing.Dict[ str, str ] ):
+    def SetNamesToNameOverrides( self, names_to_name_overrides: dict[ str, str ] ):
         
         self._names_to_name_overrides = names_to_name_overrides
         
     
-    def SetNameWhitelist( self, name_whitelist: typing.Collection[ str ] ):
+    def SetNameWhitelist( self, name_whitelist: collections.abc.Collection[ str ] ):
         
         self._name_whitelist = set( name_whitelist )
         

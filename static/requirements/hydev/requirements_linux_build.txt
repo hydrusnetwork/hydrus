@@ -1,5 +1,2 @@
+setuptools==70.3.0
 PyInstaller==6.7
-
-mock>=4.0.0
-httmock>=1.4.0
-mkdocs-material

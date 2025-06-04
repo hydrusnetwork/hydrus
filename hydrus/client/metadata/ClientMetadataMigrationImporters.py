@@ -1,3 +1,4 @@
+import collections.abc
 import os
 import typing
 
@@ -31,7 +32,7 @@ class SingleFileMetadataImporter( ClientMetadataMigrationCore.ImporterExporterNo
         return self._string_processor
         
     
-    def Import( self, *args, **kwargs ) -> typing.Collection[ str ]:
+    def Import( self, *args, **kwargs ) -> collections.abc.Collection[ str ]:
         
         rows = self.ImportSansStringProcessing( *args, **kwargs )
         
@@ -43,7 +44,7 @@ class SingleFileMetadataImporter( ClientMetadataMigrationCore.ImporterExporterNo
         return rows
         
     
-    def ImportSansStringProcessing( self, *args, **kwargs ) -> typing.Collection[ str ]:
+    def ImportSansStringProcessing( self, *args, **kwargs ) -> collections.abc.Collection[ str ]:
         
         raise NotImplementedError()
         
@@ -56,12 +57,12 @@ class SingleFileMetadataImporter( ClientMetadataMigrationCore.ImporterExporterNo
 
 class SingleFileMetadataImporterMedia( SingleFileMetadataImporter ):
     
-    def Import( self, media_result: ClientMediaResult.MediaResult ) -> typing.Collection[ str ]:
+    def Import( self, media_result: ClientMediaResult.MediaResult ) -> collections.abc.Collection[ str ]:
         
         return super().Import( media_result )
         
     
-    def ImportSansStringProcessing( self, media_result: ClientMediaResult.MediaResult ) -> typing.Collection[ str ]:
+    def ImportSansStringProcessing( self, media_result: ClientMediaResult.MediaResult ) -> collections.abc.Collection[ str ]:
         
         return super().ImportSansStringProcessing( media_result )
         
@@ -455,7 +456,7 @@ class SingleFileMetadataImporterSidecar( SingleFileMetadataImporter, ClientMetad
         super().__init__( string_processor, remove_actual_filename_ext, suffix, filename_string_converter )
         
     
-    def GetPossibleSidecarPaths( self, path: str ) -> typing.Collection[ str ]:
+    def GetPossibleSidecarPaths( self, path: str ) -> collections.abc.Collection[ str ]:
         
         raise NotImplementedError()
         
@@ -475,12 +476,12 @@ class SingleFileMetadataImporterSidecar( SingleFileMetadataImporter, ClientMetad
         return None
         
     
-    def Import( self, actual_file_path: str ) -> typing.Collection[ str ]:
+    def Import( self, actual_file_path: str ) -> collections.abc.Collection[ str ]:
         
         return super().Import( actual_file_path )
         
     
-    def ImportSansStringProcessing( self, actual_file_path: str ) -> typing.Collection[ str ]:
+    def ImportSansStringProcessing( self, actual_file_path: str ) -> collections.abc.Collection[ str ]:
         
         return super().ImportSansStringProcessing( actual_file_path )
         
@@ -579,7 +580,7 @@ class SingleFileMetadataImporterJSON( SingleFileMetadataImporterSidecar, HydrusS
             
         
     
-    def GetPossibleSidecarPaths( self, actual_file_path: str ) -> typing.Collection[ str ]:
+    def GetPossibleSidecarPaths( self, actual_file_path: str ) -> collections.abc.Collection[ str ]:
         
         return [
             ClientMetadataMigrationCore.GetSidecarPath( actual_file_path, self._remove_actual_filename_ext, self._suffix, self._filename_string_converter, 'json' ),
@@ -592,7 +593,7 @@ class SingleFileMetadataImporterJSON( SingleFileMetadataImporterSidecar, HydrusS
         return self._json_parsing_formula
         
     
-    def ImportSansStringProcessing( self, actual_file_path: str ) -> typing.Collection[ str ]:
+    def ImportSansStringProcessing( self, actual_file_path: str ) -> collections.abc.Collection[ str ]:
         
         path = self.GetSidecarPath( actual_file_path )
         
@@ -738,7 +739,7 @@ class SingleFileMetadataImporterTXT( SingleFileMetadataImporterSidecar, HydrusSe
             
         
     
-    def GetPossibleSidecarPaths( self, actual_file_path: str ) -> typing.Collection[ str ]:
+    def GetPossibleSidecarPaths( self, actual_file_path: str ) -> collections.abc.Collection[ str ]:
         
         return [
             ClientMetadataMigrationCore.GetSidecarPath( actual_file_path, self._remove_actual_filename_ext, self._suffix, self._filename_string_converter, 'txt' ),
@@ -751,7 +752,7 @@ class SingleFileMetadataImporterTXT( SingleFileMetadataImporterSidecar, HydrusSe
         return self._separator
         
     
-    def ImportSansStringProcessing( self, actual_file_path: str ) -> typing.Collection[ str ]:
+    def ImportSansStringProcessing( self, actual_file_path: str ) -> collections.abc.Collection[ str ]:
         
         path = self.GetSidecarPath( actual_file_path )
         

@@ -1,6 +1,6 @@
 import collections
+import collections.abc
 import sqlite3
-import typing
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
@@ -25,7 +25,7 @@ def GenerateResolutionPendingActionsPairsTableName( rule_id: int ) -> str:
     return f'duplicate_files_auto_resolution_pending_actions_{rule_id}'
     
 
-def GenerateAutoResolutionQueueTableNames( rule_id: int ) -> typing.Dict[ int, str ]:
+def GenerateAutoResolutionQueueTableNames( rule_id: int ) -> dict[ int, str ]:
     
     table_core = f'duplicate_files_auto_resolution_pair_decisions_{rule_id}'
     
@@ -63,7 +63,7 @@ class ClientDBFilesDuplicatesAutoResolutionStorage( ClientDBModule.ClientDBModul
         
         super().__init__( 'client duplicates auto-resolution storage', cursor )
         
-        self._rule_ids_to_rules: typing.Dict[ int, ClientDuplicatesAutoResolution.DuplicatesAutoResolutionRule ] = {}
+        self._rule_ids_to_rules: dict[ int, ClientDuplicatesAutoResolution.DuplicatesAutoResolutionRule ] = {}
         
         self._have_initialised_rules = False
         
@@ -118,7 +118,7 @@ class ClientDBFilesDuplicatesAutoResolutionStorage( ClientDBModule.ClientDBModul
         self._have_initialised_rules = True
         
     
-    def _RemovePairsFromQueues( self, rule: ClientDuplicatesAutoResolution.DuplicatesAutoResolutionRule, pairs: typing.Collection ):
+    def _RemovePairsFromQueues( self, rule: ClientDuplicatesAutoResolution.DuplicatesAutoResolutionRule, pairs: collections.abc.Collection ):
         
         rule_id = rule.GetId()
         
@@ -255,7 +255,7 @@ class ClientDBFilesDuplicatesAutoResolutionStorage( ClientDBModule.ClientDBModul
         return hash_id_pairs
         
     
-    def GetRulesWithCounts( self ) -> typing.List[ ClientDuplicatesAutoResolution.DuplicatesAutoResolutionRule ]:
+    def GetRulesWithCounts( self ) -> list[ ClientDuplicatesAutoResolution.DuplicatesAutoResolutionRule ]:
         
         if not self._have_initialised_rules:
             
@@ -365,7 +365,7 @@ class ClientDBFilesDuplicatesAutoResolutionStorage( ClientDBModule.ClientDBModul
             
         
     
-    def GetTablesAndColumnsThatUseDefinitions( self, content_type: int ) -> typing.List[ typing.Tuple[ str, str ] ]:
+    def GetTablesAndColumnsThatUseDefinitions( self, content_type: int ) -> list[ tuple[ str, str ] ]:
         
         tables_and_columns = []
         
@@ -754,7 +754,7 @@ class ClientDBFilesDuplicatesAutoResolutionStorage( ClientDBModule.ClientDBModul
             
         
     
-    def SetPairsToSimpleQueue( self, rule: ClientDuplicatesAutoResolution.DuplicatesAutoResolutionRule, pairs: typing.Collection, status_to_set: int ):
+    def SetPairsToSimpleQueue( self, rule: ClientDuplicatesAutoResolution.DuplicatesAutoResolutionRule, pairs: collections.abc.Collection, status_to_set: int ):
         
         if status_to_set in ( ClientDuplicatesAutoResolution.DUPLICATE_STATUS_MATCHES_SEARCH_PASSED_TEST_READY_TO_ACTION, ClientDuplicatesAutoResolution.DUPLICATE_STATUS_ACTIONED ):
             
@@ -784,7 +784,7 @@ class ClientDBFilesDuplicatesAutoResolutionStorage( ClientDBModule.ClientDBModul
         CG.client_controller.duplicates_auto_resolution_manager.Wake()
         
     
-    def SetRules( self, rules_to_set: typing.Collection[ ClientDuplicatesAutoResolution.DuplicatesAutoResolutionRule ], master_potential_duplicate_pairs_table_name = 'potential_duplicate_pairs' ):
+    def SetRules( self, rules_to_set: collections.abc.Collection[ ClientDuplicatesAutoResolution.DuplicatesAutoResolutionRule ], master_potential_duplicate_pairs_table_name = 'potential_duplicate_pairs' ):
         
         if not self._have_initialised_rules:
             

@@ -1,4 +1,5 @@
 import collections
+import collections.abc
 import os
 import random
 import sys
@@ -88,9 +89,18 @@ class HydrusController( object ):
             
             # all the threads in the pool are currently busy
             
-            calling_from_the_thread_pool = threading.current_thread() in self._call_to_threads
+            ok_to_make_one = len( self._call_to_threads ) < 200
             
-            if calling_from_the_thread_pool or len( self._call_to_threads ) < 200:
+            if not ok_to_make_one:
+                
+                my_thread = threading.current_thread()
+                
+                calling_from_the_thread_pool = my_thread in self._call_to_threads or my_thread in self._long_running_call_to_threads
+                
+                ok_to_make_one = calling_from_the_thread_pool
+                
+            
+            if ok_to_make_one:
                 
                 call_to_thread = HydrusThreading.THREADCallToThread( self, 'CallToThread' )
                 

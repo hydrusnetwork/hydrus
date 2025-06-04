@@ -1,6 +1,6 @@
+import collections.abc
 import itertools
 import traceback
-import typing
 
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
@@ -1021,7 +1021,7 @@ class EditContentParserPanel( ClientGUIScrolledPanels.EditPanel ):
     
 class EditContentParsersPanel( ClientGUICommon.StaticBox ):
     
-    def __init__( self, parent: QW.QWidget, test_data_callable: typing.Callable[ [], ClientParsing.ParsingTestData ], permitted_content_types ):
+    def __init__( self, parent: QW.QWidget, test_data_callable: collections.abc.Callable[ [], ClientParsing.ParsingTestData ], permitted_content_types ):
         
         super().__init__( parent, 'content parsers' )
         

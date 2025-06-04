@@ -1,3 +1,4 @@
+import collections.abc
 import typing
 
 from qtpy import QtWidgets as QW
@@ -87,7 +88,7 @@ class AutoCompleteDropdownMetadataConditional( ClientGUIACDropdown.AutoCompleteD
         self._include_pending_tags.valueChanged.connect( self._tag_context_button.SetIncludePending )
         
     
-    def _BroadcastChoices( self, predicates: typing.Collection[ ClientSearchPredicate.Predicate ], shift_down ):
+    def _BroadcastChoices( self, predicates: collections.abc.Collection[ ClientSearchPredicate.Predicate ], shift_down ):
         
         predicates = [ predicate for predicate in predicates if predicate.CanTestMediaResult() ]
         
@@ -284,7 +285,7 @@ class AutoCompleteDropdownMetadataConditional( ClientGUIACDropdown.AutoCompleteD
         CG.client_controller.CallAfterQtSafe( self, 'Metadata Conditional Results Generation', self.SetFetchedResults, job_status, parsed_autocomplete_text, self._results_cache, results )
         
     
-    def GetPredicates( self ) -> typing.Set[ ClientSearchPredicate.Predicate ]:
+    def GetPredicates( self ) -> set[ ClientSearchPredicate.Predicate ]:
         
         return self._file_search_context.GetPredicates()
         

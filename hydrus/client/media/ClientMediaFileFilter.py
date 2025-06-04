@@ -1,5 +1,5 @@
+import collections.abc
 import traceback
-import typing
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusText
@@ -467,7 +467,7 @@ quick_inverse_lookups.update( {
     FileFilter( FILE_FILTER_REMOTE ) : FileFilter( FILE_FILTER_LOCAL )
 } )
 
-def ReportDeleteLockFailures( media_results: typing.Collection[ ClientMediaResult.MediaResult ] ):
+def ReportDeleteLockFailures( media_results: collections.abc.Collection[ ClientMediaResult.MediaResult ] ):
     
     HydrusData.Print( 'Hey, we had a delete-lock problem. Here is the stack, which hydev may care to see:' )
     

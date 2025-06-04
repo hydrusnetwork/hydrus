@@ -1,5 +1,4 @@
 import random
-import typing
 
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
@@ -139,7 +138,7 @@ class MediaResultsPanelThumbnails( ClientGUIMediaResultsPanel.MediaResultsPanel 
         self._drag_init_coordinates = None
         self._drag_click_timestamp_ms = 0
         self._drag_prefire_event_count = 0
-        self._hashes_to_thumbnails_waiting_to_be_drawn: typing.Dict[ bytes, ThumbnailWaitingToBeDrawn ] = {}
+        self._hashes_to_thumbnails_waiting_to_be_drawn: dict[ bytes, ThumbnailWaitingToBeDrawn ] = {}
         self._hashes_faded = set()
         
         super().__init__( parent, page_key, page_manager, media_results )
@@ -1038,7 +1037,7 @@ class MediaResultsPanelThumbnails( ClientGUIMediaResultsPanel.MediaResultsPanel 
         self.ShowMenu()
         
     
-    def MoveMedia( self, medias: typing.List[ ClientMedia.Media ], insertion_index: int ):
+    def MoveMedia( self, medias: list[ ClientMedia.Media ], insertion_index: int ):
         
         super().MoveMedia( medias, insertion_index )
         
@@ -1678,9 +1677,9 @@ class MediaResultsPanelThumbnails( ClientGUIMediaResultsPanel.MediaResultsPanel 
             
             if self._HasFocusSingleton():
                 
-                focus_singleton = self._GetFocusSingleton()
+                media_result = self._GetFocusSingleton().GetMediaResult()
                 
-                ClientGUIMediaMenus.AddDuplicatesMenu( self, self, manage_menu, self._location_context, focus_singleton, num_selected, collections_selected )
+                ClientGUIMediaMenus.AddDuplicatesMenu( self, self, manage_menu, self._location_context, media_result, num_selected, collections_selected )
                 
             
             regen_menu = ClientGUIMenus.GenerateMenu( manage_menu )

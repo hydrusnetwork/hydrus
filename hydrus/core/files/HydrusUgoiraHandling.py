@@ -196,7 +196,7 @@ UgoiraFrame = typing.TypedDict('UgoiraFrame', {'file': str, 'delay': int})
 # this function is called multiple times for a single ugoira file 
 # and involves opening and parsing JSON so let's cache it
 @functools.lru_cache( maxsize = 8 )
-def GetUgoiraFrameDataJSON( path: str ) -> typing.Optional[typing.List[UgoiraFrame]]:
+def GetUgoiraFrameDataJSON( path: str ) -> typing.Optional[list[UgoiraFrame]]:
     
     try:
         
@@ -269,7 +269,7 @@ def GetUgoiraFramePIL( path: str, frameIndex: int ) -> PILImage.Image:
     return HydrusImageHandling.GeneratePILImage( frameFromZip )
     
 
-def GenerateThumbnailNumPyFromUgoiraPath( path: str, target_resolution: typing.Tuple[int, int], frame_index: int ):
+def GenerateThumbnailNumPyFromUgoiraPath( path: str, target_resolution: tuple[int, int], frame_index: int ):
     
     pil_image = GetUgoiraFramePIL( path, frame_index )
     

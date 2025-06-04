@@ -1,5 +1,5 @@
+import collections.abc
 import os
-import typing
 
 from hydrus.core import HydrusData
 from hydrus.core import HydrusPaths
@@ -19,7 +19,7 @@ def CheckFullPrefixCoverage( merge_target, prefixes ):
         
     
 
-def GetMissingPrefixes( merge_target: str, prefixes: typing.Collection[ str ], min_prefix_length_allowed = 3, prefixes_are_filtered: bool = False ):
+def GetMissingPrefixes( merge_target: str, prefixes: collections.abc.Collection[ str ], min_prefix_length_allowed = 3, prefixes_are_filtered: bool = False ):
     
     # given a merge target of 'tf'
     # do these prefixes, let's say { tf0, tf1, tf2, tf3, tf4, tf5, tf6, tf7, tf8, tf9, tfa, tfb, tfc, tfd, tfe, tff }, add up to 'tf'?
@@ -200,7 +200,7 @@ class FilesStorageBaseLocation( object ):
         
     
     @staticmethod
-    def STATICGetIdealWeights( total_num_bytes_to_hold: int, base_locations: typing.List[ "FilesStorageBaseLocation" ] ) -> typing.Dict[ "FilesStorageBaseLocation", float ]:
+    def STATICGetIdealWeights( total_num_bytes_to_hold: int, base_locations: list[ "FilesStorageBaseLocation" ] ) -> dict[ "FilesStorageBaseLocation", float ]:
         
         # This is kind of tacked on logic versus the eager/able/needs/would stuff, but I'm collecting it here so at least the logic, pseudo-doubled, is in one place
         # EDIT: I like this logic now, after some fixes and simplification, so perhaps it can be used elsewhere

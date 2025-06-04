@@ -1,7 +1,7 @@
 import collections
+import collections.abc
 import itertools
 import sqlite3
-import typing
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
@@ -412,7 +412,7 @@ class ClientDBTagParents( ClientDBModule.ClientDBModule ):
         return ( actual_parent_rows, ideal_parent_rows, parent_rows_to_add, parent_rows_to_remove )
         
     
-    def GetChainsMembers( self, display_type: int, tag_service_id: int, ideal_tag_ids: typing.Collection[ int ] ):
+    def GetChainsMembers( self, display_type: int, tag_service_id: int, ideal_tag_ids: collections.abc.Collection[ int ] ):
         
         if len( ideal_tag_ids ) == 0:
             
@@ -536,7 +536,7 @@ class ClientDBTagParents( ClientDBModule.ClientDBModule ):
         return info
         
     
-    def GetTablesAndColumnsThatUseDefinitions( self, content_type: int ) -> typing.List[ typing.Tuple[ str, str ] ]:
+    def GetTablesAndColumnsThatUseDefinitions( self, content_type: int ) -> list[ tuple[ str, str ] ]:
         
         tables_and_columns = []
         
@@ -697,7 +697,7 @@ class ClientDBTagParents( ClientDBModule.ClientDBModule ):
         return statuses_to_pair_ids
         
     
-    def GetTagsToAncestors( self, display_type: int, tag_service_id: int, ideal_tag_ids: typing.Collection[ int ] ):
+    def GetTagsToAncestors( self, display_type: int, tag_service_id: int, ideal_tag_ids: collections.abc.Collection[ int ] ):
         
         if len( ideal_tag_ids ) == 0:
             
@@ -730,7 +730,7 @@ class ClientDBTagParents( ClientDBModule.ClientDBModule ):
         return tag_ids_to_ancestors
         
     
-    def GetTagsToDescendants( self, display_type: int, tag_service_id: int, ideal_tag_ids: typing.Collection[ int ] ):
+    def GetTagsToDescendants( self, display_type: int, tag_service_id: int, ideal_tag_ids: collections.abc.Collection[ int ] ):
         
         if len( ideal_tag_ids ) == 0:
             

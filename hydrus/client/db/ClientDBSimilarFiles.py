@@ -1,4 +1,5 @@
 import collections
+import collections.abc
 import random
 import sqlite3
 import typing
@@ -244,7 +245,7 @@ class ClientDBSimilarFiles( ClientDBModule.ClientDBModule ):
         self._ClearPerceptualHashesFromVPTreeNodeCache( all_altered_phash_ids )
         
     
-    def _GetHashIdsWithPixelHashId( self, pixel_hash_id: int ) -> typing.Set[ int ]:
+    def _GetHashIdsWithPixelHashId( self, pixel_hash_id: int ) -> set[ int ]:
         
         pixel_dupe_hash_ids = self._STS( self._Execute( 'SELECT hash_id FROM pixel_hash_map WHERE pixel_hash_id = ?;', ( pixel_hash_id, ) ) )
         
@@ -282,7 +283,7 @@ class ClientDBSimilarFiles( ClientDBModule.ClientDBModule ):
         }
         
     
-    def _GetPerceptualHashes( self, perceptual_hash_ids: typing.Collection[ int ] ) -> typing.Set[ bytes ]:
+    def _GetPerceptualHashes( self, perceptual_hash_ids: collections.abc.Collection[ int ] ) -> set[ bytes ]:
         
         with self._MakeTemporaryIntegerTable( perceptual_hash_ids, 'phash_id' ) as temp_table_name:
             
@@ -317,7 +318,7 @@ class ClientDBSimilarFiles( ClientDBModule.ClientDBModule ):
         return perceptual_hash_id
         
     
-    def _GetPerceptualHashIdsFromHashId( self, hash_id: int ) -> typing.Set[ int ]:
+    def _GetPerceptualHashIdsFromHashId( self, hash_id: int ) -> set[ int ]:
         
         perceptual_hash_ids = self._STS( self._Execute( 'SELECT phash_id FROM shape_perceptual_hash_map WHERE hash_id = ?;', ( hash_id, ) ) )
         
@@ -535,7 +536,7 @@ class ClientDBSimilarFiles( ClientDBModule.ClientDBModule ):
             
         
     
-    def _ClearPerceptualHashesFromVPTreeNodeCache( self, perceptual_hash_ids: typing.Collection[ int ] ):
+    def _ClearPerceptualHashesFromVPTreeNodeCache( self, perceptual_hash_ids: collections.abc.Collection[ int ] ):
         
         for perceptual_hash_id in perceptual_hash_ids:
             
@@ -561,7 +562,7 @@ class ClientDBSimilarFiles( ClientDBModule.ClientDBModule ):
             
         
     
-    def _TryToPopulatePerceptualHashToVPTreeNodeCache( self, perceptual_hash_ids: typing.Collection[ int ] ):
+    def _TryToPopulatePerceptualHashToVPTreeNodeCache( self, perceptual_hash_ids: collections.abc.Collection[ int ] ):
         
         # the node cache used to limit itself to 1,000,000 nodes, but on clients with 13m files it was churning
         # if you got a big client, I'm going to eat some ram, simple as
@@ -664,7 +665,7 @@ class ClientDBSimilarFiles( ClientDBModule.ClientDBModule ):
         return dict( self._Execute( f'SELECT {hash_ids_table_name}.hash_id, hash FROM {hash_ids_table_name} CROSS JOIN pixel_hash_map ON ( {hash_ids_table_name}.hash_id = pixel_hash_map.hash_id ) CROSS JOIN hashes ON ( pixel_hash_map.pixel_hash_id = hashes.hash_id );' ) )
         
     
-    def GetTablesAndColumnsThatUseDefinitions( self, content_type: int ) -> typing.List[ typing.Tuple[ str, str ] ]:
+    def GetTablesAndColumnsThatUseDefinitions( self, content_type: int ) -> list[ tuple[ str, str ] ]:
         
         if content_type == HC.CONTENT_TYPE_HASH:
             
@@ -897,7 +898,7 @@ class ClientDBSimilarFiles( ClientDBModule.ClientDBModule ):
         self._ExecuteMany( 'UPDATE shape_search_cache SET searched_distance = NULL WHERE hash_id = ?;', ( ( hash_id, ) for hash_id in hash_ids ) )
         
     
-    def SearchFile( self, hash_id: int, max_hamming_distance: int ) -> typing.List:
+    def SearchFile( self, hash_id: int, max_hamming_distance: int ) -> list:
         
         similar_hash_ids_and_distances = [ ( hash_id, 0 ) ]
         
@@ -928,7 +929,7 @@ class ClientDBSimilarFiles( ClientDBModule.ClientDBModule ):
         return similar_hash_ids_and_distances
         
     
-    def SearchPixelHashes( self, search_pixel_hash_ids: typing.Collection[ int ] ):
+    def SearchPixelHashes( self, search_pixel_hash_ids: collections.abc.Collection[ int ] ):
         
         similar_hash_ids_and_distances = []
         
@@ -944,7 +945,7 @@ class ClientDBSimilarFiles( ClientDBModule.ClientDBModule ):
         return similar_hash_ids_and_distances
         
     
-    def SearchPerceptualHashes( self, search_perceptual_hashes: typing.Collection[ bytes ], max_hamming_distance: int ) -> typing.List:
+    def SearchPerceptualHashes( self, search_perceptual_hashes: collections.abc.Collection[ bytes ], max_hamming_distance: int ) -> list:
         
         similar_hash_ids_and_distances = []
         

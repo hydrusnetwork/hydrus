@@ -318,7 +318,7 @@ class JobStatus( object ):
         self.Cancel()
         
     
-    def SetFiles( self, hashes: typing.List[ bytes ], label: str ):
+    def SetFiles( self, hashes: list[ bytes ], label: str ):
         
         if len( hashes ) == 0:
             

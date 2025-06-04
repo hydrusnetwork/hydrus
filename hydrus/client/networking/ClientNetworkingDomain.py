@@ -1,4 +1,5 @@
 import collections
+import collections.abc
 import threading
 import time
 import typing
@@ -241,7 +242,7 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def _GetNormalisedAPIURLClassAndURL( self, url ) -> typing.Tuple[ ClientNetworkingURLClass.URLClass, str ]:
+    def _GetNormalisedAPIURLClassAndURL( self, url ) -> tuple[ ClientNetworkingURLClass.URLClass, str ]:
         
         url_class = self._GetURLClass( url )
         
@@ -1584,7 +1585,7 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def NormaliseURLs( self, urls: typing.Collection[ str ], for_server = False ) -> typing.List[ str ]:
+    def NormaliseURLs( self, urls: collections.abc.Collection[ str ], for_server = False ) -> list[ str ]:
         
         normalised_urls = []
         

@@ -1,7 +1,6 @@
 from io import BytesIO
 import re
 import subprocess
-import typing
 
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
@@ -135,7 +134,7 @@ def ParseFFMPEGPSDLine( lines ) -> str:
     return line
     
 
-def ParseFFMPEGPSDResolution( lines ) -> typing.Tuple[ int, int ]:
+def ParseFFMPEGPSDResolution( lines ) -> tuple[ int, int ]:
     
     try:
         
@@ -181,7 +180,7 @@ def GeneratePILImageFromPSD( path ):
     return HydrusImageHandling.GeneratePILImage( BytesIO( png_bytes ), human_file_description = f'Preview image inside PSD "{path}"' )
     
 
-def GenerateThumbnailNumPyFromPSDPath( path: str, target_resolution: typing.Tuple[int, int] ) -> bytes:
+def GenerateThumbnailNumPyFromPSDPath( path: str, target_resolution: tuple[int, int] ) -> bytes:
     
     try:
         

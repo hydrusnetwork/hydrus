@@ -1,3 +1,4 @@
+import collections.abc
 import os
 import re
 import typing
@@ -444,7 +445,7 @@ class TagImportOptions( HydrusSerialisable.SerialisableBase ):
         return self.HasAdditionalTags() or self.WorthFetchingTags()
         
     
-    def CheckTagsVeto( self, tags: typing.Collection[ str ], sibling_tags: typing.Collection[ str ] ):
+    def CheckTagsVeto( self, tags: collections.abc.Collection[ str ], sibling_tags: collections.abc.Collection[ str ] ):
         
         tags = set( tags )
         
@@ -484,7 +485,7 @@ class TagImportOptions( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def GetContentUpdatePackage( self, status: int, media_result: ClientMediaResult.MediaResult, filterable_tags: typing.Iterable[ str ], external_filterable_tags = None, external_additional_service_keys_to_tags = None ) -> ClientContentUpdates.ContentUpdatePackage:
+    def GetContentUpdatePackage( self, status: int, media_result: ClientMediaResult.MediaResult, filterable_tags: collections.abc.Iterable[ str ], external_filterable_tags = None, external_additional_service_keys_to_tags = None ) -> ClientContentUpdates.ContentUpdatePackage:
         
         if external_filterable_tags is None:
             
@@ -832,7 +833,7 @@ class ServiceTagImportOptions( HydrusSerialisable.SerialisableBase ):
         return statements
         
     
-    def GetTags( self, service_key: bytes, status: int, media_result: ClientMediaResult.MediaResult, filterable_tags: typing.Collection[ str ], additional_tags: typing.Optional[ typing.Collection[ str ] ] = None ):
+    def GetTags( self, service_key: bytes, status: int, media_result: ClientMediaResult.MediaResult, filterable_tags: collections.abc.Collection[ str ], additional_tags: typing.Optional[ collections.abc.Collection[ str ] ] = None ):
         
         if additional_tags is None:
             

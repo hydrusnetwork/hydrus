@@ -1,3 +1,4 @@
+import collections.abc
 import sqlite3
 import typing
 
@@ -71,19 +72,19 @@ class ClientDBFilesTimestamps( ClientDBModule.ClientDBModule ):
         }
         
     
-    def _ClearSimpleTimes( self, timestamp_type: int, hash_ids: typing.Collection[ int ] ):
+    def _ClearSimpleTimes( self, timestamp_type: int, hash_ids: collections.abc.Collection[ int ] ):
         
         ( table_name, column_name ) = GetSimpleTimestampTableNames( timestamp_type )
         
         self._ExecuteMany( f'DELETE FROM {table_name} WHERE hash_id = ?;', ( ( hash_id, ) for hash_id in hash_ids ) )
         
     
-    def ClearArchivedTimes( self, hash_ids: typing.Collection[ int ] ):
+    def ClearArchivedTimes( self, hash_ids: collections.abc.Collection[ int ] ):
         
         self._ClearSimpleTimes( HC.TIMESTAMP_TYPE_ARCHIVED, hash_ids )
         
     
-    def ClearTime( self, hash_ids: typing.Collection[ int ], timestamp_data: ClientTime.TimestampData ):
+    def ClearTime( self, hash_ids: collections.abc.Collection[ int ], timestamp_data: ClientTime.TimestampData ):
         
         if timestamp_data.timestamp_type == HC.TIMESTAMP_TYPE_MODIFIED_DOMAIN:
             
@@ -176,7 +177,7 @@ class ClientDBFilesTimestamps( ClientDBModule.ClientDBModule ):
         return set()
         
     
-    def GetHashIdsToArchivedTimestampsMS( self, hash_ids: typing.Collection[ int ] ):
+    def GetHashIdsToArchivedTimestampsMS( self, hash_ids: collections.abc.Collection[ int ] ):
         
         # TODO: generalise this to any timestamp_data stub, but it is a slight pain!
         
@@ -198,7 +199,7 @@ class ClientDBFilesTimestamps( ClientDBModule.ClientDBModule ):
         return result
         
     
-    def GetHashIdsToHalfInitialisedTimesManagers( self, hash_ids: typing.Collection[ int ], hash_ids_table_name: str ) -> typing.Dict[ int, ClientMediaManagers.TimesManager ]:
+    def GetHashIdsToHalfInitialisedTimesManagers( self, hash_ids: collections.abc.Collection[ int ], hash_ids_table_name: str ) -> dict[ int, ClientMediaManagers.TimesManager ]:
         
         # note that this doesn't fetch everything, just the stuff this module handles directly and can fetch efficiently
         
@@ -238,7 +239,7 @@ class ClientDBFilesTimestamps( ClientDBModule.ClientDBModule ):
         return hash_ids_to_timestamp_managers
         
     
-    def GetSimpleTimestampsMS( self, timestamp_type: int, hash_ids_table_name: str ) -> typing.Dict[ int, int ]:
+    def GetSimpleTimestampsMS( self, timestamp_type: int, hash_ids_table_name: str ) -> dict[ int, int ]:
         
         ( table_name, column_name ) = GetSimpleTimestampTableNames( timestamp_type )
         
@@ -247,7 +248,7 @@ class ClientDBFilesTimestamps( ClientDBModule.ClientDBModule ):
         return dict( self._Execute( query ) )
         
     
-    def GetTablesAndColumnsThatUseDefinitions( self, content_type: int ) -> typing.List[ typing.Tuple[ str, str ] ]:
+    def GetTablesAndColumnsThatUseDefinitions( self, content_type: int ) -> list[ tuple[ str, str ] ]:
         
         if content_type == HC.CONTENT_TYPE_HASH:
             
@@ -308,7 +309,7 @@ class ClientDBFilesTimestamps( ClientDBModule.ClientDBModule ):
         self._ExecuteMany( f'REPLACE INTO {table_name} ( hash_id, {column_name} ) VALUES ( ?, ? );', rows )
         
     
-    def SetTime( self, hash_ids: typing.Collection[ int ], timestamp_data: ClientTime.TimestampData ):
+    def SetTime( self, hash_ids: collections.abc.Collection[ int ], timestamp_data: ClientTime.TimestampData ):
         
         if timestamp_data.timestamp_ms is None:
             
@@ -342,7 +343,7 @@ class ClientDBFilesTimestamps( ClientDBModule.ClientDBModule ):
             
         
     
-    def UpdateTime( self, hash_ids: typing.Collection[ int ], timestamp_data: ClientTime.TimestampData ):
+    def UpdateTime( self, hash_ids: collections.abc.Collection[ int ], timestamp_data: ClientTime.TimestampData ):
         
         if timestamp_data.timestamp_ms is None:
             

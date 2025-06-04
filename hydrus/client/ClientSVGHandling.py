@@ -1,5 +1,3 @@
-import typing
-
 from qtpy import QtSvg
 from qtpy import QtGui as QG
 from qtpy import QtCore as QC
@@ -30,7 +28,7 @@ def LoadSVGRenderer( path: str ):
     return renderer
     
 
-def GenerateThumbnailNumPyFromSVGPath( path: str, target_resolution: typing.Tuple[int, int] ) -> bytes:
+def GenerateThumbnailNumPyFromSVGPath( path: str, target_resolution: tuple[int, int] ) -> bytes:
     
     # TODO: SVGs have no inherent resolution, so all this is pretty stupid. we should render to exactly the res we want and then clip the result, not beforehand
     

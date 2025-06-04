@@ -1,5 +1,3 @@
-import typing
-
 from hydrus.core import HydrusExceptions
 from hydrus.core.files import HydrusArchiveHandling
 from hydrus.core.files.images import HydrusImageHandling
@@ -38,7 +36,7 @@ def ThumbnailPILImageFromKra( path ):
         
     
 
-def GenerateThumbnailNumPyFromKraPath( path: str, target_resolution: typing.Tuple[ int, int ] ) -> bytes:
+def GenerateThumbnailNumPyFromKraPath( path: str, target_resolution: tuple[ int, int ] ) -> bytes:
     
     try:
         

@@ -148,6 +148,8 @@ class NetworkJob( object ):
         self._method = method
         self._url = url
         
+        self._additional_bandwidth_urls = []
+        
         self._current_connection_attempt_number = 1
         self._current_request_attempt_number = 1
         self._this_is_a_one_shot_request = False
@@ -980,6 +982,26 @@ class NetworkJob( object ):
             
         
     
+    def AddBandwidthURL( self, url: str ):
+        
+        with self._lock:
+            
+            domain = ClientNetworkingFunctions.ConvertURLIntoDomain( url )
+            
+            domains = ClientNetworkingFunctions.ConvertDomainIntoAllApplicableDomains( domain )
+            
+            for domain in domains:
+                
+                network_context = ClientNetworkingContexts.NetworkContext( CC.NETWORK_CONTEXT_DOMAIN, domain )
+                
+                if network_context not in self._network_contexts:
+                    
+                    self._network_contexts.append( network_context )
+                    
+                
+            
+        
+    
     def BandwidthOK( self ):
         
         with self._lock:
@@ -1192,7 +1214,7 @@ class NetworkJob( object ):
             
         
     
-    def GetNetworkContexts( self ) -> typing.List[ ClientNetworkingContexts.NetworkContext ]:
+    def GetNetworkContexts( self ) -> list[ ClientNetworkingContexts.NetworkContext ]:
         
         with self._lock:
             

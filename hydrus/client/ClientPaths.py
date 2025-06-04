@@ -1,4 +1,4 @@
-import typing
+import collections.abc
 import webbrowser
 
 from hydrus.core import HydrusConstants as HC
@@ -78,7 +78,7 @@ def OpenFileLocation( path: str ):
         
     
 
-def OpenFileLocations( paths: typing.Sequence[str] ):
+def OpenFileLocations( paths: collections.abc.Sequence[str] ):
     
     if SHOW_IN_FILE_MANAGER_OK:
         

@@ -1,6 +1,5 @@
 import os
 import time
-import typing
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
@@ -478,7 +477,7 @@ class HydrusResourceClientAPIRestrictedGetFilesFileMetadata( HydrusResourceClien
             
         elif only_return_basic_information:
             
-            file_info_managers: typing.List[ ClientMediaManagers.FileInfoManager ] = CG.client_controller.Read( 'file_info_managers_from_ids', hash_ids )
+            file_info_managers: list[ ClientMediaManagers.FileInfoManager ] = CG.client_controller.Read( 'file_info_managers_from_ids', hash_ids )
             
             hashes_to_file_info_managers = { file_info_manager.hash : file_info_manager for file_info_manager in file_info_managers }
             
@@ -528,7 +527,7 @@ class HydrusResourceClientAPIRestrictedGetFilesFileMetadata( HydrusResourceClien
             
         else:
             
-            media_results: typing.List[ ClientMediaResult.MediaResult ] = CG.client_controller.Read( 'media_results_from_ids', hash_ids )
+            media_results: list[ ClientMediaResult.MediaResult ] = CG.client_controller.Read( 'media_results_from_ids', hash_ids )
             
             hashes_to_media_results = { media_result.GetFileInfoManager().hash : media_result for media_result in media_results }
             

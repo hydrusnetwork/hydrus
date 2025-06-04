@@ -1,3 +1,4 @@
+import collections.abc
 import datetime
 import re
 import typing
@@ -125,7 +126,7 @@ SYSTEM_PREDICATE_TYPES = {
     PREDICATE_TYPE_SYSTEM_HAS_FORCED_FILETYPE
 }
 
-def ConvertSpecificFiletypesToSummary( specific_mimes: typing.Collection[ int ], only_searchable = True ) -> typing.Collection[ int ]:
+def ConvertSpecificFiletypesToSummary( specific_mimes: collections.abc.Collection[ int ], only_searchable = True ) -> collections.abc.Collection[ int ]:
     
     specific_mimes_to_process = set( specific_mimes )
     
@@ -151,7 +152,7 @@ def ConvertSpecificFiletypesToSummary( specific_mimes: typing.Collection[ int ],
     return summary_mimes
     
 
-def ConvertSummaryFiletypesToSpecific( summary_mimes: typing.Collection[ int ], only_searchable = True ) -> typing.Collection[ int ]:
+def ConvertSummaryFiletypesToSpecific( summary_mimes: collections.abc.Collection[ int ], only_searchable = True ) -> collections.abc.Collection[ int ]:
     
     specific_mimes = set()
     
@@ -175,7 +176,7 @@ def ConvertSummaryFiletypesToSpecific( summary_mimes: typing.Collection[ int ], 
     return specific_mimes
     
 
-def ConvertSummaryFiletypesToString( summary_mimes: typing.Collection[ int ] ) -> str:
+def ConvertSummaryFiletypesToString( summary_mimes: collections.abc.Collection[ int ] ) -> str:
     
     if set( summary_mimes ) == HC.GENERAL_FILETYPES:
         
@@ -1054,7 +1055,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
         return self._matchable_search_texts
         
     
-    def GetORPredicates( self ) -> typing.List[ "Predicate" ]:
+    def GetORPredicates( self ) -> list[ "Predicate" ]:
         
         if self._predicate_type == PREDICATE_TYPE_OR_CONTAINER:
             
@@ -1066,7 +1067,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def GetParentPredicates( self ) -> typing.Set[ "Predicate" ]:
+    def GetParentPredicates( self ) -> set[ "Predicate" ]:
         
         return self._parent_predicates
         
@@ -1251,14 +1252,14 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
         self._RecalcPythonHash()
         
     
-    def SetKnownParents( self, parents: typing.Set[ str ] ):
+    def SetKnownParents( self, parents: set[ str ] ):
         
         self._parents = parents
         
         self._parent_predicates = [ Predicate( PREDICATE_TYPE_PARENT, parent ) for parent in self._parents ]
         
     
-    def SetKnownSiblings( self, siblings: typing.Set[ str ] ):
+    def SetKnownSiblings( self, siblings: set[ str ] ):
         
         self._siblings = siblings
         
@@ -2318,7 +2319,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
         
     
 
-def MergePredicates( predicates: typing.Collection[ Predicate ] ):
+def MergePredicates( predicates: collections.abc.Collection[ Predicate ] ):
     
     master_predicate_dict = {}
     
@@ -2339,7 +2340,7 @@ def MergePredicates( predicates: typing.Collection[ Predicate ] ):
     return list( master_predicate_dict.values() )
     
 
-def SortPredicates( predicates: typing.List[ Predicate ] ):
+def SortPredicates( predicates: list[ Predicate ] ):
     
     key = lambda p: ( - p.GetCount().GetMinCount(), p.ToString() )
     

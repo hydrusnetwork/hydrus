@@ -1,5 +1,5 @@
+import collections.abc
 import sqlite3
-import typing
 
 from hydrus.client.db import ClientDBDefinitionsCache
 from hydrus.client.db import ClientDBMaintenance
@@ -42,7 +42,7 @@ class ClientDBMappingsCountsUpdate( ClientDBModule.ClientDBModule ):
             
         
     
-    def FilterExistingTags( self, service_key: bytes, tags: typing.Collection[ str ] ):
+    def FilterExistingTags( self, service_key: bytes, tags: collections.abc.Collection[ str ] ):
         
         service_id = self.modules_services.GetServiceId( service_key )
         
@@ -62,7 +62,7 @@ class ClientDBMappingsCountsUpdate( ClientDBModule.ClientDBModule ):
         return filtered_tags
         
     
-    def GetTablesAndColumnsThatUseDefinitions( self, content_type: int ) -> typing.List[ typing.Tuple[ str, str ] ]:
+    def GetTablesAndColumnsThatUseDefinitions( self, content_type: int ) -> list[ tuple[ str, str ] ]:
         
         tables_and_columns = []
         

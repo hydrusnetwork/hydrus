@@ -17,7 +17,7 @@ class PrettyMediaResultInfoLine( object ):
 
 class PrettyMediaResultInfoLinesSubmenu( PrettyMediaResultInfoLine ):
     
-    def __init__( self, text: str, interesting: bool, sublines: typing.List[ PrettyMediaResultInfoLine ], tooltip: typing.Optional[ str ] = None ):
+    def __init__( self, text: str, interesting: bool, sublines: list[ PrettyMediaResultInfoLine ], tooltip: typing.Optional[ str ] = None ):
         
         super().__init__( text, interesting, tooltip = tooltip )
         

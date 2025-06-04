@@ -1,3 +1,4 @@
+import collections.abc
 import typing
 
 from qtpy import QtCore as QC
@@ -449,7 +450,7 @@ class BetterCheckBoxList( QW.QListWidget ):
         return self.item( index ).data( QC.Qt.ItemDataRole.UserRole )
         
     
-    def GetCheckedIndices( self ) -> typing.List[ int ]:
+    def GetCheckedIndices( self ) -> list[ int ]:
         
         checked_indices = [ i for i in range( self.count() ) if self.IsChecked( i ) ]
         
@@ -511,7 +512,7 @@ class BetterCheckBoxList( QW.QListWidget ):
             
         
     
-    def SetValue( self, datas: typing.Collection ):
+    def SetValue( self, datas: collections.abc.Collection ):
         
         for index in range( self.count() ):
             

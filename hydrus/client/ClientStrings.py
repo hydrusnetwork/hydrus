@@ -1,4 +1,5 @@
 import base64
+import collections.abc
 import datetime
 import hashlib
 import html
@@ -620,7 +621,7 @@ class StringJoiner( StringProcessingStep ):
         return True
         
     
-    def Join( self, texts: typing.Collection[ str ] ) -> typing.List[ str ]:
+    def Join( self, texts: collections.abc.Collection[ str ] ) -> list[ str ]:
         
         for text in texts:
             
@@ -995,7 +996,7 @@ class StringSlicer( StringProcessingStep ):
         ( self._index_start, self._index_end ) = serialisable_info
         
     
-    def GetIndexStartEnd( self ) -> typing.Tuple[ typing.Optional[ int ], typing.Optional[ int ] ]:
+    def GetIndexStartEnd( self ) -> tuple[ typing.Optional[ int ], typing.Optional[ int ] ]:
         
         return ( self._index_start, self._index_end )
         
@@ -1054,7 +1055,7 @@ class StringSlicer( StringProcessingStep ):
         return ( both_positive or both_negative ) and self._index_start == self._index_end - 1
         
     
-    def Slice( self, texts: typing.Sequence[ str ] ) -> typing.List[ str ]:
+    def Slice( self, texts: collections.abc.Sequence[ str ] ) -> list[ str ]:
         
         try:
             
@@ -1187,7 +1188,7 @@ class StringSorter( StringProcessingStep ):
         return True
         
     
-    def Sort( self, texts: typing.Sequence[ str ] ) -> typing.List[ str ]:
+    def Sort( self, texts: collections.abc.Sequence[ str ] ) -> list[ str ]:
         
         try:
             
@@ -1329,7 +1330,7 @@ class StringSplitter( StringProcessingStep ):
         return True
         
     
-    def Split( self, text: str ) -> typing.List[ str ]:
+    def Split( self, text: str ) -> list[ str ]:
         
         if isinstance( text, bytes ):
             
@@ -1571,7 +1572,7 @@ class StringProcessor( StringProcessingStep ):
         return True in ( step.MakesChanges() for step in self._processing_steps )
         
     
-    def ProcessStrings( self, starting_strings: typing.Iterable[ str ], max_steps_allowed = None, no_slicing = False ) -> typing.List[ str ]:
+    def ProcessStrings( self, starting_strings: collections.abc.Iterable[ str ], max_steps_allowed = None, no_slicing = False ) -> list[ str ]:
         
         current_strings = list( starting_strings )
         
@@ -1698,7 +1699,7 @@ class StringProcessor( StringProcessingStep ):
         return current_strings
         
     
-    def SetProcessingSteps( self, processing_steps: typing.List[ StringProcessingStep ] ):
+    def SetProcessingSteps( self, processing_steps: list[ StringProcessingStep ] ):
         
         self._processing_steps = list( processing_steps )
         

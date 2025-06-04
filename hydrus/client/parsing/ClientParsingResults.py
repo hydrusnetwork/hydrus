@@ -1,7 +1,7 @@
 import base64
-import typing
-
 import collections
+import collections.abc
+import typing
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
@@ -12,7 +12,7 @@ from hydrus.core import HydrusTime
 
 from hydrus.client.metadata import ClientTags
 
-def ConvertParsableContentDescriptionsToPrettyString( parsable_content_descriptions: typing.Collection[ "ParsableContentDescription" ], include_veto = False ):
+def ConvertParsableContentDescriptionsToPrettyString( parsable_content_descriptions: collections.abc.Collection[ "ParsableContentDescription" ], include_veto = False ):
     
     # when this was tuple hell, this guy used to go "tags: creator, series, unnamespaced". it would be neat to have that compression again, so think about it
     # maybe each subclass could have the ability to do STATICToMassString( pcds ) or something, and then I just group by
@@ -25,7 +25,7 @@ def ConvertParsableContentDescriptionsToPrettyString( parsable_content_descripti
     
     for content_type in content_types:
         
-        pcds = typing.cast( typing.List[ ParsableContentDescription ], list( content_types_to_pcds[ content_type ] ) )
+        pcds = typing.cast( list[ ParsableContentDescription ], list( content_types_to_pcds[ content_type ] ) )
         
         shorthand_strings = sorted( { s for s in { pcd.GetShorthandContentSpecificInfoString() for pcd in pcds } if s is not None } )
         
@@ -95,7 +95,7 @@ def GetHashFromParsedText( hash_encoding, parsed_text ) -> bytes:
     raise Exception( 'Could not decode hash: {}'.format( main_error_text ) )
     
 
-def GetNamespacesFromParsableContentDescriptions( parsable_content_descriptions: typing.List[ "ParsableContentDescription" ] ):
+def GetNamespacesFromParsableContentDescriptions( parsable_content_descriptions: list[ "ParsableContentDescription" ] ):
     
     namespaces = set()
     
@@ -119,7 +119,7 @@ def GetNamespacesFromParsableContentDescriptions( parsable_content_descriptions:
     return namespaces
     
 
-def GetTitleFromParsedPosts( parsed_posts: typing.List[ "ParsedPost" ] ) -> typing.Optional[ str ]:
+def GetTitleFromParsedPosts( parsed_posts: list[ "ParsedPost" ] ) -> typing.Optional[ str ]:
     
     titles = []
     
@@ -596,7 +596,7 @@ class ParsedContent( object ):
 
 class ParsedPost( object ):
     
-    def __init__( self, parsed_contents: typing.List[ ParsedContent ] ):
+    def __init__( self, parsed_contents: list[ ParsedContent ] ):
         
         self.parsed_contents = parsed_contents
         
@@ -606,7 +606,7 @@ class ParsedPost( object ):
         return len( self.parsed_contents )
         
     
-    def GetHashes( self ) -> typing.List[ typing.Tuple[ str, bytes ] ]:
+    def GetHashes( self ) -> list[ tuple[ str, bytes ] ]:
         
         hash_results = []
         
@@ -632,7 +632,7 @@ class ParsedPost( object ):
         return hash_results
         
 
-    def GetHTTPHeaders( self ) -> typing.Dict[ str, str ]:
+    def GetHTTPHeaders( self ) -> dict[ str, str ]:
         
         headers = {}
         
@@ -649,7 +649,7 @@ class ParsedPost( object ):
         return headers
         
     
-    def GetNamesAndNotes( self ) -> typing.List[ typing.Tuple[ str, str ] ]:
+    def GetNamesAndNotes( self ) -> list[ tuple[ str, str ] ]:
         
         name_and_note_results = []
         
@@ -675,7 +675,7 @@ class ParsedPost( object ):
         return name_and_note_results
         
 
-    def GetTags( self ) -> typing.List[ str ]:
+    def GetTags( self ) -> list[ str ]:
         
         tag_results = []
         
@@ -752,7 +752,7 @@ class ParsedPost( object ):
             
         
     
-    def GetURLs( self, desired_url_types, only_get_top_priority = False ) -> typing.List[ str ]:
+    def GetURLs( self, desired_url_types, only_get_top_priority = False ) -> list[ str ]:
         
         url_results = collections.defaultdict( list )
         
@@ -805,7 +805,7 @@ class ParsedPost( object ):
         return url_list
         
     
-    def GetVariable( self ) -> typing.Optional[ typing.Tuple[ str, str ] ]:
+    def GetVariable( self ) -> typing.Optional[ tuple[ str, str ] ]:
         
         for parsed_content in self.parsed_contents:
             

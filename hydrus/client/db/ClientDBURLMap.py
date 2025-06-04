@@ -1,6 +1,6 @@
+import collections.abc
 import re
 import sqlite3
-import typing
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
@@ -57,7 +57,7 @@ class ClientDBURLMap( ClientDBModule.ClientDBModule ):
         return hash_ids
         
     
-    def GetHashIdsFromCountTests( self, number_tests: typing.List[ ClientNumberTest.NumberTest ], hash_ids: typing.Collection[ int ], hash_ids_table_name: str ):
+    def GetHashIdsFromCountTests( self, number_tests: list[ ClientNumberTest.NumberTest ], hash_ids: collections.abc.Collection[ int ], hash_ids_table_name: str ):
         
         # we'll have to natural join 'urls' or 'urls-class-map-cache' or whatever when we add a proper filter to this guy
         
@@ -245,7 +245,7 @@ class ClientDBURLMap( ClientDBModule.ClientDBModule ):
         return hash_ids_to_urls
         
     
-    def GetTablesAndColumnsThatUseDefinitions( self, content_type: int ) -> typing.List[ typing.Tuple[ str, str ] ]:
+    def GetTablesAndColumnsThatUseDefinitions( self, content_type: int ) -> list[ tuple[ str, str ] ]:
         
         # if content type is a domain, then give urls? bleh
         

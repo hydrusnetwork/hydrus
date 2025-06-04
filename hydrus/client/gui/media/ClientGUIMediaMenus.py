@@ -1,4 +1,5 @@
 import collections
+import collections.abc
 import random
 import typing
 
@@ -23,11 +24,12 @@ from hydrus.client.gui.media import ClientGUIMediaModalActions
 from hydrus.client.gui.media import ClientGUIMediaSimpleActions
 from hydrus.client.media import ClientMedia
 from hydrus.client.media import ClientMediaManagers
+from hydrus.client.media import ClientMediaResult
 from hydrus.client.media import ClientMediaResultPrettyInfoObjects
 from hydrus.client.networking import ClientNetworkingFunctions
 from hydrus.client.search import ClientSearchPredicate
 
-def AddDuplicatesMenu( win: QW.QWidget, command_processor: CAC.ApplicationCommandProcessorMixin, menu: QW.QMenu, location_context: ClientLocation.LocationContext, focus_singleton: ClientMedia.Media, num_selected: int, collections_selected: bool ):
+def AddDuplicatesMenu( win: QW.QWidget, command_processor: CAC.ApplicationCommandProcessorMixin, menu: QW.QMenu, location_context: ClientLocation.LocationContext, focus_media_result: ClientMediaResult.MediaResult, num_selected: int, collections_selected: bool ):
     
     # TODO: I am hesitating making this async since we'll have duplicate relations available in the MediaResult soon enough
     # it would be great to have it in the Canvas though, hence the refactoring. needs a bit more reworking for that, but a good step forward
@@ -36,7 +38,7 @@ def AddDuplicatesMenu( win: QW.QWidget, command_processor: CAC.ApplicationComman
     
     duplicates_menu = ClientGUIMenus.GenerateMenu( menu )
     
-    focused_hash = focus_singleton.GetHash()
+    focused_hash = focus_media_result.GetHash()
     
     combined_local_location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
     
@@ -63,7 +65,7 @@ def AddDuplicatesMenu( win: QW.QWidget, command_processor: CAC.ApplicationComman
     focus_is_in_alternate_group = False
     focus_has_fps = False
     focus_has_potentials = False
-    focus_can_be_searched = focus_singleton.GetMime() in HC.FILES_THAT_HAVE_PERCEPTUAL_HASH
+    focus_can_be_searched = focus_media_result.GetMime() in HC.FILES_THAT_HAVE_PERCEPTUAL_HASH
     
     if len( file_duplicate_info ) == 0:
         
@@ -97,6 +99,8 @@ def AddDuplicatesMenu( win: QW.QWidget, command_processor: CAC.ApplicationComman
                 
             
             if HC.DUPLICATE_MEMBER in file_duplicate_types_to_counts:
+                
+                ClientGUIMenus.AppendMenuLabel( duplicates_menu, 'this file is in a duplicate file group' )
                 
                 if job_duplicate_info[ 'is_king' ]:
                     
@@ -153,6 +157,11 @@ def AddDuplicatesMenu( win: QW.QWidget, command_processor: CAC.ApplicationComman
             
         
     
+    if len( duplicates_menu.actions() ) == 0:
+        
+        ClientGUIMenus.AppendMenuLabel( duplicates_menu, 'this file has no duplicate relationships' )
+        
+    
     ClientGUIMenus.AppendSeparator( duplicates_menu )
     
     focus_is_definitely_king = len( file_duplicate_info ) > 0 and file_duplicate_info[ 'is_king' ]
@@ -163,52 +172,46 @@ def AddDuplicatesMenu( win: QW.QWidget, command_processor: CAC.ApplicationComman
     
     if multiple_selected or single_action_available:
         
-        duplicates_action_submenu = ClientGUIMenus.GenerateMenu( duplicates_menu )
-        
         if len( file_duplicate_info ) == 0:
             
-            ClientGUIMenus.AppendMenuLabel( duplicates_action_submenu, 'could not fetch info to check for available file actions (db currently locked)' )
+            ClientGUIMenus.AppendMenuLabel( duplicates_menu, 'could not fetch info to check for available file actions (db currently locked)' )
             
         else:
             
             if not focus_is_definitely_king:
                 
-                ClientGUIMenus.AppendMenuItem( duplicates_action_submenu, 'set this file as the best quality of its group', 'Set the focused media to be the King of its group.', command_processor.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_SET_FOCUSED_KING ) )
+                ClientGUIMenus.AppendMenuItem( duplicates_menu, 'set this file as the best quality of its group', 'Set the focused media to be the King of its group.', command_processor.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_SET_FOCUSED_KING ) )
                 
             
         
-        ClientGUIMenus.AppendSeparator( duplicates_action_submenu )
+        ClientGUIMenus.AppendSeparator( duplicates_menu )
         
         if multiple_selected:
             
             label = 'set this file as better than the ' + HydrusNumbers.ToHumanInt( num_selected - 1 ) + ' other selected'
             
-            ClientGUIMenus.AppendMenuItem( duplicates_action_submenu, label, 'Set the focused media to be better than the other selected files.', command_processor.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_SET_FOCUSED_BETTER ) )
+            ClientGUIMenus.AppendMenuItem( duplicates_menu, label, 'Set the focused media to be better than the other selected files.', command_processor.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_SET_FOCUSED_BETTER ) )
             
-            num_pairs = num_selected * ( num_selected - 1 ) / 2 # com // ations -- n!/2(n-2)!
+            ClientGUIMenus.AppendMenuItem( duplicates_menu, 'set all selected as same quality duplicates', 'Set all the selected files as same quality duplicates.', command_processor.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_SET_SAME_QUALITY ) )
             
-            num_pairs_text = HydrusNumbers.ToHumanInt( num_pairs ) + ' pairs'
+            ClientGUIMenus.AppendSeparator( duplicates_menu )
             
-            ClientGUIMenus.AppendMenuItem( duplicates_action_submenu, 'set all selected as same quality duplicates', 'Set all the selected files as same quality duplicates.', command_processor.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_SET_SAME_QUALITY ) )
+            ClientGUIMenus.AppendMenuItem( duplicates_menu, 'set all selected as alternates', 'Set all the selected files as alternates.', command_processor.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_SET_ALTERNATE ) )
             
-            ClientGUIMenus.AppendSeparator( duplicates_action_submenu )
-            
-            ClientGUIMenus.AppendMenuItem( duplicates_action_submenu, 'set all selected as alternates', 'Set all the selected files as alternates.', command_processor.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_SET_ALTERNATE ) )
-            
-            ClientGUIMenus.AppendMenuItem( duplicates_action_submenu, 'set a relationship with custom metadata merge options', 'Choose which duplicates status to set to this selection and customise non-default duplicate metadata merge options.', command_processor.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_SET_CUSTOM ) )
+            ClientGUIMenus.AppendMenuItem( duplicates_menu, 'set a relationship with custom metadata merge options', 'Choose which duplicates status to set to this selection and customise non-default duplicate metadata merge options.', command_processor.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_SET_CUSTOM ) )
             
             if collections_selected:
                 
-                ClientGUIMenus.AppendSeparator( duplicates_action_submenu )
+                ClientGUIMenus.AppendSeparator( duplicates_menu )
                 
-                ClientGUIMenus.AppendMenuItem( duplicates_action_submenu, 'set selected collections as groups of alternates', 'Set files in the selection which are collected together as alternates.', command_processor.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_SET_ALTERNATE_COLLECTIONS ) )
+                ClientGUIMenus.AppendMenuItem( duplicates_menu, 'set selected collections as groups of alternates', 'Set files in the selection which are collected together as alternates.', command_processor.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_SET_ALTERNATE_COLLECTIONS ) )
                 
             
             #
             
-            ClientGUIMenus.AppendSeparator( duplicates_action_submenu )
+            ClientGUIMenus.AppendSeparator( duplicates_menu )
             
-            duplicates_edit_action_submenu = ClientGUIMenus.GenerateMenu( duplicates_action_submenu )
+            duplicates_edit_action_submenu = ClientGUIMenus.GenerateMenu( duplicates_menu )
             
             for duplicate_type in ( HC.DUPLICATE_BETTER, HC.DUPLICATE_SAME_QUALITY ):
                 
@@ -220,41 +223,55 @@ def AddDuplicatesMenu( win: QW.QWidget, command_processor: CAC.ApplicationComman
                 ClientGUIMenus.AppendMenuItem( duplicates_edit_action_submenu, 'for ' + HC.duplicate_type_string_lookup[HC.DUPLICATE_ALTERNATE] + ' (advanced!)', 'Edit what happens when you set this status.', ClientGUIMediaModalActions.EditDuplicateContentMergeOptions, win, HC.DUPLICATE_ALTERNATE )
                 
             
-            ClientGUIMenus.AppendMenu( duplicates_action_submenu, duplicates_edit_action_submenu, 'edit default duplicate metadata merge options' )
+            ClientGUIMenus.AppendMenu( duplicates_menu, duplicates_edit_action_submenu, 'edit default duplicate metadata merge options' )
             
             #
             
-            ClientGUIMenus.AppendSeparator( duplicates_action_submenu )
+            ClientGUIMenus.AppendSeparator( duplicates_menu )
             
-            ClientGUIMenus.AppendMenuItem( duplicates_action_submenu, 'set all possible pair combinations as \'potential\' duplicates for the duplicates filter.', 'Queue all these files up in the duplicates filter.', command_processor.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_SET_POTENTIAL ) )
+            ClientGUIMenus.AppendMenuItem( duplicates_menu, 'set all possible pair combinations as \'potential\' duplicates for the duplicates filter.', 'Queue all these files up in the duplicates filter.', command_processor.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_SET_POTENTIAL ) )
+            
+        
+        ClientGUIMenus.AppendSeparator( duplicates_menu )
+        
+        remove_actions_available = ( focus_is_in_duplicate_group and not focus_is_definitely_king ) or focus_is_in_alternate_group
+        
+        if remove_actions_available:
+            
+            duplicates_single_remove_menu = ClientGUIMenus.GenerateMenu( duplicates_menu )
+            
+            if focus_is_in_duplicate_group and not focus_is_definitely_king:
+                
+                ClientGUIMenus.AppendMenuItem( duplicates_single_remove_menu, 'remove this file from its duplicate group', 'Extract this file from its duplicate group and reset its search status.', command_processor.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_REMOVE_FOCUSED_FROM_DUPLICATE_GROUP ) )
+                
+            
+            if focus_is_in_alternate_group:
+                
+                ClientGUIMenus.AppendMenuItem( duplicates_single_remove_menu, 'remove this file\'s duplicate group from its alternate group', 'Extract this file\'s duplicate group from its alternate group and reset the duplicate group\'s search status.', command_processor.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_REMOVE_FOCUSED_FROM_ALTERNATE_GROUP ) )
+                
+            
+            ClientGUIMenus.AppendMenu( duplicates_menu, duplicates_single_remove_menu, 'remove for this file' )
             
         
         if dissolution_actions_available:
             
-            ClientGUIMenus.AppendSeparator( duplicates_action_submenu )
+            ClientGUIMenus.AppendSeparator( duplicates_menu )
             
-            duplicates_single_dissolution_menu = ClientGUIMenus.GenerateMenu( duplicates_action_submenu )
+            duplicates_single_dissolution_menu = ClientGUIMenus.GenerateMenu( duplicates_menu )
             
             if focus_is_in_duplicate_group:
-                
-                if not focus_is_definitely_king:
-                    
-                    ClientGUIMenus.AppendMenuItem( duplicates_single_dissolution_menu, 'remove this file from its duplicate group', 'Extract this file from its duplicate group and reset its search status.', command_processor.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_REMOVE_FOCUSED_FROM_DUPLICATE_GROUP ) )
-                    
                 
                 ClientGUIMenus.AppendMenuItem( duplicates_single_dissolution_menu, 'DUPLICATE WIPE: dissolve this file\'s duplicate group', 'Completely eliminate this file\'s duplicate group and reset all files\' search status.', command_processor.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_DISSOLVE_FOCUSED_DUPLICATE_GROUP ) )
                 
             
             if focus_is_in_alternate_group:
                 
-                ClientGUIMenus.AppendMenuItem( duplicates_single_dissolution_menu, 'remove this file\'s duplicate group from its alternate group', 'Extract this file\'s duplicate group from its alternate group and reset the duplicate group\'s search status.', command_processor.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_REMOVE_FOCUSED_FROM_ALTERNATE_GROUP ) )
-                
                 ClientGUIMenus.AppendMenuItem( duplicates_single_dissolution_menu, 'EVEN BIGGER WIPE: dissolve this file\'s alternate group', 'Completely eliminate this file\'s alternate group, undoing all alternate decisions. This resets search status for all involved files.', command_processor.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_DISSOLVE_FOCUSED_ALTERNATE_GROUP ) )
                 
             
             if focus_has_fps:
                 
-                ClientGUIMenus.AppendMenuItem( duplicates_single_dissolution_menu, 'delete all false-positive relationships this file\'s alternate group has with other groups', 'Clear out all false-positive relationships this file\'s alternates group has with other groups and resets search status.', command_processor.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_CLEAR_FOCUSED_FALSE_POSITIVES ) )
+                ClientGUIMenus.AppendMenuItem( duplicates_single_dissolution_menu, 'delete all false-positive relationships this file\'s alternate group has with other groups', 'Clear out all false-positive relationships this file\'s alternates group has with other groups and resets search status.', command_processor.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_CLEAR_ALL_FOCUSED_FALSE_POSITIVES ) )
                 
             
             ClientGUIMenus.AppendSeparator( duplicates_single_dissolution_menu )
@@ -266,27 +283,34 @@ def AddDuplicatesMenu( win: QW.QWidget, command_processor: CAC.ApplicationComman
             
             if focus_has_potentials:
                 
-                ClientGUIMenus.AppendMenuItem( duplicates_single_dissolution_menu, 'remove this file\'s potential relationships', 'Clear out this file\'s potential relationships.', command_processor.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_REMOVE_FOCUSED_POTENTIALS ) )
+                ClientGUIMenus.AppendMenuItem( duplicates_single_dissolution_menu, 'delete all this file\'s potential relationships', 'Clear out this file\'s potential relationships.', command_processor.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_REMOVE_FOCUSED_POTENTIALS ) )
                 
             
-            ClientGUIMenus.AppendMenu( duplicates_action_submenu, duplicates_single_dissolution_menu, 'remove/reset for this file' )
+            ClientGUIMenus.AppendMenu( duplicates_menu, duplicates_single_dissolution_menu, 'reset for this file' )
             
         
         if multiple_selected:
             
-            duplicates_multiple_dissolution_menu = ClientGUIMenus.GenerateMenu( duplicates_action_submenu )
+            duplicates_multiple_remove_menu = ClientGUIMenus.GenerateMenu( duplicates_menu )
+            
+            ClientGUIMenus.AppendMenuItem( duplicates_multiple_remove_menu, 'delete all false-positive relationships these files\' alternate groups have between each other', 'Clear out all false-positive relationships these files\' alternates groups have with each other and reset search status.', command_processor.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_CLEAR_INTERNAL_FALSE_POSITIVES ) )
+            
+            ClientGUIMenus.AppendMenu( duplicates_menu, duplicates_multiple_remove_menu, 'remove for all selected' )
+            
+            #
+            
+            duplicates_multiple_dissolution_menu = ClientGUIMenus.GenerateMenu( duplicates_menu )
             
             ClientGUIMenus.AppendMenuItem( duplicates_multiple_dissolution_menu, 'DUPLICATE WIPE: completely dissolve these files\' duplicate groups', 'Completely eliminate these files\' duplicate groups and reset all files\' search status.', command_processor.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_DISSOLVE_DUPLICATE_GROUP ) )
             ClientGUIMenus.AppendMenuItem( duplicates_multiple_dissolution_menu, 'EVEN BIGGER WIPE: completely dissolve these files\' alternate groups', 'Completely eliminate these files\' alternate groups, undoing all alternate decisions. This resets search status for all involved files.', command_processor.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_DISSOLVE_ALTERNATE_GROUP ) )
-            ClientGUIMenus.AppendMenuItem( duplicates_multiple_dissolution_menu, 'delete all false-positive relationships these files\' alternate groups have with other groups', 'Clear out all false-positive relationships these files\' alternates groups has with other groups and resets search status.', command_processor.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_CLEAR_FALSE_POSITIVES ) )
+            ClientGUIMenus.AppendSeparator( duplicates_multiple_dissolution_menu )
+            ClientGUIMenus.AppendMenuItem( duplicates_multiple_dissolution_menu, 'delete all false-positive relationships these files\' alternate groups have with other groups', 'Clear out all false-positive relationships these files\' alternates groups has with other groups and reset search status.', command_processor.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_CLEAR_ALL_FALSE_POSITIVES ) )
             ClientGUIMenus.AppendSeparator( duplicates_multiple_dissolution_menu )
             ClientGUIMenus.AppendMenuItem( duplicates_multiple_dissolution_menu, 'schedule these files to be searched for potentials again', 'Queue these files for another potentials search. Will not remove any existing potentials or real duplicate relationships.', command_processor.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_RESET_POTENTIAL_SEARCH ) )
-            ClientGUIMenus.AppendMenuItem( duplicates_multiple_dissolution_menu, 'remove these files\' potential relationships', 'Clear out these files\' potential relationships.', command_processor.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_REMOVE_POTENTIALS ) )
+            ClientGUIMenus.AppendMenuItem( duplicates_multiple_dissolution_menu, 'delete these files\' potential relationships', 'Clear out these files\' potential relationships.', command_processor.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_MEDIA_REMOVE_POTENTIALS ) )
             
-            ClientGUIMenus.AppendMenu( duplicates_action_submenu, duplicates_multiple_dissolution_menu, 'advanced: remove/reset for all selected' )
+            ClientGUIMenus.AppendMenu( duplicates_menu, duplicates_multiple_dissolution_menu, 'advanced: reset for all selected' )
             
-        
-        ClientGUIMenus.AppendMenu( duplicates_menu, duplicates_action_submenu, 'set relationship' )
         
     
     if len( duplicates_menu.actions() ) == 0:
@@ -297,7 +321,7 @@ def AddDuplicatesMenu( win: QW.QWidget, command_processor: CAC.ApplicationComman
     ClientGUIMenus.AppendMenu( menu, duplicates_menu, 'file relationships' )
     
 
-def AddFileViewingStatsMenu( menu, medias: typing.Collection[ ClientMedia.Media ] ):
+def AddFileViewingStatsMenu( menu, medias: collections.abc.Collection[ ClientMedia.Media ] ):
     
     if len( medias ) == 0:
         
@@ -648,7 +672,7 @@ def AddKnownURLsViewCopyMenu( win: QW.QWidget, command_processor: CAC.Applicatio
     ClientGUIMenus.AppendMenu( menu, urls_menu, 'urls' )
     
 
-def AddLocalFilesMoveAddToMenu( win: QW.QWidget, menu: QW.QMenu, local_duplicable_to_file_service_keys: typing.Collection[ bytes ], local_moveable_from_and_to_file_service_keys: typing.Collection[ typing.Tuple[ bytes, bytes ] ], multiple_selected: bool, process_application_command_call ):
+def AddLocalFilesMoveAddToMenu( win: QW.QWidget, menu: QW.QMenu, local_duplicable_to_file_service_keys: collections.abc.Collection[ bytes ], local_moveable_from_and_to_file_service_keys: collections.abc.Collection[ tuple[ bytes, bytes ] ], multiple_selected: bool, process_application_command_call ):
     
     if len( local_duplicable_to_file_service_keys ) == 0 and len( local_moveable_from_and_to_file_service_keys ) == 0:
         
@@ -716,7 +740,7 @@ def AddLocalFilesMoveAddToMenu( win: QW.QWidget, menu: QW.QMenu, local_duplicabl
         
     
 
-def AddManageFileViewingStatsMenu( win: QW.QWidget, menu: QW.QMenu, flat_medias: typing.Collection[ ClientMedia.MediaSingleton ] ):
+def AddManageFileViewingStatsMenu( win: QW.QWidget, menu: QW.QMenu, flat_medias: collections.abc.Collection[ ClientMedia.MediaSingleton ] ):
     
     # add test here for if media actually has stats, edit them, all that
     
@@ -727,7 +751,7 @@ def AddManageFileViewingStatsMenu( win: QW.QWidget, menu: QW.QMenu, flat_medias:
     ClientGUIMenus.AppendMenu( menu, submenu, 'viewing stats' )
     
 
-def AddOpenMenu( win: QW.QWidget, command_processor: CAC.ApplicationCommandProcessorMixin, menu: QW.QMenu, focused_media: typing.Optional[ ClientMedia.Media ], selected_media: typing.Collection[ ClientMedia.Media ] ):
+def AddOpenMenu( win: QW.QWidget, command_processor: CAC.ApplicationCommandProcessorMixin, menu: QW.QMenu, focused_media: typing.Optional[ ClientMedia.Media ], selected_media: collections.abc.Collection[ ClientMedia.Media ] ):
     
     if len( selected_media ) == 0:
         
@@ -799,7 +823,7 @@ def AddOpenMenu( win: QW.QWidget, command_processor: CAC.ApplicationCommandProce
     ClientGUIMenus.AppendMenu( menu, open_menu, 'open' )
     
 
-def AddPrettyMediaResultInfoLines( menu: QW.QMenu, pretty_info_lines: typing.List[ ClientMediaResultPrettyInfoObjects.PrettyMediaResultInfoLine ] ):
+def AddPrettyMediaResultInfoLines( menu: QW.QMenu, pretty_info_lines: list[ ClientMediaResultPrettyInfoObjects.PrettyMediaResultInfoLine ] ):
     
     def add_pretty_info_str( m: QW.QMenu, line: ClientMediaResultPrettyInfoObjects.PrettyMediaResultInfoLine ):
         
@@ -937,7 +961,7 @@ def StartOtherHashesMenuFetch( win: QW.QWidget, media: ClientMedia.MediaSingleto
     job.start()
     
 
-def AddShareMenu( win: QW.QWidget, command_processor: CAC.ApplicationCommandProcessorMixin, menu: QW.QMenu, focused_media: typing.Optional[ ClientMedia.Media ], selected_media: typing.Collection[ ClientMedia.Media ] ):
+def AddShareMenu( win: QW.QWidget, command_processor: CAC.ApplicationCommandProcessorMixin, menu: QW.QMenu, focused_media: typing.Optional[ ClientMedia.Media ], selected_media: collections.abc.Collection[ ClientMedia.Media ] ):
     
     if focused_media is not None:
         

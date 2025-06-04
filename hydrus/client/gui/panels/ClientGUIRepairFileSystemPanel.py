@@ -1,5 +1,5 @@
+import collections.abc
 import os
-import typing
 
 from qtpy import QtWidgets as QW
 
@@ -18,7 +18,7 @@ from hydrus.client.gui.widgets import ClientGUICommon
 
 class RepairFileSystemPanel( ClientGUIScrolledPanels.ManagePanel ):
     
-    def __init__( self, parent, missing_subfolders: typing.Collection[ ClientFilesPhysical.FilesStorageSubfolder ] ):
+    def __init__( self, parent, missing_subfolders: collections.abc.Collection[ ClientFilesPhysical.FilesStorageSubfolder ] ):
         
         super().__init__( parent )
         

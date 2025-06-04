@@ -1,5 +1,3 @@
-import typing
-
 import numpy
 import os
 import re
@@ -690,7 +688,7 @@ def ParseFFMPEGVideoLine( lines, png_ok = False ) -> str:
     return line
     
 
-def ParseFFMPEGVideoResolution( lines, png_ok = False ) -> typing.Tuple[ int, int ]:
+def ParseFFMPEGVideoResolution( lines, png_ok = False ) -> tuple[ int, int ]:
     
     try:
         

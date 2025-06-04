@@ -1,5 +1,5 @@
+import collections.abc
 import sqlite3
-import typing
 
 from hydrus.core import HydrusDBBase
 from hydrus.core import HydrusExceptions
@@ -73,7 +73,7 @@ class HydrusDBModule( HydrusDBBase.DBBase ):
         pass
         
     
-    def _GetCriticalTableNames( self ) -> typing.Collection[ str ]:
+    def _GetCriticalTableNames( self ) -> collections.abc.Collection[ str ]:
         
         return set()
         
@@ -122,7 +122,7 @@ class HydrusDBModule( HydrusDBBase.DBBase ):
         return table_generation_dict
         
     
-    def _GetServiceTablePrefixes( self ) -> typing.Collection[ str ]:
+    def _GetServiceTablePrefixes( self ) -> collections.abc.Collection[ str ]:
         
         return set()
         
@@ -172,21 +172,21 @@ class HydrusDBModule( HydrusDBBase.DBBase ):
         self._DoLastShutdownWasBadWork()
         
     
-    def GetExpectedServiceTableNames( self ) -> typing.Collection[ str ]:
+    def GetExpectedServiceTableNames( self ) -> collections.abc.Collection[ str ]:
         
         table_generation_dict = self._GetServicesTableGenerationDict()
         
         return list( table_generation_dict.keys() )
         
     
-    def GetExpectedInitialTableNames( self ) -> typing.Collection[ str ]:
+    def GetExpectedInitialTableNames( self ) -> collections.abc.Collection[ str ]:
         
         table_generation_dict = self._GetInitialTableGenerationDict()
         
         return list( table_generation_dict.keys() )
         
     
-    def GetSurplusServiceTableNames( self, all_table_names ) -> typing.Set[ str ]:
+    def GetSurplusServiceTableNames( self, all_table_names ) -> set[ str ]:
         
         prefixes = self._GetServiceTablePrefixes()
         
@@ -211,7 +211,7 @@ class HydrusDBModule( HydrusDBBase.DBBase ):
         return surplus_table_names
         
     
-    def GetTablesAndColumnsThatUseDefinitions( self, content_type: int ) -> typing.List[ typing.Tuple[ str, str ] ]:
+    def GetTablesAndColumnsThatUseDefinitions( self, content_type: int ) -> list[ tuple[ str, str ] ]:
         
         # could also do another one of these for orphan tables that have service id in the name.
         

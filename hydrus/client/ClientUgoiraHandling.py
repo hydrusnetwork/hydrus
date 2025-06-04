@@ -1,4 +1,5 @@
 import io
+import json
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core.files import HydrusUgoiraHandling
@@ -7,9 +8,6 @@ from hydrus.core.files import HydrusArchiveHandling
 
 from hydrus.client import ClientGlobals as CG
 from hydrus.client.media import ClientMediaResult
-
-import json
-import typing
 
 UGOIRA_DEFAULT_FRAME_DURATION_MS = 125
 
@@ -73,11 +71,11 @@ def GetFrameDurationsMSFromNote( media: ClientMediaResult.MediaResult ):
             
             if isinstance(ugoiraJson, list):
                 
-                frameData: typing.List[HydrusUgoiraHandling.UgoiraFrame] = ugoiraJson
+                frameData: list[HydrusUgoiraHandling.UgoiraFrame] = ugoiraJson
                 
             else:
                 
-                frameData: typing.List[HydrusUgoiraHandling.UgoiraFrame] = ugoiraJson['frames']
+                frameData: list[HydrusUgoiraHandling.UgoiraFrame] = ugoiraJson['frames']
                 
             
             frame_durations_ms = [data['delay'] for data in frameData]
@@ -97,7 +95,7 @@ def GetFrameDurationsMSFromNote( media: ClientMediaResult.MediaResult ):
         
         try:
             
-            ugoiraJsonArray: typing.List[int] = json.loads(notes['ugoira frame delay array'])
+            ugoiraJsonArray: list[int] = json.loads(notes['ugoira frame delay array'])
             
             if len(ugoiraJsonArray) > 0 and isinstance(ugoiraJsonArray[0], int):
                 

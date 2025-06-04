@@ -1,3 +1,4 @@
+import collections.abc
 import itertools
 import sqlite3
 import typing
@@ -28,7 +29,7 @@ class FileSearchContextLeaf( object ):
     
 class FileSearchContextBranch( object ):
     
-    def __init__( self, file_search_context: ClientSearchFileSearchContext.FileSearchContext, file_service_ids: typing.Collection[ int ], tag_service_ids: typing.Collection[ int ], file_location_is_cross_referenced: bool ):
+    def __init__( self, file_search_context: ClientSearchFileSearchContext.FileSearchContext, file_service_ids: collections.abc.Collection[ int ], tag_service_ids: collections.abc.Collection[ int ], file_location_is_cross_referenced: bool ):
         
         self.file_search_context = file_search_context
         
@@ -83,7 +84,7 @@ class ClientDBMasterServices( ClientDBModule.ClientDBModule ):
         self._InitCaches()
         
     
-    def _GetCriticalTableNames( self ) -> typing.Collection[ str ]:
+    def _GetCriticalTableNames( self ) -> collections.abc.Collection[ str ]:
         
         return {
             'main.services'
@@ -283,12 +284,12 @@ class ClientDBMasterServices( ClientDBModule.ClientDBModule ):
         raise HydrusExceptions.DataMissing( 'Service id error in database: key "{}" does not exist!'.format( service_key.hex() ) )
         
     
-    def GetServiceIds( self, service_types ) -> typing.Set[ int ]:
+    def GetServiceIds( self, service_types ) -> set[ int ]:
         
         return { service_id for ( service_id, service ) in self._service_ids_to_services.items() if service.GetServiceType() in service_types }
         
     
-    def GetServiceIdsToServiceKeys( self ) -> typing.Dict[ int, bytes ]:
+    def GetServiceIdsToServiceKeys( self ) -> dict[ int, bytes ]:
         
         return { service_id : service_key for ( service_key, service_id ) in self._service_keys_to_service_ids.items() }
         
@@ -298,7 +299,7 @@ class ClientDBMasterServices( ClientDBModule.ClientDBModule ):
         return self.GetService( service_id ).GetServiceKey()
         
     
-    def GetServiceKeys( self ) -> typing.Set[ bytes ]:
+    def GetServiceKeys( self ) -> set[ bytes ]:
         
         return set( self._service_keys_to_service_ids.keys() )
         
@@ -313,7 +314,7 @@ class ClientDBMasterServices( ClientDBModule.ClientDBModule ):
         raise HydrusExceptions.DataMissing( 'Service id error in database: id "{}" does not exist!'.format( service_id ) )
         
     
-    def GetTablesAndColumnsThatUseDefinitions( self, content_type: int ) -> typing.List[ typing.Tuple[ str, str ] ]:
+    def GetTablesAndColumnsThatUseDefinitions( self, content_type: int ) -> list[ tuple[ str, str ] ]:
         
         return []
         

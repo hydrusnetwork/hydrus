@@ -100,7 +100,7 @@ def blurhash_components(blurhash):
     
     return size_x, size_y
 
-def blurhash_decode(blurhash, width, height, punch = 1.0, linear = False):
+def blurhash_decode( blurhash, width, height, punch = 1.0, linear = False ):
     """
     Decodes the given blurhash to an image of the specified size.
     
@@ -115,8 +115,11 @@ def blurhash_decode(blurhash, width, height, punch = 1.0, linear = False):
     to a relatively small size and then scale the result up, as it
     basically looks the same anyways.
     """
+    
     if len(blurhash) < 6:
+        
         raise ValueError("Blurhash must be at least 6 characters long.")
+        
     
     # Decode metadata
     size_info = base83_decode(blurhash[0])
@@ -149,32 +152,63 @@ def blurhash_decode(blurhash, width, height, punch = 1.0, linear = False):
     
     # Return image RGB values, as a list of lists of lists, 
     # consumable by something like numpy or PIL.
+    
+    width_float = float( width )
+    height_float = float( height )
+    
     pixels = []
-    for y in range(height):
+    
+    for y in range( height ):
+        
+        y_float = float( y )
+        
         pixel_row = []
-        for x in range(width):
+        
+        for x in range( width ):
+            
+            x_float = float( x )
+            
             pixel = [0.0, 0.0, 0.0]
 
-            for j in range(size_y):
-                for i in range(size_x):
-                    basis = math.cos(math.pi * float(x) * float(i) / float(width)) * \
-                            math.cos(math.pi * float(y) * float(j) / float(height))
-                    colour = colours[i + j * size_x]
+            for j in range( size_y ):
+                
+                j_float = float( j )
+                
+                for i in range( size_x ):
+                    
+                    i_float = float( i )
+                    
+                    basis = math.cos( math.pi * x_float * i_float / width_float ) * math.cos( math.pi * y_float * j_float / height_float )
+                    
+                    colour = colours[ i + j * size_x ]
+                    
                     pixel[0] += colour[0] * basis
                     pixel[1] += colour[1] * basis
                     pixel[2] += colour[2] * basis
+                    
+                
+            
             if not linear:
+                
                 pixel_row.append([
                     linear_to_srgb(pixel[0]),
                     linear_to_srgb(pixel[1]),
                     linear_to_srgb(pixel[2]),
                 ])
+                
             else:
+                
                 pixel_row.append(pixel)
-        pixels.append(pixel_row)
+                
+            
+        
+        pixels.append( pixel_row )
+        
+    
     return pixels
     
-def blurhash_encode(image, components_x = 4, components_y = 4, linear = False):
+
+def blurhash_encode( image, components_x = 4, components_y = 4, linear = False ):
     """
     Calculates the blurhash for an image using the given x and y component counts.
     
@@ -186,53 +220,92 @@ def blurhash_encode(image, components_x = 4, components_y = 4, linear = False):
     useful if you want to encode a version of your image resized to a smaller size (which
     you should ideally do in linear colour).
     """
+    
     if components_x < 1 or components_x > 9 or components_y < 1 or components_y > 9: 
-        raise ValueError("x and y component counts must be between 1 and 9 inclusive.")
-    height = float(len(image))
-    width = float(len(image[0]))
+        
+        raise ValueError( "x and y component counts must be between 1 and 9 inclusive." )
+        
+    
+    height = len( image )
+    height_float = float( height )
+    
+    width = len(image[0])
+    width_float = float( width )
     
     # Convert to linear if neeeded
     image_linear = []
+    
     if not linear:
-        for y in range(int(height)):
+        
+        for y in range( height ):
+            
             image_linear_line = []
-            for x in range(int(width)):
+            
+            for x in range( width ):
+                
                 image_linear_line.append([
                     srgb_to_linear(image[y][x][0]),
                     srgb_to_linear(image[y][x][1]),
                     srgb_to_linear(image[y][x][2])
                 ])
+                
+            
             image_linear.append(image_linear_line)
+            
+        
     else:
+        
         image_linear = image
         
+    
     # Calculate components
     components = []
+    
     max_ac_component = 0.0
-    for j in range(components_y):
-        for i in range(components_x):
+    
+    for j in range( components_y ):
+        
+        j_float = float( j )
+        
+        for i in range( components_x ):
+            
+            i_float = float( i )
+            
             norm_factor = 1.0 if (i == 0 and j == 0) else 2.0
+            
             component = [0.0, 0.0, 0.0]
-            for y in range(int(height)):
-                for x in range(int(width)):
-                    basis = norm_factor * math.cos(math.pi * float(i) * float(x) / width) * \
-                                          math.cos(math.pi * float(j) * float(y) / height)
+            
+            for y in range( height ):
+                
+                y_float = float( y )
+                
+                for x in range( width ):
+                    
+                    x_float = float( x )
+                    
+                    basis = norm_factor * math.cos( math.pi * i_float * x_float / width_float ) * math.cos( math.pi * j_float * y_float / height_float )
+                    
                     component[0] += basis * image_linear[y][x][0]
                     component[1] += basis * image_linear[y][x][1]
                     component[2] += basis * image_linear[y][x][2]
                     
-            component[0] /= (width * height)
-            component[1] /= (width * height)
-            component[2] /= (width * height)
+                
+            
+            component[0] /= (width_float * height_float)
+            component[1] /= (width_float * height_float)
+            component[2] /= (width_float * height_float)
+            
             components.append(component)
             
             if not (i == 0 and j == 0):
+                
                 max_ac_component = max(max_ac_component, abs(component[0]), abs(component[1]), abs(component[2]))
                 
+            
+        
+    
     # Encode components
-    dc_value = (linear_to_srgb(components[0][0]) << 16) + \
-               (linear_to_srgb(components[0][1]) << 8) + \
-               linear_to_srgb(components[0][2])
+    dc_value = (linear_to_srgb(components[0][0]) << 16) + (linear_to_srgb(components[0][1]) << 8) + linear_to_srgb(components[0][2])
     
     quant_max_ac_component = int(max(0, min(82, math.floor(max_ac_component * 166 - 0.5))))
     ac_component_norm_factor = float(quant_max_ac_component + 1) / 166.0
@@ -250,7 +323,11 @@ def blurhash_encode(image, components_x = 4, components_y = 4, linear = False):
     blurhash += base83_encode((components_x - 1) + (components_y - 1) * 9, 1)
     blurhash += base83_encode(quant_max_ac_component, 1)
     blurhash += base83_encode(dc_value, 4)
+    
     for ac_value in ac_values:
+        
         blurhash += base83_encode(ac_value, 2)
+        
     
     return blurhash
+    

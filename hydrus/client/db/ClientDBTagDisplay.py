@@ -1,8 +1,8 @@
 import collections
+import collections.abc
 import itertools
 import sqlite3
 import time
-import typing
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
@@ -45,7 +45,7 @@ class ClientDBTagDisplay( ClientDBModule.ClientDBModule ):
         super().__init__( 'client tag display', cursor )
         
     
-    def FilterChained( self, display_type, tag_service_id, tag_ids ) -> typing.Set[ int ]:
+    def FilterChained( self, display_type, tag_service_id, tag_ids ) -> set[ int ]:
         
         # we are not passing ideal_tag_ids here, but that's ok, we are testing sibling chains in one second
         parents_chained_tag_ids = self.modules_tag_parents.FilterChained( display_type, tag_service_id, tag_ids )
@@ -234,12 +234,12 @@ class ClientDBTagDisplay( ClientDBModule.ClientDBModule ):
         return ( sibling_rows_to_add, sibling_rows_to_remove, parent_rows_to_add, parent_rows_to_remove, num_actual_rows, num_ideal_rows )
         
     
-    def GetApplicableServiceIds( self, tag_service_id ) -> typing.Set[ int ]:
+    def GetApplicableServiceIds( self, tag_service_id ) -> set[ int ]:
         
         return set( self.modules_tag_siblings.GetApplicableServiceIds( tag_service_id ) ).union( self.modules_tag_parents.GetApplicableServiceIds( tag_service_id ) )
         
     
-    def GetChainsMembers( self, display_type, tag_service_id, tag_ids ) -> typing.Set[ int ]:
+    def GetChainsMembers( self, display_type, tag_service_id, tag_ids ) -> set[ int ]:
         
         # all parent definitions are sibling collapsed, so are terminus of their sibling chains
         # so get all of the parent chain, then get all chains that point to those
@@ -326,7 +326,7 @@ class ClientDBTagDisplay( ClientDBModule.ClientDBModule ):
         return tags_to_descendants
         
     
-    def GetImpliedBy( self, display_type, tag_service_id, tag_id ) -> typing.Set[ int ]:
+    def GetImpliedBy( self, display_type, tag_service_id, tag_id ) -> set[ int ]:
         
         ideal_tag_id = self.modules_tag_siblings.GetIdealTagId( display_type, tag_service_id, tag_id )
         
@@ -351,7 +351,7 @@ class ClientDBTagDisplay( ClientDBModule.ClientDBModule ):
         return implication_ids
         
     
-    def GetImplies( self, display_type, tag_service_id, tag_id ) -> typing.Set[ int ]:
+    def GetImplies( self, display_type, tag_service_id, tag_id ) -> set[ int ]:
         
         # a tag implies its ideal sibling and any ancestors
         
@@ -364,7 +364,7 @@ class ClientDBTagDisplay( ClientDBModule.ClientDBModule ):
         return implies
         
     
-    def GetInterestedServiceIds( self, tag_service_id ) -> typing.Set[ int ]:
+    def GetInterestedServiceIds( self, tag_service_id ) -> set[ int ]:
         
         return set( self.modules_tag_siblings.GetInterestedServiceIds( tag_service_id ) ).union( self.modules_tag_parents.GetInterestedServiceIds( tag_service_id ) )
         
@@ -434,7 +434,7 @@ class ClientDBTagDisplay( ClientDBModule.ClientDBModule ):
         return predicates
         
     
-    def GetSiblingsAndParentsForTags( self, tag_display_type: int, tags: typing.Collection[ str ] ):
+    def GetSiblingsAndParentsForTags( self, tag_display_type: int, tags: collections.abc.Collection[ str ] ):
         
         tag_services = self.modules_services.GetServices( HC.REAL_TAG_SERVICES )
         
@@ -499,7 +499,7 @@ class ClientDBTagDisplay( ClientDBModule.ClientDBModule ):
         return tags_to_service_keys_to_siblings_and_parents
         
     
-    def GetTablesAndColumnsThatUseDefinitions( self, content_type: int ) -> typing.List[ typing.Tuple[ str, str ] ]:
+    def GetTablesAndColumnsThatUseDefinitions( self, content_type: int ) -> list[ tuple[ str, str ] ]:
         
         return []
         

@@ -70,7 +70,7 @@ def ConvertURLClassesIntoAPIPairs( url_classes ):
     
     return pairs
     
-def SortURLClassesListDescendingComplexity( url_classes: typing.List[ "URLClass" ] ):
+def SortURLClassesListDescendingComplexity( url_classes: list[ "URLClass" ] ):
     
     # sort reverse = true so most complex come first
     
@@ -395,7 +395,7 @@ class URLClass( HydrusSerialisable.SerialisableBaseNamed ):
         return netloc
         
     
-    def _ClipAndFleshOutPath( self, path_components: typing.List[ str ], for_server: bool ):
+    def _ClipAndFleshOutPath( self, path_components: list[ str ], for_server: bool ):
         
         # /post/show/1326143/akunim-anthro-armband-armwear-clothed-clothing-fem
         
@@ -434,7 +434,7 @@ class URLClass( HydrusSerialisable.SerialisableBaseNamed ):
         return path
         
     
-    def _ClipAndFleshOutQuery( self, query_dict: typing.Dict[ str, str ], single_value_parameters: typing.List[ str ], param_order: typing.List[ str ], for_server: bool ):
+    def _ClipAndFleshOutQuery( self, query_dict: dict[ str, str ], single_value_parameters: list[ str ], param_order: list[ str ], for_server: bool ):
         
         query_dict_keys_to_parameters = {}
         
@@ -1181,7 +1181,7 @@ class URLClass( HydrusSerialisable.SerialisableBaseNamed ):
         return next_gallery_url
         
     
-    def GetParameters( self ) -> typing.List[ URLClassParameterFixedName ]:
+    def GetParameters( self ) -> list[ URLClassParameterFixedName ]:
         
         return self._parameters
         

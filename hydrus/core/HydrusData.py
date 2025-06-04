@@ -1,6 +1,5 @@
-import collections.abc
-
 import collections
+import collections.abc
 import decimal
 import fractions
 import itertools
@@ -124,7 +123,7 @@ def DebugPrint( debug_info ):
     sys.stderr.flush()
     
 
-def DedupeList( xs: typing.Iterable ):
+def DedupeList( xs: collections.abc.Iterable ):
     
     if isinstance( xs, set ):
         
@@ -282,7 +281,7 @@ def IterateHexPrefixes():
         
     
 
-def IterateListRandomlyAndFast( xs: typing.List ):
+def IterateListRandomlyAndFast( xs: list ):
     
     # do this instead of a pre-for-loop shuffle on big lists
     
@@ -316,14 +315,14 @@ def MergeKeyToListDicts( key_to_list_dicts ):
     
     return result
     
-def PartitionIterator( pred: typing.Callable[ [ object ], bool ], stream: typing.Iterable[ object ] ):
+def PartitionIterator( pred: collections.abc.Callable[ [ object ], bool ], stream: collections.abc.Iterable[ object ] ):
     
     ( t1, t2 ) = itertools.tee( stream )
     
     return ( itertools.filterfalse( pred, t1 ), filter( pred, t2 ) )
     
 
-def PartitionIteratorIntoLists( pred: typing.Callable[ [ object ], bool ], stream: typing.Iterable[ object ] ):
+def PartitionIteratorIntoLists( pred: collections.abc.Callable[ [ object ], bool ], stream: collections.abc.Iterable[ object ] ):
     
     ( a, b ) = PartitionIterator( pred, stream )
     

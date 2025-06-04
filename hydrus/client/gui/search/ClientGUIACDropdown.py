@@ -1,4 +1,5 @@
 import collections
+import collections.abc
 import itertools
 import typing
 
@@ -50,7 +51,7 @@ def AppendLoadingPredicate( predicates, label ):
     predicates.append( ClientSearchPredicate.Predicate( predicate_type = ClientSearchPredicate.PREDICATE_TYPE_LABEL, value = label + HC.UNICODE_ELLIPSIS ) )
     
 
-def InsertOtherPredicatesForRead( predicates: typing.MutableSequence[ ClientSearchPredicate.Predicate ], parsed_autocomplete_text: ClientSearchAutocomplete.ParsedAutocompleteText, include_unusual_predicate_types: bool, under_construction_or_predicate: typing.Optional[ ClientSearchPredicate.Predicate ] ):
+def InsertOtherPredicatesForRead( predicates: collections.abc.MutableSequence[ ClientSearchPredicate.Predicate ], parsed_autocomplete_text: ClientSearchAutocomplete.ParsedAutocompleteText, include_unusual_predicate_types: bool, under_construction_or_predicate: typing.Optional[ ClientSearchPredicate.Predicate ] ):
     
     if include_unusual_predicate_types:
         
@@ -72,7 +73,7 @@ def InsertOtherPredicatesForRead( predicates: typing.MutableSequence[ ClientSear
         
     
 
-def InsertTagPredicates( predicates: typing.MutableSequence[ ClientSearchPredicate.Predicate ], tag_service_key: bytes, parsed_autocomplete_text: ClientSearchAutocomplete.ParsedAutocompleteText, allow_auto_wildcard_conversion: bool, insert_if_does_not_exist: bool = True ):
+def InsertTagPredicates( predicates: collections.abc.MutableSequence[ ClientSearchPredicate.Predicate ], tag_service_key: bytes, parsed_autocomplete_text: ClientSearchAutocomplete.ParsedAutocompleteText, allow_auto_wildcard_conversion: bool, insert_if_does_not_exist: bool = True ):
     
     if parsed_autocomplete_text.IsTagSearch( allow_auto_wildcard_conversion ):
         
@@ -453,7 +454,7 @@ def ReadFetch(
     CG.client_controller.CallAfterQtSafe( win, 'read a/c full results', results_callable, job_status, parsed_autocomplete_text, results_cache, matches )
     
 
-def PutAtTopOfMatches( matches: typing.MutableSequence[ ClientSearchPredicate.Predicate ], predicate: ClientSearchPredicate.Predicate, insert_if_does_not_exist: bool = True ):
+def PutAtTopOfMatches( matches: collections.abc.MutableSequence[ ClientSearchPredicate.Predicate ], predicate: ClientSearchPredicate.Predicate, insert_if_does_not_exist: bool = True ):
     
     # we have to be careful here to preserve autocomplete counts!
     # if it already exists, we move it up, do not replace with the test pred param
@@ -1677,7 +1678,7 @@ class ChildrenTab( ListBoxTagsPredicatesAC ):
         self._tags_to_child_predicates_cache = dict()
         
     
-    def UpdateChildrenIfNeeded( self, context_tags: typing.Collection[ str ] ):
+    def UpdateChildrenIfNeeded( self, context_tags: collections.abc.Collection[ str ] ):
         
         if self._children_need_updating:
             
@@ -2111,7 +2112,7 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
         self._SetLocationContext( location_context )
         
     
-    def SetPrefetchResults( self, job_status: ClientThreading.JobStatus, predicates: typing.List[ ClientSearchPredicate.Predicate ], parsed_autocomplete_text: ClientSearchAutocomplete.ParsedAutocompleteText ):
+    def SetPrefetchResults( self, job_status: ClientThreading.JobStatus, predicates: list[ ClientSearchPredicate.Predicate ], parsed_autocomplete_text: ClientSearchAutocomplete.ParsedAutocompleteText ):
         
         if self._current_fetch_job_status is not None and self._current_fetch_job_status.GetKey() == job_status.GetKey():
             
@@ -2121,7 +2122,7 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
             
         
     
-    def SetContextTags( self, tags: typing.Collection[ str ] ):
+    def SetContextTags( self, tags: collections.abc.Collection[ str ] ):
         """
         The search context or the taglist we are editing just changed, so let's tell anything in here that wants to filter or do lookups based on that.
         """
@@ -2937,7 +2938,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTagsFileSearchContext ):
             
         
     
-    def GetPredicates( self ) -> typing.Set[ ClientSearchPredicate.Predicate ]:
+    def GetPredicates( self ) -> set[ ClientSearchPredicate.Predicate ]:
         
         return self._file_search_context.GetPredicates()
         
@@ -3259,7 +3260,7 @@ class ListBoxTagsActiveSearchPredicates( ClientGUIListBoxes.ListBoxTagsPredicate
         return self._my_ac_parent.GetFileSearchContext().GetLocationContext()
         
     
-    def _GetCurrentPagePredicates( self ) -> typing.Set[ ClientSearchPredicate.Predicate ]:
+    def _GetCurrentPagePredicates( self ) -> set[ ClientSearchPredicate.Predicate ]:
         
         return self.GetPredicates()
         

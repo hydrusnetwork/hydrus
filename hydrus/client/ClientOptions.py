@@ -1,6 +1,5 @@
 import os
 import threading
-import typing
 
 from qtpy import QtGui as QG
 
@@ -303,7 +302,8 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             'do_not_setgeometry_on_an_mpv' : False,
             'focus_media_thumb_on_viewer_close' : True,
             'skip_yesno_on_write_autocomplete_multiline_paste' : False,
-            'activate_main_gui_on_viewer_close' : False
+            'activate_main_gui_on_viewer_close' : False,
+            'override_bandwidth_on_file_urls_from_post_urls' : True
         }
         
         #
@@ -1349,7 +1349,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def GetIntegerList( self, name: str ) -> typing.List[ int ]:
+    def GetIntegerList( self, name: str ) -> list[ int ]:
         
         with self._lock:
             
@@ -1599,7 +1599,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def GetStringList( self, name: str ) -> typing.List[ str ]:
+    def GetStringList( self, name: str ) -> list[ str ]:
         
         with self._lock:
             
@@ -1926,7 +1926,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def SetIntegerList( self, name: str, value: typing.List[ int ] ):
+    def SetIntegerList( self, name: str, value: list[ int ] ):
         
         with self._lock:
             

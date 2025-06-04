@@ -1,6 +1,6 @@
+import collections.abc
 import sqlite3
 import time
-import typing
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
@@ -1094,7 +1094,7 @@ class ClientDBTagSearch( ClientDBModule.ClientDBModule ):
         return subtags_searchable_map_table_name
         
     
-    def GetTablesAndColumnsThatUseDefinitions( self, content_type: int ) -> typing.List[ typing.Tuple[ str, str ] ]:
+    def GetTablesAndColumnsThatUseDefinitions( self, content_type: int ) -> list[ tuple[ str, str ] ]:
         
         tables_and_columns = []
         
@@ -1139,7 +1139,7 @@ class ClientDBTagSearch( ClientDBModule.ClientDBModule ):
         return count
         
     
-    def GetTagIdsFromNamespaceIds( self, leaf: ClientDBServices.FileSearchContextLeaf, namespace_ids: typing.Collection[ int ], job_status = None ):
+    def GetTagIdsFromNamespaceIds( self, leaf: ClientDBServices.FileSearchContextLeaf, namespace_ids: collections.abc.Collection[ int ], job_status = None ):
         
         if len( namespace_ids ) == 0:
             
@@ -1189,7 +1189,7 @@ class ClientDBTagSearch( ClientDBModule.ClientDBModule ):
         return final_result_tag_ids
         
     
-    def GetTagIdsFromNamespaceIdsSubtagIds( self, file_service_id: int, tag_service_id: int, namespace_ids: typing.Collection[ int ], subtag_ids: typing.Collection[ int ], job_status = None ):
+    def GetTagIdsFromNamespaceIdsSubtagIds( self, file_service_id: int, tag_service_id: int, namespace_ids: collections.abc.Collection[ int ], subtag_ids: collections.abc.Collection[ int ], job_status = None ):
         
         if len( namespace_ids ) == 0 or len( subtag_ids ) == 0:
             
@@ -1248,7 +1248,7 @@ class ClientDBTagSearch( ClientDBModule.ClientDBModule ):
         return final_result_tag_ids
         
     
-    def GetTagIdsFromSubtagIds( self, file_service_id: int, tag_service_id: int, subtag_ids: typing.Collection[ int ], job_status = None ):
+    def GetTagIdsFromSubtagIds( self, file_service_id: int, tag_service_id: int, subtag_ids: collections.abc.Collection[ int ], job_status = None ):
         
         if len( subtag_ids ) == 0:
             
@@ -1308,7 +1308,7 @@ class ClientDBTagSearch( ClientDBModule.ClientDBModule ):
         self,
         tag_display_type: int,
         file_search_context: ClientSearchFileSearchContext.FileSearchContext,
-        tag_ids: typing.Collection[ int ],
+        tag_ids: collections.abc.Collection[ int ],
         inclusive = True,
         zero_count_ok = False,
         job_status = None
@@ -1365,7 +1365,7 @@ class ClientDBTagSearch( ClientDBModule.ClientDBModule ):
         self,
         tag_display_type: int,
         file_search_context: ClientSearchFileSearchContext.FileSearchContext,
-        tags: typing.Collection[ str ],
+        tags: collections.abc.Collection[ str ],
         inclusive = True,
         zero_count_ok = False,
         job_status = None

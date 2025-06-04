@@ -1,4 +1,5 @@
 import collections
+import collections.abc
 import http.cookiejar
 
 from qtpy import QtCore as QC

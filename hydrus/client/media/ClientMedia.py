@@ -1,4 +1,5 @@
 import collections
+import collections.abc
 import random
 import typing
 
@@ -59,7 +60,7 @@ def CanDisplayMedia( media: "MediaSingleton" ) -> bool:
     return True
     
 
-def FlattenMedia( medias ) -> typing.List[ "MediaSingleton" ]:
+def FlattenMedia( medias ) -> list[ "MediaSingleton" ]:
     
     flat_media = []
     
@@ -129,7 +130,7 @@ def GetMediaResultsTagCount( media_results, tag_service_key, tag_display_type ):
     return GetTagsManagersTagCount( tags_managers, tag_service_key, tag_display_type )
     
 
-def GetMediasFiletypeSummaryString( medias: typing.Collection[ "Media" ] ):
+def GetMediasFiletypeSummaryString( medias: collections.abc.Collection[ "Media" ] ):
     
         def GetDescriptor( plural, classes, num_collections ):
             
@@ -375,7 +376,7 @@ class Media( object ):
         raise NotImplementedError()
         
     
-    def GetResolution( self ) -> typing.Tuple[ int, int ]:
+    def GetResolution( self ) -> tuple[ int, int ]:
         
         raise NotImplementedError()
         
@@ -1024,7 +1025,7 @@ class MediaList( object ):
         return self._GetMedia( hashes )
         
     
-    def GetMediaResults( self, is_in_file_service_key = None, discriminant = None, selected_media = None, unrated = None, for_media_viewer = False ) -> typing.List[ ClientMediaResult.MediaResult ]:
+    def GetMediaResults( self, is_in_file_service_key = None, discriminant = None, selected_media = None, unrated = None, for_media_viewer = False ) -> list[ ClientMediaResult.MediaResult ]:
         
         media_results = []
         
@@ -1196,7 +1197,7 @@ class MediaList( object ):
         return self._sorted_media.index( media )
         
     
-    def MoveMedia( self, medias: typing.List[ Media ], insertion_index: int ):
+    def MoveMedia( self, medias: list[ Media ], insertion_index: int ):
         
         self._sorted_media.move_items( medias, insertion_index )
         
@@ -1300,7 +1301,7 @@ class MediaList( object ):
         self._RecalcAfterContentUpdates( content_update_package )
         
     
-    def ProcessServiceUpdates( self, service_keys_to_service_updates: typing.Dict[ bytes, typing.Collection[ ClientServices.ServiceUpdate ] ] ):
+    def ProcessServiceUpdates( self, service_keys_to_service_updates: dict[ bytes, collections.abc.Collection[ ClientServices.ServiceUpdate ] ] ):
         
         for ( service_key, service_updates ) in service_keys_to_service_updates.items():
             

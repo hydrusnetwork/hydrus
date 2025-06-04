@@ -1,6 +1,6 @@
 import collections
+import collections.abc
 import sqlite3
-import typing
 
 from hydrus.core import HydrusDB
 from hydrus.core import HydrusNumbers
@@ -88,7 +88,7 @@ class ClientDBMappingsCacheCombinedFilesStorage( ClientDBModule.ClientDBModule )
         self.modules_mappings_cache_combined_files_display.Generate( tag_service_id )
         
     
-    def GetTablesAndColumnsThatUseDefinitions( self, content_type: int ) -> typing.List[ typing.Tuple[ str, str ] ]:
+    def GetTablesAndColumnsThatUseDefinitions( self, content_type: int ) -> list[ tuple[ str, str ] ]:
         
         tables_and_columns = []
         

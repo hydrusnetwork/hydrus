@@ -22,6 +22,5 @@ PyYAML>=5.0.0
 requests==2.32.3
 Send2Trash>=1.5.0
 service-identity>=18.1.0
-setuptools==70.3.0
 show-in-file-manager>=1.1.5
 twisted[tls,http2]>=20.3.0

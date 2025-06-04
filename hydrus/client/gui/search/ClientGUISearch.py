@@ -1,3 +1,4 @@
+import collections.abc
 import typing
 
 from qtpy import QtCore as QC
@@ -61,7 +62,7 @@ FLESH_OUT_SYSTEM_PRED_TYPES = {
     ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_FILE_VIEWING_STATS
 }
 
-def EditPredicates( widget: QW.QWidget, predicates: typing.Collection[ ClientSearchPredicate.Predicate ], empty_file_search_context: typing.Optional[ ClientSearchFileSearchContext.FileSearchContext ] = None ) -> typing.List[ ClientSearchPredicate.Predicate ]:
+def EditPredicates( widget: QW.QWidget, predicates: collections.abc.Collection[ ClientSearchPredicate.Predicate ], empty_file_search_context: typing.Optional[ ClientSearchFileSearchContext.FileSearchContext ] = None ) -> list[ ClientSearchPredicate.Predicate ]:
     
     ( editable_predicates, only_invertible_predicates, non_editable_predicates ) = GetEditablePredicates( predicates )
     
@@ -110,7 +111,7 @@ def EditPredicates( widget: QW.QWidget, predicates: typing.Collection[ ClientSea
     
     raise HydrusExceptions.CancelledException()
     
-def FilterAndConvertLabelPredicates( predicates: typing.Collection[ ClientSearchPredicate.Predicate ] ) -> typing.List[ ClientSearchPredicate.Predicate ]:
+def FilterAndConvertLabelPredicates( predicates: collections.abc.Collection[ ClientSearchPredicate.Predicate ] ) -> list[ ClientSearchPredicate.Predicate ]:
     
     good_predicates = []
     
@@ -134,7 +135,7 @@ def FilterAndConvertLabelPredicates( predicates: typing.Collection[ ClientSearch
     
     return good_predicates
     
-def FleshOutPredicates( widget: QW.QWidget, predicates: typing.Collection[ ClientSearchPredicate.Predicate ] ) -> typing.List[ ClientSearchPredicate.Predicate ]:
+def FleshOutPredicates( widget: QW.QWidget, predicates: collections.abc.Collection[ ClientSearchPredicate.Predicate ] ) -> list[ ClientSearchPredicate.Predicate ]:
     
     window = None
     
@@ -183,7 +184,7 @@ def FleshOutPredicates( widget: QW.QWidget, predicates: typing.Collection[ Clien
     
     return good_predicates
     
-def GetEditablePredicates( predicates: typing.Collection[ ClientSearchPredicate.Predicate ] ):
+def GetEditablePredicates( predicates: collections.abc.Collection[ ClientSearchPredicate.Predicate ] ):
     
     editable_predicates = [ predicate for predicate in predicates if predicate.IsEditable() ]
     only_invertible_predicates = [ predicate for predicate in predicates if predicate.IsInvertible() and not predicate.IsEditable() ]
@@ -194,7 +195,7 @@ def GetEditablePredicates( predicates: typing.Collection[ ClientSearchPredicate.
 
 class EditPredicatesPanel( ClientGUIScrolledPanels.EditPanel ):
     
-    def __init__( self, parent, predicates: typing.Collection[ ClientSearchPredicate.Predicate ], empty_file_search_context: typing.Optional[ ClientSearchFileSearchContext.FileSearchContext ] = None ):
+    def __init__( self, parent, predicates: collections.abc.Collection[ ClientSearchPredicate.Predicate ], empty_file_search_context: typing.Optional[ ClientSearchFileSearchContext.FileSearchContext ] = None ):
         
         super().__init__( parent )
         

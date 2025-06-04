@@ -1,5 +1,4 @@
 import random
-import typing
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
@@ -38,7 +37,7 @@ DID_SUBSTANTIAL_FILE_WORK_MINIMUM_SLEEP_TIME = 0.1
 
 REPEATING_JOB_TYPICAL_PERIOD = 30.0
 
-def ConvertParsedPostsToFileSeeds( parsed_posts: typing.List[ ClientParsingResults.ParsedPost ], source_url: str, file_import_options: FileImportOptions.FileImportOptions ):
+def ConvertParsedPostsToFileSeeds( parsed_posts: list[ ClientParsingResults.ParsedPost ], source_url: str, file_import_options: FileImportOptions.FileImportOptions ):
     
     file_seeds = []
     
@@ -109,7 +108,7 @@ def GetRepeatingJobInitialDelay():
     return 0.5 + ( random.random() * 0.5 )
     
 
-def PublishPresentationHashes( publishing_label: str, hashes: typing.List[ bytes ], publish_to_popup_button: bool, publish_files_to_page: bool ):
+def PublishPresentationHashes( publishing_label: str, hashes: list[ bytes ], publish_to_popup_button: bool, publish_files_to_page: bool ):
     
     if publish_to_popup_button:
         

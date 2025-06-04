@@ -88,7 +88,7 @@ class StaticSystemPredicateButton( QW.QWidget ):
         self.predicatesRemoved.emit( self )
         
     
-    def GetPredicates( self ) -> typing.List[ ClientSearchPredicate.Predicate ]:
+    def GetPredicates( self ) -> list[ ClientSearchPredicate.Predicate ]:
         
         return self._predicates
         

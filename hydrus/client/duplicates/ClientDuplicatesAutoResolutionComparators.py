@@ -1,3 +1,4 @@
+import collections.abc
 import random
 import typing
 
@@ -379,7 +380,7 @@ class PairSelector( HydrusSerialisable.SerialisableBase ):
         
         super().__init__()
         
-        self._comparators: typing.List[ PairComparator ] = HydrusSerialisable.SerialisableList()
+        self._comparators: list[ PairComparator ] = HydrusSerialisable.SerialisableList()
         
     
     def __eq__( self, other ):
@@ -418,7 +419,7 @@ class PairSelector( HydrusSerialisable.SerialisableBase ):
         return self._comparators
         
     
-    def GetMatchingAB( self, media_result_1: ClientMediaResult.MediaResult, media_result_2: ClientMediaResult.MediaResult, test_both_ways_around = True ) -> typing.Optional[ typing.Tuple[ ClientMediaResult.MediaResult, ClientMediaResult.MediaResult ] ]:
+    def GetMatchingAB( self, media_result_1: ClientMediaResult.MediaResult, media_result_2: ClientMediaResult.MediaResult, test_both_ways_around = True ) -> typing.Optional[ tuple[ ClientMediaResult.MediaResult, ClientMediaResult.MediaResult ] ]:
         
         pair = [ media_result_1, media_result_2 ]
         
@@ -537,7 +538,7 @@ class PairSelector( HydrusSerialisable.SerialisableBase ):
         return True
         
     
-    def SetComparators( self, comparators: typing.Collection[ PairComparator ] ):
+    def SetComparators( self, comparators: collections.abc.Collection[ PairComparator ] ):
         
         self._comparators = list( comparators )
         

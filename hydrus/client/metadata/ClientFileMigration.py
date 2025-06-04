@@ -1,3 +1,4 @@
+import collections.abc
 import typing
 
 from hydrus.core import HydrusConstants as HC
@@ -12,7 +13,7 @@ from hydrus.client import ClientThreading
 from hydrus.client.media import ClientMediaResult
 from hydrus.client.metadata import ClientContentUpdates
 
-def MoveOrDuplicateLocalFiles( dest_service_key: bytes, action: int, media_results: typing.Collection[ ClientMediaResult.MediaResult ], source_service_key: typing.Optional[ bytes ] = None ):
+def MoveOrDuplicateLocalFiles( dest_service_key: bytes, action: int, media_results: collections.abc.Collection[ ClientMediaResult.MediaResult ], source_service_key: typing.Optional[ bytes ] = None ):
     
     if action == HC.CONTENT_UPDATE_MOVE and source_service_key is None:
         

@@ -1,9 +1,9 @@
 import collections
+import collections.abc
 import os
 import random
 import threading
 import time
-import typing
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
@@ -309,7 +309,7 @@ class ClientFilesManager( object ):
         return thumbnail_bytes
         
     
-    def _GetAllSubfolders( self ) -> typing.List[ ClientFilesPhysical.FilesStorageSubfolder ]:
+    def _GetAllSubfolders( self ) -> list[ ClientFilesPhysical.FilesStorageSubfolder ]:
         
         result = []
         
@@ -391,7 +391,7 @@ class ClientFilesManager( object ):
         return free_space
         
     
-    def _GetPossibleSubfoldersForFile( self, hash: bytes, prefix_type: str ) -> typing.List[ ClientFilesPhysical.FilesStorageSubfolder ]:
+    def _GetPossibleSubfoldersForFile( self, hash: bytes, prefix_type: str ) -> list[ ClientFilesPhysical.FilesStorageSubfolder ]:
         
         prefix_umbrella = self._GetPrefixUmbrella( hash, prefix_type )
         
@@ -1364,7 +1364,7 @@ class ClientFilesManager( object ):
         return self._missing_subfolders
         
     
-    def GetAllSubfolders( self ) -> typing.Collection[ ClientFilesPhysical.FilesStorageSubfolder ]:
+    def GetAllSubfolders( self ) -> collections.abc.Collection[ ClientFilesPhysical.FilesStorageSubfolder ]:
         
         with self._master_locations_rwlock.read:
             

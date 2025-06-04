@@ -1,4 +1,5 @@
 import collections
+import collections.abc
 import threading
 import time
 import typing
@@ -932,7 +933,7 @@ class DuplicatesManager( object ):
         
     
 
-def get_updated_domain_modified_timestamp_datas( destination_media_result: ClientMediaResult.MediaResult, source_media_result: ClientMediaResult.MediaResult, urls: typing.Collection[ str ] ):
+def get_updated_domain_modified_timestamp_datas( destination_media_result: ClientMediaResult.MediaResult, source_media_result: ClientMediaResult.MediaResult, urls: collections.abc.Collection[ str ] ):
     
     from hydrus.client.networking import ClientNetworkingFunctions
     
@@ -976,7 +977,7 @@ def get_updated_domain_modified_timestamp_datas( destination_media_result: Clien
     return timestamp_datas
     
 
-def get_domain_modified_content_updates( destination_media_result: ClientMediaResult.MediaResult, source_media_result: ClientMediaResult.MediaResult, urls: typing.Collection[ str ] ):
+def get_domain_modified_content_updates( destination_media_result: ClientMediaResult.MediaResult, source_media_result: ClientMediaResult.MediaResult, urls: collections.abc.Collection[ str ] ):
     
     timestamp_datas = get_updated_domain_modified_timestamp_datas( destination_media_result, source_media_result, urls )
     
@@ -1234,12 +1235,12 @@ class DuplicateContentMergeOptions( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def GetRatingServiceActions( self ) -> typing.Collection[ tuple ]:
+    def GetRatingServiceActions( self ) -> collections.abc.Collection[ tuple ]:
         
         return self._rating_service_actions
         
     
-    def GetTagServiceActions( self ) -> typing.Collection[ tuple ]:
+    def GetTagServiceActions( self ) -> collections.abc.Collection[ tuple ]:
         
         return self._tag_service_actions
         
@@ -1269,12 +1270,12 @@ class DuplicateContentMergeOptions( HydrusSerialisable.SerialisableBase ):
         return self._sync_urls_action
         
     
-    def SetRatingServiceActions( self, rating_service_actions: typing.Collection[ tuple ] ):
+    def SetRatingServiceActions( self, rating_service_actions: collections.abc.Collection[ tuple ] ):
         
         self._rating_service_actions = rating_service_actions
         
     
-    def SetTagServiceActions( self, tag_service_actions: typing.Collection[ tuple ] ):
+    def SetTagServiceActions( self, tag_service_actions: collections.abc.Collection[ tuple ] ):
         
         self._tag_service_actions = tag_service_actions
         
@@ -1313,7 +1314,7 @@ class DuplicateContentMergeOptions( HydrusSerialisable.SerialisableBase ):
         file_deletion_reason = None,
         do_not_do_deletes = False,
         in_auto_resolution = False
-    ) -> typing.List[ ClientContentUpdates.ContentUpdatePackage ]:
+    ) -> list[ ClientContentUpdates.ContentUpdatePackage ]:
         
         # small note here, if we have BETTER/WORSE distinctions in any of the settings, A is better, B is worse. if we have HC.DUPLICATE_WORSE anywhere, which sets B as better, it must be flipped beforehand to BETTER and BA -> AB
         # TODO: since this is a crazy situation, maybe this guy should just take the duplicate action, and then it can convert to media_result_better as needed

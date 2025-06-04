@@ -1,4 +1,4 @@
-import typing
+import collections.abc
 
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
@@ -256,7 +256,7 @@ def convert_router_to_pretty_string( router: ClientMetadataMigration.SingleFileM
 
 class SingleFileMetadataRoutersControl( ClientGUIListBoxes.AddEditDeleteListBox ):
     
-    def __init__( self, parent: QW.QWidget, routers: typing.Collection[ ClientMetadataMigration.SingleFileMetadataRouter ], allowed_importer_classes: list, allowed_exporter_classes: list, test_context_factory: ClientGUIMetadataMigrationTest.MigrationTestContextFactory ):
+    def __init__( self, parent: QW.QWidget, routers: collections.abc.Collection[ ClientMetadataMigration.SingleFileMetadataRouter ], allowed_importer_classes: list, allowed_exporter_classes: list, test_context_factory: ClientGUIMetadataMigrationTest.MigrationTestContextFactory ):
         
         super().__init__( parent, 5, convert_router_to_pretty_string, self._AddRouter, self._EditRouter )
         
@@ -349,7 +349,7 @@ class SingleFileMetadataRoutersButton( QW.QPushButton ):
     
     valueChanged = QC.Signal()
     
-    def __init__( self, parent: QW.QWidget, routers: typing.Collection[ ClientMetadataMigration.SingleFileMetadataRouter ], allowed_importer_classes: list, allowed_exporter_classes: list, test_context_factory: ClientGUIMetadataMigrationTest.MigrationTestContextFactory ):
+    def __init__( self, parent: QW.QWidget, routers: collections.abc.Collection[ ClientMetadataMigration.SingleFileMetadataRouter ], allowed_importer_classes: list, allowed_exporter_classes: list, test_context_factory: ClientGUIMetadataMigrationTest.MigrationTestContextFactory ):
         
         super().__init__( parent )
         
@@ -414,7 +414,7 @@ class SingleFileMetadataRoutersButton( QW.QPushButton ):
         return self._routers
         
     
-    def SetValue( self, routers: typing.Collection[ ClientMetadataMigration.SingleFileMetadataRouter ] ):
+    def SetValue( self, routers: collections.abc.Collection[ ClientMetadataMigration.SingleFileMetadataRouter ] ):
         
         self._routers = routers
         

@@ -1,4 +1,4 @@
-import typing
+import collections.abc
 
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
@@ -95,14 +95,14 @@ class OptionsPanelMimesTree( OptionsPanel ):
         return mimes_in_type
         
     
-    def GetValue( self ) -> typing.Tuple[ int ]:
+    def GetValue( self ) -> tuple[ int ]:
         
         mimes = tuple( [ mime for ( mime, item ) in self._mimes_to_items.items() if item.checkState( 0 ) == QC.Qt.CheckState.Checked ] )
         
         return mimes
         
     
-    def SetValue( self, checked_mimes: typing.Collection[ int ] ):
+    def SetValue( self, checked_mimes: collections.abc.Collection[ int ] ):
         
         checked_mimes = ClientSearchPredicate.ConvertSummaryFiletypesToSpecific( checked_mimes, only_searchable = False )
         

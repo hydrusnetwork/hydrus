@@ -1,5 +1,3 @@
-import typing
-
 from hydrus.core import HydrusData
 from hydrus.core import HydrusSerialisable
 
@@ -180,7 +178,7 @@ class ColumnListStatus( HydrusSerialisable.SerialisableBase ):
         return self._column_types_in_order[ column_index ]
         
     
-    def GetColumnTypes( self ) -> typing.List[ int ]:
+    def GetColumnTypes( self ) -> list[ int ]:
         
         return list( self._column_types_in_order )
         
@@ -190,7 +188,7 @@ class ColumnListStatus( HydrusSerialisable.SerialisableBase ):
         return self._columns_to_widths[ column_type ]
         
     
-    def GetSort( self ) -> typing.Tuple[ int, bool ]:
+    def GetSort( self ) -> tuple[ int, bool ]:
         
         return ( self._sort_column_type, self._sort_asc )
         
@@ -211,7 +209,7 @@ class ColumnListStatus( HydrusSerialisable.SerialisableBase ):
         self._sort_asc = sort_asc
         
     
-    def SetColumns( self, columns: typing.List[ typing.Tuple[ int, int, bool ] ] ):
+    def SetColumns( self, columns: list[ tuple[ int, int, bool ] ] ):
         
         self._columns = columns
         

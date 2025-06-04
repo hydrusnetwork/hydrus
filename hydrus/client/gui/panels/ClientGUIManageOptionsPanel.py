@@ -24,6 +24,8 @@ from hydrus.client.gui import ClientGUIDialogs
 from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIFunctions
+from hydrus.client.gui import ClientGUIShortcutControls
+from hydrus.client.gui import ClientGUIShortcuts
 from hydrus.client.gui import ClientGUIStyle
 from hydrus.client.gui import ClientGUITagSorting
 from hydrus.client.gui import ClientGUITags
@@ -57,6 +59,369 @@ class OptionsPagePanel( QW.QWidget ):
         
     
 
+class ShortcutsPanel( OptionsPagePanel ):
+    
+    def __init__( self, parent, new_options, all_shortcuts: list[ ClientGUIShortcuts.ShortcutSet ] ):
+        
+        self._new_options = new_options
+        
+        call_mouse_buttons_primary_secondary = new_options.GetBoolean( 'call_mouse_buttons_primary_secondary' )
+        shortcuts_merge_non_number_numpad = new_options.GetBoolean( 'shortcuts_merge_non_number_numpad' )
+        
+        self._have_edited_anything = False
+        
+        super().__init__( parent )
+        
+        help_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().help, self._ShowHelp )
+        help_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'Show help regarding editing shortcuts.' ) )
+        
+        self._call_mouse_buttons_primary_secondary = QW.QCheckBox( self )
+        self._call_mouse_buttons_primary_secondary.setToolTip( ClientGUIFunctions.WrapToolTip( 'Useful if you swap your buttons around.' ) )
+        
+        self._shortcuts_merge_non_number_numpad = QW.QCheckBox( self )
+        self._shortcuts_merge_non_number_numpad.setToolTip( ClientGUIFunctions.WrapToolTip( 'This means a "numpad" variant of Return/Home/Arrow etc.. is just counted as a normal one. Helps clear up a bunch of annoying keyboard mappings.' ) )
+        
+        reserved_panel = ClientGUICommon.StaticBox( self, 'built-in hydrus shortcut sets' )
+        
+        model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_SHORTCUT_SETS.ID, self._GetDisplayTuple, self._GetSortTuple )
+        
+        self._reserved_shortcuts = ClientGUIListCtrl.BetterListCtrlTreeView( reserved_panel, 6, model, activation_callback = self._EditReserved )
+        
+        ( min_width, min_height ) = ClientGUIFunctions.ConvertTextToPixels( self._reserved_shortcuts, ( 32, 12 ) )
+        
+        self._reserved_shortcuts.setMinimumSize( min_width, min_height )
+        
+        self._edit_reserved_button = ClientGUICommon.BetterButton( reserved_panel, 'edit', self._EditReserved )
+        self._restore_defaults_button = ClientGUICommon.BetterButton( reserved_panel, 'restore defaults', self._RestoreDefaults )
+        
+        #
+        
+        custom_panel = ClientGUICommon.StaticBox( self, 'custom user sets' )
+        
+        model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_SHORTCUT_SETS.ID, self._GetDisplayTuple, self._GetSortTuple )
+        
+        self._custom_shortcuts = ClientGUIListCtrl.BetterListCtrlTreeView( custom_panel, 6, model, delete_key_callback = self._Delete, activation_callback = self._EditCustom )
+        
+        self._add_button = ClientGUICommon.BetterButton( custom_panel, 'add', self._Add )
+        self._edit_custom_button = ClientGUICommon.BetterButton( custom_panel, 'edit', self._EditCustom )
+        self._delete_button = ClientGUICommon.BetterButton( custom_panel, 'delete', self._Delete )
+        
+        #
+        
+        self._call_mouse_buttons_primary_secondary.setChecked( call_mouse_buttons_primary_secondary )
+        self._shortcuts_merge_non_number_numpad.setChecked( shortcuts_merge_non_number_numpad )
+        
+        reserved_shortcuts = [ shortcuts for shortcuts in all_shortcuts if shortcuts.GetName() in ClientGUIShortcuts.SHORTCUTS_RESERVED_NAMES ]
+        custom_shortcuts = [ shortcuts for shortcuts in all_shortcuts if shortcuts.GetName() not in ClientGUIShortcuts.SHORTCUTS_RESERVED_NAMES ]
+        
+        self._reserved_shortcuts.SetData( reserved_shortcuts )
+        
+        self._reserved_shortcuts.Sort()
+        
+        self._original_custom_names = { shortcuts.GetName() for shortcuts in custom_shortcuts }
+        
+        self._custom_shortcuts.SetData( custom_shortcuts )
+        
+        self._custom_shortcuts.Sort()
+        
+        #
+        
+        rows = []
+        
+        rows.append( ( 'Treat all non-number numpad inputs as "normal": ', self._shortcuts_merge_non_number_numpad ) )
+        rows.append( ( 'Replace "left/right"-click labels with "primary/secondary": ', self._call_mouse_buttons_primary_secondary ) )
+        
+        mouse_gridbox = ClientGUICommon.WrapInGrid( self, rows )
+        
+        #
+        
+        button_hbox = QP.HBoxLayout()
+        
+        QP.AddToLayout( button_hbox, self._edit_reserved_button, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( button_hbox, self._restore_defaults_button, CC.FLAGS_CENTER_PERPENDICULAR )
+        
+        reserved_panel.Add( self._reserved_shortcuts, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        reserved_panel.Add( button_hbox, CC.FLAGS_ON_RIGHT )
+        
+        #
+        
+        button_hbox = QP.HBoxLayout()
+        
+        QP.AddToLayout( button_hbox, self._add_button, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( button_hbox, self._edit_custom_button, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( button_hbox, self._delete_button, CC.FLAGS_CENTER_PERPENDICULAR )
+        
+        custom_panel_message = 'Custom shortcuts are advanced. They apply to the media viewer and must be turned on to take effect.'
+        
+        st = ClientGUICommon.BetterStaticText( custom_panel, custom_panel_message )
+        st.setWordWrap( True )
+        
+        custom_panel.Add( st, CC.FLAGS_EXPAND_PERPENDICULAR )
+        custom_panel.Add( self._custom_shortcuts, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        custom_panel.Add( button_hbox, CC.FLAGS_ON_RIGHT )
+        
+        #
+        
+        vbox = QP.VBoxLayout()
+        
+        QP.AddToLayout( vbox, help_button, CC.FLAGS_ON_RIGHT )
+        QP.AddToLayout( vbox, mouse_gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        QP.AddToLayout( vbox, reserved_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( vbox, custom_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        self.setLayout( vbox )
+        
+    
+    def _Add( self ):
+        
+        shortcut_set = ClientGUIShortcuts.ShortcutSet( 'new shortcuts' )
+        
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit shortcuts' ) as dlg:
+            
+            call_mouse_buttons_primary_secondary = self._call_mouse_buttons_primary_secondary.isChecked()
+            shortcuts_merge_non_number_numpad = self._shortcuts_merge_non_number_numpad.isChecked()
+            
+            panel = ClientGUIShortcutControls.EditShortcutSetPanel( dlg, shortcut_set, call_mouse_buttons_primary_secondary, shortcuts_merge_non_number_numpad )
+            
+            dlg.SetPanel( panel )
+            
+            if dlg.exec() == QW.QDialog.DialogCode.Accepted:
+                
+                new_shortcuts = panel.GetValue()
+                
+                existing_names = self._GetExistingCustomShortcutNames()
+                
+                new_shortcuts.SetNonDupeName( existing_names )
+                
+                self._custom_shortcuts.AddData( new_shortcuts, select_sort_and_scroll = True )
+                
+                self._have_edited_anything = True
+                
+            
+        
+    
+    def _Delete( self ):
+        
+        result = ClientGUIDialogsQuick.GetYesNo( self, 'Remove all selected?' )
+        
+        if result == QW.QDialog.DialogCode.Accepted:
+            
+            self._custom_shortcuts.DeleteSelected()
+            
+            self._have_edited_anything = True
+            
+        
+    
+    def _EditCustom( self ):
+        
+        data = self._custom_shortcuts.GetTopSelectedData()
+        
+        if data is None:
+            
+            return
+            
+        
+        shortcuts = data
+        
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit shortcuts' ) as dlg:
+            
+            call_mouse_buttons_primary_secondary = self._call_mouse_buttons_primary_secondary.isChecked()
+            shortcuts_merge_non_number_numpad = self._shortcuts_merge_non_number_numpad.isChecked()
+            
+            panel = ClientGUIShortcutControls.EditShortcutSetPanel( dlg, shortcuts, call_mouse_buttons_primary_secondary, shortcuts_merge_non_number_numpad )
+            
+            dlg.SetPanel( panel )
+            
+            if dlg.exec() == QW.QDialog.DialogCode.Accepted:
+                
+                edited_shortcuts = panel.GetValue()
+                
+                existing_names = self._GetExistingCustomShortcutNames()
+                
+                existing_names.discard( shortcuts.GetName() )
+                
+                edited_shortcuts.SetNonDupeName( existing_names )
+                
+                self._custom_shortcuts.ReplaceData( shortcuts, edited_shortcuts, sort_and_scroll = True )
+                
+                self._have_edited_anything = True
+                
+            
+        
+    
+    def _EditReserved( self ):
+        
+        data = self._reserved_shortcuts.GetTopSelectedData()
+        
+        if data is None:
+            
+            return
+            
+        
+        shortcuts = data
+        
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit shortcuts' ) as dlg:
+            
+            call_mouse_buttons_primary_secondary = self._call_mouse_buttons_primary_secondary.isChecked()
+            shortcuts_merge_non_number_numpad = self._shortcuts_merge_non_number_numpad.isChecked()
+            
+            panel = ClientGUIShortcutControls.EditShortcutSetPanel( dlg, shortcuts, call_mouse_buttons_primary_secondary, shortcuts_merge_non_number_numpad )
+            
+            dlg.SetPanel( panel )
+            
+            if dlg.exec() == QW.QDialog.DialogCode.Accepted:
+                
+                edited_shortcuts = panel.GetValue()
+                
+                self._reserved_shortcuts.ReplaceData( shortcuts, edited_shortcuts, sort_and_scroll = True )
+                
+                self._have_edited_anything = True
+                
+            
+        
+    
+    def _GetDisplayTuple( self, shortcuts ):
+        
+        name = shortcuts.GetName()
+        
+        if name in ClientGUIShortcuts.shortcut_names_to_descriptions:
+            
+            pretty_name = ClientGUIShortcuts.shortcut_names_to_pretty_names[ name ]
+            
+        else:
+            
+            pretty_name = name
+            
+        
+        size = len( shortcuts )
+        
+        return ( pretty_name, HydrusNumbers.ToHumanInt( size ) )
+        
+    
+    def _GetExistingCustomShortcutNames( self ):
+        
+        return { shortcuts.GetName() for shortcuts in self._custom_shortcuts.GetData() }
+        
+    
+    def _GetSortTuple( self, shortcuts ):
+        
+        name = shortcuts.GetName()
+        
+        if name in ClientGUIShortcuts.shortcut_names_to_descriptions:
+            
+            sort_name = ClientGUIShortcuts.shortcut_names_sorted.index( name )
+            
+        else:
+            
+            sort_name = name
+            
+        
+        size = len( shortcuts )
+        
+        return ( sort_name, size )
+        
+    
+    def _RestoreDefaults( self ):
+        
+        from hydrus.client import ClientDefaults
+        
+        defaults = ClientDefaults.GetDefaultShortcuts()
+        
+        names_to_sets = { shortcut_set.GetName() : shortcut_set for shortcut_set in defaults }
+        
+        choice_tuples = [ ( name, name ) for name in names_to_sets ]
+        
+        try:
+            
+            name = ClientGUIDialogsQuick.SelectFromList( self, 'select which default to restore', choice_tuples )
+            
+        except HydrusExceptions.CancelledException:
+            
+            return
+            
+        
+        new_data = names_to_sets[ name ]
+        
+        existing_data = None
+        
+        for data in self._reserved_shortcuts.GetData():
+            
+            if data.GetName() == name:
+                
+                existing_data = data
+                
+                break
+                
+            
+        
+        if existing_data is None:
+            
+            ClientGUIDialogsMessage.ShowInformation( self, 'It looks like your client was missing the "{}" shortcut set! It will now be restored.'.format( name ) )
+            
+            self._reserved_shortcuts.AddData( new_data, select_sort_and_scroll = True )
+            
+        else:
+            
+            message = 'Are you certain you want to restore the defaults for "{}"? Any custom shortcuts you have set will be wiped.'.format( name )
+            
+            result = ClientGUIDialogsQuick.GetYesNo( self, message )
+            
+            if result == QW.QDialog.DialogCode.Accepted:
+                
+                self._reserved_shortcuts.ReplaceData( existing_data, new_data, sort_and_scroll = True )
+                
+            
+        
+    
+    def _ShowHelp( self ):
+        
+        message = 'I am in the process of converting the multiple old messy shortcut systems to this single unified engine. Many actions are not yet available here, and mouse support is very limited. I expect to overwrite the reserved shortcut sets back to (new and expanded) defaults at least once more, so don\'t remap everything yet unless you are ok with doing it again.'
+        message += '\n' * 2
+        message += '---'
+        message += '\n' * 2
+        message += 'In hydrus, shortcuts are split into different sets that are active in different contexts. Depending on where the program focus is, multiple sets can be active at the same time. On a keyboard or mouse event, the active sets will be consulted one after another (typically from the smallest and most precise focus to the largest and broadest parent) until an action match is found.'
+        message += '\n' * 2
+        message += 'There are two kinds--ones built-in to hydrus, and custom sets that you turn on and off:'
+        message += '\n' * 2
+        message += 'The built-in shortcut sets are always active in their contexts--the \'main_gui\' one is always consulted when you hit a key on the main gui window, for instance. They have limited actions to choose from, appropriate to their context. If you would prefer to, say, open the manage tags dialog with Ctrl+F3, edit or add that entry in the \'media\' set and that new shortcut will apply anywhere you are focused on some particular media.'
+        message += '\n' * 2
+        message += 'Custom shortcuts sets are those you can create and rename at will. They are only ever active in the media viewer window, and only when you set them so from the top hover-window\'s keyboard icon. They are primarily meant for setting tags and ratings with shortcuts, and are intended to be turned on and off as you perform different \'filtering\' jobs--for instance, you might like to set the 1-5 keys to the different values of a five-star rating system, or assign a few simple keystrokes to a number of common tags.'
+        message += '\n' * 2
+        message += 'The built-in \'media\' set also supports tag and rating actions, if you would like some of those to always be active.'
+        
+        ClientGUIDialogsMessage.ShowInformation( self, message )
+        
+    
+    def GetValue( self ):
+        
+        # a stub for wrapper panels/dialogs to check validity versus a normal editpanel
+        return True
+        
+    
+    def UpdateOptions( self ):
+        
+        call_mouse_buttons_primary_secondary = self._call_mouse_buttons_primary_secondary.isChecked()
+        shortcuts_merge_non_number_numpad = self._shortcuts_merge_non_number_numpad.isChecked()
+        
+        self._new_options.SetBoolean( 'call_mouse_buttons_primary_secondary', call_mouse_buttons_primary_secondary )
+        self._new_options.SetBoolean( 'shortcuts_merge_non_number_numpad', shortcuts_merge_non_number_numpad )
+        
+        if self._have_edited_anything:
+            
+            shortcut_sets = []
+            
+            shortcut_sets.extend( self._reserved_shortcuts.GetData() )
+            shortcut_sets.extend( self._custom_shortcuts.GetData() )
+            
+            dupe_shortcut_sets = [ shortcut_set.Duplicate() for shortcut_set in shortcut_sets ]
+            
+            CG.client_controller.Write( 'serialisables_overwrite', [ HydrusSerialisable.SERIALISABLE_TYPE_SHORTCUT_SET ], dupe_shortcut_sets )
+            
+            ClientGUIShortcuts.shortcuts_manager().SetShortcutSets( shortcut_sets )
+            
+        
+    
+
 class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
     
     def __init__( self, parent ):
@@ -68,33 +433,39 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         self._new_options = CG.client_controller.new_options
         self._original_new_options = self._new_options.Duplicate()
         
+        all_shortcuts = ClientGUIShortcuts.shortcuts_manager().GetShortcutSets()
+        
         self._listbook = ClientGUIListBook.ListBook( self, list_chars_width = 28 )
         
         self._listbook.AddPage( 'gui', self._GUIPanel( self._listbook ) ) # leave this at the top, to make it default page
-        self._listbook.AddPage( 'gui pages', self._GUIPagesPanel( self._listbook, self._new_options ) )
+        self._listbook.AddPage( 'audio', self._AudioPanel( self._listbook, self._new_options ) )
         self._listbook.AddPage( 'command palette', self._CommandPalettePanel( self._listbook, self._new_options ) )
+        self._listbook.AddPage( 'colours', self._ColoursPanel( self._listbook ) )
         self._listbook.AddPage( 'connection', self._ConnectionPanel( self._listbook ) )
         self._listbook.AddPage( 'exporting', self._ExportingPanel( self._listbook ) )
         self._listbook.AddPage( 'external programs', self._ExternalProgramsPanel( self._listbook ) )
         self._listbook.AddPage( 'files and trash', self._FilesAndTrashPanel( self._listbook ) )
+        self._listbook.AddPage( 'file search', self._FileSearchPanel( self._listbook, self._new_options ) )
         self._listbook.AddPage( 'file viewing statistics', self._FileViewingStatisticsPanel( self._listbook ) )
-        self._listbook.AddPage( 'speed and memory', self._SpeedAndMemoryPanel( self._listbook, self._new_options ) )
+        self._listbook.AddPage( 'gui pages', self._GUIPagesPanel( self._listbook, self._new_options ) )
+        self._listbook.AddPage( 'gui sessions', self._GUISessionsPanel( self._listbook, self._new_options ) )
         self._listbook.AddPage( 'maintenance and processing', self._MaintenanceAndProcessingPanel( self._listbook ) )
         self._listbook.AddPage( 'media viewer', self._MediaViewerPanel( self._listbook ) )
+        self._listbook.AddPage( 'media viewer hovers', self._MediaViewerHoversPanel( self._listbook ) )
         self._listbook.AddPage( 'media playback', self._MediaPlaybackPanel( self._listbook ) )
-        self._listbook.AddPage( 'audio', self._AudioPanel( self._listbook, self._new_options ) )
+        self._listbook.AddPage( 'speed and memory', self._SpeedAndMemoryPanel( self._listbook, self._new_options ) )
         self._listbook.AddPage( 'system tray', self._SystemTrayPanel( self._listbook, self._new_options ) )
-        self._listbook.AddPage( 'file search', self._FileSearchPanel( self._listbook, self._new_options ) )
-        self._listbook.AddPage( 'colours', self._ColoursPanel( self._listbook ) )
         self._listbook.AddPage( 'popups', self._PopupPanel( self._listbook, self._new_options ) )
         self._listbook.AddPage( 'regex favourites', self._RegexPanel( self._listbook ) )
-        self._listbook.AddPage( 'sort/collect', self._SortCollectPanel( self._listbook, self._new_options ) )
+        self._listbook.AddPage( 'file sort/collect', self._FileSortCollectPanel( self._listbook, self._new_options ) )
         self._listbook.AddPage( 'downloading', self._DownloadingPanel( self._listbook, self._new_options ) )
         self._listbook.AddPage( 'duplicates', self._DuplicatesPanel( self._listbook, self._new_options ) )
         self._listbook.AddPage( 'importing', self._ImportingPanel( self._listbook, self._new_options ) )
+        self._listbook.AddPage( 'shortcuts', ShortcutsPanel( self._listbook, self._new_options, all_shortcuts ) )
         self._listbook.AddPage( 'style', self._StylePanel( self._listbook, self._new_options ) )
         self._listbook.AddPage( 'tag editing', self._TagEditingPanel( self._listbook, self._new_options ) )
         self._listbook.AddPage( 'tag presentation', self._TagPresentationPanel( self._listbook, self._new_options ) )
+        self._listbook.AddPage( 'tag sort', self._TagSortPanel( self._listbook, self._new_options ) )
         self._listbook.AddPage( 'tag suggestions', self._TagSuggestionsPanel( self._listbook, self._new_options ) )
         self._listbook.AddPage( 'tag autocomplete tabs', self._TagsPanel( self._listbook, self._new_options ) )
         self._listbook.AddPage( 'thumbnails', self._ThumbnailsPanel( self._listbook, self._new_options ) )
@@ -132,7 +503,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             # https://github.com/hydrusnetwork/hydrus/issues/1558
             
             self._advanced_mode = QW.QCheckBox( self )
-            self._advanced_mode.setToolTip( ClientGUIFunctions.WrapToolTip( 'This controls a variety of different features across the program, too many to list neatly. The plan is to blow this single option out into many granular options on this page.\n\nThis plan is failing.' ) )
+            self._advanced_mode.setToolTip( ClientGUIFunctions.WrapToolTip( 'This controls a variety of different features across the program, too many to list neatly. The plan is to blow this single option out into many granular options on this page.\n\nThis plan is failing!' ) )
             
             self._advanced_mode.setChecked( self._new_options.GetBoolean( 'advanced_mode' ) )
             
@@ -146,43 +517,11 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             #
             
-            self._advanced_mode_box = ClientGUICommon.StaticBox( self, 'advanced mode stuff' )
-            self._advanced_mode_box.setToolTip( ClientGUIFunctions.WrapToolTip( 'Enabled after you tick the global advanced mode box. Surely some future advanced options will find their way here...' ) )
-            
-            self._shortcuts_button = ClientGUICommon.BetterButton( self._advanced_mode_box, 'open \'file->shortcuts...\'', self._PopupManageShortcuts )
-            self._shortcuts_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'If you accidentally opened the \'options\' window instead of \'shortcuts\', this button is for you.' ) )
-            
-            advanced_gridbox = QP.GridLayout( cols = 2 )
-            
-            shortcut_bar = ClientGUICommon.BetterStaticText( self._advanced_mode_box, 'Shortcuts: ' )
-            QP.AddToLayout( advanced_gridbox, shortcut_bar, CC.FLAGS_ON_LEFT )
-            QP.AddToLayout( advanced_gridbox, self._shortcuts_button, CC.FLAGS_CENTER_PERPENDICULAR )
-            
-            self._advanced_mode_box.Add( advanced_gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-            
-            #
-            
             QP.AddToLayout( vbox, gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-            QP.AddToLayout( vbox, self._advanced_mode_box, CC.FLAGS_EXPAND_BOTH_WAYS )
             vbox.addStretch( 0 )
             
             self.setLayout( vbox )
             
-            self._advanced_mode.clicked.connect( self._UpdateOverride )
-            self._UpdateOverride()
-            
-        
-        def _PopupManageShortcuts( self ):
-        
-            from hydrus.client.gui import ClientGUIShortcutControls
-            
-            panel = ClientGUIShortcutControls.ManageShortcuts( self )
-            
-        
-        def _UpdateOverride( self ):
-            
-            self._advanced_mode_box.setEnabled( self._advanced_mode.isChecked() )
-        
         
         def UpdateOptions( self ):
             
@@ -253,8 +592,10 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._new_options = CG.client_controller.new_options
             
             help_text = 'Hey, this page is pretty old, and hydev is in the process of transforming it into a different system. Colours are generally managed through QSS stylesheets now, under the "style" page, but you can still override some stuff here if you want.'
-            help_text += '\n' * 2
+            help_text += '\n\n'
             help_text += 'The "darkmode" in hydrus is also very old and only changes these colours; it does not change the stylesheet. Please bear with the awkwardness, this will be cleaned up eventually, thank you!'
+            help_text += '\n\n'
+            help_text += 'Tag colours are set under "tag presentation".'
             
             self._help_label = ClientGUICommon.BetterStaticText( self, label = help_text )
             
@@ -616,6 +957,10 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._default_gug = ClientGUIImport.GUGKeyAndNameSelector( gallery_downloader, gug_key_and_name )
             
+            self._override_bandwidth_on_file_urls_from_post_urls = QW.QCheckBox( gallery_downloader )
+            tt = 'Sometimes, File URLs have tokens on them that cause them to time out. If this is on, all file urls will override all bandwidth rules within three seconds, ensuring they occur quickly after their spawning Post URL parsed them. I recommend you leave this on, but you can turn it off if you have troubles here.'
+            self._override_bandwidth_on_file_urls_from_post_urls.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
+            
             self._gallery_page_wait_period_pages = ClientGUICommon.BetterSpinBox( gallery_downloader, min=1, max=3600 )
             self._gallery_file_limit = ClientGUICommon.NoneableSpinCtrl( gallery_downloader, 2000, none_phrase = 'no limit', min = 1, max = 1000000 )
             
@@ -689,6 +1034,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._gallery_page_wait_period_pages.setToolTip( ClientGUIFunctions.WrapToolTip( gallery_page_tt ) )
             self._gallery_file_limit.SetValue( HC.options['gallery_file_limit'] )
             
+            self._override_bandwidth_on_file_urls_from_post_urls.setChecked( self._new_options.GetBoolean( 'override_bandwidth_on_file_urls_from_post_urls' ) )
             self._highlight_new_query.setChecked( self._new_options.GetBoolean( 'highlight_new_query' ) )
             
             self._gallery_page_wait_period_subscriptions.setValue( self._new_options.GetInteger( 'gallery_page_wait_period_subscriptions' ) )
@@ -717,9 +1063,10 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows = []
             
             rows.append( ( 'Default download source:', self._default_gug ) )
-            rows.append( ( 'If new query entered and no current highlight, highlight the new query:', self._highlight_new_query ) )
             rows.append( ( 'Additional fixed time (in seconds) to wait between gallery page fetches:', self._gallery_page_wait_period_pages ) )
             rows.append( ( 'By default, stop searching once this many files are found:', self._gallery_file_limit ) )
+            rows.append( ( 'If new query entered and no current highlight, highlight the new query:', self._highlight_new_query ) )
+            rows.append( ( 'Force file downloads to occur quickly after Post URL fetches:', self._override_bandwidth_on_file_urls_from_post_urls ) )
             
             gridbox = ClientGUICommon.WrapInGrid( gallery_downloader, rows )
             
@@ -787,6 +1134,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._new_options.SetInteger( 'gallery_page_wait_period_pages', self._gallery_page_wait_period_pages.value() )
             HC.options[ 'gallery_file_limit' ] = self._gallery_file_limit.GetValue()
             self._new_options.SetBoolean( 'highlight_new_query', self._highlight_new_query.isChecked() )
+            self._new_options.SetBoolean( 'override_bandwidth_on_file_urls_from_post_urls', self._override_bandwidth_on_file_urls_from_post_urls.isChecked() )
             
             self._new_options.SetInteger( 'gallery_page_wait_period_subscriptions', self._gallery_page_wait_period_subscriptions.value() )
             self._new_options.SetInteger( 'max_simultaneous_subscriptions', self._max_simultaneous_subscriptions.value() )
@@ -1691,6 +2039,118 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
         
     
+    class _FileSortCollectPanel( OptionsPagePanel ):
+        
+        def __init__( self, parent, new_options ):
+            
+            super().__init__( parent )
+            
+            self._new_options = new_options
+            
+            self._file_sort_panel = ClientGUICommon.StaticBox( self, 'file sort' )
+            
+            default_sort = self._new_options.GetDefaultSort()
+            
+            self._default_media_sort = ClientGUIMediaResultsPanelSortCollect.MediaSortControl( self._file_sort_panel, media_sort = default_sort )
+            
+            if self._default_media_sort.GetSort() != default_sort:
+                
+                media_sort = ClientMedia.MediaSort( ( 'system', CC.SORT_FILES_BY_FILESIZE ), CC.SORT_ASC )
+                
+                self._default_media_sort.SetSort( media_sort )
+                
+            
+            fallback_sort = self._new_options.GetFallbackSort()
+            
+            self._fallback_media_sort = ClientGUIMediaResultsPanelSortCollect.MediaSortControl( self._file_sort_panel, media_sort = fallback_sort )
+            
+            if self._fallback_media_sort.GetSort() != fallback_sort:
+                
+                media_sort = ClientMedia.MediaSort( ( 'system', CC.SORT_FILES_BY_IMPORT_TIME ), CC.SORT_ASC )
+                
+                self._fallback_media_sort.SetSort( media_sort )
+                
+            
+            self._save_page_sort_on_change = QW.QCheckBox( self._file_sort_panel )
+            
+            self._default_media_collect = ClientGUIMediaResultsPanelSortCollect.MediaCollectControl( self._file_sort_panel )
+            
+            #
+            
+            namespace_file_sorting_box = ClientGUICommon.StaticBox( self._file_sort_panel, 'namespace file sorting' )
+            
+            self._namespace_file_sort_by = ClientGUIListBoxes.QueueListBox( namespace_file_sorting_box, 8, self._ConvertNamespaceTupleToSortString, add_callable = self._AddNamespaceSort, edit_callable = self._EditNamespaceSort )
+            
+            #
+            
+            self._namespace_file_sort_by.AddDatas( [ media_sort.sort_type[1] for media_sort in CG.client_controller.new_options.GetDefaultNamespaceSorts() ] )
+            
+            self._save_page_sort_on_change.setChecked( self._new_options.GetBoolean( 'save_page_sort_on_change' ) )
+            
+            #
+            
+            sort_by_text = 'You can manage your namespace sorting schemes here.'
+            sort_by_text += '\n'
+            sort_by_text += 'The client will sort media by comparing their namespaces, moving from left to right until an inequality is found.'
+            sort_by_text += '\n'
+            sort_by_text += 'Any namespaces here will also appear in your collect-by dropdowns.'
+            
+            namespace_file_sorting_box.Add( ClientGUICommon.BetterStaticText( namespace_file_sorting_box, sort_by_text ), CC.FLAGS_EXPAND_PERPENDICULAR )
+            namespace_file_sorting_box.Add( self._namespace_file_sort_by, CC.FLAGS_EXPAND_BOTH_WAYS )
+            
+            #
+            
+            rows = []
+            
+            rows.append( ( 'Default file sort: ', self._default_media_sort ) )
+            rows.append( ( 'Secondary file sort (when primary gives two equal values): ', self._fallback_media_sort ) )
+            rows.append( ( 'Update default file sort every time a new sort is manually chosen: ', self._save_page_sort_on_change ) )
+            rows.append( ( 'Default collect: ', self._default_media_collect ) )
+            
+            gridbox = ClientGUICommon.WrapInGrid( self, rows )
+            
+            self._file_sort_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            self._file_sort_panel.Add( namespace_file_sorting_box, CC.FLAGS_EXPAND_BOTH_WAYS )
+            
+            vbox = QP.VBoxLayout()
+            
+            QP.AddToLayout( vbox, self._file_sort_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+            
+            self.setLayout( vbox )
+            
+        
+        def _AddNamespaceSort( self ):
+            
+            default = ( ( 'creator', 'series', 'page' ), ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL )
+            
+            return self._EditNamespaceSort( default )
+            
+        
+        def _ConvertNamespaceTupleToSortString( self, sort_data ):
+            
+            ( namespaces, tag_display_type ) = sort_data
+            
+            return '-'.join( namespaces )
+            
+        
+        def _EditNamespaceSort( self, sort_data ):
+            
+            return ClientGUITags.EditNamespaceSort( self, sort_data )
+            
+        
+        def UpdateOptions( self ):
+            
+            self._new_options.SetDefaultSort( self._default_media_sort.GetSort() )
+            self._new_options.SetFallbackSort( self._fallback_media_sort.GetSort() )
+            self._new_options.SetBoolean( 'save_page_sort_on_change', self._save_page_sort_on_change.isChecked() )
+            self._new_options.SetDefaultCollect( self._default_media_collect.GetValue() )
+            
+            namespace_sorts = [ ClientMedia.MediaSort( sort_type = ( 'namespaces', sort_data ) ) for sort_data in self._namespace_file_sort_by.GetData() ]
+            
+            self._new_options.SetDefaultNamespaceSorts( namespace_sorts )
+            
+        
+    
     class _FileViewingStatisticsPanel( OptionsPagePanel ):
         
         def __init__( self, parent ):
@@ -1900,7 +2360,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             rows.append( ( 'Application display name: ', self._app_display_name ) )
             rows.append( ( 'Confirm client exit: ', self._confirm_client_exit ) )
-            rows.append( ( 'Switch to main window when opening tag search page from media viewer: ', self._activate_window_on_tag_search_page_activation ) )
+            rows.append( ( 'Switch to main window when creating new file search page from media viewer: ', self._activate_window_on_tag_search_page_activation ) )
             
             gridbox = ClientGUICommon.WrapInGrid( self._main_gui_panel, rows )
             
@@ -2114,88 +2574,83 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._new_options = new_options
             
-            self._sessions_panel = ClientGUICommon.StaticBox( self, 'sessions' )
+            #
             
-            self._default_gui_session = ClientGUICommon.BetterChoice( self._sessions_panel )
+            self._controls_panel = ClientGUICommon.StaticBox( self, 'preview window' )
             
-            self._last_session_save_period_minutes = ClientGUICommon.BetterSpinBox( self._sessions_panel, min = 1, max = 1440 )
-            
-            self._only_save_last_session_during_idle = QW.QCheckBox( self._sessions_panel )
-            
-            self._only_save_last_session_during_idle.setToolTip( ClientGUIFunctions.WrapToolTip( 'This is useful if you usually have a very large session (200,000+ files/import items open) and a client that is always on.' ) )
-            
-            self._number_of_gui_session_backups = ClientGUICommon.BetterSpinBox( self._sessions_panel, min = 1, max = 32 )
-            
-            self._number_of_gui_session_backups.setToolTip( ClientGUIFunctions.WrapToolTip( 'The client keeps multiple rolling backups of your gui sessions. If you have very large sessions, you might like to reduce this number.' ) )
-            
-            self._show_session_size_warnings = QW.QCheckBox( self._sessions_panel )
-            
-            self._show_session_size_warnings.setToolTip( ClientGUIFunctions.WrapToolTip( 'This will give you a once-per-boot warning popup if your active session contains more than 10M weight.' ) )
+            self._hide_preview = QW.QCheckBox( self._controls_panel )
             
             #
             
-            self._pages_panel = ClientGUICommon.StaticBox( self, 'pages' )
+            self._opening_and_closing_panel = ClientGUICommon.StaticBox( self, 'opening and closing' )
             
-            self._show_all_my_files_on_page_chooser = QW.QCheckBox( self._pages_panel )
-            self._show_all_my_files_on_page_chooser.setToolTip( ClientGUIFunctions.WrapToolTip( 'This will only show if you have more than one local file domain.' ) )
-            self._show_all_my_files_on_page_chooser_at_top = QW.QCheckBox( self._pages_panel )
-            self._show_all_my_files_on_page_chooser_at_top.setToolTip( ClientGUIFunctions.WrapToolTip( 'Put "all my files" at the top of the page chooser, to better see it if you have many local file domains.' ) )
-            
-            self._show_local_files_on_page_chooser = QW.QCheckBox( self._pages_panel )
-            self._show_local_files_on_page_chooser.setToolTip( ClientGUIFunctions.WrapToolTip( 'If you do not know what this is, you do not want it!' ) )
-            self._show_local_files_on_page_chooser_at_top = QW.QCheckBox( self._pages_panel )
-            self._show_local_files_on_page_chooser_at_top.setToolTip( ClientGUIFunctions.WrapToolTip( 'Put "local files" at the top of the page chooser (above "all my files" as well, if it is present).' ) )
-            
-            self._confirm_all_page_closes = QW.QCheckBox( self._pages_panel )
-            self._confirm_all_page_closes.setToolTip( ClientGUIFunctions.WrapToolTip( 'With this, you will always be asked, even on single page closures of simple file pages.' ) )
-            self._confirm_non_empty_downloader_page_close = QW.QCheckBox( self._pages_panel )
-            self._confirm_non_empty_downloader_page_close.setToolTip( ClientGUIFunctions.WrapToolTip( 'Helps to avoid accidental closes of big downloader pages.' ) )
-            
-            self._default_new_page_goes = ClientGUICommon.BetterChoice( self._pages_panel )
+            self._default_new_page_goes = ClientGUICommon.BetterChoice( self._opening_and_closing_panel )
             
             for value in [ CC.NEW_PAGE_GOES_FAR_LEFT, CC.NEW_PAGE_GOES_LEFT_OF_CURRENT, CC.NEW_PAGE_GOES_RIGHT_OF_CURRENT, CC.NEW_PAGE_GOES_FAR_RIGHT ]:
                 
                 self._default_new_page_goes.addItem( CC.new_page_goes_string_lookup[ value ], value )
                 
             
-            self._close_page_focus_goes = ClientGUICommon.BetterChoice( self._pages_panel )
+            self._show_all_my_files_on_page_chooser = QW.QCheckBox( self._opening_and_closing_panel )
+            self._show_all_my_files_on_page_chooser.setToolTip( ClientGUIFunctions.WrapToolTip( 'This will only show if you have more than one local file domain.' ) )
+            self._show_all_my_files_on_page_chooser_at_top = QW.QCheckBox( self._opening_and_closing_panel )
+            self._show_all_my_files_on_page_chooser_at_top.setToolTip( ClientGUIFunctions.WrapToolTip( 'Put "all my files" at the top of the page chooser, to better see it if you have many local file domains.' ) )
+            
+            self._show_local_files_on_page_chooser = QW.QCheckBox( self._opening_and_closing_panel )
+            self._show_local_files_on_page_chooser.setToolTip( ClientGUIFunctions.WrapToolTip( 'If you do not know what this is, you do not want it!' ) )
+            self._show_local_files_on_page_chooser_at_top = QW.QCheckBox( self._opening_and_closing_panel )
+            self._show_local_files_on_page_chooser_at_top.setToolTip( ClientGUIFunctions.WrapToolTip( 'Put "local files" at the top of the page chooser (above "all my files" as well, if it is present).' ) )
+            
+            self._close_page_focus_goes = ClientGUICommon.BetterChoice( self._opening_and_closing_panel )
             
             for value in [ CC.CLOSED_PAGE_FOCUS_GOES_LEFT, CC.CLOSED_PAGE_FOCUS_GOES_RIGHT ]:
                 
                 self._close_page_focus_goes.addItem( CC.closed_page_focus_string_lookup[ value ], value )
                 
             
-            self._notebook_tab_alignment = ClientGUICommon.BetterChoice( self._pages_panel )
+            self._confirm_all_page_closes = QW.QCheckBox( self._opening_and_closing_panel )
+            self._confirm_all_page_closes.setToolTip( ClientGUIFunctions.WrapToolTip( 'With this, you will always be asked, even on single page closures of simple file pages.' ) )
+            self._confirm_non_empty_downloader_page_close = QW.QCheckBox( self._opening_and_closing_panel )
+            self._confirm_non_empty_downloader_page_close.setToolTip( ClientGUIFunctions.WrapToolTip( 'Helps to avoid accidental closes of big downloader pages.' ) )
+            
+            self._force_hide_page_signal_on_new_page = QW.QCheckBox( self._opening_and_closing_panel )
+            
+            self._force_hide_page_signal_on_new_page.setToolTip( ClientGUIFunctions.WrapToolTip( 'If your video still plays with sound in the preview viewer when you create a new page, please try this.' ) )
+            
+            #
+            
+            self._navigation_and_dnd = ClientGUICommon.StaticBox( self, 'navigation and drag-and-drop' )
+            
+            self._notebook_tab_alignment = ClientGUICommon.BetterChoice( self._navigation_and_dnd )
             
             for value in [ CC.DIRECTION_UP, CC.DIRECTION_LEFT, CC.DIRECTION_RIGHT, CC.DIRECTION_DOWN ]:
                 
                 self._notebook_tab_alignment.addItem( CC.directions_alignment_string_lookup[ value ], value )
                 
             
-            self._page_drop_chase_normally = QW.QCheckBox( self._pages_panel )
+            self._set_search_focus_on_page_change = QW.QCheckBox( self._navigation_and_dnd )
+            self._set_search_focus_on_page_change.setToolTip( ClientGUIFunctions.WrapToolTip( 'Set it so whenever you switch between pages, the keyboard focus immediately moves to the tag autocomplete or search text input.' ) )
+            
+            self._page_drop_chase_normally = QW.QCheckBox( self._navigation_and_dnd )
             self._page_drop_chase_normally.setToolTip( ClientGUIFunctions.WrapToolTip( 'When you drop a page to a new location, should hydrus follow the page selection to the new location?' ) )
-            self._page_drop_chase_with_shift = QW.QCheckBox( self._pages_panel )
+            self._page_drop_chase_with_shift = QW.QCheckBox( self._navigation_and_dnd )
             self._page_drop_chase_with_shift.setToolTip( ClientGUIFunctions.WrapToolTip( 'When you drop a page to a new location with shift held down, should hydrus follow the page selection to the new location?' ) )
             
-            self._page_drag_change_tab_normally = QW.QCheckBox( self._pages_panel )
+            self._page_drag_change_tab_normally = QW.QCheckBox( self._navigation_and_dnd )
             self._page_drag_change_tab_normally.setToolTip( ClientGUIFunctions.WrapToolTip( 'When you drag media or a page to a new location, should hydrus navigate and change tabs as you move the mouse around?' ) )
-            self._page_drag_change_tab_with_shift = QW.QCheckBox( self._pages_panel )
+            self._page_drag_change_tab_with_shift = QW.QCheckBox( self._navigation_and_dnd )
             self._page_drag_change_tab_with_shift.setToolTip( ClientGUIFunctions.WrapToolTip( 'When you drag media or a page to a new location with shift held down, should hydrus navigate and change tabs as you move the mouse around?' ) )
             
-            self._wheel_scrolls_tab_bar = QW.QCheckBox( self._pages_panel )
+            self._wheel_scrolls_tab_bar = QW.QCheckBox( self._navigation_and_dnd )
             self._wheel_scrolls_tab_bar.setToolTip( ClientGUIFunctions.WrapToolTip( 'When you scroll your mouse wheel over some tabs, the normal behaviour is to change the tab selection. If you often have overloaded tab bars, you might like to have the mouse wheel actually scroll the tab bar itself.' ) )
             
-            self._disable_page_tab_dnd = QW.QCheckBox( self._pages_panel )
+            self._disable_page_tab_dnd = QW.QCheckBox( self._navigation_and_dnd )
             
             self._disable_page_tab_dnd.setToolTip( ClientGUIFunctions.WrapToolTip( 'Trying to debug some client hangs!' ) )
             
-            self._force_hide_page_signal_on_new_page = QW.QCheckBox( self._pages_panel )
-            
-            self._force_hide_page_signal_on_new_page.setToolTip( ClientGUIFunctions.WrapToolTip( 'If your video still plays with sound in the preview viewer when you create a new page, please try this.' ) )
-            
             #
             
-            self._page_names_panel = ClientGUICommon.StaticBox( self._pages_panel, 'page tab names' )
+            self._page_names_panel = ClientGUICommon.StaticBox( self, 'page tab names' )
             
             self._max_page_name_chars = ClientGUICommon.BetterSpinBox( self._page_names_panel, min=1, max=256 )
             self._elide_page_tab_names = QW.QCheckBox( self._page_names_panel )
@@ -2215,39 +2670,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._rename_page_of_pages_on_send.setToolTip( ClientGUIFunctions.WrapToolTip( 'When you \'send this page down\' or \'send pages to the right\' to a new page of pages, should it also automatically prompt you to rename it?' ) )
             
             #
-            
-            self._controls_panel = ClientGUICommon.StaticBox( self, 'controls and preview' )
-            
-            self._set_search_focus_on_page_change = QW.QCheckBox( self._controls_panel )
-            self._set_search_focus_on_page_change.setToolTip( ClientGUIFunctions.WrapToolTip( 'Set it so whenever you switch between pages, the keyboard focus immediately moves to the tag autocomplete or search text input.' ) )
-            
-            self._hide_preview = QW.QCheckBox( self._controls_panel )
-            
-            #
-            
-            gui_session_names = CG.client_controller.Read( 'serialisable_names', HydrusSerialisable.SERIALISABLE_TYPE_GUI_SESSION_CONTAINER )
-            
-            if CC.LAST_SESSION_SESSION_NAME not in gui_session_names:
-                
-                gui_session_names.insert( 0, CC.LAST_SESSION_SESSION_NAME )
-                
-            
-            self._default_gui_session.addItem( 'just a blank page', None )
-            
-            for name in gui_session_names:
-                
-                self._default_gui_session.addItem( name, name )
-                
-            
-            self._default_gui_session.SetValue( HC.options['default_gui_session'] )
-            
-            self._last_session_save_period_minutes.setValue( self._new_options.GetInteger( 'last_session_save_period_minutes' ) )
-            
-            self._only_save_last_session_during_idle.setChecked( self._new_options.GetBoolean( 'only_save_last_session_during_idle' ) )
-            
-            self._number_of_gui_session_backups.setValue( self._new_options.GetInteger( 'number_of_gui_session_backups' ) )
-            
-            self._show_session_size_warnings.setChecked( self._new_options.GetBoolean( 'show_session_size_warnings' ) )
             
             self._show_all_my_files_on_page_chooser.setChecked( self._new_options.GetBoolean( 'show_all_my_files_on_page_chooser' ) )
             self._show_all_my_files_on_page_chooser_at_top.setChecked( self._new_options.GetBoolean( 'show_all_my_files_on_page_chooser_at_top' ) )
@@ -2292,36 +2714,38 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             rows = []
             
-            rows.append( ( 'Default session on startup: ', self._default_gui_session ) )
-            rows.append( ( 'If \'last session\' above, autosave it how often (minutes)?', self._last_session_save_period_minutes ) )
-            rows.append( ( 'If \'last session\' above, only autosave during idle time?', self._only_save_last_session_during_idle ) )
-            rows.append( ( 'Number of session backups to keep: ', self._number_of_gui_session_backups ) )
-            rows.append( ( 'Show warning popup if session size exceeds 10,000,000: ', self._show_session_size_warnings ) )
-            
-            sessions_gridbox = ClientGUICommon.WrapInGrid( self._sessions_panel, rows )
-            
-            self._sessions_panel.Add( sessions_gridbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
-            
-            rows = []
-            
+            rows.append( ( 'Put new page tabs on: ', self._default_new_page_goes ) )
             rows.append( ( 'In new page chooser, show "all my files" if appropriate:', self._show_all_my_files_on_page_chooser ) )
             rows.append( ( '  Put it at the top:', self._show_all_my_files_on_page_chooser_at_top ) )
             rows.append( ( 'In new page chooser, show "local files":', self._show_local_files_on_page_chooser ) )
             rows.append( ( '  Put it at the top:', self._show_local_files_on_page_chooser_at_top ) )
+            rows.append( ( 'When closing the current tab, move focus: ', self._close_page_focus_goes ) )
             rows.append( ( 'Confirm when closing any page: ', self._confirm_all_page_closes ) )
             rows.append( ( 'Confirm when closing a non-empty downloader page: ', self._confirm_non_empty_downloader_page_close ) )
-            rows.append( ( 'Put new page tabs on: ', self._default_new_page_goes ) )
-            rows.append( ( 'When closing the current tab, move focus: ', self._close_page_focus_goes ) )
+            rows.append( ( 'BUGFIX: Force \'hide page\' signal when creating a new page: ', self._force_hide_page_signal_on_new_page ) )
+            
+            gridbox = ClientGUICommon.WrapInGrid( self._opening_and_closing_panel, rows )
+            
+            self._opening_and_closing_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            
+            #
+            
+            rows = []
+            
             rows.append( ( 'Notebook tab alignment: ', self._notebook_tab_alignment ) )
+            rows.append( ( 'When switching to pages, move keyboard focus to any text input field: ', self._set_search_focus_on_page_change ) )
             rows.append( ( 'Selection chases dropped page after drag and drop: ', self._page_drop_chase_normally ) )
             rows.append( ( '  With shift held down?: ', self._page_drop_chase_with_shift ) )
             rows.append( ( 'Navigate tabs during drag and drop: ', self._page_drag_change_tab_normally ) )
             rows.append( ( '  With shift held down?: ', self._page_drag_change_tab_with_shift ) )
             rows.append( ( 'EXPERIMENTAL: Mouse wheel scrolls tab bar, not page selection: ', self._wheel_scrolls_tab_bar ) )
             rows.append( ( 'BUGFIX: Disable all page tab drag and drop: ', self._disable_page_tab_dnd ) )
-            rows.append( ( 'BUGFIX: Force \'hide page\' signal when creating a new page: ', self._force_hide_page_signal_on_new_page ) )
             
-            gridbox = ClientGUICommon.WrapInGrid( self._pages_panel, rows )
+            gridbox = ClientGUICommon.WrapInGrid( self._navigation_and_dnd, rows )
+            
+            self._navigation_and_dnd.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            
+            #
             
             rows = []
             
@@ -2352,22 +2776,23 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._page_names_panel.Add( page_names_gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
-            self._pages_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-            self._pages_panel.Add( self._page_names_panel, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            #
             
             rows = []
             
-            rows.append( ( 'When switching to pages, move keyboard focus to any text input field: ', self._set_search_focus_on_page_change ) )
             rows.append( ( 'Hide the bottom-left preview window: ', self._hide_preview ) )
             gridbox = ClientGUICommon.WrapInGrid( self._controls_panel, rows )
             
             self._controls_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
             
+            #
+            
             vbox = QP.VBoxLayout()
             
-            QP.AddToLayout( vbox, self._sessions_panel, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-            QP.AddToLayout( vbox, self._pages_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
             QP.AddToLayout( vbox, self._controls_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+            QP.AddToLayout( vbox, self._opening_and_closing_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+            QP.AddToLayout( vbox, self._navigation_and_dnd, CC.FLAGS_EXPAND_PERPENDICULAR )
+            QP.AddToLayout( vbox, self._page_names_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
             vbox.addStretch( 0 )
             
             self.setLayout( vbox )
@@ -2375,17 +2800,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         def UpdateOptions( self ):
             
-            HC.options[ 'default_gui_session' ] = self._default_gui_session.GetValue()
-            
             self._new_options.SetInteger( 'notebook_tab_alignment', self._notebook_tab_alignment.GetValue() )
-            
-            self._new_options.SetInteger( 'last_session_save_period_minutes', self._last_session_save_period_minutes.value() )
-            
-            self._new_options.SetInteger( 'number_of_gui_session_backups', self._number_of_gui_session_backups.value() )
-            
-            self._new_options.SetBoolean( 'show_session_size_warnings', self._show_session_size_warnings.isChecked() )
-            
-            self._new_options.SetBoolean( 'only_save_last_session_during_idle', self._only_save_last_session_during_idle.isChecked() )
             
             self._new_options.SetBoolean( 'show_all_my_files_on_page_chooser', self._show_all_my_files_on_page_chooser.isChecked() )
             self._new_options.SetBoolean( 'show_all_my_files_on_page_chooser_at_top', self._show_all_my_files_on_page_chooser_at_top.isChecked() )
@@ -2420,6 +2835,94 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._new_options.SetBoolean( 'set_search_focus_on_page_change', self._set_search_focus_on_page_change.isChecked() )
             
             HC.options[ 'hide_preview' ] = self._hide_preview.isChecked()
+            
+        
+    
+    class _GUISessionsPanel( OptionsPagePanel ):
+        
+        def __init__( self, parent, new_options ):
+            
+            super().__init__( parent )
+            
+            self._new_options = new_options
+            
+            self._sessions_panel = ClientGUICommon.StaticBox( self, 'sessions' )
+            
+            self._default_gui_session = ClientGUICommon.BetterChoice( self._sessions_panel )
+            
+            self._last_session_save_period_minutes = ClientGUICommon.BetterSpinBox( self._sessions_panel, min = 1, max = 1440 )
+            
+            self._only_save_last_session_during_idle = QW.QCheckBox( self._sessions_panel )
+            
+            self._only_save_last_session_during_idle.setToolTip( ClientGUIFunctions.WrapToolTip( 'This is useful if you usually have a very large session (200,000+ files/import items open) and a client that is always on.' ) )
+            
+            self._number_of_gui_session_backups = ClientGUICommon.BetterSpinBox( self._sessions_panel, min = 1, max = 32 )
+            
+            self._number_of_gui_session_backups.setToolTip( ClientGUIFunctions.WrapToolTip( 'The client keeps multiple rolling backups of your gui sessions. If you have very large sessions, you might like to reduce this number.' ) )
+            
+            self._show_session_size_warnings = QW.QCheckBox( self._sessions_panel )
+            
+            self._show_session_size_warnings.setToolTip( ClientGUIFunctions.WrapToolTip( 'This will give you a once-per-boot warning popup if your active session contains more than 10M weight.' ) )
+            
+            #
+            
+            gui_session_names = CG.client_controller.Read( 'serialisable_names', HydrusSerialisable.SERIALISABLE_TYPE_GUI_SESSION_CONTAINER )
+            
+            if CC.LAST_SESSION_SESSION_NAME not in gui_session_names:
+                
+                gui_session_names.insert( 0, CC.LAST_SESSION_SESSION_NAME )
+                
+            
+            self._default_gui_session.addItem( 'just a blank page', None )
+            
+            for name in gui_session_names:
+                
+                self._default_gui_session.addItem( name, name )
+                
+            
+            self._default_gui_session.SetValue( HC.options['default_gui_session'] )
+            
+            self._last_session_save_period_minutes.setValue( self._new_options.GetInteger( 'last_session_save_period_minutes' ) )
+            
+            self._only_save_last_session_during_idle.setChecked( self._new_options.GetBoolean( 'only_save_last_session_during_idle' ) )
+            
+            self._number_of_gui_session_backups.setValue( self._new_options.GetInteger( 'number_of_gui_session_backups' ) )
+            
+            self._show_session_size_warnings.setChecked( self._new_options.GetBoolean( 'show_session_size_warnings' ) )
+            
+            #
+            
+            rows = []
+            
+            rows.append( ( 'Default session on startup: ', self._default_gui_session ) )
+            rows.append( ( 'If \'last session\' above, autosave it how often (minutes)?', self._last_session_save_period_minutes ) )
+            rows.append( ( 'If \'last session\' above, only autosave during idle time?', self._only_save_last_session_during_idle ) )
+            rows.append( ( 'Number of session backups to keep: ', self._number_of_gui_session_backups ) )
+            rows.append( ( 'Show warning popup if session size exceeds 10,000,000: ', self._show_session_size_warnings ) )
+            
+            sessions_gridbox = ClientGUICommon.WrapInGrid( self._sessions_panel, rows )
+            
+            self._sessions_panel.Add( sessions_gridbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+            
+            vbox = QP.VBoxLayout()
+            
+            QP.AddToLayout( vbox, self._sessions_panel, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            vbox.addStretch( 0 )
+            
+            self.setLayout( vbox )
+            
+        
+        def UpdateOptions( self ):
+            
+            HC.options[ 'default_gui_session' ] = self._default_gui_session.GetValue()
+            
+            self._new_options.SetInteger( 'last_session_save_period_minutes', self._last_session_save_period_minutes.value() )
+            
+            self._new_options.SetInteger( 'number_of_gui_session_backups', self._number_of_gui_session_backups.value() )
+            
+            self._new_options.SetBoolean( 'show_session_size_warnings', self._show_session_size_warnings.isChecked() )
+            
+            self._new_options.SetBoolean( 'only_save_last_session_during_idle', self._only_save_last_session_during_idle.isChecked() )
             
         
     
@@ -3113,6 +3616,183 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             #
             
+            slideshow_panel = ClientGUICommon.StaticBox( self, 'slideshows' )
+            
+            self._slideshow_durations = QW.QLineEdit( slideshow_panel )
+            self._slideshow_durations.setToolTip( ClientGUIFunctions.WrapToolTip( 'This is a bit hacky, but whatever you have here, in comma-separated floats, will end up in the slideshow menu in the media viewer.' ) )
+            self._slideshow_durations.textChanged.connect( self.EventSlideshowChanged )
+            
+            self._slideshow_always_play_duration_media_once_through = QW.QCheckBox( slideshow_panel )
+            self._slideshow_always_play_duration_media_once_through.setToolTip( ClientGUIFunctions.WrapToolTip( 'If this is on, then a slideshow will not move on until the current duration-having media has played once through.' ) )
+            self._slideshow_always_play_duration_media_once_through.clicked.connect( self.EventSlideshowChanged )
+            
+            self._slideshow_short_duration_loop_seconds = ClientGUICommon.NoneableSpinCtrl( slideshow_panel, 10, none_phrase = 'do not use', min = 1, max = 86400, unit = 's' )
+            tt = '(Ensures very short loops play for a bit, but not five minutes) A slideshow will move on early if the current duration-having media has a duration less than this many seconds (and this is less than the overall slideshow period).'
+            self._slideshow_short_duration_loop_seconds.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
+            
+            self._slideshow_short_duration_loop_percentage = ClientGUICommon.NoneableSpinCtrl( slideshow_panel, 20, none_phrase = 'do not use', min = 1, max = 99, unit = '%' )
+            tt = '(Ensures short videos play for a bit, but not twenty minutes) A slideshow will move on early if the current duration-having media has a duration less than this percentage of the overall slideshow period.'
+            self._slideshow_short_duration_loop_percentage.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
+            
+            self._slideshow_short_duration_cutoff_percentage = ClientGUICommon.NoneableSpinCtrl( slideshow_panel, 75, none_phrase = 'do not use', min = 1, max = 99, unit = '%' )
+            tt = '(Ensures that slightly shorter videos move the slideshow cleanly along as soon as they are done) A slideshow will move on early if the current duration-having media will have played exactly once through between this many percent and 100% of the slideshow period.'
+            self._slideshow_short_duration_cutoff_percentage.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
+            
+            self._slideshow_long_duration_overspill_percentage = ClientGUICommon.NoneableSpinCtrl( slideshow_panel, 50, none_phrase = 'do not use', min = 1, max = 500, unit = '%' )
+            tt = '(Ensures slightly longer videos will not get cut off right at the end) A slideshow will delay moving on if playing the current duration-having media would stretch the overall slideshow period less than this amount.'
+            self._slideshow_long_duration_overspill_percentage.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
+            
+            #
+            
+            self._focus_media_tab_on_viewer_close_if_possible.setChecked( self._new_options.GetBoolean( 'focus_media_tab_on_viewer_close_if_possible' ) )
+            self._focus_media_thumb_on_viewer_close.setChecked( self._new_options.GetBoolean( 'focus_media_thumb_on_viewer_close' ) )
+            self._activate_main_gui_on_viewer_close.setChecked( self._new_options.GetBoolean( 'activate_main_gui_on_viewer_close' ) )
+            
+            self._animated_scanbar_height.setValue( self._new_options.GetInteger( 'animated_scanbar_height' ) )
+            self._animated_scanbar_nub_width.setValue( self._new_options.GetInteger( 'animated_scanbar_nub_width' ) )
+            
+            self._animated_scanbar_hide_height.SetValue( 5 )
+            self._animated_scanbar_hide_height.SetValue( self._new_options.GetNoneableInteger( 'animated_scanbar_hide_height' ) )
+            
+            self._media_viewer_cursor_autohide_time_ms.SetValue( self._new_options.GetNoneableInteger( 'media_viewer_cursor_autohide_time_ms' ) )
+            self._disallow_media_drags_on_duration_media.setChecked( self._new_options.GetBoolean( 'disallow_media_drags_on_duration_media' ) )
+            self._anchor_and_hide_canvas_drags.setChecked( self._new_options.GetBoolean( 'anchor_and_hide_canvas_drags' ) )
+            self._touchscreen_canvas_drags_unanchor.setChecked( self._new_options.GetBoolean( 'touchscreen_canvas_drags_unanchor' ) )
+            
+            slideshow_durations = self._new_options.GetSlideshowDurations()
+            
+            self._slideshow_durations.setText( ','.join( ( str( slideshow_duration ) for slideshow_duration in slideshow_durations ) ) )
+            
+            self._slideshow_always_play_duration_media_once_through.setChecked( self._new_options.GetBoolean( 'slideshow_always_play_duration_media_once_through' ) )
+            self._slideshow_short_duration_loop_seconds.SetValue( self._new_options.GetNoneableInteger( 'slideshow_short_duration_loop_seconds' ) )
+            self._slideshow_short_duration_loop_percentage.SetValue( self._new_options.GetNoneableInteger( 'slideshow_short_duration_loop_percentage' ) )
+            self._slideshow_short_duration_cutoff_percentage.SetValue( self._new_options.GetNoneableInteger( 'slideshow_short_duration_cutoff_percentage' ) )
+            self._slideshow_long_duration_overspill_percentage.SetValue( self._new_options.GetNoneableInteger( 'slideshow_long_duration_overspill_percentage' ) )
+            
+            #
+            
+            rows = []
+            
+            rows.append( ( 'Re-focus original search page when closing the media viewer: ', self._focus_media_tab_on_viewer_close_if_possible ) )
+            rows.append( ( 'Tell original search page to select exit media when closing the media viewer: ', self._focus_media_thumb_on_viewer_close ) )
+            rows.append( ( 'DEBUG: Activate Main GUI when closing the media viewer: ', self._activate_main_gui_on_viewer_close ) )
+            
+            gridbox = ClientGUICommon.WrapInGrid( window_panel, rows )
+            
+            window_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            
+            rows = []
+            
+            rows.append( ( 'Time until mouse cursor autohides on media viewer:', self._media_viewer_cursor_autohide_time_ms ) )
+            rows.append( ( 'Animation scanbar height:', self._animated_scanbar_height ) )
+            rows.append( ( 'Animation scanbar height when mouse away:', self._animated_scanbar_hide_height ) )
+            rows.append( ( 'Animation scanbar nub width:', self._animated_scanbar_nub_width ) )
+            rows.append( ( 'Do not allow mouse media drag-panning when the media has duration:', self._disallow_media_drags_on_duration_media ) )
+            rows.append( ( 'RECOMMEND WINDOWS ONLY: Hide and anchor mouse cursor on media viewer drags:', self._anchor_and_hide_canvas_drags ) )
+            rows.append( ( 'RECOMMEND WINDOWS ONLY: If set to hide and anchor, undo on apparent touchscreen drag:', self._touchscreen_canvas_drags_unanchor ) )
+            
+            media_viewer_gridbox = ClientGUICommon.WrapInGrid( media_viewer_panel, rows )
+            
+            media_viewer_panel.Add( media_viewer_gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            
+            rows = []
+            
+            rows.append( ( 'Slideshow durations:', self._slideshow_durations ) )
+            rows.append( ( 'Always play media once through before moving on:', self._slideshow_always_play_duration_media_once_through ) )
+            rows.append( ( 'Slideshow short-media skip seconds threshold:', self._slideshow_short_duration_loop_seconds ) )
+            rows.append( ( 'Slideshow short-media skip percentage threshold:', self._slideshow_short_duration_loop_percentage ) )
+            rows.append( ( 'Slideshow shorter-media cutoff percentage threshold:', self._slideshow_short_duration_cutoff_percentage ) )
+            rows.append( ( 'Slideshow long-media allowed delay percentage threshold:', self._slideshow_long_duration_overspill_percentage ) )
+            
+            slideshow_gridbox = ClientGUICommon.WrapInGrid( slideshow_panel, rows )
+            
+            slideshow_panel.Add( slideshow_gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            
+            #
+            
+            vbox = QP.VBoxLayout()
+            
+            QP.AddToLayout( vbox, window_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+            QP.AddToLayout( vbox, media_viewer_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+            QP.AddToLayout( vbox, slideshow_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.addStretch( 0 )
+            
+            self.setLayout( vbox )
+            
+        
+        def EventSlideshowChanged( self, text ):
+            
+            try:
+                
+                slideshow_durations = [ float( slideshow_duration ) for slideshow_duration in self._slideshow_durations.text().split( ',' ) ]
+                
+                self._slideshow_durations.setObjectName( '' )
+                
+            except ValueError:
+                
+                self._slideshow_durations.setObjectName( 'HydrusInvalid' )
+                
+            
+            self._slideshow_durations.style().polish( self._slideshow_durations )
+            
+            self._slideshow_durations.update()
+            
+            always_once_through = self._slideshow_always_play_duration_media_once_through.isChecked()
+            
+            self._slideshow_long_duration_overspill_percentage.setEnabled( not always_once_through )
+            
+        
+        def UpdateOptions( self ):
+            
+            self._new_options.SetBoolean( 'focus_media_tab_on_viewer_close_if_possible', self._focus_media_tab_on_viewer_close_if_possible.isChecked() )
+            self._new_options.SetBoolean( 'focus_media_thumb_on_viewer_close', self._focus_media_thumb_on_viewer_close.isChecked() )
+            self._new_options.SetBoolean( 'activate_main_gui_on_viewer_close', self._activate_main_gui_on_viewer_close.isChecked() )
+            
+            self._new_options.SetBoolean( 'disallow_media_drags_on_duration_media', self._disallow_media_drags_on_duration_media.isChecked() )
+            self._new_options.SetBoolean( 'anchor_and_hide_canvas_drags', self._anchor_and_hide_canvas_drags.isChecked() )
+            self._new_options.SetBoolean( 'touchscreen_canvas_drags_unanchor', self._touchscreen_canvas_drags_unanchor.isChecked() )
+            
+            self._new_options.SetNoneableInteger( 'media_viewer_cursor_autohide_time_ms', self._media_viewer_cursor_autohide_time_ms.GetValue() )
+            
+            self._new_options.SetInteger( 'animated_scanbar_height', self._animated_scanbar_height.value() )
+            self._new_options.SetInteger( 'animated_scanbar_nub_width', self._animated_scanbar_nub_width.value() )
+            
+            self._new_options.SetNoneableInteger( 'animated_scanbar_hide_height', self._animated_scanbar_hide_height.GetValue() )
+            
+            try:
+                
+                slideshow_durations = [ float( slideshow_duration ) for slideshow_duration in self._slideshow_durations.text().split( ',' ) ]
+                
+                slideshow_durations = [ slideshow_duration for slideshow_duration in slideshow_durations if slideshow_duration > 0.0 ]
+                
+                if len( slideshow_durations ) > 0:
+                    
+                    self._new_options.SetSlideshowDurations( slideshow_durations )
+                    
+                
+            except ValueError:
+                
+                HydrusData.ShowText( 'Could not parse those slideshow durations, so they were not saved!' )
+                
+            
+            self._new_options.SetBoolean( 'slideshow_always_play_duration_media_once_through', self._slideshow_always_play_duration_media_once_through.isChecked() )
+            self._new_options.SetNoneableInteger( 'slideshow_short_duration_loop_percentage', self._slideshow_short_duration_loop_percentage.GetValue() )
+            self._new_options.SetNoneableInteger( 'slideshow_short_duration_loop_seconds', self._slideshow_short_duration_loop_seconds.GetValue() )
+            self._new_options.SetNoneableInteger( 'slideshow_short_duration_cutoff_percentage', self._slideshow_short_duration_cutoff_percentage.GetValue() )
+            self._new_options.SetNoneableInteger( 'slideshow_long_duration_overspill_percentage', self._slideshow_long_duration_overspill_percentage.GetValue() )
+            
+        
+    
+    class _MediaViewerHoversPanel( OptionsPagePanel ):
+        
+        def __init__( self, parent ):
+            
+            super().__init__( parent )
+            
+            self._new_options = CG.client_controller.new_options
+            
+            #
+            
             media_canvas_panel = ClientGUICommon.StaticBox( self, 'hover windows and background' )
             
             self._draw_tags_hover_in_media_viewer_background = QW.QCheckBox( media_canvas_panel )
@@ -3164,44 +3844,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             #
             
-            slideshow_panel = ClientGUICommon.StaticBox( self, 'slideshows' )
-            
-            self._slideshow_durations = QW.QLineEdit( slideshow_panel )
-            self._slideshow_durations.setToolTip( ClientGUIFunctions.WrapToolTip( 'This is a bit hacky, but whatever you have here, in comma-separated floats, will end up in the slideshow menu in the media viewer.' ) )
-            self._slideshow_durations.textChanged.connect( self.EventSlideshowChanged )
-            
-            self._slideshow_always_play_duration_media_once_through = QW.QCheckBox( slideshow_panel )
-            self._slideshow_always_play_duration_media_once_through.setToolTip( ClientGUIFunctions.WrapToolTip( 'If this is on, then a slideshow will not move on until the current duration-having media has played once through.' ) )
-            self._slideshow_always_play_duration_media_once_through.clicked.connect( self.EventSlideshowChanged )
-            
-            self._slideshow_short_duration_loop_seconds = ClientGUICommon.NoneableSpinCtrl( slideshow_panel, 10, none_phrase = 'do not use', min = 1, max = 86400, unit = 's' )
-            tt = '(Ensures very short loops play for a bit, but not five minutes) A slideshow will move on early if the current duration-having media has a duration less than this many seconds (and this is less than the overall slideshow period).'
-            self._slideshow_short_duration_loop_seconds.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
-            
-            self._slideshow_short_duration_loop_percentage = ClientGUICommon.NoneableSpinCtrl( slideshow_panel, 20, none_phrase = 'do not use', min = 1, max = 99, unit = '%' )
-            tt = '(Ensures short videos play for a bit, but not twenty minutes) A slideshow will move on early if the current duration-having media has a duration less than this percentage of the overall slideshow period.'
-            self._slideshow_short_duration_loop_percentage.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
-            
-            self._slideshow_short_duration_cutoff_percentage = ClientGUICommon.NoneableSpinCtrl( slideshow_panel, 75, none_phrase = 'do not use', min = 1, max = 99, unit = '%' )
-            tt = '(Ensures that slightly shorter videos move the slideshow cleanly along as soon as they are done) A slideshow will move on early if the current duration-having media will have played exactly once through between this many percent and 100% of the slideshow period.'
-            self._slideshow_short_duration_cutoff_percentage.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
-            
-            self._slideshow_long_duration_overspill_percentage = ClientGUICommon.NoneableSpinCtrl( slideshow_panel, 50, none_phrase = 'do not use', min = 1, max = 500, unit = '%' )
-            tt = '(Ensures slightly longer videos will not get cut off right at the end) A slideshow will delay moving on if playing the current duration-having media would stretch the overall slideshow period less than this amount.'
-            self._slideshow_long_duration_overspill_percentage.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
-            
-            #
-            
-            self._focus_media_tab_on_viewer_close_if_possible.setChecked( self._new_options.GetBoolean( 'focus_media_tab_on_viewer_close_if_possible' ) )
-            self._focus_media_thumb_on_viewer_close.setChecked( self._new_options.GetBoolean( 'focus_media_thumb_on_viewer_close' ) )
-            self._activate_main_gui_on_viewer_close.setChecked( self._new_options.GetBoolean( 'activate_main_gui_on_viewer_close' ) )
-            
-            self._animated_scanbar_height.setValue( self._new_options.GetInteger( 'animated_scanbar_height' ) )
-            self._animated_scanbar_nub_width.setValue( self._new_options.GetInteger( 'animated_scanbar_nub_width' ) )
-            
-            self._animated_scanbar_hide_height.SetValue( 5 )
-            self._animated_scanbar_hide_height.SetValue( self._new_options.GetNoneableInteger( 'animated_scanbar_hide_height' ) )
-            
             self._draw_tags_hover_in_media_viewer_background.setChecked( self._new_options.GetBoolean( 'draw_tags_hover_in_media_viewer_background' ) )
             self._disable_tags_hover_in_media_viewer.setChecked( self._new_options.GetBoolean( 'disable_tags_hover_in_media_viewer' ) )
             self._draw_top_hover_in_media_viewer_background.setChecked( self._new_options.GetBoolean( 'draw_top_hover_in_media_viewer_background' ) )
@@ -3220,46 +3862,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._file_info_line_consider_trash_reason_interesting.setChecked( self._new_options.GetBoolean( 'file_info_line_consider_trash_reason_interesting' ) )
             self._hide_uninteresting_modified_time.setChecked( self._new_options.GetBoolean( 'hide_uninteresting_modified_time' ) )
             
-            self._media_viewer_cursor_autohide_time_ms.SetValue( self._new_options.GetNoneableInteger( 'media_viewer_cursor_autohide_time_ms' ) )
-            self._disallow_media_drags_on_duration_media.setChecked( self._new_options.GetBoolean( 'disallow_media_drags_on_duration_media' ) )
-            self._anchor_and_hide_canvas_drags.setChecked( self._new_options.GetBoolean( 'anchor_and_hide_canvas_drags' ) )
-            self._touchscreen_canvas_drags_unanchor.setChecked( self._new_options.GetBoolean( 'touchscreen_canvas_drags_unanchor' ) )
-            
-            slideshow_durations = self._new_options.GetSlideshowDurations()
-            
-            self._slideshow_durations.setText( ','.join( ( str( slideshow_duration ) for slideshow_duration in slideshow_durations ) ) )
-            
-            self._slideshow_always_play_duration_media_once_through.setChecked( self._new_options.GetBoolean( 'slideshow_always_play_duration_media_once_through' ) )
-            self._slideshow_short_duration_loop_seconds.SetValue( self._new_options.GetNoneableInteger( 'slideshow_short_duration_loop_seconds' ) )
-            self._slideshow_short_duration_loop_percentage.SetValue( self._new_options.GetNoneableInteger( 'slideshow_short_duration_loop_percentage' ) )
-            self._slideshow_short_duration_cutoff_percentage.SetValue( self._new_options.GetNoneableInteger( 'slideshow_short_duration_cutoff_percentage' ) )
-            self._slideshow_long_duration_overspill_percentage.SetValue( self._new_options.GetNoneableInteger( 'slideshow_long_duration_overspill_percentage' ) )
-            
             #
-            
-            rows = []
-            
-            rows.append( ( 'Re-focus original search page when closing the media viewer: ', self._focus_media_tab_on_viewer_close_if_possible ) )
-            rows.append( ( 'Tell original search page to select exit media when closing the media viewer: ', self._focus_media_thumb_on_viewer_close ) )
-            rows.append( ( 'DEBUG: Activate Main GUI when closing the media viewer: ', self._activate_main_gui_on_viewer_close ) )
-            
-            gridbox = ClientGUICommon.WrapInGrid( window_panel, rows )
-            
-            window_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-            
-            rows = []
-            
-            rows.append( ( 'Time until mouse cursor autohides on media viewer:', self._media_viewer_cursor_autohide_time_ms ) )
-            rows.append( ( 'Animation scanbar height:', self._animated_scanbar_height ) )
-            rows.append( ( 'Animation scanbar height when mouse away:', self._animated_scanbar_hide_height ) )
-            rows.append( ( 'Animation scanbar nub width:', self._animated_scanbar_nub_width ) )
-            rows.append( ( 'Do not allow mouse media drag-panning when the media has duration:', self._disallow_media_drags_on_duration_media ) )
-            rows.append( ( 'RECOMMEND WINDOWS ONLY: Hide and anchor mouse cursor on media viewer drags:', self._anchor_and_hide_canvas_drags ) )
-            rows.append( ( 'RECOMMEND WINDOWS ONLY: If set to hide and anchor, undo on apparent touchscreen drag:', self._touchscreen_canvas_drags_unanchor ) )
-            
-            media_viewer_gridbox = ClientGUICommon.WrapInGrid( media_viewer_panel, rows )
-            
-            media_viewer_panel.Add( media_viewer_gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
             rows = []
             
@@ -3299,28 +3902,12 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             top_hover_summary_panel.Add( st, CC.FLAGS_EXPAND_PERPENDICULAR )
             top_hover_summary_panel.Add( top_hover_summary_gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
-            rows = []
-            
-            rows.append( ( 'Slideshow durations:', self._slideshow_durations ) )
-            rows.append( ( 'Always play media once through before moving on:', self._slideshow_always_play_duration_media_once_through ) )
-            rows.append( ( 'Slideshow short-media skip seconds threshold:', self._slideshow_short_duration_loop_seconds ) )
-            rows.append( ( 'Slideshow short-media skip percentage threshold:', self._slideshow_short_duration_loop_percentage ) )
-            rows.append( ( 'Slideshow shorter-media cutoff percentage threshold:', self._slideshow_short_duration_cutoff_percentage ) )
-            rows.append( ( 'Slideshow long-media allowed delay percentage threshold:', self._slideshow_long_duration_overspill_percentage ) )
-            
-            slideshow_gridbox = ClientGUICommon.WrapInGrid( slideshow_panel, rows )
-            
-            slideshow_panel.Add( slideshow_gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-            
             #
             
             vbox = QP.VBoxLayout()
             
-            QP.AddToLayout( vbox, window_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-            QP.AddToLayout( vbox, media_viewer_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
             QP.AddToLayout( vbox, media_canvas_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
             QP.AddToLayout( vbox, top_hover_summary_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-            QP.AddToLayout( vbox, slideshow_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
             vbox.addStretch( 0 )
             
             self.setLayout( vbox )
@@ -3337,33 +3924,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._file_info_line_consider_file_services_import_times_interesting.setEnabled( self._file_info_line_consider_file_services_interesting.isChecked() )
             
         
-        def EventSlideshowChanged( self, text ):
-            
-            try:
-                
-                slideshow_durations = [ float( slideshow_duration ) for slideshow_duration in self._slideshow_durations.text().split( ',' ) ]
-                
-                self._slideshow_durations.setObjectName( '' )
-                
-            except ValueError:
-                
-                self._slideshow_durations.setObjectName( 'HydrusInvalid' )
-                
-            
-            self._slideshow_durations.style().polish( self._slideshow_durations )
-            
-            self._slideshow_durations.update()
-            
-            always_once_through = self._slideshow_always_play_duration_media_once_through.isChecked()
-            
-            self._slideshow_long_duration_overspill_percentage.setEnabled( not always_once_through )
-            
-        
         def UpdateOptions( self ):
-            
-            self._new_options.SetBoolean( 'focus_media_tab_on_viewer_close_if_possible', self._focus_media_tab_on_viewer_close_if_possible.isChecked() )
-            self._new_options.SetBoolean( 'focus_media_thumb_on_viewer_close', self._focus_media_thumb_on_viewer_close.isChecked() )
-            self._new_options.SetBoolean( 'activate_main_gui_on_viewer_close', self._activate_main_gui_on_viewer_close.isChecked() )
             
             self._new_options.SetBoolean( 'draw_tags_hover_in_media_viewer_background', self._draw_tags_hover_in_media_viewer_background.isChecked() )
             self._new_options.SetBoolean( 'disable_tags_hover_in_media_viewer', self._disable_tags_hover_in_media_viewer.isChecked() )
@@ -3383,39 +3944,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._new_options.SetBoolean( 'file_info_line_consider_trash_time_interesting', self._file_info_line_consider_trash_time_interesting.isChecked() )
             self._new_options.SetBoolean( 'file_info_line_consider_trash_reason_interesting', self._file_info_line_consider_trash_reason_interesting.isChecked() )
             self._new_options.SetBoolean( 'hide_uninteresting_modified_time', self._hide_uninteresting_modified_time.isChecked() )
-            
-            self._new_options.SetBoolean( 'disallow_media_drags_on_duration_media', self._disallow_media_drags_on_duration_media.isChecked() )
-            self._new_options.SetBoolean( 'anchor_and_hide_canvas_drags', self._anchor_and_hide_canvas_drags.isChecked() )
-            self._new_options.SetBoolean( 'touchscreen_canvas_drags_unanchor', self._touchscreen_canvas_drags_unanchor.isChecked() )
-            
-            self._new_options.SetNoneableInteger( 'media_viewer_cursor_autohide_time_ms', self._media_viewer_cursor_autohide_time_ms.GetValue() )
-            
-            self._new_options.SetInteger( 'animated_scanbar_height', self._animated_scanbar_height.value() )
-            self._new_options.SetInteger( 'animated_scanbar_nub_width', self._animated_scanbar_nub_width.value() )
-            
-            self._new_options.SetNoneableInteger( 'animated_scanbar_hide_height', self._animated_scanbar_hide_height.GetValue() )
-            
-            try:
-                
-                slideshow_durations = [ float( slideshow_duration ) for slideshow_duration in self._slideshow_durations.text().split( ',' ) ]
-                
-                slideshow_durations = [ slideshow_duration for slideshow_duration in slideshow_durations if slideshow_duration > 0.0 ]
-                
-                if len( slideshow_durations ) > 0:
-                    
-                    self._new_options.SetSlideshowDurations( slideshow_durations )
-                    
-                
-            except ValueError:
-                
-                HydrusData.ShowText( 'Could not parse those slideshow durations, so they were not saved!' )
-                
-            
-            self._new_options.SetBoolean( 'slideshow_always_play_duration_media_once_through', self._slideshow_always_play_duration_media_once_through.isChecked() )
-            self._new_options.SetNoneableInteger( 'slideshow_short_duration_loop_percentage', self._slideshow_short_duration_loop_percentage.GetValue() )
-            self._new_options.SetNoneableInteger( 'slideshow_short_duration_loop_seconds', self._slideshow_short_duration_loop_seconds.GetValue() )
-            self._new_options.SetNoneableInteger( 'slideshow_short_duration_cutoff_percentage', self._slideshow_short_duration_cutoff_percentage.GetValue() )
-            self._new_options.SetNoneableInteger( 'slideshow_long_duration_overspill_percentage', self._slideshow_long_duration_overspill_percentage.GetValue() )
             
         
     
@@ -3997,208 +4525,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
         
     
-    class _SortCollectPanel( OptionsPagePanel ):
-        
-        def __init__( self, parent, new_options ):
-            
-            super().__init__( parent )
-            
-            self._new_options = new_options
-            
-            self._tag_sort_panel = ClientGUICommon.StaticBox( self, 'tag sort' )
-            
-            self._default_tag_sort_search_page = ClientGUITagSorting.TagSortControl( self._tag_sort_panel, self._new_options.GetDefaultTagSort( CC.TAG_PRESENTATION_SEARCH_PAGE ) )
-            self._default_tag_sort_search_page_manage_tags = ClientGUITagSorting.TagSortControl( self._tag_sort_panel, self._new_options.GetDefaultTagSort( CC.TAG_PRESENTATION_SEARCH_PAGE_MANAGE_TAGS ), show_siblings = True )
-            self._default_tag_sort_media_viewer = ClientGUITagSorting.TagSortControl( self._tag_sort_panel, self._new_options.GetDefaultTagSort( CC.TAG_PRESENTATION_MEDIA_VIEWER ) )
-            self._default_tag_sort_media_viewer_manage_tags = ClientGUITagSorting.TagSortControl( self._tag_sort_panel, self._new_options.GetDefaultTagSort( CC.TAG_PRESENTATION_MEDIA_VIEWER_MANAGE_TAGS ), show_siblings = True )
-            
-            self._file_sort_panel = ClientGUICommon.StaticBox( self, 'file sort' )
-            
-            default_sort = self._new_options.GetDefaultSort()
-            
-            self._default_media_sort = ClientGUIMediaResultsPanelSortCollect.MediaSortControl( self._file_sort_panel, media_sort = default_sort )
-            
-            if self._default_media_sort.GetSort() != default_sort:
-                
-                media_sort = ClientMedia.MediaSort( ( 'system', CC.SORT_FILES_BY_FILESIZE ), CC.SORT_ASC )
-                
-                self._default_media_sort.SetSort( media_sort )
-                
-            
-            fallback_sort = self._new_options.GetFallbackSort()
-            
-            self._fallback_media_sort = ClientGUIMediaResultsPanelSortCollect.MediaSortControl( self._file_sort_panel, media_sort = fallback_sort )
-            
-            if self._fallback_media_sort.GetSort() != fallback_sort:
-                
-                media_sort = ClientMedia.MediaSort( ( 'system', CC.SORT_FILES_BY_IMPORT_TIME ), CC.SORT_ASC )
-                
-                self._fallback_media_sort.SetSort( media_sort )
-                
-            
-            self._save_page_sort_on_change = QW.QCheckBox( self._file_sort_panel )
-            
-            self._default_media_collect = ClientGUIMediaResultsPanelSortCollect.MediaCollectControl( self._file_sort_panel )
-            
-            #
-            
-            user_namespace_group_by_sort_box = ClientGUICommon.StaticBox( self._file_sort_panel, 'namespace grouping sort' )
-            
-            self._user_namespace_group_by_sort = ClientGUIListBoxes.QueueListBox( user_namespace_group_by_sort_box, 8, ClientTags.RenderNamespaceForUser, add_callable = self._AddNamespaceGroupBySort, edit_callable = self._EditNamespaceGroupBySort, paste_callable = self._PasteNamespaceGroupBySort )
-            
-            #
-            
-            namespace_file_sorting_box = ClientGUICommon.StaticBox( self._file_sort_panel, 'namespace file sorting' )
-            
-            self._namespace_file_sort_by = ClientGUIListBoxes.QueueListBox( namespace_file_sorting_box, 8, self._ConvertNamespaceTupleToSortString, add_callable = self._AddNamespaceSort, edit_callable = self._EditNamespaceSort )
-            
-            #
-            
-            self._user_namespace_group_by_sort.AddDatas( CG.client_controller.new_options.GetStringList( 'user_namespace_group_by_sort' ) )
-            
-            self._namespace_file_sort_by.AddDatas( [ media_sort.sort_type[1] for media_sort in CG.client_controller.new_options.GetDefaultNamespaceSorts() ] )
-            
-            self._save_page_sort_on_change.setChecked( self._new_options.GetBoolean( 'save_page_sort_on_change' ) )
-            
-            #
-            
-            group_by_sort_text = 'You can manage the custom "(user)" namespace grouping sort here. This lets you put, say, "creator" tags above any other namespace in a tag sort.'
-            group_by_sort_text += '\n'
-            group_by_sort_text += 'Any namespaces not listed here will be listed afterwards in a-z format, with unnamespaced following, just like the normal (a-z) namespace grouping.'
-            
-            user_namespace_group_by_sort_box.Add( ClientGUICommon.BetterStaticText( user_namespace_group_by_sort_box, group_by_sort_text ), CC.FLAGS_EXPAND_PERPENDICULAR )
-            user_namespace_group_by_sort_box.Add( self._user_namespace_group_by_sort, CC.FLAGS_EXPAND_BOTH_WAYS )
-            
-            #
-            
-            sort_by_text = 'You can manage your namespace sorting schemes here.'
-            sort_by_text += '\n'
-            sort_by_text += 'The client will sort media by comparing their namespaces, moving from left to right until an inequality is found.'
-            sort_by_text += '\n'
-            sort_by_text += 'Any namespaces here will also appear in your collect-by dropdowns.'
-            
-            namespace_file_sorting_box.Add( ClientGUICommon.BetterStaticText( namespace_file_sorting_box, sort_by_text ), CC.FLAGS_EXPAND_PERPENDICULAR )
-            namespace_file_sorting_box.Add( self._namespace_file_sort_by, CC.FLAGS_EXPAND_BOTH_WAYS )
-            
-            #
-            
-            rows = []
-            
-            rows.append( ( 'Default tag sort in search pages: ', self._default_tag_sort_search_page ) )
-            rows.append( ( 'Default tag sort in search page manage tags dialogs: ', self._default_tag_sort_search_page_manage_tags ) )
-            rows.append( ( 'Default tag sort in the media viewer: ', self._default_tag_sort_media_viewer ) )
-            rows.append( ( 'Default tag sort in media viewer manage tags dialogs: ', self._default_tag_sort_media_viewer_manage_tags ) )
-            
-            gridbox = ClientGUICommon.WrapInGrid( self._tag_sort_panel, rows )
-            
-            self._tag_sort_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-            
-            #
-            
-            rows = []
-            
-            rows.append( ( 'Default file sort: ', self._default_media_sort ) )
-            rows.append( ( 'Secondary file sort (when primary gives two equal values): ', self._fallback_media_sort ) )
-            rows.append( ( 'Update default file sort every time a new sort is manually chosen: ', self._save_page_sort_on_change ) )
-            rows.append( ( 'Default collect: ', self._default_media_collect ) )
-            
-            gridbox = ClientGUICommon.WrapInGrid( self, rows )
-            
-            self._file_sort_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-            self._file_sort_panel.Add( user_namespace_group_by_sort_box, CC.FLAGS_EXPAND_BOTH_WAYS )
-            self._file_sort_panel.Add( namespace_file_sorting_box, CC.FLAGS_EXPAND_BOTH_WAYS )
-            
-            vbox = QP.VBoxLayout()
-            
-            QP.AddToLayout( vbox, self._tag_sort_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-            QP.AddToLayout( vbox, self._file_sort_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
-            
-            self.setLayout( vbox )
-            
-        
-        def _AddNamespaceGroupBySort( self ):
-            
-            default = 'namespace'
-            
-            return self._EditNamespaceGroupBySort( default )
-            
-        
-        def _AddNamespaceSort( self ):
-            
-            default = ( ( 'creator', 'series', 'page' ), ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL )
-            
-            return self._EditNamespaceSort( default )
-            
-        
-        def _ConvertNamespaceTupleToSortString( self, sort_data ):
-            
-            ( namespaces, tag_display_type ) = sort_data
-            
-            return '-'.join( namespaces )
-            
-        
-        def _EditNamespaceGroupBySort( self, namespace ):
-            
-            message = 'Enter the namespace. Leave blank for unnamespaced tags, use ":" for all unspecified namespaced tags.'
-            
-            with ClientGUIDialogs.DialogTextEntry( self, message, allow_blank = True, default = namespace ) as dlg:
-                
-                if dlg.exec() == QW.QDialog.DialogCode.Accepted:
-                    
-                    edited_namespace = dlg.GetValue()
-                    
-                    return edited_namespace
-                    
-                else:
-                    
-                    raise HydrusExceptions.VetoException()
-                    
-                
-            
-        
-        def _EditNamespaceSort( self, sort_data ):
-            
-            return ClientGUITags.EditNamespaceSort( self, sort_data )
-            
-        
-        def _PasteNamespaceGroupBySort( self ):
-            
-            try:
-                
-                text = CG.client_controller.GetClipboardText()
-                
-            except Exception as e:
-                
-                raise HydrusExceptions.VetoException()
-                
-            
-            namespaces = HydrusText.DeserialiseNewlinedTexts( text )
-            
-            return namespaces
-            
-        
-        def UpdateOptions( self ):
-            
-            self._new_options.SetDefaultTagSort( CC.TAG_PRESENTATION_SEARCH_PAGE, self._default_tag_sort_search_page.GetValue() )
-            self._new_options.SetDefaultTagSort( CC.TAG_PRESENTATION_SEARCH_PAGE_MANAGE_TAGS, self._default_tag_sort_search_page_manage_tags.GetValue() )
-            self._new_options.SetDefaultTagSort( CC.TAG_PRESENTATION_MEDIA_VIEWER, self._default_tag_sort_media_viewer.GetValue() )
-            self._new_options.SetDefaultTagSort( CC.TAG_PRESENTATION_MEDIA_VIEWER_MANAGE_TAGS, self._default_tag_sort_media_viewer_manage_tags.GetValue() )
-            
-            self._new_options.SetDefaultSort( self._default_media_sort.GetSort() )
-            self._new_options.SetFallbackSort( self._fallback_media_sort.GetSort() )
-            self._new_options.SetBoolean( 'save_page_sort_on_change', self._save_page_sort_on_change.isChecked() )
-            self._new_options.SetDefaultCollect( self._default_media_collect.GetValue() )
-            
-            user_namespace_group_by_sort = self._user_namespace_group_by_sort.GetData()
-            
-            self._new_options.SetStringList( 'user_namespace_group_by_sort', user_namespace_group_by_sort )
-            
-            namespace_sorts = [ ClientMedia.MediaSort( sort_type = ( 'namespaces', sort_data ) ) for sort_data in self._namespace_file_sort_by.GetData() ]
-            
-            self._new_options.SetDefaultNamespaceSorts( namespace_sorts )
-            
-        
-    
     class _SpeedAndMemoryPanel( OptionsPagePanel ):
         
         def __init__( self, parent, new_options ):
@@ -4209,7 +4535,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             #
             
-            thumbnail_cache_panel = ClientGUICommon.StaticBox( self, 'thumbnail cache' )
+            thumbnail_cache_panel = ClientGUICommon.StaticBox( self, 'thumbnail cache', can_expand = True, start_expanded = False )
             
             self._thumbnail_cache_size = ClientGUIBytes.BytesControl( thumbnail_cache_panel )
             self._thumbnail_cache_size.valueChanged.connect( self.EventThumbnailsUpdate )
@@ -4228,7 +4554,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._thumbnail_cache_timeout.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
             
-            image_cache_panel = ClientGUICommon.StaticBox( self, 'image cache' )
+            image_cache_panel = ClientGUICommon.StaticBox( self, 'image cache', can_expand = True, start_expanded = False )
             
             self._image_cache_size = ClientGUIBytes.BytesControl( image_cache_panel )
             self._image_cache_size.valueChanged.connect( self.EventImageCacheUpdate )
@@ -4271,7 +4597,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._image_cache_prefetch_limit_percentage_st.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
             
-            prefetch_panel = ClientGUICommon.StaticBox( self, 'image prefetch' )
+            prefetch_panel = ClientGUICommon.StaticBox( self, 'image prefetch', can_expand = True, start_expanded = False )
             
             self._media_viewer_prefetch_delay_base_ms = ClientGUICommon.BetterSpinBox( prefetch_panel, min = 0, max = 2000 )
             
@@ -4287,7 +4613,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._prefetch_label_warning = ClientGUICommon.BetterStaticText( prefetch_panel )
             self._prefetch_label_warning.setToolTip( ClientGUIFunctions.WrapToolTip( 'If you boost the prefetch numbers, make sure your image cache is big enough to handle it! Doubly so if you frequently load images that at 100% are far larger than your screen size. You really don\'t want to be prefetching more than your cache can hold!' ) )
             
-            image_tile_cache_panel = ClientGUICommon.StaticBox( self, 'image tile cache' )
+            image_tile_cache_panel = ClientGUICommon.StaticBox( self, 'image tile cache', can_expand = True, start_expanded = False )
             
             self._image_tile_cache_size = ClientGUIBytes.BytesControl( image_tile_cache_panel )
             self._image_tile_cache_size.valueChanged.connect( self.EventImageTilesUpdate )
@@ -4326,7 +4652,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             #
             
-            buffer_panel = ClientGUICommon.StaticBox( self, 'video buffer' )
+            buffer_panel = ClientGUICommon.StaticBox( self, 'video buffer', can_expand = True, start_expanded = False )
             
             self._video_buffer_size = ClientGUIBytes.BytesControl( buffer_panel )
             self._video_buffer_size.valueChanged.connect( self.EventVideoBufferUpdate )
@@ -5514,6 +5840,116 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
         
     
+    class _TagSortPanel( OptionsPagePanel ):
+        
+        def __init__( self, parent, new_options ):
+            
+            super().__init__( parent )
+            
+            self._new_options = new_options
+            
+            self._tag_sort_panel = ClientGUICommon.StaticBox( self, 'tag sort' )
+            
+            self._default_tag_sort_search_page = ClientGUITagSorting.TagSortControl( self._tag_sort_panel, self._new_options.GetDefaultTagSort( CC.TAG_PRESENTATION_SEARCH_PAGE ) )
+            self._default_tag_sort_search_page_manage_tags = ClientGUITagSorting.TagSortControl( self._tag_sort_panel, self._new_options.GetDefaultTagSort( CC.TAG_PRESENTATION_SEARCH_PAGE_MANAGE_TAGS ), show_siblings = True )
+            self._default_tag_sort_media_viewer = ClientGUITagSorting.TagSortControl( self._tag_sort_panel, self._new_options.GetDefaultTagSort( CC.TAG_PRESENTATION_MEDIA_VIEWER ) )
+            self._default_tag_sort_media_viewer_manage_tags = ClientGUITagSorting.TagSortControl( self._tag_sort_panel, self._new_options.GetDefaultTagSort( CC.TAG_PRESENTATION_MEDIA_VIEWER_MANAGE_TAGS ), show_siblings = True )
+            
+            #
+            
+            user_namespace_group_by_sort_box = ClientGUICommon.StaticBox( self._tag_sort_panel, 'namespace grouping sort' )
+            
+            self._user_namespace_group_by_sort = ClientGUIListBoxes.QueueListBox( user_namespace_group_by_sort_box, 8, ClientTags.RenderNamespaceForUser, add_callable = self._AddNamespaceGroupBySort, edit_callable = self._EditNamespaceGroupBySort, paste_callable = self._PasteNamespaceGroupBySort )
+            
+            #
+            
+            self._user_namespace_group_by_sort.AddDatas( CG.client_controller.new_options.GetStringList( 'user_namespace_group_by_sort' ) )
+            
+            #
+            
+            group_by_sort_text = 'You can manage the custom "(user)" namespace grouping sort here. This lets you put, say, "creator" tags above any other namespace in a tag sort.'
+            group_by_sort_text += '\n'
+            group_by_sort_text += 'Any namespaces not listed here will be listed afterwards in a-z format, with unnamespaced following, just like the normal (a-z) namespace grouping.'
+            
+            user_namespace_group_by_sort_box.Add( ClientGUICommon.BetterStaticText( user_namespace_group_by_sort_box, group_by_sort_text ), CC.FLAGS_EXPAND_PERPENDICULAR )
+            user_namespace_group_by_sort_box.Add( self._user_namespace_group_by_sort, CC.FLAGS_EXPAND_BOTH_WAYS )
+            
+            #
+            
+            rows = []
+            
+            rows.append( ( 'Default tag sort in search pages: ', self._default_tag_sort_search_page ) )
+            rows.append( ( 'Default tag sort in search page manage tags dialogs: ', self._default_tag_sort_search_page_manage_tags ) )
+            rows.append( ( 'Default tag sort in the media viewer: ', self._default_tag_sort_media_viewer ) )
+            rows.append( ( 'Default tag sort in media viewer manage tags dialogs: ', self._default_tag_sort_media_viewer_manage_tags ) )
+            
+            gridbox = ClientGUICommon.WrapInGrid( self._tag_sort_panel, rows )
+            
+            self._tag_sort_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            self._tag_sort_panel.Add( user_namespace_group_by_sort_box, CC.FLAGS_EXPAND_BOTH_WAYS )
+            
+            vbox = QP.VBoxLayout()
+            
+            QP.AddToLayout( vbox, self._tag_sort_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+            
+            self.setLayout( vbox )
+            
+        
+        def _AddNamespaceGroupBySort( self ):
+            
+            default = 'namespace'
+            
+            return self._EditNamespaceGroupBySort( default )
+            
+        
+        def _EditNamespaceGroupBySort( self, namespace ):
+            
+            message = 'Enter the namespace. Leave blank for unnamespaced tags, use ":" for all unspecified namespaced tags.'
+            
+            with ClientGUIDialogs.DialogTextEntry( self, message, allow_blank = True, default = namespace ) as dlg:
+                
+                if dlg.exec() == QW.QDialog.DialogCode.Accepted:
+                    
+                    edited_namespace = dlg.GetValue()
+                    
+                    return edited_namespace
+                    
+                else:
+                    
+                    raise HydrusExceptions.VetoException()
+                    
+                
+            
+        
+        def _PasteNamespaceGroupBySort( self ):
+            
+            try:
+                
+                text = CG.client_controller.GetClipboardText()
+                
+            except Exception as e:
+                
+                raise HydrusExceptions.VetoException()
+                
+            
+            namespaces = HydrusText.DeserialiseNewlinedTexts( text )
+            
+            return namespaces
+            
+        
+        def UpdateOptions( self ):
+            
+            self._new_options.SetDefaultTagSort( CC.TAG_PRESENTATION_SEARCH_PAGE, self._default_tag_sort_search_page.GetValue() )
+            self._new_options.SetDefaultTagSort( CC.TAG_PRESENTATION_SEARCH_PAGE_MANAGE_TAGS, self._default_tag_sort_search_page_manage_tags.GetValue() )
+            self._new_options.SetDefaultTagSort( CC.TAG_PRESENTATION_MEDIA_VIEWER, self._default_tag_sort_media_viewer.GetValue() )
+            self._new_options.SetDefaultTagSort( CC.TAG_PRESENTATION_MEDIA_VIEWER_MANAGE_TAGS, self._default_tag_sort_media_viewer_manage_tags.GetValue() )
+            
+            user_namespace_group_by_sort = self._user_namespace_group_by_sort.GetData()
+            
+            self._new_options.SetStringList( 'user_namespace_group_by_sort', user_namespace_group_by_sort )
+            
+        
+    
     class _TagSuggestionsPanel( OptionsPagePanel ):
         
         def __init__( self, parent, new_options ):
@@ -6077,7 +6513,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             thumbnail_interaction_box = ClientGUICommon.StaticBox( self, 'interaction' )
             
             self._show_extended_single_file_info_in_status_bar = QW.QCheckBox( thumbnail_interaction_box )
-            tt = 'This will show, any time you have a single thumbnail selected, the file info summary you normally see in the top hover window of the media viewer in the main gui status bar. Check the "media viewer" options panel to edit what this summary includes.'
+            tt = 'This will show, any time you have a single thumbnail selected, the file info summary you normally see in the top hover window of the media viewer in the main gui status bar. Check the "media viewer hovers" options panel to edit what this summary includes.'
             self._show_extended_single_file_info_in_status_bar.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
             
             self._focus_preview_on_ctrl_click = QW.QCheckBox( thumbnail_interaction_box )
@@ -6301,6 +6737,27 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             HydrusData.PrintException( e )
             
             ClientGUIDialogsMessage.ShowCritical( self, 'Problem saving options!', str( e ) )
+            
+        
+    
+
+def ManageShortcuts( win: QW.QWidget ):
+    
+    all_shortcuts = ClientGUIShortcuts.shortcuts_manager().GetShortcutSets()
+    
+    with ClientGUITopLevelWindowsPanels.DialogEdit( win, 'manage shortcuts' ) as dlg:
+        
+        panel = ClientGUIScrolledPanels.EditSingleCtrlPanel( dlg )
+        
+        widget = ShortcutsPanel( dlg, CG.client_controller.new_options, all_shortcuts )
+        
+        panel.SetControl( widget )
+        
+        dlg.SetPanel( panel )
+        
+        if dlg.exec() == QW.QDialog.DialogCode.Accepted:
+            
+            widget.UpdateOptions()
             
         
     

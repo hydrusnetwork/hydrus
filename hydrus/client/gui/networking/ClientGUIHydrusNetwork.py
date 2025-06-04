@@ -1,4 +1,4 @@
-import typing
+import collections.abc
 
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
@@ -411,7 +411,7 @@ class EditAccountTypesPanel( ClientGUIScrolledPanels.EditPanel ):
     
 class ListAccountsPanel( ClientGUIScrolledPanels.ReviewPanel ):
     
-    def __init__( self, parent: QW.QWidget, service_key: bytes, accounts: typing.List[ HydrusNetwork.Account ] ):
+    def __init__( self, parent: QW.QWidget, service_key: bytes, accounts: list[ HydrusNetwork.Account ] ):
         
         super().__init__( parent )
         
@@ -493,7 +493,7 @@ class ReviewAccountsPanel( QW.QWidget ):
     accountsFetchFinished = QC.Signal()
     accountsFetchStarted = QC.Signal()
     
-    def __init__( self, parent: QW.QWidget, service_key: bytes, account_identifiers: typing.Collection[ HydrusNetwork.AccountIdentifier ] ):
+    def __init__( self, parent: QW.QWidget, service_key: bytes, account_identifiers: collections.abc.Collection[ HydrusNetwork.AccountIdentifier ] ):
         
         super().__init__( parent )
         
@@ -877,7 +877,7 @@ class ReviewAccountsPanel( QW.QWidget ):
 
 class ModifyAccountsPanel( ClientGUIScrolledPanels.ReviewPanel ):
     
-    def __init__( self, parent: QW.QWidget, service_key: bytes, subject_identifiers: typing.Collection[ HydrusNetwork.AccountIdentifier ]  ):
+    def __init__( self, parent: QW.QWidget, service_key: bytes, subject_identifiers: collections.abc.Collection[ HydrusNetwork.AccountIdentifier ]  ):
         
         super().__init__( parent )
         

@@ -1,5 +1,5 @@
+import collections.abc
 import sqlite3
-import typing
 
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
@@ -110,7 +110,7 @@ class ClientDBServicePaths( ClientDBModule.ClientDBModule ):
         return filename
         
     
-    def GetServiceFilenames( self, service_key: bytes, hashes: typing.Collection[ bytes ] ):
+    def GetServiceFilenames( self, service_key: bytes, hashes: collections.abc.Collection[ bytes ] ):
         
         service_id = self.modules_services.GetServiceId( service_key )
         hash_ids = self.modules_hashes_local_cache.GetHashIds( hashes )
@@ -120,7 +120,7 @@ class ClientDBServicePaths( ClientDBModule.ClientDBModule ):
         return result
         
     
-    def GetTablesAndColumnsThatUseDefinitions( self, content_type: int ) -> typing.List[ typing.Tuple[ str, str ] ]:
+    def GetTablesAndColumnsThatUseDefinitions( self, content_type: int ) -> list[ tuple[ str, str ] ]:
         
         # if content type is a domain, then give urls? bleh
         
@@ -129,7 +129,7 @@ class ClientDBServicePaths( ClientDBModule.ClientDBModule ):
         return tables_and_columns
         
     
-    def SetServiceDirectory( self, service_id: int, hash_ids: typing.Collection[ int ], dirname: str, total_size: int, note: str ):
+    def SetServiceDirectory( self, service_id: int, hash_ids: collections.abc.Collection[ int ], dirname: str, total_size: int, note: str ):
         
         directory_id = self.modules_texts.GetTextId( dirname )
         

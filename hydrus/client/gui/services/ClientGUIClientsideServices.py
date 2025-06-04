@@ -1,6 +1,5 @@
 import os
 import time
-import typing
 
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
@@ -938,7 +937,7 @@ class EditServiceRestrictedSubPanel( ClientGUICommon.StaticBox ):
         job.start()
         
     
-    def _SelectAccountTypeForAutoAccountCreation( self, account_types: typing.List[ HydrusNetwork.AccountType ] ):
+    def _SelectAccountTypeForAutoAccountCreation( self, account_types: list[ HydrusNetwork.AccountType ] ):
         
         if len( account_types ) == 0:
             
@@ -1460,6 +1459,8 @@ class EditServiceStarRatingsSubPanel( ClientGUICommon.StaticBox ):
         help_button = ClientGUIMenuButton.MenuBitmapButton( self, CC.global_pixmaps().help, menu_items )
         
         help_hbox = ClientGUICommon.WrapInText( help_button, self, 'help -->', object_name = 'HydrusIndeterminate' )
+        
+        CC.global_icons().RefreshUserIcons()
         
         svg_ratings_are_ok = len( CC.global_icons().user_icons ) > 0
         

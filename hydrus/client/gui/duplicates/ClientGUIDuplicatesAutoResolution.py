@@ -1,3 +1,4 @@
+import collections.abc
 import threading
 import time
 import typing
@@ -41,7 +42,7 @@ from hydrus.client.gui.widgets import ClientGUINumberTest
 
 class EditDuplicatesAutoResolutionRulesPanel( ClientGUIScrolledPanels.EditPanel ):
     
-    def __init__( self, parent, duplicates_auto_resolution_rules: typing.Collection[ ClientDuplicatesAutoResolution.DuplicatesAutoResolutionRule ] ):
+    def __init__( self, parent, duplicates_auto_resolution_rules: collections.abc.Collection[ ClientDuplicatesAutoResolution.DuplicatesAutoResolutionRule ] ):
         
         super().__init__( parent )
         
@@ -203,7 +204,7 @@ class EditDuplicatesAutoResolutionRulesPanel( ClientGUIScrolledPanels.EditPanel 
         self._duplicates_auto_resolution_rules.AddData( duplicates_auto_resolution_rule, select_sort_and_scroll = True )
         
     
-    def GetValue( self ) -> typing.List[ ClientDuplicatesAutoResolution.DuplicatesAutoResolutionRule ]:
+    def GetValue( self ) -> list[ ClientDuplicatesAutoResolution.DuplicatesAutoResolutionRule ]:
         
         return self._duplicates_auto_resolution_rules.GetData()
         
@@ -964,7 +965,7 @@ class ReviewDuplicatesAutoResolutionPanel( QW.QWidget ):
     
     def _Edit( self ):
         
-        def do_it_qt( duplicates_auto_resolution_rules: typing.List[ ClientDuplicatesAutoResolution.DuplicatesAutoResolutionRule ] ):
+        def do_it_qt( duplicates_auto_resolution_rules: list[ ClientDuplicatesAutoResolution.DuplicatesAutoResolutionRule ] ):
             
             with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit rules' ) as dlg:
                 

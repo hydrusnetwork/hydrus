@@ -1,5 +1,4 @@
 import sqlite3
-import typing
 
 from hydrus.core import HydrusConstants as HC
 
@@ -30,7 +29,7 @@ MAPPINGS_DELETED_PREFIX = 'deleted_mappings_'
 MAPPINGS_PENDING_PREFIX = 'pending_mappings_'
 MAPPINGS_PETITIONED_PREFIX = 'petitioned_mappings_'
 
-def GenerateMappingsTableNames( service_id: int ) -> typing.Tuple[ str, str, str, str ]:
+def GenerateMappingsTableNames( service_id: int ) -> tuple[ str, str, str, str ]:
     
     suffix = str( service_id )
     
@@ -469,7 +468,7 @@ class ClientDBMappingsStorage( ClientDBModule.ClientDBModule ):
         return count
         
     
-    def GetTablesAndColumnsThatUseDefinitions( self, content_type: int ) -> typing.List[ typing.Tuple[ str, str ] ]:
+    def GetTablesAndColumnsThatUseDefinitions( self, content_type: int ) -> list[ tuple[ str, str ] ]:
         
         tables_and_columns = []
         

@@ -1,6 +1,6 @@
 import collections
+import collections.abc
 import threading
-import typing
 
 from qtpy import QtWidgets as QW
 
@@ -68,12 +68,12 @@ class TagPairActionContext( object ):
         raise NotImplementedError()
         
     
-    def _GetFixedPendSuggestions( self ) -> typing.Collection[ str ]:
+    def _GetFixedPendSuggestions( self ) -> collections.abc.Collection[ str ]:
         
         raise NotImplementedError()
         
     
-    def _GetFixedPetitionSuggestions( self ) -> typing.Collection[ str ]:
+    def _GetFixedPetitionSuggestions( self ) -> collections.abc.Collection[ str ]:
         
         raise NotImplementedError()
         
@@ -83,7 +83,7 @@ class TagPairActionContext( object ):
         raise NotImplementedError()
         
     
-    def _GetTagsToFetch( self, tags: typing.Collection[ str ] ) -> typing.Set[ str ]:
+    def _GetTagsToFetch( self, tags: collections.abc.Collection[ str ] ) -> set[ str ]:
         
         if self._have_fetched_all:
             
@@ -598,7 +598,7 @@ class TagPairActionContext( object ):
         CG.client_controller.CallToThread( wait_for_preload )
         
     
-    def GetContentUpdates( self ) -> typing.List[ ClientContentUpdates.ContentUpdate ]:
+    def GetContentUpdates( self ) -> list[ ClientContentUpdates.ContentUpdate ]:
         
         content_type = self._GetMyContentType()
         
@@ -667,7 +667,7 @@ class TagPairActionContext( object ):
             
         
     
-    def GetPertinentPairsForTags( self, tags: typing.Collection[ str ], show_all: bool, show_pending_and_petitioned: bool, pursue_whole_chain: bool ) -> typing.Set[ typing.Tuple[ str, str ] ]:
+    def GetPertinentPairsForTags( self, tags: collections.abc.Collection[ str ], show_all: bool, show_pending_and_petitioned: bool, pursue_whole_chain: bool ) -> set[ tuple[ str, str ] ]:
         """This guy can take a long time to return, so call it on a thread!"""
         
         if show_all and not self._have_fetched_all:
@@ -865,7 +865,7 @@ class TagPairActionContext( object ):
         return pertinent_pairs
         
     
-    def InformTagsInterest( self, tags: typing.Collection[ str ] ):
+    def InformTagsInterest( self, tags: collections.abc.Collection[ str ] ):
         
         # ok the user just entered a new tag pair or something. we need to fetch the related pairs from the db so we can do logic
         
@@ -932,7 +932,7 @@ class TagPairActionContext( object ):
             
         
     
-    def RegisterQtUpdateCall( self, widget: QW.QWidget, c: typing.Callable ):
+    def RegisterQtUpdateCall( self, widget: QW.QWidget, c: collections.abc.Callable ):
         
         with self._lock:
             
@@ -960,7 +960,7 @@ class ParentActionContext( TagPairActionContext ):
         return statuses_to_pairs
         
     
-    def _GetFixedPendSuggestions( self ) -> typing.Collection[ str ]:
+    def _GetFixedPendSuggestions( self ) -> collections.abc.Collection[ str ]:
         
         return [
             'obvious by definition (a sword is a weapon)',
@@ -968,7 +968,7 @@ class ParentActionContext( TagPairActionContext ):
         ]
         
     
-    def _GetFixedPetitionSuggestions( self ) -> typing.Collection[ str ]:
+    def _GetFixedPetitionSuggestions( self ) -> collections.abc.Collection[ str ]:
         
         return [
             'obvious typo/mistake'
@@ -1039,7 +1039,7 @@ class SiblingActionContext( TagPairActionContext ):
         return statuses_to_pairs
         
     
-    def _GetFixedPendSuggestions( self ) -> typing.Collection[ str ]:
+    def _GetFixedPendSuggestions( self ) -> collections.abc.Collection[ str ]:
         
         return [
             'merging underscores/typos/phrasing/unnamespaced to a single uncontroversial good tag',
@@ -1047,7 +1047,7 @@ class SiblingActionContext( TagPairActionContext ):
         ]
         
     
-    def _GetFixedPetitionSuggestions( self ) -> typing.Collection[ str ]:
+    def _GetFixedPetitionSuggestions( self ) -> collections.abc.Collection[ str ]:
         
         return [
             'obvious typo/mistake',

@@ -1,5 +1,5 @@
+import collections.abc
 import threading
-import typing
 import weakref
 
 from hydrus.core import HydrusConstants as HC
@@ -47,7 +47,7 @@ class MediaResultCache( object ):
         CG.client_controller.sub( self, 'NewTagDisplayRules', 'notify_new_tag_display_rules' )
         
     
-    def AddMediaResults( self, media_results: typing.Iterable[ ClientMediaResult.MediaResult ] ):
+    def AddMediaResults( self, media_results: collections.abc.Iterable[ ClientMediaResult.MediaResult ] ):
         
         with self._lock:
             
@@ -93,7 +93,7 @@ class MediaResultCache( object ):
             
         
     
-    def FilterFiles( self, hash_ids: typing.Collection[ int ] ):
+    def FilterFiles( self, hash_ids: collections.abc.Collection[ int ] ):
         
         with self._lock:
             
@@ -101,7 +101,7 @@ class MediaResultCache( object ):
             
         
     
-    def FilterFilesWithTags( self, tags: typing.Collection[ str ] ):
+    def FilterFilesWithTags( self, tags: collections.abc.Collection[ str ] ):
         
         with self._lock:
             
@@ -149,7 +149,7 @@ class MediaResultCache( object ):
         CG.client_controller.CallToThread( do_it, hash_ids )
         
     
-    def GetMediaResultsAndMissing( self, hash_ids: typing.Iterable[ int ] ) -> typing.Tuple[ typing.List[ ClientMediaResult.MediaResult ], typing.List[ int ] ]:
+    def GetMediaResultsAndMissing( self, hash_ids: collections.abc.Iterable[ int ] ) -> tuple[ list[ ClientMediaResult.MediaResult ], list[ int ] ]:
         
         with self._lock:
             
@@ -221,7 +221,7 @@ class MediaResultCache( object ):
             
         
     
-    def ProcessServiceUpdates( self, service_keys_to_service_updates: typing.Dict[ bytes, typing.Collection[ ClientServices.ServiceUpdate ] ] ):
+    def ProcessServiceUpdates( self, service_keys_to_service_updates: dict[ bytes, collections.abc.Collection[ ClientServices.ServiceUpdate ] ] ):
         
         with self._lock:
             

@@ -1,4 +1,4 @@
-import typing
+import collections.abc
 
 from qtpy import QtWidgets as QW
 
@@ -20,7 +20,7 @@ from hydrus.client.gui.widgets import ClientGUICommon
 
 class ReviewPurgeTagsPanel( ClientGUIScrolledPanels.ReviewPanel ):
     
-    def __init__( self, parent, service_key: bytes, tags: typing.Collection[ str ] ):
+    def __init__( self, parent, service_key: bytes, tags: collections.abc.Collection[ str ] ):
         
         # update the listboxstrings to have async count fetch, would be nice. could also show (0) count tags from init
         # prob needs a refresh button also to refresh current counts
@@ -140,7 +140,7 @@ def PurgeTags(
 def OpenPurgeTagsWindow(
     win: QW.QWidget,
     service_key: bytes,
-    tags: typing.Collection[ str ]
+    tags: collections.abc.Collection[ str ]
 ):
     
     frame = ClientGUITopLevelWindowsPanels.FrameThatTakesScrollablePanel( win, 'purge tags' )

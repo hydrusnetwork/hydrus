@@ -1,3 +1,4 @@
+import collections.abc
 import os
 import typing
 
@@ -42,7 +43,7 @@ def SafeNoneStr( value ):
 # note that this AbstractItemModel can support nested folder stuff, with some work. we'd prob want to move to a data storage system that actuall was a tree, rather than this indices-to-data stuff
 class HydrusListItemModel( QC.QAbstractItemModel ):
     
-    def __init__( self, parent: QW.QWidget, column_list_type: int, data_to_display_tuple_func: typing.Callable, data_to_sort_tuple_func: typing.Callable, column_types_to_name_overrides = None ):
+    def __init__( self, parent: QW.QWidget, column_list_type: int, data_to_display_tuple_func: collections.abc.Callable, data_to_sort_tuple_func: collections.abc.Callable, column_types_to_name_overrides = None ):
         
         super().__init__( parent )
         
@@ -220,7 +221,7 @@ class HydrusListItemModel( QC.QAbstractItemModel ):
         return self._column_list_type
         
     
-    def GetData( self, indices: typing.Optional[ typing.Collection[ int ] ] = None ):
+    def GetData( self, indices: typing.Optional[ collections.abc.Collection[ int ] ] = None ):
         
         if indices is None:
             
@@ -741,7 +742,7 @@ class BetterListCtrlTreeView( QW.QTreeView ):
         return height
         
     
-    def _GetSelectedIndices( self ) -> typing.List[ int ]:
+    def _GetSelectedIndices( self ) -> list[ int ]:
         
         return sorted( ( index.row() for index in self.selectionModel().selectedRows() ) )
         
@@ -811,7 +812,7 @@ class BetterListCtrlTreeView( QW.QTreeView ):
         self.AddDatas( ( data, ), select_sort_and_scroll = select_sort_and_scroll )
         
     
-    def AddDatas( self, datas: typing.Iterable[ object ], select_sort_and_scroll = False ):
+    def AddDatas( self, datas: collections.abc.Iterable[ object ], select_sort_and_scroll = False ):
         
         datas = list( datas )
         
@@ -846,7 +847,7 @@ class BetterListCtrlTreeView( QW.QTreeView ):
         self.customContextMenuRequested.connect( self.EventShowMenu )
         
     
-    def DeleteDatas( self, deletee_datas: typing.Iterable[ object ] ):
+    def DeleteDatas( self, deletee_datas: collections.abc.Iterable[ object ] ):
         
         deletee_datas = [ QP.ListsToTuples( data ) for data in deletee_datas ]
         
@@ -1259,7 +1260,7 @@ class BetterListCtrlTreeView( QW.QTreeView ):
             
         
     
-    def SelectDatas( self, datas: typing.Iterable[ object ], deselect_others = False ):
+    def SelectDatas( self, datas: collections.abc.Iterable[ object ], deselect_others = False ):
         
         selectee_datas = { QP.ListsToTuples( data ) for data in datas }
         
@@ -1272,24 +1273,35 @@ class BetterListCtrlTreeView( QW.QTreeView ):
             
             deselectee_datas = set( current_selection ).difference( selectee_datas )
             
-            for data in deselectee_datas:
+            if len( deselectee_datas ) > 0:
                 
-                model_index = model.GetModelIndexFromData( data )
+                selection = QC.QItemSelection()
                 
-                selection_model.select( model_index, QC.QItemSelectionModel.SelectionFlag.Deselect | QC.QItemSelectionModel.SelectionFlag.Rows )
+                for data in deselectee_datas:
+                    
+                    model_index = model.GetModelIndexFromData( data )
+                    
+                    selection.select( model_index, model_index )
+                    
+                
+                selection_model.select( selection, QC.QItemSelectionModel.SelectionFlag.Deselect | QC.QItemSelectionModel.SelectionFlag.Rows )
                 
             
         
         selectee_datas.difference_update( current_selection )
         
-        for data in selectee_datas:
-            
-            model_index = model.GetModelIndexFromData( data )
-            
-            selection_model.select( model_index, QC.QItemSelectionModel.SelectionFlag.Select | QC.QItemSelectionModel.SelectionFlag.Rows )
-            
-        
         if len( selectee_datas ) > 0:
+            
+            selection = QC.QItemSelection()
+            
+            for data in selectee_datas:
+                
+                model_index = model.GetModelIndexFromData( data )
+                
+                selection.select( model_index, model_index )
+                
+            
+            selection_model.select( selection, QC.QItemSelectionModel.SelectionFlag.Select | QC.QItemSelectionModel.SelectionFlag.Rows )
             
             data = model.GetEarliestData( selectee_datas )
             
@@ -1304,7 +1316,7 @@ class BetterListCtrlTreeView( QW.QTreeView ):
         self._copy_rows_callable = copy_rows_callable
         
     
-    def SetData( self, datas: typing.Iterable[ object ] ):
+    def SetData( self, datas: collections.abc.Iterable[ object ] ):
         
         datas = [ QP.ListsToTuples( data ) for data in datas ]
         
@@ -1366,7 +1378,7 @@ class BetterListCtrlTreeView( QW.QTreeView ):
             
         
     
-    def UpdateDatas( self, datas: typing.Optional[ typing.Iterable[ object ] ] = None, check_for_changed_sort_data = False ):
+    def UpdateDatas( self, datas: typing.Optional[ collections.abc.Iterable[ object ] ] = None, check_for_changed_sort_data = False ):
         
         if datas is not None:
             

@@ -61,7 +61,6 @@ from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIMenus
 from hydrus.client.gui import ClientGUIPopupMessages
 from hydrus.client.gui import ClientGUIShortcuts
-from hydrus.client.gui import ClientGUIShortcutControls
 from hydrus.client.gui import ClientGUISplash
 from hydrus.client.gui import ClientGUIStyle
 from hydrus.client.gui import ClientGUISubscriptions
@@ -3530,7 +3529,6 @@ ATTACH "client.mappings.db" as external_mappings;'''
         ClientGUIMenus.AppendSeparator( menu )
         
         ClientGUIMenus.AppendMenuItem( menu, 'options' + HC.UNICODE_ELLIPSIS, 'Change how the client operates.', self._ManageOptions, role = QW.QAction.MenuRole.PreferencesRole )
-        ClientGUIMenus.AppendMenuItem( menu, 'shortcuts' + HC.UNICODE_ELLIPSIS, 'Edit the shortcuts your client responds to.', ClientGUIShortcutControls.ManageShortcuts, self, role = QW.QAction.MenuRole.ApplicationSpecificRole )
         
         ClientGUIMenus.AppendSeparator( menu )
         

@@ -1,4 +1,5 @@
 import collections
+import collections.abc
 import threading
 import time
 import typing
@@ -38,7 +39,7 @@ from hydrus.client.importing import ClientImportSubscriptions
 from hydrus.client.importing import ClientImportSubscriptionQuery
 from hydrus.client.importing import ClientImportSubscriptionLegacy # keep this here so the serialisable stuff is registered, it has to be imported somewhere
 
-def DoAliveOrDeadCheck( win: QW.QWidget, subscriptions: typing.Collection[ ClientImportSubscriptions.Subscription ], query_headers: typing.Collection[ ClientImportSubscriptionQuery.SubscriptionQueryHeader ] ):
+def DoAliveOrDeadCheck( win: QW.QWidget, subscriptions: collections.abc.Collection[ ClientImportSubscriptions.Subscription ], query_headers: collections.abc.Collection[ ClientImportSubscriptionQuery.SubscriptionQueryHeader ] ):
     
     do_paused_subs = True
     
@@ -168,7 +169,7 @@ def DoAliveOrDeadCheck( win: QW.QWidget, subscriptions: typing.Collection[ Clien
     return ( do_alive, do_dead, do_paused_subs, do_paused_queries )
     
 
-def GetQueryHeadersQualityInfo( query_headers: typing.Iterable[ ClientImportSubscriptionQuery.SubscriptionQueryHeader ] ):
+def GetQueryHeadersQualityInfo( query_headers: collections.abc.Iterable[ ClientImportSubscriptionQuery.SubscriptionQueryHeader ] ):
     
     data = []
     
@@ -219,7 +220,7 @@ def GetQueryHeadersQualityInfo( query_headers: typing.Iterable[ ClientImportSubs
     
     return data
     
-def GetQueryLogContainers( query_headers: typing.Iterable[ ClientImportSubscriptionQuery.SubscriptionQueryHeader ] ):
+def GetQueryLogContainers( query_headers: collections.abc.Iterable[ ClientImportSubscriptionQuery.SubscriptionQueryHeader ] ):
     
     query_log_containers = []
     
@@ -249,7 +250,7 @@ def GetQueryLogContainers( query_headers: typing.Iterable[ ClientImportSubscript
 
 class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
     
-    def __init__( self, parent: QW.QWidget, subscription: ClientImportSubscriptions.Subscription, names_to_edited_query_log_containers: typing.Mapping[ str, ClientImportSubscriptionQuery.SubscriptionQueryLogContainer ], original_existing_query_log_container_names: typing.Set[ str ] ):
+    def __init__( self, parent: QW.QWidget, subscription: ClientImportSubscriptions.Subscription, names_to_edited_query_log_containers: typing.Mapping[ str, ClientImportSubscriptionQuery.SubscriptionQueryLogContainer ], original_existing_query_log_container_names: set[ str ] ):
         
         subscription = subscription.Duplicate()
         
@@ -743,7 +744,7 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
             
         
     
-    def _DoAsyncGetQueryLogContainers( self, query_headers: typing.Collection[ ClientImportSubscriptionQuery.SubscriptionQueryHeader ], call: HydrusData.Call ):
+    def _DoAsyncGetQueryLogContainers( self, query_headers: collections.abc.Collection[ ClientImportSubscriptionQuery.SubscriptionQueryHeader ], call: HydrusData.Call ):
         
         missing_query_headers = [ query_header for query_header in query_headers if query_header.GetQueryLogContainerName() not in self._names_to_edited_query_log_containers ]
         
@@ -856,7 +857,7 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _GetSelectedExistingQueries( self ):
         
-        query_headers = typing.cast( typing.Collection[ ClientImportSubscriptionQuery.SubscriptionQueryHeader ], self._query_headers.GetData( only_selected = True ) )
+        query_headers = typing.cast( collections.abc.Collection[ ClientImportSubscriptionQuery.SubscriptionQueryHeader ], self._query_headers.GetData( only_selected = True ) )
         
         existing_query_headers = [ query_header for query_header in query_headers if query_header.GetQueryLogContainerName() in self._original_existing_query_log_container_names ]
         
@@ -1089,6 +1090,8 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
                 
             
         
+        revive_dead = True
+        
         DEAD_query_headers = { query_header for query_header in self._query_headers.GetData() if query_header.GetQueryText() in already_existing_query_texts and query_header.IsDead() }
         
         already_existing_query_texts = sorted( already_existing_query_texts )
@@ -1104,8 +1107,21 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 DEAD_query_header_texts = [ query_header.GetQueryText() for query_header in DEAD_query_headers ]
                 
-                message += '\n' * 2
-                message += f'The DEAD queries{HydrusText.ConvertManyStringsToNiceInsertableHumanSummary(DEAD_query_header_texts)}were revived.'
+                DEAD_revive_message = f'Some of the queries you pasted already exist in the subscription but are DEAD. Do you want to revive them? They are:{HydrusText.ConvertManyStringsToNiceInsertableHumanSummary(DEAD_query_header_texts)}'
+                
+                result = ClientGUIDialogsQuick.GetYesNo( self, DEAD_revive_message )
+                
+                if result == QW.QDialog.DialogCode.Accepted:
+                    
+                    revive_dead = True
+                    
+                    message += '\n' * 2
+                    message += f'The DEAD queries{HydrusText.ConvertManyStringsToNiceInsertableHumanSummary(DEAD_query_header_texts)}were revived.'
+                    
+                else:
+                    
+                    revive_dead = False
+                    
                 
             
         
@@ -1141,11 +1157,14 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
             self._names_to_edited_query_log_containers[ query_log_container_name ] = query_log_container
             
         
-        for query_header in DEAD_query_headers:
+        if revive_dead:
             
-            query_header.CheckNow()
+            for query_header in DEAD_query_headers:
+                
+                query_header.CheckNow()
+                
             
-        
+            
         self._query_headers.AddDatas( new_query_headers, select_sort_and_scroll = True )
         
         self._query_headers.UpdateDatas( DEAD_query_headers )
@@ -1209,7 +1228,7 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         self._DoAsyncGetQueryLogContainers( query_headers, call )
         
     
-    def _RetryFailed( self, query_headers: typing.Collection[ ClientImportSubscriptionQuery.SubscriptionQueryHeader ] ):
+    def _RetryFailed( self, query_headers: collections.abc.Collection[ ClientImportSubscriptionQuery.SubscriptionQueryHeader ] ):
         
         for query_header in query_headers:
             
@@ -1254,7 +1273,7 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         self._DoAsyncGetQueryLogContainers( query_headers, call )
         
     
-    def _RetryIgnored( self, query_headers: typing.Collection[ ClientImportSubscriptionQuery.SubscriptionQueryHeader ], ignored_regex = typing.Optional[ str ] ):
+    def _RetryIgnored( self, query_headers: collections.abc.Collection[ ClientImportSubscriptionQuery.SubscriptionQueryHeader ], ignored_regex = typing.Optional[ str ] ):
         
         for query_header in query_headers:
             
@@ -1293,7 +1312,7 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         self._delay_st.setText( status )
         
     
-    def GetValue( self ) -> typing.Tuple[ ClientImportSubscriptions.Subscription, typing.Dict[ str, ClientImportSubscriptionQuery.SubscriptionQueryLogContainer ] ]:
+    def GetValue( self ) -> tuple[ ClientImportSubscriptions.Subscription, dict[ str, ClientImportSubscriptionQuery.SubscriptionQueryLogContainer ] ]:
         
         if not self.isEnabled():
             
@@ -1502,7 +1521,7 @@ class EditSubscriptionQueryPanel( ClientGUIScrolledPanels.EditPanel ):
         ClientGUIFunctions.SetFocusLater( self._query_text )
         
     
-    def _GetValue( self ) -> typing.Tuple[ ClientImportSubscriptionQuery.SubscriptionQueryHeader, ClientImportSubscriptionQuery.SubscriptionQueryLogContainer ]:
+    def _GetValue( self ) -> tuple[ ClientImportSubscriptionQuery.SubscriptionQueryHeader, ClientImportSubscriptionQuery.SubscriptionQueryLogContainer ]:
         
         query_header = self._original_query_header.Duplicate()
         
@@ -1533,14 +1552,14 @@ class EditSubscriptionQueryPanel( ClientGUIScrolledPanels.EditPanel ):
         self._status_st.setText( 'next check: {}'.format( query_header.GetNextCheckStatusString() ) )
         
     
-    def GetValue( self ) -> typing.Tuple[ ClientImportSubscriptionQuery.SubscriptionQueryHeader, ClientImportSubscriptionQuery.SubscriptionQueryLogContainer ]:
+    def GetValue( self ) -> tuple[ ClientImportSubscriptionQuery.SubscriptionQueryHeader, ClientImportSubscriptionQuery.SubscriptionQueryLogContainer ]:
         
         return self._GetValue()
         
     
 class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
     
-    def __init__( self, parent: QW.QWidget, subscriptions: typing.Collection[ ClientImportSubscriptions.Subscription ] ):
+    def __init__( self, parent: QW.QWidget, subscriptions: collections.abc.Collection[ ClientImportSubscriptions.Subscription ] ):
         
         subscriptions = [ subscription.Duplicate() for subscription in subscriptions ]
         
@@ -2019,7 +2038,7 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         return ( name, pretty_site, status, sort_latest_new_file_time, sort_last_checked, delay, items, paused )
         
     
-    def _DoAsyncGetQueryLogContainers( self, query_headers: typing.Collection[ ClientImportSubscriptionQuery.SubscriptionQueryHeader ], call: HydrusData.Call ):
+    def _DoAsyncGetQueryLogContainers( self, query_headers: collections.abc.Collection[ ClientImportSubscriptionQuery.SubscriptionQueryHeader ], call: HydrusData.Call ):
         
         missing_query_headers = [ query_header for query_header in query_headers if query_header.GetQueryLogContainerName() not in self._names_to_edited_query_log_containers ]
         
@@ -2245,7 +2264,7 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             
         
     
-    def _Reset( self, query_headers: typing.Iterable[ ClientImportSubscriptionQuery.SubscriptionQueryHeader ] ):
+    def _Reset( self, query_headers: collections.abc.Iterable[ ClientImportSubscriptionQuery.SubscriptionQueryHeader ] ):
         
         for query_header in query_headers:
             
@@ -2282,7 +2301,7 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         self._DoAsyncGetQueryLogContainers( query_headers, call )
         
     
-    def _RetryFailed( self, query_headers: typing.Iterable[ ClientImportSubscriptionQuery.SubscriptionQueryHeader ] ):
+    def _RetryFailed( self, query_headers: collections.abc.Iterable[ ClientImportSubscriptionQuery.SubscriptionQueryHeader ] ):
         
         for query_header in query_headers:
             
@@ -2330,7 +2349,7 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         self._DoAsyncGetQueryLogContainers( query_headers, call )
         
     
-    def _RetryIgnored( self, query_headers: typing.Iterable[ ClientImportSubscriptionQuery.SubscriptionQueryHeader ], ignored_regex: typing.Optional[ str ] ):
+    def _RetryIgnored( self, query_headers: collections.abc.Iterable[ ClientImportSubscriptionQuery.SubscriptionQueryHeader ], ignored_regex: typing.Optional[ str ] ):
         
         for query_header in query_headers:
             

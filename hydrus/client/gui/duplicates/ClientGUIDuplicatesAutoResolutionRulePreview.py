@@ -6,6 +6,7 @@ from qtpy import QtWidgets as QW
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusLists
 from hydrus.core import HydrusNumbers
 
 from hydrus.client import ClientConstants as CC
@@ -21,6 +22,8 @@ from hydrus.client.gui.canvas import ClientGUICanvas
 from hydrus.client.gui.canvas import ClientGUICanvasFrame
 from hydrus.client.gui.duplicates import ThumbnailPairList
 from hydrus.client.gui.widgets import ClientGUICommon
+
+POTENTIAL_DUPLICATE_PAIRS_BLOCK_SIZE = 1024
 
 class PreviewPanel( ClientGUICommon.StaticBox ):
     
@@ -179,6 +182,11 @@ class PreviewPanel( ClientGUICommon.StaticBox ):
             
             all_potential_duplicate_pairs_and_distances = CG.client_controller.Read( 'all_potential_duplicate_pairs_and_distances' )
             
+            # ok randomise the order we'll do this guy, but only at the block level
+            # we'll preserve order each block came in since we'll then keep db-proximal indices close together on each actual block fetch
+            
+            all_potential_duplicate_pairs_and_distances = HydrusLists.RandomiseListByChunks( all_potential_duplicate_pairs_and_distances, POTENTIAL_DUPLICATE_PAIRS_BLOCK_SIZE )
+            
             return all_potential_duplicate_pairs_and_distances
             
         
@@ -216,11 +224,9 @@ class PreviewPanel( ClientGUICommon.StaticBox ):
             
             potential_duplicates_search_context = self._value.GetPotentialDuplicatesSearchContext()
             
-            BLOCK_SIZE = 1024
+            block_of_pairs_and_distances = self._potential_duplicate_pairs_and_distances_still_to_search[ : POTENTIAL_DUPLICATE_PAIRS_BLOCK_SIZE ]
             
-            block_of_pairs_and_distances = self._potential_duplicate_pairs_and_distances_still_to_search[ : BLOCK_SIZE ]
-            
-            self._potential_duplicate_pairs_and_distances_still_to_search = self._potential_duplicate_pairs_and_distances_still_to_search[ BLOCK_SIZE : ]
+            self._potential_duplicate_pairs_and_distances_still_to_search = self._potential_duplicate_pairs_and_distances_still_to_search[ POTENTIAL_DUPLICATE_PAIRS_BLOCK_SIZE : ]
             
             return ( potential_duplicates_search_context, block_of_pairs_and_distances, self._fetch_pairs_job_status )
             

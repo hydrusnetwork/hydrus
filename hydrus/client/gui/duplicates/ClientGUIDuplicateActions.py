@@ -1,36 +1,91 @@
 from qtpy import QtWidgets as QW
 
+from hydrus.core import HydrusData
 from hydrus.core import HydrusNumbers
 
 from hydrus.client import ClientGlobals as CG
 from hydrus.client.gui import ClientGUIDialogsQuick
 
-def ClearFalsePositives( win, hashes ):
+def ClearAllFalsePositives( win, hashes ):
     
     if len( hashes ) == 1:
         
-        message = 'Are you sure you want to clear this file of its false-positive relations?'
+        message = 'Are you sure you want to clear this file of all its false-positive relations?'
         message += '\n' * 2
         message += 'False-positive relations are recorded between alternate groups, so this change will also affect any files this file is alternate to.'
         message += '\n' * 2
-        message += 'All affected files will be queued up for another potential duplicates search, so you will likely see at least one of them again in the duplicate filter.'
+        message += 'All files will be queued up for another potential duplicates search, so you will likely see at least one of them again in the duplicate filter.'
         
     else:
         
-        message = 'Are you sure you want to clear these {} files of their false-positive relations?'.format( HydrusNumbers.ToHumanInt( len( hashes ) ) )
+        message = 'Are you sure you want to clear these {} files of all their false-positive relations?'.format( HydrusNumbers.ToHumanInt( len( hashes ) ) )
         message += '\n' * 2
         message += 'False-positive relations are recorded between alternate groups, so this change will also affect all alternate files to your selection.'
         message += '\n' * 2
-        message += 'All affected files will be queued up for another potential duplicates search, so you will likely see some of them again in the duplicate filter.'
+        message += 'All files will be queued up for another potential duplicates search, so you will likely see some of them again in the duplicate filter.'
         
     
     result = ClientGUIDialogsQuick.GetYesNo( win, message )
     
     if result == QW.QDialog.DialogCode.Accepted:
         
-        CG.client_controller.Write( 'clear_false_positive_relations', hashes )
+        def do_it():
+            
+            num_cleared = CG.client_controller.WriteSynchronous( 'clear_all_false_positive_relations', hashes )
+            
+            if num_cleared == 0:
+                
+                message = 'No false positives to clear!'
+                
+            else:
+                
+                message = f'{HydrusNumbers.ToHumanInt( num_cleared )} false positive relationships cleared.'
+                
+            
+            HydrusData.ShowText( message )
+            
+        
+        CG.client_controller.CallToThread( do_it )
         
     
+
+def ClearInternalFalsePositives( win, hashes ):
+    
+    if len( hashes ) < 2:
+        
+        return
+        
+    
+    message = 'Are you sure you want to clear these {} files of any false-positive relations between them?'.format( HydrusNumbers.ToHumanInt( len( hashes ) ) )
+    message += '\n' * 2
+    message += 'False-positive relations are recorded between alternate groups, so this change will affect all alternate files to your selection. If all these files share the same alternates group, this action does nothing.'
+    message += '\n' * 2
+    message += 'All files will be queued up for another potential duplicates search, so you will likely see some of them again in the duplicate filter.'
+    
+    result = ClientGUIDialogsQuick.GetYesNo( win, message )
+    
+    if result == QW.QDialog.DialogCode.Accepted:
+        
+        def do_it():
+            
+            num_cleared = CG.client_controller.WriteSynchronous( 'clear_internal_false_positive_relations', hashes )
+            
+            if num_cleared == 0:
+                
+                message = 'No false positives to clear!'
+                
+            else:
+                
+                message = f'{HydrusNumbers.ToHumanInt( num_cleared )} false positive relationships cleared.'
+                
+            
+            HydrusData.ShowText( message )
+            
+        
+        CG.client_controller.CallToThread( do_it )
+        
+    
+
 def DissolveAlternateGroup( win, hashes ):
     
     if len( hashes ) == 1:

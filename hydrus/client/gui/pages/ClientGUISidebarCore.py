@@ -67,7 +67,7 @@ class ListBoxTagsMediaSidebar( ClientGUIListBoxes.ListBoxTagsMedia ):
         return self._page_manager.GetLocationContext()
         
     
-    def _GetCurrentPagePredicates( self ) -> typing.Set[ ClientSearchPredicate.Predicate ]:
+    def _GetCurrentPagePredicates( self ) -> set[ ClientSearchPredicate.Predicate ]:
         
         if self._tag_autocomplete is None:
             

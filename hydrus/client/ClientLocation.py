@@ -1,3 +1,4 @@
+import collections.abc
 import typing
 
 from hydrus.core import HydrusConstants as HC
@@ -7,7 +8,7 @@ from hydrus.core import HydrusSerialisable
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
 
-def FilterOutRedundantMetaServices( list_of_service_keys: typing.List[ bytes ] ):
+def FilterOutRedundantMetaServices( list_of_service_keys: list[ bytes ] ):
     
     services_manager = CG.client_controller.services_manager
     
@@ -110,7 +111,7 @@ class LocationContext( HydrusSerialisable.SerialisableBase ):
     SERIALISABLE_NAME = 'Location Search Context'
     SERIALISABLE_VERSION = 1
     
-    def __init__( self, current_service_keys: typing.Optional[ typing.Collection[ bytes ] ] = None, deleted_service_keys: typing.Optional[ typing.Collection[ bytes ] ] = None ):
+    def __init__( self, current_service_keys: typing.Optional[ collections.abc.Collection[ bytes ] ] = None, deleted_service_keys: typing.Optional[ collections.abc.Collection[ bytes ] ] = None ):
         
         # note this is pretty much a read-only class
         # sometimes we'll run FixMissingServices, but usually only on load and who cares if that fix is propagated around
@@ -168,7 +169,7 @@ class LocationContext( HydrusSerialisable.SerialisableBase ):
         self.deleted_service_keys = frozenset( { bytes.fromhex( service_key ) for service_key in serialisable_deleted_service_keys } )
         
     
-    def ClearSurplusLocalFilesServices( self, service_type_func: typing.Callable ):
+    def ClearSurplusLocalFilesServices( self, service_type_func: collections.abc.Callable ):
         # if we have combined local files, then we don't need specific local domains
         
         if CC.COMBINED_LOCAL_FILE_SERVICE_KEY in self.current_service_keys:
@@ -192,7 +193,7 @@ class LocationContext( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def FixMissingServices( self, services_exist_func: typing.Callable ) -> bool:
+    def FixMissingServices( self, services_exist_func: collections.abc.Callable ) -> bool:
         
         prev_len = len( self.current_service_keys ) + len( self.deleted_service_keys )
         
@@ -274,7 +275,7 @@ class LocationContext( HydrusSerialisable.SerialisableBase ):
         return len( self.current_service_keys ) + len( self.deleted_service_keys ) == 1
         
     
-    def LimitToServiceTypes( self, service_type_func: typing.Callable, service_types ):
+    def LimitToServiceTypes( self, service_type_func: collections.abc.Callable, service_types ):
         
         self.current_service_keys = frozenset( ( service_key for service_key in self.current_service_keys if service_type_func( service_key ) in service_types ) )
         

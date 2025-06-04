@@ -1,7 +1,7 @@
+import collections.abc
 import pickle
 import requests
 import threading
-import typing
 
 from hydrus.core import HydrusData
 from hydrus.core import HydrusSerialisable
@@ -419,7 +419,7 @@ class NetworkSessionManager( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def SetSessionContainers( self, session_containers: typing.Collection[ NetworkSessionManagerSessionContainer ], set_all_sessions_dirty = False ):
+    def SetSessionContainers( self, session_containers: collections.abc.Collection[ NetworkSessionManagerSessionContainer ], set_all_sessions_dirty = False ):
         
         with self._lock:
             

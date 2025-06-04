@@ -1,5 +1,5 @@
+import collections.abc
 import datetime
-import typing
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusExceptions
@@ -332,7 +332,7 @@ pred_generators = {
     SystemPredicateParser.Predicate.TAG_ADVANCED_EXCLUSIVE : lambda o, v, u: ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_TAG_ADVANCED, ( o[0], o[1], o[2], v ), inclusive = False ),
 }
 
-def ParseSystemPredicateStringsToPredicates( system_predicate_strings: typing.Collection[ str ], discard_failures = False ) -> typing.List[ ClientSearchPredicate.Predicate ]:
+def ParseSystemPredicateStringsToPredicates( system_predicate_strings: collections.abc.Collection[ str ], discard_failures = False ) -> list[ ClientSearchPredicate.Predicate ]:
     
     system_predicates = []
     

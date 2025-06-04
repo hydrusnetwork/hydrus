@@ -1,3 +1,4 @@
+import collections.abc
 import os
 import typing
 
@@ -181,7 +182,7 @@ class EditImportFoldersPanel( ClientGUIScrolledPanels.EditPanel ):
         return names
         
     
-    def GetValue( self ) -> typing.Collection[ ClientImportLocal.ImportFolder ]:
+    def GetValue( self ) -> collections.abc.Collection[ ClientImportLocal.ImportFolder ]:
         
         import_folders = self._import_folders.GetData()
         

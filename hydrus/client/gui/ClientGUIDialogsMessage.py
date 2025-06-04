@@ -1,3 +1,4 @@
+import collections.abc
 import typing
 
 from qtpy import QtCore as QC
@@ -10,7 +11,7 @@ from hydrus.client import ClientGlobals as CG
 # This holds common calls for the various QMessageBox dialogs
 # a thread can call these safely and they'll block
 
-def ShowDialog( dialog_call: typing.Callable, win: typing.Optional[ QW.QWidget ], title: str, message: str ):
+def ShowDialog( dialog_call: collections.abc.Callable, win: typing.Optional[ QW.QWidget ], title: str, message: str ):
     
     if not isinstance( message, str ):
         

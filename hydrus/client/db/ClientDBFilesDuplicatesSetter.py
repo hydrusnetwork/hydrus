@@ -1,5 +1,4 @@
 import sqlite3
-import typing
 
 from hydrus.core import HydrusConstants as HC
 
@@ -25,7 +24,7 @@ class ClientDBFilesDuplicatesSetter( ClientDBModule.ClientDBModule ):
         self.modules_content_updates = modules_content_updates
         
     
-    def GetTablesAndColumnsThatUseDefinitions( self, content_type: int ) -> typing.List[ typing.Tuple[ str, str ] ]:
+    def GetTablesAndColumnsThatUseDefinitions( self, content_type: int ) -> list[ tuple[ str, str ] ]:
         
         tables_and_columns = []
         
@@ -92,9 +91,6 @@ class ClientDBFilesDuplicatesSetter( ClientDBModule.ClientDBModule ):
                         media_id_a = self.modules_files_duplicates.GetMediaId( hash_id_a )
                         media_id_b = self.modules_files_duplicates.GetMediaId( hash_id_b )
                         
-                        smaller_media_id = min( media_id_a, media_id_b )
-                        larger_media_id = max( media_id_a, media_id_b )
-                        
                     
                     self.modules_files_duplicates.SetAlternates( media_id_a, media_id_b )
                     
@@ -130,7 +126,7 @@ class ClientDBFilesDuplicatesSetter( ClientDBModule.ClientDBModule ):
                         
                         # a member of A is better than King B, hence B can merge into A
                         
-                        self.modules_files_duplicates.MergeMedias( media_id_a, media_id_b )
+                        self.modules_files_duplicates.SetDuplicates( media_id_a, media_id_b )
                         
                     
                 elif duplicate_type == HC.DUPLICATE_SAME_QUALITY:
@@ -171,7 +167,7 @@ class ClientDBFilesDuplicatesSetter( ClientDBModule.ClientDBModule ):
                             mergee_media_id = media_id_b
                             
                         
-                        self.modules_files_duplicates.MergeMedias( superior_media_id, mergee_media_id )
+                        self.modules_files_duplicates.SetDuplicates( superior_media_id, mergee_media_id )
                         
                     
                 

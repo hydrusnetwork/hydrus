@@ -1,4 +1,5 @@
 import collections
+import collections.abc
 import itertools
 
 from qtpy import QtWidgets as QW

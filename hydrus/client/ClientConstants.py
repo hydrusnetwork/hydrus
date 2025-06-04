@@ -669,6 +669,8 @@ class GlobalIcons( object ):
     
     def __init__( self ):
         
+        self.user_icons = {}
+        
         self._Initialise()
         
     
@@ -691,6 +693,11 @@ class GlobalIcons( object ):
         self.tumblr = QG.QIcon( os.path.join( HC.STATIC_DIR, 'tumblr.svg' ) )
         self.discord = QG.QIcon( os.path.join( HC.STATIC_DIR, 'discord.svg' ) )
         self.patreon = QG.QIcon( os.path.join( HC.STATIC_DIR, 'patreon.svg' ) )
+        
+        self.RefreshUserIcons()
+        
+    
+    def RefreshUserIcons( self ):
         
         self.user_icons = {}
         

@@ -1,5 +1,5 @@
+import collections.abc
 import random
-import typing
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
@@ -566,7 +566,7 @@ class SubscriptionLegacy( HydrusSerialisable.SerialisableBaseNamed ):
         return label
         
     
-    def _GetQueriesForProcessing( self ) -> typing.List[ SubscriptionQueryLegacy ]:
+    def _GetQueriesForProcessing( self ) -> list[ SubscriptionQueryLegacy ]:
         
         queries = list( self._queries )
         
@@ -1012,7 +1012,7 @@ class SubscriptionLegacy( HydrusSerialisable.SerialisableBaseNamed ):
         return self._gug_key_and_name
         
     
-    def GetQueries( self ) -> typing.List[ SubscriptionQueryLegacy ]:
+    def GetQueries( self ) -> list[ SubscriptionQueryLegacy ]:
         
         return self._queries
         
@@ -1171,7 +1171,7 @@ class SubscriptionLegacy( HydrusSerialisable.SerialisableBaseNamed ):
         self._merge_query_publish_events = merge_query_publish_events
         
     
-    def SetQueries( self, queries: typing.Iterable[ SubscriptionQueryLegacy ] ):
+    def SetQueries( self, queries: collections.abc.Iterable[ SubscriptionQueryLegacy ] ):
         
         self._queries = list( queries )
         

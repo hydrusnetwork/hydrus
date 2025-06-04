@@ -1,5 +1,3 @@
-import typing
-
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
 
@@ -1930,7 +1928,7 @@ class EditLoginScriptPanel( ClientGUIScrolledPanels.EditPanel ):
             
         
     
-    def _GetExistingCredentialDefinitionNames( self ) -> typing.Set[ str ]:
+    def _GetExistingCredentialDefinitionNames( self ) -> set[ str ]:
         
         return { credential_definition.GetName() for credential_definition in self._credential_definitions.GetData() }
         

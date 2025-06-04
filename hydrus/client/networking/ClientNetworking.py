@@ -1,4 +1,5 @@
 import collections
+import collections.abc
 import threading
 import time
 import typing
@@ -101,7 +102,7 @@ class NetworkEngine( object ):
         self._new_work_to_do.set()
         
     
-    def ForceLogins( self, domains_to_login: typing.Collection[ str ] ):
+    def ForceLogins( self, domains_to_login: collections.abc.Collection[ str ] ):
         
         with self._lock:
             

@@ -1,4 +1,5 @@
 import collections
+import collections.abc
 import os
 import queue
 import threading
@@ -1606,7 +1607,7 @@ class ReviewDownloaderImport( ClientGUIScrolledPanels.ReviewPanel ):
 
 class ReviewFileEmbeddedMetadata( ClientGUIScrolledPanels.ReviewPanel ):
     
-    def __init__( self, parent, mime: int, top_line_text: str, exif_dict: typing.Optional[ dict ], file_text: typing.Optional[ str ], extra_rows: typing.List[ typing.Tuple[ str, str ] ] ):
+    def __init__( self, parent, mime: int, top_line_text: str, exif_dict: typing.Optional[ dict ], file_text: typing.Optional[ str ], extra_rows: list[ tuple[ str, str ] ] ):
         
         super().__init__( parent )
         

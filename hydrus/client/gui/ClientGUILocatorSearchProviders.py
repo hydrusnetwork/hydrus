@@ -195,7 +195,7 @@ class MainMenuSearchProvider( QAbstractLocatorSearchProvider ):
         super().__init__( parent )
         
         self.result_id_counter = 0
-        self.result_ids_to_actions: typing.Dict[ int, QW.QAction ] = {}
+        self.result_ids_to_actions: dict[ int, QW.QAction ] = {}
         
 
     def title( self ):
@@ -317,7 +317,7 @@ class MediaMenuSearchProvider( QAbstractLocatorSearchProvider ):
         super().__init__( parent )
         
         self.result_id_counter = 0
-        self.result_ids_to_actions: typing.Dict[ int, QW.QAction ] = {}
+        self.result_ids_to_actions: dict[ int, QW.QAction ] = {}
         self.menu = None
 
 

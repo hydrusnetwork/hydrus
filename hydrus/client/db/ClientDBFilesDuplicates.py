@@ -1,8 +1,8 @@
 import collections
+import collections.abc
 import itertools
 import random
 import sqlite3
-import typing
 
 from hydrus.core import HydrusConstants as HC
 
@@ -36,7 +36,7 @@ class ClientDBFilesDuplicates( ClientDBModule.ClientDBModule ):
         self._service_ids_to_content_types_to_outstanding_local_processing = collections.defaultdict( dict )
         
     
-    def _GetFileHashIdsByDuplicateType( self, db_location_context: ClientDBFilesStorage.DBLocationContext, hash_id: int, duplicate_type: int ) -> typing.List[ int ]:
+    def _GetFileHashIdsByDuplicateType( self, db_location_context: ClientDBFilesStorage.DBLocationContext, hash_id: int, duplicate_type: int ) -> list[ int ]:
         
         dupe_hash_ids = set()
         
@@ -247,81 +247,70 @@ class ClientDBFilesDuplicates( ClientDBModule.ClientDBModule ):
         return false_positive_pair_found
         
     
-    def ClearAllFalsePositiveRelations( self, alternates_group_id ):
-        
-        self._Execute( 'DELETE FROM duplicate_false_positives WHERE smaller_alternates_group_id = ? OR larger_alternates_group_id = ?;', ( alternates_group_id, alternates_group_id ) )
-        
-        media_ids = self.GetAlternateMediaIds( alternates_group_id )
-        
-        hash_ids = self.GetDuplicatesHashIds( media_ids )
-        
-        self.modules_similar_files.ResetSearch( hash_ids )
-        
-    
-    def ClearAllFalsePositiveRelationsFromHashes( self, hashes ):
+    def ClearInternalFalsePositivesHashes( self, hashes ):
         
         hash_ids = self.modules_hashes_local_cache.GetHashIds( hashes )
         
-        for hash_id in hash_ids:
+        media_ids = { self.GetMediaId( hash_id, do_not_create = True ) for hash_id in hash_ids }
+        
+        media_ids.discard( None )
+        
+        if len( media_ids ) < 2:
             
-            media_id = self.GetMediaId( hash_id, do_not_create = True )
+            return 0
             
-            if media_id is not None:
-                
-                alternates_group_id = self.GetAlternatesGroupId( media_id, do_not_create = True )
-                
-                if alternates_group_id is not None:
-                    
-                    self.ClearAllFalsePositiveRelations( alternates_group_id )
-                    
-                
+        
+        alternates_group_ids = { self.GetAlternatesGroupId( media_id, do_not_create = True ) for media_id in media_ids }
+        
+        alternates_group_ids.discard( None )
+        
+        if len( alternates_group_ids ) < 2:
             
+            return 0
+            
+        
+        # BIG BRAIN ALERT
+        # if we pre-sort the list we give combinations, every pair in the output is sorted, a < b, which satisfies our need for smaller/larger pair
+        all_pairs = list( itertools.combinations( sorted( alternates_group_ids ), 2 ) )
+        
+        self._ExecuteMany( 'DELETE FROM duplicate_false_positives WHERE smaller_alternates_group_id = ? AND larger_alternates_group_id = ?;', all_pairs )
+        
+        num_cleared = self._GetRowCount()
+        
+        self.modules_similar_files.ResetSearch( hash_ids )
+        
+        return num_cleared
         
     
-    def ClearFalsePositiveRelationsBetweenGroups( self, alternates_group_ids ):
+    def ClearAllFalsePositivesHashes( self, hashes ):
         
-        pairs = list( itertools.combinations( alternates_group_ids, 2 ) )
+        hash_ids = self.modules_hashes_local_cache.GetHashIds( hashes )
         
-        for ( alternates_group_id_a, alternates_group_id_b ) in pairs:
-            
-            smaller_alternates_group_id = min( alternates_group_id_a, alternates_group_id_b )
-            larger_alternates_group_id = max( alternates_group_id_a, alternates_group_id_b )
-            
-            self._Execute( 'DELETE FROM duplicate_false_positives WHERE smaller_alternates_group_id = ? AND larger_alternates_group_id = ?;', ( smaller_alternates_group_id, larger_alternates_group_id ) )
-            
+        media_ids = { self.GetMediaId( hash_id, do_not_create = True ) for hash_id in hash_ids }
         
-        for alternates_group_id in alternates_group_ids:
+        media_ids.discard( None )
+        
+        if len( media_ids ) == 0:
             
-            media_ids = self.GetAlternateMediaIds( alternates_group_id )
-            
-            hash_ids = self.GetDuplicatesHashIds( media_ids )
-            
-            self.modules_similar_files.ResetSearch( hash_ids )
+            return 0
             
         
-    
-    def ClearFalsePositiveRelationsBetweenGroupsFromHashes( self, hashes ):
+        alternates_group_ids = { self.GetAlternatesGroupId( media_id, do_not_create = True ) for media_id in media_ids }
         
-        alternates_group_ids = set()
+        alternates_group_ids.discard( None )
         
-        hash_id = self.modules_hashes_local_cache.GetHashId( hash )
-        
-        media_id = self.GetMediaId( hash_id, do_not_create = True )
-        
-        if media_id is not None:
+        if len( alternates_group_ids ) == 0:
             
-            alternates_group_id = self.GetAlternatesGroupId( media_id, do_not_create = True )
-            
-            if alternates_group_id is not None:
-                
-                alternates_group_ids.add( alternates_group_id )
-                
+            return 0
             
         
-        if len( alternates_group_ids ) > 1:
-            
-            self.ClearFalsePositiveRelationsBetweenGroups( alternates_group_ids )
-            
+        self._ExecuteMany( 'DELETE FROM duplicate_false_positives WHERE smaller_alternates_group_id = ? OR larger_alternates_group_id = ?;', ( ( alternates_group_id, alternates_group_id ) for alternates_group_id in alternates_group_ids ) )
+        
+        num_cleared = self._GetRowCount()
+        
+        self.modules_similar_files.ResetSearch( hash_ids )
+        
+        return num_cleared
         
     
     def ClearPotentialsBetweenMedias( self, media_ids_a, media_ids_b ):
@@ -412,6 +401,9 @@ class ClientDBFilesDuplicates( ClientDBModule.ClientDBModule ):
             self.DissolveMediaId( media_id )
             
         
+        self._Execute( 'DELETE FROM alternate_file_groups WHERE alternates_group_id = ?;', ( alternates_group_id, ) )
+        self._Execute( 'DELETE FROM duplicate_false_positives WHERE smaller_alternates_group_id = ? OR larger_alternates_group_id = ?;', ( alternates_group_id, alternates_group_id ) )
+        
     
     def DissolveAlternatesGroupIdFromHashes( self, hashes ):
         
@@ -444,7 +436,10 @@ class ClientDBFilesDuplicates( ClientDBModule.ClientDBModule ):
         self._Execute( 'DELETE FROM duplicate_file_members WHERE media_id = ?;', ( media_id, ) )
         self._Execute( 'DELETE FROM duplicate_files WHERE media_id = ?;', ( media_id, ) )
         
-        self.modules_similar_files.ResetSearch( hash_ids )
+        if len( hash_ids ) > 0:
+            
+            self.modules_similar_files.ResetSearch( hash_ids )
+            
         
     
     def DissolveMediaIdFromHashes( self, hashes ):
@@ -744,7 +739,7 @@ class ClientDBFilesDuplicates( ClientDBModule.ClientDBModule ):
         return result_dict
         
     
-    def GetFileRelationshipsForAPI( self, location_context: ClientLocation.LocationContext, hashes: typing.Collection[ bytes ] ):
+    def GetFileRelationshipsForAPI( self, location_context: ClientLocation.LocationContext, hashes: collections.abc.Collection[ bytes ] ):
         
         hashes_to_file_relationships = {}
         
@@ -823,7 +818,7 @@ class ClientDBFilesDuplicates( ClientDBModule.ClientDBModule ):
         return hashes_to_file_relationships
         
     
-    def GetFileHashesByDuplicateType( self, location_context: ClientLocation.LocationContext, hash: bytes, duplicate_type: int ) -> typing.List[ bytes ]:
+    def GetFileHashesByDuplicateType( self, location_context: ClientLocation.LocationContext, hash: bytes, duplicate_type: int ) -> list[ bytes ]:
         
         hash_id = self.modules_hashes_local_cache.GetHashId( hash )
         
@@ -1274,7 +1269,7 @@ class ClientDBFilesDuplicates( ClientDBModule.ClientDBModule ):
         return table_join
         
     
-    def GetTablesAndColumnsThatUseDefinitions( self, content_type: int ) -> typing.List[ typing.Tuple[ str, str ] ]:
+    def GetTablesAndColumnsThatUseDefinitions( self, content_type: int ) -> list[ tuple[ str, str ] ]:
         
         tables_and_columns = []
         
@@ -1333,86 +1328,6 @@ class ClientDBFilesDuplicates( ClientDBModule.ClientDBModule ):
             
         
         return self.AlternatesGroupsAreFalsePositive( alternates_group_id_a, alternates_group_id_b )
-        
-    
-    def MergeMedias( self, superior_media_id, mergee_media_id ):
-        
-        if superior_media_id == mergee_media_id:
-            
-            return
-            
-        
-        self.ClearPotentialsBetweenMedias( ( superior_media_id, ), ( mergee_media_id, ) )
-        
-        alternates_group_id = self.GetAlternatesGroupId( superior_media_id )
-        mergee_alternates_group_id = self.GetAlternatesGroupId( mergee_media_id )
-        
-        if alternates_group_id != mergee_alternates_group_id:
-            
-            if self.AlternatesGroupsAreFalsePositive( alternates_group_id, mergee_alternates_group_id ):
-                
-                smaller_alternates_group_id = min( alternates_group_id, mergee_alternates_group_id )
-                larger_alternates_group_id = max( alternates_group_id, mergee_alternates_group_id )
-                
-                self._Execute( 'DELETE FROM duplicate_false_positives WHERE smaller_alternates_group_id = ? AND larger_alternates_group_id = ?;', ( smaller_alternates_group_id, larger_alternates_group_id ) )
-                
-            
-            self.SetAlternates( superior_media_id, mergee_media_id )
-            
-        
-        self._Execute( 'UPDATE duplicate_file_members SET media_id = ? WHERE media_id = ?;', ( superior_media_id, mergee_media_id ) )
-        
-        smaller_media_id = min( superior_media_id, mergee_media_id )
-        larger_media_id = max( superior_media_id, mergee_media_id )
-        
-        # ensure the potential merge pair is gone
-        
-        self.DeletePotentialDuplicates( [ ( smaller_media_id, larger_media_id ) ] )
-        
-        # now merge potentials from the old to the new--however this has complicated tests to stop confirmed alts and so on, so can't just update ids
-        
-        existing_potential_info_of_mergee_media_id = self._Execute( 'SELECT smaller_media_id, larger_media_id, distance FROM potential_duplicate_pairs WHERE smaller_media_id = ? OR larger_media_id = ?;', ( mergee_media_id, mergee_media_id ) ).fetchall()
-        
-        self.DeletePotentialDuplicatesForMediaId( mergee_media_id )
-        
-        for ( smaller_media_id, larger_media_id, distance ) in existing_potential_info_of_mergee_media_id:
-            
-            if smaller_media_id == mergee_media_id:
-                
-                media_id_a = superior_media_id
-                media_id_b = larger_media_id
-                
-            else:
-                
-                media_id_a = smaller_media_id
-                media_id_b = superior_media_id
-                
-            
-            potential_duplicate_media_ids_and_distances = [ ( media_id_b, distance ) ]
-            
-            self.AddPotentialDuplicates( media_id_a, potential_duplicate_media_ids_and_distances )
-            
-        
-        # ensure any previous confirmed alt pair is gone
-        
-        self._Execute( 'DELETE FROM confirmed_alternate_pairs WHERE smaller_media_id = ? AND larger_media_id = ?;', ( smaller_media_id, larger_media_id ) )
-        
-        # now merge confirmed alts from the old to the new
-        
-        self._Execute( 'UPDATE OR IGNORE confirmed_alternate_pairs SET smaller_media_id = ? WHERE smaller_media_id = ?;', ( superior_media_id, mergee_media_id ) )
-        self._Execute( 'UPDATE OR IGNORE confirmed_alternate_pairs SET larger_media_id = ? WHERE larger_media_id = ?;', ( superior_media_id, mergee_media_id ) )
-        
-        # and clear out potentials that are now invalid
-        
-        confirmed_alternate_pairs = self._Execute( 'SELECT smaller_media_id, larger_media_id FROM confirmed_alternate_pairs WHERE smaller_media_id = ? OR larger_media_id = ?;', ( superior_media_id, superior_media_id ) ).fetchall()
-        
-        self.DeletePotentialDuplicates( confirmed_alternate_pairs )
-        
-        # clear out empty records
-        
-        self._Execute( 'DELETE FROM alternate_file_group_members WHERE media_id = ?;', ( mergee_media_id, ) )
-        
-        self._Execute( 'DELETE FROM duplicate_files WHERE media_id = ?;', ( mergee_media_id, ) )
         
     
     def RemoveAlternateMember( self, media_id ):
@@ -1506,85 +1421,119 @@ class ClientDBFilesDuplicates( ClientDBModule.ClientDBModule ):
             
         
     
-    def SetAlternates( self, media_id_a, media_id_b ):
+    def SetAlternates( self, superior_media_id, mergee_media_id ):
+        """
+        If mergee_media_id has a different alternates group id, this guy is going to merge, and the mergee alternates group disappears.
+        """
         
-        if media_id_a == media_id_b:
+        if superior_media_id == mergee_media_id:
             
             return
             
         
-        # let's clear out any outstanding potentials. whether this is a valid or not connection, we don't want to see it again
+        # let's clear out any outstanding potentials. whether this is a valid connection or not, we don't want to see it again
         
-        self.ClearPotentialsBetweenMedias( ( media_id_a, ), ( media_id_b, ) )
+        smaller_media_id = min( superior_media_id, mergee_media_id )
+        larger_media_id = max( superior_media_id, mergee_media_id )
+        
+        self.DeletePotentialDuplicates( [ ( smaller_media_id, larger_media_id ) ] )
         
         # now check if we should be making a new relationship
         
-        alternates_group_id_a = self.GetAlternatesGroupId( media_id_a )
-        alternates_group_id_b = self.GetAlternatesGroupId( media_id_b )
+        alternates_group_id_a = self.GetAlternatesGroupId( superior_media_id )
+        alternates_group_id_b = self.GetAlternatesGroupId( mergee_media_id )
         
-        if self.AlternatesGroupsAreFalsePositive( alternates_group_id_a, alternates_group_id_b ):
+        if alternates_group_id_a != alternates_group_id_b:
             
-            return
+            # ok, if A-alt-B, then A-alt-anything-alt-B, so we need to merge B into A
+            
+            # first, copy other false positive records from B to A
+            
+            false_positive_records = self._STS( self._Execute( 'SELECT smaller_alternates_group_id FROM duplicate_false_positives WHERE larger_alternates_group_id = ?;', ( alternates_group_id_b, ) ) )
+            false_positive_records.update( self._STI( self._Execute( 'SELECT larger_alternates_group_id FROM duplicate_false_positives WHERE smaller_alternates_group_id = ?;', ( alternates_group_id_b, ) ) ) )
+            
+            for alternates_group_id_x in false_positive_records:
+                
+                if alternates_group_id_x in ( alternates_group_id_a, alternates_group_id_b ):
+                    
+                    continue
+                    
+                
+                self.SetFalsePositive( alternates_group_id_a, alternates_group_id_x )
+                
+            
+            # now move all B to A
+            # all existing confirmed B/X pairs stay intact, no worries
+            
+            self._Execute( 'UPDATE alternate_file_group_members SET alternates_group_id = ? WHERE alternates_group_id = ?;', ( alternates_group_id_a, alternates_group_id_b ) )
+            
+            # remove empty B
+            
+            self.DissolveAlternatesGroupId( alternates_group_id_b )
             
         
-        # write a confirmed result so this can't come up again due to subsequent re-searching etc...
         # in future, I can tune this to consider alternate labels and indices. alternates with different labels and indices are not appropriate for potentials, so we can add more rows here
-        
-        smaller_media_id = min( media_id_a, media_id_b )
-        larger_media_id = max( media_id_a, media_id_b )
         
         self._Execute( 'INSERT OR IGNORE INTO confirmed_alternate_pairs ( smaller_media_id, larger_media_id ) VALUES ( ?, ? );', ( smaller_media_id, larger_media_id ) )
         
-        if alternates_group_id_a == alternates_group_id_b:
+    
+    def SetDuplicates( self, superior_media_id, mergee_media_id ):
+        
+        if superior_media_id == mergee_media_id:
             
             return
             
         
-        # ok, they are currently not alternates, so we need to merge B into A
+        superior_alternates_group_id = self.GetAlternatesGroupId( superior_media_id )
+        mergee_alternates_group_id = self.GetAlternatesGroupId( mergee_media_id, do_not_create = True )
         
-        # first, for all false positive relationships that A already has, clear out potentials between B and those fps before it moves over
-        
-        false_positive_pairs = self._Execute( 'SELECT smaller_alternates_group_id, larger_alternates_group_id FROM duplicate_false_positives WHERE smaller_alternates_group_id = ? OR larger_alternates_group_id = ?;', ( alternates_group_id_a, alternates_group_id_a ) )
-        
-        for ( smaller_false_positive_alternates_group_id, larger_false_positive_alternates_group_id ) in false_positive_pairs:
+        if mergee_alternates_group_id is not None:
             
-            if smaller_false_positive_alternates_group_id == alternates_group_id_a:
+            # if they are not currently in the same alternates group, let's merge them!
+            # any false positive relations the mergee_media_id may have had are also transitively moved over nicely
+            
+            if superior_alternates_group_id != mergee_alternates_group_id:
                 
-                self.ClearPotentialsBetweenAlternatesGroups( alternates_group_id_b, larger_false_positive_alternates_group_id )
+                self.SetAlternates( superior_media_id, mergee_media_id )
                 
-            else:
-                
-                self.ClearPotentialsBetweenAlternatesGroups( smaller_false_positive_alternates_group_id, alternates_group_id_b )
+                # mergee_alternates_group_id no longer exists
                 
             
         
-        # first, update all B to A
+        # copy other potentials from the mergee to the superior
         
-        self._Execute( 'UPDATE alternate_file_group_members SET alternates_group_id = ? WHERE alternates_group_id = ?;', ( alternates_group_id_a, alternates_group_id_b ) )
+        existing_potential_info = set( self._Execute( 'SELECT smaller_media_id, distance FROM potential_duplicate_pairs WHERE larger_media_id = ?;', ( mergee_media_id, ) ) )
+        existing_potential_info.update( self._Execute( 'SELECT larger_media_id, distance FROM potential_duplicate_pairs WHERE smaller_media_id = ?;', ( mergee_media_id, ) ) )
         
-        # move false positive records for B to A
+        potential_duplicate_media_ids_and_distances = [ ( media_id_x, distance ) for ( media_id_x, distance ) in existing_potential_info if media_id_x not in ( mergee_media_id, superior_media_id ) ]
         
-        false_positive_pairs = self._Execute( 'SELECT smaller_alternates_group_id, larger_alternates_group_id FROM duplicate_false_positives WHERE smaller_alternates_group_id = ? OR larger_alternates_group_id = ?;', ( alternates_group_id_b, alternates_group_id_b ) )
-        
-        self._Execute( 'DELETE FROM duplicate_false_positives WHERE smaller_alternates_group_id = ? OR larger_alternates_group_id = ?;', ( alternates_group_id_b, alternates_group_id_b ) )
-        
-        for ( smaller_false_positive_alternates_group_id, larger_false_positive_alternates_group_id ) in false_positive_pairs:
+        if len( potential_duplicate_media_ids_and_distances ) > 0:
             
-            if smaller_false_positive_alternates_group_id == alternates_group_id_b:
-                
-                self.SetFalsePositive( alternates_group_id_a, larger_false_positive_alternates_group_id )
-                
-            else:
-                
-                self.SetFalsePositive( smaller_false_positive_alternates_group_id, alternates_group_id_a )
-                
+            self.AddPotentialDuplicates( superior_media_id, potential_duplicate_media_ids_and_distances )
             
         
-        # remove master record
+        # copy any previous confirmed alt pair that B has to A
         
-        self._Execute( 'DELETE FROM alternate_file_groups WHERE alternates_group_id = ?;', ( alternates_group_id_b, ) )
+        mergee_confirmed_alternates = self._STS( self._Execute( 'SELECT smaller_media_id FROM confirmed_alternate_pairs WHERE larger_media_id = ?;', ( mergee_media_id, ) ) )
+        mergee_confirmed_alternates.update( self._STI( self._Execute( 'SELECT larger_media_id FROM confirmed_alternate_pairs WHERE smaller_media_id = ?;', ( mergee_media_id, ) ) ) )
         
-        # pubsub to refresh alternates info for alternates_group_id_a and _b goes here
+        for media_id_x in mergee_confirmed_alternates:
+            
+            if media_id_x in ( mergee_media_id, superior_media_id ):
+                
+                continue
+                
+            
+            self.SetAlternates( superior_media_id, media_id_x )
+            
+        
+        # actually move the members over
+        
+        self._Execute( 'UPDATE duplicate_file_members SET media_id = ? WHERE media_id = ?;', ( superior_media_id, mergee_media_id ) )
+        
+        # clear out empty duplicate group
+        
+        self.DissolveMediaId( mergee_media_id )
         
     
     def SetFalsePositive( self, alternates_group_id_a, alternates_group_id_b ):

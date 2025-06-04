@@ -1,7 +1,7 @@
 import collections
+import collections.abc
 import itertools
 import sqlite3
-import typing
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
@@ -498,7 +498,7 @@ class ClientDBRepositories( ClientDBModule.ClientDBModule ):
         return needed_hashes
         
     
-    def GetTablesAndColumnsThatUseDefinitions( self, content_type: int ) -> typing.List[ typing.Tuple[ str, str ] ]:
+    def GetTablesAndColumnsThatUseDefinitions( self, content_type: int ) -> list[ tuple[ str, str ] ]:
         
         tables_and_columns = []
         
@@ -572,7 +572,7 @@ class ClientDBRepositories( ClientDBModule.ClientDBModule ):
         return hash_id
         
     
-    def NormaliseServiceHashIds( self, service_id: int, service_hash_ids: typing.Collection[ int ] ) -> typing.Set[ int ]:
+    def NormaliseServiceHashIds( self, service_id: int, service_hash_ids: collections.abc.Collection[ int ] ) -> set[ int ]:
         
         hash_id_map_table_name = GenerateRepositoryFileDefinitionTableName( service_id )
         
@@ -725,7 +725,7 @@ class ClientDBRepositories( ClientDBModule.ClientDBModule ):
         return num_rows_processed
         
     
-    def ReprocessRepository( self, service_key: bytes, content_types: typing.Collection[ int ] ):
+    def ReprocessRepository( self, service_key: bytes, content_types: collections.abc.Collection[ int ] ):
         
         service_id = self.modules_services.GetServiceId( service_key )
         
@@ -789,7 +789,7 @@ class ClientDBRepositories( ClientDBModule.ClientDBModule ):
         self._RegisterLocalUpdates( service_id )
         
     
-    def SetUpdateProcessed( self, service_id: int, update_hash: bytes, content_types: typing.Collection[ int ] ):
+    def SetUpdateProcessed( self, service_id: int, update_hash: bytes, content_types: collections.abc.Collection[ int ] ):
         
         ( repository_updates_table_name, repository_unregistered_updates_table_name, repository_updates_processed_table_name ) = GenerateRepositoryUpdatesTableNames( service_id )
         

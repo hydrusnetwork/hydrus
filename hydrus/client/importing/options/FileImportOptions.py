@@ -1,4 +1,4 @@
-import typing
+import collections.abc
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
@@ -433,7 +433,7 @@ class FileImportOptions( HydrusSerialisable.SerialisableBase ):
         return self._exclude_deleted
         
     
-    def GetAllowedSpecificFiletypes( self ) -> typing.Collection[ int ]:
+    def GetAllowedSpecificFiletypes( self ) -> collections.abc.Collection[ int ]:
         
         return ClientSearchPredicate.ConvertSummaryFiletypesToSpecific( self._filetype_filter_predicate.GetValue(), only_searchable = False )
         

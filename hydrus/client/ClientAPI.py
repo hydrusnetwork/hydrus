@@ -1,5 +1,5 @@
+import collections.abc
 import threading
-import typing
 
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
@@ -99,7 +99,7 @@ class APIManager( HydrusSerialisable.SerialisableBase ):
         
         serialisable_api_permissions_objects = serialisable_info
         
-        api_permissions_objects: typing.List[ APIPermissions ] = [ HydrusSerialisable.CreateFromSerialisableTuple( serialisable_api_permissions ) for serialisable_api_permissions in serialisable_api_permissions_objects ]
+        api_permissions_objects: list[ APIPermissions ] = [ HydrusSerialisable.CreateFromSerialisableTuple( serialisable_api_permissions ) for serialisable_api_permissions in serialisable_api_permissions_objects ]
         
         self._access_keys_to_permissions = { api_permissions.GetAccessKey() : api_permissions for api_permissions in api_permissions_objects }
         
@@ -387,7 +387,7 @@ class APIPermissions( HydrusSerialisable.SerialisableBaseNamed ):
             
         
     
-    def CheckPermissionToSeeFiles( self, hash_ids: typing.Collection[ int ] ):
+    def CheckPermissionToSeeFiles( self, hash_ids: collections.abc.Collection[ int ] ):
         
         with self._lock:
             
@@ -415,7 +415,7 @@ class APIPermissions( HydrusSerialisable.SerialisableBaseNamed ):
             
         
     
-    def FilterTagPredicateResponse( self, predicates: typing.List[ ClientSearchPredicate.Predicate ] ):
+    def FilterTagPredicateResponse( self, predicates: list[ ClientSearchPredicate.Predicate ] ):
         
         with self._lock:
             

@@ -1,4 +1,5 @@
 import collections
+import collections.abc
 import os
 import random
 import threading
@@ -878,7 +879,7 @@ class SidebarPetitions( ClientGUISidebarCore.Sidebar ):
         
         subject_account_key = self._GetSubjectAccountKey()
         
-        def qt_set_petitions_summary( petitions_summary: typing.List[ HydrusNetwork.PetitionHeader ] ):
+        def qt_set_petitions_summary( petitions_summary: list[ HydrusNetwork.PetitionHeader ] ):
             
             if self._last_petition_type_fetched != petition_type:
                 
@@ -1181,7 +1182,7 @@ class SidebarPetitions( ClientGUISidebarCore.Sidebar ):
         self._ShowHashes( [] )
         
     
-    def _SetPetitionsSummary( self, petitions_summary: typing.List[ HydrusNetwork.PetitionHeader ] ):
+    def _SetPetitionsSummary( self, petitions_summary: list[ HydrusNetwork.PetitionHeader ] ):
         
         # note we can't make this a nice 'append' so easily, since we still need to cull petitions that were processed without us looking
         # we'll keep the current since the user is looking, but otherwise we'll be good for now
@@ -1357,7 +1358,7 @@ class SidebarPetitions( ClientGUISidebarCore.Sidebar ):
         CG.client_controller.CallToThread( do_it, self._service, subject_account_key )
         
     
-    def _StartUploadingCompletedPetitions( self, petitions: typing.Collection[ HydrusNetwork.Petition ] ):
+    def _StartUploadingCompletedPetitions( self, petitions: collections.abc.Collection[ HydrusNetwork.Petition ] ):
         
         for petition in petitions:
             

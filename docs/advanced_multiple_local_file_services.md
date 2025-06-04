@@ -65,7 +65,7 @@ If you want to try multiple local file services out, I recommend this split to s
 
 The main way to add and move files around is the thumbnail/media viewer right-click menu.
 
-You can make shortcuts for the add/move operations too. Check _file->shortcuts_ and then the 'media actions' set.
+You can make shortcuts for the add/move operations too. Check _file->options->shortcuts_ and then the 'media actions' set.
 
 ![](images/mlfs_shortcut.png)
 

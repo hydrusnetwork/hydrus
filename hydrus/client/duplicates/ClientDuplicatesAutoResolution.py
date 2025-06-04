@@ -1,4 +1,5 @@
 import collections
+import collections.abc
 import threading
 import time
 import typing
@@ -274,7 +275,7 @@ class DuplicatesAutoResolutionRule( HydrusSerialisable.SerialisableBaseNamed ):
         return collections.Counter( self._counts_cache )
         
     
-    def GetDeleteInfo( self ) -> typing.Tuple[ bool, bool ]:
+    def GetDeleteInfo( self ) -> tuple[ bool, bool ]:
         
         return ( self._delete_a, self._delete_b )
         
@@ -496,7 +497,7 @@ class DuplicatesAutoResolutionRule( HydrusSerialisable.SerialisableBaseNamed ):
 
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_DUPLICATES_AUTO_RESOLUTION_RULE ] = DuplicatesAutoResolutionRule
 
-def GetDefaultRuleSuggestions() -> typing.List[ DuplicatesAutoResolutionRule ]:
+def GetDefaultRuleSuggestions() -> list[ DuplicatesAutoResolutionRule ]:
     
     suggested_rules = []
     
@@ -830,7 +831,7 @@ class DuplicatesAutoResolutionManager( ClientDaemons.ManagerWithMainLoop ):
             
         
     
-    def _FilterToWorkingHardRules( self, rules: typing.Collection[ DuplicatesAutoResolutionRule ] ):
+    def _FilterToWorkingHardRules( self, rules: collections.abc.Collection[ DuplicatesAutoResolutionRule ] ):
         
         if len( self._working_hard_rules ) > 0:
             
@@ -1001,7 +1002,7 @@ class DuplicatesAutoResolutionManager( ClientDaemons.ManagerWithMainLoop ):
         return 'duplicates auto-resolution'
         
     
-    def GetRules( self ) -> typing.List[ DuplicatesAutoResolutionRule ]:
+    def GetRules( self ) -> list[ DuplicatesAutoResolutionRule ]:
         
         rules = CG.client_controller.Read( 'duplicate_auto_resolution_rules_with_counts' )
         
@@ -1039,7 +1040,7 @@ class DuplicatesAutoResolutionManager( ClientDaemons.ManagerWithMainLoop ):
             
         
     
-    def GetWorkingHard( self ) -> typing.Collection[ DuplicatesAutoResolutionRule ]:
+    def GetWorkingHard( self ) -> collections.abc.Collection[ DuplicatesAutoResolutionRule ]:
         
         with self._lock:
             
@@ -1047,7 +1048,7 @@ class DuplicatesAutoResolutionManager( ClientDaemons.ManagerWithMainLoop ):
             
         
     
-    def ResetRuleDeclined( self, rules: typing.Collection[ DuplicatesAutoResolutionRule ] ):
+    def ResetRuleDeclined( self, rules: collections.abc.Collection[ DuplicatesAutoResolutionRule ] ):
         
         for rule in rules:
             
@@ -1057,7 +1058,7 @@ class DuplicatesAutoResolutionManager( ClientDaemons.ManagerWithMainLoop ):
         self.Wake()
         
     
-    def ResetRuleSearchProgress( self, rules: typing.Collection[ DuplicatesAutoResolutionRule ] ):
+    def ResetRuleSearchProgress( self, rules: collections.abc.Collection[ DuplicatesAutoResolutionRule ] ):
         
         for rule in rules:
             
@@ -1067,7 +1068,7 @@ class DuplicatesAutoResolutionManager( ClientDaemons.ManagerWithMainLoop ):
         self.Wake()
         
     
-    def ResetRuleTestProgress( self, rules: typing.Collection[ DuplicatesAutoResolutionRule ] ):
+    def ResetRuleTestProgress( self, rules: collections.abc.Collection[ DuplicatesAutoResolutionRule ] ):
         
         for rule in rules:
             
@@ -1077,7 +1078,7 @@ class DuplicatesAutoResolutionManager( ClientDaemons.ManagerWithMainLoop ):
         self.Wake()
         
     
-    def SetRules( self, rules: typing.Collection[ DuplicatesAutoResolutionRule ] ):
+    def SetRules( self, rules: collections.abc.Collection[ DuplicatesAutoResolutionRule ] ):
         
         with self._lock:
             

@@ -1,3 +1,4 @@
+import collections.abc
 import sqlite3
 import typing
 
@@ -99,7 +100,7 @@ class ClientDBFilesViewingStats( ClientDBModule.ClientDBModule ):
             
         
     
-    def GetHashIdsFromFileViewingStatistics( self, view_type, desired_canvas_types, operator, viewing_value ) -> typing.Set[ int ]:
+    def GetHashIdsFromFileViewingStatistics( self, view_type, desired_canvas_types, operator, viewing_value ) -> set[ int ]:
         
         # only works for positive values like '> 5'. won't work for '= 0' or '< 1' since those are absent from the table
         
@@ -173,7 +174,7 @@ class ClientDBFilesViewingStats( ClientDBModule.ClientDBModule ):
         return hash_ids
         
     
-    def GetHashIdsFromLastViewed( self, min_last_viewed_timestamp_ms = None, max_last_viewed_timestamp_ms = None, job_status: typing.Optional[ ClientThreading.JobStatus ] = None ) -> typing.Set[ int ]:
+    def GetHashIdsFromLastViewed( self, min_last_viewed_timestamp_ms = None, max_last_viewed_timestamp_ms = None, job_status: typing.Optional[ ClientThreading.JobStatus ] = None ) -> set[ int ]:
         
         cancelled_hook = None
         
@@ -204,7 +205,7 @@ class ClientDBFilesViewingStats( ClientDBModule.ClientDBModule ):
         return HydrusData.BuildKeyToListDict( ( ( hash_id, ( canvas_type, last_viewed_timestamp_ms, views, viewtime_ms ) ) for ( hash_id, canvas_type, last_viewed_timestamp_ms, views, viewtime_ms ) in self._Execute( query ) ) )
         
     
-    def GetTablesAndColumnsThatUseDefinitions( self, content_type: int ) -> typing.List[ typing.Tuple[ str, str ] ]:
+    def GetTablesAndColumnsThatUseDefinitions( self, content_type: int ) -> list[ tuple[ str, str ] ]:
         
         tables_and_columns = []
         
@@ -237,7 +238,7 @@ class ClientDBFilesViewingStats( ClientDBModule.ClientDBModule ):
             
         
     
-    def SetTime( self, hash_ids: typing.Collection[ int ], timestamp_data: ClientTime.TimestampData ):
+    def SetTime( self, hash_ids: collections.abc.Collection[ int ], timestamp_data: ClientTime.TimestampData ):
         
         if timestamp_data.location is None:
             

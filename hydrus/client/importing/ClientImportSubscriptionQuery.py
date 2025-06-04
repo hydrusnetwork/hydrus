@@ -1,3 +1,4 @@
+import collections.abc
 import typing
 
 from hydrus.core import HydrusData
@@ -379,7 +380,7 @@ class SubscriptionQueryHeader( HydrusSerialisable.SerialisableBase ):
         return self._DomainOK( domain_manager, example_url )
         
     
-    def FileLoginOK( self, network_engine: ClientNetworking.NetworkEngine, subscription_name: str ) -> typing.Tuple[ bool, str ]:
+    def FileLoginOK( self, network_engine: ClientNetworking.NetworkEngine, subscription_name: str ) -> tuple[ bool, str ]:
         
         reason = 'login looks good!'
         
@@ -429,7 +430,7 @@ class SubscriptionQueryHeader( HydrusSerialisable.SerialisableBase ):
         return self._DomainOK( domain_manager, example_url )
         
     
-    def GalleryLoginOK( self, network_engine: ClientNetworking.NetworkEngine, subscription_name: str ) -> typing.Tuple[ bool, str ]:
+    def GalleryLoginOK( self, network_engine: ClientNetworking.NetworkEngine, subscription_name: str ) -> tuple[ bool, str ]:
         
         reason = 'login looks good!'
         
@@ -873,7 +874,7 @@ class SubscriptionQueryHeader( HydrusSerialisable.SerialisableBase ):
     
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_SUBSCRIPTION_QUERY_HEADER ] = SubscriptionQueryHeader
 
-def GenerateQueryHeadersStatus( query_headers: typing.Iterable[ SubscriptionQueryHeader ] ):
+def GenerateQueryHeadersStatus( query_headers: collections.abc.Iterable[ SubscriptionQueryHeader ] ):
     
     fscs = ClientImportFileSeeds.FileSeedCacheStatus()
     

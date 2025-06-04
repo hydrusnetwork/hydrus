@@ -49,13 +49,13 @@ class EditDefaultImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         parent: QW.QWidget,
         url_classes,
         parsers,
-        url_class_keys_to_parser_keys: typing.Dict[ bytes, bytes ],
+        url_class_keys_to_parser_keys: dict[ bytes, bytes ],
         file_post_default_tag_import_options: TagImportOptions.TagImportOptions,
         watchable_default_tag_import_options: TagImportOptions.TagImportOptions,
-        url_class_keys_to_tag_import_options: typing.Dict[ bytes, TagImportOptions.TagImportOptions ],
+        url_class_keys_to_tag_import_options: dict[ bytes, TagImportOptions.TagImportOptions ],
         file_post_default_note_import_options: NoteImportOptions.NoteImportOptions,
         watchable_default_note_import_options: NoteImportOptions.NoteImportOptions,
-        url_class_keys_to_note_import_options: typing.Dict[ bytes, NoteImportOptions.NoteImportOptions ]
+        url_class_keys_to_note_import_options: dict[ bytes, NoteImportOptions.NoteImportOptions ]
     ):
         
         super().__init__( parent )
@@ -1203,7 +1203,7 @@ class EditDeleteFilesPanel( ClientGUIScrolledPanels.EditPanel ):
 
 class EditFilesForcedFiletypePanel( ClientGUIScrolledPanels.EditPanel ):
     
-    def __init__( self, parent: QW.QWidget, original_mimes_count: typing.Dict[ int, int ], forced_mimes_count: typing.Dict[ int, int ] ):
+    def __init__( self, parent: QW.QWidget, original_mimes_count: dict[ int, int ], forced_mimes_count: dict[ int, int ] ):
         
         super().__init__( parent )
         
@@ -1338,7 +1338,7 @@ class EditFilesForcedFiletypePanel( ClientGUIScrolledPanels.EditPanel ):
 
 class EditFileNotesPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPanels.EditPanel ):
     
-    def __init__( self, parent: QW.QWidget, names_to_notes: typing.Dict[ str, str ], name_to_start_on: typing.Optional[ str ] ):
+    def __init__( self, parent: QW.QWidget, names_to_notes: dict[ str, str ], name_to_start_on: typing.Optional[ str ] ):
         
         super().__init__( parent )
         
@@ -1646,7 +1646,7 @@ class EditFileNotesPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolle
         self._delete_button.setEnabled( can_edit )
         
     
-    def GetValue( self ) -> typing.Tuple[ typing.Dict[ str, str ], typing.Set[ str ] ]:
+    def GetValue( self ) -> tuple[ dict[ str, str ], set[ str ] ]:
         
         names_to_notes = { self._notebook.tabText( i ) : HydrusText.CleanNoteText( typing.cast( QW.QPlainTextEdit, self._notebook.widget( i ) ).toPlainText() ) for i in range( self._notebook.count() ) }
         
@@ -2246,7 +2246,7 @@ class EditRegexFavourites( ClientGUIScrolledPanels.EditPanel ):
 
 class EditURLsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPanels.EditPanel ):
     
-    def __init__( self, parent, medias: typing.Collection[ ClientMedia.MediaSingleton ] ):
+    def __init__( self, parent, medias: collections.abc.Collection[ ClientMedia.MediaSingleton ] ):
         
         super().__init__( parent )
         

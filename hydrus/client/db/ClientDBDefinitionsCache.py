@@ -1,5 +1,5 @@
+import collections.abc
 import sqlite3
-import typing
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
@@ -128,7 +128,7 @@ class ClientDBCacheLocalHashes( ClientDBModule.ClientDBModule ):
         return self._hash_ids_to_hashes_cache[ hash_id ]
         
     
-    def GetHashes( self, hash_ids ) -> typing.List[ bytes ]:
+    def GetHashes( self, hash_ids ) -> list[ bytes ]:
         
         self._PopulateHashIdsToHashesCache( hash_ids )
         
@@ -151,7 +151,7 @@ class ClientDBCacheLocalHashes( ClientDBModule.ClientDBModule ):
         return hash_id
         
     
-    def GetHashIds( self, hashes ) -> typing.Set[ int ]:
+    def GetHashIds( self, hashes ) -> set[ int ]:
         
         hash_ids = set()
         hashes_not_in_cache = set()
@@ -185,7 +185,7 @@ class ClientDBCacheLocalHashes( ClientDBModule.ClientDBModule ):
         return hash_ids
         
     
-    def GetHashIdsToHashes( self, hash_ids = None, hashes = None, create_new_hash_ids = True, error_on_missing_hash_ids = False ) -> typing.Dict[ int, bytes ]:
+    def GetHashIdsToHashes( self, hash_ids = None, hashes = None, create_new_hash_ids = True, error_on_missing_hash_ids = False ) -> dict[ int, bytes ]:
         
         hash_ids_to_hashes = {}
         
@@ -208,7 +208,7 @@ class ClientDBCacheLocalHashes( ClientDBModule.ClientDBModule ):
         return hash_ids_to_hashes
         
     
-    def GetTablesAndColumnsThatUseDefinitions( self, content_type: int ) -> typing.List[ typing.Tuple[ str, str ] ]:
+    def GetTablesAndColumnsThatUseDefinitions( self, content_type: int ) -> list[ tuple[ str, str ] ]:
         
         # we actually provide a backup, which we may want to automate later in mappings caches etc...
         
@@ -248,7 +248,7 @@ class ClientDBCacheLocalHashes( ClientDBModule.ClientDBModule ):
         self.SyncHashIds( all_hash_ids, job_status = job_status )
         
     
-    def SyncHashIds( self, all_hash_ids: typing.Collection[ int ], job_status = None ):
+    def SyncHashIds( self, all_hash_ids: collections.abc.Collection[ int ], job_status = None ):
         
         if job_status is None:
             
@@ -363,7 +363,7 @@ class ClientDBCacheLocalHashes( ClientDBModule.ClientDBModule ):
         job_status.Finish()
         
     
-    def SyncHashes( self, hashes: typing.Collection[ bytes ] ):
+    def SyncHashes( self, hashes: collections.abc.Collection[ bytes ] ):
         """
         This guy double-checks the hashes against the local store and the master store, because they may well differ in a desync!
         """
@@ -468,7 +468,7 @@ class ClientDBCacheLocalTags( ClientDBModule.ClientDBModule ):
         self._ExecuteMany( 'DELETE FROM local_tags_cache WHERE tag_id = ?;', ( ( tag_id, ) for tag_id in tag_ids ) )
         
     
-    def GetTablesAndColumnsThatUseDefinitions( self, content_type: int ) -> typing.List[ typing.Tuple[ str, str ] ]:
+    def GetTablesAndColumnsThatUseDefinitions( self, content_type: int ) -> list[ tuple[ str, str ] ]:
         
         # we actually provide a backup, which we may want to automate later in mappings caches etc...
         
@@ -509,7 +509,7 @@ class ClientDBCacheLocalTags( ClientDBModule.ClientDBModule ):
         return tag_id
         
     
-    def GetTagIdsToTags( self, tag_ids = None, tags = None ) -> typing.Dict[ int, str ]:
+    def GetTagIdsToTags( self, tag_ids = None, tags = None ) -> dict[ int, str ]:
         
         tag_ids_to_tags = {}
         

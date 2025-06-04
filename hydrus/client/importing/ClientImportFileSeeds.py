@@ -1,4 +1,5 @@
 import collections
+import collections.abc
 import itertools
 import os
 import random
@@ -69,7 +70,7 @@ def FilterOneFileURLs( urls ):
     return one_file_urls
     
 
-def FileURLMappingHasUntrustworthyNeighbours( hash: bytes, lookup_urls: typing.Collection[ str ] ):
+def FileURLMappingHasUntrustworthyNeighbours( hash: bytes, lookup_urls: collections.abc.Collection[ str ] ):
     
     # TODO: Revisiting this guy, it feels too complicated and opaque
     # why do we not care about the exact caller URL that got us this hash? in the caller it seems like any match to this hash will fail, no matter how we got there?
@@ -706,7 +707,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
         self._CheckTagsVeto( self._tags, tag_import_options )
         
     
-    def DownloadAndImportRawFile( self, file_url: str, file_import_options, loud_or_quiet: int, network_job_factory, network_job_presentation_context_factory, status_hook, override_bandwidth = False, forced_referral_url = None, file_seed_cache = None ):
+    def DownloadAndImportRawFile( self, file_url: str, file_import_options, loud_or_quiet: int, network_job_factory, network_job_presentation_context_factory, status_hook, override_bandwidth = False, spawning_url = None, forced_referral_url = None, file_seed_cache = None ):
         
         file_import_options = FileImportOptions.GetRealFileImportOptions( file_import_options, loud_or_quiet )
         
@@ -738,6 +739,11 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
             for ( key, value ) in self._request_headers.items():
                 
                 network_job.AddAdditionalHeader( key, value )
+                
+            
+            if spawning_url is not None:
+                
+                network_job.AddBandwidthURL( spawning_url )
                 
             
             if override_bandwidth:
@@ -898,7 +904,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
         return dict( self._hashes )
         
     
-    def GetPreImportStatusPredictionHash( self, file_import_options: FileImportOptions.FileImportOptions ) -> typing.Tuple[ bool, bool, ClientImportFiles.FileImportStatus ]:
+    def GetPreImportStatusPredictionHash( self, file_import_options: FileImportOptions.FileImportOptions ) -> tuple[ bool, bool, ClientImportFiles.FileImportStatus ]:
         
         # TODO: a user raised the spectre of multiple hash parses on some site that actually provides somehow the pre- and post- optimised versions of a file
         # some I guess support multiple hashes at some point, maybe, or figure out a different solution, or draw a harder line in parsing about one-hash-per-parse
@@ -956,7 +962,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
         return ( match_found, matches_are_dispositive, ClientImportFiles.FileImportStatus.STATICGetUnknownStatus() )
         
     
-    def GetPreImportStatusPredictionURL( self, file_import_options: FileImportOptions.FileImportOptions, file_url = None ) -> typing.Tuple[ bool, bool, ClientImportFiles.FileImportStatus ]:
+    def GetPreImportStatusPredictionURL( self, file_import_options: FileImportOptions.FileImportOptions, file_url = None ) -> tuple[ bool, bool, ClientImportFiles.FileImportStatus ]:
         
         preimport_url_check_type = file_import_options.GetPreImportURLCheckType()
         
@@ -1653,7 +1659,10 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
                                 
                                 if should_download_file:
                                     
-                                    self.DownloadAndImportRawFile( file_url, file_import_options, loud_or_quiet, network_job_factory, network_job_presentation_context_factory, status_hook, override_bandwidth = True, forced_referral_url = url_for_child_referral, file_seed_cache = file_seed_cache )
+                                    # this could become an url class property on the post url url class
+                                    override_bandwidth = CG.client_controller.new_options.GetBoolean( 'override_bandwidth_on_file_urls_from_post_urls' )
+                                    
+                                    self.DownloadAndImportRawFile( file_url, file_import_options, loud_or_quiet, network_job_factory, network_job_presentation_context_factory, status_hook, override_bandwidth = override_bandwidth, spawning_url = url_to_check, forced_referral_url = url_for_child_referral, file_seed_cache = file_seed_cache )
                                     
                                 
                             elif url_type == HC.URL_TYPE_POST and can_parse:
@@ -2131,7 +2140,7 @@ class FileSeedCacheStatus( HydrusSerialisable.SerialisableBase ):
         return self._statuses_to_counts
         
     
-    def GetValueRange( self ) -> typing.Tuple[ int, int ]:
+    def GetValueRange( self ) -> tuple[ int, int ]:
         
         total = sum( self._statuses_to_counts.values() )
         
@@ -2260,7 +2269,7 @@ class FileSeedCache( HydrusSerialisable.SerialisableBase ):
         return len( self._file_seeds )
         
     
-    def _FixStatusesToFileSeeds( self, file_seeds: typing.Collection[ FileSeed ] ):
+    def _FixStatusesToFileSeeds( self, file_seeds: collections.abc.Collection[ FileSeed ] ):
         
         if self._statuses_to_file_seeds_dirty:
             
@@ -2372,7 +2381,7 @@ class FileSeedCache( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def _GetFileSeedsToIndices( self ) -> typing.Dict[ FileSeed, int ]:
+    def _GetFileSeedsToIndices( self ) -> dict[ FileSeed, int ]:
         
         if self._file_seeds_to_indices_dirty:
             
@@ -2508,7 +2517,7 @@ class FileSeedCache( HydrusSerialisable.SerialisableBase ):
         return statuses_to_counts
         
     
-    def _GetStatusesToFileSeeds( self ) -> typing.Dict[ int, typing.Set[ FileSeed ] ]:
+    def _GetStatusesToFileSeeds( self ) -> dict[ int, set[ FileSeed ] ]:
         
         file_seeds_to_indices = self._GetFileSeedsToIndices()
         
@@ -2565,7 +2574,7 @@ class FileSeedCache( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def _NotifyFileSeedsUpdated( self, file_seeds: typing.Collection[ FileSeed ] ):
+    def _NotifyFileSeedsUpdated( self, file_seeds: collections.abc.Collection[ FileSeed ] ):
         
         if len( file_seeds ) == 0:
             
@@ -2800,7 +2809,7 @@ class FileSeedCache( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def AddFileSeeds( self, file_seeds: typing.Collection[ FileSeed ], dupe_try_again = False ):
+    def AddFileSeeds( self, file_seeds: collections.abc.Collection[ FileSeed ], dupe_try_again = False ):
         
         if len( file_seeds ) == 0:
             
@@ -3223,7 +3232,7 @@ class FileSeedCache( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def InsertFileSeeds( self, index: int, file_seeds: typing.Collection[ FileSeed ] ):
+    def InsertFileSeeds( self, index: int, file_seeds: collections.abc.Collection[ FileSeed ] ):
         
         file_seeds = HydrusData.DedupeList( file_seeds )
         
@@ -3285,7 +3294,7 @@ class FileSeedCache( HydrusSerialisable.SerialisableBase ):
         return first.file_seed_type == FILE_SEED_TYPE_URL
         
     
-    def NotifyFileSeedsUpdated( self, file_seeds: typing.Collection[ FileSeed ] ):
+    def NotifyFileSeedsUpdated( self, file_seeds: collections.abc.Collection[ FileSeed ] ):
         
         if len( file_seeds ) == 0:
             
@@ -3302,7 +3311,7 @@ class FileSeedCache( HydrusSerialisable.SerialisableBase ):
         self._NotifyFileSeedsUpdated( file_seeds )
         
     
-    def RemoveFileSeeds( self, file_seeds_to_delete: typing.Iterable[ FileSeed ] ):
+    def RemoveFileSeeds( self, file_seeds_to_delete: collections.abc.Iterable[ FileSeed ] ):
         
         with self._lock:
             
@@ -3333,7 +3342,7 @@ class FileSeedCache( HydrusSerialisable.SerialisableBase ):
         self._NotifyFileSeedsUpdated( updated_file_seeds )
         
     
-    def RemoveFileSeedsByStatus( self, statuses_to_remove: typing.Collection[ int ] ):
+    def RemoveFileSeedsByStatus( self, statuses_to_remove: collections.abc.Collection[ int ] ):
         
         with self._lock:
             
@@ -3487,7 +3496,7 @@ class FileSeedCache( HydrusSerialisable.SerialisableBase ):
     
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_FILE_SEED_CACHE ] = FileSeedCache
 
-def GenerateFileSeedCachesStatus( file_seed_caches: typing.Iterable[ FileSeedCache ] ):
+def GenerateFileSeedCachesStatus( file_seed_caches: collections.abc.Iterable[ FileSeedCache ] ):
     
     fscs = FileSeedCacheStatus()
     

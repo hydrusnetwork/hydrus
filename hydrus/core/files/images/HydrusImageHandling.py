@@ -419,7 +419,7 @@ def GeneratePILImageFromNumPyImage( numpy_image: numpy.ndarray ) -> PILImage.Ima
     return pil_image
     
 
-def GenerateFileBytesNumPy( numpy_image, ext: str = '.png', params: typing.Optional[ typing.List[ int ] ] = None ) -> bytes:
+def GenerateFileBytesNumPy( numpy_image, ext: str = '.png', params: typing.Optional[ list[ int ] ] = None ) -> bytes:
     
     if params is None:
         
@@ -604,7 +604,7 @@ thumbnail_scale_str_lookup = {
     THUMBNAIL_SCALE_TO_FILL : 'scale to fill'
 }
 
-def GetThumbnailResolution( image_resolution: typing.Tuple[ int, int ], bounding_dimensions: typing.Tuple[ int, int ], thumbnail_scale_type: int, thumbnail_dpr_percent: int ) -> typing.Tuple[ int, int ]:
+def GetThumbnailResolution( image_resolution: tuple[ int, int ], bounding_dimensions: tuple[ int, int ], thumbnail_scale_type: int, thumbnail_dpr_percent: int ) -> tuple[ int, int ]:
     
     ( im_width, im_height ) = image_resolution
     ( bounding_width, bounding_height ) = bounding_dimensions
@@ -762,7 +762,7 @@ def ResizeNumPyImage( numpy_image: numpy.ndarray, target_resolution, forced_inte
     return cv2.resize( numpy_image, ( target_width, target_height ), interpolation = interpolation )
     
 
-def GenerateDefaultThumbnailNumPyFromPath( path: str, target_resolution: typing.Tuple[ int, int ] ):
+def GenerateDefaultThumbnailNumPyFromPath( path: str, target_resolution: tuple[ int, int ] ):
     
     thumb_image = GeneratePILImage( path )
     

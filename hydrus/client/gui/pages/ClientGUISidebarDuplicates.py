@@ -1,4 +1,4 @@
-import typing
+import collections.abc
 
 from qtpy import QtWidgets as QW
 
@@ -388,7 +388,7 @@ class SidebarDuplicateFilter( ClientGUISidebarCore.Sidebar ):
         self._UpdateMaintenanceStatus()
         
     
-    def _ShowPairInPage( self, media: typing.Collection[ ClientMedia.MediaSingleton ] ):
+    def _ShowPairInPage( self, media: collections.abc.Collection[ ClientMedia.MediaSingleton ] ):
         
         media_results = [ m.GetMediaResult() for m in media ]
         

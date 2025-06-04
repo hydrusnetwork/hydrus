@@ -1,6 +1,5 @@
 import http.cookiejar
 import re
-import typing
 
 import unicodedata
 import urllib.parse
@@ -165,7 +164,7 @@ def ConvertHTTPToHTTPS( url ):
         
     
 
-def ConvertPathTextToList( path: str ) -> typing.List[ str ]:
+def ConvertPathTextToList( path: str ) -> list[ str ]:
     
     # yo sometimes you see a URL with double slashes in a weird place. maybe we should just split( '/' ) and then remove empty '' results?
     

@@ -1,4 +1,5 @@
 import collections
+import collections.abc
 import threading
 
 from hydrus.core import HydrusConstants as HC

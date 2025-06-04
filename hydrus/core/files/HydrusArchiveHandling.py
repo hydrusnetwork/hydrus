@@ -1,4 +1,5 @@
 import collections
+import collections.abc
 import re
 import zipfile
 

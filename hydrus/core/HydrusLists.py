@@ -1,7 +1,7 @@
 import collections
+import collections.abc
 import itertools
 import random
-import typing
 
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusTime
@@ -195,7 +195,7 @@ class FastIndexUniqueList( collections.abc.MutableSequence ):
             
         
     
-    def move_items( self, new_items: typing.List, insertion_index: int ):
+    def move_items( self, new_items: list, insertion_index: int ):
         
         items_to_move = []
         items_before_insertion_index = 0
@@ -307,7 +307,7 @@ class FastIndexUniqueList( collections.abc.MutableSequence ):
         
     
 
-def ConvertTupleOfDatasToCasefolded( l: typing.Sequence ) -> typing.Tuple:
+def ConvertTupleOfDatasToCasefolded( l: collections.abc.Sequence ) -> tuple:
     
     # TODO: We could convert/augment this guy to do HumanTextSort too so we have 3 < 22
     
@@ -330,7 +330,7 @@ def ConvertTupleOfDatasToCasefolded( l: typing.Sequence ) -> typing.Tuple:
     return tuple( ( casefold_obj( obj ) for obj in l ) )
     
 
-def IntelligentMassIntersect( sets_to_reduce: typing.Collection[ set ] ):
+def IntelligentMassIntersect( sets_to_reduce: collections.abc.Collection[ set ] ):
     
     answer = None
     
@@ -410,6 +410,15 @@ def PullNFromIterator( iterator, n ):
         
     
     return chunk
+    
+
+def RandomiseListByChunks( xs, n ):
+    
+    blocks = list( SplitListIntoChunks( xs, n ) )
+    
+    random.shuffle( blocks )
+    
+    return [ item for block in blocks for item in block ] # 2025-06-03 - hydev's first nested list comprehension
     
 
 def SetsIntersect( a, b ):

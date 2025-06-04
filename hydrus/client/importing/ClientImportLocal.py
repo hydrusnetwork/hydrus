@@ -1,4 +1,5 @@
 import collections
+import collections.abc
 import os
 import threading
 import time
@@ -480,7 +481,7 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
         path = '',
         file_import_options = None,
         tag_import_options = None,
-        metadata_routers: typing.Optional[ typing.Collection[ ClientMetadataMigration.SingleFileMetadataRouter ] ] = None,
+        metadata_routers: typing.Optional[ collections.abc.Collection[ ClientMetadataMigration.SingleFileMetadataRouter ] ] = None,
         tag_service_keys_to_filename_tagging_options = None,
         actions = None,
         action_locations = None,
@@ -1254,7 +1255,7 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
         self._last_modified_time_skip_period = value
         
     
-    def SetMetadataRouters( self, metadata_routers: typing.Collection[ ClientMetadataMigration.SingleFileMetadataRouter ] ):
+    def SetMetadataRouters( self, metadata_routers: collections.abc.Collection[ ClientMetadataMigration.SingleFileMetadataRouter ] ):
         
         self._metadata_routers = HydrusSerialisable.SerialisableList( metadata_routers )
         
@@ -1302,7 +1303,7 @@ class ImportFoldersManager( ClientDaemons.ManagerWithMainLoop ):
         super().__init__( controller, 10 )
         
         self._import_folder_names_fetched = False
-        self._import_folder_names_to_next_work_time_cache: typing.Dict[ str, int ] = {}
+        self._import_folder_names_to_next_work_time_cache: dict[ str, int ] = {}
         
         self._controller.sub( self, 'NotifyImportFoldersHaveChanged', 'notify_new_import_folders' )
         

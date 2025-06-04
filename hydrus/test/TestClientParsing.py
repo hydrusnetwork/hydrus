@@ -1,7 +1,6 @@
 import os
 import json
 import random
-import typing
 import unittest
 
 from hydrus.core import HydrusConstants as HC
@@ -12,7 +11,7 @@ from hydrus.client.parsing import ClientParsing
 
 class DummyFormula( ClientParsing.ParseFormula ):
     
-    def __init__( self, result: typing.List[ str ] ):
+    def __init__( self, result: list[ str ] ):
         
         super().__init__( name = 'dummy formula' )
         

@@ -1,4 +1,5 @@
 import collections
+import collections.abc
 import itertools
 import threading
 import typing
@@ -329,12 +330,12 @@ class TimesManager( object ):
         return self._GetDomainModifiedTimestampMS( domain )
         
     
-    def GetDomainModifiedTimestampsMS( self ) -> typing.Dict[ str, int ]:
+    def GetDomainModifiedTimestampsMS( self ) -> dict[ str, int ]:
         
         return dict( self._domains_to_modified_timestamps_ms )
         
     
-    def GetDomainModifiedTimestampDatas( self ) -> typing.Collection[ ClientTime.TimestampData ]:
+    def GetDomainModifiedTimestampDatas( self ) -> collections.abc.Collection[ ClientTime.TimestampData ]:
         
         return [ ClientTime.TimestampData( timestamp_type = HC.TIMESTAMP_TYPE_MODIFIED_DOMAIN, location = domain, timestamp_ms = timestamp_ms ) for ( domain, timestamp_ms ) in self._domains_to_modified_timestamps_ms.items() ]
         
@@ -344,7 +345,7 @@ class TimesManager( object ):
         return self._GetSimpleTimestampMS( HC.TIMESTAMP_TYPE_MODIFIED_FILE )
         
     
-    def GetFileServiceTimestampDatas( self ) -> typing.Collection[ ClientTime.TimestampData ]:
+    def GetFileServiceTimestampDatas( self ) -> collections.abc.Collection[ ClientTime.TimestampData ]:
         
         result = []
         
@@ -421,7 +422,7 @@ class TimesManager( object ):
         self._SetFileServiceTimestampMS( HC.TIMESTAMP_TYPE_DELETED, service_key, timestamp_ms )
         
     
-    def SetDeletedTimestampsMS( self, service_keys_to_timestamps_ms: typing.Dict[ bytes, int ] ):
+    def SetDeletedTimestampsMS( self, service_keys_to_timestamps_ms: dict[ bytes, int ] ):
         
         for ( service_key, timestamp_ms ) in service_keys_to_timestamps_ms.items():
             
@@ -449,7 +450,7 @@ class TimesManager( object ):
         self._SetFileServiceTimestampMS( HC.TIMESTAMP_TYPE_PREVIOUSLY_IMPORTED, service_key, timestamp_ms )
         
     
-    def SetPreviouslyImportedTimestampsMS( self, service_keys_to_timestamps_ms: typing.Dict[ bytes, int ] ):
+    def SetPreviouslyImportedTimestampsMS( self, service_keys_to_timestamps_ms: dict[ bytes, int ] ):
         
         for ( service_key, timestamp_ms ) in service_keys_to_timestamps_ms.items():
             
@@ -462,7 +463,7 @@ class TimesManager( object ):
         self._SetFileServiceTimestampMS( HC.TIMESTAMP_TYPE_IMPORTED, service_key, timestamp_ms )
         
     
-    def SetImportedTimestampsMS( self, service_keys_to_timestamps_ms: typing.Dict[ bytes, int ] ):
+    def SetImportedTimestampsMS( self, service_keys_to_timestamps_ms: dict[ bytes, int ] ):
         
         for ( service_key, timestamp_ms ) in service_keys_to_timestamps_ms.items():
             
@@ -538,7 +539,7 @@ class FileViewingStatsManager( object ):
     def __init__(
         self,
         times_manager: TimesManager,
-        view_rows: typing.Collection
+        view_rows: collections.abc.Collection
     ):
         
         self._times_manager = times_manager
@@ -582,7 +583,7 @@ class FileViewingStatsManager( object ):
         return FileViewingStatsManager( pre_duped_times_manager, view_rows )
         
     
-    def GetPrettyViewsLine( self, canvas_types: typing.Collection[ int ] ) -> str:
+    def GetPrettyViewsLine( self, canvas_types: collections.abc.Collection[ int ] ) -> str:
         
         # TODO: update this and callers to handle client api canvas
         if len( canvas_types ) == 1:
@@ -708,7 +709,7 @@ class FileViewingStatsManager( object ):
         
     
     @staticmethod
-    def STATICGenerateCombinedManager( sub_fvsms: typing.Iterable[ "FileViewingStatsManager" ] ):
+    def STATICGenerateCombinedManager( sub_fvsms: collections.abc.Iterable[ "FileViewingStatsManager" ] ):
         
         fvsm = FileViewingStatsManager.STATICGenerateEmptyManager( TimesManager() )
         
@@ -731,14 +732,14 @@ class LocationsManager( object ):
     
     def __init__(
         self,
-        current: typing.Set[ bytes ],
-        deleted: typing.Set[ bytes ],
-        pending: typing.Set[ bytes ],
-        petitioned: typing.Set[ bytes ],
+        current: set[ bytes ],
+        deleted: set[ bytes ],
+        pending: set[ bytes ],
+        petitioned: set[ bytes ],
         times_manager: TimesManager,
         inbox: bool = False,
-        urls: typing.Optional[ typing.Set[ str ] ] = None,
-        service_keys_to_filenames: typing.Optional[ typing.Dict[ bytes, str ] ] = None,
+        urls: typing.Optional[ set[ str ] ] = None,
+        service_keys_to_filenames: typing.Optional[ dict[ bytes, str ] ] = None,
         local_file_deletion_reason: str = None
     ):
         
@@ -1063,7 +1064,7 @@ class LocationsManager( object ):
             
         
     
-    def GetServiceFilenames( self ) -> typing.Dict[ bytes, str ]:
+    def GetServiceFilenames( self ) -> dict[ bytes, str ]:
         
         return dict( self._service_keys_to_filenames )
         
@@ -1326,7 +1327,7 @@ class LocationsManager( object ):
     
 class NotesManager( object ):
     
-    def __init__( self, names_to_notes: typing.Dict[ str, str ] ):
+    def __init__( self, names_to_notes: dict[ str, str ] ):
         
         self._names_to_notes = names_to_notes
         
@@ -1348,7 +1349,7 @@ class NotesManager( object ):
         return dict( self._names_to_notes )
         
     
-    def SetNamesToNotes( self, names_to_notes: typing.Dict[ str, str ] ):
+    def SetNamesToNotes( self, names_to_notes: dict[ str, str ] ):
         
         self._names_to_notes = names_to_notes
         
@@ -1408,7 +1409,7 @@ class NotesManager( object ):
     
 class RatingsManager( object ):
     
-    def __init__( self, service_keys_to_ratings: typing.Dict[ bytes, typing.Union[ None, float, int ] ] ):
+    def __init__( self, service_keys_to_ratings: dict[ bytes, typing.Union[ None, float, int ] ] ):
         
         self._service_keys_to_ratings = service_keys_to_ratings
         
@@ -1531,8 +1532,8 @@ class TagsManager( object ):
     
     def __init__(
         self,
-        service_keys_to_statuses_to_storage_tags: typing.Dict[ bytes, typing.Dict[ int, typing.Set[ str ] ] ],
-        service_keys_to_statuses_to_display_tags: typing.Dict[ bytes, typing.Dict[ int, typing.Set[ str ] ] ]
+        service_keys_to_statuses_to_storage_tags: dict[ bytes, dict[ int, set[ str ] ] ],
+        service_keys_to_statuses_to_display_tags: dict[ bytes, dict[ int, set[ str ] ] ]
         ):
         
         self._tag_display_types_to_service_keys_to_statuses_to_tags = {
@@ -1834,7 +1835,7 @@ class TagsManager( object ):
             
         
     
-    def GetComparableNamespaceSlice( self, service_key: bytes, namespaces: typing.Collection[ str ], tag_display_type: int ):
+    def GetComparableNamespaceSlice( self, service_key: bytes, namespaces: collections.abc.Collection[ str ], tag_display_type: int ):
         
         with self._lock:
             
@@ -1896,7 +1897,7 @@ class TagsManager( object ):
             
         
     
-    def GetNamespaceSlice( self, service_key: bytes, namespaces: typing.Collection[ str ], tag_display_type: int ):
+    def GetNamespaceSlice( self, service_key: bytes, namespaces: collections.abc.Collection[ str ], tag_display_type: int ):
         
         with self._lock:
             

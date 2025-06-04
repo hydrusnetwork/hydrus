@@ -1,6 +1,5 @@
 import os
 import sqlite3
-import typing
 
 from hydrus.core import HydrusData
 from hydrus.core import HydrusPaths
@@ -120,7 +119,7 @@ class ClientDBFilesPhysicalStorage( ClientDBModule.ClientDBModule ):
         return ( media_base_locations, thumbnail_override_base_location )
         
     
-    def GetTablesAndColumnsThatUseDefinitions( self, content_type: int ) -> typing.List[ typing.Tuple[ str, str ] ]:
+    def GetTablesAndColumnsThatUseDefinitions( self, content_type: int ) -> list[ tuple[ str, str ] ]:
         
         tables_and_columns = []
         
@@ -224,7 +223,7 @@ class ClientDBFilesPhysicalStorage( ClientDBModule.ClientDBModule ):
             
         
     
-    def RepairClientFiles( self, correct_rows: typing.List[ typing.Tuple[ ClientFilesPhysical.FilesStorageSubfolder, ClientFilesPhysical.FilesStorageSubfolder ] ] ):
+    def RepairClientFiles( self, correct_rows: list[ tuple[ ClientFilesPhysical.FilesStorageSubfolder, ClientFilesPhysical.FilesStorageSubfolder ] ] ):
         
         # TODO: as we move to multiple valid locations, this should probably become something else, or the things that feed it should have more sophisticated discovery of the correct 
         # tbh we should probably replace it with a 'set everything to this' call, like setideal but just an override to fix actual current understanding of file location

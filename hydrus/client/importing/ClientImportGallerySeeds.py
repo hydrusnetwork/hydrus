@@ -1,4 +1,5 @@
 import collections
+import collections.abc
 import random
 import threading
 import time
@@ -20,7 +21,7 @@ from hydrus.client.metadata import ClientTags
 from hydrus.client.parsing import ClientParsing
 from hydrus.client.parsing import ClientParsingResults
 
-def ConvertParsedPostsToGallerySeeds( parsed_posts: typing.List[ ClientParsingResults.ParsedPost ], desired_url_types: typing.Collection[ int ], can_generate_more_pages: bool ):
+def ConvertParsedPostsToGallerySeeds( parsed_posts: list[ ClientParsingResults.ParsedPost ], desired_url_types: collections.abc.Collection[ int ], can_generate_more_pages: bool ):
     
     sub_gallery_seeds = []
     
@@ -386,6 +387,7 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
         num_urls_total = 0
         result_404 = False
         added_new_gallery_pages = False
+        can_search_for_more_files = True
         stop_reason = ''
         note = ''
         
@@ -741,7 +743,7 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
             gallery_seed_log.NotifyGallerySeedsUpdated( ( self, ) )
             
         
-        return ( num_urls_added, num_urls_already_in_file_seed_cache, num_urls_total, result_404, added_new_gallery_pages, stop_reason )
+        return ( num_urls_added, num_urls_already_in_file_seed_cache, num_urls_total, result_404, added_new_gallery_pages, can_search_for_more_files, stop_reason )
         
     
 

@@ -1,4 +1,4 @@
-import typing
+import collections.abc
 
 import bs4
 import html
@@ -267,7 +267,7 @@ class ParseFormula( HydrusSerialisable.SerialisableBase ):
         return self._string_processor
         
     
-    def Parse( self, parsing_context, parsing_text: str, collapse_newlines: bool ) -> typing.List[ str ]:
+    def Parse( self, parsing_context, parsing_text: str, collapse_newlines: bool ) -> list[ str ]:
         
         raw_texts = self._ParseRawTexts( parsing_context, parsing_text, collapse_newlines )
         
@@ -2273,7 +2273,7 @@ class ContentParser( HydrusSerialisable.SerialisableBase ):
         return self._ConvertLegacyParsableContentToParsableContentDescription()
         
     
-    def GetParsableContentDescriptions( self ) -> typing.List[ ClientParsingResults.ParsableContentDescription ]:
+    def GetParsableContentDescriptions( self ) -> list[ ClientParsingResults.ParsableContentDescription ]:
         
         return [ self._ConvertLegacyParsableContentToParsableContentDescription() ]
         
@@ -2504,9 +2504,9 @@ class PageParser( HydrusSerialisable.SerialisableBaseNamed ):
         
         self._parser_key: bytes = parser_key
         self._string_converter: ClientStrings.StringConverter = string_converter
-        self._subsidiary_page_parsers: typing.List[ SubsidiaryPageParser ] = subsidiary_page_parsers
-        self._content_parsers: typing.List[ ContentParser ] = content_parsers
-        self._example_urls: typing.Collection[ str ] = example_urls
+        self._subsidiary_page_parsers: list[ SubsidiaryPageParser ] = subsidiary_page_parsers
+        self._content_parsers: list[ ContentParser ] = content_parsers
+        self._example_urls: collections.abc.Collection[ str ] = example_urls
         self._example_parsing_context: dict = example_parsing_context
         
     
@@ -2623,7 +2623,7 @@ class PageParser( HydrusSerialisable.SerialisableBaseNamed ):
         return ClientParsingResults.GetNamespacesFromParsableContentDescriptions( self.GetParsableContentDescriptions() )
         
     
-    def GetParsableContentDescriptions( self ) -> typing.List[ ClientParsingResults.ParsableContentDescription ]:
+    def GetParsableContentDescriptions( self ) -> list[ ClientParsingResults.ParsableContentDescription ]:
         
         parsable_content_descriptions = set()
         
@@ -2672,7 +2672,7 @@ class PageParser( HydrusSerialisable.SerialisableBaseNamed ):
             
         
     
-    def Parse( self, parsing_context, parsing_text ) -> typing.List[ ClientParsingResults.ParsedPost ]:
+    def Parse( self, parsing_context, parsing_text ) -> list[ ClientParsingResults.ParsedPost ]:
         
         try:
             
@@ -2879,7 +2879,7 @@ class SubsidiaryPageParser( HydrusSerialisable.SerialisableBase ):
         self._page_parser.NullifyTestData()
         
     
-    def Parse( self, parent_parsed_post: ClientParsingResults.ParsedPost, parsing_context, parsing_text ) -> typing.List[ ClientParsingResults.ParsedPost ]:
+    def Parse( self, parent_parsed_post: ClientParsingResults.ParsedPost, parsing_context, parsing_text ) -> list[ ClientParsingResults.ParsedPost ]:
         
         results_parsed_posts = []
         
@@ -2983,7 +2983,7 @@ class SubsidiaryPageParser( HydrusSerialisable.SerialisableBase ):
         self._sort_posts_by_source_time = sort_posts_by_source_time
         
     
-    def SortParsedPostsIfNeeded( self, parsed_posts: typing.List[ ClientParsingResults.ParsedPost ] ):
+    def SortParsedPostsIfNeeded( self, parsed_posts: list[ ClientParsingResults.ParsedPost ] ):
         
         if self._sort_posts_by_source_time:
             

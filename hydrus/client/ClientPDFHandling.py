@@ -1,6 +1,5 @@
 import re
 import traceback
-import typing
 
 pdf_failed_reason = 'QtPdf seems ok!'
 
@@ -74,7 +73,7 @@ def LoadPDF( path: str ):
     return document
     
 
-def GenerateThumbnailNumPyFromPDFPath( path: str, target_resolution: typing.Tuple[int, int] ) -> bytes:
+def GenerateThumbnailNumPyFromPDFPath( path: str, target_resolution: tuple[int, int] ) -> bytes:
     
     try:
         

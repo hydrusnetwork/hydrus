@@ -1,3 +1,4 @@
+import collections.abc
 import json
 import os
 import sqlite3
@@ -154,7 +155,7 @@ class ClientDBSerialisable( ClientDBModule.ClientDBModule ):
         self.modules_services = modules_services
         
     
-    def _GetCriticalTableNames( self ) -> typing.Collection[ str ]:
+    def _GetCriticalTableNames( self ) -> collections.abc.Collection[ str ]:
         
         return {
             'main.json_dict',
@@ -193,7 +194,7 @@ class ClientDBSerialisable( ClientDBModule.ClientDBModule ):
             
         
     
-    def GetAllExpectedHashedJSONHashes( self ) -> typing.Collection[ bytes ]:
+    def GetAllExpectedHashedJSONHashes( self ) -> collections.abc.Collection[ bytes ]:
         
         all_expected_hashes = set()
         
@@ -473,7 +474,7 @@ class ClientDBSerialisable( ClientDBModule.ClientDBModule ):
         return value
         
     
-    def GetTablesAndColumnsThatUseDefinitions( self, content_type: int ) -> typing.List[ typing.Tuple[ str, str ] ]:
+    def GetTablesAndColumnsThatUseDefinitions( self, content_type: int ) -> list[ tuple[ str, str ] ]:
         
         return []
         
@@ -782,9 +783,9 @@ class ClientDBSerialisable( ClientDBModule.ClientDBModule ):
         
     
     def SetJSONComplex( self,
-        overwrite_types_and_objs: typing.Optional[ typing.Tuple[ typing.Iterable[ int ], typing.Iterable[ HydrusSerialisable.SerialisableBase ] ] ] = None,
-        set_objs: typing.Optional[ typing.List[ HydrusSerialisable.SerialisableBase ] ] = None,
-        deletee_types_to_names: typing.Optional[ typing.Dict[ int, typing.Iterable[ str ] ] ] = None
+        overwrite_types_and_objs: typing.Optional[ tuple[ collections.abc.Iterable[ int ], collections.abc.Iterable[ HydrusSerialisable.SerialisableBase ] ] ] = None,
+        set_objs: typing.Optional[ list[ HydrusSerialisable.SerialisableBase ] ] = None,
+        deletee_types_to_names: typing.Optional[ dict[ int, collections.abc.Iterable[ str ] ] ] = None
     ):
         
         if overwrite_types_and_objs is not None:

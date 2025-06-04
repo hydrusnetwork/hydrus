@@ -2,7 +2,6 @@ import math
 import numpy
 
 import cv2
-import typing
 
 from hydrus.core.files.images import HydrusImageNormalisation
 
@@ -21,9 +20,10 @@ NUM_TILES = NUM_TILES_PER_DIMENSION * NUM_TILES_PER_DIMENSION
 
 class LabHistogram( ClientCachesBase.CacheableObject ):
     
-    def __init__( self, resolution, l_hist: numpy.ndarray, a_hist: numpy.ndarray, b_hist: numpy.ndarray ):
+    def __init__( self, resolution, had_alpha: bool, l_hist: numpy.ndarray, a_hist: numpy.ndarray, b_hist: numpy.ndarray ):
         
         self.resolution = resolution
+        self.had_alpha = had_alpha
         self.l_hist = l_hist
         self.a_hist = a_hist
         self.b_hist = b_hist
@@ -48,9 +48,10 @@ class LabHistogram( ClientCachesBase.CacheableObject ):
 
 class LabTilesHistogram( ClientCachesBase.CacheableObject ):
     
-    def __init__( self, resolution, histograms: typing.List[ LabHistogram ] ):
+    def __init__( self, resolution, had_alpha: bool, histograms: list[ LabHistogram ] ):
         
         self.resolution = resolution
+        self.had_alpha = had_alpha
         self.histograms = histograms
         
     
@@ -441,14 +442,28 @@ VISUAL_DUPLICATES_RESULT_PERFECTLY = 4
 
 def FilesAreVisuallySimilarRegional( lab_tile_hist_1: LabTilesHistogram, lab_tile_hist_2: LabTilesHistogram ):
     
+    if lab_tile_hist_1.had_alpha or lab_tile_hist_2.had_alpha:
+        
+        if lab_tile_hist_1.had_alpha and lab_tile_hist_2.had_alpha:
+            
+            message = 'cannot determine visual duplicates\n(they have transparency)'
+            
+        else:
+            
+            message = 'not visual duplicates\n(one has transparency)'
+            
+        
+        return ( False, VISUAL_DUPLICATES_RESULT_NOT, message )
+        
+    
     if FilesHaveDifferentRatio( lab_tile_hist_1.resolution, lab_tile_hist_2.resolution ):
         
-        return ( False, VISUAL_DUPLICATES_RESULT_NOT, 'not visual duplicates (different ratio)' )
+        return ( False, VISUAL_DUPLICATES_RESULT_NOT, 'not visual duplicates\n(different ratio)' )
         
     
     if lab_tile_hist_1.ResolutionIsTooLow() or lab_tile_hist_2.ResolutionIsTooLow():
         
-        return ( False, VISUAL_DUPLICATES_RESULT_NOT, 'cannot determine visual duplicates (too low resolution)' )
+        return ( False, VISUAL_DUPLICATES_RESULT_NOT, 'cannot determine visual duplicates\n(too low resolution)' )
         
     
     data = []
@@ -544,14 +559,28 @@ def FilesAreVisuallySimilarSimple( lab_hist_1: LabHistogram, lab_hist_2: LabHist
     # if I do not scale images to be the same size, this guy falls over!
     # I guess the INTER_AREA or something is doing an implicit gaussian of some sort and my tuned numbers assume that
     
+    if lab_hist_1.had_alpha or lab_hist_2.had_alpha:
+        
+        if lab_hist_1.had_alpha and lab_hist_2.had_alpha:
+            
+            message = 'cannot determine visual duplicates\n(they have transparency)'
+            
+        else:
+            
+            message = 'not visual duplicates\n(one has transparency)'
+            
+        
+        return ( False, VISUAL_DUPLICATES_RESULT_NOT, message )
+        
+    
     if FilesHaveDifferentRatio( lab_hist_1.resolution, lab_hist_2.resolution ):
         
-        return ( False, VISUAL_DUPLICATES_RESULT_NOT, 'not visual duplicates (different ratio)' )
+        return ( False, VISUAL_DUPLICATES_RESULT_NOT, 'not visual duplicates\n(different ratio)' )
         
     
     if lab_hist_1.ResolutionIsTooLow() or lab_hist_2.ResolutionIsTooLow():
         
-        return ( False, VISUAL_DUPLICATES_RESULT_NOT, 'cannot determine visual duplicates (too low resolution)' )
+        return ( False, VISUAL_DUPLICATES_RESULT_NOT, 'cannot determine visual duplicates\n(too low resolution)' )
         
     
     # this is useful to rule out easy false positives, but as expected it suffers from lack of fine resolution
@@ -645,6 +674,9 @@ def GenerateImageLabHistogramsNumPy( numpy_image: numpy.ndarray ) -> LabHistogra
     
     numpy_image_rgb = HydrusImageNormalisation.StripOutAnyAlphaChannel( numpy_image )
     
+    # TODO: add an alpha histogram or something and an alpha comparison
+    had_alpha = numpy_image.shape != numpy_image_rgb.shape
+    
     #numpy_image_gray = cv2.cvtColor( numpy_image_rgb, cv2.COLOR_RGB2GRAY )
     
     if NORMALISE_SCALE_FOR_PROCESSING:
@@ -666,7 +698,7 @@ def GenerateImageLabHistogramsNumPy( numpy_image: numpy.ndarray ) -> LabHistogra
     
     #edge_map = GenerateEdgeMapNumPy( numpy_image_gray, resolution )
     
-    return LabHistogram( resolution, l_hist.astype( numpy.float32 ), a_hist.astype( numpy.float32 ), b_hist.astype( numpy.float32 ) )
+    return LabHistogram( resolution, had_alpha, l_hist.astype( numpy.float32 ), a_hist.astype( numpy.float32 ), b_hist.astype( numpy.float32 ) )
     
 
 def GenerateImageLabTilesHistogramsNumPy( numpy_image: numpy.ndarray ) -> LabTilesHistogram:
@@ -676,6 +708,8 @@ def GenerateImageLabTilesHistogramsNumPy( numpy_image: numpy.ndarray ) -> LabTil
     resolution = ( width, height )
     
     numpy_image_rgb = HydrusImageNormalisation.StripOutAnyAlphaChannel( numpy_image )
+    
+    had_alpha = numpy_image.shape != numpy_image_rgb.shape
     
     # ok scale the image up to the nearest multiple of 16
     tile_fitting_width = ( ( width + NUM_TILES_PER_DIMENSION - 1 ) // NUM_TILES_PER_DIMENSION ) * NUM_TILES_PER_DIMENSION
@@ -725,11 +759,11 @@ def GenerateImageLabTilesHistogramsNumPy( numpy_image: numpy.ndarray ) -> LabTil
             
             #edge_map = GenerateEdgeMapNumPy( gray_tile, resolution )
             
-            histograms.append( LabHistogram( resolution, l_hist.astype( numpy.float32 ), a_hist.astype( numpy.float32 ), b_hist.astype( numpy.float32 ) ) )
+            histograms.append( LabHistogram( resolution, had_alpha, l_hist.astype( numpy.float32 ), a_hist.astype( numpy.float32 ), b_hist.astype( numpy.float32 ) ) )
             
         
     
-    return LabTilesHistogram( resolution, histograms )
+    return LabTilesHistogram( resolution, had_alpha, histograms )
     
 
 def GenerateImageRGBHistogramsNumPy( numpy_image: numpy.ndarray ):

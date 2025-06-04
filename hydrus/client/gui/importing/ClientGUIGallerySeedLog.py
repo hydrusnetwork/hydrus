@@ -1,4 +1,4 @@
-import typing
+import collections.abc
 
 from qtpy import QtWidgets as QW
 
@@ -157,7 +157,7 @@ def ImportURLs( win: QW.QWidget, gallery_seed_log: ClientImportGallerySeeds.Gall
     gallery_seed_log.AddGallerySeeds( gallery_seeds )
     
 
-def ExportGallerySeedsToClipboard( gallery_seeds: typing.Collection[ ClientImportGallerySeeds.GallerySeed ] ):
+def ExportGallerySeedsToClipboard( gallery_seeds: collections.abc.Collection[ ClientImportGallerySeeds.GallerySeed ] ):
     
     gallery_seeds = HydrusSerialisable.SerialisableList( gallery_seeds )
     
@@ -196,7 +196,7 @@ def RetryErrors( win: QW.QWidget, gallery_seed_log: ClientImportGallerySeeds.Gal
         gallery_seed_log.RetryFailed()
         
     
-def PopulateGallerySeedLogButton( win: QW.QWidget, menu: QW.QMenu, gallery_seed_log: ClientImportGallerySeeds.GallerySeedLog, selected_gallery_seeds: typing.List[ ClientImportGallerySeeds.GallerySeed ], read_only: bool, can_generate_more_pages: bool, gallery_type_string: str ):
+def PopulateGallerySeedLogButton( win: QW.QWidget, menu: QW.QMenu, gallery_seed_log: ClientImportGallerySeeds.GallerySeedLog, selected_gallery_seeds: list[ ClientImportGallerySeeds.GallerySeed ], read_only: bool, can_generate_more_pages: bool, gallery_type_string: str ):
     
     num_successful = gallery_seed_log.GetGallerySeedCount( CC.STATUS_SUCCESSFUL_AND_NEW )
     num_vetoed = gallery_seed_log.GetGallerySeedCount( CC.STATUS_VETOED )

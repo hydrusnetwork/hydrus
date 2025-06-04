@@ -1,4 +1,4 @@
-import typing
+import collections.abc
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusExceptions
@@ -102,7 +102,7 @@ def CreatePageManagerImportSimpleDownloader():
     return page_manager
     
 
-def CreatePageManagerImportHDD( paths, file_import_options: FileImportOptions.FileImportOptions, metadata_routers: typing.Collection[ ClientMetadataMigration.SingleFileMetadataRouter ], paths_to_additional_service_keys_to_tags, delete_after_success ):
+def CreatePageManagerImportHDD( paths, file_import_options: FileImportOptions.FileImportOptions, metadata_routers: collections.abc.Collection[ ClientMetadataMigration.SingleFileMetadataRouter ], paths_to_additional_service_keys_to_tags, delete_after_success ):
     
     page_manager = CreatePageManager( 'import', ClientGUIPagesCore.PAGE_TYPE_IMPORT_HDD )
     

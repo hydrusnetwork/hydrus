@@ -1,3 +1,4 @@
+import collections.abc
 import typing
 
 from qtpy import QtCore as QC
@@ -207,18 +208,37 @@ shortcut_mouse_string_lookup = {
     SHORTCUT_MOUSE_SCROLL_RIGHT : 'scroll right'
 }
 
-def SetMouseLabels( call_mouse_buttons_primary_secondary ):
+def get_shortcut_mouse_string( shortcut_key: int, call_mouse_buttons_primary_secondary_override: typing.Optional[ bool ] = None ):
     
-    if call_mouse_buttons_primary_secondary:
+    if call_mouse_buttons_primary_secondary_override is None:
         
-        shortcut_mouse_string_lookup[ SHORTCUT_MOUSE_LEFT ] = 'primary-click'
-        shortcut_mouse_string_lookup[ SHORTCUT_MOUSE_RIGHT ] = 'secondary-click'
+        try:
+            
+            call_mouse_buttons_primary_secondary = CG.client_controller.new_options.GetBoolean( 'call_mouse_buttons_primary_secondary' )
+            
+        except:
+            
+            call_mouse_buttons_primary_secondary = False
+            
         
     else:
         
-        shortcut_mouse_string_lookup[ SHORTCUT_MOUSE_LEFT ] = 'left-click'
-        shortcut_mouse_string_lookup[ SHORTCUT_MOUSE_RIGHT ] = 'right-click'
+        call_mouse_buttons_primary_secondary = call_mouse_buttons_primary_secondary_override
         
+    
+    if call_mouse_buttons_primary_secondary:
+        
+        if shortcut_key == SHORTCUT_MOUSE_LEFT:
+            
+            return 'primary-click'
+            
+        elif shortcut_key == SHORTCUT_MOUSE_RIGHT:
+            
+            return 'secondary-click'
+            
+        
+    
+    return shortcut_mouse_string_lookup[ shortcut_key ]
     
 
 shortcut_names_to_pretty_names = {
@@ -319,7 +339,8 @@ SHORTCUTS_MEDIA_ACTIONS = [
     CAC.SIMPLE_NATIVE_OPEN_FILE_WITH_DIALOG,
     CAC.SIMPLE_DUPLICATE_MEDIA_DISSOLVE_DUPLICATE_GROUP,
     CAC.SIMPLE_DUPLICATE_MEDIA_DISSOLVE_ALTERNATE_GROUP,
-    CAC.SIMPLE_DUPLICATE_MEDIA_CLEAR_FALSE_POSITIVES,
+    CAC.SIMPLE_DUPLICATE_MEDIA_CLEAR_ALL_FALSE_POSITIVES,
+    CAC.SIMPLE_DUPLICATE_MEDIA_CLEAR_INTERNAL_FALSE_POSITIVES,
     CAC.SIMPLE_DUPLICATE_MEDIA_RESET_POTENTIAL_SEARCH,
     CAC.SIMPLE_DUPLICATE_MEDIA_REMOVE_POTENTIALS,
 ]
@@ -575,7 +596,7 @@ def ConvertQtKeyToShortcutKey( key_qt ):
         
     
 
-def ConvertKeyEventToShortcut( event ):
+def ConvertKeyEventToShortcut( event, shortcuts_merge_non_number_numpad_override = None ):
     
     key_qt = event.key()
     
@@ -614,7 +635,23 @@ def ConvertKeyEventToShortcut( event ):
             
             do_it = True
             
-            if CG.client_controller.new_options.GetBoolean( 'shortcuts_merge_non_number_numpad' ):
+            if shortcuts_merge_non_number_numpad_override is None:
+                
+                try:
+                    
+                    shortcuts_merge_non_number_numpad = CG.client_controller.new_options.GetBoolean( 'shortcuts_merge_non_number_numpad' )
+                    
+                except:
+                    
+                    shortcuts_merge_non_number_numpad = True
+                    
+                
+            else:
+                
+                shortcuts_merge_non_number_numpad = shortcuts_merge_non_number_numpad_override
+                
+            
+            if shortcuts_merge_non_number_numpad:
                 
                 it_is_a_number = ord( '0' ) <= key_ord <= ord( '9' )
                 
@@ -806,7 +843,7 @@ def ConvertMouseEventToShortcut( event: typing.Union[ QG.QMouseEvent, QG.QWheelE
     return None
     
 
-def IShouldCatchShortcutEvent( event_handler_owner: QC.QObject, event_catcher: QW.QWidget, event: typing.Optional[ QC.QEvent ] = None, child_tlw_classes_who_can_pass_up: typing.Optional[ typing.Collection[ type ] ] = None ):
+def IShouldCatchShortcutEvent( event_handler_owner: QC.QObject, event_catcher: QW.QWidget, event: typing.Optional[ QC.QEvent ] = None, child_tlw_classes_who_can_pass_up: typing.Optional[ collections.abc.Collection[ type ] ] = None ):
     
     do_focus_test = True
     
@@ -1101,11 +1138,26 @@ class Shortcut( HydrusSerialisable.SerialisableBase ):
         return self
         
     
-    def GetSearchShortcuts( self ) -> typing.Set[ "Shortcut" ]:
+    def GetSearchShortcuts( self, shortcuts_merge_non_number_numpad_override = None ) -> set[ "Shortcut" ]:
         
         search_shortcuts = { self }
         
-        if CG.client_controller.new_options.GetBoolean( 'shortcuts_merge_non_number_numpad' ):
+        if shortcuts_merge_non_number_numpad_override is None:
+            
+            try:
+                
+                shortcuts_merge_non_number_numpad = CG.client_controller.new_options.GetBoolean( 'shortcuts_merge_non_number_numpad' )
+                
+            except:
+                
+                shortcuts_merge_non_number_numpad = False
+                
+        else:
+            
+            shortcuts_merge_non_number_numpad = shortcuts_merge_non_number_numpad_override
+            
+        
+        if shortcuts_merge_non_number_numpad:
             
             it_is_a_number = ord( '0' ) <= self.shortcut_key <= ord( '9' )
             
@@ -1140,7 +1192,7 @@ class Shortcut( HydrusSerialisable.SerialisableBase ):
         return self.shortcut_type == SHORTCUT_TYPE_MOUSE and self.shortcut_press_type == SHORTCUT_PRESS_TYPE_DOUBLE_CLICK
         
     
-    def ToString( self ):
+    def ToString( self, call_mouse_buttons_primary_secondary_override = None ):
         
         components = []
         
@@ -1229,7 +1281,7 @@ class Shortcut( HydrusSerialisable.SerialisableBase ):
         
         if self.shortcut_type == SHORTCUT_TYPE_MOUSE and self.shortcut_key in shortcut_mouse_string_lookup:
             
-            action_name += shortcut_mouse_string_lookup[ self.shortcut_key ]
+            action_name += get_shortcut_mouse_string( self.shortcut_key, call_mouse_buttons_primary_secondary_override = call_mouse_buttons_primary_secondary_override )
             
         elif self.shortcut_type == SHORTCUT_TYPE_KEYBOARD_SPECIAL and self.shortcut_key in special_key_shortcut_str_lookup:
             
@@ -1424,9 +1476,9 @@ class ShortcutSet( HydrusSerialisable.SerialisableBaseNamed ):
             
         
     
-    def GetCommand( self, shortcut: Shortcut ):
+    def GetCommand( self, shortcut: Shortcut, shortcuts_merge_non_number_numpad_override = None ):
         
-        for s in shortcut.GetSearchShortcuts():
+        for s in shortcut.GetSearchShortcuts( shortcuts_merge_non_number_numpad_override = shortcuts_merge_non_number_numpad_override ):
             
             if s in self._shortcuts_to_commands:
                 
@@ -1471,7 +1523,7 @@ HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIAL
 
 class ShortcutsHandler( QC.QObject ):
     
-    def __init__( self, parent: QW.QWidget, command_processor: CAC.ApplicationCommandProcessorMixin, initial_shortcuts_names: typing.Collection[ str ], alternate_filter_target = None, catch_mouse = False, ignore_activating_mouse_click = False ):
+    def __init__( self, parent: QW.QWidget, command_processor: CAC.ApplicationCommandProcessorMixin, initial_shortcuts_names: collections.abc.Collection[ str ], alternate_filter_target = None, catch_mouse = False, ignore_activating_mouse_click = False ):
         
         super().__init__( parent )
         
@@ -1873,7 +1925,7 @@ class ShortcutsManager( QC.QObject ):
             
         
     
-    def GetCommand( self, shortcuts_names: typing.Iterable[ str ], shortcut: Shortcut ):
+    def GetCommand( self, shortcuts_names: collections.abc.Iterable[ str ], shortcut: Shortcut ):
         
         # process more specific shortcuts with higher priority
         shortcuts_names = list( shortcuts_names )
@@ -1917,12 +1969,12 @@ class ShortcutsManager( QC.QObject ):
         return names_to_shortcuts
         
     
-    def GetShortcutSets( self ) -> typing.List[ ShortcutSet ]:
+    def GetShortcutSets( self ) -> list[ ShortcutSet ]:
         
         return list( self._names_to_shortcut_sets.values() )
         
     
-    def SetShortcutSets( self, shortcut_sets: typing.Iterable[ ShortcutSet ] ):
+    def SetShortcutSets( self, shortcut_sets: collections.abc.Iterable[ ShortcutSet ] ):
         
         self._names_to_shortcut_sets = { shortcut_set.GetName() : shortcut_set for shortcut_set in shortcut_sets }
         

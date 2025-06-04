@@ -1,7 +1,7 @@
+import collections.abc
 import random
 import threading
 import time
-import typing
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
@@ -44,7 +44,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
         
         self._gug_key_and_name = gug_key_and_name
         
-        self._query_headers: typing.List[ ClientImportSubscriptionQuery.SubscriptionQueryHeader ] = []
+        self._query_headers: list[ ClientImportSubscriptionQuery.SubscriptionQueryHeader ] = []
         
         new_options = CG.client_controller.new_options
         
@@ -146,7 +146,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
         return label
         
     
-    def _GetQueryHeadersForProcessing( self ) -> typing.List[ ClientImportSubscriptionQuery.SubscriptionQueryHeader ]:
+    def _GetQueryHeadersForProcessing( self ) -> list[ ClientImportSubscriptionQuery.SubscriptionQueryHeader ]:
         
         query_headers = list( self._query_headers )
         
@@ -365,6 +365,8 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
         
         query_text = query_header.GetQueryText()
         query_name = query_header.GetHumanName()
+        
+        gallery_url_classes_to_special_stop_reasons = dict()
         
         file_seed_cache = query_log_container.GetFileSeedCache()
         gallery_seed_log = query_log_container.GetGallerySeedLog()
@@ -665,11 +667,22 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                     return ( num_urls_added_in_this_call, num_urls_already_in_file_seed_cache_in_this_call, can_search_for_more_files, stop_reason )
                     
                 
+                gallery_seed_url_class = CG.client_controller.network_engine.domain_manager.GetURLClass( gallery_seed.url )
+                
+                if gallery_seed_url_class in gallery_url_classes_to_special_stop_reasons:
+                    
+                    special_stop_reason = gallery_url_classes_to_special_stop_reasons[ gallery_seed_url_class ]
+                    
+                    gallery_seed.SetStatus( CC.STATUS_SKIPPED, note = special_stop_reason )
+                    
+                    continue
+                    
+                
                 job_status.SetStatusText( status_prefix + ': found ' + HydrusNumbers.ToHumanInt( total_new_urls_for_this_sync ) + ' new urls, checking next page' )
                 
                 try:
                     
-                    ( num_urls_added_in_this_call, num_urls_already_in_file_seed_cache_in_this_call, num_urls_total, result_404, added_new_gallery_pages, stop_reason ) = gallery_seed.WorkOnURL( 'subscription', gallery_seed_log, file_seeds_callable, status_hook, title_hook, query_header.GenerateNetworkJobFactory( self._name ), ClientImporting.GenerateMultiplePopupNetworkJobPresentationContextFactory( job_status ), self._file_import_options, gallery_urls_seen_before = gallery_urls_seen_this_sync )
+                    ( num_urls_added_in_this_call, num_urls_already_in_file_seed_cache_in_this_call, num_urls_total, result_404, added_new_gallery_pages, can_search_for_more_files, stop_reason ) = gallery_seed.WorkOnURL( 'subscription', gallery_seed_log, file_seeds_callable, status_hook, title_hook, query_header.GenerateNetworkJobFactory( self._name ), ClientImporting.GenerateMultiplePopupNetworkJobPresentationContextFactory( job_status ), self._file_import_options, gallery_urls_seen_before = gallery_urls_seen_this_sync )
                     
                 except HydrusExceptions.CancelledException as e:
                     
@@ -684,6 +697,18 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                     stop_reason = str( e )
                     
                     raise
+                    
+                
+                # this url probably hit a 'caught up' limit
+                # we don't want to hit any other urls of this type this sync
+                if not can_search_for_more_files:
+                    
+                    special_stop_reason = f'previous {gallery_seed_url_class.GetName()} URL said: {stop_reason}'
+                    
+                    if gallery_seed_url_class is not None:
+                        
+                        gallery_url_classes_to_special_stop_reasons[ gallery_seed_url_class ] = special_stop_reason
+                        
                     
                 
                 total_new_urls_for_this_sync += num_urls_added_in_this_call
@@ -1266,7 +1291,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
         self.ScrubDelay()
         
     
-    def DedupeQueryTexts( self, dedupe_query_texts: typing.Iterable[ str ], enforce_case: bool = True ):
+    def DedupeQueryTexts( self, dedupe_query_texts: collections.abc.Iterable[ str ], enforce_case: bool = True ):
         
         if not enforce_case:
             
@@ -1307,7 +1332,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
         self._query_headers = deduped_query_headers
         
     
-    def GetAllQueryLogContainerNames( self ) -> typing.Set[ str ]:
+    def GetAllQueryLogContainerNames( self ) -> set[ str ]:
         
         names = { query_header.GetQueryLogContainerName() for query_header in self._query_headers }
         
@@ -1380,7 +1405,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
         return self._gug_key_and_name
         
     
-    def GetQueryHeaders( self ) -> typing.List[ ClientImportSubscriptionQuery.SubscriptionQueryHeader ]:
+    def GetQueryHeaders( self ) -> list[ ClientImportSubscriptionQuery.SubscriptionQueryHeader ]:
         
         return self._query_headers
         
@@ -1466,7 +1491,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
             
         
     
-    def Merge( self, mergees: typing.Iterable[ "Subscription" ] ):
+    def Merge( self, mergees: collections.abc.Iterable[ "Subscription" ] ):
         
         unmerged = []
         merged = []
@@ -1493,7 +1518,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
         self.SetPaused( not self._paused )
         
     
-    def RemoveQueryTexts( self, removee_query_texts: typing.Iterable[ str ], enforce_case: bool = True ):
+    def RemoveQueryTexts( self, removee_query_texts: collections.abc.Iterable[ str ], enforce_case: bool = True ):
         
         if not enforce_case:
             
@@ -1600,7 +1625,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
         self._merge_query_publish_events = merge_query_publish_events
         
     
-    def SetQueryHeaders( self, query_headers: typing.Iterable[ ClientImportSubscriptionQuery.SubscriptionQueryHeader ] ):
+    def SetQueryHeaders( self, query_headers: collections.abc.Iterable[ ClientImportSubscriptionQuery.SubscriptionQueryHeader ] ):
         
         self._query_headers = list( query_headers )
         
@@ -1835,7 +1860,7 @@ class SubscriptionJob( object ):
 
 class SubscriptionsManager( ClientDaemons.ManagerWithMainLoop ):
     
-    def __init__( self, controller, subscriptions: typing.List[ Subscription ] ):
+    def __init__( self, controller, subscriptions: list[ Subscription ] ):
         
         super().__init__( controller, 10 )
         
@@ -1997,7 +2022,7 @@ class SubscriptionsManager( ClientDaemons.ManagerWithMainLoop ):
         return 'subscriptions'
         
     
-    def GetSubscriptions( self ) -> typing.List[ Subscription ]:
+    def GetSubscriptions( self ) -> list[ Subscription ]:
         
         with self._lock:
             

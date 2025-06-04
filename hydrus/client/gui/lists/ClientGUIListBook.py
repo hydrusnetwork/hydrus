@@ -116,7 +116,7 @@ class ListBook( QW.QWidget ):
             
         
     
-    def GetPages( self ) -> typing.List[ QW.QWidget ]:
+    def GetPages( self ) -> list[ QW.QWidget ]:
         
         return self._page_list.GetData()
         

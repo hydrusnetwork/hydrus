@@ -1,4 +1,4 @@
-import typing
+import collections.abc
 
 from qtpy import QtWidgets as QW
 
@@ -145,7 +145,7 @@ class EditContextVariableFormulaPanel( EditSpecificFormulaPanel ):
 
 class EditFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
     
-    def __init__( self, parent: QW.QWidget, formula: ClientParsing.ParseFormula, test_data_callable: typing.Callable[ [], ClientParsing.ParsingTestData ] ):
+    def __init__( self, parent: QW.QWidget, formula: ClientParsing.ParseFormula, test_data_callable: collections.abc.Callable[ [], ClientParsing.ParsingTestData ] ):
         
         super().__init__( parent )
         

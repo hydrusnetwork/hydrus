@@ -1,5 +1,5 @@
+import collections.abc
 import re
-import typing
 
 from hydrus.core import HydrusData
 from hydrus.core import HydrusTags
@@ -9,7 +9,7 @@ from hydrus.client.search import ClientSearchParseSystemPredicates
 from hydrus.client.search import ClientSearchPredicate
 from hydrus.client.search import ClientSearchTagContext
 
-def FilterPredicatesBySearchText( service_key, search_text, predicates: typing.Collection[ ClientSearchPredicate.Predicate ] ):
+def FilterPredicatesBySearchText( service_key, search_text, predicates: collections.abc.Collection[ ClientSearchPredicate.Predicate ] ):
     
     def compile_re( s ):
         
@@ -459,7 +459,7 @@ class ParsedAutocompleteText( object ):
     
 class PredicateResultsCache( object ):
     
-    def __init__( self, predicates: typing.Iterable[ ClientSearchPredicate.Predicate ] ):
+    def __init__( self, predicates: collections.abc.Iterable[ ClientSearchPredicate.Predicate ] ):
         
         self._predicates = list( predicates )
         
@@ -497,7 +497,7 @@ class PredicateResultsCacheMedia( PredicateResultsCache ):
     
 class PredicateResultsCacheTag( PredicateResultsCache ):
     
-    def __init__( self, predicates: typing.Iterable[ ClientSearchPredicate.Predicate ], strict_search_text: str, exact_match: bool ):
+    def __init__( self, predicates: collections.abc.Iterable[ ClientSearchPredicate.Predicate ], strict_search_text: str, exact_match: bool ):
         
         super().__init__( predicates )
         

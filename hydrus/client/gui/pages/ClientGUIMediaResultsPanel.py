@@ -1,7 +1,7 @@
 import collections
+import collections.abc
 import itertools
 import time
-import typing
 
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
@@ -314,7 +314,7 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.Liste
         raise HydrusExceptions.DataMissing( 'No media singleton!' )
         
     
-    def _GetMediasForFileCommandTarget( self, file_command_target: int ) -> typing.Collection[ ClientMedia.MediaSingleton ]:
+    def _GetMediasForFileCommandTarget( self, file_command_target: int ) -> collections.abc.Collection[ ClientMedia.MediaSingleton ]:
         
         if file_command_target == CAC.FILE_COMMAND_TARGET_FOCUSED_FILE:
             
@@ -2146,7 +2146,7 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.Liste
                     ClientGUIMediaSimpleActions.ShowDuplicatesInNewPage( self._location_context, hash, duplicate_type )
                     
                 
-            elif action == CAC.SIMPLE_DUPLICATE_MEDIA_CLEAR_FOCUSED_FALSE_POSITIVES:
+            elif action == CAC.SIMPLE_DUPLICATE_MEDIA_CLEAR_ALL_FOCUSED_FALSE_POSITIVES:
                 
                 if self._HasFocusSingleton():
                     
@@ -2154,16 +2154,25 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.Liste
                     
                     hash = media.GetHash()
                     
-                    ClientGUIDuplicateActions.ClearFalsePositives( self, ( hash, ) )
+                    ClientGUIDuplicateActions.ClearAllFalsePositives( self, ( hash, ) )
                     
                 
-            elif action == CAC.SIMPLE_DUPLICATE_MEDIA_CLEAR_FALSE_POSITIVES:
+            elif action == CAC.SIMPLE_DUPLICATE_MEDIA_CLEAR_ALL_FALSE_POSITIVES:
                 
                 hashes = self._GetSelectedHashes()
                 
                 if len( hashes ) > 0:
                     
-                    ClientGUIDuplicateActions.ClearFalsePositives( self, hashes )
+                    ClientGUIDuplicateActions.ClearAllFalsePositives( self, hashes )
+                    
+                
+            elif action == CAC.SIMPLE_DUPLICATE_MEDIA_CLEAR_INTERNAL_FALSE_POSITIVES:
+                
+                hashes = self._GetSelectedHashes()
+                
+                if len( hashes ) > 1:
+                    
+                    ClientGUIDuplicateActions.ClearInternalFalsePositives( self, hashes )
                     
                 
             elif action == CAC.SIMPLE_DUPLICATE_MEDIA_DISSOLVE_FOCUSED_ALTERNATE_GROUP:
@@ -2544,7 +2553,7 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.Liste
             
         
     
-    def ProcessServiceUpdates( self, service_keys_to_service_updates: typing.Dict[ bytes, typing.Collection[ ClientServices.ServiceUpdate ] ] ):
+    def ProcessServiceUpdates( self, service_keys_to_service_updates: dict[ bytes, collections.abc.Collection[ ClientServices.ServiceUpdate ] ] ):
         
         ClientMedia.ListeningMediaList.ProcessServiceUpdates( self, service_keys_to_service_updates )
         

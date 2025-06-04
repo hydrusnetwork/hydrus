@@ -1,3 +1,4 @@
+import collections.abc
 import typing
 import urllib.parse
 
@@ -39,10 +40,10 @@ class EditDownloaderDisplayPanel( ClientGUIScrolledPanels.EditPanel ):
         super().__init__( parent )
         
         self._gugs = gugs
-        self._gug_keys_to_gugs: typing.Dict[ bytes, ClientNetworkingGUG.GalleryURLGenerator ] = { gug.GetGUGKey() : gug for gug in self._gugs }
+        self._gug_keys_to_gugs: dict[ bytes, ClientNetworkingGUG.GalleryURLGenerator ] = { gug.GetGUGKey() : gug for gug in self._gugs }
         
         self._url_classes = url_classes
-        self._url_class_keys_to_url_classes: typing.Dict[ bytes, ClientNetworkingURLClass.URLClass ] = { url_class.GetClassKey() : url_class for url_class in self._url_classes }
+        self._url_class_keys_to_url_classes: dict[ bytes, ClientNetworkingURLClass.URLClass ] = { url_class.GetClassKey() : url_class for url_class in self._url_classes }
         
         self._network_engine = network_engine
         
@@ -446,7 +447,7 @@ class EditGUGPanel( ClientGUIScrolledPanels.EditPanel ):
     
 class EditNGUGPanel( ClientGUIScrolledPanels.EditPanel ):
     
-    def __init__( self, parent: QW.QWidget, ngug: ClientNetworkingGUG.NestedGalleryURLGenerator, available_gugs: typing.Iterable[ ClientNetworkingGUG.GalleryURLGenerator ] ):
+    def __init__( self, parent: QW.QWidget, ngug: ClientNetworkingGUG.NestedGalleryURLGenerator, available_gugs: collections.abc.Iterable[ ClientNetworkingGUG.GalleryURLGenerator ] ):
         
         super().__init__( parent )
         
@@ -1894,7 +1895,7 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
             
         
     
-    def _GetExistingParameterNames( self ) -> typing.Set[ str ]:
+    def _GetExistingParameterNames( self ) -> set[ str ]:
         
         parameters = self._parameters.GetData()
         
@@ -2313,7 +2314,7 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
 
 class EditURLClassesPanel( ClientGUIScrolledPanels.EditPanel ):
     
-    def __init__( self, parent: QW.QWidget, url_classes: typing.Iterable[ ClientNetworkingURLClass.URLClass ] ):
+    def __init__( self, parent: QW.QWidget, url_classes: collections.abc.Iterable[ ClientNetworkingURLClass.URLClass ] ):
         
         super().__init__( parent )
         
@@ -2521,7 +2522,7 @@ class EditURLClassesPanel( ClientGUIScrolledPanels.EditPanel ):
         self._UpdateURLClassCheckerText()
         
     
-    def GetValue( self ) -> typing.List[ ClientNetworkingURLClass.URLClass ]:
+    def GetValue( self ) -> list[ ClientNetworkingURLClass.URLClass ]:
         
         url_classes = self._list_ctrl.GetData()
         

@@ -34,7 +34,7 @@ from hydrus.client.metadata import ClientContentUpdates
 
 class EditFileTimestampsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPanels.EditPanel ):
     
-    def __init__( self, parent: QW.QWidget, ordered_medias: typing.List[ ClientMedia.MediaSingleton ] ):
+    def __init__( self, parent: QW.QWidget, ordered_medias: list[ ClientMedia.MediaSingleton ] ):
         
         super().__init__( parent )
         
@@ -592,7 +592,7 @@ class EditFileTimestampsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUISc
             
         
     
-    def _GetValidTimestampDatas( self, only_changes = False ) -> typing.List[ typing.Tuple[ typing.Collection[ bytes ], ClientTime.TimestampData, int ] ]:
+    def _GetValidTimestampDatas( self, only_changes = False ) -> list[ tuple[ collections.abc.Collection[ bytes ], ClientTime.TimestampData, int ] ]:
         
         if not only_changes and len( self._ordered_medias ) != 1:
             
@@ -763,7 +763,7 @@ class EditFileTimestampsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUISc
         self._SetValueTimestampDatas( list_of_timestamp_data, from_user = True )
         
     
-    def _SetValueTimestampDatas( self, list_of_timestamp_data: typing.Collection[ ClientTime.TimestampData ], from_user = True ):
+    def _SetValueTimestampDatas( self, list_of_timestamp_data: collections.abc.Collection[ ClientTime.TimestampData ], from_user = True ):
         
         for timestamp_data in list_of_timestamp_data:
             
@@ -929,7 +929,7 @@ class EditFileTimestampsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUISc
         self._file_modified_time_warning_st.setVisible( False )
         
     
-    def GetFileModifiedUpdateData( self ) -> typing.Optional[ typing.Tuple[ typing.Collection[ bytes ], int, int ] ]:
+    def GetFileModifiedUpdateData( self ) -> typing.Optional[ tuple[ collections.abc.Collection[ bytes ], int, int ] ]:
         
         for ( hashes, timestamp_data, step_ms ) in self._GetValidTimestampDatas( only_changes = True ):
             

@@ -76,7 +76,7 @@ This system was once much more simple, but it still had HTA support. If you wish
 
 ## custom shortcuts { id="shortcuts" }
 
-Once you are comfortable with manually setting tags and ratings, you may be interested in setting some shortcuts to do it quicker. Try hitting _file->shortcuts_ or clicking the keyboard icon on any media viewer window's top hover window.
+Once you are comfortable with manually setting tags and ratings, you may be interested in setting some shortcuts to do it quicker. Try hitting _file->options->shortcuts_ or clicking the keyboard icon on any media viewer window's top hover window.
 
 There are two kinds of shortcuts in the program--_reserved_, which have fixed names, are undeletable, and are always active in certain contexts (related to their name), and _custom_, which you create and name and edit and are only active in a media viewer when you want them to. You can redefine some simple shortcut commands, but most importantly, you can create shortcuts for adding/removing a tag or setting/unsetting a rating.
 

@@ -489,7 +489,7 @@ class DialogManageRatings( CAC.ApplicationCommandProcessorMixin, ClientGUIDialog
                 ( rating_state, rating ) = ClientRatings.GetNumericalStateFromMedia( self._media, service_key )
                 
                 control = ClientGUIRatings.RatingNumericalDialog( self, service_key )
-                control.setSizePolicy( QW.QSizePolicy.Fixed, QW.QSizePolicy.Fixed )
+                control.setSizePolicy( QW.QSizePolicy.Policy.Fixed, QW.QSizePolicy.Policy.Fixed )
                 
                 if rating_state != ClientRatings.SET:
                     

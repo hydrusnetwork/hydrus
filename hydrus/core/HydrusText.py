@@ -1,3 +1,4 @@
+import collections.abc
 import typing
 
 try:
@@ -76,7 +77,7 @@ def CleanseImportText( text: str ):
     return text
     
 
-def CleanseImportTexts( texts: typing.Collection[ str ] ):
+def CleanseImportTexts( texts: collections.abc.Collection[ str ] ):
     
     return [ CleanseImportText( text ) for text in texts ]
     
@@ -110,7 +111,7 @@ def CleanNoteText( t: str ):
     return t
     
 
-def ConvertManyStringsToNiceInsertableHumanSummary( texts: typing.Collection[ str ], do_sort: bool = True, no_trailing_whitespace = False ) -> str:
+def ConvertManyStringsToNiceInsertableHumanSummary( texts: collections.abc.Collection[ str ], do_sort: bool = True, no_trailing_whitespace = False ) -> str:
     """
     The purpose of this guy is to convert your list of 20 subscription names or whatever to something you can present to the user without making a giganto tall dialog.
     """
@@ -154,7 +155,7 @@ def ConvertManyStringsToNiceInsertableHumanSummary( texts: typing.Collection[ st
         
     
 
-def ConvertManyStringsToNiceInsertableHumanSummarySingleLine( texts: typing.Collection[ str ], collective_description_noun: str, do_sort: bool = True ) -> str:
+def ConvertManyStringsToNiceInsertableHumanSummarySingleLine( texts: collections.abc.Collection[ str ], collective_description_noun: str, do_sort: bool = True ) -> str:
     """
     The purpose of this guy is to convert your list of 20 subscription names or whatever to something you can present to the user without making a giganto tall dialog.
     Suitable for a menu!
@@ -531,7 +532,7 @@ def RemoveNewlines( text: str ) -> str:
     return text
     
 
-def SortStringsIgnoringCase( list_of_strings: typing.List[ str ] ):
+def SortStringsIgnoringCase( list_of_strings: list[ str ] ):
     
     list_of_strings.sort( key = lambda s: s.lower() )
     

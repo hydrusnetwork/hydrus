@@ -1,5 +1,5 @@
+import collections.abc
 import sqlite3
-import typing
 
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusTime
@@ -42,7 +42,7 @@ class ClientDBFilesMetadataRich( ClientDBModule.ClientDBModule ):
         super().__init__( 'client files rich metadata', cursor )
         
     
-    def FilterHashesByService( self, location_context: ClientLocation.LocationContext, hashes: typing.Sequence[ bytes ] ) -> typing.List[ bytes ]:
+    def FilterHashesByService( self, location_context: ClientLocation.LocationContext, hashes: collections.abc.Sequence[ bytes ] ) -> list[ bytes ]:
         
         # returns hashes in order, to be nice to UI
         
@@ -156,12 +156,12 @@ class ClientDBFilesMetadataRich( ClientDBModule.ClientDBModule ):
         return self.GetHashIdStatus( hash_id, prefix = prefix )
         
     
-    def GetTablesAndColumnsThatUseDefinitions( self, content_type: int ) -> typing.List[ typing.Tuple[ str, str ] ]:
+    def GetTablesAndColumnsThatUseDefinitions( self, content_type: int ) -> list[ tuple[ str, str ] ]:
         
         return []
         
     
-    def GetURLStatuses( self, url ) -> typing.List[ ClientImportFiles.FileImportStatus ]:
+    def GetURLStatuses( self, url ) -> list[ ClientImportFiles.FileImportStatus ]:
         
         search_urls = ClientNetworkingFunctions.GetSearchURLs( url )
         

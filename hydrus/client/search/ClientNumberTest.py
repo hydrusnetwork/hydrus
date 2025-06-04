@@ -1,3 +1,4 @@
+import collections.abc
 import typing
 
 from hydrus.core import HydrusConstants as HC
@@ -358,7 +359,7 @@ class NumberTest( HydrusSerialisable.SerialisableBase ):
         return actually_zero or less_than_one or less_than_or_equal_to_zero
         
     
-    def ToString( self, absolute_number_renderer: typing.Optional[ typing.Callable ] = None, replacement_value_string: typing.Optional[ str ] = None ) -> str:
+    def ToString( self, absolute_number_renderer: typing.Optional[ collections.abc.Callable ] = None, replacement_value_string: typing.Optional[ str ] = None ) -> str:
         
         if absolute_number_renderer is None:
             
@@ -402,7 +403,7 @@ class NumberTest( HydrusSerialisable.SerialisableBase ):
         
     
     @staticmethod
-    def STATICCreateMegaLambda( number_tests: typing.Collection[ "NumberTest" ] ):
+    def STATICCreateMegaLambda( number_tests: collections.abc.Collection[ "NumberTest" ] ):
         
         lambdas = [ number_test.GetLambda() for number_test in number_tests ]
         

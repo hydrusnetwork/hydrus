@@ -1,7 +1,7 @@
 import collections
+import collections.abc
 import itertools
 import sqlite3
-import typing
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
@@ -142,7 +142,7 @@ class ClientDBMediaResults( ClientDBModule.ClientDBModule ):
         CG.client_controller.pub( 'notify_files_need_redraw', updated_hashes )
         
     
-    def GenerateFileInfoManagers( self, hash_ids: typing.Collection[ int ], hash_ids_table_name ) -> typing.List[ ClientMediaManagers.FileInfoManager ]:
+    def GenerateFileInfoManagers( self, hash_ids: collections.abc.Collection[ int ], hash_ids_table_name ) -> list[ ClientMediaManagers.FileInfoManager ]:
         
         hash_ids_to_hashes = self.modules_hashes_local_cache.GetHashIdsToHashes( hash_ids = hash_ids )
         
@@ -195,7 +195,7 @@ class ClientDBMediaResults( ClientDBModule.ClientDBModule ):
         return file_info_managers
         
     
-    def GetFileInfoManagers( self, hash_ids: typing.Collection[ int ], sorted = False ) -> typing.List[ ClientMediaManagers.FileInfoManager ]:
+    def GetFileInfoManagers( self, hash_ids: collections.abc.Collection[ int ], sorted = False ) -> list[ ClientMediaManagers.FileInfoManager ]:
         
         ( cached_media_results, missing_hash_ids ) = self._weakref_media_result_cache.GetMediaResultsAndMissing( hash_ids )
         
@@ -226,7 +226,7 @@ class ClientDBMediaResults( ClientDBModule.ClientDBModule ):
         return file_info_managers
         
     
-    def GetFileInfoManagersFromHashes( self, hashes: typing.Collection[ bytes ], sorted: bool = False ) -> typing.List[ ClientMediaManagers.FileInfoManager ]:
+    def GetFileInfoManagersFromHashes( self, hashes: collections.abc.Collection[ bytes ], sorted: bool = False ) -> list[ ClientMediaManagers.FileInfoManager ]:
         
         query_hash_ids = set( self.modules_hashes_local_cache.GetHashIds( hashes ) )
         
@@ -257,7 +257,7 @@ class ClientDBMediaResults( ClientDBModule.ClientDBModule ):
             
         
     
-    def GetForceRefreshTagsManagersWithTableHashIds( self, hash_ids, hash_ids_table_name, hash_ids_to_current_file_service_ids = None ) -> typing.Dict[ int, ClientMediaManagers.TagsManager ]:
+    def GetForceRefreshTagsManagersWithTableHashIds( self, hash_ids, hash_ids_table_name, hash_ids_to_current_file_service_ids = None ) -> dict[ int, ClientMediaManagers.TagsManager ]:
         
         if hash_ids_to_current_file_service_ids is None:
             
@@ -335,7 +335,7 @@ class ClientDBMediaResults( ClientDBModule.ClientDBModule ):
         return hash_ids_to_tag_managers
         
     
-    def GetForceRefreshTagsManagersWithTableHashIdsTagData( self, common_file_service_id, tag_service_ids, hash_ids_table_name ) -> typing.Tuple:
+    def GetForceRefreshTagsManagersWithTableHashIdsTagData( self, common_file_service_id, tag_service_ids, hash_ids_table_name ) -> tuple:
         
         storage_tag_data = []
         display_tag_data = []
@@ -387,7 +387,7 @@ class ClientDBMediaResults( ClientDBModule.ClientDBModule ):
         return self.GetMediaResults( ( hash_id, ) )[0]
         
     
-    def GetMediaResults( self, hash_ids: typing.Collection[ int ], sorted = False ) -> typing.List[ ClientMediaResult.MediaResult ]:
+    def GetMediaResults( self, hash_ids: collections.abc.Collection[ int ], sorted = False ) -> list[ ClientMediaResult.MediaResult ]:
         
         ( cached_media_results, missing_hash_ids ) = self._weakref_media_result_cache.GetMediaResultsAndMissing( hash_ids )
         
@@ -569,7 +569,7 @@ class ClientDBMediaResults( ClientDBModule.ClientDBModule ):
         return media_results[0]
         
     
-    def GetMediaResultsFromHashes( self, hashes: typing.Collection[ bytes ], sorted: bool = False ) -> typing.List[ ClientMediaResult.MediaResult ]:
+    def GetMediaResultsFromHashes( self, hashes: collections.abc.Collection[ bytes ], sorted: bool = False ) -> list[ ClientMediaResult.MediaResult ]:
         
         query_hash_ids = set( self.modules_hashes_local_cache.GetHashIds( hashes ) )
         
@@ -590,7 +590,7 @@ class ClientDBMediaResults( ClientDBModule.ClientDBModule ):
         return media_results
         
     
-    def GetTablesAndColumnsThatUseDefinitions( self, content_type: int ) -> typing.List[ typing.Tuple[ str, str ] ]:
+    def GetTablesAndColumnsThatUseDefinitions( self, content_type: int ) -> list[ tuple[ str, str ] ]:
         
         # if content type is a domain, then give urls? bleh
         

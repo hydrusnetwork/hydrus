@@ -47,7 +47,7 @@ The program will try to draw the sillhouette of the svg with the chosen colours:
 
 ![](images/ratings_spiral_experiment.png)
 
-More complicated shapes obviously look better at higher resolution, which you can now set in `options->media viewer` and `options->thumbnails`. We are going to keep working on this, and I expect to migrate all the old polygons to nicer svg once we have this nailed down. 
+More complicated shapes obviously look better at higher resolution, which you can now set in `options->media viewer hovers` and `options->thumbnails`. We are going to keep working on this, and I expect to migrate all the old polygons to nicer svg once we have this nailed down. 
 
 ## now what? { id="using_ratings" }
 

@@ -1,5 +1,3 @@
-import typing
-
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusExceptions
 from hydrus.core.files.HydrusArchiveHandling import GetZipAsPath
@@ -60,7 +58,7 @@ def MimeFromMicrosoftOpenXMLDocument(path: str):
         
     
 
-def GenerateThumbnailNumPyFromOfficePath( path: str, target_resolution: typing.Tuple[ int, int ] ) -> bytes:
+def GenerateThumbnailNumPyFromOfficePath( path: str, target_resolution: tuple[ int, int ] ) -> bytes:
     
     try:
         

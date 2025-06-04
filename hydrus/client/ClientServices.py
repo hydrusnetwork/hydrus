@@ -1,3 +1,4 @@
+import collections.abc
 import hashlib
 from io import BytesIO
 import json
@@ -300,7 +301,7 @@ class Service( object ):
             
         
     
-    def GetStatusInfo( self ) -> typing.Tuple[ bool, str ]:
+    def GetStatusInfo( self ) -> tuple[ bool, str ]:
         
         with self._lock:
             
@@ -1123,7 +1124,7 @@ class ServiceRestricted( ServiceRemote ):
         return 'next account sync ' + s
         
     
-    def GetStatusInfo( self ) -> typing.Tuple[ bool, str ]:
+    def GetStatusInfo( self ) -> tuple[ bool, str ]:
         
         with self._lock:
             
@@ -3212,7 +3213,7 @@ class ServicesManager( object ):
         self._controller = controller
         
         self._lock = threading.Lock()
-        self._keys_to_services: typing.Dict[ bytes, Service ] = {}
+        self._keys_to_services: dict[ bytes, Service ] = {}
         self._services_sorted = []
         
         self.RefreshServices()
@@ -3232,7 +3233,7 @@ class ServicesManager( object ):
             
         
     
-    def _SetServices( self, services: typing.Collection[ Service ] ):
+    def _SetServices( self, services: collections.abc.Collection[ Service ] ):
         
         self._keys_to_services = { service.GetServiceKey() : service for service in services }
         
@@ -3243,7 +3244,7 @@ class ServicesManager( object ):
         self._services_sorted = sorted( services, key = key )
         
     
-    def Filter( self, service_keys: typing.Iterable[ bytes ], desired_types: typing.Iterable[ int ] ):
+    def Filter( self, service_keys: collections.abc.Iterable[ bytes ], desired_types: collections.abc.Iterable[ int ] ):
         
         with self._lock:
             
@@ -3253,7 +3254,7 @@ class ServicesManager( object ):
             
         
     
-    def FilterValidServiceKeys( self, service_keys: typing.Iterable[ bytes ] ):
+    def FilterValidServiceKeys( self, service_keys: collections.abc.Iterable[ bytes ] ):
         
         with self._lock:
             
@@ -3328,7 +3329,7 @@ class ServicesManager( object ):
             
         
     
-    def GetServiceKeyFromName( self, allowed_types: typing.Collection[ int ], service_name: str ):
+    def GetServiceKeyFromName( self, allowed_types: collections.abc.Collection[ int ], service_name: str ):
         
         with self._lock:
             
@@ -3352,7 +3353,7 @@ class ServicesManager( object ):
             
         
     
-    def GetServiceKeys( self, desired_types: typing.Collection[ int ] = HC.ALL_SERVICES ):
+    def GetServiceKeys( self, desired_types: collections.abc.Collection[ int ] = HC.ALL_SERVICES ):
         
         with self._lock:
             
@@ -3362,7 +3363,7 @@ class ServicesManager( object ):
             
         
     
-    def GetServices( self, desired_types: typing.Collection[ int ] = HC.ALL_SERVICES, randomised: bool = False ) -> typing.List[ Service ]:
+    def GetServices( self, desired_types: collections.abc.Collection[ int ] = HC.ALL_SERVICES, randomised: bool = False ) -> list[ Service ]:
         
         with self._lock:
             

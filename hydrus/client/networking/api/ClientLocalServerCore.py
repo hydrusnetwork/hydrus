@@ -1,3 +1,4 @@
+import collections.abc
 import json
 import typing
 
@@ -230,7 +231,7 @@ def CheckTagService( tag_service_key: bytes ):
     return service
     
 
-def CheckTags( tags: typing.Collection[ str ] ):
+def CheckTags( tags: collections.abc.Collection[ str ] ):
     
     for tag in tags:
         
@@ -623,7 +624,7 @@ def ParseClientAPIPOSTArgs( request ):
     
     return ( parsed_request_args, total_bytes_read )
     
-def ParseClientAPISearchPredicates( request ) -> typing.List[ ClientSearchPredicate.Predicate ]:
+def ParseClientAPISearchPredicates( request ) -> list[ ClientSearchPredicate.Predicate ]:
     
     default_search_values = {}
     
@@ -951,7 +952,7 @@ def ParseTagServiceKey( request: HydrusServerRequest.HydrusRequest ):
     return tag_service_key
     
 
-def ConvertTagListToPredicates( request, tag_list, do_permission_check = True, error_on_invalid_tag = True ) -> typing.List[ ClientSearchPredicate.Predicate ]:
+def ConvertTagListToPredicates( request, tag_list, do_permission_check = True, error_on_invalid_tag = True ) -> list[ ClientSearchPredicate.Predicate ]:
     
     or_tag_lists = [ tag for tag in tag_list if isinstance( tag, list ) ]
     tag_strings = [ tag for tag in tag_list if isinstance( tag, str ) ]

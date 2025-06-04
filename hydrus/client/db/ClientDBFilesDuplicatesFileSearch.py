@@ -1,4 +1,5 @@
 import collections
+import collections.abc
 import itertools
 import random
 import sqlite3
@@ -52,7 +53,7 @@ class ClientDBFilesDuplicatesFileSearch( ClientDBModule.ClientDBModule ):
         return self._STS( self._Execute( 'SELECT king_hash_id FROM duplicate_files;' ) )
         
     
-    def GetPotentialDuplicatePairsForAutoResolution( self, potential_duplicates_search_context: ClientPotentialDuplicatesSearchContext.PotentialDuplicatesSearchContext, relevant_pairs_and_distances: typing.Collection[ typing.Tuple[ int, int, int ] ] ):
+    def GetPotentialDuplicatePairsForAutoResolution( self, potential_duplicates_search_context: ClientPotentialDuplicatesSearchContext.PotentialDuplicatesSearchContext, relevant_pairs_and_distances: collections.abc.Collection[ tuple[ int, int, int ] ] ):
         
         # we need to search the mass of potential duplicates using our search context, but we only want results from within the given pairs
         # to achieve this, we need two layers of clever fast filtering:
@@ -131,7 +132,7 @@ class ClientDBFilesDuplicatesFileSearch( ClientDBModule.ClientDBModule ):
         return matching_pairs
         
     
-    def GetPotentialDuplicatePairsForAutoResolutionMediaResults( self, potential_duplicates_search_context: ClientPotentialDuplicatesSearchContext.PotentialDuplicatesSearchContext, relevant_pairs_and_distances: typing.Collection[ typing.Tuple[ int, int, int ] ] ):
+    def GetPotentialDuplicatePairsForAutoResolutionMediaResults( self, potential_duplicates_search_context: ClientPotentialDuplicatesSearchContext.PotentialDuplicatesSearchContext, relevant_pairs_and_distances: collections.abc.Collection[ tuple[ int, int, int ] ] ):
         
         pairs_of_media_ids = self.GetPotentialDuplicatePairsForAutoResolution( potential_duplicates_search_context, relevant_pairs_and_distances )
         
@@ -435,7 +436,7 @@ class ClientDBFilesDuplicatesFileSearch( ClientDBModule.ClientDBModule ):
         return potential_duplicates_count
         
     
-    def GetRandomPotentialDuplicateHashes( self, potential_duplicates_search_context: ClientPotentialDuplicatesSearchContext.PotentialDuplicatesSearchContext ) -> typing.List[ bytes ]:
+    def GetRandomPotentialDuplicateHashes( self, potential_duplicates_search_context: ClientPotentialDuplicatesSearchContext.PotentialDuplicatesSearchContext ) -> list[ bytes ]:
         
         potential_duplicates_search_context = potential_duplicates_search_context.Duplicate()
         
@@ -584,7 +585,7 @@ class ClientDBFilesDuplicatesFileSearch( ClientDBModule.ClientDBModule ):
             
         
     
-    def GetTablesAndColumnsThatUseDefinitions( self, content_type: int ) -> typing.List[ typing.Tuple[ str, str ] ]:
+    def GetTablesAndColumnsThatUseDefinitions( self, content_type: int ) -> list[ tuple[ str, str ] ]:
         
         tables_and_columns = []
         

@@ -1,4 +1,5 @@
 import collections
+import collections.abc
 import itertools
 import typing
 
@@ -16,7 +17,7 @@ from hydrus.client.media import ClientMedia
 from hydrus.client.metadata import ClientContentUpdates
 from hydrus.client.search import ClientSearchPredicate
 
-def GetLocalMediaPaths( medias: typing.Collection[ ClientMedia.Media ] ):
+def GetLocalMediaPaths( medias: collections.abc.Collection[ ClientMedia.Media ] ):
     
     medias = ClientMedia.FlattenMedia( medias )
     
@@ -42,7 +43,7 @@ def GetLocalMediaPaths( medias: typing.Collection[ ClientMedia.Media ] ):
     return paths
     
 
-def CopyFilesToClipboard( medias: typing.Collection[ ClientMedia.Media ] ):
+def CopyFilesToClipboard( medias: collections.abc.Collection[ ClientMedia.Media ] ):
     
     paths = GetLocalMediaPaths( medias )
     
@@ -52,7 +53,7 @@ def CopyFilesToClipboard( medias: typing.Collection[ ClientMedia.Media ] ):
         
     
 
-def CopyFileIdsToClipboard( medias: typing.Collection[ ClientMedia.Media ] ):
+def CopyFileIdsToClipboard( medias: collections.abc.Collection[ ClientMedia.Media ] ):
     
     flat_media = ClientMedia.FlattenMedia( medias )
     
@@ -66,7 +67,7 @@ def CopyFileIdsToClipboard( medias: typing.Collection[ ClientMedia.Media ] ):
         
     
 
-def CopyFilePathsToClipboard( medias: typing.Collection[ ClientMedia.Media ] ):
+def CopyFilePathsToClipboard( medias: collections.abc.Collection[ ClientMedia.Media ] ):
     
     paths = GetLocalMediaPaths( medias )
     
@@ -169,7 +170,7 @@ def CopyMediaURLClassURLs( medias, url_class ):
     CG.client_controller.pub( 'clipboard', 'text', urls_string )
     
 
-def CopyServiceFilenamesToClipboard( service_key: bytes, medias: typing.Collection[ ClientMedia.Media ] ):
+def CopyServiceFilenamesToClipboard( service_key: bytes, medias: collections.abc.Collection[ ClientMedia.Media ] ):
     
     flat_media = ClientMedia.FlattenMedia( medias )
     
@@ -209,7 +210,7 @@ def CopyServiceFilenamesToClipboard( service_key: bytes, medias: typing.Collecti
         
     
 
-def GetLocalFileActionServiceKeys( media: typing.Collection[ ClientMedia.MediaSingleton ] ):
+def GetLocalFileActionServiceKeys( media: collections.abc.Collection[ ClientMedia.MediaSingleton ] ):
     
     local_media_file_service_keys = set( CG.client_controller.services_manager.GetServiceKeys( ( HC.LOCAL_FILE_DOMAIN, ) ) )
     
@@ -384,7 +385,7 @@ def ShowDuplicatesInNewPage( location_context: ClientLocation.LocationContext, h
         
     
 
-def ShowFilesInNewDuplicatesFilterPage( hashes: typing.Collection[ bytes ], location_context: ClientLocation.LocationContext ):
+def ShowFilesInNewDuplicatesFilterPage( hashes: collections.abc.Collection[ bytes ], location_context: ClientLocation.LocationContext ):
     
     activate_window = CG.client_controller.new_options.GetBoolean( 'activate_window_on_tag_search_page_activation' )
     
@@ -395,12 +396,12 @@ def ShowFilesInNewDuplicatesFilterPage( hashes: typing.Collection[ bytes ], loca
     CG.client_controller.pub( 'new_page_duplicates', location_context, initial_predicates = predicates, page_name = page_name, activate_window = activate_window )
     
 
-def ShowFilesInNewPage( hashes: typing.Collection[ bytes ], location_context: ClientLocation.LocationContext, media_sort = None, media_collect = None ):
+def ShowFilesInNewPage( hashes: collections.abc.Collection[ bytes ], location_context: ClientLocation.LocationContext, media_sort = None, media_collect = None ):
     
     CG.client_controller.pub( 'new_page_query', location_context, initial_hashes = hashes, initial_sort = media_sort, initial_collect = media_collect )
     
 
-def ShowSimilarFilesInNewPage( media: typing.Collection[ ClientMedia.MediaSingleton ], location_context: ClientLocation.LocationContext, max_hamming: int ):
+def ShowSimilarFilesInNewPage( media: collections.abc.Collection[ ClientMedia.MediaSingleton ], location_context: ClientLocation.LocationContext, max_hamming: int ):
     
     hashes = set()
     

@@ -1,4 +1,5 @@
 import collections
+import collections.abc
 import threading
 import time
 import typing
@@ -450,7 +451,7 @@ class Account( object ):
             
         
     
-    def GetStatusInfo( self ) -> typing.Tuple[ bool, str ]:
+    def GetStatusInfo( self ) -> tuple[ bool, str ]:
         
         with self._lock:
             

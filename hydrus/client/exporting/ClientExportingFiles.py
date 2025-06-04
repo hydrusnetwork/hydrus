@@ -1,3 +1,4 @@
+import collections.abc
 import os
 import re
 import typing
@@ -850,7 +851,7 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
         return self._last_error
         
     
-    def GetMetadataRouters( self ) -> typing.Collection[ ClientMetadataMigration.SingleFileMetadataRouter ]:
+    def GetMetadataRouters( self ) -> collections.abc.Collection[ ClientMetadataMigration.SingleFileMetadataRouter ]:
         
         return self._metadata_routers
         
