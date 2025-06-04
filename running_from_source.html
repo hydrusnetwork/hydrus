@@ -2676,16 +2676,31 @@
 <p>I can't promise anything though. The requirements.txt isn't perfect, and something else may break in future! You may like to think about setting up a Linux instance.</p>
 </details>
 <p>Then you will need to install Python. Get 3.10 or 3.11 <a href="https://www.python.org/downloads/windows/">here</a>. During the install process, make sure it has something like 'Add Python to PATH' checked. This makes Python available everywhere in Windows.  </p>
+<p>If you want to test it, right-click on any folder and select 'open in terminal' and copy/paste the following:</p>
+<p><code>python --version</code>
+<code>python -m pip --version</code>
+<code>python -m venv --help</code></p>
+<p>If all these lines produce good output (no errors), you are good to go!</p>
 </div>
 <div class="tabbed-block">
-<p>You should already have a fairly new python. Ideally, you want at least 3.9. You can find out what version you have just by opening a new terminal and typing 'python'.</p>
+<p>You should already have a fairly new python. Ideally, you want at least 3.10. You can find out what version you have just by opening a new terminal and typing <code>python3</code> or <code>python</code>.</p>
+<p>You are going to need <code>pip</code> and <code>venv</code>. These are often bundled with a python install, but not always with a system python. Open a terminal and try these two lines:</p>
+<p><code>python3 -m pip --version</code>
+<code>python3 -m venv --help</code></p>
+<p>If it complains about either, you will need to install them. Try this:</p>
+<p><code>sudo apt install python3-pip</code>
+<code>sudo apt install python3-venv</code></p>
 </div>
 <div class="tabbed-block">
-<p>You should already have a fairly new python. Ideally, you want at least 3.9. You can find out what version you have just by opening a new terminal and typing 'python'.</p>
+<p>You should already have a fairly new python. Ideally, you want at least 3.10. You can find out what version you have just by opening a new terminal and typing <code>python3</code> or <code>python</code>.</p>
+<p>You are going to need <code>pip</code> and <code>venv</code>. These are often bundled with a python install, but not always with a system python. Open a terminal and try these two lines:</p>
+<p><code>python3 -m pip --version</code>
+<code>python3 -m venv --help</code></p>
+<p>If it complains about either, you will need to install them. You do not want to fight with your system python, so you should investigate <code>brew install python</code> to install a separate python just for your username.</p>
 </div>
 </div>
 </div>
-<p>If you are already on newer python, like 3.12+, that's ok--you might need to select the 'advanced' setup later on and choose the '(t)est' options. If you are stuck on 3.9, try the same thing, but with the '(o)lder' options (but I can't promise it will work!).</p>
+<p>Hydrus should be fine with Python 3.10-3.13. If you are already on a newer python, that may be ok, but select the 'advanced' setup later on and choose the '(t)est' options. If you are stuck on something older, try the same thing, but with the '(o)lder' options (but I can't promise it will work!).</p>
 <p><strong>Then, get the hydrus source.</strong> It is best to get it with Git: make a new folder somewhere, open a terminal in it, and then paste:</p>
 <div class="highlight"><pre><span></span><code>git clone https://github.com/hydrusnetwork/hydrus
 </code></pre></div>
@@ -2718,14 +2733,15 @@
 </li>
 <li>
 <p>SQLite3  </p>
-<p><em>This is optional and might feel scary, so feel free to ignore. It updates your python install to newer, faster database tech.</em></p>
+<p><em>This is optional and might feel scary, so feel free to ignore. It updates your python install to newer, faster database tech. You can always come back and do it later.</em></p>
 <p>Open your python install location and find the DLLs folder. Likely something like <code>C:\Program Files\Python311\DLLs</code> or <code>C:\Python311\DLLs</code>. There should be a sqlite3.dll there. Rename it to sqlite3.dll.old, and then open <code>install_dir/static/build_files/windows</code> and copy that 'sqlite3.dll' into the python <code>DLLs</code> folder.</p>
 <p>The absolute newest sqlite3.dll is always available <a href="https://sqlite.org/download.html">here</a>. You want the x64 dll.</p>
 </li>
 <li>
 <p>FFMPEG  </p>
-<p>Get a Windows build of FFMPEG <a href="https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-full.7z">here</a>.</p>
-<p>Extract the ffmpeg.exe into <code>install_dir/bin</code>.</p>
+<p>If you already have FFMPEG on your PATH, you are good to go.</p>
+<p>If not, get a Windows build of FFMPEG <a href="https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-full.7z">here</a>.</p>
+<p>If you know how to put it on your PATH, do so. Otherwise, extract the ffmpeg.exe into <code>install_dir/bin</code>.</p>
 </li>
 </ol>
 </div>
@@ -2734,7 +2750,7 @@
 <li>
 <p>mpv  </p>
 <p>Linux can provide what we need in a couple of different ways. It is important that we get <code>libmpv</code>, rather than just the <code>mpv</code> player. Some Linux installs of mpv do also bring libmpv, but others do not. If your package manager provides mpv and it says it comes with libmpv, you are probably good just to get that.</p>
-<p>Otherwise, try just running <code>apt-get install libmpv1</code> or <code>apt-get install libmpv2</code> in a new terminal. You can also try <code>apt show libmpv2</code> to see any current version. Or, if you use a different package manager, try searching <code>libmpv</code>, <code>libmpv1</code>, <code>libmpv2</code>, or again, just <code>mpv</code> on that.</p>
+<p>Otherwise, try just running <code>apt install libmpv1</code> or <code>apt install libmpv2</code> in a new terminal. You can also try <code>apt show libmpv2</code> to see any current version. Or, if you use a different package manager, try searching <code>libmpv</code>, <code>libmpv1</code>, <code>libmpv2</code>, or again, just <code>mpv</code> on that.</p>
 <ol>
 <li>If you have earlier than 0.34.1, you will be looking at running the 'advanced' setup in the next section and selecting the 'old' mpv.</li>
 <li>If you have 0.34.1 or later, you can run the normal setup script.</li>
@@ -2746,7 +2762,7 @@
 </li>
 <li>
 <p>FFMPEG  </p>
-<p>You should already have ffmpeg. Just type <code>ffmpeg</code> into a new terminal, and it should give a basic version response. If you somehow don't have ffmpeg, check your package manager.</p>
+<p>You should already have ffmpeg, but double-check: just type <code>ffmpeg</code> into a new terminal, and it should give a basic version response. If you don't have it, check your package manager.</p>
 </li>
 </ol>
 </div>
@@ -2781,7 +2797,6 @@
 <p>If you do not have permission to execute the file, do this before trying again:  </p>
 <p><code>chmod +x setup_venv.sh</code></p>
 <p>You will likely have to do the same on the other .sh files.</p>
-<p>If you get an error about the venv failing to activate during <code>setup_venv.sh</code>, you may need to install venv especially for your system. The specific error message should help you out, but you'll be looking at something along the lines of <code>apt install python3.10-venv</code>. </p>
 <p>If you like, you can run the <code>setup_desktop.sh</code> file to install an io.github.hydrusnetwork.hydrus.desktop file to your applications folder. (Or check the template in <code>install_dir/static/io.github.hydrusnetwork.hydrus.desktop</code> and do it yourself!)</p>
 </div>
 <div class="tabbed-block">
@@ -2815,8 +2830,8 @@
 </ul>
 <p>With <code>apt</code>, that will be:</p>
 <ul>
-<li><code>sudo apt-get install libicu-dev</code></li>
-<li><code>sudo apt-get install libxcb-cursor-dev</code></li>
+<li><code>sudo apt install libicu-dev</code></li>
+<li><code>sudo apt install libxcb-cursor-dev</code></li>
 </ul>
 <p>Or check your OS's package manager.</p>
 <p>If you still have trouble with the default Qt6 version, try running setup_venv again and choose a different version. There are several to choose from, including (w)riting a custom version. Check the advanced requirements.txts files in <code>install_dir/static/requirements/advanced</code> for more info, and you can also work off this list: <a href="https://pypi.org/project/PySide6/#history">PySide6</a></p>
@@ -2832,7 +2847,7 @@
 <div class="admonition warning">
 <p class="admonition-title">Missing a Library</p>
 <p>If the client fails to boot, it should place a 'hydrus_crash.log' in your 'db' directory or your desktop, or, if it got far enough, it may write the error straight to the 'client - date.log' file in your db directory.  </p>
-<p>If that error talks about a missing library, try reinstalling your venv. Are you sure it finished correctly? Do you need to run the advanced setup and select a different version of Qt?</p>
+<p>If that error talks about a missing library, particularly 'yaml', try reinstalling your venv. Scroll through the output--are you sure it installed everything correctly? Do you need to run the advanced setup and select a different version of Qt?</p>
 </div>
 <div class="tabbed-set tabbed-alternate" data-tabs="5:3"><input checked="checked" id="__tabbed_5_1" name="__tabbed_5" type="radio" /><input id="__tabbed_5_2" name="__tabbed_5" type="radio" /><input id="__tabbed_5_3" name="__tabbed_5" type="radio" /><div class="tabbed-labels"><label for="__tabbed_5_1">Windows</label><label for="__tabbed_5_2">Linux</label><label for="__tabbed_5_3">macOS</label></div>
 <div class="tabbed-content">
@@ -2852,28 +2867,25 @@
 </div>
 </div>
 <h3 id="simple_updating_guide">Simple Updating Guide<a class="headerlink" href="#simple_updating_guide" title="Permanent link">&para;</a></h3>
-<p>To update, you do the same thing as for the extract builds.</p>
-<ol>
-<li>If you installed by extracting the source zip, then download the <a href="https://github.com/hydrusnetwork/hydrus/releases/latest">latest release</a> source zip and extract it over the top of the folder you have, overwriting the existing source files.</li>
-<li>If you installed with git, then just run <code>git pull</code> as normal. I have added easy 'git_pull' scripts to the install directory for your convenience (on Windows, just double-click 'git_pull.bat').</li>
-</ol>
-<p>If you get a library version error when you try to boot, run the venv setup again. It is worth doing this anyway, every now and then, just to stay up to date.</p>
+<p>Updating is simple. If you installed with <code>git</code>, it takes about three seconds: just open the base install directory in a terminal and type <code>git pull</code>. I have added easy 'git_pull' scripts to the install directory for your convenience (on Windows, just double-click 'git_pull.bat'). </p>
+<p>If you installed by extracting the source zip, you can update much like you would with the built extract: download the <a href="https://github.com/hydrusnetwork/hydrus/releases/latest">latest release</a> source zip and extract it over the top of the folder you have, overwriting the existing source files.</p>
+<p>If you get a library version error when you try to boot, run the venv setup again. It is worth doing this every 3-6 months, just to stay up to date.</p>
 <h3 id="migrating_from_an_existing_install">Migrating from an Existing Install<a class="headerlink" href="#migrating_from_an_existing_install" title="Permanent link">&para;</a></h3>
 <p>Many users start out using one of the official built releases and decide to move to source. There is lots of information <a href="database_migration.html">here</a> about how to migrate the database, but for your purposes, the simple method is this:</p>
 <p><strong>If you never moved your database to another place and do not use -d/--db_dir launch parameter</strong></p>
 <ol>
 <li>Follow the above guide to get the source install working in a new folder on a fresh database</li>
 <li><strong>MAKE A BACKUP OF EVERYTHING</strong></li>
-<li>Delete everything from the source install's <code>db</code> directory.</li>
-<li>Move your built release's entire <code>db</code> directory to the source.</li>
+<li>Delete any test database you made from the source install's <code>db</code> directory.</li>
+<li>Move your built release's entire <code>db</code> directory to the now-clear source <code>db</code> directory.</li>
 <li>Run your source release again--it should load your old db no problem!</li>
-<li>Update your backup routine to point to the new source install location.</li>
+<li>Move things around, or update your backup routine to point to the new source install location.</li>
 </ol>
 <p><strong>If you moved your database to another location and use the -d/--db_dir launch parameter</strong></p>
 <ol>
 <li>Follow the above guide to get the source install working in a new folder on a fresh database (without -db_dir)</li>
 <li><strong>MAKE A BACKUP OF EVERYTHING</strong></li>
-<li>Just to be neat, delete the .db files, .log files, and client_files folder from the source install's <code>db</code> directory.</li>
+<li>Just to be neat, delete any test database you made from the source install's <code>db</code> directory.</li>
 <li>Run the source install with --db_dir just as you would the built executable--it should load your old db no problem!</li>
 </ol>
 <h2 id="what_you_need">Doing it Yourself<a class="headerlink" href="#what_you_need" title="Permanent link">&para;</a></h2>
@@ -2910,31 +2922,29 @@
 <p><code>set QT_API=pyqt6</code></p>
 <div class="admonition note">
 <p class="admonition-title">Qt compatibility</p>
-<p>If you run into trouble running newer versions of Qt6 on Linux, often with an XCB-related error such as <code>qt.qpa.plugin: Could not load the Qt platform plugin "xcb" in "" even though it was found.</code>, try installing the packages <code>libicu-dev</code> and <code>libxcb-cursor-dev</code>. With <code>apt</code> that will be:</p>
-<p>If you run into trouble running newer versions of Qt6, some users have fixed it by installing one or more of these additional packages:</p>
+<p>If the program fails to run, and from terminal it says something like this:</p>
+<p><code>qt.qpa.plugin: From 6.5.0, xcb-cursor0 or libxcb-cursor0 is needed to load the Qt xcb platform plugin</code></p>
+<p>Then Qt6 may need a couple additional packages:</p>
 <ul>
 <li><code>libicu-dev</code></li>
 <li><code>libxcb-cursor-dev</code></li>
-<li><code>libgthread</code></li>
 </ul>
-<p>With <code>apt</code> that will be:</p>
+<p>With <code>apt</code>, that will be:</p>
 <ul>
-<li><code>sudo apt-get install libicu-dev</code></li>
-<li><code>sudo apt-get install libxcb-cursor-dev</code></li>
-<li><code>sudo apt-get install libgthread2.0-0</code></li>
+<li><code>sudo apt install libicu-dev</code></li>
+<li><code>sudo apt install libxcb-cursor-dev</code></li>
 </ul>
 <p>Or check your OS's package manager.</p>
-<p>If you still have trouble with the default Qt6 version, check the advanced requirements.txts in <code>install_dir/static/requirements/advanced</code>. There should be several older version examples you can explore, and you can also work off these lists: <a href="https://pypi.org/project/PySide6/#history">PySide6</a> <a href="https://pypi.org/project/PyQt6/#history">PyQt6</a></p>
-<p>If your OS is very old (and thus you are stuck on older python), you may only be able to run Qt5, in which case you cannot run modern hydrus, sorry! You could try v578, as above in the Windows 7 note.</p>
+<p>If you still have trouble with the default Qt6 version, try running setup_venv again and choose a different version. There are several to choose from, including (w)riting a custom version. Check the advanced requirements.txts files in <code>install_dir/static/requirements/advanced</code> for more info, and you can also work off this list: <a href="https://pypi.org/project/PySide6/#history">PySide6</a></p>
 </div>
 <h3 id="mpv">mpv<a class="headerlink" href="#mpv" title="Permanent link">&para;</a></h3>
 <p>MPV is optional and complicated, but it is great, so it is worth the time to figure out!</p>
 <p>As well as the python wrapper, 'python-mpv' (which is in the requirements.txt), you also need the underlying dev library. This is <em>not</em> mpv the program, but <code>libmpv</code>, often called <code>libmpv1</code> or <code>libmpv2</code>.</p>
 <p>For Windows, the dll builds are <a href="https://sourceforge.net/projects/mpv-player-windows/files/libmpv/">here</a>, although getting a stable version can be difficult. Just put it in your hydrus base install directory. Check the links in the easy-setup guide above for good versions. You can also just grab the 'mpv-1.dll'/'mpv-2.dll' I bundle in my extractable Windows release.</p>
 <p>If you are on Linux, you can usually get <code>libmpv</code> like so:</p>
-<p><code>apt-get install libmpv1</code>
+<p><code>apt install libmpv1</code>
 -or-
-<code>apt-get install libmpv2</code></p>
+<code>apt install libmpv2</code></p>
 <p>On macOS, you should be able to get it with <code>brew install mpv</code>, but you are likely to find mpv crashes the program when it tries to load. Hydev is working on this, but it will probably need a completely different render API.</p>
 <p>Hit <em>help-&gt;about</em> to see your mpv status. If you don't have it, it will present an error popup box with more info.</p>
 <h3 id="sqlite">SQLite<a class="headerlink" href="#sqlite" title="Permanent link">&para;</a></h3>
@@ -2942,7 +2952,7 @@
 <p>On Windows, get the 64-bit sqlite3.dll <a href="https://www.sqlite.org/download.html">here</a>, and just drop it in your base install directory. You can also just grab the 'sqlite3.dll' I bundle in my extractable Windows release.</p>
 <p>You <em>may</em> be able to update your SQLite on Linux or macOS with:</p>
 <ul>
-<li><code>apt-get install libsqlite3-dev</code></li>
+<li><code>apt install libsqlite3-dev</code></li>
 <li>(activate your venv)</li>
 <li><code>python -m pip install pysqlite3</code></li>
 </ul>
@@ -3010,7 +3020,7 @@ choco install -y windows-sdk-10.0
     <span class="md-icon" title="Last update">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 13.1c-.1 0-.3.1-.4.2l-1 1 2.1 2.1 1-1c.2-.2.2-.6 0-.8l-1.3-1.3c-.1-.1-.2-.2-.4-.2m-1.9 1.8-6.1 6V23h2.1l6.1-6.1zM12.5 7v5.2l4 2.4-1 1L11 13V7zM11 21.9c-5.1-.5-9-4.8-9-9.9C2 6.5 6.5 2 12 2c5.3 0 9.6 4.1 10 9.3-.3-.1-.6-.2-1-.2s-.7.1-1 .2C19.6 7.2 16.2 4 12 4c-4.4 0-8 3.6-8 8 0 4.1 3.1 7.5 7.1 7.9l-.1.2z"/></svg>
     </span>
-    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="May 21, 2025 20:44:43 UTC">May 21, 2025</span>
+    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="June 4, 2025 20:18:37 UTC">June 4, 2025</span>
   </span>
 
     
