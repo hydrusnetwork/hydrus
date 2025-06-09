@@ -451,7 +451,7 @@ def GenerateFileBytesNumPy( numpy_image, ext: str = '.png', params: typing.Optio
     if result_success:
         
         # noinspection PyUnresolvedReferences
-        return result_byte_array.tostring()
+        return result_byte_array.tobytes()
         
     else:
         
