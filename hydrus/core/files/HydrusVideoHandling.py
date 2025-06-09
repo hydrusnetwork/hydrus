@@ -1023,7 +1023,7 @@ class VideoRendererFFMPEG( object ):
                 
             else:
                 
-                result = numpy.fromstring( s, dtype = 'uint8' ).reshape( ( h, w, self.depth ) )
+                result = numpy.frombuffer( s, dtype = 'uint8' ).reshape( ( h, w, self.depth ) )
                 
                 self.lastread = result
                 
