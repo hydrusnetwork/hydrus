@@ -152,7 +152,7 @@ def ConvertQtImageToNumPy( qt_image: QG.QImage, strip_useless_alpha = True ):
     
     if qt_image.bytesPerLine() == width * depth:
         
-        numpy_image = numpy.fromstring( data_bytes, dtype = 'uint8' ).reshape( ( height, width, depth ) )
+        numpy_image = numpy.frombuffer( data_bytes, dtype = 'uint8' ).reshape( ( height, width, depth ) )
         
     else:
         
@@ -165,7 +165,7 @@ def ConvertQtImageToNumPy( qt_image: QG.QImage, strip_useless_alpha = True ):
         desired_bytes_per_line = width * depth
         excess_bytes_to_trim = bytes_per_line - desired_bytes_per_line
         
-        numpy_padded = numpy.fromstring( data_bytes, dtype = 'uint8' ).reshape( ( height, bytes_per_line ) )
+        numpy_padded = numpy.frombuffer( data_bytes, dtype = 'uint8' ).reshape( ( height, bytes_per_line ) )
         
         numpy_image = numpy_padded[ :, : -excess_bytes_to_trim ].reshape( ( height, width, depth ) )
         

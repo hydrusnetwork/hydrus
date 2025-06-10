@@ -149,7 +149,7 @@ def DumpToPNG( width, payload_bytes, title, payload_description, text, path ):
     
     header_and_payload_bytes = payload_length_header + payload_bytes + b'\x00' * num_empty_bytes
     
-    payload_image = numpy.fromstring( header_and_payload_bytes, dtype = 'uint8' ).reshape( ( payload_height, width ) )
+    payload_image = numpy.frombuffer( header_and_payload_bytes, dtype = 'uint8' ).reshape( ( payload_height, width ) )
     
     finished_image = numpy.concatenate( ( top_image, payload_image ) )
     
