@@ -92,9 +92,9 @@ To tell it about the new database location, pass it a `-d` or `--db_dir` command
 And it will instead use the given path. If no database is found, it will similarly create a new empty one at that location. You can use any path that is valid in your system.
 
 !!! danger "Bad Locations"
-    **Do not run a SQLite database on a network location!** The database relies on clever hardware-level exclusive file locks, which network interfaces often fake. While the program may work, I cannot guarantee the database will stay non-corrupt.
+    **Do not install to a network location!** (i.e. on a different computer's hard drive) The SQLite database is sensitive to interruption and requires good file locking, which network interfaces often fake. There are [ways of splitting your client up](database_migration.md) so the database is on a local SSD but the files are on a network--this is fine--but you really should not put the database on a remote machine unless you know what you are doing and have a backup in case things go wrong.
     
-    **Do not run a SQLite database on a location with filesystem-level compression enabled!** In the best case (BTRFS), the database can suddenly get extremely slow when it hits a certain size; in the worst (NTFS), a &gt;50GB database will encounter I/O errors and receive sporadic corruption!
+    **Be careful installing to a location with filesystem-level compression or versioning enabled!** It may work ok to start, but when the SQLite database grows to large size, this can cause extreme access latency. I have been told that BTRFS works well these days, and they have been working specifically to improve SQLite performance, but keep it in mind if you are using anything else. Using NTFS compression mode on the database files is not a good idea. Compressing a hydrus database backup is fine, but the live db is sensitive.
 
 Rather than typing the path out in a terminal every time you want to launch your external database, create a new shortcut with the argument in. Something like this:
 

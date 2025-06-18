@@ -17,6 +17,7 @@ from hydrus.core.files import HydrusArchiveHandling
 from hydrus.core.files import HydrusClipHandling
 from hydrus.core.files import HydrusFlashHandling
 from hydrus.core.files import HydrusKritaHandling
+from hydrus.core.files import HydrusPaintNETHandling
 from hydrus.core.files import HydrusPDFHandling
 from hydrus.core.files import HydrusProcreateHandling
 from hydrus.core.files import HydrusPSDHandling
@@ -90,6 +91,7 @@ mimes_to_default_thumbnail_paths[ HC.APPLICATION_PSD ] = os.path.join( HC.STATIC
 mimes_to_default_thumbnail_paths[ HC.APPLICATION_CLIP ] = os.path.join( HC.STATIC_DIR, 'clip.png' )
 mimes_to_default_thumbnail_paths[ HC.APPLICATION_SAI2 ] = os.path.join( HC.STATIC_DIR, 'sai.png' )
 mimes_to_default_thumbnail_paths[ HC.APPLICATION_KRITA ] = os.path.join( HC.STATIC_DIR, 'krita.png' )
+mimes_to_default_thumbnail_paths[ HC.APPLICATION_PAINT_DOT_NET ] = os.path.join( HC.STATIC_DIR, 'paintnet.png' )
 mimes_to_default_thumbnail_paths[ HC.APPLICATION_FLASH ] = os.path.join( HC.STATIC_DIR, 'flash.png' )
 mimes_to_default_thumbnail_paths[ HC.APPLICATION_XCF ] = os.path.join( HC.STATIC_DIR, 'xcf.png' )
 mimes_to_default_thumbnail_paths[ HC.APPLICATION_PROCREATE ] = os.path.join( HC.STATIC_DIR, 'procreate.png' )
@@ -143,7 +145,7 @@ def GenerateThumbnailNumPy( path, target_resolution, mime, duration_ms, num_fram
             
             PrintMoreThumbErrorInfo( e, f'Problem generating thumbnail for "{path}".', extra_description = extra_description )
             
-            thumbnail_numpy = GenerateDefaultThumbnail(mime, target_resolution)
+            thumbnail_numpy = GenerateDefaultThumbnail( mime, target_resolution )
             
         finally:
             
@@ -164,7 +166,7 @@ def GenerateThumbnailNumPy( path, target_resolution, mime, duration_ms, num_fram
             
             PrintMoreThumbErrorInfo( e, f'Problem generating thumbnail for "{path}".', extra_description = extra_description )
             
-            thumbnail_numpy = GenerateDefaultThumbnail(mime, target_resolution)
+            thumbnail_numpy = GenerateDefaultThumbnail( mime, target_resolution )
             
         finally:
             
@@ -180,8 +182,21 @@ def GenerateThumbnailNumPy( path, target_resolution, mime, duration_ms, num_fram
         except Exception as e:
             
             PrintMoreThumbErrorInfo( e, f'Problem generating thumbnail for "{path}".', extra_description = extra_description )
-                        
-            thumbnail_numpy = GenerateDefaultThumbnail(mime, target_resolution)
+            
+            thumbnail_numpy = GenerateDefaultThumbnail( mime, target_resolution )
+            
+        
+    elif mime == HC.APPLICATION_PAINT_DOT_NET:
+        
+        try:
+            
+            thumbnail_numpy = HydrusPaintNETHandling.GenerateThumbnailNumPyFromPaintNET( path, target_resolution )
+            
+        except Exception as e:
+            
+            PrintMoreThumbErrorInfo( e, f'Problem generating thumbnail for "{path}".', extra_description = extra_description )
+            
+            thumbnail_numpy = GenerateDefaultThumbnail( mime, target_resolution )
             
         
     elif mime == HC.APPLICATION_PROCREATE:
@@ -198,7 +213,7 @@ def GenerateThumbnailNumPy( path, target_resolution, mime, duration_ms, num_fram
             
             PrintMoreThumbErrorInfo( e, f'Problem generating thumbnail for "{path}".', extra_description = extra_description )
             
-            thumbnail_numpy = GenerateDefaultThumbnail(mime, target_resolution)
+            thumbnail_numpy = GenerateDefaultThumbnail( mime, target_resolution )
             
         finally:
             
@@ -228,7 +243,7 @@ def GenerateThumbnailNumPy( path, target_resolution, mime, duration_ms, num_fram
             
             PrintMoreThumbErrorInfo( e, f'Problem generating thumbnail for "{path}".', extra_description = extra_description )
             
-            thumbnail_numpy = GenerateDefaultThumbnail(mime, target_resolution)
+            thumbnail_numpy = GenerateDefaultThumbnail( mime, target_resolution )
             
         
     elif mime == HC.APPLICATION_PDF:
@@ -241,7 +256,7 @@ def GenerateThumbnailNumPy( path, target_resolution, mime, duration_ms, num_fram
             
             PrintMoreThumbErrorInfo( e, f'Problem generating thumbnail for "{path}".', extra_description = extra_description )
             
-            thumbnail_numpy = GenerateDefaultThumbnail(mime, target_resolution)
+            thumbnail_numpy = GenerateDefaultThumbnail( mime, target_resolution )
             
         
     elif mime == HC.APPLICATION_PPTX:
@@ -252,13 +267,13 @@ def GenerateThumbnailNumPy( path, target_resolution, mime, duration_ms, num_fram
             
         except HydrusExceptions.NoThumbnailFileException:
             
-            thumbnail_numpy = GenerateDefaultThumbnail(mime, target_resolution)
+            thumbnail_numpy = GenerateDefaultThumbnail( mime, target_resolution )
             
         except Exception as e:
             
             PrintMoreThumbErrorInfo( e, f'Problem generating thumbnail for "{path}".', extra_description = extra_description )
             
-            thumbnail_numpy = GenerateDefaultThumbnail(mime, target_resolution)
+            thumbnail_numpy = GenerateDefaultThumbnail( mime, target_resolution )
             
         
     elif mime == HC.APPLICATION_FLASH:
@@ -276,7 +291,7 @@ def GenerateThumbnailNumPy( path, target_resolution, mime, duration_ms, num_fram
             
             PrintMoreThumbErrorInfo( e, f'Problem generating thumbnail for "{path}".', extra_description = extra_description )
             
-            thumbnail_numpy = GenerateDefaultThumbnail(mime, target_resolution)
+            thumbnail_numpy = GenerateDefaultThumbnail( mime, target_resolution )
             
         
     elif mime == HC.ANIMATION_UGOIRA:
@@ -291,7 +306,7 @@ def GenerateThumbnailNumPy( path, target_resolution, mime, duration_ms, num_fram
             
             PrintMoreThumbErrorInfo( e, f'Problem generating thumbnail for "{path}".', extra_description = extra_description )
             
-            thumbnail_numpy = GenerateDefaultThumbnail(mime, target_resolution)
+            thumbnail_numpy = GenerateDefaultThumbnail( mime, target_resolution )
             
         
     else: # animations and video
@@ -342,7 +357,7 @@ def GenerateThumbnailNumPy( path, target_resolution, mime, duration_ms, num_fram
         
         if numpy_image is None:
             
-            thumbnail_numpy = GenerateDefaultThumbnail(mime, target_resolution)
+            thumbnail_numpy = GenerateDefaultThumbnail( mime, target_resolution )
             
         else:
             
@@ -470,6 +485,17 @@ def GetFileInfo( path, mime = None, ok_to_look_for_hydrus_updates = False ):
         try:
             
             ( width, height ) = HydrusKritaHandling.GetKraProperties( path )
+            
+        except HydrusExceptions.NoResolutionFileException:
+            
+            pass
+            
+        
+    elif mime == HC.APPLICATION_PAINT_DOT_NET:
+        
+        try:
+            
+            ( width, height ) = HydrusPaintNETHandling.GetPaintNETResolution( path )
             
         except HydrusExceptions.NoResolutionFileException:
             
@@ -657,6 +683,7 @@ headers_and_mime = [
     ( ( ( [0], [b'SAI-CANVAS'] ), ), HC.APPLICATION_SAI2 ),
     ( ( ( [0], [b'gimp xcf '] ), ), HC.APPLICATION_XCF ),
     ( ( ( [38, 42, 58, 63],[ b'application/x-krita'] ), ), HC.APPLICATION_KRITA ), # important this comes before zip files because this is also a zip file
+    ( ( ( [0],[ b'PDN3'] ), ), HC.APPLICATION_PAINT_DOT_NET ), # Paint.NET 3.x, which is since 2006 and has xml data internally it seems
     ( ( ( [38, 43],[ b'application/epub+zip'] ), ), HC.APPLICATION_EPUB ),
     ( ( ( [4], [b'FORM'] ), ( [12], [b'DJVU', b'DJVM', b'PM44', b'BM44', b'SDJV'] ), ), HC.APPLICATION_DJVU ),
     ( ( ( [0], [b'{\\rtf'] ), ), HC.APPLICATION_RTF ),

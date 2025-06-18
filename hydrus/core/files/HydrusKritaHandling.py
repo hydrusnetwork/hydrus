@@ -2,6 +2,8 @@ from hydrus.core import HydrusExceptions
 from hydrus.core.files import HydrusArchiveHandling
 from hydrus.core.files.images import HydrusImageHandling
 
+import numpy
+
 from PIL import Image as PILImage
 import xml.etree.ElementTree as ET
 
@@ -36,7 +38,7 @@ def ThumbnailPILImageFromKra( path ):
         
     
 
-def GenerateThumbnailNumPyFromKraPath( path: str, target_resolution: tuple[ int, int ] ) -> bytes:
+def GenerateThumbnailNumPyFromKraPath( path: str, target_resolution: tuple[ int, int ] ) -> numpy.ndarray:
     
     try:
         

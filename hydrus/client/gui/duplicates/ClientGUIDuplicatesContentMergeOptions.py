@@ -453,7 +453,16 @@ class EditDuplicateContentMergeOptionsWidget( ClientGUICommon.StaticBox ):
         
         if self._duplicate_action in ( HC.DUPLICATE_BETTER, HC.DUPLICATE_WORSE ):
             
-            possible_actions = [ HC.CONTENT_MERGE_ACTION_COPY, HC.CONTENT_MERGE_ACTION_MOVE, HC.CONTENT_MERGE_ACTION_TWO_WAY_MERGE ]
+            service = CG.client_controller.services_manager.GetService( service_key )
+            
+            if service.GetServiceType() == HC.TAG_REPOSITORY:
+                
+                possible_actions = [ HC.CONTENT_MERGE_ACTION_COPY, HC.CONTENT_MERGE_ACTION_TWO_WAY_MERGE ]
+                
+            else:
+                
+                possible_actions = [ HC.CONTENT_MERGE_ACTION_COPY, HC.CONTENT_MERGE_ACTION_MOVE, HC.CONTENT_MERGE_ACTION_TWO_WAY_MERGE ]
+                
             
             choice_tuples = [ ( HC.content_merge_string_lookup[ action ], action ) for action in possible_actions ]
             

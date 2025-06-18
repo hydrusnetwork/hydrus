@@ -2390,18 +2390,21 @@ class CanvasHoverFrameRightDuplicates( CanvasHoverFrame ):
         
         def loading_callable():
             
+            self._comparison_statement_score_summary.setText( '' )
+            
             for ( panel, st ) in self._comparison_statements_sts.values():
                 
                 if panel.isVisible():
                     
-                    st.setText( '' )
+                    current_text = st.text()
+                    
+                    num_newlines = current_text.count( '\n' )
+                    
+                    st.setText( num_newlines * '\n' )
                     
                 
             
-            # minimumsize is not immediately updated without this
-            self.layout().activate()
-            
-            self._SizeAndPosition()
+            # no resize here! we don't want any possible flicker mate
             
         
         def pre_work_callable():
@@ -2495,6 +2498,15 @@ class CanvasHoverFrameRightDuplicates( CanvasHoverFrame ):
                         
                     
                 
+                # hackery dackery doo
+                st.updateGeometry()
+                panel.updateGeometry()
+                
+            
+            # some more hackery dackery doo, along with the updateGeometry forced calls above
+            # might be able to remove this if and when the layout chain here is cleaned up all the way to the window()
+            self._comparison_statements_vbox.invalidate()
+            self._comparison_statements_vbox.activate()
             
             # minimumsize is not immediately updated without this
             self.layout().activate()

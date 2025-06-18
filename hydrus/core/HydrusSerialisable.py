@@ -209,9 +209,9 @@ def GetNoneableSerialisableTuple( obj_or_none ):
         
     
 
-def SetNonDupeName( obj, disallowed_names ):
+def SetNonDupeName( obj, disallowed_names, do_casefold = False ):
     
-    non_dupe_name = HydrusData.GetNonDupeName( obj.GetName(), disallowed_names )
+    non_dupe_name = HydrusData.GetNonDupeName( obj.GetName(), disallowed_names, do_casefold = do_casefold )
     
     obj.SetName( non_dupe_name )
     
@@ -424,9 +424,9 @@ class SerialisableBaseNamed( SerialisableBase ):
     
     def SetName( self, name ): self._name = name
     
-    def SetNonDupeName( self, disallowed_names ):
+    def SetNonDupeName( self, disallowed_names, do_casefold = False ):
         
-        self._name = HydrusData.GetNonDupeName( self._name, disallowed_names )
+        self._name = HydrusData.GetNonDupeName( self._name, disallowed_names, do_casefold = do_casefold )
         
     
 class SerialisableDictionary( SerialisableBase, dict ):

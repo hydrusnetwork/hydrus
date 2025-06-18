@@ -235,19 +235,38 @@ def GetNicelyDivisibleNumberForZoom( zoom, no_bigger_than ):
     
     return frac.numerator
     
+
 def GetEmptyDataDict():
     
     data = collections.defaultdict( default_dict_list )
     
     return data
     
-def GetNonDupeName( original_name, disallowed_names ):
+
+def GetNonDupeName( original_name: str, disallowed_names: set[ str ], do_casefold: bool = False ):
+    
+    if do_casefold:
+        
+        disallowed_names = { name.casefold() for name in disallowed_names }
+        
+    
+    def name_exists( name: str ):
+        
+        if do_casefold:
+            
+            return name.casefold() in disallowed_names
+            
+        else:
+            
+            return name in disallowed_names
+            
+        
     
     i = 1
     
     non_dupe_name = original_name
     
-    while non_dupe_name in disallowed_names:
+    while name_exists( non_dupe_name ):
         
         non_dupe_name = original_name + ' (' + str( i ) + ')'
         

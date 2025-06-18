@@ -204,46 +204,113 @@ def DirectoryIsWriteable( path ):
     return True
     
 
-def ElideFilenameOrDirectorySafely( name: str, num_characters_used_in_other_components: typing.Optional[ int ] = None, num_characters_already_used_in_this_component: typing.Optional[ int ] = None ):
+def ElideFilenameSafely( name: str, num_character_count_available: int, directory_prefix: str, ext_suffix: typing.Optional[ str ] ):
     
-    # most OSes cannot handle a filename or dirname with more than 255 characters
-    # Windows cannot handle a _total_ pathname more than 260
-    # to be safe and deal with surprise extensions like (11) or .txt sidecars, we use 220
-    # moreover, unicode paths are encoded to bytes, so we have to count differently
+    # I could prefetch the GetFileSystemType of the dest directory here and test that precisely instead of PLATFORM...
+    # but tbh that opens a Pandora's Box of 'NTFS mount on Linux', and sticking our finger in that sort of thing is Not A Good Idea. let the user handle that if and when it fails
     
-    MAX_PATH_LENGTH = 220
+    # most OSes cannot handle a filename or dirname with more than 256 X, where on Windows that is chars and Linux/macOS is bytes
+    # Windows cannot handle a _total_ pathname more than 260 (unless you activate some new \\?\ thing that doesn't work great yet)
+    # to be safe and deal with surprise extensions like (11) or .txt sidecars, we default to 220
     
-    num_characters_available = MAX_PATH_LENGTH
-    
-    if num_characters_used_in_other_components is not None:
+    if name == '':
         
-        if HC.PLATFORM_WINDOWS:
+        raise Exception( 'Sorry, the proposed filename was empty!' )
+        
+    
+    if num_character_count_available == 0:
+        
+        raise Exception( 'Sorry, it seems like there were no characters available for the filename!' )
+        
+    
+    max_path_bytes = None
+    max_path_characters = None
+    
+    if HC.PLATFORM_WINDOWS:
+        
+        max_path_characters = 260 # 256 + X:\...\
+        
+    elif HC.PLATFORM_LINUX:
+        
+        max_path_bytes = 4096
+        
+    elif HC.PLATFORM_MACOS:
+        
+        max_path_bytes = 1024
+        
+    else:
+        
+        max_path_bytes = 4096 # assume weird Linux but probably robust
+        
+    
+    if max_path_bytes is not None:
+        
+        max_path_bytes -= 20 # bit of padding
+        
+        max_bytes_with_full_filename = len( directory_prefix.encode( 'utf-8' ) ) + 1 + num_character_count_available
+        
+        if max_bytes_with_full_filename > max_path_bytes:
             
-            num_characters_available -= num_characters_used_in_other_components
+            num_character_count_available -= max_bytes_with_full_filename - max_path_bytes
             
-            if num_characters_available <= 0:
+            min_filename_bytes = 18
+            
+            if num_character_count_available <= min_filename_bytes:
                 
                 raise Exception( 'Sorry, it looks like the combined export filename or directory would be too long! Try shortening the export directory name!' )
                 
             
         
     
-    if num_characters_already_used_in_this_component is not None:
+    if max_path_characters is not None:
         
-        num_characters_available -= num_characters_already_used_in_this_component
+        max_path_characters -= 10 # bit of padding
         
-        if num_characters_available <= 0:
+        max_characters_with_full_filename = len( directory_prefix ) + 1 + num_character_count_available
+        
+        if max_characters_with_full_filename > max_path_characters:
+            
+            num_character_count_available -= max_characters_with_full_filename - max_path_characters
+            
+            min_filename_chars = 10
+            
+            if num_character_count_available <= min_filename_chars:
+                
+                raise Exception( 'Sorry, it looks like the combined export filename or directory would be too long! Try shortening the export directory name!' )
+                
+            
+        
+    
+    if ext_suffix is not None:
+        
+        if HC.PLATFORM_WINDOWS:
+            
+            num_character_count_available -= len( ext_suffix )
+            
+        else:
+            
+            num_character_count_available -= len( ext_suffix.encode( 'utf-8' ) )
+            
+        
+        if num_character_count_available <= 0:
             
             raise Exception( 'Sorry, it looks like the export filename would be too long! Try shortening the export phrase or directory!' )
             
         
     
-    if name == '':
+    def the_test( n ):
         
-        return name
+        if HC.PLATFORM_WINDOWS:
+            
+            return len( n ) > num_character_count_available
+            
+        else:
+            
+            return len( n.encode( 'utf-8' ) ) > num_character_count_available
+            
         
     
-    while len( name.encode( 'utf-8' ) ) > num_characters_available:
+    while the_test( name ):
         
         name = name[:-1]
         

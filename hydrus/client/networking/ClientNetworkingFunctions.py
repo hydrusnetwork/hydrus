@@ -146,6 +146,7 @@ def ConvertHTTPSToHTTP( url ):
         raise Exception( 'Given a url that did not have a scheme!' )
         
     
+
 def ConvertHTTPToHTTPS( url ):
     
     if url.startswith( 'https://' ):
@@ -166,16 +167,27 @@ def ConvertHTTPToHTTPS( url ):
 
 def ConvertPathTextToList( path: str ) -> list[ str ]:
     
-    # yo sometimes you see a URL with double slashes in a weird place. maybe we should just split( '/' ) and then remove empty '' results?
-    
     # /post/show/1326143/akunim-anthro-armband-armwear-clothed-clothing-fem
     
-    # for a while we've had URLs like this:
+    # this is a valid URL, with double //
     # https://img2.gelbooru.com//images/80/c8/80c8646b4a49395fb36c805f316c49a9.jpg
-    # I was going to be careful as I unified all this to preserve the double-slash to help legacy known url storage matching, but it seems we've been nuking the extra slash for ages in actual db storage, so w/e!
-    while path.startswith( '/' ):
+    # We have a bunch of legacy URLs where I collapsed starting // down to /. Oh well!
+    
+    if CG.client_controller.new_options.GetBoolean( 'remove_leading_url_double_slashes' ):
         
-        path = path[ 1 : ]
+        # old legacy way
+        while path.startswith( '/' ):
+            
+            path = path[ 1 : ]
+            
+        
+    else:
+        
+        # new test that supports urls properly, but may break some url classes but fingers-crossed it isn't a big deal
+        if path.startswith( '/' ):
+            
+            path = path[ 1 : ]
+            
         
     
     # post/show/1326143/akunim-anthro-armband-armwear-clothed-clothing-fem
@@ -400,11 +412,27 @@ def GetSearchURLs( url ):
         query = p.query
         fragment = p.fragment
         
+        # legacy issue, dealing with URLs we previously collapsed this way
+        # not amazing, but the idea that two urls that differ this way are _actually_ different rather than a storage/parsing discrepancy is not real
+        if path.startswith( '//' ):
+            
+            collapsed_path = path
+            
+            while collapsed_path.startswith( '//' ):
+                
+                collapsed_path = collapsed_path[ 1 : ]
+                
+            
+            collapsed_adjusted_url = urllib.parse.urlunparse( ( scheme, netloc, collapsed_path, params, query, fragment ) )
+            
+            search_urls.add( collapsed_adjusted_url )
+            
+        
         if netloc.startswith( 'www' ):
             
             try:
                 
-                netloc = ConvertDomainIntoSecondLevelDomain( netloc )
+                alt_netloc = ConvertDomainIntoSecondLevelDomain( netloc )
                 
             except HydrusExceptions.URLClassException:
                 
@@ -413,10 +441,10 @@ def GetSearchURLs( url ):
             
         else:
             
-            netloc = 'www.' + netloc
+            alt_netloc = 'www.' + netloc
             
         
-        adjusted_url = urllib.parse.urlunparse( ( scheme, netloc, path, params, query, fragment ) )
+        adjusted_url = urllib.parse.urlunparse( ( scheme, alt_netloc, path, params, query, fragment ) )
         
         search_urls.add( adjusted_url )
         

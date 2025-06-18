@@ -60,42 +60,58 @@ There are now setup scripts that make this easy on Windows and Linux. You do not
         I can't promise anything though. The requirements.txt isn't perfect, and something else may break in future! You may like to think about setting up a Linux instance.
         
 
-    Then you will need to install Python. Get 3.10 or 3.11 [here](https://www.python.org/downloads/windows/). During the install process, make sure it has something like 'Add Python to PATH' checked. This makes Python available everywhere in Windows.  
+    Then you will need to install Python. Get 3.11 or 3.12 [here](https://www.python.org/downloads/windows/). During the install process, make sure it has something like 'Add Python to PATH' checked. This makes Python available everywhere in Windows.  
     
-    If you want to test it, right-click on any folder and select 'open in terminal' and copy/paste the following:
+    If you want to test it, then, _after installation is complete_, right-click on any folder and select 'open in terminal' and copy/paste the following:
     
-    `python --version`
-    `python -m pip --version`
+    `python --version`  
+    `python -m pip --version`  
     `python -m venv --help`
     
     If all these lines produce good output (no errors), you are good to go!
 
 === "Linux"
 
+    You probably have git, but let's check by opening a new terminal and going:
+    
+    `git --version`
+    
+    If you do not get a nice version back, you will want to install it, most likely with:
+    
+    `apt install git`
+    
     You should already have a fairly new python. Ideally, you want at least 3.10. You can find out what version you have just by opening a new terminal and typing `python3` or `python`.
     
     You are going to need `pip` and `venv`. These are often bundled with a python install, but not always with a system python. Open a terminal and try these two lines:
     
-    `python3 -m pip --version`
+    `python3 -m pip --version`  
     `python3 -m venv --help`
     
     If it complains about either, you will need to install them. Try this:
     
-    `sudo apt install python3-pip`
+    `sudo apt install python3-pip`  
     `sudo apt install python3-venv`
 
 === "macOS"
 
+    You may not have git already, so open a new terminal and check with:
+    
+    `git --version`
+    
+    If you do not get a nice version back, you will want to install it, most likely with:
+    
+    `brew install git`
+    
     You should already have a fairly new python. Ideally, you want at least 3.10. You can find out what version you have just by opening a new terminal and typing `python3` or `python`.
     
     You are going to need `pip` and `venv`. These are often bundled with a python install, but not always with a system python. Open a terminal and try these two lines:
     
-    `python3 -m pip --version`
+    `python3 -m pip --version`  
     `python3 -m venv --help`
     
     If it complains about either, you will need to install them. You do not want to fight with your system python, so you should investigate `brew install python` to install a separate python just for your username.
 
-Hydrus should be fine with Python 3.10-3.13. If you are already on a newer python, that may be ok, but select the 'advanced' setup later on and choose the '(t)est' options. If you are stuck on something older, try the same thing, but with the '(o)lder' options (but I can't promise it will work!).
+Hydrus should be fine with Python 3.10-3.13. If you are on an even newer python, that may be ok, but select the 'advanced' setup later on and choose the '(t)est' options. If you are stuck on something older, try the same thing, but with the '(o)lder' options (but I can't promise it will work!).
 
 **Then, get the hydrus source.** It is best to get it with Git: make a new folder somewhere, open a terminal in it, and then paste:
 
@@ -401,8 +417,8 @@ For Windows, the dll builds are [here](https://sourceforge.net/projects/mpv-play
 
 If you are on Linux, you can usually get `libmpv` like so:
 
-`apt install libmpv1`
--or-
+`apt install libmpv1`  
+-or-  
 `apt install libmpv2`
 
 On macOS, you should be able to get it with `brew install mpv`, but you are likely to find mpv crashes the program when it tries to load. Hydev is working on this, but it will probably need a completely different render API.
@@ -487,6 +503,6 @@ I have a fair bit of experience with Windows python, so send me a mail if you ne
 
 I develop hydrus on and am most experienced with Windows, so the program is more stable and reasonable on that. I do not have as much experience with Linux or macOS, but I still appreciate and will work on your Linux/macOS bug reports.
 
-My coding style is unusual and unprofessional. Everything is pretty much hacked together. If you are interested in how things work, please do look through the source and ask me if you don't understand something.
+My coding style is unusual and unprofessional. Everything is pretty much hacked together. I'm constantly throwing new code together and then cleaning and overhauling it down the line. If you are interested in how things work, please do look through the source and ask me if you don't understand something.
 
-I'm constantly throwing new code together and then cleaning and overhauling it down the line. I work strictly alone. While I am very interested in detailed bug reports or suggestions for good libraries to use, I am not looking for pull requests or suggestions on style. I know a lot of things are a mess. Everything I do is [WTFPL](https://github.com/sirkris/WTFPL/blob/master/WTFPL.md), so feel free to fork and play around with things on your end as much as you like.
+I work strictly alone. While I am very interested in detailed bug reports or suggestions for good libraries to use, I am not looking for pull requests or suggestions on style. I know a lot of things are a mess. Everything I do is [WTFPL](https://github.com/sirkris/WTFPL/blob/master/WTFPL.md), so feel free to fork and play around with things on your end as much as you like.

@@ -3630,10 +3630,8 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
             
             menu_items = []
             
-            menu_items.append( ( 'normal', 'from clipboard', 'Load siblings from text in your clipboard.', HydrusData.Call( self._ImportFromClipboard, False ) ) )
-            menu_items.append( ( 'normal', 'from clipboard (only add pairs--no deletions)', 'Load siblings from text in your clipboard.', HydrusData.Call( self._ImportFromClipboard, True ) ) )
-            menu_items.append( ( 'normal', 'from .txt file', 'Load siblings from a .txt file.', HydrusData.Call( self._ImportFromTXT, False ) ) )
-            menu_items.append( ( 'normal', 'from .txt file (only add pairs--no deletions)', 'Load siblings from a .txt file.', HydrusData.Call( self._ImportFromTXT, True ) ) )
+            menu_items.append( ( 'normal', 'from clipboard', 'Load siblings from text in your clipboard.', HydrusData.Call( self._ImportFromClipboard, True ) ) )
+            menu_items.append( ( 'normal', 'from .txt file', 'Load siblings from a .txt file.', HydrusData.Call( self._ImportFromTXT, True ) ) )
             
             self._listctrl_panel.AddMenuButton( 'import', menu_items )
             
@@ -3737,7 +3735,7 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
                 
                 pairs = list( itertools.product( children, parents ) )
                 
-                self._parent_action_context.EnterPairs( self, pairs )
+                self._parent_action_context.EnterPairs( self, pairs, only_add = True )
                 
                 self._children.SetTags( [] )
                 self._parents.SetTags( [] )
@@ -4422,10 +4420,8 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
             
             menu_items = []
             
-            menu_items.append( ( 'normal', 'from clipboard', 'Load siblings from text in your clipboard.', HydrusData.Call( self._ImportFromClipboard, False ) ) )
-            menu_items.append( ( 'normal', 'from clipboard (only add pairs--no deletions)', 'Load siblings from text in your clipboard.', HydrusData.Call( self._ImportFromClipboard, True ) ) )
-            menu_items.append( ( 'normal', 'from .txt file', 'Load siblings from a .txt file.', HydrusData.Call( self._ImportFromTXT, False ) ) )
-            menu_items.append( ( 'normal', 'from .txt file (only add pairs--no deletions)', 'Load siblings from a .txt file.', HydrusData.Call( self._ImportFromTXT, True ) ) )
+            menu_items.append( ( 'normal', 'from clipboard (add new pairs and ignore pre-existing)', 'Load siblings from text in your clipboard.', HydrusData.Call( self._ImportFromClipboard, True ) ) )
+            menu_items.append( ( 'normal', 'from .txt file (add new pairs and ignore pre-existing)', 'Load siblings from a .txt file.', HydrusData.Call( self._ImportFromTXT, True ) ) )
             
             self._listctrl_panel.AddMenuButton( 'import', menu_items )
             
@@ -4522,7 +4518,7 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
                 
                 pairs = [ ( old, self._current_new ) for old in olds ]
                 
-                self._sibling_action_context.EnterPairs( self, pairs )
+                self._sibling_action_context.EnterPairs( self, pairs, only_add = True )
                 
                 self._old_siblings.SetTags( set() )
                 self.SetNew( set() )
@@ -4571,13 +4567,34 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
             
             if old in existing_olds:
                 
-                if status == HC.CONTENT_STATUS_PENDING:
+                if self._current_new is None:
                     
-                    note = 'CONFLICT: Will be rescinded on add.'
+                    if status == HC.CONTENT_STATUS_PENDING:
+                        
+                        note = 'POSSIBLE CONFLICT: May be auto-rescinded on add.'
+                        
+                    elif status == HC.CONTENT_STATUS_CURRENT:
+                        
+                        note = 'POSSIBLE CONFLICT: May be auto-petitioned/deleted on add.'
+                        
                     
-                elif status == HC.CONTENT_STATUS_CURRENT:
+                else:
                     
-                    note = 'CONFLICT: Will be petitioned/deleted on add.'
+                    if self._current_new == new:
+                        
+                        note = 'Already exists.'
+                        
+                    else:
+                        
+                        if status == HC.CONTENT_STATUS_PENDING:
+                            
+                            note = 'CONFLICT: Will be auto-rescinded on add.'
+                            
+                        elif status == HC.CONTENT_STATUS_CURRENT:
+                            
+                            note = 'CONFLICT: Will be auto-petitioned/deleted on add.'
+                            
+                        
                     
                 
             

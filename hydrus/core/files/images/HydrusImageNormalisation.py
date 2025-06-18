@@ -71,7 +71,7 @@ def srgb_encode(c):
 
 def ConvertGammaChromaticityPNGToSRGB( pil_image ):
     
-    if not PilImageIsPNGWithGammaAndChromaticity( pil_image ):
+    if not PILImageIsPNGWithGammaAndChromaticity( pil_image ):
         
         return pil_image
         
@@ -314,7 +314,7 @@ def DequantizeFreshlyLoadedNumPyImage( numpy_image: numpy.ndarray ) -> numpy.nda
     return numpy_image
     
 
-def PilImageIsPNGWithGammaAndChromaticity( pil_image: PILImage.Image ):
+def PILImageIsPNGWithGammaAndChromaticity( pil_image: PILImage.Image ):
     
     if pil_image.format == 'PNG' and pil_image.mode in ( 'RGB', 'RGBA' ) and 'gamma' in pil_image.info and 'chromaticity' in pil_image.info:
         
@@ -329,6 +329,16 @@ def PilImageIsPNGWithGammaAndChromaticity( pil_image: PILImage.Image ):
             
             return False
             
+        
+        return True
+        
+    
+    return False
+    
+
+def PILImageIsPNGWithSRGB( pil_image: PILImage.Image ):
+    
+    if pil_image.format == 'PNG' and 'srgb' in pil_image.info:
         
         return True
         
@@ -360,7 +370,12 @@ def DequantizePILImage( pil_image: PILImage.Image ) -> PILImage.Image:
             pass
             
         
-    elif PilImageIsPNGWithGammaAndChromaticity( pil_image ):
+    elif PILImageIsPNGWithSRGB( pil_image ):
+        
+        pass # we are already sRGB
+        # the 'srgb' key has a value like 0 or 1. this is 'rendering intent' stuff and would be useful if we wanted to convert to another system
+        
+    elif PILImageIsPNGWithGammaAndChromaticity( pil_image ):
         
         # if a png has an ICC Profile, that overrides gamma/chromaticity, so this should be elif
         # there's also srgb, which has precedence between those two and we can consider if and when it comes up.

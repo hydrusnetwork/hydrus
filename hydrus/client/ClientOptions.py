@@ -135,7 +135,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             'secret_discord_dnd_fix' : False,
             'show_unmatched_urls_in_media_viewer' : False,
             'set_search_focus_on_page_change' : False,
-            'allow_remove_on_manage_tags_input' : True,
+            'allow_remove_on_manage_tags_input' : False,
             'yes_no_on_remove_on_manage_tags' : True,
             'activate_window_on_tag_search_page_activation' : False,
             'show_related_tags' : True,
@@ -303,7 +303,8 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             'focus_media_thumb_on_viewer_close' : True,
             'skip_yesno_on_write_autocomplete_multiline_paste' : False,
             'activate_main_gui_on_viewer_close' : False,
-            'override_bandwidth_on_file_urls_from_post_urls' : True
+            'override_bandwidth_on_file_urls_from_post_urls' : True,
+            'remove_leading_url_double_slashes' : True,
         }
         
         #
@@ -508,7 +509,8 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             'watcher_page_status_update_time_minimum_ms' : 1000,
             'watcher_page_status_update_time_ratio_denominator' : 30,
             'media_viewer_default_zoom_type_override' : ClientGUICanvasMedia.MEDIA_VIEWER_ZOOM_TYPE_DEFAULT_FOR_FILETYPE,
-            'preview_default_zoom_type_override' : ClientGUICanvasMedia.MEDIA_VIEWER_ZOOM_TYPE_DEFAULT_FOR_FILETYPE
+            'preview_default_zoom_type_override' : ClientGUICanvasMedia.MEDIA_VIEWER_ZOOM_TYPE_DEFAULT_FOR_FILETYPE,
+            'export_filename_character_limit' : 220
         }
         
         self._dictionary[ 'floats' ] = {

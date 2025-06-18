@@ -612,6 +612,49 @@ class URLClass( HydrusSerialisable.SerialisableBaseNamed ):
             
         
     
+    def _TestPathComponents( self, path: str ):
+        
+        path_components = ClientNetworkingFunctions.ConvertPathTextToList( path )
+        
+        if self._no_more_path_components_than_this:
+            
+            if len( path_components ) > len( self._path_components ):
+                
+                raise HydrusExceptions.URLClassException( '"{}" has {} path components, but I will not allow more than my defined {}!'.format( path, len( path_components ), len( self._path_components ) ) )
+                
+            
+        
+        for ( index, ( string_match, default ) ) in enumerate( self._path_components ):
+            
+            if len( path_components ) > index:
+                
+                path_component = path_components[ index ]
+                
+                try:
+                    
+                    string_match.Test( path_component )
+                    
+                except HydrusExceptions.StringMatchException as e:
+                    
+                    raise HydrusExceptions.URLClassException( str( e ) )
+                    
+                
+            elif default is None:
+                
+                if index + 1 == len( self._path_components ):
+                    
+                    message = '"{}" has {} path components, but I was expecting {}!'.format( path, len( path_components ), len( self._path_components ) )
+                    
+                else:
+                    
+                    message = '"{}" has {} path components, but I was expecting at least {} and maybe as many as {}!'.format( path, len( path_components ), index + 1, len( self._path_components ) )
+                    
+                
+                raise HydrusExceptions.URLClassException( message )
+                
+            
+        
+    
     def _UpdateSerialisableInfo( self, version, old_serialisable_info ):
         
         if version == 1:
@@ -1469,46 +1512,9 @@ class URLClass( HydrusSerialisable.SerialisableBaseNamed ):
         path = p.path
         query = p.query
         
-        path_components = ClientNetworkingFunctions.ConvertPathTextToList( path )
+        self._TestPathComponents( path )
+        
         ( query_dict, single_value_parameters, param_order ) = ClientNetworkingFunctions.ConvertQueryTextToDict( query )
-        
-        if self._no_more_path_components_than_this:
-            
-            if len( path_components ) > len( self._path_components ):
-                
-                raise HydrusExceptions.URLClassException( '"{}" has {} path components, but I will not allow more than my defined {}!'.format( path, len( path_components ), len( self._path_components ) ) )
-                
-            
-        
-        for ( index, ( string_match, default ) ) in enumerate( self._path_components ):
-            
-            if len( path_components ) > index:
-                
-                path_component = path_components[ index ]
-                
-                try:
-                    
-                    string_match.Test( path_component )
-                    
-                except HydrusExceptions.StringMatchException as e:
-                    
-                    raise HydrusExceptions.URLClassException( str( e ) )
-                    
-                
-            elif default is None:
-                
-                if index + 1 == len( self._path_components ):
-                    
-                    message = '"{}" has {} path components, but I was expecting {}!'.format( path, len( path_components ), len( self._path_components ) )
-                    
-                else:
-                    
-                    message = '"{}" has {} path components, but I was expecting at least {} and maybe as many as {}!'.format( path, len( path_components ), index + 1, len( self._path_components ) )
-                    
-                
-                raise HydrusExceptions.URLClassException( message )
-                
-            
         
         if self._no_more_parameters_than_this:
             

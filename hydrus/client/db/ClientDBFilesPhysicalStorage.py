@@ -175,19 +175,26 @@ class ClientDBFilesPhysicalStorage( ClientDBModule.ClientDBModule ):
             
         
         prefix = source_subfolder.prefix
-        portable_source_base_location = source_subfolder.base_location.portable_path
+        creation_source_base_location = source_subfolder.base_location.creation_path
         
-        self._Execute( 'DELETE FROM client_files_subfolders WHERE prefix = ? AND location = ?;', ( prefix, portable_source_base_location ) )
+        self._Execute( 'DELETE FROM client_files_subfolders WHERE prefix = ? AND location = ?;', ( prefix, creation_source_base_location ) )
         
         if self._GetRowCount() == 0:
             
-            absolute_base_location = source_subfolder.base_location.path
+            portable_source_base_location = source_subfolder.base_location.portable_path
             
-            self._Execute( 'DELETE FROM client_files_subfolders WHERE prefix = ? AND location = ?;', ( prefix, absolute_base_location ) )
+            self._Execute( 'DELETE FROM client_files_subfolders WHERE prefix = ? AND location = ?;', ( prefix, portable_source_base_location ) )
             
             if self._GetRowCount() == 0:
                 
-                raise Exception( f'Was commanded to move "{source_subfolder}" to "{dest_subfolder}", but the entry for the source folder seems incorrect! Please contact hydrus dev!' )
+                absolute_base_location = source_subfolder.base_location.path
+                
+                self._Execute( 'DELETE FROM client_files_subfolders WHERE prefix = ? AND location = ?;', ( prefix, absolute_base_location ) )
+                
+                if self._GetRowCount() == 0:
+                    
+                    raise Exception( f'Was commanded to move "{source_subfolder}" to "{dest_subfolder}", but the entry for the source folder seems incorrect! Please contact hydrus dev!' )
+                    
                 
             
         
@@ -240,22 +247,29 @@ class ClientDBFilesPhysicalStorage( ClientDBModule.ClientDBModule ):
             prefix = incorrect_subfolder.prefix
             
             # it is possible these are actually the same, when we do the 'just regen my thumbs, no recovery'
-            portable_incorrect_base_location = incorrect_subfolder.base_location.portable_path
+            creation_incorrect_base_location = incorrect_subfolder.base_location.creation_path
             portable_correct_base_location = correct_subfolder.base_location.portable_path
             
-            if portable_incorrect_base_location != portable_correct_base_location:
+            if creation_incorrect_base_location != portable_correct_base_location:
                 
-                self._Execute( 'DELETE FROM client_files_subfolders WHERE prefix = ? AND location = ?;', ( prefix, portable_incorrect_base_location ) )
+                self._Execute( 'DELETE FROM client_files_subfolders WHERE prefix = ? AND location = ?;', ( prefix, creation_incorrect_base_location ) )
                 
                 if self._GetRowCount() == 0:
                     
-                    absolute_base_location = incorrect_subfolder.base_location.path
+                    portable_incorrect_base_location = incorrect_subfolder.base_location.portable_path
                     
-                    self._Execute( 'DELETE FROM client_files_subfolders WHERE prefix = ? AND location = ?;', ( prefix, absolute_base_location ) )
+                    self._Execute( 'DELETE FROM client_files_subfolders WHERE prefix = ? AND location = ?;', ( prefix, portable_incorrect_base_location ) )
                     
                     if self._GetRowCount() == 0:
                         
-                        raise Exception( f'When trying to repair the database file storage system, I could not remove the old "{incorrect_subfolder}" entry from the database! Please contact hydrus dev--you probably need manual fixing.' )
+                        absolute_incorrect_base_location = incorrect_subfolder.base_location.path
+                        
+                        self._Execute( 'DELETE FROM client_files_subfolders WHERE prefix = ? AND location = ?;', ( prefix, absolute_incorrect_base_location ) )
+                        
+                        if self._GetRowCount() == 0:
+                            
+                            raise Exception( f'When trying to repair the database file storage system, I could not remove the old "{incorrect_subfolder}" entry from the database! Please contact hydrus dev--you probably need manual fixing.' )
+                            
                         
                     
                 

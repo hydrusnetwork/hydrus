@@ -793,6 +793,7 @@ class Controller( object ):
         ]
         
         module_lookup[ 'data' ] = [
+            TestHydrusPaths,
             TestClientConstants,
             TestClientFileStorage,
             TestClientImportObjects,
@@ -802,7 +803,6 @@ class Controller( object ):
             TestClientTags,
             TestClientThreading,
             TestHydrusData,
-            TestHydrusPaths,
             TestHydrusTags,
             TestHydrusTime,
             TestHydrusSerialisable,

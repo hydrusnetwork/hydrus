@@ -1327,11 +1327,11 @@ class BetterListCtrlTreeView( QW.QTreeView ):
         self.columnListContentsChanged.emit()
         
     
-    def SetNonDupeName( self, obj: object ):
+    def SetNonDupeName( self, obj: object, do_casefold = False ):
         
         current_names = { o.GetName() for o in self.GetData() if o is not obj }
 
-        HydrusSerialisable.SetNonDupeName( obj, current_names )
+        HydrusSerialisable.SetNonDupeName( obj, current_names, do_casefold = do_casefold )
         
     
     def ShowDeleteSelectedDialog( self ):

@@ -141,7 +141,45 @@ def ConvertManyStringsToNiceInsertableHumanSummary( texts: collections.abc.Colle
             
         else:
             
-            t = ', '.join( texts )
+            LINE_NO_LONGER_THAN = 64
+            NUM_LINES_LIMIT = 24
+            
+            lines = []
+            line = ''
+            
+            texts_to_do = list( texts )
+            
+            while len( texts_to_do ) > 0:
+                
+                text = texts_to_do.pop( 0 )
+                
+                if line == '':
+                    
+                    line = text
+                    
+                else:
+                    
+                    if len( line ) + 2 + len( text ) > LINE_NO_LONGER_THAN:
+                        
+                        lines.append( line )
+                        
+                        line = text
+                        
+                    else:
+                        
+                        line += ', ' + text
+                        
+                    
+                
+                if len( lines ) >= NUM_LINES_LIMIT:
+                    
+                    lines.append( f'and {HydrusNumbers.ToHumanInt( len( texts_to_do ) )} others' )
+                    
+                    break
+                    
+                
+            
+            t = '\n'.join( lines )
             
         
         if no_trailing_whitespace:
