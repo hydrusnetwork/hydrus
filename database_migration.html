@@ -2441,8 +2441,8 @@
 <p>And it will instead use the given path. If no database is found, it will similarly create a new empty one at that location. You can use any path that is valid in your system.</p>
 <div class="admonition danger">
 <p class="admonition-title">Bad Locations</p>
-<p><strong>Do not run a SQLite database on a network location!</strong> The database relies on clever hardware-level exclusive file locks, which network interfaces often fake. While the program may work, I cannot guarantee the database will stay non-corrupt.</p>
-<p><strong>Do not run a SQLite database on a location with filesystem-level compression enabled!</strong> In the best case (BTRFS), the database can suddenly get extremely slow when it hits a certain size; in the worst (NTFS), a &gt;50GB database will encounter I/O errors and receive sporadic corruption!</p>
+<p><strong>Do not install to a network location!</strong> (i.e. on a different computer's hard drive) The SQLite database is sensitive to interruption and requires good file locking, which network interfaces often fake. There are <a href="database_migration.html">ways of splitting your client up</a> so the database is on a local SSD but the files are on a network--this is fine--but you really should not put the database on a remote machine unless you know what you are doing and have a backup in case things go wrong.</p>
+<p><strong>Be careful installing to a location with filesystem-level compression or versioning enabled!</strong> It may work ok to start, but when the SQLite database grows to large size, this can cause extreme access latency. I have been told that BTRFS works well these days, and they have been working specifically to improve SQLite performance, but keep it in mind if you are using anything else. Using NTFS compression mode on the database files is not a good idea. Compressing a hydrus database backup is fine, but the live db is sensitive.</p>
 </div>
 <p>Rather than typing the path out in a terminal every time you want to launch your external database, create a new shortcut with the argument in. Something like this:</p>
 <p><img alt="" src="images/db_migration_shortcut.png" /></p>
@@ -2495,7 +2495,7 @@
     <span class="md-icon" title="Last update">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 13.1c-.1 0-.3.1-.4.2l-1 1 2.1 2.1 1-1c.2-.2.2-.6 0-.8l-1.3-1.3c-.1-.1-.2-.2-.4-.2m-1.9 1.8-6.1 6V23h2.1l6.1-6.1zM12.5 7v5.2l4 2.4-1 1L11 13V7zM11 21.9c-5.1-.5-9-4.8-9-9.9C2 6.5 6.5 2 12 2c5.3 0 9.6 4.1 10 9.3-.3-.1-.6-.2-1-.2s-.7.1-1 .2C19.6 7.2 16.2 4 12 4c-4.4 0-8 3.6-8 8 0 4.1 3.1 7.5 7.1 7.9l-.1.2z"/></svg>
     </span>
-    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="February 14, 2024 21:20:24 UTC">February 14, 2024</span>
+    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="June 18, 2025 20:40:39 UTC">June 18, 2025</span>
   </span>
 
     

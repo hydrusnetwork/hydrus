@@ -2675,32 +2675,40 @@
 <p>Then, later, when you do the <code>git clone https://github.com/hydrusnetwork/hydrus</code> line, you will need to run <code>git checkout tags/v578</code>, which will rewind you to that point in time.</p>
 <p>I can't promise anything though. The requirements.txt isn't perfect, and something else may break in future! You may like to think about setting up a Linux instance.</p>
 </details>
-<p>Then you will need to install Python. Get 3.10 or 3.11 <a href="https://www.python.org/downloads/windows/">here</a>. During the install process, make sure it has something like 'Add Python to PATH' checked. This makes Python available everywhere in Windows.  </p>
-<p>If you want to test it, right-click on any folder and select 'open in terminal' and copy/paste the following:</p>
-<p><code>python --version</code>
-<code>python -m pip --version</code>
+<p>Then you will need to install Python. Get 3.11 or 3.12 <a href="https://www.python.org/downloads/windows/">here</a>. During the install process, make sure it has something like 'Add Python to PATH' checked. This makes Python available everywhere in Windows.  </p>
+<p>If you want to test it, then, <em>after installation is complete</em>, right-click on any folder and select 'open in terminal' and copy/paste the following:</p>
+<p><code>python --version</code><br />
+<code>python -m pip --version</code><br />
 <code>python -m venv --help</code></p>
 <p>If all these lines produce good output (no errors), you are good to go!</p>
 </div>
 <div class="tabbed-block">
+<p>You probably have git, but let's check by opening a new terminal and going:</p>
+<p><code>git --version</code></p>
+<p>If you do not get a nice version back, you will want to install it, most likely with:</p>
+<p><code>apt install git</code></p>
 <p>You should already have a fairly new python. Ideally, you want at least 3.10. You can find out what version you have just by opening a new terminal and typing <code>python3</code> or <code>python</code>.</p>
 <p>You are going to need <code>pip</code> and <code>venv</code>. These are often bundled with a python install, but not always with a system python. Open a terminal and try these two lines:</p>
-<p><code>python3 -m pip --version</code>
+<p><code>python3 -m pip --version</code><br />
 <code>python3 -m venv --help</code></p>
 <p>If it complains about either, you will need to install them. Try this:</p>
-<p><code>sudo apt install python3-pip</code>
+<p><code>sudo apt install python3-pip</code><br />
 <code>sudo apt install python3-venv</code></p>
 </div>
 <div class="tabbed-block">
+<p>You may not have git already, so open a new terminal and check with:</p>
+<p><code>git --version</code></p>
+<p>If you do not get a nice version back, you will want to install it, most likely with:</p>
+<p><code>brew install git</code></p>
 <p>You should already have a fairly new python. Ideally, you want at least 3.10. You can find out what version you have just by opening a new terminal and typing <code>python3</code> or <code>python</code>.</p>
 <p>You are going to need <code>pip</code> and <code>venv</code>. These are often bundled with a python install, but not always with a system python. Open a terminal and try these two lines:</p>
-<p><code>python3 -m pip --version</code>
+<p><code>python3 -m pip --version</code><br />
 <code>python3 -m venv --help</code></p>
 <p>If it complains about either, you will need to install them. You do not want to fight with your system python, so you should investigate <code>brew install python</code> to install a separate python just for your username.</p>
 </div>
 </div>
 </div>
-<p>Hydrus should be fine with Python 3.10-3.13. If you are already on a newer python, that may be ok, but select the 'advanced' setup later on and choose the '(t)est' options. If you are stuck on something older, try the same thing, but with the '(o)lder' options (but I can't promise it will work!).</p>
+<p>Hydrus should be fine with Python 3.10-3.13. If you are on an even newer python, that may be ok, but select the 'advanced' setup later on and choose the '(t)est' options. If you are stuck on something older, try the same thing, but with the '(o)lder' options (but I can't promise it will work!).</p>
 <p><strong>Then, get the hydrus source.</strong> It is best to get it with Git: make a new folder somewhere, open a terminal in it, and then paste:</p>
 <div class="highlight"><pre><span></span><code>git clone https://github.com/hydrusnetwork/hydrus
 </code></pre></div>
@@ -2942,8 +2950,8 @@
 <p>As well as the python wrapper, 'python-mpv' (which is in the requirements.txt), you also need the underlying dev library. This is <em>not</em> mpv the program, but <code>libmpv</code>, often called <code>libmpv1</code> or <code>libmpv2</code>.</p>
 <p>For Windows, the dll builds are <a href="https://sourceforge.net/projects/mpv-player-windows/files/libmpv/">here</a>, although getting a stable version can be difficult. Just put it in your hydrus base install directory. Check the links in the easy-setup guide above for good versions. You can also just grab the 'mpv-1.dll'/'mpv-2.dll' I bundle in my extractable Windows release.</p>
 <p>If you are on Linux, you can usually get <code>libmpv</code> like so:</p>
-<p><code>apt install libmpv1</code>
--or-
+<p><code>apt install libmpv1</code><br />
+-or-<br />
 <code>apt install libmpv2</code></p>
 <p>On macOS, you should be able to get it with <code>brew install mpv</code>, but you are likely to find mpv crashes the program when it tries to load. Hydev is working on this, but it will probably need a completely different render API.</p>
 <p>Hit <em>help-&gt;about</em> to see your mpv status. If you don't have it, it will present an error popup box with more info.</p>
@@ -2998,8 +3006,8 @@ choco install -y windows-sdk-10.0
 <p>I have a fair bit of experience with Windows python, so send me a mail if you need help.</p>
 <h2 id="my_code">My Code<a class="headerlink" href="#my_code" title="Permanent link">&para;</a></h2>
 <p>I develop hydrus on and am most experienced with Windows, so the program is more stable and reasonable on that. I do not have as much experience with Linux or macOS, but I still appreciate and will work on your Linux/macOS bug reports.</p>
-<p>My coding style is unusual and unprofessional. Everything is pretty much hacked together. If you are interested in how things work, please do look through the source and ask me if you don't understand something.</p>
-<p>I'm constantly throwing new code together and then cleaning and overhauling it down the line. I work strictly alone. While I am very interested in detailed bug reports or suggestions for good libraries to use, I am not looking for pull requests or suggestions on style. I know a lot of things are a mess. Everything I do is <a href="https://github.com/sirkris/WTFPL/blob/master/WTFPL.md">WTFPL</a>, so feel free to fork and play around with things on your end as much as you like.</p>
+<p>My coding style is unusual and unprofessional. Everything is pretty much hacked together. I'm constantly throwing new code together and then cleaning and overhauling it down the line. If you are interested in how things work, please do look through the source and ask me if you don't understand something.</p>
+<p>I work strictly alone. While I am very interested in detailed bug reports or suggestions for good libraries to use, I am not looking for pull requests or suggestions on style. I know a lot of things are a mess. Everything I do is <a href="https://github.com/sirkris/WTFPL/blob/master/WTFPL.md">WTFPL</a>, so feel free to fork and play around with things on your end as much as you like.</p>
 
 
 
@@ -3020,7 +3028,7 @@ choco install -y windows-sdk-10.0
     <span class="md-icon" title="Last update">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 13.1c-.1 0-.3.1-.4.2l-1 1 2.1 2.1 1-1c.2-.2.2-.6 0-.8l-1.3-1.3c-.1-.1-.2-.2-.4-.2m-1.9 1.8-6.1 6V23h2.1l6.1-6.1zM12.5 7v5.2l4 2.4-1 1L11 13V7zM11 21.9c-5.1-.5-9-4.8-9-9.9C2 6.5 6.5 2 12 2c5.3 0 9.6 4.1 10 9.3-.3-.1-.6-.2-1-.2s-.7.1-1 .2C19.6 7.2 16.2 4 12 4c-4.4 0-8 3.6-8 8 0 4.1 3.1 7.5 7.1 7.9l-.1.2z"/></svg>
     </span>
-    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="June 4, 2025 20:18:37 UTC">June 4, 2025</span>
+    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="June 18, 2025 20:40:39 UTC">June 18, 2025</span>
   </span>
 
     
