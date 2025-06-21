@@ -257,6 +257,8 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             'draw_tags_hover_in_media_viewer_background' : True,
             'draw_top_hover_in_media_viewer_background' : True,
             'draw_top_right_hover_in_media_viewer_background' : True,
+            'draw_top_right_hover_in_preview_window_background' : False,
+            'preview_window_hover_top_right_shows_popup' : False,
             'draw_notes_hover_in_media_viewer_background' : True,
             'draw_bottom_right_index_in_media_viewer_background' : True,
             'disable_tags_hover_in_media_viewer': False,
@@ -295,6 +297,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             'set_requests_ca_bundle_env' : False,
             'mpv_loop_playlist_instead_of_file' : False,
             'draw_thumbnail_rating_background' : True,
+            'draw_thumbnail_numerical_ratings_collapsed_always' : False,
             'show_destination_page_when_dnd_url' : True,
             'confirm_non_empty_downloader_page_close' : True,
             'confirm_all_page_closes' : False,
@@ -513,7 +516,9 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         self._dictionary[ 'floats' ] = {
             'draw_thumbnail_rating_icon_size_px' : ClientGUIPainterShapes.SIZE.width(),
-            'media_viewer_rating_icon_size_px' : ClientGUIPainterShapes.SIZE.width()
+            'media_viewer_rating_icon_size_px' : ClientGUIPainterShapes.SIZE.width(),
+            'thumbnail_rating_incdec_width_px' : ClientGUIPainterShapes.SIZE.width() * 2,
+            'media_viewer_rating_incdec_width_px' : ClientGUIPainterShapes.SIZE.width() * 2
         }
         
         #

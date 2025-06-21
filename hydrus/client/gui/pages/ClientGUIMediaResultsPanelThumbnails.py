@@ -2442,6 +2442,7 @@ class Thumbnail( Selectable ):
         
         # ratings
         THUMBNAIL_RATING_ICON_SET_SIZE = round( new_options.GetFloat( 'draw_thumbnail_rating_icon_size_px' ) )
+        THUMBNAIL_RATING_INCDEC_SET_WIDTH = round( new_options.GetFloat( 'thumbnail_rating_incdec_width_px' ) )
         STAR_DX = THUMBNAIL_RATING_ICON_SET_SIZE
         STAR_DY = THUMBNAIL_RATING_ICON_SET_SIZE
         
@@ -2535,8 +2536,8 @@ class Thumbnail( Selectable ):
         
         if num_to_show > 0:
             
-            control_width = THUMBNAIL_RATING_ICON_SET_SIZE * 2 #+ PAD_PX?
-            control_height = THUMBNAIL_RATING_ICON_SET_SIZE
+            control_width = THUMBNAIL_RATING_INCDEC_SET_WIDTH
+            control_height = THUMBNAIL_RATING_INCDEC_SET_WIDTH / 2
             
             rect_width = ( control_width * num_to_show ) + ( ICON_MARGIN * 2 )
             rect_height = control_height + ( ICON_MARGIN * 2 )
@@ -2558,7 +2559,7 @@ class Thumbnail( Selectable ):
                 
                 ( rating_state, rating ) = ClientRatings.GetIncDecStateFromMedia( ( media, ), service_key )
                 
-                ClientGUIRatings.DrawIncDec( painter, incdec_rating_current_x, incdec_rating_current_y, service_key, rating_state, rating, QC.QSize( STAR_DX * 2, STAR_DY ), QC.QSize( ICON_PAD, ICON_MARGIN ) )
+                ClientGUIRatings.DrawIncDec( painter, incdec_rating_current_x, incdec_rating_current_y, service_key, rating_state, rating, QC.QSize( control_width, control_height ), QC.QSize( ICON_PAD, ICON_MARGIN ) )
                 
                 incdec_rating_current_x += control_width
                 

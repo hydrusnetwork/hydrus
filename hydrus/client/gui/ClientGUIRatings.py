@@ -85,9 +85,18 @@ def DrawIncDec( painter: QG.QPainter, x, y, service_key, rating_state, rating, s
     
     text_pos = QC.QPoint( x, y )
     
-    if incdec_font.pixelSize() > 8:
+    if incdec_font.pixelSize() > 20:
         
         text_pos = QC.QPoint( x + 1, y + 1 )
+        
+    elif incdec_font.pixelSize() > 12:
+        
+        text_pos = QC.QPoint( x - 1, y - 1 )
+        
+    elif incdec_font.pixelSize() < 10:
+        
+        painter.setRenderHint( QG.QPainter.RenderHint.Antialiasing, False )
+        text_pos = QC.QPoint( x - 1, y - 1 )
         
     
     text_rect = QC.QRect( text_pos, size - pad_size )
@@ -172,7 +181,8 @@ def GetNumericalWidth( service_key, star_width, pad_px = None ):
         num_stars = 1
         
     
-    return ( ( star_width + pad_px ) * num_stars - 1 ) + ( ClientGUIPainterShapes.PAD_PX ) - ( pad_px if pad_px < 0 else 0 )
+    return ( ( star_width + pad_px ) * num_stars - 1 ) + ( ClientGUIPainterShapes.PAD_PX ) - pad_px
+    
     
 def GetPenAndBrushColours( service_key, rating_state ):
     

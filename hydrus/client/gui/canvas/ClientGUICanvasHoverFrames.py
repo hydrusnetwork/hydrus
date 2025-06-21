@@ -145,7 +145,7 @@ class RatingIncDecCanvas( ClientGUIRatings.RatingIncDec ):
         
         pad = ClientGUIPainterShapes.PAD_PX
         
-        return QC.QSize( self._iconsize.width() + pad, self._iconsize.height() + pad )
+        return QC.QSize( int( self._iconsize.width() + pad ), int( self._iconsize.height() + pad ) )
     
 
 class RatingLikeCanvas( ClientGUIRatings.RatingLike ):
@@ -305,7 +305,7 @@ class RatingNumericalCanvas( ClientGUIRatings.RatingNumericalControl ):
         
         if self._current_media is not None:
             
-            ClientGUIRatings.DrawNumerical( painter, ClientGUIPainterShapes.PAD_PX / 2, ClientGUIPainterShapes.PAD_PX / 2, self._service_key, self._rating_state, self._rating, self._iconsize )
+            ClientGUIRatings.DrawNumerical( painter, int( ClientGUIPainterShapes.PAD_PX / 2 ), int( ClientGUIPainterShapes.PAD_PX / 2 ), self._service_key, self._rating_state, self._rating, self._iconsize )
             
         
     
@@ -1505,6 +1505,7 @@ class CanvasHoverFrameTopRight( CanvasHoverFrame ):
         self._icon_panel.setLayout( icon_hbox )
         
         self._rating_icon_size_px = round( CG.client_controller.new_options.GetFloat( 'media_viewer_rating_icon_size_px' ) )
+        self._rating_incdec_width_px = round( CG.client_controller.new_options.GetFloat( 'media_viewer_rating_incdec_width_px' ) )
         
         # repo strings
         
@@ -1562,7 +1563,7 @@ class CanvasHoverFrameTopRight( CanvasHoverFrame ):
         
         # now incdec
         
-        incdec_hbox = QP.HBoxLayout( spacing = 0, margin = ClientGUIPainterShapes.PAD_PX )
+        incdec_hbox = QP.HBoxLayout( spacing = 0, margin = 0 )
         
         incdec_services = CG.client_controller.services_manager.GetServices( ( HC.LOCAL_RATING_INCDEC, ) )
         
@@ -1575,7 +1576,7 @@ class CanvasHoverFrameTopRight( CanvasHoverFrame ):
             
             service_key = service.GetServiceKey()
             
-            control = RatingIncDecCanvas( self, service_key, canvas_key, QC.QSize( self._rating_icon_size_px * 2, self._rating_icon_size_px ) )
+            control = RatingIncDecCanvas( self, service_key, canvas_key, QC.QSize( self._rating_incdec_width_px, int( self._rating_incdec_width_px / 2 ) ) )
             
             self.mediaChanged.connect( control.SetMedia )
             self.mediaCleared.connect( control.ClearMedia )

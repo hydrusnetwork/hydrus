@@ -3814,8 +3814,9 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._use_nice_resolution_strings.setToolTip( ClientGUIFunctions.WrapToolTip( 'Use "1080p" instead of "1920x1080" for common resolutions.' ) )
             
             self._media_viewer_rating_icon_size_px = ClientGUICommon.BetterDoubleSpinBox( media_canvas_panel, min = 1.0, max = 255.0 )
-            tt = 'Set size in pixels for like, numerical, and inc/dec rating icons for clicking on. This will be used for both width and height of the square icons, inc/dec rectangles are 2x wide and get padded to be pixel-adjacent. If you want to set the size of ratings icons in thumbnails, check the \'thumbnails\' options page.'
-            self._media_viewer_rating_icon_size_px.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
+            self._media_viewer_rating_icon_size_px.setToolTip( ClientGUIFunctions.WrapToolTip( 'Set size in pixels for like, numerical, and inc/dec rating icons for clicking on. This will be used for both width and height of the square icons. If you want to set the size of ratings icons in thumbnails, check the \'thumbnails\' options page.' ) )
+            self._media_viewer_rating_incdec_width_px = ClientGUICommon.BetterDoubleSpinBox( media_canvas_panel, min = 2.0, max = 255.0 )
+            self._media_viewer_rating_incdec_width_px.setToolTip( ClientGUIFunctions.WrapToolTip( 'Set width in pixels for inc/dec rectangles in the media viewer. The height will be half of this, and it is limited to be between twice and half of the normal ratings icons sizes. If you want to set the size of ratings icons in thumbnails, check the \'thumbnails\' options page.' ) )
             
             #
             
@@ -3844,6 +3845,16 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             #
             
+            preview_hovers_panel = ClientGUICommon.StaticBox( self, 'preview window hovers' )
+            
+            self._preview_window_hover_top_right_shows_popup = QW.QCheckBox( preview_hovers_panel )
+            self._preview_window_hover_top_right_shows_popup.setToolTip( ClientGUIFunctions.WrapToolTip( 'When you hover over the top right of the preview window, show the same top right popup window as in the media viewer.' ) )
+            
+            self._draw_top_right_hover_in_preview_window_background = QW.QCheckBox( preview_hovers_panel )
+            self._draw_top_right_hover_in_preview_window_background.setToolTip( ClientGUIFunctions.WrapToolTip( 'Also draw the top-right hover window in the background of the preview window.' ) )
+            
+            #
+            
             self._draw_tags_hover_in_media_viewer_background.setChecked( self._new_options.GetBoolean( 'draw_tags_hover_in_media_viewer_background' ) )
             self._disable_tags_hover_in_media_viewer.setChecked( self._new_options.GetBoolean( 'disable_tags_hover_in_media_viewer' ) )
             self._draw_top_hover_in_media_viewer_background.setChecked( self._new_options.GetBoolean( 'draw_top_hover_in_media_viewer_background' ) )
@@ -3853,6 +3864,9 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._draw_bottom_right_index_in_media_viewer_background.setChecked( self._new_options.GetBoolean( 'draw_bottom_right_index_in_media_viewer_background' ) )
             self._use_nice_resolution_strings.setChecked( self._new_options.GetBoolean( 'use_nice_resolution_strings' ) )
             self._media_viewer_rating_icon_size_px.setValue( self._new_options.GetFloat( 'media_viewer_rating_icon_size_px' ) )
+            self._media_viewer_rating_incdec_width_px.setValue( self._new_options.GetFloat( 'media_viewer_rating_incdec_width_px' ) )
+            self._media_viewer_rating_incdec_width_px.setMaximum( self._media_viewer_rating_icon_size_px.value() * 2 )
+            self._media_viewer_rating_incdec_width_px.setMinimum( self._media_viewer_rating_icon_size_px.value() * 0.5 )
             
             self._file_info_line_consider_archived_interesting.setChecked( self._new_options.GetBoolean( 'file_info_line_consider_archived_interesting' ) )
             self._file_info_line_consider_archived_time_interesting.setChecked( self._new_options.GetBoolean( 'file_info_line_consider_archived_time_interesting' ) )
@@ -3861,6 +3875,9 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._file_info_line_consider_trash_time_interesting.setChecked( self._new_options.GetBoolean( 'file_info_line_consider_trash_time_interesting' ) )
             self._file_info_line_consider_trash_reason_interesting.setChecked( self._new_options.GetBoolean( 'file_info_line_consider_trash_reason_interesting' ) )
             self._hide_uninteresting_modified_time.setChecked( self._new_options.GetBoolean( 'hide_uninteresting_modified_time' ) )
+            
+            self._preview_window_hover_top_right_shows_popup.setChecked( self._new_options.GetBoolean( 'preview_window_hover_top_right_shows_popup' ) )
+            self._draw_top_right_hover_in_preview_window_background.setChecked( self._new_options.GetBoolean( 'draw_top_right_hover_in_preview_window_background' ) )
             
             #
             
@@ -3874,7 +3891,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows.append( ( 'Duplicate notes hover-window information in the background of the viewer:', self._draw_notes_hover_in_media_viewer_background ) )
             rows.append( ( 'Draw bottom-right index text in the background of the viewer:', self._draw_bottom_right_index_in_media_viewer_background ) )
             rows.append( ( 'Swap in common resolution labels:', self._use_nice_resolution_strings ) )
-            rows.append( ( 'Media viewer star & inc/dec rating icon size:', self._media_viewer_rating_icon_size_px ) )
+            rows.append( ( 'Media viewer ratings like/dislike and numerical service icon size:', self._media_viewer_rating_icon_size_px ) )
+            rows.append( ( 'Media viewer ratings inc/dec service icon width:', self._media_viewer_rating_incdec_width_px ) )
             
             media_canvas_gridbox = ClientGUICommon.WrapInGrid( media_canvas_panel, rows )
             
@@ -3902,12 +3920,22 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             top_hover_summary_panel.Add( st, CC.FLAGS_EXPAND_PERPENDICULAR )
             top_hover_summary_panel.Add( top_hover_summary_gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
+            rows = []
+            
+            rows.append( ( 'Show top-right hover window popup in the preview window: ', self._preview_window_hover_top_right_shows_popup ) )
+            rows.append( ( 'Draw top-right hover in preview window background: ', self._draw_top_right_hover_in_preview_window_background ) )
+            
+            preview_hovers_gridbox = ClientGUICommon.WrapInGrid( preview_hovers_panel, rows )
+            
+            preview_hovers_panel.Add( preview_hovers_gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+            
             #
             
             vbox = QP.VBoxLayout()
             
             QP.AddToLayout( vbox, media_canvas_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
             QP.AddToLayout( vbox, top_hover_summary_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+            QP.AddToLayout( vbox, preview_hovers_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
             vbox.addStretch( 0 )
             
             self.setLayout( vbox )
@@ -3936,6 +3964,10 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._new_options.SetBoolean( 'use_nice_resolution_strings', self._use_nice_resolution_strings.isChecked() )
             
             self._new_options.SetFloat( 'media_viewer_rating_icon_size_px', self._media_viewer_rating_icon_size_px.value() )
+            self._new_options.SetFloat( 'media_viewer_rating_incdec_width_px', self._media_viewer_rating_incdec_width_px.value() )
+            
+            self._new_options.SetBoolean( 'preview_window_hover_top_right_shows_popup', self._preview_window_hover_top_right_shows_popup.isChecked() )
+            self._new_options.SetBoolean( 'draw_top_right_hover_in_preview_window_background', self._draw_top_right_hover_in_preview_window_background.isChecked() )
             
             self._new_options.SetBoolean( 'file_info_line_consider_archived_interesting', self._file_info_line_consider_archived_interesting.isChecked() )
             self._new_options.SetBoolean( 'file_info_line_consider_archived_time_interesting', self._file_info_line_consider_archived_time_interesting.isChecked() )
@@ -6498,6 +6530,14 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             tt = 'This is the size of any rating icons shown in pixels. It will be square, so this is both the width and height. This only sets it for display on thumbnails, if you want to change the size of icons in the media viewer check the \'media viewer\' options page.'
             self._draw_thumbnail_rating_icon_size_px.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
             
+            self._draw_thumbnail_rating_incdec_width_px = ClientGUICommon.BetterDoubleSpinBox( thumbnail_appearance_box, min = 2.0, max = self._thumbnail_width.value() )
+            tt = 'This is the width of the inc/dec rating buttons in pixels. Height is 1/2 this. Limited to a range around the rating icon sizes.'
+            self._draw_thumbnail_rating_incdec_width_px.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
+            
+            self._draw_thumbnail_numerical_ratings_collapsed_always = QW.QCheckBox( thumbnail_appearance_box )
+            tt = 'If this is checked, numerical ratings will always draw collapsed in thumbnails (\'2/10 ▲\' instead of \'▲▲▼▼▼▼▼▼▼▼\') regardless of the per-service setting.'
+            self._draw_thumbnail_numerical_ratings_collapsed_always.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
+            
             self._video_thumbnail_percentage_in = ClientGUICommon.BetterSpinBox( thumbnail_appearance_box, min=0, max=100 )
             
             self._fade_thumbnails = QW.QCheckBox( thumbnail_appearance_box )
@@ -6551,8 +6591,11 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._fade_thumbnails.setChecked( self._new_options.GetBoolean( 'fade_thumbnails' ) )
             self._draw_thumbnail_rating_background.setChecked( self._new_options.GetBoolean( 'draw_thumbnail_rating_background' ) )
-            
+            self._draw_thumbnail_numerical_ratings_collapsed_always.setChecked( self._new_options.GetBoolean( 'draw_thumbnail_numerical_ratings_collapsed_always' ) )
             self._draw_thumbnail_rating_icon_size_px.setValue( self._new_options.GetFloat( 'draw_thumbnail_rating_icon_size_px' ) )
+            self._draw_thumbnail_rating_incdec_width_px.setValue( self._new_options.GetFloat( 'thumbnail_rating_incdec_width_px' )  )
+            self._draw_thumbnail_rating_incdec_width_px.setMaximum( self._draw_thumbnail_rating_icon_size_px.value() * 2 )
+            self._draw_thumbnail_rating_incdec_width_px.setMinimum( self._draw_thumbnail_rating_icon_size_px.value() * 0.5 )
             
             self._focus_preview_on_ctrl_click.setChecked( self._new_options.GetBoolean( 'focus_preview_on_ctrl_click' ) )
             self._focus_preview_on_ctrl_click_only_static.setChecked( self._new_options.GetBoolean( 'focus_preview_on_ctrl_click_only_static' ) )
@@ -6584,6 +6627,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows.append( ( 'Thumbnail UI-scale supersampling %: ', self._thumbnail_dpr_percentage ) )
             rows.append( ( 'Give thumbnail ratings a flat background: ', self._draw_thumbnail_rating_background ) )
             rows.append( ( 'Thumbnail rating icon size: ', self._draw_thumbnail_rating_icon_size_px ) )
+            rows.append( ( 'Thumbnail rating inc/dec width: ', self._draw_thumbnail_rating_incdec_width_px ) )
+            rows.append( ( 'Thumbnail numerical ratings always draw collapsed: ', self._draw_thumbnail_numerical_ratings_collapsed_always ) )
             rows.append( ( 'Generate video thumbnails this % in: ', self._video_thumbnail_percentage_in ) )
             rows.append( ( 'Fade thumbnails: ', self._fade_thumbnails ) )
             rows.append( ( 'Use blurhash missing thumbnail fallback: ', self._allow_blurhash_fallback ) )
@@ -6661,8 +6706,10 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._new_options.SetBoolean( 'fade_thumbnails', self._fade_thumbnails.isChecked() )
             self._new_options.SetBoolean( 'draw_thumbnail_rating_background', self._draw_thumbnail_rating_background.isChecked() )
+            self._new_options.SetBoolean( 'draw_thumbnail_numerical_ratings_collapsed_always', self._draw_thumbnail_numerical_ratings_collapsed_always.isChecked() )
             
             self._new_options.SetFloat( 'draw_thumbnail_rating_icon_size_px', self._draw_thumbnail_rating_icon_size_px.value() )
+            self._new_options.SetFloat( 'thumbnail_rating_incdec_width_px', self._draw_thumbnail_rating_incdec_width_px.value() )
             
             self._new_options.SetBoolean( 'show_extended_single_file_info_in_status_bar', self._show_extended_single_file_info_in_status_bar.isChecked() )
             
