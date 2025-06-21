@@ -44,7 +44,7 @@ from hydrus.client.metadata import ClientRatings
 
 class RatingIncDecCanvas( ClientGUIRatings.RatingIncDec ):
 
-    def __init__( self, parent, service_key, canvas_key, icon_size ):
+    def __init__( self, parent, service_key, canvas_key, icon_size, icon_pad: QC.QSize = None ):
         
         super().__init__( parent, service_key, icon_size )
         
@@ -53,6 +53,7 @@ class RatingIncDecCanvas( ClientGUIRatings.RatingIncDec ):
         self._rating_state = None
         self._rating = None
         self._iconsize = icon_size
+        self._iconpad = QC.QSize( int( ClientGUIPainterShapes.PAD_PX ), int( ClientGUIPainterShapes.PAD_PX / 2 ) ) if icon_pad is None else icon_pad
         
         self._hashes = set()
         
@@ -67,7 +68,7 @@ class RatingIncDecCanvas( ClientGUIRatings.RatingIncDec ):
         
         if self._current_media is not None:
             
-            ClientGUIRatings.DrawIncDec( painter, int( ClientGUIPainterShapes.PAD_PX / 2 ), int( ClientGUIPainterShapes.PAD_PX / 2 ), self._service_key, self._rating_state, self._rating, self._iconsize )
+            ClientGUIRatings.DrawIncDec( painter, self._iconpad.width(), self._iconpad.height(), self._service_key, self._rating_state, self._rating, self._iconsize )
             
         
     
@@ -145,7 +146,7 @@ class RatingIncDecCanvas( ClientGUIRatings.RatingIncDec ):
         
         pad = ClientGUIPainterShapes.PAD_PX
         
-        return QC.QSize( int( self._iconsize.width() + pad ), int( self._iconsize.height() + pad ) )
+        return QC.QSize( int( self._iconsize.width() + 1 ), int( self._iconsize.height() + pad ) )
     
 
 class RatingLikeCanvas( ClientGUIRatings.RatingLike ):
@@ -1572,11 +1573,13 @@ class CanvasHoverFrameTopRight( CanvasHoverFrame ):
             incdec_hbox.addStretch( 0 )
             
         
+        incdec_pad = QC.QSize( 0, int( ClientGUIPainterShapes.PAD_PX / 2 ) )
+        
         for service in incdec_services:
             
             service_key = service.GetServiceKey()
             
-            control = RatingIncDecCanvas( self, service_key, canvas_key, QC.QSize( self._rating_incdec_width_px, int( self._rating_incdec_width_px / 2 ) ) )
+            control = RatingIncDecCanvas( self, service_key, canvas_key, QC.QSize( self._rating_incdec_width_px, int( self._rating_incdec_width_px / 2 ) ), incdec_pad )
             
             self.mediaChanged.connect( control.SetMedia )
             self.mediaCleared.connect( control.ClearMedia )

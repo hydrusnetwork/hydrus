@@ -2317,9 +2317,9 @@ class CanvasWithHovers( Canvas ):
         
         incdec_services.reverse()
         
-        control_width = RATING_INCDEC_SET_WIDTH
+        control_width = RATING_INCDEC_SET_WIDTH + 1
         
-        incdec_rating_current_x = my_width - ( control_width + int( STAR_PAD.width() / 2 ) ) - ( QFRAME_PADDING + VBOX_MARGIN )
+        incdec_rating_current_x = my_width - ( control_width ) - ( QFRAME_PADDING + VBOX_MARGIN )
         
         for incdec_service in incdec_services:
             
@@ -2329,12 +2329,12 @@ class CanvasWithHovers( Canvas ):
             
             ClientGUIRatings.DrawIncDec( painter, incdec_rating_current_x, current_y, service_key, rating_state, rating, QC.QSize( RATING_INCDEC_SET_WIDTH, RATING_INCDEC_SET_WIDTH / 2 ) )
             
-            incdec_rating_current_x -= control_width + STAR_PAD.width()
+            incdec_rating_current_x -= control_width    #+ STAR_PAD.width() #instead of spacing these out, we will just have them pixel-adjacent in all cases
             
         
         if len( incdec_services ) > 0:
             
-            current_y += RATING_INCDEC_SET_WIDTH / 2 + int( STAR_PAD.height() / 2 ) + VBOX_SPACING
+            current_y += round( RATING_INCDEC_SET_WIDTH / 2 ) + int( STAR_PAD.height() / 2 ) + VBOX_SPACING
             
         
         # icons

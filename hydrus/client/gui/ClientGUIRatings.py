@@ -41,12 +41,17 @@ default_incdec_colours[ ClientRatings.MIXED ] = ( ( 0, 0, 0 ), ( 95, 95, 95 ) )
 INCDEC_SIZE = ClientGUIPainterShapes.INCDEC_BACKGROUND_SIZE
 STAR_SIZE = ClientGUIPainterShapes.SIZE
 STAR_PAD  = ClientGUIPainterShapes.PAD
+PAD_PX = round( ClientGUIPainterShapes.PAD_PX )
 
-def DrawIncDec( painter: QG.QPainter, x, y, service_key, rating_state, rating, size: QC.QSize = INCDEC_SIZE, pad_size = STAR_PAD ):
+def DrawIncDec( painter: QG.QPainter, x, y, service_key, rating_state, rating, size: QC.QSize = INCDEC_SIZE, pad_size: QC.QSize = None ):
     
     if rating is None:
         
         rating = 0
+        
+    if pad_size is None:
+        
+        pad_size = QC.QSize( round( min( size.width() / PAD_PX, PAD_PX ) ), PAD_PX ) #allow X pad to go smaller, Y pad as normal
         
     
     text = HydrusNumbers.ToHumanInt( rating )
@@ -55,7 +60,7 @@ def DrawIncDec( painter: QG.QPainter, x, y, service_key, rating_state, rating, s
     
     incdec_font = painter.font()
     
-    incdec_font.setPixelSize( int( size.height() - pad_size.height() / 2 ) )
+    incdec_font.setPixelSize( int( size.height() - 1 ) if size.height() > 8 else int( size.height() ) )
     
     incdec_font.setStyleHint( QG.QFont.StyleHint.Monospace )
     
@@ -77,29 +82,23 @@ def DrawIncDec( painter: QG.QPainter, x, y, service_key, rating_state, rating, s
     
     painter.setRenderHint( QG.QPainter.RenderHint.Antialiasing, False )
     
-    star_type = ClientRatings.StarType( ClientRatings.SQUARE, None )
+    # star_type = ClientRatings.StarType( ClientRatings.SQUARE, None )
+    # ClientGUIPainterShapes.DrawShape( painter, star_type, x, y, size.width(), size.height() )
     
-    ClientGUIPainterShapes.DrawShape( painter, star_type, x, y, size.width(), size.height() )
+    #switch back to qt rect draw to avoid extra overhead and bypass some pads since we don't customize these yet
+    painter.drawRect( QC.QRect( x, y, size.width(), size.height() ) )
     
-    painter.setRenderHint( QG.QPainter.RenderHint.Antialiasing, True )
+    #
+    text_pos = QC.QPoint( x - 1, y + 1 )
     
-    text_pos = QC.QPoint( x, y )
-    
-    if incdec_font.pixelSize() > 20:
+    if incdec_font.pixelSize() > 8:
         
-        text_pos = QC.QPoint( x + 1, y + 1 )
+        painter.setRenderHint( QG.QPainter.RenderHint.Antialiasing, True )
         
-    elif incdec_font.pixelSize() > 12:
-        
-        text_pos = QC.QPoint( x - 1, y - 1 )
-        
-    elif incdec_font.pixelSize() < 10:
-        
-        painter.setRenderHint( QG.QPainter.RenderHint.Antialiasing, False )
-        text_pos = QC.QPoint( x - 1, y - 1 )
+        text_pos = QC.QPoint( x - 1, y )
         
     
-    text_rect = QC.QRect( text_pos, size - pad_size )
+    text_rect = QC.QRect( text_pos, size - QC.QSize( 1, 1 ) )
     
     painter.drawText( text_rect, QC.Qt.AlignmentFlag.AlignRight | QC.Qt.AlignmentFlag.AlignVCenter, text )
     

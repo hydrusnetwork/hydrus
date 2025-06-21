@@ -2539,7 +2539,7 @@ class Thumbnail( Selectable ):
             control_width = THUMBNAIL_RATING_INCDEC_SET_WIDTH
             control_height = THUMBNAIL_RATING_INCDEC_SET_WIDTH / 2
             
-            rect_width = ( control_width * num_to_show ) + ( ICON_MARGIN * 2 )
+            rect_width = ( control_width * num_to_show ) + ( ICON_MARGIN * 2 ) + ( ICON_MARGIN * ( num_to_show - 1 ) )
             rect_height = control_height + ( ICON_MARGIN * 2 )
             
             rect_x = width - thumbnail_border - rect_width
@@ -2550,7 +2550,7 @@ class Thumbnail( Selectable ):
                 painter.fillRect( rect_x, rect_y, rect_width, rect_height, qss_window_colour )
                 
             
-            incdec_rating_current_x = rect_x + ICON_MARGIN
+            incdec_rating_current_x = rect_x
             incdec_rating_current_y = rect_y + ICON_MARGIN
             
             for incdec_service in incdec_services_to_show:
@@ -2558,6 +2558,8 @@ class Thumbnail( Selectable ):
                 service_key = incdec_service.GetServiceKey()
                 
                 ( rating_state, rating ) = ClientRatings.GetIncDecStateFromMedia( ( media, ), service_key )
+                
+                incdec_rating_current_x += ICON_MARGIN
                 
                 ClientGUIRatings.DrawIncDec( painter, incdec_rating_current_x, incdec_rating_current_y, service_key, rating_state, rating, QC.QSize( control_width, control_height ), QC.QSize( ICON_PAD, ICON_MARGIN ) )
                 
