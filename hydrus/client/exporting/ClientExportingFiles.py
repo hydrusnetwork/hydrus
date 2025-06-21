@@ -40,24 +40,6 @@ def GenerateExportFilename( destination_directory, media, terms, file_index, do_
         return t
         
     
-    decent_expected_filename_length = 64
-    
-    try:
-        
-        destination_directory_elided = HydrusPaths.ElideFilenameOrDirectorySafely( destination_directory, num_characters_used_in_other_components = decent_expected_filename_length )
-        
-    except Exception as e:
-        
-        raise Exception( 'Sorry, the destination directory path is way too long! Try shortening it.' ) from e
-        
-    
-    if destination_directory_elided != destination_directory:
-        
-        raise Exception( 'Sorry, the destination directory path is too long! Try shortening it.' )
-        
-    
-    destination_directory_num_characters_in_filesystem = len( destination_directory.encode( 'utf-8' ) )
-    
     filename = ''
     
     for ( term_type, term ) in terms:
@@ -112,6 +94,7 @@ def GenerateExportFilename( destination_directory, media, terms, file_index, do_
                 
                 filename += str( file_index )
                 
+            
         elif term_type == 'tag':
             
             tag = term
@@ -154,32 +137,47 @@ def GenerateExportFilename( destination_directory, media, terms, file_index, do_
         filename = filename[ : - len( ext ) ]
         
     
-    # sidecar suffixes, and in general we don't want to spam giganto strings to people's hard drives
-    extra_characters_and_padding = 64 + len( ext )
+    filename_character_limit = CG.client_controller.new_options.GetInteger( 'export_filename_character_limit' )
     
-    filename = HydrusPaths.ElideFilenameOrDirectorySafely( filename, num_characters_already_used_in_this_component = extra_characters_and_padding, num_characters_used_in_other_components = destination_directory_num_characters_in_filesystem )
+    ( subdirs, true_filename ) = os.path.split( filename )
+    
+    if len( subdirs ) > 0:
+        
+        true_destination_directory = os.path.join( destination_directory, subdirs )
+        
+    else:
+        
+        true_destination_directory = destination_directory
+        
+    
+    filename_elided = HydrusPaths.ElideFilenameSafely( true_filename, filename_character_limit, true_destination_directory, ext_suffix = ext )
+    
+    if len( subdirs ) > 0:
+        
+        filename_elided = os.path.join( subdirs, filename_elided )
+        
     
     if do_not_use_filenames is not None:
         
         i = 1
         
-        possible_filename = '{}{}'.format( filename, ext )
+        possible_filename = '{}{}'.format( filename_elided, ext )
         
         while possible_filename in do_not_use_filenames:
             
-            possible_filename = '{} ({}){}'.format( filename, i, ext )
+            possible_filename = '{} ({}){}'.format( filename_elided, i, ext )
             
             i += 1
             
         
-        filename = possible_filename
+        filename_elided = possible_filename
         
     else:
         
-        filename += ext
+        filename_elided += ext
         
     
-    return filename
+    return filename_elided
     
 
 def GetExportPath():

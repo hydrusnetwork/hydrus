@@ -888,6 +888,8 @@ class DuplicatesAutoResolutionManager( ClientDaemons.ManagerWithMainLoop ):
         
         rules = CG.client_controller.Read( 'duplicate_auto_resolution_rules_with_counts' )
         
+        rules = sorted( rules, key = lambda r: r.GetName().casefold() )
+        
         with self._lock:
             
             rules = self._FilterToWorkingHardRules( rules )

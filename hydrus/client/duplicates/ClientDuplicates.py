@@ -116,13 +116,13 @@ def GetDuplicateComparisonStatements( shown_media_result: ClientMediaResult.Medi
             
             if s_mime == HC.IMAGE_PNG and c_mime in other_file_is_pixel_png_appropriate_filetypes:
                 
-                statement = 'this is a pixel-for-pixel duplicate png! it is a waste of space!'
+                statement = 'this is a pixel-for-pixel duplicate png!\nit is almost certainly a derivative copy!'
                 
                 score = -100
                 
             elif s_mime in other_file_is_pixel_png_appropriate_filetypes and c_mime == HC.IMAGE_PNG:
                 
-                statement = 'other file is a pixel-for-pixel duplicate png!'
+                statement = 'other file is a pixel-for-pixel duplicate png!\nthis is almost certainly an original!'
                 
                 score = 100
                 
@@ -1351,6 +1351,11 @@ class DuplicateContentMergeOptions( HydrusSerialisable.SerialisableBase ):
                 
             
             service_type = service.GetServiceType()
+            
+            if service_type == HC.TAG_REPOSITORY and action == HC.CONTENT_MERGE_ACTION_MOVE:
+                
+                action = HC.CONTENT_MERGE_ACTION_COPY
+                
             
             if service_type == HC.LOCAL_TAG:
                 

@@ -109,7 +109,7 @@ By default, hydrus stores all its data—options, files, subscriptions, _everyth
 !!! danger "Bad Locations"
     **Do not install to a network location!** (i.e. on a different computer's hard drive) The SQLite database is sensitive to interruption and requires good file locking, which network interfaces often fake. There are [ways of splitting your client up](database_migration.md) so the database is on a local SSD but the files are on a network--this is fine--but you really should not put the database on a remote machine unless you know what you are doing and have a backup in case things go wrong.
     
-    **Do not install to a location with filesystem-level compression enabled! (e.g. BTRFS)** It may work ok to start, but when the SQLite database grows to large size, this can cause extreme access latency and I/O errors and corruption.
+    **Be careful installing to a location with filesystem-level compression or versioning enabled!** It may work ok to start, but when the SQLite database grows to large size, this can cause extreme access latency. I have been told that BTRFS works well these days, and they have been working specifically to improve SQLite performance, but keep it in mind if you are using anything else. Using NTFS compression mode on the database files is not a good idea. Compressing a hydrus database backup is fine, but the live db is sensitive.
 
 ## Anti-virus { id="anti_virus" }
 

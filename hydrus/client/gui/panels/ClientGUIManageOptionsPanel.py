@@ -998,6 +998,10 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             misc = ClientGUICommon.StaticBox( self, 'misc' )
             
+            self._remove_leading_url_double_slashes = QW.QCheckBox( misc )
+            tt = 'Hydev is doing a test here, and I would like feedback from advanced users. The client currently removes leading double slashes from an URL path, something like https://site.com//images/123456, collapsing it to https://site.com/images/123456. This is not actually correct, and I want to test how certain URL Classes and their downloaders will handle me dealing with it properly. Check this to try the test, and let me know how it goes.'
+            self._remove_leading_url_double_slashes.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
+            
             self._pause_character = QW.QLineEdit( misc )
             self._stop_character = QW.QLineEdit( misc )
             self._show_new_on_file_seed_short_summary = QW.QCheckBox( misc )
@@ -1045,6 +1049,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._process_subs_in_random_order.setChecked( self._new_options.GetBoolean( 'process_subs_in_random_order' ) )
             
+            self._remove_leading_url_double_slashes.setChecked( not self._new_options.GetBoolean( 'remove_leading_url_double_slashes' ) )
             self._pause_character.setText( self._new_options.GetString( 'pause_character' ) )
             self._stop_character.setText( self._new_options.GetString( 'stop_character' ) )
             self._show_new_on_file_seed_short_summary.setChecked( self._new_options.GetBoolean( 'show_new_on_file_seed_short_summary' ) )
@@ -1102,6 +1107,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             rows = []
             
+            rows.append( ( 'TEST: stop removing leading double-slashes from URL paths:', self._remove_leading_url_double_slashes ) )
             rows.append( ( 'Pause character:', self._pause_character ) )
             rows.append( ( 'Stop character:', self._stop_character ) )
             rows.append( ( 'Show a \'N\' (for \'new\') count on short file import summaries:', self._show_new_on_file_seed_short_summary ) )
@@ -1147,6 +1153,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._new_options.SetDefaultWatcherCheckerOptions( self._watcher_checker_options.GetValue() )
             self._new_options.SetDefaultSubscriptionCheckerOptions( self._subscription_checker_options.GetValue() )
             
+            self._new_options.SetBoolean( 'remove_leading_url_double_slashes', not self._remove_leading_url_double_slashes.isChecked() )
             self._new_options.SetString( 'pause_character', self._pause_character.text() )
             self._new_options.SetString( 'stop_character', self._stop_character.text() )
             self._new_options.SetBoolean( 'show_new_on_file_seed_short_summary', self._show_new_on_file_seed_short_summary.isChecked() )
@@ -1363,6 +1370,10 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._export_pattern_button = ClientGUICommon.ExportPatternButton( self )
             
+            self._export_filename_character_limit = ClientGUICommon.BetterSpinBox( self, min = 16, max = 2048 )
+            tt = 'When generating an export filename, hydrus will clip the output so it is not longer than this. On Windows, this means characters, on Linux/macOS, it means bytes (when encoding unicode characters). This stuff can get complicated, so be careful changing it too much! Most OS filesystems do not accept a filename longer than 256 chars/bytes, but you should leave a little padding for stuff like sidecar suffixes and other surprises. If you have a Linux folder using eCryptFS, the filename limit is around 140 bytes, which with sophisticated unicode output can be really short. On Windows, the entire path also has to be shorter than 256 characters total! (Linux is usually 4096; macOS 1024.)'
+            self._export_filename_character_limit.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
+            
             self._secret_discord_dnd_fix = QW.QCheckBox( self._dnd_panel )
             self._secret_discord_dnd_fix.setToolTip( ClientGUIFunctions.WrapToolTip( 'THIS SOMETIMES FIXES DnD FOR WEIRD PROGRAMS, BUT IT ALSO OFTEN BREAKS IT FOR OTHERS.\n\nBecause of weird security/permission issues, a program will sometimes not accept a drag and drop file export from hydrus unless the DnD is set to "move" rather than "copy" (discord has done this for some people). Since we do not want to let you accidentally move your files out of your primary file store, this is only enabled if you are copying the files in question to your temp folder first!' ) )
             
@@ -1390,6 +1401,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                     
                 
             
+            self._export_filename_character_limit.setValue( self._new_options.GetInteger( 'export_filename_character_limit' ) )
+            
             #
             
             rows = []
@@ -1398,6 +1411,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows.append( ( 'BUGFIX: Set drag-and-drops to have a "move" flag: ', self._secret_discord_dnd_fix ) )
             rows.append( ( 'Drag-and-drop export filename pattern: ', self._discord_dnd_filename_pattern ) )
             rows.append( ( '', self._export_pattern_button ) )
+            rows.append( ( 'ADVANCED: Export filename length limit (characters/bytes): ', self._export_filename_character_limit ) )
             
             gridbox = ClientGUICommon.WrapInGrid( self._dnd_panel, rows )
             
@@ -1457,6 +1471,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._new_options.SetBoolean( 'secret_discord_dnd_fix', self._secret_discord_dnd_fix.isChecked() )
             
             HC.options[ 'export_path' ] = HydrusPaths.ConvertAbsPathToPortablePath( self._export_location.GetPath() )
+            
+            self._new_options.SetInteger( 'export_filename_character_limit', self._export_filename_character_limit.value() )
             
         
     

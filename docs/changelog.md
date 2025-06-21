@@ -7,6 +7,82 @@ title: Changelog
 !!! note
     This is the new changelog, only the most recent builds. For all versions, see the [old changelog](old_changelog.html).
 
+## [Version 626](https://github.com/hydrusnetwork/hydrus/releases/tag/v626)
+
+### AUR numpy problem
+
+* there was a problem with the AUR (Arch Linux) hydrus package while I was on vacation. the python package `numpy` updated and a couple deprecated lines I had missed now threw errors. for those who auto-update to the newest of things (eg. as on AUR), this broke video view and file import. sorry for the trouble! by luck I had fixed half of this by accident a few weeks ago, but I also missed a few more lines. a user kindly figured out the fix and I was able to merge it into master early for those who could pull. rolling back numpy to `<2.3.0` was another temporary solution. the fix is now properly in this v626, so when AUR v626 rolls out, everyone should be good again. if you are an AUR guy and really want to avoid this in future, I recommend moving to your own source install, as here: https://hydrusnetwork.github.io/hydrus/running_from_source.html it takes a couple minutes to set up, but with our own venv that we control, we can fix the library versions to stuff that we know will work in perpetuity.(issue #1744)
+
+### Paint.NET
+
+* Paint.NET files are now importable (or at least anything since ~2006). the client pulls resolution and should be able to do thumbnail, but cannot render them fully. they count as an 'image project file'. let me know if you have any v3 .pdn files that don't work!
+
+### default downloaders
+
+* the derpibooru file page parser is updated to get tags again. I think I updated everything correct, but let me know if anything is parsing different to how it was before
+
+### duplicates auto-resolution
+
+* improved my 'A and B are visual duplicates' algorithm with a new pre-histogram gaussian filter to better tune out jpeg artifacts and a more careful later 'absolute skew pull' inspection
+* many previously 'definitely visual duplicates' false positives are now detected as various states of 'not visual duplicates' or 'very probably visual duplicates'
+* many previously false negatives are now correctly detected as 'definitely' or 'near-perfect' visual duplicates
+* many previously true positive duplicates are now detected as higher levels of confidence of duplicate
+* thank you all for submitting your false positives and false negatives. I now have one pair that still false positives as 'definitely visual duplicates', and a couple that still go 'very problably', which I would like to fix. the remaining problem to solve is file-to-file edge difference comparison, which I feel pretty good about attempting at this stage. I also feel better about finally turning this system on for the duplicates auto-resolution rules soon, with the caveat that I'll probably recommend users only go 'near-perfect' to start
+* after thinking about it, I renamed the 'definitely' to 'almost certainly'. with an even more confident tier in 'near-perfect', 'definite' is the wrong word
+* I am still interested in any false positives or false negatives you encounter hereon. the main problem I now have to beat in image terms is where the alternate is an artist correction that moves a small object of interest a few pixels amidst a sea of similarly coloured pixels, for instance moving an anime nose a few pixels right. eyes that have slight differences (tear-drops, heart-shapes) are also proving a problem, but the main one is a small thing moving without changing average colours anywhere. also, obviously, if today's algorithm is actually worse anywhere, let me know!
+
+### better export filenames
+
+* the call that generates export filenames for manual exports, export folders, and drag and drops with export filenames is improved in several ways--
+* - you can now set your own 'max filename length' under `options->exporting`. defaults to 220 (most OSes are 256, although Linux eCryptFS is ~140)
+* - on Windows it now tests filename and total path length against characters rather than encoded bytes
+* - the test against max total path length (260 characters on Windows, which we shave to 250 for extra safety) is more reliable
+* - on Linux it now tests against a max total path length of 4096 bytes, and on macOS 1024 bytes. we shave by another 20 bytes for safety
+* - the test against total filename length now recognises when a filename pattern produces subdirectories and will not include them for the filename length test
+* - there is less padding fudge in the system, around 54 characters! if you were clipped before, you will likely see longer filenames immediately
+* if you have an export folder that uses frequently elided filenames, it is going to be busy as it generates new filenames on next run. let me know how you get on!
+* added a bunch of unit tests to test filename eliding, for: null, filename, path, filename and long path cases, for ascii and unicode, for character limits (windows) and byte limits (linux)
+
+### url slash test
+
+* when I first made the network engine, I had the URL normalisation routine collapse multiple leading slashes on a URL path down to one. for instance, `https://site.com//images/123456.jpg` becomes `https://site.com/images/123456.jpg`. this is actually incorrect handling on my part, and there's a site or two where it matters. unfortunately, I cannot make the switch without breaking URL Classes that already relied on the collapse, and I do not know how many of these there are out there
+* so, I have added a checkbox to `options->downloading` where you can participate in a TEST to change the normalisation behaviour. I would like advanced users who use unusual downloaders to turn on the test and run their subs and stuff as normal. let me know if anything suddenly doesn't work. I suspect 99.8% of everything will be fine, but I don't know so let's test it
+* as a side thing, I have adjusted my master URL lookup tool, which checks for duplicates in the file log and does 'already in db'/'previously deleted' url status lookups, to consider the leading single slash as matching the two slashes. I can't do the same for URL Classes though!
+
+### enter vs add tags
+
+* the manage tag parents and siblings dialogs are now 'add_only' from the 'add' button. previously, this was really an 'enter' command that would add new but petition pre-existing, but this workflow was never very intuitive and now we are reguarly dealing with hundreds of rows it is only ever confusing and annoying. similarly, the 'import' button now only offers a way to add new rows. sorry for the inconvenience here--I regret this took so long to figure out. if you want to do very large clever deletes, select the rows you do not want with ctrl/shift+click and hit the 'delete' button. if you want programmatic ways to remove rows (maybe a return of the 'import' conflict-remove, or a full-on only_delete mode), let me know how you would like it to look
+* the 'CONFLICT: Will be deleted on add.' list notes as you enter siblings are now more varied and precise
+* similarly, in manage tags, the 'allow remove/petition result on tag input for already existing tag' cog-menu option now defaults for new users to False, and all updating users will be set to False in v626. I don't like to force option changes on update, but most people are surprised to learn this option even exists, so I'm flicking us all, one-time, to the less confusing mode
+
+### duplicates
+
+* auto-resolution rules are now processed in alphabetical order. the preferred order in which rules and pairs are processed is a complicated topic and I am not sure on what is generally ideal, but if you have an opinion you can now force it
+* I think I fixed some layout squish with the duplicates hover window. the window sometimes won't grow to be a little taller, particularly if a comparison statement goes from single line to multiple, which was causing the buttons to squish to make everything fit, until the user jiggled a window resize
+* I think I fixed some transitional layout flicker with the duplicates hover window, particularly when some of the comparison statements are multiple line. also the previous pair's score line now properly blanks out while the new comparison statements are being loaded
+* if a duplicate metadata merge options panel no longer allows you to set 'move from worse to better' tag action when you hit 'edit action' on a tag repository. this choice was accidentally being included here.
+* if a duplicate metadata merge options does have 'move from worse to better' tag action set for a tag repository, through whatever grandfathered legacy reason, this is now treated as a copy action. previously it was hitting a 'you should not have been able to select this' safety check and doing nothing! if you have a hole because of this, don't panic--it is just another hole we'll want to fill in with retroactive duplicate merge, when we get around to that
+
+### misc
+
+* when the client adds or edits services, it now forces case-insensitive unique names. you can use whatever upper case you like, but you won't be able to make two services called 'score' and 'Score' any more. this helps out some parsing stuff
+* same deal for subscriptions, duplicates auto-resolution rules, and import/export folders. not because we parse these names, but just to better differentiate big objects we want to be careful about
+* fixed name deduplication when editing an import folder
+* thanks to a user who submitted a PNG with 'srgb' colourspace metadata, I have fixed PNG colours for these files. this is related to the recent gamma/chromaticity work. a bunch of PNGs that previously rendered slow will now do so fast and with correct colours
+* I've added `system:inbox/archive` to the list of selectable system predicates for all search file domains (previously they were hidden when your search domain had no 'real' and 'current' file domain). inbox/archive doesn't really have meaning outside of your local files, but advanced searches that switch file domain do sometimes carry these preds over to something like 'deleted from my files', so we might as well support them officially and fix the exposed nails. I think the logic will be crazy sometimes, and any counts too, so if you do clever searches and use them, let me know if and when they fail
+* the routine that bundles many items into a single UI presentation text (for instance, when you paste a whole bunch of query texts into a sub and it talks to you about them) now deals with very long lists better. it'll now max out at 25 lines, each line about 64 characters, with the last being some form of 'and 741 others' overflow. we think that pasting many thousands of queries into a sub may have been causing out of memory crashes when a dialog &gt;32k pixels tall was being created. this obviously also generally fixes crazy tall dialogs in these cases
+* when the file migration system chooses locations to pull from and push to, it no longer selects candidates of equal urgency pseudorandomly, but now pulls from the disk with the least free disk space and pushes to the one with the most
+* fixed some 'repair missing file location' handling when the incorrect path is stored in the database in an invalid portable/absolute format. this may be related to some flatpak path magic
+* a related problem where in rare cases a normal file migration would abandon the job early because it could not delist the old location is fixed
+
+### help and env stuff
+
+* updated help regarding running the db on BTRFS and NTFS filesystem compression. thanks to the users who let me know that BTRFS is ok and faster these days, particularly on WAL journalling, which we use by default
+* added 'how to test and get `git`' to the Linux and macOS 'running from source' help
+* clarified some 1/2, A/B stuff in the duplicates auto-resolution dialog text
+* fixed some bad newline .md formatting in 'running from source' help
+* updated the 'test' `mpv` version to `1.0.8` and `PySide6` to `6.9.1`
+
 ## [Version 625](https://github.com/hydrusnetwork/hydrus/releases/tag/v625)
 
 ### more ratings work and some QoL
@@ -50,7 +126,8 @@ title: Changelog
 * when a network job downloads a file from a Post URL, it now registers the bandwidth use to the Post URL's domains as well, if they differ. this should soon fix the issue where a site that produces files on completely different domain was not pausing when the file domain hits its bandwidth rules (file urls override bandwidth rules within three seconds in order to keep post/file url hits close together, which helps some token stuff, but if the post url never becomes aware of how much bandwidth it is eating, it just keeps on chugging. now it won't!)
 * added a checkbox to stop the 'override bandwidth in 3 seconds' rule under `options->downloading`, but I'm hoping the above overall fixes the issue
 
-* misc
+### misc
+
 * the page tab menu gets a new 'collapse pages' submenu. depending on where you click, it'll say 'this page', 'pages from here to the right', and 'pages to the right'. it will suck up all the files from the given pages and place them in a new locked search page, closing the old pages in the same step. use this for when you have eight small import pages in a row you want to collapse into a single processing page. it isn wrapped in a yes/no. it works on 'page of pages' too. this action is cool to do, so try it out
 * the 'send down to a new page of pages' gets the same 'pages from here to the right' option too, so you can do both operations from the very left-hand side if that's what you want
 * fixed a benign error popup when you hold the 'next image' shortcut while closing out on the last pair in a duplicates filter
@@ -472,85 +549,3 @@ title: Changelog
 * continued my old multi-column list 'view' conversion, finishing it for all the remaining 34 lists: the 'move media files' locations list; the legacy file-lookup-script parsing system's node-editing panels; the edit account types list; the janitor process petitions list;the repair file storage locations list; the EXIF review list; all the lists in the login UI; the edit parsers list; the edit bandwidth rules list; the manage server services list; the manage client services list; the client api access keys list; the ipfs shares list; the lists in the options dialog; review vacuum data; review deferred table delete data; the debug job scheduler review panel; the manual local file import list; the file maintenance pending jobs list; the cookies review list; the network session review list; the review network jobs list; the review bandwidth usage list; the review http headers list
 * with this list refactor finally done, I can think about extending lists again. I'd like to next go for hide/showing and re-ordering columns
 * when I was poking around the AVIF stuff, I discovered regular `Pillow` seems to be getting native AVIF support very soon with the upcoming `11.2.0`. AVIF is similarly recently deprecated in `pillow_heif`. hydrus now has code to navigate this situation sanely, and as soon as the new `Pillow` comes out, hydrus will detect this and just that instead for AVIFs
-
-## [Version 616](https://github.com/hydrusnetwork/hydrus/releases/tag/v616)
-
-### more media viewer stuff from a user
-
-* thanks to a user, we have some more media viewer updates--
-* first, if you use multiple media viewers from different tabs (especially complicated nested tabs), you can now set a 'close-media-viewer' shortcut action that does 'close-media-viewer-and-return-to-the-tab-that-opened-it'. a new checkbox under `options->media viewer` allows you to mandate this all the time
-* second, the media viewer 'eye' menu button has two new settings for setting 'always on top' and removing the window frame. these options are a little experimental and don't save just yet. have a play with them and let us know how it goes, especially on more unusual OSes
-
-### misc
-
-* you can now mix and match as many `system:hash` predicates in a query as you like. the UI will no longer consider them mutually exclusive when editing, and in the Client API, where you can force two at once, it no longer pseudorandomly chooses one to actually use
-* fixed export folders that have multiple sidecar routers that have the same file destination. previously only one of the sidecars was adding data and the others were doing nothing. (my recent 'genius' 'optimisation' code was going 'oh, that sidecar already exists, do not update it')
-* the export folder UI has a label on the sidecar section saying 'hey, export folders will not update pre-existing sidecar files, if you change them make sure to delete the existing sidecars and they will regenerate on next run'
-* when subscriptions hit their periodic file limit, they now compare the url classes of the new fetch with the oldest url class in the file log; if they differ, it no longer shows the 'subscription found x new URLs without running into any it had seen before' popup that offers the gap downloader! since in this case, the site/downloader has changed URL format, and the recommendation is to ignore the messages, I now no longer show the messages. we are doing this this week, so let me know how it goes
-* the 'search enabled' system, which on very old subscription presentation pages would allow for a search page that just presented files and had no search panel in the sidebar, is completely removed. the echoes of this thing have caused several typo problems over the years, was anti-KISS, and I intend to completely replace it with a nicer dynamic search freeze/sync system that will sync the page's current files to a fresh system:hash pred
-* the duplicate metadata merge options panel now has separate buttons on the tag service list for 'edit action' and 'edit filter'
-* the duplicate metadata merge options panel has a new label to clarify how ratings merge
-* the core Exception-handling routine can now handle an Exception with an empty string in its value
-* Errors that end up in a popup use the nicer log-printing routine to form their traceback, and they print to the log using this system too
-* errors with no trace no longer spam the stack twice
-
-### e621 and more
-
-* _tl;dr: today e621 is fixed to get tags again and I add e926 and e6ai. your subs will do some extra CPU work to catch up but it isn't a big deal_
-* the e621 sites have been changing their html recently, and it broke our parser--suddenly it wouldn't get tags any more. the good news is that someone let me know their API is excellent, so I am rolling out a fixed e621 downloader, and downloaders for e926 (their sfw alternative) and e6ai (their ai containment booru), and pool URL support too. since the API is so good, the downloader now runs extremely efficiently--all the normal 'post' data is provided at the gallery step, so e621 downloaders will hereafter only need to hit the gallery page and then they'll be downloading raw files directly. the only drawback here is the gallery parsing step eats a whack of CPU all at once, which you'll notice if you go bananas (issue #1698)
-* your e621 subscriptions will see the new direct file URLs and not be able to knit that together with the old Post URLs they already have. there is no nice technical way to get around this while keeping the nice new efficient downloader. we would normally be blitzed by the 'subscription found x new URLs without running into any it had seen before' popups that offer to open up the gap downloader, but I hate offloading that problem to user and have written in some new logic this week to detect the 'oh it is basically ok, the url format just changed' situation and silence the report in this case. luckily, your temporarily bloated e621 subs will process the 100-odd 'new' URLs they see very fast because there will be an md5 and raw file URL and e621 Post URL and tags to help it realise 'already in db'/'previously deleted'/'tag-blacklisted' without having to make any more network requests. serendipitously, this will actually help to fill in the gap of missing tags users have had over the past week or two. all users will get a popup about this on update. **if you changed your e621 subs to have a very high "normal checks" file limit, edit them before you update! 100 is proper**
-* several users were quicker than me, and I appreciate the suggestions and submissions. I made heavy use of an API parser one user made, fixing a couple tiny things and making it work for more domains, and that's what's rolling out today. you do not have to do anything--it should all just work. if you have added or played around with your own e621 parsers and today's update seems not to have worked, check out what's going on under `network->downloader components->url class links` and the other dialogs under there--worst case, if things aren't lining up, just delete everything 'e621' related and add back from the defaults
-
-### duplicates auto-resolution
-
-* thank you to the users who tried out the new system. although it works technically well, the common consensus is that it is _too_ automatic and needs A) the ability to pump the brakes and let humans better review what it is about to do and B) remember the pairs it actioned so humans can review what it just did. I am launching these features today for more testing and delaying the all-user launch of the system.
-* unfortunately, the changes I am making to the database are not compatible with the jpeg/png test rule from last week. on update, if you have the rule, you will get a popup saying 'hey, sorry, have to delete the rule now'. you can recreate it just as you did before, but the count it had of how many pairs it had processed has to be reset back to 0
-* you now choose if rules are going to be 'paused', where they do nothing, 'semi-automatic', where they will search and test but not action until the human approves, or 'fully automatic', where they will search, test, and then action entirely on their own (as before). new auto-resolution rules now start semi-automatic by default
-* beside the 'edit rules' button, there's now a 'review actions' button. double-clicking a row in the list now launches this. it opens up a panel for the selected rule with new thumbnail lists that show any semi-automatic pending pairs and the actioned pairs. they both allow multiple selection. the 'pending actions' page has approve/deny buttons, and the 'actions taken' has a powerful undo button that's wrapped in a scary yes/no confirmation. these panels are non-modal, meaning you can still use the program while they are open. the actioned audit log will often have fully deleted files so will present a blurhash or the hydrus default thumb, and any deleted files obviously won't launch in the media viewer
-* the thumbnail pair lists that show a pending action, which used to just show 'it will be this AB' vs 'could be either way around', now also says the duplicate action to be applied and an experimental summary of all content updates about to occur to both A and B. you'll see the tags, notes, urls, ratings, and archive actions--let me know how this works IRL, since I think we'll need some better sizing tech to make it all fit nice
-* a 'duplicate metadata merge options' that is set to 'always archive both' will now perform 'if one is archived, archive the other' if ran through the auto-resolution system. the auto-resolution edit UI says this explicitly. KISS answer to this sticky problem.
-* in the preview panel of the edit UI, the 'pairs that will be actioned' and 'pairs that will be skipped' lists are now collapsible
-* the cog icon on the duplicates auto-resolution sidebar now has 'reset test' and 'reset declined' to re-test all current pending/fail test results and undo all user-declined pairs
-* the main auto-resolution rule dialog now has some WOAH LAD red text at the top
-* updated the help with new screenshots and stuff for the new semi-automatic and fully automatic modes
-
-### boring duplicates auto-resolution stuff
-
-* all resolution rules and associated data will be deleted on update. sorry!
-* auto-resolution rules ditch the paused bool and now have a tri-state operation mode--paused, semi-automatic, and fully automatic. the semi-automatic does all the search and test work but queues 'ready to action' pairs for human approval. when a rule switches to fully automatic, all 'ready to action' pending pairs are sent back to be re-tested in the normal queue for KISS
-* added a new status for 'passes search, passes test, ready for actioning', with a custom pair storage table, to handle the semi-automatic mode where it prepares pairs and the human approves them
-* same deal but for 'user declined to action', for when the user does not approve
-* figured out the pipeline for this
-* added a table to log AB file pairs actioned. it records the duplicate action and the timestamp also. the 'pairs resolved' count is now generated from this live and stored in the normal count cache table
-* figured out the pipeline for this record
-* I vacillated and wrote some code to make the history try to 'live sync' to current data, but in the end I decided to go full non-changing audit log. if you dissolve a duplicate group and re-action the files with the same rule, the log will have two entries
-* if a rule's selector changes after editing, all pairs in the 'failed test' or 'ready to action' queues are now reset to 'passes search, ready to test'. relatedly, pair selectors can now equality-compare themselves to each other
-* the thumbnail pair lists that list duplicate merge summary data now calculate that third column in an async thread. previously this happened in one big block before the list was populated, but in future selector work will be high CPU (think comparing image similarity live), so it now happens on each list row as it comes into view. there's still a little more work to do here in the preview panel
-* refactored the new thumbnail list classes out to their own file and renamed some things to be more generic (for use in the new 'review actions' panel too)
-* if a user tries to edit the auto-resolution rules while any of the new preview windows is open, the preview windows are closed
-* the thumbnail lists now check if media it wants to open in the media viewer is local lol
-* cleaned up the 'reset search' and 'reset test' maintenance calls and improved efficiency
-* refactored how I move pairs from one database queue to another and cleaned it up a bit. a lot of maintenance and other reset stuff now all goes through this one location
-* a bunch of misc refactoring and cleanup of the auto-resolution db module
-
-### unit tests
-
-* added unit tests for the semi-automatic auto-resolution rule queueing, queue-fetching, and approval and denial processes
-* added unit tests for the audit log after all other unit tests commit actions
-* added a unit test to ensure changing the search resets searched pairs back to 'not searched'
-* added a unit test to ensure changing the selector resets tested pairs back to 'match search but not tested'
-* added a unit test to ensure changing from semi- to fully automatic resets 'ready to action' pairs back to 'not tested'
-
-### misc boring stuff
-
-* added a convenience function to the media results database module to fetch pairs of media results
-* made my static box change its size policy to fixed when it is collapsed--it now tucks itself away where before it was expanding to any available space
-* fixed the new auto-resolution unit tests for python 3.12+. thanks to a user for reporting--I was using the deprecated `assertNotEquals` instead of `assertNotEqual`
-* fixed some Mr Bones crazy text alignment and he now tells you in the duplicates panel to set to "all files every imported or deleted" to get better "all-time" numbers
-* Mr Bones now gives more accurate 'total files in alternate groups' numbers and also says the total number of alternate groups. previously, he was basically adding a bunch of duplicate files in there that were standing on their own and hadn't actually been set alternate to anything
-* updated my 'install help' Linux tab Wayland section to say 'yeah, best solution is X11 for now' with the two ways we know of getting that to work within Wayland. that's my Wayland policy going forward
-
-### client api
-
-* the Mr Bones call on the Client API now has a 'total_alternate_groups' key, reflecting the new number in the window
-* Client API version is now 79

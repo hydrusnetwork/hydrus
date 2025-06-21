@@ -3,60 +3,255 @@ import unittest
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusPaths
 
+# I pad these in the actual code
+MAGIC_WINDOWS_TOTAL_PATH_LIMIT = 260 - 10
+MAGIC_LINUX_TOTAL_PATH_LIMIT = 4096 - 20
+
 class TestHydrusPaths( unittest.TestCase ):
     
-    def test_eliding( self ):
+    def test_0_eliding_none( self ):
         
-        MAGIC_MAX_LENGTH = 220
-        
-        name_too_long = 'a' * 245
-        name_shortened = 'a' * MAGIC_MAX_LENGTH
-        
-        self.assertEqual( HydrusPaths.ElideFilenameOrDirectorySafely( name_too_long ), name_shortened )
-        
-        unicode_name_too_long_hex = '57696e646f7773e381a7e381afe380814e544653e381aee5a0b4e59088e38081e9809ae5b8b8e38081e38395e382a1e382a4e383abe5908de381aee69c80e5a4a7e995b7e381af323630e69687e5ad97e381a7e38199e380826d61634f53efbc88556e6978e38399e383bce382b9efbc89e381a7e381afe380814846532be3818ae38288e381b341504653e381aee5a0b4e59088e38081e9809ae5b8b8e38081e38395e382a1e382a4e383abe5908de381aee69c80e5a4a7e995b7e381af323535e69687e5ad97e381a7e38199e380824c696e7578efbc88e3818ae38288e381b3e3819de381aee4bb96e381ae556e6978e7b3bbe382b7e382b9e38386e383a0efbc89e381a7e381afe38081e381bbe381a8e38293e381a9e381aee38395e382a1e382a4e383abe382b7e382b9e38386e383a0e38081e4be8be38188e381b065787434e381aee5a0b4e59088e38081e9809ae5b8b8e38081e38395e382a1e382a4e383abe5908de381aee69c80e5a4a7e995b7e381af323535e69687e5ad97e381a7e38199e38082'
-        
-        unicode_name_too_long = bytes.fromhex( unicode_name_too_long_hex ).decode( 'utf-8' )
-        
-        unicode_name_shortened_hex = '57696e646f7773e381a7e381afe380814e544653e381aee5a0b4e59088e38081e9809ae5b8b8e38081e38395e382a1e382a4e383abe5908de381aee69c80e5a4a7e995b7e381af323630e69687e5ad97e381a7e38199e380826d61634f53efbc88556e6978e38399e383bce382b9efbc89e381a7e381afe380814846532be3818ae38288e381b341504653e381aee5a0b4e59088e38081e9809ae5b8b8e38081e38395e382a1e382a4e383abe5908de381aee69c80e5a4a7e995b7e381af323535e69687e5ad97e381a7e38199e380824c696e7578efbc88e3818a'
-        
-        unicode_name_shortened = bytes.fromhex( unicode_name_shortened_hex ).decode( 'utf-8' )
-        
-        self.assertEqual( HydrusPaths.ElideFilenameOrDirectorySafely( unicode_name_too_long ), unicode_name_shortened )
-        
-        #
-        
+        old_platform_linux = HC.PLATFORM_LINUX
         old_platform_windows = HC.PLATFORM_WINDOWS
-        
-        num_characters_used_in_other_components = 4
         
         try:
             
+            # chars, not bytes
             HC.PLATFORM_WINDOWS = True
+            HC.PLATFORM_LINUX = False
             
-            name_shortened = 'a' * ( MAGIC_MAX_LENGTH - num_characters_used_in_other_components )
+            max_num_characters = 220
             
-            self.assertEqual( HydrusPaths.ElideFilenameOrDirectorySafely( name_too_long, num_characters_used_in_other_components = num_characters_used_in_other_components ), name_shortened )
+            a_hiragana = '\u3042'
             
+            #
+            
+            directory_prefix = 'C:\\hydrus\\files'
+            ext = '.png'
+            
+            name_normal = 'a' * 20
+            
+            self.assertEqual( HydrusPaths.ElideFilenameSafely( name_normal, max_num_characters, directory_prefix, ext ), name_normal )
+            
+            name_normal = a_hiragana * 20
+            
+            self.assertEqual( HydrusPaths.ElideFilenameSafely( name_normal, max_num_characters, directory_prefix, ext ), name_normal )
+            
+            #
+            
+            # bytes, not chars
             HC.PLATFORM_WINDOWS = False
+            HC.PLATFORM_LINUX = True
             
-            name_shortened = 'a' * MAGIC_MAX_LENGTH
+            directory_prefix = '/mnt/hydrus'
+            ext = '.png'
             
-            self.assertEqual( HydrusPaths.ElideFilenameOrDirectorySafely( name_too_long, num_characters_used_in_other_components = num_characters_used_in_other_components ), name_shortened )
+            name_normal = 'a' * 20
+            
+            self.assertEqual( HydrusPaths.ElideFilenameSafely( name_normal, max_num_characters, directory_prefix, ext ), name_normal )
+            
+            name_normal = a_hiragana * 20
+            
+            self.assertEqual( HydrusPaths.ElideFilenameSafely( name_normal, max_num_characters, directory_prefix, ext ), name_normal )
             
         finally:
             
+            HC.PLATFORM_LINUX = old_platform_linux
             HC.PLATFORM_WINDOWS = old_platform_windows
             
         
-        num_characters_already_used_in_this_component = 3
+    
+    def test_1_eliding_simple( self ):
         
-        name_shortened = 'a' * ( MAGIC_MAX_LENGTH - num_characters_already_used_in_this_component )
+        old_platform_linux = HC.PLATFORM_LINUX
+        old_platform_windows = HC.PLATFORM_WINDOWS
         
-        self.assertEqual( HydrusPaths.ElideFilenameOrDirectorySafely( name_too_long, num_characters_already_used_in_this_component = num_characters_already_used_in_this_component ), name_shortened )
+        try:
+            
+            # chars, not bytes
+            HC.PLATFORM_WINDOWS = True
+            HC.PLATFORM_LINUX = False
+            
+            max_num_characters = 220
+            
+            a_hiragana = '\u3042'
+            
+            #
+            
+            directory_prefix = 'C:\\hydrus\\files'
+            ext = '.png'
+            
+            name_too_long = 'a' * 245
+            name_shortened = 'a' * ( max_num_characters - len( ext ) )
+            
+            self.assertEqual( HydrusPaths.ElideFilenameSafely( name_too_long, max_num_characters, directory_prefix, ext ), name_shortened )
+            
+            name_too_long = a_hiragana * 245
+            name_shortened = a_hiragana * ( max_num_characters - len( ext ) )
+            
+            self.assertEqual( HydrusPaths.ElideFilenameSafely( name_too_long, max_num_characters, directory_prefix, ext ), name_shortened )
+            
+            #
+            
+            # bytes, not chars
+            HC.PLATFORM_WINDOWS = False
+            HC.PLATFORM_LINUX = True
+            
+            directory_prefix = '/mnt/hydrus'
+            ext = '.png'
+            
+            name_too_long = 'a' * 245
+            name_shortened = 'a' * ( max_num_characters - len( ext ) )
+            
+            self.assertEqual( HydrusPaths.ElideFilenameSafely( name_too_long, max_num_characters, directory_prefix, ext ), name_shortened )
+            
+            name_too_long = a_hiragana * 245
+            
+            name_shortened = ''
+            
+            len_one_char = len( a_hiragana.encode( 'utf-8' ) )
+            
+            while len( name_shortened.encode( 'utf-8' ) ) + len_one_char <= ( max_num_characters - len( ext.encode( 'utf-8' ) ) ):
+                
+                name_shortened += a_hiragana
+                
+            
+            self.assertEqual( HydrusPaths.ElideFilenameSafely( name_too_long, max_num_characters, directory_prefix, ext ), name_shortened )
+            
+        finally:
+            
+            HC.PLATFORM_LINUX = old_platform_linux
+            HC.PLATFORM_WINDOWS = old_platform_windows
+            
         
-        #
+    
+    def test_2_eliding_with_path( self ):
         
+        old_platform_linux = HC.PLATFORM_LINUX
+        old_platform_windows = HC.PLATFORM_WINDOWS
         
+        try:
+            
+            # chars, not bytes
+            HC.PLATFORM_WINDOWS = True
+            HC.PLATFORM_LINUX = False
+            
+            max_num_characters = 220
+            
+            a_hiragana = '\u3042'
+            
+            #
+            
+            directory_prefix = 'C:\\hydrus\\files\\' + ( 'd' * ( MAGIC_WINDOWS_TOTAL_PATH_LIMIT - int( 245 / 2 ) ) )
+            ext = '.png'
+            
+            name_too_long = 'a' * 245
+            name_shortened = 'a' * ( MAGIC_WINDOWS_TOTAL_PATH_LIMIT - len( directory_prefix ) - 1 - len( ext ) )
+            
+            self.assertEqual( HydrusPaths.ElideFilenameSafely( name_too_long, max_num_characters, directory_prefix, ext ), name_shortened )
+            
+            name_too_long = a_hiragana * 245
+            name_shortened = a_hiragana * ( MAGIC_WINDOWS_TOTAL_PATH_LIMIT - len( directory_prefix ) - 1 - len( ext ) )
+            
+            self.assertEqual( HydrusPaths.ElideFilenameSafely( name_too_long, max_num_characters, directory_prefix, ext ), name_shortened )
+            
+            #
+            
+            # bytes, not chars
+            HC.PLATFORM_WINDOWS = False
+            HC.PLATFORM_LINUX = True
+            
+            #
+            
+            directory_prefix = '/mnt/hydrus/files/' + ( 'd' * ( MAGIC_LINUX_TOTAL_PATH_LIMIT - int( 245 / 2 ) ) ) 
+            ext = '.png'
+            
+            name_too_long = 'a' * 245
+            name_shortened = 'a' * ( MAGIC_LINUX_TOTAL_PATH_LIMIT - len( directory_prefix ) - 1 - len( ext ) )
+            
+            self.assertEqual( HydrusPaths.ElideFilenameSafely( name_too_long, max_num_characters, directory_prefix, ext ), name_shortened )
+            
+            name_too_long = a_hiragana * 245
+            name_shortened = ''
+            
+            len_one_char = len( a_hiragana.encode( 'utf-8' ) )
+            
+            while len( name_shortened.encode( 'utf-8' ) ) + len_one_char <= ( MAGIC_LINUX_TOTAL_PATH_LIMIT - len( directory_prefix ) - 1 - len( ext ) ):
+                
+                name_shortened += a_hiragana
+                
+            
+            self.assertEqual( HydrusPaths.ElideFilenameSafely( name_too_long, max_num_characters, directory_prefix, ext ), name_shortened )
+            
+        finally:
+            
+            HC.PLATFORM_LINUX = old_platform_linux
+            HC.PLATFORM_WINDOWS = old_platform_windows
+            
+        
+    
+    def test_3_eliding_to_short_result( self ):
+        
+        old_platform_linux = HC.PLATFORM_LINUX
+        old_platform_windows = HC.PLATFORM_WINDOWS
+        
+        try:
+            
+            # chars, not bytes
+            HC.PLATFORM_WINDOWS = True
+            HC.PLATFORM_LINUX = False
+            
+            short_max_num_characters = 12
+            
+            a_hiragana = '\u3042'
+            
+            #
+            
+            directory_prefix = 'C:\\hydrus\\files\\' + ( 'd' * ( MAGIC_WINDOWS_TOTAL_PATH_LIMIT - int( 245 / 2 ) ) )
+            ext = '.png'
+            
+            name_too_long = 'a' * 245
+            name_shortened = 'a' * ( short_max_num_characters - len( ext ) )
+            
+            self.assertEqual( HydrusPaths.ElideFilenameSafely( name_too_long, short_max_num_characters, directory_prefix, ext ), name_shortened )
+            
+            name_too_long = a_hiragana * 245
+            name_shortened = a_hiragana * ( short_max_num_characters - len( ext ) )
+            
+            self.assertEqual( HydrusPaths.ElideFilenameSafely( name_too_long, short_max_num_characters, directory_prefix, ext ), name_shortened )
+            
+            #
+            
+            # bytes, not chars
+            HC.PLATFORM_WINDOWS = False
+            HC.PLATFORM_LINUX = True
+            
+            #
+            
+            directory_prefix = '/mnt/hydrus/files/' + ( 'd' * ( MAGIC_LINUX_TOTAL_PATH_LIMIT - int( 245 / 2 ) ) ) 
+            ext = '.png'
+            
+            name_too_long = 'a' * 245
+            name_shortened = 'a' * ( short_max_num_characters - len( ext.encode( 'utf-8' ) ) )
+            
+            self.assertEqual( HydrusPaths.ElideFilenameSafely( name_too_long, short_max_num_characters, directory_prefix, ext ), name_shortened )
+            
+            name_too_long = a_hiragana * 245
+            name_shortened = ''
+            
+            len_one_char = len( a_hiragana.encode( 'utf-8' ) )
+            
+            while len( name_shortened.encode( 'utf-8' ) ) + len_one_char <= ( short_max_num_characters - len( ext.encode( 'utf-8' ) ) ):
+                
+                name_shortened += a_hiragana
+                
+            
+            self.assertEqual( HydrusPaths.ElideFilenameSafely( name_too_long, short_max_num_characters, directory_prefix, ext ), name_shortened )
+            
+        finally:
+            
+            HC.PLATFORM_LINUX = old_platform_linux
+            HC.PLATFORM_WINDOWS = old_platform_windows
+            
         
     

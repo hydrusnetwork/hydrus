@@ -10,6 +10,13 @@ from hydrus.client.caches import ClientCachesBase
 
 # TODO: rework the cv2 stuff here to PIL or custom methods or whatever!
 
+
+# to help smooth out jpeg artifacts, we can do a gaussian blur at 100% zoom
+# jpeg artifacts are on the scale of 8x8 blocks. 0.8 sigma, which is about 3x that (2.4px) radius, is a nice sweet spot I have confirmed visually
+JPEG_ARTIFACT_BLUR_FOR_PROCESSING = True
+JPEG_ARTIFACT_GAUSSIAN_SIGMA_AT_100_ZOOM = 0.8
+
+# saves lots of CPU time for no great change
 NORMALISE_SCALE_FOR_PROCESSING = True
 NORMALISED_RESOLUTION = ( 1024, 1024 )
 
@@ -405,17 +412,18 @@ def aberrant_bump_in_scores( values ):
 WD_MAX_REGIONAL_SCORE = 0.01
 WD_MAX_MEAN = 0.003
 WD_MAX_VARIANCE = 0.0000035
-WD_MAX_ABSOLUTE_SKEW_PULL = 50
+WD_MAX_ABSOLUTE_SKEW_PULL = 50.0
 
 # and, additionally, after visual score histogram inspection...
 WD_VERY_GOOD_MAX_REGIONAL_SCORE = 0.004
 WD_VERY_GOOD_MAX_MEAN = 0.0015
 WD_VERY_GOOD_MAX_VARIANCE = 0.000001
+WD_VERY_GOOD_MAX_SKEW_PULL = 5.0
 
 WD_PERFECT_MAX_REGIONAL_SCORE = 0.001
 WD_PERFECT_MAX_MEAN = 0.0001
 WD_PERFECT_MAX_VARIANCE = 0.000001
-
+WD_PERFECT_MAX_SKEW_PULL = 1.5
 
 # some future ideas:
 
@@ -437,8 +445,16 @@ WD_PERFECT_MAX_VARIANCE = 0.000001
 VISUAL_DUPLICATES_RESULT_NOT = 0
 VISUAL_DUPLICATES_RESULT_PROBABLY = 1
 VISUAL_DUPLICATES_RESULT_VERY_PROBABLY = 2
-VISUAL_DUPLICATES_RESULT_DEFINITELY = 3
-VISUAL_DUPLICATES_RESULT_PERFECTLY = 4
+VISUAL_DUPLICATES_RESULT_ALMOST_CERTAINLY = 3
+VISUAL_DUPLICATES_RESULT_NEAR_PERFECT = 4
+
+def BlurRGBNumPy( numpy_image: numpy.ndarray, sigmaX ):
+    
+    return numpy.stack(
+        [ cv2.GaussianBlur( numpy_image[ ..., i ], (0, 0), sigmaX = sigmaX ) for i in range( 3 ) ],
+        axis = -1
+    )
+    
 
 def FilesAreVisuallySimilarRegional( lab_tile_hist_1: LabTilesHistogram, lab_tile_hist_2: LabTilesHistogram ):
     
@@ -483,11 +499,11 @@ def FilesAreVisuallySimilarRegional( lab_tile_hist_1: LabTilesHistogram, lab_til
     score_variance = float( numpy.var( scores ) )
     score_skew = skewness_numpy( scores )
     
-    we_have_a_mix_of_perfect_and_non_perfect_matches = we_have_an_interesting_tile_that_matches_perfectly and max_regional_score > 0.0001
-    
     # ok so skew alone is normalised and can thus be whack when we have a really tight, low variance distribution
     # so, let's multiply it by the maximum value we saw, and that gives us a nicer thing that scales to relevance with a decent sized distribution
     absolute_skew_pull = score_skew * max_regional_score * 1000
+    
+    we_have_a_mix_of_perfect_and_non_perfect_matches = we_have_an_interesting_tile_that_matches_perfectly and max_regional_score > 0.0001 and absolute_skew_pull > 8.0
     
     exceeds_regional_score = max_regional_score > WD_MAX_REGIONAL_SCORE
     exceeds_mean = mean_score > WD_MAX_MEAN
@@ -496,7 +512,7 @@ def FilesAreVisuallySimilarRegional( lab_tile_hist_1: LabTilesHistogram, lab_til
     
     we_saw_an_aberrant_bump = aberrant_bump_in_scores( scores )
     
-    debug_score_statement = f'max {max_regional_score:.3f} ({"ok" if not exceeds_regional_score else "bad"}) / mean {mean_score:.6f} ({"ok" if not exceeds_mean else "bad"})'
+    debug_score_statement = f'max {max_regional_score:.6f} ({"ok" if not exceeds_regional_score else "bad"}) / mean {mean_score:.6f} ({"ok" if not exceeds_mean else "bad"})'
     debug_score_statement += '\n'
     debug_score_statement += f'variance {score_variance:.7f} ({"ok" if not exceeds_variance else "bad"}) / skew {score_skew:.3f}/{absolute_skew_pull:.2f} ({"ok" if not exceeds_skew else "bad"})'
     debug_score_statement += '\n'
@@ -534,15 +550,15 @@ def FilesAreVisuallySimilarRegional( lab_tile_hist_1: LabTilesHistogram, lab_til
         
         they_are_similar = True
         
-        if max_regional_score < WD_PERFECT_MAX_REGIONAL_SCORE and mean_score < WD_PERFECT_MAX_MEAN and score_variance < WD_PERFECT_MAX_VARIANCE:
+        if max_regional_score < WD_PERFECT_MAX_REGIONAL_SCORE and mean_score < WD_PERFECT_MAX_MEAN and score_variance < WD_PERFECT_MAX_VARIANCE and absolute_skew_pull < WD_PERFECT_MAX_SKEW_PULL:
             
             statement = 'near-perfect visual duplicates'
-            result = VISUAL_DUPLICATES_RESULT_PERFECTLY
+            result = VISUAL_DUPLICATES_RESULT_NEAR_PERFECT
             
-        elif max_regional_score < WD_VERY_GOOD_MAX_REGIONAL_SCORE and mean_score < WD_VERY_GOOD_MAX_MEAN and score_variance < WD_VERY_GOOD_MAX_VARIANCE:
+        elif max_regional_score < WD_VERY_GOOD_MAX_REGIONAL_SCORE and mean_score < WD_VERY_GOOD_MAX_MEAN and score_variance < WD_VERY_GOOD_MAX_VARIANCE and absolute_skew_pull < WD_VERY_GOOD_MAX_SKEW_PULL:
             
-            statement = 'definitely visual duplicates'
-            result = VISUAL_DUPLICATES_RESULT_DEFINITELY
+            statement = 'almost certainly visual duplicates'
+            result = VISUAL_DUPLICATES_RESULT_ALMOST_CERTAINLY
             
         else:
             
@@ -628,6 +644,9 @@ def FilesHaveDifferentRatio( resolution_1, resolution_2 ):
 def GenerateEdgeMapNumPy( numpy_image: numpy.ndarray, original_resolution ) -> numpy.ndarray:
     
     '''
+    2025-06: rework all this now I know more about this topic
+    keep the edge map, do an AB edgemap diff, and tile that. compute stats on tile scores
+    
     This can work exceptionally well to detect lines, but if we scale images down, we lose data!!!
     So, we feed the image into here as a 100% grayscale.
     Then we have two objectives:
@@ -679,6 +698,11 @@ def GenerateImageLabHistogramsNumPy( numpy_image: numpy.ndarray ) -> LabHistogra
     
     #numpy_image_gray = cv2.cvtColor( numpy_image_rgb, cv2.COLOR_RGB2GRAY )
     
+    if JPEG_ARTIFACT_BLUR_FOR_PROCESSING:
+        
+        numpy_image_rgb = BlurRGBNumPy( numpy_image_rgb, JPEG_ARTIFACT_GAUSSIAN_SIGMA_AT_100_ZOOM )
+        
+    
     if NORMALISE_SCALE_FOR_PROCESSING:
         
         numpy_image_rgb = cv2.resize( numpy_image_rgb, NORMALISED_RESOLUTION, interpolation = cv2.INTER_AREA )
@@ -708,6 +732,11 @@ def GenerateImageLabTilesHistogramsNumPy( numpy_image: numpy.ndarray ) -> LabTil
     resolution = ( width, height )
     
     numpy_image_rgb = HydrusImageNormalisation.StripOutAnyAlphaChannel( numpy_image )
+    
+    if JPEG_ARTIFACT_BLUR_FOR_PROCESSING:
+        
+        numpy_image_rgb = BlurRGBNumPy( numpy_image_rgb, JPEG_ARTIFACT_GAUSSIAN_SIGMA_AT_100_ZOOM )
+        
     
     had_alpha = numpy_image.shape != numpy_image_rgb.shape
     

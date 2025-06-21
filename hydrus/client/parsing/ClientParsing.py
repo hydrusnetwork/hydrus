@@ -273,6 +273,9 @@ class ParseFormula( HydrusSerialisable.SerialisableBase ):
         
         raw_texts = HydrusText.CleanseImportTexts( raw_texts )
         
+        # TODO: it would be useful to have a formula checkbox that said 'yes strip what I parse'
+        # probably related to newline handling improvements too. that RemoveNewlines strips too btw
+        
         if collapse_newlines:
             
             # maybe should use HydrusText.DeserialiseNewlinedTexts, but that might change/break some existing parsers with the strip() trim

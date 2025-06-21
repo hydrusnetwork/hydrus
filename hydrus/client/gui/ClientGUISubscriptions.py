@@ -1719,7 +1719,7 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             subscription = unknown_subscription
             
         
-        subscription.SetNonDupeName( self._GetExistingNames() )
+        subscription.SetNonDupeName( self._GetExistingNames(), do_casefold = True )
         
         self._subscriptions.AddData( subscription, select_sort_and_scroll = True )
         
@@ -2789,7 +2789,7 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 if edited_subscription.GetName() != subscription.GetName():
                     
-                    edited_subscription.SetNonDupeName( self._GetExistingNames() )
+                    edited_subscription.SetNonDupeName( self._GetExistingNames(), do_casefold = True )
                     
                 
                 self._subscriptions.ReplaceData( subscription, edited_subscription, sort_and_scroll = True )
@@ -2951,7 +2951,7 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 if merged_sub.GetName() != primary.GetName():
                     
-                    merged_sub.SetNonDupeName( existing_names )
+                    merged_sub.SetNonDupeName( existing_names, do_casefold = True )
                     
                 
                 existing_names.add( merged_sub.GetName() )
@@ -3177,7 +3177,7 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         for final_subscription in final_subscriptions:
             
-            final_subscription.SetNonDupeName( existing_names )
+            final_subscription.SetNonDupeName( existing_names, do_casefold = True )
             
             existing_names.add( final_subscription.GetName() )
             

@@ -2403,7 +2403,11 @@ class DB( HydrusDB.HydrusDB ):
             jobs.extend( ( ( file_service_key, HC.CONTENT_STATUS_DELETED ) for file_service_key in location_context.deleted_service_keys ) )
             
             file_repo_preds = []
-            inbox_archive_preds = []
+            
+            inbox_archive_preds = [
+                ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_INBOX ),
+                ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_ARCHIVE )
+            ]
             
             we_saw_a_file_repo = False
             
@@ -2428,13 +2432,12 @@ class DB( HydrusDB.HydrusDB ):
                     
                     if location_context.IncludesDeleted():
                         
-                        # inbox/archive and local/remote are too difficult to get good numbers for and merge for deleted, so we'll exclude if this is a mix
+                        # inbox/archive and local/remote are too difficult to get good numbers for and merge for deleted
                         
                         continue
                         
                     
                     num_inbox = service_info[ HC.SERVICE_INFO_NUM_INBOX ]
-                    num_archive = num_everything - num_inbox
                     
                     if service_type == HC.FILE_REPOSITORY:
                         
@@ -9231,6 +9234,56 @@ class DB( HydrusDB.HydrusDB ):
                 self.pub_initial_message( message )
                 
             
+        
+        if version == 625:
+            
+            try:
+                
+                domain_manager = self.modules_serialisable.GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
+                
+                domain_manager.Initialise()
+                
+                #
+                
+                domain_manager.OverwriteDefaultParsers( [
+                    'derpibooru.org file page parser'
+                ] )
+                
+                #
+                
+                domain_manager.TryToLinkURLClassesAndParsers()
+                
+                #
+                
+                self.modules_serialisable.SetJSONDump( domain_manager )
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to update some downloaders failed! Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
+                
+            
+            try:
+                
+                new_options = self.modules_serialisable.GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_CLIENT_OPTIONS )
+                
+                new_options.SetBoolean( 'allow_remove_on_manage_tags_input', False )
+                
+                self.modules_serialisable.SetJSONDump( new_options )
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to update your options failed! Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
+                
+            
+        
         
         self._controller.frame_splash_status.SetTitleText( 'updated db to v{}'.format( HydrusNumbers.ToHumanInt( version + 1 ) ) )
         

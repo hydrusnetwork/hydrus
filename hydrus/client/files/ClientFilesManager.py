@@ -64,7 +64,7 @@ class ClientFilesManager( object ):
         
         file_size = os.path.getsize( source_path )
         
-        dest_free_space = self._GetFileStorageFreeSpace( hash )
+        dest_free_space = self._GetFileStorageFreeSpaceForHash( hash )
         
         if dest_free_space < 100 * 1048576 or dest_free_space < file_size:
             
@@ -341,11 +341,7 @@ class ClientFilesManager( object ):
         return known_base_locations
         
     
-    def _GetFileStorageFreeSpace( self, hash: bytes ) -> int:
-        
-        subfolder = self._GetSubfolderForFile( hash, 'f' )
-        
-        base_location = subfolder.base_location
+    def _GetFileStorageFreeSpace( self, base_location: ClientFilesPhysical.FilesStorageBaseLocation ):
         
         if base_location in self._locations_to_free_space:
             
@@ -389,6 +385,15 @@ class ClientFilesManager( object ):
             
         
         return free_space
+        
+    
+    def _GetFileStorageFreeSpaceForHash( self, hash: bytes ) -> int:
+        
+        subfolder = self._GetSubfolderForFile( hash, 'f' )
+        
+        base_location = subfolder.base_location
+        
+        return self._GetFileStorageFreeSpace( base_location )
         
     
     def _GetPossibleSubfoldersForFile( self, hash: bytes, prefix_type: str ) -> list[ ClientFilesPhysical.FilesStorageSubfolder ]:
@@ -522,8 +527,6 @@ class ClientFilesManager( object ):
                 
             
         
-        random.shuffle( second_round_base_locations )
-        
         # second round, let's distribute the remainder
         # I fixed some logic and it seems like everything here is now AbleToAccept, so maybe we want another quick pass on this
         # or just wait until I do the slow migration and we'll figure something out with the staticmethod on BaseLocation that just gets ideal weights
@@ -545,7 +548,7 @@ class ClientFilesManager( object ):
             
             if base_location.EagerToAcceptSubfolders( current_normalised_weight / ( 1 - total_normalised_weight_lost_in_first_round ), second_round_total_ideal_weight, smallest_subfolder_normalised_weight, current_num_bytes, smallest_subfolder_num_bytes ):
                 
-                starving_locations.insert( 0, base_location )
+                starving_locations.append( base_location )
                 
             elif base_location.AbleToAcceptSubfolders( current_num_bytes, smallest_subfolder_num_bytes ):
                 
@@ -554,6 +557,11 @@ class ClientFilesManager( object ):
             
         
         #
+        
+        desperately_overweight_locations.sort( key = lambda bl: self._GetFileStorageFreeSpace( bl ) )
+        overweight_locations.sort( key = lambda bl: self._GetFileStorageFreeSpace( bl ) )
+        available_locations.sort( key = lambda bl: - self._GetFileStorageFreeSpace( bl ) )
+        starving_locations.sort( key = lambda bl: - self._GetFileStorageFreeSpace( bl ) )
         
         if len( desperately_overweight_locations ) > 0:
             

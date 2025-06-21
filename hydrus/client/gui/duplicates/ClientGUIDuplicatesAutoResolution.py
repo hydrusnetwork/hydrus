@@ -117,7 +117,7 @@ class EditDuplicatesAutoResolutionRulesPanel( ClientGUIScrolledPanels.EditPanel 
                 
                 duplicates_auto_resolution_rule = panel.GetValue()
                 
-                duplicates_auto_resolution_rule.SetNonDupeName( self._GetExistingNames() )
+                duplicates_auto_resolution_rule.SetNonDupeName( self._GetExistingNames(), do_casefold = True )
                 
                 self._duplicates_auto_resolution_rules.AddData( duplicates_auto_resolution_rule, select_sort_and_scroll = True )
                 
@@ -184,7 +184,7 @@ class EditDuplicatesAutoResolutionRulesPanel( ClientGUIScrolledPanels.EditPanel 
                     
                     existing_names.discard( duplicates_auto_resolution_rule.GetName() )
                     
-                    edited_duplicates_auto_resolution_rule.SetNonDupeName( existing_names )
+                    edited_duplicates_auto_resolution_rule.SetNonDupeName( existing_names, do_casefold = True )
                     
                 
                 self._duplicates_auto_resolution_rules.ReplaceData( duplicates_auto_resolution_rule, edited_duplicates_auto_resolution_rule, sort_and_scroll = True )
@@ -199,7 +199,7 @@ class EditDuplicatesAutoResolutionRulesPanel( ClientGUIScrolledPanels.EditPanel 
     
     def _ImportRule( self, duplicates_auto_resolution_rule: ClientDuplicatesAutoResolution.DuplicatesAutoResolutionRule ):
         
-        duplicates_auto_resolution_rule.SetNonDupeName( self._GetExistingNames() )
+        duplicates_auto_resolution_rule.SetNonDupeName( self._GetExistingNames(), do_casefold = True )
         
         self._duplicates_auto_resolution_rules.AddData( duplicates_auto_resolution_rule, select_sort_and_scroll = True )
         
@@ -299,9 +299,9 @@ class EditDuplicatesAutoResolutionRulePanel( ClientGUIScrolledPanels.EditPanel )
         
         vbox = QP.VBoxLayout()
         
-        label = 'Now, for each pair that matches our search, we need to determine if their differences (or similarities!) are clear enough that we confidently can make an automatic decision. If we are setting one file to be a better duplicate of the other, we also need to arrange which is the A (usually the better) and the B (usually the worse).'
+        label = 'Now, for each pair that matches our search, we need to determine if their differences (or similarities!) are clear enough that we can confidently make an automatic decision. The pairs are also unordered, so if we are setting one file to be a better duplicate of the other, we also need to define which is the A (usually the better) and the B (usually the worse).'
         label += '\n\n'
-        label += 'The client will test the incoming pair both ways around against these rules, and if they fit either way, that "AB" pair order is set and the action is applied. If the pair fails the rules both ways around, no changes will be made. If there are no rules, all pairs will be actioned--but you need at least one A- or B-defining rule for a "better/worse duplicates" action'
+        label += 'The client will test the incoming pair both ways around ([1,2] and [2,1]) against these rules, and if they fit either way, that "AB" pair order is set and the action is applied. If the pair cannot fit into the rules either way, the test is considered failed and no changes are made. If there are no rules, all pairs will be actioned--but remember you need at least one clear A- or B-defining rule for a "better/worse duplicates" action.'
         
         st = ClientGUICommon.BetterStaticText( self._selector_panel, label )
         

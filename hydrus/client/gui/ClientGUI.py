@@ -975,7 +975,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
             
             all_names = [ s.GetName() for s in all_services ]
             
-            name = HydrusData.GetNonDupeName( 'public tag repository', all_names )
+            name = HydrusData.GetNonDupeName( 'public tag repository', all_names, do_casefold = True )
             
             service_key = HydrusData.GenerateKey()
             service_type = HC.TAG_REPOSITORY
