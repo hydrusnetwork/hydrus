@@ -2496,6 +2496,8 @@ class Thumbnail( Selectable ):
         
         numerical_services = services_manager.GetServices( ( HC.LOCAL_RATING_NUMERICAL, ) )
         
+        draw_collapsed_numerical_ratings = new_options.GetBoolean( 'draw_thumbnail_numerical_ratings_collapsed_always' )
+        
         numerical_services_to_show = [ numerical_service for numerical_service in numerical_services if ShouldShowRatingInThumbnail( media, numerical_service.GetServiceKey() ) ]
         
         for numerical_service in numerical_services_to_show:
@@ -2506,7 +2508,7 @@ class Thumbnail( Selectable ):
             
             ( rating_state, rating ) = ClientRatings.GetNumericalStateFromMedia( ( media, ), service_key )
             
-            numerical_width = ClientGUIRatings.GetNumericalWidth( service_key, STAR_DX )
+            numerical_width = ClientGUIRatings.GetNumericalWidth( service_key, STAR_DX, None, draw_collapsed_numerical_ratings, False, rating_state, rating )
             
             rect_width = numerical_width + ( ICON_MARGIN * 2 ) #icon padding is included in GetNumericalWidth
             rect_height = STAR_DY + ICON_PAD + ( ICON_MARGIN * 2 )
@@ -2522,7 +2524,7 @@ class Thumbnail( Selectable ):
             numerical_rating_current_x = rect_x + ICON_PAD / 2
             numerical_rating_current_y = rect_y + ICON_PAD / 2
             
-            ClientGUIRatings.DrawNumerical( painter, numerical_rating_current_x, numerical_rating_current_y, service_key, rating_state, rating, QC.QSize( STAR_DX, STAR_DY ) )
+            ClientGUIRatings.DrawNumerical( painter, numerical_rating_current_x, numerical_rating_current_y, service_key, rating_state, rating, QC.QSize( STAR_DX, STAR_DY ), custom_pad, draw_collapsed_numerical_ratings )
             
             current_top_right_y += rect_height
             

@@ -119,7 +119,7 @@ def DrawLike( painter: QG.QPainter, x, y, service_key, rating_state, size: QC.QS
     ClientGUIPainterShapes.DrawShape( painter, star_type, x, y, size.width(), size.height() )
     
 
-def DrawNumerical( painter: QG.QPainter, x, y, service_key, rating_state, rating, size: QC.QSize = STAR_SIZE, pad_px = None ):
+def DrawNumerical( painter: QG.QPainter, x, y, service_key, rating_state, rating, size: QC.QSize = STAR_SIZE, pad_px = None, draw_collapsed = False, draw_fractional_beside = False ):
     
     if pad_px is None:
         
@@ -142,27 +142,82 @@ def DrawNumerical( painter: QG.QPainter, x, y, service_key, rating_state, rating
     x_delta = 0
     x_step = size.width() + pad_px
     
-    for ( num_stars, pen_colour, brush_colour ) in stars:
+    if draw_collapsed or draw_fractional_beside:
         
-        painter.setPen( QG.QPen( pen_colour ) )
-        painter.setBrush( QG.QBrush( brush_colour ) )
+        original_font = painter.font()
         
-        for i in range( num_stars ):
-            
-            ClientGUIPainterShapes.DrawShape( painter, star_type, x + x_delta, y, size.width(), size.height() )
-            
-            x_delta += x_step
-            
+        numeric_font = painter.font()
+        
+        numeric_font.setPixelSize( int( size.height() - 1 ) )
+        
+        painter.setFont( numeric_font )
+        
+        painter.setPen( QG.QPen( stars[0][1] ) )
+        painter.setBrush( QG.QBrush( stars[0][2] ) )
+        
+        text = '{}/{}'.format( stars[0][0], ( stars[0][0] + stars[1][0] ) )
+        
+        metrics = QG.QFontMetrics( numeric_font )
+        text_size = metrics.size( 0, text )
+        
+        painter.drawText( QC.QRect( x - 1, y - ClientGUIPainterShapes.PAD_PX + 1, text_size.width(), text_size.height() ), text )
+        
+        painter.setFont( original_font )
+        
         
     
+    if draw_collapsed: #draw 1 'like' star in collapsed state
+        
+        ClientGUIPainterShapes.DrawShape( painter, star_type, x + text_size.width() + ClientGUIPainterShapes.PAD_PX / 2, y, size.width(), size.height() )
+        
+    else:
+        
+        for ( num_stars, pen_colour, brush_colour ) in stars:
+            
+            painter.setPen( QG.QPen( pen_colour ) )
+            painter.setBrush( QG.QBrush( brush_colour ) )
+            
+            for i in range( num_stars ):
+                
+                ClientGUIPainterShapes.DrawShape( painter, star_type, x + x_delta, y, size.width(), size.height() )
+                
+                x_delta += x_step
+                
+            
+    
 
-def GetNumericalWidth( service_key, star_width, pad_px = None ):
+def GetNumericalWidth( service_key, star_width, pad_px = None, draw_collapsed = False, draw_fractional_beside = False, rating_state = None, rating = None ):
     
     try:
         
         service = CG.client_controller.services_manager.GetService( service_key )
         
         num_stars = service.GetNumStars()
+        
+        if draw_collapsed or draw_fractional_beside:
+            
+            ( star_type, stars ) = GetStars( service_key, rating_state, rating )
+            
+            #calculate the width of the text to be added e.g. 10/10
+            numeric_font = QG.QFont()
+            
+            numeric_font.setPixelSize( int( star_width - 1 ) )
+            
+            text = '{}/{}'.format( stars[0][0], ( stars[0][0] + stars[1][0] ) )
+            
+            metrics = QG.QFontMetrics( numeric_font )
+            text_size = metrics.size( 0, text )
+            text_size = text_size.width()
+            
+            if draw_collapsed:
+                
+                num_stars = 1
+                
+            
+        else:
+            
+            text_size = 0
+            
         
         if pad_px is None:
             
@@ -180,7 +235,8 @@ def GetNumericalWidth( service_key, star_width, pad_px = None ):
         num_stars = 1
         
     
-    return ( ( star_width + pad_px ) * num_stars - 1 ) + ( ClientGUIPainterShapes.PAD_PX ) - pad_px
+    return text_size + ( star_width * num_stars) + ( pad_px * ( num_stars - 1 ) ) + ( ClientGUIPainterShapes.PAD_PX )
+    ##return text_size + ( ( star_width + pad_px ) * num_stars - 1 ) + ( ClientGUIPainterShapes.PAD_PX ) - pad_px
     
     
 def GetPenAndBrushColours( service_key, rating_state ):
