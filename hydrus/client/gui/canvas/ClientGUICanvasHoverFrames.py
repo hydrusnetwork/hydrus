@@ -283,6 +283,8 @@ class RatingNumericalCanvas( ClientGUIRatings.RatingNumericalControl ):
         
         CG.client_controller.sub( self, 'ProcessContentUpdatePackage', 'content_updates_gui' )
         
+        self.valueChanged.connect( self.UpdateSize )
+        
     
     def _ClearRating( self ):
         
@@ -371,6 +373,8 @@ class RatingNumericalCanvas( ClientGUIRatings.RatingNumericalControl ):
             
             ( self._rating_state, self._rating ) = ClientRatings.GetNumericalStateFromMedia( ( self._current_media, ), self._service_key )
             
+        
+        self.UpdateSize()
         
         self.update()
         

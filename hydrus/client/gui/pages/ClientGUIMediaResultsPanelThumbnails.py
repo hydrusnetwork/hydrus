@@ -2508,7 +2508,7 @@ class Thumbnail( Selectable ):
             
             ( rating_state, rating ) = ClientRatings.GetNumericalStateFromMedia( ( media, ), service_key )
             
-            numerical_width = ClientGUIRatings.GetNumericalWidth( service_key, STAR_DX, None, draw_collapsed_numerical_ratings, False, rating_state, rating )
+            numerical_width = ClientGUIRatings.GetNumericalWidth( service_key, STAR_DX, None, draw_collapsed_numerical_ratings, rating_state, rating )
             
             rect_width = numerical_width + ( ICON_MARGIN * 2 ) #icon padding is included in GetNumericalWidth
             rect_height = STAR_DY + ICON_PAD + ( ICON_MARGIN * 2 )

@@ -119,20 +119,24 @@ def DrawLike( painter: QG.QPainter, x, y, service_key, rating_state, size: QC.QS
     ClientGUIPainterShapes.DrawShape( painter, star_type, x, y, size.width(), size.height() )
     
 
-def DrawNumerical( painter: QG.QPainter, x, y, service_key, rating_state, rating, size: QC.QSize = STAR_SIZE, pad_px = None, draw_collapsed = False, draw_fractional_beside = False ):
+def DrawNumerical( painter: QG.QPainter, x, y, service_key, rating_state, rating, size: QC.QSize = STAR_SIZE, pad_px = None, draw_collapsed = False ):
     
-    if pad_px is None:
+    try:
         
-        try:
-            
-            service = CG.client_controller.services_manager.GetService( service_key )
+        service = CG.client_controller.services_manager.GetService( service_key )
+        
+        if pad_px is None:
             
             pad_px = service.GetCustomPad()
             
-        except HydrusExceptions.DataMissing:
-            
-            pad_px = ClientGUIPainterShapes.PAD_PX
-            
+        
+        draw_fractional_beside = service.GetShowFractionBesideStars()
+        
+    except HydrusExceptions.DataMissing:
+        
+        pad_px = ClientGUIPainterShapes.PAD_PX
+        
+        draw_fractional_beside = False
         
     
     painter.setRenderHint( QG.QPainter.RenderHint.Antialiasing, True )
@@ -142,7 +146,7 @@ def DrawNumerical( painter: QG.QPainter, x, y, service_key, rating_state, rating
     x_delta = 0
     x_step = size.width() + pad_px
     
-    if draw_collapsed or draw_fractional_beside:
+    if draw_collapsed or draw_fractional_beside == ClientRatings.DRAW_ON_LEFT:
         
         original_font = painter.font()
         
@@ -155,20 +159,22 @@ def DrawNumerical( painter: QG.QPainter, x, y, service_key, rating_state, rating
         painter.setPen( QG.QPen( stars[0][1] ) )
         painter.setBrush( QG.QBrush( stars[0][2] ) )
         
-        text = '{}/{}'.format( stars[0][0], ( stars[0][0] + stars[1][0] ) )
+        text = GetNumericalFractionText( stars )
         
         metrics = QG.QFontMetrics( numeric_font )
         text_size = metrics.size( 0, text )
         
-        painter.drawText( QC.QRect( x - 1, y - ClientGUIPainterShapes.PAD_PX + 1, text_size.width(), text_size.height() ), text )
+        painter.drawText( QC.QRect( x - ClientGUIPainterShapes.PAD_PX / 2, y - ClientGUIPainterShapes.PAD_PX + 1, text_size.width(), text_size.height() ), text )
         
         painter.setFont( original_font )
         
+        x_delta += text_size.width() + 1
         
     
-    if draw_collapsed: #draw 1 'like' star in collapsed state
+    #draw 1 'like' star in collapsed state
+    if draw_collapsed:
         
-        ClientGUIPainterShapes.DrawShape( painter, star_type, x + text_size.width() + ClientGUIPainterShapes.PAD_PX / 2, y, size.width(), size.height() )
+        ClientGUIPainterShapes.DrawShape( painter, star_type, x + x_delta, y, size.width(), size.height() )
         
     else:
         
@@ -184,9 +190,52 @@ def DrawNumerical( painter: QG.QPainter, x, y, service_key, rating_state, rating
                 x_delta += x_step
                 
             
+        if draw_fractional_beside == ClientRatings.DRAW_ON_RIGHT:
+            
+            original_font = painter.font()
+            
+            numeric_font = painter.font()
+            
+            numeric_font.setPixelSize( int( size.height() - 1 ) )
+            
+            painter.setFont( numeric_font )
+            
+            painter.setPen( QG.QPen( stars[0][1] ) )
+            painter.setBrush( QG.QBrush( stars[0][2] ) )
+            
+            text = GetNumericalFractionText( stars )
+            
+            metrics = QG.QFontMetrics( numeric_font )
+            text_size = metrics.size( 0, text )
+            
+            painter.drawText( QC.QRect( x + x_delta - pad_px + ClientGUIPainterShapes.PAD_PX / 2, y - ClientGUIPainterShapes.PAD_PX + 1, text_size.width(), text_size.height() ), text )
+            
+            painter.setFont( original_font )
+            
+        
     
 
-def GetNumericalWidth( service_key, star_width, pad_px = None, draw_collapsed = False, draw_fractional_beside = False, rating_state = None, rating = None ):
+def GetNumericalFractionText( stars ):
+    
+    if len( stars ) == 1:
+        
+        frac_numerator = 0
+        frac_denominator = stars[0][0]
+        
+    else:
+        
+        frac_numerator = stars[0][0]
+        frac_denominator = stars[0][0] + stars[1][0]
+        
+    
+    #Do not adjust whitespace within :> formatter.
+    frac_numerator = f"{frac_numerator:>{ len( str( frac_denominator ) ) }}"
+    text = '{}/{}'.format( frac_numerator, frac_denominator )
+    
+    return text
+    
+
+def GetNumericalWidth( service_key, star_width, pad_px = None, draw_collapsed = False, rating_state = ClientRatings.NULL, rating = None ):
     
     try:
         
@@ -194,7 +243,14 @@ def GetNumericalWidth( service_key, star_width, pad_px = None, draw_collapsed = 
         
         num_stars = service.GetNumStars()
         
+        draw_fractional_beside = service.GetShowFractionBesideStars()
+        
         if draw_collapsed or draw_fractional_beside:
+            
+            if rating is None:
+                
+                rating = 1.0
+                
             
             ( star_type, stars ) = GetStars( service_key, rating_state, rating )
             
@@ -203,7 +259,7 @@ def GetNumericalWidth( service_key, star_width, pad_px = None, draw_collapsed = 
             
             numeric_font.setPixelSize( int( star_width - 1 ) )
             
-            text = '{}/{}'.format( stars[0][0], ( stars[0][0] + stars[1][0] ) )
+            text = GetNumericalFractionText( stars )
             
             metrics = QG.QFontMetrics( numeric_font )
             text_size = metrics.size( 0, text )
@@ -672,15 +728,17 @@ class RatingNumerical( QW.QWidget ):
             self._num_stars = service.GetNumStars()
             self._allow_zero = service.AllowZero()
             self._custom_pad = service.GetCustomPad()
+            self._draw_fraction = service.GetShowFractionBesideStars()
             
         except HydrusExceptions.DataMissing:
             
             self._num_stars = 5
             self._allow_zero = False
             self._custom_pad = ClientGUIPainterShapes.PAD_PX
+            self._draw_fraction = ClientRatings.DRAW_NO
             
         
-        my_width = GetNumericalWidth( self._service_key, icon_size.width(), self._custom_pad )
+        self._icon_size = icon_size
         
         self._widget_event_filter = QP.WidgetEventFilter( self )
         
@@ -689,10 +747,10 @@ class RatingNumerical( QW.QWidget ):
         self._widget_event_filter.EVT_RIGHT_DOWN( self.EventRightDown )
         self._widget_event_filter.EVT_RIGHT_DCLICK( self.EventRightDown )
         
-        self.setMinimumSize( QC.QSize( my_width, icon_size.height() + STAR_PAD.height() ) )
-        
         self._rating_state = ClientRatings.NULL
         self._rating = 0.0
+        
+        self.UpdateSize()
         
     
     def _ClearRating( self ):
@@ -730,7 +788,24 @@ class RatingNumerical( QW.QWidget ):
             
             x_adjusted = x - BORDER
             
-            proportion_filled = x_adjusted / my_active_size.width()
+            width = my_active_size.width()
+            
+            if self._draw_fraction == ClientRatings.DRAW_ON_LEFT: #if we drew the fraction on the left of the stars, adjust clicky area from the left side
+                
+                x_min = width * 0.2
+                x_clamped = max(x_adjusted, x_min)
+                proportion_filled = (x_clamped - x_min) / (width - x_min)
+                
+            elif self._draw_fraction == ClientRatings.DRAW_ON_RIGHT: #or if we drew if on the right, adjust from the right side. 20% in both cases seems to align decently
+                
+                x_max = width * 0.8
+                x_clamped = min(x_adjusted, x_max)
+                proportion_filled = x_clamped / x_max
+                
+            else:
+                
+                proportion_filled = x_adjusted / width
+                
             
             if self._allow_zero:
                 
@@ -869,6 +944,15 @@ class RatingNumerical( QW.QWidget ):
         self._UpdateTooltip()
         
     
+    def UpdateSize( self ):
+        
+        my_width = GetNumericalWidth( self._service_key, self._icon_size.width(), self._custom_pad, False, self._rating_state, self._rating )
+        
+        self.setMinimumSize( QC.QSize( my_width, self._icon_size.height() + STAR_PAD.height() ) )
+        
+        self.update()
+        
+    
 
 class RatingNumericalControl( RatingNumerical ):
     
@@ -939,5 +1023,8 @@ class RatingNumericalDialog( RatingNumericalControl ):
             
             DrawNumerical( painter, 1, 1, self._service_key, ClientRatings.NULL, 0.0 )
             
+        
+        self.UpdateSize()
+        self.updateGeometry()
         
     

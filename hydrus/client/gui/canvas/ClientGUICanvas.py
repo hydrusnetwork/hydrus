@@ -2303,7 +2303,7 @@ class CanvasWithHovers( Canvas ):
             
             ( rating_state, rating ) = ClientRatings.GetNumericalStateFromMedia( ( self._current_media, ), service_key )
             
-            numerical_width = ClientGUIRatings.GetNumericalWidth( service_key, RATING_ICON_SET_SIZE, custom_pad )
+            numerical_width = ClientGUIRatings.GetNumericalWidth( service_key, RATING_ICON_SET_SIZE, custom_pad, False, rating_state, rating )
             
             current_x = my_width - numerical_width - ( QFRAME_PADDING + VBOX_MARGIN ) + STAR_PAD.width() / 2
             

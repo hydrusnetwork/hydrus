@@ -6551,7 +6551,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._draw_thumbnail_rating_incdec_width_px.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
             
             self._draw_thumbnail_numerical_ratings_collapsed_always = QW.QCheckBox( thumbnail_appearance_box )
-            tt = 'If this is checked, numerical ratings will always draw collapsed in thumbnails (\'2/10 ▲\' instead of \'▲▲▼▼▼▼▼▼▼▼\') regardless of the per-service setting.'
+            tt = 'If this is checked, all numerical ratings will show collapsed in thumbnails (\'2/10 ▲\' instead of \'▲▲▼▼▼▼▼▼▼▼\') regardless of the per-service setting.'
             self._draw_thumbnail_numerical_ratings_collapsed_always.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
             
             self._video_thumbnail_percentage_in = ClientGUICommon.BetterSpinBox( thumbnail_appearance_box, min=0, max=100 )

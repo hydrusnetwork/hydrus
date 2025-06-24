@@ -132,6 +132,7 @@ def GenerateDefaultServiceDictionary( service_type ):
                 dictionary[ 'num_stars' ] = 5
                 dictionary[ 'allow_zero' ] = True
                 dictionary[ 'custom_pad' ] = ClientGUIRatings.STAR_PAD.width()
+                dictionary[ 'show_fraction_beside_stars' ] = ClientRatings.DRAW_NO
                 
             
         
@@ -686,6 +687,7 @@ class ServiceLocalRatingNumerical( ServiceLocalRatingStars ):
         dictionary[ 'num_stars' ] = self._num_stars
         dictionary[ 'allow_zero' ] = self._allow_zero
         dictionary[ 'custom_pad' ] = self._custom_pad
+        dictionary[ 'show_fraction_beside_stars' ] = self._show_fraction_beside_stars
         
         return dictionary
         
@@ -697,6 +699,7 @@ class ServiceLocalRatingNumerical( ServiceLocalRatingStars ):
         self._num_stars = dictionary[ 'num_stars' ]
         self._allow_zero = dictionary[ 'allow_zero' ]
         self._custom_pad = dictionary[ 'custom_pad' ]
+        self._show_fraction_beside_stars = dictionary[ 'show_fraction_beside_stars' ]
         
     
     def AllowZero( self ):
@@ -781,6 +784,13 @@ class ServiceLocalRatingNumerical( ServiceLocalRatingStars ):
         one_star_value = 1.0 / ( num_choices - 1 )
         
         return one_star_value
+        
+    def GetShowFractionBesideStars( self ):
+        
+        with self._lock:
+            
+            return self._show_fraction_beside_stars
+            
         
     
 class ServiceRemote( Service ):
