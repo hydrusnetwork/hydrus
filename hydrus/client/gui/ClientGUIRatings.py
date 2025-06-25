@@ -792,13 +792,13 @@ class RatingNumerical( QW.QWidget ):
             
             if self._draw_fraction == ClientRatings.DRAW_ON_LEFT: #if we drew the fraction on the left of the stars, adjust clicky area from the left side
                 
-                x_min = width * 0.2
+                x_min = ( self._icon_size.width() - 1 ) * len( GetNumericalFractionText( [ [ self._num_stars ] ] ) ) / 2
                 x_clamped = max(x_adjusted, x_min)
                 proportion_filled = (x_clamped - x_min) / (width - x_min)
                 
-            elif self._draw_fraction == ClientRatings.DRAW_ON_RIGHT: #or if we drew if on the right, adjust from the right side. 20% in both cases seems to align decently
+            elif self._draw_fraction == ClientRatings.DRAW_ON_RIGHT: #or if we drew if on the right, adjust from the right side
                 
-                x_max = width * 0.8
+                x_max = width - ( self._icon_size.width() - 1 ) * len( GetNumericalFractionText( [ [ self._num_stars ] ] ) ) / 2
                 x_clamped = min(x_adjusted, x_max)
                 proportion_filled = x_clamped / x_max
                 
