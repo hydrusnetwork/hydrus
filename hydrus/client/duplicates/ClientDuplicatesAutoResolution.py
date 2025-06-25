@@ -819,7 +819,7 @@ def GetDefaultRuleSuggestions() -> list[ DuplicatesAutoResolutionRule ]:
     potential_duplicates_search_context.SetPixelDupesPreference( ClientDuplicates.SIMILAR_FILES_PIXEL_DUPES_EXCLUDED )
     potential_duplicates_search_context.SetMaxHammingDistance( 0 )
     
-    duplicates_auto_resolution_rule = DuplicatesAutoResolutionRule( 'visually similar pairs - eliminate bloat' )
+    duplicates_auto_resolution_rule = DuplicatesAutoResolutionRule( 'visually similar pairs - eliminate smaller' )
     
     duplicates_auto_resolution_rule.SetMaxPendingPairs( 64 )
     duplicates_auto_resolution_rule.SetPotentialDuplicatesSearchContext( potential_duplicates_search_context )
