@@ -1212,6 +1212,30 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#now_what" class="md-nav__link">
+    <span class="md-ellipsis">
+      now what?
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="now what?">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#a_and_b_are_visual_duplicates" class="md-nav__link">
+    <span class="md-ellipsis">
+      A and B are visual duplicates
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#future" class="md-nav__link">
     <span class="md-ellipsis">
       future
@@ -2399,6 +2423,30 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#now_what" class="md-nav__link">
+    <span class="md-ellipsis">
+      now what?
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="now what?">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#a_and_b_are_visual_duplicates" class="md-nav__link">
+    <span class="md-ellipsis">
+      A and B are visual duplicates
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#future" class="md-nav__link">
     <span class="md-ellipsis">
       future
@@ -2433,7 +2481,7 @@
 
   <h1>Filtering Duplicates Automatically</h1>
 
-<p><strong>Hey, this is all for a system that is still launching. Advanced users only, and only simple comparisons are active/ready for real use!</strong></p>
+<p><strong>Hey, this is all for a system that is still being worked on. Start slow, and let me know how it works for you!</strong></p>
 <h2 id="the_problem_with_duplicates_processing">the problem with duplicates processing<a class="headerlink" href="#the_problem_with_duplicates_processing" title="Permanent link">&para;</a></h2>
 <p>The duplicates filter can get pretty tedious. Pairs that are obvious resizes or pixel duplicates are easy to resolve but boring to work through.</p>
 <p>If only there were some way to automate common decisions! We could have hydrus solve these trivial duplicates in the background, leaving us with less, more interesting work to do.</p>
@@ -2448,7 +2496,6 @@
 <p>This system has templated quick-start suggestions, but they are not mandatory. The intention is to let you set up what you want how you want. Everything is off by default!</p>
 </div>
 <h2 id="duplicates_auto-resolution">duplicates auto-resolution<a class="headerlink" href="#duplicates_auto-resolution" title="Permanent link">&para;</a></h2>
-<p><em>This is a new system that I am still developing. I am rolling out a hardcoded rule that resolves jpeg and png pixel dupes so we can test performance, and then I will produce more tools for user-customisable rules in future weeks. If you try it, let me know how you find things!</em></p>
 <p>So, let's start with a simple and generally non-controversial example: pixel-duplicate jpeg &amp; png pairs.</p>
 <p>When converting between typical image formats, if you save to a jpeg, the output file will have some new 'fuzzy' artifacts, but if you save a png, it is pixel perfect to the original. This is one of the reasons why jpegs of rich images tend to be smaller than pngs--jpegs are a <em>lossy</em> simulation and compress well, pngs are <em>lossless</em> and have to account for everything perfectly.</p>
 <p>Thus, when you have a normal potential duplicate pair that is pixel-duplicates (i.e. they have exactly the same pixel image content) and which has one jpeg and one png, you <em>know</em>, for certain, that the png is a copy of the jpeg. The lossless pixel-perfect copy was made from the lossy original. This happens most often when someone is posting from one application to another, or with a phone, where rather than uploading the source jpeg, they do 'copy image' and paste that into the upload box--the browser eats the bitmap on the clipboard and creates the accursed 'Clipboard.png', and it all eventually percolates to our clients as duplicate spam.</p>
@@ -2499,8 +2546,16 @@
 <p><a href="images/duplicates_auto_resolution_actions_taken.png"><img alt="" src="images/duplicates_auto_resolution_actions_taken.png" /></a></p>
 <p>This shows everything the rule has actioned. The 'undo' button is serious and will be inconvenient to you, so try not to rely on it.</p>
 <p>When you import new files and the regular potential dupes search (on the 'preparation' tab of the duplicates page) finds new pairs amongst them, the auto-resolution rules will be told about them and will quickly see if they can action them. You can force the system to work a bit harder on a particular rule if you want to catch up somewhere, but normally you can just leave it all alone and be happy that it is saving you time in the background.</p>
+<h2 id="now_what">now what?<a class="headerlink" href="#now_what" title="Permanent link">&para;</a></h2>
+<p>Once you have played with easy jpg/png pixel duplicates, try out some of the other pixel-duplicate suggested rules. If you have a preference one way or another, you might like to tweak the search--maybe you only want it for jpegs, or only for files smaller than 3MB.</p>
+<p>I strongly recommend you stay on semi-automatic until you are very confident your rules are set up how you want. Once you set them to automatic, you probably aren't going to look at them much any more!</p>
+<p>Once you are comfortable with things, I would like you to play with my new visual duplicates tool:</p>
+<h4 id="a_and_b_are_visual_duplicates">A and B are visual duplicates<a class="headerlink" href="#a_and_b_are_visual_duplicates" title="Permanent link">&para;</a></h4>
+<p>I wrote an algorithm specifically for this system that renders and inspects two images and uses a lot of math to determine if they are "visual duplicates". Imagine it as a much more precise version of the original similar file serach that populates the "potential duplicates" queue. It ignores compression artifacts but will recognise artist corrections or alternates or recolours. Because we want to trust it eventually making automatic decisions, the algorithm is intended to be as very confident when it does say "yes they are duplicates", so I have tuned it to err on the side of a false negative (it sometimes says that a pair of files are not duplicates when they actually are, but it will very rarely say that two files are duplicates when they are not). It works pretty well, and I encourage users try it out at "almost certainly" confidence and in semi-automatic mode. Once we are confident in its tuning and in how it should be best set up, I will encourage testing in automatic mode.</p>
+<p>You can add it as a kind of comparator rule. Set the confidence and it'll filter out anything it doesn't think are visual duplicates. Note that this tool is CPU expensive--about a second of time for each pair actioned--so try to limit the prior search space. Don't have it operate on a similar files search distance of 12, for instance! There's a suggested rule called "visually similar pairs - eliminate smaller" that shows how you might use it.</p>
+<p>My hope is we can eventually eliminate many many easy duplicate decisions with this tool. Let me know how it goes, and if you discover a false positive pair, I am very interested in seeing it!</p>
 <h2 id="future">future<a class="headerlink" href="#future" title="Permanent link">&para;</a></h2>
-<p>We need more powerful comparison tools. Pixel-perfect jpeg/png is easy and simple to logically define, but we want to push into fuzzier territory like 'delete all files that are close-match dupes but the resolution difference is greater than 1.4x' etc.. To differentiate alternates from dupes, I think we need sophisticated A vs B similarity testing, like "A is &gt;= 99.7% pixel-similar to B" to differentiate jpeg encoding artifacts from actual watermarks and artist corrections and such.</p>
+<p>We need more comparison tools. I'd like to migrate more of the system predicate logic to the comparators, and add simple tag tests, and add some more hardcoded tools for specific situations. I may start thinking about the whole problem from the opposite angle, also, by detecting and actioning pairs we are confident are alternates.</p>
 <p>I'd also eventually love if auto-resolution rules applied to files <em>as</em> they are imported, so, in the vein of a 'previously deleted' import result, you could have an instant result of 'duplicate discarded: (rule name)'. This may be tricky though and make file imports take +800ms each, so we'll see how our early tests shake out.</p>
 <p>If you try out the system, thank you. Let me know how it works and I'll keep iterating.</p>
 
@@ -2523,7 +2578,7 @@
     <span class="md-icon" title="Last update">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 13.1c-.1 0-.3.1-.4.2l-1 1 2.1 2.1 1-1c.2-.2.2-.6 0-.8l-1.3-1.3c-.1-.1-.2-.2-.4-.2m-1.9 1.8-6.1 6V23h2.1l6.1-6.1zM12.5 7v5.2l4 2.4-1 1L11 13V7zM11 21.9c-5.1-.5-9-4.8-9-9.9C2 6.5 6.5 2 12 2c5.3 0 9.6 4.1 10 9.3-.3-.1-.6-.2-1-.2s-.7.1-1 .2C19.6 7.2 16.2 4 12 4c-4.4 0-8 3.6-8 8 0 4.1 3.1 7.5 7.1 7.9l-.1.2z"/></svg>
     </span>
-    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="April 23, 2025 20:18:44 UTC">April 23, 2025</span>
+    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="June 25, 2025 20:51:52 UTC">June 25, 2025</span>
   </span>
 
     
