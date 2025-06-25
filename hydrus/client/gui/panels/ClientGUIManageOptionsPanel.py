@@ -3869,6 +3869,17 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._draw_top_right_hover_in_preview_window_background = QW.QCheckBox( preview_hovers_panel )
             self._draw_top_right_hover_in_preview_window_background.setToolTip( ClientGUIFunctions.WrapToolTip( 'Also draw the top-right hover window in the background of the preview window.' ) )
             
+            self._preview_window_rating_icon_size_px = ClientGUICommon.BetterDoubleSpinBox( preview_hovers_panel, min = 1.0, max = 255.0 )
+            self._preview_window_rating_icon_size_px.setToolTip( ClientGUIFunctions.WrapToolTip( 'Set size in pixels for like and numerical rating icons for clicking on in the preview window.' ) )
+            
+            self._preview_window_rating_incdec_width_px  = ClientGUICommon.BetterDoubleSpinBox( preview_hovers_panel, min = 2.0, max = 255.0 )
+            self._preview_window_rating_incdec_width_px.setToolTip( ClientGUIFunctions.WrapToolTip( 'Set width in pixels for inc/dec rectangles in the preview window. The height will be half of this, and it is limited to be between twice and half of the normal ratings icons sizes.' ) )
+            
+            #
+            #clamp inc/dec rectangles to min 0.5 and max 2x rating stars px for rating size stuff - probably need to implement more sizeHints
+            self._media_viewer_rating_icon_size_px.editingFinished.connect( self._media_viewer_icon_size_changed )
+            self._preview_window_rating_icon_size_px.editingFinished.connect( self._preview_window_icon_size_changed )
+            
             #
             
             self._draw_tags_hover_in_media_viewer_background.setChecked( self._new_options.GetBoolean( 'draw_tags_hover_in_media_viewer_background' ) )
@@ -3881,8 +3892,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._use_nice_resolution_strings.setChecked( self._new_options.GetBoolean( 'use_nice_resolution_strings' ) )
             self._media_viewer_rating_icon_size_px.setValue( self._new_options.GetFloat( 'media_viewer_rating_icon_size_px' ) )
             self._media_viewer_rating_incdec_width_px.setValue( self._new_options.GetFloat( 'media_viewer_rating_incdec_width_px' ) )
-            self._media_viewer_rating_incdec_width_px.setMaximum( self._media_viewer_rating_icon_size_px.value() * 2 )
-            self._media_viewer_rating_incdec_width_px.setMinimum( self._media_viewer_rating_icon_size_px.value() * 0.5 )
             
             self._file_info_line_consider_archived_interesting.setChecked( self._new_options.GetBoolean( 'file_info_line_consider_archived_interesting' ) )
             self._file_info_line_consider_archived_time_interesting.setChecked( self._new_options.GetBoolean( 'file_info_line_consider_archived_time_interesting' ) )
@@ -3894,6 +3903,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._preview_window_hover_top_right_shows_popup.setChecked( self._new_options.GetBoolean( 'preview_window_hover_top_right_shows_popup' ) )
             self._draw_top_right_hover_in_preview_window_background.setChecked( self._new_options.GetBoolean( 'draw_top_right_hover_in_preview_window_background' ) )
+            self._preview_window_rating_icon_size_px.setValue( self._new_options.GetFloat( 'preview_window_rating_icon_size_px' ) )
+            self._preview_window_rating_incdec_width_px.setValue( self._new_options.GetFloat( 'preview_window_rating_incdec_width_px' ) )
             
             #
             
@@ -3940,6 +3951,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             rows.append( ( 'Show top-right hover window popup in the preview window: ', self._preview_window_hover_top_right_shows_popup ) )
             rows.append( ( 'Draw top-right hover in preview window background: ', self._draw_top_right_hover_in_preview_window_background ) )
+            rows.append( ( 'Preview window ratings like/dislike and numerical service icon size:', self._preview_window_rating_icon_size_px ) )
+            rows.append( ( 'Preview window ratings inc/dec service icon width:', self._preview_window_rating_incdec_width_px ) )
             
             preview_hovers_gridbox = ClientGUICommon.WrapInGrid( preview_hovers_panel, rows )
             
@@ -3962,6 +3975,22 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._UpdateFileInfoLineWidgets()
             
         
+        def _media_viewer_icon_size_changed( self ):
+            
+            new_value = self._media_viewer_rating_icon_size_px.value()
+            
+            self._media_viewer_rating_incdec_width_px.setMaximum( new_value * 2 )
+            self._media_viewer_rating_incdec_width_px.setMinimum( new_value * 0.5 )
+            
+        
+        def _preview_window_icon_size_changed( self ):
+            
+            new_value = self._preview_window_rating_icon_size_px.value()
+            
+            self._preview_window_rating_incdec_width_px.setMaximum( new_value * 2 )
+            self._preview_window_rating_incdec_width_px.setMinimum( new_value * 0.5 )
+            
+        
         def _UpdateFileInfoLineWidgets( self ):
             
             self._file_info_line_consider_archived_time_interesting.setEnabled( self._file_info_line_consider_archived_interesting.isChecked() )
@@ -3981,6 +4010,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._new_options.SetFloat( 'media_viewer_rating_icon_size_px', self._media_viewer_rating_icon_size_px.value() )
             self._new_options.SetFloat( 'media_viewer_rating_incdec_width_px', self._media_viewer_rating_incdec_width_px.value() )
+            self._new_options.SetFloat( 'preview_window_rating_icon_size_px', self._preview_window_rating_icon_size_px.value() )
+            self._new_options.SetFloat( 'preview_window_rating_incdec_width_px', self._preview_window_rating_incdec_width_px.value() )
             
             self._new_options.SetBoolean( 'preview_window_hover_top_right_shows_popup', self._preview_window_hover_top_right_shows_popup.isChecked() )
             self._new_options.SetBoolean( 'draw_top_right_hover_in_preview_window_background', self._draw_top_right_hover_in_preview_window_background.isChecked() )

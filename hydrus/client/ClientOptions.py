@@ -518,9 +518,11 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         self._dictionary[ 'floats' ] = {
             'draw_thumbnail_rating_icon_size_px' : ClientGUIPainterShapes.SIZE.width(),
-            'media_viewer_rating_icon_size_px' : ClientGUIPainterShapes.SIZE.width(),
             'thumbnail_rating_incdec_width_px' : ClientGUIPainterShapes.SIZE.width() * 2,
-            'media_viewer_rating_incdec_width_px' : ClientGUIPainterShapes.SIZE.width() * 2
+            'media_viewer_rating_icon_size_px' : ClientGUIPainterShapes.SIZE.width(),
+            'media_viewer_rating_incdec_width_px' : ClientGUIPainterShapes.SIZE.width() * 2,
+            'preview_window_rating_icon_size_px' : ClientGUIPainterShapes.SIZE.width(),
+            'preview_window_rating_incdec_width_px' : ClientGUIPainterShapes.SIZE.width() * 2,
         }
         
         #

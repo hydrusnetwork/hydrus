@@ -487,7 +487,7 @@ class CanvasHoverFrame( QW.QFrame ):
     
     def _SizeAndPosition( self ):
         
-        # hey the parentwidget here is the media viewer!
+        # hey the parentwidget here is the media viewer! or sometimes it is the preview window
         if self.parentWidget().isVisible():
             
             ( should_resize, my_ideal_size, my_ideal_position ) = self._GetIdealSizeAndPosition()
@@ -511,13 +511,18 @@ class CanvasHoverFrame( QW.QFrame ):
                 self.hoverResizedOrMoved.emit()
                 
             
+            if self._my_canvas.GetCanvasType() == CC.CANVAS_PREVIEW:
+                
+                self.adjustSize()
+                
+            
         
     
     def eventFilter( self, watched, event ):
         
         try:
             
-            if event.type() == QC.QEvent.Type.Resize:
+            if event.type()  in ( QC.QEvent.Type.Resize, QC.QEvent.Type.Move, QC.QEvent.Type.Show, QC.QEvent.Type.Hide ):
                 
                 self._SizeAndPosition()
                 
@@ -605,7 +610,7 @@ class CanvasHoverFrame( QW.QFrame ):
         
         my_ideal_width = my_ideal_size.width()
         my_ideal_height = my_ideal_size.height()
-        
+        #print(f'ideal size: {my_ideal_size}, ideal pos: {my_ideal_pos}')
         my_ideal_x = my_ideal_pos.x()
         my_ideal_y = my_ideal_pos.y()
         
@@ -1509,9 +1514,16 @@ class CanvasHoverFrameTopRight( CanvasHoverFrame ):
         
         self._icon_panel.setLayout( icon_hbox )
         
-        self._rating_icon_size_px = round( CG.client_controller.new_options.GetFloat( 'media_viewer_rating_icon_size_px' ) )
-        self._rating_incdec_width_px = round( CG.client_controller.new_options.GetFloat( 'media_viewer_rating_incdec_width_px' ) )
-        
+        if self._my_canvas.GetCanvasType() == CC.CANVAS_MEDIA_VIEWER:
+            
+            self._rating_icon_size_px = round( CG.client_controller.new_options.GetFloat( 'media_viewer_rating_icon_size_px' ) )
+            self._rating_incdec_width_px = round( CG.client_controller.new_options.GetFloat( 'media_viewer_rating_incdec_width_px' ) )
+            
+        else:
+            
+            self._rating_icon_size_px = round( CG.client_controller.new_options.GetFloat( 'preview_window_rating_icon_size_px' ) )
+            self._rating_incdec_width_px = round( CG.client_controller.new_options.GetFloat( 'preview_window_rating_incdec_width_px' ) )
+            
         # repo strings
         
         self._location_strings = ClientGUICommon.BetterStaticText( self, '' )
@@ -1603,6 +1615,10 @@ class CanvasHoverFrameTopRight( CanvasHoverFrame ):
         
         self._ResetWidgets()
         
+        self.layout().activate()
+        
+        self.adjustSize()
+        
         CG.client_controller.sub( self, 'ProcessContentUpdatePackage', 'content_updates_gui' )
         
     
@@ -1622,57 +1638,86 @@ class CanvasHoverFrameTopRight( CanvasHoverFrame ):
     
     def _GetIdealSizeAndPosition( self ):
         
-        if CG.client_controller.new_options.GetBoolean( 'disable_top_right_hover_in_media_viewer' ):
-
-            return ( False, QC.QSize( 0, 0 ), QC.QPoint( 0, 0 ) )
+        canvas_type = self._my_canvas.GetCanvasType()
         
-        parent_window = self.parentWidget().window()
-        
-        parent_size = parent_window.size()
-        
-        parent_width = parent_size.width()
-        
-        my_size = self.size()
-        
-        my_width = my_size.width()
-        my_height = my_size.height()
-        
-        my_ideal_width = self.sizeHint().width()
-        
-        if not self._top_hover.PositionInitialisedSinceLastMedia():
+        if canvas_type == CC.CANVAS_MEDIA_VIEWER :
             
-            self._top_hover.DoRegularHideShow()
-            
-        
-        top_hover_bottom_right = QC.QPoint( 0, 0 )
-        
-        if self._top_hover.PositionInitialisedSinceLastMedia():
-            
-            # don't use .rect() here, it (sometimes) isn't updated on a hidden window until next show, I think
-            top_hover_bottom_right = QC.QPoint( self._top_hover.x() + self._top_hover.width(), self._top_hover.y() + self._top_hover.height() )
-            
-            width_beside_top_hover = parent_window.rect().topRight().x() - top_hover_bottom_right.x()
-            
-            my_ideal_width = max( my_ideal_width, width_beside_top_hover )
-            
-        
-        my_ideal_height = self.sizeHint().height()
-        
-        should_resize = my_ideal_width != my_width or my_ideal_height != my_height
-        
-        ideal_size = QC.QSize( my_ideal_width, my_ideal_height )
-        
-        ideal_position = QC.QPoint( int( parent_width - my_ideal_width ), 0 )
-        
-        if self._top_hover.PositionInitialisedSinceLastMedia():
-            
-            if top_hover_bottom_right.x() > ideal_position.x():
+            if CG.client_controller.new_options.GetBoolean( 'disable_top_right_hover_in_media_viewer'):
                 
-                ideal_position.setY( top_hover_bottom_right.y() )
+                return ( False, QC.QSize( 0, 0 ), QC.QPoint( 0, 0 ) )
+            
+            parent_window = self.parentWidget().window()
+            
+            parent_size = parent_window.size()
+            
+            parent_width = parent_size.width()
+            
+            my_size = self.size()
+            
+            my_width = my_size.width()
+            my_height = my_size.height()
+            
+            my_ideal_width = self.sizeHint().width()
+            
+            if self._top_hover and not self._top_hover.PositionInitialisedSinceLastMedia():
+                
+                self._top_hover.DoRegularHideShow()
                 
             
+            top_hover_bottom_right = QC.QPoint( 0, 0 )
+            
+            if self._top_hover and self._top_hover.PositionInitialisedSinceLastMedia():
+                
+                # don't use .rect() here, it (sometimes) isn't updated on a hidden window until next show, I think
+                top_hover_bottom_right = QC.QPoint( self._top_hover.x() + self._top_hover.width(), self._top_hover.y() + self._top_hover.height() )
+                
+                width_beside_top_hover = parent_window.rect().topRight().x() - top_hover_bottom_right.x()
+                
+                my_ideal_width = max( my_ideal_width, width_beside_top_hover )
+                
+            
+            my_ideal_height = self.sizeHint().height()
+            
+            should_resize = my_ideal_width != my_width or my_ideal_height != my_height
+            
+            ideal_size = QC.QSize( my_ideal_width, my_ideal_height )
+            
+            ideal_position = QC.QPoint( int( parent_width - my_ideal_width ), 0 )
+            
+            if self._top_hover and self._top_hover.PositionInitialisedSinceLastMedia():
+                
+                if top_hover_bottom_right.x() > ideal_position.x():
+                    
+                    ideal_position.setY( top_hover_bottom_right.y() )
+                    
+                
+            return ( should_resize, ideal_size, ideal_position )
+            
         
-        return ( should_resize, ideal_size, ideal_position )
+        elif canvas_type == CC.CANVAS_PREVIEW and CG.client_controller.new_options.GetBoolean( 'preview_window_hover_top_right_shows_popup' ):
+            
+            preview_size = self.parentWidget().size()
+            
+            #sometimes the entire width of the widget changes, which affects position calculations; so recalculate the frame size first here
+            self.adjustSize()
+            
+            my_size = self.size()
+            my_width = my_size.width()
+            my_height = my_size.height()
+            
+            my_ideal_width = min( my_width, preview_size.width() )
+            my_ideal_height = min( my_height, preview_size.height() )
+            
+            should_resize = ( my_ideal_width != my_width or my_ideal_height != my_height )
+            
+            ideal_size = QC.QSize( my_ideal_width, my_ideal_height )
+            
+            ideal_position = QC.QPoint( preview_size.width() - my_ideal_width, 0 )
+            
+            return ( should_resize, ideal_size, ideal_position )
+            
+        
+        return ( False, QC.QSize( 0, 0 ), QC.QPoint( 0, 0 ) )
         
     
     def _ResetWidgets( self ):
