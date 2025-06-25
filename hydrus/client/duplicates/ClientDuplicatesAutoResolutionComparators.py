@@ -2,8 +2,11 @@ import collections.abc
 import random
 import typing
 
+from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusSerialisable
 
+from hydrus.client.duplicates import ClientDuplicates
+from hydrus.client.files.images import ClientVisualData
 from hydrus.client.media import ClientMediaResult
 from hydrus.client.metadata import ClientMetadataConditional 
 from hydrus.client.search import ClientNumberTest
@@ -289,7 +292,7 @@ HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIAL
 
 HARDCODED_COMPARATOR_TYPE_FILETYPE_SAME = 0
 HARDCODED_COMPARATOR_TYPE_FILETYPE_DIFFERS = 1
-# do not put pixel similarity here. we'll have this as a toolbox of _very_ hardcoded stuff, no customisation for KISS
+# do not put pixel similarity here. we'll have this enum be a toolbox of _very_ hardcoded stuff, no customisation for KISS
 
 hardcoded_comparator_type_str_lookup = {
     HARDCODED_COMPARATOR_TYPE_FILETYPE_SAME : 'A and B have the same filetype',
@@ -364,6 +367,88 @@ class PairComparatorRelativeHardcoded( PairComparator ):
     
 
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_DUPLICATES_AUTO_RESOLUTION_PAIR_COMPARATOR_TWO_FILES_RELATIVE_HARDCODED ] = PairComparatorRelativeHardcoded
+
+class PairComparatorRelativeVisualDuplicates( PairComparator ):
+    
+    SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_DUPLICATES_AUTO_RESOLUTION_PAIR_COMPARATOR_TWO_FILES_RELATIVE_VISUAL_DUPLICATES
+    SERIALISABLE_NAME = 'Duplicates Auto-Resolution Pair Comparator - Relative Visual Duplicates'
+    SERIALISABLE_VERSION = 1
+    
+    def __init__( self, acceptable_confidence = ClientVisualData.VISUAL_DUPLICATES_RESULT_ALMOST_CERTAINLY ):
+        """
+        This guy compares the pair directly using the "A and B are visual duplicates" algorithm.
+        
+        Since the algorithm biases towards false positive, we won't turn on 'they are not duplicates' detection, but if we end up graduating that confidence, we could. We'd want to add a direction operator here obviously.
+        We'd have to differentiate "These files are too small to process" versus "I positively recognise these are very different".
+        """
+        
+        super().__init__()
+        
+        self._acceptable_confidence = acceptable_confidence
+        
+    
+    def _GetSerialisableInfo( self ):
+        
+        return self._acceptable_confidence
+        
+    
+    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
+        
+        self._acceptable_confidence = serialisable_info
+        
+    
+    def CanDetermineBetter( self ) -> bool:
+        
+        return False
+        
+    
+    def GetAcceptableConfidence( self ) -> int:
+        
+        return self._acceptable_confidence
+        
+    
+    def GetSummary( self ):
+        
+        s = ClientVisualData.result_str_lookup.get( self._acceptable_confidence, 'unknown confidence' )
+        
+        return f'A and B are {s}'
+        
+    
+    def IsFast( self ) -> bool:
+        
+        return False
+        
+    
+    def OrderDoesNotMatter( self ):
+        
+        return True
+        
+    
+    def Test( self, media_result_a: ClientMediaResult.MediaResult, media_result_b: ClientMediaResult.MediaResult ) -> bool:
+        
+        if media_result_a.GetMime() in HC.IMAGES and media_result_b.GetMime() in HC.IMAGES:
+            
+            visual_data_a = ClientDuplicates.GetVisualData( media_result_a )
+            visual_data_b = ClientDuplicates.GetVisualData( media_result_b )
+            
+            ( simple_seems_good, simple_result, simple_score_statement ) = ClientVisualData.FilesAreVisuallySimilarSimple( visual_data_a, visual_data_b )
+            
+            if simple_seems_good:
+                
+                visual_data_tiled_a = ClientDuplicates.GetVisualDataTiled( media_result_a )
+                visual_data_tiled_b = ClientDuplicates.GetVisualDataTiled( media_result_b )
+                
+                ( regional_seems_good, regional_result, regional_score_statement ) = ClientVisualData.FilesAreVisuallySimilarRegional( visual_data_tiled_a, visual_data_tiled_b )
+                
+                return regional_result >= self._acceptable_confidence
+                
+            
+        
+        return False
+        
+    
+
+HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_DUPLICATES_AUTO_RESOLUTION_PAIR_COMPARATOR_TWO_FILES_RELATIVE_VISUAL_DUPLICATES ] = PairComparatorRelativeVisualDuplicates
 
 class PairSelector( HydrusSerialisable.SerialisableBase ):
     

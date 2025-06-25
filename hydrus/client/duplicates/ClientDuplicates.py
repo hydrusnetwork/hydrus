@@ -21,7 +21,7 @@ from hydrus.client import ClientData
 from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientThreading
 from hydrus.client import ClientTime
-from hydrus.client.files.images import ClientImageHistograms
+from hydrus.client.files.images import ClientVisualData
 from hydrus.client.importing.options import NoteImportOptions
 from hydrus.client.media import ClientMediaResult
 from hydrus.client.metadata import ClientContentUpdates
@@ -54,6 +54,66 @@ def GetDuplicateComparisonScore( shown_media_result: ClientMediaResult.MediaResu
     total_score = sum( ( score for ( statement, score ) in statements_and_scores.values() ) )
     
     return total_score
+    
+
+def GetVisualData( media_result: ClientMediaResult.MediaResult ) -> ClientVisualData.VisualData:
+    
+    hash = media_result.GetHash()
+    
+    visual_data_cache = ClientVisualData.VisualDataStorage.instance()
+    
+    if not visual_data_cache.HasData( hash ):
+        
+        image_renderer = CG.client_controller.images_cache.GetImageRenderer( media_result )
+        
+        while not image_renderer.IsReady():
+            
+            if HydrusThreading.IsThreadShuttingDown():
+                
+                raise HydrusExceptions.ShutdownException( 'Seems like program is shutting down!' )
+                
+            
+            time.sleep( 0.1 )
+            
+        
+        numpy_image = image_renderer.GetNumPyImage()
+        
+        visual_data = ClientVisualData.GenerateImageVisualDataNumPy( numpy_image, hash )
+        
+        visual_data_cache.AddData( hash, visual_data )
+        
+    
+    return typing.cast( ClientVisualData.VisualData, visual_data_cache.GetData( hash ) )
+    
+
+def GetVisualDataTiled( media_result: ClientMediaResult.MediaResult ) -> ClientVisualData.VisualDataTiled:
+    
+    hash = media_result.GetHash()
+    
+    visual_data_tiled_cache = ClientVisualData.VisualDataTiledStorage.instance()
+    
+    if not visual_data_tiled_cache.HasData( hash ):
+        
+        image_renderer = CG.client_controller.images_cache.GetImageRenderer( media_result )
+        
+        while not image_renderer.IsReady():
+            
+            if HydrusThreading.IsThreadShuttingDown():
+                
+                raise HydrusExceptions.ShutdownException( 'Seems like program is shutting down!' )
+                
+            
+            time.sleep( 0.1 )
+            
+        
+        numpy_image = image_renderer.GetNumPyImage()
+        
+        visual_data_tiled = ClientVisualData.GenerateImageVisualDataTiledNumPy( numpy_image, hash )
+        
+        visual_data_tiled_cache.AddData( hash, visual_data_tiled )
+        
+    
+    return typing.cast( ClientVisualData.VisualDataTiled, visual_data_tiled_cache.GetData( hash ) )
     
 
 # TODO: All this will be replaced by tools being developed for the duplicates auto-resolution system
@@ -623,77 +683,17 @@ def GetDuplicateComparisonStatements( shown_media_result: ClientMediaResult.Medi
             
             try:
                 
-                def get_lab_histogram( media_result: ClientMediaResult.MediaResult ) -> ClientImageHistograms.LabHistogram:
-                    
-                    hash = media_result.GetHash()
-                    
-                    lab_histogram_cache = ClientImageHistograms.LabHistogramStorage.instance()
-                    
-                    if not lab_histogram_cache.HasData( hash ):
-                        
-                        image_renderer = CG.client_controller.images_cache.GetImageRenderer( media_result )
-                        
-                        while not image_renderer.IsReady():
-                            
-                            if HydrusThreading.IsThreadShuttingDown():
-                                
-                                raise HydrusExceptions.ShutdownException( 'Seems like program is shutting down!' )
-                                
-                            
-                            time.sleep( 0.1 )
-                            
-                        
-                        numpy_image = image_renderer.GetNumPyImage()
-                        
-                        lab_histogram = ClientImageHistograms.GenerateImageLabHistogramsNumPy( numpy_image )
-                        
-                        lab_histogram_cache.AddData( hash, lab_histogram )
-                        
-                    
-                    return typing.cast( ClientImageHistograms.LabHistogram, lab_histogram_cache.GetData( hash ) )
-                    
+                s_visual_data = GetVisualData( shown_media_result )
+                c_visual_data = GetVisualData( comparison_media_result )
                 
-                def get_lab_tiles_histogram( media_result: ClientMediaResult.MediaResult ) -> ClientImageHistograms.LabTilesHistogram:
-                    
-                    hash = media_result.GetHash()
-                    
-                    lab_tiles_histogram_cache = ClientImageHistograms.LabTilesHistogramStorage.instance()
-                    
-                    if not lab_tiles_histogram_cache.HasData( hash ):
-                        
-                        image_renderer = CG.client_controller.images_cache.GetImageRenderer( media_result )
-                        
-                        while not image_renderer.IsReady():
-                            
-                            if HydrusThreading.IsThreadShuttingDown():
-                                
-                                raise HydrusExceptions.ShutdownException( 'Seems like program is shutting down!' )
-                                
-                            
-                            time.sleep( 0.1 )
-                            
-                        
-                        numpy_image = image_renderer.GetNumPyImage()
-                        
-                        lab_tiles_histogram = ClientImageHistograms.GenerateImageLabTilesHistogramsNumPy( numpy_image )
-                        
-                        lab_tiles_histogram_cache.AddData( hash, lab_tiles_histogram )
-                        
-                    
-                    return typing.cast( ClientImageHistograms.LabTilesHistogram, lab_tiles_histogram_cache.GetData( hash ) )
-                    
-                
-                s_lab_histogram = get_lab_histogram( shown_media_result )
-                c_lab_histogram = get_lab_histogram( comparison_media_result )
-                
-                ( simple_seems_good, simple_result, simple_score_statement ) = ClientImageHistograms.FilesAreVisuallySimilarSimple( s_lab_histogram, c_lab_histogram )
+                ( simple_seems_good, simple_result, simple_score_statement ) = ClientVisualData.FilesAreVisuallySimilarSimple( s_visual_data, c_visual_data )
                 
                 if simple_seems_good:
                     
-                    s_lab_tiles_histogram = get_lab_tiles_histogram( shown_media_result )
-                    c_lab_tiles_histogram = get_lab_tiles_histogram( comparison_media_result )
+                    s_visual_data_tiled = GetVisualDataTiled( shown_media_result )
+                    c_visual_data_tiled = GetVisualDataTiled( comparison_media_result )
                     
-                    ( regional_seems_good, regional_result, regional_score_statement ) = ClientImageHistograms.FilesAreVisuallySimilarRegional( s_lab_tiles_histogram, c_lab_tiles_histogram )
+                    ( regional_seems_good, regional_result, regional_score_statement ) = ClientVisualData.FilesAreVisuallySimilarRegional( s_visual_data_tiled, c_visual_data_tiled )
                     
                     statements_and_scores[ 'a_and_b_are_visual_duplicates' ] = ( regional_score_statement, 0 )
                     

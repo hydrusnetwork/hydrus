@@ -17,6 +17,8 @@ A hydrus client consists of three components:
     
     It doesn't really matter where you put this. An SSD will load it marginally quicker the first time, but you probably won't notice. If you run it without command-line parameters, it will try to write to its own directory (to create the initial database), so if you mean to run it like that, it should not be in a protected place like _Program Files_.
     
+    If you run from source, things are basically the same, but you are building a virtual environment in the `venv` folder and launching hydrus_client.py from the activated venv instead. Note: a venv includes absolute path links, so you will have to rebuild your venv every time you move your install directory!
+    
 2.  **the actual SQLite database**
     
     The client stores all its preferences and current state and knowledge _about_ files--like file size and resolution, tags, ratings, inbox status, and so on and on--in a handful of SQLite database files, defaulting to _install_dir/db_. Depending on the size of your client, these might total 1MB in size or be as much as 10GB.

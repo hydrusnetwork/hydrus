@@ -22,6 +22,8 @@ try:
     
     HydrusBoot.AddBaseDirToEnvPath()
     
+    HydrusBoot.DoPreImportEnvWork()
+    
     from hydrus.core import HydrusConstants as HC
     
     HC.RUNNING_SERVER = True

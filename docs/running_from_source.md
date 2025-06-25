@@ -336,6 +336,14 @@ Many users start out using one of the official built releases and decide to move
 3. Just to be neat, delete any test database you made from the source install's `db` directory.
 4. Run the source install with --db_dir just as you would the built executable--it should load your old db no problem!
 
+### Moving Your Install Directory
+
+The venv directory that holds your private copy of python contains absolute path references to itself. If you move your source install directory somewhere, trying to launch hydrus will give you an error about 'python' being missing.
+
+**If you move your install directory, you have to build a new venv.** Just double-click the setup_venv script again, and you'll be back in a couple minutes.
+
+If you want to run from source via a USB stick you will move between different computers, my setup_venv script will not be enough (a normal venv symlinks to your system python, and you have the absolute path issue); you will either have to rebuild your venv from the local python every time you move the stick or manually set up your own environment with a special embeddable version of python or self-contained environment creator like Conda's `constructor`.
+
 ## Doing it Yourself { id="what_you_need" }
 
 _This is for advanced users only._

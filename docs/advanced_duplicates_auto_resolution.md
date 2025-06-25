@@ -2,7 +2,7 @@
 title: Filtering Duplicates Automatically
 ---
 
-**Hey, this is all for a system that is still launching. Advanced users only, and only simple comparisons are active/ready for real use!**
+**Hey, this is all for a system that is still being worked on. Start slow, and let me know how it works for you!**
 
 ## the problem with duplicates processing
 
@@ -21,8 +21,6 @@ If only there were some way to automate common decisions! We could have hydrus s
     This system has templated quick-start suggestions, but they are not mandatory. The intention is to let you set up what you want how you want. Everything is off by default!
 
 ## duplicates auto-resolution
-
-_This is a new system that I am still developing. I am rolling out a hardcoded rule that resolves jpeg and png pixel dupes so we can test performance, and then I will produce more tools for user-customisable rules in future weeks. If you try it, let me know how you find things!_
 
 So, let's start with a simple and generally non-controversial example: pixel-duplicate jpeg & png pairs.
 
@@ -113,9 +111,25 @@ This shows everything the rule has actioned. The 'undo' button is serious and wi
 
 When you import new files and the regular potential dupes search (on the 'preparation' tab of the duplicates page) finds new pairs amongst them, the auto-resolution rules will be told about them and will quickly see if they can action them. You can force the system to work a bit harder on a particular rule if you want to catch up somewhere, but normally you can just leave it all alone and be happy that it is saving you time in the background.
 
+## now what?
+
+Once you have played with easy jpg/png pixel duplicates, try out some of the other pixel-duplicate suggested rules. If you have a preference one way or another, you might like to tweak the search--maybe you only want it for jpegs, or only for files smaller than 3MB.
+
+I strongly recommend you stay on semi-automatic until you are very confident your rules are set up how you want. Once you set them to automatic, you probably aren't going to look at them much any more!
+
+Once you are comfortable with things, I would like you to play with my new visual duplicates tool:
+
+#### A and B are visual duplicates
+
+I wrote an algorithm specifically for this system that renders and inspects two images and uses a lot of math to determine if they are "visual duplicates". Imagine it as a much more precise version of the original similar file serach that populates the "potential duplicates" queue. It ignores compression artifacts but will recognise artist corrections or alternates or recolours. Because we want to trust it eventually making automatic decisions, the algorithm is intended to be as very confident when it does say "yes they are duplicates", so I have tuned it to err on the side of a false negative (it sometimes says that a pair of files are not duplicates when they actually are, but it will very rarely say that two files are duplicates when they are not). It works pretty well, and I encourage users try it out at "almost certainly" confidence and in semi-automatic mode. Once we are confident in its tuning and in how it should be best set up, I will encourage testing in automatic mode.
+
+You can add it as a kind of comparator rule. Set the confidence and it'll filter out anything it doesn't think are visual duplicates. Note that this tool is CPU expensive--about a second of time for each pair actioned--so try to limit the prior search space. Don't have it operate on a similar files search distance of 12, for instance! There's a suggested rule called "visually similar pairs - eliminate smaller" that shows how you might use it.
+
+My hope is we can eventually eliminate many many easy duplicate decisions with this tool. Let me know how it goes, and if you discover a false positive pair, I am very interested in seeing it!
+
 ## future
 
-We need more powerful comparison tools. Pixel-perfect jpeg/png is easy and simple to logically define, but we want to push into fuzzier territory like 'delete all files that are close-match dupes but the resolution difference is greater than 1.4x' etc.. To differentiate alternates from dupes, I think we need sophisticated A vs B similarity testing, like "A is >= 99.7% pixel-similar to B" to differentiate jpeg encoding artifacts from actual watermarks and artist corrections and such.
+We need more comparison tools. I'd like to migrate more of the system predicate logic to the comparators, and add simple tag tests, and add some more hardcoded tools for specific situations. I may start thinking about the whole problem from the opposite angle, also, by detecting and actioning pairs we are confident are alternates.
 
 I'd also eventually love if auto-resolution rules applied to files _as_ they are imported, so, in the vein of a 'previously deleted' import result, you could have an instant result of 'duplicate discarded: (rule name)'. This may be tricky though and make file imports take +800ms each, so we'll see how our early tests shake out.
 
