@@ -191,7 +191,7 @@ def ExpandTLWIfPossible( tlw: QW.QWidget, frame_key, desired_size_delta: QC.QSiz
 
 def SaveTLWSizeAndPosition( tlw: QW.QWidget, frame_key ):
     
-    if tlw.isMinimized():
+    if tlw.isMinimized() or not tlw.isVisible():
         
         return
         
@@ -781,8 +781,11 @@ class FrameThatResizes( Frame ):
         super().__init__( parent, title )
         
         self._widget_event_filter.EVT_SIZE( self.EventSizeAndPositionChanged )
-        self._widget_event_filter.EVT_MOVE_END( self.EventSizeAndPositionChanged )
         self._widget_event_filter.EVT_MAXIMIZE( self.EventSizeAndPositionChanged )
+        
+        self._move_end_timer = QC.QTimer( self )
+        self._move_end_timer.setSingleShot( True )
+        self._move_end_timer.timeout.connect( self.moveEnded )
         
     
     def CleanBeforeDestroy( self ):
@@ -801,6 +804,18 @@ class FrameThatResizes( Frame ):
         return True # was: event.ignore()
         
     
+    def moveEnded( self ):
+        
+        CG.client_controller.CallLaterQtSafe( self, 0.1, 'save frame size and position: {}'.format( self._frame_key ), SaveTLWSizeAndPosition, self, self._frame_key )
+        
+    
+    def moveEvent( self, event ):
+        
+        self._move_end_timer.start( 200 )
+        
+        super().moveEvent( event )
+        
+    
 
 class FrameThatResizesWithHovers( FrameThatResizes ):
     
@@ -816,10 +831,13 @@ class MainFrameThatResizes( MainFrame ):
         super().__init__( parent, title )
 
         self._widget_event_filter.EVT_SIZE( self.EventSizeAndPositionChanged )
-        self._widget_event_filter.EVT_MOVE_END( self.EventSizeAndPositionChanged )
         self._widget_event_filter.EVT_MAXIMIZE( self.EventSizeAndPositionChanged )
         
-
+        self._move_end_timer = QC.QTimer( self )
+        self._move_end_timer.setSingleShot( True )
+        self._move_end_timer.timeout.connect( self.moveEnded )
+        
+    
     def CleanBeforeDestroy( self ):
         
         MainFrame.CleanBeforeDestroy( self )
@@ -834,5 +852,17 @@ class MainFrameThatResizes( MainFrame ):
         CG.client_controller.CallLaterQtSafe( self, 0.1, 'save frame size and position: {}'.format( self._frame_key ), SaveTLWSizeAndPosition, self, self._frame_key )
 
         return True # was: event.ignore()
+        
+    
+    def moveEnded( self ):
+        
+        CG.client_controller.CallLaterQtSafe( self, 0.1, 'save frame size and position: {}'.format( self._frame_key ), SaveTLWSizeAndPosition, self, self._frame_key )
+        
+    
+    def moveEvent( self, event ):
+        
+        self._move_end_timer.start( 200 )
+        
+        super().moveEvent( event )
         
     

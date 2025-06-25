@@ -18,8 +18,7 @@ from hydrus.client import ClientThreading
 from hydrus.client.duplicates import ClientDuplicatesAutoResolution
 from hydrus.client.duplicates import ClientDuplicatesAutoResolutionComparators
 from hydrus.client.duplicates import ClientDuplicates
-from hydrus.client.search import ClientNumberTest
-from hydrus.client.search import ClientSearchPredicate
+from hydrus.client.files.images import ClientVisualData
 from hydrus.client.gui import ClientGUIAsync
 from hydrus.client.gui import ClientGUICore as CGC
 from hydrus.client.gui import ClientGUIDialogsQuick
@@ -39,6 +38,8 @@ from hydrus.client.gui.panels import ClientGUIScrolledPanels
 from hydrus.client.gui.widgets import ClientGUICommon
 from hydrus.client.gui.widgets import ClientGUIMenuButton
 from hydrus.client.gui.widgets import ClientGUINumberTest
+from hydrus.client.search import ClientNumberTest
+from hydrus.client.search import ClientSearchPredicate
 
 class EditDuplicatesAutoResolutionRulesPanel( ClientGUIScrolledPanels.EditPanel ):
     
@@ -90,7 +91,7 @@ class EditDuplicatesAutoResolutionRulesPanel( ClientGUIScrolledPanels.EditPanel 
         st_warning.setAlignment( QC.Qt.AlignmentFlag.AlignCenter )
         QP.AddToLayout( vbox, st_warning, CC.FLAGS_EXPAND_PERPENDICULAR )
         
-        st = ClientGUICommon.BetterStaticText( self, 'Hey, this system is still launching, and not everything planned is available yet. Start with the suggested pixel duplicate jpg/png rule, and if it all makes sense to you, play with the other suggested rules and then perhaps making your own. Try to stick to pixel duplicates for now, and do semi-automatic before switching to automatic. Be careful. Let me know how it goes!' )
+        st = ClientGUICommon.BetterStaticText( self, 'Hey, this system is still being worked on, and not all its planned tools are available yet. Start with the suggested pixel duplicate jpg/png rule, and if it all makes sense to you, keep exploring. Stay semi-automatic for a while before attempting automatic. Be careful. Let me know how it goes!' )
         st.setWordWrap( True )
         QP.AddToLayout( vbox, st, CC.FLAGS_EXPAND_PERPENDICULAR )
         
@@ -369,10 +370,6 @@ class EditDuplicatesAutoResolutionRulePanel( ClientGUIScrolledPanels.EditPanel )
         #
         
         vbox = QP.VBoxLayout()
-        
-        st = ClientGUICommon.BetterStaticText( self, 'Hey, this system is still launching, and not everything planned is available yet! You can now set basic relative pair comparison rules--try it out!' )
-        st.setWordWrap( True )
-        QP.AddToLayout( vbox, st, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         QP.AddToLayout( vbox, self._rule_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         
@@ -749,6 +746,64 @@ class EditPairComparatorRelativeFileinfoPanel( ClientGUIScrolledPanels.EditPanel
         
     
 
+class EditPairComparatorRelativeVisualDuplicatesPanel( ClientGUIScrolledPanels.EditPanel ):
+    
+    def __init__( self, parent, pair_comparator: ClientDuplicatesAutoResolutionComparators.PairComparatorRelativeVisualDuplicates ):
+        
+        super().__init__( parent )
+        
+        self._acceptable_confidence = ClientGUICommon.BetterChoice( self )
+        
+        for confidence in [ ClientVisualData.VISUAL_DUPLICATES_RESULT_VERY_PROBABLY, ClientVisualData.VISUAL_DUPLICATES_RESULT_ALMOST_CERTAINLY, ClientVisualData.VISUAL_DUPLICATES_RESULT_NEAR_PERFECT ]:
+            
+            self._acceptable_confidence.addItem( ClientVisualData.result_str_lookup[ confidence ], confidence )
+            
+        
+        #
+        
+        self._acceptable_confidence.SetValue( pair_comparator.GetAcceptableConfidence() )
+        
+        #
+        
+        label = 'This comparison uses a custom visual inspection algorithm that renders both images, computes statistical data on their edges and colours, and compares the two to determine if they are the same image with no changes a human eye would notice. Imagine it as a much more precise version of the original similar file search that populates this whole system. It filters out noise from compression artifacts or resizing differences but will spot almost all watermarks or artist corrections/alterations.'
+        label += '\n\n'
+        label += 'This system is not perfect, but when it is positive, it is usually trustworthy. I recommend you keep it at at least "almost-certainly" confidence confidence, and only on semi-automatic to start with. I have ironed out all the false positives we have discovered, but if you encounter any more, I would be interested in seeing them. False negatives are more common and less urgent--this system is designed for the auto-resolution system, and thus it errs on the side of "not visual duplicates". It will most often do this on very heavy re-encodes, where the jpeg artifacts are overwhelmingly fuzzy on the smaller file.'
+        label += '\n\n'
+        label += 'It only works on images and cannot handle files with transparency yet. It will also abstain from giving a positive result on anything too unusual, such as a very small resolution file, or one that seems to only be a white panel.'
+        label += '\n\n'
+        label += 'This system is heavy on the CPU! Expect about a second of processing time per pair. Try to cut down the prior search space if you can.'
+        
+        st = ClientGUICommon.BetterStaticText( self, label = label )
+        
+        st.setWordWrap( True )
+        st.setAlignment( QC.Qt.AlignmentFlag.AlignCenter )
+        
+        vbox = QP.VBoxLayout()
+        
+        QP.AddToLayout( vbox, st, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        
+        rows = []
+        
+        rows.append( ( 'A and B are at least ', self._acceptable_confidence ) )
+        
+        gridbox = ClientGUICommon.WrapInGrid( self, rows )
+        
+        QP.AddToLayout( vbox, gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        self.widget().setLayout( vbox )
+        
+    
+    def GetValue( self ):
+        
+        acceptable_confidence = self._acceptable_confidence.GetValue()
+        
+        pair_comparator = ClientDuplicatesAutoResolutionComparators.PairComparatorRelativeVisualDuplicates( acceptable_confidence = acceptable_confidence )
+        
+        return pair_comparator
+        
+    
+
 class EditPairSelectorWidget( ClientGUICommon.StaticBox ):
     
     def __init__( self, parent, pair_selector: ClientDuplicatesAutoResolutionComparators.PairSelector ):
@@ -768,19 +823,22 @@ class EditPairSelectorWidget( ClientGUICommon.StaticBox ):
         
         choice_tuples = [
             ( 'test A or B', ClientDuplicatesAutoResolutionComparators.PairComparatorOneFile(), 'A comparator that tests one file at a time using system predicates.' ),
-            ( 'test A against B using file info', ClientDuplicatesAutoResolutionComparators.PairComparatorRelativeFileInfo(), 'A comparator that performs a number test on the width, filesize, etc.. of A vs B.' )
+            ( 'test A against B using file info', ClientDuplicatesAutoResolutionComparators.PairComparatorRelativeFileInfo(), 'A comparator that performs a number test on the width, filesize, etc.. of A vs B.' ),
+            ( 'test if A and B are visual duplicates', ClientDuplicatesAutoResolutionComparators.PairComparatorRelativeVisualDuplicates( acceptable_confidence = ClientVisualData.VISUAL_DUPLICATES_RESULT_ALMOST_CERTAINLY ), 'A comparator that examines the differences in the images\' shape and colour to determine if they are visual duplicates.' )
         ]
+        
+        additional_comparators = []
         
         comparator = ClientDuplicatesAutoResolutionComparators.PairComparatorRelativeHardcoded( hardcoded_type = ClientDuplicatesAutoResolutionComparators.HARDCODED_COMPARATOR_TYPE_FILETYPE_SAME )
         
-        choice_tuples.append(
-            ( comparator.GetSummary(), comparator, comparator.GetSummary() )
-        )
+        additional_comparators.append( comparator )
         
         comparator = ClientDuplicatesAutoResolutionComparators.PairComparatorRelativeHardcoded( hardcoded_type = ClientDuplicatesAutoResolutionComparators.HARDCODED_COMPARATOR_TYPE_FILETYPE_DIFFERS )
         
-        choice_tuples.append(
-            ( comparator.GetSummary(), comparator, comparator.GetSummary() )
+        additional_comparators.append( comparator )
+        
+        choice_tuples.extend(
+            ( ( comparator.GetSummary(), comparator, comparator.GetSummary() ) for comparator in additional_comparators )
         )
         
         try:
@@ -806,6 +864,10 @@ class EditPairSelectorWidget( ClientGUICommon.StaticBox ):
             elif isinstance( comparator, ClientDuplicatesAutoResolutionComparators.PairComparatorRelativeFileInfo ):
                 
                 panel = EditPairComparatorRelativeFileinfoPanel( dlg, comparator )
+                
+            elif isinstance( comparator, ClientDuplicatesAutoResolutionComparators.PairComparatorRelativeVisualDuplicates ):
+                
+                panel = EditPairComparatorRelativeVisualDuplicatesPanel( dlg, comparator )
                 
             elif isinstance( comparator, ClientDuplicatesAutoResolutionComparators.PairComparatorRelativeHardcoded ):
                 
@@ -887,7 +949,7 @@ class ReviewDuplicatesAutoResolutionPanel( QW.QWidget ):
         
         QP.AddToLayout( vbox, help_hbox, CC.FLAGS_ON_RIGHT )
         
-        st = ClientGUICommon.BetterStaticText( self, 'Hey, this system is still launching, and not everything planned is available yet! Start with the suggested pixel duplicate jpg/png rule, and if it all makes sense to you, play with the other suggested rules and then perhaps making your own. Try to stick to pixel duplicates for now, and do semi-automatic before switching to automatic. Be careful. Let me know how it goes!' )
+        st = ClientGUICommon.BetterStaticText( self, 'Hey, this system is still being worked on, and not all its planned tools are available yet. Start with the suggested pixel duplicate jpg/png rule, and if it all makes sense to you, keep exploring. Stay semi-automatic for a while before attempting automatic. Be careful. Let me know how it goes!' )
         st.setWordWrap( True )
         
         QP.AddToLayout( vbox, st, CC.FLAGS_EXPAND_PERPENDICULAR )

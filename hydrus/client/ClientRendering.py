@@ -661,10 +661,7 @@ class RasterContainerVideo( RasterContainer ):
     
     def CanHaveVariableFramerate( self ):
         
-        with self._lock:
-            
-            return self._media.GetMime() == HC.ANIMATION_GIF or self._media.GetMime() == HC.ANIMATION_UGOIRA
-            
+        return self._media.GetMime() in ( HC.ANIMATION_GIF, HC.ANIMATION_UGOIRA, HC.ANIMATION_WEBP )
         
     
     def GetBufferIndices( self ):
@@ -681,7 +678,7 @@ class RasterContainerVideo( RasterContainer ):
     
     def GetDurationMS( self, index ):
         
-        if self._media.GetMime() == HC.ANIMATION_GIF or self._media.GetMime() == HC.ANIMATION_UGOIRA:
+        if self.CanHaveVariableFramerate():
             
             if 0 <= index <= len( self._frame_durations_ms ) - 1:
                 
@@ -813,7 +810,7 @@ class RasterContainerVideo( RasterContainer ):
     
     def GetFrameIndex( self, timestamp_ms ):
         
-        if self._media.GetMime() == HC.ANIMATION_GIF or self._media.GetMime() == HC.ANIMATION_UGOIRA:
+        if self.CanHaveVariableFramerate():
             
             so_far = 0
             
@@ -846,7 +843,7 @@ class RasterContainerVideo( RasterContainer ):
     
     def GetTimestampMS( self, frame_index ):
         
-        if self._media.GetMime() == HC.ANIMATION_GIF or self._media.GetMime() == HC.ANIMATION_UGOIRA:
+        if self.CanHaveVariableFramerate():
             
             return sum( self._frame_durations_ms[ : frame_index ] )
             
@@ -858,7 +855,7 @@ class RasterContainerVideo( RasterContainer ):
     
     def GetTotalDuration( self ):
         
-        if self._media.GetMime() == HC.ANIMATION_GIF or self._media.GetMime() == HC.ANIMATION_UGOIRA:
+        if self.CanHaveVariableFramerate():
             
             return sum( self._frame_durations_ms )
             

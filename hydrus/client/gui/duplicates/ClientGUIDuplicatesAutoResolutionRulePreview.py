@@ -70,6 +70,9 @@ class PreviewPanel( ClientGUICommon.StaticBox ):
         
         #
         
+        self._pairs_still_to_test_label = ClientGUICommon.BetterStaticText( self, label = 'ready to test new pairs' )
+        self._pairs_still_to_test_label.setWordWrap( True )
+        
         self._pause_testing_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().pause, self._PausePlayTesting )
         
         self._retest_pairs_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().refresh, self._RetestPairs )
@@ -125,11 +128,12 @@ class PreviewPanel( ClientGUICommon.StaticBox ):
         
         hbox = QP.HBoxLayout()
         
+        QP.AddToLayout( hbox, self._pairs_still_to_test_label, CC.FLAGS_EXPAND_BOTH_WAYS )
         QP.AddToLayout( hbox, self._pause_testing_button, CC.FLAGS_CENTER )
         QP.AddToLayout( hbox, self._retest_pairs_button, CC.FLAGS_CENTER )
         
         self.Add( self._search_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self.Add( hbox, CC.FLAGS_ON_RIGHT )
+        self.Add( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         self.Add( self._pass_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         self.Add( self._fail_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         
@@ -509,6 +513,17 @@ class PreviewPanel( ClientGUICommon.StaticBox ):
         
     
     def _UpdateTestLabels( self ):
+        
+        if len( self._fetched_pairs_still_to_test ) == 0:
+            
+            label = ''
+            
+        else:
+            
+            label = f'{HydrusNumbers.ToHumanInt( len( self._fetched_pairs_still_to_test ))} pairs still to test'
+            
+        
+        self._pairs_still_to_test_label.setText( label )
         
         if len( self._ab_pairs_that_pass ) == 0:
             

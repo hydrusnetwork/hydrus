@@ -17,3 +17,21 @@ def AddBaseDirToEnvPath():
         os.environ[ 'PATH' ] = HC.BASE_DIR + os.pathsep + os.environ[ 'PATH' ]
         
     
+
+def DoPreImportEnvWork():
+    
+    try:
+        
+        # we need to do this before the first import cv2, so we'll stick it here
+        
+        import os
+        
+        os.environ[ 'OPENCV_LOG_LEVEL' ] = 'ERROR'
+        os.environ[ 'OPENCV_FFMPEG_LEVEL' ] = '16' # AV_LOG_ERROR
+        
+    except:
+        
+        print( 'Could not set OpenCV logging envs.' )
+        
+    
+

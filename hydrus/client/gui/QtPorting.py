@@ -2032,7 +2032,6 @@ class WidgetEventFilter ( QC.QObject ):
         
         self._callback_map = defaultdict( list )
         
-        self._user_moved_window = False # There is no EVT_MOVE_END in Qt so some trickery is required.
     
     def _ExecuteCallbacks( self, event_name, event ):
         
@@ -2092,29 +2091,10 @@ class WidgetEventFilter ( QC.QObject ):
                 
                 event_killed = event_killed or self._ExecuteCallbacks( 'EVT_MOVE', event )
                 
-                if isValid( self._parent_widget ) and self._parent_widget.isVisible():
-                    
-                    self._user_moved_window = True
-                    
-                
             elif type == QC.QEvent.Type.Resize:
                 
                 event_killed = event_killed or self._ExecuteCallbacks( 'EVT_SIZE', event )
                 
-            elif type == QC.QEvent.Type.NonClientAreaMouseButtonPress:
-                
-                self._user_moved_window = False
-                
-            elif type == QC.QEvent.Type.NonClientAreaMouseButtonRelease:
-                
-                if self._user_moved_window:
-                    
-                    event_killed = event_killed or self._ExecuteCallbacks( 'EVT_MOVE_END', event )
-                    
-                    self._user_moved_window = False
-                    
-                
-            
             if event_killed:
                 
                 event.accept()
@@ -2169,10 +2149,6 @@ class WidgetEventFilter ( QC.QObject ):
     def EVT_MOVE( self, callback ):
         
         self._AddCallback( 'EVT_MOVE', callback )
-
-    def EVT_MOVE_END( self, callback ):
-        
-        self._AddCallback( 'EVT_MOVE_END', callback )
 
     def EVT_RIGHT_DOWN( self, callback ):
         

@@ -1,3 +1,6 @@
+import os
+import time
+import typing
 import unittest
 
 from hydrus.core import HydrusConstants as HC
@@ -5,13 +8,19 @@ from hydrus.core import HydrusData
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientLocation
+from hydrus.client.db import ClientDB
 from hydrus.client.duplicates import ClientDuplicatesAutoResolutionComparators
+from hydrus.client.files.images import ClientVisualData
+from hydrus.client.importing.options import FileImportOptions
+from hydrus.client.importing import ClientImportFiles
 from hydrus.client.metadata import ClientMetadataConditional
 from hydrus.client.search import ClientSearchFileSearchContext
 from hydrus.client.search import ClientNumberTest
 from hydrus.client.search import ClientSearchPredicate
 from hydrus.client.search import ClientSearchTagContext
 
+from hydrus.test import TestController
+from hydrus.test import TestGlobals as TG
 from hydrus.test import HelperFunctions
 
 class TestComparatorOneFile( unittest.TestCase ):
@@ -457,6 +466,168 @@ class TestComparatorHardcoded( unittest.TestCase ):
         
         self.assertTrue( comparator.Test( media_result_a, media_result_c ) )
         self.assertTrue( comparator.Test( media_result_c, media_result_a ) )
+        
+    
+
+class TestComparatorVisualDuplicates( unittest.TestCase ):
+    
+    _db: typing.Any = None
+    
+    @classmethod
+    def _clear_db( cls ):
+        
+        cls._delete_db()
+        
+        # class variable
+        cls._db = ClientDB.DB( TG.test_controller, TestController.DB_DIR, 'client' )
+        
+        TG.test_controller.SetTestDB( cls._db )
+        
+    
+    @classmethod
+    def _delete_db( cls ):
+        
+        cls._db.Shutdown()
+        
+        while not cls._db.LoopIsFinished():
+            
+            time.sleep( 0.1 )
+            
+        
+        db_filenames = list(cls._db._db_filenames.values())
+        
+        for filename in db_filenames:
+            
+            path = os.path.join( TestController.DB_DIR, filename )
+            
+            os.remove( path )
+            
+        
+        del cls._db
+        
+        TG.test_controller.ClearTestDB()
+        
+    
+    @classmethod
+    def setUpClass( cls ):
+        
+        cls._db = ClientDB.DB( TG.test_controller, TestController.DB_DIR, 'client' )
+        
+        TG.test_controller.SetTestDB( cls._db )
+        
+    
+    @classmethod
+    def tearDownClass( cls ):
+        
+        cls._delete_db()
+        
+    
+    def _read( self, action, *args, **kwargs ): return TestComparatorVisualDuplicates._db.Read( action, *args, **kwargs )
+    def _write( self, action, *args, **kwargs ): return TestComparatorVisualDuplicates._db.Write( action, True, *args, **kwargs )
+    
+    def _do_file_import( self, name ):
+        
+        path = os.path.join( HC.STATIC_DIR, 'testing', name )
+        
+        file_import_options = FileImportOptions.FileImportOptions()
+        file_import_options.SetIsDefault( True )
+        
+        file_import_job = ClientImportFiles.FileImportJob( path, file_import_options )
+        
+        file_import_job.GeneratePreImportHashAndStatus()
+        
+        file_import_job.GenerateInfo()
+        
+        TG.test_controller.client_files_manager.AddFile( file_import_job.GetHash(), file_import_job.GetMime(), file_import_job._temp_path, thumbnail_bytes = file_import_job._thumbnail_bytes )
+        
+        self._write( 'import_file', file_import_job )
+        
+        hash = file_import_job.GetHash()
+        
+        ( media_result, ) = self._read( 'media_results', ( hash, ) )
+        
+        return media_result
+        
+    
+    def test_comparator_0_easy( self ):
+        
+        self._clear_db()
+        
+        media_result_a = self._do_file_import( 'visual_dupe_original.jpg' )
+        media_result_b = self._do_file_import( 'visual_dupe_scale.jpg' )
+        
+        comparator = ClientDuplicatesAutoResolutionComparators.PairComparatorRelativeVisualDuplicates( acceptable_confidence = ClientVisualData.VISUAL_DUPLICATES_RESULT_VERY_PROBABLY )
+        
+        self.assertFalse( comparator.CanDetermineBetter() )
+        self.assertTrue( comparator.OrderDoesNotMatter() )
+        self.assertFalse( comparator.IsFast() )
+        
+        self.assertTrue( comparator.Test( media_result_a, media_result_b ) )
+        self.assertTrue( comparator.Test( media_result_b, media_result_a ) )
+        
+    
+    def test_comparator_1_grunky( self ):
+        
+        self._clear_db()
+        
+        media_result_a = self._do_file_import( 'visual_dupe_original.jpg' )
+        media_result_b = self._do_file_import( 'visual_dupe_grunky.jpg' )
+        
+        #
+        
+        comparator = ClientDuplicatesAutoResolutionComparators.PairComparatorRelativeVisualDuplicates( acceptable_confidence = ClientVisualData.VISUAL_DUPLICATES_RESULT_VERY_PROBABLY )
+        
+        self.assertFalse( comparator.CanDetermineBetter() )
+        self.assertTrue( comparator.OrderDoesNotMatter() )
+        self.assertFalse( comparator.IsFast() )
+        
+        self.assertTrue( comparator.Test( media_result_a, media_result_b ) )
+        self.assertTrue( comparator.Test( media_result_b, media_result_a ) )
+        
+        #
+        
+        comparator = ClientDuplicatesAutoResolutionComparators.PairComparatorRelativeVisualDuplicates( acceptable_confidence = ClientVisualData.VISUAL_DUPLICATES_RESULT_NEAR_PERFECT )
+        
+        self.assertFalse( comparator.CanDetermineBetter() )
+        self.assertTrue( comparator.OrderDoesNotMatter() )
+        self.assertFalse( comparator.IsFast() )
+        
+        self.assertFalse( comparator.Test( media_result_a, media_result_b ) )
+        self.assertFalse( comparator.Test( media_result_b, media_result_a ) )
+        
+    
+    def test_comparator_2_colour( self ):
+        
+        self._clear_db()
+        
+        media_result_a = self._do_file_import( 'visual_dupe_original.jpg' )
+        media_result_b = self._do_file_import( 'visual_dupe_colour.jpg' )
+        
+        comparator = ClientDuplicatesAutoResolutionComparators.PairComparatorRelativeVisualDuplicates( acceptable_confidence = ClientVisualData.VISUAL_DUPLICATES_RESULT_ALMOST_CERTAINLY )
+        
+        self.assertFalse( comparator.CanDetermineBetter() )
+        self.assertTrue( comparator.OrderDoesNotMatter() )
+        self.assertFalse( comparator.IsFast() )
+        
+        self.assertFalse( comparator.Test( media_result_a, media_result_b ) )
+        self.assertFalse( comparator.Test( media_result_b, media_result_a ) )
+        
+    
+    def test_comparator_3_correction( self ):
+        
+        self._clear_db()
+        
+        media_result_a = self._do_file_import( 'visual_dupe_original.jpg' )
+        media_result_b = self._do_file_import( 'visual_dupe_correction.jpg' )
+        
+        comparator = ClientDuplicatesAutoResolutionComparators.PairComparatorRelativeVisualDuplicates( acceptable_confidence = ClientVisualData.VISUAL_DUPLICATES_RESULT_ALMOST_CERTAINLY )
+        
+        self.assertFalse( comparator.CanDetermineBetter() )
+        self.assertTrue( comparator.OrderDoesNotMatter() )
+        self.assertFalse( comparator.IsFast() )
+        
+        self.assertFalse( comparator.Test( media_result_a, media_result_b ) )
+        self.assertFalse( comparator.Test( media_result_b, media_result_a ) )
         
     
 

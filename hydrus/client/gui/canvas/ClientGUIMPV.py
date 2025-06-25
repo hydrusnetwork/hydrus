@@ -1011,9 +1011,14 @@ class MPVWidget( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
         
         try:
             
-            if self._media is None:
+            self._player.pause = True
+            
+            if CG.client_controller.new_options.GetBoolean( 'stop_mpv_on_media_transition' ):
                 
-                self._player.pause = True
+                self._player.stop()
+                
+            
+            if self._media is None:
                 
                 self._player.loadfile( self._black_png_path )
                 
@@ -1070,8 +1075,6 @@ class MPVWidget( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
                     self._player.visibility = 'always'
                     
                     self._stop_for_slideshow = False
-                    
-                    self._player.pause = True
                     
                     mime = self._media.GetMime()
                     

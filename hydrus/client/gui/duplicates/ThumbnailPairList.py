@@ -263,9 +263,13 @@ class ThumbnailPairListModelPendingAutoResolutionAction( ThumbnailPairListModel 
             self._pairs_to_third_column_info = {}
             self._pairs_we_are_calculating = set()
             
-            top_left = self.index(0, 2 )
-            bottom_right = self.index(self.rowCount() - 1, 2 )
-            self.dataChanged.emit( top_left, bottom_right, [ QC.Qt.ItemDataRole.DisplayRole ] )
+            if self.rowCount() > 0:
+                
+                top_left = self.index( 0, 2 )
+                bottom_right = self.index( self.rowCount() - 1, 2 )
+                
+                self.dataChanged.emit( top_left, bottom_right, [ QC.Qt.ItemDataRole.DisplayRole ] )
+                
             
         
     

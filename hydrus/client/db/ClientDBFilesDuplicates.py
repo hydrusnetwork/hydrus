@@ -5,6 +5,7 @@ import random
 import sqlite3
 
 from hydrus.core import HydrusConstants as HC
+from hydrus.core import HydrusData
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientLocation
@@ -1037,9 +1038,21 @@ class ClientDBFilesDuplicates( ClientDBModule.ClientDBModule ):
                 return None
                 
             
-            self._Execute( 'INSERT INTO duplicate_files ( king_hash_id ) VALUES ( ? );', ( hash_id, ) )
+            # adding safety check to catch desynced database
+            result = self._Execute( 'SELECT media_id FROM duplicate_files WHERE king_hash_id = ?;', ( hash_id, ) ).fetchone()
             
-            media_id = self._GetLastRowId()
+            if result is None:
+                
+                self._Execute( 'INSERT INTO duplicate_files ( king_hash_id ) VALUES ( ? );', ( hash_id, ) )
+                
+                media_id = self._GetLastRowId()
+                
+            else:
+                
+                ( media_id, ) = result
+                
+                HydrusData.Print( f'When looking for the media_id {media_id} of hash_id {hash_id}, it did not have a member row but did have a definiton row!' )
+                
             
             self._Execute( 'INSERT INTO duplicate_file_members ( media_id, hash_id ) VALUES ( ?, ? );', ( media_id, hash_id ) )
             
