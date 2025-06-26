@@ -2,6 +2,7 @@ import itertools
 import json
 
 from qtpy import QtWidgets as QW
+from qtpy import QtCore as QC
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
@@ -489,6 +490,7 @@ class DialogManageRatings( CAC.ApplicationCommandProcessorMixin, ClientGUIDialog
                 ( rating_state, rating ) = ClientRatings.GetNumericalStateFromMedia( self._media, service_key )
                 
                 control = ClientGUIRatings.RatingNumericalDialog( self, service_key, 'popup' )
+                
                 control.setSizePolicy( QW.QSizePolicy.Policy.Fixed, QW.QSizePolicy.Policy.Fixed )
                 
                 if rating_state != ClientRatings.SET:
@@ -508,6 +510,11 @@ class DialogManageRatings( CAC.ApplicationCommandProcessorMixin, ClientGUIDialog
             
             gridbox = ClientGUICommon.WrapInGrid( self, rows, expand_text = True )
             gridbox.setColumnStretch( 1, 0 )
+            
+            for control in self._service_keys_to_controls.values():
+                
+                gridbox.setAlignment( control, QC.Qt.AlignRight | QC.Qt.AlignVCenter )
+                
             
             self.setLayout( gridbox )
             
