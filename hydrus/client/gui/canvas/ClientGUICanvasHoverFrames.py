@@ -44,12 +44,14 @@ from hydrus.client.metadata import ClientRatings
 
 class RatingIncDecCanvas( ClientGUIRatings.RatingIncDec ):
 
-    def __init__( self, parent, service_key, canvas_key, icon_size, icon_pad: QC.QSize = None ):
+    def __init__( self, parent, service_key, canvas_key, icon_size: QC.QSize, icon_pad: QC.QSize = None, canvas_type = CC.CANVAS_PREVIEW ):
         
-        super().__init__( parent, service_key, icon_size )
+        super().__init__( parent, service_key, canvas_type )
         
         self._canvas_key = canvas_key
+        self._canvas_type = canvas_type
         self._current_media = None
+        self._panel = parent
         self._rating_state = None
         self._rating = None
         self._iconsize = icon_size
@@ -68,7 +70,18 @@ class RatingIncDecCanvas( ClientGUIRatings.RatingIncDec ):
         
         if self._current_media is not None:
             
-            ClientGUIRatings.DrawIncDec( painter, self._iconpad.width(), self._iconpad.height(), self._service_key, self._rating_state, self._rating, self._iconsize )
+            icon_size = ClientGUIRatings.GetIconSize( self._canvas_type, HC.LOCAL_RATING_INCDEC )
+            
+            ClientGUIRatings.DrawIncDec( painter, self._iconpad.width(), self._iconpad.height(), self._service_key, self._rating_state, self._rating, icon_size )
+            
+            if self._iconsize != icon_size:
+                
+                self._iconsize = icon_size
+                self.UpdateSize()
+                
+                self._panel.hide()
+                self._panel.DoRegularHideShow()
+                
             
         
     
@@ -151,14 +164,16 @@ class RatingIncDecCanvas( ClientGUIRatings.RatingIncDec ):
 
 class RatingLikeCanvas( ClientGUIRatings.RatingLike ):
     
-    def __init__( self, parent, service_key, canvas_key, icon_size ):
+    def __init__( self, parent, service_key, canvas_key, icon_size: QC.QSize, canvas_type ):
         
-        super().__init__( parent, service_key, icon_size )
+        super().__init__( parent, service_key, icon_size, canvas_type )
         
         self._canvas_key = canvas_key
+        self._canvas_type = canvas_type
         self._current_media = None
         self._hashes = set()
         self._iconsize = icon_size
+        self._panel = parent
         
         CG.client_controller.sub( self, 'ProcessContentUpdatePackage', 'content_updates_gui' )
         
@@ -171,7 +186,18 @@ class RatingLikeCanvas( ClientGUIRatings.RatingLike ):
         
         if self._current_media is not None:
             
-            ClientGUIRatings.DrawLike( painter, int( ClientGUIPainterShapes.PAD_PX / 2 ), int( ClientGUIPainterShapes.PAD_PX / 2 ), self._service_key, self._rating_state, self._iconsize )
+            icon_size = ClientGUIRatings.GetIconSize( self._canvas_type, HC.LOCAL_RATING_LIKE )
+            
+            ClientGUIRatings.DrawLike( painter, int( ClientGUIPainterShapes.PAD_PX / 2 ), int( ClientGUIPainterShapes.PAD_PX / 2 ), self._service_key, self._rating_state, icon_size )
+            
+            if self._iconsize != icon_size:
+                
+                self._iconsize = icon_size
+                self.UpdateSize()
+                
+                self._panel.hide()
+                self._panel.DoRegularHideShow()
+                
             
         
     
@@ -269,12 +295,14 @@ class RatingLikeCanvas( ClientGUIRatings.RatingLike ):
 
 class RatingNumericalCanvas( ClientGUIRatings.RatingNumericalControl ):
 
-    def __init__( self, parent, service_key, canvas_key, icon_size ):
+    def __init__( self, parent, service_key, canvas_key, icon_size: QC.QSize, canvas_type = CC.CANVAS_PREVIEW ):
         
-        super().__init__( parent, service_key, icon_size )
+        super().__init__( parent, service_key, canvas_type )
         
         self._canvas_key = canvas_key
+        self._canvas_type = canvas_type
         self._current_media = None
+        self._panel = parent
         self._rating_state = None
         self._rating = None
         self._iconsize = icon_size
@@ -308,7 +336,18 @@ class RatingNumericalCanvas( ClientGUIRatings.RatingNumericalControl ):
         
         if self._current_media is not None:
             
-            ClientGUIRatings.DrawNumerical( painter, int( ClientGUIPainterShapes.PAD_PX / 2 ), int( ClientGUIPainterShapes.PAD_PX / 2 ), self._service_key, self._rating_state, self._rating, self._iconsize )
+            icon_size = ClientGUIRatings.GetIconSize( self._canvas_type, HC.LOCAL_RATING_NUMERICAL )
+            
+            ClientGUIRatings.DrawNumerical( painter, int( ClientGUIPainterShapes.PAD_PX / 2 ), int( ClientGUIPainterShapes.PAD_PX / 2 ), self._service_key, self._rating_state, self._rating, icon_size )
+            
+            if self._iconsize != icon_size:
+                
+                self._iconsize = icon_size
+                self.UpdateSize()
+                
+                self._panel.hide()
+                self._panel.DoRegularHideShow()
+                
             
         
     
@@ -1499,6 +1538,7 @@ class CanvasHoverFrameTopRight( CanvasHoverFrame ):
         self._margin = 2
         
         vbox = QP.VBoxLayout( spacing = self._spacing, margin = self._margin )
+        self.setSizePolicy( QW.QSizePolicy.Policy.Fixed, QW.QSizePolicy.Policy.Fixed )
         
         self._icon_panel = QW.QWidget( self )
         
@@ -1514,7 +1554,9 @@ class CanvasHoverFrameTopRight( CanvasHoverFrame ):
         
         self._icon_panel.setLayout( icon_hbox )
         
-        if self._my_canvas.GetCanvasType() == CC.CANVAS_MEDIA_VIEWER:
+        canvas_type = self._my_canvas.GetCanvasType()
+        
+        if canvas_type == CC.CANVAS_MEDIA_VIEWER:
             
             self._rating_icon_size_px = round( CG.client_controller.new_options.GetFloat( 'media_viewer_rating_icon_size_px' ) )
             self._rating_incdec_width_px = round( CG.client_controller.new_options.GetFloat( 'media_viewer_rating_incdec_width_px' ) )
@@ -1550,7 +1592,8 @@ class CanvasHoverFrameTopRight( CanvasHoverFrame ):
             
             service_key = service.GetServiceKey()
             
-            control = RatingLikeCanvas( self, service_key, canvas_key, QC.QSize( self._rating_icon_size_px, self._rating_icon_size_px ) )
+            control = RatingLikeCanvas( self, service_key, canvas_key, QC.QSize( self._rating_icon_size_px, self._rating_icon_size_px ), canvas_type )
+            control.setSizePolicy( QW.QSizePolicy.Policy.Fixed, QW.QSizePolicy.Policy.Fixed )
             
             self.mediaChanged.connect( control.SetMedia )
             self.mediaCleared.connect( control.ClearMedia )
@@ -1568,7 +1611,8 @@ class CanvasHoverFrameTopRight( CanvasHoverFrame ):
             
             service_key = service.GetServiceKey()
             
-            control = RatingNumericalCanvas( self, service_key, canvas_key, QC.QSize( self._rating_icon_size_px, self._rating_icon_size_px ) )
+            control = RatingNumericalCanvas( self, service_key, canvas_key, QC.QSize( self._rating_icon_size_px, self._rating_icon_size_px ),canvas_type )
+            control.setSizePolicy( QW.QSizePolicy.Policy.Fixed, QW.QSizePolicy.Policy.Fixed )
             
             self.mediaChanged.connect( control.SetMedia )
             self.mediaCleared.connect( control.ClearMedia )
@@ -1595,7 +1639,8 @@ class CanvasHoverFrameTopRight( CanvasHoverFrame ):
             
             service_key = service.GetServiceKey()
             
-            control = RatingIncDecCanvas( self, service_key, canvas_key, QC.QSize( self._rating_incdec_width_px, int( self._rating_incdec_width_px / 2 ) ), incdec_pad )
+            control = RatingIncDecCanvas( self, service_key, canvas_key, QC.QSize( self._rating_incdec_width_px, int( self._rating_incdec_width_px / 2 ) ), incdec_pad, canvas_type )
+            control.setSizePolicy( QW.QSizePolicy.Policy.Fixed, QW.QSizePolicy.Policy.Fixed )
             
             self.mediaChanged.connect( control.SetMedia )
             self.mediaCleared.connect( control.ClearMedia )
@@ -1645,6 +1690,7 @@ class CanvasHoverFrameTopRight( CanvasHoverFrame ):
             if CG.client_controller.new_options.GetBoolean( 'disable_top_right_hover_in_media_viewer'):
                 
                 return ( False, QC.QSize( 0, 0 ), QC.QPoint( 0, 0 ) )
+                
             
             parent_window = self.parentWidget().window()
             

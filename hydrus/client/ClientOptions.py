@@ -523,6 +523,8 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             'media_viewer_rating_incdec_width_px' : ClientGUIPainterShapes.SIZE.width() * 2,
             'preview_window_rating_icon_size_px' : ClientGUIPainterShapes.SIZE.width(),
             'preview_window_rating_incdec_width_px' : ClientGUIPainterShapes.SIZE.width() * 2,
+            'popup_manage_ratings_window_icon_size_px' : ClientGUIPainterShapes.SIZE.width(),
+            'popup_manage_ratings_window_incdec_width_px' : ClientGUIPainterShapes.SIZE.width() * 2
         }
         
         #

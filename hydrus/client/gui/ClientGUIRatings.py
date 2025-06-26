@@ -9,6 +9,7 @@ from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusNumbers
 
 from hydrus.client import ClientGlobals as CG
+from hydrus.client import ClientConstants as CC
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui.widgets import ClientGUICommon
@@ -164,7 +165,7 @@ def DrawNumerical( painter: QG.QPainter, x, y, service_key, rating_state, rating
         metrics = QG.QFontMetrics( numeric_font )
         text_size = metrics.size( 0, text )
         
-        painter.drawText( QC.QRect( x - ClientGUIPainterShapes.PAD_PX / 2, y - ClientGUIPainterShapes.PAD_PX + 1, text_size.width(), text_size.height() ), text )
+        painter.drawText( QC.QRect( x - ClientGUIPainterShapes.PAD_PX / 2, y - ClientGUIPainterShapes.PAD_PX, text_size.width(), text_size.height() ), text )
         
         painter.setFont( original_font )
         
@@ -208,10 +209,43 @@ def DrawNumerical( painter: QG.QPainter, x, y, service_key, rating_state, rating
             metrics = QG.QFontMetrics( numeric_font )
             text_size = metrics.size( 0, text )
             
-            painter.drawText( QC.QRect( x + x_delta - pad_px + ClientGUIPainterShapes.PAD_PX / 2, y - ClientGUIPainterShapes.PAD_PX + 1, text_size.width(), text_size.height() ), text )
+            painter.drawText( QC.QRect( x + x_delta - pad_px + ClientGUIPainterShapes.PAD_PX / 2, y - ClientGUIPainterShapes.PAD_PX, text_size.width(), text_size.height() ), text )
             
             painter.setFont( original_font )
             
+        
+    
+
+def GetIconSize( canvas_type, service_type = ClientGUICommon.HC.LOCAL_RATING_LIKE ):
+    
+    if canvas_type == CC.CANVAS_MEDIA_VIEWER:
+        
+        rating_icon_size_px = CG.client_controller.new_options.GetFloat( 'media_viewer_rating_icon_size_px' )
+        rating_incdec_width_px = CG.client_controller.new_options.GetFloat( 'media_viewer_rating_incdec_width_px' )
+        
+    elif canvas_type == CC.CANVAS_PREVIEW:
+        
+        rating_icon_size_px = CG.client_controller.new_options.GetFloat( 'preview_window_rating_icon_size_px' )
+        rating_incdec_width_px = CG.client_controller.new_options.GetFloat( 'preview_window_rating_incdec_width_px' )
+        
+    elif canvas_type == 'popup':
+        
+        rating_icon_size_px = CG.client_controller.new_options.GetFloat( 'popup_manage_ratings_window_icon_size_px' )
+        rating_incdec_width_px = CG.client_controller.new_options.GetFloat( 'popup_manage_ratings_window_incdec_width_px' )
+        
+    else:
+        
+        rating_icon_size_px = CG.client_controller.new_options.GetFloat( 'draw_thumbnail_rating_icon_size_px' )
+        rating_incdec_width_px = CG.client_controller.new_options.GetFloat( 'thumbnail_rating_incdec_width_px' )
+        
+    
+    if service_type == ClientGUICommon.HC.LOCAL_RATING_INCDEC:
+        
+        return QC.QSize( round( rating_incdec_width_px ), round( rating_incdec_width_px / 2 ) )
+        
+    else:
+        
+        return QC.QSize( round( rating_icon_size_px ), round( rating_icon_size_px ) )
         
     
 
@@ -361,9 +395,11 @@ class RatingIncDec( QW.QWidget ):
     
     valueChanged = QC.Signal()
     
-    def __init__( self, parent, service_key, icon_size = INCDEC_SIZE ):
+    def __init__( self, parent, service_key, canvas_type ):
         
         super().__init__( parent )
+        
+        self._canvas_type = canvas_type
         
         self._service_key = service_key
         
@@ -373,10 +409,12 @@ class RatingIncDec( QW.QWidget ):
         
         # middle down too? brings up a dialog for manual entry, sounds good
         
-        self.setMinimumSize( icon_size )
+        self._icon_size = GetIconSize( canvas_type, ClientGUICommon.HC.LOCAL_RATING_INCDEC )
         
         self._rating_state = ClientRatings.SET
         self._rating = 0
+        
+        self.UpdateSize()
         
     
     def _Draw( self, painter ):
@@ -511,6 +549,16 @@ class RatingIncDec( QW.QWidget ):
         self._UpdateTooltip()
         
     
+    def UpdateSize( self ):
+        
+        self._icon_size = GetIconSize( self._canvas_type, ClientGUICommon.HC.LOCAL_RATING_INCDEC )
+        
+        self.setMinimumSize( QC.QSize( self._icon_size.width(), self._icon_size.height() + STAR_PAD.height() ) )
+        
+        self.update()
+        
+    
+
 class RatingIncDecDialog( RatingIncDec ):
     
     def _Draw( self, painter ):
@@ -521,11 +569,11 @@ class RatingIncDecDialog( RatingIncDec ):
         
         if self.isEnabled():
             
-            DrawIncDec( painter, 0, 0, self._service_key, self._rating_state, self._rating )
+            DrawIncDec( painter, 0, 0, self._service_key, self._rating_state, self._rating, self._icon_size )
             
         else:
             
-            DrawIncDec( painter, 0, 0, self._service_key, ClientRatings.NULL, 0 )
+            DrawIncDec( painter, 0, 0, self._service_key, ClientRatings.NULL, 0, self._icon_size )
             
         
     
@@ -559,10 +607,11 @@ class RatingLike( QW.QWidget ):
     
     valueChanged = QC.Signal()
     
-    def __init__( self, parent, service_key, icon_size = STAR_SIZE ):
+    def __init__( self, parent, service_key, icon_size, canvas_type ):
         
         super().__init__( parent )
         
+        self._canvas_type = canvas_type
         self._service_key = service_key
         
         self._rating_state = ClientRatings.NULL
@@ -574,7 +623,8 @@ class RatingLike( QW.QWidget ):
         self._widget_event_filter.EVT_RIGHT_DOWN( self.EventRightDown )
         self._widget_event_filter.EVT_RIGHT_DCLICK( self.EventRightDown )
         
-        self.setMinimumSize( icon_size + STAR_PAD )
+        self._icon_size = GetIconSize( self._canvas_type, ClientGUICommon.HC.LOCAL_RATING_LIKE )
+        self.setMinimumSize( self._icon_size + STAR_PAD )
         
         self._UpdateTooltip()
         
@@ -659,6 +709,16 @@ class RatingLike( QW.QWidget ):
         self._UpdateTooltip()
         
     
+    def UpdateSize( self ):
+        
+        self._icon_size = GetIconSize( self._canvas_type, ClientGUICommon.HC.LOCAL_RATING_LIKE )
+        
+        self.setMinimumSize( QC.QSize( self._icon_size.width() + STAR_PAD.width(), self._icon_size.height() + STAR_PAD.height() ) )
+        
+        self.update()
+        
+    
+
 class RatingLikeDialog( RatingLike ):
     
     def _Draw( self, painter ):
@@ -715,7 +775,7 @@ class RatingNumerical( QW.QWidget ):
     
     valueChanged = QC.Signal()
     
-    def __init__( self, parent, service_key, icon_size = STAR_SIZE ):
+    def __init__( self, parent, service_key, canvas_type = None ):
         
         super().__init__( parent )
         
@@ -738,7 +798,8 @@ class RatingNumerical( QW.QWidget ):
             self._draw_fraction = ClientRatings.DRAW_NO
             
         
-        self._icon_size = icon_size
+        self._canvas_type = canvas_type
+        self._icon_size = GetIconSize( canvas_type, ClientGUICommon.HC.LOCAL_RATING_NUMERICAL )
         
         self._widget_event_filter = QP.WidgetEventFilter( self )
         
@@ -945,6 +1006,8 @@ class RatingNumerical( QW.QWidget ):
         
     
     def UpdateSize( self ):
+        
+        self._icon_size = GetIconSize( self._canvas_type, ClientGUICommon.HC.LOCAL_RATING_NUMERICAL )
         
         my_width = GetNumericalWidth( self._service_key, self._icon_size.width(), self._custom_pad, False, self._rating_state, self._rating )
         
