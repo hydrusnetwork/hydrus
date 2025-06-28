@@ -4704,8 +4704,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._new_options.SetFloat( 'preview_window_rating_icon_size_px', self._preview_window_rating_icon_size_px.value() )
             self._new_options.SetFloat( 'preview_window_rating_incdec_width_px', self._preview_window_rating_incdec_width_px.value() )
             
-            self._new_options.SetFloat( 'popup_manage_ratings_window_icon_size_px', self._manage_ratings_rating_icon_size_px.value() )
-            self._new_options.SetFloat( 'popup_manage_ratings_window_incdec_width_px', self._manage_ratings_rating_incdec_width_px.value() )
+            self._new_options.SetFloat( 'manage_ratings_window_icon_size_px', self._manage_ratings_rating_icon_size_px.value() )
+            self._new_options.SetFloat( 'manage_ratings_window_incdec_width_px', self._manage_ratings_rating_incdec_width_px.value() )
             
         
     
