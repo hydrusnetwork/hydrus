@@ -230,8 +230,8 @@ def GetIconSize( canvas_type, service_type = ClientGUICommon.HC.LOCAL_RATING_LIK
         
     elif canvas_type == 'popup':
         
-        rating_icon_size_px = CG.client_controller.new_options.GetFloat( 'popup_manage_ratings_window_icon_size_px' )
-        rating_incdec_width_px = CG.client_controller.new_options.GetFloat( 'popup_manage_ratings_window_incdec_width_px' )
+        rating_icon_size_px = CG.client_controller.new_options.GetFloat( 'manage_ratings_window_icon_size_px' )
+        rating_incdec_width_px = CG.client_controller.new_options.GetFloat( 'manage_ratings_window_incdec_width_px' )
         
     else:
         
@@ -569,11 +569,11 @@ class RatingIncDecDialog( RatingIncDec ):
         
         if self.isEnabled():
             
-            DrawIncDec( painter, 0, 0, self._service_key, self._rating_state, self._rating, self._icon_size )
+            DrawIncDec( painter, 0, 0, self._service_key, self._rating_state, self._rating, self._icon_size - QC.QSize( 1, 0 ) )
             
         else:
             
-            DrawIncDec( painter, 0, 0, self._service_key, ClientRatings.NULL, 0, self._icon_size )
+            DrawIncDec( painter, 0, 0, self._service_key, ClientRatings.NULL, 0, self._icon_size - QC.QSize( 1, 0 ) )
             
         
     
@@ -729,11 +729,11 @@ class RatingLikeDialog( RatingLike ):
         
         if self.isEnabled():
             
-            DrawLike( painter, 0, 0, self._service_key, self._rating_state )
+            DrawLike( painter, PAD_PX / 2, 1, self._service_key, self._rating_state, self._icon_size )
             
         else:
             
-            DrawLike( painter, 0, 0, self._service_key, ClientRatings.NULL )
+            DrawLike( painter, PAD_PX / 2, 1, self._service_key, ClientRatings.NULL, self._icon_size)
             
         
     
@@ -1080,11 +1080,11 @@ class RatingNumericalDialog( RatingNumericalControl ):
         
         if self.isEnabled():
             
-            DrawNumerical( painter, 1, 1, self._service_key, self._rating_state, self._rating )
+            DrawNumerical( painter, 1, PAD_PX / 2, self._service_key, self._rating_state, self._rating, self._icon_size )
             
         else:
             
-            DrawNumerical( painter, 1, 1, self._service_key, ClientRatings.NULL, 0.0 )
+            DrawNumerical( painter, 1, PAD_PX / 2, self._service_key, ClientRatings.NULL, 0.0, self._icon_size )
             
         
         self.UpdateSize()

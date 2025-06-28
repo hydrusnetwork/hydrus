@@ -74,6 +74,9 @@ class VBoxLayout( QW.QVBoxLayout ):
 
 class LabelledSlider( QW.QWidget ):
     
+    valueChanged = QC.Signal( int )
+    finishedEditing  = QC.Signal( int )
+    
     def __init__( self, parent = None ):
         
         super().__init__( parent )
@@ -100,6 +103,8 @@ class LabelledSlider( QW.QWidget ):
         self.layout().setAlignment( self._value_label, QC.Qt.AlignmentFlag.AlignHCenter )
         
         self._slider.valueChanged.connect( self._UpdateLabels )
+        self._slider.valueChanged.connect( self.valueChanged )
+        self._slider.sliderReleased.connect( lambda: self.finishedEditing.emit( self._slider.value() ) )
         
         self._UpdateLabels()
         
@@ -113,6 +118,12 @@ class LabelledSlider( QW.QWidget ):
         
         return self._slider.value()
     
+    def SetInterval( self, interval ):
+        
+        self._slider.setTickInterval( interval )
+        
+        self._UpdateLabels()
+        
     def SetRange( self, min, max ):
         
         self._slider.setRange( min, max )

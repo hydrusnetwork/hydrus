@@ -325,6 +325,14 @@ class DialogManageRatings( CAC.ApplicationCommandProcessorMixin, ClientGUIDialog
                 
             
         
+        def UpdateControlSizes( self ):
+            
+            for control in self._service_keys_to_controls.values():
+                
+                control.UpdateSize()
+                
+            
+        
     
     class _LikePanel( QW.QWidget ):
         
@@ -464,8 +472,16 @@ class DialogManageRatings( CAC.ApplicationCommandProcessorMixin, ClientGUIDialog
                     
                 
             
+        def UpdateControlSizes( self ):
+            
+            for control in self._service_keys_to_controls.values():
+                
+                control.UpdateSize()
+                
+            
         
     
+
     class _NumericalPanel( QW.QWidget ):
         
         def __init__( self, parent, services, media ):
@@ -599,6 +615,13 @@ class DialogManageRatings( CAC.ApplicationCommandProcessorMixin, ClientGUIDialog
                         control.SetRating( rating )
                         
                     
+                
+            
+        def UpdateControlSizes( self ):
+            
+            for control in self._service_keys_to_controls.values():
+                
+                control.UpdateSize()
                 
             
         
