@@ -97,7 +97,7 @@ class Page( QW.QWidget ):
         self._preview_panel.setFrameStyle( QW.QFrame.Shape.Panel | QW.QFrame.Shadow.Sunken )
         self._preview_panel.setLineWidth( 2 )
         
-        self._preview_canvas = ClientGUICanvas.CanvasPanel( self._preview_panel, self._page_key, self._page_manager.GetLocationContext() )
+        self._preview_canvas = ClientGUICanvas.CanvasPanelWithHovers( self._preview_panel, self._page_key, self._page_manager.GetLocationContext() )
         
         self._sidebar.locationChanged.connect( self._preview_canvas.SetLocationContext )
         

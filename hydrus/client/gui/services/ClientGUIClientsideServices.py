@@ -1604,15 +1604,21 @@ class EditServiceRatingsNumericalSubPanel( ClientGUICommon.StaticBox ):
         self._num_stars = ClientGUICommon.BetterSpinBox( self, min=1, max=20 )
         self._allow_zero = QW.QCheckBox( self )
         self._custom_pad = ClientGUICommon.BetterSpinBox( self, min=-64, max=64 )
-
+        self._draw_fraction = ClientGUICommon.BetterChoice( self )
+        
+        self._draw_fraction.addItem( 'do not', ClientRatings.DRAW_NO )
+        self._draw_fraction.addItem( 'show on left', ClientRatings.DRAW_ON_LEFT )
+        self._draw_fraction.addItem( 'show on right', ClientRatings.DRAW_ON_RIGHT )
         
         #
         
         self._num_stars.setValue( dictionary['num_stars'] )
         self._allow_zero.setChecked( dictionary[ 'allow_zero' ] )
         self._custom_pad.setValue( dictionary[ 'custom_pad' ] )
+        self._draw_fraction.SetValue( dictionary[ 'show_fraction_beside_stars' ] )
         
         self._custom_pad.setToolTip( ClientGUIFunctions.WrapToolTip( 'Set the distance, in pixels, between shapes in the row. Just set this to 0 if you want to go back to the old way these icons were rendered, with them displaying as a seamless loading bar.' ) )
+        self._draw_fraction.setToolTip( ClientGUIFunctions.WrapToolTip( 'This will add the fractional display (e.g. \'4/5\') beside the rating stars. You can choose whether it appears on the right or left.' ) )
         
         #
         
@@ -1621,6 +1627,7 @@ class EditServiceRatingsNumericalSubPanel( ClientGUICommon.StaticBox ):
         rows.append( ( 'number of \'stars\': ', self._num_stars ) )
         rows.append( ( 'allow a zero rating: ', self._allow_zero ) )
         rows.append( ( 'icon padding: ', self._custom_pad ) )
+        rows.append( ( 'draw fraction beside the rating', self._draw_fraction ) )
         
         gridbox = ClientGUICommon.WrapInGrid( self, rows )
         
@@ -1634,6 +1641,7 @@ class EditServiceRatingsNumericalSubPanel( ClientGUICommon.StaticBox ):
         num_stars = self._num_stars.value()
         allow_zero = self._allow_zero.isChecked()
         custom_pad = self._custom_pad.value()
+        draw_fraction = self._draw_fraction.GetValue()
         
         if num_stars == 1 and not allow_zero:
             
@@ -1643,6 +1651,7 @@ class EditServiceRatingsNumericalSubPanel( ClientGUICommon.StaticBox ):
         dictionary_part[ 'num_stars' ] = num_stars
         dictionary_part[ 'allow_zero' ] = allow_zero
         dictionary_part[ 'custom_pad' ] = custom_pad
+        dictionary_part[ 'show_fraction_beside_stars' ] = draw_fraction
         
         return dictionary_part
         
