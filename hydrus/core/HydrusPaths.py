@@ -323,6 +323,38 @@ def ElideFilenameSafely( name: str, num_character_count_available: int, director
     return name
     
 
+def ElideDirectoryHack( name: str, force_ntfs = False ):
+    
+    # most OSes cannot handle a filename or dirname with more than 256 X, where on Windows that is chars and Linux/macOS is bytes
+    # since Windows also can't handle a path of more than 256, we are hacking a 64 char limit there
+    
+    if name == '':
+        
+        raise Exception( 'Sorry, the proposed directory was empty!' )
+        
+    
+    def the_test( n ):
+        
+        if HC.PLATFORM_WINDOWS or force_ntfs:
+            
+            # characters
+            return len( n ) > 64
+            
+        else:
+            
+            # bytes
+            return len( n.encode( 'utf-8' ) ) > ( 256 - 10 ) # bit of padding
+            
+        
+    
+    while the_test( name ):
+        
+        name = name[:-1]
+        
+    
+    return name
+    
+
 def FigureOutDBDir( arg_db_dir: str ):
     
     switching_to_userpath_is_ok = False
@@ -1273,7 +1305,10 @@ def SanitizePathForExport( directory_path, directories_and_filename ):
         force_ntfs = fst.lower() in ( 'ntfs', 'exfat' )
         
     
+    suffix_directories = [ ElideDirectoryHack( suffix_directory, force_ntfs = force_ntfs ) for suffix_directory in suffix_directories ]
+    
     suffix_directories = [ SanitizeFilename( suffix_directory, force_ntfs = force_ntfs ) for suffix_directory in suffix_directories ]
+    
     filename = SanitizeFilename( filename, force_ntfs = force_ntfs )
     
     sanitized_components = suffix_directories

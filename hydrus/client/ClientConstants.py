@@ -15,6 +15,7 @@ CANVAS_PREVIEW = 1
 CANVAS_MEDIA_VIEWER_DUPLICATES = 2
 CANVAS_MEDIA_VIEWER_ARCHIVE_DELETE = 3
 CANVAS_CLIENT_API = 4
+CANVAS_DIALOG = 5
 
 CANVAS_MEDIA_VIEWER_TYPES = { CANVAS_MEDIA_VIEWER, CANVAS_MEDIA_VIEWER_DUPLICATES, CANVAS_MEDIA_VIEWER_ARCHIVE_DELETE }
 
@@ -23,7 +24,8 @@ canvas_type_str_lookup = {
     CANVAS_PREVIEW : 'preview viewer',
     CANVAS_MEDIA_VIEWER_DUPLICATES : 'duplicates filter',
     CANVAS_MEDIA_VIEWER_ARCHIVE_DELETE : 'archive/delete filter',
-    CANVAS_CLIENT_API : 'client api viewer'
+    CANVAS_CLIENT_API : 'client api viewer',
+    CANVAS_DIALOG : 'dialog'
 }
 
 COLOUR_THUMB_BACKGROUND = 0
@@ -721,31 +723,33 @@ class GlobalIcons( object ):
 
 global_icons = GlobalIcons.instance
 
-DEFAULT_LOCAL_TAG_SERVICE_KEY = b'local tags'
+# ": bytes" for some linting fun
 
-DEFAULT_LOCAL_DOWNLOADER_TAG_SERVICE_KEY = b'downloader tags'
+DEFAULT_LOCAL_TAG_SERVICE_KEY: bytes = b'local tags'
 
-LOCAL_FILE_SERVICE_KEY = b'local files'
+DEFAULT_LOCAL_DOWNLOADER_TAG_SERVICE_KEY: bytes = b'downloader tags'
 
-LOCAL_UPDATE_SERVICE_KEY = b'repository updates'
+LOCAL_FILE_SERVICE_KEY: bytes = b'local files'
 
-LOCAL_BOORU_SERVICE_KEY = b'local booru'
+LOCAL_UPDATE_SERVICE_KEY: bytes = b'repository updates'
 
-LOCAL_NOTES_SERVICE_KEY = b'local notes'
+LOCAL_BOORU_SERVICE_KEY: bytes = b'local booru'
 
-DEFAULT_FAVOURITES_RATING_SERVICE_KEY = b'favourites'
+LOCAL_NOTES_SERVICE_KEY: bytes = b'local notes'
 
-CLIENT_API_SERVICE_KEY = b'client api'
+DEFAULT_FAVOURITES_RATING_SERVICE_KEY: bytes = b'favourites'
 
-TRASH_SERVICE_KEY = b'trash'
+CLIENT_API_SERVICE_KEY: bytes = b'client api'
 
-COMBINED_LOCAL_MEDIA_SERVICE_KEY = b'all local media'
-COMBINED_LOCAL_FILE_SERVICE_KEY = b'all local files'
+TRASH_SERVICE_KEY: bytes = b'trash'
 
-COMBINED_FILE_SERVICE_KEY = b'all known files'
+COMBINED_LOCAL_MEDIA_SERVICE_KEY: bytes = b'all local media'
+COMBINED_LOCAL_FILE_SERVICE_KEY: bytes = b'all local files'
 
-COMBINED_DELETED_FILE_SERVICE_KEY = b'all deleted files'
+COMBINED_FILE_SERVICE_KEY: bytes = b'all known files'
 
-COMBINED_TAG_SERVICE_KEY = b'all known tags'
+COMBINED_DELETED_FILE_SERVICE_KEY: bytes = b'all deleted files'
 
-TEST_SERVICE_KEY = b'test service'
+COMBINED_TAG_SERVICE_KEY: bytes = b'all known tags'
+
+TEST_SERVICE_KEY: bytes = b'test service'

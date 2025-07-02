@@ -12,7 +12,6 @@ from hydrus.core import HydrusText
 
 from hydrus.client import ClientGlobals as CG
 from hydrus.client.metadata import ClientContentUpdates
-from hydrus.client.gui import ClientGUIDialogs
 from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIDialogsQuick
 
@@ -313,21 +312,18 @@ class TagPairActionContext( object ):
                     
                     message = 'Enter a reason for:' + '\n' * 2 + pair_strings + '\n' * 2 + 'To be added. A janitor will review your petition.'
                     
-                    with ClientGUIDialogs.DialogTextEntry( widget, message, suggestions = suggestions ) as dlg:
+                    try:
                         
-                        if dlg.exec() == QW.QDialog.DialogCode.Accepted:
+                        reason = ClientGUIDialogsQuick.EnterText( widget, message, suggestions = suggestions )
+                        
+                        if reason not in fixed_suggestions:
                             
-                            reason = dlg.GetValue()
+                            CG.client_controller.new_options.PushRecentPetitionReason( content_type, HC.CONTENT_UPDATE_ADD, reason )
                             
-                            if reason not in fixed_suggestions:
-                                
-                                CG.client_controller.new_options.PushRecentPetitionReason( content_type, HC.CONTENT_UPDATE_ADD, reason )
-                                
-                            
-                        else:
-                            
-                            do_it = False
-                            
+                        
+                    except HydrusExceptions.CancelledException:
+                        
+                        do_it = False
                         
                     
                 
@@ -412,21 +408,18 @@ class TagPairActionContext( object ):
                     
                     suggestions.extend( fixed_suggestions )
                     
-                    with ClientGUIDialogs.DialogTextEntry( widget, message, suggestions = suggestions ) as dlg:
+                    try:
                         
-                        if dlg.exec() == QW.QDialog.DialogCode.Accepted:
+                        reason = ClientGUIDialogsQuick.EnterText( widget, message, suggestions = suggestions )
+                        
+                        if reason not in fixed_suggestions:
                             
-                            reason = dlg.GetValue()
+                            CG.client_controller.new_options.PushRecentPetitionReason( content_type, HC.CONTENT_UPDATE_DELETE, reason )
                             
-                            if reason not in fixed_suggestions:
-                                
-                                CG.client_controller.new_options.PushRecentPetitionReason( content_type, HC.CONTENT_UPDATE_DELETE, reason )
-                                
-                            
-                        else:
-                            
-                            do_it = False
-                            
+                        
+                    except HydrusExceptions.CancelledException:
+                        
+                        do_it = False
                         
                     
                 

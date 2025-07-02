@@ -16,8 +16,32 @@ from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui.panels import ClientGUIScrolledPanelsButtonQuestions
 from hydrus.client.gui.panels import ClientGUIScrolledPanelsEdit
 from hydrus.client.gui.panels import ClientGUIScrolledPanelsSelectFromList
+from hydrus.client.gui.panels import ClientGUIScrolledPanelsTextEntry
 
-def GetDeleteFilesJobs( win, media, default_reason, suggested_file_service_key = None ):
+def EnterText( win: QW.QWidget, message: str, default = '', placeholder = None, allow_blank = False, suggestions = None, max_chars = None, password_entry = False, min_char_width = 72 ):
+    
+    title = 'Enter Text'
+    
+    with ClientGUITopLevelWindowsPanels.DialogEdit( win, title, frame_key = 'regular_center_dialog' ) as dlg:
+        
+        panel = ClientGUIScrolledPanelsTextEntry.EditTextPanel( dlg, message, default, placeholder, allow_blank, suggestions, max_chars, password_entry, min_char_width = min_char_width )
+        
+        dlg.SetPanel( panel )
+        
+        if dlg.exec() == QW.QDialog.DialogCode.Accepted:
+            
+            text = panel.GetValue()
+            
+            return text
+            
+        else:
+            
+            raise HydrusExceptions.CancelledException( 'Dialog cancelled.' )
+            
+        
+    
+
+def GetDeleteFilesJobs( win: QW.QWidget, media, default_reason, suggested_file_service_key = None ):
     
     title = 'Delete files?'
     
@@ -82,7 +106,7 @@ def run_auto_yes_no_gubbins( dlg: QW.QDialog, time_to_fire, original_title, acti
     
 
 # TODO: check_for_cancelled aiiiiieeeeeeeeee
-def GetYesNo( win, message, title = 'Are you sure?', yes_label = 'yes', no_label = 'no', auto_yes_time = None, auto_no_time = None, check_for_cancelled = False ):
+def GetYesNo( win: QW.QWidget, message: str, title = 'Are you sure?', yes_label = 'yes', no_label = 'no', auto_yes_time = None, auto_no_time = None, check_for_cancelled = False ):
     
     with ClientGUITopLevelWindowsPanels.DialogCustomButtonQuestion( win, title ) as dlg:
         
@@ -106,7 +130,7 @@ def GetYesNo( win, message, title = 'Are you sure?', yes_label = 'yes', no_label
         
     
 
-def GetYesNoNo( win, message, title = 'Are you sure?', yes_label = 'yes', no_tuples = None, auto_yes_time = None, disable_yes_initially = False ):
+def GetYesNoNo( win: QW.QWidget, message: str, title = 'Are you sure?', yes_label = 'yes', no_tuples = None, auto_yes_time = None, disable_yes_initially = False ):
     
     with ClientGUITopLevelWindowsPanels.DialogCustomButtonQuestion( win, title ) as dlg:
         
@@ -132,7 +156,7 @@ def GetYesNoNo( win, message, title = 'Are you sure?', yes_label = 'yes', no_tup
         
     
 
-def GetYesYesNo( win, message, title = 'Are you sure?', yes_tuples = None, no_label = 'no' ):
+def GetYesYesNo( win: QW.QWidget, message: str, title = 'Are you sure?', yes_tuples = None, no_label = 'no' ):
     
     with ClientGUITopLevelWindowsPanels.DialogCustomButtonQuestion( win, title ) as dlg:
         
@@ -224,7 +248,7 @@ def PresentClipboardParseError( win: QW.QWidget, content: str, expected_content_
     ClientGUIDialogsMessage.ShowCritical( win, 'Clipboard Error!', message )
     
 
-def SelectFromList( win, title, choice_tuples, value_to_select = None, sort_tuples = True, allow_insta_one_item_select = True ):
+def SelectFromList( win: QW.QWidget, title: str, choice_tuples, value_to_select = None, sort_tuples = True, allow_insta_one_item_select = True ):
     
     if len( choice_tuples ) == 1 and allow_insta_one_item_select:
         
@@ -252,7 +276,7 @@ def SelectFromList( win, title, choice_tuples, value_to_select = None, sort_tupl
         
     
 
-def SelectFromListButtons( win, title, choice_tuples, message = '' ):
+def SelectFromListButtons( win: QW.QWidget, title: str, choice_tuples, message = '' ):
     
     if len( choice_tuples ) == 1:
         
@@ -280,7 +304,7 @@ def SelectFromListButtons( win, title, choice_tuples, message = '' ):
         
     
 
-def SelectMultipleFromList( win, title, choice_tuples ):
+def SelectMultipleFromList( win: QW.QWidget, title: str, choice_tuples ):
     
     with ClientGUITopLevelWindowsPanels.DialogEdit( win, title ) as dlg:
         

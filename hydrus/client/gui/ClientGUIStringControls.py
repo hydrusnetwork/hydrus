@@ -11,7 +11,6 @@ from hydrus.core import HydrusText
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientStrings
-from hydrus.client.gui import ClientGUIDialogs
 from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIFunctions
@@ -539,32 +538,35 @@ class StringToStringDictControl( QW.QWidget ):
     
     def _Add( self ):
         
-        with ClientGUIDialogs.DialogTextEntry( self, 'enter the ' + self._key_name, allow_blank = False ) as dlg:
+        try:
             
-            if dlg.exec() == QW.QDialog.DialogCode.Accepted:
-                
-                key = dlg.GetValue()
-                
-                if key in self._GetExistingKeys():
-                    
-                    ClientGUIDialogsMessage.ShowWarning( self, 'That {} already exists!'.format( self._key_name ) )
-                    
-                    return
-                    
-                
-                with ClientGUIDialogs.DialogTextEntry( self, 'enter the ' + self._value_name, allow_blank = True ) as dlg_2:
-                    
-                    if dlg_2.exec() == QW.QDialog.DialogCode.Accepted:
-                        
-                        value = dlg_2.GetValue()
-                        
-                        data = ( key, value )
-                        
-                        self._listctrl.AddData( data, select_sort_and_scroll = True )
-                        
-                    
-                
+            key = ClientGUIDialogsQuick.EnterText( self, 'enter the ' + self._key_name, allow_blank = False )
             
+        except HydrusExceptions.CancelledException:
+            
+            return
+            
+        
+        if key in self._GetExistingKeys():
+            
+            ClientGUIDialogsMessage.ShowWarning( self, 'That {} already exists!'.format( self._key_name ) )
+            
+            return
+            
+        
+        try:
+            
+            value = ClientGUIDialogsQuick.EnterText( self, 'enter the ' + self._value_name, allow_blank = True )
+            
+        except HydrusExceptions.CancelledException:
+            
+            return
+            
+        
+        data = ( key, value )
+        
+        self._listctrl.AddData( data, select_sort_and_scroll = True )
+        
         
     
     def _Edit( self ):
@@ -580,23 +582,20 @@ class StringToStringDictControl( QW.QWidget ):
         
         if self._edit_keys:
             
-            with ClientGUIDialogs.DialogTextEntry( self, 'edit the ' + self._key_name, default = key, allow_blank = False ) as dlg:
+            try:
                 
-                if dlg.exec() == QW.QDialog.DialogCode.Accepted:
-                    
-                    edited_key = dlg.GetValue()
-                    
-                    if edited_key != key and edited_key in self._GetExistingKeys():
-                        
-                        ClientGUIDialogsMessage.ShowWarning( self, 'That {} already exists!'.format( self._key_name ) )
-                        
-                        return
-                        
-                    
-                else:
-                    
-                    return
-                    
+                edited_key = ClientGUIDialogsQuick.EnterText( self, 'edit the ' + self._key_name, default = key, allow_blank = False )
+                
+            except HydrusExceptions.CancelledException:
+                
+                return
+                
+            
+            if edited_key != key and edited_key in self._GetExistingKeys():
+                
+                ClientGUIDialogsMessage.ShowWarning( self, 'That {} already exists!'.format( self._key_name ) )
+                
+                return
                 
             
         else:
@@ -604,16 +603,13 @@ class StringToStringDictControl( QW.QWidget ):
             edited_key = key
             
         
-        with ClientGUIDialogs.DialogTextEntry( self, 'edit the ' + self._value_name, default = value, allow_blank = True ) as dlg:
+        try:
             
-            if dlg.exec() == QW.QDialog.DialogCode.Accepted:
-                
-                edited_value = dlg.GetValue()
-                
-            else:
-                
-                return
-                
+            edited_value = ClientGUIDialogsQuick.EnterText( self, 'edit the ' + self._value_name, default = value, allow_blank = True )
+            
+        except HydrusExceptions.CancelledException:
+            
+            return
             
         
         edited_data = ( edited_key, edited_value )
@@ -701,36 +697,37 @@ class StringToStringMatchDictControl( QW.QWidget ):
     
     def _Add( self ):
         
-        with ClientGUIDialogs.DialogTextEntry( self, 'enter the ' + self._key_name, allow_blank = False ) as dlg:
+        try:
             
-            if dlg.exec() == QW.QDialog.DialogCode.Accepted:
+            key = ClientGUIDialogsQuick.EnterText( self, 'enter the ' + self._key_name, allow_blank = False )
+            
+        except HydrusExceptions.CancelledException:
+            
+            return
+            
+        
+        if key in self._GetExistingKeys():
+            
+            ClientGUIDialogsMessage.ShowWarning( self, 'That {} already exists!'.format( self._key_name ) )
+            
+            return
+            
+        
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit match' ) as dlg_2:
+            
+            string_match = ClientStrings.StringMatch()
+            
+            panel = ClientGUIStringPanels.EditStringMatchPanel( dlg_2, string_match )
+            
+            dlg_2.SetPanel( panel )
+            
+            if dlg_2.exec() == QW.QDialog.DialogCode.Accepted:
                 
-                key = dlg.GetValue()
+                string_match = panel.GetValue()
                 
-                if key in self._GetExistingKeys():
-                    
-                    ClientGUIDialogsMessage.ShowWarning( self, 'That {} already exists!'.format( self._key_name ) )
-                    
-                    return
-                    
+                data = ( key, string_match )
                 
-                with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit match' ) as dlg_2:
-                    
-                    string_match = ClientStrings.StringMatch()
-                    
-                    panel = ClientGUIStringPanels.EditStringMatchPanel( dlg_2, string_match )
-                    
-                    dlg_2.SetPanel( panel )
-                    
-                    if dlg_2.exec() == QW.QDialog.DialogCode.Accepted:
-                        
-                        string_match = panel.GetValue()
-                        
-                        data = ( key, string_match )
-                        
-                        self._listctrl.AddData( data, select_sort_and_scroll = True )
-                        
-                    
+                self._listctrl.AddData( data, select_sort_and_scroll = True )
                 
             
         
@@ -746,23 +743,20 @@ class StringToStringMatchDictControl( QW.QWidget ):
         
         ( key, string_match ) = data
         
-        with ClientGUIDialogs.DialogTextEntry( self, 'edit the ' + self._key_name, default = key, allow_blank = False ) as dlg:
+        try:
             
-            if dlg.exec() == QW.QDialog.DialogCode.Accepted:
-                
-                edited_key = dlg.GetValue()
-                
-                if edited_key != key and edited_key in self._GetExistingKeys():
-                    
-                    ClientGUIDialogsMessage.ShowWarning( self, 'That {} already exists!'.format( self._key_name ) )
-                    
-                    return
-                    
-                
-            else:
-                
-                return
-                
+            edited_key = ClientGUIDialogsQuick.EnterText( self, 'edit the ' + self._key_name, default = key, allow_blank = False )
+            
+        except HydrusExceptions.CancelledException:
+            
+            return
+            
+        
+        if edited_key != key and edited_key in self._GetExistingKeys():
+            
+            ClientGUIDialogsMessage.ShowWarning( self, 'That {} already exists!'.format( self._key_name ) )
+            
+            return
             
         
         with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit match' ) as dlg:

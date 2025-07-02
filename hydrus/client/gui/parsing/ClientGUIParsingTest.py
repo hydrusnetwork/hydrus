@@ -16,7 +16,6 @@ from hydrus.core.files import HydrusFileHandling
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientStrings
-from hydrus.client.gui import ClientGUIDialogs
 from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIFunctions
@@ -179,15 +178,16 @@ class TestPanel( QW.QWidget ):
         
         message = 'Enter URL to fetch data for.'
         
-        with ClientGUIDialogs.DialogTextEntry( self, message, placeholder = 'enter url', allow_blank = False) as dlg:
+        try:
             
-            if dlg.exec() == QW.QDialog.DialogCode.Accepted:
-                
-                url = dlg.GetValue()
-                
-                CG.client_controller.CallToThread( do_it, url )
-                
+            url = ClientGUIDialogsQuick.EnterText( self, message, placeholder = 'url' )
             
+        except HydrusExceptions.CancelledException:
+            
+            return
+            
+        
+        CG.client_controller.CallToThread( do_it, url )
         
     
     def _Paste( self ):

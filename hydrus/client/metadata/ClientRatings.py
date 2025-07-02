@@ -33,6 +33,10 @@ HEART = 101
 TEARDROP = 102
 MOON_CRESCENT = 103
 
+DRAW_NO = 0
+DRAW_ON_LEFT = 1
+DRAW_ON_RIGHT = 2
+
 # TODO: Ultimately, assuming svg works out and fill/border colours are all good, let's port all this to the default svg directory
 
 shape_to_str_lookup_dict = {

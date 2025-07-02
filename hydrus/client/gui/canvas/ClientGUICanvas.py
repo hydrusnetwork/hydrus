@@ -23,7 +23,6 @@ from hydrus.client import ClientThreading
 from hydrus.client.duplicates import ClientDuplicates
 from hydrus.client.duplicates import ClientPotentialDuplicatesSearchContext
 from hydrus.client.gui import ClientGUICore as CGC
-from hydrus.client.gui import ClientGUIDialogs
 from hydrus.client.gui import ClientGUIDialogsManage
 from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIDialogsQuick
@@ -31,7 +30,6 @@ from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIMenus
 from hydrus.client.gui import ClientGUIRatings
 from hydrus.client.gui import ClientGUIShortcuts
-from hydrus.client.gui import ClientGUITags
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.canvas import ClientGUICanvasHoverFrames
@@ -42,6 +40,7 @@ from hydrus.client.gui.media import ClientGUIMediaSimpleActions
 from hydrus.client.gui.media import ClientGUIMediaModalActions
 from hydrus.client.gui.media import ClientGUIMediaControls
 from hydrus.client.gui.media import ClientGUIMediaMenus
+from hydrus.client.gui.metadata import ClientGUIManageTags
 from hydrus.client.gui.panels import ClientGUIScrolledPanels
 from hydrus.client.gui.panels import ClientGUIScrolledPanelsCommitFiltering
 from hydrus.client.gui.panels import ClientGUIScrolledPanelsEdit
@@ -347,6 +346,7 @@ class Canvas( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
         
         self._new_options = CG.client_controller.new_options
         
+        self._canvas_type = CC.CANVAS_MEDIA_VIEWER
         self._canvas_key = HydrusData.GenerateKey()
         
         self._force_maintain_pan_and_zoom = False
@@ -524,7 +524,7 @@ class Canvas( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
                 
                 panel = child.GetPanel()
                 
-                if isinstance( panel, ClientGUITags.ManageTagsPanel ):
+                if isinstance( panel, ClientGUIManageTags.ManageTagsPanel ):
                     
                     child.activateWindow()
                     
@@ -545,7 +545,7 @@ class Canvas( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
         
         manage_tags = ClientGUITopLevelWindowsPanels.FrameThatTakesScrollablePanel( self, title, frame_key )
         
-        panel = ClientGUITags.ManageTagsPanel( manage_tags, self._location_context, CC.TAG_PRESENTATION_MEDIA_VIEWER_MANAGE_TAGS, [ self._current_media ], immediate_commit = True, canvas_key = self._canvas_key )
+        panel = ClientGUIManageTags.ManageTagsPanel( manage_tags, self._location_context, CC.TAG_PRESENTATION_MEDIA_VIEWER_MANAGE_TAGS, [ self._current_media ], immediate_commit = True, canvas_key = self._canvas_key )
         
         manage_tags.SetPanel( panel )
         
@@ -1607,6 +1607,7 @@ class CanvasPanel( Canvas ):
         
         super().__init__( parent, location_context )
         
+        self._canvas_type = CC.CANVAS_PREVIEW
         self._page_key = page_key
         
         self._hidden_page_current_media = None
@@ -1840,6 +1841,284 @@ class CanvasPanel( Canvas ):
             
         
         self._is_splitter_hidden = is_hidden
+        
+    
+
+class CanvasPanelWithHovers( CanvasPanel ):
+    
+    def __init__( self, parent, page_key, location_context: ClientLocation.LocationContext ):
+        
+        self._canvas_type = CC.CANVAS_PREVIEW
+        
+        super().__init__( parent, page_key, location_context )
+        
+        #
+        
+        self._hovers = []
+        
+        self._top_right_hover = ClientGUICanvasHoverFrames.CanvasHoverFrameTopRight( self, self, None, self._canvas_key )
+        
+        self.mediaChanged.connect( self._top_right_hover.SetMedia )
+        self.mediaCleared.connect( self._top_right_hover.ClearMedia )
+        
+        self._top_right_hover.sendApplicationCommand.connect( self.ProcessApplicationCommand )
+        
+        self._hovers.append( self._top_right_hover )
+        
+        #
+        
+        self._my_shortcuts_handler.AddWindowToFilter( self._top_right_hover )
+        
+        CG.client_controller.gui.RegisterUIUpdateWindow( self )
+        
+    
+    def _DrawBackgroundDetails( self, painter: QG.QPainter ):
+        
+        if self._current_media is None:
+            
+            # maybe we'll want something here, but I think I prefer it blank for default for now
+            pass
+            
+            '''
+            my_size = self.size()
+            
+            my_width = my_size.width()
+            my_height = my_size.height()
+            
+            text = 'No media selected'
+            
+            ( text_size, text ) = ClientGUIFunctions.GetTextSizeFromPainter( painter, text )
+            
+            x = ( my_width - text_size.width() ) // 2
+            y = ( my_height - text_size.height() ) // 2
+            
+            ClientGUIFunctions.DrawText( painter, x, y, text )
+            '''
+        else: #TODO maybe implement some of the commented out options with custom draw for sizes / overlapping shiz / +"bottom info" bar to preview window with extended details?
+            
+            new_options = CG.client_controller.new_options
+            
+            # if new_options.GetBoolean( 'draw_tags_hover_in_preview_window_background' ):
+                
+            #     self._DrawTags( painter )
+                
+            
+            # if new_options.GetBoolean( 'draw_top_hover_in_preview_window_background' ):
+                
+            #     self._DrawTopMiddle( painter )
+                
+            
+            if new_options.GetBoolean( 'draw_top_right_hover_in_preview_window_background' ):
+                
+                current_y = self._DrawTopRight( painter )
+                
+            # else:
+                
+            #     current_y = 0
+                
+            
+            # if new_options.GetBoolean( 'draw_notes_hover_in_preview_window_background' ):
+                
+            #     self._DrawNotes( painter, current_y )
+                
+            
+            # if new_options.GetBoolean( 'draw_bottom_right_index_in_preview_window_background' ):
+                
+            #     self._DrawIndexAndZoom( painter )
+                
+            
+        
+    
+    def _DrawTopRight( self, painter: QG.QPainter ) -> int:
+        
+        my_size = self.size()
+        
+        my_width = my_size.width()
+        my_height = my_size.height()
+        
+        try:
+            
+            QFRAME_PADDING = self._top_right_hover.frameWidth()
+            
+            ( VBOX_SPACING, VBOX_MARGIN ) = self._top_right_hover.GetVboxSpacingAndMargin()
+            
+        except:
+            
+            QFRAME_PADDING = 2
+            ( VBOX_SPACING, VBOX_MARGIN ) = ( 2, 2 )
+            
+        
+        current_y = QFRAME_PADDING + VBOX_MARGIN + round( ClientGUIPainterShapes.PAD_PX / 2 )
+        
+        # ratings
+        
+        RATING_ICON_SET_SIZE = round( self._new_options.GetFloat( 'preview_window_rating_icon_size_px' ) )
+        RATING_INCDEC_SET_WIDTH = round( self._new_options.GetFloat( 'preview_window_rating_incdec_width_px' ) )
+        STAR_DX = RATING_ICON_SET_SIZE
+        STAR_DY = RATING_ICON_SET_SIZE
+        STAR_PAD = ClientGUIPainterShapes.PAD
+        
+        services_manager = CG.client_controller.services_manager
+        
+        
+        like_services = services_manager.GetServices( ( HC.LOCAL_RATING_LIKE, ) )
+        
+        like_services.reverse()
+        
+        like_rating_current_x = my_width - ( STAR_DX + round( STAR_PAD.width() / 2 ) ) - ( QFRAME_PADDING + VBOX_MARGIN )
+        
+        for like_service in like_services:
+            
+            service_key = like_service.GetServiceKey()
+            
+            rating_state = ClientRatings.GetLikeStateFromMedia( ( self._current_media, ), service_key )
+            
+            ClientGUIRatings.DrawLike( painter, like_rating_current_x, current_y, service_key, rating_state, QC.QSize( STAR_DX, STAR_DY ))
+            
+            like_rating_current_x -= STAR_DX + STAR_PAD.width()
+            
+        
+        if len( like_services ) > 0:
+            
+            current_y += STAR_DY + STAR_PAD.height() + VBOX_SPACING
+            
+        
+        
+        numerical_services = services_manager.GetServices( ( HC.LOCAL_RATING_NUMERICAL, ) )
+        
+        for numerical_service in numerical_services:
+            
+            service_key = numerical_service.GetServiceKey()
+            
+            custom_pad = numerical_service.GetCustomPad()
+            
+            ( rating_state, rating ) = ClientRatings.GetNumericalStateFromMedia( ( self._current_media, ), service_key )
+            
+            numerical_width = ClientGUIRatings.GetNumericalWidth( service_key, RATING_ICON_SET_SIZE, custom_pad, False, rating_state, rating )
+            
+            current_x = my_width - numerical_width - ( QFRAME_PADDING + VBOX_MARGIN ) + round( STAR_PAD.width() / 2 )
+            
+            ClientGUIRatings.DrawNumerical( painter, current_x, current_y, service_key, rating_state, rating, QC.QSize( STAR_DX, STAR_DY ), custom_pad )
+            
+            current_y += STAR_DY + STAR_PAD.height() + VBOX_SPACING
+            
+        
+        
+        incdec_services = services_manager.GetServices( ( HC.LOCAL_RATING_INCDEC, ) )
+        
+        incdec_services.reverse()
+        
+        control_width = RATING_INCDEC_SET_WIDTH + 1
+        
+        incdec_rating_current_x = my_width - ( control_width ) - ( QFRAME_PADDING + VBOX_MARGIN )
+        
+        for incdec_service in incdec_services:
+            
+            service_key = incdec_service.GetServiceKey()
+            
+            ( rating_state, rating ) = ClientRatings.GetIncDecStateFromMedia( ( self._current_media, ), service_key )
+            
+            ClientGUIRatings.DrawIncDec( painter, incdec_rating_current_x, current_y, service_key, rating_state, rating, QC.QSize( round( RATING_INCDEC_SET_WIDTH ), round( RATING_INCDEC_SET_WIDTH / 2 ) ) )
+            
+            incdec_rating_current_x -= control_width    #+ STAR_PAD.width() #instead of spacing these out, we will just have them pixel-adjacent in all cases
+            
+        
+        if len( incdec_services ) > 0:
+            
+            current_y += round( RATING_INCDEC_SET_WIDTH / 2 ) + round( STAR_PAD.height() / 2 ) + VBOX_SPACING
+            
+        
+        # icons
+        
+        icons_to_show = []
+        
+        if self._current_media.GetLocationsManager().IsTrashed():
+            
+            icons_to_show.append( CC.global_pixmaps().trash )
+            
+        
+        if self._current_media.HasInbox():
+            
+            icons_to_show.append( CC.global_pixmaps().inbox )
+            
+        
+        if len( icons_to_show ) > 0:
+            
+            current_y += VBOX_MARGIN
+            
+            icon_x = - ( QFRAME_PADDING + VBOX_MARGIN )
+            
+            for icon in icons_to_show:
+                
+                painter.drawPixmap( my_width + icon_x - ( 16 + VBOX_SPACING ), current_y, icon )
+                
+                icon_x -= 16 + VBOX_SPACING
+                
+            
+            # this appears to be correct for the wrong reasons
+            
+            current_y += 16 + VBOX_SPACING
+            
+            current_y += VBOX_MARGIN
+            
+        
+        pen_colour = self.GetColour( CC.COLOUR_MEDIA_TEXT )
+        
+        painter.setPen( QG.QPen( pen_colour ) )
+        
+        # location strings
+        
+        location_strings = self._current_media.GetLocationsManager().GetLocationStrings()
+        
+        for location_string in location_strings:
+            
+            ( text_size, location_string ) = ClientGUIFunctions.GetTextSizeFromPainter( painter, location_string )
+            
+            ClientGUIFunctions.DrawText( painter, my_width - ( text_size.width() + QFRAME_PADDING + VBOX_MARGIN ), current_y, location_string )
+            
+            current_y += text_size.height()
+            
+        
+        # urls
+        
+        urls = self._current_media.GetLocationsManager().GetURLs()
+        
+        url_tuples = CG.client_controller.network_engine.domain_manager.ConvertURLsToMediaViewerTuples( urls )
+        
+        if len( url_tuples ) > 0:
+            
+            current_y += VBOX_MARGIN
+            
+            for ( display_string, url ) in url_tuples:
+                
+                ( text_size, display_string ) = ClientGUIFunctions.GetTextSizeFromPainter( painter, display_string )
+                
+                ClientGUIFunctions.DrawText( painter, my_width - ( text_size.width() + QFRAME_PADDING + VBOX_MARGIN ), current_y, display_string )
+                
+                current_y += text_size.height() + VBOX_SPACING
+                
+            
+            # again this appears to be correct but for the wrong reasons
+            # flying completely by my pants here
+            
+            current_y -= VBOX_MARGIN
+            
+        
+        current_y += VBOX_MARGIN + QFRAME_PADDING
+        
+        return current_y
+        
+    
+    def GetCanvasType( self ):
+        
+        return self._canvas_type
+        
+    def TIMERUIUpdate( self ):
+        
+        for hover in self._hovers:
+            
+            hover.DoRegularHideShow()
+            
         
     
 
@@ -2257,11 +2536,12 @@ class CanvasWithHovers( Canvas ):
             ( VBOX_SPACING, VBOX_MARGIN ) = ( 2, 2 )
             
         
-        current_y = QFRAME_PADDING + VBOX_MARGIN + int( ClientGUIPainterShapes.PAD_PX / 2 )
+        current_y = QFRAME_PADDING + VBOX_MARGIN + round( ClientGUIPainterShapes.PAD_PX / 2 )
         
         # ratings
         
         RATING_ICON_SET_SIZE = round( self._new_options.GetFloat( 'media_viewer_rating_icon_size_px' ) )
+        RATING_INCDEC_SET_WIDTH = round( self._new_options.GetFloat( 'media_viewer_rating_incdec_width_px' ) )
         STAR_DX = RATING_ICON_SET_SIZE
         STAR_DY = RATING_ICON_SET_SIZE
         STAR_PAD = ClientGUIPainterShapes.PAD
@@ -2273,7 +2553,7 @@ class CanvasWithHovers( Canvas ):
         
         like_services.reverse()
         
-        like_rating_current_x = my_width - ( STAR_DX + int( STAR_PAD.width() / 2 ) ) - ( QFRAME_PADDING + VBOX_MARGIN )
+        like_rating_current_x = my_width - ( STAR_DX + round( STAR_PAD.width() / 2 ) ) - ( QFRAME_PADDING + VBOX_MARGIN )
         
         for like_service in like_services:
             
@@ -2302,9 +2582,9 @@ class CanvasWithHovers( Canvas ):
             
             ( rating_state, rating ) = ClientRatings.GetNumericalStateFromMedia( ( self._current_media, ), service_key )
             
-            numerical_width = ClientGUIRatings.GetNumericalWidth( service_key, RATING_ICON_SET_SIZE, custom_pad )
+            numerical_width = ClientGUIRatings.GetNumericalWidth( service_key, RATING_ICON_SET_SIZE, custom_pad, False, rating_state, rating )
             
-            current_x = my_width - numerical_width - ( QFRAME_PADDING + VBOX_MARGIN ) + STAR_PAD.width() / 2
+            current_x = my_width - numerical_width - ( QFRAME_PADDING + VBOX_MARGIN ) + round( STAR_PAD.width() / 2 )
             
             ClientGUIRatings.DrawNumerical( painter, current_x, current_y, service_key, rating_state, rating, QC.QSize( STAR_DX, STAR_DY ), custom_pad )
             
@@ -2316,9 +2596,9 @@ class CanvasWithHovers( Canvas ):
         
         incdec_services.reverse()
         
-        control_width = RATING_ICON_SET_SIZE * 2
+        control_width = RATING_INCDEC_SET_WIDTH + 1
         
-        incdec_rating_current_x = my_width - ( control_width + int( STAR_PAD.width() / 2 ) ) - ( QFRAME_PADDING + VBOX_MARGIN )
+        incdec_rating_current_x = my_width - ( control_width ) - ( QFRAME_PADDING + VBOX_MARGIN )
         
         for incdec_service in incdec_services:
             
@@ -2326,14 +2606,14 @@ class CanvasWithHovers( Canvas ):
             
             ( rating_state, rating ) = ClientRatings.GetIncDecStateFromMedia( ( self._current_media, ), service_key )
             
-            ClientGUIRatings.DrawIncDec( painter, incdec_rating_current_x, current_y, service_key, rating_state, rating, QC.QSize( RATING_ICON_SET_SIZE * 2, RATING_ICON_SET_SIZE ) )
+            ClientGUIRatings.DrawIncDec( painter, incdec_rating_current_x, current_y, service_key, rating_state, rating, QC.QSize( round( RATING_INCDEC_SET_WIDTH ), round( RATING_INCDEC_SET_WIDTH / 2 ) ) )
             
-            incdec_rating_current_x -= control_width + STAR_PAD.width()
+            incdec_rating_current_x -= control_width    #+ STAR_PAD.width() #instead of spacing these out, we will just have them pixel-adjacent in all cases
             
         
         if len( incdec_services ) > 0:
             
-            current_y += STAR_DY + int( STAR_PAD.height() / 2 ) + VBOX_SPACING
+            current_y += round( RATING_INCDEC_SET_WIDTH / 2 ) + round( STAR_PAD.height() / 2 ) + VBOX_SPACING
             
         
         # icons
@@ -2637,6 +2917,11 @@ class CanvasWithHovers( Canvas ):
         super().mouseMoveEvent( event )
         
     
+    def GetCanvasType( self ):
+        
+        return self._canvas_type
+        
+    
     def ProcessApplicationCommand( self, command: CAC.ApplicationCommand ):
         
         command_processed = True
@@ -2711,6 +2996,8 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
         location_context = self._potential_duplicates_search_context.GetFileSearchContext1().GetLocationContext()
         
         super().__init__( parent, location_context )
+        
+        self._canvas_type = CC.CANVAS_MEDIA_VIEWER_DUPLICATES
         
         self._duplicates_right_hover = ClientGUICanvasHoverFrames.CanvasHoverFrameRightDuplicates( self, self, self._canvas_key )
         
@@ -4127,6 +4414,8 @@ class CanvasMediaListFilterArchiveDelete( CanvasMediaList ):
         
         self._my_shortcuts_handler.AddShortcuts( 'archive_delete_filter' )
         
+        self._canvas_type = CC.CANVAS_MEDIA_VIEWER_ARCHIVE_DELETE
+        
         self._kept = set()
         self._deleted = set()
         self._skipped = set()
@@ -4832,21 +5121,26 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
     
     def _StartSlideshowCustomPeriod( self ):
         
-        with ClientGUIDialogs.DialogTextEntry( self, 'Enter the interval, in seconds.', default = '15', min_char_width = 12 ) as dlg:
+        try:
             
-            if dlg.exec() == QW.QDialog.DialogCode.Accepted:
-                
-                try:
-                    
-                    period = float( dlg.GetValue() )
-                    
-                    self._StartSlideshow( period )
-                    
-                except:
-                    
-                    pass
-                    
-                
+            message = 'Enter the interval, in seconds.'
+            
+            period_str = ClientGUIDialogsQuick.EnterText( self, message, default = '15.0', min_char_width = 12 )
+            
+        except HydrusExceptions.CancelledException:
+            
+            raise
+            
+        
+        try:
+            
+            period = float( period_str )
+            
+            self._StartSlideshow( period )
+            
+        except:
+            
+            ClientGUIDialogsMessage.ShowWarning( self, 'Could not parse that slideshow period!' )
             
         
     

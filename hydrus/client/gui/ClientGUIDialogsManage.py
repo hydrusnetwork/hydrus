@@ -2,6 +2,7 @@ import itertools
 import json
 
 from qtpy import QtWidgets as QW
+from qtpy import QtCore as QC
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
@@ -231,7 +232,7 @@ class DialogManageRatings( CAC.ApplicationCommandProcessorMixin, ClientGUIDialog
                 
                 ( rating_state, rating ) = ClientRatings.GetIncDecStateFromMedia( self._media, service_key )
                 
-                control = ClientGUIRatings.RatingIncDecDialog( self, service_key )
+                control = ClientGUIRatings.RatingIncDecDialog( self, service_key, CC.CANVAS_DIALOG )
                 
                 if rating_state != ClientRatings.SET:
                     
@@ -324,6 +325,14 @@ class DialogManageRatings( CAC.ApplicationCommandProcessorMixin, ClientGUIDialog
                 
             
         
+        def UpdateControlSizes( self ):
+            
+            for control in self._service_keys_to_controls.values():
+                
+                control.UpdateSize()
+                
+            
+        
     
     class _LikePanel( QW.QWidget ):
         
@@ -348,7 +357,7 @@ class DialogManageRatings( CAC.ApplicationCommandProcessorMixin, ClientGUIDialog
                 
                 rating_state = ClientRatings.GetLikeStateFromMedia( self._media, service_key )
                 
-                control = ClientGUIRatings.RatingLikeDialog( self, service_key )
+                control = ClientGUIRatings.RatingLikeDialog( self, service_key, CC.CANVAS_DIALOG )
                 
                 control.SetRatingState( rating_state )
                 
@@ -463,8 +472,16 @@ class DialogManageRatings( CAC.ApplicationCommandProcessorMixin, ClientGUIDialog
                     
                 
             
+        def UpdateControlSizes( self ):
+            
+            for control in self._service_keys_to_controls.values():
+                
+                control.UpdateSize()
+                
+            
         
     
+
     class _NumericalPanel( QW.QWidget ):
         
         def __init__( self, parent, services, media ):
@@ -488,7 +505,8 @@ class DialogManageRatings( CAC.ApplicationCommandProcessorMixin, ClientGUIDialog
                 
                 ( rating_state, rating ) = ClientRatings.GetNumericalStateFromMedia( self._media, service_key )
                 
-                control = ClientGUIRatings.RatingNumericalDialog( self, service_key )
+                control = ClientGUIRatings.RatingNumericalDialog( self, service_key, CC.CANVAS_DIALOG )
+                
                 control.setSizePolicy( QW.QSizePolicy.Policy.Fixed, QW.QSizePolicy.Policy.Fixed )
                 
                 if rating_state != ClientRatings.SET:
@@ -508,6 +526,11 @@ class DialogManageRatings( CAC.ApplicationCommandProcessorMixin, ClientGUIDialog
             
             gridbox = ClientGUICommon.WrapInGrid( self, rows, expand_text = True )
             gridbox.setColumnStretch( 1, 0 )
+            
+            for control in self._service_keys_to_controls.values():
+                
+                gridbox.setAlignment( control, QC.Qt.AlignRight | QC.Qt.AlignVCenter )
+                
             
             self.setLayout( gridbox )
             
@@ -592,6 +615,13 @@ class DialogManageRatings( CAC.ApplicationCommandProcessorMixin, ClientGUIDialog
                         control.SetRating( rating )
                         
                     
+                
+            
+        def UpdateControlSizes( self ):
+            
+            for control in self._service_keys_to_controls.values():
+                
+                control.UpdateSize()
                 
             
         

@@ -18,7 +18,6 @@ from hydrus.core import HydrusTime
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
 from hydrus.client.gui import ClientGUIAsync
-from hydrus.client.gui import ClientGUIDialogs
 from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIFunctions
@@ -1071,6 +1070,7 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
             return
             
         
+        # use lower, not casefold; let's not get too clever here
         current_query_texts_lower = { query_text.lower() for query_text in self._GetCurrentQueryTexts() }
         
         already_existing_query_texts = set()
@@ -1094,14 +1094,16 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         
         DEAD_query_headers = { query_header for query_header in self._query_headers.GetData() if query_header.GetQueryText() in already_existing_query_texts and query_header.IsDead() }
         
-        already_existing_query_texts = sorted( already_existing_query_texts )
-        new_query_texts = sorted( new_query_texts )
+        already_existing_query_texts = sorted( already_existing_query_texts, key = HydrusText.HumanTextSortKey )
+        new_query_texts = sorted( new_query_texts, key = HydrusText.HumanTextSortKey )
         
-        message = ''
+        #
+        
+        paste_message_components = []
         
         if len( already_existing_query_texts ) > 0:
             
-            message += f'The queries{HydrusText.ConvertManyStringsToNiceInsertableHumanSummary(already_existing_query_texts)}were already in the subscription.'
+            paste_message_components.append( f'The queries{HydrusText.ConvertManyStringsToNiceInsertableHumanSummary(already_existing_query_texts)}were already in the subscription.' )
             
             if len( DEAD_query_headers ) > 0:
                 
@@ -1115,8 +1117,7 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
                     
                     revive_dead = True
                     
-                    message += '\n' * 2
-                    message += f'The DEAD queries{HydrusText.ConvertManyStringsToNiceInsertableHumanSummary(DEAD_query_header_texts)}were revived.'
+                    paste_message_components.append( f'The DEAD queries{HydrusText.ConvertManyStringsToNiceInsertableHumanSummary(DEAD_query_header_texts)}were revived.' )
                     
                 else:
                     
@@ -1127,15 +1128,12 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         
         if len( new_query_texts ) > 0:
             
-            if len( already_existing_query_texts ) > 0:
-                
-                message += '\n' * 2
-                
-            
-            message += f'The queries{HydrusText.ConvertManyStringsToNiceInsertableHumanSummary(new_query_texts)}were added.'
+            paste_message_components.append( f'The queries{HydrusText.ConvertManyStringsToNiceInsertableHumanSummary(new_query_texts)}were added.' )
             
         
-        if len( message ) > 0:
+        if len( paste_message_components ) > 0:
+            
+            message = '\n\n'.join( paste_message_components )
             
             ClientGUIDialogsMessage.ShowInformation( self, message )
             
@@ -1164,7 +1162,7 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
                 query_header.CheckNow()
                 
             
-            
+        
         self._query_headers.AddDatas( new_query_headers, select_sort_and_scroll = True )
         
         self._query_headers.UpdateDatas( DEAD_query_headers )
@@ -2926,17 +2924,19 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 message = f'{primary_sub_name} was able to merge {HydrusNumbers.ToHumanInt( len( eaten_subs ) )} other subscriptions. If you wish to change its name, do so here.'
                 
-                with ClientGUIDialogs.DialogTextEntry( self, message, default = primary_sub_name ) as dlg:
+                name = primary_sub_name
+                
+                try:
                     
-                    if dlg.exec() == QW.QDialog.DialogCode.Accepted:
-                        
-                        name = dlg.GetValue()
-                        
-                        merged_sub.SetName( name )
-                        
+                    name = ClientGUIDialogsQuick.EnterText( self, message, default = name )
+                    
+                except HydrusExceptions.CancelledException:
                     
                     # don't care about a cancel here--we'll take that as 'I didn't want to change its name', not 'abort'
+                    pass
                     
+                
+                merged_sub.SetName( name )
                 
                 primary_and_merged_replacement_tuples.append( ( original_primary_sub, merged_sub ) )
                 
@@ -2991,27 +2991,28 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         message = 'This selects subscriptions based on query text. Please enter some search text, and any subscription that has a query that includes that text will be selected.'
         
-        with ClientGUIDialogs.DialogTextEntry( self, message ) as dlg:
+        try:
             
-            if dlg.exec() == QW.QDialog.DialogCode.Accepted:
+            search_text = ClientGUIDialogsQuick.EnterText( self, message )
+            
+        except HydrusExceptions.CancelledException:
+            
+            return
+            
+        
+        self._subscriptions.clearSelection()
+        
+        selectee_subscriptions = []
+        
+        for subscription in self._subscriptions.GetData():
+            
+            if subscription.HasQuerySearchTextFragment( search_text ):
                 
-                search_text = dlg.GetValue()
-                
-                self._subscriptions.clearSelection()
-                
-                selectee_subscriptions = []
-                
-                for subscription in self._subscriptions.GetData():
-                    
-                    if subscription.HasQuerySearchTextFragment( search_text ):
-                        
-                        selectee_subscriptions.append( subscription )
-                        
-                    
-                
-                self._subscriptions.SelectDatas( selectee_subscriptions )
+                selectee_subscriptions.append( subscription )
                 
             
+        
+        self._subscriptions.SelectDatas( selectee_subscriptions )
         
     
     def Separate( self ):
@@ -3055,6 +3056,8 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         want_post_merge = False
         
+        query_headers_to_extract = []
+        
         if action == 'part':
             
             query_headers = subscription.GetQueryHeaders()
@@ -3091,6 +3094,8 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
                 
             
         
+        name = subscription.GetName()
+        
         if action != 'half':
             
             if want_post_merge:
@@ -3102,16 +3107,13 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
                 message = 'Please enter the base name for the new subscriptions. They will be named \'[NAME]: query\'.'
                 
             
-            with ClientGUIDialogs.DialogTextEntry( self, message, default = subscription.GetName() ) as dlg:
+            try:
                 
-                if dlg.exec() == QW.QDialog.DialogCode.Accepted:
-                    
-                    name = dlg.GetValue()
-                    
-                else:
-                    
-                    return
-                    
+                name = ClientGUIDialogsQuick.EnterText( self, message, default = subscription.GetName() )
+                
+            except HydrusExceptions.CancelledException:
+                
+                return
                 
             
         
@@ -3152,7 +3154,7 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             
         elif action == 'half':
             
-            query_headers = sorted( subscription.GetQueryHeaders(), key = lambda q: q.GetQueryText() )
+            query_headers = sorted( subscription.GetQueryHeaders(), key = lambda q: HydrusText.HumanTextSortKey( q.GetQueryText() ) )
             
             query_headers_to_extract = query_headers[ : len( query_headers ) // 2 ]
             

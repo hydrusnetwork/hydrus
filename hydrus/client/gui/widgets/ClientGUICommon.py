@@ -1040,8 +1040,8 @@ class BufferedWindowIcon( BufferedWindow ):
         device_independant_pixmap_width = self._pixmap.width() / self._pixmap.devicePixelRatio()
         device_independant_pixmap_height = self._pixmap.height() / self._pixmap.devicePixelRatio()
         
-        x_offset = int( ( self.width() - device_independant_pixmap_width ) / 2 )
-        y_offset = int( ( self.height() - device_independant_pixmap_height ) / 2 )
+        x_offset = round( ( self.width() - device_independant_pixmap_width ) / 2 )
+        y_offset = round( ( self.height() - device_independant_pixmap_height ) / 2 )
         
         if isinstance( self._pixmap, QG.QImage ):
             

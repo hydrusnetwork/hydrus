@@ -40,15 +40,9 @@ class SidebarDuplicateFilter( ClientGUISidebarCore.Sidebar ):
         self._potential_file_search_currently_happening = False
         self._maintenance_numbers_need_redrawing = True
         
-        self._potential_duplicates_count = 0
-        
         self._have_done_first_maintenance_numbers_show = False
         
         new_options = CG.client_controller.new_options
-        
-        self._dupe_count_numbers_dirty = True
-        
-        self._currently_refreshing_dupe_count_numbers = False
         
         #
         
@@ -143,10 +137,6 @@ class SidebarDuplicateFilter( ClientGUISidebarCore.Sidebar ):
         
         self._filtering_panel = ClientGUICommon.StaticBox( self._main_right_panel, 'duplicate filter' )
         
-        # move these guys to the search context panel!!
-        self._num_potential_duplicates = ClientGUICommon.BetterStaticText( self._filtering_panel, ellipsize_end = True )
-        self._refresh_dupe_counts_button = ClientGUICommon.BetterBitmapButton( self._filtering_panel, CC.global_pixmaps().refresh, self.RefreshDuplicateNumbers )
-        
         self._launch_filter = ClientGUICommon.BetterButton( self._filtering_panel, 'launch the filter', self._LaunchFilter )
         
         #
@@ -209,12 +199,6 @@ class SidebarDuplicateFilter( ClientGUISidebarCore.Sidebar ):
         
         self._options_panel.Add( self._edit_merge_options, CC.FLAGS_EXPAND_PERPENDICULAR )
         
-        text_and_button_hbox = QP.HBoxLayout()
-        
-        QP.AddToLayout( text_and_button_hbox, self._num_potential_duplicates, CC.FLAGS_CENTER_PERPENDICULAR_EXPAND_DEPTH )
-        QP.AddToLayout( text_and_button_hbox, self._refresh_dupe_counts_button, CC.FLAGS_CENTER_PERPENDICULAR )
-        
-        self._filtering_panel.Add( text_and_button_hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._filtering_panel.Add( self._launch_filter, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         random_filtering_panel.Add( self._show_some_dupes, CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -244,6 +228,27 @@ class SidebarDuplicateFilter( ClientGUISidebarCore.Sidebar ):
         CG.client_controller.sub( self, 'NotifyNewPotentialsSearchNumbers', 'new_similar_files_potentials_search_numbers' )
         
         self._max_hamming_distance_for_potential_discovery_spinctrl.valueChanged.connect( self.MaxHammingDistanceForPotentialDiscoveryChanged )
+        
+        self._potential_duplicates_search_context.restartedSearch.connect( self._NotifyPotentialsSearchStarted )
+        self._potential_duplicates_search_context.thisSearchHasPairs.connect( self._NotifyPotentialsSearchHasPairs )
+        
+        self._main_notebook.currentChanged.connect( self._CurrentPageChanged )
+        
+        self._CurrentPageChanged()
+        
+    
+    def _CurrentPageChanged( self ):
+        
+        page = self._main_notebook.currentWidget()
+        
+        if page == self._main_right_panel:
+            
+            self._potential_duplicates_search_context.PageShown()
+            
+        else:
+            
+            self._potential_duplicates_search_context.PageHidden()
+            
         
     
     def _EditMergeOptions( self, duplicate_type ):
@@ -286,6 +291,18 @@ class SidebarDuplicateFilter( ClientGUISidebarCore.Sidebar ):
         canvas_frame.SetCanvas( canvas_window )
         
     
+    def _NotifyPotentialsSearchStarted( self ):
+        
+        self._launch_filter.setEnabled( False )
+        self._show_some_dupes.setEnabled( False )
+        
+    
+    def _NotifyPotentialsSearchHasPairs( self ):
+        
+        self._launch_filter.setEnabled( True )
+        self._show_some_dupes.setEnabled( True )
+        
+    
     def _PotentialDuplicatesSearchContextChanged( self ):
         
         potential_duplicates_search_context = self._potential_duplicates_search_context.GetValue()
@@ -298,50 +315,6 @@ class SidebarDuplicateFilter( ClientGUISidebarCore.Sidebar ):
         
         self.locationChanged.emit( potential_duplicates_search_context.GetFileSearchContext1().GetLocationContext() )
         self.tagContextChanged.emit( potential_duplicates_search_context.GetFileSearchContext1().GetTagContext() )
-        
-        if synchronised:
-            
-            self._dupe_count_numbers_dirty = True
-            
-        
-    
-    def _RefreshDuplicateCounts( self ):
-        
-        def qt_code( potential_duplicates_count ):
-            
-            if not self or not QP.isValid( self ):
-                
-                return
-                
-            
-            self._currently_refreshing_dupe_count_numbers = False
-            
-            self._dupe_count_numbers_dirty = False
-            
-            self._refresh_dupe_counts_button.setEnabled( True )
-            
-            self._UpdatePotentialDuplicatesCount( potential_duplicates_count )
-            
-        
-        def thread_do_it( potential_duplicates_search_context ):
-            
-            potential_duplicates_count = CG.client_controller.Read( 'potential_duplicates_count', potential_duplicates_search_context )
-            
-            QP.CallAfter( qt_code, potential_duplicates_count )
-            
-        
-        if not self._currently_refreshing_dupe_count_numbers:
-            
-            self._currently_refreshing_dupe_count_numbers = True
-            
-            self._refresh_dupe_counts_button.setEnabled( False )
-            
-            self._num_potential_duplicates.setText( 'updating' + HC.UNICODE_ELLIPSIS )
-            
-            potential_duplicates_search_context = self._potential_duplicates_search_context.GetValue()
-            
-            CG.client_controller.CallToThread( thread_do_it, potential_duplicates_search_context )
-            
         
     
     def _ResetUnknown( self ):
@@ -368,16 +341,7 @@ class SidebarDuplicateFilter( ClientGUISidebarCore.Sidebar ):
         
         if change_made:
             
-            self._dupe_count_numbers_dirty = True
-            
-            if self._potential_duplicates_count > 1:
-                
-                self._ShowRandomPotentialDupes()
-                
-            else:
-                
-                self._ShowPotentialDupes( [] )
-                
+            self._ShowRandomPotentialDupes()
             
         
     
@@ -396,8 +360,6 @@ class SidebarDuplicateFilter( ClientGUISidebarCore.Sidebar ):
         
     
     def _ShowPotentialDupes( self, hashes ):
-        
-        potential_duplicates_search_context = self._potential_duplicates_search_context.GetValue()
         
         if len( hashes ) > 0:
             
@@ -427,10 +389,12 @@ class SidebarDuplicateFilter( ClientGUISidebarCore.Sidebar ):
         
         if len( hashes ) == 0:
             
-            HydrusData.ShowText( 'No random potential duplicates were found. Try refreshing the count, and if this keeps happening, please let hydrus_dev know.' )
+            self._potential_duplicates_search_context.NotifyNewDupePairs()
             
-        
-        self._ShowPotentialDupes( hashes )
+        else:
+            
+            self._ShowPotentialDupes( hashes )
+            
         
     
     def _UpdateMaintenanceStatus( self ):
@@ -525,24 +489,6 @@ class SidebarDuplicateFilter( ClientGUISidebarCore.Sidebar ):
         self._main_notebook.setTabText( 0, page_name )
         
     
-    def _UpdatePotentialDuplicatesCount( self, potential_duplicates_count ):
-        
-        self._potential_duplicates_count = potential_duplicates_count
-        
-        self._num_potential_duplicates.setText( '{} potential pairs.'.format( HydrusNumbers.ToHumanInt( potential_duplicates_count ) ) )
-        
-        if self._potential_duplicates_count > 0:
-            
-            self._show_some_dupes.setEnabled( True )
-            self._launch_filter.setEnabled( True )
-            
-        else:
-            
-            self._show_some_dupes.setEnabled( False )
-            self._launch_filter.setEnabled( False )
-            
-        
-    
     def MaxHammingDistanceForPotentialDiscoveryChanged( self ):
         
         search_distance = self._max_hamming_distance_for_potential_discovery_spinctrl.value()
@@ -561,31 +507,41 @@ class SidebarDuplicateFilter( ClientGUISidebarCore.Sidebar ):
     
     def NotifyNewPotentialsSearchNumbers( self ):
         
-        self._dupe_count_numbers_dirty = True
+        self._potential_duplicates_search_context.NotifyNewDupePairs()
         
     
     def PageHidden( self ):
         
         super().PageHidden()
         
-        self._potential_duplicates_search_context.PageHidden()
+        page = self._main_notebook.currentWidget()
+        
+        if page == self._main_right_panel:
+            
+            self._potential_duplicates_search_context.PageHidden()
+            
         
     
     def PageShown( self ):
         
         super().PageShown()
         
-        self._potential_duplicates_search_context.PageShown()
+        page = self._main_notebook.currentWidget()
+        
+        if page == self._main_right_panel:
+            
+            self._potential_duplicates_search_context.PageShown()
+            
         
     
     def RefreshDuplicateNumbers( self ):
         
-        self._dupe_count_numbers_dirty = True
+        self._potential_duplicates_search_context.NotifyNewDupePairs()
         
     
     def RefreshQuery( self ):
         
-        self._PotentialDuplicatesSearchContextChanged()
+        self._potential_duplicates_search_context.NotifyNewDupePairs()
         
     
     def REPEATINGPageUpdate( self ):
@@ -597,11 +553,6 @@ class SidebarDuplicateFilter( ClientGUISidebarCore.Sidebar ):
             self._maintenance_numbers_need_redrawing = False
             
             self._UpdateMaintenanceStatus()
-            
-        
-        if self._dupe_count_numbers_dirty:
-            
-            self._RefreshDuplicateCounts()
             
         
         self._potential_duplicates_search_context.REPEATINGPageUpdate()

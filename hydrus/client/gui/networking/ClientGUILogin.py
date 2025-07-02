@@ -10,7 +10,6 @@ from hydrus.core import HydrusTime
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientDefaults
 from hydrus.client import ClientGlobals as CG
-from hydrus.client.gui import ClientGUIDialogs
 from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIFunctions
@@ -375,50 +374,45 @@ class EditLoginsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         if login_domain is None:
             
-            with ClientGUIDialogs.DialogTextEntry( self, 'enter the domain', placeholder = 'example.com', allow_blank = False ) as dlg:
+            try:
                 
-                if dlg.exec() == QW.QDialog.DialogCode.Accepted:
-                    
-                    login_domain = dlg.GetValue()
-                    
-                    if login_domain in domains_in_use:
-                        
-                        ClientGUIDialogsMessage.ShowWarning( self, 'That domain is already in use!' )
-                        
-                        return
-                        
-                    
-                    a_types = [ ClientNetworkingLogin.LOGIN_ACCESS_TYPE_EVERYTHING, ClientNetworkingLogin.LOGIN_ACCESS_TYPE_NSFW, ClientNetworkingLogin.LOGIN_ACCESS_TYPE_SPECIAL, ClientNetworkingLogin.LOGIN_ACCESS_TYPE_USER_PREFS_ONLY ]
-                    
-                    choice_tuples = [ ( ClientNetworkingLogin.login_access_type_str_lookup[ a_type ], a_type ) for a_type in a_types ]
-                    
-                    try:
-                        
-                        login_access_type = ClientGUIDialogsQuick.SelectFromList( self, 'select what type of access the login gives to this domain', choice_tuples, sort_tuples = False )
-                        
-                    except HydrusExceptions.CancelledException:
-                        
-                        return
-                        
-                    
-                    login_access_text = ClientNetworkingLogin.login_access_type_default_description_lookup[ login_access_type ]
-                    
-                    with ClientGUIDialogs.DialogTextEntry( self, 'edit the access description, if needed', default = login_access_text, allow_blank = False ) as dlg_2:
-                        
-                        if dlg_2.exec() == QW.QDialog.DialogCode.Accepted:
-                            
-                            login_access_text = dlg_2.GetValue()
-                            
-                        else:
-                            
-                            return
-                            
-                        
-                    
-                else:
-                    
-                    return
-                    
+                login_domain = ClientGUIDialogsQuick.EnterText( self, 'Enter the domain.', placeholder = 'example.com' )
+                
+            except HydrusExceptions.CancelledException:
+                
+                return
+                
+            
+            if login_domain in domains_in_use:
+                
+                ClientGUIDialogsMessage.ShowWarning( self, 'That domain is already in use!' )
+                
+                return
+                
+            
+            a_types = [ ClientNetworkingLogin.LOGIN_ACCESS_TYPE_EVERYTHING, ClientNetworkingLogin.LOGIN_ACCESS_TYPE_NSFW, ClientNetworkingLogin.LOGIN_ACCESS_TYPE_SPECIAL, ClientNetworkingLogin.LOGIN_ACCESS_TYPE_USER_PREFS_ONLY ]
+            
+            choice_tuples = [ ( ClientNetworkingLogin.login_access_type_str_lookup[ a_type ], a_type ) for a_type in a_types ]
+            
+            try:
+                
+                login_access_type = ClientGUIDialogsQuick.SelectFromList( self, 'select what type of access the login gives to this domain', choice_tuples, sort_tuples = False )
+                
+            except HydrusExceptions.CancelledException:
+                
+                return
+                
+            
+            login_access_text = ClientNetworkingLogin.login_access_type_default_description_lookup[ login_access_type ]
+            
+            try:
+                
+                login_access_text = ClientGUIDialogsQuick.EnterText( self, 'Edit the access description, if needed.', default = login_access_text )
+                
+            except HydrusExceptions.CancelledException:
+                
+                # don't mind a cancel here
+                pass
                 
             
         
@@ -1032,16 +1026,14 @@ class EditLoginsPanel( ClientGUIScrolledPanels.EditPanel ):
             
             login_access_text = ClientNetworkingLogin.login_access_type_default_description_lookup[ login_access_type ]
             
-            with ClientGUIDialogs.DialogTextEntry( self, 'edit the access description, if needed', default = login_access_text, allow_blank = False ) as dlg:
+            try:
                 
-                if dlg.exec() == QW.QDialog.DialogCode.Accepted:
-                    
-                    login_access_text = dlg.GetValue()
-                    
-                else:
-                    
-                    return
-                    
+                login_access_text = ClientGUIDialogsQuick.EnterText( self, 'Edit the access description, if needed.', default = login_access_text )
+                
+            except HydrusExceptions.CancelledException:
+                
+                # a cancel is fine
+                pass
                 
             
         
@@ -1509,16 +1501,13 @@ class EditLoginScriptPanel( ClientGUIScrolledPanels.EditPanel ):
         
         ( domain, access_type, access_text ) = ( 'example.com', ClientNetworkingLogin.LOGIN_ACCESS_TYPE_NSFW, ClientNetworkingLogin.login_access_type_default_description_lookup[ ClientNetworkingLogin.LOGIN_ACCESS_TYPE_NSFW ] )
         
-        with ClientGUIDialogs.DialogTextEntry( self, 'edit the domain', default = domain, allow_blank = False ) as dlg:
+        try:
             
-            if dlg.exec() == QW.QDialog.DialogCode.Accepted:
-                
-                domain = dlg.GetValue()
-                
-            else:
-                
-                return
-                
+            domain = ClientGUIDialogsQuick.EnterText( self, 'Edit the domain', default = domain )
+            
+        except HydrusExceptions.CancelledException:
+            
+            return
             
         
         existing_domains = self._GetExistingDomains()
@@ -1550,16 +1539,14 @@ class EditLoginScriptPanel( ClientGUIScrolledPanels.EditPanel ):
             access_text = ClientNetworkingLogin.login_access_type_default_description_lookup[ access_type ]
             
         
-        with ClientGUIDialogs.DialogTextEntry( self, 'edit the access description, if needed', default = access_text, allow_blank = False ) as dlg:
+        try:
             
-            if dlg.exec() == QW.QDialog.DialogCode.Accepted:
-                
-                access_text = dlg.GetValue()
-                
-            else:
-                
-                return
-                
+            access_text = ClientGUIDialogsQuick.EnterText( self, 'Edit the access description, if needed.', default = access_text )
+            
+        except HydrusExceptions.CancelledException:
+            
+            # a cancel is fine here
+            pass
             
         
         example_domain_info = ( domain, access_type, access_text )
@@ -1788,16 +1775,13 @@ class EditLoginScriptPanel( ClientGUIScrolledPanels.EditPanel ):
                 
             
         
-        with ClientGUIDialogs.DialogTextEntry( self, 'edit the domain', default = self._test_domain, allow_blank = False ) as dlg:
+        try:
             
-            if dlg.exec() == QW.QDialog.DialogCode.Accepted:
-                
-                self._test_domain = dlg.GetValue()
-                
-            else:
-                
-                return
-                
+            self._test_domain = ClientGUIDialogsQuick.EnterText( self, 'Edit the domain.', default = self._test_domain )
+            
+        except HydrusExceptions.CancelledException:
+            
+            return
             
         
         credential_definitions = login_script.GetCredentialDefinitions()
@@ -1849,16 +1833,13 @@ class EditLoginScriptPanel( ClientGUIScrolledPanels.EditPanel ):
         
         ( original_domain, access_type, access_text ) = example_domain_info
         
-        with ClientGUIDialogs.DialogTextEntry( self, 'edit the domain', default = original_domain, allow_blank = False ) as dlg:
+        try:
             
-            if dlg.exec() == QW.QDialog.DialogCode.Accepted:
-                
-                domain = dlg.GetValue()
-                
-            else:
-                
-                return
-                
+            domain = ClientGUIDialogsQuick.EnterText( self, 'Edit the domain', default = original_domain )
+            
+        except HydrusExceptions.CancelledException:
+            
+            return
             
         
         existing_domains = self._GetExistingDomains()
@@ -1890,16 +1871,14 @@ class EditLoginScriptPanel( ClientGUIScrolledPanels.EditPanel ):
             access_text = ClientNetworkingLogin.login_access_type_default_description_lookup[ access_type ]
             
         
-        with ClientGUIDialogs.DialogTextEntry( self, 'edit the access description, if needed', default = access_text, allow_blank = False ) as dlg:
+        try:
             
-            if dlg.exec() == QW.QDialog.DialogCode.Accepted:
-                
-                access_text = dlg.GetValue()
-                
-            else:
-                
-                return
-                
+            access_text = ClientGUIDialogsQuick.EnterText( self, 'Edit the access description, if needed.', default = access_text )
+            
+        except HydrusExceptions.CancelledException:
+            
+            # a cancel is fine here
+            pass
             
         
         edited_example_domain_info = ( domain, access_type, access_text )

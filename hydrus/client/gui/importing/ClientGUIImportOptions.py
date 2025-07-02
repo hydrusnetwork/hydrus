@@ -17,10 +17,10 @@ from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIMenus
 from hydrus.client.gui import ClientGUIOptionsPanels
 from hydrus.client.gui import ClientGUIStringControls
-from hydrus.client.gui import ClientGUITags
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.lists import ClientGUIListBoxes
+from hydrus.client.gui.metadata import ClientGUITagFilter
 from hydrus.client.gui.panels import ClientGUIScrolledPanels
 from hydrus.client.gui.search import ClientGUILocation
 from hydrus.client.gui.widgets import ClientGUICommon
@@ -720,32 +720,30 @@ class EditNoteImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _AddWhitelistItem( self ):
         
-        with ClientGUIDialogs.DialogTextEntry( self, 'enter the note name', placeholder = 'note name to allow', allow_blank = False ) as dlg:
+        try:
             
-            if dlg.exec() == QW.QDialog.DialogCode.Accepted:
-                
-                whitelist_name = dlg.GetValue()
-                
-                return whitelist_name
-                
+            whitelist_name = ClientGUIDialogsQuick.EnterText( self, 'enter the note name', placeholder = 'note name to allow' )
+            
+        except HydrusExceptions.CancelledException:
+            
+            raise
             
         
-        raise HydrusExceptions.VetoException()
+        return whitelist_name
         
     
     def _EditWhitelistItem( self, whitelist_name ):
         
-        with ClientGUIDialogs.DialogTextEntry( self, 'edit the note name', default = whitelist_name, placeholder = 'note name to allow', allow_blank = False ) as dlg:
+        try:
             
-            if dlg.exec() == QW.QDialog.DialogCode.Accepted:
-                
-                edited_whitelist_name = dlg.GetValue()
-                
-                return edited_whitelist_name
-                
+            edited_whitelist_name = ClientGUIDialogsQuick.EnterText( self, 'edit the note name', default = whitelist_name, placeholder = 'note name to allow' )
+            
+        except HydrusExceptions.CancelledException:
+            
+            raise
             
         
-        raise HydrusExceptions.VetoException()
+        return edited_whitelist_name
         
     
     def _LoadDefaultOptions( self ):
@@ -1073,7 +1071,7 @@ class EditServiceTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             message += 'Once you are happy, you might want to say \'only "character:", "creator:" and "series:" tags\', or \'everything _except_ "species:" tags\'. This tag filter can get complicated if you want it to--check the help button in the top-right for more information.'
             
         
-        self._get_tags_filter_button = ClientGUITags.TagFilterButton( downloader_options_panel, message, get_tags_filter, label_prefix = 'adding: ' )
+        self._get_tags_filter_button = ClientGUITagFilter.TagFilterButton( downloader_options_panel, message, get_tags_filter, label_prefix = 'adding: ' )
         
         hbox = QP.HBoxLayout()
         
@@ -1147,7 +1145,7 @@ class EditServiceTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             message += '\n' * 2
             message += 'Clicking ok on this dialog will automatically turn on the already-exists filter if it is off.'
             
-            panel = ClientGUITags.EditTagFilterPanel( dlg, self._only_add_existing_tags_filter, namespaces = namespaces, message = message )
+            panel = ClientGUITagFilter.EditTagFilterPanel( dlg, self._only_add_existing_tags_filter, namespaces = namespaces, message = message )
             
             dlg.SetPanel( panel )
             
@@ -1314,7 +1312,7 @@ class EditTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         message += '\n' * 2
         message += 'It is worth doing a small test here, just to make sure it is all set up how you want.'
         
-        self._tag_blacklist_button = ClientGUITags.TagFilterButton( downloader_options_panel, message, tag_blacklist, only_show_blacklist = True )
+        self._tag_blacklist_button = ClientGUITagFilter.TagFilterButton( downloader_options_panel, message, tag_blacklist, only_show_blacklist = True )
         
         self._tag_blacklist_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'A blacklist will ignore files if they have any of a certain list of tags.' ) )
         

@@ -74,6 +74,9 @@ class VBoxLayout( QW.QVBoxLayout ):
 
 class LabelledSlider( QW.QWidget ):
     
+    valueChanged = QC.Signal( int )
+    finishedEditing  = QC.Signal( int )
+    
     def __init__( self, parent = None ):
         
         super().__init__( parent )
@@ -100,6 +103,8 @@ class LabelledSlider( QW.QWidget ):
         self.layout().setAlignment( self._value_label, QC.Qt.AlignmentFlag.AlignHCenter )
         
         self._slider.valueChanged.connect( self._UpdateLabels )
+        self._slider.valueChanged.connect( self.valueChanged )
+        self._slider.sliderReleased.connect( lambda: self.finishedEditing.emit( self._slider.value() ) )
         
         self._UpdateLabels()
         
@@ -113,6 +118,12 @@ class LabelledSlider( QW.QWidget ):
         
         return self._slider.value()
     
+    def SetInterval( self, interval ):
+        
+        self._slider.setTickInterval( interval )
+        
+        self._UpdateLabels()
+        
     def SetRange( self, min, max ):
         
         self._slider.setRange( min, max )
@@ -2058,13 +2069,7 @@ class WidgetEventFilter ( QC.QObject ):
             
             event_killed = False
             
-            if type == QC.QEvent.Type.WindowStateChange:
-                
-                if isValid( self._parent_widget ):
-                    
-                    if self._parent_widget.isMaximized() or (event.oldState() & QC.Qt.WindowState.WindowMaximized): event_killed = event_killed or self._ExecuteCallbacks( 'EVT_MAXIMIZE', event )
-                
-            elif type == QC.QEvent.Type.MouseButtonDblClick:
+            if type == QC.QEvent.Type.MouseButtonDblClick:
                 
                 if event.button() == QC.Qt.MouseButton.LeftButton:
                     
@@ -2086,10 +2091,6 @@ class WidgetEventFilter ( QC.QObject ):
             elif type == QC.QEvent.Type.MouseButtonRelease:
                 
                 if event.buttons() & QC.Qt.MouseButton.LeftButton: event_killed = event_killed or self._ExecuteCallbacks( 'EVT_LEFT_UP', event )
-                
-            elif type == QC.QEvent.Type.Move:
-                
-                event_killed = event_killed or self._ExecuteCallbacks( 'EVT_MOVE', event )
                 
             elif type == QC.QEvent.Type.Resize:
                 
@@ -2138,17 +2139,9 @@ class WidgetEventFilter ( QC.QObject ):
         
         self._AddCallback( 'EVT_LEFT_UP', callback )
 
-    def EVT_MAXIMIZE( self, callback ):
-        
-        self._AddCallback( 'EVT_MAXIMIZE', callback )
-
     def EVT_MIDDLE_DOWN( self, callback ):
         
         self._AddCallback( 'EVT_MIDDLE_DOWN', callback )
-
-    def EVT_MOVE( self, callback ):
-        
-        self._AddCallback( 'EVT_MOVE', callback )
 
     def EVT_RIGHT_DOWN( self, callback ):
         

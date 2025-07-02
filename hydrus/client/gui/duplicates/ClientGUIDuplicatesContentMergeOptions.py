@@ -10,11 +10,11 @@ from hydrus.client.duplicates import ClientDuplicates
 from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIFunctions
-from hydrus.client.gui import ClientGUITags
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui.importing import ClientGUIImportOptions
 from hydrus.client.gui.lists import ClientGUIListConstants as CGLC
 from hydrus.client.gui.lists import ClientGUIListCtrl
+from hydrus.client.gui.metadata import ClientGUITagFilter
 from hydrus.client.gui.widgets import ClientGUICommon
 
 class EditDuplicateContentMergeOptionsWidget( ClientGUICommon.StaticBox ):
@@ -263,7 +263,7 @@ class EditDuplicateContentMergeOptionsWidget( ClientGUICommon.StaticBox ):
                 
                 namespaces = CG.client_controller.network_engine.domain_manager.GetParserNamespaces()
                 
-                panel = ClientGUITags.EditTagFilterPanel( dlg_3, tag_filter, namespaces = namespaces )
+                panel = ClientGUITagFilter.EditTagFilterPanel( dlg_3, tag_filter, namespaces = namespaces )
                 
                 dlg_3.SetPanel( panel )
                 
@@ -502,7 +502,7 @@ class EditDuplicateContentMergeOptionsWidget( ClientGUICommon.StaticBox ):
             
             namespaces = CG.client_controller.network_engine.domain_manager.GetParserNamespaces()
             
-            panel = ClientGUITags.EditTagFilterPanel( dlg_3, tag_filter, namespaces = namespaces )
+            panel = ClientGUITagFilter.EditTagFilterPanel( dlg_3, tag_filter, namespaces = namespaces )
             
             dlg_3.SetPanel( panel )
             

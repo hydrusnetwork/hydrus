@@ -21,7 +21,6 @@ from hydrus.client import ClientLocation
 from hydrus.client import ClientThreading
 from hydrus.client.gui import ClientGUIAsync
 from hydrus.client.gui import ClientGUICore as CGC
-from hydrus.client.gui import ClientGUIDialogs
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIMenus
@@ -97,7 +96,7 @@ class Page( QW.QWidget ):
         self._preview_panel.setFrameStyle( QW.QFrame.Shape.Panel | QW.QFrame.Shadow.Sunken )
         self._preview_panel.setLineWidth( 2 )
         
-        self._preview_canvas = ClientGUICanvas.CanvasPanel( self._preview_panel, self._page_key, self._page_manager.GetLocationContext() )
+        self._preview_canvas = ClientGUICanvas.CanvasPanelWithHovers( self._preview_panel, self._page_key, self._page_manager.GetLocationContext() )
         
         self._sidebar.locationChanged.connect( self._preview_canvas.SetLocationContext )
         
@@ -1102,17 +1101,21 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
                     
                     if CG.client_controller.new_options.GetBoolean( 'rename_page_of_pages_on_pick_new' ):
                         
-                        with ClientGUIDialogs.DialogTextEntry( self, 'Enter the name for the new page of pages.', default = 'pages', allow_blank = False ) as dlg:
+                        message = 'Enter the name for the new page of pages.'
+                        
+                        try:
                             
-                            if dlg.exec() == QW.QDialog.DialogCode.Accepted:
-                                
-                                new_name = dlg.GetValue()
-                                
-                                new_notebook.SetName( new_name )
-                                
-                                CG.client_controller.pub( 'refresh_page_name', new_notebook.GetPageKey() )
-                                
+                            new_name = ClientGUIDialogsQuick.EnterText( self, message, default = 'pages' )
                             
+                        except HydrusExceptions.CancelledException:
+                            
+                            return
+                            
+                        
+                        new_notebook.SetName( new_name )
+                        
+                        CG.client_controller.pub( 'refresh_page_name', new_notebook.GetPageKey() )
+                        
                     
                 elif page_type == 'page':
                     
@@ -1655,17 +1658,20 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         
         current_name = page.GetName()
         
-        with ClientGUIDialogs.DialogTextEntry( self, 'Enter the new name.', default = current_name, allow_blank = False ) as dlg:
+        message = 'Enter the new name.'
+        
+        try:
             
-            if dlg.exec() == QW.QDialog.DialogCode.Accepted:
-                
-                new_name = dlg.GetValue()
-                
-                page.SetName( new_name )
-                
-                CG.client_controller.pub( 'refresh_page_name', page.GetPageKey() )
-                
+            new_name = ClientGUIDialogsQuick.EnterText( self, message, default = current_name )
             
+        except HydrusExceptions.CancelledException:
+            
+            return
+            
+        
+        page.SetName( new_name )
+        
+        CG.client_controller.pub( 'refresh_page_name', page.GetPageKey() )
         
     
     def _SendPageToNewNotebook( self, index ):
@@ -1680,17 +1686,20 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
             
             if CG.client_controller.new_options.GetBoolean( 'rename_page_of_pages_on_send' ):
                 
-                with ClientGUIDialogs.DialogTextEntry( self, 'Enter the name for the new page of pages.', default = 'pages', allow_blank = False ) as dlg:
+                message = 'Enter the name for the new page of pages.'
+                
+                try:
                     
-                    if dlg.exec() == QW.QDialog.DialogCode.Accepted:
-                        
-                        new_name = dlg.GetValue()
-                        
-                        dest_notebook.SetName( new_name )
-                        
-                        CG.client_controller.pub( 'refresh_page_name', dest_notebook.GetPageKey() )
-                        
+                    new_name = ClientGUIDialogsQuick.EnterText( self, message, default = 'pages' )
                     
+                except HydrusExceptions.CancelledException:
+                    
+                    return
+                    
+                
+                dest_notebook.SetName( new_name )
+                
+                CG.client_controller.pub( 'refresh_page_name', dest_notebook.GetPageKey() )
                 
             
         
@@ -1720,17 +1729,20 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
             
             if CG.client_controller.new_options.GetBoolean( 'rename_page_of_pages_on_send' ):
                 
-                with ClientGUIDialogs.DialogTextEntry( self, 'Enter the name for the new page of pages.', default = 'pages', allow_blank = False ) as dlg:
+                message = 'Enter the name for the new page of pages.'
+                
+                try:
                     
-                    if dlg.exec() == QW.QDialog.DialogCode.Accepted:
-                        
-                        new_name = dlg.GetValue()
-                        
-                        dest_notebook.SetName( new_name )
-                        
-                        CG.client_controller.pub( 'refresh_page_name', dest_notebook.GetPageKey() )
-                        
+                    new_name = ClientGUIDialogsQuick.EnterText( self, message, default = 'pages' )
                     
+                except HydrusExceptions.CancelledException:
+                    
+                    return
+                    
+                
+                dest_notebook.SetName( new_name )
+                
+                CG.client_controller.pub( 'refresh_page_name', dest_notebook.GetPageKey() )
                 
             
         

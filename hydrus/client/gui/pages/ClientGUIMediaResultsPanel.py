@@ -22,12 +22,10 @@ from hydrus.client import ClientLocation
 from hydrus.client import ClientPaths
 from hydrus.client import ClientServices
 from hydrus.client.files import ClientFilesMaintenance
-from hydrus.client.gui import ClientGUIDialogs
 from hydrus.client.gui import ClientGUIDialogsManage
 from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIShortcuts
-from hydrus.client.gui import ClientGUITags
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.canvas import ClientGUICanvas
@@ -36,6 +34,7 @@ from hydrus.client.gui.duplicates import ClientGUIDuplicateActions
 from hydrus.client.gui.duplicates import ClientGUIDuplicatesContentMergeOptions
 from hydrus.client.gui.media import ClientGUIMediaSimpleActions
 from hydrus.client.gui.media import ClientGUIMediaModalActions
+from hydrus.client.gui.metadata import ClientGUIManageTags
 from hydrus.client.gui.networking import ClientGUIHydrusNetwork
 from hydrus.client.gui.pages import ClientGUIPageManager
 from hydrus.client.gui.panels import ClientGUIScrolledPanels
@@ -961,7 +960,7 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.Liste
             
             with ClientGUITopLevelWindowsPanels.DialogManage( self, title, frame_key ) as dlg:
                 
-                panel = ClientGUITags.ManageTagsPanel( dlg, self._location_context, CC.TAG_PRESENTATION_SEARCH_PAGE_MANAGE_TAGS, flat_media )
+                panel = ClientGUIManageTags.ManageTagsPanel( dlg, self._location_context, CC.TAG_PRESENTATION_SEARCH_PAGE_MANAGE_TAGS, flat_media )
                 
                 dlg.SetPanel( panel )
                 
@@ -1122,19 +1121,20 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.Liste
                     message = 'Enter a reason for these {} files to be removed from {}.'.format( HydrusNumbers.ToHumanInt( len( hashes ) ), remote_service.GetName() )
                     
                 
-                with ClientGUIDialogs.DialogTextEntry( self, message ) as dlg:
+                try:
                     
-                    if dlg.exec() == QW.QDialog.DialogCode.Accepted:
-                        
-                        reason = dlg.GetValue()
-                        
-                        content_update = ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_PETITION, hashes, reason = reason )
-                        
-                        content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( remote_service_key, content_update )
-                        
-                        CG.client_controller.Write( 'content_updates', content_update_package )
-                        
+                    reason = ClientGUIDialogsQuick.EnterText( self, message )
                     
+                except HydrusExceptions.CancelledException:
+                    
+                    return
+                    
+                
+                content_update = ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_PETITION, hashes, reason = reason )
+                
+                content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( remote_service_key, content_update )
+                
+                CG.client_controller.Write( 'content_updates', content_update_package )
                 
                 self.setFocus( QC.Qt.FocusReason.OtherFocusReason )
                 
@@ -1871,20 +1871,25 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.Liste
         
         hashes = self._GetSelectedHashes()
         
-        if hashes is not None and len( hashes ) > 0:
+        if hashes is None or len( hashes ) == 0:
             
-            ipfs_service = CG.client_controller.services_manager.GetService( file_service_key )
+            return
             
         
-        with ClientGUIDialogs.DialogTextEntry( self, 'Enter a note to describe this directory.' ) as dlg:
+        ipfs_service = CG.client_controller.services_manager.GetService( file_service_key )
+        
+        try:
             
-            if dlg.exec() == QW.QDialog.DialogCode.Accepted:
-                
-                note = dlg.GetValue()
-                
-                CG.client_controller.CallToThread( ipfs_service.PinDirectory, hashes, note )
-                
+            message = 'Enter a note to describe this directory.'
             
+            note = ClientGUIDialogsQuick.EnterText( self, message )
+            
+        except HydrusExceptions.CancelledException:
+            
+            return
+            
+        
+        CG.client_controller.CallToThread( ipfs_service.PinDirectory, hashes, note )
         
     
     def _UploadFiles( self, file_service_key ):

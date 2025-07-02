@@ -26,18 +26,17 @@ from hydrus.client import ClientServices
 from hydrus.client import ClientThreading
 from hydrus.client.gui import ClientGUIAPI
 from hydrus.client.gui import ClientGUIAsync
-from hydrus.client.gui import ClientGUIDialogs
 from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIPanels
-from hydrus.client.gui import ClientGUITags
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.lists import ClientGUIListConstants as CGLC
 from hydrus.client.gui.lists import ClientGUIListCtrl
 from hydrus.client.gui.media import ClientGUIMediaSimpleActions
 from hydrus.client.gui.metadata import ClientGUIMigrateTags
+from hydrus.client.gui.metadata import ClientGUITagFilter
 from hydrus.client.gui.panels import ClientGUIScrolledPanels
 from hydrus.client.gui.widgets import ClientGUIBandwidth
 from hydrus.client.gui.widgets import ClientGUIColourPicker
@@ -792,16 +791,15 @@ class EditServiceRestrictedSubPanel( ClientGUICommon.StaticBox ):
     
     def _EnterRegistrationKey( self ):
         
-        with ClientGUIDialogs.DialogTextEntry( self, 'Enter the registration token.' ) as dlg:
+        message = 'Enter the registration token.'
+        
+        try:
             
-            if dlg.exec() == QW.QDialog.DialogCode.Accepted:
-                
-                registration_key_encoded = dlg.GetValue()
-                
-            else:
-                
-                return
-                
+            registration_key_encoded = ClientGUIDialogsQuick.EnterText( self, message )
+            
+        except HydrusExceptions.CancelledException:
+            
+            return
             
         
         if registration_key_encoded[0] == 'r':
@@ -1604,15 +1602,21 @@ class EditServiceRatingsNumericalSubPanel( ClientGUICommon.StaticBox ):
         self._num_stars = ClientGUICommon.BetterSpinBox( self, min=1, max=20 )
         self._allow_zero = QW.QCheckBox( self )
         self._custom_pad = ClientGUICommon.BetterSpinBox( self, min=-64, max=64 )
-
+        self._draw_fraction = ClientGUICommon.BetterChoice( self )
+        
+        self._draw_fraction.addItem( 'do not', ClientRatings.DRAW_NO )
+        self._draw_fraction.addItem( 'show on left', ClientRatings.DRAW_ON_LEFT )
+        self._draw_fraction.addItem( 'show on right', ClientRatings.DRAW_ON_RIGHT )
         
         #
         
         self._num_stars.setValue( dictionary['num_stars'] )
         self._allow_zero.setChecked( dictionary[ 'allow_zero' ] )
         self._custom_pad.setValue( dictionary[ 'custom_pad' ] )
+        self._draw_fraction.SetValue( dictionary[ 'show_fraction_beside_stars' ] )
         
         self._custom_pad.setToolTip( ClientGUIFunctions.WrapToolTip( 'Set the distance, in pixels, between shapes in the row. Just set this to 0 if you want to go back to the old way these icons were rendered, with them displaying as a seamless loading bar.' ) )
+        self._draw_fraction.setToolTip( ClientGUIFunctions.WrapToolTip( 'This will add the fractional display (e.g. \'4/5\') beside the rating stars. You can choose whether it appears on the right or left.' ) )
         
         #
         
@@ -1621,6 +1625,7 @@ class EditServiceRatingsNumericalSubPanel( ClientGUICommon.StaticBox ):
         rows.append( ( 'number of \'stars\': ', self._num_stars ) )
         rows.append( ( 'allow a zero rating: ', self._allow_zero ) )
         rows.append( ( 'icon padding: ', self._custom_pad ) )
+        rows.append( ( 'draw fraction beside the rating', self._draw_fraction ) )
         
         gridbox = ClientGUICommon.WrapInGrid( self, rows )
         
@@ -1634,6 +1639,7 @@ class EditServiceRatingsNumericalSubPanel( ClientGUICommon.StaticBox ):
         num_stars = self._num_stars.value()
         allow_zero = self._allow_zero.isChecked()
         custom_pad = self._custom_pad.value()
+        draw_fraction = self._draw_fraction.GetValue()
         
         if num_stars == 1 and not allow_zero:
             
@@ -1643,6 +1649,7 @@ class EditServiceRatingsNumericalSubPanel( ClientGUICommon.StaticBox ):
         dictionary_part[ 'num_stars' ] = num_stars
         dictionary_part[ 'allow_zero' ] = allow_zero
         dictionary_part[ 'custom_pad' ] = custom_pad
+        dictionary_part[ 'show_fraction_beside_stars' ] = draw_fraction
         
         return dictionary_part
         
@@ -3382,7 +3389,7 @@ class ReviewServiceRepositorySubPanel( QW.QWidget ):
         
         namespaces = CG.client_controller.network_engine.domain_manager.GetParserNamespaces()
         
-        panel = ClientGUITags.EditTagFilterPanel( frame, tag_filter, namespaces = namespaces, message = message, read_only = True )
+        panel = ClientGUITagFilter.EditTagFilterPanel( frame, tag_filter, namespaces = namespaces, message = message, read_only = True )
         
         frame.SetPanel( panel )
         
@@ -3639,28 +3646,31 @@ class ReviewServiceIPFSSubPanel( ClientGUICommon.StaticBox ):
         
         if len( datas ) > 0:
             
-            with ClientGUIDialogs.DialogTextEntry( self, 'Set a note for these shares.' ) as dlg:
+            message = 'Set a note for these shares.'
+            
+            try:
                 
-                if dlg.exec() == QW.QDialog.DialogCode.Accepted:
-                    
-                    note = dlg.GetValue()
-                    
-                    content_updates = []
-                    
-                    for ( multihash, num_files, total_size, old_note ) in datas:
-                        
-                        hashes = CG.client_controller.Read( 'service_directory', self._service.GetServiceKey(), multihash )
-                        
-                        content_update_row = ( hashes, multihash, note )
-                        
-                        content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_DIRECTORIES, HC.CONTENT_UPDATE_ADD, content_update_row ) )
-                        
-                    
-                    CG.client_controller.Write( 'content_updates', ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( self._service.GetServiceKey(), content_updates ) )
-                    
-                    self._my_updater.Update()
-                    
+                note = ClientGUIDialogsQuick.EnterText( self, message )
                 
+            except HydrusExceptions.CancelledException:
+                
+                return
+                
+            
+            content_updates = []
+            
+            for ( multihash, num_files, total_size, old_note ) in datas:
+                
+                hashes = CG.client_controller.Read( 'service_directory', self._service.GetServiceKey(), multihash )
+                
+                content_update_row = ( hashes, multihash, note )
+                
+                content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_DIRECTORIES, HC.CONTENT_UPDATE_ADD, content_update_row ) )
+                
+            
+            CG.client_controller.Write( 'content_updates', ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( self._service.GetServiceKey(), content_updates ) )
+            
+            self._my_updater.Update()
             
         
     

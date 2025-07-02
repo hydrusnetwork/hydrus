@@ -17,7 +17,6 @@ from hydrus.core import HydrusText
 from hydrus.client import ClientApplicationCommand as CAC
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
-from hydrus.client.gui import ClientGUIDialogs
 from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIFunctions
@@ -32,7 +31,6 @@ from hydrus.client.gui.lists import ClientGUIListConstants as CGLC
 from hydrus.client.gui.lists import ClientGUIListCtrl
 from hydrus.client.gui.panels import ClientGUIScrolledPanels
 from hydrus.client.gui.widgets import ClientGUICommon
-from hydrus.client.gui.widgets import ClientGUIRegex
 from hydrus.client.importing.options import NoteImportOptions
 from hydrus.client.importing.options import TagImportOptions
 from hydrus.client.media import ClientMedia
@@ -1423,17 +1421,20 @@ class EditFileNotesPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolle
         
         existing_names = set( names_to_notes.keys() )
         
-        with ClientGUIDialogs.DialogTextEntry( self, 'Enter the name for the note.', allow_blank = False ) as dlg:
+        message = 'Enter the name for the note.'
+        
+        try:
             
-            if dlg.exec() == QW.QDialog.DialogCode.Accepted:
-                
-                name = dlg.GetValue()
-                
-                name = HydrusData.GetNonDupeName( name, existing_names )
-                
-                self._AddNotePanel( name, '' )
-                
+            name = ClientGUIDialogsQuick.EnterText( self, message )
             
+        except HydrusExceptions.CancelledException:
+            
+            return
+            
+        
+        name = HydrusData.GetNonDupeName( name, existing_names )
+        
+        self._AddNotePanel( name, '' )
         
     
     def _AddNotePanel( self, name, note ):
@@ -1613,17 +1614,20 @@ class EditFileNotesPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolle
         
         existing_names.discard( name )
         
-        with ClientGUIDialogs.DialogTextEntry( self, 'Enter the name for the note.', allow_blank = False, default = name ) as dlg:
+        message = 'Enter the name for the note.'
+        
+        try:
             
-            if dlg.exec() == QW.QDialog.DialogCode.Accepted:
-                
-                name = dlg.GetValue()
-                
-                name = HydrusData.GetNonDupeName( name, existing_names )
-                
-                self._notebook.setTabText( index, name )
-                
+            name = ClientGUIDialogsQuick.EnterText( self, message, default = name )
             
+        except HydrusExceptions.CancelledException:
+            
+            return
+            
+        
+        name = HydrusData.GetNonDupeName( name, existing_names )
+        
+        self._notebook.setTabText( index, name )
         
     
     def _TabBarDoubleClicked( self, index: int ):
@@ -2114,133 +2118,6 @@ class EditMediaViewOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         zoom_info = ( media_scale_up, media_scale_down, preview_scale_up, preview_scale_down, exact_zooms_only, scale_up_quality, scale_down_quality )
         
         return ( self._mime, media_show_action, media_start_paused, media_start_with_embed, preview_show_action, preview_start_paused, preview_start_with_embed, zoom_info )
-        
-    
-
-class EditRegexFavourites( ClientGUIScrolledPanels.EditPanel ):
-    
-    def __init__( self, parent: QW.QWidget, regex_favourites ):
-        
-        super().__init__( parent )
-        
-        regex_listctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
-        
-        model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_REGEX_FAVOURITES.ID, self._ConvertDataToDisplayTuple, self._ConvertDataToSortTuple )
-        
-        self._regexes = ClientGUIListCtrl.BetterListCtrlTreeView( regex_listctrl_panel, 8, model, use_simple_delete = True, activation_callback = self._Edit )
-        
-        regex_listctrl_panel.SetListCtrl( self._regexes )
-        
-        regex_listctrl_panel.AddButton( 'add', self._Add )
-        regex_listctrl_panel.AddButton( 'edit', self._Edit, enabled_only_on_single_selection = True )
-        regex_listctrl_panel.AddDeleteButton()
-        
-        #
-        
-        self._regexes.SetData( regex_favourites )
-        
-        self._regexes.Sort()
-        
-        #
-        
-        vbox = QP.VBoxLayout()
-        
-        QP.AddToLayout( vbox, regex_listctrl_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
-        
-        self.widget().setLayout( vbox )
-        
-    
-    def _Add( self ):
-        
-        current_data = self._regexes.GetData()
-        
-        with ClientGUIDialogs.DialogTextEntry( self, 'Enter regex.' ) as dlg:
-            
-            if dlg.exec() == QW.QDialog.DialogCode.Accepted:
-                
-                regex_phrase = dlg.GetValue()
-                
-                with ClientGUIDialogs.DialogTextEntry( self, 'Enter description.' ) as dlg_2:
-                    
-                    if dlg_2.exec() == QW.QDialog.DialogCode.Accepted:
-                        
-                        description = dlg_2.GetValue()
-                        
-                        row = ( regex_phrase, description )
-                        
-                        if row in current_data:
-                            
-                            ClientGUIDialogsMessage.ShowWarning( self, 'That regex and description are already in the list!' )
-                            
-                            return
-                            
-                        
-                        self._regexes.AddData( row, select_sort_and_scroll = True )
-                        
-                    
-                
-            
-        
-    
-    def _ConvertDataToDisplayTuple( self, row ):
-        
-        ( regex_phrase, description ) = row
-        
-        display_tuple = ( regex_phrase, description )
-        
-        return display_tuple
-        
-    
-    _ConvertDataToSortTuple = _ConvertDataToDisplayTuple
-    
-    def _Edit( self ):
-        
-        data = self._regexes.GetTopSelectedData()
-        
-        if data is None:
-            
-            return
-            
-        
-        row = data
-        
-        ( regex_phrase, description ) = row
-        
-        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit regex' ) as dlg:
-            
-            panel = ClientGUIScrolledPanels.EditSingleCtrlPanel( dlg )
-            
-            control = ClientGUIRegex.RegexInput( panel )
-            
-            control.SetValue( regex_phrase )
-            
-            panel.SetControl( control, perpendicular = True )
-            
-            dlg.SetPanel( panel )
-            
-            if dlg.exec() == QW.QDialog.DialogCode.Accepted:
-                
-                regex_phrase = control.GetValue()
-                
-                with ClientGUIDialogs.DialogTextEntry( self, 'Update description.', default = description ) as dlg_2:
-                    
-                    if dlg_2.exec() == QW.QDialog.DialogCode.Accepted:
-                        
-                        description = dlg_2.GetValue()
-                        
-                        edited_row = ( regex_phrase, description )
-                        
-                        self._regexes.ReplaceData( row, edited_row, sort_and_scroll = True )
-                        
-                    
-                
-            
-        
-        
-    
-    def GetValue( self ):
-        
-        return self._regexes.GetData()
         
     
 

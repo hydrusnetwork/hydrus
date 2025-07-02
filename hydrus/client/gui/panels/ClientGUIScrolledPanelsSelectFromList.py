@@ -2,6 +2,8 @@ from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
 
 from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusText
+
 from hydrus.client import ClientConstants as CC
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import QtPorting as QP
@@ -24,18 +26,11 @@ class EditSelectFromListPanel( ClientGUIScrolledPanels.EditPanel ):
             
             try:
                 
-                choice_tuples.sort()
+                choice_tuples = sorted( choice_tuples, key = lambda c_t: HydrusText.HumanTextSortKey( c_t[0] ) )
                 
             except TypeError:
                 
-                try:
-                    
-                    choice_tuples.sort( key = lambda t: t[0] )
-                    
-                except TypeError:
-                    
-                    pass # fugg
-                    
+                pass # fugg
                 
             
         
@@ -229,18 +224,11 @@ class EditSelectMultiple( ClientGUIScrolledPanels.EditPanel ):
         
         try:
             
-            choice_tuples.sort()
+            choice_tuples = sorted( choice_tuples, key = lambda c_t: HydrusText.HumanTextSortKey( c_t[0] ) )
             
         except TypeError:
             
-            try:
-                
-                choice_tuples.sort( key = lambda t: t[0] )
-                
-            except TypeError:
-                
-                pass # fugg
-                
+            pass # fugg
             
         
         for ( index, ( label, data, selected ) ) in enumerate( choice_tuples ):

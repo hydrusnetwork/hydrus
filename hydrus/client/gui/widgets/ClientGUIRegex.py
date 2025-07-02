@@ -17,11 +17,12 @@ from hydrus.client.gui.widgets import ClientGUICommon
 
 class RegexButton( ClientGUICommon.BetterButton ):
     
-    def __init__( self, parent, show_group_menu = False ):
+    def __init__( self, parent, show_group_menu = False, show_manage_favourites_menu = True ):
         
         super().__init__( parent, '.*', self._ShowMenu )
         
         self._show_group_menu = show_group_menu
+        self._show_manage_favourites_menu = show_manage_favourites_menu
         
         width = ClientGUIFunctions.ConvertTextToPixelWidth( self, 4 )
         
@@ -121,9 +122,12 @@ class RegexButton( ClientGUICommon.BetterButton ):
         
         submenu = ClientGUIMenus.GenerateMenu( menu )
         
-        ClientGUIMenus.AppendMenuItem( submenu, 'manage favourites', 'manage some custom favourite phrases', self._ManageFavourites )
-        
-        ClientGUIMenus.AppendSeparator( submenu )
+        if self._show_manage_favourites_menu:
+            
+            ClientGUIMenus.AppendMenuItem( submenu, 'manage favourites', 'manage some custom favourite phrases', self._ManageFavourites )
+            
+            ClientGUIMenus.AppendSeparator( submenu )
+            
         
         ClientGUIMenus.AppendMenuLabel( submenu, 'click below to copy to clipboard', no_copy = True, make_it_bold = True )
         
@@ -144,11 +148,11 @@ class RegexButton( ClientGUICommon.BetterButton ):
         regex_favourites = HC.options[ 'regex_favourites' ]
         
         from hydrus.client.gui import ClientGUITopLevelWindowsPanels
-        from hydrus.client.gui.panels import ClientGUIScrolledPanelsEdit
+        from hydrus.client.gui.panels import ClientGUIScrolledPanelsEditRegexFavourites
         
         with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'manage regex favourites' ) as dlg:
             
-            panel = ClientGUIScrolledPanelsEdit.EditRegexFavourites( dlg, regex_favourites )
+            panel = ClientGUIScrolledPanelsEditRegexFavourites.EditRegexFavourites( dlg, regex_favourites )
             
             dlg.SetPanel( panel )
             
@@ -168,16 +172,16 @@ class RegexInput( QW.QWidget ):
     
     textChanged = QC.Signal()
     
-    def __init__( self, parent: QW.QWidget, show_group_menu = False ):
+    def __init__( self, parent: QW.QWidget, show_group_menu = False, show_manage_favourites_menu = True ):
         
         super().__init__( parent )
         
         self._allow_enter_key_to_propagate_outside = True
         
         self._regex_text = QW.QLineEdit( self )
-        self._regex_text.setPlaceholderText( 'regex input' )
+        self._regex_text.setPlaceholderText( 'regex' )
         
-        self._regex_button = RegexButton( self, show_group_menu = show_group_menu )
+        self._regex_button = RegexButton( self, show_group_menu = show_group_menu, show_manage_favourites_menu = show_manage_favourites_menu )
         
         hbox = QP.HBoxLayout( margin = 0 )
         

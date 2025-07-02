@@ -5,6 +5,7 @@ from qtpy import QtWidgets as QW
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
+from hydrus.core import HydrusLists
 from hydrus.core import HydrusNumbers
 
 from hydrus.client import ClientConstants as CC
@@ -50,6 +51,8 @@ class ReviewActionsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         self._approve_selected_button = ClientGUICommon.BetterButton( self._pending_actions_panel, 'approve', self._ApproveSelectedPending )
         self._deny_selected_button = ClientGUICommon.BetterButton( self._pending_actions_panel, 'deny', self._DenySelectedPending )
         
+        self._select_all_button = ClientGUICommon.BetterButton( self._pending_actions_panel, 'select all', self._SelectAllPending )
+        
         #
         
         self._actioned_pairs_panel = ClientGUICommon.StaticBox( self, 'actioned pairs' )
@@ -88,7 +91,9 @@ class ReviewActionsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         QP.AddToLayout( hbox, self._approve_selected_button, CC.FLAGS_CENTER_PERPENDICULAR_EXPAND_DEPTH )
         QP.AddToLayout( hbox, self._deny_selected_button, CC.FLAGS_CENTER_PERPENDICULAR_EXPAND_DEPTH )
         
-        self._pending_actions_panel.Add( hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._pending_actions_panel.Add( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        
+        self._pending_actions_panel.Add( self._select_all_button, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         #
         
@@ -159,7 +164,9 @@ class ReviewActionsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         model = self._pending_actions_pair_list.model()
         indices = self._pending_actions_pair_list.selectedIndexes()
         
-        selected_pairs = { model.GetMediaResultPair( index.row() ) for index in indices }
+        selected_pairs = [ model.GetMediaResultPair( index.row() ) for index in indices ]
+        
+        selected_pairs = HydrusData.DedupeList( selected_pairs )
         
         if len( selected_pairs ) == 0:
             
@@ -180,12 +187,24 @@ class ReviewActionsPanel( ClientGUIScrolledPanels.ReviewPanel ):
                 
             
         
+        def status_hook( status: str ):
+            
+            self._approve_selected_button.setText( status )
+            
+        
         rule = self._rule
         
         def work_callable():
             
-            # this is safe to run on a bunch of related pairs like AB, AC, DB--the db figures that out
-            CG.client_controller.WriteSynchronous( 'duplicate_auto_resolution_approve_pending_pairs', rule, selected_pairs )
+            for ( num_done, num_to_do, chunk ) in HydrusLists.SplitListIntoChunksRich( selected_pairs, 4 ):
+                
+                message = f'approving: {HydrusNumbers.ValueRangeToPrettyString( num_done, num_to_do )}'
+                
+                CG.client_controller.CallAfterQtSafe( self, 'approve pairs status hook', status_hook, message )
+                
+                # this is safe to run on a bunch of related pairs like AB, AC, DB--the db figures that out
+                CG.client_controller.WriteSynchronous( 'duplicate_auto_resolution_approve_pending_pairs', rule, chunk )
+                
             
             return 1
             
@@ -201,6 +220,8 @@ class ReviewActionsPanel( ClientGUIScrolledPanels.ReviewPanel ):
             self._pending_actions_pair_list.SetData( self._pending_action_pairs )
             
             self._actioned_pairs_with_info = [] # trigger a refresh
+            
+            self._approve_selected_button.setText( original_approve_button_label )
             
             if len( self._pending_action_pairs ) > 0:
                 
@@ -218,6 +239,8 @@ class ReviewActionsPanel( ClientGUIScrolledPanels.ReviewPanel ):
                 self._RefetchPendingActionPairs()
                 
             
+        
+        original_approve_button_label = self._approve_selected_button.text()
         
         self._pending_actions_panel.setEnabled( False )
         
@@ -251,7 +274,9 @@ class ReviewActionsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         model = self._pending_actions_pair_list.model()
         indices = self._pending_actions_pair_list.selectedIndexes()
         
-        selected_pairs = { model.GetMediaResultPair( index.row() ) for index in indices }
+        selected_pairs = [ model.GetMediaResultPair( index.row() ) for index in indices ]
+        
+        selected_pairs = HydrusData.DedupeList( selected_pairs )
         
         if len( selected_pairs ) == 0:
             
@@ -272,11 +297,24 @@ class ReviewActionsPanel( ClientGUIScrolledPanels.ReviewPanel ):
                 
             
         
+        def status_hook( status: str ):
+            
+            self._deny_selected_button.setText( status )
+            
+        
         rule = self._rule
         
         def work_callable():
             
-            CG.client_controller.WriteSynchronous( 'duplicate_auto_resolution_deny_pending_pairs', rule, selected_pairs )
+            for ( num_done, num_to_do, chunk ) in HydrusLists.SplitListIntoChunksRich( selected_pairs, 4 ):
+                
+                message = f'denying: {HydrusNumbers.ValueRangeToPrettyString( num_done, num_to_do )}'
+                
+                CG.client_controller.CallAfterQtSafe( self, 'deny pairs status hook', status_hook, message )
+                
+                # this is safe to run on a bunch of related pairs like AB, AC, DB--the db figures that out
+                CG.client_controller.WriteSynchronous( 'duplicate_auto_resolution_deny_pending_pairs', rule, selected_pairs )
+                
             
             return 1
             
@@ -290,6 +328,8 @@ class ReviewActionsPanel( ClientGUIScrolledPanels.ReviewPanel ):
             self._pending_actions_label.setText( f'{HydrusNumbers.ToHumanInt(len(self._pending_action_pairs))} pairs remaining.' )
             
             self._pending_actions_pair_list.SetData( self._pending_action_pairs )
+            
+            self._deny_selected_button.setText( original_deny_button_label )
             
             if len( self._pending_action_pairs ) > 0:
                 
@@ -307,6 +347,8 @@ class ReviewActionsPanel( ClientGUIScrolledPanels.ReviewPanel ):
                 self._RefetchPendingActionPairs()
                 
             
+        
+        original_deny_button_label = self._deny_selected_button.text()
         
         self._pending_actions_panel.setEnabled( False )
         
@@ -396,6 +438,11 @@ class ReviewActionsPanel( ClientGUIScrolledPanels.ReviewPanel ):
             
             async_job.start()
             
+        
+    
+    def _SelectAllPending( self ):
+        
+        self._pending_actions_pair_list.selectAll()
         
     
     def _ShowMediaViewer( self, media_result_1, media_result_2 ):

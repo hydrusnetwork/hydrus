@@ -2,6 +2,8 @@ from io import BytesIO
 import re
 import subprocess
 
+import numpy
+
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusProcess
@@ -154,7 +156,7 @@ def ParseFFMPEGPSDResolution( lines ) -> tuple[ int, int ]:
         
     except:
         
-        raise HydrusExceptions.DamagedOrUnusualFileException( 'Error parsing resolution!' )
+        raise HydrusExceptions.NoResolutionFileException( 'Error parsing resolution!' )
         
     
 
@@ -174,13 +176,13 @@ def GeneratePILImageFromPSD( path ):
     
     if len( png_bytes ) == 0:
         
-        raise HydrusExceptions.LimitedSupportFileException( 'This PSD has no embedded Preview file that FFMPEG can read!' )
+        raise HydrusExceptions.NoRenderFileException( 'This PSD has no embedded Preview file that FFMPEG can read!' )
         
     
     return HydrusImageHandling.GeneratePILImage( BytesIO( png_bytes ), human_file_description = f'Preview image inside PSD "{path}"' )
     
 
-def GenerateThumbnailNumPyFromPSDPath( path: str, target_resolution: tuple[int, int] ) -> bytes:
+def GenerateThumbnailNumPyFromPSDPath( path: str, target_resolution: tuple[int, int] ) -> numpy.ndarray:
     
     try:
         

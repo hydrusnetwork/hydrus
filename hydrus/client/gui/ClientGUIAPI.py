@@ -8,8 +8,8 @@ from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIDialogsMessage
-from hydrus.client.gui import ClientGUITags
 from hydrus.client.gui import QtPorting as QP
+from hydrus.client.gui.metadata import ClientGUITagFilter
 from hydrus.client.gui.panels import ClientGUIScrolledPanels
 from hydrus.client.gui.widgets import ClientGUICommon
 
@@ -101,7 +101,7 @@ class EditAPIPermissionsPanel( ClientGUIScrolledPanels.EditPanel ):
         message += '\n' * 2
         message += 'If you want to allow all tags, just leave it as is, permitting everything. If you want to limit it to just one tag, such as "do waifu2x on this", set up a whitelist with only that tag allowed.'
         
-        self._search_tag_filter = ClientGUITags.TagFilterButton( self._permissions_panel, message, search_tag_filter, label_prefix = 'permitted tags: ' )
+        self._search_tag_filter = ClientGUITagFilter.TagFilterButton( self._permissions_panel, message, search_tag_filter, label_prefix = 'permitted tags: ' )
         
         #
         

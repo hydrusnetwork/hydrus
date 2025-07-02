@@ -635,7 +635,16 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
             
             serialisable_or_predicates = serialisable_value
             
-            self._value = tuple( sorted( HydrusSerialisable.CreateFromSerialisableTuple( serialisable_or_predicates ), key = lambda p: HydrusText.HumanTextSortKey( p.ToString() ) ) )
+            self._value = tuple( HydrusSerialisable.CreateFromSerialisableTuple( serialisable_or_predicates ) )
+            
+            try:
+                
+                self._value = tuple( sorted( self._value, key = lambda p: HydrusText.HumanTextSortKey( p.ToString() ) ) )
+                
+            except:
+                
+                pass
+                
             
         elif self._predicate_type in ( PREDICATE_TYPE_SYSTEM_WIDTH, PREDICATE_TYPE_SYSTEM_HEIGHT, PREDICATE_TYPE_SYSTEM_NUM_NOTES, PREDICATE_TYPE_SYSTEM_NUM_WORDS, PREDICATE_TYPE_SYSTEM_NUM_URLS, PREDICATE_TYPE_SYSTEM_NUM_FRAMES, PREDICATE_TYPE_SYSTEM_DURATION, PREDICATE_TYPE_SYSTEM_FRAMERATE ):
             
@@ -1383,7 +1392,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def ToString( self, with_count: bool = True, render_for_user: bool = False, or_under_construction: bool = False, for_parsable_export: bool = False ) -> str:
+    def _ToString( self, with_count: bool = True, render_for_user: bool = False, or_under_construction: bool = False, for_parsable_export: bool = False ) -> str:
         
         base = ''
         count_text = ''
@@ -1991,6 +2000,10 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                         
                     except HydrusExceptions.DataMissing:
                         
+                        base = 'missing rating service system predicate'
+                        
+                    except:
+                        
                         base = 'unknown rating service system predicate'
                         
                     
@@ -2316,6 +2329,20 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
             
         
         return base
+        
+    
+    def ToString( self, with_count: bool = True, render_for_user: bool = False, or_under_construction: bool = False, for_parsable_export: bool = False ) -> str:
+        
+        try:
+            
+            return self._ToString( with_count = with_count, render_for_user = render_for_user, or_under_construction = or_under_construction, for_parsable_export = for_parsable_export )
+            
+        except Exception as e:
+            
+            HydrusData.PrintException( e, do_wait = False )
+            
+            return 'error:cannot render this predicate, check log'
+            
         
     
 

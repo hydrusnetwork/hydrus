@@ -16,8 +16,8 @@ from hydrus.client import ClientMigration
 from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIFunctions
-from hydrus.client.gui import ClientGUITags
 from hydrus.client.gui import QtPorting as QP
+from hydrus.client.gui.metadata import ClientGUITagFilter
 from hydrus.client.gui.panels import ClientGUIScrolledPanels
 from hydrus.client.gui.search import ClientGUILocation
 from hydrus.client.gui.widgets import ClientGUICommon
@@ -115,7 +115,7 @@ class MigrateTagsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         tag_filter = HydrusTags.TagFilter()
         
-        self._migration_source_tag_filter = ClientGUITags.TagFilterButton( self._migration_panel, message, tag_filter, label_prefix = 'tags taken: ' )
+        self._migration_source_tag_filter = ClientGUITagFilter.TagFilterButton( self._migration_panel, message, tag_filter, label_prefix = 'tags taken: ' )
         
         message = 'The left side of a tag sibling/parent pair must pass this filter for the pair to be included in the migration.'
         message += '\n' * 2
@@ -123,7 +123,7 @@ class MigrateTagsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         tag_filter = HydrusTags.TagFilter()
         
-        self._migration_source_left_tag_pair_filter = ClientGUITags.TagFilterButton( self._migration_panel, message, tag_filter, label_prefix = 'left: ' )
+        self._migration_source_left_tag_pair_filter = ClientGUITagFilter.TagFilterButton( self._migration_panel, message, tag_filter, label_prefix = 'left: ' )
         
         message = 'The right side of a tag sibling/parent pair must pass this filter for the pair to be included in the migration.'
         message += '\n' * 2
@@ -131,7 +131,7 @@ class MigrateTagsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         tag_filter = HydrusTags.TagFilter()
         
-        self._migration_source_right_tag_pair_filter = ClientGUITags.TagFilterButton( self._migration_panel, message, tag_filter, label_prefix = 'right: ' )
+        self._migration_source_right_tag_pair_filter = ClientGUITagFilter.TagFilterButton( self._migration_panel, message, tag_filter, label_prefix = 'right: ' )
         
         #
         

@@ -136,6 +136,8 @@ class ClientDBFilesDuplicatesAutoResolutionSearch( ClientDBModule.ClientDBModule
             media_result_1 = self.modules_media_results.GetMediaResult( smaller_hash_id )
             media_result_2 = self.modules_media_results.GetMediaResult( larger_hash_id )
             
+            # TODO: now that this can take some CPU time, we should pull this out of the db tbh!
+            
             result = rule.TestPair( media_result_1, media_result_2 )
             
             if result is None:
@@ -208,7 +210,7 @@ class ClientDBFilesDuplicatesAutoResolutionSearch( ClientDBModule.ClientDBModule
         # there is some overhead for any search. even as we prime with a query_hash_ids, I suspect some searches will be bad.
         # if we dicover that fetching just two rows here every thirty seconds really screws things up, we'll want to batch this to 256 chunks or something
         
-        limit = 8192
+        limit = 4096
         
         unsearched_pairs_and_distances = self.modules_files_duplicates_auto_resolution_storage.GetUnsearchedPairsAndDistances( rule, limit = limit )
         
@@ -218,7 +220,7 @@ class ClientDBFilesDuplicatesAutoResolutionSearch( ClientDBModule.ClientDBModule
             
             potential_duplicates_search_context = rule.GetPotentialDuplicatesSearchContext()
             
-            matching_pairs = self.modules_files_duplicates_file_query.GetPotentialDuplicatePairsForAutoResolution( potential_duplicates_search_context, unsearched_pairs_and_distances )
+            matching_pairs = self.modules_files_duplicates_file_query.GetPotentialDuplicatePairsFragmentary( potential_duplicates_search_context, unsearched_pairs_and_distances )
             
             #
             

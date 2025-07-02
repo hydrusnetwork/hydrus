@@ -1433,25 +1433,24 @@ class Controller( HydrusController.HydrusController ):
             
             def qt_code_password():
                 
+                from hydrus.client.gui import ClientGUIDialogsQuick
+                
                 while True:
                     
-                    from hydrus.client.gui import ClientGUIDialogs
-                    
-                    with ClientGUIDialogs.DialogTextEntry( self._splash, 'Enter your password.', allow_blank = False, password_entry = True, min_char_width = 24 ) as dlg:
+                    try:
                         
-                        if dlg.exec() == QW.QDialog.DialogCode.Accepted:
-                            
-                            password_bytes = bytes( dlg.GetValue(), 'utf-8' )
-                            
-                            if hashlib.sha256( password_bytes ).digest() == self.options[ 'password' ]:
-                                
-                                break
-                                
-                            
-                        else:
-                            
-                            raise HydrusExceptions.DBCredentialsException( 'Bad password check' )
-                            
+                        password_str = ClientGUIDialogsQuick.EnterText( self._splash, 'Enter your password.', allow_blank = False, password_entry = True, min_char_width = 36 )
+                        
+                    except HydrusExceptions.CancelledException:
+                        
+                        raise HydrusExceptions.DBCredentialsException( 'Bad password check' )
+                        
+                    
+                    password_bytes = bytes( password_str, 'utf-8' )
+                    
+                    if hashlib.sha256( password_bytes ).digest() == self.options[ 'password' ]:
+                        
+                        break
                         
                     
                 
