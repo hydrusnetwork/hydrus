@@ -19,8 +19,6 @@ a = Analysis(['hydrus\\hydrus_client.pyw'],
                ('hydrus\\help my client will not boot.txt', '.'),
                ('hydrus\\db', 'db')
              ],
-             hookspath=[],
-             runtime_hooks=[],
              excludes=[],
              win_no_prefer_redirects=False,
              win_private_assemblies=False,

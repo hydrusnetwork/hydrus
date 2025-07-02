@@ -9,7 +9,6 @@ chardet>=3.0.4
 html5lib>=1.0.1
 lxml>=4.5.0
 lz4>=3.0.0
-numpy>=2.0.0
 olefile>=0.47
 Pillow>=10.0.1
 pillow-avif-plugin
@@ -19,11 +18,14 @@ psutil>=5.0.0
 pyOpenSSL>=19.1.0
 PySocks>=1.7.0
 PyYAML>=5.0.0
-requests==2.32.3
 Send2Trash>=1.5.0
 service-identity>=18.1.0
 show-in-file-manager>=1.1.5
 twisted[tls,http2]>=20.3.0
+
+numpy<=2.3.1
+
+requests==2.32.4
 
 opencv-python-headless==4.10.0.84
 mpv==1.0.7
