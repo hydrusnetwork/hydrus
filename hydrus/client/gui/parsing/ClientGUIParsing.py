@@ -15,7 +15,6 @@ from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientDefaults
 from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientStrings
-from hydrus.client.gui import ClientGUIDialogs
 from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIFunctions
@@ -91,18 +90,15 @@ class DownloaderExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
     
     def _AddDomainMetadata( self ):
         
-        message = 'Enter domain:'
+        message = 'Enter domain.'
         
-        with ClientGUIDialogs.DialogTextEntry( self, message ) as dlg:
+        try:
             
-            if dlg.exec() == QW.QDialog.DialogCode.Accepted:
-                
-                domain = dlg.GetValue()
-                
-            else:
-                
-                return
-                
+            domain = ClientGUIDialogsQuick.EnterText( self, message )
+            
+        except HydrusExceptions.CancelledException:
+            
+            return
             
         
         domain_metadatas = self._GetDomainMetadatasToInclude( { domain } )
@@ -1464,17 +1460,16 @@ class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
         
         message = 'Enter example URL.'
         
-        with ClientGUIDialogs.DialogTextEntry( self, message, default = example_url ) as dlg:
+        try:
             
-            if dlg.exec() == QW.QDialog.DialogCode.Accepted:
-                
-                return dlg.GetValue()
-                
-            else:
-                
-                raise HydrusExceptions.VetoException()
-                
+            url = ClientGUIDialogsQuick.EnterText( self, message, default = example_url )
             
+        except HydrusExceptions.CancelledException:
+            
+            raise
+            
+        
+        return url
         
     
     def _EditSubPageParser( self ):

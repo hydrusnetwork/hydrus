@@ -6,6 +6,7 @@ import sqlite3
 import typing
 
 from hydrus.core import HydrusData
+from hydrus.core import HydrusLists
 
 from hydrus.client import ClientGlobals as CG
 from hydrus.client.db import ClientDBDefinitionsCache
@@ -53,7 +54,7 @@ class ClientDBFilesDuplicatesFileSearch( ClientDBModule.ClientDBModule ):
         return self._STS( self._Execute( 'SELECT king_hash_id FROM duplicate_files;' ) )
         
     
-    def GetPotentialDuplicatePairsForAutoResolution( self, potential_duplicates_search_context: ClientPotentialDuplicatesSearchContext.PotentialDuplicatesSearchContext, relevant_pairs_and_distances: collections.abc.Collection[ tuple[ int, int, int ] ] ):
+    def GetPotentialDuplicatePairsFragmentary( self, potential_duplicates_search_context: ClientPotentialDuplicatesSearchContext.PotentialDuplicatesSearchContext, relevant_pairs_and_distances: collections.abc.Collection[ tuple[ int, int, int ] ] ):
         
         # we need to search the mass of potential duplicates using our search context, but we only want results from within the given pairs
         # to achieve this, we need two layers of clever fast filtering:
@@ -74,8 +75,6 @@ class ClientDBFilesDuplicatesFileSearch( ClientDBModule.ClientDBModule ):
         
         all_media_ids = set( itertools.chain.from_iterable( ( ( smaller_media_id, larger_media_id ) for ( smaller_media_id, larger_media_id, distance ) in relevant_pairs_and_distances ) ) )
         
-        required_hash_ids = self.modules_files_duplicates.GetKingHashIds( all_media_ids )
-        
         #
         
         # OK so the conceit I went with in the end is simply substituting potential_duplicate_pairs with a temp table of our relevant pairs and letting the query planner's chips fall where they may
@@ -86,11 +85,16 @@ class ClientDBFilesDuplicatesFileSearch( ClientDBModule.ClientDBModule ):
             
             self._Execute( f'ANALYZE {temp_media_ids_table_name};')
             
+            # TODO: If I am feeling clever I can break the following into a separate method and call that with the master potential pairs table and like all_media_ids = None and merge the GetPotentialDuplicatesCount monolithic call in, if we want it
+            # if we want it! maybe it is only unit tests that care, and we should do something else
+            
             with self._MakeTemporaryIntegerTable( [], 'hash_id' ) as temp_table_name_1:
                 
                 with self._MakeTemporaryIntegerTable( [], 'hash_id' ) as temp_table_name_2:
                     
                     if dupe_search_type == ClientDuplicates.DUPE_SEARCH_BOTH_FILES_MATCH_DIFFERENT_SEARCHES:
+                        
+                        required_hash_ids = self.modules_files_duplicates.GetKingHashIds( db_location_context, all_media_ids )
                         
                         self.modules_files_query.PopulateSearchIntoTempTable( file_search_context_1, temp_table_name_1, query_hash_ids = required_hash_ids )
                         self.modules_files_query.PopulateSearchIntoTempTable( file_search_context_2, temp_table_name_2, query_hash_ids = required_hash_ids )
@@ -102,11 +106,13 @@ class ClientDBFilesDuplicatesFileSearch( ClientDBModule.ClientDBModule ):
                         
                     else:
                         
-                        if file_search_context_1.IsJustSystemEverything() or file_search_context_1.HasNoPredicates():
+                        if ( file_search_context_1.IsJustSystemEverything() or file_search_context_1.HasNoPredicates() ) and db_location_context.SingleTableIsFast():
                             
                             table_join = self.modules_files_duplicates.GetPotentialDuplicatePairsTableJoinOnEverythingSearchResults( db_location_context, pixel_dupes_preference, max_hamming_distance, master_potential_duplicate_pairs_table_name = temp_media_ids_table_name )
                             
                         else:
+                            
+                            required_hash_ids = self.modules_files_duplicates.GetKingHashIds( db_location_context, all_media_ids )
                             
                             self.modules_files_query.PopulateSearchIntoTempTable( file_search_context_1, temp_table_name_1, query_hash_ids = required_hash_ids )
                             
@@ -132,9 +138,9 @@ class ClientDBFilesDuplicatesFileSearch( ClientDBModule.ClientDBModule ):
         return matching_pairs
         
     
-    def GetPotentialDuplicatePairsForAutoResolutionMediaResults( self, potential_duplicates_search_context: ClientPotentialDuplicatesSearchContext.PotentialDuplicatesSearchContext, relevant_pairs_and_distances: collections.abc.Collection[ tuple[ int, int, int ] ] ):
+    def GetPotentialDuplicatePairsFragmentaryMediaResults( self, potential_duplicates_search_context: ClientPotentialDuplicatesSearchContext.PotentialDuplicatesSearchContext, relevant_pairs_and_distances: collections.abc.Collection[ tuple[ int, int, int ] ] ):
         
-        pairs_of_media_ids = self.GetPotentialDuplicatePairsForAutoResolution( potential_duplicates_search_context, relevant_pairs_and_distances )
+        pairs_of_media_ids = self.GetPotentialDuplicatePairsFragmentary( potential_duplicates_search_context, relevant_pairs_and_distances )
         
         all_media_ids = set()
         
@@ -152,6 +158,9 @@ class ClientDBFilesDuplicatesFileSearch( ClientDBModule.ClientDBModule ):
         
     
     def GetPotentialDuplicatePairsForFiltering( self, potential_duplicates_search_context: ClientPotentialDuplicatesSearchContext.PotentialDuplicatesSearchContext, max_num_pairs: typing.Optional[ int ] = None ):
+        
+        # TODO: This guy feels ripe for a fragmentary update to reduce latency
+        # however the later logic is crazy/old. maybe KISS wipe is the solution, or maybe we need a clever little hook after a fragmentary fetch loop
         
         if max_num_pairs is None:
             
@@ -202,7 +211,7 @@ class ClientDBFilesDuplicatesFileSearch( ClientDBModule.ClientDBModule ):
                     
                 else:
                     
-                    if file_search_context_1.IsJustSystemEverything() or file_search_context_1.HasNoPredicates():
+                    if ( file_search_context_1.IsJustSystemEverything() or file_search_context_1.HasNoPredicates() ) and db_location_context.SingleTableIsFast():
                         
                         table_join = self.modules_files_duplicates.GetPotentialDuplicatePairsTableJoinOnEverythingSearchResults( db_location_context, pixel_dupes_preference, max_hamming_distance )
                         
@@ -375,68 +384,29 @@ class ClientDBFilesDuplicatesFileSearch( ClientDBModule.ClientDBModule ):
     
     def GetPotentialDuplicatesCount( self, potential_duplicates_search_context: ClientPotentialDuplicatesSearchContext.PotentialDuplicatesSearchContext ):
         
-        potential_duplicates_search_context = potential_duplicates_search_context.Duplicate()
+        all_potential_duplicate_pairs_and_distances = self.modules_files_duplicates.GetAllPotentialDuplicatePairsAndDistances()
         
-        potential_duplicates_search_context.OptimiseForSearch()
+        count = 0
         
-        file_search_context_1 = potential_duplicates_search_context.GetFileSearchContext1()
-        file_search_context_2 = potential_duplicates_search_context.GetFileSearchContext2()
-        dupe_search_type = potential_duplicates_search_context.GetDupeSearchType()
-        pixel_dupes_preference = potential_duplicates_search_context.GetPixelDupesPreference()
-        max_hamming_distance = potential_duplicates_search_context.GetMaxHammingDistance()
-        
-        db_location_context = self.modules_files_storage.GetDBLocationContext( file_search_context_1.GetLocationContext() )
-        
-        with self._MakeTemporaryIntegerTable( [], 'hash_id' ) as temp_table_name_1:
+        for block in HydrusLists.SplitListIntoChunks( all_potential_duplicate_pairs_and_distances, 4096 ):
             
-            with self._MakeTemporaryIntegerTable( [], 'hash_id' ) as temp_table_name_2:
-                
-                if dupe_search_type == ClientDuplicates.DUPE_SEARCH_BOTH_FILES_MATCH_DIFFERENT_SEARCHES:
-                    
-                    all_possible_king_hash_ids = self._GetAllKingHashIds( db_location_context )
-                    
-                    self.modules_files_query.PopulateSearchIntoTempTable( file_search_context_1, temp_table_name_1, query_hash_ids = all_possible_king_hash_ids )
-                    self.modules_files_query.PopulateSearchIntoTempTable( file_search_context_2, temp_table_name_2, query_hash_ids = all_possible_king_hash_ids )
-                    
-                    self._Execute( f'ANALYZE {temp_table_name_1};')
-                    self._Execute( f'ANALYZE {temp_table_name_2};')
-                    
-                    table_join = self.modules_files_duplicates.GetPotentialDuplicatePairsTableJoinOnSeparateSearchResults( temp_table_name_1, temp_table_name_2, pixel_dupes_preference, max_hamming_distance )
-                    
-                else:
-                    
-                    if file_search_context_1.IsJustSystemEverything() or file_search_context_1.HasNoPredicates():
-                        
-                        table_join = self.modules_files_duplicates.GetPotentialDuplicatePairsTableJoinOnEverythingSearchResults( db_location_context, pixel_dupes_preference, max_hamming_distance )
-                        
-                    else:
-                        
-                        all_possible_king_hash_ids = self._GetAllKingHashIds( db_location_context )
-                        
-                        self.modules_files_query.PopulateSearchIntoTempTable( file_search_context_1, temp_table_name_1, query_hash_ids = all_possible_king_hash_ids )
-                        
-                        self._Execute( f'ANALYZE {temp_table_name_1};')
-                        
-                        if dupe_search_type == ClientDuplicates.DUPE_SEARCH_BOTH_FILES_MATCH_ONE_SEARCH:
-                            
-                            table_join = self.modules_files_duplicates.GetPotentialDuplicatePairsTableJoinOnSearchResultsBothFiles( temp_table_name_1, pixel_dupes_preference, max_hamming_distance )
-                            
-                        else:
-                            
-                            table_join = self.modules_files_duplicates.GetPotentialDuplicatePairsTableJoinOnSearchResults( db_location_context, temp_table_name_1, pixel_dupes_preference, max_hamming_distance )
-                            
-                        
-                    
-                
-                # distinct important here for the search results table join
-                ( potential_duplicates_count, ) = self._Execute( 'SELECT COUNT( * ) FROM ( SELECT DISTINCT smaller_media_id, larger_media_id FROM {} );'.format( table_join ) ).fetchone()
-                
+            count += self.GetPotentialDuplicatesCountFragmentary( potential_duplicates_search_context, block )
             
         
-        return potential_duplicates_count
+        return count
+        
+    
+    def GetPotentialDuplicatesCountFragmentary( self, potential_duplicates_search_context: ClientPotentialDuplicatesSearchContext.PotentialDuplicatesSearchContext, relevant_pairs_and_distances: collections.abc.Collection[ tuple[ int, int, int ] ] ):
+        
+        pairs_of_media_ids = self.GetPotentialDuplicatePairsFragmentary( potential_duplicates_search_context, relevant_pairs_and_distances )
+        
+        return len( pairs_of_media_ids )
         
     
     def GetRandomPotentialDuplicateHashes( self, potential_duplicates_search_context: ClientPotentialDuplicatesSearchContext.PotentialDuplicatesSearchContext ) -> list[ bytes ]:
+        
+        # TODO: This guy feels ripe for a fragmentary update to reduce latency
+        # however the later logic is crazy/old. maybe KISS wipe is the solution, or maybe we need a clever little hook after a fragmentary fetch loop
         
         potential_duplicates_search_context = potential_duplicates_search_context.Duplicate()
         
@@ -479,7 +449,7 @@ class ClientDBFilesDuplicatesFileSearch( ClientDBModule.ClientDBModule ):
                     
                 else:
                     
-                    if file_search_context_1.IsJustSystemEverything() or file_search_context_1.HasNoPredicates():
+                    if ( file_search_context_1.IsJustSystemEverything() or file_search_context_1.HasNoPredicates() ) and db_location_context.SingleTableIsFast():
                         
                         table_join = self.modules_files_duplicates.GetPotentialDuplicatePairsTableJoinOnEverythingSearchResults( db_location_context, pixel_dupes_preference, max_hamming_distance )
                         

@@ -26,7 +26,6 @@ from hydrus.client import ClientServices
 from hydrus.client.gui import ClientGUIAsync
 from hydrus.client.gui import ClientGUICore as CGC
 from hydrus.client.gui import ClientGUIDialogsMessage
-from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIMenus
 from hydrus.client.gui import ClientGUIShortcuts
@@ -34,7 +33,6 @@ from hydrus.client.gui import ClientGUITagSorting
 from hydrus.client.gui import QtInit
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.lists import ClientGUIListBoxesData
-from hydrus.client.gui.search import ClientGUISearch
 from hydrus.client.gui.widgets import ClientGUICommon
 from hydrus.client.gui.widgets import ClientGUIMenuButton
 from hydrus.client.media import ClientMedia
@@ -600,6 +598,8 @@ class AddEditDeleteListBox( QW.QWidget ):
             
         except Exception as e:
             
+            from hydrus.client.gui import ClientGUIDialogsQuick
+            
             ClientGUIDialogsQuick.PresentClipboardParseError( self, raw_text, 'JSON-serialised Hydrus Object(s)', e )
             
         
@@ -1162,6 +1162,8 @@ class QueueListBox( QW.QWidget ):
             self._ImportObject( obj )
             
         except Exception as e:
+            
+            from hydrus.client.gui import ClientGUIDialogsQuick
             
             ClientGUIDialogsQuick.PresentClipboardParseError( self, raw_text, 'JSON-serialised Hydrus Object(s)', e )
             
@@ -3063,6 +3065,8 @@ class ListBoxTags( ListBox ):
         
         activate_window = CG.client_controller.new_options.GetBoolean( 'activate_window_on_tag_search_page_activation' )
         
+        from hydrus.client.gui.search import ClientGUISearch
+        
         predicates = ClientGUISearch.FleshOutPredicates( self, predicates )
         
         if len( predicates ) == 0:
@@ -3082,6 +3086,8 @@ class ListBoxTags( ListBox ):
     def _NewSearchPages( self, pages_of_predicates ):
         
         activate_window = CG.client_controller.new_options.GetBoolean( 'activate_window_on_tag_search_page_activation' )
+        
+        from hydrus.client.gui.search import ClientGUISearch
         
         for predicates in pages_of_predicates:
             
@@ -3157,8 +3163,6 @@ class ListBoxTags( ListBox ):
             
         else:
             
-            from hydrus.client.gui import ClientGUITags
-            
             if command == 'parent':
                 
                 title = 'manage tag parents'
@@ -3174,11 +3178,15 @@ class ListBoxTags( ListBox ):
                 
                 if command == 'parent':
                     
-                    panel = ClientGUITags.ManageTagParents( dlg, tags )
+                    from hydrus.client.gui.metadata import ClientGUIManageTagParents
+                    
+                    panel = ClientGUIManageTagParents.ManageTagParents( dlg, tags )
                     
                 elif command == 'sibling':
                     
-                    panel = ClientGUITags.ManageTagSiblings( dlg, tags )
+                    from hydrus.client.gui.metadata import ClientGUIManageTagSiblings
+                    
+                    panel = ClientGUIManageTagSiblings.ManageTagSiblings( dlg, tags )
                     
                 
                 dlg.SetPanel( panel )
@@ -4041,6 +4049,8 @@ class ListBoxTags( ListBox ):
                 message += 'This will delete and then regenerate all the display calculations for the selected tags and their siblings and parents, with the intention of fixing bad autocomplete counts or sibling/parent presentation. It is functionally similar to the \'tag storage mappings cache\' regeneration job, but just for these tags.'
                 message += '\n' * 2
                 message += 'It might take a while to run, perhaps many minutes for a heavily-siblinged/-parented/-mapped tag, during which the database will be locked. Doing it on a thousand tags is going to completely gonk you. Also, any sibling or parent rules will be reset, and they will have to be recalculated, which will probably occur in a few seconds in the background after the regeneration job completes.'
+                
+                from hydrus.client.gui import ClientGUIDialogsQuick
                 
                 result = ClientGUIDialogsQuick.GetYesNo( self, message, title = 'Regen tags?', yes_label = 'let\'s go', no_label = 'forget it' )
                 

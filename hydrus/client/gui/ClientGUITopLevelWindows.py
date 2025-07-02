@@ -1,3 +1,5 @@
+import typing
+
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
 from qtpy import QtGui as QG
@@ -744,6 +746,7 @@ class Frame( QW.QWidget ):
         self.CleanBeforeDestroy()
         
     
+
 class MainFrame( QW.QMainWindow ):
     
     def __init__( self, parent, title ):
@@ -772,6 +775,44 @@ class MainFrame( QW.QMainWindow ):
         
     
 
+class MaximiseRestoreCatcher( QC.QObject ):
+    
+    def __init__( self, parent: QW.QWidget, call ):
+        
+        self._call = call
+        
+        self._parent = parent
+        
+        super().__init__( parent )
+        
+        parent.installEventFilter( self )
+        
+    
+    def eventFilter( self, watched, event ):
+        
+        try:
+            
+            type = event.type()
+            
+            if type == QC.QEvent.Type.WindowStateChange:
+                
+                event = typing.cast( QG.QWindowStateChangeEvent, event )
+                
+                if self._parent.isMaximized() or ( event.oldState() & QC.Qt.WindowState.WindowMaximized):
+                    
+                    self._call()
+                    
+                
+            
+        except Exception as e:
+            
+            HydrusData.ShowException( e, do_wait = False )
+            
+        
+        return False
+        
+    
+
 class FrameThatResizes( Frame ):
     
     def __init__( self, parent, title, frame_key ):
@@ -780,33 +821,39 @@ class FrameThatResizes( Frame ):
         
         super().__init__( parent, title )
         
-        self._widget_event_filter.EVT_SIZE( self.EventSizeAndPositionChanged )
-        self._widget_event_filter.EVT_MAXIMIZE( self.EventSizeAndPositionChanged )
+        self._maximise_restore_catcher = MaximiseRestoreCatcher( self, self._StartSaveTLWSizeAndPositionTimer )
         
         self._move_end_timer = QC.QTimer( self )
         self._move_end_timer.setSingleShot( True )
         self._move_end_timer.timeout.connect( self.moveEnded )
+        
+        self._save_size_and_position_timer = QC.QTimer( self )
+        self._save_size_and_position_timer.setSingleShot( True )
+        self._save_size_and_position_timer.timeout.connect( self._SaveTLWSizeAndPosition )
+        
+    
+    def _SaveTLWSizeAndPosition( self ):
+        
+        # maximise sends a pre-maximise size event that poisons last_size if this is immediate
+        # and generally a good idea to wait here to handle some init states
+        CG.client_controller.CallLaterQtSafe( self, 0.1, 'save frame size and position: {}'.format( self._frame_key ), SaveTLWSizeAndPosition, self, self._frame_key )
+        
+    
+    def _StartSaveTLWSizeAndPositionTimer( self ):
+        
+        self._save_size_and_position_timer.start( 100 )
         
     
     def CleanBeforeDestroy( self ):
         
         Frame.CleanBeforeDestroy( self )
         
-        # maximise sends a pre-maximise size event that poisons last_size if this is immediate
-        CG.client_controller.CallLaterQtSafe( self, 0.1, 'save frame size and position: {}'.format( self._frame_key ), SaveTLWSizeAndPosition, self, self._frame_key )
-        
-    
-    def EventSizeAndPositionChanged( self, event ):
-        
-        # maximise sends a pre-maximise size event that poisons last_size if this is immediate
-        CG.client_controller.CallLaterQtSafe( self, 0.1, 'save frame size and position: {}'.format( self._frame_key ), SaveTLWSizeAndPosition, self, self._frame_key )
-        
-        return True # was: event.ignore()
+        self._StartSaveTLWSizeAndPositionTimer()
         
     
     def moveEnded( self ):
         
-        CG.client_controller.CallLaterQtSafe( self, 0.1, 'save frame size and position: {}'.format( self._frame_key ), SaveTLWSizeAndPosition, self, self._frame_key )
+        self._StartSaveTLWSizeAndPositionTimer()
         
     
     def moveEvent( self, event ):
@@ -816,6 +863,13 @@ class FrameThatResizes( Frame ):
         super().moveEvent( event )
         
     
+    def resizeEvent( self, event ):
+        
+        self._StartSaveTLWSizeAndPositionTimer()
+        
+        super().resizeEvent( event )
+        
+    
 
 class FrameThatResizesWithHovers( FrameThatResizes ):
     
@@ -823,40 +877,46 @@ class FrameThatResizesWithHovers( FrameThatResizes ):
     
 
 class MainFrameThatResizes( MainFrame ):
-
+    
     def __init__( self, parent, title, frame_key ):
         
         self._frame_key = frame_key
-
+        
         super().__init__( parent, title )
-
-        self._widget_event_filter.EVT_SIZE( self.EventSizeAndPositionChanged )
-        self._widget_event_filter.EVT_MAXIMIZE( self.EventSizeAndPositionChanged )
+        
+        self._maximise_restore_catcher = MaximiseRestoreCatcher( self, self._StartSaveTLWSizeAndPositionTimer )
         
         self._move_end_timer = QC.QTimer( self )
         self._move_end_timer.setSingleShot( True )
         self._move_end_timer.timeout.connect( self.moveEnded )
+        
+        self._save_size_and_position_timer = QC.QTimer( self )
+        self._save_size_and_position_timer.setSingleShot( True )
+        self._save_size_and_position_timer.timeout.connect( self._SaveTLWSizeAndPosition )
+        
+    
+    def _SaveTLWSizeAndPosition( self ):
+        
+        # maximise sends a pre-maximise size event that poisons last_size if this is immediate
+        # and generally a good idea to wait here to handle some init states
+        CG.client_controller.CallLaterQtSafe( self, 0.1, 'save frame size and position: {}'.format( self._frame_key ), SaveTLWSizeAndPosition, self, self._frame_key )
+        
+    
+    def _StartSaveTLWSizeAndPositionTimer( self ):
+        
+        self._save_size_and_position_timer.start( 100 )
         
     
     def CleanBeforeDestroy( self ):
         
         MainFrame.CleanBeforeDestroy( self )
         
-        # maximise sends a pre-maximise size event that poisons last_size if this is immediate
-        CG.client_controller.CallLaterQtSafe( self, 0.1, 'save frame size and position: {}'.format( self._frame_key ), SaveTLWSizeAndPosition, self, self._frame_key )
-        
-    
-    def EventSizeAndPositionChanged( self, event ):
-        
-        # maximise sends a pre-maximise size event that poisons last_size if this is immediate
-        CG.client_controller.CallLaterQtSafe( self, 0.1, 'save frame size and position: {}'.format( self._frame_key ), SaveTLWSizeAndPosition, self, self._frame_key )
-
-        return True # was: event.ignore()
+        self._StartSaveTLWSizeAndPositionTimer()
         
     
     def moveEnded( self ):
         
-        CG.client_controller.CallLaterQtSafe( self, 0.1, 'save frame size and position: {}'.format( self._frame_key ), SaveTLWSizeAndPosition, self, self._frame_key )
+        self._StartSaveTLWSizeAndPositionTimer()
         
     
     def moveEvent( self, event ):

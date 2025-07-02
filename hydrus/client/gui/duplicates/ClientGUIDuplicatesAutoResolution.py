@@ -219,6 +219,8 @@ class EditDuplicatesAutoResolutionRulePanel( ClientGUIScrolledPanels.EditPanel )
         
         self._duplicates_auto_resolution_rule = duplicates_auto_resolution_rule
         
+        self._starting_operation_mode = self._duplicates_auto_resolution_rule.GetOperationMode()
+        
         self._rule_panel = ClientGUICommon.StaticBox( self, 'rule' )
         
         self._name = QW.QLineEdit( self._rule_panel )
@@ -383,10 +385,21 @@ class EditDuplicatesAutoResolutionRulePanel( ClientGUIScrolledPanels.EditPanel )
         
         self._OperationModeChanged()
         
+        self._CurrentPageChanged()
+        
     
     def _CurrentPageChanged( self ):
         
         page = self._main_notebook.currentWidget()
+        
+        if page == self._search_panel:
+            
+            self._potential_duplicates_search_context.PageShown()
+            
+        else:
+            
+            self._potential_duplicates_search_context.PageHidden()
+            
         
         if page == self._preview_panel:
             
@@ -400,7 +413,18 @@ class EditDuplicatesAutoResolutionRulePanel( ClientGUIScrolledPanels.EditPanel )
     
     def _OperationModeChanged( self ):
         
-        self._max_pending_pairs.setEnabled( self._operation_mode.GetValue() == ClientDuplicatesAutoResolution.DUPLICATES_AUTO_RESOLUTION_RULE_OPERATION_MODE_WORK_BUT_NO_ACTION )
+        operation_mode = self._operation_mode.GetValue()
+        
+        if self._starting_operation_mode == ClientDuplicatesAutoResolution.DUPLICATES_AUTO_RESOLUTION_RULE_OPERATION_MODE_FULLY_AUTOMATIC:
+            
+            enabled = operation_mode == ClientDuplicatesAutoResolution.DUPLICATES_AUTO_RESOLUTION_RULE_OPERATION_MODE_WORK_BUT_NO_ACTION
+            
+        else:
+            
+            enabled = operation_mode != ClientDuplicatesAutoResolution.DUPLICATES_AUTO_RESOLUTION_RULE_OPERATION_MODE_FULLY_AUTOMATIC
+            
+        
+        self._max_pending_pairs.setEnabled( enabled )
         
     
     def GetValue( self ):
@@ -941,7 +965,7 @@ class ReviewDuplicatesAutoResolutionPanel( QW.QWidget ):
         
         self._duplicates_auto_resolution_rules_panel.AddButton( 'review actions', self._ReviewActions, enabled_only_on_selection = True )
         self._duplicates_auto_resolution_rules_panel.AddButton( 'edit rules', self._Edit )
-        self._duplicates_auto_resolution_rules_panel.AddButton( 'work hard', self._FlipWorkingHard, enabled_check_func = self._CanWorkHard )
+        #self._duplicates_auto_resolution_rules_panel.AddButton( 'work hard', self._FlipWorkingHard, enabled_check_func = self._CanWorkHard )
         
         #
         

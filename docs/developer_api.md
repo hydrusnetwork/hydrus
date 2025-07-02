@@ -3499,7 +3499,8 @@ Response description
     }
   },
   "media" : {
-    "num_files" : 4
+    "num_files" : 4,
+    "hash_ids" : [ 12345, 12346, 88754, 23 ]
   }
 }
 ```

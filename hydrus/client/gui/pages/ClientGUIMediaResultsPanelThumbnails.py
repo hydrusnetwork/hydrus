@@ -2476,8 +2476,8 @@ class Thumbnail( Selectable ):
                 painter.fillRect( rect_x, rect_y, rect_width, rect_height, qss_window_colour )
                 
             
-            like_rating_current_x = rect_x + ICON_PAD / 2
-            like_rating_current_y = rect_y + ICON_PAD / 2
+            like_rating_current_x = rect_x + round( ICON_PAD / 2 )
+            like_rating_current_y = rect_y + round( ICON_PAD / 2 )
             
             for like_service in like_services_to_show:
                 
@@ -2521,8 +2521,8 @@ class Thumbnail( Selectable ):
                 painter.fillRect( rect_x, rect_y, rect_width, rect_height, qss_window_colour )
                 
             
-            numerical_rating_current_x = rect_x + ICON_PAD / 2
-            numerical_rating_current_y = rect_y + ICON_PAD / 2
+            numerical_rating_current_x = rect_x + round( ICON_PAD / 2 )
+            numerical_rating_current_y = rect_y + round( ICON_PAD / 2 )
             
             ClientGUIRatings.DrawNumerical( painter, numerical_rating_current_x, numerical_rating_current_y, service_key, rating_state, rating, QC.QSize( STAR_DX, STAR_DY ), custom_pad, draw_collapsed_numerical_ratings )
             
@@ -2539,7 +2539,7 @@ class Thumbnail( Selectable ):
         if num_to_show > 0:
             
             control_width = THUMBNAIL_RATING_INCDEC_SET_WIDTH
-            control_height = THUMBNAIL_RATING_INCDEC_SET_WIDTH / 2
+            control_height = round( THUMBNAIL_RATING_INCDEC_SET_WIDTH / 2 )
             
             rect_width = ( control_width * num_to_show ) + ( ICON_MARGIN * 2 ) + ( ICON_MARGIN * ( num_to_show - 1 ) )
             rect_height = control_height + ( ICON_MARGIN * 2 )

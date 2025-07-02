@@ -23,7 +23,7 @@ from hydrus.client.gui.canvas import ClientGUICanvasFrame
 from hydrus.client.gui.duplicates import ThumbnailPairList
 from hydrus.client.gui.widgets import ClientGUICommon
 
-POTENTIAL_DUPLICATE_PAIRS_BLOCK_SIZE = 1024
+POTENTIAL_DUPLICATE_PAIRS_BLOCK_SIZE = 4096
 
 class PreviewPanel( ClientGUICommon.StaticBox ):
     
@@ -199,6 +199,8 @@ class PreviewPanel( ClientGUICommon.StaticBox ):
             self._all_potential_duplicate_pairs_and_distances = all_potential_duplicate_pairs_and_distances
             
             self._all_potential_duplicate_pairs_and_distances_initialised = True
+            
+            self._all_potential_duplicate_pairs_and_distances_fetch_started = False
             
             self._RefetchPairs()
             

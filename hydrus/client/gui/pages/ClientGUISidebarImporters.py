@@ -16,7 +16,6 @@ from hydrus.client import ClientPaths
 from hydrus.client import ClientThreading
 from hydrus.client.gui import ClientGUIAsync
 from hydrus.client.gui import ClientGUICore as CGC
-from hydrus.client.gui import ClientGUIDialogs
 from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIFunctions
@@ -2659,16 +2658,13 @@ class SidebarImporterSimpleDownloader( SidebarImporter ):
             
             name = simple_downloader_formula.GetName()
             
-            with ClientGUIDialogs.DialogTextEntry( dlg, 'edit name', default = name ) as dlg_2:
+            try:
                 
-                if dlg_2.exec() == QW.QDialog.DialogCode.Accepted:
-                    
-                    name = dlg_2.GetValue()
-                    
-                else:
-                    
-                    raise HydrusExceptions.VetoException()
-                    
+                name = ClientGUIDialogsQuick.EnterText( dlg, 'Edit name.', default = name )
+                
+            except HydrusExceptions.CancelledException:
+                
+                raise
                 
             
             with ClientGUITopLevelWindowsPanels.DialogEdit( dlg, 'edit formula' ) as dlg_3:

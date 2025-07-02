@@ -3805,20 +3805,11 @@ class DB( HydrusDB.HydrusDB ):
         self._read_commands_to_methods.update(
             {
                 'boned_stats' : self._GetBonedStats,
-                'duplicate_pairs_for_filtering' : self.modules_files_duplicates_file_query.GetPotentialDuplicatePairsForFiltering,
-                'duplicates_auto_resolution_actioned_pairs' : self.modules_files_duplicates_auto_resolution_search.GetActionedPairs,
-                'duplicates_auto_resolution_pending_action_pairs' : self.modules_files_duplicates_auto_resolution_search.GetPendingActionPairs,
                 'file_history' : self._GetFileHistory,
-                'file_info_managers' : self.modules_media_results.GetFileInfoManagersFromHashes,
-                'file_info_managers_from_ids' : self.modules_media_results.GetFileInfoManagers,
                 'file_system_predicates' : self._GetFileSystemPredicates,
-                'force_refresh_tags_managers' : self.modules_media_results.GetForceRefreshTagsManagers,
                 'inbox_hashes' : self._FilterInboxHashes,
                 'is_an_orphan' : self._IsAnOrphan,
                 'maintenance_due' : self._GetMaintenanceDue,
-                'media_result' : self.modules_media_results.GetMediaResultFromHash,
-                'media_results' : self.modules_media_results.GetMediaResultsFromHashes,
-                'media_results_from_ids' : self.modules_media_results.GetMediaResults,
                 'migration_filter_pairs_by_count' : self._MigrationFilterPairsByCount,
                 'migration_get_mappings' : self._MigrationGetMappings,
                 'migration_get_pairs' : self._MigrationGetPairs,
@@ -3826,8 +3817,6 @@ class DB( HydrusDB.HydrusDB ):
                 'nums_pending' : self._GetNumsPending,
                 'options' : self._GetOptions,
                 'pending' : self._GetPending,
-                'potential_duplicates_count' : self.modules_files_duplicates_file_query.GetPotentialDuplicatesCount,
-                'random_potential_duplicate_hashes' : self.modules_files_duplicates_file_query.GetRandomPotentialDuplicateHashes,
                 'related_tags' : self._GetRelatedTags,
                 'service_info' : self._GetServiceInfo,
                 'tables_and_columns_using_definitions' : self._GetTablesAndColumnsUsingDefinitions,
@@ -3844,15 +3833,21 @@ class DB( HydrusDB.HydrusDB ):
                 'deferred_delete_data' : self.modules_db_maintenance.GetDeferredDeleteTableData,
                 'deferred_physical_delete' : self.modules_files_storage.GetDeferredPhysicalDelete,
                 'duplicate_auto_resolution_rules_with_counts' : self.modules_files_duplicates_auto_resolution_storage.GetRulesWithCounts,
+                'duplicate_pairs_for_filtering' : self.modules_files_duplicates_file_query.GetPotentialDuplicatePairsForFiltering,
+                'duplicates_auto_resolution_actioned_pairs' : self.modules_files_duplicates_auto_resolution_search.GetActionedPairs,
+                'duplicates_auto_resolution_pending_action_pairs' : self.modules_files_duplicates_auto_resolution_search.GetPendingActionPairs,
                 'file_duplicate_hashes' : self.modules_files_duplicates.GetFileHashesByDuplicateType,
                 'file_duplicate_info' : self.modules_files_duplicates.GetFileDuplicateInfo,
                 'file_hashes' : self.modules_hashes.GetFileHashes,
+                'file_info_managers' : self.modules_media_results.GetFileInfoManagersFromHashes,
+                'file_info_managers_from_ids' : self.modules_media_results.GetFileInfoManagers,
                 'file_maintenance_get_job_counts' : self.modules_files_maintenance_queue.GetJobCounts,
                 'file_maintenance_get_jobs' : self.modules_files_maintenance_queue.GetJobs,
                 'file_query_ids' : self.modules_files_query.GetHashIdsFromQuery,
                 'file_relationships_for_api' : self.modules_files_duplicates.GetFileRelationshipsForAPI,
                 'filter_existing_tags' : self.modules_mappings_counts_update.FilterExistingTags,
                 'filter_hashes' : self.modules_files_metadata_rich.FilterHashesByService,
+                'force_refresh_tags_managers' : self.modules_media_results.GetForceRefreshTagsManagers,
                 'gui_session' : self.modules_serialisable.GetGUISession,
                 'hash_ids_to_hashes' : self.modules_hashes_local_cache.GetHashIdsToHashes,
                 'hash_status' : self.modules_files_metadata_rich.GetHashStatus,
@@ -3860,13 +3855,19 @@ class DB( HydrusDB.HydrusDB ):
                 'ideal_client_files_locations' : self.modules_files_physical_storage.GetIdealClientFilesLocations,
                 'last_shutdown_work_time' : self.modules_db_maintenance.GetLastShutdownWorkTime,
                 'media_predicates' : self.modules_tag_display.GetMediaPredicates,
+                'media_result' : self.modules_media_results.GetMediaResultFromHash,
+                'media_results' : self.modules_media_results.GetMediaResultsFromHashes,
+                'media_results_from_ids' : self.modules_media_results.GetMediaResults,
                 'missing_archive_timestamps_import_count' : self.modules_files_inbox.NumMissingImportArchiveTimestamps,
                 'missing_archive_timestamps_legacy_count' : self.modules_files_inbox.NumMissingLegacyArchiveTimestamps,
                 'missing_archive_timestamps_import_test' : self.modules_files_inbox.WeHaveMissingImportArchiveTimestamps,
                 'missing_archive_timestamps_legacy_test' : self.modules_files_inbox.WeHaveMissingLegacyArchiveTimestamps,
                 'missing_repository_update_hashes' : self.modules_repositories.GetRepositoryUpdateHashesIDoNotHave,
                 'num_deferred_file_deletes' : self.modules_files_storage.GetDeferredPhysicalDeleteCounts,
-                'potential_duplicate_pairs_fragmentary' : self.modules_files_duplicates_file_query.GetPotentialDuplicatePairsForAutoResolutionMediaResults,
+                'potential_duplicates_count' : self.modules_files_duplicates_file_query.GetPotentialDuplicatesCount,
+                'potential_duplicates_count_fragmentary' : self.modules_files_duplicates_file_query.GetPotentialDuplicatesCountFragmentary,
+                'potential_duplicate_pairs_fragmentary' : self.modules_files_duplicates_file_query.GetPotentialDuplicatePairsFragmentaryMediaResults,
+                'random_potential_duplicate_hashes' : self.modules_files_duplicates_file_query.GetRandomPotentialDuplicateHashes,
                 'recent_tags' : self.modules_recent_tags.GetRecentTags,
                 'repository_progress' : self.modules_repositories.GetRepositoryProgress,
                 'repository_update_hashes_to_process' : self.modules_repositories.GetRepositoryUpdateHashesICanProcess,
@@ -3898,11 +3899,9 @@ class DB( HydrusDB.HydrusDB ):
             {
                 'backup' : self._Backup,
                 'clear_orphan_file_records' : self._ClearOrphanFileRecords,
-                'content_updates' : self.modules_content_updates.ProcessContentUpdatePackage,
                 'delete_pending' : self._DeletePending,
                 'delete_service_info' : self._DeleteServiceInfo,
                 'dirty_services' : self._SaveDirtyServices,
-                'duplicate_pair_status' : self.modules_files_duplicates_setter.SetDuplicatePairStatus,
                 'fix_logically_inconsistent_mappings' : self._FixLogicallyInconsistentMappings,
                 'force_filetype' : self._ForceFiletypes,
                 'import_file' : self._ImportFile,
@@ -3948,6 +3947,7 @@ class DB( HydrusDB.HydrusDB ):
                 'clear_all_false_positive_relations' : self.modules_files_duplicates.ClearAllFalsePositivesHashes,
                 'clear_internal_false_positive_relations' : self.modules_files_duplicates.ClearInternalFalsePositivesHashes,
                 'clear_orphan_tables' : self.modules_db_maintenance.ClearOrphanTables,
+                'content_updates' : self.modules_content_updates.ProcessContentUpdatePackage,
                 'cull_file_viewing_statistics' : self.modules_files_viewing_stats.CullFileViewingStatistics,
                 'db_integrity' : self.modules_db_maintenance.CheckDBIntegrity,
                 'delete_serialisable_named' : self.modules_serialisable.DeleteJSONDumpNamed,
@@ -3966,6 +3966,7 @@ class DB( HydrusDB.HydrusDB ):
                 'duplicate_auto_resolution_reset_rule_test_progress' : self.modules_files_duplicates_auto_resolution_storage.ResetRuleTestProgress,
                 'duplicate_auto_resolution_reset_rule_declined' : self.modules_files_duplicates_auto_resolution_storage.ResetRuleDeclined,
                 'duplicate_auto_resolution_set_rules' : self.modules_files_duplicates_auto_resolution_storage.SetRules,
+                'duplicate_pair_status' : self.modules_files_duplicates_setter.SetDuplicatePairStatus,
                 'duplicate_set_king' : self.modules_files_duplicates.SetKingFromHash,
                 'file_maintenance_add_jobs' : self.modules_files_maintenance_queue.AddJobs,
                 'file_maintenance_add_jobs_hashes' : self.modules_files_maintenance_queue.AddJobsHashes,
@@ -9284,6 +9285,36 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
+        if version == 627:
+            
+            try:
+                
+                new_options = self.modules_serialisable.GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_CLIENT_OPTIONS )
+                
+                draw_thumbnail_rating_icon_size_px = new_options.GetFloat( 'draw_thumbnail_rating_icon_size_px' )
+                media_viewer_rating_icon_size_px = new_options.GetFloat( 'media_viewer_rating_icon_size_px' )
+                
+                new_options.SetFloat( 'thumbnail_rating_incdec_width_px', draw_thumbnail_rating_icon_size_px * 2 )
+                new_options.SetFloat( 'media_viewer_rating_incdec_width_px', media_viewer_rating_icon_size_px * 2 )
+                
+                new_options.SetFloat( 'preview_window_rating_icon_size_px', media_viewer_rating_icon_size_px )
+                new_options.SetFloat( 'preview_window_rating_incdec_width_px', media_viewer_rating_icon_size_px * 2 )
+                new_options.SetFloat( 'dialog_rating_icon_size_px', draw_thumbnail_rating_icon_size_px )
+                new_options.SetFloat( 'dialog_rating_incdec_width_px', draw_thumbnail_rating_icon_size_px * 2 )
+                
+                new_options.SetBoolean( 'remove_leading_url_double_slashes', False )
+                
+                self.modules_serialisable.SetJSONDump( new_options )
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to update your options failed! Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
+                
+            
         
         self._controller.frame_splash_status.SetTitleText( 'updated db to v{}'.format( HydrusNumbers.ToHumanInt( version + 1 ) ) )
         

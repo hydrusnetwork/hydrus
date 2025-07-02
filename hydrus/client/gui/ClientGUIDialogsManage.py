@@ -232,7 +232,7 @@ class DialogManageRatings( CAC.ApplicationCommandProcessorMixin, ClientGUIDialog
                 
                 ( rating_state, rating ) = ClientRatings.GetIncDecStateFromMedia( self._media, service_key )
                 
-                control = ClientGUIRatings.RatingIncDecDialog( self, service_key, 'popup' )
+                control = ClientGUIRatings.RatingIncDecDialog( self, service_key, CC.CANVAS_DIALOG )
                 
                 if rating_state != ClientRatings.SET:
                     
@@ -357,7 +357,7 @@ class DialogManageRatings( CAC.ApplicationCommandProcessorMixin, ClientGUIDialog
                 
                 rating_state = ClientRatings.GetLikeStateFromMedia( self._media, service_key )
                 
-                control = ClientGUIRatings.RatingLikeDialog( self, service_key, None, 'popup' )
+                control = ClientGUIRatings.RatingLikeDialog( self, service_key, CC.CANVAS_DIALOG )
                 
                 control.SetRatingState( rating_state )
                 
@@ -505,7 +505,7 @@ class DialogManageRatings( CAC.ApplicationCommandProcessorMixin, ClientGUIDialog
                 
                 ( rating_state, rating ) = ClientRatings.GetNumericalStateFromMedia( self._media, service_key )
                 
-                control = ClientGUIRatings.RatingNumericalDialog( self, service_key, 'popup' )
+                control = ClientGUIRatings.RatingNumericalDialog( self, service_key, CC.CANVAS_DIALOG )
                 
                 control.setSizePolicy( QW.QSizePolicy.Policy.Fixed, QW.QSizePolicy.Policy.Fixed )
                 

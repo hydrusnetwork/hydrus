@@ -4,6 +4,7 @@ from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
 
 from hydrus.core import HydrusConstants as HC
+from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTags
@@ -13,7 +14,7 @@ from hydrus.client import ClientApplicationCommand as CAC
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientThreading
-from hydrus.client.gui import ClientGUIDialogs
+from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.lists import ClientGUIListBoxes
@@ -700,14 +701,13 @@ class FileLookupScriptTagsPanel( QW.QWidget ):
             
             message = 'Enter the custom input for the file lookup script.'
             
-            with ClientGUIDialogs.DialogTextEntry( self, message ) as dlg:
+            try:
                 
-                if dlg.exec() != QW.QDialog.DialogCode.Accepted:
-                    
-                    return
-                    
+                file_identifier = ClientGUIDialogsQuick.EnterText( self, message )
                 
-                file_identifier = dlg.GetValue()
+            except HydrusExceptions.CancelledException:
+                
+                return
                 
             
         else:

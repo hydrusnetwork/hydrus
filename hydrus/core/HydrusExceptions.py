@@ -65,6 +65,7 @@ class LimitedSupportFileException( HydrusException ): pass
 
 class EncryptedFileException( LimitedSupportFileException ): pass
 class NoThumbnailFileException( LimitedSupportFileException ): pass
+class NoRenderFileException( LimitedSupportFileException ): pass
 class NoResolutionFileException( LimitedSupportFileException ): pass
 
 class VetoException( HydrusException ): pass

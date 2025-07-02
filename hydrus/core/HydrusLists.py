@@ -479,6 +479,21 @@ def SplitListIntoChunks( xs, n ):
         
     
 
+def SplitListIntoChunksRich( xs, n ):
+    
+    if isinstance( xs, set ):
+        
+        xs = list( xs )
+        
+    
+    num_to_do = len( xs )
+    
+    for i in range( 0, len( xs ), n ):
+        
+        yield ( i, num_to_do, xs[ i : i + n ] )
+        
+    
+
 def SplitMappingIteratorIntoAutothrottledChunks( iterator, starting_n, precise_time_to_stop ):
     
     n = starting_n

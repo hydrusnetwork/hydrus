@@ -1680,9 +1680,14 @@ class DuplicateContentMergeOptions( HydrusSerialisable.SerialisableBase ):
             
             if CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY in media_result.GetLocationsManager().GetCurrent():
                 
-                if not in_auto_resolution and CG.client_controller.new_options.GetBoolean( 'delete_lock_for_archived_files' ) and CG.client_controller.new_options.GetBoolean( 'delete_lock_reinbox_deletees_after_duplicate_filter' ):
+                delete_lock_applies = not media_result.GetLocationsManager().inbox and CG.client_controller.new_options.GetBoolean( 'delete_lock_for_archived_files' )
+                
+                if delete_lock_applies:
                     
-                    if not media_result.GetLocationsManager().inbox:
+                    undo_delete_lock_1 = not in_auto_resolution and CG.client_controller.new_options.GetBoolean( 'delete_lock_reinbox_deletees_after_duplicate_filter' )
+                    undo_delete_lock_2 = in_auto_resolution and CG.client_controller.new_options.GetBoolean( 'delete_lock_reinbox_deletees_in_auto_resolution' )
+                    
+                    if ( undo_delete_lock_1 or undo_delete_lock_2 ):
                         
                         content_update_package.AddContentUpdate( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_INBOX, { media_result.GetHash() } ) )
                         

@@ -936,10 +936,6 @@ class AutoCompleteDropdown( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
         
         if self._float_mode:
             
-            self._widget_event_filter = QP.WidgetEventFilter( self )
-            self._widget_event_filter.EVT_MOVE( self.EventMove )
-            self._widget_event_filter.EVT_SIZE( self.EventMove )
-            
             parent = self
             
             self._scroll_event_filters = []
@@ -1468,13 +1464,6 @@ class AutoCompleteDropdown( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
         return False
         
     
-    def EventMove( self, event ):
-        
-        self._DropdownHideShow()
-        
-        return True # was: event.ignore()
-        
-    
     def EventText( self, new_text ):
         
         num_chars = len( self._text_ctrl.text() )
@@ -1511,6 +1500,13 @@ class AutoCompleteDropdown( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
             
             return self._qss_colours.get( colour_type, QG.QColor( 127, 127, 127 ) )
             
+        
+    
+    def moveEvent( self, event ):
+        
+        self._DropdownHideShow()
+        
+        return super().moveEvent( event )
         
     
     def MoveNotebookPageFocus( self, index = None, direction = None ):
@@ -1635,6 +1631,13 @@ class AutoCompleteDropdown( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
         self._force_dropdown_hide = value
         
         self._DropdownHideShow()
+        
+    
+    def resizeEvent( self, event ):
+        
+        self._DropdownHideShow()
+        
+        super().resizeEvent( event )
         
     
     def get_hta_background( self ):

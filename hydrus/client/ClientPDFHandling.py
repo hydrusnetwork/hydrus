@@ -19,7 +19,6 @@ except Exception:
 from qtpy import QtGui as QG
 from qtpy import QtCore as QC
 
-from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core.files import HydrusPDFHandling
 
@@ -97,10 +96,6 @@ def GenerateThumbnailNumPyFromPDFPath( path: str, target_resolution: tuple[int, 
         return thumbnail_numpy_image
         
     except Exception as e:
-        
-        message = f'PDF at {path} failed to make a thumbnail: {e}'
-        
-        HydrusData.Print( message )
         
         raise HydrusExceptions.NoThumbnailFileException()
         

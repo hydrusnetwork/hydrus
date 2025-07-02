@@ -34,6 +34,8 @@ class ClientDBFilesDuplicates( ClientDBModule.ClientDBModule ):
         self.modules_similar_files = modules_similar_files
         self.modules_files_duplicates_auto_resolution_storage = modules_files_duplicates_auto_resolution_storage
         
+        self._all_potential_duplicate_pairs_and_distances = None
+        
         self._service_ids_to_content_types_to_outstanding_local_processing = collections.defaultdict( dict )
         
     
@@ -191,6 +193,11 @@ class ClientDBFilesDuplicates( ClientDBModule.ClientDBModule ):
         }
         
     
+    def _NotifyChangeToPotentialDuplicatePairs( self ):
+        
+        self._all_potential_duplicate_pairs_and_distances = None
+        
+    
     def AddPotentialDuplicates( self, media_id, potential_duplicate_media_ids_and_distances ):
         
         inserts = []
@@ -224,6 +231,8 @@ class ClientDBFilesDuplicates( ClientDBModule.ClientDBModule ):
         if len( inserts ) > 0:
             
             self._ExecuteMany( 'INSERT OR IGNORE INTO potential_duplicate_pairs ( smaller_media_id, larger_media_id, distance ) VALUES ( ?, ?, ? );', inserts )
+            
+            self._NotifyChangeToPotentialDuplicatePairs()
             
             self.modules_files_duplicates_auto_resolution_storage.NotifyNewPotentialDuplicatePairsAdded(
                 [ ( smaller_media_id, larger_media_id ) for ( smaller_media_id, larger_media_id, distance ) in inserts ]
@@ -374,6 +383,8 @@ class ClientDBFilesDuplicates( ClientDBModule.ClientDBModule ):
         
         self._Execute( 'DELETE FROM potential_duplicate_pairs;' )
         
+        self._NotifyChangeToPotentialDuplicatePairs()
+        
         self.modules_files_duplicates_auto_resolution_storage.DeleteAllPotentialDuplicatePairs()
         
         self.modules_similar_files.ResetSearch( hash_ids )
@@ -381,14 +392,24 @@ class ClientDBFilesDuplicates( ClientDBModule.ClientDBModule ):
     
     def DeletePotentialDuplicates( self, pairs ):
         
-        self._ExecuteMany( 'DELETE FROM potential_duplicate_pairs WHERE smaller_media_id = ? AND larger_media_id = ?;', pairs )
-        
-        self.modules_files_duplicates_auto_resolution_storage.NotifyExistingPotentialDuplicatePairsRemoved( pairs )
+        if len( pairs ) > 0:
+            
+            self._ExecuteMany( 'DELETE FROM potential_duplicate_pairs WHERE smaller_media_id = ? AND larger_media_id = ?;', pairs )
+            
+            self._NotifyChangeToPotentialDuplicatePairs()
+            
+            self.modules_files_duplicates_auto_resolution_storage.NotifyExistingPotentialDuplicatePairsRemoved( pairs )
+            
         
     
     def DeletePotentialDuplicatesForMediaId( self, media_id: int ):
         
         self._Execute( 'DELETE FROM potential_duplicate_pairs WHERE smaller_media_id = ? OR larger_media_id = ?;', ( media_id, media_id ) )
+        
+        if self._GetRowCount() > 0:
+            
+            self._NotifyChangeToPotentialDuplicatePairs()
+            
         
         self.modules_files_duplicates_auto_resolution_storage.NotifyMediaIdNoLongerPotential( media_id )
         
@@ -519,7 +540,12 @@ class ClientDBFilesDuplicates( ClientDBModule.ClientDBModule ):
     
     def GetAllPotentialDuplicatePairsAndDistances( self ):
         
-        return self._Execute( 'SELECT smaller_media_id, larger_media_id, distance FROM potential_duplicate_pairs;' ).fetchall()
+        if self._all_potential_duplicate_pairs_and_distances is None:
+            
+            self._all_potential_duplicate_pairs_and_distances = self._Execute( 'SELECT smaller_media_id, larger_media_id, distance FROM potential_duplicate_pairs;' ).fetchall()
+            
+        
+        return list( self._all_potential_duplicate_pairs_and_distances )
         
     
     def GetAlternatesGroupId( self, media_id, do_not_create = False ):
@@ -1017,14 +1043,22 @@ class ClientDBFilesDuplicates( ClientDBModule.ClientDBModule ):
         return king_hash_id
         
     
-    def GetKingHashIds( self, media_ids ):
+    def GetKingHashIds( self, db_location_context: ClientDBFilesStorage.DBLocationContext, media_ids: set[ int ] ):
+        """
+        This guy won't filter to the db location context when it is complicated, but he will always return kings.
+        """
         
         with self._MakeTemporaryIntegerTable( media_ids, 'media_id' ) as temp_media_ids_table_name:
             
-            king_hash_ids = self._STS( self._Execute( f'SELECT king_hash_id FROM {temp_media_ids_table_name} CROSS JOIN duplicate_files USING ( media_id );' ) )
+            if db_location_context.SingleTableIsFast():
+                
+                files_table_name = db_location_context.GetSingleFilesTableName()
+                
+                return self._STS( self._Execute( f'SELECT king_hash_id FROM {temp_media_ids_table_name} CROSS JOIN duplicate_files USING ( media_id ) CROSS JOIN {files_table_name} ON ( duplicate_files.king_hash_id = {files_table_name}.hash_id );' ) )
+                
             
-        
-        return king_hash_ids
+            return self._STS( self._Execute( f'SELECT king_hash_id FROM {temp_media_ids_table_name} CROSS JOIN duplicate_files USING ( media_id );' ) )
+            
         
     
     def GetMediaId( self, hash_id, do_not_create = False ):

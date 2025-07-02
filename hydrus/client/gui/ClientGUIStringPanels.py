@@ -14,12 +14,12 @@ from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientStrings
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIFunctions
-from hydrus.client.gui import ClientGUITags
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.lists import ClientGUIListBoxes
 from hydrus.client.gui.lists import ClientGUIListConstants as CGLC
 from hydrus.client.gui.lists import ClientGUIListCtrl
+from hydrus.client.gui.metadata import ClientGUITagFilter
 from hydrus.client.gui.panels import ClientGUIScrolledPanels
 from hydrus.client.gui.widgets import ClientGUICommon
 from hydrus.client.gui.widgets import ClientGUIRegex
@@ -2078,7 +2078,7 @@ class EditStringTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         tag_filter = string_tag_filter.GetTagFilter()
         
-        self._tag_filter_button = ClientGUITags.TagFilterButton( self, message, tag_filter )
+        self._tag_filter_button = ClientGUITagFilter.TagFilterButton( self, message, tag_filter )
         
         self._example_string = QW.QLineEdit( self )
         

@@ -2339,7 +2339,7 @@ class PredicateSystemRatingLike( PanelPredicateSystemSingle ):
         
         self._choice = ClientGUICommon.BetterRadioBox( self, choice_tuples, vertical = True )
         
-        self._rating_control = ClientGUIRatings.RatingLikeDialog( self, service_key )
+        self._rating_control = ClientGUIRatings.RatingLikeDialog( self, service_key, CC.CANVAS_DIALOG )
         
         #
         

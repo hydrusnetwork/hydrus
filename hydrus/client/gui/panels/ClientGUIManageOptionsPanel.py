@@ -20,7 +20,6 @@ from hydrus.core.files.images import HydrusImageHandling
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientData
 from hydrus.client import ClientGlobals as CG
-from hydrus.client.gui import ClientGUIDialogs
 from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIFunctions
@@ -28,7 +27,6 @@ from hydrus.client.gui import ClientGUIShortcutControls
 from hydrus.client.gui import ClientGUIShortcuts
 from hydrus.client.gui import ClientGUIStyle
 from hydrus.client.gui import ClientGUITagSorting
-from hydrus.client.gui import ClientGUITags
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.importing import ClientGUIImport
@@ -37,10 +35,13 @@ from hydrus.client.gui.lists import ClientGUIListBook
 from hydrus.client.gui.lists import ClientGUIListBoxes
 from hydrus.client.gui.lists import ClientGUIListConstants as CGLC
 from hydrus.client.gui.lists import ClientGUIListCtrl
+from hydrus.client.gui.metadata import ClientGUITagsEditNamespaceSort
+from hydrus.client.gui.metadata import ClientGUITagSummaryGenerator
 from hydrus.client.gui.metadata import ClientGUITime
 from hydrus.client.gui.pages import ClientGUIMediaResultsPanelSortCollect
 from hydrus.client.gui.panels import ClientGUIScrolledPanels
 from hydrus.client.gui.panels import ClientGUIScrolledPanelsEdit
+from hydrus.client.gui.panels import ClientGUIScrolledPanelsEditRegexFavourites
 from hydrus.client.gui.search import ClientGUIACDropdown
 from hydrus.client.gui.search import ClientGUILocation
 from hydrus.client.gui.widgets import ClientGUIBytes
@@ -455,7 +456,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         self._listbook.AddPage( 'media playback', self._MediaPlaybackPanel( self._listbook ) )
         self._listbook.AddPage( 'speed and memory', self._SpeedAndMemoryPanel( self._listbook, self._new_options ) )
         self._listbook.AddPage( 'system tray', self._SystemTrayPanel( self._listbook, self._new_options ) )
-        self._listbook.AddPage( 'popups', self._PopupPanel( self._listbook, self._new_options ) )
+        self._listbook.AddPage( 'popup notifications', self._PopupPanel( self._listbook, self._new_options ) )
         self._listbook.AddPage( 'regex favourites', self._RegexPanel( self._listbook ) )
         self._listbook.AddPage( 'file sort/collect', self._FileSortCollectPanel( self._listbook, self._new_options ) )
         self._listbook.AddPage( 'downloading', self._DownloadingPanel( self._listbook, self._new_options ) )
@@ -1000,7 +1001,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             misc = ClientGUICommon.StaticBox( self, 'misc' )
             
             self._remove_leading_url_double_slashes = QW.QCheckBox( misc )
-            tt = 'Hydev is doing a test here, and I would like feedback from advanced users. The client currently removes leading double slashes from an URL path, something like https://site.com//images/123456, collapsing it to https://site.com/images/123456. This is not actually correct, and I want to test how certain URL Classes and their downloaders will handle me dealing with it properly. Check this to try the test, and let me know how it goes.'
+            tt = 'The client used to remove leading double slashes from an URL path, collapsing something like https://site.com//images/123456 to https://site.com/images/123456. This is not correct, and it no longer does this. If you need it to do this again, to fix some URL CLass, turn this on. I will retire this option eventually, so update your downloader to work in the new system (ideally recognise both formats).'
             self._remove_leading_url_double_slashes.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
             
             self._pause_character = QW.QLineEdit( misc )
@@ -1050,7 +1051,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._process_subs_in_random_order.setChecked( self._new_options.GetBoolean( 'process_subs_in_random_order' ) )
             
-            self._remove_leading_url_double_slashes.setChecked( not self._new_options.GetBoolean( 'remove_leading_url_double_slashes' ) )
+            self._remove_leading_url_double_slashes.setChecked( self._new_options.GetBoolean( 'remove_leading_url_double_slashes' ) )
             self._pause_character.setText( self._new_options.GetString( 'pause_character' ) )
             self._stop_character.setText( self._new_options.GetString( 'stop_character' ) )
             self._show_new_on_file_seed_short_summary.setChecked( self._new_options.GetBoolean( 'show_new_on_file_seed_short_summary' ) )
@@ -1108,7 +1109,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             rows = []
             
-            rows.append( ( 'TEST: stop removing leading double-slashes from URL paths:', self._remove_leading_url_double_slashes ) )
             rows.append( ( 'Pause character:', self._pause_character ) )
             rows.append( ( 'Stop character:', self._stop_character ) )
             rows.append( ( 'Show a \'N\' (for \'new\') count on short file import summaries:', self._show_new_on_file_seed_short_summary ) )
@@ -1116,6 +1116,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows.append( ( 'Delay time on a gallery/watcher network error:', self._downloader_network_error_delay ) )
             rows.append( ( 'Delay time on a subscription network error:', self._subscription_network_error_delay ) )
             rows.append( ( 'Delay time on a subscription other error:', self._subscription_other_error_delay ) )
+            rows.append( ( 'DEBUG: remove leading double-slashes from URL paths:', self._remove_leading_url_double_slashes ) )
             
             gridbox = ClientGUICommon.WrapInGrid( misc, rows )
             
@@ -1154,7 +1155,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._new_options.SetDefaultWatcherCheckerOptions( self._watcher_checker_options.GetValue() )
             self._new_options.SetDefaultSubscriptionCheckerOptions( self._subscription_checker_options.GetValue() )
             
-            self._new_options.SetBoolean( 'remove_leading_url_double_slashes', not self._remove_leading_url_double_slashes.isChecked() )
+            self._new_options.SetBoolean( 'remove_leading_url_double_slashes', self._remove_leading_url_double_slashes.isChecked() )
             self._new_options.SetString( 'pause_character', self._pause_character.text() )
             self._new_options.SetString( 'stop_character', self._stop_character.text() )
             self._new_options.SetBoolean( 'show_new_on_file_seed_short_summary', self._show_new_on_file_seed_short_summary.isChecked() )
@@ -1621,36 +1622,37 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 default = launch_path
                 
             
-            with ClientGUIDialogs.DialogTextEntry( self, message, default = default, allow_blank = True ) as dlg:
+            try:
                 
-                if dlg.exec() == QW.QDialog.DialogCode.Accepted:
+                new_launch_path = ClientGUIDialogsQuick.EnterText( self, message, default = default, allow_blank = True )
+                
+            except HydrusExceptions.CancelledException:
+                
+                return
+                
+            
+            if new_launch_path == '':
+                
+                new_launch_path = None
+                
+            
+            if new_launch_path not in ( launch_path, default ):
+                
+                if new_launch_path is not None and '%path%' not in new_launch_path:
                     
-                    new_launch_path = dlg.GetValue()
+                    message = f'Hey, your command "{new_launch_path}" did not include %path%--it probably is not going to work! Are you sure this is ok?'
                     
-                    if new_launch_path == '':
-                        
-                        new_launch_path = None
-                        
+                    result = ClientGUIDialogsQuick.GetYesNo( self, message )
                     
-                    if new_launch_path not in ( launch_path, default ):
+                    if result != QW.QDialog.DialogCode.Accepted:
                         
-                        if new_launch_path is not None and '%path%' not in new_launch_path:
-                            
-                            message = f'Hey, your command "{new_launch_path}" did not include %path%--it probably is not going to work! Are you sure this is ok?'
-                            
-                            result = ClientGUIDialogsQuick.GetYesNo( self, message )
-                            
-                            if result != QW.QDialog.DialogCode.Accepted:
-                                
-                                return
-                                
-                            
-                        
-                        edited_row = ( mime, new_launch_path )
-                        
-                        self._mime_launch_listctrl.ReplaceData( row, edited_row, sort_and_scroll = True )
+                        return
                         
                     
+                
+                edited_row = ( mime, new_launch_path )
+                
+                self._mime_launch_listctrl.ReplaceData( row, edited_row, sort_and_scroll = True )
                 
             
         
@@ -1721,6 +1723,9 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._delete_lock_reinbox_deletees_after_duplicate_filter = QW.QCheckBox( delete_lock_panel )
             self._delete_lock_reinbox_deletees_after_duplicate_filter.setToolTip( ClientGUIFunctions.WrapToolTip( 'Be careful with this!\n\nIf the delete lock is on, and you do a duplicate filter, this will ensure that all deletee files from merge options are inboxed before being deleted.' ) )
             
+            self._delete_lock_reinbox_deletees_in_auto_resolution = QW.QCheckBox( delete_lock_panel )
+            self._delete_lock_reinbox_deletees_in_auto_resolution.setToolTip( ClientGUIFunctions.WrapToolTip( 'Be careful with this!\n\nIf the delete lock is on, any auto-resolution rule action, semi-automatic or automatic, will ensure that all deletee files from merge options are inboxed before being deleted.' ) )
+            
             advanced_file_deletion_panel = ClientGUICommon.StaticBox( self, 'advanced file deletion and custom reasons' )
             
             self._use_advanced_file_deletion_dialog = QW.QCheckBox( advanced_file_deletion_panel )
@@ -1763,6 +1768,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._delete_lock_for_archived_files.setChecked( self._new_options.GetBoolean( 'delete_lock_for_archived_files' ) )
             self._delete_lock_reinbox_deletees_after_archive_delete.setChecked( self._new_options.GetBoolean( 'delete_lock_reinbox_deletees_after_archive_delete' ) )
             self._delete_lock_reinbox_deletees_after_duplicate_filter.setChecked( self._new_options.GetBoolean( 'delete_lock_reinbox_deletees_after_duplicate_filter' ) )
+            self._delete_lock_reinbox_deletees_in_auto_resolution.setChecked( self._new_options.GetBoolean( 'delete_lock_reinbox_deletees_in_auto_resolution' ) )
             
             self._use_advanced_file_deletion_dialog.setChecked( self._new_options.GetBoolean( 'use_advanced_file_deletion_dialog' ) )
             
@@ -1807,6 +1813,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows.append( ( 'Do not permit archived files to be deleted from the trash: ', self._delete_lock_for_archived_files ) )
             rows.append( ( 'After archive/delete filter, ensure deletees are inboxed before delete: ', self._delete_lock_reinbox_deletees_after_archive_delete ) )
             rows.append( ( 'After duplicate filter, ensure deletees are inboxed before delete: ', self._delete_lock_reinbox_deletees_after_duplicate_filter ) )
+            rows.append( ( 'In duplicates auto-resolution, ensure deletees are inboxed before delete: ', self._delete_lock_reinbox_deletees_in_auto_resolution ) )
             
             gridbox = ClientGUICommon.WrapInGrid( delete_lock_panel, rows )
             
@@ -1853,19 +1860,16 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         def _EditAFDR( self, reason ):
             
-            with ClientGUIDialogs.DialogTextEntry( self, 'enter the reason', default = reason, allow_blank = False ) as dlg:
+            try:
                 
-                if dlg.exec() == QW.QDialog.DialogCode.Accepted:
-                    
-                    reason = dlg.GetValue()
-                    
-                    return reason
-                    
-                else:
-                    
-                    raise HydrusExceptions.VetoException()
-                    
+                reason = ClientGUIDialogsQuick.EnterText( self, 'Enter the reason', default = reason )
                 
+            except HydrusExceptions.CancelledException:
+                
+                raise
+                
+            
+            return reason
             
         
         def _UpdateAdvancedControls( self ):
@@ -1886,6 +1890,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._delete_lock_reinbox_deletees_after_archive_delete.setEnabled( self._delete_lock_for_archived_files.isChecked() )
             self._delete_lock_reinbox_deletees_after_duplicate_filter.setEnabled( self._delete_lock_for_archived_files.isChecked() )
+            self._delete_lock_reinbox_deletees_in_auto_resolution.setEnabled( self._delete_lock_for_archived_files.isChecked() )
             
         
         def UpdateOptions( self ):
@@ -1912,6 +1917,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._new_options.SetBoolean( 'delete_lock_for_archived_files', self._delete_lock_for_archived_files.isChecked() )
             self._new_options.SetBoolean( 'delete_lock_reinbox_deletees_after_archive_delete', self._delete_lock_reinbox_deletees_after_archive_delete.isChecked() )
             self._new_options.SetBoolean( 'delete_lock_reinbox_deletees_after_duplicate_filter', self._delete_lock_reinbox_deletees_after_duplicate_filter.isChecked() )
+            self._new_options.SetBoolean( 'delete_lock_reinbox_deletees_in_auto_resolution', self._delete_lock_reinbox_deletees_in_auto_resolution.isChecked() )
             
             self._new_options.SetBoolean( 'use_advanced_file_deletion_dialog', self._use_advanced_file_deletion_dialog.isChecked() )
             
@@ -2152,7 +2158,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         def _EditNamespaceSort( self, sort_data ):
             
-            return ClientGUITags.EditNamespaceSort( self, sort_data )
+            return ClientGUITagsEditNamespaceSort.EditNamespaceSort( self, sort_data )
             
         
         def UpdateOptions( self ):
@@ -4551,7 +4557,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             #
             
-            media_viewer_rating_panel = ClientGUICommon.StaticBox( self, 'services in media viewer' )
+            media_viewer_rating_panel = ClientGUICommon.StaticBox( self, 'media viewer' )
             
             self._media_viewer_rating_icon_size_px = ClientGUICommon.BetterDoubleSpinBox( media_viewer_rating_panel, min = 1.0, max = 255.0 )
             self._media_viewer_rating_icon_size_px.setToolTip( ClientGUIFunctions.WrapToolTip( 'Set size in pixels for like, numerical, and inc/dec rating icons for clicking on. This will be used for both width and height of the square icons. If you want to set the size of ratings icons in thumbnails, check the \'thumbnails\' options page.' ) )
@@ -4559,7 +4565,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._media_viewer_rating_incdec_width_px.setToolTip( ClientGUIFunctions.WrapToolTip( 'Set width in pixels for inc/dec rectangles in the media viewer. The height will be half of this, and it is limited to be between twice and half of the normal ratings icons sizes. If you want to set the size of ratings icons in thumbnails, check the \'thumbnails\' options page.' ) )
             
             
-            thumbnail_ratings_panel = ClientGUICommon.StaticBox( self, 'services in thumbnails' )
+            thumbnail_ratings_panel = ClientGUICommon.StaticBox( self, 'thumbnails' )
             
             ( thumbnail_width, thumbnail_height ) = HC.options[ 'thumbnail_dimensions' ]
             
@@ -4580,7 +4586,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._draw_thumbnail_numerical_ratings_collapsed_always.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
             
             
-            preview_window_rating_panel = ClientGUICommon.StaticBox( self, 'services in preview window' )
+            preview_window_rating_panel = ClientGUICommon.StaticBox( self, 'preview window' )
             
             self._preview_window_rating_icon_size_px = ClientGUICommon.BetterDoubleSpinBox( preview_window_rating_panel, min = 1.0, max = 255.0 )
             self._preview_window_rating_icon_size_px.setToolTip( ClientGUIFunctions.WrapToolTip( 'Set size in pixels for like and numerical rating icons for clicking on in the preview window.' ) )
@@ -4589,13 +4595,13 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._preview_window_rating_incdec_width_px.setToolTip( ClientGUIFunctions.WrapToolTip( 'Set width in pixels for inc/dec rectangles in the preview window. The height will be half of this, and it is limited to be between twice and half of the normal ratings icons sizes.' ) )
             
             
-            manage_ratings_popup_panel = ClientGUICommon.StaticBox( self, 'services in \'manage ratings\' dialog' )
+            manage_ratings_popup_panel = ClientGUICommon.StaticBox( self, 'dialogs' )
             
-            self._manage_ratings_rating_icon_size_px = ClientGUICommon.BetterDoubleSpinBox( manage_ratings_popup_panel, min = 6.0, max = 128.0 )
-            self._manage_ratings_rating_icon_size_px.setToolTip( ClientGUIFunctions.WrapToolTip( 'Set size in pixels for like and numerical rating icons for clicking on in the \'manage ratings\' dialog.' ) )
+            self._dialog_rating_icon_size_px = ClientGUICommon.BetterDoubleSpinBox( manage_ratings_popup_panel, min = 6.0, max = 128.0 )
+            self._dialog_rating_icon_size_px.setToolTip( ClientGUIFunctions.WrapToolTip( 'Set size in pixels for like and numerical rating icons for clicking on in the \'manage ratings\' dialog.' ) )
             
-            self._manage_ratings_rating_incdec_width_px = ClientGUICommon.BetterDoubleSpinBox( manage_ratings_popup_panel, min = 12.0, max = 128.0 )
-            self._manage_ratings_rating_incdec_width_px.setToolTip( ClientGUIFunctions.WrapToolTip( 'Set width in pixels for inc/dec rectangles in the \'manage ratings\' dialog. The height will be half of this, and it is limited to be between twice and half of the normal ratings icons sizes.' ) )
+            self._dialog_rating_incdec_width_px = ClientGUICommon.BetterDoubleSpinBox( manage_ratings_popup_panel, min = 12.0, max = 128.0 )
+            self._dialog_rating_incdec_width_px.setToolTip( ClientGUIFunctions.WrapToolTip( 'Set width in pixels for inc/dec rectangles in the \'manage ratings\' dialog. The height will be half of this, and it is limited to be between twice and half of the normal ratings icons sizes.' ) )
             
             #clamp inc/dec rectangles to min 0.5 and max 2x rating stars px for rating size stuff
             self._media_viewer_rating_icon_size_px.editingFinished.connect( self._icon_size_changed )
@@ -4615,41 +4621,41 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._preview_window_rating_icon_size_px.setValue( self._new_options.GetFloat( 'preview_window_rating_icon_size_px' ) )
             self._preview_window_rating_incdec_width_px.setValue( self._new_options.GetFloat( 'preview_window_rating_incdec_width_px' ) )
             
-            self._manage_ratings_rating_icon_size_px.setValue( self._new_options.GetFloat( 'manage_ratings_window_icon_size_px' ) )
-            self._manage_ratings_rating_incdec_width_px.setValue( self._new_options.GetFloat( 'manage_ratings_window_incdec_width_px' ) )
+            self._dialog_rating_icon_size_px.setValue( self._new_options.GetFloat( 'dialog_rating_icon_size_px' ) )
+            self._dialog_rating_incdec_width_px.setValue( self._new_options.GetFloat( 'dialog_rating_incdec_width_px' ) )
             
             #
             
             rows = []
             
-            rows.append( ( 'Media viewer ratings like/dislike and numerical service icon size:', self._media_viewer_rating_icon_size_px ) )
-            rows.append( ( 'Media viewer ratings inc/dec service icon width:', self._media_viewer_rating_incdec_width_px ) )
+            rows.append( ( 'Media viewer like/dislike and numerical rating icon size:', self._media_viewer_rating_icon_size_px ) )
+            rows.append( ( 'Media viewer inc/dec rating icon width:', self._media_viewer_rating_incdec_width_px ) )
             
             media_viewer_rating_gridbox = ClientGUICommon.WrapInGrid( media_viewer_rating_panel, rows )
             media_viewer_rating_panel.Add( media_viewer_rating_gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
             rows = []
             
-            rows.append( ( 'Preview window ratings like/dislike and numerical service icon size:', self._preview_window_rating_icon_size_px ) )
-            rows.append( ( 'Preview window ratings inc/dec service icon width:', self._preview_window_rating_incdec_width_px ) )
+            rows.append( ( 'Preview window like/dislike and numerical rating icon size:', self._preview_window_rating_icon_size_px ) )
+            rows.append( ( 'Preview window inc/dec rating icon width:', self._preview_window_rating_incdec_width_px ) )
             
             preview_hovers_gridbox = ClientGUICommon.WrapInGrid( preview_window_rating_panel, rows )
             preview_window_rating_panel.Add( preview_hovers_gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
             rows = []
             
+            rows.append( ( 'Thumbnail like/dislike and numerical rating icon size: ', self._draw_thumbnail_rating_icon_size_px ) )
+            rows.append( ( 'Thumbnail inc/dec rating width: ', self._draw_thumbnail_rating_incdec_width_px ) )
             rows.append( ( 'Give thumbnail ratings a flat background: ', self._draw_thumbnail_rating_background ) )
-            rows.append( ( 'Thumbnail rating icon size: ', self._draw_thumbnail_rating_icon_size_px ) )
-            rows.append( ( 'Thumbnail rating inc/dec width: ', self._draw_thumbnail_rating_incdec_width_px ) )
-            rows.append( ( 'Thumbnail numerical ratings always draw collapsed: ', self._draw_thumbnail_numerical_ratings_collapsed_always ) )
+            rows.append( ( 'Always draw thumbnail numerical ratings collapsed: ', self._draw_thumbnail_numerical_ratings_collapsed_always ) )
             
             thumbnail_ratings_gridbox = ClientGUICommon.WrapInGrid( thumbnail_ratings_panel, rows )
             thumbnail_ratings_panel.Add( thumbnail_ratings_gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
             rows = []
             
-            rows.append( ( 'Manage ratings popup icon size:', self._manage_ratings_rating_icon_size_px ) )
-            rows.append( ( 'Manage ratings popup inc/dec width:', self._manage_ratings_rating_incdec_width_px ) )
+            rows.append( ( 'Dialogs like/dislike and numerical rating icon size:', self._dialog_rating_icon_size_px ) )
+            rows.append( ( 'Dialogs inc/dec rating width:', self._dialog_rating_incdec_width_px ) )
             
             manage_ratings_gridbox = ClientGUICommon.WrapInGrid( manage_ratings_popup_panel, rows )
             
@@ -4694,8 +4700,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._draw_thumbnail_rating_incdec_width_px.setMaximum( new_value * 2 )
             self._draw_thumbnail_rating_incdec_width_px.setMinimum( new_value * 0.5 )
             
-            
-            
         
         def UpdateOptions( self ):
             
@@ -4710,8 +4714,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._new_options.SetFloat( 'preview_window_rating_icon_size_px', self._preview_window_rating_icon_size_px.value() )
             self._new_options.SetFloat( 'preview_window_rating_incdec_width_px', self._preview_window_rating_incdec_width_px.value() )
             
-            self._new_options.SetFloat( 'manage_ratings_window_icon_size_px', self._manage_ratings_rating_icon_size_px.value() )
-            self._new_options.SetFloat( 'manage_ratings_window_incdec_width_px', self._manage_ratings_rating_incdec_width_px.value() )
+            self._new_options.SetFloat( 'dialog_rating_icon_size_px', self._dialog_rating_icon_size_px.value() )
+            self._new_options.SetFloat( 'dialog_rating_incdec_width_px', self._dialog_rating_incdec_width_px.value() )
             
         
     
@@ -4723,7 +4727,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             regex_favourites = HC.options[ 'regex_favourites' ]
             
-            self._regex_panel = ClientGUIScrolledPanelsEdit.EditRegexFavourites( self, regex_favourites )
+            self._regex_panel = ClientGUIScrolledPanelsEditRegexFavourites.EditRegexFavourites( self, regex_favourites )
             
             vbox = QP.VBoxLayout()
             
@@ -5785,15 +5789,15 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             tag_summary_generator = self._new_options.GetTagSummaryGenerator( 'thumbnail_top' )
             
-            self._thumbnail_top = ClientGUITags.TagSummaryGeneratorButton( self._tag_banners_panel, tag_summary_generator )
+            self._thumbnail_top = ClientGUITagSummaryGenerator.TagSummaryGeneratorButton( self._tag_banners_panel, tag_summary_generator )
             
             tag_summary_generator = self._new_options.GetTagSummaryGenerator( 'thumbnail_bottom_right' )
             
-            self._thumbnail_bottom_right = ClientGUITags.TagSummaryGeneratorButton( self._tag_banners_panel, tag_summary_generator )
+            self._thumbnail_bottom_right = ClientGUITagSummaryGenerator.TagSummaryGeneratorButton( self._tag_banners_panel, tag_summary_generator )
             
             tag_summary_generator = self._new_options.GetTagSummaryGenerator( 'media_viewer_top' )
             
-            self._media_viewer_top = ClientGUITags.TagSummaryGeneratorButton( self._tag_banners_panel, tag_summary_generator )
+            self._media_viewer_top = ClientGUITagSummaryGenerator.TagSummaryGeneratorButton( self._tag_banners_panel, tag_summary_generator )
             
             #
             
@@ -5958,43 +5962,44 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         def _AddNamespaceColour( self ):
             
-            with ClientGUIDialogs.DialogTextEntry( self, 'Enter the namespace', allow_blank = False ) as dlg:
+            try:
                 
-                if dlg.exec() == QW.QDialog.DialogCode.Accepted:
-                    
-                    namespace = dlg.GetValue()
-                    
-                    namespace = namespace.lower().strip()
-                    
-                    if namespace in ( '', ':' ):
-                        
-                        ClientGUIDialogsMessage.ShowWarning( self, 'Sorry, that namespace means unnamespaced/default namespaced, which are already listed.' )
-                        
-                        return
-                        
-                    
-                    while namespace.endswith( ':' ):
-                        
-                        namespace = namespace[:-1]
-                        
-                    
-                    if namespace != 'system':
-                        
-                        namespace = HydrusTags.StripTagTextOfGumpf( namespace )
-                        
-                    
-                    existing_namespaces = self._namespace_colours.GetNamespaceColours().keys()
-                    
-                    if namespace in existing_namespaces:
-                        
-                        ClientGUIDialogsMessage.ShowWarning( self, 'Sorry, that namespace is already listed!' )
-                        
-                        return
-                        
-                    
-                    self._namespace_colours.SetNamespaceColour( namespace, QG.QColor( random.randint(0,255), random.randint(0,255), random.randint(0,255) ) )
-                    
+                namespace = ClientGUIDialogsQuick.EnterText( self, 'Enter the namespace.' )
                 
+            except HydrusExceptions.CancelledException:
+                
+                return
+                
+            
+            namespace = namespace.lower().strip()
+            
+            if namespace in ( '', ':' ):
+                
+                ClientGUIDialogsMessage.ShowWarning( self, 'Sorry, that namespace means unnamespaced/default namespaced, which are already listed.' )
+                
+                return
+                
+            
+            while namespace.endswith( ':' ):
+                
+                namespace = namespace[:-1]
+                
+            
+            if namespace != 'system':
+                
+                namespace = HydrusTags.StripTagTextOfGumpf( namespace )
+                
+            
+            existing_namespaces = self._namespace_colours.GetNamespaceColours().keys()
+            
+            if namespace in existing_namespaces:
+                
+                ClientGUIDialogsMessage.ShowWarning( self, 'Sorry, that namespace is already listed!' )
+                
+                return
+                
+            
+            self._namespace_colours.SetNamespaceColour( namespace, QG.QColor( random.randint(0,255), random.randint(0,255), random.randint(0,255) ) )
             
         
         def _DeleteNamespaceColour( self ):
@@ -6121,19 +6126,16 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             message = 'Enter the namespace. Leave blank for unnamespaced tags, use ":" for all unspecified namespaced tags.'
             
-            with ClientGUIDialogs.DialogTextEntry( self, message, allow_blank = True, default = namespace ) as dlg:
+            try:
                 
-                if dlg.exec() == QW.QDialog.DialogCode.Accepted:
-                    
-                    edited_namespace = dlg.GetValue()
-                    
-                    return edited_namespace
-                    
-                else:
-                    
-                    raise HydrusExceptions.VetoException()
-                    
+                edited_namespace = ClientGUIDialogsQuick.EnterText( self, message, default = namespace, allow_blank = True )
                 
+            except HydrusExceptions.CancelledException:
+                
+                raise
+                
+            
+            return edited_namespace
             
         
         def _PasteNamespaceGroupBySort( self ):
@@ -6461,52 +6463,53 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             message = 'enter namespace'
             
-            with ClientGUIDialogs.DialogTextEntry( self, message, allow_blank = False ) as dlg:
+            try:
                 
-                if dlg.exec() == QW.QDialog.DialogCode.Accepted:
+                tag_slice = ClientGUIDialogsQuick.EnterText( self, message )
+                
+            except HydrusExceptions.CancelledException:
+                
+                return
+                
+            
+            if tag_slice in ( '', ':' ):
+                
+                ClientGUIDialogsMessage.ShowWarning( self, 'Sorry, you cannot re-add unnamespaced or namespaced!' )
+                
+                return
+                
+            
+            if not tag_slice.endswith( ':' ):
+                
+                tag_slice = tag_slice + ':'
+                
+            
+            existing_tag_slices = { existing_tag_slice for ( existing_tag_slice, existing_weight ) in list_ctrl.GetData() }
+            
+            if tag_slice in existing_tag_slices:
+                
+                ClientGUIDialogsMessage.ShowWarning( self, 'Sorry, that namespace already exists!' )
+                
+                return
+                
+            
+            with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'set weight' ) as dlg_2:
+                
+                panel = ClientGUIScrolledPanels.EditSingleCtrlPanel( dlg_2 )
+                
+                control = ClientGUICommon.BetterSpinBox( panel, initial = 100, min = 0, max = 10000 )
+                
+                panel.SetControl( control, perpendicular = True )
+                
+                dlg_2.SetPanel( panel )
+                
+                if dlg_2.exec() == QW.QDialog.DialogCode.Accepted:
                     
-                    tag_slice = dlg.GetValue()
+                    weight = control.value()
                     
-                    if tag_slice in ( '', ':' ):
-                        
-                        ClientGUIDialogsMessage.ShowWarning( self, 'Sorry, you cannot re-add unnamespaced or namespaced!' )
-                        
-                        return
-                        
+                    new_data = ( tag_slice, weight )
                     
-                    if not tag_slice.endswith( ':' ):
-                        
-                        tag_slice = tag_slice + ':'
-                        
-                    
-                    existing_tag_slices = { existing_tag_slice for ( existing_tag_slice, existing_weight ) in list_ctrl.GetData() }
-                    
-                    if tag_slice in existing_tag_slices:
-                        
-                        ClientGUIDialogsMessage.ShowWarning( self, 'Sorry, that namespace already exists!' )
-                        
-                        return
-                        
-                    
-                    with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'set weight' ) as dlg_2:
-                        
-                        panel = ClientGUIScrolledPanels.EditSingleCtrlPanel( dlg_2 )
-                        
-                        control = ClientGUICommon.BetterSpinBox( panel, initial = 100, min = 0, max = 10000 )
-                        
-                        panel.SetControl( control, perpendicular = True )
-                        
-                        dlg_2.SetPanel( panel )
-                        
-                        if dlg_2.exec() == QW.QDialog.DialogCode.Accepted:
-                            
-                            weight = control.value()
-                            
-                            new_data = ( tag_slice, weight )
-                            
-                            list_ctrl.AddData( new_data, select_sort_and_scroll = True )
-                            
-                        
+                    list_ctrl.AddData( new_data, select_sort_and_scroll = True )
                     
                 
             

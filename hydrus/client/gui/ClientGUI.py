@@ -65,7 +65,6 @@ from hydrus.client.gui import ClientGUISplash
 from hydrus.client.gui import ClientGUIStyle
 from hydrus.client.gui import ClientGUISubscriptions
 from hydrus.client.gui import ClientGUISystemTray
-from hydrus.client.gui import ClientGUITags
 from hydrus.client.gui import ClientGUITopLevelWindows
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QLocator
@@ -77,7 +76,13 @@ from hydrus.client.gui.canvas import ClientGUIMPV
 from hydrus.client.gui.exporting import ClientGUIExport
 from hydrus.client.gui.importing import ClientGUIImportFolders
 from hydrus.client.gui.media import ClientGUIMediaControls
+from hydrus.client.gui.metadata import ClientGUITagDisplayMaintenanceEdit
+from hydrus.client.gui.metadata import ClientGUIManageTagParents
+from hydrus.client.gui.metadata import ClientGUIManageTagSiblings
 from hydrus.client.gui.metadata import ClientGUIMigrateTags
+from hydrus.client.gui.metadata import ClientGUITagFilter
+from hydrus.client.gui.metadata import ClientGUITagDisplayOptions
+from hydrus.client.gui.metadata import ClientGUITagDisplayMaintenanceReview
 from hydrus.client.gui.metadata import ClientGUITime
 from hydrus.client.gui.networking import ClientGUIHydrusNetwork
 from hydrus.client.gui.networking import ClientGUILogin
@@ -744,6 +749,10 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         
         library_version_lines.append( 'OpenCV: {}'.format( cv2.__version__ ) )
         library_version_lines.append( 'openssl: {}'.format( ssl.OPENSSL_VERSION ) )
+        
+        import numpy
+        
+        library_version_lines.append( 'numpy: {}'.format( numpy.__version__ ) )
         library_version_lines.append( 'Pillow: {}'.format( PIL.__version__ ) )
         
         qt_string = 'Qt: Unknown'
@@ -1430,15 +1439,16 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
             QP.CallAfter( qt_code, network_job )
             
         
-        with ClientGUIDialogs.DialogTextEntry( self, 'Enter the URL.' ) as dlg:
+        try:
             
-            if dlg.exec() == QW.QDialog.DialogCode.Accepted:
-                
-                url = dlg.GetValue()
-                
-                self._controller.CallToThread( thread_wait, url )
-                
+            url = ClientGUIDialogsQuick.EnterText( self, 'Enter the URL.' )
             
+        except HydrusExceptions.CancelledException:
+            
+            return
+            
+        
+        self._controller.CallToThread( thread_wait, url )
         
     
     def _DebugIsolateMPVWindows( self ):
@@ -1895,33 +1905,45 @@ QMenuBar::item { padding: 2px 8px; margin: 0px; }'''
     
     def _FetchIP( self, service_key ):
         
-        with ClientGUIDialogs.DialogTextEntry( self, 'Enter the file\'s hash.' ) as dlg:
+        try:
             
-            if dlg.exec() == QW.QDialog.DialogCode.Accepted:
-                
-                hash = bytes.fromhex( dlg.GetValue() )
-                
-                service = self._controller.services_manager.GetService( service_key )
-                
-                with ClientGUICommon.BusyCursor(): response = service.Request( HC.GET, 'ip', { 'hash' : hash } )
-                
-                ip = response[ 'ip' ]
-                timestamp = response[ 'timestamp' ]
-                
-                utc_time = HydrusTime.TimestampToPrettyTime( timestamp, in_utc = True )
-                local_time = HydrusTime.TimestampToPrettyTime( timestamp )
-                
-                text = 'File Hash: ' + hash.hex()
-                text += '\n'
-                text += 'Uploader\'s IP: ' + ip
-                text += 'Upload Time (UTC): ' + utc_time
-                text += 'Upload Time (Your time): ' + local_time
-                
-                HydrusData.Print( text )
-                
-                ClientGUIDialogsMessage.ShowInformation( self, text + '\n' * 2 + 'This has been written to the log.' )
-                
+            file_hash_hex = ClientGUIDialogsQuick.EnterText( self, 'Enter the file\'s hash.' )
             
+        except HydrusExceptions.CancelledException:
+            
+            return
+            
+        
+        try:
+            
+            hash = bytes.fromhex( file_hash_hex )
+            
+        except:
+            
+            ClientGUIDialogsMessage.ShowCritical( self, 'Error', 'Could not parse that hash!' )
+            
+            return
+            
+        
+        service = self._controller.services_manager.GetService( service_key )
+        
+        with ClientGUICommon.BusyCursor(): response = service.Request( HC.GET, 'ip', { 'hash' : hash } )
+        
+        ip = response[ 'ip' ]
+        timestamp = response[ 'timestamp' ]
+        
+        utc_time = HydrusTime.TimestampToPrettyTime( timestamp, in_utc = True )
+        local_time = HydrusTime.TimestampToPrettyTime( timestamp )
+        
+        text = 'File Hash: ' + hash.hex()
+        text += '\n'
+        text += 'Uploader\'s IP: ' + ip
+        text += 'Upload Time (UTC): ' + utc_time
+        text += 'Upload Time (Your time): ' + local_time
+        
+        HydrusData.Print( text )
+        
+        ClientGUIDialogsMessage.ShowInformation( self, text + '\n' * 2 + 'This has been written to the log.' )
         
     
     def _FindMenuBarIndex( self, name ):
@@ -4820,7 +4842,7 @@ ATTACH "client.mappings.db" as external_mappings;'''
             
             message = 'The repository will apply this to all new pending tags that are uploaded to it. Anything that does not pass is silently discarded.'
             
-            panel = ClientGUITags.EditTagFilterPanel( dlg, tag_filter, message = message, namespaces = namespaces )
+            panel = ClientGUITagFilter.EditTagFilterPanel( dlg, tag_filter, message = message, namespaces = namespaces )
             
             dlg.SetPanel( panel )
             
@@ -5131,7 +5153,7 @@ ATTACH "client.mappings.db" as external_mappings;'''
         
         with ClientGUITopLevelWindowsPanels.DialogEdit( self, title ) as dlg:
             
-            panel = ClientGUITags.EditTagDisplayManagerPanel( dlg, self._controller.tag_display_manager )
+            panel = ClientGUITagDisplayOptions.EditTagDisplayManagerPanel( dlg, self._controller.tag_display_manager )
             
             dlg.SetPanel( panel )
             
@@ -5156,7 +5178,7 @@ ATTACH "client.mappings.db" as external_mappings;'''
             
             ( master_service_keys_to_sibling_applicable_service_keys, master_service_keys_to_parent_applicable_service_keys ) = self._controller.Read( 'tag_display_application' )
             
-            panel = ClientGUITags.EditTagDisplayApplication( dlg, master_service_keys_to_sibling_applicable_service_keys, master_service_keys_to_parent_applicable_service_keys )
+            panel = ClientGUITagDisplayMaintenanceEdit.EditTagDisplayApplication( dlg, master_service_keys_to_sibling_applicable_service_keys, master_service_keys_to_parent_applicable_service_keys )
             
             dlg.SetPanel( panel )
             
@@ -5173,7 +5195,7 @@ ATTACH "client.mappings.db" as external_mappings;'''
         
         with ClientGUITopLevelWindowsPanels.DialogManage( self, 'manage tag parents' ) as dlg:
             
-            panel = ClientGUITags.ManageTagParents( dlg )
+            panel = ClientGUIManageTagParents.ManageTagParents( dlg )
             
             dlg.SetPanel( panel )
             
@@ -5185,7 +5207,7 @@ ATTACH "client.mappings.db" as external_mappings;'''
         
         with ClientGUITopLevelWindowsPanels.DialogManage( self, 'manage tag siblings' ) as dlg:
             
-            panel = ClientGUITags.ManageTagSiblings( dlg )
+            panel = ClientGUIManageTagSiblings.ManageTagSiblings( dlg )
             
             dlg.SetPanel( panel )
             
@@ -5278,30 +5300,33 @@ ATTACH "client.mappings.db" as external_mappings;'''
         
         service = self._controller.services_manager.GetService( service_key )
         
-        with ClientGUIDialogs.DialogTextEntry( self, 'Enter the account id for the account to be modified.' ) as dlg:
+        try:
             
-            if dlg.exec() == QW.QDialog.DialogCode.Accepted:
-                
-                try:
-                    
-                    account_key = bytes.fromhex( dlg.GetValue() )
-                    
-                except:
-                    
-                    ClientGUIDialogsMessage.ShowCritical( self, 'Error', 'Could not parse that account id' )
-                    
-                    return
-                    
-                
-                subject_account_identifiers = [ HydrusNetwork.AccountIdentifier( account_key = account_key ) ]
-                
-                frame = ClientGUITopLevelWindowsPanels.FrameThatTakesScrollablePanel( self, 'manage accounts' )
-                
-                panel = ClientGUIHydrusNetwork.ModifyAccountsPanel( frame, service_key, subject_account_identifiers )
-                
-                frame.SetPanel( panel )
-                
+            account_key_hex = ClientGUIDialogsQuick.EnterText( self, 'Enter the account id for the account to be modified.' )
             
+        except HydrusExceptions.CancelledException:
+            
+            return
+            
+        
+        try:
+            
+            account_key = bytes.fromhex( account_key_hex )
+            
+        except:
+            
+            ClientGUIDialogsMessage.ShowCritical( self, 'Error', 'Could not parse that account id!' )
+            
+            return
+            
+        
+        subject_account_identifiers = [ HydrusNetwork.AccountIdentifier( account_key = account_key ) ]
+        
+        frame = ClientGUITopLevelWindowsPanels.FrameThatTakesScrollablePanel( self, 'manage accounts' )
+        
+        panel = ClientGUIHydrusNetwork.ModifyAccountsPanel( frame, service_key, subject_account_identifiers )
+        
+        frame.SetPanel( panel )
         
     
     def _OpenDBFolder( self ):
@@ -6007,7 +6032,7 @@ ATTACH "client.mappings.db" as external_mappings;'''
         
         frame = ClientGUITopLevelWindowsPanels.FrameThatTakesScrollablePanel( self, 'tag display sync' )
         
-        panel = ClientGUITags.ReviewTagDisplayMaintenancePanel( frame )
+        panel = ClientGUITagDisplayMaintenanceReview.ReviewTagDisplayMaintenancePanel( frame )
         
         frame.SetPanel( panel )
         
@@ -6705,28 +6730,56 @@ ATTACH "client.mappings.db" as external_mappings;'''
     
     def _SetPassword( self ):
         
-        message = '''You can set a password to be asked for whenever the client starts.
+        message = '''You can set a password to be asked for whenever the client starts. This does not encrypt or truly lock the database files or media folders; it is just a simple check on boot. It will stop noobs from easily booting your client and poking around if you leave your machine unattended.
 
-Though not foolproof by any means, it will stop noobs from easily seeing your files if you leave your machine unattended.
-
-Do not ever forget your password! If you do, you'll have to manually insert a yaml-dumped python dictionary into a sqlite database or run from edited source to regain easy access. This is not trivial.
+Do not forget your password! If you do, you'll have to manually insert a yaml-dumped python dictionary into a sqlite database or run from edited source to regain access.
 
 The password is cleartext here but obscured in the entry dialog. Enter a blank password to remove.'''
         
-        with ClientGUIDialogs.DialogTextEntry( self, message, allow_blank = True, min_char_width = 24 ) as dlg:
+        try:
             
-            if dlg.exec() == QW.QDialog.DialogCode.Accepted:
+            password = ClientGUIDialogsQuick.EnterText( self, message, allow_blank = True, min_char_width = 36 )
+            
+        except HydrusExceptions.CancelledException:
+            
+            return
+            
+        
+        if password == '':
+            
+            text = 'Clear any existing password?'
+            
+            result = ClientGUIDialogsQuick.GetYesNo( self, text )
+            
+            if result != QW.QDialog.DialogCode.Accepted:
                 
-                password = dlg.GetValue()
-                
-                if password == '':
-                    
-                    password = None
-                    
-                
-                self._controller.Write( 'set_password', password )
+                return
                 
             
+            password = None
+            
+        else:
+            
+            message = 'Please enter it again.'
+            
+            try:
+                
+                password_confirmation = ClientGUIDialogsQuick.EnterText( self, message, allow_blank = False, min_char_width = 36 )
+                
+            except HydrusExceptions.CancelledException:
+                
+                return
+                
+            
+            if password != password_confirmation:
+                
+                ClientGUIDialogsMessage.ShowCritical( self, 'Problem!', 'Those passwords did not match!' )
+                
+                return
+                
+            
+        
+        self._controller.Write( 'set_password', password )
         
     
     def _SetMediaFocus( self ):
@@ -8167,43 +8220,42 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
             while True:
                 
-                with ClientGUIDialogs.DialogTextEntry( self, 'Enter a name for the new session.', default = suggested_name ) as dlg:
+                try:
                     
-                    if dlg.exec() == QW.QDialog.DialogCode.Accepted:
+                    message = 'Enter a name for the new session.'
+                    
+                    name = ClientGUIDialogsQuick.EnterText( self, message, default = suggested_name )
+                    
+                except HydrusExceptions.CancelledException:
+                    
+                    return
+                    
+                
+                if name in ClientGUISession.RESERVED_SESSION_NAMES:
+                    
+                    ClientGUIDialogsMessage.ShowWarning( self, 'Sorry, you cannot have that name! Try another.' )
+                    
+                else:
+                    
+                    existing_session_names = self._controller.Read( 'serialisable_names', HydrusSerialisable.SERIALISABLE_TYPE_GUI_SESSION_CONTAINER )
+                    
+                    if name in existing_session_names:
                         
-                        name = dlg.GetValue()
+                        message = 'Session "{}" already exists! Do you want to overwrite it?'.format( name )
                         
-                        if name in ClientGUISession.RESERVED_SESSION_NAMES:
+                        ( result, closed_by_user ) = ClientGUIDialogsQuick.GetYesNo( self, message, title = 'Overwrite existing session?', yes_label = 'yes, overwrite', no_label = 'no, choose another name', check_for_cancelled = True )
+                        
+                        if closed_by_user:
                             
-                            ClientGUIDialogsMessage.ShowWarning( self, 'Sorry, you cannot have that name! Try another.' )
+                            return
                             
-                        else:
+                        elif result == QW.QDialog.DialogCode.Rejected:
                             
-                            existing_session_names = self._controller.Read( 'serialisable_names', HydrusSerialisable.SERIALISABLE_TYPE_GUI_SESSION_CONTAINER )
-                            
-                            if name in existing_session_names:
-                                
-                                message = 'Session "{}" already exists! Do you want to overwrite it?'.format( name )
-                                
-                                ( result, closed_by_user ) = ClientGUIDialogsQuick.GetYesNo( self, message, title = 'Overwrite existing session?', yes_label = 'yes, overwrite', no_label = 'no, choose another name', check_for_cancelled = True )
-                                
-                                if closed_by_user:
-                                    
-                                    return
-                                    
-                                elif result == QW.QDialog.DialogCode.Rejected:
-                                    
-                                    continue
-                                    
-                                
-                            
-                            break
+                            continue
                             
                         
-                    else:
-                        
-                        return
-                        
+                    
+                    break
                     
                 
             

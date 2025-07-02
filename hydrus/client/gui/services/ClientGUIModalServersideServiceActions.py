@@ -8,8 +8,8 @@ from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientServices
 from hydrus.client import ClientThreading
 from hydrus.client.gui import ClientGUIAsync
-from hydrus.client.gui import ClientGUITags
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
+from hydrus.client.gui.metadata import ClientGUITagFilter
 
 def ManageServiceOptionsTagFilter(
     win: QW.QWidget,
@@ -38,7 +38,7 @@ def ManageServiceOptionsTagFilter(
         
         message = 'The repository will apply this to all new pending tags that are uploaded to it. Anything that does not pass is silently discarded.'
         
-        panel = ClientGUITags.EditTagFilterPanel( dlg, tag_filter, message = message, namespaces = namespaces )
+        panel = ClientGUITagFilter.EditTagFilterPanel( dlg, tag_filter, message = message, namespaces = namespaces )
         
         dlg.SetPanel( panel )
         

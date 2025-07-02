@@ -711,21 +711,16 @@ def GetContentUpdatesForAppliedContentApplicationCommandTags( win: QW.QWidget, s
             
             message = 'Enter a reason for this tag to be removed. A janitor will review your petition.'
             
-            from hydrus.client.gui import ClientGUIDialogs
+            try:
+                
+                reason = ClientGUIDialogsQuick.EnterText( win, message )
+                
+            except HydrusExceptions.CancelledException:
+                
+                return []
+                
             
-            with ClientGUIDialogs.DialogTextEntry( win, message ) as dlg:
-                
-                if dlg.exec() == QW.QDialog.DialogCode.Accepted:
-                    
-                    content_update_action = HC.CONTENT_UPDATE_PETITION
-                    
-                    reason = dlg.GetValue()
-                    
-                else:
-                    
-                    return []
-                    
-                
+            content_update_action = HC.CONTENT_UPDATE_PETITION
             
         else:
             

@@ -16,7 +16,6 @@ from hydrus.client import ClientApplicationCommand as CAC
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientTime
-from hydrus.client.gui import ClientGUIDialogs
 from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIFunctions
@@ -403,55 +402,56 @@ class EditFileTimestampsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUISc
     
     def _AddDomainModifiedTimestamp( self ):
         
-        message = 'Enter domain'
+        message = 'Enter domain.'
         
-        with ClientGUIDialogs.DialogTextEntry( self, message, allow_blank = False ) as dlg:
+        try:
             
-            if dlg.exec() == QW.QDialog.DialogCode.Accepted:
+            domain = ClientGUIDialogsQuick.EnterText( self, message )
+            
+        except HydrusExceptions.CancelledException:
+            
+            return
+            
+        
+        for existing_domain in self._domain_modified_list_ctrl.GetData():
+            
+            if domain == existing_domain:
                 
-                domain = dlg.GetValue()
+                ClientGUIDialogsMessage.ShowWarning( self, 'Sorry, that domain already exists!' )
                 
-                for existing_domain in self._domain_modified_list_ctrl.GetData():
-                    
-                    if domain == existing_domain:
-                        
-                        ClientGUIDialogsMessage.ShowWarning( self, 'Sorry, that domain already exists!' )
-                        
-                        return
-                        
-                    
+                return
                 
-                with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit datetime' ) as dlg_2:
-                    
-                    hashes = [ m.GetHash() for m in self._ordered_medias ]
-                    
-                    panel = ClientGUIScrolledPanels.EditSingleCtrlPanel( dlg_2 )
-                    
-                    control = ClientGUITime.DateTimesCtrl( self, seconds_allowed = True, milliseconds_allowed = True, none_allowed = False, only_past_dates = True )
-                    
-                    datetime_value_range = ClientGUITime.DateTimeWidgetValueRange()
-                    
-                    qt_datetime = QC.QDateTime.currentDateTime()
-                    
-                    datetime_value_range.AddValueQtDateTime( qt_datetime, num_to_add = len( hashes ) )
-                    
-                    control.SetValue( datetime_value_range )
-                    
-                    panel.SetControl( control )
-                    
-                    dlg_2.SetPanel( panel )
-                    
-                    if dlg_2.exec() == QW.QDialog.DialogCode.Accepted: # no 'haschanges' check here, we are ok with starting value
-                        
-                        new_datetime_value_range = control.GetValue()
-                        
-                        user_has_edited = True
-                        
-                        self._domain_modified_list_ctrl_data_dict[ domain ] = ( hashes, new_datetime_value_range, user_has_edited )
-                        
-                        self._domain_modified_list_ctrl.AddData( domain, select_sort_and_scroll = True )
-                        
-                    
+            
+        
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit datetime' ) as dlg_2:
+            
+            hashes = [ m.GetHash() for m in self._ordered_medias ]
+            
+            panel = ClientGUIScrolledPanels.EditSingleCtrlPanel( dlg_2 )
+            
+            control = ClientGUITime.DateTimesCtrl( self, seconds_allowed = True, milliseconds_allowed = True, none_allowed = False, only_past_dates = True )
+            
+            datetime_value_range = ClientGUITime.DateTimeWidgetValueRange()
+            
+            qt_datetime = QC.QDateTime.currentDateTime()
+            
+            datetime_value_range.AddValueQtDateTime( qt_datetime, num_to_add = len( hashes ) )
+            
+            control.SetValue( datetime_value_range )
+            
+            panel.SetControl( control )
+            
+            dlg_2.SetPanel( panel )
+            
+            if dlg_2.exec() == QW.QDialog.DialogCode.Accepted: # no 'haschanges' check here, we are ok with starting value
+                
+                new_datetime_value_range = control.GetValue()
+                
+                user_has_edited = True
+                
+                self._domain_modified_list_ctrl_data_dict[ domain ] = ( hashes, new_datetime_value_range, user_has_edited )
+                
+                self._domain_modified_list_ctrl.AddData( domain, select_sort_and_scroll = True )
                 
             
         
