@@ -219,7 +219,7 @@ def DrawNumerical( painter: QG.QPainter, x: int, y: int, service_key, rating_sta
 
 def GetIconSize( canvas_type, service_type = ClientGUICommon.HC.LOCAL_RATING_LIKE ):
     
-    if canvas_type == CC.CANVAS_MEDIA_VIEWER:
+    if canvas_type in CC.CANVAS_MEDIA_VIEWER_TYPES:
         
         rating_icon_size_px = CG.client_controller.new_options.GetFloat( 'media_viewer_rating_icon_size_px' )
         rating_incdec_width_px = CG.client_controller.new_options.GetFloat( 'media_viewer_rating_incdec_width_px' )

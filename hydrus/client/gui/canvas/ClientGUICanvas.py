@@ -58,7 +58,7 @@ def AddAudioVolumeMenu( menu, canvas_type ):
     mute_volume_type = None
     volume_volume_type = ClientGUIMediaControls.AUDIO_GLOBAL
     
-    if canvas_type == CC.CANVAS_MEDIA_VIEWER:
+    if canvas_type in CC.CANVAS_MEDIA_VIEWER_TYPES:
         
         mute_volume_type = ClientGUIMediaControls.AUDIO_MEDIA_VIEWER
         

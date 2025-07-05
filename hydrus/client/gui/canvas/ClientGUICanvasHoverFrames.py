@@ -1676,7 +1676,7 @@ class CanvasHoverFrameTopRight( CanvasHoverFrame ):
         
         canvas_type = self._my_canvas.GetCanvasType()
         
-        if canvas_type == CC.CANVAS_MEDIA_VIEWER :
+        if canvas_type in CC.CANVAS_MEDIA_VIEWER_TYPES:
             
             if CG.client_controller.new_options.GetBoolean( 'disable_top_right_hover_in_media_viewer'):
                 
