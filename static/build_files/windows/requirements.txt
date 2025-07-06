@@ -1,6 +1,5 @@
 cbor2
 cryptography
-dateparser
 pympler
 python-dateutil
 
@@ -26,6 +25,7 @@ twisted[tls,http2]>=20.3.0
 opencv-python-headless==4.10.0.84
 mpv==1.0.7
 
+dateparser==1.2.1
 numpy==2.3.1
 requests==2.32.4
 

@@ -28,6 +28,9 @@ try:
     
 except:
     
+    import traceback
+    traceback.print_exc()
+    
     DATEPARSER_OK = False
     
 
