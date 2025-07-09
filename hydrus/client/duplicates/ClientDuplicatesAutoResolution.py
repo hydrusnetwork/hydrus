@@ -420,7 +420,7 @@ class DuplicatesAutoResolutionRule( HydrusSerialisable.SerialisableBaseNamed ):
             
             if self._operation_mode == DUPLICATES_AUTO_RESOLUTION_RULE_OPERATION_MODE_WORK_BUT_NO_ACTION:
                 
-                if self._max_pending_pairs is not None and self._counts_cache[ DUPLICATE_STATUS_MATCHES_SEARCH_PASSED_TEST_READY_TO_ACTION ] > self._max_pending_pairs:
+                if self._max_pending_pairs is not None and self._counts_cache[ DUPLICATE_STATUS_MATCHES_SEARCH_PASSED_TEST_READY_TO_ACTION ] >= self._max_pending_pairs:
                     
                     return False
                     
