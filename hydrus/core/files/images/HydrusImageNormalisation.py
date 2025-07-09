@@ -182,7 +182,11 @@ def ConvertGammaChromaticityPNGToSRGB( pil_image ):
             
         
     
-    return PILImage.fromarray( primary_work_canvas_uint8, mode = pil_image.mode )
+    converted_pil_image_modeless = PILImage.fromarray( primary_work_canvas_uint8 )
+    
+    converted_pil_image = converted_pil_image_modeless.convert( pil_image.mode ) # probably a no-op
+    
+    return converted_pil_image
     
 
 def GenerateICCProfileBytesFromGammaAndChromaticityPNG( pil_image: PILImage.Image ):

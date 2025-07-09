@@ -1,3 +1,5 @@
+import time
+
 from hydrus.core import HydrusData
 from hydrus.core import HydrusTime
 
@@ -166,6 +168,16 @@ class DatabaseMaintenanceManager( ClientDaemons.ManagerWithMainLoop ):
             with self._lock:
                 
                 wait_period = self._GetWaitPeriod( work_period, time_it_took, still_work_to_do )
+                
+            
+            FORCED_WAIT_PERIOD = 0.25
+            
+            if wait_period > FORCED_WAIT_PERIOD:
+                
+                # forced wait when lots going on
+                time.sleep( FORCED_WAIT_PERIOD )
+                
+                wait_period -= FORCED_WAIT_PERIOD
                 
             
             self._wake_event.wait( wait_period )

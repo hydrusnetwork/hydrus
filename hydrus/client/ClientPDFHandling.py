@@ -1,19 +1,19 @@
 import re
 import traceback
 
-pdf_failed_reason = 'QtPdf seems ok!'
+PDF_OK = True
+PDF_MODULE_NOT_FOUND = False
+PDF_IMPORT_ERROR = 'QtPdf seems fine!'
 
 try:
     
     from qtpy import QtPdf
     
-    PDF_OK = True
-    
-except Exception:
-    
-    pdf_failed_reason = traceback.format_exc()
+except Exception as e:
     
     PDF_OK = False
+    PDF_MODULE_NOT_FOUND = isinstance( e, ModuleNotFoundError )
+    PDF_IMPORT_ERROR = traceback.format_exc()
     
 
 from qtpy import QtGui as QG

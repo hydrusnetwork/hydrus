@@ -315,6 +315,8 @@ def ElideFilenameSafely( name: str, num_character_count_available: int, director
         name = name[:-1]
         
     
+    name = name.strip()
+    
     if name == '':
         
         raise Exception( 'Sorry, it looks like the export filename would be too long! Try shortening the export phrase or directory!' )
@@ -350,6 +352,13 @@ def ElideDirectoryHack( name: str, force_ntfs = False ):
     while the_test( name ):
         
         name = name[:-1]
+        
+    
+    name = name.strip()
+    
+    if name == '':
+        
+        name = 'directory_truncated'
         
     
     return name
@@ -1269,6 +1278,10 @@ def RecyclePath( path ):
         
     
 
+NTFS_disallowed_names_case_insensitive = { 'con', 'prn', 'aux', 'nul' }
+NTFS_disallowed_names_case_insensitive.update( ( f'com{x}' for x in range( 1, 10 ) ) )
+NTFS_disallowed_names_case_insensitive.update( ( f'lpt{x}' for x in range( 1, 10 ) ) )
+
 def SanitizeFilename( filename, force_ntfs = False ) -> str:
     
     if HC.PLATFORM_WINDOWS or force_ntfs:
@@ -1276,15 +1289,38 @@ def SanitizeFilename( filename, force_ntfs = False ) -> str:
         # \, /, :, *, ?, ", <, >, |
         bad_characters = r'[\\/:*?"<>|]'
         
+        disallowed_names_case_insensitive = NTFS_disallowed_names_case_insensitive
+        disallowed_suffix_characters = { '.', ' ' }
+        
     else:
         
         bad_characters = '/'
         
+        disallowed_names_case_insensitive = set()
+        disallowed_suffix_characters = {}
+        
     
-    return re.sub( bad_characters, '_', filename )
+    clean_filename = re.sub( bad_characters, '_', filename )
+    
+    if len( disallowed_suffix_characters ) > 0:
+        
+        while True in ( clean_filename.endswith( c ) for c in disallowed_suffix_characters ):
+            
+            clean_filename = clean_filename[:-1]
+            
+        
+    
+    clean_filename = clean_filename.strip()
+    
+    if clean_filename.lower() in disallowed_names_case_insensitive:
+        
+        clean_filename = clean_filename + '_'
+        
+    
+    return clean_filename
     
 
-def SanitizePathForExport( directory_path, directories_and_filename ):
+def SanitizePathForExport( directories_and_filename, force_ntfs ):
     
     # this does not figure out the situation where the suffix directories cross a mount point to a new file system, but at that point it is user's job to fix
     
@@ -1293,17 +1329,6 @@ def SanitizePathForExport( directory_path, directories_and_filename ):
     filename = components[-1]
     
     suffix_directories = components[:-1]
-    
-    fst = GetFileSystemType( directory_path )
-    
-    if fst is None:
-        
-        force_ntfs = False
-        
-    else:
-        
-        force_ntfs = fst.lower() in ( 'ntfs', 'exfat' )
-        
     
     suffix_directories = [ ElideDirectoryHack( suffix_directory, force_ntfs = force_ntfs ) for suffix_directory in suffix_directories ]
     

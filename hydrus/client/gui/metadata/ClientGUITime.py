@@ -1513,7 +1513,7 @@ class TimestampDataStubCtrl( QW.QWidget ):
     
     valueChanged = QC.Signal()
     
-    def __init__( self, parent, timestamp_data_stub = None ):
+    def __init__( self, parent, timestamp_data_stub = None, show_aggregate_modified_time = False ):
         
         super().__init__( parent )
         
@@ -1522,11 +1522,18 @@ class TimestampDataStubCtrl( QW.QWidget ):
             timestamp_data_stub = ClientTime.TimestampData.STATICSimpleStub( HC.TIMESTAMP_TYPE_ARCHIVED )
             
         
+        self._show_aggregate_modified_time = show_aggregate_modified_time
+        
         #
         
         self._timestamp_type = ClientGUICommon.BetterChoice( self )
         
-        for timestamp_type in [ HC.TIMESTAMP_TYPE_ARCHIVED, HC.TIMESTAMP_TYPE_MODIFIED_FILE, HC.TIMESTAMP_TYPE_MODIFIED_DOMAIN, HC.TIMESTAMP_TYPE_IMPORTED, HC.TIMESTAMP_TYPE_DELETED, HC.TIMESTAMP_TYPE_PREVIOUSLY_IMPORTED, HC.TIMESTAMP_TYPE_LAST_VIEWED ]:
+        for timestamp_type in [ HC.TIMESTAMP_TYPE_ARCHIVED, HC.TIMESTAMP_TYPE_MODIFIED_FILE, HC.TIMESTAMP_TYPE_MODIFIED_DOMAIN, HC.TIMESTAMP_TYPE_MODIFIED_AGGREGATE, HC.TIMESTAMP_TYPE_IMPORTED, HC.TIMESTAMP_TYPE_DELETED, HC.TIMESTAMP_TYPE_PREVIOUSLY_IMPORTED, HC.TIMESTAMP_TYPE_LAST_VIEWED ]:
+            
+            if timestamp_type == HC.TIMESTAMP_TYPE_MODIFIED_AGGREGATE and not show_aggregate_modified_time:
+                
+                continue
+                
             
             label = HC.timestamp_type_str_lookup[ timestamp_type ]
             

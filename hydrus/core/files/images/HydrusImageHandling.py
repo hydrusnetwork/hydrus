@@ -10,99 +10,133 @@ import io
 import typing
 import warnings
 
+from PIL import features as PILFeatures
 from PIL import ImageFile as PILImageFile
 from PIL import Image as PILImage
 from PIL import ImageOps as PILImageOps
 
 from hydrus.core import HydrusData
 
-try:
+with warnings.catch_warnings():
     
-    # TODO: clean up this import mess
+    warnings.simplefilter( 'ignore', UserWarning )
     
-    from pillow_heif import register_heif_opener
+    PIL_HAS_HEIF = PILFeatures.check( 'heif' )
     
-    register_heif_opener(thumbnails=False)
+
+HEIF_PLUGIN_OK = False
+
+if not PIL_HAS_HEIF:
     
     try:
         
-        import pillow_heif.options
+        # TODO: clean up this import mess
         
-        pillow_heif.options.DISABLE_SECURITY_LIMITS = True # no 512MB/768MB bitmap limit for file loading
+        from pillow_heif import register_heif_opener
+        
+        register_heif_opener(thumbnails=False)
+        
+        try:
+            
+            import pillow_heif.options
+            
+            pillow_heif.options.DISABLE_SECURITY_LIMITS = True # no 512MB/768MB bitmap limit for file loading
+            
+        except:
+            
+            pass
+            
+        
+        HEIF_PLUGIN_OK = True
         
     except:
         
-        pass
+        HydrusData.Print( 'Could not register HEIF Opener with plugin library.' )
         
     
-    HEIF_OK = True
+
+HEIF_OK = PIL_HAS_HEIF or HEIF_PLUGIN_OK
+
+with warnings.catch_warnings():
     
-except:
+    warnings.simplefilter( 'ignore', UserWarning )
     
-    HEIF_OK = False
+    # should be true as of PIL 11.3
+    PIL_HAS_AVIF = PILFeatures.check( 'avif' )
     
 
-AVIF_OK = False
+AVIF_PLUGIN_OK = False
+AVIF_BACKUP_PLUGIN_OK = False
 
-try:
-    
-    import pillow_avif
-    
-    AVIF_OK = True
-    
-except:
+if not PIL_HAS_AVIF:
     
     try:
         
-        import pillow_heif
+        import pillow_avif
         
-        pillow_does_not_have_native_avif_support = True
-        # this is the version test that failed. they decided not to bundle it in the wheel because it bloated it https://pillow.readthedocs.io/en/stable/releasenotes/11.2.1.html
-        # now waiting on a future version to see if they can figure out a solution 
-        # pillow_does_not_have_native_avif_support = tuple( ( int( v ) for v in PIL.__version__.split( '.' ) ) ) < ( 11, 2 )
-        
-        # they may try again in 11.3: https://github.com/python-pillow/Pillow/pull/5201#issuecomment-2833394184
-        
-        if pillow_does_not_have_native_avif_support and hasattr( pillow_heif, 'register_avif_opener' ):
-            
-            try:
-                
-                from pillow_heif import register_avif_opener
-                
-                register_avif_opener(thumbnails=False) # this is now deprecated 2024-04, pillow_heif 0.22.0
-                
-                AVIF_OK = True
-                
-                HydrusData.Print( 'AVIF Opener registered with legacy library.' )
-                
-            except:
-                
-                HydrusData.Print( 'Could not register AVIF Opener with main or legacy library.' )
-                
-            
+        AVIF_PLUGIN_OK = True
         
     except:
         
-        HydrusData.Print( 'Could not register AVIF Opener with main or legacy library.' )
+        try:
+            
+            import pillow_heif
+            
+            if hasattr( pillow_heif, 'register_avif_opener' ):
+                
+                try:
+                    
+                    from pillow_heif import register_avif_opener
+                    
+                    register_avif_opener(thumbnails=False) # this is now deprecated 2024-04, pillow_heif 0.22.0
+                    
+                    AVIF_BACKUP_PLUGIN_OK = True
+                    
+                    HydrusData.Print( 'AVIF Opener registered with legacy library.' )
+                    
+                except:
+                    
+                    HydrusData.Print( 'Could not register AVIF Opener with main or legacy library.' )
+                    
+                
+            
+        except:
+            
+            HydrusData.Print( 'Could not register AVIF Opener with main or legacy plugin library.' )
+            
         
     
 
-try:
+AVIF_OK = PIL_HAS_AVIF or AVIF_PLUGIN_OK or AVIF_BACKUP_PLUGIN_OK
+
+with warnings.catch_warnings():
     
-    import pillow_jxl
+    warnings.simplefilter( 'ignore', UserWarning )
     
-    JXL_OK = True
+    PIL_HAS_JXL = PILFeatures.check( 'jpegxl' )
     
-    JXL_ERROR_TEXT = 'Jpeg-XL seems fine!'
+
+JXL_PLUGIN_OK = False
+
+if not PIL_HAS_JXL:
     
-except Exception as e:
+    try:
+        
+        import pillow_jxl
+        
+        JXL_PLUGIN_OK = True
+        
+        JXL_ERROR_TEXT = 'Jpeg-XL seems fine!'
+        
+    except Exception as e:
+        
+        import traceback
+        
+        JXL_ERROR_TEXT = traceback.format_exc()
+        
     
-    JXL_OK = False
-    
-    import traceback
-    
-    JXL_ERROR_TEXT = traceback.format_exc()
-    
+
+JXL_OK = PIL_HAS_JXL or JXL_PLUGIN_OK
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData

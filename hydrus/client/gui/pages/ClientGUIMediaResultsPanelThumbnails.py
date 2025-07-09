@@ -2524,7 +2524,7 @@ class Thumbnail( Selectable ):
             numerical_rating_current_x = rect_x + round( ICON_PAD / 2 )
             numerical_rating_current_y = rect_y + round( ICON_PAD / 2 )
             
-            ClientGUIRatings.DrawNumerical( painter, numerical_rating_current_x, numerical_rating_current_y, service_key, rating_state, rating, QC.QSize( STAR_DX, STAR_DY ), custom_pad, draw_collapsed_numerical_ratings )
+            ClientGUIRatings.DrawNumerical( painter, numerical_rating_current_x, numerical_rating_current_y, service_key, rating_state, rating, size = QC.QSize( STAR_DX, STAR_DY ), pad_px = custom_pad, draw_collapsed = draw_collapsed_numerical_ratings, text_pen_colour = qss_text_colour )
             
             current_top_right_y += rect_height
             

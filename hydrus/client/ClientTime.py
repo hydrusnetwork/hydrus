@@ -1,37 +1,46 @@
 import datetime
+import traceback
 import typing
 
 from hydrus.core import HydrusConstants as HC
+from hydrus.core import HydrusData
 from hydrus.core import HydrusSerialisable
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
 
+DATEUTIL_OK = True
+DATEUTIL_MODULE_NOT_FOUND = False
+DATEUTIL_IMPORT_ERROR = 'Dateutil seems fine!'
+
 try:
+    
+    import dateutil.parser
     
     from dateutil.relativedelta import relativedelta
     
-    DATEUTIL_OK = True
-    
-except:
+except Exception as e:
     
     DATEUTIL_OK = False
+    DATEUTIL_MODULE_NOT_FOUND = isinstance( e, ModuleNotFoundError )
+    DATEUTIL_IMPORT_ERROR = traceback.format_exc()
     
 
 from hydrus.core import HydrusTime
+
+DATEPARSER_OK = True
+DATEPARSER_MODULE_NOT_FOUND = False
+DATEPARSER_IMPORT_ERROR = 'Dateparser seems fine!'
 
 try:
     
     import dateparser
     
-    DATEPARSER_OK = True
-    
-except:
-    
-    import traceback
-    traceback.print_exc()
+except Exception as e:
     
     DATEPARSER_OK = False
+    DATEPARSER_MODULE_NOT_FOUND = isinstance( e, ModuleNotFoundError )
+    DATEPARSER_IMPORT_ERROR = traceback.format_exc()
     
 
 def CalendarDelta( dt: datetime.datetime, month_delta = 0, day_delta = 0 ) -> datetime.datetime:
@@ -52,32 +61,60 @@ def CalendarDelta( dt: datetime.datetime, month_delta = 0, day_delta = 0 ) -> da
 
 def ParseDate( date_string: str ):
     
-    if not DATEPARSER_OK:
+    if not DATEUTIL_OK and not DATEPARSER_OK:
         
-        raise Exception( 'Sorry, you need the dateparse library for this, please try reinstalling your venv!' )
-        
-    
-    # as a weird note, this function appears, in one case, to raise the sorry Exception, after several seconds of delay, if the boot locale is ru_RU
-    # it works on the same machine if locale is set to en_US. this suggests some environment variable locale-forcing or similar, or a bug in dateparser, that is causing the delay (and then?) failing the 'en' fallback 
-    
-    # dateparser does not have ru-RU in its internal locale mappings, nor en-US. it has a whole bunch like 'en-PH', which will parse "19 October 2024, 3:45 PM", but not the more common ones
-    # it'll raise an error if you ask for en-US but not if you ask for locales = [ 'en' ], where 'en' _seems_ to be a proxy for 'en-US', so there's some weird locale init going on, idk
-    
-    dt = dateparser.parse( date_string )
-    
-    if dt is None:
-        
-        # '7/18/2023 8:32:00AM' will not parse if the locale is 'pl', seems to be a 24-hour clock thing
-        # since most non-locale timestamps will be EN, let's do this as fallback
-        dt = dateparser.parse( date_string, languages = ['en'] )
+        raise Exception( 'Sorry, you need either the dateparser or dateutil library to do date parsing!' )
         
     
-    if dt is None:
+    if DATEPARSER_OK:
         
-        raise Exception( 'Sorry, could not parse that date!' )
+        # as a weird note, this function appears, in one case, to raise the sorry Exception, after several seconds of delay, if the boot locale is ru_RU
+        # it works on the same machine if locale is set to en_US. this suggests some environment variable locale-forcing or similar, or a bug in dateparser, that is causing the delay (and then?) failing the 'en' fallback
+        # UPDATE sometime later (2025-06), here: https://github.com/hydrusnetwork/hydrus/issues/1754
+        # it was a locale issue. if dateparser is first imported after one of probably locale, Qt, mpv, it can't build its timezone cache properly
+        
+        try:
+            
+            dt = dateparser.parse( date_string )
+            
+            if dt is None:
+                
+                # '7/18/2023 8:32:00AM' will not parse if the locale is 'pl', seems to be a 24-hour clock thing
+                # since most non-locale timestamps will be EN, let's do this as fallback
+                dt = dateparser.parse( date_string, languages = ['en'] )
+                
+            
+            return HydrusTime.DateTimeToTimestamp( dt )
+            
+        except:
+            
+            HydrusData.Print( f'Dateparser failed to parse: "{date_string}"' )
+            
         
     
-    return HydrusTime.DateTimeToTimestamp( dt )
+    if DATEUTIL_OK:
+        
+        try:
+            
+            try:
+                
+                # if you give this 'January 12, 2012 10:00 PM EST', it moans about the timezone being not understood. maybe some summertime thing? or maybe it wants +0300 kind of thing
+                dt = dateutil.parser.parse( date_string )
+                
+            except:
+                
+                dt = dateutil.parser.parse( date_string, ignoretz = True )
+                
+            
+            return HydrusTime.DateTimeToTimestamp( dt )
+            
+        except:
+            
+            HydrusData.Print( f'Dateutil failed to parse: "{date_string}"' )
+            
+        
+    
+    raise Exception( 'Sorry, could not parse that date!' )
     
 
 def MergeModifiedTimes( existing_timestamp: typing.Optional[ int ], new_timestamp: typing.Optional[ int ] ) -> typing.Optional[ int ]:

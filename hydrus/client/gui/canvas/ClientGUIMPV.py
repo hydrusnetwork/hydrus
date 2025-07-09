@@ -25,19 +25,19 @@ from hydrus.client.gui.media import ClientGUIMediaControls
 from hydrus.client.gui.media import ClientGUIMediaVolume
 from hydrus.client.media import ClientMedia
 
-mpv_failed_reason = 'MPV seems ok!'
+MPV_IS_AVAILABLE = True
+MPV_MODULE_NOT_FOUND = False
+MPV_IMPORT_ERROR = 'MPV seems fine!'
 
 try:
     
     import mpv
     
-    MPV_IS_AVAILABLE = True
-    
 except Exception as e:
     
-    mpv_failed_reason = traceback.format_exc()
-    
     MPV_IS_AVAILABLE = False
+    MPV_MODULE_NOT_FOUND = isinstance( e, ModuleNotFoundError )
+    MPV_IMPORT_ERROR = traceback.format_exc()
     
 
 damaged_file_hashes = set()
@@ -1012,11 +1012,6 @@ class MPVWidget( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
         try:
             
             self._player.pause = True
-            
-            if CG.client_controller.new_options.GetBoolean( 'stop_mpv_on_media_transition' ):
-                
-                self._player.stop()
-                
             
             if self._media is None:
                 

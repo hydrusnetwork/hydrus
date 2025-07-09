@@ -109,7 +109,7 @@ class EditSingleFileMetadataImporterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._timestamp_data_stub_panel = ClientGUICommon.StaticBox( self, 'timestamp type' )
         
-        self._timestamp_data_stub = ClientGUITime.TimestampDataStubCtrl( self._timestamp_data_stub_panel )
+        self._timestamp_data_stub = ClientGUITime.TimestampDataStubCtrl( self._timestamp_data_stub_panel, show_aggregate_modified_time = True )
         
         self._timestamp_data_stub_panel.Add( self._timestamp_data_stub, CC.FLAGS_EXPAND_BOTH_WAYS )
         

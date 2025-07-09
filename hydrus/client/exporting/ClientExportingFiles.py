@@ -124,7 +124,18 @@ def GenerateExportFilename( destination_directory, media, terms, file_index, do_
         filename = re.sub( '/+', '/', filename )
         
     
-    filename = HydrusPaths.SanitizePathForExport( destination_directory, filename )
+    fst = HydrusPaths.GetFileSystemType( destination_directory )
+    
+    if fst is None:
+        
+        force_ntfs = False
+        
+    else:
+        
+        force_ntfs = fst.lower() in ( 'ntfs', 'exfat' )
+        
+    
+    filename = HydrusPaths.SanitizePathForExport( filename, force_ntfs )
     
     #
     

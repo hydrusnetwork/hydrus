@@ -1998,7 +1998,7 @@ class CanvasPanelWithHovers( CanvasPanel ):
             
             current_x = my_width - numerical_width - ( QFRAME_PADDING + VBOX_MARGIN ) + round( STAR_PAD.width() / 2 )
             
-            ClientGUIRatings.DrawNumerical( painter, current_x, current_y, service_key, rating_state, rating, QC.QSize( STAR_DX, STAR_DY ), custom_pad )
+            ClientGUIRatings.DrawNumerical( painter, current_x, current_y, service_key, rating_state, rating, size = QC.QSize( STAR_DX, STAR_DY ), pad_px = custom_pad )
             
             current_y += STAR_DY + STAR_PAD.height() + VBOX_SPACING
             
@@ -2586,7 +2586,7 @@ class CanvasWithHovers( Canvas ):
             
             current_x = my_width - numerical_width - ( QFRAME_PADDING + VBOX_MARGIN ) + round( STAR_PAD.width() / 2 )
             
-            ClientGUIRatings.DrawNumerical( painter, current_x, current_y, service_key, rating_state, rating, QC.QSize( STAR_DX, STAR_DY ), custom_pad )
+            ClientGUIRatings.DrawNumerical( painter, current_x, current_y, service_key, rating_state, rating, size = QC.QSize( STAR_DX, STAR_DY ), pad_px = custom_pad )
             
             current_y += STAR_DY + STAR_PAD.height() + VBOX_SPACING
             

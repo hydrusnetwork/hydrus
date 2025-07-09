@@ -1,10 +1,14 @@
+import traceback
+
 from qtpy import QtCore as QC
+
+QT_CHARTS_OK = True
+QT_CHARTS_MODULE_NOT_FOUND = False
+QT_CHARTS_IMPORT_ERROR = 'QtCharts seems fine!'
 
 try:
     
     from qtpy import QtCharts as QCh
-    
-    QT_CHARTS_OK = True
     
     class BarChartBandwidthHistory( QCh.QtCharts.QChartView ):
         
@@ -248,7 +252,9 @@ try:
             
         
     
-except:
+except Exception as e:
     
     QT_CHARTS_OK = False
+    QT_CHARTS_MODULE_NOT_FOUND = isinstance( e, ModuleNotFoundError )
+    QT_CHARTS_IMPORT_ERROR = traceback.format_exc()
     

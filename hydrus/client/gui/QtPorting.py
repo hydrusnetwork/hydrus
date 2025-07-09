@@ -1416,7 +1416,8 @@ def CallAfter( fn, *args, **kwargs ):
     
     QW.QApplication.instance().postEvent( QW.QApplication.instance().call_after_catcher, CallAfterEvent( fn, *args, **kwargs ) )
     
-    QW.QApplication.instance().eventDispatcher().wakeUp()
+    # it appears this is redundant and for Arch from the Ubuntu-built release apparently eventDispatcher() was None
+    # QW.QApplication.instance().eventDispatcher().wakeUp()
     
 
 def ClearLayout( layout, delete_widgets = False ):

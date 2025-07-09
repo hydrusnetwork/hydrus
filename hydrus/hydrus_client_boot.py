@@ -4,6 +4,18 @@
 # You just DO WHAT THE FUCK YOU WANT TO.
 # https://github.com/sirkris/WTFPL/blob/master/WTFPL.md
 
+try:
+    
+    # For Russian and Polish and some other 24-hour-only systems, it is highly important this happens before Qt and mpv get their teeth into things
+    # it establishes some timezone cache that requires the locale to be clean
+    # I don't know if it needs to be before locale.setlocale, but I know that it works if it does
+    import dateparser
+    
+except:
+    
+    pass
+    
+
 import locale
 
 try: locale.setlocale( locale.LC_ALL, '' )

@@ -996,6 +996,7 @@ class ReviewDuplicatesAutoResolutionPanel( QW.QWidget ):
         self._rules_list_updater.update()
         
         CG.client_controller.sub( self, 'NotifyWorkComplete', 'notify_duplicates_auto_resolution_work_complete' )
+        CG.client_controller.sub( self, 'NotifyNewRules', 'notify_duplicates_auto_resolution_new_rules' )
         
     
     def _CanWorkHard( self ):
@@ -1029,7 +1030,7 @@ class ReviewDuplicatesAutoResolutionPanel( QW.QWidget ):
         
         if result == QW.QDialog.DialogCode.Accepted:
             
-            CG.client_controller.Write( 'duplicate_auto_resolution_maintenance_fix_orphan_rules' )
+            CG.client_controller.Write( 'duplicates_auto_resolution_maintenance_fix_orphan_rules' )
             
             self._rules_list_updater.update()
             
@@ -1043,7 +1044,7 @@ class ReviewDuplicatesAutoResolutionPanel( QW.QWidget ):
         
         if result == QW.QDialog.DialogCode.Accepted:
             
-            CG.client_controller.Write( 'duplicate_auto_resolution_maintenance_fix_orphan_potential_pairs' )
+            CG.client_controller.Write( 'duplicates_auto_resolution_maintenance_fix_orphan_potential_pairs' )
             
             self._rules_list_updater.update()
             
@@ -1082,11 +1083,9 @@ class ReviewDuplicatesAutoResolutionPanel( QW.QWidget ):
                 
                 try:
                     
-                    work_edit_lock = CG.client_controller.duplicates_auto_resolution_manager.GetEditWorkLock()
+                    edit_work_lock = CG.client_controller.duplicates_auto_resolution_manager.GetEditWorkLock()
                     
-                    while not work_edit_lock.acquire( False ):
-                        
-                        time.sleep( 0.1 )
+                    while not edit_work_lock.acquire( timeout = 0.25 ):
                         
                         if HG.started_shutdown:
                             
@@ -1111,7 +1110,9 @@ class ReviewDuplicatesAutoResolutionPanel( QW.QWidget ):
                     
                 finally:
                     
-                    work_edit_lock.release()
+                    edit_work_lock.release()
+                    
+                    CG.client_controller.duplicates_auto_resolution_manager.Wake()
                     
                 
             
@@ -1158,7 +1159,7 @@ class ReviewDuplicatesAutoResolutionPanel( QW.QWidget ):
         
         def work_callable( args ):
             
-            rules = CG.client_controller.Read( 'duplicate_auto_resolution_rules_with_counts' )
+            rules = CG.client_controller.Read( 'duplicates_auto_resolution_rules_with_counts' )
             
             return rules
             
@@ -1181,7 +1182,7 @@ class ReviewDuplicatesAutoResolutionPanel( QW.QWidget ):
         
         if result == QW.QDialog.DialogCode.Accepted:
             
-            CG.client_controller.Write( 'duplicate_auto_resolution_maintenance_regen_numbers' )
+            CG.client_controller.Write( 'duplicates_auto_resolution_maintenance_regen_numbers' )
             
             self._rules_list_updater.update()
             
@@ -1285,7 +1286,7 @@ class ReviewDuplicatesAutoResolutionPanel( QW.QWidget ):
         
         menu = ClientGUIMenus.GenerateMenu( self )
         
-        ClientGUIMenus.AppendMenuCheckItem( menu, 'work on these rules during idle time', 'Allow the client to work on auto-resolution rules when you are not using the program.', CG.client_controller.new_options.GetBoolean( 'maintain_similar_files_duplicate_pairs_during_idle' ), self._FlipBoolean, 'maintain_similar_files_duplicate_pairs_during_idle' )
+        ClientGUIMenus.AppendMenuCheckItem( menu, 'work on these rules during idle time', 'Allow the client to work on auto-resolution rules when you are not using the program.', CG.client_controller.new_options.GetBoolean( 'duplicates_auto_resolution_during_idle' ), self._FlipBoolean, 'duplicates_auto_resolution_during_idle' )
         ClientGUIMenus.AppendMenuCheckItem( menu, 'work on these rules during normal time', 'Allow the client to work on auto-resolution rules when you are using the program.', CG.client_controller.new_options.GetBoolean( 'duplicates_auto_resolution_during_active' ), self._FlipBoolean, 'duplicates_auto_resolution_during_active' )
         
         ClientGUIMenus.AppendSeparator( menu )
@@ -1317,8 +1318,13 @@ class ReviewDuplicatesAutoResolutionPanel( QW.QWidget ):
         self._rules_list_updater.update()
         
     
-    def NotifyWorkComplete( self ):
+    def NotifyNewRules( self ):
         
         self._rules_list_updater.update()
+        
+    
+    def NotifyWorkComplete( self ):
+        
+        self._duplicates_auto_resolution_rules.UpdateDatas()
         
     

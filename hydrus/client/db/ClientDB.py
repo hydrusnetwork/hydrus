@@ -3832,10 +3832,11 @@ class DB( HydrusDB.HydrusDB ):
                 'client_files_subfolders' : self.modules_files_physical_storage.GetClientFilesSubfolders,
                 'deferred_delete_data' : self.modules_db_maintenance.GetDeferredDeleteTableData,
                 'deferred_physical_delete' : self.modules_files_storage.GetDeferredPhysicalDelete,
-                'duplicate_auto_resolution_rules_with_counts' : self.modules_files_duplicates_auto_resolution_storage.GetRulesWithCounts,
                 'duplicate_pairs_for_filtering' : self.modules_files_duplicates_file_query.GetPotentialDuplicatePairsForFiltering,
                 'duplicates_auto_resolution_actioned_pairs' : self.modules_files_duplicates_auto_resolution_search.GetActionedPairs,
                 'duplicates_auto_resolution_pending_action_pairs' : self.modules_files_duplicates_auto_resolution_search.GetPendingActionPairs,
+                'duplicates_auto_resolution_resolution_pair' : self.modules_files_duplicates_auto_resolution_search.GetResolutionPair,
+                'duplicates_auto_resolution_rules_with_counts' : self.modules_files_duplicates_auto_resolution_storage.GetRulesWithCounts,
                 'file_duplicate_hashes' : self.modules_files_duplicates.GetFileHashesByDuplicateType,
                 'file_duplicate_info' : self.modules_files_duplicates.GetFileDuplicateInfo,
                 'file_hashes' : self.modules_hashes.GetFileHashes,
@@ -3955,17 +3956,18 @@ class DB( HydrusDB.HydrusDB ):
                 'dissolve_alternates_group' : self.modules_files_duplicates.DissolveAlternatesGroupIdFromHashes,
                 'dissolve_duplicates_group' : self.modules_files_duplicates.DissolveMediaIdFromHashes,
                 'do_deferred_table_delete_work' : self.modules_db_maintenance.DoDeferredDeleteTablesWork,
-                'duplicate_auto_resolution_approve_pending_pairs' : self.modules_files_duplicates_auto_resolution_search.ApprovePendingPairs,
-                'duplicate_auto_resolution_deny_pending_pairs' : self.modules_files_duplicates_auto_resolution_search.DenyPendingPairs,
-                'duplicate_auto_resolution_do_resolution_work' : self.modules_files_duplicates_auto_resolution_search.DoResolutionWork,
-                'duplicate_auto_resolution_do_search_work' : self.modules_files_duplicates_auto_resolution_search.DoSearchWork,
-                'duplicate_auto_resolution_maintenance_fix_orphan_rules' : self.modules_files_duplicates_auto_resolution_storage.MaintenanceFixOrphanRules,
-                'duplicate_auto_resolution_maintenance_fix_orphan_potential_pairs' : self.modules_files_duplicates_auto_resolution_storage.MaintenanceFixOrphanPotentialPairs,
-                'duplicate_auto_resolution_maintenance_regen_numbers' : self.modules_files_duplicates_auto_resolution_storage.MaintenanceRegenNumbers,
-                'duplicate_auto_resolution_reset_rule_search_progress' : self.modules_files_duplicates_auto_resolution_storage.ResetRuleSearchProgress,
-                'duplicate_auto_resolution_reset_rule_test_progress' : self.modules_files_duplicates_auto_resolution_storage.ResetRuleTestProgress,
-                'duplicate_auto_resolution_reset_rule_declined' : self.modules_files_duplicates_auto_resolution_storage.ResetRuleDeclined,
-                'duplicate_auto_resolution_set_rules' : self.modules_files_duplicates_auto_resolution_storage.SetRules,
+                'duplicates_auto_resolution_approve_pending_pairs' : self.modules_files_duplicates_auto_resolution_search.ApprovePendingPairs,
+                'duplicates_auto_resolution_commit_resolution_pair_failed' : self.modules_files_duplicates_auto_resolution_search.CommitResolutionPairFailed,
+                'duplicates_auto_resolution_commit_resolution_pair_passed' : self.modules_files_duplicates_auto_resolution_search.CommitResolutionPairPassed,
+                'duplicates_auto_resolution_deny_pending_pairs' : self.modules_files_duplicates_auto_resolution_search.DenyPendingPairs,
+                'duplicates_auto_resolution_do_search_work' : self.modules_files_duplicates_auto_resolution_search.DoSearchWork,
+                'duplicates_auto_resolution_maintenance_fix_orphan_rules' : self.modules_files_duplicates_auto_resolution_storage.MaintenanceFixOrphanRules,
+                'duplicates_auto_resolution_maintenance_fix_orphan_potential_pairs' : self.modules_files_duplicates_auto_resolution_storage.MaintenanceFixOrphanPotentialPairs,
+                'duplicates_auto_resolution_maintenance_regen_numbers' : self.modules_files_duplicates_auto_resolution_storage.MaintenanceRegenNumbers,
+                'duplicates_auto_resolution_reset_rule_search_progress' : self.modules_files_duplicates_auto_resolution_storage.ResetRuleSearchProgress,
+                'duplicates_auto_resolution_reset_rule_test_progress' : self.modules_files_duplicates_auto_resolution_storage.ResetRuleTestProgress,
+                'duplicates_auto_resolution_reset_rule_declined' : self.modules_files_duplicates_auto_resolution_storage.ResetRuleDeclined,
+                'duplicates_auto_resolution_set_rules' : self.modules_files_duplicates_auto_resolution_storage.SetRules,
                 'duplicate_pair_status' : self.modules_files_duplicates_setter.SetDuplicatePairStatus,
                 'duplicate_set_king' : self.modules_files_duplicates.SetKingFromHash,
                 'file_maintenance_add_jobs' : self.modules_files_maintenance_queue.AddJobs,
@@ -4373,6 +4375,7 @@ class DB( HydrusDB.HydrusDB ):
         
         self.modules_files_duplicates_auto_resolution_search = ClientDBFilesDuplicatesAutoResolutionSearch.ClientDBFilesDuplicatesAutoResolutionSearch(
             self._c,
+            self.modules_hashes_local_cache,
             self.modules_files_storage,
             self.modules_files_duplicates,
             self.modules_files_duplicates_auto_resolution_storage,
@@ -9311,6 +9314,32 @@ class DB( HydrusDB.HydrusDB ):
                 HydrusData.PrintException( e )
                 
                 message = 'Trying to update your options failed! Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
+                
+            
+        
+        if version == 628:
+            
+            try:
+                
+                table_join = self.modules_files_storage.GetTableJoinLimitedByFileDomain( self.modules_services.combined_local_file_service_id, 'files_info', HC.CONTENT_STATUS_CURRENT )
+                
+                hash_ids = self._STL( self._Execute( 'SELECT hash_id FROM {} WHERE mime IN {};'.format( table_join, HydrusData.SplayListForDB( [ HC.IMAGE_AVIF ] ) ) ) )
+                
+                self.modules_files_maintenance_queue.AddJobs( hash_ids, ClientFilesMaintenance.REGENERATE_FILE_DATA_JOB_FILE_HAS_EXIF )
+                self.modules_files_maintenance_queue.AddJobs( hash_ids, ClientFilesMaintenance.REGENERATE_FILE_DATA_JOB_FILE_HAS_ICC_PROFILE )
+                self.modules_files_maintenance_queue.AddJobs( hash_ids, ClientFilesMaintenance.REGENERATE_FILE_DATA_JOB_FILE_HAS_HUMAN_READABLE_EMBEDDED_METADATA )
+                self.modules_files_maintenance_queue.AddJobs( hash_ids, ClientFilesMaintenance.REGENERATE_FILE_DATA_JOB_FILE_METADATA )
+                self.modules_files_maintenance_queue.AddJobs( hash_ids, ClientFilesMaintenance.REGENERATE_FILE_DATA_JOB_FORCE_THUMBNAIL )
+                self.modules_files_maintenance_queue.AddJobs( hash_ids, ClientFilesMaintenance.REGENERATE_FILE_DATA_JOB_PIXEL_HASH )
+                self.modules_files_maintenance_queue.AddJobs( hash_ids, ClientFilesMaintenance.REGENERATE_FILE_DATA_JOB_SIMILAR_FILES_METADATA )
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to schedule avif files for some maintenance failed! Please let hydrus dev know!'
                 
                 self.pub_initial_message( message )
                 

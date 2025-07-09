@@ -309,7 +309,6 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             'activate_main_gui_on_viewer_close' : False,
             'override_bandwidth_on_file_urls_from_post_urls' : True,
             'remove_leading_url_double_slashes' : False,
-            'stop_mpv_on_media_transition' : False,
         }
         
         #

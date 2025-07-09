@@ -339,7 +339,7 @@ class RatingNumericalCanvas( ClientGUIRatings.RatingNumericalControl ):
             
             icon_size = ClientGUIRatings.GetIconSize( self._canvas_type, HC.LOCAL_RATING_NUMERICAL )
             
-            ClientGUIRatings.DrawNumerical( painter, round( ClientGUIPainterShapes.PAD_PX / 2 ), round( ClientGUIPainterShapes.PAD_PX / 2 ), self._service_key, self._rating_state, self._rating, icon_size )
+            ClientGUIRatings.DrawNumerical( painter, round( ClientGUIPainterShapes.PAD_PX / 2 ), round( ClientGUIPainterShapes.PAD_PX / 2 ), self._service_key, self._rating_state, self._rating, size = icon_size )
             
             if self._iconsize != icon_size:
                 
@@ -1730,7 +1730,6 @@ class CanvasHoverFrameTopRight( CanvasHoverFrame ):
                 
             return ( should_resize, ideal_size, ideal_position )
             
-        
         elif canvas_type == CC.CANVAS_PREVIEW and CG.client_controller.new_options.GetBoolean( 'preview_window_hover_top_right_shows_popup' ):
             
             preview_size = self.parentWidget().size()

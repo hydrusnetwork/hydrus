@@ -603,6 +603,11 @@ class PairSelector( HydrusSerialisable.SerialisableBase ):
         return ', '.join( comparator_strings )
         
     
+    def IsFast( self ) -> bool:
+        
+        return False not in ( comparator.IsFast() for comparator in self._comparators )
+        
+    
     def MatchingPairMatchesBothWaysAround( self, media_result_1: ClientMediaResult.MediaResult, media_result_2: ClientMediaResult.MediaResult ) -> bool:
         """This presumes the pair DO match as 1,2."""
         

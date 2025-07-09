@@ -390,6 +390,8 @@ class TestSingleFileMetadataImporters( unittest.TestCase ):
     def test_media_timestamps( self ):
         
         archived_timestamp_ms = HydrusTime.GetNowMS() - 3600000
+        file_modified_timestamp_ms = HydrusTime.GetNowMS() - 2400000
+        site_dot_com_modified_timestamp_ms = HydrusTime.GetNowMS() - 2500000
         timestamp_data_stub = ClientTime.TimestampData.STATICSimpleStub( HC.TIMESTAMP_TYPE_ARCHIVED )
         
         # simple
@@ -409,6 +411,8 @@ class TestSingleFileMetadataImporters( unittest.TestCase ):
         times_manager.SetImportedTimestampMS( CC.LOCAL_FILE_SERVICE_KEY, 123000 )
         times_manager.SetImportedTimestampMS( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, 123000 )
         times_manager.SetArchivedTimestampMS( archived_timestamp_ms )
+        times_manager.SetFileModifiedTimestampMS( file_modified_timestamp_ms )
+        times_manager.SetDomainModifiedTimestampMS( 'site.com', site_dot_com_modified_timestamp_ms )
         
         inbox = True
         
@@ -455,6 +459,39 @@ class TestSingleFileMetadataImporters( unittest.TestCase ):
         self.assertTrue( len( result ) > 0 )
         self.assertNotEqual( set( result ), { str( HydrusTime.SecondiseMS( archived_timestamp_ms ) ) } )
         self.assertEqual( set( result ), set( string_processor.ProcessStrings( { str( HydrusTime.SecondiseMS( archived_timestamp_ms ) ) } ) ) )
+        
+        # test modified date/aggregate
+        
+        timestamp_data_stub = ClientTime.TimestampData.STATICSimpleStub( HC.TIMESTAMP_TYPE_MODIFIED_FILE )
+        
+        importer = ClientMetadataMigrationImporters.SingleFileMetadataImporterMediaTimestamps()
+        importer.SetTimestampDataStub( timestamp_data_stub )
+        
+        result = importer.Import( media_result )
+        
+        self.assertEqual( set( result ), { str( HydrusTime.SecondiseMS( file_modified_timestamp_ms ) ) } )
+        
+        #
+        
+        timestamp_data_stub = ClientTime.TimestampData( timestamp_type = HC.TIMESTAMP_TYPE_MODIFIED_DOMAIN, location = 'site.com' )
+        
+        importer = ClientMetadataMigrationImporters.SingleFileMetadataImporterMediaTimestamps()
+        importer.SetTimestampDataStub( timestamp_data_stub )
+        
+        result = importer.Import( media_result )
+        
+        self.assertEqual( set( result ), { str( HydrusTime.SecondiseMS( site_dot_com_modified_timestamp_ms ) ) } )
+        
+        #
+        
+        timestamp_data_stub = ClientTime.TimestampData.STATICSimpleStub( HC.TIMESTAMP_TYPE_MODIFIED_AGGREGATE )
+        
+        importer = ClientMetadataMigrationImporters.SingleFileMetadataImporterMediaTimestamps()
+        importer.SetTimestampDataStub( timestamp_data_stub )
+        
+        result = importer.Import( media_result )
+        
+        self.assertEqual( set( result ), { str( HydrusTime.SecondiseMS( min( site_dot_com_modified_timestamp_ms, file_modified_timestamp_ms ) ) ) } )
         
     
     def test_media_txt( self ):

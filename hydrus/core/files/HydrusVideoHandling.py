@@ -167,6 +167,11 @@ def GetMime( path ):
     ( has_video, video_format ) = ParseFFMPEGVideoFormat( lines )
     ( has_audio, audio_format ) = HydrusAudioHandling.ParseFFMPEGAudio( lines )
     
+    if not ( has_video or has_audio ):
+        
+        return HC.APPLICATION_UNKNOWN
+        
+    
     if 'matroska' in mime_text or 'webm' in mime_text:
         
         # a webm has at least vp8/vp9 video and optionally vorbis audio
@@ -638,6 +643,7 @@ def ParseFFMPEGNumFramesManually( lines ) -> int:
     
     return num_frames
     
+
 def ParseFFMPEGVideoFormat( lines ):
     
     try:
@@ -654,6 +660,11 @@ def ParseFFMPEGVideoFormat( lines ):
         match = re.search( r'(?<=Video:\s).+?(?=,)', line )
         
         video_format = match.group()
+        
+        if video_format.startswith( 'none' ): # none (CRAW / mem_address), none, 6000x4000, blah blah
+            
+            return ( False, 'none' )
+            
         
     except:
         

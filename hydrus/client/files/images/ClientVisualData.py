@@ -28,7 +28,7 @@ LAB_HISTOGRAM_NUM_TILES = LAB_HISTOGRAM_NUM_TILES_DIMENSIONS[0] * LAB_HISTOGRAM_
 
 EDGE_MAP_PERCEPTUAL_RESOLUTION = ( 2048, 2048 )
 EDGE_MAP_NORMALISED_RESOLUTION = ( 256, 256 )
-EDGE_MAP_NUM_TILES_PER_DIMENSION = 8
+EDGE_MAP_NUM_TILES_PER_DIMENSION = 16
 EDGE_MAP_NUM_TILES_DIMENSIONS = ( EDGE_MAP_NUM_TILES_PER_DIMENSION, EDGE_MAP_NUM_TILES_PER_DIMENSION )
 EDGE_MAP_NUM_TILES = EDGE_MAP_NUM_TILES_DIMENSIONS[0] * EDGE_MAP_NUM_TILES_DIMENSIONS[1]
 
@@ -494,22 +494,28 @@ def FilesAreVisuallySimilarRegional( lab_tile_hist_1: VisualDataTiled, lab_tile_
         
     
 
-# ok here I tried several things. tile comparison, some stats, some absolute skew calculations
-# ultimately I'm settling on KISS. tiling just softens out our rich data, and absolute skew gubbins was producing false positives
-# we might have success doing tiles of only like 8x8 and summing/averaging, so we are locating pockets of edge difference rather than points
-# we might have success capturing the average of the top quintile or similar to again detect real bumps from a general fuzz
-# but there did seem to be a fair amount of unpredictable general noise, so we can't be too clever
-# as I have said for the colour histograms, if we want to make further big changes here, I think we should do it properly with a test suite that we can tune programatically
+# ok we are doing a hybrid now. a bit of absolute, a bit of tiling
+# I still wonder if we might want to do this in Lab. if we do, it should be a part of an automated profiling and testing regime here (about the fifth time I have pledged to work on this 'next time')
 
-# this overall, however, seems to work well. sometimes there is a heavy re-encode pair at 18, and sometimes there is a subtle alternate pair at 18, but generally speaking these numbers are safely reliable:
-
-EDGE_MAX_POINT_DIFFERENCE = 15
-
-EDGE_VERY_GOOD_MAX_POINT_DIFFERENCE = 11
+# these numbers seem to work well. sometimes there is a heavy re-encode pair at 18, and sometimes there is a subtle alternate pair at 18, but generally speaking these numbers are safely reliable:
 
 EDGE_PERFECT_MAX_POINT_DIFFERENCE = 3
-
+EDGE_VERY_GOOD_MAX_POINT_DIFFERENCE = 11
+EDGE_MAX_POINT_DIFFERENCE = 15
 EDGE_RUBBISH_MIN_POINT_DIFFERENCE = 45
+
+# and here we have some numbers from experimentation. some stand out starkly
+
+# -3->-6 = dupes
+# 15-20 = strong encode
+# 12-18 = pale watermark
+# 34-226 = sweat drop moved
+# 200-440 = tears around eyes
+# 1400 = yep clear correction
+EDGE_TILE_PERFECT_MAX_SKEW = 0
+EDGE_TILE_VERY_GOOD_MAX_SKEW = 5
+EDGE_TILE_MAX_SKEW = 15
+EDGE_TILE_RUBBISH_MIN_SKEW = 200
 
 def FilesAreVisuallySimilarRegionalEdgeMap( edge_map_1: EdgeMap, edge_map_2: EdgeMap ):
     
@@ -524,6 +530,56 @@ def FilesAreVisuallySimilarRegionalEdgeMap( edge_map_1: EdgeMap, edge_map_2: Edg
     largest_point_difference_b = numpy.max( numpy.abs( difference_edge_map_b ) )
     
     largest_point_difference = max( largest_point_difference_r, largest_point_difference_g, largest_point_difference_b )
+    
+    #
+    
+    # Ok the above 'just get the max diff seen' works well, but I did get a nice 'very probably' false positive pair that had a logo difference in a pale colour
+    # to detect a regional shift like this, we will now break our edge map into tiles and computer average distance in each and compute stats on that. any blob in the heat map will stand out
+    # basically the same as we do for our histograms
+    
+    tile_height = int( EDGE_MAP_NORMALISED_RESOLUTION[0] / EDGE_MAP_NUM_TILES_PER_DIMENSION )
+    tile_width = int( EDGE_MAP_NORMALISED_RESOLUTION[1] / EDGE_MAP_NUM_TILES_PER_DIMENSION )
+    
+    for ( largest_point_difference_for_this, difference_edge_map_for_this ) in [
+        ( largest_point_difference_r, difference_edge_map_r ),
+        ( largest_point_difference_g, difference_edge_map_g ),
+        ( largest_point_difference_b, difference_edge_map_b ),
+    ]:
+        
+        scores = []
+        
+        for i in range( 0, EDGE_MAP_NORMALISED_RESOLUTION[0], tile_height ):
+            
+            for j in range( 0, EDGE_MAP_NORMALISED_RESOLUTION[1], tile_width ):
+                
+                tile = difference_edge_map_for_this[ i : i + tile_height, j : j + tile_width ]
+                
+                mean_diff = numpy.mean( numpy.abs( tile ) )
+                
+                scores.append( mean_diff )
+                
+            
+        
+        score_skew = skewness_numpy( scores )
+        
+        # ok so skew alone is normalised and can thus be whack when we have a really tight, low variance distribution
+        # so, let's multiply it by the maximum value we saw, and that gives us a nicer thing that scales to relevance with a decent sized distribution
+        absolute_skew_pull = score_skew * largest_point_difference_for_this
+        
+        if absolute_skew_pull > EDGE_TILE_MAX_SKEW:
+            
+            if absolute_skew_pull > EDGE_TILE_RUBBISH_MIN_SKEW:
+                
+                return ( False, VISUAL_DUPLICATES_RESULT_NOT, 'not visual duplicates\n(alternate)' )
+                
+            else:
+                
+                return ( False, VISUAL_DUPLICATES_RESULT_NOT, 'probably not visual duplicates\n(alternate/severe re-encode?)' )
+                
+            
+        
+    
+    #
     
     if largest_point_difference < EDGE_PERFECT_MAX_POINT_DIFFERENCE:
         

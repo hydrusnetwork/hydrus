@@ -203,7 +203,7 @@ class ReviewActionsPanel( ClientGUIScrolledPanels.ReviewPanel ):
                 CG.client_controller.CallAfterQtSafe( self, 'approve pairs status hook', status_hook, message )
                 
                 # this is safe to run on a bunch of related pairs like AB, AC, DB--the db figures that out
-                CG.client_controller.WriteSynchronous( 'duplicate_auto_resolution_approve_pending_pairs', rule, chunk )
+                CG.client_controller.WriteSynchronous( 'duplicates_auto_resolution_approve_pending_pairs', rule, chunk )
                 
             
             return 1
@@ -313,7 +313,7 @@ class ReviewActionsPanel( ClientGUIScrolledPanels.ReviewPanel ):
                 CG.client_controller.CallAfterQtSafe( self, 'deny pairs status hook', status_hook, message )
                 
                 # this is safe to run on a bunch of related pairs like AB, AC, DB--the db figures that out
-                CG.client_controller.WriteSynchronous( 'duplicate_auto_resolution_deny_pending_pairs', rule, selected_pairs )
+                CG.client_controller.WriteSynchronous( 'duplicates_auto_resolution_deny_pending_pairs', rule, selected_pairs )
                 
             
             return 1
