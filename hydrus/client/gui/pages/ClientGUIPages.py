@@ -1988,8 +1988,8 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
             
             if can_go_right:
                 
-                ClientGUIMenus.AppendMenuItem( collapse_menu, 'pages from here to the right', 'Gather all the files from here to the right and put them all in a single search page.', self._CollapsePagesToTheRight, tab_index, 1 )
-                ClientGUIMenus.AppendMenuItem( collapse_menu, 'pages to the right', 'Gather all the files from the right of here and put them all in a single search page.', self._CollapsePagesToTheRight, tab_index + 1, 1 )
+                ClientGUIMenus.AppendMenuItem( collapse_menu, 'pages from here to the right', 'Gather all the files from here to the right and put them all in a single search page.', self._CollapsePagesToTheRight, tab_index )
+                ClientGUIMenus.AppendMenuItem( collapse_menu, 'pages to the right', 'Gather all the files from the right of here and put them all in a single search page.', self._CollapsePagesToTheRight, tab_index + 1 )
                 
             
             ClientGUIMenus.AppendMenu( menu, collapse_menu, 'collapse to a single page' )
