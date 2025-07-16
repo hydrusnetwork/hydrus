@@ -1252,6 +1252,15 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#to_new_OS" class="md-nav__link">
+    <span class="md-ellipsis">
+      moving to a new machine
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#multiple_clients" class="md-nav__link">
     <span class="md-ellipsis">
       p.s. running multiple clients
@@ -2339,6 +2348,15 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#to_new_OS" class="md-nav__link">
+    <span class="md-ellipsis">
+      moving to a new machine
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#multiple_clients" class="md-nav__link">
     <span class="md-ellipsis">
       p.s. running multiple clients
@@ -2449,7 +2467,7 @@
 <p><img alt="" src="images/db_migration_shortcut.png" /></p>
 <p>Note that an install with an 'external' database no longer needs access to write to its own path, so you can store it anywhere you like, including protected read-only locations (e.g. in 'Program Files'). Just double-check your shortcuts are good.</p>
 <h2 id="finally">backups<a class="headerlink" href="#finally" title="Permanent link">&para;</a></h2>
-<p>If your database now lives in one or more new locations, make sure to update your backup routine to follow them!</p>
+<p>If your database now lives in one or more new locations, make sure to update your backup routine! You should be maintaining a copy of everything. As your collection grows, you may want to similarly store your db + thumbs on a low-latency SSD USB stick (a nice 3.2 USB drive can sustain 350MB/s write of the db files and 4,000 thumbs/s) but the media files on a big cheap multi-TB regular USB drive.</p>
 <h2 id="to_an_ssd">moving to an SSD<a class="headerlink" href="#to_an_ssd" title="Permanent link">&para;</a></h2>
 <p>As an example, let's say you started using the hydrus client on your HDD, and now you have an SSD available and would like to move your thumbnails and main install to that SSD to speed up the client. Your database will be valid and functional at every stage of this, and it can all be undone. The basic steps are:</p>
 <ol>
@@ -2474,6 +2492,41 @@
 </ol>
 <p>You should now have <em>something</em> like this (let's say the D drive is the fast SSD, and E is the high capacity HDD):</p>
 <p><img alt="" src="images/db_migration_example.png" /></p>
+<h2 id="to_new_OS">moving to a new machine<a class="headerlink" href="#to_new_OS" title="Permanent link">&para;</a></h2>
+<p>The hydrus database is completely portable. As well as moving it about within the same system, you can move your whole hydrus client to another computer quite easily. It all runs on Windows/Linux/macOS with no big modifications needed. The only thing you need to watch out for are the paths the database uses to talk to other parts of the system--for instance the location of an Export Folder.</p>
+<p>If the OSes are the same (e.g. Windows to Windows), moving from one machine to another is usually pretty easy--just drag and drop the whole install from one drive to another, via a network share or USB drive--but going from one OS type to another introduces a couple of extra wrinkles.</p>
+<details class="note">
+<summary>OS Paths</summary>
+<p>Remember that Windows has paths that start with drive letters, like <code>D:\</code> and uses backslashes to split paths; but Linux and macOS all start with root <code>/</code> and use regular slashes. If your OS suddenly changes, your absolute <code>D:\hydrus_files</code> is going to be seen as a relative path by Linux and you'll end up with like <code>/home/you/hydrus/db/D:\hydrus_files</code>. There's no huge worry here--hydrus won't rush to break anything, and it'll generally just freak out that the thing doesn't exist. You just need to tell it the correct new path.</p>
+</details>
+<p>Before any system migration, make sure you:</p>
+<ul>
+<li>finish any hard drive import pages that were working</li>
+<li>pause your import folders</li>
+<li>pause your export folders</li>
+<li>MAKE A BACKUP</li>
+</ul>
+<p>Install a fresh new hydrus on the new machine and then, using a network share or a USB drive, copy the database folder, files, and thumbnails from the old to the new. You can insert the db directly into your new <code>install_dir/db</code> folder, or if you want to set up a new <code>--db_dir</code>, put the db in that location and set up the new shortcut.</p>
+<details class="note">
+<summary>source installs</summary>
+<p>If the type of OS hasn't changed, you can usually get away with copying the whole install folder. If you run from source, however, you <em>must</em> recreate a new install dir with that OS's <code>git</code> and then build a new venv. Do not try to migrate a source installation folder!</p>
+</details>
+<details class="note">
+<summary>macOS App</summary>
+<p>If you are moving to or from the macOS App, recall that the App cannot store the hydrus db inside it, so the correct 'default' location (i.e. without <code>--db_dir</code>), analogous to <code>install_dir/db</code> on other installs, is <code>~/Library/Hydrus</code>. You can always go <code>file-&gt;open-&gt;database directory</code> on any running client to find what it is currently running.</p>
+</details>
+<p>Boot up your newly assembled client, and if your files or thumbnails are stored outside of <code>install_folder/db/client_files</code>, there's a good chance it will complain about them being missing. Don't panic! Just tell the repair dialog the correct new locations, and it'll stitch itself back together.</p>
+<p>Then:</p>
+<ul>
+<li>check <code>options-&gt;external programs</code> and update anything as needed</li>
+<li>check <code>options-&gt;exporting</code> and update the default export directory</li>
+<li>check a file's <code>right-click-&gt;share-&gt;export files</code> window to see what the default export path there is</li>
+<li>check <code>database-&gt;move media files</code> and remove any empty stubs from the old system</li>
+<li>edit your import folders to point at the correct locations</li>
+<li>edit your export folders to point at the correct locations</li>
+<li>unpause import/export folders</li>
+</ul>
+<p>Then you should be good! Let me know if you run into any trouble.</p>
 <h2 id="multiple_clients">p.s. running multiple clients<a class="headerlink" href="#multiple_clients" title="Permanent link">&para;</a></h2>
 <p>Since you now know how to tell the software about an external database, you can, if you like, run multiple clients from the same install (and if you previously had multiple install folders, now you can now just use the one). Just make multiple shortcuts to the same hydrus_client executable but with different database directories. They can run at the same time. You'll save yourself a little memory and update-hassle.</p>
 
@@ -2496,7 +2549,7 @@
     <span class="md-icon" title="Last update">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 13.1c-.1 0-.3.1-.4.2l-1 1 2.1 2.1 1-1c.2-.2.2-.6 0-.8l-1.3-1.3c-.1-.1-.2-.2-.4-.2m-1.9 1.8-6.1 6V23h2.1l6.1-6.1zM12.5 7v5.2l4 2.4-1 1L11 13V7zM11 21.9c-5.1-.5-9-4.8-9-9.9C2 6.5 6.5 2 12 2c5.3 0 9.6 4.1 10 9.3-.3-.1-.6-.2-1-.2s-.7.1-1 .2C19.6 7.2 16.2 4 12 4c-4.4 0-8 3.6-8 8 0 4.1 3.1 7.5 7.1 7.9l-.1.2z"/></svg>
     </span>
-    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="June 25, 2025 20:39:30 UTC">June 25, 2025</span>
+    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="July 16, 2025 20:48:50 UTC">July 16, 2025</span>
   </span>
 
     

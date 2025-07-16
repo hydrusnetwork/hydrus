@@ -6903,8 +6903,8 @@ Accept: application/json
 <span class="p">}</span>
 </code></pre></div></dd>
 </dl>
-<p><code>king</code> refers to which file is set as the best of a duplicate group. If you are doing potential duplicate comparisons, the kings of your two groups are usually the ideal representatives, and the 'get some pairs to filter'-style commands try to select the kings of the various to-be-compared duplicate groups. <code>is_king</code> is a convenience bool for when a file is king of its own group.</p>
-<p><strong>It is possible for the king to not be available.</strong> Every group has a king, but if that file has been deleted, or if the file domain here is limited and the king is on a different file service, then it may not be available. A similar issue occurs when you search for filtering pairs--while it is ideal to compare kings with kings, if you set 'files must be pixel dupes', then the user will expect to see those pixel duplicates, not their champions--you may be forced to compare non-kings. <code>king_is_on_file_domain</code> lets you know if the king is on the file domain you set, and <code>king_is_local</code> lets you know if it is on the hard disk--if <code>king_is_local=true</code>, you can do a <code>/get_files/file</code> request on it. It is generally rare, but you have to deal with the king being unavailable--in this situation, your best bet is to just use the file itself as its own representative.</p>
+<p><code>king</code> refers to which file is set as the best of a duplicate group. If you are doing potential duplicate comparisons, the kings of your two groups are usually the ideal representatives, and the 'get some pairs to filter'-style commands will always select the kings of the various to-be-compared duplicate groups. <code>is_king</code> is a convenience bool for when a file is king of its own group.</p>
+<p><strong>It is possible for the king to not be available.</strong> Every group has a king, but if that file has been deleted, or if the file domain here is limited and the king is on a different file service, then it may not be available. The regular hydrus potential duplicate pair commands always look at kings, so a group like this will not contribute to any 'potential duplicate pairs' count or filter fetch and so on. If you need to do your own clever manual lookups, <code>king_is_on_file_domain</code> lets you know if the king is on the file domain you set, and <code>king_is_local</code> lets you know if it is on the hard disk--if <code>king_is_local=true</code>, you can do a <code>/get_files/file</code> request on it. It is generally rare, but you have to deal with the king being unavailable--in this situation, your best bet is to just use the file itself as its own representative.</p>
 <p>All the relationships you get are filtered by the file domain. If you set the file domain to 'all known files', you will get every relationship a file has, including all deleted files, which is often less useful than you would think. The default, 'all my files', is usually most useful.</p>
 <p>A file that has no duplicates is considered to be in a duplicate group of size 1 and thus is always its own king.</p>
 <p>The numbers are from a duplicate status enum, as so:</p>
@@ -6940,7 +6940,7 @@ Accept: application/json
 </dl>
 <div class="highlight"><span class="filename">Example request</span><pre><span></span><code>/manage_file_relationships/get_potentials_count?tag_service_key_1=c1ba23c60cda1051349647a151321d43ef5894aacdfb4b4e333d6c4259d56c5f&amp;tags_1=%5B%22dupes_to_process%22%2C%20%22system%3Awidth%3C400%22%5D&amp;potentials_search_type=1&amp;pixel_duplicates=2&amp;max_hamming_distance=0&amp;max_num_pairs=50
 </code></pre></div>
-<p><code>tag_service_key_x</code> and <code>tags_x</code> work the same as <a href="#get_files_search_files">/get_files/search_files</a>. The <code>_2</code> variants are only useful if the <code>potentials_search_type</code> is 2.</p>
+<p>The arguments here reflect the same options as you see in duplicate page sidebar and auto-resolution system that search for potential duplicate pairs. <code>tag_service_key_x</code> and <code>tags_x</code> work the same as <a href="#get_files_search_files">/get_files/search_files</a>. The <code>_2</code> variants are only useful if the <code>potentials_search_type</code> is 2.</p>
 <p><code>potentials_search_type</code> and <code>pixel_duplicates</code> are enums:</p>
 <ul>
 <li>0 - one file matches search 1</li>
@@ -7002,8 +7002,15 @@ Accept: application/json
 <span class="p">}</span>
 </code></pre></div></dd>
 </dl>
-<p>The selected pair sample and their order is strictly hardcoded for now (e.g. to guarantee that a decision will not invalidate any other pair in the batch, you shouldn't see the same file twice in a batch, nor two files in the same duplicate group). Treat it as the client filter does, where you fetch batches to process one after another. I expect to make it more flexible in future, in the client itself and here.</p>
-<p>You will see significantly fewer than <code>max_num_pairs</code> (and potential duplicate count) as you close to the last available pairs, and when there are none left, you will get an empty list.</p>
+<p>These file hashes are all kings that are available in the given file domain. Treat it as the client filter does, where you fetch batches to process one after another. I expect to add grouping/sorting options in the near future.</p>
+<p>You may see the same file more than once in this batch, and if you expect to process and commit these as a batch, just like the filter does, you would be wise to skip through pairs that are implicated by a previous decision. When considering whether to display the 'next' pair, you should test:</p>
+<ul>
+<li>In the current batch of decisions, has either file been manually deleted by the user?</li>
+<li>In the current batch of decisions, has either file been adjudicated as the B in a 'A is better than B' or 'A is the same as B' (or, if you are doing it, the A in a 'B is better than A')?</li>
+</ul>
+<p>If either is true, you should skip the pair, since, after your current decisions are committed, that file is no longer in any potential duplicate pairs in the search you gave. The respective file is either no longer in the file domain, or it has been merged into another group (that file is no longer a king and either the potential pair no longer exists via transitive collapse or, rarely, hydrus can present you with a better comparison pair if you ask for a new batch).
+s
+You will see significantly fewer than <code>max_num_pairs</code> as you close to the last available pairs, and when there are none left, you will get an empty list.</p>
 <h3 id="manage_file_relationships_get_random_potentials"><strong>GET <code>/manage_file_relationships/get_random_potentials</code></strong><a class="headerlink" href="#manage_file_relationships_get_random_potentials" title="Permanent link">&para;</a></h3>
 <p><em>Get some random potentially duplicate file hashes. Exactly the same as the 'show some random potential dupes' button in the duplicate processing page.</em></p>
 <dl>
@@ -7048,7 +7055,7 @@ Accept: application/json
 <span class="p">}</span>
 </code></pre></div></dd>
 </dl>
-<p>If there are no potential duplicate groups in the search, this returns an empty list.</p>
+<p>These will all be kings. If there are no potential duplicate groups in the search, this returns an empty list.</p>
 <h3 id="manage_file_relationships_remove_potentials"><strong>POST <code>/manage_file_relationships/remove_potentials</code></strong><a class="headerlink" href="#manage_file_relationships_remove_potentials" title="Permanent link">&para;</a></h3>
 <p>Remove all potential pairs that any of the given files are a part of. If you hit <a href="#manage_file_relationships_get_file_relationships">/manage_file_relationships/get_file_relationships</a> after this on any of these files, they will have no potential relationships, and any hashes that were potential to them before will no longer, conversely, refer to these files as potentials.</p>
 <dl>
@@ -7199,7 +7206,7 @@ Accept: application/json
 </li>
 </ul>
 </details>
-<p>So, if you can, always present kings to your users, and action using those kings' hashes. It makes the merge logic easier in all cases. Remember that you can set <code>system:is the best quality file of its duplicate group</code> in any file search to exclude any non-kings (e.g. if you are hunting for easily actionable pixel potential duplicates).</p>
+<p>So, if you can, always present kings to your users, and action using those kings' hashes. It makes the merge logic easier in all cases. When you ask hydrus to 'get potential duplicate pairs' with these API calls, and it will <em>always</em> present you kings or counts of available kings. If it cannot present a king (e.g. some group members are in the file domain, but the king is deleted, say), hydrus will <em>not</em> count that as a potential duplicate pair in that potential duplicate pair search. If you are doing your own file duplicate search, remember that you can set <code>system:is the best quality file of its duplicate group</code> to exclude any non-kings.</p>
 <h3 id="manage_file_relationships_set_kings"><strong>POST <code>/manage_file_relationships/set_kings</code></strong><a class="headerlink" href="#manage_file_relationships_set_kings" title="Permanent link">&para;</a></h3>
 <p>Set the specified files to be the kings of their duplicate groups.</p>
 <dl>
@@ -8278,7 +8285,7 @@ This request will also return any cookies for subdomains. The session system in 
     <span class="md-icon" title="Last update">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 13.1c-.1 0-.3.1-.4.2l-1 1 2.1 2.1 1-1c.2-.2.2-.6 0-.8l-1.3-1.3c-.1-.1-.2-.2-.4-.2m-1.9 1.8-6.1 6V23h2.1l6.1-6.1zM12.5 7v5.2l4 2.4-1 1L11 13V7zM11 21.9c-5.1-.5-9-4.8-9-9.9C2 6.5 6.5 2 12 2c5.3 0 9.6 4.1 10 9.3-.3-.1-.6-.2-1-.2s-.7.1-1 .2C19.6 7.2 16.2 4 12 4c-4.4 0-8 3.6-8 8 0 4.1 3.1 7.5 7.1 7.9l-.1.2z"/></svg>
     </span>
-    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="July 2, 2025 21:08:16 UTC">July 2, 2025</span>
+    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="July 16, 2025 20:48:50 UTC">July 16, 2025</span>
   </span>
 
     
