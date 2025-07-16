@@ -1,6 +1,5 @@
 import collections.abc
 import threading
-import time
 import typing
 
 from qtpy import QtCore as QC

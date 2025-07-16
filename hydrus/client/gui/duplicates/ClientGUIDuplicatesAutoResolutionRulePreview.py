@@ -6,14 +6,15 @@ from qtpy import QtWidgets as QW
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
-from hydrus.core import HydrusLists
 from hydrus.core import HydrusNumbers
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientLocation
 from hydrus.client import ClientThreading
+from hydrus.client.duplicates import ClientDuplicates
 from hydrus.client.duplicates import ClientDuplicatesAutoResolution
+from hydrus.client.duplicates import ClientPotentialDuplicatesSearchContext
 from hydrus.client.gui import ClientGUIAsync
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIDialogsMessage
@@ -22,8 +23,6 @@ from hydrus.client.gui.canvas import ClientGUICanvas
 from hydrus.client.gui.canvas import ClientGUICanvasFrame
 from hydrus.client.gui.duplicates import ThumbnailPairList
 from hydrus.client.gui.widgets import ClientGUICommon
-
-POTENTIAL_DUPLICATE_PAIRS_BLOCK_SIZE = 4096
 
 class PreviewPanel( ClientGUICommon.StaticBox ):
     
@@ -35,12 +34,12 @@ class PreviewPanel( ClientGUICommon.StaticBox ):
         
         self._value: typing.Optional[ ClientDuplicatesAutoResolution.DuplicatesAutoResolutionRule ] = None
         
-        self._all_potential_duplicate_pairs_and_distances = []
+        self._all_potential_duplicate_pairs_and_distances = ClientPotentialDuplicatesSearchContext.PotentialDuplicatePairsAndDistances( [] )
         self._all_potential_duplicate_pairs_and_distances_initialised = False
         self._all_potential_duplicate_pairs_and_distances_fetch_started = False
         
         self._fetch_pairs_job_status = ClientThreading.JobStatus( cancellable = True )
-        self._potential_duplicate_pairs_and_distances_still_to_search = []
+        self._potential_duplicate_pairs_and_distances_still_to_search = ClientPotentialDuplicatesSearchContext.PotentialDuplicatePairsAndDistances( [] )
         
         self._fetched_pairs = []
         
@@ -184,17 +183,17 @@ class PreviewPanel( ClientGUICommon.StaticBox ):
         
         def work_callable():
             
-            all_potential_duplicate_pairs_and_distances = CG.client_controller.Read( 'all_potential_duplicate_pairs_and_distances' )
+            all_potential_duplicate_pairs_and_distances: ClientPotentialDuplicatesSearchContext.PotentialDuplicatePairsAndDistances = CG.client_controller.Read( 'all_potential_duplicate_pairs_and_distances' )
             
             # ok randomise the order we'll do this guy, but only at the block level
             # we'll preserve order each block came in since we'll then keep db-proximal indices close together on each actual block fetch
             
-            all_potential_duplicate_pairs_and_distances = HydrusLists.RandomiseListByChunks( all_potential_duplicate_pairs_and_distances, POTENTIAL_DUPLICATE_PAIRS_BLOCK_SIZE )
+            all_potential_duplicate_pairs_and_distances.RandomiseBlocks()
             
             return all_potential_duplicate_pairs_and_distances
             
         
-        def publish_callable( all_potential_duplicate_pairs_and_distances ):
+        def publish_callable( all_potential_duplicate_pairs_and_distances: ClientPotentialDuplicatesSearchContext.PotentialDuplicatePairsAndDistances ):
             
             self._all_potential_duplicate_pairs_and_distances = all_potential_duplicate_pairs_and_distances
             
@@ -230,9 +229,7 @@ class PreviewPanel( ClientGUICommon.StaticBox ):
             
             potential_duplicates_search_context = self._value.GetPotentialDuplicatesSearchContext()
             
-            block_of_pairs_and_distances = self._potential_duplicate_pairs_and_distances_still_to_search[ : POTENTIAL_DUPLICATE_PAIRS_BLOCK_SIZE ]
-            
-            self._potential_duplicate_pairs_and_distances_still_to_search = self._potential_duplicate_pairs_and_distances_still_to_search[ POTENTIAL_DUPLICATE_PAIRS_BLOCK_SIZE : ]
+            block_of_pairs_and_distances = self._potential_duplicate_pairs_and_distances_still_to_search.PopBlock()
             
             return ( potential_duplicates_search_context, block_of_pairs_and_distances, self._fetch_pairs_job_status )
             
@@ -246,7 +243,7 @@ class PreviewPanel( ClientGUICommon.StaticBox ):
                 return ( [], job_status )
                 
             
-            fetched_pairs = CG.client_controller.Read( 'potential_duplicate_pairs_fragmentary', potential_duplicates_search_context, block_of_pairs_and_distances )
+            fetched_pairs = CG.client_controller.Read( 'potential_duplicate_pairs_fragmentary', potential_duplicates_search_context, block_of_pairs_and_distances, ClientDuplicates.DUPE_PAIR_SORT_MIN_FILESIZE, False )
             
             return ( fetched_pairs, job_status )
             
@@ -420,7 +417,7 @@ class PreviewPanel( ClientGUICommon.StaticBox ):
         self._fetched_pairs = []
         self._fetched_pairs_still_to_test = []
         
-        self._potential_duplicate_pairs_and_distances_still_to_search = list( self._all_potential_duplicate_pairs_and_distances )
+        self._potential_duplicate_pairs_and_distances_still_to_search = self._all_potential_duplicate_pairs_and_distances.Duplicate()
         
         self._fetch_pairs_job_status.Cancel()
         

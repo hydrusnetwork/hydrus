@@ -4,7 +4,6 @@ from qtpy import QtWidgets as QW
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
-from hydrus.core import HydrusLists
 from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusTime
 
@@ -22,8 +21,6 @@ from hydrus.client.gui.widgets import ClientGUICommon
 # good idea to refresh this cache regularly, to clear out since-deleted pairs and catch other unusual desync situations
 POTENTIAL_PAIRS_REFRESH_TIMEOUT = 3600
 
-POTENTIAL_DUPLICATE_PAIRS_BLOCK_SIZE = 4096
-
 class EditPotentialDuplicatesSearchContextPanel( ClientGUICommon.StaticBox ):
     
     restartedSearch = QC.Signal()
@@ -36,13 +33,13 @@ class EditPotentialDuplicatesSearchContextPanel( ClientGUICommon.StaticBox ):
         
         #
         
-        self._all_potential_duplicate_pairs_and_distances = []
+        self._all_potential_duplicate_pairs_and_distances = ClientPotentialDuplicatesSearchContext.PotentialDuplicatePairsAndDistances( [] )
         self._all_potential_duplicate_pairs_and_distances_initialised = False
         self._all_potential_duplicate_pairs_and_distances_fetch_started = False
         self._all_potential_duplicate_pairs_and_distances_initialised_time = 0
         
         self._count_job_status = ClientThreading.JobStatus( cancellable = True )
-        self._potential_duplicate_pairs_and_distances_still_to_search = []
+        self._potential_duplicate_pairs_and_distances_still_to_search = ClientPotentialDuplicatesSearchContext.PotentialDuplicatePairsAndDistances( [] )
         
         self._num_potential_duplicate_pairs = 0
         
@@ -202,9 +199,7 @@ class EditPotentialDuplicatesSearchContextPanel( ClientGUICommon.StaticBox ):
             
             potential_duplicates_search_context = self.GetValue()
             
-            block_of_pairs_and_distances = self._potential_duplicate_pairs_and_distances_still_to_search[ : POTENTIAL_DUPLICATE_PAIRS_BLOCK_SIZE ]
-            
-            self._potential_duplicate_pairs_and_distances_still_to_search = self._potential_duplicate_pairs_and_distances_still_to_search[ POTENTIAL_DUPLICATE_PAIRS_BLOCK_SIZE : ]
+            block_of_pairs_and_distances = self._potential_duplicate_pairs_and_distances_still_to_search.PopBlock()
             
             return ( potential_duplicates_search_context, block_of_pairs_and_distances, self._count_job_status )
             
@@ -258,17 +253,17 @@ class EditPotentialDuplicatesSearchContextPanel( ClientGUICommon.StaticBox ):
         
         def work_callable():
             
-            all_potential_duplicate_pairs_and_distances = CG.client_controller.Read( 'all_potential_duplicate_pairs_and_distances' )
+            all_potential_duplicate_pairs_and_distances: ClientPotentialDuplicatesSearchContext.PotentialDuplicatePairsAndDistances = CG.client_controller.Read( 'all_potential_duplicate_pairs_and_distances' )
             
             # ok randomise the order we'll do this guy, but only at the block level
             # we'll preserve order each block came in since we'll then keep db-proximal indices close together on each actual block fetch
             
-            all_potential_duplicate_pairs_and_distances = HydrusLists.RandomiseListByChunks( all_potential_duplicate_pairs_and_distances, POTENTIAL_DUPLICATE_PAIRS_BLOCK_SIZE )
+            all_potential_duplicate_pairs_and_distances.RandomiseBlocks()
             
             return all_potential_duplicate_pairs_and_distances
             
         
-        def publish_callable( all_potential_duplicate_pairs_and_distances ):
+        def publish_callable( all_potential_duplicate_pairs_and_distances: ClientPotentialDuplicatesSearchContext.PotentialDuplicatePairsAndDistances ):
             
             self._all_potential_duplicate_pairs_and_distances = all_potential_duplicate_pairs_and_distances
             
@@ -307,7 +302,7 @@ class EditPotentialDuplicatesSearchContextPanel( ClientGUICommon.StaticBox ):
         
         self._all_potential_duplicate_pairs_and_distances_initialised = False
         
-        self._all_potential_duplicate_pairs_and_distances = []
+        self._all_potential_duplicate_pairs_and_distances = ClientPotentialDuplicatesSearchContext.PotentialDuplicatePairsAndDistances( [] )
         
         self._RefreshDuplicateCounts()
         
@@ -322,7 +317,7 @@ class EditPotentialDuplicatesSearchContextPanel( ClientGUICommon.StaticBox ):
         
         self._count_job_status = ClientThreading.JobStatus( cancellable = True )
         
-        self._potential_duplicate_pairs_and_distances_still_to_search = list( self._all_potential_duplicate_pairs_and_distances )
+        self._potential_duplicate_pairs_and_distances_still_to_search = self._all_potential_duplicate_pairs_and_distances.Duplicate()
         
         self._DoCountWork()
         

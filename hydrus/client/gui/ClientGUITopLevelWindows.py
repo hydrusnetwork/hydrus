@@ -926,3 +926,18 @@ class MainFrameThatResizes( MainFrame ):
         super().moveEvent( event )
         
     
+
+def ResizableWindowIsOpenAndIAmNotItsChild( win: QW.QWidget ):
+    
+    tlws = QW.QApplication.topLevelWidgets()
+    
+    for tlw in tlws:
+        
+        if isinstance( tlw, ( QP.Dialog, DialogThatResizes, FrameThatResizes ) ) and tlw.isVisible() and not ClientGUIFunctions.IsQtAncestor( win, tlw, through_tlws = True ):
+            
+            return True
+            
+        
+    
+    return False
+    

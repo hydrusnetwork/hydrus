@@ -87,11 +87,13 @@ class AboutPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         desc_label = ClientGUICommon.BetterStaticText( self, description_versions )
         desc_label.setAlignment( QC.Qt.AlignmentFlag.AlignHCenter | QC.Qt.AlignmentFlag.AlignVCenter )
+        desc_label.setWordWrap( True )
         
         #
         
         availability_label = ClientGUICommon.BetterStaticText( self, description_availability )
         availability_label.setAlignment( QC.Qt.AlignmentFlag.AlignHCenter | QC.Qt.AlignmentFlag.AlignVCenter )
+        availability_label.setWordWrap( True )
         
         #
         

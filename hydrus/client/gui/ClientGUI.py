@@ -2,15 +2,9 @@ import hashlib
 import os
 import random
 import re
-import ssl
-import sys
 import threading
 import time
 import typing
-
-import cv2
-import PIL
-import sqlite3
 
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
@@ -60,7 +54,6 @@ from hydrus.client.gui import ClientGUITopLevelWindows
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QLocator
 from hydrus.client.gui import ClientGUILocatorSearchProviders
-from hydrus.client.gui import QtInit
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.canvas import ClientGUICanvasMedia
 from hydrus.client.gui.canvas import ClientGUIMPV

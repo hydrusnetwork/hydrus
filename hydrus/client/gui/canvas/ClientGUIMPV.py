@@ -1164,7 +1164,7 @@ class MPVWidget( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
     
     def UpdateConfAndCoreOptions( self ):
         
-        # this fixes at least instance of the 100% CPU 'too many events queued' bug, which was down to bad APNG EOF rewind navigation
+        # this fixes at least one instance of the 100% CPU 'too many events queued' bug, which was down to bad APNG EOF rewind navigation
         loop_playlist = CG.client_controller.new_options.GetBoolean( 'mpv_loop_playlist_instead_of_file' )
         
         self._player[ 'loop' ] = not loop_playlist

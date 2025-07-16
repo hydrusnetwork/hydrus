@@ -1,6 +1,8 @@
+import collections
 import typing
 
 from hydrus.core import HydrusSerialisable
+from hydrus.core import HydrusLists
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
@@ -9,6 +11,140 @@ from hydrus.client.duplicates import ClientDuplicates
 
 from hydrus.client.search import ClientSearchFileSearchContext
 from hydrus.client.search import ClientSearchPredicate
+
+def FilterPotentialPairsToWiderPotentialGroup( potential_pairs_and_distances, smaller_media_id, larger_media_id ):
+    
+    # ok, the caller wants to process a 'whole group' of similar files all at once, so let's get them all
+    # given this pair, what are all the other pairs these two files have? what are all the potentials those files have? keep searching until the whole network is mapped
+    
+    pass
+    
+
+POTENTIAL_DUPLICATE_PAIRS_BLOCK_SIZE = 4096
+
+class PotentialDuplicatePairsAndDistances( object ):
+    
+    def __init__( self, potential_pairs_and_distances: collections.abc.Collection[ tuple[ int, int, int ] ] ):
+        
+        self._potential_pairs_and_distances = list( potential_pairs_and_distances )
+        
+        self._media_ids_to_other_media_ids_and_distances = collections.defaultdict( list )
+        self._mapping_initialised = False
+        
+    
+    def __len__( self ):
+        
+        return len( self._potential_pairs_and_distances )
+        
+    
+    def _InitialiseMapping( self ):
+        
+        for ( smaller_media_id, larger_media_id, distance ) in self._potential_pairs_and_distances:
+            
+            self._media_ids_to_other_media_ids_and_distances[ smaller_media_id ].append( ( larger_media_id, distance ) )
+            self._media_ids_to_other_media_ids_and_distances[ larger_media_id ].append( ( smaller_media_id, distance ) )
+            
+        
+        self._mapping_initialised = True
+        
+    
+    def Duplicate( self ) -> "PotentialDuplicatePairsAndDistances":
+        
+        return PotentialDuplicatePairsAndDistances( self._potential_pairs_and_distances )
+        
+    
+    def FilterWiderPotentialGroup( self, media_id ):
+        
+        # ok, the caller wants to process a 'whole group' of similar files all at once, so let's get them all. recall that merging a pair merges peasant potentials to the king too
+        # given this file (of a pair), what are all the other pairs this file has? what are all the potentials those other files have? keep searching until the whole network is mapped
+        
+        if not self._mapping_initialised:
+            
+            self._InitialiseMapping()
+            
+        
+        searched = set()
+        still_to_search = [ media_id ]
+        rows_found = []
+        
+        while len( still_to_search ) > 0:
+            
+            search_media_id = still_to_search.pop()
+            
+            searched.add( search_media_id )
+            
+            for ( result_media_id, distance ) in self._media_ids_to_other_media_ids_and_distances[ search_media_id ]:
+                
+                if result_media_id in searched:
+                    
+                    continue
+                    
+                
+                rows_found.append( ( min( search_media_id, result_media_id ), max( search_media_id, result_media_id ), distance ) )
+                
+                still_to_search.append( result_media_id )
+                
+            
+        
+        return PotentialDuplicatePairsAndDistances( rows_found )
+        
+    
+    def IterateBlocks( self ):
+        
+        for block in HydrusLists.SplitListIntoChunks( self._potential_pairs_and_distances, POTENTIAL_DUPLICATE_PAIRS_BLOCK_SIZE ):
+            
+            yield PotentialDuplicatePairsAndDistances( block )
+            
+        
+    
+    def IteratePairs( self ):
+        
+        for ( smaller_media_id, larger_media_id, distance ) in self._potential_pairs_and_distances:
+            
+            yield ( smaller_media_id, larger_media_id )
+            
+        
+    
+    def GetPairs( self ) -> list[ tuple[ int, int ] ]:
+        
+        return [ ( smaller_media_id, larger_media_id ) for ( smaller_media_id, larger_media_id, distance ) in self._potential_pairs_and_distances ]
+        
+    
+    def GetPairListsBySmallestDistanceFirst( self ) -> list[ list[ tuple[ int, int ] ] ]:
+        
+        distance_to_pairs = collections.defaultdict( list )
+        
+        for ( smaller_media_id, larger_media_id, distance ) in self._potential_pairs_and_distances:
+            
+            distance_to_pairs[ distance ].append( ( smaller_media_id, larger_media_id ) )
+            
+        
+        distances = sorted( distance_to_pairs.keys() )
+        
+        return [ distance_to_pairs[ distance ] for distance in distances ]
+        
+    
+    def GetRows( self ):
+        
+        return list( self._potential_pairs_and_distances )
+        
+    
+    def PopBlock( self ):
+        
+        block_of_pairs_and_distances = self._potential_pairs_and_distances[ : POTENTIAL_DUPLICATE_PAIRS_BLOCK_SIZE ]
+        
+        self._potential_pairs_and_distances = self._potential_pairs_and_distances[ POTENTIAL_DUPLICATE_PAIRS_BLOCK_SIZE : ]
+        
+        self._mapping_initialised = False
+        
+        return PotentialDuplicatePairsAndDistances( block_of_pairs_and_distances )
+        
+    
+    def RandomiseBlocks( self ):
+        
+        self._potential_pairs_and_distances = HydrusLists.RandomiseListByChunks( self._potential_pairs_and_distances, POTENTIAL_DUPLICATE_PAIRS_BLOCK_SIZE )
+        
+    
 
 class PotentialDuplicatesSearchContext( HydrusSerialisable.SerialisableBase ):
     

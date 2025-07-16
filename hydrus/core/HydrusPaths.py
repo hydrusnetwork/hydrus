@@ -204,7 +204,161 @@ def DirectoryIsWriteable( path ):
     return True
     
 
-def ElideFilenameSafely( name: str, num_character_count_available: int, directory_prefix: str, ext_suffix: typing.Optional[ str ] ):
+def ElideSubdirsSafely( destination_directory: str, subdirs_elidable: str, path_character_limit: typing.Optional[ int ], dirname_character_limit: typing.Optional[ int ], force_ntfs_rules: bool ):
+    
+    if subdirs_elidable == '':
+        
+        return subdirs_elidable
+        
+    
+    max_path_bytes = None
+    max_path_characters = None
+    
+    if path_character_limit is None:
+        
+        if HC.PLATFORM_WINDOWS or force_ntfs_rules:
+            
+            max_path_characters = 260 # 256 + X:\...\
+            
+        elif HC.PLATFORM_LINUX:
+            
+            max_path_bytes = 4096
+            
+        elif HC.PLATFORM_MACOS:
+            
+            max_path_bytes = 1024
+            
+        else:
+            
+            max_path_bytes = 4096 # assume weird Linux but probably robust
+            
+        
+    else:
+        
+        if HC.PLATFORM_WINDOWS or force_ntfs_rules:
+            
+            max_path_characters = path_character_limit
+            
+        else:
+            
+            max_path_bytes = path_character_limit
+            
+        
+    
+    max_dirname_characters = None
+    max_dirname_bytes = None
+    
+    if dirname_character_limit is None:
+        
+        if HC.PLATFORM_WINDOWS or force_ntfs_rules:
+            
+            max_dirname_characters = 128
+            
+        else:
+            
+            max_dirname_bytes = 256
+            
+        
+    else:
+        
+        if HC.PLATFORM_WINDOWS or force_ntfs_rules:
+            
+            max_dirname_characters = dirname_character_limit
+            
+        else:
+            
+            max_dirname_bytes = dirname_character_limit
+            
+        
+    
+    dirnames = subdirs_elidable.split( os.path.sep )
+    
+    actual_per_dirname_characters_limit = 64
+    actual_per_dirname_bytes_limit = 256 - 10 # for some padding
+    
+    if HC.PLATFORM_WINDOWS or force_ntfs_rules:
+        
+        typical_filename_characters = int( max_path_characters / 4 )
+        
+        total_available_characters_left = max_path_characters - len( destination_directory ) - typical_filename_characters - len( dirnames ) - 10 # -10 for some padding
+        
+        actual_per_dirname_characters_limit = int( total_available_characters_left / len( dirnames ) )
+        
+        if actual_per_dirname_characters_limit < 4:
+            
+            raise Exception( 'Sorry, it looks like the combined export filename or directory would be too long! Try shortening the export directory name!' )
+            
+        
+        if max_dirname_characters is not None:
+            
+            actual_per_dirname_characters_limit = min( actual_per_dirname_characters_limit, max_dirname_characters )
+            
+        
+    else:
+        
+        typical_filename_bytes = int( max_path_bytes / 4 )
+        
+        total_available_bytes_left = max_path_bytes - len( destination_directory ) - typical_filename_bytes - len( dirnames ) - 10 # for some padding
+        
+        actual_per_dirname_bytes_limit = int( total_available_bytes_left / len( dirnames ) )
+        
+        if actual_per_dirname_bytes_limit < 4:
+            
+            raise Exception( 'Sorry, it looks like the combined export filename or directory would be too long! Try shortening the export directory name!' )
+            
+        
+        if max_dirname_bytes is not None:
+            
+            actual_per_dirname_bytes_limit = min( actual_per_dirname_bytes_limit, max_dirname_bytes )
+            
+        
+    
+    dirnames_elided = []
+    
+    for dirname in dirnames:
+        
+        dirname = SanitizeFilename( dirname, force_ntfs_rules )
+        
+        if dirname == '':
+            
+            dirname = 'empty'
+            
+        
+        def the_test( n ):
+            
+            if HC.PLATFORM_WINDOWS or force_ntfs_rules:
+                
+                # characters
+                return len( n ) > actual_per_dirname_characters_limit
+                
+            else:
+                
+                # bytes
+                return len( n.encode( 'utf-8' ) ) > actual_per_dirname_bytes_limit
+                
+            
+        
+        while the_test( dirname ):
+            
+            dirname = dirname[:-1]
+            
+            dirname = SanitizeFilename( dirname, force_ntfs_rules )
+            
+        
+        dirname = dirname.strip()
+        
+        if dirname == '':
+            
+            dirname = 'truncated'
+            
+        
+        dirnames_elided.append( dirname )
+        
+    
+    return os.path.join( *dirnames_elided )
+    
+
+def ElideFilenameSafely( destination_directory: str, subdirs_elidable: str, base_filename: str, ext_suffix: str, path_character_limit: typing.Optional[ int ], dirname_character_limit: typing.Optional[ int ], filename_character_limit: int, force_ntfs_rules: bool ):
     
     # I could prefetch the GetFileSystemType of the dest directory here and test that precisely instead of PLATFORM...
     # but tbh that opens a Pandora's Box of 'NTFS mount on Linux', and sticking our finger in that sort of thing is Not A Good Idea. let the user handle that if and when it fails
@@ -213,49 +367,69 @@ def ElideFilenameSafely( name: str, num_character_count_available: int, director
     # Windows cannot handle a _total_ pathname more than 260 (unless you activate some new \\?\ thing that doesn't work great yet)
     # to be safe and deal with surprise extensions like (11) or .txt sidecars, we default to 220
     
-    if name == '':
+    if base_filename == '':
         
-        raise Exception( 'Sorry, the proposed filename was empty!' )
+        base_filename = 'empty'
         
     
-    if num_character_count_available == 0:
+    if len( subdirs_elidable ) > 0:
         
-        raise Exception( 'Sorry, it seems like there were no characters available for the filename!' )
+        subdirs_elided = ElideSubdirsSafely( destination_directory, subdirs_elidable, path_character_limit, dirname_character_limit, force_ntfs_rules )
+        
+        destination_directory = os.path.join( destination_directory, subdirs_elided )
+        
+    else:
+        
+        subdirs_elided = subdirs_elidable
         
     
     max_path_bytes = None
     max_path_characters = None
     
-    if HC.PLATFORM_WINDOWS:
+    if path_character_limit is None:
         
-        max_path_characters = 260 # 256 + X:\...\
-        
-    elif HC.PLATFORM_LINUX:
-        
-        max_path_bytes = 4096
-        
-    elif HC.PLATFORM_MACOS:
-        
-        max_path_bytes = 1024
+        if HC.PLATFORM_WINDOWS or force_ntfs_rules:
+            
+            max_path_characters = 260 # 256 + X:\...\
+            
+        elif HC.PLATFORM_LINUX:
+            
+            max_path_bytes = 4096
+            
+        elif HC.PLATFORM_MACOS:
+            
+            max_path_bytes = 1024
+            
+        else:
+            
+            max_path_bytes = 4096 # assume weird Linux but probably robust
+            
         
     else:
         
-        max_path_bytes = 4096 # assume weird Linux but probably robust
+        if HC.PLATFORM_WINDOWS or force_ntfs_rules:
+            
+            max_path_characters = path_character_limit
+            
+        else:
+            
+            max_path_bytes = path_character_limit
+            
         
     
     if max_path_bytes is not None:
         
         max_path_bytes -= 20 # bit of padding
         
-        max_bytes_with_full_filename = len( directory_prefix.encode( 'utf-8' ) ) + 1 + num_character_count_available
+        max_bytes_with_full_filename = len( destination_directory.encode( 'utf-8' ) ) + 1 + filename_character_limit
         
         if max_bytes_with_full_filename > max_path_bytes:
             
-            num_character_count_available -= max_bytes_with_full_filename - max_path_bytes
+            filename_character_limit -= max_bytes_with_full_filename - max_path_bytes
             
             min_filename_bytes = 18
             
-            if num_character_count_available <= min_filename_bytes:
+            if filename_character_limit <= min_filename_bytes:
                 
                 raise Exception( 'Sorry, it looks like the combined export filename or directory would be too long! Try shortening the export directory name!' )
                 
@@ -266,102 +440,64 @@ def ElideFilenameSafely( name: str, num_character_count_available: int, director
         
         max_path_characters -= 10 # bit of padding
         
-        max_characters_with_full_filename = len( directory_prefix ) + 1 + num_character_count_available
+        max_characters_with_full_filename = len( destination_directory ) + 1 + filename_character_limit
         
         if max_characters_with_full_filename > max_path_characters:
             
-            num_character_count_available -= max_characters_with_full_filename - max_path_characters
+            filename_character_limit -= max_characters_with_full_filename - max_path_characters
             
             min_filename_chars = 10
             
-            if num_character_count_available <= min_filename_chars:
+            if filename_character_limit <= min_filename_chars:
                 
                 raise Exception( 'Sorry, it looks like the combined export filename or directory would be too long! Try shortening the export directory name!' )
                 
             
         
     
-    if ext_suffix is not None:
+    if HC.PLATFORM_WINDOWS or force_ntfs_rules:
         
-        if HC.PLATFORM_WINDOWS:
-            
-            num_character_count_available -= len( ext_suffix )
-            
-        else:
-            
-            num_character_count_available -= len( ext_suffix.encode( 'utf-8' ) )
-            
+        filename_character_limit -= len( ext_suffix )
         
-        if num_character_count_available <= 0:
-            
-            raise Exception( 'Sorry, it looks like the export filename would be too long! Try shortening the export phrase or directory!' )
-            
+    else:
+        
+        filename_character_limit -= len( ext_suffix.encode( 'utf-8' ) )
         
     
-    def the_test( n ):
-        
-        if HC.PLATFORM_WINDOWS:
-            
-            return len( n ) > num_character_count_available
-            
-        else:
-            
-            return len( n.encode( 'utf-8' ) ) > num_character_count_available
-            
-        
-    
-    while the_test( name ):
-        
-        name = name[:-1]
-        
-    
-    name = name.strip()
-    
-    if name == '':
+    if filename_character_limit <= 0:
         
         raise Exception( 'Sorry, it looks like the export filename would be too long! Try shortening the export phrase or directory!' )
         
     
-    return name
-    
-
-def ElideDirectoryHack( name: str, force_ntfs = False ):
-    
-    # most OSes cannot handle a filename or dirname with more than 256 X, where on Windows that is chars and Linux/macOS is bytes
-    # since Windows also can't handle a path of more than 256, we are hacking a 64 char limit there
-    
-    if name == '':
-        
-        raise Exception( 'Sorry, the proposed directory was empty!' )
-        
-    
     def the_test( n ):
         
-        if HC.PLATFORM_WINDOWS or force_ntfs:
+        if HC.PLATFORM_WINDOWS or force_ntfs_rules:
             
-            # characters
-            return len( n ) > 64
+            return len( n ) > filename_character_limit
             
         else:
             
-            # bytes
-            return len( n.encode( 'utf-8' ) ) > ( 256 - 10 ) # bit of padding
+            return len( n.encode( 'utf-8' ) ) > filename_character_limit
             
         
     
-    while the_test( name ):
+    base_filename = SanitizeFilename( base_filename, force_ntfs_rules )
+    
+    while the_test( base_filename ):
         
-        name = name[:-1]
+        base_filename = base_filename[:-1]
+        
+        base_filename = SanitizeFilename( base_filename, force_ntfs_rules )
         
     
-    name = name.strip()
+    base_filename = base_filename.strip()
     
-    if name == '':
+    if base_filename == '':
         
-        name = 'directory_truncated'
+        raise Exception( 'Sorry, it looks like the export filename would be too long! Try shortening the export phrase or directory!' )
         
     
-    return name
+    return ( subdirs_elided, base_filename )
     
 
 def FigureOutDBDir( arg_db_dir: str ):
@@ -1282,9 +1418,9 @@ NTFS_disallowed_names_case_insensitive = { 'con', 'prn', 'aux', 'nul' }
 NTFS_disallowed_names_case_insensitive.update( ( f'com{x}' for x in range( 1, 10 ) ) )
 NTFS_disallowed_names_case_insensitive.update( ( f'lpt{x}' for x in range( 1, 10 ) ) )
 
-def SanitizeFilename( filename, force_ntfs = False ) -> str:
+def SanitizeFilename( filename: str, force_ntfs_rules: bool ) -> str:
     
-    if HC.PLATFORM_WINDOWS or force_ntfs:
+    if HC.PLATFORM_WINDOWS or force_ntfs_rules:
         
         # \, /, :, *, ?, ", <, >, |
         bad_characters = r'[\\/:*?"<>|]'
@@ -1312,34 +1448,15 @@ def SanitizeFilename( filename, force_ntfs = False ) -> str:
     
     clean_filename = clean_filename.strip()
     
-    if clean_filename.lower() in disallowed_names_case_insensitive:
+    if len( disallowed_names_case_insensitive ) > 0:
         
-        clean_filename = clean_filename + '_'
+        while clean_filename.lower() in disallowed_names_case_insensitive:
+            
+            clean_filename = clean_filename[:-1]
+            
         
     
     return clean_filename
-    
-
-def SanitizePathForExport( directories_and_filename, force_ntfs ):
-    
-    # this does not figure out the situation where the suffix directories cross a mount point to a new file system, but at that point it is user's job to fix
-    
-    components = directories_and_filename.split( os.path.sep )
-    
-    filename = components[-1]
-    
-    suffix_directories = components[:-1]
-    
-    suffix_directories = [ ElideDirectoryHack( suffix_directory, force_ntfs = force_ntfs ) for suffix_directory in suffix_directories ]
-    
-    suffix_directories = [ SanitizeFilename( suffix_directory, force_ntfs = force_ntfs ) for suffix_directory in suffix_directories ]
-    
-    filename = SanitizeFilename( filename, force_ntfs = force_ntfs )
-    
-    sanitized_components = suffix_directories
-    sanitized_components.append( filename )
-    
-    return os.path.join( *sanitized_components )
     
 
 def TryToGiveFileNicePermissionBits( path ):

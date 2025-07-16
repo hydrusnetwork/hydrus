@@ -84,7 +84,7 @@ class PNGExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
             
             filename = name + '.png'
             
-            filename = HydrusPaths.SanitizeFilename( filename )
+            filename = HydrusPaths.SanitizeFilename( filename, True )
             
             path = os.path.join( last_png_export_dir, filename )
             

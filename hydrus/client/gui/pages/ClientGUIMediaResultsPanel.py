@@ -187,10 +187,7 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.Liste
             
             canvas_frame.SetCanvas( canvas_window )
             
-            canvas_window.exitFocusMedia.connect( self.SetFocusedMedia )
-            canvas_window.userRemovedMedia.connect( self.RemoveMedia )
-            canvas_window.canvasWithHoversExiting.connect( CG.client_controller.gui.NotifyMediaViewerExiting )
-            
+            self._ConnectCanvasWindowSignals( canvas_window )
             
         
     
@@ -199,6 +196,21 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.Liste
         media = self._GetSelectedFlatMedia()
         
         ClientGUIMediaModalActions.ClearDeleteRecord( self, media )
+        
+    
+    def _ConnectCanvasWindowSignals( self, canvas_window: ClientGUICanvas.Canvas ):
+        
+        if isinstance( canvas_window, ClientGUICanvas.CanvasMediaList ):
+            
+            canvas_window.exitFocusMedia.connect( self.NotifyFocusedMediaFromCanvasExiting )
+            
+            canvas_window.userRemovedMedia.connect( self.RemoveMedia )
+            
+        
+        if isinstance( canvas_window, ClientGUICanvas.CanvasWithHovers ):
+            
+            canvas_window.canvasWithHoversExiting.connect( CG.client_controller.gui.NotifyMediaViewerExiting )
+            
         
     
     def _Delete( self, file_service_key = None, only_those_in_file_service_key = None ):
@@ -904,16 +916,7 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.Liste
             
             canvas_frame.SetCanvas( canvas_window )
             
-            canvas_window.userRemovedMedia.connect( self.RemoveMedia )
-
-            if CG.client_controller.new_options.GetBoolean( 'focus_media_tab_on_viewer_close_if_possible' ):
-                
-                canvas_window.exitFocusMedia.connect( self.SetFocusedMediaAndFocusTab )
-                
-            else:
-                
-                canvas_window.exitFocusMedia.connect( self.SetFocusedMedia )
-                
+            self._ConnectCanvasWindowSignals( canvas_window )
             
         
     
@@ -1812,7 +1815,8 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.Liste
         if self._focused_media is not None:
             
             publish_media = self._focused_media.GetDisplayMedia()
-
+            
+        
         if publish_media is None:
             
             self.focusMediaCleared.emit()
@@ -1967,6 +1971,23 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.Liste
     def LaunchMediaViewerOn( self, media ):
         
         self._LaunchMediaViewer( media )
+        
+    
+    def NotifyFocusedMediaFromCanvasExiting( self, media ):
+        
+        if CG.client_controller.new_options.GetBoolean( 'focus_media_tab_on_viewer_close_if_possible' ):
+            
+            if CG.client_controller.gui.GetPageFromPageKey( self._page_key ) is not None:
+                
+                CG.client_controller.gui.ShowPage( self._page_key )
+                
+            
+        
+        if CG.client_controller.new_options.GetBoolean( 'focus_media_thumb_on_viewer_close' ):
+            
+            self.SetFocusedMedia( media )
+            
+        
         
     
     def PageHidden( self ):
@@ -2613,18 +2634,6 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.Liste
     def SetFocusedMedia( self, media ):
         
         pass
-        
-    
-    def SetFocusedMediaAndFocusTab( self, media ):
-        
-        if CG.client_controller.gui.GetPageFromPageKey( self._page_key ) is not None:
-            
-            CG.client_controller.gui.ShowPage( self._page_key )
-
-            self.SetFocusedMedia( media )
-            
-            self._PublishSelectionChange()
-            
         
     
     def get_hmrp_background( self ):

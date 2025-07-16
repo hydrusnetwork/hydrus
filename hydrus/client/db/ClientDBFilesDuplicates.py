@@ -15,6 +15,7 @@ from hydrus.client.db import ClientDBModule
 from hydrus.client.db import ClientDBSimilarFiles
 from hydrus.client.db import ClientDBFilesDuplicatesAutoResolutionStorage
 from hydrus.client.duplicates import ClientDuplicates
+from hydrus.client.duplicates import ClientPotentialDuplicatesSearchContext
 
 class ClientDBFilesDuplicates( ClientDBModule.ClientDBModule ):
     
@@ -195,6 +196,7 @@ class ClientDBFilesDuplicates( ClientDBModule.ClientDBModule ):
     
     def _NotifyChangeToPotentialDuplicatePairs( self ):
         
+        # now this guy is a nice object, we _could_ consider updating that guy directly in the various ways when that is simple
         self._all_potential_duplicate_pairs_and_distances = None
         
     
@@ -545,7 +547,7 @@ class ClientDBFilesDuplicates( ClientDBModule.ClientDBModule ):
             self._all_potential_duplicate_pairs_and_distances = self._Execute( 'SELECT smaller_media_id, larger_media_id, distance FROM potential_duplicate_pairs;' ).fetchall()
             
         
-        return list( self._all_potential_duplicate_pairs_and_distances )
+        return ClientPotentialDuplicatesSearchContext.PotentialDuplicatePairsAndDistances( self._all_potential_duplicate_pairs_and_distances )
         
     
     def GetAlternatesGroupId( self, media_id, do_not_create = False ):

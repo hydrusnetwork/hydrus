@@ -64,7 +64,7 @@ def ShowAboutWindow( win: QW.QWidget ):
     
     library_version_lines = []
     
-    library_version_lines.append( 'running on {} {}'.format( HC.NICE_PLATFORM_STRING, HC.NICE_RUNNING_AS_STRING ) )
+    library_version_lines.append( 'running on {} {} {}'.format( HC.NICE_ARCHITECTURE_STRING, HC.NICE_PLATFORM_STRING, HC.NICE_RUNNING_AS_STRING ) )
     
     # 2.7.12 (v2.7.12:d33e0cf91556, Jun 27 2016, 15:24:40) [MSC v.1500 64 bit (AMD64)]
     v = sys.version

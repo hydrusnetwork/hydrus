@@ -68,11 +68,9 @@ class HydrusResourceClientAPIRestrictedManageFileRelationshipsGetPotentialPairs(
         
         max_num_pairs = request.parsed_request_args.GetValue( 'max_num_pairs', int, default_value = CG.client_controller.new_options.GetInteger( 'duplicate_filter_max_batch_size' ) )
         
-        filtering_pairs_media_results = CG.client_controller.Read( 'duplicate_pairs_for_filtering', potential_duplicates_search_context, max_num_pairs = max_num_pairs )
+        filtering_pairs_hashes = CG.client_controller.Read( 'duplicate_pair_hashes_for_filtering', potential_duplicates_search_context, max_num_pairs = max_num_pairs )
         
-        filtering_pairs_hashes = [ ( m1.GetHash().hex(), m2.GetHash().hex() ) for ( m1, m2 ) in filtering_pairs_media_results ]
-        
-        body_dict = { 'potential_duplicate_pairs' : filtering_pairs_hashes }
+        body_dict = { 'potential_duplicate_pairs' : [ ( hash_1.hex(), hash_2.hex() ) for ( hash_1, hash_2 ) in filtering_pairs_hashes ] }
         
         body = ClientLocalServerCore.Dumps( body_dict, request.preferred_mime )
         

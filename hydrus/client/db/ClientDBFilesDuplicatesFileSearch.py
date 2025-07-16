@@ -1,14 +1,10 @@
-import collections
-import collections.abc
 import itertools
 import random
 import sqlite3
 import typing
 
 from hydrus.core import HydrusData
-from hydrus.core import HydrusLists
 
-from hydrus.client import ClientGlobals as CG
 from hydrus.client.db import ClientDBDefinitionsCache
 from hydrus.client.db import ClientDBFilesDuplicates
 from hydrus.client.db import ClientDBFilesSearch
@@ -18,6 +14,8 @@ from hydrus.client.db import ClientDBModule
 from hydrus.client.db import ClientDBSimilarFiles
 from hydrus.client.duplicates import ClientDuplicates
 from hydrus.client.duplicates import ClientPotentialDuplicatesSearchContext
+
+from hydrus.client.media import ClientMediaResult
 
 class ClientDBFilesDuplicatesFileSearch( ClientDBModule.ClientDBModule ):
     
@@ -54,7 +52,7 @@ class ClientDBFilesDuplicatesFileSearch( ClientDBModule.ClientDBModule ):
         return self._STS( self._Execute( 'SELECT king_hash_id FROM duplicate_files;' ) )
         
     
-    def GetPotentialDuplicatePairsFragmentary( self, potential_duplicates_search_context: ClientPotentialDuplicatesSearchContext.PotentialDuplicatesSearchContext, relevant_pairs_and_distances: collections.abc.Collection[ tuple[ int, int, int ] ] ):
+    def GetPotentialDuplicatePairsAndDistancesFragmentary( self, potential_duplicates_search_context: ClientPotentialDuplicatesSearchContext.PotentialDuplicatesSearchContext, relevant_pairs_and_distances: ClientPotentialDuplicatesSearchContext.PotentialDuplicatePairsAndDistances ) -> ClientPotentialDuplicatesSearchContext.PotentialDuplicatePairsAndDistances:
         
         # we need to search the mass of potential duplicates using our search context, but we only want results from within the given pairs
         # to achieve this, we need two layers of clever fast filtering:
@@ -73,15 +71,13 @@ class ClientDBFilesDuplicatesFileSearch( ClientDBModule.ClientDBModule ):
         
         db_location_context = self.modules_files_storage.GetDBLocationContext( file_search_context_1.GetLocationContext() )
         
-        all_media_ids = set( itertools.chain.from_iterable( ( ( smaller_media_id, larger_media_id ) for ( smaller_media_id, larger_media_id, distance ) in relevant_pairs_and_distances ) ) )
-        
         #
         
         # OK so the conceit I went with in the end is simply substituting potential_duplicate_pairs with a temp table of our relevant pairs and letting the query planner's chips fall where they may
         # I threw in the ANALYZE to help the query planner navigate this. we'll see how it is IRL, fingers-crossed we win with three-row tables giving us insta-search
         # trying to insert a forced CROSS JOIN in dynamic join calls here is total wewmode, so tread carefully
         
-        with self._MakeTemporaryIntegerTable( relevant_pairs_and_distances, ( 'smaller_media_id', 'larger_media_id', 'distance' ) ) as temp_media_ids_table_name:
+        with self._MakeTemporaryIntegerTable( relevant_pairs_and_distances.GetRows(), ( 'smaller_media_id', 'larger_media_id', 'distance' ) ) as temp_media_ids_table_name:
             
             self._Execute( f'ANALYZE {temp_media_ids_table_name};')
             
@@ -93,6 +89,8 @@ class ClientDBFilesDuplicatesFileSearch( ClientDBModule.ClientDBModule ):
                 with self._MakeTemporaryIntegerTable( [], 'hash_id' ) as temp_table_name_2:
                     
                     if dupe_search_type == ClientDuplicates.DUPE_SEARCH_BOTH_FILES_MATCH_DIFFERENT_SEARCHES:
+                        
+                        all_media_ids = set( itertools.chain.from_iterable( relevant_pairs_and_distances.GetPairs() ) )
                         
                         required_hash_ids = self.modules_files_duplicates.GetKingHashIds( db_location_context, all_media_ids )
                         
@@ -112,6 +110,8 @@ class ClientDBFilesDuplicatesFileSearch( ClientDBModule.ClientDBModule ):
                             
                         else:
                             
+                            all_media_ids = set( itertools.chain.from_iterable( relevant_pairs_and_distances.GetPairs() ) )
+                            
                             required_hash_ids = self.modules_files_duplicates.GetKingHashIds( db_location_context, all_media_ids )
                             
                             self.modules_files_query.PopulateSearchIntoTempTable( file_search_context_1, temp_table_name_1, query_hash_ids = required_hash_ids )
@@ -130,256 +130,121 @@ class ClientDBFilesDuplicatesFileSearch( ClientDBModule.ClientDBModule ):
                         
                     
                     # distinct important here for the search results table join
-                    matching_pairs = self._Execute( 'SELECT DISTINCT smaller_media_id, larger_media_id FROM {};'.format( table_join ) ).fetchall()
+                    matching_pairs_and_distances = self._Execute( 'SELECT DISTINCT smaller_media_id, larger_media_id, distance FROM {};'.format( table_join ) ).fetchall()
                     
                 
             
         
-        return matching_pairs
+        return ClientPotentialDuplicatesSearchContext.PotentialDuplicatePairsAndDistances( matching_pairs_and_distances )
         
     
-    def GetPotentialDuplicatePairsFragmentaryMediaResults( self, potential_duplicates_search_context: ClientPotentialDuplicatesSearchContext.PotentialDuplicatesSearchContext, relevant_pairs_and_distances: collections.abc.Collection[ tuple[ int, int, int ] ] ):
+    def GetPotentialDuplicatePairsFragmentaryMediaResults( self, potential_duplicates_search_context: ClientPotentialDuplicatesSearchContext.PotentialDuplicatesSearchContext, relevant_pairs_and_distances: ClientPotentialDuplicatesSearchContext.PotentialDuplicatePairsAndDistances, duplicate_pair_sort_type: int, sort_asc: bool ):
         
-        pairs_of_media_ids = self.GetPotentialDuplicatePairsFragmentary( potential_duplicates_search_context, relevant_pairs_and_distances )
+        matching_potential_duplicate_pairs_and_distances = self.GetPotentialDuplicatePairsAndDistancesFragmentary( potential_duplicates_search_context, relevant_pairs_and_distances )
         
-        all_media_ids = set()
-        
-        for ( smaller_media_id, larger_media_id ) in pairs_of_media_ids:
-            
-            all_media_ids.add( smaller_media_id )
-            all_media_ids.add( larger_media_id )
-            
+        all_media_ids = { media_id for pair in matching_potential_duplicate_pairs_and_distances.GetPairs() for media_id in pair }
         
         media_ids_to_king_hash_ids = { media_id : self.modules_files_duplicates.GetKingHashId( media_id ) for media_id in all_media_ids }
         
-        pairs_of_hash_ids = [ ( media_ids_to_king_hash_ids[ smaller_media_id ], media_ids_to_king_hash_ids[ larger_media_id ] ) for ( smaller_media_id, larger_media_id ) in pairs_of_media_ids ]
+        handle_invalid = lambda i: 1 if i is None or i == 0 else i
         
-        return self.modules_media_results.GetMediaResultPairs( pairs_of_hash_ids )
-        
-    
-    def GetPotentialDuplicatePairsForFiltering( self, potential_duplicates_search_context: ClientPotentialDuplicatesSearchContext.PotentialDuplicatesSearchContext, max_num_pairs: typing.Optional[ int ] = None ):
-        
-        # TODO: This guy feels ripe for a fragmentary update to reduce latency
-        # however the later logic is crazy/old. maybe KISS wipe is the solution, or maybe we need a clever little hook after a fragmentary fetch loop
-        
-        if max_num_pairs is None:
+        if duplicate_pair_sort_type == ClientDuplicates.DUPE_PAIR_SORT_SIMILARITY:
             
-            max_num_pairs = CG.client_controller.new_options.GetInteger( 'duplicate_filter_max_batch_size' )
-            
-        
-        potential_duplicates_search_context = potential_duplicates_search_context.Duplicate()
-        
-        potential_duplicates_search_context.OptimiseForSearch()
-        
-        file_search_context_1 = potential_duplicates_search_context.GetFileSearchContext1()
-        file_search_context_2 = potential_duplicates_search_context.GetFileSearchContext2()
-        dupe_search_type = potential_duplicates_search_context.GetDupeSearchType()
-        pixel_dupes_preference = potential_duplicates_search_context.GetPixelDupesPreference()
-        max_hamming_distance = potential_duplicates_search_context.GetMaxHammingDistance()
-        
-        # we need to batch non-intersecting decisions here to keep it simple at the gui-level
-        # we also want to maximise per-decision value
-        
-        # now we will fetch some unknown pairs
-        
-        db_location_context = self.modules_files_storage.GetDBLocationContext( file_search_context_1.GetLocationContext() )
-        
-        chosen_allowed_hash_ids = None
-        chosen_preferred_hash_ids = None
-        comparison_allowed_hash_ids = None
-        comparison_preferred_hash_ids = None
-        
-        with self._MakeTemporaryIntegerTable( [], 'hash_id' ) as temp_table_name_1:
-            
-            with self._MakeTemporaryIntegerTable( [], 'hash_id' ) as temp_table_name_2:
+            def sort_key( pair: tuple[ ClientMediaResult.MediaResult, ClientMediaResult.MediaResult ] ):
                 
-                if dupe_search_type == ClientDuplicates.DUPE_SEARCH_BOTH_FILES_MATCH_DIFFERENT_SEARCHES:
-                    
-                    all_possible_king_hash_ids = self._GetAllKingHashIds( db_location_context )
-                    
-                    query_hash_ids_1 = set( self.modules_files_query.PopulateSearchIntoTempTable( file_search_context_1, temp_table_name_1, query_hash_ids = all_possible_king_hash_ids ) )
-                    query_hash_ids_2 = set( self.modules_files_query.PopulateSearchIntoTempTable( file_search_context_2, temp_table_name_2, query_hash_ids = all_possible_king_hash_ids ) )
-                    
-                    self._Execute( f'ANALYZE {temp_table_name_1};')
-                    self._Execute( f'ANALYZE {temp_table_name_2};')
-                    
-                    # we always want pairs where one is in one and the other is in the other, we don't want king-selection-trickery giving us a jpeg vs a jpeg
-                    chosen_allowed_hash_ids = query_hash_ids_1
-                    comparison_allowed_hash_ids = query_hash_ids_2
-                    
-                    table_join = self.modules_files_duplicates.GetPotentialDuplicatePairsTableJoinOnSeparateSearchResults( temp_table_name_1, temp_table_name_2, pixel_dupes_preference, max_hamming_distance )
-                    
-                else:
-                    
-                    if ( file_search_context_1.IsJustSystemEverything() or file_search_context_1.HasNoPredicates() ) and db_location_context.SingleTableIsFast():
-                        
-                        table_join = self.modules_files_duplicates.GetPotentialDuplicatePairsTableJoinOnEverythingSearchResults( db_location_context, pixel_dupes_preference, max_hamming_distance )
-                        
-                    else:
-                        
-                        all_possible_king_hash_ids = self._GetAllKingHashIds( db_location_context )
-                        
-                        query_hash_ids = set( self.modules_files_query.PopulateSearchIntoTempTable( file_search_context_1, temp_table_name_1, query_hash_ids = all_possible_king_hash_ids ) )
-                        
-                        self._Execute( f'ANALYZE {temp_table_name_1};')
-                        
-                        if dupe_search_type == ClientDuplicates.DUPE_SEARCH_BOTH_FILES_MATCH_ONE_SEARCH:
-                            
-                            # both chosen and comparison must be in the search, no king selection nonsense allowed
-                            chosen_allowed_hash_ids = query_hash_ids
-                            comparison_allowed_hash_ids = query_hash_ids
-                            
-                            table_join = self.modules_files_duplicates.GetPotentialDuplicatePairsTableJoinOnSearchResultsBothFiles( temp_table_name_1, pixel_dupes_preference, max_hamming_distance )
-                            
-                        else:
-                            
-                            # one file matches the search
-                            chosen_allowed_hash_ids = query_hash_ids
-                            
-                            table_join = self.modules_files_duplicates.GetPotentialDuplicatePairsTableJoinOnSearchResults( db_location_context, temp_table_name_1, pixel_dupes_preference, max_hamming_distance )
-                            
-                        
-                    
+                ( m_r_1, m_r_2 ) = pair
                 
-                # distinct important here for the search results table join
-                result = self._Execute( 'SELECT DISTINCT smaller_media_id, larger_media_id, distance FROM {} LIMIT 2500;'.format( table_join ) ).fetchall()
+                m_r_1_size = handle_invalid( m_r_1.GetSize() )
+                m_r_2_size = handle_invalid( m_r_2.GetSize() )
+                
+                return max( m_r_1_size, m_r_2_size ) / min( m_r_1_size, m_r_2_size )
                 
             
-        
-        batch_of_pairs_of_media_ids = []
-        seen_media_ids = set()
-        
-        distances_to_pairs = HydrusData.BuildKeyToListDict( ( ( distance, ( smaller_media_id, larger_media_id ) ) for ( smaller_media_id, larger_media_id, distance ) in result ) )
-        
-        distances = sorted( distances_to_pairs.keys() )
-        
-        # we want to preference pairs that have the smallest distance between them. deciding on more similar files first helps merge dupes before dealing with alts so reduces potentials more quickly
-        for distance in distances:
+            lists_of_potential_duplicate_pairs = matching_potential_duplicate_pairs_and_distances.GetPairListsBySmallestDistanceFirst()
             
-            result_pairs_for_this_distance = distances_to_pairs[ distance ]
+            lists_of_media_result_pairs = []
             
-            # convert them into possible groups per each possible 'master hash_id', and value them
-            
-            master_media_ids_to_groups = collections.defaultdict( list )
-            
-            for pair in result_pairs_for_this_distance:
+            for potential_duplicate_pairs in lists_of_potential_duplicate_pairs:
                 
-                ( smaller_media_id, larger_media_id ) = pair
+                pairs_of_hash_ids = [ ( media_ids_to_king_hash_ids[ smaller_media_id ], media_ids_to_king_hash_ids[ larger_media_id ] ) for ( smaller_media_id, larger_media_id ) in potential_duplicate_pairs ]
                 
-                master_media_ids_to_groups[ smaller_media_id ].append( pair )
-                master_media_ids_to_groups[ larger_media_id ].append( pair )
+                media_result_pairs = sorted( self.modules_media_results.GetMediaResultPairs( pairs_of_hash_ids ), key = sort_key )
+                
+                lists_of_media_result_pairs.append( media_result_pairs )
                 
             
-            master_hash_ids_to_values = collections.Counter()
-            
-            for ( media_id, pairs ) in master_media_ids_to_groups.items():
-                
-                # negative so we later serve up smallest groups first
-                # we shall say for now that smaller groups are more useful to front-load because it lets us solve simple problems first
-                master_hash_ids_to_values[ media_id ] = - len( pairs )
-                
-            
-            # now let's add decision groups to our batch
-            # we exclude hashes we have seen before in each batch so we aren't treading over ground that was implicitly solved by a previous decision in the batch
-            
-            for ( master_media_id, count ) in master_hash_ids_to_values.most_common():
-                
-                if master_media_id in seen_media_ids:
-                    
-                    continue
-                    
-                
-                seen_media_ids_for_this_master_media_id = set()
-                
-                for pair in master_media_ids_to_groups[ master_media_id ]:
-                    
-                    ( smaller_media_id, larger_media_id ) = pair
-                    
-                    if smaller_media_id in seen_media_ids or larger_media_id in seen_media_ids:
-                        
-                        continue
-                        
-                    
-                    seen_media_ids_for_this_master_media_id.add( smaller_media_id )
-                    seen_media_ids_for_this_master_media_id.add( larger_media_id )
-                    
-                    batch_of_pairs_of_media_ids.append( pair )
-                    
-                    if len( batch_of_pairs_of_media_ids ) >= max_num_pairs:
-                        
-                        break
-                        
-                    
-                
-                seen_media_ids.update( seen_media_ids_for_this_master_media_id )
-                
-                if len( batch_of_pairs_of_media_ids ) >= max_num_pairs:
-                    
-                    break
-                    
-                
-            
-            if len( batch_of_pairs_of_media_ids ) >= max_num_pairs:
-                
-                break
-                
-            
-        
-        seen_hash_ids = set()
-        
-        batch_of_pairs_of_hash_ids = []
-        
-        if chosen_allowed_hash_ids == comparison_allowed_hash_ids and chosen_preferred_hash_ids == comparison_preferred_hash_ids:
-            
-            # which file was 'chosen' vs 'comparison' is irrelevant. the user is expecting to see a mix, so we want the best kings possible. this is probably 'system:everything' or similar
-            
-            for ( smaller_media_id, larger_media_id ) in batch_of_pairs_of_media_ids:
-                
-                best_smaller_king_hash_id = self.modules_files_duplicates.GetBestKingId( smaller_media_id, db_location_context, allowed_hash_ids = chosen_allowed_hash_ids, preferred_hash_ids = chosen_preferred_hash_ids )
-                best_larger_king_hash_id = self.modules_files_duplicates.GetBestKingId( larger_media_id, db_location_context, allowed_hash_ids = chosen_allowed_hash_ids, preferred_hash_ids = chosen_preferred_hash_ids )
-                
-                if best_smaller_king_hash_id is not None and best_larger_king_hash_id is not None:
-                    
-                    batch_of_pairs_of_hash_ids.append( ( best_smaller_king_hash_id, best_larger_king_hash_id ) )
-                    
-                    seen_hash_ids.update( ( best_smaller_king_hash_id, best_larger_king_hash_id ) )
-                    
-                
+            final_list_of_media_result_pairs = [ media_result_pair for media_result_pairs in lists_of_media_result_pairs for media_result_pair in media_result_pairs ]
             
         else:
             
-            # we want to enforce that our pairs seem human. if the user said 'A is in search 1 and B is in search 2', we don't want king selection going funny and giving us two from 1
-            # previously, we did this on media_ids on their own, but we have to do it in pairs. we choose the 'chosen' and 'comparison' of our pair and filter accordingly
+            if duplicate_pair_sort_type == ClientDuplicates.DUPE_PAIR_SORT_MAX_FILESIZE:
+                
+                def sort_key( pair: tuple[ ClientMediaResult.MediaResult, ClientMediaResult.MediaResult ] ):
+                    
+                    ( m_r_1, m_r_2 ) = pair
+                    
+                    m_r_1_size = handle_invalid( m_r_1.GetSize() )
+                    m_r_2_size = handle_invalid( m_r_2.GetSize() )
+                    
+                    return ( max( m_r_1_size, m_r_2_size ), min( m_r_1_size, m_r_2_size ) )
+                    
+                
+            elif duplicate_pair_sort_type == ClientDuplicates.DUPE_PAIR_SORT_MIN_FILESIZE:
+                
+                # what I would like auto-resolution to hook into
+                
+                def sort_key( pair: tuple[ ClientMediaResult.MediaResult, ClientMediaResult.MediaResult ] ):
+                    
+                    ( m_r_1, m_r_2 ) = pair
+                    
+                    m_r_1_size = handle_invalid( m_r_1.GetSize() )
+                    m_r_2_size = handle_invalid( m_r_2.GetSize() )
+                    
+                    return ( min( m_r_1_size, m_r_2_size ), max( m_r_1_size, m_r_2_size ) )
+                    
+                
+            else:
+                
+                raise NotImplementedError( 'Did not understand that duplicate sort!' )
+                
             
-            for ( smaller_media_id, larger_media_id ) in batch_of_pairs_of_media_ids:
+            matching_potential_duplicate_pairs = matching_potential_duplicate_pairs_and_distances.GetPairs()
+            
+            pairs_of_hash_ids = [ ( media_ids_to_king_hash_ids[ smaller_media_id ], media_ids_to_king_hash_ids[ larger_media_id ] ) for ( smaller_media_id, larger_media_id ) in matching_potential_duplicate_pairs ]
+            
+            final_list_of_media_result_pairs = sorted( self.modules_media_results.GetMediaResultPairs( pairs_of_hash_ids ), key = sort_key )
+            
+        
+        if not sort_asc:
+            
+            final_list_of_media_result_pairs.reverse()
+            
+        
+        return final_list_of_media_result_pairs
+        
+    
+    def GetPotentialDuplicatePairHashesForFiltering( self, potential_duplicates_search_context: ClientPotentialDuplicatesSearchContext.PotentialDuplicatesSearchContext, max_num_pairs: typing.Optional[ int ] = None ):
+        
+        all_potential_duplicate_pairs_and_distances = self.modules_files_duplicates.GetAllPotentialDuplicatePairsAndDistances()
+        
+        pair_results = []
+        
+        for block_of_potential_duplicate_paris_and_distances in all_potential_duplicate_pairs_and_distances.IterateBlocks():
+            
+            block_of_matching_media_results = self.GetPotentialDuplicatePairsFragmentaryMediaResults( potential_duplicates_search_context, block_of_potential_duplicate_paris_and_distances, ClientDuplicates.DUPE_PAIR_SORT_MAX_FILESIZE, False )
+            
+            for ( media_result_1, media_result_2 ) in block_of_matching_media_results:
                 
-                best_smaller_king_hash_id = self.modules_files_duplicates.GetBestKingId( smaller_media_id, db_location_context, allowed_hash_ids = chosen_allowed_hash_ids, preferred_hash_ids = chosen_preferred_hash_ids )
-                best_larger_king_hash_id = self.modules_files_duplicates.GetBestKingId( larger_media_id, db_location_context, allowed_hash_ids = comparison_allowed_hash_ids, preferred_hash_ids = comparison_preferred_hash_ids )
+                pair_results.append( ( media_result_1.GetHash(), media_result_2.GetHash() ) )
                 
-                if best_smaller_king_hash_id is None or best_larger_king_hash_id is None:
+                if max_num_pairs is not None and len( pair_results ) >= max_num_pairs:
                     
-                    # ok smaller was probably the comparison, let's see if that produces a better king hash
-                    
-                    best_smaller_king_hash_id = self.modules_files_duplicates.GetBestKingId( smaller_media_id, db_location_context, allowed_hash_ids = comparison_allowed_hash_ids, preferred_hash_ids = comparison_preferred_hash_ids )
-                    best_larger_king_hash_id = self.modules_files_duplicates.GetBestKingId( larger_media_id, db_location_context, allowed_hash_ids = chosen_allowed_hash_ids, preferred_hash_ids = chosen_preferred_hash_ids )
-                    
-                
-                if best_smaller_king_hash_id is not None and best_larger_king_hash_id is not None:
-                    
-                    batch_of_pairs_of_hash_ids.append( ( best_smaller_king_hash_id, best_larger_king_hash_id ) )
-                    
-                    seen_hash_ids.update( ( best_smaller_king_hash_id, best_larger_king_hash_id ) )
+                    return pair_results
                     
                 
             
         
-        media_results = self.modules_media_results.GetMediaResults( seen_hash_ids )
-        
-        hash_ids_to_media_results = { media_result.GetHashId() : media_result for media_result in media_results }
-        
-        batch_of_pairs_of_media_results = [ ( hash_ids_to_media_results[ hash_id_a ], hash_ids_to_media_results[ hash_id_b ] ) for ( hash_id_a, hash_id_b ) in batch_of_pairs_of_hash_ids ]
-        
-        return batch_of_pairs_of_media_results
+        return pair_results
         
     
     def GetPotentialDuplicatesCount( self, potential_duplicates_search_context: ClientPotentialDuplicatesSearchContext.PotentialDuplicatesSearchContext ):
@@ -388,7 +253,7 @@ class ClientDBFilesDuplicatesFileSearch( ClientDBModule.ClientDBModule ):
         
         count = 0
         
-        for block in HydrusLists.SplitListIntoChunks( all_potential_duplicate_pairs_and_distances, 4096 ):
+        for block in all_potential_duplicate_pairs_and_distances.IterateBlocks():
             
             count += self.GetPotentialDuplicatesCountFragmentary( potential_duplicates_search_context, block )
             
@@ -396,11 +261,11 @@ class ClientDBFilesDuplicatesFileSearch( ClientDBModule.ClientDBModule ):
         return count
         
     
-    def GetPotentialDuplicatesCountFragmentary( self, potential_duplicates_search_context: ClientPotentialDuplicatesSearchContext.PotentialDuplicatesSearchContext, relevant_pairs_and_distances: collections.abc.Collection[ tuple[ int, int, int ] ] ):
+    def GetPotentialDuplicatesCountFragmentary( self, potential_duplicates_search_context: ClientPotentialDuplicatesSearchContext.PotentialDuplicatesSearchContext, relevant_pairs_and_distances: ClientPotentialDuplicatesSearchContext.PotentialDuplicatePairsAndDistances ) -> int:
         
-        pairs_of_media_ids = self.GetPotentialDuplicatePairsFragmentary( potential_duplicates_search_context, relevant_pairs_and_distances )
+        matching_potential_duplicate_pairs_and_distances = self.GetPotentialDuplicatePairsAndDistancesFragmentary( potential_duplicates_search_context, relevant_pairs_and_distances )
         
-        return len( pairs_of_media_ids )
+        return len( matching_potential_duplicate_pairs_and_distances )
         
     
     def GetRandomPotentialDuplicateHashes( self, potential_duplicates_search_context: ClientPotentialDuplicatesSearchContext.PotentialDuplicatesSearchContext ) -> list[ bytes ]:

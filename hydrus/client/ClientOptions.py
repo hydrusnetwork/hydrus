@@ -309,6 +309,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             'activate_main_gui_on_viewer_close' : False,
             'override_bandwidth_on_file_urls_from_post_urls' : True,
             'remove_leading_url_double_slashes' : False,
+            'always_apply_ntfs_export_filename_rules' : False
         }
         
         #
@@ -440,7 +441,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             'gallery_page_wait_period_subscriptions' : 5,
             'watcher_page_wait_period' : 5,
             'popup_message_character_width' : 56,
-            'duplicate_filter_max_batch_size' : 250,
+            'duplicate_filter_max_batch_size' : 100,
             'video_thumbnail_percentage_in' : 35,
             'global_audio_volume' : 70,
             'media_viewer_audio_volume' : 70,
@@ -561,7 +562,9 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             'slideshow_short_duration_cutoff_percentage' : 75,
             'slideshow_long_duration_overspill_percentage' : 50,
             'num_to_show_in_ac_dropdown_children_tab' : 40,
-            'number_of_unselected_medias_to_present_tags_for' : 4096
+            'number_of_unselected_medias_to_present_tags_for' : 4096,
+            'export_path_character_limit' : None,
+            'export_dirname_character_limit' : None,
         }
         
         #

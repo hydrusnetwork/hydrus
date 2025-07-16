@@ -27,6 +27,10 @@ from hydrus.client.media import ClientMediaResult
 from hydrus.client.metadata import ClientContentUpdates
 from hydrus.client.metadata import ClientTags
 
+DUPE_PAIR_SORT_MAX_FILESIZE = 0
+DUPE_PAIR_SORT_SIMILARITY = 1
+DUPE_PAIR_SORT_MIN_FILESIZE = 2
+
 DUPE_SEARCH_ONE_FILE_MATCHES_ONE_SEARCH = 0
 DUPE_SEARCH_BOTH_FILES_MATCH_ONE_SEARCH = 1
 DUPE_SEARCH_BOTH_FILES_MATCH_DIFFERENT_SEARCHES = 2

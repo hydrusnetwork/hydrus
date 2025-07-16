@@ -124,18 +124,30 @@ def GenerateExportFilename( destination_directory, media, terms, file_index, do_
         filename = re.sub( '/+', '/', filename )
         
     
-    fst = HydrusPaths.GetFileSystemType( destination_directory )
-    
-    if fst is None:
+    if CG.client_controller.new_options.GetBoolean( 'always_apply_ntfs_export_filename_rules' ):
         
-        force_ntfs = False
+        force_ntfs_rules = True
         
     else:
         
-        force_ntfs = fst.lower() in ( 'ntfs', 'exfat' )
+        fst = HydrusPaths.GetFileSystemType( destination_directory )
         
-    
-    filename = HydrusPaths.SanitizePathForExport( filename, force_ntfs )
+        if fst is None:
+            
+            force_ntfs_rules = False
+            
+        else:
+            
+            fst_lower = fst.lower()
+            
+            if fst_lower.startswith( 'fuse.' ):
+                
+                fst_lower = fst_lower[ 5 : ]
+                
+            
+            force_ntfs_rules = fst_lower in ( 'ntfs', 'exfat', 'vfat', 'msdos', 'fat', 'fat32', 'cifs', 'smbfs', 'fuseblk' )
+            
+        
     
     #
     
@@ -148,24 +160,17 @@ def GenerateExportFilename( destination_directory, media, terms, file_index, do_
         filename = filename[ : - len( ext ) ]
         
     
+    path_character_limit = CG.client_controller.new_options.GetNoneableInteger( 'export_path_character_limit' )
+    dirname_character_limit = CG.client_controller.new_options.GetNoneableInteger( 'export_dirname_character_limit' )
     filename_character_limit = CG.client_controller.new_options.GetInteger( 'export_filename_character_limit' )
     
     ( subdirs, true_filename ) = os.path.split( filename )
     
-    if len( subdirs ) > 0:
-        
-        true_destination_directory = os.path.join( destination_directory, subdirs )
-        
-    else:
-        
-        true_destination_directory = destination_directory
-        
+    ( subdirs_elided, filename_elided ) = HydrusPaths.ElideFilenameSafely( destination_directory, subdirs, true_filename, ext, path_character_limit, dirname_character_limit, filename_character_limit, force_ntfs_rules )
     
-    filename_elided = HydrusPaths.ElideFilenameSafely( true_filename, filename_character_limit, true_destination_directory, ext_suffix = ext )
-    
-    if len( subdirs ) > 0:
+    if len( subdirs_elided ) > 0:
         
-        filename_elided = os.path.join( subdirs, filename_elided )
+        filename_elided = os.path.join( subdirs_elided, filename_elided )
         
     
     if do_not_use_filenames is not None:

@@ -1,4 +1,5 @@
 import os
+import platform
 import sqlite3
 import sys
 import typing
@@ -56,6 +57,13 @@ elif PLATFORM_LINUX:
 elif PLATFORM_HAIKU:
     NICE_PLATFORM_STRING = 'Haiku'
 
+NICE_ARCHITECTURE_STRING = platform.machine()
+
+if NICE_ARCHITECTURE_STRING == 'AMD64':
+    
+    NICE_ARCHITECTURE_STRING = 'x86_64'
+    
+
 RUNNING_FROM_MACOS_APP = os.path.exists( os.path.join( BASE_DIR, 'running_from_app' ) )
 
 # I used to check argv[0], but it is unreliable
@@ -105,7 +113,7 @@ options = {}
 # Misc
 
 NETWORK_VERSION = 20
-SOFTWARE_VERSION = 629
+SOFTWARE_VERSION = 630
 CLIENT_API_VERSION = 80
 
 SERVER_THUMBNAIL_DIMENSIONS = ( 200, 200 )

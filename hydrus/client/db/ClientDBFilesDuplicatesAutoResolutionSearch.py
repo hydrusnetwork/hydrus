@@ -141,6 +141,11 @@ class ClientDBFilesDuplicatesAutoResolutionSearch( ClientDBModule.ClientDBModule
         
         def get_row():
             
+            # were it convenient, I think it might be nice to sort this to reduce the incidence of visual duplicates false negatives
+            # I am thinking that if you have 90%, 80%, 60% quality, the 80/60 is more likely to match than the 90/60, so if we do 80/60 first, i.e. smallest max filesize, we'd be able to collapse more
+            # however I think we'd violate KISS generally.  we'd be fetching 15 pairs for every single pair fetch or rewangling the pair queue storage to track size of king blah blah blah, so no worries
+            # also, an odd thought: typically, every decision will raise the average filesize
+            
             return self.modules_files_duplicates_auto_resolution_storage.GetMatchingUntestedPair( rule )
             
         
@@ -188,13 +193,15 @@ class ClientDBFilesDuplicatesAutoResolutionSearch( ClientDBModule.ClientDBModule
             
             potential_duplicates_search_context = rule.GetPotentialDuplicatesSearchContext()
             
-            matching_pairs = self.modules_files_duplicates_file_query.GetPotentialDuplicatePairsFragmentary( potential_duplicates_search_context, unsearched_pairs_and_distances )
+            matching_potential_duplicate_pairs_and_distances = self.modules_files_duplicates_file_query.GetPotentialDuplicatePairsAndDistancesFragmentary( potential_duplicates_search_context, unsearched_pairs_and_distances )
             
             #
             
-            unsearched_pairs = { ( smaller_media_id, larger_media_id ) for ( smaller_media_id, larger_media_id, distance ) in unsearched_pairs_and_distances }
+            unsearched_pairs = set( unsearched_pairs_and_distances.GetPairs() )
             
-            unmatching_pairs = set( unsearched_pairs ).difference( matching_pairs )
+            matching_pairs = set( matching_potential_duplicate_pairs_and_distances.GetPairs() )
+            
+            unmatching_pairs = unsearched_pairs.difference( matching_pairs )
             
             self.modules_files_duplicates_auto_resolution_storage.SetPairsToSimpleQueue( rule, matching_pairs, ClientDuplicatesAutoResolution.DUPLICATE_STATUS_MATCHES_SEARCH_BUT_NOT_TESTED )
             self.modules_files_duplicates_auto_resolution_storage.SetPairsToSimpleQueue( rule, unmatching_pairs, ClientDuplicatesAutoResolution.DUPLICATE_STATUS_DOES_NOT_MATCH_SEARCH )

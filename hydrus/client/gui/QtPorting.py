@@ -1834,13 +1834,18 @@ class DirDialog( QW.QFileDialog ):
         
         super().__init__( parent )
         
-        if message is not None: self.setWindowTitle( message )
+        if message is not None:
+            
+            self.setWindowTitle( message )
+            
         
         self.setAcceptMode( QW.QFileDialog.AcceptMode.AcceptOpen )
         
         self.setFileMode( QW.QFileDialog.FileMode.Directory )
         
         self.setOption( QW.QFileDialog.Option.ShowDirsOnly, True )
+        
+        self.setOption( QW.QFileDialog.Option.ReadOnly, False )
         
         if CG.client_controller.new_options.GetBoolean( 'use_qt_file_dialogs' ):
             

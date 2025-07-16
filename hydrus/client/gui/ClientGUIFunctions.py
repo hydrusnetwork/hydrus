@@ -201,22 +201,7 @@ def DialogIsOpen():
     
     for tlw in tlws:
         
-        if isinstance( tlw, QP.Dialog ) and tlw.isModal():
-            
-            return True
-            
-        
-    
-    return False
-    
-
-def DialogIsOpenAndIAmNotItsChild( win: QW.QWidget ):
-    
-    tlws = QW.QApplication.topLevelWidgets()
-    
-    for tlw in tlws:
-        
-        if isinstance( tlw, QP.Dialog ) and tlw.isModal() and not IsQtAncestor( win, tlw, through_tlws = True):
+        if isinstance( tlw, QP.Dialog ) and tlw.isVisible():
             
             return True
             
@@ -438,6 +423,24 @@ def MouseIsOverWidget( win: QW.QWidget ):
     
     return win.rect().contains( local_mouse_pos )
     
+
+def MyWindowHasAChildTLW( win: QW.QWidget ):
+    
+    me = win.window()
+    
+    tlws = QW.QApplication.topLevelWidgets()
+    
+    for tlw in tlws:
+        
+        if tlw != me and IsQtAncestor( tlw, me, through_tlws = True ):
+            
+            return True
+            
+        
+    
+    return False
+    
+
 
 def NotebookScreenToHitTest( notebook, screen_position ):
     

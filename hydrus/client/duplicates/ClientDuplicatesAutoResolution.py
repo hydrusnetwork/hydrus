@@ -438,6 +438,14 @@ class DuplicatesAutoResolutionRule( HydrusSerialisable.SerialisableBaseNamed ):
             
         
     
+    def HasUserWorkToDo( self ):
+        
+        with self._counts_lock:
+            
+            return self._counts_cache[ DUPLICATE_STATUS_MATCHES_SEARCH_PASSED_TEST_READY_TO_ACTION ] > 0
+            
+        
+    
     def IsPaused( self ):
         
         return self._operation_mode == DUPLICATES_AUTO_RESOLUTION_RULE_OPERATION_MODE_PAUSED
@@ -1173,8 +1181,6 @@ class DuplicatesAutoResolutionManager( ClientDaemons.ManagerWithMainLoop ):
         
         still_work_to_do = False
         
-        matching_pairs_produced = False
-        
         rules = CG.client_controller.Read( 'duplicates_auto_resolution_rules_with_counts' )
         
         rules = sorted( rules, key = lambda r: r.GetName().casefold() )
@@ -1205,11 +1211,6 @@ class DuplicatesAutoResolutionManager( ClientDaemons.ManagerWithMainLoop ):
                     if still_work_to_do_here:
                         
                         still_work_to_do = True
-                        
-                    
-                    if matching_pairs_produced_here:
-                        
-                        matching_pairs_produced = True
                         
                     
                 finally:
@@ -1365,6 +1366,10 @@ class DuplicatesAutoResolutionManager( ClientDaemons.ManagerWithMainLoop ):
                     
                     return 'waiting'
                     
+                
+            elif rule.HasUserWorkToDo():
+                
+                return 'queued'
                 
             else:
                 

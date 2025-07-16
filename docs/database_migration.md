@@ -106,7 +106,7 @@ Note that an install with an 'external' database no longer needs access to write
 
 ## backups { id="finally" }
 
-If your database now lives in one or more new locations, make sure to update your backup routine to follow them!
+If your database now lives in one or more new locations, make sure to update your backup routine! You should be maintaining a copy of everything. As your collection grows, you may want to similarly store your db + thumbs on a low-latency SSD USB stick (a nice 3.2 USB drive can sustain 350MB/s write of the db files and 4,000 thumbs/s) but the media files on a big cheap multi-TB regular USB drive.
 
 ## moving to an SSD { id="to_an_ssd" }
 
@@ -134,6 +134,44 @@ Specifically:
 You should now have _something_ like this (let's say the D drive is the fast SSD, and E is the high capacity HDD):
 
 ![](images/db_migration_example.png)
+
+## moving to a new machine { id="to_new_OS" }
+
+The hydrus database is completely portable. As well as moving it about within the same system, you can move your whole hydrus client to another computer quite easily. It all runs on Windows/Linux/macOS with no big modifications needed. The only thing you need to watch out for are the paths the database uses to talk to other parts of the system--for instance the location of an Export Folder.
+
+If the OSes are the same (e.g. Windows to Windows), moving from one machine to another is usually pretty easy--just drag and drop the whole install from one drive to another, via a network share or USB drive--but going from one OS type to another introduces a couple of extra wrinkles.
+
+??? note "OS Paths"
+    Remember that Windows has paths that start with drive letters, like `D:\` and uses backslashes to split paths; but Linux and macOS all start with root `/` and use regular slashes. If your OS suddenly changes, your absolute `D:\hydrus_files` is going to be seen as a relative path by Linux and you'll end up with like `/home/you/hydrus/db/D:\hydrus_files`. There's no huge worry here--hydrus won't rush to break anything, and it'll generally just freak out that the thing doesn't exist. You just need to tell it the correct new path.
+
+Before any system migration, make sure you:
+
+- finish any hard drive import pages that were working
+- pause your import folders
+- pause your export folders
+- MAKE A BACKUP
+
+Install a fresh new hydrus on the new machine and then, using a network share or a USB drive, copy the database folder, files, and thumbnails from the old to the new. You can insert the db directly into your new `install_dir/db` folder, or if you want to set up a new `--db_dir`, put the db in that location and set up the new shortcut.
+
+??? note "source installs"
+    If the type of OS hasn't changed, you can usually get away with copying the whole install folder. If you run from source, however, you _must_ recreate a new install dir with that OS's `git` and then build a new venv. Do not try to migrate a source installation folder!
+
+??? note "macOS App"
+    If you are moving to or from the macOS App, recall that the App cannot store the hydrus db inside it, so the correct 'default' location (i.e. without `--db_dir`), analogous to `install_dir/db` on other installs, is `~/Library/Hydrus`. You can always go `file->open->database directory` on any running client to find what it is currently running.
+
+Boot up your newly assembled client, and if your files or thumbnails are stored outside of `install_folder/db/client_files`, there's a good chance it will complain about them being missing. Don't panic! Just tell the repair dialog the correct new locations, and it'll stitch itself back together.
+
+Then:
+
+- check `options->external programs` and update anything as needed
+- check `options->exporting` and update the default export directory
+- check a file's `right-click->share->export files` window to see what the default export path there is
+- check `database->move media files` and remove any empty stubs from the old system
+- edit your import folders to point at the correct locations
+- edit your export folders to point at the correct locations
+- unpause import/export folders
+
+Then you should be good! Let me know if you run into any trouble.
 
 ## p.s. running multiple clients { id="multiple_clients" }
 

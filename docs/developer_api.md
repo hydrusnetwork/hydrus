@@ -2673,9 +2673,9 @@ Response:
 }
 ```
 
-`king` refers to which file is set as the best of a duplicate group. If you are doing potential duplicate comparisons, the kings of your two groups are usually the ideal representatives, and the 'get some pairs to filter'-style commands try to select the kings of the various to-be-compared duplicate groups. `is_king` is a convenience bool for when a file is king of its own group.
+`king` refers to which file is set as the best of a duplicate group. If you are doing potential duplicate comparisons, the kings of your two groups are usually the ideal representatives, and the 'get some pairs to filter'-style commands will always select the kings of the various to-be-compared duplicate groups. `is_king` is a convenience bool for when a file is king of its own group.
 
-**It is possible for the king to not be available.** Every group has a king, but if that file has been deleted, or if the file domain here is limited and the king is on a different file service, then it may not be available. A similar issue occurs when you search for filtering pairs--while it is ideal to compare kings with kings, if you set 'files must be pixel dupes', then the user will expect to see those pixel duplicates, not their champions--you may be forced to compare non-kings. `king_is_on_file_domain` lets you know if the king is on the file domain you set, and `king_is_local` lets you know if it is on the hard disk--if `king_is_local=true`, you can do a `/get_files/file` request on it. It is generally rare, but you have to deal with the king being unavailable--in this situation, your best bet is to just use the file itself as its own representative.
+**It is possible for the king to not be available.** Every group has a king, but if that file has been deleted, or if the file domain here is limited and the king is on a different file service, then it may not be available. The regular hydrus potential duplicate pair commands always look at kings, so a group like this will not contribute to any 'potential duplicate pairs' count or filter fetch and so on. If you need to do your own clever manual lookups, `king_is_on_file_domain` lets you know if the king is on the file domain you set, and `king_is_local` lets you know if it is on the hard disk--if `king_is_local=true`, you can do a `/get_files/file` request on it. It is generally rare, but you have to deal with the king being unavailable--in this situation, your best bet is to just use the file itself as its own representative.
 
 All the relationships you get are filtered by the file domain. If you set the file domain to 'all known files', you will get every relationship a file has, including all deleted files, which is often less useful than you would think. The default, 'all my files', is usually most useful.
 
@@ -2716,7 +2716,7 @@ Arguments (in percent-encoded JSON):
 /manage_file_relationships/get_potentials_count?tag_service_key_1=c1ba23c60cda1051349647a151321d43ef5894aacdfb4b4e333d6c4259d56c5f&tags_1=%5B%22dupes_to_process%22%2C%20%22system%3Awidth%3C400%22%5D&potentials_search_type=1&pixel_duplicates=2&max_hamming_distance=0&max_num_pairs=50
 ```
 
-`tag_service_key_x` and `tags_x` work the same as [/get\_files/search\_files](#get_files_search_files). The `_2` variants are only useful if the `potentials_search_type` is 2.
+The arguments here reflect the same options as you see in duplicate page sidebar and auto-resolution system that search for potential duplicate pairs. `tag_service_key_x` and `tags_x` work the same as [/get\_files/search\_files](#get_files_search_files). The `_2` variants are only useful if the `potentials_search_type` is 2.
 
 `potentials_search_type` and `pixel_duplicates` are enums:
 
@@ -2783,9 +2783,16 @@ Response:
 }
 ```
 
-The selected pair sample and their order is strictly hardcoded for now (e.g. to guarantee that a decision will not invalidate any other pair in the batch, you shouldn't see the same file twice in a batch, nor two files in the same duplicate group). Treat it as the client filter does, where you fetch batches to process one after another. I expect to make it more flexible in future, in the client itself and here.
+These file hashes are all kings that are available in the given file domain. Treat it as the client filter does, where you fetch batches to process one after another. I expect to add grouping/sorting options in the near future.
 
-You will see significantly fewer than `max_num_pairs` (and potential duplicate count) as you close to the last available pairs, and when there are none left, you will get an empty list.
+You may see the same file more than once in this batch, and if you expect to process and commit these as a batch, just like the filter does, you would be wise to skip through pairs that are implicated by a previous decision. When considering whether to display the 'next' pair, you should test:
+
+- In the current batch of decisions, has either file been manually deleted by the user?
+- In the current batch of decisions, has either file been adjudicated as the B in a 'A is better than B' or 'A is the same as B' (or, if you are doing it, the A in a 'B is better than A')?
+
+If either is true, you should skip the pair, since, after your current decisions are committed, that file is no longer in any potential duplicate pairs in the search you gave. The respective file is either no longer in the file domain, or it has been merged into another group (that file is no longer a king and either the potential pair no longer exists via transitive collapse or, rarely, hydrus can present you with a better comparison pair if you ask for a new batch).
+s
+You will see significantly fewer than `max_num_pairs` as you close to the last available pairs, and when there are none left, you will get an empty list.
 
 ### **GET `/manage_file_relationships/get_random_potentials`** { id="manage_file_relationships_get_random_potentials" }
 
@@ -2832,7 +2839,7 @@ Response:
 }
 ```
 
-If there are no potential duplicate groups in the search, this returns an empty list.
+These will all be kings. If there are no potential duplicate groups in the search, this returns an empty list.
 
 ### **POST `/manage_file_relationships/remove_potentials`** { id="manage_file_relationships_remove_potentials" }
 
@@ -2974,7 +2981,7 @@ The logic here can get tricky, but I have tried my best to avoid overcommitting 
         * King of A stays king of A
         * King of B stays king of B
 
-So, if you can, always present kings to your users, and action using those kings' hashes. It makes the merge logic easier in all cases. Remember that you can set `system:is the best quality file of its duplicate group` in any file search to exclude any non-kings (e.g. if you are hunting for easily actionable pixel potential duplicates).
+So, if you can, always present kings to your users, and action using those kings' hashes. It makes the merge logic easier in all cases. When you ask hydrus to 'get potential duplicate pairs' with these API calls, and it will _always_ present you kings or counts of available kings. If it cannot present a king (e.g. some group members are in the file domain, but the king is deleted, say), hydrus will _not_ count that as a potential duplicate pair in that potential duplicate pair search. If you are doing your own file duplicate search, remember that you can set `system:is the best quality file of its duplicate group` to exclude any non-kings.
 
 ### **POST `/manage_file_relationships/set_kings`** { id="manage_file_relationships_set_kings" }
 

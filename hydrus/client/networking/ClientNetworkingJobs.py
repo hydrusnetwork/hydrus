@@ -469,7 +469,7 @@ class NetworkJob( object ):
                     
                     if self._max_allowed_bytes is not None and self._num_bytes_to_read > self._max_allowed_bytes:
                         
-                        raise HydrusExceptions.NetworkException( 'The url was apparently {} but the max network size for this type of job is {}!'.format( HydrusData.ToHumanBytes( self._num_bytes_to_read ), HydrusData.ToHumanBytes( self._max_allowed_bytes ) ) )
+                        raise HydrusExceptions.NetworkException( 'The url, which I thought was supposed to be some small HTML/JSON-style file, was apparently {}, but the max network size for this type of job is {}! Are the URL Classes for this type of URL all correct?'.format( HydrusData.ToHumanBytes( self._num_bytes_to_read ), HydrusData.ToHumanBytes( self._max_allowed_bytes ) ) )
                         
                     
                     if self._file_import_options is not None:
@@ -618,7 +618,7 @@ class NetworkJob( object ):
                 
                 if self._max_allowed_bytes is not None and self._num_bytes_read > self._max_allowed_bytes:
                     
-                    raise HydrusExceptions.NetworkException( 'The url exceeded the max network size for this type of job, which is {}!'.format( HydrusData.ToHumanBytes( self._max_allowed_bytes ) ) )
+                    raise HydrusExceptions.NetworkException( 'The url, which I thought was supposed to be some small HTML/JSON-style file, exceeded the max network size for this type of job, which is {}! Are the URL Classes for this type of URL all correct?'.format( HydrusData.ToHumanBytes( self._max_allowed_bytes ) ) )
                     
                 
                 if self._file_import_options is not None:

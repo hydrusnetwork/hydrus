@@ -1211,6 +1211,8 @@ class TestClientAPI( unittest.TestCase ):
             
             self.assertEqual( response.status, 200 )
             
+            time.sleep( 0.25 )
+            
             [ ( ( content_update_package, ), kwargs ) ] = TG.test_controller.GetWrite( 'content_updates' )
             
             expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( CC.LOCAL_FILE_SERVICE_KEY, [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ADD, ( media_result.GetFileInfoManager(), magic_now ) ) ] )
@@ -5068,14 +5070,13 @@ class TestClientAPI( unittest.TestCase ):
         
         # get pairs
         
-        default_max_num_pairs = 250
+        default_max_num_pairs = 100
         test_max_num_pairs = 20
         
         test_hash_pairs = [ ( os.urandom( 32 ), os.urandom( 32 ) ) for i in range( 10 ) ]
-        test_media_result_pairs = [ ( HF.GetFakeMediaResult( h1 ), HF.GetFakeMediaResult( h2 ) ) for ( h1, h2 ) in test_hash_pairs ]
         test_hash_pairs_hex = [ [ h1.hex(), h2.hex() ] for ( h1, h2 ) in test_hash_pairs ]
         
-        TG.test_controller.SetRead( 'duplicate_pairs_for_filtering', test_media_result_pairs )
+        TG.test_controller.SetRead( 'duplicate_pair_hashes_for_filtering', test_hash_pairs )
         
         path = '/manage_file_relationships/get_potential_pairs'
         
@@ -5093,7 +5094,7 @@ class TestClientAPI( unittest.TestCase ):
         
         self.assertEqual( d[ 'potential_duplicate_pairs' ], test_hash_pairs_hex )
         
-        [ ( args, kwargs ) ] = TG.test_controller.GetRead( 'duplicate_pairs_for_filtering' )
+        [ ( args, kwargs ) ] = TG.test_controller.GetRead( 'duplicate_pair_hashes_for_filtering' )
         
         ( potential_duplicates_search_context, ) = args
         
@@ -5114,7 +5115,7 @@ class TestClientAPI( unittest.TestCase ):
         
         # get pairs with params
         
-        TG.test_controller.SetRead( 'duplicate_pairs_for_filtering', test_media_result_pairs )
+        TG.test_controller.SetRead( 'duplicate_pair_hashes_for_filtering', test_hash_pairs )
         
         path = '/manage_file_relationships/get_potential_pairs?tag_service_key_1={}&tags_1={}&tag_service_key_2={}&tags_2={}&potentials_search_type={}&pixel_duplicates={}&max_hamming_distance={}&max_num_pairs={}'.format(
             test_tag_service_key_1.hex(),
@@ -5141,7 +5142,7 @@ class TestClientAPI( unittest.TestCase ):
         
         self.assertEqual( d[ 'potential_duplicate_pairs' ], test_hash_pairs_hex )
         
-        [ ( args, kwargs ) ] = TG.test_controller.GetRead( 'duplicate_pairs_for_filtering' )
+        [ ( args, kwargs ) ] = TG.test_controller.GetRead( 'duplicate_pair_hashes_for_filtering' )
 
         ( potential_duplicates_search_context, ) = args
         

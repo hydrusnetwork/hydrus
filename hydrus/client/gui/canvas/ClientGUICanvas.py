@@ -22,6 +22,7 @@ from hydrus.client import ClientServices
 from hydrus.client import ClientThreading
 from hydrus.client.duplicates import ClientDuplicates
 from hydrus.client.duplicates import ClientPotentialDuplicatesSearchContext
+from hydrus.client.gui import ClientGUIAsync
 from hydrus.client.gui import ClientGUICore as CGC
 from hydrus.client.gui import ClientGUIDialogsManage
 from hydrus.client.gui import ClientGUIDialogsMessage
@@ -30,6 +31,7 @@ from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIMenus
 from hydrus.client.gui import ClientGUIRatings
 from hydrus.client.gui import ClientGUIShortcuts
+from hydrus.client.gui import ClientGUITopLevelWindows
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.canvas import ClientGUICanvasHoverFrames
@@ -2185,19 +2187,23 @@ class CanvasWithHovers( Canvas ):
         
         #
         
-        self._timer_cursor_hide_job = None
+        self._cursor_autohide_timer = QC.QTimer( self )
         self._last_cursor_autohide_touch_time = HydrusTime.GetNowFloat()
         
         # need this as we need un-button-pressed move events for cursor hide
         self.setMouseTracking( True )
-        
-        self._RestartCursorHideWait()
         
         CG.client_controller.sub( self, 'RedrawDetails', 'refresh_all_tag_presentation_gui' )
         CG.client_controller.sub( self, 'CloseFromHover', 'canvas_close' )
         CG.client_controller.sub( self, 'FullscreenSwitch', 'canvas_fullscreen_switch' )
         
         CG.client_controller.gui.RegisterUIUpdateWindow( self )
+        
+        self._cursor_autohide_timer.timeout.connect( self._HideCursorCheck )
+        
+        self._cursor_autohide_timer.start( 100 )
+        
+        self._RestartCursorHideWait()
         
     
     def _DrawAdditionalTopMiddleInfo( self, painter: QG.QPainter, current_y ):
@@ -2728,62 +2734,45 @@ class CanvasWithHovers( Canvas ):
         
         if hide_time_ms is None:
             
-            return
+            should_be_hidden = False
+            
+            next_check_period_ms = 1000
+            
+        else:
+            
+            next_check_period_ms = max( 100, min( int( hide_time_ms / 5 ), 250 ) )
+            
+            hide_time = HydrusTime.SecondiseMSFloat( hide_time_ms )
+            
+            if not CC.CAN_HIDE_MOUSE or CGC.core().MenuIsOpen() or ClientGUITopLevelWindows.ResizableWindowIsOpenAndIAmNotItsChild( self ):
+                
+                should_be_hidden = False
+                
+            else:
+                
+                should_be_hidden = HydrusTime.TimeHasPassedFloat( self._last_cursor_autohide_touch_time + hide_time )
+                
             
         
-        hide_time = HydrusTime.SecondiseMSFloat( hide_time_ms )
+        mouse_currently_shown = self.cursor().shape() == QC.Qt.CursorShape.ArrowCursor
         
-        can_hide = HydrusTime.TimeHasPassedFloat( self._last_cursor_autohide_touch_time + hide_time )
-        
-        can_check_again = ClientGUIFunctions.MouseIsOverWidget( self )
-        
-        if not CC.CAN_HIDE_MOUSE:
-            
-            can_hide = False
-            
-        
-        if CGC.core().MenuIsOpen():
-            
-            can_hide = False
-            
-        
-        if ClientGUIFunctions.DialogIsOpenAndIAmNotItsChild( self ):
-            
-            can_hide = False
-            
-            can_check_again = False
-            
-        
-        if can_hide:
+        if should_be_hidden and mouse_currently_shown:
             
             self.setCursor( QG.QCursor( QC.Qt.CursorShape.BlankCursor ) )
             
-        elif can_check_again:
+        elif not should_be_hidden and not mouse_currently_shown:
             
-            self._RestartCursorHideCheckJob()
+            self.setCursor( QG.QCursor( QC.Qt.CursorShape.ArrowCursor ) )
             
+        
+        self._cursor_autohide_timer.start( next_check_period_ms )
         
     
     def _RestartCursorHideWait( self ):
         
         self._last_cursor_autohide_touch_time = HydrusTime.GetNowFloat()
         
-        self._RestartCursorHideCheckJob()
-        
-    
-    def _RestartCursorHideCheckJob( self ):
-        
-        if self._timer_cursor_hide_job is not None:
-            
-            timer_is_running_or_finished = self._timer_cursor_hide_job.CurrentlyWorking() or self._timer_cursor_hide_job.IsWorkComplete()
-            
-            if not timer_is_running_or_finished:
-                
-                return
-                
-            
-        
-        self._timer_cursor_hide_job = CG.client_controller.CallLaterQtSafe( self, 0.1, 'hide cursor check', self._HideCursorCheck )
+        self._cursor_autohide_timer.start( 100 )
         
     
     def _TryToCloseWindow( self ):
@@ -2845,6 +2834,8 @@ class CanvasWithHovers( Canvas ):
         is_dragging = event.buttons() & QC.Qt.MouseButton.LeftButton and self._last_drag_pos is not None
         has_moved = event_pos != self._last_motion_pos
         
+        we_are_hiding_an_anchored_drag = False
+        
         if is_dragging:
             
             delta = event_pos - self._last_drag_pos
@@ -2869,7 +2860,7 @@ class CanvasWithHovers( Canvas ):
                 
                 if anchor_and_hide_canvas_drags and not touch_anchor_override:
                     
-                    show_mouse = False
+                    we_are_hiding_an_anchored_drag = True
                     
                     global_mouse_pos = self.mapToGlobal( self._last_drag_pos )
                     
@@ -2878,8 +2869,6 @@ class CanvasWithHovers( Canvas ):
                     ClientGUIShortcuts.CUMULATIVE_MOUSEWARP_MANHATTAN_LENGTH += approx_distance
                     
                 else:
-                    
-                    show_mouse = True
                     
                     self._last_drag_pos = QC.QPoint( event_pos )
                     
@@ -2893,11 +2882,9 @@ class CanvasWithHovers( Canvas ):
                 
                 self._last_motion_pos = QC.QPoint( event_pos )
                 
-                show_mouse = True
-                
             
         
-        if show_mouse:
+        if has_moved and not we_are_hiding_an_anchored_drag:
             
             if not mouse_currently_shown:
                 
@@ -2905,13 +2892,6 @@ class CanvasWithHovers( Canvas ):
                 
             
             self._RestartCursorHideWait()
-            
-        else:
-            
-            if mouse_currently_shown:
-                
-                self.setCursor( QG.QCursor( QC.Qt.CursorShape.BlankCursor ) )
-                
             
         
         super().mouseMoveEvent( event )
@@ -2983,6 +2963,54 @@ class CanvasWithHovers( Canvas ):
         
     
 
+def THREADCommitDuplicateResults( content_update_packages: list, pairs_info: list ):
+    
+    start_time = HydrusTime.GetNowFloat()
+    
+    job_status = ClientThreading.JobStatus()
+    have_published_job_status = False
+    
+    job_status.SetStatusTitle( 'committing duplicate decisions' )
+    
+    num_to_do = len( content_update_packages )
+    
+    for ( i, content_update_package ) in enumerate( content_update_packages ):
+        
+        if not have_published_job_status and HydrusTime.TimeHasPassedFloat( start_time + 1 ):
+            
+            CG.client_controller.pub( 'message', job_status )
+            
+            have_published_job_status = True
+            
+        
+        num_done = i + 1
+        
+        job_status.SetStatusText( f'misc file updates: {HydrusNumbers.ValueRangeToPrettyString( num_done, num_to_do )}' )
+        job_status.SetVariable( 'popup_gauge_1', ( num_done, num_to_do ) )
+        
+        CG.client_controller.WriteSynchronous( 'content_updates', content_update_package )
+        
+    
+    for ( num_done, num_to_do, block_of_pair_infos ) in HydrusLists.SplitListIntoChunksRich( pairs_info, 4 ):
+        
+        if not have_published_job_status and HydrusTime.TimeHasPassedFloat( start_time + 1 ):
+            
+            CG.client_controller.pub( 'message', job_status )
+            
+            have_published_job_status = True
+            
+        
+        job_status.SetStatusText( f'decisions: {HydrusNumbers.ValueRangeToPrettyString( num_done, num_to_do )}' )
+        job_status.SetVariable( 'popup_gauge_1', ( num_done, num_to_do ) )
+        
+        CG.client_controller.WriteSynchronous( 'duplicate_pair_status', block_of_pair_infos )
+        
+    
+    job_status.FinishAndDismiss()
+    
+    CG.client_controller.pub( 'new_similar_files_potentials_search_numbers' )
+    
+
 class CanvasFilterDuplicates( CanvasWithHovers ):
     
     CANVAS_TYPE = CC.CANVAS_MEDIA_VIEWER_DUPLICATES
@@ -2996,6 +3024,21 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
         location_context = self._potential_duplicates_search_context.GetFileSearchContext1().GetLocationContext()
         
         super().__init__( parent, location_context )
+        
+        self._all_potential_duplicate_pairs_and_distances = ClientPotentialDuplicatesSearchContext.PotentialDuplicatePairsAndDistances( [] )
+        self._all_potential_duplicate_pairs_and_distances_initialised = False
+        self._all_potential_duplicate_pairs_and_distances_fetch_started = False
+        
+        self._potential_duplicate_pairs_and_distances_still_to_search = ClientPotentialDuplicatesSearchContext.PotentialDuplicatePairsAndDistances( [] )
+        
+        self._fetched_pairs_to_process = []
+        
+        self._num_items_to_commit = 0
+        self._content_update_packages_we_are_committing = []
+        self._pair_infos_we_are_committing = []
+        
+        self._search_work_updater = self._InitialiseSearchWorkUpdater()
+        self._commit_work_updater = self._InitialiseCommitWorkUpdater()
         
         self._canvas_type = CC.CANVAS_MEDIA_VIEWER_DUPLICATES
         
@@ -3019,21 +3062,15 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
         
         self._force_maintain_pan_and_zoom = True
         
-        self._currently_fetching_pairs = False
-        
         self._current_pair_score = 0
+        
+        self._loading_text = 'initialising'
         
         self._batch_of_pairs_to_process = []
         self._current_pair_index = 0
         self._processed_pairs = []
         self._hashes_due_to_be_deleted_in_this_batch = set()
-        
-        # ok we started excluding pairs if they had been deleted, now I am extending it to any files that have been processed.
-        # main thing is if you have AB, AC, that's neat and a bunch of people want it, but current processing system doesn't do B->A->C merge if it happens in a single batch
-        # I need to store dupe merge options rather than content updates apply them in db transaction or do the retroactive sync or similar to get this done properly
-        # so regrettably I turn it off for now
-        
-        self._hashes_processed_in_this_batch = set()
+        self._hashes_due_to_be_media_merged_in_this_batch = set()
         
         self._media_list = ClientMedia.MediaList( location_context, [] )
         
@@ -3053,7 +3090,17 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
     
     def _CommitProcessed( self, blocking = True ):
         
-        pair_info = []
+        self.ClearMedia()
+        self._media_list = ClientMedia.MediaList( self._location_context, [] )
+        
+        self._num_items_to_commit = 0
+        self._content_update_packages_we_are_committing = []
+        self._pair_infos_we_are_committing = []
+        
+        # unfortunate, but the old value is now invalid since we are about to change things
+        # we may have knocked out potentials without merging media ids (set alternate) or, more rarely, added new potentials from merge inheritance
+        self._all_potential_duplicate_pairs_and_distances = ClientPotentialDuplicatesSearchContext.PotentialDuplicatePairsAndDistances( [] )
+        self._all_potential_duplicate_pairs_and_distances_initialised = False
         
         for ( duplicate_type, media_a, media_b, content_update_packages, was_auto_skipped ) in self._processed_pairs:
             
@@ -3063,14 +3110,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
                     
                     for content_update_package in content_update_packages:
                         
-                        if blocking:
-                            
-                            CG.client_controller.WriteSynchronous( 'content_updates', content_update_package )
-                            
-                        else:
-                            
-                            CG.client_controller.Write( 'content_updates', content_update_package )
-                            
+                        self._content_update_packages_we_are_committing.append( content_update_package )
                         
                     
                 
@@ -3079,35 +3119,46 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
             
             if was_auto_skipped:
                 
-                continue # it was a 'skip' decision
+                continue
                 
             
             hash_a = media_a.GetHash()
             hash_b = media_b.GetHash()
             
-            pair_info.append( ( duplicate_type, hash_a, hash_b, content_update_packages ) )
-            
-        
-        if len( pair_info ) > 0:
-            
-            if blocking:
-                
-                CG.client_controller.WriteSynchronous( 'duplicate_pair_status', pair_info )
-                
-            else:
-                
-                CG.client_controller.Write( 'duplicate_pair_status', pair_info )
-                
+            self._pair_infos_we_are_committing.append( ( duplicate_type, hash_a, hash_b, content_update_packages ) )
             
         
         self._processed_pairs = []
         self._hashes_due_to_be_deleted_in_this_batch = set()
-        self._hashes_processed_in_this_batch = set()
+        self._hashes_due_to_be_media_merged_in_this_batch = set()
+        
+        self._num_items_to_commit = len( self._content_update_packages_we_are_committing ) + len( self._pair_infos_we_are_committing )
+        
+        if self._num_items_to_commit > 0:
+            
+            if blocking:
+                
+                self._commit_work_updater.update()
+                
+            else:
+                
+                CG.client_controller.CallToThread( THREADCommitDuplicateResults, self._content_update_packages_we_are_committing, self._pair_infos_we_are_committing )
+                
+                self._num_items_to_commit = 0
+                self._content_update_packages_we_are_committing = []
+                self._pair_infos_we_are_committing = []
+                
+            
         
     
     def _CurrentMediaIsBetter( self, delete_b = True ):
         
         self._ProcessPair( HC.DUPLICATE_BETTER, delete_b = delete_b )
+        
+    
+    def _CurrentlyCommitting( self ):
+        
+        return len( self._content_update_packages_we_are_committing ) + len( self._pair_infos_we_are_committing ) > 0
         
     
     def _Delete( self, media = None, reason = None, file_service_key = None ):
@@ -3173,6 +3224,11 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
             
         
         return deleted
+        
+    
+    def _DoCommitWork( self ):
+        
+        self._commit_work_updater.update()
         
     
     def _DoCustomAction( self ):
@@ -3264,25 +3320,9 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
         self._ProcessPair( duplicate_type, delete_a = delete_a, delete_b = delete_b, duplicate_content_merge_options = duplicate_content_merge_options )
         
     
-    def _DrawBackgroundDetails( self, painter ):
+    def _DoSearchWork( self ):
         
-        if self._currently_fetching_pairs:
-            
-            text = 'Loading pairs' + HC.UNICODE_ELLIPSIS
-            
-            ( text_size, text ) = ClientGUIFunctions.GetTextSizeFromPainter( painter, text )
-            
-            my_size = self.size()
-            
-            x = ( my_size.width() - text_size.width() ) // 2
-            y = ( my_size.height() - text_size.height() ) // 2
-            
-            ClientGUIFunctions.DrawText( painter, x, y, text )
-            
-        else:
-            
-            super()._DrawBackgroundDetails( painter )
-            
+        self._search_work_updater.update()
         
     
     def _GenerateHoverTopFrame( self ):
@@ -3335,7 +3375,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
     
     def _GetNoMediaText( self ):
         
-        return 'Looking for pairs to compare--please wait.'
+        return self._loading_text
         
     
     def _GetNumCommittableDecisions( self ):
@@ -3372,19 +3412,272 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
             
         
     
+    def _HaveFetchedPairsToWork( self ):
+        
+        return len( self._batch_of_pairs_to_process ) > 0
+        
+    
+    def _InitialisePotentialDuplicatePairs( self ):
+        
+        if self._CurrentlyCommitting():
+            
+            return
+            
+        
+        if self._all_potential_duplicate_pairs_and_distances_initialised or self._all_potential_duplicate_pairs_and_distances_fetch_started:
+            
+            return
+            
+        
+        self._all_potential_duplicate_pairs_and_distances_fetch_started = True
+        
+        def work_callable():
+            
+            all_potential_duplicate_pairs_and_distances: ClientPotentialDuplicatesSearchContext.PotentialDuplicatePairsAndDistances = CG.client_controller.Read( 'all_potential_duplicate_pairs_and_distances' )
+            
+            # ok randomise the order we'll do this guy, but only at the block level
+            # we'll preserve order each block came in since we'll then keep db-proximal indices close together on each actual block fetch
+            
+            # a checkbox for the user to say 'choose different work with each launch'
+            all_potential_duplicate_pairs_and_distances.RandomiseBlocks()
+            
+            return all_potential_duplicate_pairs_and_distances
+            
+        
+        def publish_callable( all_potential_duplicate_pairs_and_distances: ClientPotentialDuplicatesSearchContext.PotentialDuplicatePairsAndDistances ):
+            
+            self._all_potential_duplicate_pairs_and_distances = all_potential_duplicate_pairs_and_distances
+            
+            self._all_potential_duplicate_pairs_and_distances_initialised = True
+            
+            self._all_potential_duplicate_pairs_and_distances_fetch_started = False
+            
+            if len( self._all_potential_duplicate_pairs_and_distances ) == 0:
+                
+                ClientGUIDialogsMessage.ShowInformation( self, 'All potential pairs are cleared!' )
+                
+                CG.client_controller.pub( 'new_similar_files_potentials_search_numbers' )
+                
+                self._TryToCloseWindow()
+                
+                return
+                
+            
+            self._LoadNextBatchOfPairs()
+            
+        
+        self._loading_text = 'Initialising pair search--please wait.'
+        
+        self.update()
+        
+        async_job = ClientGUIAsync.AsyncQtJob( self, work_callable, publish_callable )
+        
+        async_job.start()
+        
+    
+    def _InitialiseCommitWorkUpdater( self ):
+        
+        def loading_callable():
+            
+            pass
+            
+        
+        def pre_work_callable():
+            
+            num_work_to_do = len( self._content_update_packages_we_are_committing ) + len( self._pair_infos_we_are_committing )
+            
+            if num_work_to_do == 0:
+                
+                raise HydrusExceptions.CancelledException()
+                
+            else:
+                
+                value = self._num_items_to_commit - num_work_to_do
+                range = self._num_items_to_commit
+                
+                self._loading_text = f'committed {HydrusNumbers.ValueRangeToPrettyString( value, range )} decisions{HC.UNICODE_ELLIPSIS}'
+                
+            
+            NUM_DECISIONS_IN_BLOCK = 4
+            
+            block_of_content_update_packages = self._content_update_packages_we_are_committing[ : NUM_DECISIONS_IN_BLOCK ]
+            
+            self._content_update_packages_we_are_committing = self._content_update_packages_we_are_committing[ NUM_DECISIONS_IN_BLOCK : ]
+            
+            block_of_pair_infos = self._pair_infos_we_are_committing[ : NUM_DECISIONS_IN_BLOCK ]
+            
+            self._pair_infos_we_are_committing = self._pair_infos_we_are_committing[ NUM_DECISIONS_IN_BLOCK : ]
+            
+            self.update()
+            
+            return ( block_of_content_update_packages, block_of_pair_infos )
+            
+        
+        def work_callable( args ):
+            
+            ( block_of_content_update_packages, block_of_pair_infos ) = args
+            
+            for content_update_package in block_of_content_update_packages:
+                
+                CG.client_controller.WriteSynchronous( 'content_updates', content_update_package )
+                
+            
+            if len( block_of_pair_infos ) > 0:
+                
+                CG.client_controller.WriteSynchronous( 'duplicate_pair_status', block_of_pair_infos )
+                
+            
+            return 1
+            
+        
+        def publish_callable( result ):
+            
+            if len( self._content_update_packages_we_are_committing ) + len( self._pair_infos_we_are_committing ) == 0:
+                
+                self._LoadNextBatchOfPairs()
+                
+            else:
+                
+                self._DoCommitWork()
+                
+            
+            self.update()
+            
+        
+        return ClientGUIAsync.AsyncQtUpdater( self, loading_callable, work_callable, publish_callable, pre_work_callable = pre_work_callable )
+        
+    
+    def _InitialiseSearchWorkUpdater( self ):
+        
+        def loading_callable():
+            
+            pass
+            
+        
+        def pre_work_callable():
+            
+            if self._CurrentlyCommitting():
+                
+                raise HydrusExceptions.CancelledException()
+                
+            
+            if len( self._potential_duplicate_pairs_and_distances_still_to_search ) == 0:
+                
+                self._loading_text = 'No duplicate pairs to search!'
+                
+                raise HydrusExceptions.CancelledException()
+                
+            else:
+                
+                value = len( self._all_potential_duplicate_pairs_and_distances ) - len( self._potential_duplicate_pairs_and_distances_still_to_search )
+                range = len( self._all_potential_duplicate_pairs_and_distances )
+                
+                self._loading_text = f'{HydrusNumbers.ValueRangeToPrettyString(value, range)} potentials searched; found {HydrusNumbers.ToHumanInt( len( self._fetched_pairs_to_process ) )} pairs{HC.UNICODE_ELLIPSIS}'
+                
+            
+            block_of_pairs_and_distances = self._potential_duplicate_pairs_and_distances_still_to_search.PopBlock()
+            
+            self.update()
+            
+            return ( self._potential_duplicates_search_context, block_of_pairs_and_distances )
+            
+        
+        def work_callable( args ):
+            
+            ( potential_duplicates_search_context, block_of_pairs_and_distances ) = args
+            
+            sort_type = ClientDuplicates.DUPE_PAIR_SORT_MAX_FILESIZE
+            sort_asc = False
+            
+            fetched_pairs = CG.client_controller.Read( 'potential_duplicate_pairs_fragmentary', potential_duplicates_search_context, block_of_pairs_and_distances, sort_type, sort_asc )
+            
+            return fetched_pairs
+            
+        
+        def publish_callable( result ):
+            
+            some_fetched_pairs = result
+            
+            # filter the pairs as needed I guess
+            # keep adding them one at a time or whatever
+            # if we meet the number we need, set them as the pairs to process and job done
+            
+            total_we_want = CG.client_controller.new_options.GetInteger( 'duplicate_filter_max_batch_size' )
+            
+            for fetched_pair in some_fetched_pairs:
+                
+                self._fetched_pairs_to_process.append( fetched_pair )
+                
+                if len( self._fetched_pairs_to_process ) >= total_we_want:
+                    
+                    break
+                    
+                
+            
+            if len( self._fetched_pairs_to_process ) >= total_we_want or len( self._potential_duplicate_pairs_and_distances_still_to_search ) == 0:
+                
+                if len( self._fetched_pairs_to_process ) == 0:
+                    
+                    ClientGUIDialogsMessage.ShowInformation( self, 'All pairs have been filtered!' )
+                    
+                    CG.client_controller.pub( 'new_similar_files_potentials_search_numbers' )
+                    
+                    self._TryToCloseWindow()
+                    
+                    return
+                    
+                
+                self._batch_of_pairs_to_process = self._fetched_pairs_to_process
+                self._current_pair_index = 0
+                
+                self._fetched_pairs_to_process = []
+                
+                self._ShowCurrentPair()
+                
+            else:
+                
+                self._DoSearchWork()
+                
+            
+        
+        return ClientGUIAsync.AsyncQtUpdater( self, loading_callable, work_callable, publish_callable, pre_work_callable = pre_work_callable )
+        
+    
     def _LoadNextBatchOfPairs( self ):
         
+        if self._CurrentlyCommitting():
+            
+            return
+            
+        
+        if not self._all_potential_duplicate_pairs_and_distances_initialised:
+            
+            if not self._all_potential_duplicate_pairs_and_distances_fetch_started:
+                
+                self._InitialisePotentialDuplicatePairs()
+                
+            
+            return
+            
+        
+        self._batch_of_pairs_to_process = []
+        self._processed_pairs = []
         self._hashes_due_to_be_deleted_in_this_batch = set()
-        self._hashes_processed_in_this_batch = set()
-        self._processed_pairs = [] # just in case someone 'skip'ed everything in the last batch, so this never got cleared above in the commit
+        self._hashes_due_to_be_media_merged_in_this_batch = set()
+        
+        self._loading_text = 'Loading more pairs--please wait.'
+        
+        # TODO: if I want to sort by similarity, I can pre-sort this by distance right now!!
+        # or indeed when we initialise this guy but whatever
+        # to grab stable/random groups, we can choose to randomise blocks or not, also
+        self._potential_duplicate_pairs_and_distances_still_to_search = self._all_potential_duplicate_pairs_and_distances.Duplicate()
+        self._fetched_pairs_to_process = []
         
         self.ClearMedia()
         
         self._media_list = ClientMedia.MediaList( self._location_context, [] )
         
-        self._currently_fetching_pairs = True
-        
-        CG.client_controller.CallToThread( self.THREADFetchPairs, self._potential_duplicates_search_context )
+        self._DoSearchWork()
         
         self.update()
         
@@ -3478,8 +3771,14 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
         
         was_auto_skipped = False
         
-        self._hashes_processed_in_this_batch.update( media_a.GetHashes() )
-        self._hashes_processed_in_this_batch.update( media_b.GetHashes() )
+        if duplicate_type in ( HC.DUPLICATE_BETTER, HC.DUPLICATE_SAME_QUALITY ):
+            
+            self._hashes_due_to_be_media_merged_in_this_batch.update( media_b.GetHashes() )
+            
+        elif duplicate_type == HC.DUPLICATE_WORSE: # pretty sure this never happens but whatever maybe some future advanced custom action could
+            
+            self._hashes_due_to_be_media_merged_in_this_batch.update( media_a.GetHashes() )
+            
         
         if delete_a or delete_b:
             
@@ -3549,7 +3848,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
     
     def _RewindProcessing( self ) -> bool:
         
-        if self._currently_fetching_pairs:
+        if not self._HaveFetchedPairsToWork():
             
             return False
             
@@ -3597,7 +3896,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
                 hash = m.GetHash()
                 
                 self._hashes_due_to_be_deleted_in_this_batch.discard( hash )
-                self._hashes_processed_in_this_batch.discard( hash )
+                self._hashes_due_to_be_media_merged_in_this_batch.discard( hash )
                 
             
             return True
@@ -3608,7 +3907,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
     
     def _ShowCurrentPair( self ):
         
-        if self._currently_fetching_pairs:
+        if not self._HaveFetchedPairsToWork():
             
             return
             
@@ -3648,7 +3947,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
     
     def _ShowNextPair( self, process_tuple: tuple ):
         
-        if self._currently_fetching_pairs:
+        if not self._HaveFetchedPairsToWork():
             
             return
             
@@ -3675,7 +3974,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
             hash_a = media_result_a.GetHash()
             hash_b = media_result_b.GetHash()
             
-            if hash_a in self._hashes_processed_in_this_batch or hash_b in self._hashes_processed_in_this_batch:
+            if hash_a in self._hashes_due_to_be_media_merged_in_this_batch or hash_b in self._hashes_due_to_be_media_merged_in_this_batch:
                 
                 return False
                 
@@ -3853,8 +4152,6 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
     
     def CleanBeforeDestroy( self ):
         
-        CG.client_controller.pub( 'new_similar_files_potentials_search_numbers' )
-        
         ClientDuplicates.hashes_to_jpeg_quality = {} # clear the cache
         
         super().CleanBeforeDestroy()
@@ -3993,6 +4290,13 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
     
     def TryToDoPreClose( self ):
         
+        if self._CurrentlyCommitting():
+            
+            self._DoCommitWork()
+            
+            return False
+            
+        
         num_committable = self._GetNumCommittableDecisions()
         num_deletable = self._GetNumCommittableDeletes()
         
@@ -4042,47 +4346,6 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
             
         
     
-    def THREADFetchPairs( self, potential_duplicates_search_context: ClientPotentialDuplicatesSearchContext.PotentialDuplicatesSearchContext ):
-        
-        def qt_close():
-            
-            if not self or not QP.isValid( self ):
-                
-                return
-                
-            
-            ClientGUIDialogsMessage.ShowInformation( self, 'All pairs have been filtered!' )
-            
-            self._TryToCloseWindow()
-            
-        
-        def qt_continue( unprocessed_pairs ):
-            
-            if not self or not QP.isValid( self ):
-                
-                return
-                
-            
-            self._batch_of_pairs_to_process = unprocessed_pairs
-            self._current_pair_index = 0
-            
-            self._currently_fetching_pairs = False
-            
-            self._ShowCurrentPair()
-            
-        
-        result = CG.client_controller.Read( 'duplicate_pairs_for_filtering', potential_duplicates_search_context )
-        
-        if len( result ) == 0:
-            
-            QP.CallAfter( qt_close )
-            
-        else:
-            
-            QP.CallAfter( qt_continue, result )
-            
-        
-    
 
 class CanvasMediaList( CanvasWithHovers ):
     
@@ -4113,7 +4376,7 @@ class CanvasMediaList( CanvasWithHovers ):
     
     def TryToDoPreClose( self ):
         
-        if self._current_media is not None and CG.client_controller.new_options.GetBoolean( 'focus_media_thumb_on_viewer_close' ):
+        if self._current_media is not None:
             
             self.exitFocusMedia.emit( self._current_media )
             
@@ -4342,7 +4605,7 @@ def CommitArchiveDelete( deletee_location_context: ClientLocation.LocationContex
     
     for ( i, block_of_deleted ) in enumerate( HydrusLists.SplitListIntoChunks( deleted, BLOCK_SIZE ) ):
         
-        if not have_shown_popup and HydrusTime.TimeHasPassedFloat( start_time + 2.0 ):
+        if not have_shown_popup and HydrusTime.TimeHasPassedFloat( start_time + 1 ):
             
             CG.client_controller.pub( 'message', job_status )
             
@@ -4383,7 +4646,7 @@ def CommitArchiveDelete( deletee_location_context: ClientLocation.LocationContex
     
     for ( i, block_of_kept_hashes ) in enumerate( HydrusLists.SplitListIntoChunks( kept_hashes, BLOCK_SIZE ) ):
         
-        if not have_shown_popup and HydrusTime.TimeHasPassedFloat( start_time + 2.0 ):
+        if not have_shown_popup and HydrusTime.TimeHasPassedFloat( start_time + 1 ):
             
             CG.client_controller.pub( 'message', job_status )
             
