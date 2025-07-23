@@ -4,11 +4,11 @@ title: Custom Assets
 
 # static dir
 
-Hydrus loads all of its icons and such from `install_dir/static`. Feel free to poke around there. You can overwrite any of these files with something else by putting a mirror version under `db_dir/static`.
+Hydrus loads all of its icons and other UI images from `install_dir/static`. Feel free to poke around there. You can overwrite any of these files with something else by putting a mirror version under `db_dir/static`.
 
 So, let's say you want a different splash screen image. The default is `install_dir/static/hydrus_splash.png`. Simply create a `static` folder in your db dir and put any other png under `db_dir/static/hydrus_splash.png`, and hydrus will use that when it boots or exits.
 
-This is a bit hacky, so don't go too crazy. I recommend you don't change the resolution or ratio of anything too much. But you can probably just put a jpeg instead of a png (still using the .png filename lol) or an svg instead of an ico and may work! Let me know when stuff breaks and I'll see what I can do.
+This is a bit hacky, so don't change the resolution or ratio of anything too much to start. In some cases, you can probably put a jpeg instead of a png (still using the .png filename) or an svg instead of an ico, and it may work! Let me know when stuff breaks and I'll see what I can do.
 
 # QSS and SVGs
 
