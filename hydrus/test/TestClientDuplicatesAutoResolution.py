@@ -5,6 +5,7 @@ import unittest
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
+from hydrus.core import HydrusStaticDir
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientLocation
@@ -527,7 +528,7 @@ class TestComparatorVisualDuplicates( unittest.TestCase ):
     
     def _do_file_import( self, name ):
         
-        path = os.path.join( HC.STATIC_DIR, 'testing', name )
+        path = HydrusStaticDir.GetStaticPath( os.path.join( 'testing', name ) )
         
         file_import_options = FileImportOptions.FileImportOptions()
         file_import_options.SetIsDefault( True )

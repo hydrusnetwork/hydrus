@@ -20,6 +20,7 @@ from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusPaths
 from hydrus.core import HydrusSerialisable
+from hydrus.core import HydrusStaticDir
 from hydrus.core import HydrusText
 from hydrus.core import HydrusThreading
 from hydrus.core import HydrusTime
@@ -1087,7 +1088,7 @@ class ReviewDownloaderImport( ClientGUIScrolledPanels.ReviewPanel ):
         st.setWordWrap( True )
         st.setAlignment( QC.Qt.AlignmentFlag.AlignCenter )
         
-        lain_path = os.path.join( HC.STATIC_DIR, 'lain.jpg' )
+        lain_path = HydrusStaticDir.GetStaticPath( 'lain.jpg' )
         
         lain_qt_pixmap = ClientRendering.GenerateHydrusBitmap( lain_path, HC.IMAGE_JPEG ).GetQtPixmap()
         
@@ -2487,7 +2488,7 @@ class ReviewHowBonedAmI( ClientGUIScrolledPanels.ReviewPanel ):
         
         self._mr_bones_text = ClientGUICommon.BetterStaticText( self )
         
-        boned_path = os.path.join( HC.STATIC_DIR, 'boned.jpg' )
+        boned_path = HydrusStaticDir.GetStaticPath( 'boned.jpg' )
         
         boned_qt_pixmap = ClientRendering.GenerateHydrusBitmap( boned_path, HC.IMAGE_JPEG ).GetQtPixmap()
         

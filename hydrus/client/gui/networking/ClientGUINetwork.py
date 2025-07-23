@@ -1,6 +1,7 @@
 import collections
 import collections.abc
 import http.cookiejar
+import json
 
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
@@ -10,6 +11,7 @@ from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusSerialisable
+from hydrus.core import HydrusText
 from hydrus.core import HydrusTime
 from hydrus.core.networking import HydrusNetworking
 
@@ -81,7 +83,8 @@ class EditCookiePanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._expires_st = ClientGUICommon.BetterStaticText( expires_panel )
         self._expires_st_utc = ClientGUICommon.BetterStaticText( expires_panel )
-        self._expires_time_delta = ClientGUITime.TimeDeltaButton( expires_panel, min = 1200, days = True, hours = True, minutes = True )
+        
+        self._set_expires_button = ClientGUICommon.BetterButton( expires_panel, 'set expires as a delta from now', self._SetExpires )
         
         #
         
@@ -92,19 +95,17 @@ class EditCookiePanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._expires = expires
         
-        self._expires_time_delta.SetValue( 30 * 86400 )
-        
         #
         
         rows = []
         
         rows.append( ( 'Actual expires as UTC Timestamp: ', self._expires_st_utc ) )
-        rows.append( ( 'Set expires as a delta from now: ', self._expires_time_delta ) )
         
         gridbox = ClientGUICommon.WrapInGrid( expires_panel, rows )
         
         expires_panel.Add( self._expires_st, CC.FLAGS_EXPAND_PERPENDICULAR )
         expires_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        expires_panel.Add( self._set_expires_button, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         vbox = QP.VBoxLayout()
         
@@ -127,24 +128,54 @@ class EditCookiePanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._UpdateExpiresText()
         
-        self._expires_time_delta.timeDeltaChanged.connect( self.EventTimeDelta )
+    
+    def _SetExpires( self ):
+        
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit time delta' ) as dlg:
+            
+            now_at_dialog_boot = HydrusTime.GetNow()
+            
+            panel = ClientGUIScrolledPanels.EditSingleCtrlPanel( dlg )
+            
+            control = ClientGUITime.TimeDeltaWidget( panel, min = 1200, days = True, hours = True, minutes = True, seconds = True, monthly_allowed = False, max_days = 366 * 200 )
+            
+            if self._expires is None:
+                
+                time_delta = 86400 * 30
+                
+            else:
+                
+                time_delta = self._expires - now_at_dialog_boot
+                
+                if time_delta < 0:
+                    
+                    time_delta = 86400 * 30
+                    
+                
+            
+            control.SetValue( time_delta )
+            
+            panel.SetControl( control, perpendicular = True )
+            
+            dlg.SetPanel( panel )
+            
+            if dlg.exec() == QW.QDialog.DialogCode.Accepted:
+                
+                edited_time_delta = panel.GetValue()
+                
+                expires = now_at_dialog_boot + edited_time_delta
+                
+                self._expires = expires
+                
+                self._UpdateExpiresText()
+                
+            
         
     
     def _UpdateExpiresText( self ):
         
         self._expires_st.setText( HydrusTime.TimestampToPrettyExpires(self._expires) )
         self._expires_st_utc.setText( str(self._expires) )
-        
-    
-    def EventTimeDelta( self ):
-        
-        time_delta = self._expires_time_delta.GetValue()
-        
-        expires = HydrusTime.GetNow() + time_delta
-        
-        self._expires = expires
-        
-        self._UpdateExpiresText()
         
     
     def GetValue( self ):
@@ -1336,11 +1367,14 @@ class ReviewNetworkSessionsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         listctrl_panel.SetListCtrl( self._listctrl )
         
         listctrl_panel.AddButton( 'create new', self._Add )
-        listctrl_panel.AddButton( 'import cookies.txt (drag and drop also works!)', self._ImportCookiesTXT )
         listctrl_panel.AddButton( 'review', self._Review, enabled_only_on_selection = True )
         listctrl_panel.AddButton( 'clear', self._Clear, enabled_only_on_selection = True )
         listctrl_panel.AddSeparator()
         listctrl_panel.AddButton( 'refresh', self._Update )
+        listctrl_panel.NewButtonRow()
+        listctrl_panel.AddButton( 'export to clipboard', self._ExportToClipboard, enabled_only_on_selection = True )
+        listctrl_panel.AddButton( 'import from clipboard', self._ImportFromClipboard )
+        listctrl_panel.AddButton( 'import cookies.txt (drag and drop also works!)', self._ImportCookiesTXT )
         
         listctrl_panel.installEventFilter( ClientGUIDragDrop.FileDropTarget( listctrl_panel, filenames_callable = self._ImportCookiesTXTPaths ) )
         
@@ -1487,6 +1521,34 @@ class ReviewNetworkSessionsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         return sort_tuple
         
     
+    def _ExportToClipboard( self ):
+        
+        all_cookies = []
+        
+        network_contexts = self._listctrl.GetData( only_selected = True )
+        
+        for network_context in network_contexts:
+            
+            session = self._session_manager.GetSession( network_context )
+            
+            if len( session.cookies ) > 0:
+                
+                all_cookies.extend( session.cookies )
+                
+            
+        
+        if len( all_cookies ) == 0:
+            
+            return
+            
+        
+        cookie_data_flat = [ [ cookie.name, cookie.value, cookie.domain, cookie.path, cookie.expires ] for cookie in all_cookies ]
+        
+        json_text = json.dumps( cookie_data_flat )
+        
+        CG.client_controller.pub( 'clipboard', 'text', json_text )
+        
+    
     # this method is thanks to a user's contribution!
     def _ImportCookiesTXT( self ):
         
@@ -1537,6 +1599,93 @@ class ReviewNetworkSessionsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         self._Update()
         
     
+    def _ImportFromClipboard( self ):
+        
+        try:
+            
+            raw_text = CG.client_controller.GetClipboardText()
+            
+        except HydrusExceptions.DataMissing as e:
+            
+            HydrusData.PrintException( e )
+            
+            ClientGUIDialogsMessage.ShowCritical( self, 'Problem importing!', str(e) )
+            
+            return
+            
+        
+        try:
+            
+            cookie_data_flat = json.loads( raw_text )
+            
+        except Exception as e:
+            
+            HydrusData.PrintException( e )
+            
+            ClientGUIDialogsMessage.ShowCritical( self, 'Did not understand what was in the clipboard!', str(e) )
+            
+            return
+            
+        
+        try:
+            
+            if len( cookie_data_flat ) == 0:
+                
+                ClientGUIDialogsMessage.ShowInformation( self, 'There were no cookies in the clipboard!' )
+                
+                return
+                
+            
+            domains = sorted( { domain for ( name, value, domain, path, expires ) in cookie_data_flat } )
+            
+            message = f'About to import {HydrusNumbers.ToHumanInt(len(cookie_data_flat))} cookies for the domains {HydrusText.ConvertManyStringsToNiceInsertableHumanSummary( domains )} Is that ok?'
+            
+            result = ClientGUIDialogsQuick.GetYesNo( self, message = message )
+            
+            if result != QW.QDialog.DialogCode.Accepted:
+                
+                return
+                
+            
+            num_added = 0
+            
+            for ( name, value, domain, path, expires ) in cookie_data_flat:
+                
+                version = 0
+                port = None
+                port_specified = False
+                domain_specified = True
+                domain_initial_dot = domain.startswith( '.' )
+                path_specified = True
+                secure = False
+                discard = False
+                comment = None
+                comment_url = None
+                rest = {}
+                
+                cookie = http.cookiejar.Cookie( version, name, value, port, port_specified, domain, domain_specified, domain_initial_dot, path, path_specified, secure, expires, discard, comment, comment_url, rest )
+                
+                session = self._session_manager.GetSessionForDomain( cookie.domain )
+                
+                session.cookies.set_cookie( cookie )
+                
+                num_added += 1
+                
+            
+            ClientGUIDialogsMessage.ShowInformation( self, f'Added {HydrusNumbers.ToHumanInt(num_added)} cookies!' )
+            
+            self._Update()
+            
+        except Exception as e:
+            
+            HydrusData.PrintException( e )
+            
+            ClientGUIDialogsMessage.ShowCritical( self, 'Had trouble importing what was in the clipboard!', str(e) )
+            
+            return
+            
+        
+    
     def _Review( self ):
         
         for network_context in self._listctrl.GetData( only_selected = True ):
@@ -1578,7 +1727,7 @@ class ReviewNetworkSessionsPanel( ClientGUIScrolledPanels.ReviewPanel ):
 
 class ReviewNetworkSessionPanel( ClientGUIScrolledPanels.ReviewPanel ):
     
-    def __init__( self, parent, session_manager, network_context ):
+    def __init__( self, parent, session_manager, network_context: ClientNetworkingContexts.NetworkContext ):
         
         super().__init__( parent )
         
@@ -1600,11 +1749,14 @@ class ReviewNetworkSessionPanel( ClientGUIScrolledPanels.ReviewPanel ):
         listctrl_panel.SetListCtrl( self._listctrl )
         
         listctrl_panel.AddButton( 'add', self._Add )
-        listctrl_panel.AddButton( 'import cookies.txt (drag and drop also works!)', self._ImportCookiesTXT )
         listctrl_panel.AddButton( 'edit', self._Edit, enabled_only_on_single_selection = True )
         listctrl_panel.AddDeleteButton()
         listctrl_panel.AddSeparator()
         listctrl_panel.AddButton( 'refresh', self._Update )
+        listctrl_panel.NewButtonRow()
+        listctrl_panel.AddButton( 'export to clipboard', self._ExportToClipboard, enabled_only_on_selection = True )
+        listctrl_panel.AddButton( 'import from clipboard', self._ImportFromClipboard )
+        listctrl_panel.AddButton( 'import cookies.txt (drag and drop also works!)', self._ImportCookiesTXT )
         
         listctrl_panel.installEventFilter( ClientGUIDragDrop.FileDropTarget( listctrl_panel, filenames_callable = self._ImportCookiesTXTPaths ) )
         
@@ -1616,6 +1768,12 @@ class ReviewNetworkSessionPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         vbox = QP.VBoxLayout()
         
+        label = 'The hydrus network engine keeps cookies in second-level-domain-separated silos. If you create/edit a cookie for example.com in the panel for site.com, it will not get sent anywhere! Make sure to export/import or whatever you need to do to migrate it.'
+        
+        st = ClientGUICommon.BetterStaticText( self, label = label )
+        st.setWordWrap( True )
+        
+        QP.AddToLayout( vbox, st, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, self._description, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, listctrl_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         
@@ -1762,6 +1920,22 @@ class ReviewNetworkSessionPanel( ClientGUIScrolledPanels.ReviewPanel ):
         self._Update()
         
     
+    def _ExportToClipboard( self ):
+        
+        cookies = self._listctrl.GetData( only_selected = True )
+        
+        if len( cookies ) == 0:
+            
+            return
+            
+        
+        cookie_data_flat = [ [ cookie.name, cookie.value, cookie.domain, cookie.path, cookie.expires ] for cookie in cookies ]
+        
+        json_text = json.dumps( cookie_data_flat )
+        
+        CG.client_controller.pub( 'clipboard', 'text', json_text )
+        
+    
     # these methods are thanks to user's contribution!
     def _ImportCookiesTXT( self ):
         
@@ -1808,6 +1982,117 @@ class ReviewNetworkSessionPanel( ClientGUIScrolledPanels.ReviewPanel ):
         ClientGUIDialogsMessage.ShowInformation( self, f'Added {HydrusNumbers.ToHumanInt(num_added)} cookies!' )
         
         self._Update()
+        
+    
+    def _ImportFromClipboard( self ):
+        
+        try:
+            
+            raw_text = CG.client_controller.GetClipboardText()
+            
+        except HydrusExceptions.DataMissing as e:
+            
+            HydrusData.PrintException( e )
+            
+            ClientGUIDialogsMessage.ShowCritical( self, 'Problem importing!', str(e) )
+            
+            return
+            
+        
+        try:
+            
+            cookie_data_flat = json.loads( raw_text )
+            
+        except Exception as e:
+            
+            HydrusData.PrintException( e )
+            
+            ClientGUIDialogsMessage.ShowCritical( self, 'Did not understand what was in the clipboard!', str(e) )
+            
+            return
+            
+        
+        try:
+            
+            cookie_data_flat_domain_filtered = cookie_data_flat
+            
+            if self._network_context.context_type == CC.NETWORK_CONTEXT_DOMAIN:
+                
+                my_domain = self._network_context.context_data
+                
+                cookie_data_flat_domain_filtered = [ ( name, value, domain, path, expires ) for ( name, value, domain, path, expires ) in cookie_data_flat if domain.endswith( my_domain ) ]
+                
+            
+            if len( cookie_data_flat ) != len( cookie_data_flat_domain_filtered ):
+                
+                text = f'Of the {HydrusNumbers.ToHumanInt(len(cookie_data_flat))} cookies in your clipboard, {HydrusNumbers.ToHumanInt(len( cookie_data_flat_domain_filtered ))} match this domain. What do you want to import?'
+                
+                if len( cookie_data_flat_domain_filtered ) == 0:
+                    
+                    yes_label = 'nothing to import--bail out now'
+                    
+                else:
+                    
+                    yes_label = 'import only the matching cookies'
+                    
+                
+                ( result, was_cancelled ) = ClientGUIDialogsQuick.GetYesNo( self, text, yes_label = yes_label, no_label = 'import everything--I intend to rename the domains', check_for_cancelled = True )
+                
+                if was_cancelled:
+                    
+                    return
+                    
+                
+                if result == QW.QDialog.DialogCode.Accepted:
+                    
+                    if len( cookie_data_flat_domain_filtered ) == 0:
+                        
+                        return
+                        
+                    
+                    cookie_data_flat = cookie_data_flat_domain_filtered
+                    
+                
+            
+            if len( cookie_data_flat ) == 0:
+                
+                ClientGUIDialogsMessage.ShowInformation( self, 'There were no cookies in the clipboard for this domain!' )
+                
+                return
+                
+            
+            domains = sorted( { domain for ( name, value, domain, path, expires ) in cookie_data_flat } )
+            
+            message = f'About to import {HydrusNumbers.ToHumanInt(len(cookie_data_flat))} cookies for the domains {HydrusText.ConvertManyStringsToNiceInsertableHumanSummary( domains, no_trailing_whitespace = True )}. Is that ok?'
+            
+            result = ClientGUIDialogsQuick.GetYesNo( self, message = message )
+            
+            if result != QW.QDialog.DialogCode.Accepted:
+                
+                return
+                
+            
+            num_added = 0
+            
+            for ( name, value, domain, path, expires ) in cookie_data_flat:
+                
+                self._SetCookie( name, value, domain, path, expires )
+                
+                num_added += 1
+                
+            
+            ClientGUIDialogsMessage.ShowInformation( self, f'Added {HydrusNumbers.ToHumanInt(num_added)} cookies!' )
+            
+            self._Update()
+            
+        except Exception as e:
+            
+            HydrusData.PrintException( e )
+            
+            ClientGUIDialogsMessage.ShowCritical( self, 'Had trouble importing what was in the clipboard!', str(e) )
+            
+            return
+            
         
     
     def _SetCookie( self, name, value, domain, path, expires ):

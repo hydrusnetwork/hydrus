@@ -21,6 +21,7 @@ from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusProcess
 from hydrus.core import HydrusPSUtil
 from hydrus.core import HydrusSerialisable
+from hydrus.core import HydrusStaticDir
 from hydrus.core import HydrusText
 from hydrus.core import HydrusThreading
 from hydrus.core import HydrusTime
@@ -1074,7 +1075,7 @@ class Controller( HydrusController.HydrusController ):
     
     def GetDefaultMPVConfPath( self ):
         
-        return os.path.join( HC.STATIC_DIR, 'mpv-conf', 'default_mpv.conf' )
+        return HydrusStaticDir.GetStaticPath( os.path.join( 'mpv-conf', 'default_mpv.conf' ) )
         
     
     def GetIdleShutdownWorkDue( self, time_to_stop ):
@@ -1191,6 +1192,7 @@ class Controller( HydrusController.HydrusController ):
         
         self.frame_splash_status.SetTitleText( 'booting db' + HC.UNICODE_ELLIPSIS )
         
+        # important this happens early mate, do not slide it down
         HydrusController.HydrusController.InitModel( self )
         
         self.frame_splash_status.SetSubtext( 'options' )
@@ -1949,7 +1951,7 @@ class Controller( HydrusController.HydrusController ):
         
         HydrusData.Print( 'booting controller' + HC.UNICODE_ELLIPSIS )
         
-        self.frame_icon_pixmap = QG.QPixmap( os.path.join( HC.STATIC_DIR, 'hydrus_32_non-transparent.png' ) )
+        self.frame_icon_pixmap = QG.QPixmap( HydrusStaticDir.GetStaticPath( 'hydrus_32_non-transparent.png' ) )
         
         self.frame_splash_status = ClientGUISplash.FrameSplashStatus()
         

@@ -4,6 +4,7 @@ import typing
 import unittest
 
 from hydrus.core import HydrusConstants as HC
+from hydrus.core import HydrusStaticDir
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientLocation
@@ -148,7 +149,7 @@ class TestClientDBDuplicatesAutoResolution( unittest.TestCase ):
             
             TG.test_controller.SetRead( 'hash_status', ClientImportFiles.FileImportStatus.STATICGetUnknownStatus() )
             
-            path = os.path.join( HC.STATIC_DIR, 'testing', filename )
+            path = HydrusStaticDir.GetStaticPath( os.path.join( 'testing', filename ) )
             
             hash = bytes.fromhex( hex_hash )
             

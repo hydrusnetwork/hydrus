@@ -274,7 +274,9 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         #
         
         self._name = QW.QLineEdit( self )
-        self._delay_st = ClientGUICommon.BetterStaticText( self )
+        self._delay_st = ClientGUICommon.BetterStaticText( self, ellipsize_end = True )
+        
+        self._delay_st.setWordWrap( True )
         
         #
         

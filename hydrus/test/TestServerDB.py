@@ -1,4 +1,3 @@
-import os
 import random
 import time
 import typing
@@ -7,6 +6,7 @@ import unittest
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusStaticDir
 from hydrus.core import HydrusTime
 from hydrus.core.networking import HydrusNetwork
 from hydrus.core.networking import HydrusNetworking
@@ -488,7 +488,7 @@ class TestServerDB( unittest.TestCase ):
                 'width' : 200,
                 'mime' : 2,
                 'size' : 5270,
-                'path' : os.path.join( HC.STATIC_DIR, 'hydrus.png' ),
+                'path' : HydrusStaticDir.GetStaticPath( 'hydrus.png' ),
                 'thumbnail' : b'abcd'
             }
             

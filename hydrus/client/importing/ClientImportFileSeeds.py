@@ -317,6 +317,36 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
         )
         
     
+    def _GiveChildFileSeedMyInfo( self, file_seed: "FileSeed", url_for_child_referral: str ):
+        
+        file_seed.AddRequestHeaders( self._request_headers )
+        
+        file_seed.SetReferralURL( url_for_child_referral )
+        
+        if self._referral_url is not None:
+            
+            file_seed.AddSourceURLs( ( self._referral_url, ) )
+            
+        
+        if self.file_seed_type == FILE_SEED_TYPE_URL:
+            
+            file_seed.AddPrimaryURLs( ( self.file_seed_data, ) )
+            
+        
+        file_seed.AddPrimaryURLs( set( self._primary_urls ) )
+        
+        file_seed.AddSourceURLs( set( self._source_urls ) )
+        
+        file_seed.AddExternalFilterableTags( self._external_filterable_tags )
+        file_seed.AddExternalAdditionalServiceKeysToTags( self._external_additional_service_keys_to_tags )
+        
+        file_seed.AddTags( set( self._tags ) )
+        
+        file_seed.AddNamesAndNotes( sorted( self._names_and_notes_dict.items() ) )
+        
+        file_seed.source_time = self.source_time
+        
+    
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
         (
@@ -1548,8 +1578,6 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
                     
                     if len( parsed_posts ) == 0:
                         
-                        it_was_a_real_file = False
-                        
                         ( os_file_handle, temp_path ) = HydrusTemp.GetTempPath()
                         
                         try:
@@ -1567,22 +1595,15 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
                                 
                                 self.Import( temp_path, file_import_options, status_hook = status_hook )
                                 
-                                it_was_a_real_file = True
-                                
                             
                         except:
                             
                             # something crazy happened, like FFMPEG thinking JSON was an MP4 wew, so let's bail out
-                            raise HydrusExceptions.VetoException( 'The parser found nothing in the document, and while it initially seemed to actually be an importable file, it looks like that failed!' )
+                            raise HydrusExceptions.VetoException( 'The parser found nothing in the document, and while the document initially seemed to actually be an importable file, it looks like it failed to import too!' )
                             
                         finally:
                             
                             HydrusTemp.CleanUpTempPath( os_file_handle, temp_path )
-                            
-                        
-                        if not it_was_a_real_file:
-                            
-                            raise HydrusExceptions.VetoException( 'The parser found nothing in the document, nor did it seem to be an importable file!' )
                             
                         
                     elif len( parsed_posts ) > 1:
@@ -1593,16 +1614,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
                         
                         for file_seed in file_seeds:
                             
-                            file_seed.AddExternalFilterableTags( self._external_filterable_tags )
-                            file_seed.AddExternalAdditionalServiceKeysToTags( self._external_additional_service_keys_to_tags )
-                            
-                            file_seed.AddPrimaryURLs( set( self._primary_urls ) )
-                            
-                            file_seed.AddSourceURLs( set( self._source_urls ) )
-                            
-                            file_seed.AddTags( set( self._tags ) )
-                            
-                            file_seed.AddNamesAndNotes( sorted( self._names_and_notes_dict.items() ) )
+                            self._GiveChildFileSeedMyInfo( file_seed, url_for_child_referral )
                             
                         
                         try:
@@ -1632,10 +1644,6 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
                         self.AddParsedPost( parsed_post, file_import_options )
                         
                         self.CheckPreFetchMetadata( tag_import_options )
-                        
-                        parsed_request_headers = parsed_post.GetHTTPHeaders()
-                        
-                        self._request_headers.update( parsed_request_headers )
                         
                         desired_urls = parsed_post.GetURLs( ( HC.URL_TYPE_DESIRED, ), only_get_top_priority = True )
                         
@@ -1688,26 +1696,19 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
                             child_urls = desired_urls
                             
                         
+                        child_urls = HydrusData.DedupeList( child_urls )
+                        
                         if len( child_urls ) > 0:
                             
                             child_file_seeds = []
                             
                             for child_url in child_urls:
                                 
-                                duplicate_file_seed = self.Duplicate() # inherits all urls and tags from here
+                                file_seed = FileSeed( FILE_SEED_TYPE_URL, child_url )
                                 
-                                duplicate_file_seed.SetFileSeedData( child_url )
+                                self._GiveChildFileSeedMyInfo( file_seed, url_for_child_referral )
                                 
-                                duplicate_file_seed.SetReferralURL( url_for_child_referral )
-
-                                duplicate_file_seed.AddRequestHeaders( self._request_headers )
-                                
-                                if self._referral_url is not None:
-                                    
-                                    duplicate_file_seed.AddSourceURLs( ( self._referral_url, ) )
-                                    
-                                
-                                child_file_seeds.append( duplicate_file_seed )
+                                child_file_seeds.append( file_seed )
                                 
                             
                             try:

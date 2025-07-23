@@ -739,12 +739,28 @@ def MoveOrDuplicateLocalFiles( win: QW.QWidget, dest_service_key: bytes, action:
     
     applicable_media = [ m for m in media if m.GetLocationsManager().IsLocal() and dest_service_key not in m.GetLocationsManager().GetCurrent() and m.GetMime() not in HC.HYDRUS_UPDATE_FILES ]
     
+    if action == HC.CONTENT_UPDATE_MOVE:
+        
+        if source_service_key is not None:
+            
+            already_in_place = lambda m: source_service_key is not None and source_service_key not in m.GetLocationsManager().GetCurrent() and dest_service_key in m.GetLocationsManager().GetCurrent()
+            
+            applicable_media = [ m for m in media if not already_in_place( m ) ]
+            
+        
+    elif action == HC.CONTENT_UPDATE_ADD:
+        
+        already_in_place = lambda m: dest_service_key in m.GetLocationsManager().GetCurrent()
+        
+        applicable_media = [ m for m in media if not already_in_place( m ) ]
+        
+    
     if len( applicable_media ) == 0:
         
         return
         
     
-    ( local_duplicable_to_file_service_keys, local_moveable_from_and_to_file_service_keys ) = ClientGUIMediaSimpleActions.GetLocalFileActionServiceKeys( media )
+    ( local_duplicable_to_file_service_keys, local_moveable_from_and_to_file_service_keys ) = ClientGUIMediaSimpleActions.GetLocalFileActionServiceKeys( applicable_media )
     
     do_yes_no = CG.client_controller.new_options.GetBoolean( 'confirm_multiple_local_file_services_copy' )
     yes_no_text = 'Add {} files to {}?'.format( HydrusNumbers.ToHumanInt( len( applicable_media ) ), dest_service_name )

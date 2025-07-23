@@ -236,7 +236,7 @@ class HydrusDBModule( HydrusDBBase.DBBase ):
             
             if len( missing_critical_table_names ) > 0:
                 
-                message = 'Unfortunately, this database is missing one or more critical tables! This database is non functional and cannot be repaired. Please check out "install_dir/db/help my db is broke.txt" for the next steps.'
+                message = 'Unfortunately, this database is missing one or more critical tables! This database is non functional and cannot be repaired. Please check out "install_dir/db/help my db is broke.txt" for the next steps. The table names are:\n\n' + '\n'.join( missing_critical_table_names )
                 
                 raise HydrusExceptions.DBAccessException( message )
                 

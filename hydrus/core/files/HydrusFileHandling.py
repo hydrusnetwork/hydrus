@@ -9,6 +9,7 @@ from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusPaths
 from hydrus.core import HydrusSerialisable
+from hydrus.core import HydrusStaticDir
 from hydrus.core import HydrusTemp
 from hydrus.core import HydrusText
 from hydrus.core import HydrusTime
@@ -49,54 +50,57 @@ except Exception as speedcopy_e:
     SPEEDCOPY_OK = False
     
 
-mimes_to_default_thumbnail_paths = collections.defaultdict( lambda: os.path.join( HC.STATIC_DIR, 'hydrus.png' ) )
+mimes_to_default_thumbnail_paths = collections.defaultdict( lambda: HydrusStaticDir.GetStaticPath( 'hydrus.png' ) )
 
-for mime in HC.AUDIO:
+def InitialiseMimesToDefaultThumbnailPaths():
     
-    mimes_to_default_thumbnail_paths[ mime ] = os.path.join( os.path.join( HC.STATIC_DIR, 'audio.png' ) )
+    for mime in HC.AUDIO:
+        
+        mimes_to_default_thumbnail_paths[ mime ] = HydrusStaticDir.GetStaticPath( 'audio.png' )
+        
     
-
-for mime in HC.VIDEO:
+    for mime in HC.VIDEO:
+        
+        mimes_to_default_thumbnail_paths[ mime ] = HydrusStaticDir.GetStaticPath( 'video.png' )
+        
     
-    mimes_to_default_thumbnail_paths[ mime ] = os.path.join( os.path.join( HC.STATIC_DIR, 'video.png' ) )
+    for mime in HC.ANIMATIONS:
+        
+        mimes_to_default_thumbnail_paths[ mime ] = HydrusStaticDir.GetStaticPath( 'video.png' )
+        
     
-
-for mime in HC.ANIMATIONS:
+    for mime in HC.ARCHIVES:
+        
+        mimes_to_default_thumbnail_paths[ mime ] = HydrusStaticDir.GetStaticPath( 'zip.png' )
+        
     
-    mimes_to_default_thumbnail_paths[ mime ] = os.path.join( os.path.join( HC.STATIC_DIR, 'video.png' ) )
+    for mime in HC.IMAGES:
+        
+        mimes_to_default_thumbnail_paths[ mime ] = HydrusStaticDir.GetStaticPath( 'image.png' )
+        
     
-
-for mime in HC.ARCHIVES:
+    mimes_to_default_thumbnail_paths[ HC.APPLICATION_UNKNOWN ] = HydrusStaticDir.GetStaticPath( 'hydrus.png' )
     
-    mimes_to_default_thumbnail_paths[ mime ] = png_path = os.path.join( HC.STATIC_DIR, 'zip.png' )
+    mimes_to_default_thumbnail_paths[ HC.APPLICATION_PDF ] = HydrusStaticDir.GetStaticPath( 'pdf.png' )
+    mimes_to_default_thumbnail_paths[ HC.APPLICATION_DOCX ] = HydrusStaticDir.GetStaticPath( 'docx.png' )
+    mimes_to_default_thumbnail_paths[ HC.APPLICATION_XLSX ] = HydrusStaticDir.GetStaticPath( 'xlsx.png' )
+    mimes_to_default_thumbnail_paths[ HC.APPLICATION_PPTX ] = HydrusStaticDir.GetStaticPath( 'pptx.png' )
+    mimes_to_default_thumbnail_paths[ HC.APPLICATION_DOC ] = HydrusStaticDir.GetStaticPath( 'doc.png' )
+    mimes_to_default_thumbnail_paths[ HC.APPLICATION_XLS ] = HydrusStaticDir.GetStaticPath( 'xls.png' )
+    mimes_to_default_thumbnail_paths[ HC.APPLICATION_PPT ] = HydrusStaticDir.GetStaticPath( 'ppt.png' )
+    mimes_to_default_thumbnail_paths[ HC.APPLICATION_EPUB ] = HydrusStaticDir.GetStaticPath( 'epub.png' )
+    mimes_to_default_thumbnail_paths[ HC.APPLICATION_DJVU ] = HydrusStaticDir.GetStaticPath( 'djvu.png' )
+    mimes_to_default_thumbnail_paths[ HC.APPLICATION_PSD ] = HydrusStaticDir.GetStaticPath( 'psd.png' )
+    mimes_to_default_thumbnail_paths[ HC.APPLICATION_CLIP ] = HydrusStaticDir.GetStaticPath( 'clip.png' )
+    mimes_to_default_thumbnail_paths[ HC.APPLICATION_SAI2 ] = HydrusStaticDir.GetStaticPath( 'sai.png' )
+    mimes_to_default_thumbnail_paths[ HC.APPLICATION_KRITA ] = HydrusStaticDir.GetStaticPath( 'krita.png' )
+    mimes_to_default_thumbnail_paths[ HC.APPLICATION_PAINT_DOT_NET ] = HydrusStaticDir.GetStaticPath( 'paintnet.png' )
+    mimes_to_default_thumbnail_paths[ HC.APPLICATION_FLASH ] = HydrusStaticDir.GetStaticPath( 'flash.png' )
+    mimes_to_default_thumbnail_paths[ HC.APPLICATION_XCF ] = HydrusStaticDir.GetStaticPath( 'xcf.png' )
+    mimes_to_default_thumbnail_paths[ HC.APPLICATION_PROCREATE ] = HydrusStaticDir.GetStaticPath( 'procreate.png' )
+    mimes_to_default_thumbnail_paths[ HC.APPLICATION_RTF ] = HydrusStaticDir.GetStaticPath( 'rtf.png' )
+    mimes_to_default_thumbnail_paths[ HC.IMAGE_SVG ] = HydrusStaticDir.GetStaticPath( 'svg.png' )
     
-
-for mime in HC.IMAGES:
-    
-    mimes_to_default_thumbnail_paths[ mime ] = png_path = os.path.join( HC.STATIC_DIR, 'image.png' )
-    
-
-mimes_to_default_thumbnail_paths[ HC.APPLICATION_UNKNOWN ] = os.path.join( HC.STATIC_DIR, 'hydrus.png' )
-
-mimes_to_default_thumbnail_paths[ HC.APPLICATION_PDF ] = os.path.join( HC.STATIC_DIR, 'pdf.png' )
-mimes_to_default_thumbnail_paths[ HC.APPLICATION_DOCX ] = os.path.join( HC.STATIC_DIR, 'docx.png' )
-mimes_to_default_thumbnail_paths[ HC.APPLICATION_XLSX ] = os.path.join( HC.STATIC_DIR, 'xlsx.png' )
-mimes_to_default_thumbnail_paths[ HC.APPLICATION_PPTX ] = os.path.join( HC.STATIC_DIR, 'pptx.png' )
-mimes_to_default_thumbnail_paths[ HC.APPLICATION_DOC ] = os.path.join( HC.STATIC_DIR, 'doc.png' )
-mimes_to_default_thumbnail_paths[ HC.APPLICATION_XLS ] = os.path.join( HC.STATIC_DIR, 'xls.png' )
-mimes_to_default_thumbnail_paths[ HC.APPLICATION_PPT ] = os.path.join( HC.STATIC_DIR, 'ppt.png' )
-mimes_to_default_thumbnail_paths[ HC.APPLICATION_EPUB ] = os.path.join( HC.STATIC_DIR, 'epub.png' )
-mimes_to_default_thumbnail_paths[ HC.APPLICATION_DJVU ] = os.path.join( HC.STATIC_DIR, 'djvu.png' )
-mimes_to_default_thumbnail_paths[ HC.APPLICATION_PSD ] = os.path.join( HC.STATIC_DIR, 'psd.png' )
-mimes_to_default_thumbnail_paths[ HC.APPLICATION_CLIP ] = os.path.join( HC.STATIC_DIR, 'clip.png' )
-mimes_to_default_thumbnail_paths[ HC.APPLICATION_SAI2 ] = os.path.join( HC.STATIC_DIR, 'sai.png' )
-mimes_to_default_thumbnail_paths[ HC.APPLICATION_KRITA ] = os.path.join( HC.STATIC_DIR, 'krita.png' )
-mimes_to_default_thumbnail_paths[ HC.APPLICATION_PAINT_DOT_NET ] = os.path.join( HC.STATIC_DIR, 'paintnet.png' )
-mimes_to_default_thumbnail_paths[ HC.APPLICATION_FLASH ] = os.path.join( HC.STATIC_DIR, 'flash.png' )
-mimes_to_default_thumbnail_paths[ HC.APPLICATION_XCF ] = os.path.join( HC.STATIC_DIR, 'xcf.png' )
-mimes_to_default_thumbnail_paths[ HC.APPLICATION_PROCREATE ] = os.path.join( HC.STATIC_DIR, 'procreate.png' )
-mimes_to_default_thumbnail_paths[ HC.APPLICATION_RTF ] = os.path.join( HC.STATIC_DIR, 'rtf.png' )
-mimes_to_default_thumbnail_paths[ HC.IMAGE_SVG ] = os.path.join( HC.STATIC_DIR, 'svg.png' )
 
 def GenerateDefaultThumbnail( mime: int, target_resolution: tuple[ int, int ] ):
     

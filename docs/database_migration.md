@@ -157,7 +157,7 @@ Install a fresh new hydrus on the new machine and then, using a network share or
     If the type of OS hasn't changed, you can usually get away with copying the whole install folder. If you run from source, however, you _must_ recreate a new install dir with that OS's `git` and then build a new venv. Do not try to migrate a source installation folder!
 
 ??? note "macOS App"
-    If you are moving to or from the macOS App, recall that the App cannot store the hydrus db inside it, so the correct 'default' location (i.e. without `--db_dir`), analogous to `install_dir/db` on other installs, is `~/Library/Hydrus`. You can always go `file->open->database directory` on any running client to find what it is currently running.
+    If you are moving to or from the macOS App, recall that the App cannot store the hydrus db inside it, so the correct 'default' location (i.e. without `--db_dir`), analogous to `install_dir/db` on other installs, is `~/Library/Hydrus`. You can always go `file->open->database directory` on any running client to find out where it is currently running from.
 
 Boot up your newly assembled client, and if your files or thumbnails are stored outside of `install_folder/db/client_files`, there's a good chance it will complain about them being missing. Don't panic! Just tell the repair dialog the correct new locations, and it'll stitch itself back together.
 

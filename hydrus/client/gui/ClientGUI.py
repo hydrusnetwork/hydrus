@@ -20,6 +20,7 @@ from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusPaths
 from hydrus.core import HydrusProfiling
 from hydrus.core import HydrusSerialisable
+from hydrus.core import HydrusStaticDir
 from hydrus.core import HydrusText
 from hydrus.core import HydrusTime
 from hydrus.core.networking import HydrusNetwork
@@ -610,7 +611,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         
         self._locator = QLocator.QLocator( self )
         
-        self._locator.setIconBasePath( HC.STATIC_DIR + os.path.sep )
+        self._locator.setIconPathFactory( HydrusStaticDir.GetStaticPath )
         
         # TODO: make configurable which providers + order
         self._locator.addProvider( ClientGUILocatorSearchProviders.CalculatorSearchProvider() )
@@ -1478,6 +1479,21 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         
         #
         
+        job_status = ClientThreading.JobStatus( pausable = True, cancellable = True )
+        
+        job_status.SetStatusTitle( 'test network control' )
+        
+        job_status.SetStatusText( 'Downloading...' )
+        job_status.SetVariable( 'popup_gauge_1', ( 2, 21 ) )
+        
+        from hydrus.client.networking import ClientNetworkingJobs
+        
+        job_status.SetNetworkJob( ClientNetworkingJobs.NetworkJob( 'GET', 'https://site.com/123456' ) )
+        
+        self._controller.pub( 'message', job_status )
+        
+        #
+        
         e = HydrusExceptions.DataMissing( 'This is a test exception' )
         
         HydrusData.ShowException( e, do_wait = False )
@@ -1563,6 +1579,8 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         
         if only_pending:
             
+            services = CG.client_controller.services_manager.GetServices( ( HC.TAG_REPOSITORY, HC.FILE_REPOSITORY, HC.IPFS ) )
+            
             types_to_delete = (
                 HC.SERVICE_INFO_NUM_PENDING_MAPPINGS,
                 HC.SERVICE_INFO_NUM_PENDING_TAG_SIBLINGS,
@@ -1578,6 +1596,8 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
             
         else:
             
+            services = CG.client_controller.services_manager.GetServices()
+            
             types_to_delete = None
             
             message = 'This clears the cached counts for things like the number of files or tags on a service. Due to unusual situations and little counting bugs, these numbers can sometimes become unsynced. Clearing them forces an accurate recount from source.'
@@ -1588,8 +1608,6 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         result = ClientGUIDialogsQuick.GetYesNo( self, message )
         
         if result == QW.QDialog.DialogCode.Accepted:
-            
-            services = CG.client_controller.services_manager.GetServices()
             
             choice_tuples = [ ( service.GetName(), service.GetServiceKey(), service.GetName() ) for service in services ]
             

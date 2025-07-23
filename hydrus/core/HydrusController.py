@@ -597,6 +597,10 @@ class HydrusController( object ):
             HydrusData.Print( 'Failed to initialise temp folder.' )
             
         
+        from hydrus.core.files import HydrusFileHandling
+        
+        HydrusFileHandling.InitialiseMimesToDefaultThumbnailPaths()
+        
         self._fast_job_scheduler = HydrusThreading.JobScheduler( self )
         self._slow_job_scheduler = HydrusThreading.JobScheduler( self )
         

@@ -4,6 +4,7 @@ import os
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusSerialisable
+from hydrus.core import HydrusStaticDir
 from hydrus.core.networking import HydrusNetworking
 from hydrus.core import HydrusTime
 
@@ -124,12 +125,13 @@ def GetDefaultHentaiFoundryInfo():
     
 def GetDefaultGUGs():
     
-    dir_path = os.path.join( HC.STATIC_DIR, 'default', 'gugs' )
+    paths = HydrusStaticDir.ListStaticDirFilePaths( os.path.join( 'default', 'gugs' ) )
     
     from hydrus.client.networking import ClientNetworkingGUG
     
-    return GetDefaultObjectsFromPNGs( dir_path, ( ClientNetworkingGUG.GalleryURLGenerator, ClientNetworkingGUG.NestedGalleryURLGenerator ) )
+    return GetDefaultObjectsFromPNGs( paths, ( ClientNetworkingGUG.GalleryURLGenerator, ClientNetworkingGUG.NestedGalleryURLGenerator ) )
     
+
 def GetDefaultNGUGs():
     
     from hydrus.client.networking import ClientNetworkingGUG
@@ -138,6 +140,7 @@ def GetDefaultNGUGs():
     
     return gugs
     
+
 def GetDefaultSingleGUGs():
     
     from hydrus.client.networking import ClientNetworkingGUG
@@ -149,21 +152,22 @@ def GetDefaultSingleGUGs():
 
 def GetDefaultLoginScripts():
     
-    dir_path = os.path.join( HC.STATIC_DIR, 'default', 'login_scripts' )
+    paths = HydrusStaticDir.ListStaticDirFilePaths( os.path.join( 'default', 'login_scripts' ) )
     
     from hydrus.client.networking import ClientNetworkingLogin
     
-    return GetDefaultObjectsFromPNGs( dir_path, ( ClientNetworkingLogin.LoginScriptDomain, ) )
+    return GetDefaultObjectsFromPNGs( paths, ( ClientNetworkingLogin.LoginScriptDomain, ) )
     
 
 def GetDefaultParsers():
     
-    dir_path = os.path.join( HC.STATIC_DIR, 'default', 'parsers' )
+    paths = HydrusStaticDir.ListStaticDirFilePaths( os.path.join( 'default', 'parsers' ) )
     
     from hydrus.client.parsing import ClientParsing
     
-    return GetDefaultObjectsFromPNGs( dir_path, ( ClientParsing.PageParser, ) )
+    return GetDefaultObjectsFromPNGs( paths, ( ClientParsing.PageParser, ) )
     
+
 def GetDefaultScriptRows():
     
     script_info = []
@@ -174,6 +178,7 @@ def GetDefaultScriptRows():
     
     return script_info
     
+
 def GetDefaultShortcuts():
     
     from hydrus.client.gui import ClientGUIShortcuts
@@ -731,34 +736,29 @@ def GetDefaultShortcuts():
 
 def GetDefaultSimpleDownloaderFormulae():
     
-    dir_path = os.path.join( HC.STATIC_DIR, 'default', 'simple_downloader_formulae' )
+    paths = HydrusStaticDir.ListStaticDirFilePaths( os.path.join( 'default', 'simple_downloader_formulae' ) )
     
     from hydrus.client.parsing import ClientParsing
     
-    return GetDefaultObjectsFromPNGs( dir_path, ( ClientParsing.SimpleDownloaderParsingFormula, ) )
+    return GetDefaultObjectsFromPNGs( paths, ( ClientParsing.SimpleDownloaderParsingFormula, ) )
     
+
 def GetDefaultURLClasses():
     
-    dir_path = os.path.join( HC.STATIC_DIR, 'default', 'url_classes' )
+    paths = HydrusStaticDir.ListStaticDirFilePaths( os.path.join( 'default', 'url_classes' ) )
     
     from hydrus.client.networking import ClientNetworkingURLClass
     
-    return GetDefaultObjectsFromPNGs( dir_path, ( ClientNetworkingURLClass.URLClass, ) )
+    return GetDefaultObjectsFromPNGs( paths, ( ClientNetworkingURLClass.URLClass, ) )
     
-def GetDefaultObjectsFromPNGs( dir_path, allowed_object_types ):
-    
-    if not os.path.exists( dir_path ):
-        
-        return []
-        
+
+def GetDefaultObjectsFromPNGs( paths: list[ str ], allowed_object_types ):
     
     default_objects = []
     
     from hydrus.client import ClientSerialisable
     
-    for filename in os.listdir( dir_path ):
-        
-        path = os.path.join( dir_path, filename )
+    for path in paths:
         
         try:
             
@@ -791,6 +791,7 @@ def GetDefaultObjectsFromPNGs( dir_path, allowed_object_types ):
     
     return default_objects
     
+
 def SetDefaultBandwidthManagerRules( bandwidth_manager ):
     
     from hydrus.client.networking import ClientNetworkingContexts

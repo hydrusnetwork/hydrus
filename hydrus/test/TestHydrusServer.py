@@ -14,6 +14,7 @@ from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusEncryption
 from hydrus.core import HydrusPaths
+from hydrus.core import HydrusStaticDir
 from hydrus.core import HydrusTime
 from hydrus.core.networking import HydrusNetwork
 from hydrus.core.networking import HydrusNetworking
@@ -27,14 +28,16 @@ from hydrus.test import TestController
 from hydrus.test import TestGlobals as TG
 
 
-with open( os.path.join( HC.STATIC_DIR, 'hydrus.png' ), 'rb' ) as f_g:
+with open( HydrusStaticDir.GetStaticPath( 'hydrus.png' ), 'rb' ) as f_g:
     
     EXAMPLE_FILE = f_g.read()
     
-with open( os.path.join( HC.STATIC_DIR, 'hydrus_small.png' ), 'rb' ) as f_g:
+
+with open( HydrusStaticDir.GetStaticPath( 'hydrus_small.png' ), 'rb' ) as f_g:
     
     EXAMPLE_THUMBNAIL = f_g.read()
     
+
 class TestServer( unittest.TestCase ):
     
     _access_key: bytes = HydrusData.GenerateKey()
@@ -146,7 +149,7 @@ class TestServer( unittest.TestCase ):
         
         #
         
-        with open( os.path.join( HC.STATIC_DIR, 'hydrus.ico' ), 'rb' ) as f:
+        with open( HydrusStaticDir.GetStaticPath( 'hydrus.ico' ), 'rb' ) as f:
             
             favicon = f.read()
             
@@ -182,7 +185,7 @@ class TestServer( unittest.TestCase ):
         
         #
         
-        path = os.path.join( HC.STATIC_DIR, 'hydrus.png' )
+        path = HydrusStaticDir.GetStaticPath( 'hydrus.png' )
         
         TG.test_controller.ClearWrites( 'file' )
         

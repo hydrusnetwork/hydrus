@@ -14,6 +14,8 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+import collections.abc
+
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
 from qtpy import QtGui as QG
@@ -515,7 +517,7 @@ class QLocatorWidget(QW.QWidget):
 
         if self.locator:
             for provider in self.locator.providers:
-                self.providerAdded(provider.title(), self.locator.iconBasePath + provider.titleIconPath(), provider.suggestedReservedItemCount(), provider.hideTitle())
+                self.providerAdded(provider.title(), self.locator.getIconPath( provider.titleIconPath() ), provider.suggestedReservedItemCount(), provider.hideTitle())
             self.locator.providerAdded.connect(self.providerAdded)
             self.locator.resultsAvailable.connect(self.handleResultsAvailable)
 
@@ -568,7 +570,7 @@ class QLocatorWidget(QW.QWidget):
         self.resultItems = []
         if self.locator:
             for provider in self.locator.providers:
-                self.providerAdded(provider.title(), self.locator.iconBasePath + provider.titleIconPath(), provider.suggestedReservedItemCount(), provider.hideTitle())
+                self.providerAdded(provider.title(), self.locator.getIconPath( provider.titleIconPath() ), provider.suggestedReservedItemCount(), provider.hideTitle())
 
     def handleResultsAvailable(self, providerIndex: int, jobID: int) -> None:
         data = self.locator.getResult(jobID)
@@ -744,7 +746,6 @@ class QLocatorWidget(QW.QWidget):
         widget.setDefaultStylingEnabled(self.defaultStylingEnabled)
 
 class QLocator(QC.QObject):
-    iconBasePathChanged = QC.Signal(str)
     providerAdded = QC.Signal(str, str, int, bool)
     resultsAvailable = QC.Signal(int, int)
     def __init__(self, parent):
@@ -753,29 +754,40 @@ class QLocator(QC.QObject):
         self.currentJobs = {}
         self.savedProviderData = {}
         self.jobIDCounter = 0
-        self.iconBasePath = str()
-
+        self.iconPathFactory = None
+    
     def addProvider(self, provider) -> None:
         self.providers.append(provider)
         provider.setParent(self)
         provider.resultsAvailable.connect(self.handleItemUpdate)
-        self.providerAdded.emit(provider.title(), self.iconBasePath + provider.titleIconPath(), provider.suggestedReservedItemCount(), provider.hideTitle())
+        self.providerAdded.emit(provider.title(), self.getIconPath( provider.titleIconPath() ), provider.suggestedReservedItemCount(), provider.hideTitle())
 
     def provider(self, idx: int):
         if idx >= 0 and idx <= len(self.providers):
             return self.providers[idx]
         return None
-
+        
+    
+    def getIconPath( self, filename ):
+        
+        if self.iconPathFactory is None:
+            
+            raise Exception( 'No way to determine icons for the Locator!' )
+            
+        
+        return self.iconPathFactory( filename ) 
+        
+    
     def getResult(self, jobID: int):
         return self.savedProviderData.pop(jobID, None)
 
     def __del__(self):
         self.stopJobs()
 
-    def setIconBasePath(self, iconBasePath: str) -> None:
-        if self.iconBasePath != iconBasePath:
-            self.iconBasePath = iconBasePath
-            self.iconBasePathChanged.emit(self.iconBasePath)
+    def setIconPathFactory(self, iconPathFactory: collections.abc.Callable[ [ str ], str ] ) -> None:
+        
+        self.iconPathFactory = iconPathFactory
+        
 
     def query(self, queryText: str, context) -> list:
         jobIDs = []
@@ -796,10 +808,10 @@ class QLocator(QC.QObject):
             del self.currentJobs[jobID]
             self.savedProviderData[jobID] = data
             for dataItem in self.savedProviderData[jobID]:
-                dataItem.defaultIconPath = self.iconBasePath + dataItem.defaultIconPath
-                dataItem.selectedIconPath = self.iconBasePath + dataItem.selectedIconPath
-                dataItem.toggledIconPath = self.iconBasePath + dataItem.toggledIconPath
-                dataItem.toggledSelectedIconPath = self.iconBasePath + dataItem.toggledSelectedIconPath
+                dataItem.defaultIconPath = self.getIconPath( dataItem.defaultIconPath )
+                dataItem.selectedIconPath = self.getIconPath( dataItem.selectedIconPath )
+                dataItem.toggledIconPath = self.getIconPath( dataItem.toggledIconPath )
+                dataItem.toggledSelectedIconPath = self.getIconPath( dataItem.toggledSelectedIconPath )
             self.resultsAvailable.emit(providerIndex, jobID)
 
     def stopJobs(self, ids = None) -> None:

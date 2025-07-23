@@ -3,14 +3,12 @@ import typing
 
 from qtpy import QtWidgets as QW
 
-from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusStaticDir
 from hydrus.core import HydrusText
 
 from hydrus.client.gui import QtInit
-
-STYLESHEET_DIR = os.path.join( HC.STATIC_DIR, 'qss' )
 
 DEFAULT_HYDRUS_STYLESHEET = ''
 ORIGINAL_STYLE_NAME = None
@@ -33,16 +31,13 @@ def GetAvailableStyles():
 
 def GetAvailableStyleSheets():
     
-    if not os.path.exists( STYLESHEET_DIR ) or not os.path.isdir( STYLESHEET_DIR ):
-        
-        raise HydrusExceptions.DataMissing( 'StyleSheet dir "{}" is missing or not a directory!'.format( STYLESHEET_DIR ) )
-        
-    
     stylesheet_filenames = []
     
     extensions = [ '.qss', '.css' ]
     
-    for filename in os.listdir( STYLESHEET_DIR ):
+    for path in HydrusStaticDir.ListStaticDirFilePaths( 'qss' ):
+        
+        ( d, filename ) = os.path.split( path )
         
         if True in ( filename.endswith( ext ) for ext in extensions ):
             
@@ -54,13 +49,14 @@ def GetAvailableStyleSheets():
     
     return stylesheet_filenames
     
+
 def InitialiseDefaults():
     
     global DEFAULT_HYDRUS_STYLESHEET
     
     try:
         
-        with open( os.path.join( STYLESHEET_DIR, 'default_hydrus.qss' ), 'r', encoding = 'utf-8' ) as f:
+        with open( HydrusStaticDir.GetStaticPath( os.path.join( 'qss', 'default_hydrus.qss' ) ), 'r', encoding = 'utf-8' ) as f:
             
             DEFAULT_HYDRUS_STYLESHEET = f.read()
             
@@ -183,7 +179,7 @@ def SetStyleSheet( stylesheet, name, prepend_hydrus = True ):
 
 def SetStyleSheetFromPath( filename ):
     
-    path = os.path.join( STYLESHEET_DIR, filename )
+    path = HydrusStaticDir.GetStaticPath( os.path.join( 'qss', filename ) )
     
     if not os.path.exists( path ):
         

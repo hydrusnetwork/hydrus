@@ -42,6 +42,7 @@ plugins:
         'help/index.md': 'index.md'
         'help/introduction.md': 'introduction.md'
         'help/ipfs.md': 'ipfs.md'
+        'help/custom_assets.md': 'launch_arguments.md'
         'help/launch_arguments.md': 'launch_arguments.md'
         'help/privacy.md': 'privacy.md'
         'help/reducing_lag.md': 'reducing_lag.md'

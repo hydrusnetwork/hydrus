@@ -25,7 +25,6 @@ from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIMenus
 from hydrus.client.gui import ClientGUIRatings
 from hydrus.client.gui import ClientGUIShortcuts
-from hydrus.client.gui import ClientGUITopLevelWindows
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.canvas import ClientGUICanvasMedia
@@ -675,8 +674,6 @@ class CanvasHoverFrame( QW.QFrame ):
         
         mouse_over_important_descendant = self._MouseOverImportantDescendant()
         
-        child_window_is_open = ClientGUITopLevelWindows.ResizableWindowIsOpenAndIAmNotItsChild( self )
-        
         mouse_is_near_animation_bar = self._my_canvas.MouseIsNearAnimationBar()
         
         mouse_is_over_something_else_important = mouse_is_near_animation_bar
@@ -693,8 +690,8 @@ class CanvasHoverFrame( QW.QFrame ):
         
         hide_focus_is_good = focus_is_good or current_focus_tlw is None # don't hide if focus is either gone to another problem or temporarily sperging-out due to a click-transition or similar
         
-        ready_to_show = not self._is_currently_up and in_position and not mouse_is_over_something_else_important and focus_is_good and not child_window_is_open and not menu_open and not mouse_is_over_a_dominant_hover
-        ready_to_hide = self._is_currently_up and not menu_open and not mouse_over_important_descendant and ( not in_position or child_window_is_open or not hide_focus_is_good or mouse_is_over_a_dominant_hover )
+        ready_to_show = not self._is_currently_up and in_position and not mouse_is_over_something_else_important and focus_is_good and not menu_open and not mouse_is_over_a_dominant_hover
+        ready_to_hide = self._is_currently_up and not menu_open and not mouse_over_important_descendant and ( not in_position or not hide_focus_is_good or mouse_is_over_a_dominant_hover )
         
         def get_logic_report_string():
             
@@ -707,7 +704,6 @@ class CanvasHoverFrame( QW.QFrame ):
             tuples.append( ( 'ideal winsize: ', ( my_ideal_width, my_ideal_height ) ) )
             tuples.append( ( 'in position: ', in_position ) )
             tuples.append( ( 'menu open: ', menu_open ) )
-            tuples.append( ( 'child window open: ', child_window_is_open ) )
             tuples.append( ( 'mouse near animation bar: ', mouse_is_near_animation_bar ) )
             tuples.append( ( 'focus is good: ', focus_is_good ) )
             tuples.append( ( 'current focus tlw: ', current_focus_tlw ) )
@@ -819,7 +815,7 @@ class CanvasHoverFrameTop( CanvasHoverFrame ):
         QP.AddToLayout( vbox, self._info_text, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         self.setLayout( vbox )
-
+        
         self._window_always_on_top = False #can set this with a global option if you want
 
         self._window_show_title_bar = True #should always start on
@@ -857,7 +853,7 @@ class CanvasHoverFrameTop( CanvasHoverFrame ):
         my_width = my_size.width()
         my_height = my_size.height()
         
-        my_ideal_width = max( int( parent_width * TOP_HOVER_PROPORTION ), self.sizeHint().width() )
+        my_ideal_width = int( parent_width * TOP_HOVER_PROPORTION )
         
         my_ideal_height = self.sizeHint().height()
         

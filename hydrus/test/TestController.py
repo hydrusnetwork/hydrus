@@ -18,6 +18,7 @@ from hydrus.core import HydrusLists
 from hydrus.core import HydrusPaths
 from hydrus.core import HydrusPubSub
 from hydrus.core import HydrusSessions
+from hydrus.core import HydrusStaticDir
 from hydrus.core import HydrusTemp
 from hydrus.core import HydrusThreading
 
@@ -360,7 +361,7 @@ class Controller( object ):
         
         CC.GlobalPixmaps()
         
-        self.frame_icon_pixmap = QG.QPixmap( os.path.join( HC.STATIC_DIR, 'hydrus_32_non-transparent.png' ) )
+        self.frame_icon_pixmap = QG.QPixmap( HydrusStaticDir.GetStaticPath( 'hydrus_32_non-transparent.png' ) )
         
     
     def pub( self, topic, *args, **kwargs ):

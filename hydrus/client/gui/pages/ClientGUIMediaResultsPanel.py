@@ -204,6 +204,8 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.Liste
             
             canvas_window.exitFocusMedia.connect( self.NotifyFocusedMediaFromCanvasExiting )
             
+            canvas_window.exitFocusMediaForced.connect( self.SetFocusedMedia )
+            
             canvas_window.userRemovedMedia.connect( self.RemoveMedia )
             
         
@@ -1987,7 +1989,6 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.Liste
             
             self.SetFocusedMedia( media )
             
-        
         
     
     def PageHidden( self ):

@@ -1499,11 +1499,6 @@ class Canvas( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
             
         
     
-    def minimumSizeHint( self ):
-        
-        return QC.QSize( 120, 120 )
-        
-    
     def ZoomChanged( self ):
         
         self.update()
@@ -2740,18 +2735,24 @@ class CanvasWithHovers( Canvas ):
             
         else:
             
-            next_check_period_ms = max( 100, min( int( hide_time_ms / 5 ), 250 ) )
+            current_focus_tlw = QW.QApplication.activeWindow()
             
-            hide_time = HydrusTime.SecondiseMSFloat( hide_time_ms )
+            focus_is_good = current_focus_tlw == self.window()
             
-            if not CC.CAN_HIDE_MOUSE or CGC.core().MenuIsOpen() or ClientGUITopLevelWindows.ResizableWindowIsOpenAndIAmNotItsChild( self ):
+            if not CC.CAN_HIDE_MOUSE or CGC.core().MenuIsOpen() or not focus_is_good:
                 
                 should_be_hidden = False
                 
+                self._last_cursor_autohide_touch_time = HydrusTime.GetNowFloat()
+                
             else:
+                
+                hide_time = HydrusTime.SecondiseMSFloat( hide_time_ms )
                 
                 should_be_hidden = HydrusTime.TimeHasPassedFloat( self._last_cursor_autohide_touch_time + hide_time )
                 
+            
+            next_check_period_ms = max( 100, min( int( hide_time_ms / 5 ), 250 ) )
             
         
         mouse_currently_shown = self.cursor().shape() == QC.Qt.CursorShape.ArrowCursor
@@ -2778,6 +2779,11 @@ class CanvasWithHovers( Canvas ):
     def _TryToCloseWindow( self ):
         
         self.window().close()
+        
+    
+    def _TryToShowMediaThatLaunchedUs( self ):
+        
+        pass
         
     
     def _TryToShowPageThatLaunchedUs( self ):
@@ -2917,6 +2923,14 @@ class CanvasWithHovers( Canvas ):
             elif action == CAC.SIMPLE_CLOSE_MEDIA_VIEWER_AND_FOCUS_TAB:
                 
                 self._TryToShowPageThatLaunchedUs()
+                
+                self._TryToCloseWindow()
+                
+            elif action == CAC.SIMPLE_CLOSE_MEDIA_VIEWER_AND_FOCUS_TAB_AND_FOCUS_MEDIA:
+                
+                self._TryToShowPageThatLaunchedUs()
+                
+                self._TryToShowMediaThatLaunchedUs()
                 
                 self._TryToCloseWindow()
                 
@@ -3200,9 +3214,27 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
             default_reason = 'Deleted manually in Duplicate Filter, along with its potential duplicate.'
             
         
-        content_update_packages = super()._Delete( media = media, default_reason = default_reason, file_service_key = file_service_key, just_get_content_update_packages = True )
+        content_update_packages = []
         
-        deleted = isinstance( content_update_packages, list ) and len( content_update_packages ) > 0
+        if CG.client_controller.new_options.GetBoolean( 'delete_lock_reinbox_deletees_after_duplicate_filter' ):
+            
+            content_update_package = ClientContentUpdates.ContentUpdatePackage()
+            
+            content_update_package.AddContentUpdate( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_INBOX, { m.GetHash() for m in media } ) )
+            
+            content_update_packages.append( content_update_package )
+            
+        
+        deleted = False
+        
+        result = super()._Delete( media = media, default_reason = default_reason, file_service_key = file_service_key, just_get_content_update_packages = True )
+        
+        if isinstance( result, list ):
+            
+            deleted = len( result ) > 0
+            
+            content_update_packages.extend( result )
+            
         
         if deleted:
             
@@ -4350,6 +4382,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
 class CanvasMediaList( CanvasWithHovers ):
     
     exitFocusMedia = QC.Signal( ClientMedia.Media )
+    exitFocusMediaForced = QC.Signal( ClientMedia.Media )
     userRemovedMedia = QC.Signal( set )
     
     def __init__( self, parent, page_key, location_context: ClientLocation.LocationContext, media_results ):
@@ -4364,6 +4397,16 @@ class CanvasMediaList( CanvasWithHovers ):
         
         CG.client_controller.sub( self, 'ProcessContentUpdatePackage', 'content_updates_gui' )
         CG.client_controller.sub( self, 'ProcessServiceUpdates', 'service_updates_gui' )
+        
+    
+    def _TryToShowMediaThatLaunchedUs( self ):
+        
+        if self._current_media is not None:
+            
+            # this sucks but whatever. who should have responsibility for handling this gubbins? maybe the canvas should have absolute push power, rather than the page deciding whether to catch
+            # because we have two ways of doing this now, from the shortcut command vs the option
+            self.exitFocusMediaForced.emit( self._current_media )
+            
         
     
     def _TryToShowPageThatLaunchedUs( self ):

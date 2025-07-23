@@ -7,7 +7,7 @@ from twisted.internet import reactor, defer
 from twisted.internet.threads import deferToThread
 from twisted.web.server import NOT_DONE_YET
 from twisted.web.resource import Resource
-from twisted.web.static import File as FileResource, NoRangeStaticProducer, SingleRangeStaticProducer
+from twisted.web.static import NoRangeStaticProducer, SingleRangeStaticProducer
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
@@ -370,8 +370,6 @@ def GenerateNormieEris( service ):
         server_summary_texts[4]
     )
     
-
-hydrus_favicon = FileResource( os.path.join( HC.STATIC_DIR, 'hydrus.ico' ), defaultType = 'image/x-icon' )
 
 class HydrusDomain( object ):
     

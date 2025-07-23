@@ -25,6 +25,10 @@ from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusGlobals as HG
 
+from hydrus.core import HydrusStaticDir
+
+HydrusStaticDir.USE_USER_STATIC_DIR = False
+
 from hydrus.test import TestController
 
 import sys

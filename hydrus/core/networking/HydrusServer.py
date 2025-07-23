@@ -1,9 +1,11 @@
 from twisted.web.http import _GenericHTTPChannelProtocol, HTTPChannel
 from twisted.web.server import Site
 from twisted.web.server import Request
+from twisted.web.static import File as FileResource
 from twisted.web.resource import Resource
 
 from hydrus.core import HydrusConstants as HC
+from hydrus.core import HydrusStaticDir
 from hydrus.core.networking import HydrusServerRequest
 from hydrus.core.networking import HydrusServerResources
 
@@ -21,6 +23,8 @@ class HydrusService( Site ):
     def __init__( self, service ):
         
         self._service = service
+        
+        self.hydrus_favicon = FileResource( HydrusStaticDir.GetStaticPath( 'hydrus.ico' ), defaultType = 'image/x-icon' )
         
         service_type = self._service.GetServiceType()
         
@@ -54,7 +58,7 @@ class HydrusService( Site ):
         root = Resource()
         
         root.putChild( b'', HydrusServerResources.HydrusResourceWelcome( self._service, REMOTE_DOMAIN ) )
-        root.putChild( b'favicon.ico', HydrusServerResources.hydrus_favicon )
+        root.putChild( b'favicon.ico', self.hydrus_favicon )
         root.putChild( b'robots.txt', HydrusServerResources.HydrusResourceRobotsTXT( self._service, REMOTE_DOMAIN ) )
         
         return root

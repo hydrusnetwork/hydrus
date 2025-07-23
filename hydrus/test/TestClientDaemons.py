@@ -3,9 +3,9 @@ import shutil
 import time
 import unittest
 
-from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusPaths
+from hydrus.core import HydrusStaticDir
 from hydrus.core import HydrusTemp
 
 from hydrus.client import ClientConstants as CC
@@ -14,10 +14,11 @@ from hydrus.client.importing import ClientImportLocal
 
 from hydrus.test import TestGlobals as TG
 
-with open( os.path.join( HC.STATIC_DIR, 'hydrus.png' ), 'rb' ) as f:
+with open( HydrusStaticDir.GetStaticPath( 'hydrus.png' ), 'rb' ) as f:
     
     EXAMPLE_FILE = f.read()
     
+
 class TestDaemons( unittest.TestCase ):
     
     def test_import_folders_daemon( self ):
@@ -30,7 +31,7 @@ class TestDaemons( unittest.TestCase ):
             
             HydrusPaths.MakeSureDirectoryExists( test_dir )
             
-            hydrus_png_path = os.path.join( HC.STATIC_DIR, 'hydrus.png' )
+            hydrus_png_path = HydrusStaticDir.GetStaticPath( 'hydrus.png' )
             
             HydrusPaths.MirrorFile( hydrus_png_path, os.path.join( test_dir, '0' ) )
             HydrusPaths.MirrorFile( hydrus_png_path, os.path.join( test_dir, '1' ) ) # previously imported

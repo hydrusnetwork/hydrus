@@ -38,7 +38,7 @@ class AutoCompleteDropdownMetadataConditional( ClientGUIACDropdown.AutoCompleteD
         
         self._page_key = HydrusData.GenerateKey()
         
-        super().__init__( parent, location_context, tag_context.service_key, file_search_context )
+        super().__init__( parent, location_context, tag_context, file_search_context )
         
         self._location_context_button.setVisible( False )
         self._tag_context_button.setVisible( False )

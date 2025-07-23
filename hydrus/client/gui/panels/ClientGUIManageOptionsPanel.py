@@ -12,6 +12,7 @@ from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusPSUtil
 from hydrus.core import HydrusPaths
 from hydrus.core import HydrusSerialisable
+from hydrus.core import HydrusStaticDir
 from hydrus.core import HydrusTags
 from hydrus.core import HydrusText
 from hydrus.core import HydrusTime
@@ -1755,7 +1756,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._delete_lock_reinbox_deletees_after_archive_delete.setToolTip( ClientGUIFunctions.WrapToolTip( 'Be careful with this!\n\nIf the delete lock is on, and you do an archive/delete filter, this will ensure that all deletee files are inboxed before being deleted.' ) )
             
             self._delete_lock_reinbox_deletees_after_duplicate_filter = QW.QCheckBox( delete_lock_panel )
-            self._delete_lock_reinbox_deletees_after_duplicate_filter.setToolTip( ClientGUIFunctions.WrapToolTip( 'Be careful with this!\n\nIf the delete lock is on, and you do a duplicate filter, this will ensure that all deletee files from merge options are inboxed before being deleted.' ) )
+            self._delete_lock_reinbox_deletees_after_duplicate_filter.setToolTip( ClientGUIFunctions.WrapToolTip( 'Be careful with this!\n\nIf the delete lock is on, and you do a duplicate filter, this will ensure that all file delese you manually trigger and all file deletees that come from merge options are inboxed before being deleted.' ) )
             
             self._delete_lock_reinbox_deletees_in_auto_resolution = QW.QCheckBox( delete_lock_panel )
             self._delete_lock_reinbox_deletees_in_auto_resolution.setToolTip( ClientGUIFunctions.WrapToolTip( 'Be careful with this!\n\nIf the delete lock is on, any auto-resolution rule action, semi-automatic or automatic, will ensure that all deletee files from merge options are inboxed before being deleted.' ) )
@@ -2778,7 +2779,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows.append( ( '  Put it at the top:', self._show_local_files_on_page_chooser_at_top ) )
             rows.append( ( 'When closing the current tab, move focus: ', self._close_page_focus_goes ) )
             rows.append( ( 'Confirm when closing any page: ', self._confirm_all_page_closes ) )
-            rows.append( ( 'Confirm when closing a non-empty downloader page: ', self._confirm_non_empty_downloader_page_close ) )
+            rows.append( ( 'Confirm when closing a non-empty importer page: ', self._confirm_non_empty_downloader_page_close ) )
             rows.append( ( 'BUGFIX: Force \'hide page\' signal when creating a new page: ', self._force_hide_page_signal_on_new_page ) )
             
             gridbox = ClientGUICommon.WrapInGrid( self._opening_and_closing_panel, rows )
@@ -4089,7 +4090,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             system_panel = ClientGUICommon.StaticBox( self, 'system' )
             
-            self._mpv_conf_path = QP.FilePickerCtrl( system_panel, starting_directory = os.path.join( HC.STATIC_DIR, 'mpv-conf' ) )
+            self._mpv_conf_path = QP.FilePickerCtrl( system_panel, starting_directory = HydrusStaticDir.GetStaticPath( 'mpv-conf' ) )
             
             self._use_system_ffmpeg = QW.QCheckBox( system_panel )
             self._use_system_ffmpeg.setToolTip( ClientGUIFunctions.WrapToolTip( 'FFMPEG is used for file import metadata parsing and the native animation viewer. Check this to always default to the system ffmpeg in your path, rather than using any static ffmpeg in hydrus\'s bin directory. (requires restart)' ) )
@@ -4181,7 +4182,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             #
             
-            label = 'MPV loads up the "mpv.conf" file in your database directory. Feel free to edit that file in place any time--it is reloaded in hydrus every time you ok this options dialog. Or, you can overwrite it from another path here.'
+            label = 'MPV loads up the "mpv.conf" file in your database directory. Feel free to edit that file in place any time--it is reloaded in hydrus every time you ok this options dialog. Or, you can overwrite it from another path here.\n\nNote, though, that applying a new mpv.conf will not "reset/undo" any options that are now ommitted in the new file. If you want to remove a line, edit/update the mpv.conf and then restart the client.'
             
             st = ClientGUICommon.BetterStaticText( system_panel, label = label )
             st.setWordWrap( True )
@@ -5328,11 +5329,13 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             QP.AddToLayout( vbox, self._help_label, CC.FLAGS_EXPAND_PERPENDICULAR )
             
-            text = 'The current styles are what your Qt has available, the stylesheets are what .css and .qss files are currently in install_dir/static/qss.'
+            text = 'The current styles are what your Qt has available, the stylesheets are what .css and .qss files are currently in install_dir/static/qss or db_dir/static/qss (if you make one).'
             text += '\n' * 2
-            text += 'If you run from source and you select e621, Paper_Dark, or another stylesheet that includes external (svg) assets, you must make sure that your CWD is the hydrus install folder when you boot.'
+            text += 'If you run from source and select e621, or Paper_Dark stylesheets, which include external (svg) assets, you must make sure that your CWD is the hydrus install folder when you boot the program. For a custom QSS in your db_dir that uses external assets, you must edit the .QSS so it uses absolute path names.'
             
             st = ClientGUICommon.BetterStaticText( self, label = text )
+            
+            st.setWordWrap( True )
             
             QP.AddToLayout( vbox, st, CC.FLAGS_EXPAND_PERPENDICULAR )
             

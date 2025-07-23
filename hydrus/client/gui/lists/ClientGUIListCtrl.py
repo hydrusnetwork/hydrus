@@ -921,6 +921,9 @@ class BetterListCtrlTreeView( QW.QTreeView ):
     
     def ForceHeight( self, rows ):
         
+        # TODO: Rework this. I use this guy to do the gallery/watcher auto-grow, but really I think sizeHint would handle it better via an internal bounding range
+        # with presumably an 'updateGeometry()' call when we recognise we have a diff number of rows
+        
         self._forced_height_num_chars = rows
         
         self.updateGeometry()

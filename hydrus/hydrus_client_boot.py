@@ -58,6 +58,7 @@ try:
     argparser.add_argument( '--db_synchronous_override', type = int, choices = range(4), help = 'override SQLite Synchronous PRAGMA (default=2)' )
     argparser.add_argument( '--no_db_temp_files', action='store_true', help = 'run db temp operations entirely in memory' )
     argparser.add_argument( '--boot_debug', action='store_true', help = 'print additional bootup information to the log' )
+    argparser.add_argument( '--no_user_static_dir', action='store_true', help = 'do not allow a static dir in the db dir to override the install static dir contents' )
     argparser.add_argument( '--profile_mode', action='store_true', help = 'start the program with profile mode on, capturing boot performance' )
     argparser.add_argument( '--pause_network_traffic', action='store_true', help = 'start the program with all new network traffic paused' )
     argparser.add_argument( '--win_qt_darkmode_test', action='store_true', help = 'Windows only: Try Qt\'s automatic darkmode recognition.' )
@@ -117,6 +118,10 @@ try:
     HG.no_db_temp_files = result.no_db_temp_files
     
     HG.boot_debug = result.boot_debug
+    
+    from hydrus.core import HydrusStaticDir
+    
+    HydrusStaticDir.USE_USER_STATIC_DIR = not result.no_user_static_dir
     
     HG.profile_mode = result.profile_mode
     HG.profile_start_time = HydrusTime.GetNow()

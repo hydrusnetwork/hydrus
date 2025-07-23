@@ -1,7 +1,7 @@
-import os
 import unittest
 
 from hydrus.core import HydrusConstants as HC
+from hydrus.core import HydrusStaticDir
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client.files.images import ClientImagePerceptualHashes
@@ -10,7 +10,7 @@ class TestImageHandling( unittest.TestCase ):
     
     def test_perceptual_hash( self ):
         
-        perceptual_hashes = ClientImagePerceptualHashes.GenerateUsefulShapePerceptualHashes( os.path.join( HC.STATIC_DIR, 'hydrus.png' ), HC.IMAGE_PNG )
+        perceptual_hashes = ClientImagePerceptualHashes.GenerateUsefulShapePerceptualHashes( HydrusStaticDir.GetStaticPath( 'hydrus.png' ), HC.IMAGE_PNG )
         
         self.assertEqual( perceptual_hashes, set( [ b'\xb4M\xc7\xb2M\xcb8\x1c' ] ) )
         

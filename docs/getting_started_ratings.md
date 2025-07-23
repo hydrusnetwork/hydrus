@@ -41,7 +41,7 @@ We are experimenting with svg ratings:
 
 ![](images/ratings_svg_experiment.png)
 
-There are some already in `install_dir/static/star_shapes`--feel free to try your own. Go for something simple that mostly fills a squarish, transparent background.
+There are some already in `install_dir/static/star_shapes`--feel free to add your own to `db_dir/static/star_shapes`. Go for something simple that mostly fills a squarish, transparent background.
 
 The program will try to draw the sillhouette of the svg with the chosen colours:
 

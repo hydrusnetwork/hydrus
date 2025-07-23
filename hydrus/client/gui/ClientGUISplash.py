@@ -1,4 +1,3 @@
-import os
 import threading
 
 from qtpy import QtCore as QC
@@ -8,6 +7,7 @@ from qtpy import QtGui as QG
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusStaticDir
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
@@ -38,7 +38,7 @@ class FrameSplashPanel( QW.QWidget ):
         self._initial_position = self.parentWidget().pos()
         
         # this is 124 x 166
-        self._hydrus_pixmap = QG.QPixmap( os.path.join( HC.STATIC_DIR, 'hydrus_splash.png' ) )
+        self._hydrus_pixmap = QG.QPixmap( HydrusStaticDir.GetStaticPath( 'hydrus_splash.png' ) )
         
         self._image_label = QW.QLabel( self )
         
@@ -229,6 +229,7 @@ class FrameSplashStatus( object ):
         self._updater = ClientGUIAsync.FastThreadToGUIUpdater( ui, ui.SetDirty )
         
     
+
 class FrameSplash( QW.QWidget ):
     
     def __init__( self, controller: "CG.ClientController.Controller", title, frame_splash_status: FrameSplashStatus ):

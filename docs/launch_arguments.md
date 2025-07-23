@@ -69,6 +69,10 @@ When SQLite performs very large queries, it may spool temporary table results to
 
 Prints additional debug information to the log during the bootup phase of the application.
 
+##**`--no_user_static_dir`**
+
+Disallows the 'custom assets' override that lets files in `db_dir/static` override what is it `install_dir/static`. Use for quick debugging.
+
 ##**`--profile_mode`**
 
 This starts the program with 'Profile Mode' turned on, which captures the performance of boot functions. This is also a way to get Profile Mode on the server, although support there is very limited.

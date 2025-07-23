@@ -7,6 +7,48 @@ title: Changelog
 !!! note
     This is the new changelog, only the most recent builds. For all versions, see the [old changelog](old_changelog.html).
 
+## [Version 631](https://github.com/hydrusnetwork/hydrus/releases/tag/v631)
+
+### custom static assets
+
+* you can now override any of the files in `install_dir/static` by creating a replacement in `db_dir/static`! it works like a lot of vidya modding folders do, where the program consults your user folder before falling back to the install's default whenever it loads an asset. If you want a custom splash image (`static/hydrus_splash.png`), go for it!
+* routines like 'what QSS stylesheets are available?' and 'what rating SVGs are available?' and (less significant) the various 'what should our default downloaders be?' check both possible locations to create their lists, preferring (if there are filename conflicts) what it finds in your user dir
+* I now explicitly recommend that custom QSS or SVGs go in this directory rather than editing the install dir. it lets you have a completely read-only install and means you don't have to worry about overwrites or clears if you update or git resync or whatever. this puts us one step closer to not having a crazy install environment, hooray
+* a new `--no_user_static_dir` launch parameter disables this mode, if you need to do quick debug
+* I wrote some simple help for this here: https://hydrusnetwork.github.io/hydrus/custom_assets.html
+
+### misc
+
+* I fixed some issues with the 'hover windows show/hide better' """improvements""" from last week. the child window testing logic was slightly dodgy and hover windows were not showing at all when there were two media viewers open. I simplified it and cleared out the unhelpful behaviour. the mouse hide/show should interact with dialogs a bit better now too
+* search pages that start with 'include current/pending tags' turned off will now initialise correctly in this state. previously, the buttons were displaying 'off', as intended, but the internal search object was starting True/True always, so a bare F5 refresh was giving the wrong results and hitting the buttons the first time was not triggering a 'new search state, need to refresh' call since the button was just aligning on that first click with what the internal object already thought
+* hydrus has _better_ duration/framerate parsing on videos that ffmpeg cannot report a good duration on. if, say, ffmpeg thinks the video is 40ms long but we just manually counted 400 frames, it now trusts its fps number more than the duration (previously it always trusted the duration)
+* added a new shortcut command that does 'close media viewer and focus the tab the media came from, if possible, and focus the media'. same as the related command, but it forces the media focus if you have that not set under `options->media viewer`
+* the 'review session cookies' and sub-panel now have 'export to clipboard' and 'import from clipboard' buttons. there's some domain filtering here that ensures cookies only go in the slot they are supposed to
+* the 'expires' section in the edit cookie dialog works better--it now boots with the existing value, and the max settable time is 200 years
+
+### duplicates
+
+* the duplicates filter page sidebar now only disables 'launch the filter' and 'show some random potential pairs' if the search is A) complete and B) found nothing. previously, it was disabling until it found at least one pair, which is technically great but annoying in practice
+* if you have 'After duplicate filter, ensure deletees are inboxed before delete' on, this now also applies to manual file deletes within the filter
+
+### complicated url-spawning metadata propagation issue
+
+* there are two ways an url file import job can create child jobs--one, by parsing multiple 'posts' with separate metadata using a subsidiary page parser, as in a watcher; the other, by parsing multiple urls within one post with a normal page parser. until now, these routines created their child objects with different, ad-hoc code. most of the 'my downloader that works like this doesn't get the tags/parent url/whatever assocated to this child down the chain' bugs were due to this
+* this situation is now remedied. both routines now use the same shared call to create children. referral urls are set up correct; the parent url is added as an associable url; parsed http headers are passed along correctly; source time is passed down; and tags, notes and parsed primary/source urls, which were all working correct before, are still passed down (issue #1763)
+* I've done the same for gallery objects creating child gallery or file imports. they had similar but lesser issues
+* there are still a couple of issues in the pipeline regarding gallery urls that use multiple tiers of subsidiary page parsers. I am thinking about how to sort it out
+
+### boring stuff
+
+* renamed the 'confirm when closing a non-empty downloader page' in the options to _importer_ page. this applies to all importers, including hard drive import pages (issue #1764)
+* the 'regen total pending count' database maintenance job now asks you to choose a repo or ipfs service. previously it was asking you to choose from every service
+* if a database is missing critical tables and thus non-functional, it now reports the specific table names
+* rejiggered my 'eliding label' sizeHint code to talk to Qt layouts better
+* the top hover window now has fixed width and will no longer overflow. at very small sizes, the buttons will shrink and overflowing text will behave better
+* the 'delay reason' label on the edit subscription panel now has proper wrap and eliding, so if that guy gets a gigantic error text, it'll now fit better
+* forced subscription popups a little wider by default
+* added another note from a user about mpv in the Linux install help, this time about MangoHUD. I think we might want a separate page regarding Linux environment tweaks and fixes
+
 ## [Version 630](https://github.com/hydrusnetwork/hydrus/releases/tag/v630)
 
 ### Linux laggy mpv issue
@@ -546,60 +588,3 @@ title: Changelog
 * my 'merge directory' call now strictly does not delete anything from the source dir until it is finished copying with no problems. previously, it would move files as it went, so if the copy failed half way through due to an I/O failure, the source was left partial. this no longer happens
 * fixed a couple of dumb path translation lines in my directory mirror/merge calls so they can better handle weird dirnames
 * the advanced mode 'experimental' tag list menu that lets you change the tag display context now shows the 'single media views' option as well
-
-## [Version 621](https://github.com/hydrusnetwork/hydrus/releases/tag/v621)
-
-### more ratings
-
-* thanks to a user, we have many new rating options--
-* `options->media viewer` and `options->thumbnails` now let you alter the size of ratings!
-* there are now many new rating shapes to choose from under `services->manage services`: triangles pointing up/down/left/right; diamond; rhombus pointing right/left; pentagon; hexagon and small hexagon; six point star; eight point starburst; hourglass; large + and X shapes
-* also, in an experiment, you can now also set a custom svg to your rating. there's a new folder, `install_dir/static/star_shapes`, that you can drop svgs into to have them available. I've put a couple of simple examples in already. try to do a squarish shape with a clear sillhouette on transparency. we will keep working on this, but feel free to try it out yourself and give feedback. I suspect we'll migrate all the existing custom polygons to nicer svgs in future if and when we nail nice svg border colours and stuff
-* I added a help button to the `manage services` edit panel here, linking to the ratings help, which has a new section on the svg rating shapes
-* I reworked some stuff behind the scenes to more neatly integrate this rating tech and allow for svg ratings. the 'edit service star shape' UI in `manage services` has two dropdowns now, too
-* we are experimenting with fractional pixel sizing and drawing here, so some of the new ratings may seem a little blurry in places and/or not line up well, including between the underlying canvas and the top-right hover pop-up. I'm going to work on this a bit and see what I can do to make it more pixel-perfect
-* we may figure out unicode character ratings in future also
-
-### misc
-
-* fixed a bug in the duplicates system's 'pixel hash' test. my current pixel hash is dimensionless, and thus, by accident, a completely flat-colour (or careful checkerboard etc..) image of 100x500 has the same pixel hash as the same colour of 200x250. it obviously doesn't come up much, but I regret the error. rather than recompute everyone's pixel hashes with dimension data, we are first patching the test code to double-check the images both have the same width. it seems ok here, but let me know if your 'must (not) be pixel duplicates' duplicate file searches are now interminably slow
-* split the prefetch settings in `options->speed and memory` into their own box, and updated the labels a bit
-* added a setting to this new box to govern how many pairs the duplicate filter will prefetch. previously this was hardcoded to 1, now it defaults to 5 and you can set whatever
-* when the client or server checks if it is already running, the 'client_running' file's 'process creation time' is now only tested to within a second's accuracy. if you have a bespoke backup workflow that involves creating your own client_running file, it should get caught better now despite float imprecision
-* updated the various Linux install/running-from-source stuff to talk about `libmpv2` as well as `libmpv1`.
-* I rolled out a v620a hotfix last week after my refactoring accidentally broke the manual duplicate filter. sorry for the trouble! I have improved my testing regime to catch this in future
-
-### duplicates auto-resolution
-
-* you can now add 'system:known url' and 'system:number of urls' predicates to the 'test A or B' comparators
-* you can now add 'system:number of urls' to the 'test A against B using file info' comparators
-* added unit tests for these, and cleaned up some of the unit tests in this area
-
-### avif
-
-* the `pillow-avif-plugin` test last week seemed to go well. this library is now folded into the main builds, and AVIF rendering should be more reliable for the time being (issue #1720)
-* if you run from source, you might like to rebuild your venv this week to get this
-
-### psd_tools replacement
-
-* `psd-tools` is no longer used by the program
-* thanks to a user report, we discovered that the Linux build was including an old and vulnerable version of a bz2 decoder. this thing was hanging around because of a drawing library included by a psd parser we use. I am not sure if the decoder was ever called, given what we use the library for. I did a test build of Linux with the bad file simply deleted, and it seemed to boot ok, but I wasn't sure if the file was bundled into a pyd on the Windows and macOS side, and I'm pretty sure it would be included in a source install, so I wasn't really happy
-* ultimately I decided I didn't like having this complicated psd library hanging around when we only needed to pull dimensions, icc profile existence, and pulling an embedded render preview file, so I cobbled together some other backup solutions we already mostly figured out, including an ffmpeg renderer, and wrote a simple file parser and replaced all the psd_tools stuff with our own calls
-* there are some psd files ffmpeg seems not to render as good as psd_tools did, but I'm fine with it for now
-* I seem to be detecting icc profiles that psd tools did not recognise, so I'm scheduling all psds for a 'has an icc profile?' check on update. maybe I'm false-positiving, but I'll make sure the existing store reflects current code at least
-* I also fixed some psd rendering for files that had weird 100% transparency
-* along the way I improved some PSD error messages and handling. PSDs that have no embedded preview should stop spamming that info to the log on thumbnail regen
-
-### swfrender removal
-
-* since cleaning was on my mind, I'm removing the swfrender exes too. new swf files you import will just get default 'flash' thumbnails from now on. having these ancient executables hanging around to load unknown flash files is not an excellent idea these days, even though it has been fun
-* the actively developed 'Ruffle' flash emulator seems to be working on a CLI executable that can render flash frames, which could be a much better and more reliable replacement in future
-* I haven't played with it properly yet, but ffmpeg can apparently thumbnail some flv-embed-style flash files, so I'll explore this too
-
-### refactoring and cleanup
-
-* moved some ffmpeg stuff from `HydrusVideoHandling` to the new `HydrusFFMPEG`
-* merged all 'ffmpeg was missing' and 'ffmpeg output no content' error handling to single calls and improved coverage
-* wrote some 'render to pipe' stuff for ffmpeg to make some of the ffmpeg based rendering work a little quicker and without the temp dir
-* deleted the `HydrusPSDTools` file
-* moved some more old network reporting mode code to a cleaner unified method

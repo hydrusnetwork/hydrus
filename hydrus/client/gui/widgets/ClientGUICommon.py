@@ -891,10 +891,8 @@ class BetterRadioBox( QW.QFrame ):
 
 class BetterStaticText( QP.EllipsizedLabel ):
     
-    def __init__( self, parent, label = None, tooltip_label = False, **kwargs ):
+    def __init__( self, parent, label = None, tooltip_label = False, ellipsize_end = False, ellipsized_ideal_width_chars = 24 ):
         
-        ellipsize_end = 'ellipsize_end' in kwargs and kwargs[ 'ellipsize_end' ]
-
         super().__init__( parent, ellipsize_end = ellipsize_end )
         
         # otherwise by default html in 'this is a <hr> parsing step' stuff renders fully lmaoooo
@@ -902,7 +900,7 @@ class BetterStaticText( QP.EllipsizedLabel ):
         
         self._tooltip_label = tooltip_label
         
-        if 'ellipsize_end' in kwargs and kwargs[ 'ellipsize_end' ]:
+        if ellipsize_end:
             
             self._tooltip_label = True
             

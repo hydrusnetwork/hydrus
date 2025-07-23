@@ -15,6 +15,7 @@ from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientDaemons
 from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientLocation
+from hydrus.client.search import ClientSearchTagContext
 
 class TagAutocompleteOptions( HydrusSerialisable.SerialisableBase ):
     
@@ -259,7 +260,7 @@ class TagAutocompleteOptions( HydrusSerialisable.SerialisableBase ):
         return self._write_autocomplete_location_context
         
     
-    def GetWriteAutocompleteSearchDomain( self, location_context: ClientLocation.LocationContext ):
+    def GetWriteAutocompleteSearchDomain( self, location_context: ClientLocation.LocationContext, display_tag_service_key: bytes ):
         
         tag_service_key = self._service_key
         
@@ -278,7 +279,9 @@ class TagAutocompleteOptions( HydrusSerialisable.SerialisableBase ):
             location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
             
         
-        return ( location_context, tag_service_key )
+        tag_context = ClientSearchTagContext.TagContext( service_key = tag_service_key, display_service_key = display_tag_service_key )
+        
+        return ( location_context, tag_context )
         
     
     def GetWriteAutocompleteTagDomain( self ):

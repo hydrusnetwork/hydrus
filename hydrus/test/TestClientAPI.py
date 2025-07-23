@@ -17,6 +17,7 @@ from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusPaths
+from hydrus.core import HydrusStaticDir
 from hydrus.core import HydrusTags
 from hydrus.core import HydrusText
 from hydrus.core import HydrusTime
@@ -183,7 +184,7 @@ class TestClientAPI( unittest.TestCase ):
         
         #
         
-        with open( os.path.join( HC.STATIC_DIR, 'hydrus.ico' ), 'rb' ) as f:
+        with open( HydrusStaticDir.GetStaticPath( 'hydrus.ico' ), 'rb' ) as f:
             
             favicon = f.read()
             
@@ -990,7 +991,7 @@ class TestClientAPI( unittest.TestCase ):
         
         TG.test_controller.SetRead( 'hash_status', f )
         
-        hydrus_png_path = os.path.join( HC.STATIC_DIR, 'hydrus.png' )
+        hydrus_png_path = HydrusStaticDir.GetStaticPath( 'hydrus.png' )
         
         with open( hydrus_png_path, 'rb' ) as f:
             
@@ -7291,7 +7292,7 @@ class TestClientAPI( unittest.TestCase ):
         TG.test_controller.SetRead( 'media_result', media_result )
         TG.test_controller.SetRead( 'media_results_from_ids', ( media_result, ) )
         
-        path = os.path.join( HC.STATIC_DIR, 'hydrus.png' )
+        path = HydrusStaticDir.GetStaticPath( 'hydrus.png' )
         
         file_path = TG.test_controller.client_files_manager.GetFilePath( hash, HC.IMAGE_PNG, check_file_exists = False )
         
@@ -7299,7 +7300,7 @@ class TestClientAPI( unittest.TestCase ):
         
         thumb_hash = b'\x17\xde\xd6\xee\x1b\xfa\x002\xbdj\xc0w\x92\xce5\xf0\x12~\xfe\x915\xb3\xb3tA\xac\x90F\x95\xc2T\xc5'
         
-        path = os.path.join( HC.STATIC_DIR, 'hydrus_small.png' )
+        path = HydrusStaticDir.GetStaticPath( 'hydrus_small.png' )
         
         thumb_path = TG.test_controller.client_files_manager._GenerateExpectedThumbnailPath( hash )
         
@@ -7626,7 +7627,7 @@ class TestClientAPI( unittest.TestCase ):
         
         data = response.read()
         
-        with open( os.path.join( HC.STATIC_DIR, 'image.png' ), 'rb' ) as f:
+        with open( HydrusStaticDir.GetStaticPath( 'hydrus.png' ), 'rb' ) as f:
             
             expected_data = f.read()
             

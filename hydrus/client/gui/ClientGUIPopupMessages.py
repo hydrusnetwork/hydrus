@@ -141,6 +141,10 @@ class PopupMessage( PopupWindow ):
         self._network_job_ctrl.hide()
         self._time_network_job_disappeared = 0
         
+        # this is kind of stupid, but whatever for now
+        width = ClientGUIFunctions.ConvertTextToPixelWidth( self._network_job_ctrl, 36 )
+        self._network_job_ctrl.setMinimumWidth( width )
+        
         self._copy_to_clipboard_button = ClientGUICommon.BetterButton( self, 'copy to clipboard', self.CopyToClipboard )
         self._copy_to_clipboard_button_ev = QP.WidgetEventFilter( self._copy_to_clipboard_button )
         self._copy_to_clipboard_button_ev.EVT_RIGHT_DOWN( self.EventDismiss )

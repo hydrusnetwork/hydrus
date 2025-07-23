@@ -25,6 +25,7 @@ class EditPotentialDuplicatesSearchContextPanel( ClientGUICommon.StaticBox ):
     
     restartedSearch = QC.Signal()
     thisSearchHasPairs = QC.Signal()
+    thisSearchDefinitelyHasNoPairs = QC.Signal()
     valueChanged = QC.Signal()
     
     def __init__( self, parent: QW.QWidget, potential_duplicates_search_context: ClientPotentialDuplicatesSearchContext.PotentialDuplicatesSearchContext, synchronised = True, page_key = None, put_searches_side_by_side = False ):
@@ -233,6 +234,11 @@ class EditPotentialDuplicatesSearchContextPanel( ClientGUICommon.StaticBox ):
                 
             
             self._num_potential_duplicate_pairs += count
+            
+            if len( self._potential_duplicate_pairs_and_distances_still_to_search ) == 0 and self._num_potential_duplicate_pairs == 0:
+                
+                self.thisSearchDefinitelyHasNoPairs.emit()
+                
             
             self._UpdateCountLabel()
             

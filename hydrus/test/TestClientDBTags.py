@@ -7,6 +7,7 @@ import unittest
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusLists
+from hydrus.core import HydrusStaticDir
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientLocation
@@ -786,7 +787,7 @@ class TestClientDBTags( unittest.TestCase ):
                 
                 TG.test_controller.SetRead( 'hash_status', ClientImportFiles.FileImportStatus.STATICGetUnknownStatus() )
                 
-                path = os.path.join( HC.STATIC_DIR, 'testing', filename )
+                path = HydrusStaticDir.GetStaticPath( os.path.join( 'testing', filename ) )
                 
                 file_import_options = FileImportOptions.FileImportOptions()
                 file_import_options.SetIsDefault( True )
@@ -1100,7 +1101,7 @@ class TestClientDBTags( unittest.TestCase ):
         
         TG.test_controller.SetRead( 'hash_status', ClientImportFiles.FileImportStatus.STATICGetUnknownStatus() )
         
-        path = os.path.join( HC.STATIC_DIR, 'testing', 'muh_jpg.jpg' )
+        path = HydrusStaticDir.GetStaticPath( os.path.join( 'testing', 'muh_jpg.jpg' ) )
         
         file_import_options = FileImportOptions.FileImportOptions()
         file_import_options.SetIsDefault( True )
@@ -1201,7 +1202,7 @@ class TestClientDBTags( unittest.TestCase ):
         
         TG.test_controller.SetRead( 'hash_status', ClientImportFiles.FileImportStatus.STATICGetUnknownStatus() )
         
-        path = os.path.join( HC.STATIC_DIR, 'testing', 'muh_jpg.jpg' )
+        path = HydrusStaticDir.GetStaticPath( os.path.join( 'testing', 'muh_jpg.jpg' ) )
         
         file_import_options = FileImportOptions.FileImportOptions()
         file_import_options.SetIsDefault( True )
@@ -1303,7 +1304,7 @@ class TestClientDBTags( unittest.TestCase ):
         
         TG.test_controller.SetRead( 'hash_status', ClientImportFiles.FileImportStatus.STATICGetUnknownStatus() )
         
-        path = os.path.join( HC.STATIC_DIR, 'testing', 'muh_jpg.jpg' )
+        path = HydrusStaticDir.GetStaticPath( os.path.join( 'testing', 'muh_jpg.jpg' ) )
         
         file_import_options = FileImportOptions.FileImportOptions()
         file_import_options.SetIsDefault( True )
@@ -1407,7 +1408,7 @@ class TestClientDBTags( unittest.TestCase ):
         
         TG.test_controller.SetRead( 'hash_status', ClientImportFiles.FileImportStatus.STATICGetUnknownStatus() )
         
-        path = os.path.join( HC.STATIC_DIR, 'testing', 'muh_jpg.jpg' )
+        path = HydrusStaticDir.GetStaticPath( os.path.join( 'testing', 'muh_jpg.jpg' ) )
         
         file_import_options = FileImportOptions.FileImportOptions()
         file_import_options.SetIsDefault( True )
@@ -1510,7 +1511,7 @@ class TestClientDBTags( unittest.TestCase ):
         
         TG.test_controller.SetRead( 'hash_status', ClientImportFiles.FileImportStatus.STATICGetUnknownStatus() )
         
-        path = os.path.join( HC.STATIC_DIR, 'testing', 'muh_jpg.jpg' )
+        path = HydrusStaticDir.GetStaticPath( os.path.join( 'testing', 'muh_jpg.jpg' ) )
         
         file_import_options = FileImportOptions.FileImportOptions()
         file_import_options.SetIsDefault( True )
@@ -2640,7 +2641,7 @@ class TestClientDBTags( unittest.TestCase ):
                     
                     TG.test_controller.SetRead( 'hash_status', ClientImportFiles.FileImportStatus.STATICGetUnknownStatus() )
                     
-                    path = os.path.join( HC.STATIC_DIR, 'testing', filename )
+                    path = HydrusStaticDir.GetStaticPath( os.path.join( 'testing', filename ) )
                     
                     file_import_job = ClientImportFiles.FileImportJob( path, file_import_options )
                     

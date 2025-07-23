@@ -10,6 +10,7 @@ from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusPaths
+from hydrus.core import HydrusStaticDir
 from hydrus.core import HydrusTime
 from hydrus.core.files import HydrusAnimationHandling
 
@@ -229,8 +230,8 @@ class MPVWidget( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
         # THUS, DO NOT EVER TALK TO THIS GUY DURING A paintEvent. fetch your data and call update() if it changed. Also, we now make sure _something_ is loaded as much as possible, even if it is a black square png
         # #####
         #
-        self._black_png_path = os.path.join( HC.STATIC_DIR, 'blacksquare.png' )
-        self._hydrus_png_path = os.path.join( HC.STATIC_DIR, 'hydrus.png' )
+        self._black_png_path = HydrusStaticDir.GetStaticPath( 'blacksquare.png' )
+        self._hydrus_png_path = HydrusStaticDir.GetStaticPath( 'hydrus.png' )
         self._currently_in_media_load_error_state = False
         
         global LOCALE_IS_SET

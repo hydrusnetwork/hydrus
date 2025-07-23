@@ -230,7 +230,7 @@ class SidebarDuplicateFilter( ClientGUISidebarCore.Sidebar ):
         self._max_hamming_distance_for_potential_discovery_spinctrl.valueChanged.connect( self.MaxHammingDistanceForPotentialDiscoveryChanged )
         
         self._potential_duplicates_search_context.restartedSearch.connect( self._NotifyPotentialsSearchStarted )
-        self._potential_duplicates_search_context.thisSearchHasPairs.connect( self._NotifyPotentialsSearchHasPairs )
+        self._potential_duplicates_search_context.thisSearchDefinitelyHasNoPairs.connect( self._NotifyPotentialsSearchDefinitelyHasNoPairs )
         
         self._main_notebook.currentChanged.connect( self._CurrentPageChanged )
         
@@ -293,14 +293,14 @@ class SidebarDuplicateFilter( ClientGUISidebarCore.Sidebar ):
     
     def _NotifyPotentialsSearchStarted( self ):
         
-        self._launch_filter.setEnabled( False )
-        self._show_some_dupes.setEnabled( False )
-        
-    
-    def _NotifyPotentialsSearchHasPairs( self ):
-        
         self._launch_filter.setEnabled( True )
         self._show_some_dupes.setEnabled( True )
+        
+    
+    def _NotifyPotentialsSearchDefinitelyHasNoPairs( self ):
+        
+        self._launch_filter.setEnabled( False )
+        self._show_some_dupes.setEnabled( False )
         
     
     def _PotentialDuplicatesSearchContextChanged( self ):

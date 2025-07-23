@@ -1085,7 +1085,7 @@ class TimeDeltaWidget( QW.QWidget ):
     
     timeDeltaChanged = QC.Signal()
     
-    def __init__( self, parent, min = 1, days = False, hours = False, minutes = False, seconds = False, milliseconds = False, monthly_allowed = False, monthly_label = 'monthly', negative_allowed = False ):
+    def __init__( self, parent, min = 1, days = False, hours = False, minutes = False, seconds = False, milliseconds = False, monthly_allowed = False, monthly_label = 'monthly', negative_allowed = False, max_days = 3523 ):
         
         super().__init__( parent )
         
@@ -1103,7 +1103,7 @@ class TimeDeltaWidget( QW.QWidget ):
         
         if self._show_days:
             
-            self._days = ClientGUICommon.BetterSpinBox( self, min=0, max=3653, width = 50 )
+            self._days = ClientGUICommon.BetterSpinBox( self, min=0, max=max_days, width = 50 )
             self._days.valueChanged.connect( self.EventChange )
             self._days.installEventFilter( self )
             

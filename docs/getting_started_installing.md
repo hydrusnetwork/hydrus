@@ -44,14 +44,19 @@ I try to release a new version every Wednesday by 8pm EST and write an accompany
 
 === "Linux"
     
-    !!! warning "Wayland"
+    ??? warning "Wayland (and MPV)"
         Unfortunately, hydrus has several bad bugs in Wayland. The mpv window will often not embed properly into the media viewer, menus and windows may position on the wrong screen, and the taskbar icon may not work at all. [Running from source](running_from_source.md) may improve the situation, but some of these issues seem to be intractable for now.
         
-        User testing suggests that the best solution for now is just to launch the program in X11, and I now encourage this for all Wayland users. Launching with the environment variable `QT_QPA_PLATFORM=xcb` should do it. The 'xcb' forces X11.
+        User testing suggests that the best solution for now is just to launch the program in X11, and I now encourage this for all Wayland users. Launching with the environment variable `QT_QPA_PLATFORM=xcb` (e.g. by putting `export QT_QPA_PLATFORM=xcb` in a boot script that launches `hydrus_client`) should do it. The 'xcb' should force X11.
         
-        If that fails, another user says setting `WAYLAND_DISPLAY= ` (as in setting it to nothing), which forces hydrus (and its embedded mpv windows) to use Xwayland, is another solution! You might need to do `sudo apt install xwayland` first.
+        It does not work for everyone, though. If it fails, another user says setting `WAYLAND_DISPLAY= ` (as in setting it to nothing), which forces hydrus (and its embedded mpv windows) to use Xwayland, is another solution. You might need to do `sudo apt install xwayland` first.
         
         I expect to revisit this question in future versions of Qt and Wayland--we'll see if the situation stabilises.
+    
+    ??? warning "MangoHUD and MPV"
+        A user notes that MangoHUD may also interfere with mpv, causing crashes.
+        
+        Try `unset MANGOHUD` to remove the MangoHUD environment variable in your hydrus launch script to fix this!
     
     !!! note "Qt compatibility"
         

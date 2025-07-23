@@ -134,6 +134,18 @@ def GetFFMPEGVideoProperties( path, force_count_frames_manually = False ):
         
         num_frames = ParseFFMPEGNumFramesManually( lines )
         
+        if num_frames > 0:
+            
+            implied_fps_given_what_we_know = num_frames / duration_s
+            
+            if 0 < fps < 1000 < implied_fps_given_what_we_know:
+                
+                # ok let's assume FFMPEG pulled 'duration = 40ms' for a file with 400 frames (looking at this now)
+                # we'll trust out 'not confident' fps number over that
+                duration_s = None
+                
+            
+        
         if duration_s is None:
             
             duration_s = num_frames / fps
@@ -473,7 +485,7 @@ def ParseFFMPEGFPSFromFirstSecond( lines_for_first_second ):
         
     
 
-def ParseFFMPEGFPSPossibleResults( video_line ):
+def ParseFFMPEGFPSPossibleResults( video_line ) -> tuple[ set[ float ], bool ]:
     
     def that_fps_string_is_likely_stupid( fps: str ) -> bool:
         

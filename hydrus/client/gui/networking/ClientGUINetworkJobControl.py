@@ -76,6 +76,10 @@ class NetworkJobControl( QW.QFrame ):
         
         self.setLayout( hbox )
         
+        width = ClientGUIFunctions.ConvertTextToPixelWidth( self, 58 )
+        
+        self.setMinimumWidth( width )
+        
     
     def _EditBandwidthRules( self, network_context: ClientNetworkingContexts.NetworkContext ):
         

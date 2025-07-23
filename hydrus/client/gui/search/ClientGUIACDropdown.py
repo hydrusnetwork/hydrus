@@ -1806,20 +1806,18 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
     locationChanged = QC.Signal( ClientLocation.LocationContext )
     tagContextChanged = QC.Signal( ClientSearchTagContext.TagContext )
     
-    def __init__( self, parent, location_context: ClientLocation.LocationContext, tag_service_key ):
+    def __init__( self, parent, location_context: ClientLocation.LocationContext, tag_context: ClientSearchTagContext.TagContext ):
         
         location_context.FixMissingServices( CG.client_controller.services_manager.FilterValidServiceKeys )
         
-        if not CG.client_controller.services_manager.ServiceExists( tag_service_key ):
+        if not CG.client_controller.services_manager.ServiceExists( tag_context.service_key ):
             
-            tag_service_key = CC.COMBINED_TAG_SERVICE_KEY
+            tag_context = ClientSearchTagContext.TagContext( service_key = CC.COMBINED_TAG_SERVICE_KEY )
             
         
         self._last_prefetch_job_status = None
         
         self._current_context_tags = {}
-        
-        tag_context = ClientSearchTagContext.TagContext( service_key = tag_service_key )
         
         super().__init__( parent )
         
@@ -2143,11 +2141,11 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
 
 class AutoCompleteDropdownTagsFileSearchContext( AutoCompleteDropdownTags ):
     
-    def __init__( self, parent: QW.QWidget, location_context: ClientLocation.LocationContext, tag_service_key: bytes, file_search_context: ClientSearchFileSearchContext.FileSearchContext ):
+    def __init__( self, parent: QW.QWidget, location_context: ClientLocation.LocationContext, tag_context: ClientSearchTagContext.TagContext, file_search_context: ClientSearchFileSearchContext.FileSearchContext ):
         
         self._file_search_context = file_search_context.Duplicate()
         
-        super().__init__( parent, location_context, tag_service_key )
+        super().__init__( parent, location_context, tag_context )
         
     
     def _TagContextJustChanged( self, tag_context: ClientSearchTagContext.TagContext ):
@@ -2221,7 +2219,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTagsFileSearchContext ):
         
         self._media_callable = media_callable
         
-        super().__init__( parent, location_context, tag_context.service_key, file_search_context )
+        super().__init__( parent, location_context, tag_context, file_search_context )
         
         self._location_context_button.SetOnlyLocalFileDomainsAllowed( only_allow_local_file_domains )
         self._location_context_button.SetOnlyAllMyFilesDomainsAllowed( only_allow_all_my_files_domains )
@@ -3375,13 +3373,11 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
         
         tag_autocomplete_options = CG.client_controller.tag_display_manager.GetTagAutocompleteOptions( tag_service_key )
         
-        ( location_context, tag_service_key ) = tag_autocomplete_options.GetWriteAutocompleteSearchDomain( location_context )
+        ( location_context, tag_context ) = tag_autocomplete_options.GetWriteAutocompleteSearchDomain( location_context, self._display_tag_service_key )
         
-        super().__init__( parent, location_context, tag_service_key )
+        super().__init__( parent, location_context, tag_context )
         
         self._location_context_button.SetAllKnownFilesAllowed( True, False )
-        
-        self._tag_context_button.SetDisplayTagServiceKey( self._display_tag_service_key )
         
         self._paste_button = ClientGUICommon.BetterBitmapButton( self._text_input_panel, CC.global_pixmaps().paste, self._Paste )
         self._paste_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'Paste from the clipboard and quick-enter as if you had typed. This can take multiple newline-separated tags.' ) )

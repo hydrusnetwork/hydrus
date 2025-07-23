@@ -181,6 +181,26 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
         )
         
     
+    def _GiveChildFileSeedMyInfo( self, file_seed, url_for_child_referral: str ):
+        
+        file_seed.SetReferralURL( url_for_child_referral )
+        
+        file_seed.AddPrimaryURLs( ( self.url, ) )
+        
+        file_seed.AddRequestHeaders( self._request_headers )
+        
+        file_seed.AddExternalFilterableTags( self._external_filterable_tags )
+        file_seed.AddExternalAdditionalServiceKeysToTags( self._external_additional_service_keys_to_tags )
+        
+    
+    def _GiveChildGallerySeedMyInfo( self, gallery_seed: "GallerySeed", url_for_child_referral: str ):
+        
+        gallery_seed.SetRunToken( self._run_token )
+        gallery_seed.SetReferralURL( url_for_child_referral )
+        gallery_seed.AddExternalFilterableTags( self._external_filterable_tags )
+        gallery_seed.AddExternalAdditionalServiceKeysToTags( self._external_additional_service_keys_to_tags )
+        
+    
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
         (
@@ -484,9 +504,7 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
                     
                     file_seed = ClientImportFileSeeds.FileSeed( ClientImportFileSeeds.FILE_SEED_TYPE_URL, actual_fetched_url )
                     
-                    file_seed.SetReferralURL( url_for_child_referral )
-
-                    file_seed.AddRequestHeaders( self._request_headers )
+                    self._GiveChildFileSeedMyInfo( file_seed, url_for_child_referral )
                     
                     file_seeds_callable( ( file_seed, ) )
                     
@@ -520,12 +538,24 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
                     title_hook( title )
                     
                 
+                if len( parsed_posts ) == 1: # this is tricky, and I think I need a better answer that is 'if parsed post is top level, then add tags' etc.. so file seeds inherit it
+                    
+                    parsed_post = parsed_posts[0]
+                    
+                    tags = parsed_post.GetTags()
+                    
+                    self.AddExternalFilterableTags( tags )
+                    
+                    request_headers = parsed_post.GetHTTPHeaders()
+                    
+                    self.AddRequestHeaders( request_headers )
+                    
+                
                 file_seeds = ClientImporting.ConvertParsedPostsToFileSeeds( parsed_posts, url_for_child_referral, file_import_options )
                 
                 for file_seed in file_seeds:
                     
-                    file_seed.AddExternalFilterableTags( self._external_filterable_tags )
-                    file_seed.AddExternalAdditionalServiceKeysToTags( self._external_additional_service_keys_to_tags )
+                    self._GiveChildFileSeedMyInfo( file_seed, url_for_child_referral )
                     
                 
                 num_urls_total = len( file_seeds )
@@ -556,15 +586,6 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
                     can_add_more_gallery_urls = num_urls_added > 0 and can_search_for_more_files
                     
                 
-                parsed_request_headers = {}
-                
-                for parsed_post in parsed_posts:
-                    
-                    parsed_request_headers.update( parsed_post.GetHTTPHeaders() )
-                    
-                
-                self._request_headers.update( parsed_request_headers )
-                
                 sub_gallery_seeds = ConvertParsedPostsToGallerySeeds( parsed_posts, ( HC.URL_TYPE_SUB_GALLERY, ), self._can_generate_more_pages )
                 
                 new_sub_gallery_seeds = [ sub_gallery_seed for sub_gallery_seed in sub_gallery_seeds if sub_gallery_seed.url not in gallery_urls_seen_before ]
@@ -573,10 +594,7 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
                     
                     for sub_gallery_seed in sub_gallery_seeds:
                         
-                        sub_gallery_seed.SetRunToken( self._run_token )
-                        sub_gallery_seed.SetReferralURL( url_for_child_referral )
-                        sub_gallery_seed.AddExternalFilterableTags( self._external_filterable_tags )
-                        sub_gallery_seed.AddExternalAdditionalServiceKeysToTags( self._external_additional_service_keys_to_tags )
+                        self._GiveChildGallerySeedMyInfo( sub_gallery_seed, url_for_child_referral )
                         
                         gallery_urls_seen_before.add( sub_gallery_seed.url )
                         
@@ -661,10 +679,7 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
                         
                         for next_gallery_seed in new_next_page_gallery_seeds:
                             
-                            next_gallery_seed.SetRunToken( self._run_token )
-                            next_gallery_seed.SetReferralURL( url_for_child_referral )
-                            next_gallery_seed.AddExternalFilterableTags( self._external_filterable_tags )
-                            next_gallery_seed.AddExternalAdditionalServiceKeysToTags( self._external_additional_service_keys_to_tags )
+                            self._GiveChildGallerySeedMyInfo( next_gallery_seed, url_for_child_referral )
                             
                             gallery_urls_seen_before.add( next_gallery_seed.url )
                             

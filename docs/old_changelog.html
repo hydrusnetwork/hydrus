@@ -35,6 +35,41 @@
             <h1 id="changelog"><a href="#changelog">changelog</a></h1>
             <ul>
                 <li>
+                    <h2 id="version_631"><a href="#version_631">version 631</a></h2>
+                    <ul>
+                        <li><h3>custom static assets</h3></li>
+                        <li>you can now override any of the files in `install_dir/static` by creating a replacement in `db_dir/static`! it works like a lot of vidya modding folders do, where the program consults your user folder before falling back to the install's default whenever it loads an asset. If you want a custom splash image (`static/hydrus_splash.png`), go for it!</li>
+                        <li>routines like 'what QSS stylesheets are available?' and 'what rating SVGs are available?' and (less significant) the various 'what should our default downloaders be?' check both possible locations to create their lists, preferring (if there are filename conflicts) what it finds in your user dir</li>
+                        <li>I now explicitly recommend that custom QSS or SVGs go in this directory rather than editing the install dir. it lets you have a completely read-only install and means you don't have to worry about overwrites or clears if you update or git resync or whatever. this puts us one step closer to not having a crazy install environment, hooray</li>
+                        <li>a new `--no_user_static_dir` launch parameter disables this mode, if you need to do quick debug</li>
+                        <li>I wrote some simple help for this here: https://hydrusnetwork.github.io/hydrus/custom_assets.html</li>
+                        <li><h3>misc</h3></li>
+                        <li>I fixed some issues with the 'hover windows show/hide better' """improvements""" from last week. the child window testing logic was slightly dodgy and hover windows were not showing at all when there were two media viewers open. I simplified it and cleared out the unhelpful behaviour. the mouse hide/show should interact with dialogs a bit better now too</li>
+                        <li>search pages that start with 'include current/pending tags' turned off will now initialise correctly in this state. previously, the buttons were displaying 'off', as intended, but the internal search object was starting True/True always, so a bare F5 refresh was giving the wrong results and hitting the buttons the first time was not triggering a 'new search state, need to refresh' call since the button was just aligning on that first click with what the internal object already thought</li>
+                        <li>hydrus has _better_ duration/framerate parsing on videos that ffmpeg cannot report a good duration on. if, say, ffmpeg thinks the video is 40ms long but we just manually counted 400 frames, it now trusts its fps number more than the duration (previously it always trusted the duration)</li>
+                        <li>added a new shortcut command that does 'close media viewer and focus the tab the media came from, if possible, and focus the media'. same as the related command, but it forces the media focus if you have that not set under `options-&gt;media viewer`</li>
+                        <li>the 'review session cookies' and sub-panel now have 'export to clipboard' and 'import from clipboard' buttons. there's some domain filtering here that ensures cookies only go in the slot they are supposed to</li>
+                        <li>the 'expires' section in the edit cookie dialog works better--it now boots with the existing value, and the max settable time is 200 years</li>
+                        <li><h3>duplicates</h3></li>
+                        <li>the duplicates filter page sidebar now only disables 'launch the filter' and 'show some random potential pairs' if the search is A) complete and B) found nothing. previously, it was disabling until it found at least one pair, which is technically great but annoying in practice</li>
+                        <li>if you have 'After duplicate filter, ensure deletees are inboxed before delete' on, this now also applies to manual file deletes within the filter</li>
+                        <li><h3>complicated url-spawning metadata propagation issue</h3></li>
+                        <li>there are two ways an url file import job can create child jobs--one, by parsing multiple 'posts' with separate metadata using a subsidiary page parser, as in a watcher; the other, by parsing multiple urls within one post with a normal page parser. until now, these routines created their child objects with different, ad-hoc code. most of the 'my downloader that works like this doesn't get the tags/parent url/whatever assocated to this child down the chain' bugs were due to this</li>
+                        <li>this situation is now remedied. both routines now use the same shared call to create children. referral urls are set up correct; the parent url is added as an associable url; parsed http headers are passed along correctly; source time is passed down; and tags, notes and parsed primary/source urls, which were all working correct before, are still passed down (issue #1763)</li>
+                        <li>I've done the same for gallery objects creating child gallery or file imports. they had similar but lesser issues</li>
+                        <li>there are still a couple of issues in the pipeline regarding gallery urls that use multiple tiers of subsidiary page parsers. I am thinking about how to sort it out</li>
+                        <li><h3>boring stuff</h3></li>
+                        <li>renamed the 'confirm when closing a non-empty downloader page' in the options to _importer_ page. this applies to all importers, including hard drive import pages (issue #1764)</li>
+                        <li>the 'regen total pending count' database maintenance job now asks you to choose a repo or ipfs service. previously it was asking you to choose from every service</li>
+                        <li>if a database is missing critical tables and thus non-functional, it now reports the specific table names</li>
+                        <li>rejiggered my 'eliding label' sizeHint code to talk to Qt layouts better</li>
+                        <li>the top hover window now has fixed width and will no longer overflow. at very small sizes, the buttons will shrink and overflowing text will behave better</li>
+                        <li>the 'delay reason' label on the edit subscription panel now has proper wrap and eliding, so if that guy gets a gigantic error text, it'll now fit better</li>
+                        <li>forced subscription popups a little wider by default</li>
+                        <li>added another note from a user about mpv in the Linux install help, this time about MangoHUD. I think we might want a separate page regarding Linux environment tweaks and fixes</li>
+                    </ul>
+                </li>
+                <li>
                     <h2 id="version_630"><a href="#version_630">version 630</a></h2>
                     <ul>
                         <li><h3>Linux laggy mpv issue</h3></li>

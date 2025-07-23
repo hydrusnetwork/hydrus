@@ -1593,18 +1593,24 @@ class UIActionSimulator:
 # Adapted from https://doc.qt.io/qt-5/qtwidgets-widgets-elidedlabel-example.html
 class EllipsizedLabel( QW.QLabel ):
     
-    def __init__( self, parent = None, ellipsize_end = False ):
+    def __init__( self, parent = None, ellipsize_end = False, ellipsized_ideal_width_chars = 24 ):
         
         super().__init__( parent )
         
         self._ellipsize_end = ellipsize_end
+        self._ellipsized_ideal_width_chars = ellipsized_ideal_width_chars
         
     
     def minimumSizeHint( self ):
         
         if self._ellipsize_end:
             
-            return self.sizeHint()
+            num_lines = self.text().count( '\n' ) + 1
+            
+            line_width = self.fontMetrics().lineWidth()
+            line_height = self.fontMetrics().lineSpacing()
+            
+            return QC.QSize( 3 * line_width, num_lines * line_height )
             
         else:
             
@@ -1630,12 +1636,11 @@ class EllipsizedLabel( QW.QLabel ):
         
         if self._ellipsize_end:
             
-            num_lines = self.text().count( '\n' ) + 1
+            parent_size_hint = QW.QLabel.sizeHint( self )
             
             line_width = self.fontMetrics().lineWidth()
-            line_height = self.fontMetrics().lineSpacing()
             
-            size_hint = QC.QSize( 3 * line_width, num_lines * line_height )
+            size_hint = QC.QSize( min( parent_size_hint.width(), self._ellipsized_ideal_width_chars * line_width ), parent_size_hint.height() )
             
         else:
             
