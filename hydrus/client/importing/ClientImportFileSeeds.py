@@ -1595,6 +1595,10 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
                                 
                                 self.Import( temp_path, file_import_options, status_hook = status_hook )
                                 
+                            else:
+                                
+                                raise HydrusExceptions.VetoException( 'The parser found nothing in the document, nor did it seem to be an importable file!' )
+                                
                             
                         except:
                             
