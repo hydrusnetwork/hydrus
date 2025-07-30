@@ -128,11 +128,16 @@ class PotentialDuplicateIdPairsAndDistances( object ):
         return self._potential_id_pairs_and_distances.__iter__()
         
     
-    def PopBlock( self ):
+    def PopBlock( self, block_size = None ):
         
-        block_of_id_pairs_and_distances = self._potential_id_pairs_and_distances[ : POTENTIAL_DUPLICATE_PAIRS_BLOCK_SIZE ]
+        if block_size is None:
+            
+            block_size = POTENTIAL_DUPLICATE_PAIRS_BLOCK_SIZE
+            
         
-        self._potential_id_pairs_and_distances = self._potential_id_pairs_and_distances[ POTENTIAL_DUPLICATE_PAIRS_BLOCK_SIZE : ]
+        block_of_id_pairs_and_distances = self._potential_id_pairs_and_distances[ : block_size ]
+        
+        self._potential_id_pairs_and_distances = self._potential_id_pairs_and_distances[ block_size : ]
         
         self._mapping_initialised = False
         

@@ -134,11 +134,20 @@ class ClientDBFilesDuplicatesFileSearch( ClientDBModule.ClientDBModule ):
         return ClientPotentialDuplicatesSearchContext.PotentialDuplicateIdPairsAndDistances( matching_pairs_and_distances )
         
     
-    def GetPotentialDuplicateMediaResultPairsAndDistancesFragmentary( self, potential_duplicates_search_context: ClientPotentialDuplicatesSearchContext.PotentialDuplicatesSearchContext, relevant_pairs_and_distances: ClientPotentialDuplicatesSearchContext.PotentialDuplicateIdPairsAndDistances ) -> ClientPotentialDuplicatesSearchContext.PotentialDuplicateMediaResultPairsAndDistances:
+    def GetPotentialDuplicateMediaResultPairsAndDistancesFragmentary( self, potential_duplicates_search_context: ClientPotentialDuplicatesSearchContext.PotentialDuplicatesSearchContext, relevant_pairs_and_distances: ClientPotentialDuplicatesSearchContext.PotentialDuplicateIdPairsAndDistances, no_more_than = None ) -> ClientPotentialDuplicatesSearchContext.PotentialDuplicateMediaResultPairsAndDistances:
         
         matching_potential_duplicate_id_pairs_and_distances = self.GetPotentialDuplicateIdPairsAndDistancesFragmentary( potential_duplicates_search_context, relevant_pairs_and_distances )
         
-        all_media_ids = { media_id for pair in matching_potential_duplicate_id_pairs_and_distances.GetPairs() for media_id in pair }
+        rows = matching_potential_duplicate_id_pairs_and_distances.GetRows()
+        
+        if no_more_than is not None:
+            
+            rows = rows[ : no_more_than ]
+            
+        
+        pairs = [ ( smaller_media_id, larger_media_id ) for ( smaller_media_id, larger_media_id, distance ) in rows ]
+        
+        all_media_ids = { media_id for pair in pairs for media_id in pair }
         
         media_ids_to_king_hash_ids = { media_id : self.modules_files_duplicates.GetKingHashId( media_id ) for media_id in all_media_ids }
         
@@ -147,7 +156,7 @@ class ClientDBFilesDuplicatesFileSearch( ClientDBModule.ClientDBModule ):
         hash_ids_to_media_results = { media_result.GetHashId() : media_result for media_result in media_results }
         
         matching_potential_duplicate_media_result_pairs_and_distances = ClientPotentialDuplicatesSearchContext.PotentialDuplicateMediaResultPairsAndDistances(
-            [ ( hash_ids_to_media_results[ media_ids_to_king_hash_ids[ smaller_media_id ] ], hash_ids_to_media_results[ media_ids_to_king_hash_ids[ larger_media_id ] ], distance ) for ( smaller_media_id, larger_media_id, distance ) in matching_potential_duplicate_id_pairs_and_distances.IterateRows() ]
+            [ ( hash_ids_to_media_results[ media_ids_to_king_hash_ids[ smaller_media_id ] ], hash_ids_to_media_results[ media_ids_to_king_hash_ids[ larger_media_id ] ], distance ) for ( smaller_media_id, larger_media_id, distance ) in rows ]
         )
         
         return matching_potential_duplicate_media_result_pairs_and_distances

@@ -3621,7 +3621,9 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
             
             ( potential_duplicates_search_context, block_of_id_pairs_and_distances ) = args
             
-            potential_duplicate_media_result_pairs_and_distances = CG.client_controller.Read( 'potential_duplicate_pairs_fragmentary', potential_duplicates_search_context, block_of_id_pairs_and_distances )
+            no_more_than = CG.client_controller.new_options.GetInteger( 'duplicate_filter_max_batch_size' )
+            
+            potential_duplicate_media_result_pairs_and_distances = CG.client_controller.Read( 'potential_duplicate_pairs_fragmentary', potential_duplicates_search_context, block_of_id_pairs_and_distances, no_more_than = no_more_than )
             
             return potential_duplicate_media_result_pairs_and_distances
             

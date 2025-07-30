@@ -231,7 +231,7 @@ class PreviewPanel( ClientGUICommon.StaticBox ):
             
             potential_duplicates_search_context = self._value.GetPotentialDuplicatesSearchContext()
             
-            block_of_id_pairs_and_distances = self._potential_duplicate_id_pairs_and_distances_still_to_search.PopBlock()
+            block_of_id_pairs_and_distances = self._potential_duplicate_id_pairs_and_distances_still_to_search.PopBlock( block_size = 256 )
             
             return ( potential_duplicates_search_context, block_of_id_pairs_and_distances, self._fetch_pairs_job_status )
             
