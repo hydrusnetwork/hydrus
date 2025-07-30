@@ -2530,9 +2530,12 @@
 <p>At the top-left of most pages there's a <code>sort by:</code> dropdown menu. Most of the options are self-explanatory. They do nothing except change in what order Hydrus presents the currently searched files to you.</p>
 <p>Default sort order and more <code>sort by: namespace</code> are found in <code>file -&gt; options -&gt; sort/collect</code>.</p>
 <h3 id="sorting_with_systemlimit">Sorting with <code>system:limit</code><a class="headerlink" href="#sorting_with_systemlimit" title="Permanent link">&para;</a></h3>
-<p>If you add <code>system:limit</code> to a search, the client will consider what that page's file sort currently is. If it is simple enough--something like file size or import time--then it will sort your results before they come back and clip the limit according to that sort, getting the n 'largest file size' or 'newest imports' and so on. This can be a great way to set up a lightweight filtering page for 'the 256 biggest videos in my inbox'.</p>
-<p>If you change the sort, hydrus will not refresh the search, it'll just re-sort the n files you have. Hit F5 to refresh the search with a new sort.</p>
-<p>However, anything complicated--e.g., tag sort--will result in a random sample instead; the sort will be applied post-hoc. For example, let's say you have 3 files in your inbox. One file is tagged with <code>creator:pablo picasso</code>, the second is tagged with <code>creator:salvador dali</code>, and the third is tagged with <code>creator:vincent van gogh</code>. If you were to sort by the <code>creator</code> tag namespace in a search with the following predicates:</p>
+<p>If you add <code>system:limit</code> to a search, the client will consider what that page's current file sort. If the sort is simple--something like file size or import time--then it will sort your results before they come back and clip the limit according to that sort, getting the n 'largest file size' or 'newest imports' and so on. This can be a great way to set up a lightweight filtering page for 'the 256 biggest videos in my inbox'.</p>
+<p>If you change the sort, hydrus will try to refresh the search to match the new 'biggest' or 'thinnest' n files it needs to fetch. Hit F5 to force-refresh.</p>
+<p>However, anything complicated--e.g. tag sort--will result in a <em>random</em> system:limit sample instead; the sort will be applied post-hoc.</p>
+<div class="admonition info">
+<p class="admonition-title">Example</p>
+<p>Let's say you have 3 files in your inbox. One file is tagged with <code>creator:pablo picasso</code>, the second is tagged with <code>creator:salvador dali</code>, and the third is tagged with <code>creator:vincent van gogh</code>. If you were to sort by the <code>creator</code> tag namespace in a search with the following predicates:</p>
 <ul>
 <li><code>system:inbox</code></li>
 <li><code>system:limit is 2</code></li>
@@ -2544,7 +2547,9 @@
 <li>the file tagged with <code>creator:salvador dali</code>, followed by the file tagged with <code>creator:vincent van gogh</code>.</li>
 </ul>
 <p>Note that the results are displayed always in alphabetical order along the <code>creator</code> tag namespace, but even though <code>pablo picasso</code> comes alphabetically before <code>salvador dali</code> and <code>vincent van gogh</code>, it does not always appear in the search. This is because the random sample occured before the sort does.</p>
-<p>A common reason for users wondering why they get random results for their sorted searches is that they have an implicit <code>system:limit</code> set under <code>options -&gt; file search</code> that is lower than the number of results their search would return, and they forgot about it. To address it, depending on your hardware specs and performance needs, you can either increase/remove the implicit <code>system:limit</code>, or you can explicitly add a high <code>system:limit</code> to queries only when exhaustive results are needed.</p>
+</div>
+<p>The tooltip on the sort controls will say whether you are currently simple enough or too complicated to do a pre-sampling sort.</p>
+<p>A common reason for users wondering why they get random results for their sorted searches is their implicit <code>system:limit</code> set under <code>options -&gt; file search</code> is lower than the number of results their search would return, and they forgot about it. To address it, depending on your hardware specs and performance needs, you can either increase/remove the implicit <code>system:limit</code>, or you can explicitly add a high <code>system:limit</code> to queries only when exhaustive results are needed.</p>
 <h2 id="collecting">Collecting<a class="headerlink" href="#collecting" title="Permanent link">&para;</a></h2>
 <p>Collection is found under the <code>sort by:</code> dropdown and uses namespaces listed in the <code>sort by: namespace</code> sort options. The new namespaces will only be available in new pages.</p>
 
@@ -2567,7 +2572,7 @@
     <span class="md-icon" title="Last update">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 13.1c-.1 0-.3.1-.4.2l-1 1 2.1 2.1 1-1c.2-.2.2-.6 0-.8l-1.3-1.3c-.1-.1-.2-.2-.4-.2m-1.9 1.8-6.1 6V23h2.1l6.1-6.1zM12.5 7v5.2l4 2.4-1 1L11 13V7zM11 21.9c-5.1-.5-9-4.8-9-9.9C2 6.5 6.5 2 12 2c5.3 0 9.6 4.1 10 9.3-.3-.1-.6-.2-1-.2s-.7.1-1 .2C19.6 7.2 16.2 4 12 4c-4.4 0-8 3.6-8 8 0 4.1 3.1 7.5 7.1 7.9l-.1.2z"/></svg>
     </span>
-    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="July 26, 2025 21:14:28 UTC">July 26, 2025</span>
+    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="July 30, 2025 20:29:52 UTC">July 30, 2025</span>
   </span>
 
     
