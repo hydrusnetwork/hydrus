@@ -112,7 +112,7 @@ options = {}
 # Misc
 
 NETWORK_VERSION = 20
-SOFTWARE_VERSION = 631
+SOFTWARE_VERSION = 632
 CLIENT_API_VERSION = 80
 
 SERVER_THUMBNAIL_DIMENSIONS = ( 200, 200 )
@@ -247,6 +247,7 @@ CONTENT_UPDATE_INCREMENT = 18
 CONTENT_UPDATE_DECREMENT = 19
 CONTENT_UPDATE_MOVE = 20
 CONTENT_UPDATE_DELETE_FROM_SOURCE_AFTER_MIGRATE = 21
+CONTENT_UPDATE_MOVE_MERGE = 22
 
 content_update_string_lookup = {
     CONTENT_UPDATE_ADD : 'add',
@@ -267,7 +268,8 @@ content_update_string_lookup = {
     CONTENT_UPDATE_CLEAR_DELETE_RECORD : 'clear deletion record',
     CONTENT_UPDATE_INCREMENT : 'increment',
     CONTENT_UPDATE_DECREMENT : 'decrement',
-    CONTENT_UPDATE_MOVE : 'move',
+    CONTENT_UPDATE_MOVE : 'move (if not already in destination)',
+    CONTENT_UPDATE_MOVE_MERGE : 'move (even if already in destination)'
 }
 
 DEFINITIONS_TYPE_HASHES = 0

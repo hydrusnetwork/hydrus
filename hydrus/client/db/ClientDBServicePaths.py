@@ -3,6 +3,7 @@ import sqlite3
 
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusLists
 
 from hydrus.client.db import ClientDBDefinitionsCache
 from hydrus.client.db import ClientDBMaster
@@ -115,7 +116,7 @@ class ClientDBServicePaths( ClientDBModule.ClientDBModule ):
         service_id = self.modules_services.GetServiceId( service_key )
         hash_ids = self.modules_hashes_local_cache.GetHashIds( hashes )
         
-        result = sorted( ( filename for ( filename, ) in self._Execute( 'SELECT filename FROM service_filenames WHERE service_id = ? AND hash_id IN ' + HydrusData.SplayListForDB( hash_ids ) + ';', ( service_id, ) ) ) )
+        result = sorted( ( filename for ( filename, ) in self._Execute( 'SELECT filename FROM service_filenames WHERE service_id = ? AND hash_id IN ' + HydrusLists.SplayListForDB( hash_ids ) + ';', ( service_id, ) ) ) )
         
         return result
         

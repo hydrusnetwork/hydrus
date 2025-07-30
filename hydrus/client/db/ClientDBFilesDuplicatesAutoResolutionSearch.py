@@ -193,13 +193,13 @@ class ClientDBFilesDuplicatesAutoResolutionSearch( ClientDBModule.ClientDBModule
             
             potential_duplicates_search_context = rule.GetPotentialDuplicatesSearchContext()
             
-            matching_potential_duplicate_pairs_and_distances = self.modules_files_duplicates_file_query.GetPotentialDuplicatePairsAndDistancesFragmentary( potential_duplicates_search_context, unsearched_pairs_and_distances )
+            matching_potential_duplicate_id_pairs_and_distances = self.modules_files_duplicates_file_query.GetPotentialDuplicateIdPairsAndDistancesFragmentary( potential_duplicates_search_context, unsearched_pairs_and_distances )
             
             #
             
             unsearched_pairs = set( unsearched_pairs_and_distances.GetPairs() )
             
-            matching_pairs = set( matching_potential_duplicate_pairs_and_distances.GetPairs() )
+            matching_pairs = set( matching_potential_duplicate_id_pairs_and_distances.GetPairs() )
             
             unmatching_pairs = unsearched_pairs.difference( matching_pairs )
             

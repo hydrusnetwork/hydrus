@@ -238,7 +238,7 @@ class HydrusResourceClientAPIRestrictedAddFilesMigrateFiles( HydrusResourceClien
         
         for service_key in location_context.current_service_keys:
             
-            CG.client_controller.CallToThread( ClientFileMigration.MoveOrDuplicateLocalFiles, service_key, HC.CONTENT_UPDATE_ADD, media_results )
+            CG.client_controller.CallToThread( ClientFileMigration.DoMoveOrDuplicateLocalFiles, service_key, HC.CONTENT_UPDATE_ADD, media_results )
             
         
         response_context = HydrusServerResources.ResponseContext( 200 )

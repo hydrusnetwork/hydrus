@@ -632,7 +632,7 @@ class ApplicationCommand( HydrusSerialisable.SerialisableBase ):
             
             ( service_key, content_type, action, value ) = self._data
             
-            if content_type == HC.CONTENT_TYPE_FILES and action == HC.CONTENT_UPDATE_MOVE and value is not None and isinstance( value, bytes ):
+            if content_type == HC.CONTENT_TYPE_FILES and value is not None and isinstance( value, bytes ):
                 
                 value = value.hex()
                 
@@ -669,7 +669,7 @@ class ApplicationCommand( HydrusSerialisable.SerialisableBase ):
             
             ( serialisable_service_key, content_type, action, value ) = serialisable_data
             
-            if content_type == HC.CONTENT_TYPE_FILES and action == HC.CONTENT_UPDATE_MOVE and value is not None and isinstance( value, str ):
+            if content_type == HC.CONTENT_TYPE_FILES and value is not None and isinstance( value, str ):
                 
                 try:
                     
@@ -1103,7 +1103,7 @@ class ApplicationCommand( HydrusSerialisable.SerialisableBase ):
                         value_string = '' # only 1 up/down allowed atm
                         
                     
-                elif content_type == HC.CONTENT_TYPE_FILES and action == HC.CONTENT_UPDATE_MOVE and value is not None:
+                elif content_type == HC.CONTENT_TYPE_FILES and value is not None:
                     
                     try:
                         

@@ -259,7 +259,8 @@ class AutoCompleteDropdownMetadataConditional( ClientGUIACDropdown.AutoCompleteD
                     ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_WIDTH,
                     ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HEIGHT,
                     ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_NUM_URLS,
-                    ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_KNOWN_URLS
+                    ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_KNOWN_URLS,
+                    ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_TAG_ADVANCED
                 ]
             ]
             

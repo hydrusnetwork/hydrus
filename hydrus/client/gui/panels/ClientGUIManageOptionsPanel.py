@@ -801,7 +801,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._set_requests_ca_bundle_env = QW.QCheckBox( general )
             self._set_requests_ca_bundle_env.setToolTip( ClientGUIFunctions.WrapToolTip( 'Just testing something here; ignore unless hydev asks you to use it please. Requires restart. Note: this breaks the self-signed certificates of hydrus services.' ) )
             
-            self._verify_regular_https = QW.QCheckBox( general )
+            self._do_not_verify_regular_https = QW.QCheckBox( general )
+            self._do_not_verify_regular_https.setToolTip( ClientGUIFunctions.WrapToolTip( 'This will not verify any HTTPS traffic. This tech is important for security, so only enable this mode temporarily, to test out unusual situations.' ) )
             
             #
             
@@ -823,7 +824,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             #
             
             self._set_requests_ca_bundle_env.setChecked( self._new_options.GetBoolean( 'set_requests_ca_bundle_env' ) )
-            self._verify_regular_https.setChecked( self._new_options.GetBoolean( 'verify_regular_https' ) )
+            self._do_not_verify_regular_https.setChecked( not self._new_options.GetBoolean( 'verify_regular_https' ) )
             
             self._http_proxy.SetValue( self._new_options.GetNoneableString( 'http_proxy' ) )
             self._https_proxy.SetValue( self._new_options.GetNoneableString( 'https_proxy' ) )
@@ -868,7 +869,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows.append( ( 'max number of simultaneous active network jobs: ', self._max_network_jobs ) )
             rows.append( ( 'max number of simultaneous active network jobs per domain: ', self._max_network_jobs_per_domain ) )
             rows.append( ( 'DEBUG: set the REQUESTS_CA_BUNDLE env to certifi cacert.pem on program start:', self._set_requests_ca_bundle_env ) )
-            rows.append( ( 'BUGFIX: verify regular https traffic:', self._verify_regular_https ) )
+            rows.append( ( 'DEBUG: do not verify regular https traffic:', self._do_not_verify_regular_https ) )
             
             gridbox = ClientGUICommon.WrapInGrid( general, rows )
             
@@ -922,7 +923,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         def UpdateOptions( self ):
             
             self._new_options.SetBoolean( 'set_requests_ca_bundle_env', self._set_requests_ca_bundle_env.isChecked() )
-            self._new_options.SetBoolean( 'verify_regular_https', self._verify_regular_https.isChecked() )
+            self._new_options.SetBoolean( 'verify_regular_https', not self._do_not_verify_regular_https.isChecked() )
             
             self._new_options.SetNoneableString( 'http_proxy', self._http_proxy.GetValue() )
             self._new_options.SetNoneableString( 'https_proxy', self._https_proxy.GetValue() )
@@ -1005,6 +1006,10 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             tt = 'The client used to remove leading double slashes from an URL path, collapsing something like https://site.com//images/123456 to https://site.com/images/123456. This is not correct, and it no longer does this. If you need it to do this again, to fix some URL CLass, turn this on. I will retire this option eventually, so update your downloader to work in the new system (ideally recognise both formats).'
             self._remove_leading_url_double_slashes.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
             
+            self._replace_percent_twenty_with_space_in_gug_input = QW.QCheckBox( misc )
+            tt = 'Checking this will cause any query text input into a downloader like "skirt%20blue_eyes" to be considered as "skirt blue_eyes". This lets you copy/paste an input straight from certain encoded URLs, but it also causes trouble if you need to input %20 raw, so this is no longer the default behaviour. This is a legacy option and I recommend you turn it off if you no longer think you need it.'
+            self._replace_percent_twenty_with_space_in_gug_input.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
+            
             self._pause_character = QW.QLineEdit( misc )
             self._stop_character = QW.QLineEdit( misc )
             self._show_new_on_file_seed_short_summary = QW.QCheckBox( misc )
@@ -1053,6 +1058,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._process_subs_in_random_order.setChecked( self._new_options.GetBoolean( 'process_subs_in_random_order' ) )
             
             self._remove_leading_url_double_slashes.setChecked( self._new_options.GetBoolean( 'remove_leading_url_double_slashes' ) )
+            self._replace_percent_twenty_with_space_in_gug_input.setChecked( self._new_options.GetBoolean( 'replace_percent_twenty_with_space_in_gug_input' ) )
             self._pause_character.setText( self._new_options.GetString( 'pause_character' ) )
             self._stop_character.setText( self._new_options.GetString( 'stop_character' ) )
             self._show_new_on_file_seed_short_summary.setChecked( self._new_options.GetBoolean( 'show_new_on_file_seed_short_summary' ) )
@@ -1118,6 +1124,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows.append( ( 'Delay time on a subscription network error:', self._subscription_network_error_delay ) )
             rows.append( ( 'Delay time on a subscription other error:', self._subscription_other_error_delay ) )
             rows.append( ( 'DEBUG: remove leading double-slashes from URL paths:', self._remove_leading_url_double_slashes ) )
+            rows.append( ( 'DEBUG: consider %20 the same as space in downloader query text inputs:', self._replace_percent_twenty_with_space_in_gug_input ) )
             
             gridbox = ClientGUICommon.WrapInGrid( misc, rows )
             
@@ -1157,6 +1164,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._new_options.SetDefaultSubscriptionCheckerOptions( self._subscription_checker_options.GetValue() )
             
             self._new_options.SetBoolean( 'remove_leading_url_double_slashes', self._remove_leading_url_double_slashes.isChecked() )
+            self._new_options.SetBoolean( 'replace_percent_twenty_with_space_in_gug_input', self._replace_percent_twenty_with_space_in_gug_input.isChecked() )
             self._new_options.SetString( 'pause_character', self._pause_character.text() )
             self._new_options.SetString( 'stop_character', self._stop_character.text() )
             self._new_options.SetBoolean( 'show_new_on_file_seed_short_summary', self._show_new_on_file_seed_short_summary.isChecked() )
@@ -3932,12 +3940,12 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             rows = []
             
-            rows.append( ( 'Duplicate tags hover-window information in the background of the viewer:', self._draw_tags_hover_in_media_viewer_background ) )
+            rows.append( ( 'Draw tags hover-window information in the background of the viewer:', self._draw_tags_hover_in_media_viewer_background ) )
             rows.append( ( 'Do not pop-in tags hover-window on mouseover:', self._disable_tags_hover_in_media_viewer ) )
-            rows.append( ( 'Duplicate top hover-window information in the background of the viewer:', self._draw_top_hover_in_media_viewer_background ) )
-            rows.append( ( 'Duplicate top-right hover-window information in the background of the viewer:', self._draw_top_right_hover_in_media_viewer_background ) )
+            rows.append( ( 'Draw top hover-window information in the background of the viewer:', self._draw_top_hover_in_media_viewer_background ) )
+            rows.append( ( 'Draw top-right hover-window information in the background of the viewer:', self._draw_top_right_hover_in_media_viewer_background ) )
             rows.append( ( 'Do not pop-in top-right hover-window on mouseover:', self._disable_top_right_hover_in_media_viewer ) )
-            rows.append( ( 'Duplicate notes hover-window information in the background of the viewer:', self._draw_notes_hover_in_media_viewer_background ) )
+            rows.append( ( 'Draw notes hover-window information in the background of the viewer:', self._draw_notes_hover_in_media_viewer_background ) )
             rows.append( ( 'Draw bottom-right index text in the background of the viewer:', self._draw_bottom_right_index_in_media_viewer_background ) )
             rows.append( ( 'Swap in common resolution labels:', self._use_nice_resolution_strings ) )
             
@@ -3953,7 +3961,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows.append( ( 'Show file service add times: ', self._file_info_line_consider_file_services_import_times_interesting ) )
             rows.append( ( 'Show file trash times: ', self._file_info_line_consider_trash_time_interesting ) )
             rows.append( ( 'Show file trash reasons: ', self._file_info_line_consider_trash_reason_interesting ) )
-            rows.append( ( 'Hide uninteresting modified times: :', self._hide_uninteresting_modified_time ) )
+            rows.append( ( 'Hide uninteresting modified times: ', self._hide_uninteresting_modified_time ) )
             
             top_hover_summary_gridbox = ClientGUICommon.WrapInGrid( top_hover_summary_panel, rows )
             
@@ -3980,6 +3988,11 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             vbox = QP.VBoxLayout()
             
+            label = 'Hover windows are the pop-in panels in the Media Viewers. You typically have tags on the left, file info up top, and ratings, notes, and sometimes duplicate controls down the right.'
+            st = ClientGUICommon.BetterStaticText( self, label = label )
+            st.setWordWrap( True )
+            
+            QP.AddToLayout( vbox, st, CC.FLAGS_EXPAND_PERPENDICULAR )
             QP.AddToLayout( vbox, media_canvas_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
             QP.AddToLayout( vbox, top_hover_summary_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
             QP.AddToLayout( vbox, preview_hovers_panel, CC.FLAGS_EXPAND_PERPENDICULAR )

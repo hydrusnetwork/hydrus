@@ -691,6 +691,11 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
                     
                 
             
+            if status == CC.STATUS_UNKNOWN:
+                
+                raise HydrusExceptions.VetoException( 'Managed to work this job without getting a result! Please report to hydrus_dev!' )
+                
+            
             self.SetStatus( status, note = note )
             
         except HydrusExceptions.ShutdownException:

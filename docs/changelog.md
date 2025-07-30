@@ -7,6 +7,62 @@ title: Changelog
 !!! note
     This is the new changelog, only the most recent builds. For all versions, see the [old changelog](old_changelog.html).
 
+## [Version 632](https://github.com/hydrusnetwork/hydrus/releases/tag/v632)
+
+### hotfix last week
+
+* I did a v631a hotfix last week that fixed a looping network job(!!) under the particular conditions where a Post URL A1) used subsidiary parsers and failed to parse any URLs or, A2) did not parse anything generally, and B) had a certain environment, I think most probably ffmpeg version, that judged the respective html/json to _not_ be potentially importable. I am very sorry for this problem and I thank the users who reported it and helped me test
+* I added additional safety checks to the file and gallery import objects to stop this type of error happening again. if an import job works and produces no status change, it will now auto-veto with an appropriate note
+
+### misc
+
+* the 'show the top-right hover window in the preview viewer' option has worked out well, and I like it a lot, so it is now default 'on' for all new users. also, all existing users will get it flipped to 'on' on update. if you tried it and decided you didn't like it already, sorry! hit up `options->media viewer hovers` to hide it again
+* the 'page lock' system now correctly removes files when you remove them from _inside_ a collection (hitting 'remove' from a child media viewer looking inside the collection)
+* the 'manage url classes' dialog's test text box is now much faster. it only needs to do CPU work on the first character you type, rather than being sluggish every time
+* the 'manage url classes' dialog's test text box no longer steals focus from the text box on a match. you can now easily keep typing to discover a more specific url class
+* added a DEBUG checkbox to `options->downloading` to turn off the legacy `%20` replacement in GUG generation (pasting `skirt%20blue_eyes` is interpreted as `skirt blue_eyes` when pasting query texts). all existing users will get this set on; all new users will get it set off. it isn't a huge deal, but if you need this off, try it out and let me know how it goes. like with the double-slash option beside it, I might quietly flip everyone to off in a year
+
+### move-merge files
+
+* the file 'locations' submenu now summarises which locations your files are currently in in the top row, in a flyout submenu
+* the file 'locations' submenu now lists 'move (merge)' and 'move (strict)' actions separately. the 'strict' was the previous behaviour, and it only moves if the file is not already in the destination
+* the shortcut command that handles local file domain add/move stuff allows this new move-merge action. existing shortcuts will have the 'if not already in destination', but perhaps you'll want the other, 'even if already in destination'
+* this 'locations' menu stuff now shows the number of files to be added/move-merged/strict-moved
+* this went through multiple reworks and namings. I'm still not totally happy with the verbiage and workflow, but it is powerful and clearly allows the various commands we want. I tried having a yes/no dialog that asked you whether you wanted a strict move or a move-merge, but it wasn't nice in its own way. I tried merging the two menus, but it make the eyes glaze over. I thought about removing the strict move entirely, but I'm not ready for that. in the end I went with a clear verb-first approach with separate submenus. let me know what you think with IRL situations and if you can think of something better than 'strict'/'merge' that isn't too long so it fits nicely in a menu
+
+### duplicates
+
+* you can now set the pair sort for the manual duplicate filter! I've got 'filesize of larger file', 'filesize of smaller file', 'similarity (distance/filesize ratio)', and 'random' to start. have a play with them, let me know what you think, and what others you'd like
+* in the duplicate filter, if either file is an image project file (e.g. PSD), or somehow an application/archive, the 'psd vs jpg' line now has a score of -100, either way around. should pop out a bit more now
+* the 'show some random potential duplicates' button now works on the fast fetch system. it builds its results far quicker than before in all typical situations, and in general worst-case performance is very much improved
+* the 'show some random potential duplicates' button now delivers what I will be calling an entire 'group' of potential pairs. previously, it selected a master file and showed you every file potential to it; now we chase down everything that those potentials are potential to, and so on, until we have everything that is transitively potential in one blob. should let you see more fuzzy (alternate) groups in one go. there's a little voodoo going on here, so let me know if you get any interesting results
+* the 'show some random potential duplicates' button now sorts the returned group according to a normal file sort widget, which is embedded just above the button. this guy works like a normal sort widget and will save and re-sort whatever is in the current page on changes; it is just in a different location. not sure I like it, but we'll see how it goes
+* the 'x potential pairs searched' part of the new duplicate pair iterative fast-fetch system is now pre-filtered to the current file domain. pairs that are in deleted domains and stuff are no longer confusing things, and a search of 'system:everything' should now always come back with a 100% count. also, if you search in a small local file domain, let's say it only has 3,000 pairs of your total of 500,000, any duplicate search now only has to iterate over that 3,000 every time. a little extra CPU is required to figure this out in the pre-search phase, but I think it pays off. let me know how it is IRL
+* the comparison statements and scores in the duplicate hover window on the right are now split into fast and slow loading and are loaded and displayed in two separate jobs, so a laggy visual dupes test won't hold the rest up. for now, slow means the jpeg quality comparison and visual dupes test
+* 'they are visual duplicates' results now deliver -10 score if they are not duplicates on the simple scan and -5 if they are not duplicate on the detailed scan (and thus get red instead of blue text). I can't deliver a positive score here since this test does not reveal which of A or B is better, but on a negative we can bias the score to say they aren't dupes
+
+### duplicates auto-resolution
+
+* 'test A or B' comparators now support `system:tag (advanced)`, so you can test for the presence/absence of a tag on a specific domain. I hacked this in a little and 'current domain' will be 'all known tags' for now; It'd be nice to show that better in UI
+* 'test A vs B' comparators now support `system:number of tags`. no namespace support yet, and it is locked to 'all known tags' and 'including parents and siblings', but you can do a basic 'A has more tags than B'
+
+### duplicates boring/cleanup
+
+* pair sorting now happens outside of the database and thus doesn't lag things in edge cases
+* pair sorting now works wholly over the entire batch fetched in the duplicate filter (previously, each separate search block was sorted, so in sparse results you'd get a sawtooth sort)
+* wrote a 'media result pairs and distances' object to hold the results of a rich potential duplicate pairs fetch. this complements the recent 'id pairs and distances' object from a couple weeks ago. this thing holds all the data needed to sort pairs and handles that all internally
+* the 'show some random potential pairs' routine was completely rewritten to use the new tech. it is KISS now, and the old ad-hoc garbage with its multiple layers of king hash filtering and  'comparison_preferred_hash_ids' hackery dackery doo is deleted
+* wrote some _fairly fast and good worst time performance_ file-domain pair-filtering code and expanded the pair-ids-and-distances cache to offer different answers for specific location contexts and rewangled the potential duplicate search context panel and the auto-resolution preview panel to re-initialise their base pair cache any time the location context changes
+* added unit tests for the new tag-based auto-resolution comparators
+
+### boring/cleanup
+
+* thanks to a user, the way `system:limit` randomly samples with complicated sorts is made more clear in https://hydrusnetwork.github.io/hydrus/getting_started_searching.html
+* brushed up the `server.html` help, clearing out some old things and adding a note about the update period from the FAQ
+* `options->media viewer hovers` now has a label at the top saying what a hover is lol
+* moved some list code from `HydrusData` to `HydrusLists`
+* to reduce confusion, the 'verify https traffic' DEBUG checkbox in `options->connection` is inverted to be 'do not verify'
+
 ## [Version 631](https://github.com/hydrusnetwork/hydrus/releases/tag/v631)
 
 ### custom static assets
@@ -537,54 +593,3 @@ title: Changelog
 * Windows and Linux: moved from python 3.11 to python 3.12
 * Windows and Linux: moved from PySide6 (Qt) 6.7.3 to 6.8.2.1
 * Windows: moved from windows-2019 runner to windows-2022 (2019 runner is being retired next month)
-
-## [Version 622](https://github.com/hydrusnetwork/hydrus/releases/tag/v622)
-
-### misc
-
-* fixed several sub-pixel problems with the new rating drawing when using PyQt6. in some cases it seems this was breaking boot. sorry for the trouble!
-* fixed a 'The chosen db path "db_dir" is not writeable-to!' error when you try to boot two clients/servers at the same time, usually with cold memory (it seems like they were syncing into early bootup checking at the exact same time due to uncached dlls and then interfering with each other's directory write-test)
-* if the 'selection tags' list is capped to only showing the first (by default) 4096 unselected files, it now says so in its box title
-* if you hit paste (ctrl+v or shift+insert) on the text input in a write/edit tag autocomplete that has a paste button (e.g. in 'manage tags' dialog), and your clipboard has multiple lines of content, you now get a little yes/no dialog asking if you want to enter everything as separate tags (otherwise, as before, it munges all the lines into your input)
-* a new checkbox in `options->tag editing` lets you skip the yes/no check in this case (i.e. always immediately pasting multiline content you enter)
-* the manage tags dialog paste button is now beside the text input box. it still only does 'add only' actions
-* all new clients, and all existing clients that don't have `Ctrl+Shift+O` set in `main_gui` shortcut set already, now get `Ctrl+Shift+O` as 'open options dialog'. the 'Use Native MenuBar' option's tooltip now highlights this shortcut (a couple of users have been soft-locked out options dialog to unset this when it borked out)
-
-### duplicates
-
-* if you are in advanced mode, the manual duplicate filter will have a new "(not) visual duplicates" line with some numbers after it. this is the new "A and B are visual duplicates" test I have been working on, which uses a bunch of histogram statistics to programatically differentiate resizes/re-encodes from files with significant visual differences. if you do duplicate filtering this week, please look at this new line and let me know how its predictions hold up. I have tuned over about 100 real pairs, and I feel fairly good, but let's see on a larger scale. it sometimes false negatives (saying they are not visual duplicates when they actually are) when the pair has a particularly wide difference in scale or encoding quality, and I'm ok with that failure, but I do not get any false positives (saying they are visual duplicates when there is actually a watermark or something). I am most interested in false positives, since we hope to fold this tool into the duplicates auto-resolution system and I don't want a positive fail. the statement will also suggest a little more info if it thinks there is an obvious watermark or recolour. please send me any pairs that are reported wrong, and if you like you can look at the numbers. I will retune this tool as needed and fold it into the automatic system, and I'll launch this test as a real comparison statement for all users (but without the ugly debug numbers). thank you for testing!
-* updated my 'A and B are visual duplicates' test to return a false when the files have resolution ratio that differs by more than 1%
-* updated my 'A and B are visual duplicates' test to return a false when either file has resolution below (32x32)
-* the duplicate filter comparison statements are now generated asynchronously. if and when the comparison statements need high CPU, they won't lag the initial pair load
-* the 'this is a pixel-for-pixel duplicate png!' comparison statement and associated high score no longer applies to webp/png pairs. webp can be lossless, where this decision is less clear. if and when we get a nice 'this webp is lossy/lossless' detector, I'll bring this back
-* the duplicates auto-resolution thumbnail pair lists should be less crazily tall if you have large thumbnails
-* the cache that aids potential duplicate pair discovery has its cap (1 million search nodes) removed. on clients with many millions of files, ongoing similar files search will be I think around ~16-50% faster. each node is four numbers and an 8-byte hash, so this will add something in the range of 100-200MB of memory use for giganto clients. for interest, search distance 10 seems to cover a search space of ~40% of the entire tree, so on a db of a million images, that's 400,000 nodes to do hamming distance calculation on. thankfully each test is only about two microseconds, but it adds up, and search distance is the core determinant of search size, so keep it low!
-
-### png colours
-
-* PNG files are now scanned for gamma and chromaticity metadata on load. if they have this information (and no ICC Profile, which supercedes this info), it is applied much like an ICC Profile to colour-adjust the PNG to what was originally intended. usually these adjustments are very slight, just a shade one way or another
-* all PNGs with this data (about one in twenty, I think?) should now render better. if any of your PNGs render crazy bright/dark/wrong this week, let me know!
-* I did this in hopes of fixing some pixel hash stuff (no collision between a png and a non-png that should collide if this data is applied correctly), but my colour translation math seems to be slightly imperfect, so I may revisit this. I won't schedule mass pixel hash regen until I have this figured out
-
-### delete lock
-
-* added a new checkbox to `options->files and trash` that lets you say 'if the archive delete lock is on, then when I finish an archive/delete filter, ensure all the deletees are inboxed before the delete'
-* added a similar checkbox that lets you say 'if the archive delete lock is on, then when I do a manual duplicate filter, ensure all the deletees from merge options are inboxed before the delete'
-* I don't really want to write exceptions to the delete lock filter, but I hadn't thought about it from quite this angle before. lets see how this works as nice simple solution for this particular problem. if you use the delete lock and want to try this, make sure you are confident it is what you want
-* if this ends up being a tangle of ugly logic, and/or if the delete lock extends to properties other than 'file is archived' in future, I may yank these options
-
-### client api
-
-* thanks to a user, the Client API now has calls to get/set the favourite tags. these calls use the existing 'add tags' permission (issue #311)
-* updated the help and wrote some unit tests for this
-* client api version is now 80
-
-### boring cleanup and weird stuff
-
-* fixed a couple places in the Client API documentation where it said a POST request didn't need a header; they all pretty much need `Content-Type: application/json`
-* the duplicate comparison statements in the duplicate filter hover window are now center-aligned using the correct method/flag
-* the operator radio buttons in the `NumberTest` widget (which appears in several places to manage 'X is &gt; Y', and the operators where it says &lt;, ≈, ≠, etc..) now have tooltips more clearly explaining what each is
-* rejiggered some duplicate content update stuff to better separate the metadata updates from the delete file calls; I wasn't sure which order this stuff was happening, but now it is explicit and the delete happens at the end
-* my 'merge directory' call now strictly does not delete anything from the source dir until it is finished copying with no problems. previously, it would move files as it went, so if the copy failed half way through due to an I/O failure, the source was left partial. this no longer happens
-* fixed a couple of dumb path translation lines in my directory mirror/merge calls so they can better handle weird dirnames
-* the advanced mode 'experimental' tag list menu that lets you change the tag display context now shows the 'single media views' option as well

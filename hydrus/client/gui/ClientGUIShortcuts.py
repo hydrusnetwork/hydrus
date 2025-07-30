@@ -515,7 +515,7 @@ simple_shortcut_name_to_action_lookup = {
     'custom' : SHORTCUTS_MEDIA_ACTIONS + SHORTCUTS_MEDIA_VIEWER_ACTIONS
 }
 
-simple_shortcut_name_to_action_lookup = { key : HydrusData.DedupeList( value ) for ( key, value ) in simple_shortcut_name_to_action_lookup.items() }
+simple_shortcut_name_to_action_lookup = { key : HydrusLists.DedupeList( value ) for ( key, value ) in simple_shortcut_name_to_action_lookup.items() }
 
 CUMULATIVE_MOUSEWARP_MANHATTAN_LENGTH = 0
 

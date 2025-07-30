@@ -12,6 +12,7 @@ from hydrus.core import HydrusTags
 from hydrus.core import HydrusText
 from hydrus.core import HydrusTime
 
+from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientData
 from hydrus.client import ClientGlobals as CG
 from hydrus.client.media import ClientMediaResult
@@ -373,7 +374,8 @@ PREDICATE_TYPES_WE_CAN_TEST_ON_MEDIA_RESULTS = [
     PREDICATE_TYPE_SYSTEM_KNOWN_URLS,
     PREDICATE_TYPE_SYSTEM_HAS_EXIF,
     PREDICATE_TYPE_SYSTEM_HAS_ICC_PROFILE,
-    PREDICATE_TYPE_SYSTEM_HAS_HUMAN_READABLE_EMBEDDED_METADATA
+    PREDICATE_TYPE_SYSTEM_HAS_HUMAN_READABLE_EMBEDDED_METADATA,
+    PREDICATE_TYPE_SYSTEM_TAG_ADVANCED
 ]
 
 # this has useful order
@@ -385,6 +387,7 @@ PREDICATE_TYPES_WE_CAN_EXTRACT_FROM_MEDIA_RESULTS = [
     PREDICATE_TYPE_SYSTEM_NUM_PIXELS,
     PREDICATE_TYPE_SYSTEM_DURATION,
     PREDICATE_TYPE_SYSTEM_NUM_FRAMES,
+    PREDICATE_TYPE_SYSTEM_NUM_TAGS,
     PREDICATE_TYPE_SYSTEM_NUM_URLS
 ]
 
@@ -887,6 +890,10 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
             
             return media_result.GetFileInfoManager().num_frames
             
+        elif self._predicate_type == PREDICATE_TYPE_SYSTEM_NUM_TAGS:
+            
+            return len( media_result.GetTagsManager().GetCurrentAndPending( CC.COMBINED_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ) )
+            
         elif self._predicate_type == PREDICATE_TYPE_SYSTEM_NUM_URLS:
             
             return len( media_result.GetLocationsManager().GetURLs() )
@@ -1384,6 +1391,38 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
             else:
                 
                 return not matches
+                
+            
+        elif self._predicate_type == PREDICATE_TYPE_SYSTEM_TAG_ADVANCED:
+            
+            ( service_key_or_none, tag_display_type, statuses, tag ) = self._value
+            
+            tags_manager = media_result.GetTagsManager()
+            
+            we_found_it = False
+            
+            if service_key_or_none is None:
+                
+                service_key_or_none = CC.COMBINED_TAG_SERVICE_KEY
+                
+            
+            for status in statuses:
+                
+                if tag in tags_manager.GetTags( service_key_or_none, tag_display_type, status ):
+                    
+                    we_found_it = True
+                    
+                    break
+                    
+                
+            
+            if self._inclusive:
+                
+                return we_found_it
+                
+            else:
+                
+                return not we_found_it
                 
             
         else:

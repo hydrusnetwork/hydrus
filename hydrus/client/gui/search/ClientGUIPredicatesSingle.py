@@ -8,6 +8,7 @@ from qtpy import QtWidgets as QW
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusLists
 from hydrus.core import HydrusTags
 from hydrus.core import HydrusText
 from hydrus.core.files import HydrusFileHandling
@@ -2857,7 +2858,7 @@ class PanelPredicateSystemSimilarToData( PanelPredicateSystemSingle ):
         
         new_text_lines.append( pixel_hash.hex() )
         
-        new_text_lines = HydrusData.DedupeList( new_text_lines )
+        new_text_lines = HydrusLists.DedupeList( new_text_lines )
         
         self._pixel_hashes.setPlainText( '\n'.join( new_text_lines ) )
         
@@ -2865,7 +2866,7 @@ class PanelPredicateSystemSimilarToData( PanelPredicateSystemSingle ):
         
         new_text_lines.extend( [ perceptual_hash.hex() for perceptual_hash in perceptual_hashes ] )
         
-        new_text_lines = HydrusData.DedupeList( new_text_lines )
+        new_text_lines = HydrusLists.DedupeList( new_text_lines )
         
         self._perceptual_hashes.setPlainText( '\n'.join( new_text_lines ) )
         

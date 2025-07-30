@@ -1712,7 +1712,7 @@ class ListBox( QW.QScrollArea ):
         
         if not with_counts:
             
-            copyable_tag_strings = HydrusData.DedupeList( copyable_tag_strings )
+            copyable_tag_strings = HydrusLists.DedupeList( copyable_tag_strings )
             
         
         return copyable_tag_strings

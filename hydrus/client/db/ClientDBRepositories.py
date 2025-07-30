@@ -411,7 +411,7 @@ class ClientDBRepositories( ClientDBModule.ClientDBModule ):
             ( min_unregistered_update_index, ) = result
             
         
-        predicate_phrase = 'processed = ? AND content_type IN {}'.format( HydrusData.SplayListForDB( content_types_to_process ) )
+        predicate_phrase = 'processed = ? AND content_type IN {}'.format( HydrusLists.SplayListForDB( content_types_to_process ) )
         
         if min_unregistered_update_index is not None:
             

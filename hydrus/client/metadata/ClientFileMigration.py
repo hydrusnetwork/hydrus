@@ -13,9 +13,9 @@ from hydrus.client import ClientThreading
 from hydrus.client.media import ClientMediaResult
 from hydrus.client.metadata import ClientContentUpdates
 
-def MoveOrDuplicateLocalFiles( dest_service_key: bytes, action: int, media_results: collections.abc.Collection[ ClientMediaResult.MediaResult ], source_service_key: typing.Optional[ bytes ] = None ):
+def DoMoveOrDuplicateLocalFiles( dest_service_key: bytes, action: int, media_results: collections.abc.Collection[ ClientMediaResult.MediaResult ], source_service_key: typing.Optional[ bytes ] = None ):
     
-    if action == HC.CONTENT_UPDATE_MOVE and source_service_key is None:
+    if action in ( HC.CONTENT_UPDATE_MOVE, HC.CONTENT_UPDATE_MOVE_MERGE ) and source_service_key is None:
         
         raise Exception( 'A file move migration was called without a source file service key!' )
         
@@ -28,7 +28,10 @@ def MoveOrDuplicateLocalFiles( dest_service_key: bytes, action: int, media_resul
             
         
     
-    media_results = [ m for m in media_results if dest_service_key not in m.GetLocationsManager().GetCurrent() ]
+    if action in ( HC.CONTENT_UPDATE_ADD, HC.CONTENT_UPDATE_MOVE ):
+        
+        media_results = [ m for m in media_results if dest_service_key not in m.GetLocationsManager().GetCurrent() ]
+        
     
     if len( media_results ) == 0:
         
@@ -75,7 +78,7 @@ def MoveOrDuplicateLocalFiles( dest_service_key: bytes, action: int, media_resul
                 
                 undelete_hashes.add( m.GetHash() )
                 
-            elif dest_service_key:
+            elif dest_service_key not in m.GetLocationsManager().GetCurrent():
                 
                 content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ADD, ( m.GetFileInfoManager(), now_ms ) ) )
                 
@@ -88,9 +91,9 @@ def MoveOrDuplicateLocalFiles( dest_service_key: bytes, action: int, media_resul
         
         CG.client_controller.WriteSynchronous( 'content_updates', ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( dest_service_key, content_updates ) )
         
-        if action == HC.CONTENT_UPDATE_MOVE:
+        if action in ( HC.CONTENT_UPDATE_MOVE, HC.CONTENT_UPDATE_MOVE_MERGE ):
             
-            block_of_hashes = [ m.GetHash() for m in block_of_media_results ]
+            block_of_hashes = [ m.GetHash() for m in block_of_media_results if source_service_key in m.GetLocationsManager().GetCurrent() ]
             
             content_updates = [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE_FROM_SOURCE_AFTER_MIGRATE, block_of_hashes, reason = 'Moved to {}'.format( dest_service_name ) ) ]
             

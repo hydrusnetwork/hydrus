@@ -1,10 +1,37 @@
 import collections
 import collections.abc
 import itertools
+import numpy
 import random
 
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusTime
+
+def DedupeList( xs: collections.abc.Iterable ):
+    
+    if isinstance( xs, set ):
+        
+        return list( xs )
+        
+    
+    xs_seen = set()
+    
+    xs_return = []
+    
+    for x in xs:
+        
+        if x in xs_seen:
+            
+            continue
+            
+        
+        xs_return.append( x )
+        
+        xs_seen.add( x )
+        
+    
+    return xs_return
+    
 
 class FastIndexUniqueList( collections.abc.MutableSequence ):
     
@@ -368,6 +395,16 @@ def IntelligentMassIntersect( sets_to_reduce: collections.abc.Collection[ set ] 
         
     
 
+def IterateListRandomlyAndFast( xs: list ):
+    
+    # do this instead of a pre-for-loop shuffle on big lists
+    
+    for i in numpy.random.permutation( len( xs ) ):
+        
+        yield xs[ i ]
+        
+    
+
 def IsAListLikeCollection( obj ):
     
     # protip: don't do isinstance( possible_list, collections.abc.Collection ) for a 'list' detection--strings pass it (and sometimes with infinite recursion) lol!
@@ -393,6 +430,20 @@ def MedianPop( population ):
     row = population.pop( median_index )
     
     return row
+    
+
+def PartitionIterator( pred: collections.abc.Callable[ [ object ], bool ], stream: collections.abc.Iterable[ object ] ):
+    
+    ( t1, t2 ) = itertools.tee( stream )
+    
+    return ( itertools.filterfalse( pred, t1 ), filter( pred, t2 ) )
+    
+
+def PartitionIteratorIntoLists( pred: collections.abc.Callable[ [ object ], bool ], stream: collections.abc.Iterable[ object ] ):
+    
+    ( a, b ) = PartitionIterator( pred, stream )
+    
+    return ( list( a ), list( b ) )
     
 
 def PullNFromIterator( iterator, n ):
@@ -421,6 +472,41 @@ def RandomiseListByChunks( xs, n ):
     return [ item for block in blocks for item in block ] # 2025-06-03 - hydev's first nested list comprehension
     
 
+def RandomPop( population ):
+    
+    random_index = random.randint( 0, len( population ) - 1 )
+    
+    row = population.pop( random_index )
+    
+    return row
+    
+
+def SampleSetByGettingFirst( s: set, n ):
+    
+    # sampling from a big set can be slow, so if we don't care about super random, let's just rip off the front and let __hash__ be our random
+    
+    n = min( len( s ), n )
+    
+    sample = set()
+    
+    if n == 0:
+        
+        return sample
+        
+    
+    for ( i, obj ) in enumerate( s ):
+        
+        sample.add( obj )
+        
+        if i >= n - 1:
+            
+            break
+            
+        
+    
+    return sample
+    
+
 def SetsIntersect( a, b ):
     
     if not isinstance( a, set ):
@@ -429,6 +515,27 @@ def SetsIntersect( a, b ):
         
     
     return not a.isdisjoint( b )
+    
+
+def SmoothOutMappingIterator( xs, n ):
+    
+    # de-spikifies mappings, so if there is ( tag, 20k files ), it breaks that up into manageable chunks
+    
+    chunk_weight = 0
+    chunk = []
+    
+    for ( tag_item, hash_items ) in xs:
+        
+        for chunk_of_hash_items in SplitIteratorIntoChunks( hash_items, n ):
+            
+            yield ( tag_item, chunk_of_hash_items )
+            
+        
+    
+
+def SplayListForDB( xs ):
+    
+    return '(' + ','.join( ( str( x ) for x in xs ) ) + ')'
     
 
 def SplitIteratorIntoAutothrottledChunks( iterator, starting_n, precise_time_to_stop ):
@@ -463,6 +570,28 @@ def SplitIteratorIntoAutothrottledChunks( iterator, starting_n, precise_time_to_
             
         
         chunk = PullNFromIterator( iterator, n )
+        
+    
+
+def SplitIteratorIntoChunks( iterator, n ):
+    
+    chunk = []
+    
+    for item in iterator:
+        
+        chunk.append( item )
+        
+        if len( chunk ) == n:
+            
+            yield chunk
+            
+            chunk = []
+            
+        
+    
+    if len( chunk ) > 0:
+        
+        yield chunk
         
     
 

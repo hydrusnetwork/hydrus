@@ -1314,6 +1314,15 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.Liste
             
         
     
+    def _RemoveMediaByHashes( self, hashes ):
+        
+        # even though this guy eventually calls _RemoveMediaDirectly and thus filesRemoved, this doesn't happen when a collection removes a file internally
+        
+        super()._RemoveMediaByHashes( hashes )
+        
+        self.filesRemoved.emit( list( hashes ) )
+        
+    
     def _RemoveMediaDirectly( self, singleton_media, collected_media ):
         
         super()._RemoveMediaDirectly( singleton_media, collected_media )

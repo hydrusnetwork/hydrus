@@ -3,7 +3,7 @@ import os
 import typing
 
 from hydrus.core import HydrusConstants as HC
-from hydrus.core import HydrusData
+from hydrus.core import HydrusLists
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusText
 from hydrus.core import HydrusTime
@@ -247,7 +247,7 @@ class SingleFileMetadataImporterMediaTags( SingleFileMetadataImporterMedia, Hydr
         # turning ::) into :)
         tags = [ HydrusText.re_leading_double_colon.sub( ':', tag ) for tag in tags ]
         
-        tags = HydrusData.DedupeList( tags )
+        tags = HydrusLists.DedupeList( tags )
         
         HydrusText.HumanTextSort( tags )
         

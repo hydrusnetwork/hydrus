@@ -7,6 +7,7 @@ from qtpy import QtWidgets as QW
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusLists
 from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusTags
 from hydrus.core import HydrusText
@@ -402,7 +403,7 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
                 pairs.append( pair )
                 
             
-            pairs = HydrusData.DedupeList( pairs )
+            pairs = HydrusLists.DedupeList( pairs )
             
             return pairs
             

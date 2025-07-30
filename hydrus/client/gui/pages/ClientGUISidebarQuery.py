@@ -3,7 +3,6 @@ import typing
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
 
-from hydrus.core import HydrusData
 from hydrus.core import HydrusLists
 from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusTime
@@ -458,7 +457,7 @@ class SidebarQuery( ClientGUISidebarCore.Sidebar ):
             
             existing_lock_hashes = self._GetExistingLockHashes()
             
-            updated_hashes = HydrusData.DedupeList( existing_lock_hashes + hashes )
+            updated_hashes = HydrusLists.DedupeList( existing_lock_hashes + hashes )
             
             self._UpdateSystemLockFiles( updated_hashes )
             

@@ -8,6 +8,7 @@ from hydrus.core import HydrusData
 from hydrus.core import HydrusDB
 from hydrus.core import HydrusDBBase
 from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusLists
 from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
@@ -243,6 +244,7 @@ class DBLocationContextBranch( DBLocationContext, ClientDBModule.ClientDBModule 
         return False
         
     
+
 class ClientDBFilesStorage( ClientDBModule.ClientDBModule ):
     
     def __init__( self, cursor: sqlite3.Cursor, cursor_transaction_wrapper: HydrusDBBase.DBCursorTransactionWrapper, modules_db_maintenance: ClientDBMaintenance.ClientDBMaintenance, modules_services: ClientDBServices.ClientDBMasterServices, modules_hashes: ClientDBMaster.ClientDBMasterHashes, modules_texts: ClientDBMaster.ClientDBMasterTexts ):
@@ -813,7 +815,7 @@ class ClientDBFilesStorage( ClientDBModule.ClientDBModule ):
         if only_viewable:
             
             # hashes to mimes
-            result = self._Execute( 'SELECT COUNT( * ) FROM {} CROSS JOIN files_info USING ( hash_id ) WHERE mime IN {};'.format( current_files_table_name, HydrusData.SplayListForDB( HC.SEARCHABLE_MIMES ) ) ).fetchone()
+            result = self._Execute( 'SELECT COUNT( * ) FROM {} CROSS JOIN files_info USING ( hash_id ) WHERE mime IN {};'.format( current_files_table_name, HydrusLists.SplayListForDB( HC.SEARCHABLE_MIMES ) ) ).fetchone()
             
         else:
             

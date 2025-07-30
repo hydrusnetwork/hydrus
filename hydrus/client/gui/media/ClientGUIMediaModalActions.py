@@ -6,7 +6,6 @@ import typing
 from qtpy import QtWidgets as QW
 
 from hydrus.core import HydrusConstants as HC
-from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusLists
 from hydrus.core import HydrusNumbers
@@ -146,7 +145,7 @@ def ClearDeleteRecord( win, media ):
     
     if result == QW.QDialog.DialogCode.Accepted:
         
-        for chunk_of_media in HydrusData.SplitIteratorIntoChunks( clearable_media, 64 ):
+        for chunk_of_media in HydrusLists.SplitIteratorIntoChunks( clearable_media, 64 ):
             
             clearee_hashes = [ m.GetHash() for m in chunk_of_media ]
             
@@ -737,16 +736,13 @@ def MoveOrDuplicateLocalFiles( win: QW.QWidget, dest_service_key: bytes, action:
     
     dest_service_name = CG.client_controller.services_manager.GetName( dest_service_key )
     
-    applicable_media = [ m for m in media if m.GetLocationsManager().IsLocal() and dest_service_key not in m.GetLocationsManager().GetCurrent() and m.GetMime() not in HC.HYDRUS_UPDATE_FILES ]
+    applicable_media = [ m for m in media if m.GetLocationsManager().IsLocal() and m.GetMime() not in HC.HYDRUS_UPDATE_FILES ]
     
     if action == HC.CONTENT_UPDATE_MOVE:
         
-        if source_service_key is not None:
-            
-            already_in_place = lambda m: source_service_key is not None and source_service_key not in m.GetLocationsManager().GetCurrent() and dest_service_key in m.GetLocationsManager().GetCurrent()
-            
-            applicable_media = [ m for m in media if not already_in_place( m ) ]
-            
+        already_in_place = lambda m: dest_service_key in m.GetLocationsManager().GetCurrent()
+        
+        applicable_media = [ m for m in media if not already_in_place( m ) ]
         
     elif action == HC.CONTENT_UPDATE_ADD:
         
@@ -760,43 +756,54 @@ def MoveOrDuplicateLocalFiles( win: QW.QWidget, dest_service_key: bytes, action:
         return
         
     
-    ( local_duplicable_to_file_service_keys, local_moveable_from_and_to_file_service_keys ) = ClientGUIMediaSimpleActions.GetLocalFileActionServiceKeys( applicable_media )
+    ( local_duplicable_to_file_service_keys, local_moveable_from_and_to_file_service_keys, local_mergable_from_and_to_file_service_keys ) = ClientGUIMediaSimpleActions.GetLocalFileActionServiceKeys( applicable_media )
     
     do_yes_no = CG.client_controller.new_options.GetBoolean( 'confirm_multiple_local_file_services_copy' )
     yes_no_text = 'Add {} files to {}?'.format( HydrusNumbers.ToHumanInt( len( applicable_media ) ), dest_service_name )
     
-    if action == HC.CONTENT_UPDATE_MOVE:
+    if action in ( HC.CONTENT_UPDATE_MOVE, HC.CONTENT_UPDATE_MOVE_MERGE ):
         
         do_yes_no = CG.client_controller.new_options.GetBoolean( 'confirm_multiple_local_file_services_move' )
         
-        local_moveable_from_and_to_file_service_keys = { pair for pair in local_moveable_from_and_to_file_service_keys if pair[1] == dest_service_key }
+        if action == HC.CONTENT_UPDATE_MOVE:
+            
+            local_moveable_from_and_to_file_service_keys = { pair for pair in local_moveable_from_and_to_file_service_keys if pair[1] == dest_service_key }
+            
+        elif action == HC.CONTENT_UPDATE_MOVE_MERGE:
+            
+            local_moveable_from_and_to_file_service_keys = { pair for pair in local_mergable_from_and_to_file_service_keys if pair[1] == dest_service_key }
+            
+        else:
+            
+            raise NotImplementedError( 'Unknown action!' )
+            
         
-        potential_source_service_keys = { pair[0] for pair in local_moveable_from_and_to_file_service_keys }
+        potential_move_source_service_keys = { pair[0] for pair in local_moveable_from_and_to_file_service_keys }
         
-        potential_source_service_keys_to_applicable_media = collections.defaultdict( list )
+        potential_move_source_service_keys_to_applicable_media = collections.defaultdict( list )
         
         for m in applicable_media:
             
             current = m.GetLocationsManager().GetCurrent()
             
-            for potential_source_service_key in potential_source_service_keys:
+            for potential_source_service_key in potential_move_source_service_keys:
                 
                 if potential_source_service_key in current:
                     
-                    potential_source_service_keys_to_applicable_media[ potential_source_service_key ].append( m )
+                    potential_move_source_service_keys_to_applicable_media[ potential_source_service_key ].append( m )
                     
                 
             
         
         if source_service_key is None:
             
-            if len( potential_source_service_keys ) == 0:
+            if len( potential_move_source_service_keys ) == 0:
                 
                 return
                 
-            elif len( potential_source_service_keys ) == 1:
+            elif len( potential_move_source_service_keys ) == 1:
                 
-                ( source_service_key, ) = potential_source_service_keys
+                ( source_service_key, ) = potential_move_source_service_keys
                 
             else:
                 
@@ -804,13 +811,26 @@ def MoveOrDuplicateLocalFiles( win: QW.QWidget, dest_service_key: bytes, action:
                 
                 choice_tuples = []
                 
-                for potential_source_service_key in potential_source_service_keys:
+                for potential_source_service_key in potential_move_source_service_keys:
                     
                     potential_source_service_name = CG.client_controller.services_manager.GetName( potential_source_service_key )
                     
-                    text = 'move {} in "{}" to "{}"'.format( len( potential_source_service_keys_to_applicable_media[ potential_source_service_key ] ), potential_source_service_name, dest_service_name )
-                    
-                    description = 'Move from {} to {}.'.format( potential_source_service_name, dest_service_name )
+                    if action == HC.CONTENT_UPDATE_MOVE:
+                        
+                        text = 'move {} in "{}" to "{}"'.format( len( potential_move_source_service_keys_to_applicable_media[ potential_source_service_key ] ), potential_source_service_name, dest_service_name )
+                        
+                        description = 'Move from {} to {}.'.format( potential_source_service_name, dest_service_name )
+                        
+                    elif action == HC.CONTENT_UPDATE_MOVE_MERGE:
+                        
+                        text = 'move-merge {} in "{}" to "{}"'.format( len( potential_move_source_service_keys_to_applicable_media[ potential_source_service_key ] ), potential_source_service_name, dest_service_name )
+                        
+                        description = 'Move-merge from {} to {}.'.format( potential_source_service_name, dest_service_name )
+                        
+                    else:
+                        
+                        raise NotImplementedError( 'Unknown action!' )
+                        
                     
                     choice_tuples.append( ( text, potential_source_service_key, description ) )
                     
@@ -819,7 +839,7 @@ def MoveOrDuplicateLocalFiles( win: QW.QWidget, dest_service_key: bytes, action:
                 
                 try:
                     
-                    source_service_key = ClientGUIDialogsQuick.SelectFromListButtons( win, 'select source service', choice_tuples, message = 'Select where we are moving from. Note this may not cover all files.' )
+                    source_service_key = ClientGUIDialogsQuick.SelectFromListButtons( win, 'select source service', choice_tuples, message = 'Select where we are moving from.' )
                     
                 except HydrusExceptions.CancelledException:
                     
@@ -830,9 +850,24 @@ def MoveOrDuplicateLocalFiles( win: QW.QWidget, dest_service_key: bytes, action:
         
         source_service_name = CG.client_controller.services_manager.GetName( source_service_key )
         
-        applicable_media = potential_source_service_keys_to_applicable_media[ source_service_key ]
+        # source service name is done, now let's see if we have a merge/move difference
         
-        yes_no_text = 'Move {} files from {} to {}?'.format( HydrusNumbers.ToHumanInt( len( applicable_media ) ), source_service_name, dest_service_name )
+        # ok now we are sorted, let's go
+        
+        applicable_media = potential_move_source_service_keys_to_applicable_media[ source_service_key ]
+        
+        if action == HC.CONTENT_UPDATE_MOVE:
+            
+            yes_no_text = 'Move {} files from {} to {}?'.format( HydrusNumbers.ToHumanInt( len( applicable_media ) ), source_service_name, dest_service_name )
+            
+        elif action == HC.CONTENT_UPDATE_MOVE_MERGE:
+            
+            yes_no_text = 'Move-merge {} files from {} to {}?'.format( HydrusNumbers.ToHumanInt( len( applicable_media ) ), source_service_name, dest_service_name )
+            
+        else:
+            
+            raise NotImplementedError( 'Unknown action!' )
+            
         
     
     if len( applicable_media ) == 0:
@@ -852,7 +887,7 @@ def MoveOrDuplicateLocalFiles( win: QW.QWidget, dest_service_key: bytes, action:
     
     applicable_media_results = [ m.GetMediaResult() for m in applicable_media ]
     
-    CG.client_controller.CallToThread( ClientFileMigration.MoveOrDuplicateLocalFiles, dest_service_key, action, applicable_media_results, source_service_key )
+    CG.client_controller.CallToThread( ClientFileMigration.DoMoveOrDuplicateLocalFiles, dest_service_key, action, applicable_media_results, source_service_key )
     
 
 def OpenURLs( win: QW.QWidget, urls ):
@@ -1225,7 +1260,7 @@ def UndeleteMedia( win, media ):
         
         if do_it:
             
-            for chunk_of_media in HydrusData.SplitIteratorIntoChunks( undeletable_media, 64 ):
+            for chunk_of_media in HydrusLists.SplitIteratorIntoChunks( undeletable_media, 64 ):
                 
                 service_key = undelete_service.GetServiceKey()
                 

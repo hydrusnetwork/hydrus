@@ -31,7 +31,6 @@ from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIMenus
 from hydrus.client.gui import ClientGUIRatings
 from hydrus.client.gui import ClientGUIShortcuts
-from hydrus.client.gui import ClientGUITopLevelWindows
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.canvas import ClientGUICanvasHoverFrames
@@ -3031,21 +3030,23 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
     
     showPairInPage = QC.Signal( list )
     
-    def __init__( self, parent, potential_duplicates_search_context: ClientPotentialDuplicatesSearchContext.PotentialDuplicatesSearchContext ):
+    def __init__( self, parent, potential_duplicates_search_context: ClientPotentialDuplicatesSearchContext.PotentialDuplicatesSearchContext, duplicate_pair_sort_type: int, duplicate_pair_sort_asc: bool ):
         
         self._potential_duplicates_search_context = potential_duplicates_search_context
+        self._duplicate_pair_sort_type = duplicate_pair_sort_type
+        self._duplicate_pair_sort_asc = duplicate_pair_sort_asc
         
         location_context = self._potential_duplicates_search_context.GetFileSearchContext1().GetLocationContext()
         
         super().__init__( parent, location_context )
         
-        self._all_potential_duplicate_pairs_and_distances = ClientPotentialDuplicatesSearchContext.PotentialDuplicatePairsAndDistances( [] )
-        self._all_potential_duplicate_pairs_and_distances_initialised = False
-        self._all_potential_duplicate_pairs_and_distances_fetch_started = False
+        self._potential_duplicate_id_pairs_and_distances = ClientPotentialDuplicatesSearchContext.PotentialDuplicateIdPairsAndDistances( [] )
+        self._potential_duplicate_id_pairs_and_distances_initialised = False
+        self._potential_duplicate_id_pairs_and_distances_fetch_started = False
         
-        self._potential_duplicate_pairs_and_distances_still_to_search = ClientPotentialDuplicatesSearchContext.PotentialDuplicatePairsAndDistances( [] )
+        self._potential_duplicate_id_pairs_and_distances_still_to_search = ClientPotentialDuplicatesSearchContext.PotentialDuplicateIdPairsAndDistances( [] )
         
-        self._fetched_pairs_to_process = []
+        self._fetched_media_result_pairs_and_distances_to_process = ClientPotentialDuplicatesSearchContext.PotentialDuplicateMediaResultPairsAndDistances( [] )
         
         self._num_items_to_commit = 0
         self._content_update_packages_we_are_committing = []
@@ -3113,8 +3114,8 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
         
         # unfortunate, but the old value is now invalid since we are about to change things
         # we may have knocked out potentials without merging media ids (set alternate) or, more rarely, added new potentials from merge inheritance
-        self._all_potential_duplicate_pairs_and_distances = ClientPotentialDuplicatesSearchContext.PotentialDuplicatePairsAndDistances( [] )
-        self._all_potential_duplicate_pairs_and_distances_initialised = False
+        self._potential_duplicate_id_pairs_and_distances = ClientPotentialDuplicatesSearchContext.PotentialDuplicateIdPairsAndDistances( [] )
+        self._potential_duplicate_id_pairs_and_distances_initialised = False
         
         for ( duplicate_type, media_a, media_b, content_update_packages, was_auto_skipped ) in self._processed_pairs:
             
@@ -3456,35 +3457,37 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
             return
             
         
-        if self._all_potential_duplicate_pairs_and_distances_initialised or self._all_potential_duplicate_pairs_and_distances_fetch_started:
+        if self._potential_duplicate_id_pairs_and_distances_initialised or self._potential_duplicate_id_pairs_and_distances_fetch_started:
             
             return
             
         
-        self._all_potential_duplicate_pairs_and_distances_fetch_started = True
+        self._potential_duplicate_id_pairs_and_distances_fetch_started = True
+        
+        location_context = self._potential_duplicates_search_context.GetFileSearchContext1().GetLocationContext()
         
         def work_callable():
             
-            all_potential_duplicate_pairs_and_distances: ClientPotentialDuplicatesSearchContext.PotentialDuplicatePairsAndDistances = CG.client_controller.Read( 'all_potential_duplicate_pairs_and_distances' )
+            potential_duplicate_id_pairs_and_distances: ClientPotentialDuplicatesSearchContext.PotentialDuplicateIdPairsAndDistances = CG.client_controller.Read( 'potential_duplicate_id_pairs_and_distances', location_context )
             
             # ok randomise the order we'll do this guy, but only at the block level
             # we'll preserve order each block came in since we'll then keep db-proximal indices close together on each actual block fetch
             
             # a checkbox for the user to say 'choose different work with each launch'
-            all_potential_duplicate_pairs_and_distances.RandomiseBlocks()
+            potential_duplicate_id_pairs_and_distances.RandomiseBlocks()
             
-            return all_potential_duplicate_pairs_and_distances
+            return potential_duplicate_id_pairs_and_distances
             
         
-        def publish_callable( all_potential_duplicate_pairs_and_distances: ClientPotentialDuplicatesSearchContext.PotentialDuplicatePairsAndDistances ):
+        def publish_callable( potential_duplicate_id_pairs_and_distances: ClientPotentialDuplicatesSearchContext.PotentialDuplicateIdPairsAndDistances ):
             
-            self._all_potential_duplicate_pairs_and_distances = all_potential_duplicate_pairs_and_distances
+            self._potential_duplicate_id_pairs_and_distances = potential_duplicate_id_pairs_and_distances
             
-            self._all_potential_duplicate_pairs_and_distances_initialised = True
+            self._potential_duplicate_id_pairs_and_distances_initialised = True
             
-            self._all_potential_duplicate_pairs_and_distances_fetch_started = False
+            self._potential_duplicate_id_pairs_and_distances_fetch_started = False
             
-            if len( self._all_potential_duplicate_pairs_and_distances ) == 0:
+            if len( self._potential_duplicate_id_pairs_and_distances ) == 0:
                 
                 ClientGUIDialogsMessage.ShowInformation( self, 'All potential pairs are cleared!' )
                 
@@ -3593,7 +3596,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
                 raise HydrusExceptions.CancelledException()
                 
             
-            if len( self._potential_duplicate_pairs_and_distances_still_to_search ) == 0:
+            if len( self._potential_duplicate_id_pairs_and_distances_still_to_search ) == 0:
                 
                 self._loading_text = 'No duplicate pairs to search!'
                 
@@ -3601,34 +3604,31 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
                 
             else:
                 
-                value = len( self._all_potential_duplicate_pairs_and_distances ) - len( self._potential_duplicate_pairs_and_distances_still_to_search )
-                range = len( self._all_potential_duplicate_pairs_and_distances )
+                value = len( self._potential_duplicate_id_pairs_and_distances ) - len( self._potential_duplicate_id_pairs_and_distances_still_to_search )
+                range = len( self._potential_duplicate_id_pairs_and_distances )
                 
-                self._loading_text = f'{HydrusNumbers.ValueRangeToPrettyString(value, range)} potentials searched; found {HydrusNumbers.ToHumanInt( len( self._fetched_pairs_to_process ) )} pairs{HC.UNICODE_ELLIPSIS}'
+                self._loading_text = f'{HydrusNumbers.ValueRangeToPrettyString(value, range)} pairs searched; {HydrusNumbers.ToHumanInt( len( self._fetched_media_result_pairs_and_distances_to_process ) )} matched{HC.UNICODE_ELLIPSIS}'
                 
             
-            block_of_pairs_and_distances = self._potential_duplicate_pairs_and_distances_still_to_search.PopBlock()
+            block_of_id_pairs_and_distances = self._potential_duplicate_id_pairs_and_distances_still_to_search.PopBlock()
             
             self.update()
             
-            return ( self._potential_duplicates_search_context, block_of_pairs_and_distances )
+            return ( self._potential_duplicates_search_context, block_of_id_pairs_and_distances )
             
         
         def work_callable( args ):
             
-            ( potential_duplicates_search_context, block_of_pairs_and_distances ) = args
+            ( potential_duplicates_search_context, block_of_id_pairs_and_distances ) = args
             
-            sort_type = ClientDuplicates.DUPE_PAIR_SORT_MAX_FILESIZE
-            sort_asc = False
+            potential_duplicate_media_result_pairs_and_distances = CG.client_controller.Read( 'potential_duplicate_pairs_fragmentary', potential_duplicates_search_context, block_of_id_pairs_and_distances )
             
-            fetched_pairs = CG.client_controller.Read( 'potential_duplicate_pairs_fragmentary', potential_duplicates_search_context, block_of_pairs_and_distances, sort_type, sort_asc )
-            
-            return fetched_pairs
+            return potential_duplicate_media_result_pairs_and_distances
             
         
         def publish_callable( result ):
             
-            some_fetched_pairs = result
+            potential_duplicate_media_result_pairs_and_distances = result
             
             # filter the pairs as needed I guess
             # keep adding them one at a time or whatever
@@ -3636,19 +3636,21 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
             
             total_we_want = CG.client_controller.new_options.GetInteger( 'duplicate_filter_max_batch_size' )
             
-            for fetched_pair in some_fetched_pairs:
+            for row in potential_duplicate_media_result_pairs_and_distances.IterateRows():
                 
-                self._fetched_pairs_to_process.append( fetched_pair )
+                self._fetched_media_result_pairs_and_distances_to_process.AppendRow( row )
                 
-                if len( self._fetched_pairs_to_process ) >= total_we_want:
+                if len( self._fetched_media_result_pairs_and_distances_to_process ) >= total_we_want:
                     
                     break
                     
                 
             
-            if len( self._fetched_pairs_to_process ) >= total_we_want or len( self._potential_duplicate_pairs_and_distances_still_to_search ) == 0:
+            if len( self._fetched_media_result_pairs_and_distances_to_process ) >= total_we_want or len( self._potential_duplicate_id_pairs_and_distances_still_to_search ) == 0:
                 
-                if len( self._fetched_pairs_to_process ) == 0:
+                self._fetched_media_result_pairs_and_distances_to_process.Sort( self._duplicate_pair_sort_type, self._duplicate_pair_sort_asc )
+                
+                if len( self._fetched_media_result_pairs_and_distances_to_process ) == 0:
                     
                     ClientGUIDialogsMessage.ShowInformation( self, 'All pairs have been filtered!' )
                     
@@ -3659,10 +3661,10 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
                     return
                     
                 
-                self._batch_of_pairs_to_process = self._fetched_pairs_to_process
+                self._batch_of_pairs_to_process = self._fetched_media_result_pairs_and_distances_to_process.GetPairs()
                 self._current_pair_index = 0
                 
-                self._fetched_pairs_to_process = []
+                self._fetched_media_result_pairs_and_distances_to_process = ClientPotentialDuplicatesSearchContext.PotentialDuplicateMediaResultPairsAndDistances( [] )
                 
                 self._ShowCurrentPair()
                 
@@ -3682,9 +3684,9 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
             return
             
         
-        if not self._all_potential_duplicate_pairs_and_distances_initialised:
+        if not self._potential_duplicate_id_pairs_and_distances_initialised:
             
-            if not self._all_potential_duplicate_pairs_and_distances_fetch_started:
+            if not self._potential_duplicate_id_pairs_and_distances_fetch_started:
                 
                 self._InitialisePotentialDuplicatePairs()
                 
@@ -3702,8 +3704,8 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
         # TODO: if I want to sort by similarity, I can pre-sort this by distance right now!!
         # or indeed when we initialise this guy but whatever
         # to grab stable/random groups, we can choose to randomise blocks or not, also
-        self._potential_duplicate_pairs_and_distances_still_to_search = self._all_potential_duplicate_pairs_and_distances.Duplicate()
-        self._fetched_pairs_to_process = []
+        self._potential_duplicate_id_pairs_and_distances_still_to_search = self._potential_duplicate_id_pairs_and_distances.Duplicate()
+        self._fetched_media_result_pairs_and_distances_to_process = ClientPotentialDuplicatesSearchContext.PotentialDuplicateMediaResultPairsAndDistances( [] )
         
         self.ClearMedia()
         
@@ -4807,7 +4809,7 @@ class CanvasMediaListFilterArchiveDelete( CanvasMediaList ):
                         
                     
                 
-                location_contexts_to_present_options_for = HydrusData.DedupeList( location_contexts_to_present_options_for )
+                location_contexts_to_present_options_for = HydrusLists.DedupeList( location_contexts_to_present_options_for )
                 
                 only_allow_all_media_files = len( location_contexts_to_present_options_for ) > 1 and CG.client_controller.new_options.GetBoolean( 'only_show_delete_from_all_local_domains_when_filtering' ) and True in ( location_context.IsAllMediaFiles() for location_context in location_contexts_to_present_options_for )
                 
@@ -5686,15 +5688,17 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
             
             ClientGUIMenus.AppendMenu( menu, manage_menu, 'manage' )
             
-            ( local_duplicable_to_file_service_keys, local_moveable_from_and_to_file_service_keys ) = ClientGUIMediaSimpleActions.GetLocalFileActionServiceKeys( (self._current_media,) )
+            local_file_service_keys = ClientMedia.GetLocalFileServiceKeys( ( self._current_media, ) )
+            
+            ( local_duplicable_to_file_service_keys, local_moveable_from_and_to_file_service_keys, local_mergable_from_and_to_file_service_keys ) = ClientGUIMediaSimpleActions.GetLocalFileActionServiceKeys( ( self._current_media, ) )
             
             multiple_selected = False
             
-            if len( local_duplicable_to_file_service_keys ) > 0 or len( local_moveable_from_and_to_file_service_keys ) > 0:
+            if len( local_file_service_keys ) + len( local_duplicable_to_file_service_keys ) + len( local_moveable_from_and_to_file_service_keys ) + len( local_mergable_from_and_to_file_service_keys ) > 0:
                 
                 locations_menu = ClientGUIMenus.GenerateMenu( menu )
                 
-                ClientGUIMediaMenus.AddLocalFilesMoveAddToMenu( self, locations_menu, local_duplicable_to_file_service_keys, local_moveable_from_and_to_file_service_keys, multiple_selected, self.ProcessApplicationCommand )
+                ClientGUIMediaMenus.AddLocalFilesMoveAddToMenu( self, locations_menu, local_file_service_keys, local_duplicable_to_file_service_keys, local_moveable_from_and_to_file_service_keys, local_mergable_from_and_to_file_service_keys, multiple_selected, self.ProcessApplicationCommand )
                 
                 ClientGUIMenus.AppendMenu( menu, locations_menu, 'locations' )
                 

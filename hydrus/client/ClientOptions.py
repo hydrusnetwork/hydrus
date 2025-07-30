@@ -258,8 +258,8 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             'draw_tags_hover_in_media_viewer_background' : True,
             'draw_top_hover_in_media_viewer_background' : True,
             'draw_top_right_hover_in_media_viewer_background' : True,
-            'draw_top_right_hover_in_preview_window_background' : False,
-            'preview_window_hover_top_right_shows_popup' : False,
+            'draw_top_right_hover_in_preview_window_background' : True,
+            'preview_window_hover_top_right_shows_popup' : True,
             'draw_notes_hover_in_media_viewer_background' : True,
             'draw_bottom_right_index_in_media_viewer_background' : True,
             'disable_tags_hover_in_media_viewer': False,
@@ -309,7 +309,8 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             'activate_main_gui_on_viewer_close' : False,
             'override_bandwidth_on_file_urls_from_post_urls' : True,
             'remove_leading_url_double_slashes' : False,
-            'always_apply_ntfs_export_filename_rules' : False
+            'always_apply_ntfs_export_filename_rules' : False,
+            'replace_percent_twenty_with_space_in_gug_input' : False,
         }
         
         #

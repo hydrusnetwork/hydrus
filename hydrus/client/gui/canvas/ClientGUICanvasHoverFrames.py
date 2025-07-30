@@ -2315,11 +2315,16 @@ class CanvasHoverFrameRightDuplicates( CanvasHoverFrame ):
         
         QP.AddToLayout( self._comparison_statements_vbox, self._comparison_statement_score_summary, CC.FLAGS_EXPAND_PERPENDICULAR )
         
-        self._comparison_statement_names = [ 'filesize', 'resolution', 'ratio', 'mime', 'num_tags', 'time_imported', 'jpeg_quality', 'pixel_duplicates', 'has_transparency', 'exif_data', 'embedded_metadata', 'icc_profile', 'has_audio', 'duration', 'a_and_b_are_visual_duplicates' ]
+        self._comparison_statement_names_fast = [ 'filesize', 'resolution', 'ratio', 'mime', 'num_tags', 'time_imported', 'pixel_duplicates', 'has_transparency', 'exif_data', 'embedded_metadata', 'icc_profile', 'has_audio', 'duration' ]
+        self._comparison_statement_names_slow = ['jpeg_quality', 'a_and_b_are_visual_duplicates' ]
+        
+        self._total_score_fast = 0
+        self._total_score_slow = 0
+        self._they_are_pixel_duplicates = False
         
         self._comparison_statements_sts = {}
         
-        for name in self._comparison_statement_names:
+        for name in self._comparison_statement_names_fast + self._comparison_statement_names_slow:
             
             panel = QW.QWidget( self )
             
@@ -2341,7 +2346,8 @@ class CanvasHoverFrameRightDuplicates( CanvasHoverFrame ):
             QP.AddToLayout( self._comparison_statements_vbox, panel, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
         
-        self._comparison_statement_updater = self._InitialiseComparisonStatementUpdater()
+        self._comparison_statement_updater_fast = self._InitialiseComparisonStatementUpdaterFast()
+        self._comparison_statement_updater_slow = self._InitialiseComparisonStatementUpdaterSlow()
         
         #
         
@@ -2373,6 +2379,23 @@ class CanvasHoverFrameRightDuplicates( CanvasHoverFrame ):
         
         CG.client_controller.sub( self, 'SetDuplicatePair', 'canvas_new_duplicate_pair' )
         CG.client_controller.sub( self, 'SetIndexString', 'canvas_new_index_string' )
+        
+    
+    def _BlankStatementsBeforePopulation( self, names ):
+        
+        for name in names:
+            
+            ( panel, st ) = self._comparison_statements_sts[ name ]
+            
+            if panel.isVisible():
+                
+                current_text = st.text()
+                
+                num_newlines = current_text.count( '\n' )
+                
+                st.setText( num_newlines * '\n' )
+                
+            
         
     
     def _EditBackgroundSwitchIntensity( self ):
@@ -2472,23 +2495,13 @@ class CanvasHoverFrameRightDuplicates( CanvasHoverFrame ):
         return ( should_resize, ideal_size, ideal_position )
         
     
-    def _InitialiseComparisonStatementUpdater( self ):
+    def _InitialiseComparisonStatementUpdaterFast( self ):
         
         def loading_callable():
             
             self._comparison_statement_score_summary.setText( '' )
             
-            for ( panel, st ) in self._comparison_statements_sts.values():
-                
-                if panel.isVisible():
-                    
-                    current_text = st.text()
-                    
-                    num_newlines = current_text.count( '\n' )
-                    
-                    st.setText( num_newlines * '\n' )
-                    
-                
+            self._BlankStatementsBeforePopulation( self._comparison_statement_names_fast )
             
             # no resize here! we don't want any possible flicker mate
             
@@ -2507,7 +2520,53 @@ class CanvasHoverFrameRightDuplicates( CanvasHoverFrame ):
             
             ( current_media_result, comparison_media_result ) = args
             
-            statements_and_scores = ClientDuplicates.GetDuplicateComparisonStatements( current_media_result, comparison_media_result )
+            ( statements_and_scores, they_are_pixel_duplicates ) = ClientDuplicates.GetDuplicateComparisonStatementsFast( current_media_result, comparison_media_result )
+            
+            return ( statements_and_scores, they_are_pixel_duplicates )
+            
+        
+        def publish_callable( result ):
+            
+            ( statements_and_scores, they_are_pixel_duplicates ) = result
+            
+            self._they_are_pixel_duplicates = they_are_pixel_duplicates
+            
+            self._total_score_fast = sum( ( score for ( statement, score ) in statements_and_scores.values() ) )
+            
+            self._UpdateTotalScore( finished = False )
+            
+            self._PopulateStatements( statements_and_scores, self._comparison_statement_names_fast )
+            
+            self._comparison_statement_updater_slow.update()
+            
+        
+        return ClientGUIAsync.AsyncQtUpdater( self, loading_callable, work_callable, publish_callable, pre_work_callable = pre_work_callable )
+        
+    
+    def _InitialiseComparisonStatementUpdaterSlow( self ):
+        
+        def loading_callable():
+            
+            self._BlankStatementsBeforePopulation( self._comparison_statement_names_slow )
+            
+            # no resize here! we don't want any possible flicker mate
+            
+        
+        def pre_work_callable():
+            
+            if self._current_media is None or self._comparison_media is None:
+                
+                raise HydrusExceptions.CancelledException()
+                
+            
+            return ( self._current_media.GetMediaResult(), self._comparison_media.GetMediaResult(), self._they_are_pixel_duplicates )
+            
+        
+        def work_callable( args ):
+            
+            ( current_media_result, comparison_media_result, they_are_pixel_duplicates ) = args
+            
+            statements_and_scores = ClientDuplicates.GetDuplicateComparisonStatementsSlow( current_media_result, comparison_media_result, they_are_pixel_duplicates )
             
             return statements_and_scores
             
@@ -2516,91 +2575,108 @@ class CanvasHoverFrameRightDuplicates( CanvasHoverFrame ):
             
             statements_and_scores = result
             
-            total_score = sum( ( score for ( statement, score ) in statements_and_scores.values() ) )
+            self._total_score_slow = sum( ( score for ( statement, score ) in statements_and_scores.values() ) )
             
-            if total_score > 0:
-                
-                text = 'score: +' + HydrusNumbers.ToHumanInt( total_score )
-                object_name = 'HydrusValid'
-                
-            elif total_score < 0:
-                
-                text = 'score: ' + HydrusNumbers.ToHumanInt( total_score )
-                object_name = 'HydrusInvalid'
-                
-            else:
-                
-                text = 'no score difference'
-                object_name = 'HydrusIndeterminate'
-                
+            self._UpdateTotalScore( finished = True )
             
-            self._comparison_statement_score_summary.setText( text )
-            
-            self._comparison_statement_score_summary.setObjectName( object_name )
-            
-            self._comparison_statement_score_summary.style().polish( self._comparison_statement_score_summary )
-            
-            for name in self._comparison_statement_names:
-                
-                ( panel, st ) = self._comparison_statements_sts[ name ]
-                
-                got_data = name in statements_and_scores
-                
-                show_panel = got_data
-                
-                panel.setVisible( show_panel )
-                
-                if got_data:
-                    
-                    ( statement, score ) = statements_and_scores[ name ]
-                    
-                    st.setText( statement )
-                    
-                    if score > 0:
-                        
-                        object_name = 'HydrusValid'
-                        
-                    elif score < 0:
-                        
-                        object_name = 'HydrusInvalid'
-                        
-                    else:
-                        
-                        object_name = 'HydrusIndeterminate'
-                        
-                    
-                    st.setObjectName( object_name )
-                    
-                    st.style().polish( st )
-                    
-                    if name == 'a_and_b_are_visual_duplicates':
-                        
-                        tt = f'{statement}\n\nThis uses a custom visual inspection algorithm to try to differentiate resizes/re-encodes vs recolours/alternates. It is pretty good and you can generally trust it. On edge cases, it intentionally errs on the side of false negative.'
-                        st.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
-                        
-                    else:
-                        
-                        st.setToolTip( ClientGUIFunctions.WrapToolTip( statement ) )
-                        
-                    
-                
-                # hackery dackery doo
-                st.updateGeometry()
-                panel.updateGeometry()
-                
-            
-            # some more hackery dackery doo, along with the updateGeometry forced calls above
-            # might be able to remove this if and when the layout chain here is cleaned up all the way to the window()
-            self._comparison_statements_vbox.invalidate()
-            self._comparison_statements_vbox.activate()
-            
-            # minimumsize is not immediately updated without this
-            self.layout().activate()
-            
-            self._SizeAndPosition()
+            self._PopulateStatements( statements_and_scores, self._comparison_statement_names_slow )
             
         
         return ClientGUIAsync.AsyncQtUpdater( self, loading_callable, work_callable, publish_callable, pre_work_callable = pre_work_callable )
+        
+    
+    def _PopulateStatements( self, statements_and_scores, names ):
+        
+        for name in names:
+            
+            ( panel, st ) = self._comparison_statements_sts[ name ]
+            
+            got_data = name in statements_and_scores
+            
+            show_panel = got_data
+            
+            panel.setVisible( show_panel )
+            
+            if got_data:
+                
+                ( statement, score ) = statements_and_scores[ name ]
+                
+                st.setText( statement )
+                
+                if score > 0:
+                    
+                    object_name = 'HydrusValid'
+                    
+                elif score < 0:
+                    
+                    object_name = 'HydrusInvalid'
+                    
+                else:
+                    
+                    object_name = 'HydrusIndeterminate'
+                    
+                
+                st.setObjectName( object_name )
+                
+                st.style().polish( st )
+                
+                if name == 'a_and_b_are_visual_duplicates':
+                    
+                    tt = f'{statement}\n\nThis uses a custom visual inspection algorithm to try to differentiate resizes/re-encodes vs recolours/alternates. It is pretty good and you can generally trust it. On edge cases, it intentionally errs on the side of false negative.'
+                    st.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
+                    
+                else:
+                    
+                    st.setToolTip( ClientGUIFunctions.WrapToolTip( statement ) )
+                    
+                
+            
+            # hackery dackery doo
+            st.updateGeometry()
+            panel.updateGeometry()
+            
+        
+        # some more hackery dackery doo, along with the updateGeometry forced calls above
+        # might be able to remove this if and when the layout chain here is cleaned up all the way to the window()
+        self._comparison_statements_vbox.invalidate()
+        self._comparison_statements_vbox.activate()
+        
+        # minimumsize is not immediately updated without this
+        self.layout().activate()
+        
+        self._SizeAndPosition()
+        
+    
+    def _UpdateTotalScore( self, finished = True ):
+        
+        total_score = self._total_score_fast + self._total_score_slow
+        
+        if total_score > 0:
+            
+            text = 'score: +' + HydrusNumbers.ToHumanInt( total_score )
+            object_name = 'HydrusValid'
+            
+        elif total_score < 0:
+            
+            text = 'score: ' + HydrusNumbers.ToHumanInt( total_score )
+            object_name = 'HydrusInvalid'
+            
+        else:
+            
+            text = 'no score difference'
+            object_name = 'HydrusIndeterminate'
+            
+        
+        if not finished:
+            
+            text += HC.UNICODE_ELLIPSIS
+            
+        
+        self._comparison_statement_score_summary.setText( text )
+        
+        self._comparison_statement_score_summary.setObjectName( object_name )
+        
+        self._comparison_statement_score_summary.style().polish( self._comparison_statement_score_summary )
         
     
     def SetDuplicatePair( self, canvas_key, shown_media, comparison_media ):
@@ -2610,9 +2686,13 @@ class CanvasHoverFrameRightDuplicates( CanvasHoverFrame ):
             self._current_media = shown_media
             self._comparison_media = comparison_media
             
+            self._total_score_fast = 0
+            self._total_score_slow = 0
+            self._they_are_pixel_duplicates = False
+            
             self._EnableDisableButtons()
             
-            self._comparison_statement_updater.update()
+            self._comparison_statement_updater_fast.update()
             
             # minimumsize is not immediately updated without this
             self.layout().activate()

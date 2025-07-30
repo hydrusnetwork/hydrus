@@ -8,6 +8,7 @@ from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusLists
 
 from hydrus.client import ClientGlobals as CG
 from hydrus.client.networking import ClientNetworkingBandwidth
@@ -108,7 +109,7 @@ class NetworkEngine( object ):
             
             self._domains_to_login.extend( domains_to_login )
             
-            self._domains_to_login = HydrusData.DedupeList( self._domains_to_login )
+            self._domains_to_login = HydrusLists.DedupeList( self._domains_to_login )
             
         
     

@@ -184,7 +184,14 @@ def AppendMenuOrItem( menu, submenu_name, menu_tuples, sort_tuples = True ):
         
         label = '{}{}'.format( item_prefix, label )
         
-        AppendMenuItem( submenu, label, description, call )
+        if call is None:
+            
+            AppendMenuLabel( submenu, label, description )
+            
+        else:
+            
+            AppendMenuItem( submenu, label, description, call )
+            
         
     
 def AppendSeparator( menu ):

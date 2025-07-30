@@ -13,6 +13,7 @@ from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusLists
 from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusTags
 from hydrus.core import HydrusTime
@@ -1549,8 +1550,8 @@ class SidebarPetitions( ClientGUISidebarCore.Sidebar ):
                 
             
         
-        copyable_items_a = HydrusData.DedupeList( copyable_items_a )
-        copyable_items_b = HydrusData.DedupeList( copyable_items_b )
+        copyable_items_a = HydrusLists.DedupeList( copyable_items_a )
+        copyable_items_b = HydrusLists.DedupeList( copyable_items_b )
         
         if len( copyable_items_a ) + len( copyable_items_b ) > 0:
             

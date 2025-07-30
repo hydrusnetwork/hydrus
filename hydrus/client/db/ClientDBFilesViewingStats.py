@@ -4,6 +4,7 @@ import typing
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
+from hydrus.core import HydrusLists
 from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
@@ -134,7 +135,7 @@ class ClientDBFilesViewingStats( ClientDBModule.ClientDBModule ):
             
         else:
             
-            canvas_type_predicate = f'canvas_type in {HydrusData.SplayListForDB( desired_canvas_types )}'
+            canvas_type_predicate = f'canvas_type in {HydrusLists.SplayListForDB( desired_canvas_types )}'
             
             group_by_phrase = ' GROUP BY hash_id'
             

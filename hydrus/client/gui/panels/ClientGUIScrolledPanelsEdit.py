@@ -2239,7 +2239,7 @@ class EditURLsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPane
             normalised_urls.extend( weird_urls )
             
         
-        normalised_urls = HydrusData.DedupeList( normalised_urls )
+        normalised_urls = HydrusLists.DedupeList( normalised_urls )
         
         for normalised_url in normalised_urls:
             

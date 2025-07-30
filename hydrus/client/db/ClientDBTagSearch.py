@@ -553,7 +553,7 @@ class ClientDBTagSearch( ClientDBModule.ClientDBModule ):
             
             domain_is_cross_referenced = leaf.file_service_id != self.modules_services.combined_deleted_file_service_id
             
-            for group_of_tag_ids in HydrusData.SplitIteratorIntoChunks( tag_ids, 1000 ):
+            for group_of_tag_ids in HydrusLists.SplitIteratorIntoChunks( tag_ids, 1000 ):
                 
                 if job_status is not None and job_status.IsCancelled():
                     
@@ -1329,7 +1329,7 @@ class ClientDBTagSearch( ClientDBModule.ClientDBModule ):
             
             domain_is_cross_referenced = leaf.file_service_id != self.modules_services.combined_deleted_file_service_id
             
-            for group_of_tag_ids in HydrusData.SplitIteratorIntoChunks( tag_ids, 1000 ):
+            for group_of_tag_ids in HydrusLists.SplitIteratorIntoChunks( tag_ids, 1000 ):
                 
                 if job_status is not None and job_status.IsCancelled():
                     

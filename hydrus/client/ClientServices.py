@@ -12,6 +12,7 @@ from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusLists
 from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTags
@@ -2177,8 +2178,8 @@ class ServiceRepository( ServiceRestricted ):
                     
                     if HC.CONTENT_TYPE_MAPPINGS in content_types:
                         
-                        iterator_dict[ 'new_mappings' ] = HydrusData.SmoothOutMappingIterator( content_update.GetNewMappings(), 50 )
-                        iterator_dict[ 'deleted_mappings' ] = HydrusData.SmoothOutMappingIterator( content_update.GetDeletedMappings(), 50 )
+                        iterator_dict[ 'new_mappings' ] = HydrusLists.SmoothOutMappingIterator( content_update.GetNewMappings(), 50 )
+                        iterator_dict[ 'deleted_mappings' ] = HydrusLists.SmoothOutMappingIterator( content_update.GetDeletedMappings(), 50 )
                         
                     
                     if HC.CONTENT_TYPE_TAG_PARENTS in content_types:

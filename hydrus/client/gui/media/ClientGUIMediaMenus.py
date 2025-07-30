@@ -672,69 +672,91 @@ def AddKnownURLsViewCopyMenu( win: QW.QWidget, command_processor: CAC.Applicatio
     ClientGUIMenus.AppendMenu( menu, urls_menu, 'urls' )
     
 
-def AddLocalFilesMoveAddToMenu( win: QW.QWidget, menu: QW.QMenu, local_duplicable_to_file_service_keys: collections.abc.Collection[ bytes ], local_moveable_from_and_to_file_service_keys: collections.abc.Collection[ tuple[ bytes, bytes ] ], multiple_selected: bool, process_application_command_call ):
+def AddLocalFilesMoveAddToMenu( win: QW.QWidget, menu: QW.QMenu, local_file_service_keys: collections.Counter[ bytes ], local_duplicable_to_file_service_keys: collections.Counter[ bytes ], local_movable_from_and_to_file_service_keys: collections.Counter[ tuple[ bytes, bytes ] ], local_mergable_from_and_to_file_service_keys: collections.Counter[ tuple[ bytes, bytes ] ], multiple_selected: bool, process_application_command_call ):
     
-    if len( local_duplicable_to_file_service_keys ) == 0 and len( local_moveable_from_and_to_file_service_keys ) == 0:
+    if len( local_file_service_keys ) > 0:
         
-        return
+        menu_tuples = []
+        
+        for ( s_k, count ) in local_file_service_keys.items():
+            
+            label = f'{CG.client_controller.services_manager.GetName( s_k )} ({HydrusNumbers.ToHumanInt(count)} files)'
+            description = label
+            call = None
+            
+            menu_tuples.append( ( label, description, call ) )
+            
+        
+        submenu_name = 'currently in'
+        
+        ClientGUIMenus.AppendMenuOrItem( menu, submenu_name, menu_tuples )
         
     
     if len( local_duplicable_to_file_service_keys ) > 0:
         
         menu_tuples = []
         
-        for s_k in local_duplicable_to_file_service_keys:
+        for ( s_k, count ) in local_duplicable_to_file_service_keys.items():
             
             application_command = CAC.ApplicationCommand(
                 command_type = CAC.APPLICATION_COMMAND_TYPE_CONTENT,
                 data = ( s_k, HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ADD, None )
             )
             
-            label = CG.client_controller.services_manager.GetName( s_k )
+            label = f'{CG.client_controller.services_manager.GetName( s_k )} ({HydrusNumbers.ToHumanInt(count)} files)'
             description = 'Duplicate the files to this local file service.'
             call = HydrusData.Call( process_application_command_call, application_command )
             
             menu_tuples.append( ( label, description, call ) )
             
         
-        if multiple_selected:
-            
-            submenu_name = 'add selected to'
-            
-        else:
-            
-            submenu_name = 'add to'
-            
+        submenu_name = 'add to'
         
         ClientGUIMenus.AppendMenuOrItem( menu, submenu_name, menu_tuples )
         
     
-    if len( local_moveable_from_and_to_file_service_keys ) > 0:
+    if len( local_mergable_from_and_to_file_service_keys ) > 0:
         
         menu_tuples = []
         
-        for ( source_s_k, dest_s_k ) in local_moveable_from_and_to_file_service_keys:
+        for ( ( source_s_k, dest_s_k ), count ) in local_mergable_from_and_to_file_service_keys.items():
+            
+            application_command = CAC.ApplicationCommand(
+                command_type = CAC.APPLICATION_COMMAND_TYPE_CONTENT,
+                data = ( dest_s_k, HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_MOVE_MERGE, source_s_k )
+            )
+            
+            label = f'from {CG.client_controller.services_manager.GetName( source_s_k )} to {CG.client_controller.services_manager.GetName( dest_s_k )} ({HydrusNumbers.ToHumanInt(count)} files)'
+            description = 'Add the files to the destination and delete from the source. Works when files are already in the destination.'
+            call = HydrusData.Call( process_application_command_call, application_command )
+            
+            menu_tuples.append( ( label, description, call ) )
+            
+        
+        submenu_name = 'move (merge)'
+        
+        ClientGUIMenus.AppendMenuOrItem( menu, submenu_name, menu_tuples )
+        
+    
+    if len( local_movable_from_and_to_file_service_keys ) > 0:
+        
+        menu_tuples = []
+        
+        for ( ( source_s_k, dest_s_k ), count ) in local_movable_from_and_to_file_service_keys.items():
             
             application_command = CAC.ApplicationCommand(
                 command_type = CAC.APPLICATION_COMMAND_TYPE_CONTENT,
                 data = ( dest_s_k, HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_MOVE, source_s_k )
             )
             
-            label = 'from {} to {}'.format( CG.client_controller.services_manager.GetName( source_s_k ), CG.client_controller.services_manager.GetName( dest_s_k ) )
-            description = 'Add the files to the destination and delete from the source.'
+            label = f'from {CG.client_controller.services_manager.GetName( source_s_k )} to {CG.client_controller.services_manager.GetName( dest_s_k )} ({HydrusNumbers.ToHumanInt(count)} files)'
+            description = 'Add the files to the destination and delete from the source. Only works on files not already in the destination.'
             call = HydrusData.Call( process_application_command_call, application_command )
             
             menu_tuples.append( ( label, description, call ) )
             
         
-        if multiple_selected:
-            
-            submenu_name = 'move selected'
-            
-        else:
-            
-            submenu_name = 'move'
-            
+        submenu_name = 'move (strict)'
         
         ClientGUIMenus.AppendMenuOrItem( menu, submenu_name, menu_tuples )
         

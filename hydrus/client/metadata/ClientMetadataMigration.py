@@ -1,7 +1,7 @@
 import collections.abc
 import typing
 
-from hydrus.core import HydrusData
+from hydrus.core import HydrusLists
 from hydrus.core import HydrusSerialisable
 
 from hydrus.client import ClientStrings
@@ -220,7 +220,7 @@ class SingleFileMetadataRouter( HydrusSerialisable.SerialisableBase ):
                 
             
         
-        rows = HydrusData.DedupeList( rows )
+        rows = HydrusLists.DedupeList( rows )
         
         rows = self._string_processor.ProcessStrings( starting_strings = rows )
         

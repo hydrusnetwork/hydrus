@@ -6,6 +6,7 @@ import typing
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusLists
 from hydrus.core import HydrusTags
 from hydrus.core import HydrusText
 from hydrus.core import HydrusTime
@@ -800,7 +801,7 @@ class ParsedPost( object ):
                 
             
         
-        url_list = HydrusData.DedupeList( url_list )
+        url_list = HydrusLists.DedupeList( url_list )
         
         return url_list
         

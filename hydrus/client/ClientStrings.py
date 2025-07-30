@@ -9,8 +9,8 @@ import typing
 import urllib.parse
 
 from hydrus.core import HydrusConstants as HC
-from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusLists
 from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTags
@@ -651,7 +651,7 @@ class StringJoiner( StringProcessingStep ):
                 
             else:
                 
-                for chunk_of_texts in HydrusData.SplitIteratorIntoChunks( texts, self._join_tuple_size ):
+                for chunk_of_texts in HydrusLists.SplitIteratorIntoChunks( texts, self._join_tuple_size ):
                     
                     if len( chunk_of_texts ) == self._join_tuple_size:
                         

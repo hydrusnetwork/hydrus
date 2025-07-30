@@ -2,9 +2,9 @@ import itertools
 import sqlite3
 
 from hydrus.core import HydrusConstants as HC
-from hydrus.core import HydrusData
 from hydrus.core import HydrusDBBase
 from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusLists
 from hydrus.core import HydrusTags
 from hydrus.core import HydrusTime
 
@@ -501,8 +501,6 @@ class ClientDBContentUpdates( ClientDBModule.ClientDBModule ):
                                 
                             elif action in ( HC.CONTENT_UPDATE_DELETE, HC.CONTENT_UPDATE_DELETE_FROM_SOURCE_AFTER_MIGRATE ):
                                 
-                                actual_delete_hash_ids = hash_ids
-                                
                                 if action == HC.CONTENT_UPDATE_DELETE and service_key in ( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, CC.TRASH_SERVICE_KEY ):
                                     
                                     local_hash_ids = self.modules_files_storage.FilterHashIds( ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_FILE_SERVICE_KEY ), hash_ids )
@@ -620,7 +618,7 @@ class ClientDBContentUpdates( ClientDBModule.ClientDBModule ):
                             
                             hash_ids = self.modules_hashes_local_cache.GetHashIds( hashes )
                             
-                            result = self._Execute( 'SELECT SUM( size ) FROM files_info WHERE hash_id IN ' + HydrusData.SplayListForDB( hash_ids ) + ';' ).fetchone()
+                            result = self._Execute( 'SELECT SUM( size ) FROM files_info WHERE hash_id IN ' + HydrusLists.SplayListForDB( hash_ids ) + ';' ).fetchone()
                             
                             total_size = self._GetSumResult( result )
                             

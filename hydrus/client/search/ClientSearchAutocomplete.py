@@ -1,7 +1,7 @@
 import collections.abc
 import re
 
-from hydrus.core import HydrusData
+from hydrus.core import HydrusLists
 from hydrus.core import HydrusTags
 
 from hydrus.client.metadata import ClientTagsHandling
@@ -295,7 +295,7 @@ class ParsedAutocompleteText( object ):
                     search_texts.append( self._GetSearchText( False, allow_auto_wildcard_conversion = allow_unnamespaced_search_gives_any_namespace_wildcards, force_do_not_collapse = True ) )
                     
                 
-                search_texts = HydrusData.DedupeList( search_texts )
+                search_texts = HydrusLists.DedupeList( search_texts )
                 
                 predicates.extend( ( ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_WILDCARD, search_text, self.inclusive ) for search_text in search_texts ) )
                 

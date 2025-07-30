@@ -4,8 +4,9 @@ import itertools
 import typing
 
 from hydrus.core import HydrusConstants as HC
-from hydrus.core import HydrusPaths
 from hydrus.core import HydrusData
+from hydrus.core import HydrusLists
+from hydrus.core import HydrusPaths
 from hydrus.core.files.images import HydrusImageHandling
 
 from hydrus.client import ClientApplicationCommand as CAC
@@ -214,8 +215,9 @@ def GetLocalFileActionServiceKeys( media: collections.abc.Collection[ ClientMedi
     
     local_media_file_service_keys = set( CG.client_controller.services_manager.GetServiceKeys( ( HC.LOCAL_FILE_DOMAIN, ) ) )
     
-    local_duplicable_to_file_service_keys = set()
-    local_moveable_from_and_to_file_service_keys = set()
+    local_duplicable_to_file_service_keys = collections.Counter()
+    local_moveable_from_and_to_file_service_keys = collections.Counter()
+    local_mergable_from_and_to_file_service_keys = collections.Counter()
     
     for m in media:
         
@@ -234,15 +236,18 @@ def GetLocalFileActionServiceKeys( media: collections.abc.Collection[ ClientMedi
                 
                 if len( can_send_from ) > 0:
                     
-                    # can_send_from does not include trash. we won't say 'move from trash to blah' since that's a little complex. we'll just say 'add to blah' in that case I think
-                    
                     local_moveable_from_and_to_file_service_keys.update( list( itertools.product( can_send_from, can_send_to ) ) )
                     
                 
             
+            if len( can_send_from ) > 0:
+                
+                local_mergable_from_and_to_file_service_keys.update( [ ( f, t ) for ( f, t ) in itertools.product( can_send_from, local_media_file_service_keys ) if f != t ] )
+                
+            
         
     
-    return ( local_duplicable_to_file_service_keys, local_moveable_from_and_to_file_service_keys )
+    return ( local_duplicable_to_file_service_keys, local_moveable_from_and_to_file_service_keys, local_mergable_from_and_to_file_service_keys )
     
 
 def OpenExternally( media: typing.Optional[ ClientMedia.MediaSingleton ] ) -> bool:
@@ -425,7 +430,7 @@ def UndeleteFiles( hashes ):
     
     local_file_service_keys = CG.client_controller.services_manager.GetServiceKeys( ( HC.LOCAL_FILE_DOMAIN, ) )
     
-    for chunk_of_hashes in HydrusData.SplitIteratorIntoChunks( hashes, 64 ):
+    for chunk_of_hashes in HydrusLists.SplitIteratorIntoChunks( hashes, 64 ):
         
         media_results = CG.client_controller.Read( 'media_results', chunk_of_hashes )
         

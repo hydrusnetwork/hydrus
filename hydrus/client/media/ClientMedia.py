@@ -92,6 +92,22 @@ def GetBlurhashToSortableCall( sort_data: int ):
     return sort_data_to_blurhash_to_sortable_calls.get( sort_data, HydrusBlurhash.ConvertBlurhashToSortableLightness )
     
 
+def GetLocalFileServiceKeys( flat_medias: collections.abc.Collection[ "MediaSingleton" ] ):
+    
+    local_media_file_service_keys = set( CG.client_controller.services_manager.GetServiceKeys( ( HC.LOCAL_FILE_DOMAIN, ) ) )
+    
+    local_file_service_keys_counter = collections.Counter()
+    
+    for m in flat_medias:
+        
+        locations_manager = m.GetLocationsManager()
+        
+        local_file_service_keys_counter.update( local_media_file_service_keys.intersection( locations_manager.GetCurrent() ) )
+        
+    
+    return local_file_service_keys_counter
+    
+
 def GetMediasTags( pool, tag_service_key, tag_display_type, content_statuses ):
     
     tags_managers = []

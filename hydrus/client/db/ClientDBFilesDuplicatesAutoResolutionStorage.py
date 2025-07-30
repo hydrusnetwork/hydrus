@@ -390,7 +390,7 @@ class ClientDBFilesDuplicatesAutoResolutionStorage( ClientDBModule.ClientDBModul
             result = self._Execute( f'SELECT smaller_media_id, larger_media_id, distance FROM {table_name} CROSS JOIN potential_duplicate_pairs USING ( smaller_media_id, larger_media_id ) LIMIT ?;', ( limit, ) ).fetchall()
             
         
-        return ClientPotentialDuplicatesSearchContext.PotentialDuplicatePairsAndDistances( result )
+        return ClientPotentialDuplicatesSearchContext.PotentialDuplicateIdPairsAndDistances( result )
         
     
     def GetTablesAndColumnsThatUseDefinitions( self, content_type: int ) -> list[ tuple[ str, str ] ]:

@@ -5,6 +5,7 @@ from qtpy import QtWidgets as QW
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusLists
 from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusText
@@ -108,7 +109,7 @@ def ImportFromPNG( win: QW.QWidget, gallery_seed_log: ClientImportGallerySeeds.G
     
 def ImportURLs( win: QW.QWidget, gallery_seed_log: ClientImportGallerySeeds.GallerySeedLog, urls, can_generate_more_pages: bool ):
     
-    urls = HydrusData.DedupeList( urls )
+    urls = HydrusLists.DedupeList( urls )
     
     filtered_urls = [ url for url in urls if not gallery_seed_log.HasGalleryURL( url ) ]
     

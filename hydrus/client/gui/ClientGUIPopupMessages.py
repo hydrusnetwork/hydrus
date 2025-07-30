@@ -11,6 +11,7 @@ from qtpy import QtWidgets as QW
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusLists
 from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusTime
 
@@ -792,7 +793,7 @@ class JobStatusPopupQueue( object ):
                             
                             new_hashes.extend( hashes )
                             
-                            new_hashes = HydrusData.DedupeList( new_hashes )
+                            new_hashes = HydrusLists.DedupeList( new_hashes )
                             
                             existing_job_status.SetFiles( new_hashes, existing_label )
                             

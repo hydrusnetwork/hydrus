@@ -1983,6 +1983,18 @@ class TagsManager( object ):
             
         
     
+    def GetTags( self, service_key, tag_display_type, status ):
+        
+        with self._lock:
+            
+            service_keys_to_statuses_to_tags = self._GetServiceKeysToStatusesToTags( tag_display_type )
+            
+            statuses_to_tags = service_keys_to_statuses_to_tags[ service_key ]
+            
+            return statuses_to_tags[ status ]
+            
+        
+    
     def HasTag( self, tag, tag_display_type ):
         
         with self._lock:

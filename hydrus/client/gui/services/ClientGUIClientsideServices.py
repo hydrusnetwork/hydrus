@@ -8,6 +8,7 @@ from qtpy import QtGui as QG
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusLists
 from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusPaths
 from hydrus.core import HydrusSerialisable
@@ -4009,7 +4010,7 @@ class ReviewServiceTrashSubPanel( ClientGUICommon.StaticBox ):
                 
                 hashes = CG.client_controller.Read( 'trash_hashes' )
                 
-                for group_of_hashes in HydrusData.SplitIteratorIntoChunks( hashes, 16 ):
+                for group_of_hashes in HydrusLists.SplitIteratorIntoChunks( hashes, 16 ):
                     
                     content_update = ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, group_of_hashes )
                     

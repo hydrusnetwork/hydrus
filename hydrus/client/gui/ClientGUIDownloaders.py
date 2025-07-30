@@ -2318,6 +2318,8 @@ class EditURLClassesPanel( ClientGUIScrolledPanels.EditPanel ):
         
         super().__init__( parent )
         
+        self._fake_domain_manager_for_url_class_tests = None
+        
         menu_items = []
         
         call = HydrusData.Call( ClientGUIDialogsQuick.OpenDocumentation, self, HC.DOCUMENTATION_DOWNLOADER_URL_CLASSES )
@@ -2404,6 +2406,8 @@ class EditURLClassesPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._list_ctrl.AddData( url_class, select_sort_and_scroll = select_sort_and_scroll )
         
+        self._fake_domain_manager_for_url_class_tests = None
+        
         self._changes_made = True
         
     
@@ -2458,6 +2462,8 @@ class EditURLClassesPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 self._list_ctrl.ReplaceData( url_class, edited_url_class, sort_and_scroll = True )
                 
+                self._fake_domain_manager_for_url_class_tests = None
+                
                 self._changes_made = True
                 
             
@@ -2472,6 +2478,17 @@ class EditURLClassesPanel( ClientGUIScrolledPanels.EditPanel ):
         return names
         
     
+    def _InitialiseFakeDomainManager( self ):
+        
+        self._fake_domain_manager_for_url_class_tests = ClientNetworkingDomain.NetworkDomainManager()
+        
+        self._fake_domain_manager_for_url_class_tests.Initialise()
+        
+        url_classes = self.GetValue()
+        
+        self._fake_domain_manager_for_url_class_tests.SetURLClasses( url_classes )
+        
+    
     def _UpdateURLClassCheckerText( self ):
         
         unclean_url = self._url_class_checker.text()
@@ -2484,17 +2501,14 @@ class EditURLClassesPanel( ClientGUIScrolledPanels.EditPanel ):
             
             url = ClientNetworkingFunctions.EnsureURLIsEncoded( unclean_url )
             
-            url_classes = self.GetValue()
-            
-            domain_manager = ClientNetworkingDomain.NetworkDomainManager()
-            
-            domain_manager.Initialise()
-            
-            domain_manager.SetURLClasses( url_classes )
-            
             try:
                 
-                url_class = domain_manager.GetURLClass( url )
+                if self._fake_domain_manager_for_url_class_tests is None:
+                    
+                    self._InitialiseFakeDomainManager()
+                    
+                
+                url_class = self._fake_domain_manager_for_url_class_tests.GetURLClass( url )
                 
                 if url_class is None:
                     
@@ -2505,7 +2519,7 @@ class EditURLClassesPanel( ClientGUIScrolledPanels.EditPanel ):
                     text = 'Matches "' + url_class.GetName() + '"'
                     
                     self._list_ctrl.SelectDatas( ( url_class, ), deselect_others = True )
-                    self._list_ctrl.ScrollToData( url_class )
+                    self._list_ctrl.ScrollToData( url_class, do_focus = False )
                     
                 
             except HydrusExceptions.URLClassException as e:

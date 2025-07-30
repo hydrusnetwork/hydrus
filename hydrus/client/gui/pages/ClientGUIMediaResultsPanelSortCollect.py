@@ -833,7 +833,7 @@ class MediaSortControl( QW.QWidget ):
             
         else:
             
-            tt = 'This sort type is too complicated to perform before media results are loaded, so if your search has a "system:limit is n", your n "limited" results will be a random sample.'
+            tt = 'This sort type is too complicated to perform before media results are loaded, so if your search has a "system:limit is n", your n "limited" results will be sampled randomly.'
             
         
         wrapped_tt = ClientGUIFunctions.WrapToolTip( tt )

@@ -1,4 +1,5 @@
 import collections
+import random
 import typing
 
 from hydrus.core import HydrusSerialisable
@@ -8,25 +9,18 @@ from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientLocation
 from hydrus.client.duplicates import ClientDuplicates
+from hydrus.client.media import ClientMediaResult
 
 from hydrus.client.search import ClientSearchFileSearchContext
 from hydrus.client.search import ClientSearchPredicate
 
-def FilterPotentialPairsToWiderPotentialGroup( potential_pairs_and_distances, smaller_media_id, larger_media_id ):
-    
-    # ok, the caller wants to process a 'whole group' of similar files all at once, so let's get them all
-    # given this pair, what are all the other pairs these two files have? what are all the potentials those files have? keep searching until the whole network is mapped
-    
-    pass
-    
-
 POTENTIAL_DUPLICATE_PAIRS_BLOCK_SIZE = 4096
 
-class PotentialDuplicatePairsAndDistances( object ):
+class PotentialDuplicateIdPairsAndDistances( object ):
     
-    def __init__( self, potential_pairs_and_distances: collections.abc.Collection[ tuple[ int, int, int ] ] ):
+    def __init__( self, potential_id_pairs_and_distances: collections.abc.Collection[ tuple[ int, int, int ] ] ):
         
-        self._potential_pairs_and_distances = list( potential_pairs_and_distances )
+        self._potential_id_pairs_and_distances = list( potential_id_pairs_and_distances )
         
         self._media_ids_to_other_media_ids_and_distances = collections.defaultdict( list )
         self._mapping_initialised = False
@@ -34,12 +28,12 @@ class PotentialDuplicatePairsAndDistances( object ):
     
     def __len__( self ):
         
-        return len( self._potential_pairs_and_distances )
+        return len( self._potential_id_pairs_and_distances )
         
     
     def _InitialiseMapping( self ):
         
-        for ( smaller_media_id, larger_media_id, distance ) in self._potential_pairs_and_distances:
+        for ( smaller_media_id, larger_media_id, distance ) in self._potential_id_pairs_and_distances:
             
             self._media_ids_to_other_media_ids_and_distances[ smaller_media_id ].append( ( larger_media_id, distance ) )
             self._media_ids_to_other_media_ids_and_distances[ larger_media_id ].append( ( smaller_media_id, distance ) )
@@ -48,9 +42,9 @@ class PotentialDuplicatePairsAndDistances( object ):
         self._mapping_initialised = True
         
     
-    def Duplicate( self ) -> "PotentialDuplicatePairsAndDistances":
+    def Duplicate( self ) -> "PotentialDuplicateIdPairsAndDistances":
         
-        return PotentialDuplicatePairsAndDistances( self._potential_pairs_and_distances )
+        return PotentialDuplicateIdPairsAndDistances( self._potential_id_pairs_and_distances )
         
     
     def FilterWiderPotentialGroup( self, media_id ):
@@ -86,20 +80,20 @@ class PotentialDuplicatePairsAndDistances( object ):
                 
             
         
-        return PotentialDuplicatePairsAndDistances( rows_found )
+        return PotentialDuplicateIdPairsAndDistances( rows_found )
         
     
     def IterateBlocks( self ):
         
-        for block in HydrusLists.SplitListIntoChunks( self._potential_pairs_and_distances, POTENTIAL_DUPLICATE_PAIRS_BLOCK_SIZE ):
+        for block in HydrusLists.SplitListIntoChunks( self._potential_id_pairs_and_distances, POTENTIAL_DUPLICATE_PAIRS_BLOCK_SIZE ):
             
-            yield PotentialDuplicatePairsAndDistances( block )
+            yield PotentialDuplicateIdPairsAndDistances( block )
             
         
     
     def IteratePairs( self ):
         
-        for ( smaller_media_id, larger_media_id, distance ) in self._potential_pairs_and_distances:
+        for ( smaller_media_id, larger_media_id, distance ) in self._potential_id_pairs_and_distances:
             
             yield ( smaller_media_id, larger_media_id )
             
@@ -107,14 +101,14 @@ class PotentialDuplicatePairsAndDistances( object ):
     
     def GetPairs( self ) -> list[ tuple[ int, int ] ]:
         
-        return [ ( smaller_media_id, larger_media_id ) for ( smaller_media_id, larger_media_id, distance ) in self._potential_pairs_and_distances ]
+        return [ ( smaller_media_id, larger_media_id ) for ( smaller_media_id, larger_media_id, distance ) in self._potential_id_pairs_and_distances ]
         
     
     def GetPairListsBySmallestDistanceFirst( self ) -> list[ list[ tuple[ int, int ] ] ]:
         
         distance_to_pairs = collections.defaultdict( list )
         
-        for ( smaller_media_id, larger_media_id, distance ) in self._potential_pairs_and_distances:
+        for ( smaller_media_id, larger_media_id, distance ) in self._potential_id_pairs_and_distances:
             
             distance_to_pairs[ distance ].append( ( smaller_media_id, larger_media_id ) )
             
@@ -126,23 +120,157 @@ class PotentialDuplicatePairsAndDistances( object ):
     
     def GetRows( self ):
         
-        return list( self._potential_pairs_and_distances )
+        return list( self._potential_id_pairs_and_distances )
+        
+    
+    def IterateRows( self ):
+        
+        return self._potential_id_pairs_and_distances.__iter__()
         
     
     def PopBlock( self ):
         
-        block_of_pairs_and_distances = self._potential_pairs_and_distances[ : POTENTIAL_DUPLICATE_PAIRS_BLOCK_SIZE ]
+        block_of_id_pairs_and_distances = self._potential_id_pairs_and_distances[ : POTENTIAL_DUPLICATE_PAIRS_BLOCK_SIZE ]
         
-        self._potential_pairs_and_distances = self._potential_pairs_and_distances[ POTENTIAL_DUPLICATE_PAIRS_BLOCK_SIZE : ]
+        self._potential_id_pairs_and_distances = self._potential_id_pairs_and_distances[ POTENTIAL_DUPLICATE_PAIRS_BLOCK_SIZE : ]
         
         self._mapping_initialised = False
         
-        return PotentialDuplicatePairsAndDistances( block_of_pairs_and_distances )
+        return PotentialDuplicateIdPairsAndDistances( block_of_id_pairs_and_distances )
         
     
     def RandomiseBlocks( self ):
         
-        self._potential_pairs_and_distances = HydrusLists.RandomiseListByChunks( self._potential_pairs_and_distances, POTENTIAL_DUPLICATE_PAIRS_BLOCK_SIZE )
+        self._potential_id_pairs_and_distances = HydrusLists.RandomiseListByChunks( self._potential_id_pairs_and_distances, POTENTIAL_DUPLICATE_PAIRS_BLOCK_SIZE )
+        
+    
+
+class PotentialDuplicateMediaResultPairsAndDistances( object ):
+    
+    def __init__( self, potential_media_result_pairs_and_distances: collections.abc.Collection[ tuple[ ClientMediaResult.MediaResult, ClientMediaResult.MediaResult, int ] ] ):
+        
+        self._potential_media_result_pairs_and_distances = list( potential_media_result_pairs_and_distances )
+        
+    
+    def __len__( self ):
+        
+        return len( self._potential_media_result_pairs_and_distances )
+        
+    
+    def AppendRow( self, row ):
+        
+        self._potential_media_result_pairs_and_distances.append( row )
+        
+    
+    def Duplicate( self ) -> "PotentialDuplicateMediaResultPairsAndDistances":
+        
+        return PotentialDuplicateMediaResultPairsAndDistances( self._potential_media_result_pairs_and_distances )
+        
+    
+    def IterateBlocks( self ):
+        
+        for block in HydrusLists.SplitListIntoChunks( self._potential_media_result_pairs_and_distances, POTENTIAL_DUPLICATE_PAIRS_BLOCK_SIZE ):
+            
+            yield PotentialDuplicateMediaResultPairsAndDistances( block )
+            
+        
+    
+    def IteratePairs( self ):
+        
+        for ( media_result_1, media_result_2, distance ) in self._potential_media_result_pairs_and_distances:
+            
+            yield ( media_result_1, media_result_2 )
+            
+        
+    
+    def IterateRows( self ):
+        
+        return self._potential_media_result_pairs_and_distances.__iter__()
+        
+    
+    def GetPairs( self ) -> list[ tuple[ ClientMediaResult.MediaResult, ClientMediaResult.MediaResult ] ]:
+        
+        return [ ( media_result_1, media_result_2 ) for ( media_result_1, media_result_2, distance ) in self._potential_media_result_pairs_and_distances ]
+        
+    
+    def GetRows( self ):
+        
+        return list( self._potential_media_result_pairs_and_distances )
+        
+    
+    def PopBlock( self ):
+        
+        block_of_media_result_pairs_and_distances = self._potential_media_result_pairs_and_distances[ : POTENTIAL_DUPLICATE_PAIRS_BLOCK_SIZE ]
+        
+        self._potential_media_result_pairs_and_distances = self._potential_media_result_pairs_and_distances[ POTENTIAL_DUPLICATE_PAIRS_BLOCK_SIZE : ]
+        
+        return PotentialDuplicateMediaResultPairsAndDistances( block_of_media_result_pairs_and_distances )
+        
+    
+    def RandomiseBlocks( self ):
+        
+        self._potential_media_result_pairs_and_distances = HydrusLists.RandomiseListByChunks( self._potential_media_result_pairs_and_distances, POTENTIAL_DUPLICATE_PAIRS_BLOCK_SIZE )
+        
+    
+    def Sort( self, duplicate_pair_sort_type: int, sort_asc: bool ):
+        
+        handle_invalid = lambda i: 1 if i is None or i == 0 else i
+        
+        if duplicate_pair_sort_type == ClientDuplicates.DUPE_PAIR_SORT_SIMILARITY:
+            
+            def sort_key( row: tuple[ ClientMediaResult.MediaResult, ClientMediaResult.MediaResult, int ] ):
+                
+                ( m_r_1, m_r_2, distance ) = row
+                
+                m_r_1_size = handle_invalid( m_r_1.GetSize() )
+                m_r_2_size = handle_invalid( m_r_2.GetSize() )
+                
+                return ( distance, max( m_r_1_size, m_r_2_size ) / min( m_r_1_size, m_r_2_size ) )
+                
+            
+        elif duplicate_pair_sort_type == ClientDuplicates.DUPE_PAIR_SORT_MAX_FILESIZE:
+            
+            def sort_key( row: tuple[ ClientMediaResult.MediaResult, ClientMediaResult.MediaResult, int ] ):
+                
+                ( m_r_1, m_r_2, distance ) = row
+                
+                m_r_1_size = handle_invalid( m_r_1.GetSize() )
+                m_r_2_size = handle_invalid( m_r_2.GetSize() )
+                
+                return ( max( m_r_1_size, m_r_2_size ), min( m_r_1_size, m_r_2_size ) )
+                
+            
+        elif duplicate_pair_sort_type == ClientDuplicates.DUPE_PAIR_SORT_MIN_FILESIZE:
+            
+            # what I would like auto-resolution to hook into, but I think it isn't easy to wangle
+            
+            def sort_key( row: tuple[ ClientMediaResult.MediaResult, ClientMediaResult.MediaResult, int ] ):
+                
+                ( m_r_1, m_r_2, distance ) = row
+                
+                m_r_1_size = handle_invalid( m_r_1.GetSize() )
+                m_r_2_size = handle_invalid( m_r_2.GetSize() )
+                
+                return ( min( m_r_1_size, m_r_2_size ), max( m_r_1_size, m_r_2_size ) )
+                
+            
+        elif duplicate_pair_sort_type == ClientDuplicates.DUPE_PAIR_SORT_RANDOM:
+            
+            random.shuffle( self._potential_media_result_pairs_and_distances )
+            
+            return
+            
+        else:
+            
+            raise NotImplementedError( 'Did not understand that duplicate sort!' )
+            
+        
+        self._potential_media_result_pairs_and_distances.sort( key = sort_key )
+        
+        if not sort_asc:
+            
+            self._potential_media_result_pairs_and_distances.reverse()
+            
         
     
 

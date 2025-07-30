@@ -9,7 +9,9 @@ from hydrus.core import HydrusNumbers
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
 from hydrus.client.duplicates import ClientDuplicates
+from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIDialogsQuick
+from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.canvas import ClientGUICanvas
@@ -137,13 +139,22 @@ class SidebarDuplicateFilter( ClientGUISidebarCore.Sidebar ):
         
         self._filtering_panel = ClientGUICommon.StaticBox( self._main_right_panel, 'duplicate filter' )
         
+        duplicate_pair_sort_type = page_manager.GetVariable( 'duplicate_pair_sort_type' )
+        duplicate_pair_sort_asc = page_manager.GetVariable( 'duplicate_pair_sort_asc' )
+        
+        self._potential_duplicates_sort_widget = ClientGUIPotentialDuplicatesSearchContext.PotentialDuplicatesSortWidget( self._filtering_panel, duplicate_pair_sort_type, duplicate_pair_sort_asc )
+        
+        self._potential_duplicates_sort_widget.valueChanged.connect( self._PotentialDuplicatesSortChanged )
+        
         self._launch_filter = ClientGUICommon.BetterButton( self._filtering_panel, 'launch the filter', self._LaunchFilter )
         
         #
         
         random_filtering_panel = ClientGUICommon.StaticBox( self._main_right_panel, 'quick and dirty processing' )
         
-        self._show_some_dupes = ClientGUICommon.BetterButton( random_filtering_panel, 'show some random potential pairs', self._ShowRandomPotentialDupes )
+        self._show_some_dupes = ClientGUICommon.BetterButton( random_filtering_panel, 'show some random potential duplicates', self._ShowRandomPotentialDupes )
+        tt = 'This will randomly select a file in the current pair search and show you all the directly or transitively potential files that are also in the same domain. Sometimes this will just be a pair, others it might be a hundred alternates, but they should all look similar.'
+        self._show_some_dupes.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
         
         self._set_random_as_same_quality_button = ClientGUICommon.BetterButton( random_filtering_panel, 'set current media as duplicates of the same quality', self._SetCurrentMediaAs, HC.DUPLICATE_SAME_QUALITY )
         self._set_random_as_alternates_button = ClientGUICommon.BetterButton( random_filtering_panel, 'set current media as all related alternates', self._SetCurrentMediaAs, HC.DUPLICATE_ALTERNATE )
@@ -158,8 +169,6 @@ class SidebarDuplicateFilter( ClientGUISidebarCore.Sidebar ):
         self._main_notebook.setCurrentWidget( self._main_right_panel )
         
         #
-        
-        self._media_sort_widget.hide()
         
         distance_hbox = QP.HBoxLayout()
         
@@ -199,8 +208,11 @@ class SidebarDuplicateFilter( ClientGUISidebarCore.Sidebar ):
         
         self._options_panel.Add( self._edit_merge_options, CC.FLAGS_EXPAND_PERPENDICULAR )
         
+        self._filtering_panel.Add( self._potential_duplicates_sort_widget, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._filtering_panel.Add( self._launch_filter, CC.FLAGS_EXPAND_PERPENDICULAR )
         
+        random_filtering_panel.Add( self._media_sort_widget, CC.FLAGS_EXPAND_PERPENDICULAR )
+        # random_filtering_panel.Add( self._media_collect_widget, CC.FLAGS_EXPAND_PERPENDICULAR ) # hidden for now
         random_filtering_panel.Add( self._show_some_dupes, CC.FLAGS_EXPAND_PERPENDICULAR )
         random_filtering_panel.Add( self._set_random_as_same_quality_button, CC.FLAGS_EXPAND_PERPENDICULAR )
         random_filtering_panel.Add( self._set_random_as_alternates_button, CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -280,9 +292,11 @@ class SidebarDuplicateFilter( ClientGUISidebarCore.Sidebar ):
         
         potential_duplicates_search_context = self._potential_duplicates_search_context.GetValue()
         
+        ( duplicate_pair_sort_type, duplicate_pair_sort_asc ) = self._potential_duplicates_sort_widget.GetValue()
+        
         canvas_frame = ClientGUICanvasFrame.CanvasFrame( self.window() )
         
-        canvas_window = ClientGUICanvas.CanvasFilterDuplicates( canvas_frame, potential_duplicates_search_context )
+        canvas_window = ClientGUICanvas.CanvasFilterDuplicates( canvas_frame, potential_duplicates_search_context, duplicate_pair_sort_type, duplicate_pair_sort_asc )
         
         canvas_window.showPairInPage.connect( self._ShowPairInPage )
         
@@ -315,6 +329,14 @@ class SidebarDuplicateFilter( ClientGUISidebarCore.Sidebar ):
         
         self.locationChanged.emit( potential_duplicates_search_context.GetFileSearchContext1().GetLocationContext() )
         self.tagContextChanged.emit( potential_duplicates_search_context.GetFileSearchContext1().GetTagContext() )
+        
+    
+    def _PotentialDuplicatesSortChanged( self ):
+        
+        ( duplicate_pair_sort_type, duplicate_pair_sort_asc ) = self._potential_duplicates_sort_widget.GetValue()
+        
+        self._page_manager.SetVariable( 'duplicate_pair_sort_type', duplicate_pair_sort_type )
+        self._page_manager.SetVariable( 'duplicate_pair_sort_asc', duplicate_pair_sort_asc )
         
     
     def _ResetUnknown( self ):
@@ -374,6 +396,10 @@ class SidebarDuplicateFilter( ClientGUISidebarCore.Sidebar ):
         
         panel.SetEmptyPageStatusOverride( 'no dupes found' )
         
+        # panel.Collect( self._media_collect_widget.GetValue() ) hidden for now
+        
+        panel.Sort( self._media_sort_widget.GetSort() )
+        
         self._page.SwapMediaResultsPanel( panel )
         
         self._page_state = CC.PAGE_STATE_NORMAL
@@ -388,6 +414,8 @@ class SidebarDuplicateFilter( ClientGUISidebarCore.Sidebar ):
         hashes = CG.client_controller.Read( 'random_potential_duplicate_hashes', potential_duplicates_search_context )
         
         if len( hashes ) == 0:
+            
+            ClientGUIDialogsMessage.ShowInformation( self, 'No potential files in this search!' )
             
             self._potential_duplicates_search_context.NotifyNewDupePairs()
             

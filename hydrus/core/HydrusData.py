@@ -4,8 +4,6 @@ import decimal
 import fractions
 import itertools
 import os
-import numpy
-import random
 import struct
 import sys
 import time
@@ -121,32 +119,6 @@ def DebugPrint( debug_info ):
     
     sys.stdout.flush()
     sys.stderr.flush()
-    
-
-def DedupeList( xs: collections.abc.Iterable ):
-    
-    if isinstance( xs, set ):
-        
-        return list( xs )
-        
-    
-    xs_seen = set()
-    
-    xs_return = []
-    
-    for x in xs:
-        
-        if x in xs_seen:
-            
-            continue
-            
-        
-        xs_return.append( x )
-        
-        xs_seen.add( x )
-        
-    
-    return xs_return
     
 
 def GenerateKey():
@@ -300,16 +272,6 @@ def IterateHexPrefixes():
         
     
 
-def IterateListRandomlyAndFast( xs: list ):
-    
-    # do this instead of a pre-for-loop shuffle on big lists
-    
-    for i in numpy.random.permutation( len( xs ) ):
-        
-        yield xs[ i ]
-        
-    
-
 def LastShutdownWasBad( db_path, instance ):
     
     path = os.path.join( db_path, instance + '_running' )
@@ -333,19 +295,6 @@ def MergeKeyToListDicts( key_to_list_dicts ):
         
     
     return result
-    
-def PartitionIterator( pred: collections.abc.Callable[ [ object ], bool ], stream: collections.abc.Iterable[ object ] ):
-    
-    ( t1, t2 ) = itertools.tee( stream )
-    
-    return ( itertools.filterfalse( pred, t1 ), filter( pred, t2 ) )
-    
-
-def PartitionIteratorIntoLists( pred: collections.abc.Callable[ [ object ], bool ], stream: collections.abc.Iterable[ object ] ):
-    
-    ( a, b ) = PartitionIterator( pred, stream )
-    
-    return ( list( a ), list( b ) )
     
 
 def Print( text ):
@@ -423,84 +372,6 @@ def PrintExceptionTuple( etype, value, tb, do_wait = True ):
 
 ShowException = PrintException
 ShowExceptionTuple = PrintExceptionTuple
-
-def RandomPop( population ):
-    
-    random_index = random.randint( 0, len( population ) - 1 )
-    
-    row = population.pop( random_index )
-    
-    return row
-    
-
-def SampleSetByGettingFirst( s: set, n ):
-    
-    # sampling from a big set can be slow, so if we don't care about super random, let's just rip off the front and let __hash__ be our random
-    
-    n = min( len( s ), n )
-    
-    sample = set()
-    
-    if n == 0:
-        
-        return sample
-        
-    
-    for ( i, obj ) in enumerate( s ):
-        
-        sample.add( obj )
-        
-        if i >= n - 1:
-            
-            break
-            
-        
-    
-    return sample
-    
-
-def SmoothOutMappingIterator( xs, n ):
-    
-    # de-spikifies mappings, so if there is ( tag, 20k files ), it breaks that up into manageable chunks
-    
-    chunk_weight = 0
-    chunk = []
-    
-    for ( tag_item, hash_items ) in xs:
-        
-        for chunk_of_hash_items in SplitIteratorIntoChunks( hash_items, n ):
-            
-            yield ( tag_item, chunk_of_hash_items )
-            
-        
-    
-
-def SplayListForDB( xs ):
-    
-    return '(' + ','.join( ( str( x ) for x in xs ) ) + ')'
-    
-
-def SplitIteratorIntoChunks( iterator, n ):
-    
-    chunk = []
-    
-    for item in iterator:
-        
-        chunk.append( item )
-        
-        if len( chunk ) == n:
-            
-            yield chunk
-            
-            chunk = []
-            
-        
-    
-    if len( chunk ) > 0:
-        
-        yield chunk
-        
-    
 
 def BaseToHumanBytes( size, sig_figs = 3 ):
     

@@ -5,7 +5,6 @@ from qtpy import QtWidgets as QW
 from qtpy import QtGui as QG
 
 from hydrus.core import HydrusConstants as HC
-from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusLists
@@ -1695,12 +1694,16 @@ class MediaResultsPanelThumbnails( ClientGUIMediaResultsPanel.MediaResultsPanel 
             
             ClientGUIMenus.AppendMenu( menu, manage_menu, 'manage' )
             
-            ( local_duplicable_to_file_service_keys, local_moveable_from_and_to_file_service_keys ) = ClientGUIMediaSimpleActions.GetLocalFileActionServiceKeys( flat_selected_medias )
+            local_file_service_keys = ClientMedia.GetLocalFileServiceKeys( flat_selected_medias )
+            
+            ( local_duplicable_to_file_service_keys, local_moveable_from_and_to_file_service_keys, local_mergable_from_and_to_file_service_keys ) = ClientGUIMediaSimpleActions.GetLocalFileActionServiceKeys( flat_selected_medias )
             
             len_interesting_local_service_keys = 0
             
+            len_interesting_local_service_keys += len( local_file_service_keys )
             len_interesting_local_service_keys += len( local_duplicable_to_file_service_keys )
             len_interesting_local_service_keys += len( local_moveable_from_and_to_file_service_keys )
+            len_interesting_local_service_keys += len( local_mergable_from_and_to_file_service_keys )
             
             #
             
@@ -1731,7 +1734,7 @@ class MediaResultsPanelThumbnails( ClientGUIMediaResultsPanel.MediaResultsPanel 
                 
                 if len_interesting_local_service_keys > 0:
                     
-                    ClientGUIMediaMenus.AddLocalFilesMoveAddToMenu( self, locations_menu, local_duplicable_to_file_service_keys, local_moveable_from_and_to_file_service_keys, multiple_selected, self.ProcessApplicationCommand )
+                    ClientGUIMediaMenus.AddLocalFilesMoveAddToMenu( self, locations_menu, local_file_service_keys, local_duplicable_to_file_service_keys, local_moveable_from_and_to_file_service_keys, local_mergable_from_and_to_file_service_keys, multiple_selected, self.ProcessApplicationCommand )
                     
                 
                 if len_interesting_remote_service_keys > 0:
@@ -1864,7 +1867,7 @@ class MediaResultsPanelThumbnails( ClientGUIMediaResultsPanel.MediaResultsPanel 
         
         page_height = self._num_rows_per_canvas_page * thumbnail_span_height
         
-        for hash in HydrusData.IterateListRandomlyAndFast( hashes ):
+        for hash in HydrusLists.IterateListRandomlyAndFast( hashes ):
             
             thumbnail_draw_object = self._hashes_to_thumbnails_waiting_to_be_drawn[ hash ]
             

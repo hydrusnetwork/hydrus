@@ -5,6 +5,7 @@ import sqlite3
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
+from hydrus.core import HydrusLists
 
 from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientTime
@@ -215,7 +216,7 @@ class ClientDBMediaResults( ClientDBModule.ClientDBModule ):
             
             if len( hash_ids ) > len( file_info_managers ):
                 
-                hash_ids = HydrusData.DedupeList( hash_ids )
+                hash_ids = HydrusLists.DedupeList( hash_ids )
                 
             
             hash_ids_to_file_info_managers = { file_info_manager.hash_id : file_info_manager for file_info_manager in file_info_managers }
@@ -236,7 +237,7 @@ class ClientDBMediaResults( ClientDBModule.ClientDBModule ):
             
             if len( hashes ) > len( query_hash_ids ):
                 
-                hashes = HydrusData.DedupeList( hashes )
+                hashes = HydrusLists.DedupeList( hashes )
                 
             
             hashes_to_file_info_managers = { file_info_manager.hash : file_info_manager for file_info_manager in file_info_managers }
@@ -579,7 +580,7 @@ class ClientDBMediaResults( ClientDBModule.ClientDBModule ):
             
             if len( hashes ) > len( query_hash_ids ):
                 
-                hashes = HydrusData.DedupeList( hashes )
+                hashes = HydrusLists.DedupeList( hashes )
                 
             
             hashes_to_media_results = { media_result.GetHash() : media_result for media_result in media_results }

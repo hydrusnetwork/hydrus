@@ -7,6 +7,7 @@ from qtpy import QtWidgets as QW
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusLists
 from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTags
@@ -275,7 +276,7 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         tag_slices = [ self._CleanTagSliceInput( tag_slice ) for tag_slice in tag_slices ]
         
-        tag_slices = HydrusData.DedupeList( tag_slices )
+        tag_slices = HydrusLists.DedupeList( tag_slices )
         
         current_blacklist = set( self._advanced_blacklist.GetTagSlices() )
         

@@ -266,8 +266,8 @@ class BetterBitmapButton( ShortcutAwareToolTipMixin, QW.QPushButton ):
         self.SetToolTipCallable( self.setToolTip )
         
         self.setIcon( QG.QIcon( bitmap ) )
-        self.setIconSize( bitmap.size() )
-        self.setSizePolicy( QW.QSizePolicy.Policy.Maximum, QW.QSizePolicy.Policy.Maximum )
+        self.setIconSize( bitmap.size() ) # if and when we move to SVG, maybe we'll do devicePixelRatio stuff here? 16x16 * dpr? 
+        #self.setSizePolicy( QW.QSizePolicy.Policy.Maximum, QW.QSizePolicy.Policy.Maximum )
         
         self._func = func
         self._args = args

@@ -13,6 +13,7 @@ import urllib.parse
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusLists
 from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusPaths
 from hydrus.core import HydrusSerialisable
@@ -1705,7 +1706,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
                             child_urls = desired_urls
                             
                         
-                        child_urls = HydrusData.DedupeList( child_urls )
+                        child_urls = HydrusLists.DedupeList( child_urls )
                         
                         if len( child_urls ) > 0:
                             
@@ -1756,6 +1757,11 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
                 
             
             did_substantial_work |= self.WriteContentUpdates( file_import_options = file_import_options, tag_import_options = tag_import_options, note_import_options = note_import_options )
+            
+            if self.status == CC.STATUS_UNKNOWN:
+                
+                raise HydrusExceptions.VetoException( 'Managed to work this job without getting a result! Please report to hydrus_dev!' )
+                
             
         except HydrusExceptions.ShutdownException:
             
@@ -2402,7 +2408,7 @@ class FileSeedCache( HydrusSerialisable.SerialisableBase ):
                 # woah, we have some dupes! maybe url classes changed and renormalisation happened, maybe hydev fixed some bad dupe file paths or something
                 # let's correct ourselves now we have the chance; this guy simply cannot handle dupes atm
                 
-                self._file_seeds = HydrusSerialisable.SerialisableList( HydrusData.DedupeList( self._file_seeds ) )
+                self._file_seeds = HydrusSerialisable.SerialisableList( HydrusLists.DedupeList( self._file_seeds ) )
                 
                 self._file_seeds_to_indices = { file_seed : index for ( index, file_seed ) in enumerate( self._file_seeds ) }
                 
@@ -3244,7 +3250,7 @@ class FileSeedCache( HydrusSerialisable.SerialisableBase ):
     
     def InsertFileSeeds( self, index: int, file_seeds: collections.abc.Collection[ FileSeed ] ):
         
-        file_seeds = HydrusData.DedupeList( file_seeds )
+        file_seeds = HydrusLists.DedupeList( file_seeds )
         
         with self._lock:
             

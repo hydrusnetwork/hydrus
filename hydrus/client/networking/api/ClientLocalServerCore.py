@@ -16,8 +16,8 @@ except:
     
 
 from hydrus.core import HydrusConstants as HC
-from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusLists
 from hydrus.core import HydrusPaths
 from hydrus.core import HydrusTags
 from hydrus.core import HydrusTemp
@@ -878,7 +878,7 @@ def ParseHashes( request: HydrusServerRequest.HydrusRequest, optional = False ):
         raise HydrusExceptions.BadRequestException( 'Please include some files in your request--file_id or hash based!' )
         
     
-    hashes = HydrusData.DedupeList( hashes )
+    hashes = HydrusLists.DedupeList( hashes )
     
     if not optional or len( hashes ) > 0:
         

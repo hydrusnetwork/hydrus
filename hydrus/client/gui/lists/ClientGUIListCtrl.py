@@ -1249,7 +1249,7 @@ class BetterListCtrlTreeView( QW.QTreeView ):
         return size_hint
         
     
-    def ScrollToData( self, data: object ):
+    def ScrollToData( self, data: object, do_focus = True ):
         
         data = QP.ListsToTuples( data )
         
@@ -1259,7 +1259,10 @@ class BetterListCtrlTreeView( QW.QTreeView ):
             
             self.scrollTo( model_index, hint = QW.QAbstractItemView.ScrollHint.PositionAtCenter )
             
-            self.setFocus( QC.Qt.FocusReason.OtherFocusReason )
+            if do_focus:
+                
+                self.setFocus( QC.Qt.FocusReason.OtherFocusReason )
+                
             
         
     
@@ -2088,7 +2091,7 @@ class BetterListCtrlPanel( QW.QWidget ):
         
         if result == QW.QDialog.DialogCode.Accepted:
             
-            ( jsons, pngs ) = HydrusData.PartitionIteratorIntoLists( lambda path: path.endswith( '.png' ), paths )
+            ( jsons, pngs ) = HydrusLists.PartitionIteratorIntoLists( lambda path: path.endswith( '.png' ), paths )
             
             self._ImportPNGs( pngs )
             self._ImportJSONs( jsons )

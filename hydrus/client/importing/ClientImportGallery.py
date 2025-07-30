@@ -5,6 +5,7 @@ import typing
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusLists
 from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusText
@@ -45,7 +46,7 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
             initial_search_urls = []
             
         
-        initial_search_urls = HydrusData.DedupeList( initial_search_urls )
+        initial_search_urls = HydrusLists.DedupeList( initial_search_urls )
         
         super().__init__()
         

@@ -434,7 +434,7 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
-        for block_of_tag_ids in HydrusData.SplitIteratorIntoChunks( tag_ids_in_dispute, 1024 ):
+        for block_of_tag_ids in HydrusLists.SplitIteratorIntoChunks( tag_ids_in_dispute, 1024 ):
             
             self._CacheTagsSyncTags( tag_service_id, block_of_tag_ids, just_these_file_service_ids = file_service_ids )
             
@@ -616,8 +616,8 @@ class DB( HydrusDB.HydrusDB ):
             
             # first up, the removees. what is in actual but not ideal
             
-            some_removee_sibling_rows = HydrusData.SampleSetByGettingFirst( sibling_rows_to_remove, 20 )
-            some_removee_parent_rows = HydrusData.SampleSetByGettingFirst( parent_rows_to_remove, 20 )
+            some_removee_sibling_rows = HydrusLists.SampleSetByGettingFirst( sibling_rows_to_remove, 20 )
+            some_removee_parent_rows = HydrusLists.SampleSetByGettingFirst( parent_rows_to_remove, 20 )
             
             possibly_affected_tag_ids = set()
             
@@ -703,8 +703,8 @@ class DB( HydrusDB.HydrusDB ):
                 
                 # there is nothing to remove, so we'll now go for what is in ideal but not actual
                 
-                some_addee_sibling_rows = HydrusData.SampleSetByGettingFirst( sibling_rows_to_add, 20 )
-                some_addee_parent_rows = HydrusData.SampleSetByGettingFirst( parent_rows_to_add, 20 )
+                some_addee_sibling_rows = HydrusLists.SampleSetByGettingFirst( sibling_rows_to_add, 20 )
+                some_addee_parent_rows = HydrusLists.SampleSetByGettingFirst( parent_rows_to_add, 20 )
                 
                 if len( some_addee_sibling_rows ) + len( some_addee_parent_rows ) > 0:
                     
@@ -1477,7 +1477,7 @@ class DB( HydrusDB.HydrusDB ):
         
         if types_to_delete is not None:
             
-            predicates.append( 'info_type IN {}'.format( HydrusData.SplayListForDB( types_to_delete ) ) )
+            predicates.append( 'info_type IN {}'.format( HydrusLists.SplayListForDB( types_to_delete ) ) )
             
         
         if len( predicates ) > 0:
@@ -3341,7 +3341,7 @@ class DB( HydrusDB.HydrusDB ):
         
         current_files_table_name = ClientDBFilesStorage.GenerateFilesTableName( service_id, HC.CONTENT_STATUS_CURRENT )
         
-        needed_hash_ids = self._STL( self._Execute( 'SELECT hash_id FROM {} NATURAL JOIN files_info WHERE mime IN {} EXCEPT SELECT hash_id FROM remote_thumbnails WHERE service_id = ?;'.format( current_files_table_name, HydrusData.SplayListForDB( HC.MIMES_WITH_THUMBNAILS ) ), ( service_id, ) ) )
+        needed_hash_ids = self._STL( self._Execute( 'SELECT hash_id FROM {} NATURAL JOIN files_info WHERE mime IN {} EXCEPT SELECT hash_id FROM remote_thumbnails WHERE service_id = ?;'.format( current_files_table_name, HydrusLists.SplayListForDB( HC.MIMES_WITH_THUMBNAILS ) ), ( service_id, ) ) )
         
         needed_hashes = []
         
@@ -3417,7 +3417,7 @@ class DB( HydrusDB.HydrusDB ):
         
         info_types = set( info_types )
         
-        results = { info_type : info for ( info_type, info ) in self._Execute( 'SELECT info_type, info FROM service_info WHERE service_id = ? AND info_type IN ' + HydrusData.SplayListForDB( info_types ) + ';', ( service_id, ) ) }
+        results = { info_type : info for ( info_type, info ) in self._Execute( 'SELECT info_type, info FROM service_info WHERE service_id = ? AND info_type IN ' + HydrusLists.SplayListForDB( info_types ) + ';', ( service_id, ) ) }
         
         if len( results ) != len( info_types ) and calculate_missing:
             
@@ -3859,7 +3859,6 @@ class DB( HydrusDB.HydrusDB ):
         
         self._read_commands_to_methods.update(
             {
-                'all_potential_duplicate_pairs_and_distances' : self.modules_files_duplicates.GetAllPotentialDuplicatePairsAndDistances,
                 'autocomplete_predicates' : self.modules_tag_search.GetAutocompletePredicates,
                 'client_files_subfolders' : self.modules_files_physical_storage.GetClientFilesSubfolders,
                 'deferred_delete_data' : self.modules_db_maintenance.GetDeferredDeleteTableData,
@@ -3899,8 +3898,9 @@ class DB( HydrusDB.HydrusDB ):
                 'num_deferred_file_deletes' : self.modules_files_storage.GetDeferredPhysicalDeleteCounts,
                 'potential_duplicates_count' : self.modules_files_duplicates_file_query.GetPotentialDuplicatesCount,
                 'potential_duplicates_count_fragmentary' : self.modules_files_duplicates_file_query.GetPotentialDuplicatesCountFragmentary,
-                'potential_duplicate_pairs_fragmentary' : self.modules_files_duplicates_file_query.GetPotentialDuplicatePairsFragmentaryMediaResults,
-                'random_potential_duplicate_hashes' : self.modules_files_duplicates_file_query.GetRandomPotentialDuplicateHashes,
+                'potential_duplicate_id_pairs_and_distances' : self.modules_files_duplicates.GetPotentialDuplicateIdPairsAndDistances,
+                'potential_duplicate_pairs_fragmentary' : self.modules_files_duplicates_file_query.GetPotentialDuplicateMediaResultPairsAndDistancesFragmentary,
+                'random_potential_duplicate_hashes' : self.modules_files_duplicates_file_query.GetRandomPotentialDuplicateGroupHashes,
                 'recent_tags' : self.modules_recent_tags.GetRecentTags,
                 'repository_progress' : self.modules_repositories.GetRepositoryProgress,
                 'repository_update_hashes_to_process' : self.modules_repositories.GetRepositoryUpdateHashesICanProcess,
@@ -7247,7 +7247,7 @@ class DB( HydrusDB.HydrusDB ):
                     hash_ids = self._STS( self._Execute( f'SELECT hash_id FROM {temp_hash_ids_table_name} CROSS JOIN files_info USING ( hash_id ) WHERE mime = ?;', ( HC.ANIMATION_APNG, ) ) )
                     self.modules_files_maintenance_queue.AddJobs( hash_ids, ClientFilesMaintenance.REGENERATE_FILE_DATA_JOB_FILE_HAS_EXIF )
                     
-                    hash_ids = self._STS( self._Execute( f'SELECT hash_id FROM {temp_hash_ids_table_name} CROSS JOIN files_info USING ( hash_id ) WHERE mime IN {HydrusData.SplayListForDB(HC.HEIF_TYPE_SEQUENCES)};' ) )
+                    hash_ids = self._STS( self._Execute( f'SELECT hash_id FROM {temp_hash_ids_table_name} CROSS JOIN files_info USING ( hash_id ) WHERE mime IN {HydrusLists.SplayListForDB(HC.HEIF_TYPE_SEQUENCES)};' ) )
                     self.modules_files_maintenance_queue.AddJobs( hash_ids, ClientFilesMaintenance.REGENERATE_FILE_DATA_JOB_FILE_HAS_TRANSPARENCY )
                     
                     hash_ids = self._STS( self._Execute( f'SELECT hash_id FROM {temp_hash_ids_table_name} CROSS JOIN files_info USING ( hash_id ) WHERE mime = ?;', ( HC.IMAGE_AVIF_SEQUENCE, ) ) )
@@ -7948,7 +7948,7 @@ class DB( HydrusDB.HydrusDB ):
                     
                     mimes_we_want = ( HC.ANIMATION_UGOIRA, )
                     
-                    hash_ids = self._STS( self._Execute( 'SELECT hash_id FROM {} CROSS JOIN files_info USING ( hash_id ) WHERE mime IN {};'.format( temp_hash_ids_table_name, HydrusData.SplayListForDB( mimes_we_want ) ) ) )
+                    hash_ids = self._STS( self._Execute( 'SELECT hash_id FROM {} CROSS JOIN files_info USING ( hash_id ) WHERE mime IN {};'.format( temp_hash_ids_table_name, HydrusLists.SplayListForDB( mimes_we_want ) ) ) )
                     self.modules_files_maintenance_queue.AddJobs( hash_ids, ClientFilesMaintenance.REGENERATE_FILE_DATA_JOB_FILE_METADATA )
                     self.modules_files_maintenance_queue.AddJobs( hash_ids, ClientFilesMaintenance.REGENERATE_FILE_DATA_JOB_FORCE_THUMBNAIL )
                     
@@ -8182,7 +8182,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 with self._MakeTemporaryIntegerTable( all_local_hash_ids, 'hash_id' ) as temp_hash_ids_table_name:
                     
-                    hash_ids = self._STS( self._Execute( 'SELECT hash_id FROM {} CROSS JOIN files_info USING ( hash_id ) WHERE mime IN {};'.format( temp_hash_ids_table_name, HydrusData.SplayListForDB( HC.FILES_THAT_HAVE_PERCEPTUAL_HASH ) ) ) )
+                    hash_ids = self._STS( self._Execute( 'SELECT hash_id FROM {} CROSS JOIN files_info USING ( hash_id ) WHERE mime IN {};'.format( temp_hash_ids_table_name, HydrusLists.SplayListForDB( HC.FILES_THAT_HAVE_PERCEPTUAL_HASH ) ) ) )
                     self.modules_files_maintenance_queue.AddJobs( hash_ids, ClientFilesMaintenance.REGENERATE_FILE_DATA_JOB_CHECK_SIMILAR_FILES_MEMBERSHIP )
                     
                 
@@ -8898,7 +8898,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 table_join = self.modules_files_storage.GetTableJoinLimitedByFileDomain( self.modules_services.combined_local_file_service_id, 'files_info', HC.CONTENT_STATUS_CURRENT )
                 
-                hash_ids = self._STL( self._Execute( 'SELECT hash_id FROM {} WHERE mime IN {};'.format( table_join, HydrusData.SplayListForDB( [ HC.IMAGE_AVIF ] ) ) ) )
+                hash_ids = self._STL( self._Execute( 'SELECT hash_id FROM {} WHERE mime IN {};'.format( table_join, HydrusLists.SplayListForDB( [ HC.IMAGE_AVIF ] ) ) ) )
                 
                 self.modules_files_maintenance_queue.AddJobs( hash_ids, ClientFilesMaintenance.REGENERATE_FILE_DATA_JOB_FILE_HAS_EXIF )
                 self.modules_files_maintenance_queue.AddJobs( hash_ids, ClientFilesMaintenance.REGENERATE_FILE_DATA_JOB_FILE_HAS_ICC_PROFILE )
@@ -8946,6 +8946,28 @@ class DB( HydrusDB.HydrusDB ):
                 HydrusData.PrintException( e )
                 
                 message = 'Trying to update some downloaders failed! Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
+                
+            
+        
+        if version == 631:
+            
+            try:
+                
+                new_options = self.modules_serialisable.GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_CLIENT_OPTIONS )
+                
+                new_options.SetBoolean( 'preview_window_hover_top_right_shows_popup', True )
+                new_options.SetBoolean( 'draw_top_right_hover_in_preview_window_background', True )
+                new_options.SetBoolean( 'replace_percent_twenty_with_space_in_gug_input', True )
+                
+                self.modules_serialisable.SetJSONDump( new_options )
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to update your options failed! Please let hydrus dev know!'
                 
                 self.pub_initial_message( message )
                 

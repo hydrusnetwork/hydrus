@@ -4,6 +4,7 @@ import sqlite3
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
+from hydrus.core import HydrusLists
 from hydrus.core import HydrusTime
 
 from hydrus.client import ClientGlobals as CG
@@ -105,7 +106,7 @@ class ClientDBFilesMaintenanceQueue( ClientDBModule.ClientDBModule ):
                 
                 with self._MakeTemporaryIntegerTable( hash_ids, 'hash_id' ) as temp_hash_ids_table_name:
                     
-                    splayed_job_types = HydrusData.SplayListForDB( possible_job_types )
+                    splayed_job_types = HydrusLists.SplayListForDB( possible_job_types )
                     
                     # temp to file jobs
                     hash_ids_to_job_types = HydrusData.BuildKeyToSetDict( self._Execute( f'SELECT hash_id, job_type FROM {temp_hash_ids_table_name} CROSS JOIN file_maintenance_jobs USING ( hash_id ) WHERE time_can_start < ? AND job_type IN {splayed_job_types};', ( HydrusTime.GetNow(), ) ) )

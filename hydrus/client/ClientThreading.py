@@ -4,6 +4,7 @@ import typing
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
+from hydrus.core import HydrusLists
 from hydrus.core import HydrusThreading
 from hydrus.core import HydrusTime
 
@@ -326,7 +327,7 @@ class JobStatus( object ):
             
         else:
             
-            hashes = HydrusData.DedupeList( list( hashes ) )
+            hashes = HydrusLists.DedupeList( list( hashes ) )
             
             self.SetVariable( 'attached_files', ( hashes, label ) )
             

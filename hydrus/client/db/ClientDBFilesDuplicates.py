@@ -35,7 +35,7 @@ class ClientDBFilesDuplicates( ClientDBModule.ClientDBModule ):
         self.modules_similar_files = modules_similar_files
         self.modules_files_duplicates_auto_resolution_storage = modules_files_duplicates_auto_resolution_storage
         
-        self._all_potential_duplicate_pairs_and_distances = None
+        self._location_contexts_to_potential_duplicate_id_pairs_and_distances_rows = {}
         
         self._service_ids_to_content_types_to_outstanding_local_processing = collections.defaultdict( dict )
         
@@ -196,8 +196,7 @@ class ClientDBFilesDuplicates( ClientDBModule.ClientDBModule ):
     
     def _NotifyChangeToPotentialDuplicatePairs( self ):
         
-        # now this guy is a nice object, we _could_ consider updating that guy directly in the various ways when that is simple
-        self._all_potential_duplicate_pairs_and_distances = None
+        self._location_contexts_to_potential_duplicate_id_pairs_and_distances_rows = {}
         
     
     def AddPotentialDuplicates( self, media_id, potential_duplicate_media_ids_and_distances ):
@@ -538,16 +537,6 @@ class ClientDBFilesDuplicates( ClientDBModule.ClientDBModule ):
         existing_pairs = set( self._Execute( f'SELECT smaller_media_id, larger_media_id FROM {potential_pair_ids_table_name} CROSS JOIN potential_duplicate_pairs ON ( {potential_pair_ids_table_name}.smaller_media_id = potential_duplicate_pairs.smaller_media_id AND {potential_pair_ids_table_name}.larger_media_id = potential_duplicate_pairs.larger_media_id );' ) )
         
         return existing_pairs
-        
-    
-    def GetAllPotentialDuplicatePairsAndDistances( self ):
-        
-        if self._all_potential_duplicate_pairs_and_distances is None:
-            
-            self._all_potential_duplicate_pairs_and_distances = self._Execute( 'SELECT smaller_media_id, larger_media_id, distance FROM potential_duplicate_pairs;' ).fetchall()
-            
-        
-        return ClientPotentialDuplicatesSearchContext.PotentialDuplicatePairsAndDistances( self._all_potential_duplicate_pairs_and_distances )
         
     
     def GetAlternatesGroupId( self, media_id, do_not_create = False ):
@@ -1038,7 +1027,7 @@ class ClientDBFilesDuplicates( ClientDBModule.ClientDBModule ):
         return hash_ids
         
     
-    def GetKingHashId( self, media_id ):
+    def GetKingHashId( self, media_id ) -> int:
         
         ( king_hash_id, ) = self._Execute( 'SELECT king_hash_id FROM duplicate_files WHERE media_id = ?;', ( media_id, ) ).fetchone()
         
@@ -1098,6 +1087,69 @@ class ClientDBFilesDuplicates( ClientDBModule.ClientDBModule ):
             
         
         return media_id
+        
+    
+    def GetPotentialDuplicateIdPairsAndDistances( self, location_context: ClientLocation.LocationContext ):
+        
+        if location_context not in self._location_contexts_to_potential_duplicate_id_pairs_and_distances_rows:
+            
+            # ok lets filter our pairs down to what exists in the domain
+            # a pair is good when both nodes' king hash ids exist in _any_ of the UNION of stuff
+            # we are going to give the SQLite query planner latitude to figure out what it wants; we'll see how it goes
+            
+            if location_context.IsAllKnownFiles():
+                
+                rows = self._Execute( 'SELECT smaller_media_id, larger_media_id, distance FROM potential_duplicate_pairs;' ).fetchall()
+                
+            else:
+                
+                db_location_context = self.modules_files_storage.GetDBLocationContext( location_context )
+                
+                file_table_names = db_location_context.GetMultipleFilesTableNames()
+                
+                if len( file_table_names ) == 1:
+                    
+                    files_table_name = file_table_names[0]
+                    
+                    table_join = f'potential_duplicate_pairs, {files_table_name} AS files_smaller, {files_table_name} AS files_larger, duplicate_files AS duplicate_files_smaller, duplicate_files AS duplicate_files_larger ON ( potential_duplicate_pairs.smaller_media_id = duplicate_files_smaller.media_id AND duplicate_files_smaller.king_hash_id = files_smaller.hash_id AND potential_duplicate_pairs.larger_media_id = duplicate_files_larger.media_id AND duplicate_files_larger.king_hash_id = files_larger.hash_id )'
+                    
+                    query = f'SELECT smaller_media_id, larger_media_id, distance FROM {table_join};'
+                    
+                    rows = self._Execute( query ).fetchall()
+                    
+                else:
+                    
+                    # maybe this is better done with a tempinttable for media_id and we do iterative INSERT OR IGNORE, and then do a double table join using that
+                    # I suspect the index-building of that makes it not much better, if at all, than just a quick and dirty python set
+                    
+                    queries = []
+                    
+                    for files_table_name in db_location_context.GetMultipleFilesTableNames():
+                        
+                        smaller_query = f'SELECT smaller_media_id FROM potential_duplicate_pairs, duplicate_files, {files_table_name} ON ( potential_duplicate_pairs.smaller_media_id = duplicate_files.media_id AND duplicate_files.king_hash_id = {files_table_name}.hash_id );'
+                        larger_query = f'SELECT larger_media_id FROM potential_duplicate_pairs, duplicate_files, {files_table_name} ON ( potential_duplicate_pairs.larger_media_id = duplicate_files.media_id AND duplicate_files.king_hash_id = {files_table_name}.hash_id );'
+                        
+                        queries.append( smaller_query )
+                        queries.append( larger_query )
+                        
+                    
+                    good_media_ids = set()
+                    
+                    for query in queries:
+                        
+                        good_media_ids.update( self._STI( self._Execute( query ) ) )
+                        
+                    
+                    all_potential_duplicate_id_pairs_and_distances = self.GetPotentialDuplicateIdPairsAndDistances( ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_FILE_SERVICE_KEY ) )
+                    
+                    rows = [ ( smaller_media_id, larger_media_id, distance ) for ( smaller_media_id, larger_media_id, distance ) in all_potential_duplicate_id_pairs_and_distances.IterateRows() if smaller_media_id in good_media_ids and larger_media_id in good_media_ids ]
+                    
+                
+            
+            self._location_contexts_to_potential_duplicate_id_pairs_and_distances_rows[ location_context ] = rows
+            
+        
+        return ClientPotentialDuplicatesSearchContext.PotentialDuplicateIdPairsAndDistances( self._location_contexts_to_potential_duplicate_id_pairs_and_distances_rows[ location_context ] )
         
     
     def GetPotentialDuplicatePairsTableJoinGetInitialTablesAndPreds( self, pixel_dupes_preference: int, max_hamming_distance: int, master_potential_duplicate_pairs_table_name = 'potential_duplicate_pairs' ):

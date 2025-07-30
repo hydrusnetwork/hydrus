@@ -114,24 +114,29 @@ Default sort order and more `sort by: namespace` are found in `file -> options -
 
 ### Sorting with `system:limit`
 
-If you add `system:limit` to a search, the client will consider what that page's file sort currently is. If it is simple enough--something like file size or import time--then it will sort your results before they come back and clip the limit according to that sort, getting the n 'largest file size' or 'newest imports' and so on. This can be a great way to set up a lightweight filtering page for 'the 256 biggest videos in my inbox'.
+If you add `system:limit` to a search, the client will consider what that page's current file sort. If the sort is simple--something like file size or import time--then it will sort your results before they come back and clip the limit according to that sort, getting the n 'largest file size' or 'newest imports' and so on. This can be a great way to set up a lightweight filtering page for 'the 256 biggest videos in my inbox'.
 
-If you change the sort, hydrus will not refresh the search, it'll just re-sort the n files you have. Hit F5 to refresh the search with a new sort.
+If you change the sort, hydrus will try to refresh the search to match the new 'biggest' or 'thinnest' n files it needs to fetch. Hit F5 to force-refresh.
 
-However, anything complicated--e.g., tag sort--will result in a random sample instead; the sort will be applied post-hoc. For example, let's say you have 3 files in your inbox. One file is tagged with `creator:pablo picasso`, the second is tagged with `creator:salvador dali`, and the third is tagged with `creator:vincent van gogh`. If you were to sort by the `creator` tag namespace in a search with the following predicates:
+However, anything complicated--e.g. tag sort--will result in a _random_ system:limit sample instead; the sort will be applied post-hoc.
 
-- `system:inbox`
-- `system:limit is 2`
+!!! Info "Example"
+    Let's say you have 3 files in your inbox. One file is tagged with `creator:pablo picasso`, the second is tagged with `creator:salvador dali`, and the third is tagged with `creator:vincent van gogh`. If you were to sort by the `creator` tag namespace in a search with the following predicates:
+    
+    - `system:inbox`
+    - `system:limit is 2`
+    
+    You would get a random sample of 2 out of 3 of these files, and *then* the client will display them to you sorted by the `creator` tag namespace. In other words, the possible random outcomes for this search are:
+    
+    - The file tagged with `creator:pablo picasso`, followed by the file tagged with `creator:salvador dali`, *or*
+    - the file tagged with `creator:pablo picasso`, followed by the file tagged with `creator:vincent van gogh`, *or*
+    - the file tagged with `creator:salvador dali`, followed by the file tagged with `creator:vincent van gogh`.
+    
+    Note that the results are displayed always in alphabetical order along the `creator` tag namespace, but even though `pablo picasso` comes alphabetically before `salvador dali` and `vincent van gogh`, it does not always appear in the search. This is because the random sample occured before the sort does.
 
-You would get a random sample of 2 out of 3 of these files, and *then* the client will display them to you sorted by the `creator` tag namespace. In other words, the possible random outcomes for this search are:
+The tooltip on the sort controls will say whether you are currently simple enough or too complicated to do a pre-sampling sort.
 
-- The file tagged with `creator:pablo picasso`, followed by the file tagged with `creator:salvador dali`, *or*
-- the file tagged with `creator:pablo picasso`, followed by the file tagged with `creator:vincent van gogh`, *or*
-- the file tagged with `creator:salvador dali`, followed by the file tagged with `creator:vincent van gogh`.
-
-Note that the results are displayed always in alphabetical order along the `creator` tag namespace, but even though `pablo picasso` comes alphabetically before `salvador dali` and `vincent van gogh`, it does not always appear in the search. This is because the random sample occured before the sort does.
-
-A common reason for users wondering why they get random results for their sorted searches is that they have an implicit `system:limit` set under `options -> file search` that is lower than the number of results their search would return, and they forgot about it. To address it, depending on your hardware specs and performance needs, you can either increase/remove the implicit `system:limit`, or you can explicitly add a high `system:limit` to queries only when exhaustive results are needed.
+A common reason for users wondering why they get random results for their sorted searches is their implicit `system:limit` set under `options -> file search` is lower than the number of results their search would return, and they forgot about it. To address it, depending on your hardware specs and performance needs, you can either increase/remove the implicit `system:limit`, or you can explicitly add a high `system:limit` to queries only when exhaustive results are needed.
 
 ## Collecting
 Collection is found under the `sort by: ` dropdown and uses namespaces listed in the `sort by: namespace` sort options. The new namespaces will only be available in new pages.

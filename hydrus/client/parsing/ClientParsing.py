@@ -10,6 +10,7 @@ import warnings
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusLists
 from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusText
@@ -151,7 +152,7 @@ def ParseHashesFromRawHexText( hash_type, hex_hashes_raw ):
     
     hex_hashes = [ hex_hash for hex_hash in hex_hashes if len( hex_hash ) % 2 == 0 ]
     
-    hex_hashes = HydrusData.DedupeList( hex_hashes )
+    hex_hashes = HydrusLists.DedupeList( hex_hashes )
     
     hashes = tuple( [ bytes.fromhex( hex_hash ) for hex_hash in hex_hashes ] )
     

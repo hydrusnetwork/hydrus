@@ -3,8 +3,8 @@ import typing
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
 
-from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusLists
 from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusTime
 
@@ -718,7 +718,7 @@ class SidebarImporterMultipleGallery( SidebarImporter ):
                 
                 all_media_results = []
                 
-                for ( i, block_of_hashes ) in enumerate( HydrusData.SplitIteratorIntoChunks( hashes, BLOCK_SIZE ) ):
+                for ( i, block_of_hashes ) in enumerate( HydrusLists.SplitIteratorIntoChunks( hashes, BLOCK_SIZE ) ):
                     
                     num_done = i * BLOCK_SIZE
                     
@@ -1864,7 +1864,7 @@ class SidebarImporterMultipleWatcher( SidebarImporter ):
                 
                 all_media_results = []
                 
-                for ( i, block_of_hashes ) in enumerate( HydrusData.SplitIteratorIntoChunks( hashes, BLOCK_SIZE ) ):
+                for ( i, block_of_hashes ) in enumerate( HydrusLists.SplitIteratorIntoChunks( hashes, BLOCK_SIZE ) ):
                     
                     num_done = i * BLOCK_SIZE
                     

@@ -6,8 +6,8 @@ import typing
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusGlobals as HG
-from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusLists
 from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTime
@@ -1603,7 +1603,7 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
             normalised_urls.append( normalised_url )
             
         
-        normalised_urls = HydrusData.DedupeList( normalised_urls )
+        normalised_urls = HydrusLists.DedupeList( normalised_urls )
         
         return normalised_urls
         

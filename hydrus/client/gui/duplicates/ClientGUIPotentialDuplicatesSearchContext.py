@@ -17,6 +17,7 @@ from hydrus.client.gui import ClientGUIAsync
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui.search import ClientGUIACDropdown
 from hydrus.client.gui.widgets import ClientGUICommon
+from hydrus.client.gui.widgets import ClientGUIMenuButton
 
 # good idea to refresh this cache regularly, to clear out since-deleted pairs and catch other unusual desync situations
 POTENTIAL_PAIRS_REFRESH_TIMEOUT = 3600
@@ -34,13 +35,13 @@ class EditPotentialDuplicatesSearchContextPanel( ClientGUICommon.StaticBox ):
         
         #
         
-        self._all_potential_duplicate_pairs_and_distances = ClientPotentialDuplicatesSearchContext.PotentialDuplicatePairsAndDistances( [] )
-        self._all_potential_duplicate_pairs_and_distances_initialised = False
-        self._all_potential_duplicate_pairs_and_distances_fetch_started = False
-        self._all_potential_duplicate_pairs_and_distances_initialised_time = 0
+        self._potential_duplicate_id_pairs_and_distances = ClientPotentialDuplicatesSearchContext.PotentialDuplicateIdPairsAndDistances( [] )
+        self._potential_duplicate_id_pairs_and_distances_initialised = False
+        self._potential_duplicate_id_pairs_and_distances_fetch_started = False
+        self._potential_duplicate_id_pairs_and_distances_initialised_time = 0
         
         self._count_job_status = ClientThreading.JobStatus( cancellable = True )
-        self._potential_duplicate_pairs_and_distances_still_to_search = ClientPotentialDuplicatesSearchContext.PotentialDuplicatePairsAndDistances( [] )
+        self._potential_duplicate_id_pairs_and_distances_still_to_search = ClientPotentialDuplicatesSearchContext.PotentialDuplicateIdPairsAndDistances( [] )
         
         self._num_potential_duplicate_pairs = 0
         
@@ -82,7 +83,7 @@ class EditPotentialDuplicatesSearchContextPanel( ClientGUICommon.StaticBox ):
         
         self._num_potential_duplicate_pairs_label = ClientGUICommon.BetterStaticText( self, ellipsize_end = True )
         self._pause_count_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().pause, self._PausePlayCount )
-        self._refresh_dupe_counts_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().refresh, self._RefreshAllPotentialDuplicatePairsAndDistances )
+        self._refresh_dupe_counts_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().refresh, self._RefreshPotentialDuplicateIdPairsAndDistances )
         
         #
         
@@ -145,16 +146,16 @@ class EditPotentialDuplicatesSearchContextPanel( ClientGUICommon.StaticBox ):
             return False
             
         
-        if self._all_potential_duplicate_pairs_and_distances_initialised and HydrusTime.TimeHasPassed( self._all_potential_duplicate_pairs_and_distances_initialised_time + POTENTIAL_PAIRS_REFRESH_TIMEOUT ):
+        if self._potential_duplicate_id_pairs_and_distances_initialised and HydrusTime.TimeHasPassed( self._potential_duplicate_id_pairs_and_distances_initialised_time + POTENTIAL_PAIRS_REFRESH_TIMEOUT ):
             
-            self._RefreshAllPotentialDuplicatePairsAndDistances()
+            self._RefreshPotentialDuplicateIdPairsAndDistances()
             
             return False
             
         
-        if not self._all_potential_duplicate_pairs_and_distances_initialised:
+        if not self._potential_duplicate_id_pairs_and_distances_initialised:
             
-            if not self._all_potential_duplicate_pairs_and_distances_fetch_started:
+            if not self._potential_duplicate_id_pairs_and_distances_fetch_started:
                 
                 self._InitialisePotentialDuplicatePairs()
                 
@@ -191,7 +192,7 @@ class EditPotentialDuplicatesSearchContextPanel( ClientGUICommon.StaticBox ):
                 raise HydrusExceptions.CancelledException()
                 
             
-            if len( self._potential_duplicate_pairs_and_distances_still_to_search ) == 0 or self._count_paused:
+            if len( self._potential_duplicate_id_pairs_and_distances_still_to_search ) == 0 or self._count_paused:
                 
                 self._UpdateCountLabel()
                 
@@ -200,21 +201,21 @@ class EditPotentialDuplicatesSearchContextPanel( ClientGUICommon.StaticBox ):
             
             potential_duplicates_search_context = self.GetValue()
             
-            block_of_pairs_and_distances = self._potential_duplicate_pairs_and_distances_still_to_search.PopBlock()
+            block_of_id_pairs_and_distances = self._potential_duplicate_id_pairs_and_distances_still_to_search.PopBlock()
             
-            return ( potential_duplicates_search_context, block_of_pairs_and_distances, self._count_job_status )
+            return ( potential_duplicates_search_context, block_of_id_pairs_and_distances, self._count_job_status )
             
         
         def work_callable( args ):
             
-            ( potential_duplicates_search_context, block_of_pairs_and_distances, job_status ) = args
+            ( potential_duplicates_search_context, block_of_id_pairs_and_distances, job_status ) = args
             
             if job_status.IsCancelled():
                 
                 return ( [], job_status )
                 
             
-            count = CG.client_controller.Read( 'potential_duplicates_count_fragmentary', potential_duplicates_search_context, block_of_pairs_and_distances )
+            count = CG.client_controller.Read( 'potential_duplicates_count_fragmentary', potential_duplicates_search_context, block_of_id_pairs_and_distances )
             
             return ( count, job_status )
             
@@ -235,7 +236,7 @@ class EditPotentialDuplicatesSearchContextPanel( ClientGUICommon.StaticBox ):
             
             self._num_potential_duplicate_pairs += count
             
-            if len( self._potential_duplicate_pairs_and_distances_still_to_search ) == 0 and self._num_potential_duplicate_pairs == 0:
+            if len( self._potential_duplicate_id_pairs_and_distances_still_to_search ) == 0 and self._num_potential_duplicate_pairs == 0:
                 
                 self.thisSearchDefinitelyHasNoPairs.emit()
                 
@@ -250,33 +251,35 @@ class EditPotentialDuplicatesSearchContextPanel( ClientGUICommon.StaticBox ):
     
     def _InitialisePotentialDuplicatePairs( self ):
         
-        if self._all_potential_duplicate_pairs_and_distances_initialised or self._all_potential_duplicate_pairs_and_distances_fetch_started:
+        if self._potential_duplicate_id_pairs_and_distances_initialised or self._potential_duplicate_id_pairs_and_distances_fetch_started:
             
             return
             
         
-        self._all_potential_duplicate_pairs_and_distances_fetch_started = True
+        self._potential_duplicate_id_pairs_and_distances_fetch_started = True
+        
+        location_context = self.GetValue().GetFileSearchContext1().GetLocationContext()
         
         def work_callable():
             
-            all_potential_duplicate_pairs_and_distances: ClientPotentialDuplicatesSearchContext.PotentialDuplicatePairsAndDistances = CG.client_controller.Read( 'all_potential_duplicate_pairs_and_distances' )
+            potential_duplicate_id_pairs_and_distances: ClientPotentialDuplicatesSearchContext.PotentialDuplicateIdPairsAndDistances = CG.client_controller.Read( 'potential_duplicate_id_pairs_and_distances', location_context )
             
             # ok randomise the order we'll do this guy, but only at the block level
             # we'll preserve order each block came in since we'll then keep db-proximal indices close together on each actual block fetch
             
-            all_potential_duplicate_pairs_and_distances.RandomiseBlocks()
+            potential_duplicate_id_pairs_and_distances.RandomiseBlocks()
             
-            return all_potential_duplicate_pairs_and_distances
+            return potential_duplicate_id_pairs_and_distances
             
         
-        def publish_callable( all_potential_duplicate_pairs_and_distances: ClientPotentialDuplicatesSearchContext.PotentialDuplicatePairsAndDistances ):
+        def publish_callable( potential_duplicate_id_pairs_and_distances: ClientPotentialDuplicatesSearchContext.PotentialDuplicateIdPairsAndDistances ):
             
-            self._all_potential_duplicate_pairs_and_distances = all_potential_duplicate_pairs_and_distances
+            self._potential_duplicate_id_pairs_and_distances = potential_duplicate_id_pairs_and_distances
             
-            self._all_potential_duplicate_pairs_and_distances_initialised = True
-            self._all_potential_duplicate_pairs_and_distances_initialised_time = HydrusTime.GetNow()
+            self._potential_duplicate_id_pairs_and_distances_initialised = True
+            self._potential_duplicate_id_pairs_and_distances_initialised_time = HydrusTime.GetNow()
             
-            self._all_potential_duplicate_pairs_and_distances_fetch_started = False
+            self._potential_duplicate_id_pairs_and_distances_fetch_started = False
             
             self._RefreshDuplicateCounts()
             
@@ -304,11 +307,12 @@ class EditPotentialDuplicatesSearchContextPanel( ClientGUICommon.StaticBox ):
         self._DoCountWork()
         
     
-    def _RefreshAllPotentialDuplicatePairsAndDistances( self ):
+    def _RefreshPotentialDuplicateIdPairsAndDistances( self ):
         
-        self._all_potential_duplicate_pairs_and_distances_initialised = False
-        
-        self._all_potential_duplicate_pairs_and_distances = ClientPotentialDuplicatesSearchContext.PotentialDuplicatePairsAndDistances( [] )
+        self._potential_duplicate_id_pairs_and_distances = ClientPotentialDuplicatesSearchContext.PotentialDuplicateIdPairsAndDistances( [] )
+        self._potential_duplicate_id_pairs_and_distances_initialised = False
+        self._potential_duplicate_id_pairs_and_distances_fetch_started = False
+        self._potential_duplicate_id_pairs_and_distances_initialised_time = 0
         
         self._RefreshDuplicateCounts()
         
@@ -323,7 +327,7 @@ class EditPotentialDuplicatesSearchContextPanel( ClientGUICommon.StaticBox ):
         
         self._count_job_status = ClientThreading.JobStatus( cancellable = True )
         
-        self._potential_duplicate_pairs_and_distances_still_to_search = self._all_potential_duplicate_pairs_and_distances.Duplicate()
+        self._potential_duplicate_id_pairs_and_distances_still_to_search = self._potential_duplicate_id_pairs_and_distances.Duplicate()
         
         self._DoCountWork()
         
@@ -341,24 +345,24 @@ class EditPotentialDuplicatesSearchContextPanel( ClientGUICommon.StaticBox ):
     
     def _UpdateCountLabel( self ):
         
-        if not self._all_potential_duplicate_pairs_and_distances_initialised:
+        if not self._potential_duplicate_id_pairs_and_distances_initialised:
             
             self._num_potential_duplicate_pairs_label.setText( f'initialising{HC.UNICODE_ELLIPSIS}' )
             
-        elif len( self._all_potential_duplicate_pairs_and_distances ) == 0:
+        elif len( self._potential_duplicate_id_pairs_and_distances ) == 0:
             
-            self._num_potential_duplicate_pairs_label.setText( f'no potential pairs in this database!' )
+            self._num_potential_duplicate_pairs_label.setText( f'no potential pairs in this file domain!' )
             
-        elif len( self._potential_duplicate_pairs_and_distances_still_to_search ) == 0:
+        elif len( self._potential_duplicate_id_pairs_and_distances_still_to_search ) == 0:
             
-            self._num_potential_duplicate_pairs_label.setText( f'{HydrusNumbers.ToHumanInt(len( self._all_potential_duplicate_pairs_and_distances))} potentials searched; found {HydrusNumbers.ToHumanInt( self._num_potential_duplicate_pairs )} pairs' )
+            self._num_potential_duplicate_pairs_label.setText( f'{HydrusNumbers.ToHumanInt(len( self._potential_duplicate_id_pairs_and_distances))} pairs searched; {HydrusNumbers.ToHumanInt( self._num_potential_duplicate_pairs )} matched' )
             
         else:
             
-            value = len( self._all_potential_duplicate_pairs_and_distances ) - len( self._potential_duplicate_pairs_and_distances_still_to_search )
-            range = len( self._all_potential_duplicate_pairs_and_distances )
+            value = len( self._potential_duplicate_id_pairs_and_distances ) - len( self._potential_duplicate_id_pairs_and_distances_still_to_search )
+            range = len( self._potential_duplicate_id_pairs_and_distances )
             
-            self._num_potential_duplicate_pairs_label.setText( f'{HydrusNumbers.ValueRangeToPrettyString(value, range)} potentials searched; found {HydrusNumbers.ToHumanInt( self._num_potential_duplicate_pairs )} pairs{HC.UNICODE_ELLIPSIS}' )
+            self._num_potential_duplicate_pairs_label.setText( f'{HydrusNumbers.ValueRangeToPrettyString(value, range)} pairs searched; {HydrusNumbers.ToHumanInt( self._num_potential_duplicate_pairs )} matched{HC.UNICODE_ELLIPSIS}' )
             
         
     
@@ -403,7 +407,7 @@ class EditPotentialDuplicatesSearchContextPanel( ClientGUICommon.StaticBox ):
     
     def NotifyNewDupePairs( self ):
         
-        self._RefreshAllPotentialDuplicatePairsAndDistances()
+        self._RefreshPotentialDuplicateIdPairsAndDistances()
         
     
     def PageHidden( self ):
@@ -435,6 +439,8 @@ class EditPotentialDuplicatesSearchContextPanel( ClientGUICommon.StaticBox ):
     
     def Search1Changed( self ):
         
+        reinit_pairs = self._tag_autocomplete_1.GetLocationContext() != self._tag_autocomplete_2.GetLocationContext()
+        
         self._tag_autocomplete_2.blockSignals( True )
         
         self._tag_autocomplete_2.SetLocationContext( self._tag_autocomplete_1.GetLocationContext() )
@@ -442,10 +448,17 @@ class EditPotentialDuplicatesSearchContextPanel( ClientGUICommon.StaticBox ):
         
         self._tag_autocomplete_2.blockSignals( False )
         
+        if reinit_pairs:
+            
+            self._RefreshPotentialDuplicateIdPairsAndDistances()
+            
+        
         self._BroadcastValueChanged()
         
     
     def Search2Changed( self ):
+        
+        reinit_pairs = self._tag_autocomplete_1.GetLocationContext() != self._tag_autocomplete_2.GetLocationContext()
         
         self._tag_autocomplete_1.blockSignals( True )
         
@@ -454,6 +467,124 @@ class EditPotentialDuplicatesSearchContextPanel( ClientGUICommon.StaticBox ):
         
         self._tag_autocomplete_1.blockSignals( False )
         
+        if reinit_pairs:
+            
+            self._RefreshPotentialDuplicateIdPairsAndDistances()
+            
+        
         self._BroadcastValueChanged()
+        
+    
+
+class PotentialDuplicatesSortWidget( QW.QWidget ):
+    
+    valueChanged = QC.Signal()
+    
+    def __init__( self, parent: QW.QWidget, duplicate_pair_sort_type: int, duplicate_pair_sort_asc: bool ):
+        
+        super().__init__( parent )
+        
+        choice_tuples = [ ( 'sort by: ' + ClientDuplicates.dupe_pair_sort_string_lookup[ sort_type ], sort_type ) for sort_type in (
+            ClientDuplicates.DUPE_PAIR_SORT_MAX_FILESIZE,
+            ClientDuplicates.DUPE_PAIR_SORT_MIN_FILESIZE,
+            ClientDuplicates.DUPE_PAIR_SORT_SIMILARITY,
+            ClientDuplicates.DUPE_PAIR_SORT_RANDOM
+        ) ]
+        
+        self._sort_type = ClientGUIMenuButton.MenuChoiceButton( self, choice_tuples )
+        
+        choice_tuples = [
+            ( 'asc', True ),
+            ( 'desc', False )
+        ]
+        
+        self._sort_asc = ClientGUIMenuButton.MenuChoiceButton( self, choice_tuples )
+        
+        #
+        
+        self.SetValue( duplicate_pair_sort_type, duplicate_pair_sort_asc )
+        
+        #
+        
+        hbox = QP.HBoxLayout()
+        
+        QP.AddToLayout( hbox, self._sort_type, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( hbox, self._sort_asc, CC.FLAGS_CENTER_PERPENDICULAR )
+        
+        self.setLayout( hbox )
+        
+        #
+        
+        self._sort_type.valueChanged.connect( self._UpdateControlsAfterSortTypeChanged )
+        
+        self._sort_type.valueChanged.connect( self._HandleValueChanged )
+        self._sort_asc.valueChanged.connect( self._HandleValueChanged )
+        
+    
+    def _UpdateControlsAfterSortTypeChanged( self ):
+        
+        sort_type = self._sort_type.GetValue()
+        
+        if sort_type == ClientDuplicates.DUPE_PAIR_SORT_RANDOM:
+            
+            self._sort_asc.setVisible( False )
+            
+        else:
+            
+            self._sort_asc.setVisible( True )
+            
+            choice_tuples = [
+                ( 'asc', True ),
+                ( 'desc', False )
+            ]
+            
+            if sort_type in ( ClientDuplicates.DUPE_PAIR_SORT_MAX_FILESIZE, ClientDuplicates.DUPE_PAIR_SORT_MIN_FILESIZE ):
+                
+                choice_tuples = [
+                    ( 'largest first', False ),
+                    ( 'smallest first', True )
+                ]
+                
+            elif sort_type == ClientDuplicates.DUPE_PAIR_SORT_SIMILARITY:
+                
+                choice_tuples = [
+                    ( 'most similar first', True ),
+                    ( 'least similar first', False )
+                ]
+                
+            
+            self._sort_asc.SetChoiceTuples( choice_tuples )
+            
+        
+    
+    def _HandleValueChanged( self ):
+        
+        self.valueChanged.emit()
+        
+    
+    def GetValue( self ):
+        
+        sort_type = self._sort_type.GetValue()
+        
+        sort_asc = self._sort_asc.GetValue()
+        
+        return ( sort_type, sort_asc )
+        
+    
+    def SetValue( self, sort_type: int, sort_asc: bool ):
+        
+        self._sort_type.blockSignals( True )
+        self._sort_asc.blockSignals( True )
+        
+        self._sort_type.SetValue( sort_type )
+        
+        self._UpdateControlsAfterSortTypeChanged()
+        
+        self._sort_asc.SetValue( sort_asc )
+        
+        self._sort_type.blockSignals( False )
+        self._sort_asc.blockSignals( False )
+        
+        self._HandleValueChanged()
         
     
