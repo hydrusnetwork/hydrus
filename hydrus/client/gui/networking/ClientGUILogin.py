@@ -308,7 +308,9 @@ class EditLoginsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         warning = 'WARNING: Your credentials are stored in plaintext! For this and other reasons, I recommend you use throwaway accounts with hydrus!'
         warning += '\n' * 2
-        warning += 'If a login script does not work for you, or the site you want has a complicated captcha, check out the Hydrus Companion web browser add-on--it can copy login cookies to hydrus! Pixiv now requires this! If you do set up HC for an external login, I recommend you set the respective domain(s) you are logging into to "not active" here (hit "flip active" on them), so hydrus knows it is not supposed to be taking responsibility.'
+        warning += 'This system is old and only works for simple sites. If a login script does not work for you, or the site you want has a complicated captcha, check out the Hydrus Companion web browser add-on--it can copy login cookies to hydrus! Pixiv now requires this! If you do set up HC for an external login, I recommend you set the respective domain(s) you are logging into to "not active" here (hit "flip active" on them), so hydrus knows it is not supposed to be taking responsibility.'
+        warning += '\n' * 2
+        warning += 'If you are looking for your login cookies, go to _network->data->review session cookies_.'
         
         warning_st = ClientGUICommon.BetterStaticText( self, warning )
         warning_st.setAlignment( QC.Qt.AlignmentFlag.AlignHCenter | QC.Qt.AlignmentFlag.AlignVCenter )

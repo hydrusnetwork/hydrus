@@ -610,7 +610,7 @@ class SidebarQuery( ClientGUISidebarCore.Sidebar ):
         
         media_results = []
         
-        for sub_query_hash_ids in HydrusLists.SplitListIntoChunks( query_hash_ids, QUERY_CHUNK_SIZE ):
+        for ( num_done, num_to_do, sub_query_hash_ids ) in HydrusLists.SplitListIntoChunksRich( query_hash_ids, QUERY_CHUNK_SIZE ):
             
             if query_job_status.IsCancelled():
                 
@@ -621,7 +621,7 @@ class SidebarQuery( ClientGUISidebarCore.Sidebar ):
             
             media_results.extend( more_media_results )
             
-            CG.client_controller.pub( 'set_num_query_results', page_key, len( media_results ), len( query_hash_ids ) )
+            CG.client_controller.pub( 'set_num_query_results', page_key, num_done, num_to_do )
             
             CG.client_controller.WaitUntilViewFree()
             

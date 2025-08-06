@@ -1367,7 +1367,7 @@ class FilesMaintenanceManager( ClientDaemons.ManagerWithMainLoop ):
             
             job_status.SetStatusText( status_text )
             
-            job_status.SetVariable( 'popup_gauge_1', ( num_jobs_done, total_num_jobs_to_do ) )
+            job_status.SetGauge( num_jobs_done, total_num_jobs_to_do )
             
             add_extra_comments_to_job_status( job_status )
             
@@ -1427,7 +1427,7 @@ class FilesMaintenanceManager( ClientDaemons.ManagerWithMainLoop ):
                 
                 job_status.SetStatusText( 'done!' )
                 
-                job_status.DeleteVariable( 'popup_gauge_1' )
+                job_status.DeleteGauge()
                 
                 job_status.FinishAndDismiss( 5 )
                 
@@ -1588,7 +1588,7 @@ class FilesMaintenanceManager( ClientDaemons.ManagerWithMainLoop ):
             
             job_status.SetStatusText( status_text )
             
-            job_status.SetVariable( 'popup_gauge_1', ( num_jobs_done, total_num_jobs_to_do ) )
+            job_status.SetGauge( num_jobs_done, total_num_jobs_to_do )
             
             add_extra_comments_to_job_status( job_status )
             
@@ -1615,7 +1615,7 @@ class FilesMaintenanceManager( ClientDaemons.ManagerWithMainLoop ):
             
             job_status.SetStatusText( 'done!' )
             
-            job_status.DeleteVariable( 'popup_gauge_1' )
+            job_status.DeleteGauge()
             
             job_status.FinishAndDismiss( 5 )
             

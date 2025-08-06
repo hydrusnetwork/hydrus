@@ -244,13 +244,9 @@ class ClientDBFilesInbox( ClientDBModule.ClientDBModule ):
             
             current_archived_hash_ids = current_hash_ids.difference( self.inbox_hash_ids )
             
-            num_to_do = len( current_archived_hash_ids )
-            
             BLOCK_SIZE = 4096
             
-            for ( i, batch_of_hash_ids ) in enumerate( HydrusLists.SplitListIntoChunks( current_archived_hash_ids, 4096 ) ):
-                
-                num_done = i * BLOCK_SIZE
+            for ( num_done, num_to_do, batch_of_hash_ids ) in HydrusLists.SplitListIntoChunksRich( current_archived_hash_ids, BLOCK_SIZE ):
                 
                 message = f'Searching current files: {HydrusNumbers.ValueRangeToPrettyString( num_done, num_to_do )}'
                 
@@ -259,7 +255,7 @@ class ClientDBFilesInbox( ClientDBModule.ClientDBModule ):
                 if job_status is not None:
                     
                     job_status.SetStatusText( message, level = 2 )
-                    job_status.SetVariable( 'popup_gauge_2', ( num_done, num_to_do ) )
+                    job_status.SetGauge( num_done, num_to_do, level = 2 )
                     
                     if job_status.IsCancelled():
                         
@@ -295,13 +291,9 @@ class ClientDBFilesInbox( ClientDBModule.ClientDBModule ):
             deleted_hash_ids = set( self.modules_files_storage.GetDeletedHashIdsList( self.modules_services.combined_local_media_service_id ) )
             deleted_hash_ids.difference_update( self.modules_files_storage.GetCurrentHashIdsList( self.modules_services.trash_service_id ) )
             
-            num_to_do = len( deleted_hash_ids )
-            
             BLOCK_SIZE = 4096
             
-            for ( i, batch_of_hash_ids ) in enumerate( HydrusLists.SplitListIntoChunks( deleted_hash_ids, BLOCK_SIZE ) ):
-                
-                num_done = i * BLOCK_SIZE
+            for ( num_done, num_to_do, batch_of_hash_ids ) in HydrusLists.SplitListIntoChunksRich( deleted_hash_ids, BLOCK_SIZE ):
                 
                 message = f'Searching deleted files: {HydrusNumbers.ValueRangeToPrettyString( num_done, num_to_do )}'
                 
@@ -310,7 +302,7 @@ class ClientDBFilesInbox( ClientDBModule.ClientDBModule ):
                 if job_status is not None:
                     
                     job_status.SetStatusText( message, level = 2 )
-                    job_status.SetVariable( 'popup_gauge_2', ( num_done, num_to_do ) )
+                    job_status.SetGauge( num_done, num_to_do, level = 2 )
                     
                     if job_status.IsCancelled():
                         
@@ -347,7 +339,7 @@ class ClientDBFilesInbox( ClientDBModule.ClientDBModule ):
             if job_status is not None:
                 
                 job_status.DeleteStatusText( level = 2 )
-                job_status.DeleteVariable( 'popup_gauge_2' )
+                job_status.DeleteGauge( level = 2 )
                 
             
         

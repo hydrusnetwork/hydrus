@@ -241,7 +241,7 @@ class ClientDBFilesDuplicatesFileSearch( ClientDBModule.ClientDBModule ):
         # ok we have selected a random guy that fits the search. we know there is at least one pair, so let's now get his whole group
         
         # a small wew moment here is that if any link in the group is not present in the search context, we nonetheless deliver the two separate sections of the chain--let's see how often that is an issue
-        group_potential_duplicate_id_pairs_and_distances = potential_duplicate_id_pairs_and_distances.FilterWiderPotentialGroup( master_media_id )
+        group_potential_duplicate_id_pairs_and_distances = potential_duplicate_id_pairs_and_distances.FilterWiderPotentialGroup( ( master_media_id, ) )
         
         group_matching_potential_duplicate_id_pairs_and_distances = self.GetPotentialDuplicateIdPairsAndDistancesFragmentary( potential_duplicates_search_context, group_potential_duplicate_id_pairs_and_distances )
         

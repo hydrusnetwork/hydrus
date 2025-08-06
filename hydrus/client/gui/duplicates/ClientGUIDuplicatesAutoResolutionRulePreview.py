@@ -245,7 +245,7 @@ class PreviewPanel( ClientGUICommon.StaticBox ):
                 return ( [], job_status )
                 
             
-            potential_duplicate_media_result_pairs_and_distances = CG.client_controller.Read( 'potential_duplicate_pairs_fragmentary', potential_duplicates_search_context, block_of_id_pairs_and_distances )
+            potential_duplicate_media_result_pairs_and_distances = CG.client_controller.Read( 'potential_duplicate_media_result_pairs_and_distances_fragmentary', potential_duplicates_search_context, block_of_id_pairs_and_distances )
             
             potential_duplicate_media_result_pairs_and_distances.Sort( ClientDuplicates.DUPE_PAIR_SORT_MIN_FILESIZE, False )
             

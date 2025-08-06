@@ -266,7 +266,7 @@ def THREADUploadPending( service_key ):
             num_done = num_to_do - remaining_num_pending
             
             job_status.SetStatusText( 'uploading to ' + service_name + ': ' + HydrusNumbers.ValueRangeToPrettyString( num_done, num_to_do ) )
-            job_status.SetVariable( 'popup_gauge_1', ( num_done, num_to_do ) )
+            job_status.SetGauge( num_done, num_to_do )
             
             while job_status.IsPaused() or job_status.IsCancelled():
                 
@@ -274,7 +274,7 @@ def THREADUploadPending( service_key ):
                 
                 if job_status.IsCancelled():
                     
-                    job_status.DeleteVariable( 'popup_gauge_1' )
+                    job_status.DeleteGauge()
                     job_status.SetStatusText( 'cancelled' )
                     
                     HydrusData.Print( job_status.ToString() )
@@ -392,7 +392,7 @@ def THREADUploadPending( service_key ):
             HydrusData.ShowText( 'Hey, your pending menu may have a miscount! It seems like you have pending count, but nothing was found in the database. Please run _database->regenerate->tag storage mappings cache (just pending, instant calculation) when convenient. Make sure it is the "instant, just pending" regeneration!' )
             
         
-        job_status.DeleteVariable( 'popup_gauge_1' )
+        job_status.DeleteGauge()
         job_status.SetStatusText( 'upload done!' )
         
     except Exception as e:
@@ -1248,7 +1248,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
                     
                 
                 job_status.SetStatusText( 'Will auto-dismiss in ' + HydrusTime.TimeDeltaToPrettyTimeDelta( 10 - i ) + '.' )
-                job_status.SetVariable( 'popup_gauge_1', ( i, 10 ) )
+                job_status.SetGauge( i, 10 )
                 
                 time.sleep( 1 )
                 
@@ -1469,13 +1469,13 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         job_status.SetStatusTitle( 'test job' )
         
         job_status.SetStatusText( 'Currently processing test job 5/8' )
-        job_status.SetVariable( 'popup_gauge_1', ( 5, 8 ) )
+        job_status.SetGauge( 5, 8 )
         
         self._controller.pub( 'message', job_status )
         
-        self._controller.CallLater( 2.0, job_status.SetStatusText, 'Pulsing subjob', 2 )
+        self._controller.CallLater( 2.0, job_status.SetStatusText, 'Pulsing subjob', level = 2 )
         
-        self._controller.CallLater( 2.0, job_status.SetVariable, 'popup_gauge_2', ( 0, None ) )
+        self._controller.CallLater( 2.0, job_status.SetGauge, 0, None, level = 2 )
         
         #
         
@@ -1484,7 +1484,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         job_status.SetStatusTitle( 'test network control' )
         
         job_status.SetStatusText( 'Downloading...' )
-        job_status.SetVariable( 'popup_gauge_1', ( 2, 21 ) )
+        job_status.SetGauge( 2, 21 )
         
         from hydrus.client.networking import ClientNetworkingJobs
         
@@ -2156,7 +2156,7 @@ ATTACH "client.mappings.db" as external_mappings;'''
                     finally:
                         
                         job_status.SetStatusText( HydrusNumbers.ValueRangeToPrettyString( i + 1, num_to_do ) )
-                        job_status.SetVariable( 'popup_gauge_1', ( i, num_to_do ) )
+                        job_status.SetGauge( i, num_to_do )
                         
                     
                 
@@ -2171,7 +2171,7 @@ ATTACH "client.mappings.db" as external_mappings;'''
                 
             finally:
                 
-                job_status.DeleteVariable( 'popup_gauge_1' )
+                job_status.DeleteGauge()
                 
                 job_status.Finish()
                 
@@ -3668,7 +3668,7 @@ ATTACH "client.mappings.db" as external_mappings;'''
         
         ClientGUIMenus.AppendMenuItem( submenu, 'DEBUG: do tumblr GDPR click-through', 'Do a manual click-through for the tumblr GDPR page.', self._controller.CallLater, 0.0, self._controller.network_engine.login_manager.LoginTumblrGDPR )
         
-        ClientGUIMenus.AppendMenu( menu, submenu, 'logins' )
+        ClientGUIMenus.AppendMenu( menu, submenu, 'logins (legacy; simple sites only)' )
         
         #
         
@@ -6339,6 +6339,10 @@ ATTACH "client.mappings.db" as external_mappings;'''
             t += 1.0
             
             CG.client_controller.CallLaterQtSafe( self, t, 'test job', self._notebook.CloseCurrentPage )
+            
+            t += 0.1
+            
+            CG.client_controller.CallLaterQtSafe( self, t, 'test job', HydrusData.ShowText, 'ui test done' )
             
         
         def do_it():

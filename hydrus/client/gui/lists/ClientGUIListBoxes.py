@@ -4496,7 +4496,7 @@ class ListBoxTagsDisplayCapable( ListBoxTags ):
             
             terms_to_info = { term : None for term in to_lookup }
             
-            for batch_to_lookup in HydrusLists.SplitListIntoChunks( to_lookup, 500 ):
+            for ( num_done, num_to_do, batch_to_lookup ) in HydrusLists.SplitListIntoChunksRich( to_lookup, 500 ):
                 
                 tags_to_terms = { term.GetTag() : term for term in batch_to_lookup }
                 

@@ -307,6 +307,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             'focus_media_thumb_on_viewer_close' : True,
             'skip_yesno_on_write_autocomplete_multiline_paste' : False,
             'activate_main_gui_on_viewer_close' : False,
+            'activate_main_gui_on_focusing_viewer_close' : False,
             'override_bandwidth_on_file_urls_from_post_urls' : True,
             'remove_leading_url_double_slashes' : False,
             'always_apply_ntfs_export_filename_rules' : False,

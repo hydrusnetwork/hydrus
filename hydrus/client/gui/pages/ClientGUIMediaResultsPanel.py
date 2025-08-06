@@ -1986,6 +1986,8 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.Liste
     
     def NotifyFocusedMediaFromCanvasExiting( self, media ):
         
+        do_activate_window_test = False
+        
         if CG.client_controller.new_options.GetBoolean( 'focus_media_tab_on_viewer_close_if_possible' ):
             
             if CG.client_controller.gui.GetPageFromPageKey( self._page_key ) is not None:
@@ -1993,10 +1995,19 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.Liste
                 CG.client_controller.gui.ShowPage( self._page_key )
                 
             
+            do_activate_window_test = True
+            
         
         if CG.client_controller.new_options.GetBoolean( 'focus_media_thumb_on_viewer_close' ):
             
             self.SetFocusedMedia( media )
+            
+            do_activate_window_test = True
+            
+        
+        if do_activate_window_test and CG.client_controller.new_options.GetBoolean( 'activate_main_gui_on_focusing_viewer_close' ):
+            
+            self.activateWindow()
             
         
     

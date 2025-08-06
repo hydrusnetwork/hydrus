@@ -714,6 +714,9 @@ class DateTimesCtrl( QW.QWidget ):
         self._paste_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().paste, self._Paste )
         self._paste_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'Paste a timestamp. Needs to be a simple string but can handle pretty much anything.' ) )
         
+        self._now_button = ClientGUICommon.BetterButton( self, 'now', self._SetNow )
+        self._now_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'Set the time to now.' ) )
+        
         #
         
         qt_now = QC.QDateTime.currentDateTime()
@@ -776,6 +779,7 @@ class DateTimesCtrl( QW.QWidget ):
         
         QP.AddToLayout( button_hbox, self._copy_button, CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( button_hbox, self._paste_button, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( button_hbox, self._now_button, CC.FLAGS_CENTER_PERPENDICULAR )
         
         QP.AddToLayout( vbox, button_hbox, CC.FLAGS_ON_RIGHT )
         
@@ -914,6 +918,16 @@ class DateTimesCtrl( QW.QWidget ):
         
         self.SetValue( datetime_value_range )
         
+    
+    def _SetNow( self ):
+        
+        qt_datetime = QC.QDateTime.currentDateTime()
+        
+        datetime_value_range = self._current_datetime_value_range.DuplicateWithNewQtDateTime( qt_datetime )
+        
+        self.SetValue( datetime_value_range )
+        
+    
     
     def _UpdateLabelAndStep( self ):
         

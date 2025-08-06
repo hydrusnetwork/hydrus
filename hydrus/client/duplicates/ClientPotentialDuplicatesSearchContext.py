@@ -47,7 +47,7 @@ class PotentialDuplicateIdPairsAndDistances( object ):
         return PotentialDuplicateIdPairsAndDistances( self._potential_id_pairs_and_distances )
         
     
-    def FilterWiderPotentialGroup( self, media_id ):
+    def FilterWiderPotentialGroup( self, media_ids: collections.abc.Collection[ int ] ):
         
         # ok, the caller wants to process a 'whole group' of similar files all at once, so let's get them all. recall that merging a pair merges peasant potentials to the king too
         # given this file (of a pair), what are all the other pairs this file has? what are all the potentials those other files have? keep searching until the whole network is mapped
@@ -58,7 +58,7 @@ class PotentialDuplicateIdPairsAndDistances( object ):
             
         
         searched = set()
-        still_to_search = [ media_id ]
+        still_to_search = list( media_ids )
         rows_found = []
         
         while len( still_to_search ) > 0:

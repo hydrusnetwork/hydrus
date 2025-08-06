@@ -278,14 +278,21 @@ def GetDuplicateComparisonStatementsFast( shown_media_result: ClientMediaResult.
     s_resolution = shown_media_result.GetResolution()
     c_resolution = comparison_media_result.GetResolution()
     
-    if s_resolution != c_resolution:
+    ( s_w, s_h ) = s_resolution
+    ( c_w, c_h ) = c_resolution
+    
+    all_measurements_are_good = None not in ( s_w, s_h, c_w, c_h ) and True not in ( d <= 0 for d in ( s_w, s_h, c_w, c_h ) )
+    
+    if all_measurements_are_good:
         
-        ( s_w, s_h ) = s_resolution
-        ( c_w, c_h ) = c_resolution
-        
-        all_measurements_are_good = None not in ( s_w, s_h, c_w, c_h ) and True not in ( d <= 0 for d in ( s_w, s_h, c_w, c_h ) )
-        
-        if all_measurements_are_good:
+        if s_w == c_w and s_h == c_h:
+            
+            score = 0
+            statement = f'both are {ClientData.ResolutionToPrettyString(s_resolution)}'
+            
+            statements_and_scores[ 'resolution' ] = ( statement, score )
+            
+        else:
             
             resolution_ratio = ( s_w * s_h ) / ( c_w * c_h )
             
@@ -392,6 +399,7 @@ def GetDuplicateComparisonStatementsFast( shown_media_result: ClientMediaResult.
             
         
     
+    
     # same/diff mime
     
     if s_mime in COMPLEX_COMPARISON_FILETYPES or c_mime in COMPLEX_COMPARISON_FILETYPES:
@@ -421,9 +429,14 @@ def GetDuplicateComparisonStatementsFast( shown_media_result: ClientMediaResult.
     s_has_audio = shown_media_result.HasAudio()
     c_has_audio = comparison_media_result.HasAudio()
     
-    if s_has_audio != c_has_audio:
+    if s_has_audio or c_has_audio:
         
-        if s_has_audio:
+        if s_has_audio and c_has_audio:
+            
+            audio_statement = 'both have audio'
+            score = 0
+            
+        elif s_has_audio:
             
             audio_statement = 'this has audio, the other does not'
             score = duplicate_comparison_score_has_audio
@@ -434,19 +447,22 @@ def GetDuplicateComparisonStatementsFast( shown_media_result: ClientMediaResult.
             score = - duplicate_comparison_score_has_audio
             
         
-        statement = '{} vs {}'.format( s_has_audio, c_has_audio )
-
         statements_and_scores[ 'has_audio' ] = ( audio_statement, score )
-    
+        
 
     # more tags
     
     s_num_tags = len( shown_media_result.GetTagsManager().GetCurrentAndPending( CC.COMBINED_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ) )
     c_num_tags = len( comparison_media_result.GetTagsManager().GetCurrentAndPending( CC.COMBINED_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ) )
     
-    operator = '?'
-    
-    if s_num_tags != c_num_tags:
+    if s_num_tags == c_num_tags:
+        
+        score = 0
+        statement = f'both have {HydrusNumbers.ToHumanInt(s_num_tags)} tags'
+        
+    else:
+        
+        operator = '?'
         
         if s_num_tags > 0 and c_num_tags > 0:
             
@@ -474,8 +490,8 @@ def GetDuplicateComparisonStatementsFast( shown_media_result: ClientMediaResult.
         
         statement = '{} tags {} {} tags'.format( HydrusNumbers.ToHumanInt( s_num_tags ), operator, HydrusNumbers.ToHumanInt( c_num_tags ) )
         
-        statements_and_scores[ 'num_tags' ] = ( statement, score )
-        
+    
+    statements_and_scores[ 'num_tags' ] = ( statement, score )
     
     # older
     
@@ -484,25 +500,34 @@ def GetDuplicateComparisonStatementsFast( shown_media_result: ClientMediaResult.
     
     one_month = 86400 * 30
     
-    if s_import_timestamp is not None and c_import_timestamp is not None and abs( s_import_timestamp - c_import_timestamp ) > one_month:
+    if s_import_timestamp is not None and c_import_timestamp is not None:
         
-        if s_import_timestamp < c_import_timestamp:
-            
-            operator = 'older than'
-            score = duplicate_comparison_score_older
-            
-        else:
-            
-            operator = 'newer than'
-            score = -duplicate_comparison_score_older
-            
-        
-        if they_are_pixel_duplicates:
+        if abs( s_import_timestamp - c_import_timestamp ) < one_month:
             
             score = 0
             
-        
-        statement = '{}, {} {}'.format( HydrusTime.TimestampToPrettyTimeDelta( s_import_timestamp, history_suffix = ' old' ), operator, HydrusTime.TimestampToPrettyTimeDelta( c_import_timestamp, history_suffix = ' old' ) )
+            statement = 'imported at similar time ({})'.format( HydrusTime.TimestampToPrettyTimeDelta( int( ( s_import_timestamp + c_import_timestamp ) / 2 ) ) )
+            
+        else:
+            
+            if s_import_timestamp < c_import_timestamp:
+                
+                operator = 'older than'
+                score = duplicate_comparison_score_older
+                
+            else:
+                
+                operator = 'newer than'
+                score = -duplicate_comparison_score_older
+                
+            
+            if they_are_pixel_duplicates:
+                
+                score = 0
+                
+            
+            statement = '{}, {} {}'.format( HydrusTime.TimestampToPrettyTimeDelta( s_import_timestamp, history_suffix = ' old' ), operator, HydrusTime.TimestampToPrettyTimeDelta( c_import_timestamp, history_suffix = ' old' ) )
+            
         
         statements_and_scores[ 'time_imported' ] = ( statement, score )
         
@@ -510,9 +535,13 @@ def GetDuplicateComparisonStatementsFast( shown_media_result: ClientMediaResult.
     s_has_transparency = shown_media_result.GetFileInfoManager().has_transparency
     c_has_transparency = comparison_media_result.GetFileInfoManager().has_transparency
     
-    if s_has_transparency ^ c_has_transparency:
+    if s_has_transparency or c_has_transparency:
         
-        if s_has_transparency:
+        if s_has_transparency and c_has_transparency:
+            
+            transparency_statement = 'both have transparency'
+            
+        elif s_has_transparency:
             
             transparency_statement = 'this has transparency, the other is opaque'
             
@@ -527,9 +556,13 @@ def GetDuplicateComparisonStatementsFast( shown_media_result: ClientMediaResult.
     s_has_exif = shown_media_result.GetFileInfoManager().has_exif
     c_has_exif = comparison_media_result.GetFileInfoManager().has_exif
     
-    if s_has_exif ^ c_has_exif:
+    if s_has_exif or c_has_exif:
         
-        if s_has_exif:
+        if s_has_exif and c_has_exif:
+            
+            exif_statement = 'both have exif data'
+            
+        elif s_has_exif:
             
             exif_statement = 'this has exif data, the other does not'
             
@@ -561,9 +594,13 @@ def GetDuplicateComparisonStatementsFast( shown_media_result: ClientMediaResult.
     s_has_icc = shown_media_result.GetFileInfoManager().has_icc_profile
     c_has_icc = comparison_media_result.GetFileInfoManager().has_icc_profile
     
-    if s_has_icc ^ c_has_icc:
+    if s_has_icc or c_has_icc:
         
-        if s_has_icc:
+        if s_has_icc and c_has_icc:
+            
+            icc_statement = 'both have icc profile'
+            
+        elif s_has_icc:
             
             icc_statement = 'this has icc profile, the other does not'
             
@@ -661,31 +698,67 @@ def GetDuplicateComparisonStatementsSlow( shown_media_result: ClientMediaResult.
                 
                 path = CG.client_controller.client_files_manager.GetFilePath( jpeg_hash, HC.IMAGE_JPEG )
                 
+                subsampling_string = 'unknown'
+                quality_result = ( 'unknown', None )
+                
                 try:
                     
                     raw_pil_image = HydrusImageOpening.RawOpenPILImage( path )
                     
-                    result = HydrusImageMetadata.GetJPEGQuantizationQualityEstimate( raw_pil_image )
+                    subsampling_string = HydrusImageMetadata.GetJpegSubsampling( raw_pil_image )
+                    
+                    quality_result = HydrusImageMetadata.GetJPEGQuantizationQualityEstimate( raw_pil_image )
                     
                 except:
                     
-                    result = ( 'unknown', None )
+                    pass
                     
                 
-                hashes_to_jpeg_quality[ jpeg_hash ] = result
+                hashes_to_jpeg_quality[ jpeg_hash ] = ( subsampling_string, quality_result )
                 
             
         
-        ( s_label, s_jpeg_quality ) = hashes_to_jpeg_quality[ s_hash ]
-        ( c_label, c_jpeg_quality ) = hashes_to_jpeg_quality[ c_hash ]
+        ( s_subsampling_string, ( s_label, s_jpeg_quality ) ) = hashes_to_jpeg_quality[ s_hash ]
+        ( c_subsampling_string, ( c_label, c_jpeg_quality ) ) = hashes_to_jpeg_quality[ c_hash ]
+        
+        s_subsampling_value = HydrusImageMetadata.subsampling_value_lookup.get( s_subsampling_string, 0 )
+        c_subsampling_value = HydrusImageMetadata.subsampling_value_lookup.get( c_subsampling_string, 0 )
+        
+        if s_subsampling_value == c_subsampling_value:
+            
+            score = 0
+            statement = f'both {s_subsampling_string}'
+            
+        else:
+            
+            if s_subsampling_value > c_subsampling_value:
+                
+                score = 10
+                
+            else:
+                
+                score = -10
+                
+            
+            statement = f'{s_subsampling_string} vs {c_subsampling_string}'
+            
+        
+        statements_and_scores[ 'jpeg_subsampling' ] = ( statement, score )
+        
+        #
         
         score = 0
         
-        if s_label != c_label:
+        if c_jpeg_quality is None or s_jpeg_quality is None or c_jpeg_quality <= 0 or s_jpeg_quality <= 0:
             
-            if c_jpeg_quality is None or s_jpeg_quality is None or c_jpeg_quality <= 0 or s_jpeg_quality <= 0:
+            score = 0
+            
+        else:
+            
+            if s_jpeg_quality == c_jpeg_quality:
                 
                 score = 0
+                statement = f'both {s_label} quality'
                 
             else:
                 
@@ -709,8 +782,8 @@ def GetDuplicateComparisonStatementsSlow( shown_media_result: ClientMediaResult.
                     score = -duplicate_comparison_score_higher_jpeg_quality
                     
                 
-            
-            statement = '{} vs {} jpeg quality'.format( s_label, c_label )
+                statement = '{} vs {} jpeg quality'.format( s_label, c_label )\
+                
             
             statements_and_scores[ 'jpeg_quality' ] = ( statement, score )
             
@@ -947,7 +1020,7 @@ class DuplicatesManager( object ):
                 
                 text = 'searching: {}'.format( HydrusNumbers.ValueRangeToPrettyString( num_searched_estimate, total_num_files ) )
                 job_status.SetStatusText( text )
-                job_status.SetVariable( 'popup_gauge_1', ( num_searched_estimate, total_num_files ) )
+                job_status.SetGauge( num_searched_estimate, total_num_files )
                 
                 if job_status.IsCancelled() or HG.model_shutdown:
                     
@@ -1006,11 +1079,11 @@ def get_updated_domain_modified_timestamp_datas( destination_media_result: Clien
         
         if source_timestamp_ms is not None:
             
-            timestamp_data = ClientTime.TimestampData.STATICDomainModifiedTime( domain, source_timestamp_ms )
-            
             destination_timestamp_ms = destination_timestamp_manager.GetDomainModifiedTimestampMS( domain )
             
             if destination_timestamp_ms is None or ClientTime.ShouldUpdateModifiedTime( destination_timestamp_ms, source_timestamp_ms ):
+                
+                timestamp_data = ClientTime.TimestampData.STATICDomainModifiedTime( domain, source_timestamp_ms )
                 
                 timestamp_datas.append( timestamp_data )
                 
@@ -1659,6 +1732,8 @@ class DuplicateContentMergeOptions( HydrusSerialisable.SerialisableBase ):
             first_urls = set( media_result_a.GetLocationsManager().GetURLs() )
             second_urls = set( media_result_b.GetLocationsManager().GetURLs() )
             
+            # hey note here that they url action is x_needs, but the timestamp action works off of what they other guy _has_, totally, since we want to examine conflicts to get the earlier time
+            
             if self._sync_urls_action == HC.CONTENT_MERGE_ACTION_TWO_WAY_MERGE:
                 
                 first_needs = second_urls.difference( first_urls )
@@ -1668,14 +1743,14 @@ class DuplicateContentMergeOptions( HydrusSerialisable.SerialisableBase ):
                     
                     content_update_package.AddContentUpdate( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_URLS, HC.CONTENT_UPDATE_ADD, ( first_needs, hash_a_set ) ) )
                     
-                    content_update_package.AddContentUpdates( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, get_domain_modified_content_updates( media_result_a, media_result_b, first_needs ) )
+                    content_update_package.AddContentUpdates( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, get_domain_modified_content_updates( media_result_a, media_result_b, second_urls ) )
                     
                 
                 if len( second_needs ) > 0:
                     
                     content_update_package.AddContentUpdate( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_URLS, HC.CONTENT_UPDATE_ADD, ( second_needs, hash_b_set ) ) )
                     
-                    content_update_package.AddContentUpdates( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, get_domain_modified_content_updates( media_result_b, media_result_a, second_needs ) )
+                    content_update_package.AddContentUpdates( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, get_domain_modified_content_updates( media_result_b, media_result_a, first_urls ) )
                     
                 
             elif self._sync_urls_action == HC.CONTENT_MERGE_ACTION_COPY:
@@ -1686,7 +1761,7 @@ class DuplicateContentMergeOptions( HydrusSerialisable.SerialisableBase ):
                     
                     content_update_package.AddContentUpdate( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_URLS, HC.CONTENT_UPDATE_ADD, ( first_needs, hash_a_set ) ) )
                     
-                    content_update_package.AddContentUpdates( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, get_domain_modified_content_updates( media_result_a, media_result_b, first_needs ) )
+                    content_update_package.AddContentUpdates( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, get_domain_modified_content_updates( media_result_a, media_result_b, second_urls ) )
                     
                 
             

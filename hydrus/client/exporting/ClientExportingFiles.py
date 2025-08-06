@@ -525,9 +525,9 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
         
         CHUNK_SIZE = 256
         
-        for ( i, block_of_hash_ids ) in enumerate( HydrusLists.SplitListIntoChunks( query_hash_ids, 256 ) ):
+        for ( num_done, num_to_do, block_of_hash_ids ) in HydrusLists.SplitListIntoChunks( query_hash_ids, CHUNK_SIZE ):
             
-            job_status.SetStatusText( 'searching: {}'.format( HydrusNumbers.ValueRangeToPrettyString( i * CHUNK_SIZE, len( query_hash_ids ) ) ) )
+            job_status.SetStatusText( 'searching: {}'.format( HydrusNumbers.ValueRangeToPrettyString( num_done, num_to_do ) ) )
             
             if job_status.IsCancelled():
                 
@@ -765,16 +765,14 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
             
             CHUNK_SIZE = 64
             
-            chunks_of_media_results = HydrusLists.SplitListIntoChunks( my_files_media_results, CHUNK_SIZE )
-            
-            for ( i, chunk_of_media_results ) in enumerate( chunks_of_media_results ):
+            for ( num_done, num_to_do, chunk_of_media_results ) in HydrusLists.SplitListIntoChunksRich( my_files_media_results, CHUNK_SIZE ):
                 
                 if job_status.IsCancelled():
                     
                     return
                     
                 
-                job_status.SetStatusText( 'deleting: {}'.format( HydrusNumbers.ValueRangeToPrettyString( i * CHUNK_SIZE, len( my_files_media_results ) ) ) )
+                job_status.SetStatusText( 'deleting: {}'.format( HydrusNumbers.ValueRangeToPrettyString( num_done, num_to_do ) ) )
                 
                 content_update = ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, { media_result.GetHash() for media_result in chunk_of_media_results }, reason = reason )
                 

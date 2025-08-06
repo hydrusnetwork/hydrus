@@ -69,6 +69,8 @@ def CreatePageManagerDuplicateFilter(
     page_manager.SetVariable( 'duplicate_pair_sort_type', ClientDuplicates.DUPE_PAIR_SORT_MAX_FILESIZE )
     page_manager.SetVariable( 'duplicate_pair_sort_asc', False )
     
+    page_manager.SetVariable( 'filter_group_mode', False )
+    
     return page_manager
     
 
@@ -185,7 +187,7 @@ class PageManager( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_MANAGEMENT_CONTROLLER
     SERIALISABLE_NAME = 'Client Page Management Controller'
-    SERIALISABLE_VERSION = 16
+    SERIALISABLE_VERSION = 17
     
     def __init__( self, page_name = 'page' ):
         
@@ -638,6 +640,24 @@ class PageManager( HydrusSerialisable.SerialisableBase ):
             new_serialisable_info = ( page_name, page_type, serialisable_variables )
             
             return ( 16, new_serialisable_info )
+            
+        
+        if version == 16:
+            
+            ( page_name, page_type, serialisable_variables ) = old_serialisable_info
+            
+            if page_type == ClientGUIPagesCore.PAGE_TYPE_DUPLICATE_FILTER:
+                
+                variables: HydrusSerialisable.SerialisableDictionary = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_variables )
+                
+                variables[ 'filter_group_mode' ] = False
+                
+                serialisable_variables = variables.GetSerialisableTuple()
+                
+            
+            new_serialisable_info = ( page_name, page_type, serialisable_variables )
+            
+            return ( 17, new_serialisable_info )
             
         
     

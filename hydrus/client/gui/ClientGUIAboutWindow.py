@@ -160,6 +160,12 @@ def ShowAboutWindow( win: QW.QWidget ):
     
     library_version_lines.append( '' )
     
+    boot_time_ms = CG.client_controller.GetBootTimestampMS()
+    
+    library_version_lines.append( f'boot time: {HydrusTime.TimestampToPrettyTimeDelta( boot_time_ms // 1000 )} ({HydrusTime.TimestampMSToPrettyTime( boot_time_ms )})' )
+    
+    library_version_lines.append( '' )
+    
     library_version_lines.append( 'install dir: {}'.format( HC.BASE_DIR ) )
     library_version_lines.append( 'db dir: {}'.format( CG.client_controller.db_dir ) )
     library_version_lines.append( 'temp dir: {}'.format( HydrusTemp.GetCurrentTempDir() ) )

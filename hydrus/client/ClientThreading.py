@@ -127,6 +127,11 @@ class JobStatus( object ):
         self.DeleteVariable( 'attached_files' )
         
     
+    def DeleteGauge( self, level = 1 ):
+        
+        self.DeleteVariable( f'popup_gauge_{level}' )
+        
+    
     def DeleteNetworkJob( self ):
         
         self.DeleteVariable( 'network_job' )
@@ -134,7 +139,7 @@ class JobStatus( object ):
     
     def DeleteStatusText( self, level = 1 ):
         
-        self.DeleteVariable( 'status_text_{}'.format( level ) )
+        self.DeleteVariable( f'status_text_{level}' )
         
     
     def DeleteStatusTitle( self ):
@@ -221,6 +226,11 @@ class JobStatus( object ):
                 return None
                 
             
+        
+    
+    def GetGauge( self, level = 1 ) -> typing.Optional[ tuple[ typing.Optional[ int ], typing.Optional[ int ] ] ]:
+        
+        return self.GetIfHasVariable( f'popup_gauge_{level}' )
         
     
     def GetKey( self ):
@@ -331,6 +341,11 @@ class JobStatus( object ):
             
             self.SetVariable( 'attached_files', ( hashes, label ) )
             
+        
+    
+    def SetGauge( self, num_done: typing.Optional[ int ], num_to_do: typing.Optional[ int ], level = 1 ):
+        
+        self.SetVariable( f'popup_gauge_{level}', ( num_done, num_to_do ) )
         
     
     def SetNetworkJob( self, network_job ):

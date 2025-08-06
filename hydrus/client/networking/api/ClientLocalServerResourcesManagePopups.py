@@ -297,7 +297,7 @@ def HandlePopupUpdate( job_status: ClientThreading.JobStatus, request: HydrusSer
             
         else:
             
-            job_status.DeleteStatusText( 2 )
+            job_status.DeleteStatusText( level = 2 )
             
         
     

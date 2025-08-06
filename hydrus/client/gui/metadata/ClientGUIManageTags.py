@@ -944,11 +944,11 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
             
             def do_it( tag_service_key, hashes ):
                 
-                tlw = CG.client_controller.GetMainTLW()
+                tlw = CG.client_controller.GetMainGUI()
                 
                 frame = ClientGUITopLevelWindowsPanels.FrameThatTakesScrollablePanel( tlw, 'migrate tags' )
                 
-                panel = ClientGUIMigrateTags.MigrateTagsPanel( frame, self._tag_service_key, hashes )
+                panel = ClientGUIMigrateTags.MigrateTagsPanel( frame, tag_service_key, hashes )
                 
                 frame.SetPanel( panel )
                 

@@ -726,7 +726,7 @@ class ClientDBSimilarFiles( ClientDBModule.ClientDBModule ):
                 
                 CG.client_controller.frame_splash_status.SetSubtext( text )
                 job_status.SetStatusText( text )
-                job_status.SetVariable( 'popup_gauge_1', ( num_done, num_to_do ) )
+                job_status.SetGauge( num_done, num_to_do )
                 
                 with self._MakeTemporaryIntegerTable( rebalance_perceptual_hash_ids, 'phash_id' ) as temp_table_name:
                     
@@ -762,8 +762,8 @@ class ClientDBSimilarFiles( ClientDBModule.ClientDBModule ):
         finally:
             
             job_status.SetStatusText( 'done!' )
-            job_status.DeleteVariable( 'popup_gauge_1' )
-            job_status.DeleteStatusText( 2 ) # used in the regenbranch call
+            job_status.DeleteGauge()
+            job_status.DeleteStatusText( level = 2 ) # used in the regenbranch call
             
             job_status.FinishAndDismiss( 5 )
             
@@ -888,7 +888,7 @@ class ClientDBSimilarFiles( ClientDBModule.ClientDBModule ):
         finally:
             
             job_status.SetStatusText( 'done!' )
-            job_status.DeleteStatusText( 2 )
+            job_status.DeleteStatusText( level = 2 )
             
             job_status.FinishAndDismiss( 5 )
             

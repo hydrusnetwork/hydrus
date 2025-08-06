@@ -115,7 +115,7 @@ class MediaResultCache( object ):
         
         def do_it( hash_ids ):
             
-            for group_of_hash_ids in HydrusLists.SplitListIntoChunks( hash_ids, 256 ):
+            for ( num_done, num_to_do, group_of_hash_ids ) in HydrusLists.SplitListIntoChunksRich( hash_ids, 256 ):
                 
                 if HydrusThreading.IsThreadShuttingDown():
                     

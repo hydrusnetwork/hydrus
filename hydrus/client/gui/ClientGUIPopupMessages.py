@@ -445,7 +445,7 @@ class PopupMessage( PopupWindow ):
         
         #
         
-        popup_gauge_1 = self._job_status.GetIfHasVariable( 'popup_gauge_1' )
+        popup_gauge_1 = self._job_status.GetGauge()
         
         if popup_gauge_1 is not None and not paused:
             

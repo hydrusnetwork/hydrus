@@ -2316,7 +2316,7 @@ class CanvasHoverFrameRightDuplicates( CanvasHoverFrame ):
         QP.AddToLayout( self._comparison_statements_vbox, self._comparison_statement_score_summary, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         self._comparison_statement_names_fast = [ 'filesize', 'resolution', 'ratio', 'mime', 'num_tags', 'time_imported', 'pixel_duplicates', 'has_transparency', 'exif_data', 'embedded_metadata', 'icc_profile', 'has_audio', 'duration' ]
-        self._comparison_statement_names_slow = ['jpeg_quality', 'a_and_b_are_visual_duplicates' ]
+        self._comparison_statement_names_slow = ['jpeg_subsampling', 'jpeg_quality', 'a_and_b_are_visual_duplicates' ]
         
         self._total_score_fast = 0
         self._total_score_slow = 0

@@ -544,7 +544,7 @@ class BetterListCtrlTreeView( QW.QTreeView ):
         # This sets header data, so we can now do header-section-sizing gubbins
         self.setModel( model )
         
-        main_tlw = CG.client_controller.GetMainTLW()
+        main_tlw = CG.client_controller.GetMainGUI()
         
         # Note: now (2024-08) we moved to TreeView, I have no idea what the status of this stuff is
         # if last section is set too low, for instance 3, the column seems unable to ever shrink from initial (expanded to fill space) size
@@ -618,7 +618,7 @@ class BetterListCtrlTreeView( QW.QTreeView ):
         
         MIN_SECTION_SIZE_CHARS = 3
         
-        main_tlw = CG.client_controller.GetMainTLW()
+        main_tlw = CG.client_controller.GetMainGUI()
         
         last_column_index = self._column_list_status.GetColumnCount() - 1
         
@@ -659,7 +659,7 @@ class BetterListCtrlTreeView( QW.QTreeView ):
         
         status.SetColumnListType( self._column_list_type )
         
-        main_tlw = CG.client_controller.GetMainTLW()
+        main_tlw = CG.client_controller.GetMainGUI()
         
         columns = []
         
@@ -1074,7 +1074,7 @@ class BetterListCtrlTreeView( QW.QTreeView ):
         
         #
         
-        main_tlw = CG.client_controller.GetMainTLW()
+        main_tlw = CG.client_controller.GetMainGUI()
         
         MIN_SECTION_SIZE_CHARS = 3
         
@@ -1219,7 +1219,7 @@ class BetterListCtrlTreeView( QW.QTreeView ):
             
             last_column_chars = self._original_column_list_status.GetColumnWidth( last_column_type )
             
-            main_tlw = CG.client_controller.GetMainTLW()
+            main_tlw = CG.client_controller.GetMainGUI()
             
             width += ClientGUIFunctions.ConvertTextToPixelWidth( main_tlw, last_column_chars )
             

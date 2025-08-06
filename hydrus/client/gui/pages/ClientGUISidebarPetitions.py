@@ -1853,7 +1853,7 @@ class SidebarPetitions( ClientGUISidebarCore.Sidebar ):
                                     
                                 
                                 job_status.SetStatusText( HydrusNumbers.ValueRangeToPrettyString( num_done, num_to_do ) )
-                                job_status.SetVariable( 'popup_gauge_1', ( num_done, num_to_do ) )
+                                job_status.SetGauge( num_done, num_to_do )
                                 
                             
                             if outgoing_petition.GetPetitionHeader() in cached_fake_petition_headers_to_petitions:

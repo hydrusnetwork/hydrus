@@ -140,6 +140,7 @@ class MockServicesManager( object ):
         return service_key in self._service_keys_to_services
         
     
+
 class FakeWebSessionManager():
     
     def EnsureLoggedIn( self, name ):
@@ -152,6 +153,7 @@ class FakeWebSessionManager():
         return { 'session_cookie' : 'blah' }
         
     
+
 class TestFrame( QW.QWidget ):
     
     def __init__( self ):
@@ -169,6 +171,7 @@ class TestFrame( QW.QWidget ):
         
         self.show()
         
+    
 
 only_run = None
 
@@ -589,6 +592,11 @@ class Controller( object ):
     def GetFilesDir( self ):
         
         return self._server_files_dir
+        
+    
+    def GetMainGUI( self ):
+        
+        return self.win
         
     
     def GetMainTLW( self ):

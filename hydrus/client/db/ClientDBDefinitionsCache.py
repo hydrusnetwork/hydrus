@@ -261,13 +261,12 @@ class ClientDBCacheLocalHashes( ClientDBModule.ClientDBModule ):
             
         
         BLOCK_SIZE = 10000
-        num_to_do = len( all_hash_ids )
         
         all_excess_hash_ids = set()
         all_missing_hash_ids = set()
         all_incorrect_hash_ids = set()
         
-        for ( i, block_of_hash_ids ) in enumerate( HydrusLists.SplitListIntoChunks( all_hash_ids, BLOCK_SIZE ) ):
+        for ( num_done, num_to_do, block_of_hash_ids ) in HydrusLists.SplitListIntoChunksRich( all_hash_ids, BLOCK_SIZE ):
             
             if job_status.IsCancelled():
                 
@@ -276,7 +275,7 @@ class ClientDBCacheLocalHashes( ClientDBModule.ClientDBModule ):
             
             block_of_hash_ids = set( block_of_hash_ids )
             
-            text = 'syncing local hashes {}'.format( HydrusNumbers.ValueRangeToPrettyString( i * BLOCK_SIZE, num_to_do ) )
+            text = 'syncing local hashes {}'.format( HydrusNumbers.ValueRangeToPrettyString( num_done, num_to_do ) )
             
             CG.client_controller.frame_splash_status.SetSubtext( text )
             job_status.SetStatusText( text )

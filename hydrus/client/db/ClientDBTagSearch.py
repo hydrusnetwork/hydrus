@@ -670,7 +670,7 @@ class ClientDBTagSearch( ClientDBModule.ClientDBModule ):
         
         tag_ids_without_siblings = list( tag_ids )
         
-        for batch_of_tag_ids in HydrusLists.SplitListIntoChunks( tag_ids_without_siblings, 10240 ):
+        for ( num_done, num_to_do, batch_of_tag_ids ) in HydrusLists.SplitListIntoChunksRich( tag_ids_without_siblings, 10240 ):
             
             with self._MakeTemporaryIntegerTable( batch_of_tag_ids, 'tag_id' ) as temp_tag_ids_table_name:
                 

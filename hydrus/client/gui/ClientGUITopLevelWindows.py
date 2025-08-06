@@ -68,6 +68,7 @@ def GetSafePosition( position: QC.QPoint, frame_key ):
         return ( position, None )
         
     
+
 def GetSafeSize( tlw: QW.QWidget, min_size: QC.QSize, gravity ) -> QC.QSize:
     
     min_width = min_size.width()
@@ -75,22 +76,38 @@ def GetSafeSize( tlw: QW.QWidget, min_size: QC.QSize, gravity ) -> QC.QSize:
     
     frame_padding = tlw.frameGeometry().size() - tlw.size()
     
-    parent = tlw.parentWidget()
+    parent_widget = tlw.parentWidget()
     
-    if parent is None:
+    if parent_widget is None:
+        
+        main_gui = CG.client_controller.GetMainGUI()
+        
+        if main_gui is not None and tlw != main_gui:
+            
+            parent_window = main_gui
+            
+        else:
+            
+            parent_window = None
+            
+        
+    else:
+        
+        parent_window = parent_widget.window()
+        
+    
+    if parent_window is None:
         
         width = min_width
         height = min_height
         
     else:
         
-        parent_window = parent.window()
-        
         # when we initialise, we might not have a frame yet because we haven't done show() yet
         # so borrow main gui's
         if frame_padding.isEmpty():
             
-            main_gui = CG.client_controller.gui
+            main_gui = CG.client_controller.GetMainGUI()
             
             if main_gui is not None and QP.isValid( main_gui ) and not main_gui.isFullScreen():
                 
@@ -275,6 +292,7 @@ def SaveTLWSizeAndPosition( tlw: QW.QWidget, frame_key ):
     
     new_options.SetFrameLocation( frame_key, remember_size, remember_position, last_size, last_position, default_gravity, default_position, maximised, fullscreen )
     
+
 def SetInitialTLWSizeAndPosition( tlw: QW.QWidget, frame_key ):
     
     new_options = CG.client_controller.new_options
@@ -285,7 +303,16 @@ def SetInitialTLWSizeAndPosition( tlw: QW.QWidget, frame_key ):
     
     if parent is None:
         
-        parent_window = None
+        main_gui = CG.client_controller.GetMainGUI()
+        
+        if main_gui is not None and tlw != main_gui:
+            
+            parent_window = main_gui
+            
+        else:
+            
+            parent_window = None
+            
         
     else:
         
@@ -410,6 +437,7 @@ def SetInitialTLWSizeAndPosition( tlw: QW.QWidget, frame_key ):
         tlw.showFullScreen()
         
     
+
 def SlideOffScreenTLWUpAndLeft( tlw ):
     
     tlw_frame_rect = tlw.frameGeometry()

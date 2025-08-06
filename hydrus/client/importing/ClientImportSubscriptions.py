@@ -256,7 +256,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
         CG.client_controller.pub( 'message', job_status )
         
     
-    def _SyncQueries( self, job_status ):
+    def _SyncQueries( self, job_status: ClientThreading.JobStatus ):
         
         self._have_made_an_initial_sync_bandwidth_notification = False
         
@@ -308,6 +308,8 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                 
             
             status_prefix += ' (' + HydrusNumbers.ValueRangeToPrettyString( i + 1, num_queries ) + ')'
+            
+            job_status.SetGauge( i + 1, num_queries )
             
             try:
                 
@@ -921,7 +923,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
             
         
     
-    def _WorkOnQueriesFiles( self, job_status ):
+    def _WorkOnQueriesFiles( self, job_status: ClientThreading.JobStatus ):
         
         self._file_error_count = 0
         
@@ -947,6 +949,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
             text_1 += ' (' + HydrusNumbers.ValueRangeToPrettyString( i + 1, num_queries ) + ')'
             
             job_status.SetStatusText( text_1 )
+            job_status.SetGauge( i + 1, num_queries )
             
             try:
                 
@@ -982,8 +985,9 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
         
         job_status.DeleteFiles()
         job_status.DeleteStatusText()
-        job_status.DeleteStatusText( 2 )
-        job_status.DeleteVariable( 'popup_gauge_2' )
+        job_status.DeleteStatusText( level = 2 )
+        job_status.DeleteGauge()
+        job_status.DeleteGauge( level = 2 )
         
     
     def _WorkOnQueriesFilesCanDoWork( self ):
@@ -1125,7 +1129,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                     
                     x_out_of_y = 'file ' + HydrusNumbers.ValueRangeToPrettyString( human_num_done + 1, human_num_urls ) + ': '
                     
-                    job_status.SetVariable( 'popup_gauge_2', ( human_num_done, human_num_urls ) )
+                    job_status.SetGauge( human_num_done, human_num_urls, level = 2 )
                     
                     def status_hook( text ):
                         

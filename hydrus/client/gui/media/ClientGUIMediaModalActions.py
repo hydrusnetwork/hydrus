@@ -447,7 +447,7 @@ def EditFileTimestamps( win: QW.QWidget, ordered_medias: list[ ClientMedia.Media
                         for ( i, m ) in enumerate( medias_to_alter_modified_dates ):
                             
                             job_status.SetStatusText( HydrusNumbers.ValueRangeToPrettyString( i, num_to_do ) )
-                            job_status.SetVariable( 'popup_gauge_1', ( i, num_to_do ) )
+                            job_status.SetGauge( i, num_to_do )
                             
                             if not showed_popup and HydrusTime.TimeHasPassed( time_started + 3 ):
                                 
@@ -940,7 +940,7 @@ def OpenURLs( win: QW.QWidget, urls ):
                         
                     
                     job_status.SetStatusText( HydrusNumbers.ValueRangeToPrettyString( i + 1, num_urls ) )
-                    job_status.SetVariable( 'popup_gauge_1', ( i + 1, num_urls ) )
+                    job_status.SetGauge( i + 1, num_urls )
                     
                 
                 ClientPaths.LaunchURLInWebBrowser( url )
@@ -1064,22 +1064,20 @@ def SetFilesForcedFiletypes( win: QW.QWidget, medias: collections.abc.Collection
                 
                 pauser = HydrusThreading.BigJobPauser()
                 
-                num_to_do = len( medias )
-                
-                if num_to_do > BLOCK_SIZE:
+                if len( medias ) > BLOCK_SIZE:
                     
                     CG.client_controller.pub( 'message', job_status )
                     
                 
-                for ( i, block_of_media ) in enumerate( HydrusLists.SplitListIntoChunks( medias, BLOCK_SIZE ) ):
+                for ( num_done, num_to_do, block_of_media ) in HydrusLists.SplitListIntoChunks( medias, BLOCK_SIZE ):
                     
                     if job_status.IsCancelled():
                         
                         break
                         
                     
-                    job_status.SetStatusText( HydrusNumbers.ValueRangeToPrettyString( i * BLOCK_SIZE, num_to_do ) )
-                    job_status.SetVariable( 'popup_gauge_1', ( i * BLOCK_SIZE, num_to_do ) )
+                    job_status.SetStatusText( HydrusNumbers.ValueRangeToPrettyString( num_done, num_to_do ) )
+                    job_status.SetGauge( num_done, num_to_do )
                     
                     hashes = { media.GetHash() for media in block_of_media }
                     

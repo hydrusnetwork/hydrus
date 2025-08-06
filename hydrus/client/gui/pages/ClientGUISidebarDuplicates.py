@@ -146,6 +146,15 @@ class SidebarDuplicateFilter( ClientGUISidebarCore.Sidebar ):
         
         self._potential_duplicates_sort_widget.valueChanged.connect( self._PotentialDuplicatesSortChanged )
         
+        filter_group_mode = page_manager.GetVariable( 'filter_group_mode' )
+        
+        self._filter_group_mode = QW.QCheckBox( self._filtering_panel )
+        self._filter_group_mode.setToolTip( ClientGUIFunctions.WrapToolTip( 'In group mode, each batch in the duplicate filter will include one entire group of files that are transitively related, much like you see when hitting "show some random potential duplicates". The filter will iteratively work on the group until all relationships are cleared, and then move on to another. Groups are selected randomly.' ) )
+        
+        self._filter_group_mode.setChecked( filter_group_mode )
+        
+        self._filter_group_mode.clicked.connect( self._FilterGroupModeChanged )
+        
         self._launch_filter = ClientGUICommon.BetterButton( self._filtering_panel, 'launch the filter', self._LaunchFilter )
         
         #
@@ -209,6 +218,7 @@ class SidebarDuplicateFilter( ClientGUISidebarCore.Sidebar ):
         self._options_panel.Add( self._edit_merge_options, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         self._filtering_panel.Add( self._potential_duplicates_sort_widget, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._filtering_panel.Add( ClientGUICommon.WrapInText( self._filter_group_mode, self._filtering_panel, 'group mode: ' ), CC.FLAGS_ON_RIGHT )
         self._filtering_panel.Add( self._launch_filter, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         random_filtering_panel.Add( self._media_sort_widget, CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -288,15 +298,23 @@ class SidebarDuplicateFilter( ClientGUISidebarCore.Sidebar ):
             
         
     
+    def _FilterGroupModeChanged( self ):
+        
+        filter_group_mode = self._filter_group_mode.isChecked()
+        
+        self._page_manager.SetVariable( 'filter_group_mode', filter_group_mode )
+        
+    
     def _LaunchFilter( self ):
         
         potential_duplicates_search_context = self._potential_duplicates_search_context.GetValue()
         
         ( duplicate_pair_sort_type, duplicate_pair_sort_asc ) = self._potential_duplicates_sort_widget.GetValue()
+        filter_group_mode = self._filter_group_mode.isChecked()
         
         canvas_frame = ClientGUICanvasFrame.CanvasFrame( self.window() )
         
-        canvas_window = ClientGUICanvas.CanvasFilterDuplicates( canvas_frame, potential_duplicates_search_context, duplicate_pair_sort_type, duplicate_pair_sort_asc )
+        canvas_window = ClientGUICanvas.CanvasFilterDuplicates( canvas_frame, potential_duplicates_search_context, duplicate_pair_sort_type, duplicate_pair_sort_asc, filter_group_mode )
         
         canvas_window.showPairInPage.connect( self._ShowPairInPage )
         

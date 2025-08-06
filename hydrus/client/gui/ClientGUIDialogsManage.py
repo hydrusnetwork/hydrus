@@ -529,7 +529,7 @@ class DialogManageRatings( CAC.ApplicationCommandProcessorMixin, ClientGUIDialog
             
             for control in self._service_keys_to_controls.values():
                 
-                gridbox.setAlignment( control, QC.Qt.AlignRight | QC.Qt.AlignVCenter )
+                gridbox.setAlignment( control, QC.Qt.AlignmentFlag.AlignRight | QC.Qt.AlignmentFlag.AlignVCenter )
                 
             
             self.setLayout( gridbox )

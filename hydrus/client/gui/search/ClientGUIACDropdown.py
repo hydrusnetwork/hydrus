@@ -351,7 +351,7 @@ def ReadFetch(
                 include_current_tags = tag_context.include_current_tags
                 include_pending_tags = tag_context.include_pending_tags
                 
-                for group_of_tags_managers in HydrusLists.SplitListIntoChunks( tags_managers, 1000 ):
+                for ( num_done, num_to_do, group_of_tags_managers ) in HydrusLists.SplitListIntoChunksRich( tags_managers, 1000 ):
                     
                     if include_current_tags:
                         

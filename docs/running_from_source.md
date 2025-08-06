@@ -308,13 +308,25 @@ The first start will take a little longer (it has to compile all the code into s
 
     If you want to redirect your database or use any other launch arguments, then copy 'hydrus_client.command' to 'hydrus_client-user.command' and edit it, inserting your desired db path. Run this instead of 'hydrus_client.command'. New `git pull` commands will not affect 'hydrus_client-user.command'.
 
+### Have Fun
+
+If everything boots ok, great! Have a play around with the client and make sure file imports work ok and that mpv is all correct.
+
+??? note "System Qt styles"
+    
+    If you have a system Qt with several styles but do not see them under `options->style`, it is probably that your venv cannot "see" your system Qt.
+    
+    I am working on a cleverer answer for this, but a user (who knew he had PySide6 installed to his system python) discovered that if he manually set up his own venv, as in the guide below, with `python -m venv venv --system-site-packages`, and then removed `PySide6` and `shiboken` from his venv, it would load his system python and he could see all his styles.
+    
+    If you have this problem and put time into it, let me know how it goes.
+
 ### Simple Updating Guide
 
-Updating is simple. If you installed with `git`, it takes about three seconds: just open the base install directory in a terminal and type `git pull`. I have added easy 'git_pull' scripts to the install directory for your convenience (on Windows, just double-click 'git_pull.bat'). 
+Updating is simple. If you installed with `git`, it takes about three seconds: just close the client, open the base install directory in a terminal, and type `git pull`. I have added easy 'git_pull' scripts to the install directory for your convenience (on Windows, just double-click 'git_pull.bat'). 
 
 If you installed by extracting the source zip, you can update much like you would with the built extract: download the [latest release](https://github.com/hydrusnetwork/hydrus/releases/latest) source zip and extract it over the top of the folder you have, overwriting the existing source files.
 
-If you get a library version error when you try to boot, run the venv setup again. It is worth doing this every 3-6 months, just to stay up to date.
+If you get a library version error when you try to boot, run the venv setup again. It is worth doing this every 3-6 months, just to stay up to date. I mention in the release posts when there are important changes, usually right after a 'future build' test.
 
 ### Migrating from an Existing Install
 
@@ -356,9 +368,13 @@ Hydrus needs a whole bunch of libraries, so let's now set your python up. I **st
 
 **You have to do this in the correct order! Do not switch things up. If you make a mistake, delete your venv folder and start over from the beginning.**
 
-To create a new venv environment:
+First get the hydrus source cloned with git:
 
-* Open a terminal at your hydrus extract folder. If `python3` doesn't work, use `python`.
+`git clone https://github.com/hydrusnetwork/hydrus`
+
+Then, to create a new venv:
+
+* Open a terminal at your hydrus folder. If `python3` doesn't work, use `python`.
 * `python3 -m pip install virtualenv` (if you need it)
 * `python3 -m venv venv`
 * `source venv/bin/activate` (`CALL venv\Scripts\activate.bat` in Windows cmd)
@@ -378,7 +394,7 @@ To create a new venv environment:
 python -m pip install -r requirements.txt
 ```
 
-If you need different versions of libraries, check the cut-up requirements.txts the 'advanced' easy-setup uses in `install_dir/static/requirements/advanced`. Check and compare their contents to the main requirements.txt to see what is going on. You'll likely need the newer OpenCV on Python 3.10, for instance.
+If you need different versions of libraries, check the cut-up requirements.txts the 'advanced' easy-setup uses in `install_dir/static/requirements/advanced`. Check and compare their contents to the main requirements.txt to see what is going on. You'll likely need the newer OpenCV on newer Python, for instance.
 
 ### Qt { id="qt" }
 
@@ -437,7 +453,7 @@ Hit _help->about_ to see your mpv status. If you don't have it, it will present 
 
 If you can, update python's SQLite--it'll improve performance. The SQLite that comes with stock python is usually quite old, so you'll get a significant boost in speed. In some python deployments, the built-in SQLite not compiled with neat features like Fast Text Search (FTS) that hydrus needs.
 
-On Windows, get the 64-bit sqlite3.dll [here](https://www.sqlite.org/download.html), and just drop it in your base install directory. You can also just grab the 'sqlite3.dll' I bundle in my extractable Windows release.
+On Windows, get the 64-bit sqlite3.dll [here](https://www.sqlite.org/download.html), and just drop it in your ~~base install directory~~ python install location's DLLs folder, likely something like `C:\Program Files\Python311\DLLs` or `C:\Python311\DLLs`. There should be a sqlite3.dll there. Rename it to sqlite3.dll.old and add your newer one in.
 
 You _may_ be able to update your SQLite on Linux or macOS with:
 
@@ -447,9 +463,7 @@ You _may_ be able to update your SQLite on Linux or macOS with:
 
 But as long as the program launches, it usually isn't a big deal.
 
-!!! warning "Extremely safe no way it can go wrong"
-    If you want to update SQLite for your Windows system python install, you can also drop it into `C:\Program Files\Python310\DLLs` or wherever you have python installed, and it'll update for all your python projects. You'll be overwriting the old file, so make a backup of the old one (I have never had trouble updating like this, however).
-    
+!!! note "Anaconda"
     A user who made a Windows venv with Anaconda reported they had to replace the sqlite3.dll in their conda env at `~/.conda/envs/<envname>/Library/bin/sqlite3.dll`.
 
 ### FFMPEG { id="ffmpeg" }
@@ -480,6 +494,8 @@ When running from source you may want to [build the hydrus help docs](about_docs
 
 ### Building Packages on Windows { id="windows_build" }
 
+_This info is old, ignore unless you have trouble._
+
 Almost everything you get through pip is provided as pre-compiled 'wheels' these days, but if you get an error about Visual Studio C++ when you try to pip something, you have two choices:
 
 - Get Visual Studio 14/whatever build tools
@@ -509,8 +525,8 @@ I have a fair bit of experience with Windows python, so send me a mail if you ne
 
 ## My Code { id="my_code" }
 
-I develop hydrus on and am most experienced with Windows, so the program is more stable and reasonable on that. I do not have as much experience with Linux or macOS, but I still appreciate and will work on your Linux/macOS bug reports.
+I use Windows and Linux, but I have much more experience with Windows, and the program is most stable and clean there. I have very little experience with macOS, but I appreciate bug reports for any platform.
 
 My coding style is unusual and unprofessional. Everything is pretty much hacked together. I'm constantly throwing new code together and then cleaning and overhauling it down the line. If you are interested in how things work, please do look through the source and ask me if you don't understand something.
 
-I work strictly alone. While I am very interested in detailed bug reports or suggestions for good libraries to use, I am not looking for pull requests or suggestions on style. I know a lot of things are a mess. Everything I do is [WTFPL](https://github.com/sirkris/WTFPL/blob/master/WTFPL.md), so feel free to fork and play around with things on your end as much as you like.
+I work strictly alone, however. While I am very interested in bug reports or suggestions for good libraries to use, I am not looking for pull requests or suggestions on refactoring. I know a lot of things are a mess. Everything I do is [WTFPL](https://github.com/sirkris/WTFPL/blob/master/WTFPL.md), so feel free to fork and play around with things on your end as much as you like.

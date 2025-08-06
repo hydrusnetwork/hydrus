@@ -1612,7 +1612,7 @@ class DB( HydrusDB.HydrusDB ):
                 HydrusData.ShowText( 'Found {} bad mappings! They _should_ be deleted, and your pending counts should be updated.'.format( HydrusNumbers.ToHumanInt( total_fixed ) ) )
                 
             
-            job_status.DeleteStatusText( 2 )
+            job_status.DeleteStatusText( level = 2 )
             
             job_status.SetStatusText( 'done!' )
             
@@ -3899,7 +3899,8 @@ class DB( HydrusDB.HydrusDB ):
                 'potential_duplicates_count' : self.modules_files_duplicates_file_query.GetPotentialDuplicatesCount,
                 'potential_duplicates_count_fragmentary' : self.modules_files_duplicates_file_query.GetPotentialDuplicatesCountFragmentary,
                 'potential_duplicate_id_pairs_and_distances' : self.modules_files_duplicates.GetPotentialDuplicateIdPairsAndDistances,
-                'potential_duplicate_pairs_fragmentary' : self.modules_files_duplicates_file_query.GetPotentialDuplicateMediaResultPairsAndDistancesFragmentary,
+                'potential_duplicate_id_pairs_and_distances_fragmentary' : self.modules_files_duplicates_file_query.GetPotentialDuplicateIdPairsAndDistancesFragmentary,
+                'potential_duplicate_media_result_pairs_and_distances_fragmentary' : self.modules_files_duplicates_file_query.GetPotentialDuplicateMediaResultPairsAndDistancesFragmentary,
                 'random_potential_duplicate_hashes' : self.modules_files_duplicates_file_query.GetRandomPotentialDuplicateGroupHashes,
                 'recent_tags' : self.modules_recent_tags.GetRecentTags,
                 'repository_progress' : self.modules_repositories.GetRepositoryProgress,
@@ -5484,7 +5485,7 @@ class DB( HydrusDB.HydrusDB ):
             
         finally:
             
-            job_status.DeleteStatusText( 2 )
+            job_status.DeleteStatusText( level = 2 )
             
             job_status.SetStatusText( 'done!' )
             
@@ -5562,7 +5563,7 @@ class DB( HydrusDB.HydrusDB ):
             
         finally:
             
-            job_status.DeleteStatusText( 2 )
+            job_status.DeleteStatusText( level = 2 )
             
             job_status.SetStatusText( 'done!' )
             
@@ -6538,7 +6539,7 @@ class DB( HydrusDB.HydrusDB ):
             
         finally:
             
-            job_status.DeleteStatusText( 2 )
+            job_status.DeleteStatusText( level = 2 )
             
             job_status.SetStatusText( 'done!' )
             

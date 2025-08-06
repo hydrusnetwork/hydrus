@@ -1517,7 +1517,16 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._new_options.SetString( 'discord_dnd_filename_pattern', self._discord_dnd_filename_pattern.text() )
             self._new_options.SetBoolean( 'secret_discord_dnd_fix', self._secret_discord_dnd_fix.isChecked() )
             
-            HC.options[ 'export_path' ] = HydrusPaths.ConvertAbsPathToPortablePath( self._export_location.GetPath() )
+            path = str( self._export_location.GetPath() ).strip()
+            
+            if path != '':
+                
+                HC.options[ 'export_path' ] = HydrusPaths.ConvertAbsPathToPortablePath( self._export_location.GetPath() )
+                
+            else:
+                
+                HC.options[ 'export_path' ] = None
+                
             
         
     
@@ -3654,15 +3663,18 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             #
             
-            window_panel = ClientGUICommon.StaticBox( self, 'window' )
+            focus_panel = ClientGUICommon.StaticBox( self, 'closing focus' )
             
-            self._focus_media_tab_on_viewer_close_if_possible = QW.QCheckBox( window_panel )
-            self._focus_media_tab_on_viewer_close_if_possible.setToolTip( ClientGUIFunctions.WrapToolTip( 'If the search page you opened a media viewer from is still open, re-focus it upon media viewer close. Useful if you use multiple media viewers launched from different pages. There is also a shortcut action to perform this on an individual basis.' ) )
+            self._focus_media_tab_on_viewer_close_if_possible = QW.QCheckBox( focus_panel )
+            self._focus_media_tab_on_viewer_close_if_possible.setToolTip( ClientGUIFunctions.WrapToolTip( 'If the search page you opened a media viewer from is still open, navigate back to it upon media viewer close. Useful if you use multiple media viewers launched from different pages. There is also a shortcut action to perform this on an individual basis.' ) )
             
-            self._focus_media_thumb_on_viewer_close = QW.QCheckBox( window_panel )
+            self._focus_media_thumb_on_viewer_close = QW.QCheckBox( focus_panel )
             self._focus_media_thumb_on_viewer_close.setToolTip( ClientGUIFunctions.WrapToolTip( 'When you close a Media Viewer, it normally tells the original search page to change the current thumbnail selection to whatever you closed the media viewer on. If you prefer this not to happen, uncheck this!' ) )
             
-            self._activate_main_gui_on_viewer_close = QW.QCheckBox( window_panel )
+            self._activate_main_gui_on_focusing_viewer_close = QW.QCheckBox( focus_panel )
+            self._activate_main_gui_on_focusing_viewer_close.setToolTip( ClientGUIFunctions.WrapToolTip( 'This will "activate" the Main GUI Window when any Media Viewer closes with with a "focusing" action, either because you set the options above, or, more importantly, if they are set off above but you do it using a shortcut. This will bring the Main GUI to the front and give it keyboard focus. Try this if you regularly use multiple viewers and need fine control over the focus stack.' ) )
+            
+            self._activate_main_gui_on_viewer_close = QW.QCheckBox( focus_panel )
             self._activate_main_gui_on_viewer_close.setToolTip( ClientGUIFunctions.WrapToolTip( 'This will "activate" the Main GUI Window when any Media Viewer closes, which should bring it to the front and give it keyboard focus. Try this if your OS is playing funny games with focus when a media viewer closes.' ) )
             
             #
@@ -3712,6 +3724,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._focus_media_tab_on_viewer_close_if_possible.setChecked( self._new_options.GetBoolean( 'focus_media_tab_on_viewer_close_if_possible' ) )
             self._focus_media_thumb_on_viewer_close.setChecked( self._new_options.GetBoolean( 'focus_media_thumb_on_viewer_close' ) )
+            self._activate_main_gui_on_focusing_viewer_close.setChecked( self._new_options.GetBoolean( 'activate_main_gui_on_focusing_viewer_close' ) )
             self._activate_main_gui_on_viewer_close.setChecked( self._new_options.GetBoolean( 'activate_main_gui_on_viewer_close' ) )
             
             self._animated_scanbar_height.setValue( self._new_options.GetInteger( 'animated_scanbar_height' ) )
@@ -3739,13 +3752,14 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             rows = []
             
-            rows.append( ( 'When closing the media viewer, re-focus original search page: ', self._focus_media_tab_on_viewer_close_if_possible ) )
+            rows.append( ( 'When closing the media viewer, re-select original search page: ', self._focus_media_tab_on_viewer_close_if_possible ) )
             rows.append( ( 'When closing the media viewer, tell original search page to select exit media: ', self._focus_media_thumb_on_viewer_close ) )
-            rows.append( ( 'DEBUG: When closing the media viewer, activate Main GUI: ', self._activate_main_gui_on_viewer_close ) )
+            rows.append( ( 'ADVANCED: When closing the media viewer with the above focusing options, activate Main GUI: ', self._activate_main_gui_on_focusing_viewer_close ) )
+            rows.append( ( 'DEBUG: When closing the media viewer at any time, activate Main GUI: ', self._activate_main_gui_on_viewer_close ) )
             
-            gridbox = ClientGUICommon.WrapInGrid( window_panel, rows )
+            gridbox = ClientGUICommon.WrapInGrid( focus_panel, rows )
             
-            window_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            focus_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
             rows = []
             
@@ -3778,9 +3792,9 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             vbox = QP.VBoxLayout()
             
-            QP.AddToLayout( vbox, window_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
             QP.AddToLayout( vbox, media_viewer_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
             QP.AddToLayout( vbox, slideshow_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+            QP.AddToLayout( vbox, focus_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
             vbox.addStretch( 0 )
             
             self.setLayout( vbox )
@@ -3812,6 +3826,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._new_options.SetBoolean( 'focus_media_tab_on_viewer_close_if_possible', self._focus_media_tab_on_viewer_close_if_possible.isChecked() )
             self._new_options.SetBoolean( 'focus_media_thumb_on_viewer_close', self._focus_media_thumb_on_viewer_close.isChecked() )
+            self._new_options.SetBoolean( 'activate_main_gui_on_focusing_viewer_close', self._activate_main_gui_on_focusing_viewer_close.isChecked() )
             self._new_options.SetBoolean( 'activate_main_gui_on_viewer_close', self._activate_main_gui_on_viewer_close.isChecked() )
             
             self._new_options.SetBoolean( 'disallow_media_drags_on_duration_media', self._disallow_media_drags_on_duration_media.isChecked() )

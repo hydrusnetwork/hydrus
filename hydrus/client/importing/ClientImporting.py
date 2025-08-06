@@ -235,7 +235,7 @@ def THREADDownloadURLs( job_status: ClientThreading.JobStatus, urls, title ):
             
         
         job_status.SetStatusText( HydrusNumbers.ValueRangeToPrettyString( i + 1, len( urls ) ) )
-        job_status.SetVariable( 'popup_gauge_1', ( i + 1, len( urls ) ) )
+        job_status.SetGauge( i + 1, len( urls ) )
         
         file_seed = ClientImportFileSeeds.FileSeed( ClientImportFileSeeds.FILE_SEED_TYPE_URL, url )
         
@@ -287,7 +287,7 @@ def THREADDownloadURLs( job_status: ClientThreading.JobStatus, urls, title ):
             
         finally:
             
-            job_status.DeleteStatusText( 2 )
+            job_status.DeleteStatusText( level = 2 )
             
         
     
@@ -322,7 +322,7 @@ def THREADDownloadURLs( job_status: ClientThreading.JobStatus, urls, title ):
         job_status.SetFiles( presentation_hashes, 'downloads' )
         
     
-    job_status.DeleteVariable( 'popup_gauge_1' )
+    job_status.DeleteGauge()
     
     job_status.Finish()
     

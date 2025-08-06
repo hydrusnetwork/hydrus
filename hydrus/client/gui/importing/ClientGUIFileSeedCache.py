@@ -45,10 +45,12 @@ def ClearFileSeeds( win: QW.QWidget, file_seed_cache: ClientImportFileSeeds.File
         file_seed_cache.RemoveFileSeedsByStatus( statuses_to_remove )
         
     
+
 def GetRetryIgnoredParam( window ):
     
     choice_tuples = [
         ( 'retry all', None, 'retry all' ),
+        ( 'retry 403s', '^403', 'retry all 403s' ),
         ( 'retry 404s', '^404', 'retry all 404s' ),
         ( 'retry blacklisted', 'blacklisted!$', 'retry all blacklisted' )
     ]

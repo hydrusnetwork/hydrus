@@ -1,3 +1,4 @@
+import re
 import typing
 import urllib.parse
 
@@ -226,6 +227,113 @@ class URLClassParameterFixedName( HydrusSerialisable.SerialisableBase ):
     def TestValue( self, value ):
         
         self._value_string_match.Test( value )
+        
+    
+
+class URLDomainMask( HydrusSerialisable.SerialisableBase ):
+    
+    SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_URL_DOMAIN_MASK
+    SERIALISABLE_NAME = 'URL Domain Mask'
+    SERIALISABLE_VERSION = 1
+    
+    def __init__( self, domain_regexes: list[ str ], match_subdomains: bool, keep_matched_subdomains: bool ):
+        
+        self._domain_regexes = tuple( sorted( domain_regexes ) )
+        self.match_subdomains = match_subdomains
+        self.keep_matched_subdomains = keep_matched_subdomains
+        
+        self._re_match_patterns = []
+        self._cache_initialised = False
+        
+    
+    def __eq__( self, other ):
+        
+        if isinstance( other, URLDomainMask ):
+            
+            return self.__hash__() == other.__hash__()
+            
+        
+        return NotImplemented
+        
+    
+    def __hash__( self ):
+        
+        return ( self._domain_regexes, self.match_subdomains ).__hash__()
+        
+    
+    def _GetSerialisableInfo( self ):
+        
+        return (
+            list( self._domain_regexes ),
+            self.match_subdomains,
+            self.keep_matched_subdomains
+        )
+        
+    
+    def _InitialiseCache( self ):
+        
+        if self.match_subdomains:
+            
+            # anything.ourdomain or ourdomain
+            self._re_match_patterns = [ re.compile( r'^(.*\.)?' + domain_regex + '$' ) for domain_regex in self._domain_regexes ]
+            
+        else:
+            
+            # wwwanything.ourdomain or ourdomain
+            self._re_match_patterns = [ re.compile( r'^(www[^\.]*\.)?' + domain_regex + '$' ) for domain_regex in self._domain_regexes ]
+            
+        
+        self._re_clip_patterns = [ re.compile( domain_regex + '$' ) for domain_regex in self._domain_regexes ]
+        
+        self._cache_initialised = True
+        
+    
+    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
+        
+        (
+            self._domain_regexes,
+            self.match_subdomains,
+            self.keep_matched_subdomains
+        ) = serialisable_info
+        
+        self._domain_regexes = tuple( sorted( self._domain_regexes ) )
+        
+    
+    def Matches( self, domain: str ):
+        
+        if not self._cache_initialised:
+            
+            self._InitialiseCache()
+            
+        
+        return True in ( pattern.match( domain ) is not None for pattern in self._re_match_patterns )
+        
+    
+    def Normalise( self, domain: str ):
+        
+        if self.keep_matched_subdomains:
+            
+            return domain
+            
+        else:
+            
+            if not self._cache_initialised:
+                
+                self._InitialiseCache()
+                
+            
+            for pattern in self._re_clip_patterns:
+                
+                result = pattern.search( domain )
+                
+                if result is not None:
+                    
+                    return result[0]
+                    
+                
+            
+            raise HydrusExceptions.URLClassException( 'Could not match that domain with this domain mask!' )
+            
         
     
 

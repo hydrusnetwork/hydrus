@@ -266,7 +266,7 @@ class QuickDownloadManager( ClientDaemons.ManagerWithMainLoop ):
             total_done = total_hashes_in_this_run - len( hashes_still_to_download_in_this_run )
             
             job_status.SetStatusText( 'downloading files from remote services: {}'.format( HydrusNumbers.ValueRangeToPrettyString( total_done, total_hashes_in_this_run ) ) )
-            job_status.SetVariable( 'popup_gauge_1', ( total_done, total_hashes_in_this_run ) )
+            job_status.SetGauge( total_done, total_hashes_in_this_run )
             
             try:
                 
@@ -376,7 +376,7 @@ class QuickDownloadManager( ClientDaemons.ManagerWithMainLoop ):
                 if len( hashes_still_to_download_in_this_run ) == 0:
                     
                     job_status.DeleteStatusText()
-                    job_status.DeleteVariable( 'popup_gauge_1' )
+                    job_status.DeleteGauge()
                     
                     if total_successful_hashes_in_this_run > 0:
                         

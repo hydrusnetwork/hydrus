@@ -1097,6 +1097,18 @@ class Controller( HydrusController.HydrusController ):
         return work_to_do
         
     
+    def GetMainGUI( self ):
+        
+        if self.gui is not None:
+            
+            return self.gui
+            
+        else:
+            
+            return None
+            
+        
+    
     def GetMainTLW( self ):
         
         if self.gui is not None:

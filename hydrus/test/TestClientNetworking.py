@@ -241,7 +241,7 @@ class TestGUGs( unittest.TestCase ):
         )
         
         self.assertEqual( gug.GetExampleURL(), 'https://blahbooru.com/post/search?tags=blonde_hair+blue_eyes' )
-        self.assertEqual( gug.GenerateGalleryURL( 'blonde_hair%20blue_eyes' ), 'https://blahbooru.com/post/search?tags=blonde_hair+blue_eyes' )
+        self.assertEqual( gug.GenerateGalleryURL( 'blonde_hair blue_eyes' ), 'https://blahbooru.com/post/search?tags=blonde_hair+blue_eyes' )
         self.assertEqual( gug.GenerateGalleryURL( '100% nice' ), 'https://blahbooru.com/post/search?tags=100%25+nice' )
         self.assertEqual( gug.GenerateGalleryURL( '6+girls blonde_hair' ), 'https://blahbooru.com/post/search?tags=6%2Bgirls+blonde_hair' )
         self.assertEqual( gug.GenerateGalleryURL( '@artistname' ), 'https://blahbooru.com/post/search?tags=%40artistname' )
@@ -276,6 +276,150 @@ class TestGUGs( unittest.TestCase ):
         self.assertEqual( gug.GenerateGalleryURL( 'some guy' ), 'https://blahsite.net/post/some_guy?page=1' )
         self.assertEqual( gug.GenerateGalleryURL( '@someguy' ), 'https://blahsite.net/post/@someguy?page=1' ) # note this does not encode since this is a path component
         self.assertEqual( gug.GenerateGalleryURL( '日本 語版' ), 'https://blahsite.net/post/%E6%97%A5%E6%9C%AC_%E8%AA%9E%E7%89%88?page=1' )
+        
+    
+
+class TestURLDomainMask( unittest.TestCase ):
+    
+    def test_1_basics( self ):
+        
+        match_subdomains = False
+        keep_matched_subdomains = False
+        
+        url_domain_mask = ClientNetworkingURLClass.URLDomainMask( [ r'site\.com' ], match_subdomains, keep_matched_subdomains )
+        
+        self.assertTrue( url_domain_mask.Matches( 'site.com' ) )
+        self.assertTrue( url_domain_mask.Matches( 'www1.site.com' ) )
+        self.assertFalse( url_domain_mask.Matches( 'artistname.site.com' ) )
+        
+        self.assertEqual( url_domain_mask.Normalise( 'site.com' ), 'site.com' )
+        self.assertEqual( url_domain_mask.Normalise( 'www1.site.com' ), 'site.com' )
+        
+        #
+        
+        match_subdomains = True
+        keep_matched_subdomains = False
+        
+        url_domain_mask = ClientNetworkingURLClass.URLDomainMask( [ r'site\.com' ], match_subdomains, keep_matched_subdomains )
+        
+        self.assertTrue( url_domain_mask.Matches( 'site.com' ) )
+        self.assertTrue( url_domain_mask.Matches( 'www1.site.com' ) )
+        self.assertTrue( url_domain_mask.Matches( 'artistname.site.com' ) )
+        
+        self.assertEqual( url_domain_mask.Normalise( 'site.com' ), 'site.com' )
+        self.assertEqual( url_domain_mask.Normalise( 'www1.site.com' ), 'site.com' )
+        self.assertEqual( url_domain_mask.Normalise( 'artistname.site.com' ), 'site.com' )
+        
+        #
+        
+        match_subdomains = True
+        keep_matched_subdomains = True
+        
+        url_domain_mask = ClientNetworkingURLClass.URLDomainMask( [ r'site\.com' ], match_subdomains, keep_matched_subdomains )
+        
+        self.assertTrue( url_domain_mask.Matches( 'site.com' ) )
+        self.assertTrue( url_domain_mask.Matches( 'www1.site.com' ) )
+        self.assertTrue( url_domain_mask.Matches( 'artistname.site.com' ) )
+        
+        self.assertEqual( url_domain_mask.Normalise( 'site.com' ), 'site.com' )
+        self.assertEqual( url_domain_mask.Normalise( 'www1.site.com' ), 'www1.site.com' )
+        self.assertEqual( url_domain_mask.Normalise( 'artistname.site.com' ), 'artistname.site.com' )
+        
+    
+    def test_2_wildcard( self ):
+        
+        match_subdomains = False
+        keep_matched_subdomains = False
+        
+        url_domain_mask = ClientNetworkingURLClass.URLDomainMask( [ r'site\.[^\.]+' ], match_subdomains, keep_matched_subdomains )
+        
+        self.assertTrue( url_domain_mask.Matches( 'site.com' ) )
+        self.assertTrue( url_domain_mask.Matches( 'www1.site.com' ) )
+        self.assertFalse( url_domain_mask.Matches( 'artistname.site.com' ) )
+        self.assertFalse( url_domain_mask.Matches( 'site.tar.gz' ) )
+        
+        self.assertEqual( url_domain_mask.Normalise( 'site.com' ), 'site.com' )
+        self.assertEqual( url_domain_mask.Normalise( 'www1.site.com' ), 'site.com' )
+        
+        #
+        
+        match_subdomains = True
+        keep_matched_subdomains = False
+        
+        url_domain_mask = ClientNetworkingURLClass.URLDomainMask( [ r'site\.[^\.]+' ], match_subdomains, keep_matched_subdomains )
+        
+        self.assertTrue( url_domain_mask.Matches( 'site.com' ) )
+        self.assertTrue( url_domain_mask.Matches( 'www1.site.com' ) )
+        self.assertTrue( url_domain_mask.Matches( 'artistname.site.com' ) )
+        self.assertFalse( url_domain_mask.Matches( 'site.tar.gz' ) )
+        
+        self.assertEqual( url_domain_mask.Normalise( 'site.com' ), 'site.com' )
+        self.assertEqual( url_domain_mask.Normalise( 'www1.site.com' ), 'site.com' )
+        self.assertEqual( url_domain_mask.Normalise( 'artistname.site.com' ), 'site.com' )
+        
+        #
+        
+        match_subdomains = True
+        keep_matched_subdomains = True
+        
+        url_domain_mask = ClientNetworkingURLClass.URLDomainMask( [ r'site\.[^\.]+' ], match_subdomains, keep_matched_subdomains )
+        
+        self.assertTrue( url_domain_mask.Matches( 'site.com' ) )
+        self.assertTrue( url_domain_mask.Matches( 'www1.site.com' ) )
+        self.assertTrue( url_domain_mask.Matches( 'artistname.site.com' ) )
+        self.assertFalse( url_domain_mask.Matches( 'site.tar.gz' ) )
+        
+        self.assertEqual( url_domain_mask.Normalise( 'site.com' ), 'site.com' )
+        self.assertEqual( url_domain_mask.Normalise( 'www1.site.com' ), 'www1.site.com' )
+        self.assertEqual( url_domain_mask.Normalise( 'artistname.site.com' ), 'artistname.site.com' )
+        
+    
+    def test_3_multiple( self ):
+        
+        match_subdomains = False
+        keep_matched_subdomains = False
+        
+        url_domain_mask = ClientNetworkingURLClass.URLDomainMask( [ r'site\.[^\.]+', 'example.cool[^\.]+.[^\.]+' ], match_subdomains, keep_matched_subdomains )
+        
+        self.assertTrue( url_domain_mask.Matches( 'example.coolsite.yo' ) )
+        self.assertTrue( url_domain_mask.Matches( 'www1.example.coolsite.yo' ) )
+        self.assertFalse( url_domain_mask.Matches( 'artistname.example.coolsite.yo' ) )
+        self.assertFalse( url_domain_mask.Matches( 'example.coolsite.co.cx' ) )
+        
+        self.assertEqual( url_domain_mask.Normalise( 'example.coolsite.yo' ), 'example.coolsite.yo' )
+        self.assertEqual( url_domain_mask.Normalise( 'www1.example.coolsite.yo' ), 'example.coolsite.yo' )
+        
+        #
+        
+        match_subdomains = True
+        keep_matched_subdomains = False
+        
+        url_domain_mask = ClientNetworkingURLClass.URLDomainMask( [ r'site\.[^\.]+', 'example.cool[^\.]+.[^\.]+' ], match_subdomains, keep_matched_subdomains )
+        
+        self.assertTrue( url_domain_mask.Matches( 'example.coolsite.yo' ) )
+        self.assertTrue( url_domain_mask.Matches( 'www1.example.coolsite.yo' ) )
+        self.assertTrue( url_domain_mask.Matches( 'artistname.example.coolsite.yo' ) )
+        self.assertFalse( url_domain_mask.Matches( 'example.coolsite.co.cx' ) )
+        
+        self.assertEqual( url_domain_mask.Normalise( 'example.coolsite.yo' ), 'example.coolsite.yo' )
+        self.assertEqual( url_domain_mask.Normalise( 'www1.example.coolsite.yo' ), 'example.coolsite.yo' )
+        self.assertEqual( url_domain_mask.Normalise( 'artistname.example.coolsite.yo' ), 'example.coolsite.yo' )
+        
+        #
+        
+        match_subdomains = True
+        keep_matched_subdomains = True
+        
+        url_domain_mask = ClientNetworkingURLClass.URLDomainMask( [ r'site\.[^\.]+', 'example.cool[^\.]+.[^\.]+' ], match_subdomains, keep_matched_subdomains )
+        
+        self.assertTrue( url_domain_mask.Matches( 'example.coolsite.yo' ) )
+        self.assertTrue( url_domain_mask.Matches( 'www1.example.coolsite.yo' ) )
+        self.assertTrue( url_domain_mask.Matches( 'artistname.example.coolsite.yo' ) )
+        self.assertFalse( url_domain_mask.Matches( 'example.coolsite.co.cx' ) )
+        
+        self.assertEqual( url_domain_mask.Normalise( 'example.coolsite.yo' ), 'example.coolsite.yo' )
+        self.assertEqual( url_domain_mask.Normalise( 'www1.example.coolsite.yo' ), 'www1.example.coolsite.yo' )
+        self.assertEqual( url_domain_mask.Normalise( 'artistname.example.coolsite.yo' ), 'artistname.example.coolsite.yo' )
         
     
 

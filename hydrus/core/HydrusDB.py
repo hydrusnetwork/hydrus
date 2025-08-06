@@ -1042,11 +1042,11 @@ class HydrusDB( HydrusDBBase.DBBase ):
         
         for filename in self._db_filenames.values():
             
-            path = os.path.join( self._db_dir, filename )
+            db_path = os.path.join( self._db_dir, filename )
             
-            if os.path.exists( path ):
+            if os.path.exists( db_path ):
                 
-                total += os.path.getsize( path )
+                total += os.path.getsize( db_path )
                 
             
         

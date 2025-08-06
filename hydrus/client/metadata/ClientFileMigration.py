@@ -59,15 +59,15 @@ def DoMoveOrDuplicateLocalFiles( dest_service_key: bytes, action: int, media_res
     
     now_ms = HydrusTime.GetNowMS()
     
-    for ( i, block_of_media_results ) in enumerate( HydrusLists.SplitListIntoChunks( media_results, BLOCK_SIZE ) ):
+    for ( num_done, num_to_do, block_of_media_results ) in HydrusLists.SplitListIntoChunksRich( media_results, BLOCK_SIZE ):
         
         if job_status.IsCancelled():
             
             break
             
         
-        job_status.SetStatusText( HydrusNumbers.ValueRangeToPrettyString( i * BLOCK_SIZE, num_to_do ) )
-        job_status.SetVariable( 'popup_gauge_1', ( i * BLOCK_SIZE, num_to_do ) )
+        job_status.SetStatusText( HydrusNumbers.ValueRangeToPrettyString( num_done, num_to_do ) )
+        job_status.SetGauge( num_done, num_to_do )
         
         content_updates = []
         undelete_hashes = set()

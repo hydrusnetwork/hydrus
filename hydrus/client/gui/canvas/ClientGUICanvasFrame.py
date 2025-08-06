@@ -184,6 +184,12 @@ class CanvasFrame( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindow
         return QC.QSize( 240, 180 )
         
     
+    def sizeHint( self ):
+        
+        # TODO: you should be able to delete or alter this in some nice way when you move to a proper layout for this guy
+        return QC.QSize( 1280, 720 )
+        
+    
     def SetCanvas( self, canvas_window: ClientGUICanvas.CanvasWithHovers ):
         
         self._canvas_window = canvas_window

@@ -826,7 +826,7 @@ class Page( QW.QWidget ):
             
             initial_media_results = []
             
-            for group_of_initial_hashes in HydrusLists.SplitListIntoChunks( initial_hashes, 64 ):
+            for ( num_done, num_to_do, group_of_initial_hashes ) in HydrusLists.SplitListIntoChunksRich( initial_hashes, 64 ):
                 
                 more_media_results = controller.Read( 'media_results', group_of_initial_hashes )
                 

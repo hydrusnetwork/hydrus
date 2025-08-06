@@ -73,6 +73,8 @@ class EditDuplicateContentMergeOptionsWidget( ClientGUICommon.StaticBox ):
         self._sync_archive_action.setToolTip( ClientGUIFunctions.WrapToolTip( 'In the duplicates auto-resolution system, "always archive both" (which assumes human eyes) will be treated as "if one is archived, archive the other".' ) )
         
         self._sync_urls_action = ClientGUICommon.BetterChoice( self )
+        self._sync_urls_action.setToolTip( ClientGUIFunctions.WrapToolTip( 'This will also sync domain modified times for the respective URLs, assuming they are reasonable and older than any existing domain times.' ) )
+        
         self._sync_file_modified_date_action = ClientGUICommon.BetterChoice( self )
         self._sync_notes_action = ClientGUICommon.BetterChoice( self )
         

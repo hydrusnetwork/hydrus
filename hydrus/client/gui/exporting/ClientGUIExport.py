@@ -850,8 +850,6 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         to_do = [ ( media, self._GetPath( media ) ) for media in flat_media ]
         
-        num_to_do = len( to_do )
-        
         def qt_update_label( text ):
             
             if not QP.isValid( self ) or not QP.isValid( self._export ) or not self._export:
@@ -889,6 +887,8 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
             
             actually_done_ok = []
             
+            num_to_do = len( to_do )
+            
             for ( index, ( media, dest_path ) ) in enumerate( to_do ):
                 
                 number = media_to_number_indices[ media ]
@@ -903,7 +903,7 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
                     x_of_y = HydrusNumbers.ValueRangeToPrettyString( index + 1, num_to_do )
                     
                     job_status.SetStatusText( 'Done {}'.format( x_of_y ) )
-                    job_status.SetVariable( 'popup_gauge_1', ( index + 1, num_to_do ) )
+                    job_status.SetGauge( index + 1, num_to_do )
                     
                     QP.CallAfter( qt_update_label, x_of_y )
                     
@@ -969,7 +969,7 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
                         
                     else:
                         
-                        win = CG.client_controller.gui
+                        win = CG.client_controller.GetMainGUI()
                         
                     
                     HydrusData.PrintException( e, do_wait = False )
@@ -988,9 +988,7 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
                 
                 actually_done_media_results = [ m.GetMediaResult() for m in actually_done_ok ]
                 
-                chunks_of_deletee_media_results = HydrusLists.SplitListIntoChunks( actually_done_media_results, 64 )
-                
-                for chunk_of_deletee_media_results in chunks_of_deletee_media_results:
+                for ( num_done, num_to_do, chunk_of_deletee_media_results ) in HydrusLists.SplitListIntoChunksRich( actually_done_media_results, 64 ):
                     
                     reason = 'Deleted after manual export to "{}".'.format( directory )
                     
@@ -1002,7 +1000,7 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
                     
                 
             
-            job_status.DeleteVariable( 'popup_gauge_1' )
+            job_status.DeleteGauge()
             job_status.SetStatusText( 'Done!' )
             
             job_status.FinishAndDismiss( 5 )
