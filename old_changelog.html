@@ -35,6 +35,39 @@
             <h1 id="changelog"><a href="#changelog">changelog</a></h1>
             <ul>
                 <li>
+                    <h2 id="version_633"><a href="#version_633">version 633</a></h2>
+                    <ul>
+                        <li><h3>duplicates group mode</h3></li>
+                        <li>the duplicate filter now has a 'group mode', which will cause it to load one group of files that are all potentially related at a time. you'll process the entire group until there are no potential pairs left, and then a new group will be selected. if new potential pairs are added as a result of the first pass of dupe merges, you'll be given those to process, over and over, until there is nothing left, but for the most part, I think you will be able to process a whole group in one pass. it'll be interesting to see how it shakes out IRL</li>
+                        <li>if you manually skip all the pairs in a group, you will be asked if you want to change group</li>
+                        <li>if you know the duplicate filter, please give this a go. I think it might be annoyingly 'bitty' with groups of size 1, so I may bundle smaller groups together to make it all smoother, but if I do that I may want a slightly different x/y label presentation. I really like this when it works well, so once we are happy, I may make this the default behaviour for new dupe pages</li>
+                        <li>as a side thing, I believe I deserve an award for 'density of ugly UI' here for the checkbox, which has a right-border misaligned with the buttons above and below, the text, which isn't properly vertically centered on the checkbox, and the whole widget overall, which refused to center align how I wanted in the first place. this is another reminder to clean up some of my ancient layout tools, which often fail when I mix different widgets and layouts together. and maybe I should just make the thing a scrolling button like I do for file and tag sort stuff</li>
+                        <li><h3>duplicates</h3></li>
+                        <li>the duplicate filter comparison statements now include jpeg subsampling (444, 422, 420), with a little score weighting too. if you don't know, subsampling is a sort of 'data density' in how the image is drawn with light and colour. much like with jpeg quality, you can usually assume that bigger numbers are better, with 444 the gold standard</li>
+                        <li>the jpeg quality comparison line in the duplicate filter now considers subsampling. it is a little complicated since this is all hacky and there's a curve going on behind the scenes, but a `4:2:0` jpeg will get 0.85 the 'arithmetic power', and a `4:2:2` will get 0.92, of a `4:4:4`'s, which works out to dropping one or two 'high quality' to 'medium quality' qualitative bands, but I may have been too aggressive. thanks to a user who pointed out that quantization tables do not change with different subsampling levels</li>
+                        <li>several duplicate filter comparison statements are no longer hidden if there is no difference. for instance, if both files have the same jpeg quality, you now get a blue (0 score) line saying 'both are medium high quality'. having dynamic hiding here to maximise useful data was a decent idea, but, rather than streamlining the experience, it usually just increased cognitive load by bouncing the lines around and made successive similar pairs more difficult to track. similarly affected are: resolution, num_tags, and import timestamp; and has_audio, has_transparency, has_exif, and has icc profile (if either does)</li>
+                        <li>when two files are set duplicate and their metadata merged using the duplicate merge options, the url timestamps are now synced when both files have an url from the same domain, that being the destination gets the reasonable earlier timestamp of itself and the source. previously, the timestamp was only synced if the destination did not have an url in that domain already</li>
+                        <li><h3>window positioning</h3></li>
+                        <li>absent a saved record, media viewers now declare an ideal initial size of 1280x720. previously, this was alternately 240x180 or 0x0, and so when your media viewers were set not to remember their previous size, they were making some crazy small or completely hidden windows (issue #1768)</li>
+                        <li>media viewers are now correctly hooked up to the main gui when they do topleft/center parent initial positioning and gravity based parent sizing</li>
+                        <li><h3>misc</h3></li>
+                        <li>all subscription popups have an additional progress gauge for the queries. this should stabilise the width of sub popups, also</li>
+                        <li>all datetime widgets (e.g. under 'manage times') now have a 'now' button, beside the 'paste', to set the time to now</li>
+                        <li>the 'retry ignored' file log buttons now offer to retry 403s</li>
+                        <li>`help-&gt;about` now has boot time in relative and absolute terms</li>
+                        <li>added an ADVANCED checkbox to `options-&gt;media viewer` that lets you focus the main gui only when you exit a media viewer with a page/thumb 'focusing' action. useful if you use multiple viewers and are thinking about the focus stack</li>
+                        <li>fixed the default export path in `options-&gt;exporting` from saving incorrectly if the dialog was saved with it on a blank value. it was saving as the path of the db directory; now it should stay blank, and the export files dialog will default to `~/hydrus_export`</li>
+                        <li>wrote a section on loading your system Qt styles in the `running from source` help. a user seems to have figured out how to do it. if you have python experience and also have this problem, have a look and let me know how it goes. I'm going to _see_ if I can adapt my 'setup_venv' script to auto-detect the situation and optionally install the venv differently (issue #1767)</li>
+                        <li><h3>boring stuff</h3></li>
+                        <li>deleted a bunch of old and no-longer-hooked-up nitter url classes from the defaults</li>
+                        <li>reduced some unbalanced lag in the 'deny auto-resolution pairs' command in semi-automatic rules, with more than 4 pairs being denied at once</li>
+                        <li>refactored much of my old list chunking to a richer progress-tracking call</li>
+                        <li>refactored my hacky old inter-thread progress-gauge tracking to nicer calls on the shared status object</li>
+                        <li>fixed a GUG unit test that failed after the recent %20 thing. I think I last-minute changed the default value for that setting, after doing my main testing</li>
+                        <li>wrote a 'URLDomainMask' object to handle the future multi-domain URL Class update. lots to do up and down the pipeline to get this guy inserted, but the whole system will eventually support multiple regex domains per URL CLass. also wrote some unit tests for it</li>
+                    </ul>
+                </li>
+                <li>
                     <h2 id="version_632"><a href="#version_632">version 632</a></h2>
                     <ul>
                         <li><h3>hotfix last week</h3></li>
