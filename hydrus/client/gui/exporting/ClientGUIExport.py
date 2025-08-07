@@ -969,7 +969,7 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
                         
                     else:
                         
-                        win = CG.client_controller.GetMainGUI()
+                        win = CG.client_controller.GetMainTLW()
                         
                     
                     HydrusData.PrintException( e, do_wait = False )
