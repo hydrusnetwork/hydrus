@@ -275,32 +275,44 @@ def GetIconSize( canvas_type, service_type = ClientGUICommon.HC.LOCAL_RATING_LIK
     if canvas_type in CC.CANVAS_MEDIA_VIEWER_TYPES:
         
         rating_icon_size_px = CG.client_controller.new_options.GetFloat( 'media_viewer_rating_icon_size_px' )
-        rating_incdec_width_px = CG.client_controller.new_options.GetFloat( 'media_viewer_rating_incdec_width_px' )
+        rating_incdec_height_px = CG.client_controller.new_options.GetFloat( 'media_viewer_rating_incdec_height_px' )
         
     elif canvas_type == CC.CANVAS_PREVIEW:
         
         rating_icon_size_px = CG.client_controller.new_options.GetFloat( 'preview_window_rating_icon_size_px' )
-        rating_incdec_width_px = CG.client_controller.new_options.GetFloat( 'preview_window_rating_incdec_width_px' )
+        rating_incdec_height_px = CG.client_controller.new_options.GetFloat( 'preview_window_rating_incdec_height_px' )
         
     elif canvas_type == CC.CANVAS_DIALOG:
         
         rating_icon_size_px = CG.client_controller.new_options.GetFloat( 'dialog_rating_icon_size_px' )
-        rating_incdec_width_px = CG.client_controller.new_options.GetFloat( 'dialog_rating_incdec_width_px' )
+        rating_incdec_height_px = CG.client_controller.new_options.GetFloat( 'dialog_rating_incdec_height_px' )
         
     else:
         
         rating_icon_size_px = CG.client_controller.new_options.GetFloat( 'draw_thumbnail_rating_icon_size_px' )
-        rating_incdec_width_px = CG.client_controller.new_options.GetFloat( 'thumbnail_rating_incdec_width_px' )
+        rating_incdec_height_px = CG.client_controller.new_options.GetFloat( 'thumbnail_rating_incdec_height_px' )
         
     
     if service_type == ClientGUICommon.HC.LOCAL_RATING_INCDEC:
         
-        return QC.QSize( round( rating_incdec_width_px ), round( rating_incdec_width_px / 2 ) )
+        return QC.QSize( rating_incdec_height_px * 2, rating_incdec_height_px )
         
     else:
         
         return QC.QSize( round( rating_icon_size_px ), round( rating_icon_size_px ) )
         
+    
+
+def GetIncDecSize( box_height, rating_number ) -> QC.QSize:
+    
+    box_width = box_height * 2
+    
+    if rating_number is not None and rating_number > 0 and len( str( rating_number ) ) > 3:
+        
+        box_width += ( box_height - 2 ) * ( len( str( rating_number ) ) - 3 )
+        
+    
+    return QC.QSize( box_width, box_height )
     
 
 def GetNumericalFractionText( rating_state, stars ):
@@ -570,6 +582,8 @@ class RatingIncDec( QW.QWidget ):
                     
                     dlg.SetPanel( panel )
                     
+                    control.setFocus()
+                    
                     if dlg.exec() == QW.QDialog.DialogCode.Accepted:
                         
                         new_rating = control.value()
@@ -617,7 +631,7 @@ class RatingIncDec( QW.QWidget ):
     
     def UpdateSize( self ):
         
-        self._icon_size = GetIconSize( self._canvas_type, ClientGUICommon.HC.LOCAL_RATING_INCDEC )
+        self._icon_size = GetIncDecSize( GetIconSize( self._canvas_type, ClientGUICommon.HC.LOCAL_RATING_INCDEC ).height(), self._rating )
         
         self.setMinimumSize( QC.QSize( self._icon_size.width(), self._icon_size.height() + STAR_PAD.height() ) )
         
