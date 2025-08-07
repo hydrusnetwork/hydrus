@@ -60,6 +60,7 @@ class RatingIncDecCanvas( ClientGUIRatings.RatingIncDec ):
         self._hashes = set()
         
         CG.client_controller.sub( self, 'ProcessContentUpdatePackage', 'content_updates_gui' )
+        CG.client_controller.sub( self, 'NotifyNewOptions', 'notify_new_options' )
         
     
     def _Draw( self, painter ):
@@ -70,18 +71,11 @@ class RatingIncDecCanvas( ClientGUIRatings.RatingIncDec ):
         
         if self._current_media is not None:
             
-            icon_size = ClientGUIRatings.GetIconSize( self._canvas_type, HC.LOCAL_RATING_INCDEC )
+            self._iconsize =  ClientGUIRatings.GetIncDecSize( ClientGUIRatings.GetIconSize( self._canvas_type, HC.LOCAL_RATING_INCDEC ).height(), self._rating )
             
-            ClientGUIRatings.DrawIncDec( painter, self._iconpad.width(), self._iconpad.height(), self._service_key, self._rating_state, self._rating, icon_size )
+            ClientGUIRatings.DrawIncDec( painter, self._iconpad.width(), self._iconpad.height(), self._service_key, self._rating_state, self._rating, self._iconsize )
             
-            if self._iconsize != icon_size:
-                
-                self._iconsize = icon_size
-                self.UpdateSize()
-                
-                self._panel.hide()
-                self._panel.DoRegularHideShow()
-                
+            self.UpdateSize()
             
         
     
@@ -100,6 +94,13 @@ class RatingIncDecCanvas( ClientGUIRatings.RatingIncDec ):
     def ClearMedia( self ):
         
         self.SetMedia( None )
+        
+    
+    def NotifyNewOptions( self ):
+        
+        self._iconsize =  ClientGUIRatings.GetIncDecSize( ClientGUIRatings.GetIconSize( self._canvas_type, HC.LOCAL_RATING_INCDEC ).height(), self._rating )
+        
+        self._panel.DoRegularHideShow()
         
     
     def ProcessContentUpdatePackage( self, content_update_package: ClientContentUpdates.ContentUpdatePackage ):

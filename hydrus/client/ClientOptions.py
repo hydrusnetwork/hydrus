@@ -522,13 +522,17 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         self._dictionary[ 'floats' ] = {
             'draw_thumbnail_rating_icon_size_px' : ClientGUIPainterShapes.SIZE.width(),
-            'thumbnail_rating_incdec_width_px' : ClientGUIPainterShapes.SIZE.width() * 2,
+            'thumbnail_rating_incdec_width_px' : ClientGUIPainterShapes.SIZE.width() * 2, #deprecated
+            'thumbnail_rating_incdec_height_px' : ClientGUIPainterShapes.SIZE.height(),
             'media_viewer_rating_icon_size_px' : ClientGUIPainterShapes.SIZE.width(),
-            'media_viewer_rating_incdec_width_px' : ClientGUIPainterShapes.SIZE.width() * 2,
+            'media_viewer_rating_incdec_width_px' : ClientGUIPainterShapes.SIZE.width() * 2, #deprecated
+            'media_viewer_rating_incdec_height_px' : ClientGUIPainterShapes.SIZE.height(),
             'preview_window_rating_icon_size_px' : ClientGUIPainterShapes.SIZE.width(),
-            'preview_window_rating_incdec_width_px' : ClientGUIPainterShapes.SIZE.width() * 2,
+            'preview_window_rating_incdec_width_px' : ClientGUIPainterShapes.SIZE.width() * 2, #deprecated
+            'preview_window_rating_incdec_height_px' : ClientGUIPainterShapes.SIZE.height(),
             'dialog_rating_icon_size_px' : ClientGUIPainterShapes.SIZE.width(),
-            'dialog_rating_incdec_width_px' : ClientGUIPainterShapes.SIZE.width() * 2,
+            'dialog_rating_incdec_width_px' : ClientGUIPainterShapes.SIZE.width() * 2, #deprecated
+            'dialog_rating_incdec_height_px' : ClientGUIPainterShapes.SIZE.height(),
         }
         
         #

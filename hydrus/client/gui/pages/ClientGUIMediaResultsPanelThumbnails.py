@@ -2445,7 +2445,7 @@ class Thumbnail( Selectable ):
         
         # ratings
         THUMBNAIL_RATING_ICON_SET_SIZE = round( new_options.GetFloat( 'draw_thumbnail_rating_icon_size_px' ) )
-        THUMBNAIL_RATING_INCDEC_SET_WIDTH = round( new_options.GetFloat( 'thumbnail_rating_incdec_width_px' ) )
+        THUMBNAIL_RATING_INCDEC_SET_HEIGHT = round( new_options.GetFloat( 'thumbnail_rating_incdec_height_px' ) )
         STAR_DX = THUMBNAIL_RATING_ICON_SET_SIZE
         STAR_DY = THUMBNAIL_RATING_ICON_SET_SIZE
         
@@ -2541,11 +2541,29 @@ class Thumbnail( Selectable ):
         
         if num_to_show > 0:
             
-            control_width = THUMBNAIL_RATING_INCDEC_SET_WIDTH
-            control_height = round( THUMBNAIL_RATING_INCDEC_SET_WIDTH / 2 )
+            """
+            The total rect_width will be added to dynamically, since we want to be able to have dramatically large numbers in some inc/dec services without needing to have unnecessary whitespace in others' boxes
+            We need this rect_width for drawing the thumbnail_rating_background only, but it must be pre-calculated for proper painter drawing, so;
+            to avoid extra fetches of Service data / Media rating state, we buffer the values used for this pre-calculation for use a moment later in the Draw call.
+            """
             
-            rect_width = ( control_width * num_to_show ) + ( ICON_MARGIN * 2 ) + ( ICON_MARGIN * ( num_to_show - 1 ) )
-            rect_height = control_height + ( ICON_MARGIN * 2 )
+            rect_width = ( ICON_MARGIN * 2 ) + ( ICON_MARGIN * ( num_to_show - 1 ) )
+            rect_height = THUMBNAIL_RATING_INCDEC_SET_HEIGHT + ( ICON_MARGIN * 2 )
+            
+            prefetched_display_values = []
+            
+            for incdec_service in incdec_services_to_show:
+                
+                service_key = incdec_service.GetServiceKey()
+                
+                ( rating_state, rating ) = ClientRatings.GetIncDecStateFromMedia( ( media, ), service_key )
+                
+                service_size = ClientGUIRatings.GetIncDecSize( THUMBNAIL_RATING_INCDEC_SET_HEIGHT, rating )
+                
+                rect_width += service_size.width()
+                
+                prefetched_display_values.append( ( service_key, rating_state, rating, service_size ) )
+                
             
             rect_x = width - thumbnail_border - rect_width
             rect_y = current_top_right_y
@@ -2555,20 +2573,16 @@ class Thumbnail( Selectable ):
                 painter.fillRect( rect_x, rect_y, rect_width, rect_height, qss_window_colour )
                 
             
-            incdec_rating_current_x = rect_x
+            incdec_rating_current_x = rect_x + ICON_MARGIN
             incdec_rating_current_y = rect_y + ICON_MARGIN
             
-            for incdec_service in incdec_services_to_show:
+            for incdec_service_details in prefetched_display_values:
                 
-                service_key = incdec_service.GetServiceKey()
+                ( service_key, rating_state, rating, incdec_size ) = incdec_service_details
                 
-                ( rating_state, rating ) = ClientRatings.GetIncDecStateFromMedia( ( media, ), service_key )
+                ClientGUIRatings.DrawIncDec( painter, incdec_rating_current_x, incdec_rating_current_y, service_key, rating_state, rating, incdec_size, QC.QSize( ICON_PAD, ICON_MARGIN ) )
                 
-                incdec_rating_current_x += ICON_MARGIN
-                
-                ClientGUIRatings.DrawIncDec( painter, incdec_rating_current_x, incdec_rating_current_y, service_key, rating_state, rating, QC.QSize( control_width, control_height ), QC.QSize( ICON_PAD, ICON_MARGIN ) )
-                
-                incdec_rating_current_x += control_width
+                incdec_rating_current_x += incdec_size.width() + ICON_MARGIN
                 
             
             current_top_right_y += rect_height
