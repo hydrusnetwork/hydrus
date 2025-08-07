@@ -307,11 +307,18 @@ def GetIncDecSize( box_height, rating_number ) -> QC.QSize:
     
     box_width = box_height * 2
     
-    if rating_number is not None and rating_number > 0 and len( str( rating_number ) ) > 3:
+    if rating_number is not None and rating_number > 0:
         
-        box_width += ( box_height - 2 ) * ( len( str( rating_number ) ) - 3 )
+        digits = len( str( rating_number ) )
         
-    
+        if digits > 3:
+            
+            box_width += ( box_height - 1 ) * ( digits - ( 2 + ( digits / 3 ) ) ) 
+            #the below increases the padding drastically with more digits, the above has a constant pad
+            #more dramatic indent for bigger numbers seems sometimes better visually, but let's tend towards saving space
+            #box_width += ( box_height - 1 ) * ( digits - 3 )
+            
+        
     return QC.QSize( box_width, box_height )
     
 
