@@ -525,7 +525,7 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
         
         CHUNK_SIZE = 256
         
-        for ( num_done, num_to_do, block_of_hash_ids ) in HydrusLists.SplitListIntoChunks( query_hash_ids, CHUNK_SIZE ):
+        for ( num_done, num_to_do, block_of_hash_ids ) in HydrusLists.SplitListIntoChunksRich( query_hash_ids, CHUNK_SIZE ):
             
             job_status.SetStatusText( 'searching: {}'.format( HydrusNumbers.ValueRangeToPrettyString( num_done, num_to_do ) ) )
             
