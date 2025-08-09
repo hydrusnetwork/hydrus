@@ -434,157 +434,34 @@ class ClientFilesManager( object ):
     
     def _GetRebalanceTuple( self ):
         
-        # TODO: obviously this will change radically when we move to multiple folders for real and background migration. hacks for now
-        # In general, I think this thing is going to determine the next migration destination and purge flag
-        # the background file migrator will work on current purge flags and not talk to this guy until the current flags are clear 
-        
-        ( ideal_media_base_locations, ideal_thumbnail_override_base_location ) = self._controller.Read( 'ideal_client_files_locations' )
-        
-        service_info = CG.client_controller.Read( 'service_info', CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
-        
-        all_local_files_total_size = service_info[ HC.SERVICE_INFO_TOTAL_SIZE ]
-        
-        total_ideal_weight = sum( ( base_location.ideal_weight for base_location in ideal_media_base_locations ) )
-        
-        smallest_subfolder_normalised_weight = 1
-        largest_subfolder_normalised_weight = 0
-        
-        current_base_locations_to_normalised_weights = collections.Counter()
-        current_base_locations_to_size_estimate = collections.Counter()
-        
-        file_prefix_umbrellas = [ prefix_umbrella for prefix_umbrella in self._prefix_umbrellas_to_client_files_subfolders.keys() if prefix_umbrella.startswith( 'f' ) ]
-        
-        all_media_base_locations = set( ideal_media_base_locations )
-        
-        for file_prefix_umbrella in file_prefix_umbrellas:
+        try:
             
-            subfolders = self._prefix_umbrellas_to_client_files_subfolders[ file_prefix_umbrella ]
+            # TODO: obviously this will change radically when we move to multiple folders for real and background migration. hacks for now
+            # In general, I think this thing is going to determine the next migration destination and purge flag
+            # the background file migrator will work on current purge flags and not talk to this guy until the current flags are clear 
             
-            subfolder = subfolders[0]
+            ( ideal_media_base_locations, ideal_thumbnail_override_base_location ) = self._controller.Read( 'ideal_client_files_locations' )
             
-            base_location = subfolder.base_location
-            
-            all_media_base_locations.add( base_location )
-            
-            normalised_weight = subfolder.GetNormalisedWeight()
-            
-            current_base_locations_to_normalised_weights[ base_location ] += normalised_weight
-            current_base_locations_to_size_estimate[ base_location ] += normalised_weight * all_local_files_total_size
-            
-            if normalised_weight < smallest_subfolder_normalised_weight:
+            if False in ( base_location.PathExists() for base_location in ideal_media_base_locations ) or not ideal_thumbnail_override_base_location.PathExists():
                 
-                smallest_subfolder_normalised_weight = normalised_weight
+                return None
                 
             
-            if normalised_weight > largest_subfolder_normalised_weight:
-                
-                largest_subfolder_normalised_weight = normalised_weight
-                
+            service_info = CG.client_controller.Read( 'service_info', CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
             
-        
-        smallest_subfolder_num_bytes = smallest_subfolder_normalised_weight * all_local_files_total_size
-        
-        #
-        
-        # ok so the problem here is that when a location blocks new subfolders because of max num bytes rules, the other guys have to take the slack and end up overweight
-        # we want these overweight guys to nonetheless distribute their stuff according to relative weights
-        # so, what we'll do is we'll play a game with a split-pot, where bust players can't get dosh from later rounds
-        
-        second_round_base_locations = []
-        
-        desperately_overweight_locations = []
-        overweight_locations = []
-        available_locations = []
-        starving_locations = []
-        
-        # first round, we need to sort out who is bust
-        
-        total_normalised_weight_lost_in_first_round = 0
-        
-        for base_location in all_media_base_locations:
+            all_local_files_total_size = service_info[ HC.SERVICE_INFO_TOTAL_SIZE ]
             
-            current_num_bytes = current_base_locations_to_size_estimate[ base_location ]
+            total_ideal_weight = sum( ( base_location.ideal_weight for base_location in ideal_media_base_locations ) )
             
-            if not base_location.AbleToAcceptSubfolders( current_num_bytes, smallest_subfolder_num_bytes ):
-                
-                if base_location.max_num_bytes is None:
-                    
-                    total_normalised_weight_lost_in_first_round = base_location.ideal_weight / total_ideal_weight
-                    
-                else:
-                    
-                    total_normalised_weight_lost_in_first_round += base_location.max_num_bytes / all_local_files_total_size
-                    
-                
-                if base_location.NeedsToRemoveSubfolders( current_num_bytes ):
-                    
-                    desperately_overweight_locations.append( base_location )
-                    
-                
-            else:
-                
-                second_round_base_locations.append( base_location )
-                
+            smallest_subfolder_normalised_weight = 1
+            largest_subfolder_normalised_weight = 0
             
-        
-        # second round, let's distribute the remainder
-        # I fixed some logic and it seems like everything here is now AbleToAccept, so maybe we want another quick pass on this
-        # or just wait until I do the slow migration and we'll figure something out with the staticmethod on BaseLocation that just gets ideal weights
-        # I also added this jank regarding / ( 1 - first_round_weight ), which makes sure we are distributing the remaining weight correctly
-        
-        second_round_total_ideal_weight = sum( ( base_location.ideal_weight for base_location in second_round_base_locations ) )
-        
-        for base_location in second_round_base_locations:
+            current_base_locations_to_normalised_weights = collections.Counter()
+            current_base_locations_to_size_estimate = collections.Counter()
             
-            current_normalised_weight = current_base_locations_to_normalised_weights[ base_location ]
-            current_num_bytes = current_base_locations_to_size_estimate[ base_location ]
+            file_prefix_umbrellas = [ prefix_umbrella for prefix_umbrella in self._prefix_umbrellas_to_client_files_subfolders.keys() if prefix_umbrella.startswith( 'f' ) ]
             
-            # can be both overweight and able to eat more
-            
-            if base_location.WouldLikeToRemoveSubfolders( current_normalised_weight / ( 1 - total_normalised_weight_lost_in_first_round ), second_round_total_ideal_weight, largest_subfolder_normalised_weight ):
-                
-                overweight_locations.append( base_location )
-                
-            
-            if base_location.EagerToAcceptSubfolders( current_normalised_weight / ( 1 - total_normalised_weight_lost_in_first_round ), second_round_total_ideal_weight, smallest_subfolder_normalised_weight, current_num_bytes, smallest_subfolder_num_bytes ):
-                
-                starving_locations.append( base_location )
-                
-            elif base_location.AbleToAcceptSubfolders( current_num_bytes, smallest_subfolder_num_bytes ):
-                
-                available_locations.append( base_location )
-                
-            
-        
-        #
-        
-        desperately_overweight_locations.sort( key = lambda bl: self._GetFileStorageFreeSpace( bl ) )
-        overweight_locations.sort( key = lambda bl: self._GetFileStorageFreeSpace( bl ) )
-        available_locations.sort( key = lambda bl: - self._GetFileStorageFreeSpace( bl ) )
-        starving_locations.sort( key = lambda bl: - self._GetFileStorageFreeSpace( bl ) )
-        
-        if len( desperately_overweight_locations ) > 0:
-            
-            potential_sources = desperately_overweight_locations
-            potential_destinations = starving_locations + available_locations
-            
-        elif len( overweight_locations ) > 0:
-            
-            potential_sources = overweight_locations
-            potential_destinations = starving_locations
-            
-        else:
-            
-            potential_sources = []
-            potential_destinations = []
-            
-        
-        if len( potential_sources ) > 0 and len( potential_destinations ) > 0:
-            
-            source_base_location = potential_sources.pop( 0 )
-            destination_base_location = potential_destinations.pop( 0 )
-            
-            random.shuffle( file_prefix_umbrellas )
+            all_media_base_locations = set( ideal_media_base_locations )
             
             for file_prefix_umbrella in file_prefix_umbrellas:
                 
@@ -594,81 +471,216 @@ class ClientFilesManager( object ):
                 
                 base_location = subfolder.base_location
                 
-                if base_location == source_base_location:
+                all_media_base_locations.add( base_location )
+                
+                normalised_weight = subfolder.GetNormalisedWeight()
+                
+                current_base_locations_to_normalised_weights[ base_location ] += normalised_weight
+                current_base_locations_to_size_estimate[ base_location ] += normalised_weight * all_local_files_total_size
+                
+                if normalised_weight < smallest_subfolder_normalised_weight:
                     
-                    overweight_subfolder = ClientFilesPhysical.FilesStorageSubfolder( subfolder.prefix, source_base_location )
-                    underweight_subfolder = ClientFilesPhysical.FilesStorageSubfolder( subfolder.prefix, destination_base_location )
+                    smallest_subfolder_normalised_weight = normalised_weight
                     
-                    return ( overweight_subfolder, underweight_subfolder )
+                
+                if normalised_weight > largest_subfolder_normalised_weight:
+                    
+                    largest_subfolder_normalised_weight = normalised_weight
                     
                 
             
-        else:
+            smallest_subfolder_num_bytes = smallest_subfolder_normalised_weight * all_local_files_total_size
             
-            thumbnail_prefix_umbrellas = [ prefix_umbrella for prefix_umbrella in self._prefix_umbrellas_to_client_files_subfolders.keys() if prefix_umbrella.startswith( 't' ) ]
+            #
             
-            for thumbnail_prefix_umbrella in thumbnail_prefix_umbrellas:
+            # ok so the problem here is that when a location blocks new subfolders because of max num bytes rules, the other guys have to take the slack and end up overweight
+            # we want these overweight guys to nonetheless distribute their stuff according to relative weights
+            # so, what we'll do is we'll play a game with a split-pot, where bust players can't get dosh from later rounds
+            
+            second_round_base_locations = []
+            
+            desperately_overweight_locations = []
+            overweight_locations = []
+            available_locations = []
+            starving_locations = []
+            
+            # first round, we need to sort out who is bust
+            
+            total_normalised_weight_lost_in_first_round = 0
+            
+            for base_location in all_media_base_locations:
                 
-                if ideal_thumbnail_override_base_location is None:
+                current_num_bytes = current_base_locations_to_size_estimate[ base_location ]
+                
+                if not base_location.AbleToAcceptSubfolders( current_num_bytes, smallest_subfolder_num_bytes ):
                     
-                    file_prefix_umbrella = 'f' + thumbnail_prefix_umbrella[1:]
-                    
-                    subfolders = None
-                    
-                    if file_prefix_umbrella in self._prefix_umbrellas_to_client_files_subfolders:
+                    if base_location.max_num_bytes is None:
                         
-                        subfolders = self._prefix_umbrellas_to_client_files_subfolders[ file_prefix_umbrella ]
+                        total_normalised_weight_lost_in_first_round = base_location.ideal_weight / total_ideal_weight
                         
                     else:
                         
-                        # TODO: Consider better that thumbs might not be split but files would.
-                        # We need to better deal with t43 trying to find its place in f431, and t431 to f43, which means triggering splits or whatever (when we get to that code)
-                        # Update: Yeah I've now moved to prefix_umbrellas, and this looks even crazier
-                        
-                        for ( possible_file_prefix_umbrella, possible_subfolders ) in self._prefix_umbrellas_to_client_files_subfolders.items():
-                            
-                            if possible_file_prefix_umbrella.startswith( file_prefix_umbrella ) or file_prefix_umbrella.startswith( possible_file_prefix_umbrella ):
-                                
-                                subfolders = possible_subfolders
-                                
-                                break
-                                
-                            
+                        total_normalised_weight_lost_in_first_round += base_location.max_num_bytes / all_local_files_total_size
                         
                     
-                    if subfolders is None:
+                    if base_location.NeedsToRemoveSubfolders( current_num_bytes ):
                         
-                        # this shouldn't ever fire, and by the time I expect to split subfolders, all this code will work different anyway
-                        # no way it could possibly go wrong
-                        raise Exception( 'Had a problem trying to find a thumnail migration location due to split subfolders! Let hydev know!' )
+                        desperately_overweight_locations.append( base_location )
                         
-                    
-                    subfolder = subfolders[0]
-                    
-                    correct_base_location = subfolder.base_location
                     
                 else:
                     
-                    correct_base_location = ideal_thumbnail_override_base_location
-                    
-                
-                subfolders = self._prefix_umbrellas_to_client_files_subfolders[ thumbnail_prefix_umbrella ]
-                
-                subfolder = subfolders[0]
-                
-                current_thumbnails_base_location = subfolder.base_location
-                
-                if current_thumbnails_base_location != correct_base_location:
-                    
-                    current_subfolder = ClientFilesPhysical.FilesStorageSubfolder( subfolder.prefix, current_thumbnails_base_location )
-                    correct_subfolder = ClientFilesPhysical.FilesStorageSubfolder( subfolder.prefix, correct_base_location )
-                    
-                    return ( current_subfolder, correct_subfolder )
+                    second_round_base_locations.append( base_location )
                     
                 
             
-        
-        return None
+            # second round, let's distribute the remainder
+            # I fixed some logic and it seems like everything here is now AbleToAccept, so maybe we want another quick pass on this
+            # or just wait until I do the slow migration and we'll figure something out with the staticmethod on BaseLocation that just gets ideal weights
+            # I also added this jank regarding / ( 1 - first_round_weight ), which makes sure we are distributing the remaining weight correctly
+            
+            second_round_total_ideal_weight = sum( ( base_location.ideal_weight for base_location in second_round_base_locations ) )
+            
+            for base_location in second_round_base_locations:
+                
+                current_normalised_weight = current_base_locations_to_normalised_weights[ base_location ]
+                current_num_bytes = current_base_locations_to_size_estimate[ base_location ]
+                
+                # can be both overweight and able to eat more
+                
+                if base_location.WouldLikeToRemoveSubfolders( current_normalised_weight / ( 1 - total_normalised_weight_lost_in_first_round ), second_round_total_ideal_weight, largest_subfolder_normalised_weight ):
+                    
+                    overweight_locations.append( base_location )
+                    
+                
+                if base_location.EagerToAcceptSubfolders( current_normalised_weight / ( 1 - total_normalised_weight_lost_in_first_round ), second_round_total_ideal_weight, smallest_subfolder_normalised_weight, current_num_bytes, smallest_subfolder_num_bytes ):
+                    
+                    starving_locations.append( base_location )
+                    
+                elif base_location.AbleToAcceptSubfolders( current_num_bytes, smallest_subfolder_num_bytes ):
+                    
+                    available_locations.append( base_location )
+                    
+                
+            
+            #
+            
+            desperately_overweight_locations.sort( key = lambda bl: self._GetFileStorageFreeSpace( bl ) )
+            overweight_locations.sort( key = lambda bl: self._GetFileStorageFreeSpace( bl ) )
+            available_locations.sort( key = lambda bl: - self._GetFileStorageFreeSpace( bl ) )
+            starving_locations.sort( key = lambda bl: - self._GetFileStorageFreeSpace( bl ) )
+            
+            if len( desperately_overweight_locations ) > 0:
+                
+                potential_sources = desperately_overweight_locations
+                potential_destinations = starving_locations + available_locations
+                
+            elif len( overweight_locations ) > 0:
+                
+                potential_sources = overweight_locations
+                potential_destinations = starving_locations
+                
+            else:
+                
+                potential_sources = []
+                potential_destinations = []
+                
+            
+            if len( potential_sources ) > 0 and len( potential_destinations ) > 0:
+                
+                source_base_location = potential_sources.pop( 0 )
+                destination_base_location = potential_destinations.pop( 0 )
+                
+                random.shuffle( file_prefix_umbrellas )
+                
+                for file_prefix_umbrella in file_prefix_umbrellas:
+                    
+                    subfolders = self._prefix_umbrellas_to_client_files_subfolders[ file_prefix_umbrella ]
+                    
+                    subfolder = subfolders[0]
+                    
+                    base_location = subfolder.base_location
+                    
+                    if base_location == source_base_location:
+                        
+                        overweight_subfolder = ClientFilesPhysical.FilesStorageSubfolder( subfolder.prefix, source_base_location )
+                        underweight_subfolder = ClientFilesPhysical.FilesStorageSubfolder( subfolder.prefix, destination_base_location )
+                        
+                        return ( overweight_subfolder, underweight_subfolder )
+                        
+                    
+                
+            else:
+                
+                thumbnail_prefix_umbrellas = [ prefix_umbrella for prefix_umbrella in self._prefix_umbrellas_to_client_files_subfolders.keys() if prefix_umbrella.startswith( 't' ) ]
+                
+                for thumbnail_prefix_umbrella in thumbnail_prefix_umbrellas:
+                    
+                    if ideal_thumbnail_override_base_location is None:
+                        
+                        file_prefix_umbrella = 'f' + thumbnail_prefix_umbrella[1:]
+                        
+                        subfolders = None
+                        
+                        if file_prefix_umbrella in self._prefix_umbrellas_to_client_files_subfolders:
+                            
+                            subfolders = self._prefix_umbrellas_to_client_files_subfolders[ file_prefix_umbrella ]
+                            
+                        else:
+                            
+                            # TODO: Consider better that thumbs might not be split but files would.
+                            # We need to better deal with t43 trying to find its place in f431, and t431 to f43, which means triggering splits or whatever (when we get to that code)
+                            # Update: Yeah I've now moved to prefix_umbrellas, and this looks even crazier
+                            
+                            for ( possible_file_prefix_umbrella, possible_subfolders ) in self._prefix_umbrellas_to_client_files_subfolders.items():
+                                
+                                if possible_file_prefix_umbrella.startswith( file_prefix_umbrella ) or file_prefix_umbrella.startswith( possible_file_prefix_umbrella ):
+                                    
+                                    subfolders = possible_subfolders
+                                    
+                                    break
+                                    
+                                
+                            
+                        
+                        if subfolders is None:
+                            
+                            # this shouldn't ever fire, and by the time I expect to split subfolders, all this code will work different anyway
+                            # no way it could possibly go wrong
+                            raise Exception( 'Had a problem trying to find a thumnail migration location due to split subfolders! Let hydev know!' )
+                            
+                        
+                        subfolder = subfolders[0]
+                        
+                        correct_base_location = subfolder.base_location
+                        
+                    else:
+                        
+                        correct_base_location = ideal_thumbnail_override_base_location
+                        
+                    
+                    subfolders = self._prefix_umbrellas_to_client_files_subfolders[ thumbnail_prefix_umbrella ]
+                    
+                    subfolder = subfolders[0]
+                    
+                    current_thumbnails_base_location = subfolder.base_location
+                    
+                    if current_thumbnails_base_location != correct_base_location:
+                        
+                        current_subfolder = ClientFilesPhysical.FilesStorageSubfolder( subfolder.prefix, current_thumbnails_base_location )
+                        correct_subfolder = ClientFilesPhysical.FilesStorageSubfolder( subfolder.prefix, correct_base_location )
+                        
+                        return ( current_subfolder, correct_subfolder )
+                        
+                    
+                
+            
+            return None
+            
+        except:
+            
+            return None
+            
         
     
     def _GetSubfolderForFile( self, hash: bytes, prefix_type: str ) -> ClientFilesPhysical.FilesStorageSubfolder:
