@@ -8973,6 +8973,34 @@ class DB( HydrusDB.HydrusDB ):
                 self.pub_initial_message( message )
                 
             
+            if version == 633:
+                
+                try:
+                    
+                    new_options = self.modules_serialisable.GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_CLIENT_OPTIONS )
+                    
+                    thumbnail_rating_incdec_width_px = new_options.GetFloat( 'thumbnail_rating_incdec_width_px' )
+                    media_viewer_rating_incdec_width_px = new_options.GetFloat( 'media_viewer_rating_incdec_width_px' )
+                    preview_window_rating_incdec_width_px = new_options.GetFloat( 'preview_window_rating_incdec_width_px' )
+                    dialog_rating_incdec_width_px = new_options.GetFloat( 'dialog_rating_incdec_width_px' )
+                    
+                    new_options.SetFloat( 'thumbnail_rating_incdec_height_px', thumbnail_rating_incdec_width_px / 2 )
+                    new_options.SetFloat( 'media_viewer_rating_incdec_height_px', media_viewer_rating_incdec_width_px / 2 )
+                    new_options.SetFloat( 'preview_window_rating_incdec_height_px', preview_window_rating_incdec_width_px / 2 )
+                    new_options.SetFloat( 'dialog_rating_incdec_height_px', dialog_rating_incdec_width_px / 2 )
+                    
+                    self.modules_serialisable.SetJSONDump( new_options )
+                    
+                except Exception as e:
+                    
+                    HydrusData.PrintException( e )
+                    
+                    message = 'Trying to update your \'rating_incdec_height_px\' options failed! Please let hydrus dev know!'
+                    
+                    self.pub_initial_message( message )
+                    
+                
+            
         
         self._controller.frame_splash_status.SetTitleText( 'updated db to v{}'.format( HydrusNumbers.ToHumanInt( version + 1 ) ) )
         
