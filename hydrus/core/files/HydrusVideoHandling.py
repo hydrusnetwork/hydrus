@@ -134,7 +134,7 @@ def GetFFMPEGVideoProperties( path, force_count_frames_manually = False ):
         
         num_frames = ParseFFMPEGNumFramesManually( lines )
         
-        if num_frames > 0:
+        if num_frames > 0 and duration_s is not None:
             
             implied_fps_given_what_we_know = num_frames / duration_s
             
