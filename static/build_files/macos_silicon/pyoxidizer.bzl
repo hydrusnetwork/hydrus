@@ -1,14 +1,13 @@
 def make_dist():
     return default_python_distribution(
-        python_version = "3.10",
-        target_triple = "aarch64-apple-darwin"
+        python_version = "3.10"
     )
 
 def make_resource_policy(dist):
     res = dist.make_resource_location_policy()
-	res.resources_location = "resources"
-	
-	return res
+    res.resources_location = "resources"
+    
+    return res
 
 def make_packaging_policy(dist):
     policy = dist.make_python_packaging_policy()
@@ -29,7 +28,7 @@ def make_client(dist, policy, res):
     client = dist.to_python_executable(
         name="hydrus_client",
         packaging_policy=policy,
-		resources_policy=res,
+        resources_policy=res,
         config=python_config,
     )
     

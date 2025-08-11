@@ -1,7 +1,6 @@
 def make_dist():
     return default_python_distribution(
-        python_version = "3.10",
-        target_triple = "x86_64-apple-darwin"
+        python_version = "3.10"
     )
 
 def make_packaging_policy(dist):
