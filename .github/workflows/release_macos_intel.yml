@@ -6,7 +6,7 @@ on:
 
 jobs:
   build-macos:
-    runs-on: macos-13
+    runs-on: macos-14
     steps:
       -
         name: Checkout
@@ -46,22 +46,23 @@ jobs:
         name: Write version to Info.plist
         run: |
           cd $GITHUB_WORKSPACE
-          plutil -replace CFBundleShortVersionString -string "${{ env.version_short }}" static/build_files/macos/Info.plist
+          plutil -replace CFBundleShortVersionString -string "${{ env.version_short }}" static/build_files/macos_intel/Info.plist
       -
         name: Build Hydrus
         run: |
           cd $GITHUB_WORKSPACE
-          cp static/build_files/macos/pyoxidizer.bzl pyoxidizer.bzl
-          cp static/build_files/macos/requirements.txt requirements.txt
+          cp static/build_files/macos_intel/pyoxidizer.bzl pyoxidizer.bzl
+          cp static/build_files/macos_intel/requirements.txt requirements.txt
           basename $(rustc --print sysroot) | sed -e "s/^stable-//" > triple.txt
-          pyoxidizer build --release
+          rustup target add x86_64-apple-darwin
+          pyoxidizer build --release --target x86_64-apple-darwin
           cd build/$(head -n 1 triple.txt)/release
           mkdir -p "Hydrus Network.app/Contents/MacOS"
           mkdir -p "Hydrus Network.app/Contents/Resources"
           mkdir -p "Hydrus Network.app/Contents/Frameworks"
           mv install/static/icon.icns "Hydrus Network.app/Contents/Resources/icon.icns"
-          cp install/static/build_files/macos/Info.plist "Hydrus Network.app/Contents/Info.plist"
-          cp install/static/build_files/macos/running_from_app "install/running_from_app"
+          cp install/static/build_files/macos_intel/Info.plist "Hydrus Network.app/Contents/Info.plist"
+          cp install/static/build_files/macos_intel/running_from_app "install/running_from_app"
           mv install/* "Hydrus Network.app/Contents/MacOS/"
           rm -rf install
       -
@@ -70,7 +71,7 @@ jobs:
           cd $GITHUB_WORKSPACE
           cd build/$(head -n 1 triple.txt)/release
           zip -r "Hydrus Network.zip" "Hydrus Network.app"
-          mv "Hydrus Network.zip" "$GITHUB_WORKSPACE/Hydrus.Network.${{ env.version_short }}.-.macOS.-.App.zip"
+          mv "Hydrus Network.zip" "$GITHUB_WORKSPACE/Hydrus.Network.${{ env.version_short }}.-.macOS.-.App.-.Intel.zip"
           cd $GITHUB_WORKSPACE
       - 
         name: Upload Files
@@ -78,4 +79,4 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/')
         with:
           files: |
-            Hydrus.Network.${{ env.version_short }}.-.macOS.-.App.zip
+            Hydrus.Network.${{ env.version_short }}.-.macOS.-.App.-.Intel.zip
