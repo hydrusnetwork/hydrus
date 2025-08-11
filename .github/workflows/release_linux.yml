@@ -2,7 +2,7 @@ name: Release-Linux
 on:
   push:
     tags:
-      - 'v*'
+      - 'NO-v*'
 
 jobs:
   build-ubuntu:

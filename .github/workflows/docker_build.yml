@@ -2,7 +2,7 @@ name: Build Containers
 on:
   push:
     tags:
-      - 'v*'
+      - 'NO-v*'
 
 jobs:
   build-client:

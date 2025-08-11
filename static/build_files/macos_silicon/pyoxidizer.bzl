@@ -1,5 +1,14 @@
 def make_dist():
-    return default_python_distribution( python_version = "3.10" )
+    return default_python_distribution(
+        python_version = "3.10",
+        target_triple = "aarch64-apple-darwin"
+    )
+
+def make_resource_policy(dist):
+    res = dist.make_resource_location_policy()
+	res.resources_location = "resources"
+	
+	return res
 
 def make_packaging_policy(dist):
     policy = dist.make_python_packaging_policy()
@@ -10,7 +19,7 @@ def make_packaging_policy(dist):
     
     return policy
 
-def make_client(dist, policy):
+def make_client(dist, policy, res):
     python_config = dist.make_python_interpreter_config()
     python_config.module_search_paths = ["$ORIGIN", "$ORIGIN/lib"]
     python_config.filesystem_importer = True
@@ -20,6 +29,7 @@ def make_client(dist, policy):
     client = dist.to_python_executable(
         name="hydrus_client",
         packaging_policy=policy,
+		resources_policy=res,
         config=python_config,
     )
     
@@ -48,7 +58,8 @@ print(CWD)
 # Tell PyOxidizer about the build targets defined above.
 register_target("dist", make_dist)
 register_target("policy", make_packaging_policy, depends=["dist"])
-register_target("hydrus_client", make_client, depends=["dist", "policy"])
+register_target("res", make_packaging_policy, depends=["dist"])
+register_target("hydrus_client", make_client, depends=["dist", "policy", "res"])
 register_target("resources", make_embedded_resources, depends=["hydrus_client"], default_build_script=True)
 register_target("install", make_install, depends=["hydrus_client", "resources"], default=True)
 
