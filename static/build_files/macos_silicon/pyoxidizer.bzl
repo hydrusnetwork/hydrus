@@ -6,7 +6,7 @@ def make_dist():
 def make_packaging_policy(dist):
     policy = dist.make_python_packaging_policy()
     policy.set_resource_handling_mode("files")
-    policy.resources_location = "app-relative:Resources"
+    policy.resources_location = "filesystem-relative:../Resources/lib"
     policy.allow_files = True
     policy.bytecode_optimize_level_zero = True
     

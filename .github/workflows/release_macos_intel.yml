@@ -2,7 +2,7 @@ name: Release-macOS-Intel
 on:
   push:
     tags:
-      - 'v*'
+      - 'NO-v*'
 
 jobs:
   build-macos:
