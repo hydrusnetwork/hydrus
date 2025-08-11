@@ -48,6 +48,11 @@ jobs:
           cd $GITHUB_WORKSPACE
           plutil -replace CFBundleShortVersionString -string "${{ env.version_short }}" static/build_files/macos_intel/Info.plist
       -
+        name: Select Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: '15.4'
+      -
         name: Build Hydrus
         run: |
           cd $GITHUB_WORKSPACE
