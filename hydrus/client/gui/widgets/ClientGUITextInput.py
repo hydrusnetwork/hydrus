@@ -24,7 +24,7 @@ class TextAndPasteCtrl( QW.QWidget ):
         self._text_input = QW.QLineEdit( self )
         self._text_input.installEventFilter( ClientGUICommon.TextCatchEnterEventFilter( self._text_input, self.EnterText ) )
         
-        self._paste_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().paste, self._Paste )
+        self._paste_button = ClientGUICommon.IconButton( self, CC.global_icons().paste, self._Paste )
         self._paste_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'Paste multiple inputs from the clipboard. Assumes the texts are newline-separated.' ) )
         
         self.setFocusProxy( self._text_input )

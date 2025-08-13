@@ -7,6 +7,24 @@ INSTALL_STATIC_DIR = os.path.join( HC.BASE_DIR, 'static' )
 
 USE_USER_STATIC_DIR = True
 
+def GetStaticIconPath( name: str, force_install_dir = False ):
+    
+    svg_path = GetStaticPath( name + '.svg', force_install_dir = force_install_dir )
+    
+    if os.path.exists( svg_path ):
+        
+        path = svg_path
+        
+    else:
+        
+        png_path = GetStaticPath( name + '.png', force_install_dir = force_install_dir )
+        
+        path = png_path
+        
+    
+    return path
+    
+
 def GetStaticPath( sub_path: str, force_install_dir = False ):
     
     if not force_install_dir and USE_USER_STATIC_DIR and HG.controller is not None:

@@ -339,7 +339,7 @@ class AddEditDeleteListBox( QW.QWidget ):
         
         #
         
-        ( width, height ) = ClientGUIFunctions.ConvertTextToPixels( self._listbox, ( 20, height_num_chars ) )
+        ( width, height ) = ClientGUIFunctions.ConvertTextToPixels( self._listbox, ( 10, height_num_chars ) )
         
         self._listbox.setMinimumWidth( width )
         self._listbox.setMinimumHeight( height )
@@ -883,7 +883,7 @@ class QueueListBox( QW.QWidget ):
         self._down_button = ClientGUICommon.BetterButton( self, '\u2193', self._Down )
         
         self._add_button = ClientGUICommon.BetterButton( self, 'add', self._Add )
-        self._paste_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().paste, self._Paste )
+        self._paste_button = ClientGUICommon.IconButton( self, CC.global_icons().paste, self._Paste )
         self._edit_button = ClientGUICommon.BetterButton( self, 'edit', self._Edit )
         
         self._enabled_only_on_selection_buttons = []
@@ -931,7 +931,7 @@ class QueueListBox( QW.QWidget ):
         
         #
         
-        ( width, height ) = ClientGUIFunctions.ConvertTextToPixels( self._listbox, ( 20, height_num_chars ) )
+        ( width, height ) = ClientGUIFunctions.ConvertTextToPixels( self._listbox, ( 10, height_num_chars ) )
         
         self._listbox.setMinimumWidth( width )
         self._listbox.setMinimumHeight( height )

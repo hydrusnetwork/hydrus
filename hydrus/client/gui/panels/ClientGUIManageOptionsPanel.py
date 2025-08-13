@@ -74,7 +74,7 @@ class ShortcutsPanel( OptionsPagePanel ):
         
         super().__init__( parent )
         
-        help_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().help, self._ShowHelp )
+        help_button = ClientGUICommon.IconButton( self, CC.global_icons().help, self._ShowHelp )
         help_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'Show help regarding editing shortcuts.' ) )
         
         self._call_mouse_buttons_primary_secondary = QW.QCheckBox( self )

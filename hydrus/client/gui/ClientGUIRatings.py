@@ -295,7 +295,7 @@ def GetIconSize( canvas_type, service_type = ClientGUICommon.HC.LOCAL_RATING_LIK
     
     if service_type == ClientGUICommon.HC.LOCAL_RATING_INCDEC:
         
-        return QC.QSize( rating_incdec_height_px * 2, rating_incdec_height_px )
+        return QC.QSize( round( rating_incdec_height_px * 2 ), round( rating_incdec_height_px ) )
         
     else:
         
@@ -319,7 +319,7 @@ def GetIncDecSize( box_height, rating_number ) -> QC.QSize:
             #box_width += ( box_height - 1 ) * ( digits - 3 )
             
         
-    return QC.QSize( box_width, box_height )
+    return QC.QSize( round( box_width ), round( box_height ) )
     
 
 def GetNumericalFractionText( rating_state, stars ):
@@ -636,11 +636,16 @@ class RatingIncDec( QW.QWidget ):
         self._UpdateTooltip()
         
     
+    def sizeHint( self ):
+        
+        return QC.QSize( self._icon_size.width(), self._icon_size.height() + STAR_PAD.height() )
+        
+    
     def UpdateSize( self ):
         
         self._icon_size = GetIncDecSize( GetIconSize( self._canvas_type, ClientGUICommon.HC.LOCAL_RATING_INCDEC ).height(), self._rating )
         
-        self.setMinimumSize( QC.QSize( self._icon_size.width(), self._icon_size.height() + STAR_PAD.height() ) )
+        self.updateGeometry()
         
         self.update()
         
@@ -678,6 +683,8 @@ class RatingIncDecDialog( RatingIncDec ):
         
         self._SetRating( rating )
         
+        self.UpdateSize()
+        
     
     def SetRatingState( self, rating_state, rating ):
         
@@ -687,6 +694,8 @@ class RatingIncDecDialog( RatingIncDec ):
         self.update()
         
         self._UpdateTooltip()
+        
+        self.UpdateSize()
         
     
 

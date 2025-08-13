@@ -41,9 +41,9 @@ class NetworkJobControl( QW.QFrame ):
         
         self._gauge = ClientGUICommon.Gauge( self )
         
-        self._cog_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().cog, self._ShowCogMenu )
-        self._cancel_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().stop, self.Cancel )
-        self._error_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().dump_fail, self._ShowErrorMenu )
+        self._cog_button = ClientGUICommon.IconButton( self, CC.global_icons().cog, self._ShowCogMenu )
+        self._cancel_button = ClientGUICommon.IconButton( self, CC.global_icons().stop, self.Cancel )
+        self._error_button = ClientGUICommon.IconButton( self, CC.global_icons().dump_fail, self._ShowErrorMenu )
         
         self._error_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'Click here to see the last job\'s error.' ) )
         
@@ -75,10 +75,6 @@ class NetworkJobControl( QW.QFrame ):
         QP.AddToLayout( hbox, self._error_button, CC.FLAGS_CENTER_PERPENDICULAR )
         
         self.setLayout( hbox )
-        
-        width = ClientGUIFunctions.ConvertTextToPixelWidth( self, 58 )
-        
-        self.setMinimumWidth( width )
         
     
     def _EditBandwidthRules( self, network_context: ClientNetworkingContexts.NetworkContext ):

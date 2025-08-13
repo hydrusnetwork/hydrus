@@ -129,5 +129,10 @@ def UnitToInt( unit ):
 
 def ValueRangeToPrettyString( value, range ):
     
+    if value is not None and range is not None:
+        
+        value = min( value, range )
+        
+    
     return ToHumanInt( value ) + '/' + ToHumanInt( range )
     

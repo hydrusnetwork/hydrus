@@ -1,10 +1,9 @@
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
-from qtpy import QtGui as QG
 
 from hydrus.core import HydrusConstants as HC
-from hydrus.core import HydrusStaticDir
 
+from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIMenus
@@ -37,9 +36,9 @@ class ClientSystemTrayIcon( QW.QSystemTrayIcon ):
         
         self._just_clicked_to_show = False
         
-        png_path = HydrusStaticDir.GetStaticPath( 'hydrus_non-transparent.png' )
+        icon = CC.global_icons().hydrus_system_tray
         
-        self.setIcon( QG.QIcon( png_path ) )
+        self.setIcon( icon )
         
         self.activated.connect( self._ClickActivated )
         

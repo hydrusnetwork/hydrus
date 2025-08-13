@@ -56,7 +56,7 @@ class StaticSystemPredicateButton( QW.QWidget ):
             
         
         self._predicates_button = ClientGUICommon.BetterButton( self, label, self._DoPredicatesChoose )
-        self._remove_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().trash_delete, self._DoPredicatesRemove )
+        self._remove_button = ClientGUICommon.IconButton( self, CC.global_icons().trash_delete, self._DoPredicatesRemove )
         
         hbox = QP.HBoxLayout()
         
@@ -2682,7 +2682,7 @@ class PanelPredicateSystemSimilarToData( PanelPredicateSystemSingle ):
         
         self._clear_button = ClientGUICommon.BetterButton( self, 'clear', self._Clear )
         
-        self._paste_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().paste, self._Paste )
+        self._paste_button = ClientGUICommon.IconButton( self, CC.global_icons().paste, self._Paste )
         self._paste_button.setText( 'Paste image!')
         
         self._pixel_hashes = QW.QPlainTextEdit( self )

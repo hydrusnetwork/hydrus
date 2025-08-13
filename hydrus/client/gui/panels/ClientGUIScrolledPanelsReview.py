@@ -71,7 +71,7 @@ class AboutPanel( ClientGUIScrolledPanels.ReviewPanel ):
         super().__init__( parent )
         
         icon_label = ClientGUICommon.BetterStaticText( self )
-        icon_label.setPixmap( CG.client_controller.frame_icon_pixmap )
+        icon_label.setPixmap( CC.global_icons().hydrus_frame.pixmap( 32, 32 ) )
         
         name_label = ClientGUICommon.BetterStaticText( self, name )
         name_label_font = name_label.font()
@@ -154,7 +154,7 @@ class MoveMediaFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         menu_items.append( ( 'normal', 'open the html migration help', 'Open the help page for database migration in your web browser.', page_func ) )
         
-        help_button = ClientGUIMenuButton.MenuBitmapButton( self, CC.global_pixmaps().help, menu_items )
+        help_button = ClientGUIMenuButton.MenuBitmapButton( self, CC.global_icons().help, menu_items )
         
         help_hbox = ClientGUICommon.WrapInText( help_button, self, 'help for this panel -->', object_name = 'HydrusIndeterminate' )
         
@@ -1074,13 +1074,13 @@ class ReviewDownloaderImport( ClientGUIScrolledPanels.ReviewPanel ):
         
         menu_items.append( ( 'normal', 'open the easy downloader import help', 'Open the help page for easily importing downloaders in your web browser.', page_func ) )
         
-        help_button = ClientGUIMenuButton.MenuBitmapButton( self, CC.global_pixmaps().help, menu_items )
+        help_button = ClientGUIMenuButton.MenuBitmapButton( self, CC.global_icons().help, menu_items )
         
         help_hbox = ClientGUICommon.WrapInText( help_button, self, 'help -->', object_name = 'HydrusIndeterminate' )
         
         self._repo_link = ClientGUICommon.BetterHyperLink( self, 'get user-made downloaders here', 'https://github.com/CuddleBear92/Hydrus-Presets-and-Scripts/tree/master/Downloaders' )
         
-        self._paste_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().paste, self._Paste )
+        self._paste_button = ClientGUICommon.IconButton( self, CC.global_icons().paste, self._Paste )
         self._paste_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'Paste paths/bitmaps/JSON from clipboard!' ) )
         
         st = ClientGUICommon.BetterStaticText( self, label = 'To import, drag-and-drop hydrus\'s special downloader-encoded pngs onto Lain. Or click her to open a file selection dialog, or copy the png bitmap, file path, or raw downloader JSON to your clipboard and hit the paste button.' )
@@ -1852,8 +1852,8 @@ class ReviewFileHistory( ClientGUIScrolledPanels.ReviewPanel ):
         self._loading_text = ClientGUICommon.BetterStaticText( self._search_panel )
         self._loading_text.setAlignment( QC.Qt.AlignmentFlag.AlignVCenter | QC.Qt.AlignmentFlag.AlignRight )
         
-        self._cancel_button = ClientGUICommon.BetterBitmapButton( self._search_panel, CC.global_pixmaps().stop, self._CancelCurrentSearch )
-        self._refresh_button = ClientGUICommon.BetterBitmapButton( self._search_panel, CC.global_pixmaps().refresh, self._RefreshSearch )
+        self._cancel_button = ClientGUICommon.IconButton( self._search_panel, CC.global_icons().stop, self._CancelCurrentSearch )
+        self._refresh_button = ClientGUICommon.IconButton( self._search_panel, CC.global_icons().refresh, self._RefreshSearch )
         
         hbox = QP.HBoxLayout()
         
@@ -2584,8 +2584,8 @@ class ReviewHowBonedAmI( ClientGUIScrolledPanels.ReviewPanel ):
         self._loading_text = ClientGUICommon.BetterStaticText( self._search_panel )
         self._loading_text.setAlignment( QC.Qt.AlignmentFlag.AlignVCenter | QC.Qt.AlignmentFlag.AlignRight )
         
-        self._cancel_button = ClientGUICommon.BetterBitmapButton( self._search_panel, CC.global_pixmaps().stop, self._CancelCurrentSearch )
-        self._refresh_button = ClientGUICommon.BetterBitmapButton( self._search_panel, CC.global_pixmaps().refresh, self._RefreshSearch )
+        self._cancel_button = ClientGUICommon.IconButton( self._search_panel, CC.global_icons().stop, self._CancelCurrentSearch )
+        self._refresh_button = ClientGUICommon.IconButton( self._search_panel, CC.global_icons().refresh, self._RefreshSearch )
         
         hbox = QP.HBoxLayout()
         
@@ -3048,10 +3048,10 @@ class ReviewLocalFileImports( ClientGUIScrolledPanels.ReviewPanel ):
         
         self._progress = ClientGUICommon.TextAndGauge( self )
         
-        self._progress_pause = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().pause, self.PauseProgress )
+        self._progress_pause = ClientGUICommon.IconButton( self, CC.global_icons().pause, self.PauseProgress )
         self._progress_pause.setEnabled( False )
         
-        self._progress_cancel = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().stop, self.StopProgress )
+        self._progress_cancel = ClientGUICommon.IconButton( self, CC.global_icons().stop, self.StopProgress )
         self._progress_cancel.setEnabled( False )
         
         file_import_options = FileImportOptions.FileImportOptions()
@@ -3070,7 +3070,7 @@ class ReviewLocalFileImports( ClientGUIScrolledPanels.ReviewPanel ):
         
         menu_items.append( ( 'check', 'sort paths as they are added', 'If checked, paths will be sorted in a numerically human-friendly (e.g. "page 9.jpg" comes before "page 10.jpg") way.', check_manager ) )
         
-        self._cog_button = ClientGUIMenuButton.MenuBitmapButton( self, CC.global_pixmaps().cog, menu_items )
+        self._cog_button = ClientGUIMenuButton.MenuBitmapButton( self, CC.global_icons().cog, menu_items )
         
         self._delete_after_success_st = ClientGUICommon.BetterStaticText( self )
         self._delete_after_success_st.setAlignment( QC.Qt.AlignmentFlag.AlignRight | QC.Qt.AlignmentFlag.AlignVCenter )
@@ -3642,11 +3642,11 @@ class ReviewLocalFileImports( ClientGUIScrolledPanels.ReviewPanel ):
         
         if paused:
             
-            ClientGUIFunctions.SetBitmapButtonBitmap( self._progress_pause, CC.global_pixmaps().play )
+            self._progress_pause.SetIconSmart( CC.global_icons().play )
             
         else:
             
-            ClientGUIFunctions.SetBitmapButtonBitmap( self._progress_pause, CC.global_pixmaps().pause )
+            self._progress_pause.SetIconSmart( CC.global_icons().pause )
             
         
     
@@ -3813,7 +3813,7 @@ class ReviewDeferredDeleteTableData( ClientGUIScrolledPanels.ReviewPanel ):
         
         deferred_delete_listctrl_panel.SetListCtrl( self._deferred_delete_listctrl )
         
-        self._refresh_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().refresh, self._RefreshData )
+        self._refresh_button = ClientGUICommon.IconButton( self, CC.global_icons().refresh, self._RefreshData )
         self._work_hard_button = ClientGUICommon.BetterButton( self,'work hard now', self._FlipWorkingHard )
         
         #

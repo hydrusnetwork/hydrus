@@ -446,7 +446,7 @@ def EditFileTimestamps( win: QW.QWidget, ordered_medias: list[ ClientMedia.Media
                         
                         for ( i, m ) in enumerate( medias_to_alter_modified_dates ):
                             
-                            job_status.SetStatusText( HydrusNumbers.ValueRangeToPrettyString( i, num_to_do ) )
+                            job_status.SetStatusText( HydrusNumbers.ValueRangeToPrettyString( i + 1, num_to_do ) )
                             job_status.SetGauge( i, num_to_do )
                             
                             if not showed_popup and HydrusTime.TimeHasPassed( time_started + 3 ):
@@ -940,7 +940,7 @@ def OpenURLs( win: QW.QWidget, urls ):
                         
                     
                     job_status.SetStatusText( HydrusNumbers.ValueRangeToPrettyString( i + 1, num_urls ) )
-                    job_status.SetGauge( i + 1, num_urls )
+                    job_status.SetGauge( i, num_urls )
                     
                 
                 ClientPaths.LaunchURLInWebBrowser( url )
@@ -1076,7 +1076,7 @@ def SetFilesForcedFiletypes( win: QW.QWidget, medias: collections.abc.Collection
                         break
                         
                     
-                    job_status.SetStatusText( HydrusNumbers.ValueRangeToPrettyString( num_done, num_to_do ) )
+                    job_status.SetStatusText( HydrusNumbers.ValueRangeToPrettyString( num_done + 1, num_to_do ) )
                     job_status.SetGauge( num_done, num_to_do )
                     
                     hashes = { media.GetHash() for media in block_of_media }

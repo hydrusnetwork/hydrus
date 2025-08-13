@@ -8,7 +8,6 @@ import unittest
 
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
-from qtpy import QtGui as QG
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
@@ -18,7 +17,6 @@ from hydrus.core import HydrusLists
 from hydrus.core import HydrusPaths
 from hydrus.core import HydrusPubSub
 from hydrus.core import HydrusSessions
-from hydrus.core import HydrusStaticDir
 from hydrus.core import HydrusTemp
 from hydrus.core import HydrusThreading
 
@@ -363,8 +361,7 @@ class Controller( object ):
         self.locale = QC.QLocale() # Very important to init this here and keep it non garbage collected
         
         CC.GlobalPixmaps()
-        
-        self.frame_icon_pixmap = QG.QPixmap( HydrusStaticDir.GetStaticPath( 'hydrus_32_non-transparent.png' ) )
+        CC.GlobalIcons()
         
     
     def pub( self, topic, *args, **kwargs ):

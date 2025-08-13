@@ -2,7 +2,8 @@ import time
 import unittest
 
 from httmock import all_requests, urlmatch, HTTMock, response
-from mock import patch
+
+from unittest import mock
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
@@ -104,7 +105,7 @@ class TestBandwidthManager( unittest.TestCase ):
         
         fast_forward = HydrusTime.GetNow() + 3600
         
-        with patch.object( HydrusTime, 'GetNow', return_value = fast_forward ):
+        with mock.patch.object( HydrusTime, 'GetNow', return_value = fast_forward ):
             
             bm = ClientNetworkingBandwidth.NetworkBandwidthManager()
             
@@ -1203,7 +1204,7 @@ class TestNetworkingJob( unittest.TestCase ):
         
         five_secs_from_now = HydrusTime.GetNowFloat() + 5
         
-        with patch.object( HydrusTime, 'GetNowFloat', return_value = five_secs_from_now ):
+        with mock.patch.object( HydrusTime, 'GetNowFloat', return_value = five_secs_from_now ):
             
             self.assertFalse( job.IsAsleep() )
             

@@ -52,7 +52,7 @@ class EditDuplicatesAutoResolutionRulesPanel( ClientGUIScrolledPanels.EditPanel 
         
         menu_items.append( ( 'normal', 'open the duplicates auto-resolution help', 'Open the help page for duplicates auto-resolution in your web browser.', call ) )
         
-        help_button = ClientGUIMenuButton.MenuBitmapButton( self, CC.global_pixmaps().help, menu_items )
+        help_button = ClientGUIMenuButton.MenuBitmapButton( self, CC.global_icons().help, menu_items )
         
         help_hbox = ClientGUICommon.WrapInText( help_button, self, 'help for this panel -->', object_name = 'HydrusIndeterminate' )
         
@@ -943,14 +943,14 @@ class ReviewDuplicatesAutoResolutionPanel( QW.QWidget ):
         
         menu_items.append( ( 'normal', 'open the duplicates auto-resolution help', 'Open the help page for duplicates auto-resolution in your web browser.', call ) )
         
-        help_button = ClientGUIMenuButton.MenuBitmapButton( self, CC.global_pixmaps().help, menu_items )
+        help_button = ClientGUIMenuButton.MenuBitmapButton( self, CC.global_icons().help, menu_items )
         
         help_hbox = ClientGUICommon.WrapInText( help_button, self, 'help for this panel -->', object_name = 'HydrusIndeterminate' )
         
         #
         
-        self._refresh_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().refresh, self._UpdateList )
-        self._cog_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().cog, self._ShowCogMenu )
+        self._refresh_button = ClientGUICommon.IconButton( self, CC.global_icons().refresh, self._UpdateList )
+        self._cog_button = ClientGUICommon.IconButton( self, CC.global_icons().cog, self._ShowCogMenu )
         
         #
         
@@ -1201,7 +1201,7 @@ class ReviewDuplicatesAutoResolutionPanel( QW.QWidget ):
                 
             
         
-        text = f'This will command the database to repeal all user-declined decisions for these {HydrusNumbers.ToHumanInt(len(rules))} rules. Do this if you want to re-do them or have decided to set this rule to fully automatic and are happy it can now handle them appropriately.'
+        text = f'This will command the database to repeal all user-denied decisions for these {HydrusNumbers.ToHumanInt(len(rules))} rules.\n\nDo this only if the rules have tens of thousands of denied pairs and you do not want to undo them manually in the "review actions" window.'
         
         result = ClientGUIDialogsQuick.GetYesNo( self, text )
         
@@ -1227,7 +1227,7 @@ class ReviewDuplicatesAutoResolutionPanel( QW.QWidget ):
                 
             
         
-        text = f'This will command the database to re-search these {HydrusNumbers.ToHumanInt(len(rules))} rules. It will not undo any user-declined decisions. There is no point to running this unless you suspect a miscount or other sync bug.'
+        text = f'This will command the database to re-search these {HydrusNumbers.ToHumanInt(len(rules))} rules. It will not undo any user-denied decisions. There is no point to running this unless you suspect a miscount or other sync bug.'
         
         result = ClientGUIDialogsQuick.GetYesNo( self, text )
         
@@ -1253,7 +1253,7 @@ class ReviewDuplicatesAutoResolutionPanel( QW.QWidget ):
                 
             
         
-        text = f'This will command the database to re-test the pending/fails for these {HydrusNumbers.ToHumanInt(len(rules))} rules. It will not undo any user-declined decisions. There is no point to running this unless you suspect a miscount or other sync bug.'
+        text = f'This will command the database to re-test the pending/fails for these {HydrusNumbers.ToHumanInt(len(rules))} rules. It will not undo any user-denied decisions. There is no point to running this unless you suspect a miscount or other sync bug.'
         
         result = ClientGUIDialogsQuick.GetYesNo( self, text )
         
@@ -1294,13 +1294,19 @@ class ReviewDuplicatesAutoResolutionPanel( QW.QWidget ):
             
             ClientGUIMenus.AppendMenuItem( menu, f'reset search on all rules', 'Reset the search for all your rules.', self._ResetSearch )
             ClientGUIMenus.AppendMenuItem( menu, f'reset test on all rules', 'Reset the test for all your rules.', self._ResetTest )
-            ClientGUIMenus.AppendMenuItem( menu, f'reset user declined on all rules', 'Reset the test for all your rules.', self._ResetDeclined )
+            
+            ClientGUIMenus.AppendSeparator( menu )
+            
+            ClientGUIMenus.AppendMenuItem( menu, f'reset all denied pairs on all rules', 'Reset the test for all your rules.', self._ResetDeclined )
             
         else:
             
             ClientGUIMenus.AppendMenuItem( menu, f'reset search on {HydrusNumbers.ToHumanInt( len( rules ) )} selected rules', 'Reset the search for the given rules.', self._ResetSearch )
             ClientGUIMenus.AppendMenuItem( menu, f'reset test on {HydrusNumbers.ToHumanInt( len( rules ) )} selected rules', 'Reset the search for the given rules.', self._ResetTest )
-            ClientGUIMenus.AppendMenuItem( menu, f'reset user declined search on {HydrusNumbers.ToHumanInt( len( rules ) )} selected rules', 'Reset the search for the given rules.', self._ResetDeclined )
+            
+            ClientGUIMenus.AppendSeparator( menu )
+            
+            ClientGUIMenus.AppendMenuItem( menu, f'reset all denied pairs on {HydrusNumbers.ToHumanInt( len( rules ) )} selected rules', 'Reset the search for the given rules.', self._ResetDeclined )
             
         
         ClientGUIMenus.AppendSeparator( menu )

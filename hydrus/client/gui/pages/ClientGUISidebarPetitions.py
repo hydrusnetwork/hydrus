@@ -1852,7 +1852,7 @@ class SidebarPetitions( ClientGUISidebarCore.Sidebar ):
                                         
                                     
                                 
-                                job_status.SetStatusText( HydrusNumbers.ValueRangeToPrettyString( num_done, num_to_do ) )
+                                job_status.SetStatusText( HydrusNumbers.ValueRangeToPrettyString( num_done + 1, num_to_do ) )
                                 job_status.SetGauge( num_done, num_to_do )
                                 
                             

@@ -703,9 +703,16 @@ def GetFreeSpace( path ) -> typing.Optional[ int ]:
         return None
         
     
-    disk_usage = HydrusPSUtil.psutil.disk_usage( path )
-    
-    return disk_usage.free
+    try:
+        
+        disk_usage = HydrusPSUtil.psutil.disk_usage( path )
+        
+        return disk_usage.free
+        
+    except:
+        
+        return None
+        
     
 
 def GetTotalSpace( path ) -> typing.Optional[ int ]:

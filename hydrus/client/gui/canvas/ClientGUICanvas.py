@@ -3009,7 +3009,7 @@ def THREADCommitDuplicateResults( content_update_packages: list, pairs_info: lis
             have_published_job_status = True
             
         
-        num_done = i + 1
+        num_done = i
         
         job_status.SetStatusText( f'misc file updates: {HydrusNumbers.ValueRangeToPrettyString( num_done, num_to_do )}' )
         job_status.SetGauge( num_done, num_to_do )

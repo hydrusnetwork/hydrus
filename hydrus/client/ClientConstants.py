@@ -549,7 +549,7 @@ class GlobalPixmaps( object ):
     
     def __init__( self ):
         
-        self._Initialise()
+        self._Reinitialise()
         
     
     @staticmethod
@@ -563,7 +563,7 @@ class GlobalPixmaps( object ):
         return GlobalPixmaps.my_instance
         
     
-    def _Initialise( self ):
+    def _Reinitialise( self ):
         
         # These probably *could* be created even before QApplication is constructed, but it can't hurt to wait until that's done.
         
@@ -663,6 +663,12 @@ class GlobalPixmaps( object ):
         self.last = QG.QPixmap( HydrusStaticDir.GetStaticPath( 'last.png' ) )
         self.pair = QG.QPixmap( HydrusStaticDir.GetStaticPath( 'pair.png' ) )
         
+    
+    def Reload( self ):
+        
+        self._Reinitialise()
+        
+    
 
 global_pixmaps = GlobalPixmaps.instance
 
@@ -674,7 +680,7 @@ class GlobalIcons( object ):
         
         self.user_icons = {}
         
-        self._Initialise()
+        self._Reinitialise()
         
     
     @staticmethod
@@ -688,16 +694,125 @@ class GlobalIcons( object ):
         return GlobalIcons.my_instance
         
     
-    def _Initialise( self ):
+    def _GetSVGOrPNGPathIcon( self, name ) -> QG.QIcon:
         
-        self.hydrus = QG.QIcon( HydrusStaticDir.GetStaticPath( 'hydrus_black_square.svg' ) )
-        self.github = QG.QIcon( HydrusStaticDir.GetStaticPath( 'github.svg' ) )
-        self.x = QG.QIcon( HydrusStaticDir.GetStaticPath( 'x.svg' ) )
-        self.tumblr = QG.QIcon( HydrusStaticDir.GetStaticPath( 'tumblr.svg' ) )
-        self.discord = QG.QIcon( HydrusStaticDir.GetStaticPath( 'discord.svg' ) )
-        self.patreon = QG.QIcon( HydrusStaticDir.GetStaticPath( 'patreon.svg' ) )
+        return QG.QIcon( HydrusStaticDir.GetStaticIconPath( name ) )
+        
+    
+    def _Reinitialise( self ):
+        
+        self.hydrus_frame = self._GetSVGOrPNGPathIcon( 'hydrus_32_non-transparent' )
+        self.hydrus_system_tray = self._GetSVGOrPNGPathIcon( 'hydrus_non-transparent' )
+        
+        self.bold = self._GetSVGOrPNGPathIcon( 'text_bold' )
+        self.italic = self._GetSVGOrPNGPathIcon( 'text_italic' )
+        self.underline = self._GetSVGOrPNGPathIcon( 'text_underline' )
+        
+        self.align_left = self._GetSVGOrPNGPathIcon( 'text_align_left' )
+        self.align_center = self._GetSVGOrPNGPathIcon( 'text_align_center' )
+        self.align_right = self._GetSVGOrPNGPathIcon( 'text_align_right' )
+        self.align_justify = self._GetSVGOrPNGPathIcon( 'text_align_justify' )
+        
+        self.indent_less = self._GetSVGOrPNGPathIcon( 'text_indent_remove' )
+        self.indent_more = self._GetSVGOrPNGPathIcon( 'text_indent' )
+        
+        self.font = self._GetSVGOrPNGPathIcon( 'font' )
+        self.colour = self._GetSVGOrPNGPathIcon( 'color_swatch' )
+        
+        self.link = self._GetSVGOrPNGPathIcon( 'link' )
+        self.link_break = self._GetSVGOrPNGPathIcon( 'link_break' )
+        
+        self.drag = self._GetSVGOrPNGPathIcon( 'drag' )
+        
+        self.transparent = self._GetSVGOrPNGPathIcon( 'transparent' )
+        self.downloading = self._GetSVGOrPNGPathIcon( 'downloading' )
+        self.file_repository = self._GetSVGOrPNGPathIcon( 'file_repository_small' )
+        self.file_repository_pending = self._GetSVGOrPNGPathIcon( 'file_repository_pending_small' )
+        self.file_repository_petitioned = self._GetSVGOrPNGPathIcon( 'file_repository_petitioned_small' )
+        self.ipfs = self._GetSVGOrPNGPathIcon( 'ipfs_small' )
+        self.ipfs_pending = self._GetSVGOrPNGPathIcon( 'ipfs_pending_small' )
+        self.ipfs_petitioned = self._GetSVGOrPNGPathIcon( 'ipfs_petitioned_small' )
+        
+        self.collection = self._GetSVGOrPNGPathIcon( 'collection' )
+        self.inbox = self._GetSVGOrPNGPathIcon( 'inbox' )
+        self.trash = self._GetSVGOrPNGPathIcon( 'trash' )
+        
+        self.refresh = self._GetSVGOrPNGPathIcon( 'refresh' )
+        self.archive = self._GetSVGOrPNGPathIcon( 'archive' )
+        self.to_inbox = self._GetSVGOrPNGPathIcon( 'to_inbox' )
+        self.delete = self._GetSVGOrPNGPathIcon( 'trash' )
+        self.trash_delete = self._GetSVGOrPNGPathIcon( 'delete' )
+        self.undelete = self._GetSVGOrPNGPathIcon( 'undelete' )
+        self.zoom_in = self._GetSVGOrPNGPathIcon( 'zoom_in' )
+        self.zoom_out = self._GetSVGOrPNGPathIcon( 'zoom_out' )
+        self.zoom_switch = self._GetSVGOrPNGPathIcon( 'zoom_switch' )
+        self.zoom_cog = self._GetSVGOrPNGPathIcon( 'zoom_cog' )
+        self.eye = self._GetSVGOrPNGPathIcon( 'eye' )
+        self.fullscreen_switch = self._GetSVGOrPNGPathIcon( 'fullscreen_switch' )
+        self.open_externally = self._GetSVGOrPNGPathIcon( 'open_externally' )
+        self.move = self._GetSVGOrPNGPathIcon( 'move' )
+        self.move_cursor = self._GetSVGOrPNGPathIcon( 'move32x' )
+        
+        self.dump_ok = self._GetSVGOrPNGPathIcon( 'dump_ok' )
+        self.dump_recoverable = self._GetSVGOrPNGPathIcon( 'dump_recoverable' )
+        self.dump_fail = self._GetSVGOrPNGPathIcon( 'dump_fail' )
+        
+        self.cog = self._GetSVGOrPNGPathIcon( 'cog' )
+        self.family = self._GetSVGOrPNGPathIcon( 'family' )
+        self.keyboard = self._GetSVGOrPNGPathIcon( 'keyboard' )
+        self.help = self._GetSVGOrPNGPathIcon( 'help' )
+        
+        self.check = self._GetSVGOrPNGPathIcon( 'check' )
+        self.pause = self._GetSVGOrPNGPathIcon( 'pause' )
+        self.play = self._GetSVGOrPNGPathIcon( 'play' )
+        self.stop = self._GetSVGOrPNGPathIcon( 'stop' )
+        
+        self.sound = self._GetSVGOrPNGPathIcon( 'sound' )
+        self.mute = self._GetSVGOrPNGPathIcon( 'mute' )
+        
+        self.notes = self._GetSVGOrPNGPathIcon( 'notes' )
+        
+        self.file_pause = self._GetSVGOrPNGPathIcon( 'file_pause' )
+        self.file_play = self._GetSVGOrPNGPathIcon( 'file_play' )
+        self.gallery_pause = self._GetSVGOrPNGPathIcon( 'gallery_pause' )
+        self.gallery_play = self._GetSVGOrPNGPathIcon( 'gallery_play' )
+        
+        self.highlight = self._GetSVGOrPNGPathIcon( 'highlight' )
+        self.clear_highlight = self._GetSVGOrPNGPathIcon( 'clear_highlight' )
+        
+        self.lock = self._GetSVGOrPNGPathIcon( 'lock' )
+        self.lock_open = self._GetSVGOrPNGPathIcon( 'lock_open' )
+        
+        self.star = self._GetSVGOrPNGPathIcon( 'star' )
+        
+        #self.listctrl = self._GetSVGOrPNGPathIcon( 'listctrl' )
+        
+        self.page_with_text = self._GetSVGOrPNGPathIcon( 'page_with_text' )
+        
+        self.copy = self._GetSVGOrPNGPathIcon( 'copy' )
+        self.paste = self._GetSVGOrPNGPathIcon( 'paste' )
+        
+        self.eight_chan = self._GetSVGOrPNGPathIcon( '8chan' )
+        
+        self.first = self._GetSVGOrPNGPathIcon( 'first' )
+        self.previous = self._GetSVGOrPNGPathIcon( 'previous' )
+        self.next_bmp = self._GetSVGOrPNGPathIcon( 'next' )
+        self.last = self._GetSVGOrPNGPathIcon( 'last' )
+        self.pair = self._GetSVGOrPNGPathIcon( 'pair' )
+        
+        self.hydrus_black_square = self._GetSVGOrPNGPathIcon( 'hydrus_black_square' )
+        self.github = self._GetSVGOrPNGPathIcon( 'github' )
+        self.x = self._GetSVGOrPNGPathIcon( 'x' )
+        self.tumblr = self._GetSVGOrPNGPathIcon( 'tumblr' )
+        self.discord = self._GetSVGOrPNGPathIcon( 'discord' )
+        self.patreon = self._GetSVGOrPNGPathIcon( 'patreon' )
         
         self.RefreshUserIcons()
+        
+    
+    def Reload( self ):
+        
+        self._Reinitialise()
         
     
     def RefreshUserIcons( self ):

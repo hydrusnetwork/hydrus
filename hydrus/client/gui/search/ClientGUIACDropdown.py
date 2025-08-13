@@ -2227,18 +2227,18 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTagsFileSearchContext ):
         
         #
         
-        self._cancel_search_button = ClientGUICommon.BetterBitmapButton( self._text_input_panel, CC.global_pixmaps().stop, self.searchCancelled.emit )
+        self._cancel_search_button = ClientGUICommon.IconButton( self._text_input_panel, CC.global_icons().stop, self.searchCancelled.emit )
         
-        self._paste_button = ClientGUICommon.BetterBitmapButton( self._text_input_panel, CC.global_pixmaps().paste, self._Paste )
+        self._paste_button = ClientGUICommon.IconButton( self._text_input_panel, CC.global_icons().paste, self._Paste )
         self._paste_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'You can paste a newline-separated list of regular tags and/or system predicates.' ) )
         
-        self._favourite_searches_button = ClientGUICommon.BetterBitmapButton( self._text_input_panel, CC.global_pixmaps().star, self._FavouriteSearchesMenu )
+        self._favourite_searches_button = ClientGUICommon.IconButton( self._text_input_panel, CC.global_icons().star, self._FavouriteSearchesMenu )
         self._favourite_searches_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'Load or save a favourite search.' ) )
         
-        self._empty_search_button = ClientGUICommon.BetterBitmapButton( self._text_input_panel, CC.global_pixmaps().clear_highlight, self._ClearSearch )
+        self._empty_search_button = ClientGUICommon.IconButton( self._text_input_panel, CC.global_icons().clear_highlight, self._ClearSearch )
         self._empty_search_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'Clear the search back to an empty page.' ) )
         
-        self._lock_search_button = ClientGUICommon.BetterBitmapButton( self._text_input_panel, CC.global_pixmaps().lock, self.lockSearch.emit )
+        self._lock_search_button = ClientGUICommon.IconButton( self._text_input_panel, CC.global_icons().lock, self.lockSearch.emit )
         self._lock_search_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'Lock the current files in view to a fixed system:hash.' ) )
         
         self._cancel_search_button.hide()
@@ -2276,11 +2276,11 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTagsFileSearchContext ):
             self._or_advanced.hide()
             
         
-        self._or_cancel = ClientGUICommon.BetterBitmapButton( self._dropdown_window, CC.global_pixmaps().delete, self._CancelORConstruction )
+        self._or_cancel = ClientGUICommon.IconButton( self._dropdown_window, CC.global_icons().delete, self._CancelORConstruction )
         self._or_cancel.setToolTip( ClientGUIFunctions.WrapToolTip( 'Cancel OR Predicate construction.' ) )
         self._or_cancel.hide()
         
-        self._or_rewind = ClientGUICommon.BetterBitmapButton( self._dropdown_window, CC.global_pixmaps().previous, self._RewindORConstruction )
+        self._or_rewind = ClientGUICommon.IconButton( self._dropdown_window, CC.global_icons().previous, self._RewindORConstruction )
         self._or_rewind.setToolTip( ClientGUIFunctions.WrapToolTip( 'Rewind OR Predicate construction.' ) )
         self._or_rewind.hide()
         
@@ -3379,7 +3379,7 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
         
         self._location_context_button.SetAllKnownFilesAllowed( True, False )
         
-        self._paste_button = ClientGUICommon.BetterBitmapButton( self._text_input_panel, CC.global_pixmaps().paste, self._Paste )
+        self._paste_button = ClientGUICommon.IconButton( self._text_input_panel, CC.global_icons().paste, self._Paste )
         self._paste_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'Paste from the clipboard and quick-enter as if you had typed. This can take multiple newline-separated tags.' ) )
         
         if not self._show_paste_button:

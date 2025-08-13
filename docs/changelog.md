@@ -7,6 +7,53 @@ title: Changelog
 !!! note
     This is the new changelog, only the most recent builds. For all versions, see the [old changelog](old_changelog.html).
 
+## [Version 634](https://github.com/hydrusnetwork/hydrus/releases/tag/v634)
+
+### hotfix
+
+* I screwed up with a couple of bad typos in v633, and a couple bad bits of logic in the previous two weeks, so I ended up fixing it on Saturday and putting out a v633a hotfix. the full problems were--
+* export folders doing work (issue #1775)
+* setting forced filetypes
+* the 'repair missing locations' pre-boot dialog
+* the migrate files dialog when a path did not exist
+* some weird webms
+* sorry for the trouble and hassle--it looks like I just had some bad weeks recently and this just slipped through linting and my tests. I particularly regret export folders, since that isn't some super rare system, and I have written some a nicer unit tests to ensure they don't get hit by another stupid mistake like this
+
+### inc/dec ratings
+
+* thanks to a user, inc/dec ratings now grow to be as wide as they need to! this affects numbers over 999. their size options are now based on height rather than width (issue #1759)
+
+### duplicates
+
+* if the two 'jpeg quality' statements have the same label, e.g. 'high quality vs high quality', the score is now 0. previously, if the behind the scenes quality scores were 728 vs 731, it'd colour green and give points, which was confusing and over-confident
+* last week's ugly 'group mode' checkbox in the duplicates sidebar is now a scrollable menu button
+
+### duplicates auto-resolution
+
+* the deny list is now available in a new tab in the 'review rule' panel, beside the 'actions taken' tab. it'll show the n most recent denied pairs, and you can undo specific pairs, which puts them back in the search queue
+* tracking denied timestamps is new tech, so all existing denied pairs will get fake timestamps of 'now minus a few ms' on update
+* the review panel now auto-updates the 'actioned' or 'denied' lists after you do actions or denies in the queue panel and then switch tabs
+
+### ui
+
+* I cleaned up some hacky sizing flags and minimum width calculations and several UI areas can now compress to a smaller space. this particularly affects the normal page sidebar--you should be able to make most quite a bit thinner, although for something with a multi-column list you'll need to manually shrink the columns yourself to get it to go down (issue #1769)
+* almost all of the icons across the program (atm basically everything except what is drawn to thumbnails and the top-right hover) are now loaded `name.svg` first, `name.png` second. I do not use any svgs yet, but I am planning a migration, and this 'try to load an svg if it exists' is a base for testing. users who have been playing around with custom icons using the new `db/static` system are invited to put some svg icons in there and see what happens. as I do this migration, we are going to have to figure out a new sizing system based on visual units like current font size character height, rather than the fixed old (16x16) raster stuff
+* a new `debug->gui actions->reload icon cache` forces the pixmap and icon caches to reload from disk, including your static dir stuff. it'll only affect _new_ widgets though
+
+### boring stuff
+
+* harmonised mismatched status text vs progress gauge display across the program. when you have a popup or similar that says 'working jobs: 3/5', this now means that three jobs are complete and it is working on the fourth. the progress gauge underneath will, similarly, now be at 60%. I accidentally showed 100% progress on the last job with the subscription query progress bar last week and noticed how off it looked, and when I looked at how I did it across the program, I noticed I was ad-hoc all over the place. I tried making it so '3/5' meant the third job was being worked on and having the gauge still be 40%, but I wasn't totally happy. everything now runs on the same system of 'report num_done' when there is both text and a gauge. I am open to revisiting it, perhaps just in certain places where the grammar is now odd; let me know how you find it
+* progress labels no longer say x/y when x is greater than y--they'll now cap at y/y. a couple of odd situations, like uploading pending content while new content is coming in, could cause this--now it'll just cap at 100% for a little extra bit
+* made the 'get free disk space for this path' checks safe for all possible disk errors
+* wrote some unit tests for the new auto-resolution deny timestamp and rescind stuff
+* reworded some 'declined' text in auto-resolution to all be a clear singular 'denied'
+* replaced my old `mock` calls and dev requirements.txt stuff with `unittest.mock`--this stuff has been built into python for ages now
+* as a test, migrated one of my unit tests to use `mock` instead of some hacky db wrapper stuff I do; strong success
+
+### macos news
+
+* the Github 'runner' that we use to make the macOS build is being retired soon. I played around with the newer 'macos-14' runner, which finally leaps us from Intel to Apple Silicon, and had some but not total success. the main App is going to be moving to Apple Silicon, but I think we'll be able to offer an Intel compatibility version too. there's still stuff to figure out, but I hope for a public test soon
+
 ## [Version 633](https://github.com/hydrusnetwork/hydrus/releases/tag/v633)
 
 ### duplicates group mode
@@ -528,57 +575,3 @@ title: Changelog
 * replaced all the basic `typing.List` style typedefs across the program with the standard `list` equivalents. same deal as above
 * overhauled the 'db duplicates' unit tests, breaking up the previous monolith rollercoaster into something a bit more atomic. it is still a huge mess, but much better than before
 * added some unit tests for the new 'remove false positives within selection'
-
-## [Version 624](https://github.com/hydrusnetwork/hydrus/releases/tag/v624)
-
-### locked pages
-
-* the search page state where it could hold files but have no active search is back with some bells and whistles. it is now much easier to manage a 'scratchpad' file page that won't suddenly get messed up if you hit F5 (issue #1602, and likely others in different ways)
-* all normal file search pages now have a padlock icon beside the autocomplete text input. clicking this collapses the current search to a single system:hash of the current media in view and swaps the search panel for an 'unlock' button. this page will not refresh its query until unlocked, at which point you are given the system:hash back
-* if you add files to or remove files from the page, the underlying system:hash will update to the new contents of the page
-* lock status is saved in the session, so it persists through restart etc..
-* any time you create a page with files, which typically means, 'open files in a new page' and subscription file-popups, they now start in the locked state. since the system:hash updates for new files, you can drag and drop new files onto the page, or add more subscription files from a later sync, and the underlying system:hash now stays updated. play around with it--you'll see how it works
-* if you are big brain and wish in some cases _not_ to sync the underlying system:hash on add/remove file events, a cog icon beside the unlock button lets you set this
-* if you have a bunch of existing subscription landing pages and other 'I'll process this later' pages, please go through them after update and lock them. it'll say 'hey, you already have a system:hash but it differs to what is currently in view, do you want to overwrite this old one with one for the current files?' and you do, so click yes
-* next step here is to finally figure out some sort of 'sort files by system:hash/downloader' sort type so these sorts of pages can restore original sort
-
-### duplicates
-
-* the 'preview' panel of an auto-resolution rule has had a complete pipeline overhaul. after a much, much, briefer one-time initialisation, it now loads results in fast small batches and streams pass/fail pairs to the lists one by one. it shows search progress and presents ongoing count of pairs. it no longer gets the total count of the search every time--unless you let it run all the way and get everything. the refresh buttons are more efficient, the 'only sample this many' widget updates the dialog live as you edit it, and there are pause buttons for both search and testing. it also cancels work faster if the dialog is closed amidst work. this dialog is now ready for the relatively CPU-expensive 'A and B are visual duplicates' integration
-* when the core duplicate file searches they rely on are CPU-expensive, the duplicates filter batch pair fetch, duplicates filter count fetch, duplicates 'show some random pairs', and duplicates auto-resolution rule preview now load up faster, particularly when you have few potential pairs remaining
-* auto-resolution rules that are in semi-automatic mode now only queue up a max of 512 files in the 'pending' queue. it can take some CPU to run these tests, so it is good to keep the queue short and snappy in case you need to change anything (thus resetting the queue) in future. you can alter the 512 limit, including removing it completely, in the edit rule panel
-* auto-resolution rules now categorise their comparators into a cross-reference of fast + order-possibly-important. the main testing routine and 'can this pair fit either way' test now cascades through some logic to get a dispositive true negative result faster
-* the program now recognises and gracefully handles the situation where the duplicate filter is closed and program shut down initiated before a slow-loading visual duplicate pair can finish (it was outputting some mysterious error lines to the log)
-
-### a and b are visual duplicates
-
-* if the images are very simple, e.g. just one or two flat colours, they are now considered 'too simple to compare' and not visual duplicates. these edge cases are often deceptively tricky
-* if the images have a perfectly matching interesting tile, the presence of any non-matching tile now results in 'probably not visual duplicates/(small difference?)'
-* I experimented with many new techniques: pre-decimation histogram population, histogram absolute difference comparison, tile phashes, longer tile phashes, gaussian edge detection histograms, gaussian edge map average block 2d wasserstein scoring, and even gaussian edge map phashes, but unfortunately these all pretty much failed. the algorithm as-is is good, but there are still a couple of false positive situations it cannot catch. the delicate edge detection is the main thing--a difference with a subtle shade (e.g. a soft line, or a transparent water droplet) that is clear to the human eye can still be missed. please keep sending in any false positives, and I'll keep thinking about all this
-* cleaned and polished a bunch of this code
-
-### misc
-
-* thanks to a user, the new resizable ratings have improved visuals! the little padding clipping bugs are fixed and everything lines up nice
-* 'less than or equal to' and 'greater than or equal to' are added to all the modernised places you can set a number comparison, such as `system:height` or duplicates auto-resolution comparison statements
-* fixed the broken `Ctrl+C = copy selected files` default 'media' shortcut for newer users--if it is broken for you (it'll say 'Unknown Application Command' in the shortcut UI), it will fix itself on update
-
-### updated Linux and Windows builds
-
-* the 'future build' last week went without any reports of problems, so I am folding the changes into today's normal build. both Windows and Linux are updating several core components and will gain a host of small and large bug fixes and performance improvements. It does not seem that a clean install is needed this week, but if you use the zip or tar.zst extracts, you might like to take this opportunity to do one anyway: https://hydrusnetwork.github.io/hydrus/getting_started_installing.html#clean_installs
-* the WIndows installer basically does a clean install every week, so no special instructions there
-* the changes are--
-* Windows and Linux: moved from python 3.11 to python 3.12
-* Windows and Linux: moved from PySide6 (Qt) 6.7.3 to 6.8.2.1
-* Windows: moved from windows-2019 runner to windows-2022 (2019 runner is being retired next month)
-* if you use a particularly old, un-updated version of Windows 10, it is possible the new Windows builds will not run for you. try running from source and choosing an older Qt version: https://hydrusnetwork.github.io/hydrus/running_from_source.html
-* if you already run from source, you might like to rebuild your venv this week to get the new Qt. users on Python 3.13 no longer have to choose the (a)dvanced mode for the (t)est Qt version-- on a typical OS, all pythons from 3.10-13 should now work with (s) out of the box!
-
-### weird/boring stuff
-
-* I fixed some encoding in my png gamma/chromaticity ICC Profile generator. it still isn't there, but I know where to look. also wangled the `wtpt` and `chad` to handle non-D65 source whitepoints
-* I may have fixed an issue where the thumbnail banners could be drawn with bold text
-* my asynchronous updater object can now deal with several mid-job cancel events
-* my thumbnail pair list can now handle streaming appends
-* deleted the monolith 'get potential pairs that match this duplicate context' routine the preview panel was relying on. I'll migrate more duplicates stuff to incremental fetches like this, and I feel good we can make the duplicate filter and so on initialise much quicker
-* updated the client api help's Hydrus Video Deduplicator link to https://github.com/hydrusvideodeduplicator/hydrus-video-deduplicator

@@ -143,7 +143,7 @@ class PopupMessage( PopupWindow ):
         self._time_network_job_disappeared = 0
         
         # this is kind of stupid, but whatever for now
-        width = ClientGUIFunctions.ConvertTextToPixelWidth( self._network_job_ctrl, 36 )
+        width = ClientGUIFunctions.ConvertTextToPixelWidth( self._network_job_ctrl, 58 )
         self._network_job_ctrl.setMinimumWidth( width )
         
         self._copy_to_clipboard_button = ClientGUICommon.BetterButton( self, 'copy to clipboard', self.CopyToClipboard )
@@ -178,12 +178,12 @@ class PopupMessage( PopupWindow ):
         self._copy_tb_button_ev.EVT_RIGHT_DOWN( self.EventDismiss )
         self._copy_tb_button.hide()
         
-        self._pause_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().pause, self.PausePlay )
+        self._pause_button = ClientGUICommon.IconButton( self, CC.global_icons().pause, self.PausePlay )
         self._pause_button_ev = QP.WidgetEventFilter( self._pause_button )
         self._pause_button_ev.EVT_RIGHT_DOWN( self.EventDismiss )
         self._pause_button.hide()
         
-        self._cancel_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().stop, self.Cancel )
+        self._cancel_button = ClientGUICommon.IconButton( self, CC.global_icons().stop, self.Cancel )
         self._cancel_button_ev = QP.WidgetEventFilter( self._cancel_button )
         self._cancel_button_ev.EVT_RIGHT_DOWN( self.EventDismiss )
         self._cancel_button.hide()
@@ -301,11 +301,11 @@ class PopupMessage( PopupWindow ):
         
         if self._job_status.IsPaused():
             
-            ClientGUIFunctions.SetBitmapButtonBitmap( self._pause_button, CC.global_pixmaps().play )
+            self._pause_button.SetIconSmart( CC.global_icons().play )
             
         else:
             
-            ClientGUIFunctions.SetBitmapButtonBitmap( self._pause_button, CC.global_pixmaps().pause )
+            self._pause_button.SetIconSmart( CC.global_icons().pause )
             
         
     

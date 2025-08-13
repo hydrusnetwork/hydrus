@@ -755,7 +755,7 @@ def GetDuplicateComparisonStatementsSlow( shown_media_result: ClientMediaResult.
             
         else:
             
-            if s_jpeg_quality == c_jpeg_quality:
+            if s_label == c_label:
                 
                 score = 0
                 statement = f'both {s_label} quality'

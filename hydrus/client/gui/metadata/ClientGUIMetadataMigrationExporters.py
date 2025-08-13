@@ -97,7 +97,7 @@ class EditSingleFileMetadataExporterWidget( QW.QWidget ):
         
         #
         
-        self._sidecar_help_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().help, self._ShowSidecarHelp )
+        self._sidecar_help_button = ClientGUICommon.IconButton( self, CC.global_icons().help, self._ShowSidecarHelp )
         
         self._nested_object_names_panel = QW.QWidget( self )
         

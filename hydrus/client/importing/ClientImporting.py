@@ -235,7 +235,7 @@ def THREADDownloadURLs( job_status: ClientThreading.JobStatus, urls, title ):
             
         
         job_status.SetStatusText( HydrusNumbers.ValueRangeToPrettyString( i + 1, len( urls ) ) )
-        job_status.SetGauge( i + 1, len( urls ) )
+        job_status.SetGauge( i, len( urls ) )
         
         file_seed = ClientImportFileSeeds.FileSeed( ClientImportFileSeeds.FILE_SEED_TYPE_URL, url )
         

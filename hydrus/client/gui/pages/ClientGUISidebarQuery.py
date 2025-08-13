@@ -41,7 +41,7 @@ class SystemHashLockPanel( ClientGUICommon.StaticBox ):
         self._unlock_button = ClientGUICommon.BetterButton( self, 'initialising', self.unlockSearch.emit )
         self._unlock_button.setToolTip( ClientGUIFunctions.WrapToolTip( desc_tt ) )
         
-        self._cog_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().cog, self._ShowCogMenu )
+        self._cog_button = ClientGUICommon.IconButton( self, CC.global_icons().cog, self._ShowCogMenu )
         
         self._syncs_new = syncs_new
         self._syncs_removes = syncs_removes

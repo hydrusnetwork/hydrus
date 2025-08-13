@@ -9,7 +9,8 @@ import unittest
 import urllib
 import urllib.parse
 
-from mock import patch
+from unittest import mock
+
 from twisted.internet import reactor
 
 from hydrus.core import HydrusConstants as HC
@@ -1135,7 +1136,7 @@ class TestClientAPI( unittest.TestCase ):
         
         magic_now = 150
         
-        with patch.object( HydrusTime, 'GetNowMS', return_value = magic_now ):
+        with mock.patch.object( HydrusTime, 'GetNowMS', return_value = magic_now ):
             
             hash = HydrusData.GenerateKey()
             
@@ -1177,7 +1178,7 @@ class TestClientAPI( unittest.TestCase ):
         
         magic_now = 150
         
-        with patch.object( HydrusTime, 'GetNowMS', return_value = magic_now ):
+        with mock.patch.object( HydrusTime, 'GetNowMS', return_value = magic_now ):
             
             hash = HydrusData.GenerateKey()
             
@@ -2029,7 +2030,7 @@ class TestClientAPI( unittest.TestCase ):
         
         magic_now = 123456789
         
-        with patch.object( HydrusTime, 'GetNowMS', return_value = magic_now ):
+        with mock.patch.object( HydrusTime, 'GetNowMS', return_value = magic_now ):
             
             for ( request_args, media_result, canvas_type, new_timestamp_ms, new_views, new_viewtime ) in jobs:
                 
@@ -2201,7 +2202,7 @@ class TestClientAPI( unittest.TestCase ):
         
         magic_now = 123456789
         
-        with patch.object( HydrusTime, 'GetNowMS', return_value = magic_now ):
+        with mock.patch.object( HydrusTime, 'GetNowMS', return_value = magic_now ):
             
             for ( request_args, media_result, canvas_type, new_timestamp_ms, new_views, new_viewtime ) in jobs:
                 

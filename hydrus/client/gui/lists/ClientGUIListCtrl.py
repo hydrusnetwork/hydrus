@@ -1938,9 +1938,9 @@ class BetterListCtrlPanel( QW.QWidget ):
             
         
     
-    def AddBitmapButton( self, bitmap, clicked_func, tooltip = None, enabled_only_on_selection = False, enabled_only_on_single_selection = False, enabled_check_func = None ):
+    def AddIconButton( self, icon: QG.QIcon, clicked_func, tooltip = None, enabled_only_on_selection = False, enabled_only_on_single_selection = False, enabled_check_func = None ):
         
-        button = ClientGUICommon.BetterBitmapButton( self, bitmap, clicked_func )
+        button = ClientGUICommon.IconButton( self, icon, clicked_func )
         
         if tooltip is not None:
             

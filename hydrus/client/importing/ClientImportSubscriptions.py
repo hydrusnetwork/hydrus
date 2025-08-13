@@ -309,7 +309,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
             
             status_prefix += ' (' + HydrusNumbers.ValueRangeToPrettyString( i + 1, num_queries ) + ')'
             
-            job_status.SetGauge( i + 1, num_queries )
+            job_status.SetGauge( i, num_queries )
             
             try:
                 
@@ -949,7 +949,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
             text_1 += ' (' + HydrusNumbers.ValueRangeToPrettyString( i + 1, num_queries ) + ')'
             
             job_status.SetStatusText( text_1 )
-            job_status.SetGauge( i + 1, num_queries )
+            job_status.SetGauge( i, num_queries )
             
             try:
                 

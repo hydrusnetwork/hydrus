@@ -1219,10 +1219,10 @@ class ScriptManagementControl( QW.QWidget ):
         
         self._status.setWordWrap( True )
         
-        self._link_button = ClientGUICommon.BetterBitmapButton( main_panel, CC.global_pixmaps().link, self.LinkButton )
+        self._link_button = ClientGUICommon.IconButton( main_panel, CC.global_icons().link, self.LinkButton )
         self._link_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'urls found by the script' ) )
         
-        self._cancel_button = ClientGUICommon.BetterBitmapButton( main_panel, CC.global_pixmaps().stop, self.CancelButton )
+        self._cancel_button = ClientGUICommon.IconButton( main_panel, CC.global_icons().stop, self.CancelButton )
         
         #
         

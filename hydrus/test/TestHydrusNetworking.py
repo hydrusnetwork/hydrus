@@ -1,7 +1,7 @@
 import random
 import unittest
 
-from mock import patch
+from unittest import mock
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusTime
@@ -13,7 +13,7 @@ now_10 = now + 10
 
 now_20 = now + 20
 
-with patch.object( HydrusTime, 'GetNow', return_value = now ):
+with mock.patch.object( HydrusTime, 'GetNow', return_value = now ):
     
     HIGH_USAGE = HydrusNetworking.BandwidthTracker()
     
@@ -36,7 +36,7 @@ class TestBandwidthRules( unittest.TestCase ):
         
         rules = HydrusNetworking.BandwidthRules()
         
-        with patch.object( HydrusTime, 'GetNow', return_value = now ):
+        with mock.patch.object( HydrusTime, 'GetNow', return_value = now ):
             
             self.assertTrue( rules.CanStartRequest( ZERO_USAGE ) )
             self.assertTrue( rules.CanStartRequest( LOW_USAGE ) )
@@ -56,7 +56,7 @@ class TestBandwidthRules( unittest.TestCase ):
         
         rules.AddRule( HC.BANDWIDTH_TYPE_DATA, 1, 10240 )
         
-        with patch.object( HydrusTime, 'GetNow', return_value = now ):
+        with mock.patch.object( HydrusTime, 'GetNow', return_value = now ):
             
             self.assertTrue( rules.CanStartRequest( ZERO_USAGE ) )
             self.assertTrue( rules.CanStartRequest( LOW_USAGE ) )
@@ -67,7 +67,7 @@ class TestBandwidthRules( unittest.TestCase ):
             self.assertFalse( rules.CanContinueDownload( HIGH_USAGE ) )
             
         
-        with patch.object( HydrusTime, 'GetNow', return_value = now_10 ):
+        with mock.patch.object( HydrusTime, 'GetNow', return_value = now_10 ):
             
             self.assertTrue( rules.CanStartRequest( ZERO_USAGE ) )
             self.assertTrue( rules.CanStartRequest( LOW_USAGE ) )
@@ -78,7 +78,7 @@ class TestBandwidthRules( unittest.TestCase ):
             self.assertTrue( rules.CanContinueDownload( HIGH_USAGE ) )
             
         
-        with patch.object( HydrusTime, 'GetNow', return_value = now_20 ):
+        with mock.patch.object( HydrusTime, 'GetNow', return_value = now_20 ):
             
             self.assertTrue( rules.CanStartRequest( ZERO_USAGE ) )
             self.assertTrue( rules.CanStartRequest( LOW_USAGE ) )
@@ -95,7 +95,7 @@ class TestBandwidthRules( unittest.TestCase ):
         
         rules.AddRule( HC.BANDWIDTH_TYPE_REQUESTS, 1, 1 )
         
-        with patch.object( HydrusTime, 'GetNow', return_value = now ):
+        with mock.patch.object( HydrusTime, 'GetNow', return_value = now ):
             
             self.assertTrue( rules.CanStartRequest( ZERO_USAGE ) )
             self.assertFalse( rules.CanStartRequest( LOW_USAGE ) )
@@ -106,7 +106,7 @@ class TestBandwidthRules( unittest.TestCase ):
             self.assertTrue( rules.CanContinueDownload( HIGH_USAGE ) )
             
         
-        with patch.object( HydrusTime, 'GetNow', return_value = now_10 ):
+        with mock.patch.object( HydrusTime, 'GetNow', return_value = now_10 ):
             
             self.assertTrue( rules.CanStartRequest( ZERO_USAGE ) )
             self.assertTrue( rules.CanStartRequest( LOW_USAGE ) )
@@ -117,7 +117,7 @@ class TestBandwidthRules( unittest.TestCase ):
             self.assertTrue( rules.CanContinueDownload( HIGH_USAGE ) )
             
         
-        with patch.object( HydrusTime, 'GetNow', return_value = now_20 ):
+        with mock.patch.object( HydrusTime, 'GetNow', return_value = now_20 ):
             
             self.assertTrue( rules.CanStartRequest( ZERO_USAGE ) )
             self.assertTrue( rules.CanStartRequest( LOW_USAGE ) )
@@ -135,7 +135,7 @@ class TestBandwidthRules( unittest.TestCase ):
         rules.AddRule( HC.BANDWIDTH_TYPE_DATA, 1, 10240 )
         rules.AddRule( HC.BANDWIDTH_TYPE_REQUESTS, 1, 1 )
         
-        with patch.object( HydrusTime, 'GetNow', return_value = now ):
+        with mock.patch.object( HydrusTime, 'GetNow', return_value = now ):
             
             self.assertTrue( rules.CanStartRequest( ZERO_USAGE ) )
             self.assertFalse( rules.CanStartRequest( LOW_USAGE ) )
@@ -146,7 +146,7 @@ class TestBandwidthRules( unittest.TestCase ):
             self.assertFalse( rules.CanContinueDownload( HIGH_USAGE ) )
             
         
-        with patch.object( HydrusTime, 'GetNow', return_value = now_10 ):
+        with mock.patch.object( HydrusTime, 'GetNow', return_value = now_10 ):
             
             self.assertTrue( rules.CanStartRequest( ZERO_USAGE ) )
             self.assertTrue( rules.CanStartRequest( LOW_USAGE ) )
@@ -157,7 +157,7 @@ class TestBandwidthRules( unittest.TestCase ):
             self.assertTrue( rules.CanContinueDownload( HIGH_USAGE ) )
             
         
-        with patch.object( HydrusTime, 'GetNow', return_value = now_20 ):
+        with mock.patch.object( HydrusTime, 'GetNow', return_value = now_20 ):
             
             self.assertTrue( rules.CanStartRequest( ZERO_USAGE ) )
             self.assertTrue( rules.CanStartRequest( LOW_USAGE ) )
@@ -177,7 +177,7 @@ class TestBandwidthRules( unittest.TestCase ):
         
         rules.AddRule( HC.BANDWIDTH_TYPE_DATA, 60, 10240 )
         
-        with patch.object( HydrusTime, 'GetNow', return_value = now ):
+        with mock.patch.object( HydrusTime, 'GetNow', return_value = now ):
             
             self.assertTrue( rules.CanStartRequest( ZERO_USAGE ) )
             self.assertTrue( rules.CanStartRequest( LOW_USAGE ) )
@@ -188,7 +188,7 @@ class TestBandwidthRules( unittest.TestCase ):
             self.assertTrue( rules.CanContinueDownload( HIGH_USAGE ) )
             
         
-        with patch.object( HydrusTime, 'GetNow', return_value = now_10 ):
+        with mock.patch.object( HydrusTime, 'GetNow', return_value = now_10 ):
             
             self.assertTrue( rules.CanStartRequest( ZERO_USAGE ) )
             self.assertTrue( rules.CanStartRequest( LOW_USAGE ) )
@@ -199,7 +199,7 @@ class TestBandwidthRules( unittest.TestCase ):
             self.assertTrue( rules.CanContinueDownload( HIGH_USAGE ) )
             
         
-        with patch.object( HydrusTime, 'GetNow', return_value = now_20 ):
+        with mock.patch.object( HydrusTime, 'GetNow', return_value = now_20 ):
             
             self.assertTrue( rules.CanStartRequest( ZERO_USAGE ) )
             self.assertTrue( rules.CanStartRequest( LOW_USAGE ) )
@@ -216,7 +216,7 @@ class TestBandwidthRules( unittest.TestCase ):
         
         rules.AddRule( HC.BANDWIDTH_TYPE_REQUESTS, 60, 10 )
         
-        with patch.object( HydrusTime, 'GetNow', return_value = now ):
+        with mock.patch.object( HydrusTime, 'GetNow', return_value = now ):
             
             self.assertTrue( rules.CanStartRequest( ZERO_USAGE ) )
             self.assertTrue( rules.CanStartRequest( LOW_USAGE ) )
@@ -227,7 +227,7 @@ class TestBandwidthRules( unittest.TestCase ):
             self.assertTrue( rules.CanContinueDownload( HIGH_USAGE ) )
             
         
-        with patch.object( HydrusTime, 'GetNow', return_value = now_10 ):
+        with mock.patch.object( HydrusTime, 'GetNow', return_value = now_10 ):
             
             self.assertTrue( rules.CanStartRequest( ZERO_USAGE ) )
             self.assertTrue( rules.CanStartRequest( LOW_USAGE ) )
@@ -238,7 +238,7 @@ class TestBandwidthRules( unittest.TestCase ):
             self.assertTrue( rules.CanContinueDownload( HIGH_USAGE ) )
             
         
-        with patch.object( HydrusTime, 'GetNow', return_value = now_20 ):
+        with mock.patch.object( HydrusTime, 'GetNow', return_value = now_20 ):
             
             self.assertTrue( rules.CanStartRequest( ZERO_USAGE ) )
             self.assertTrue( rules.CanStartRequest( LOW_USAGE ) )
@@ -256,7 +256,7 @@ class TestBandwidthRules( unittest.TestCase ):
         rules.AddRule( HC.BANDWIDTH_TYPE_DATA, 60, 10240 )
         rules.AddRule( HC.BANDWIDTH_TYPE_REQUESTS, 60, 10 )
         
-        with patch.object( HydrusTime, 'GetNow', return_value = now ):
+        with mock.patch.object( HydrusTime, 'GetNow', return_value = now ):
             
             self.assertTrue( rules.CanStartRequest( ZERO_USAGE ) )
             self.assertTrue( rules.CanStartRequest( LOW_USAGE ) )
@@ -267,7 +267,7 @@ class TestBandwidthRules( unittest.TestCase ):
             self.assertTrue( rules.CanContinueDownload( HIGH_USAGE ) )
             
         
-        with patch.object( HydrusTime, 'GetNow', return_value = now_10 ):
+        with mock.patch.object( HydrusTime, 'GetNow', return_value = now_10 ):
             
             self.assertTrue( rules.CanStartRequest( ZERO_USAGE ) )
             self.assertTrue( rules.CanStartRequest( LOW_USAGE ) )
@@ -278,7 +278,7 @@ class TestBandwidthRules( unittest.TestCase ):
             self.assertTrue( rules.CanContinueDownload( HIGH_USAGE ) )
             
         
-        with patch.object( HydrusTime, 'GetNow', return_value = now_20 ):
+        with mock.patch.object( HydrusTime, 'GetNow', return_value = now_20 ):
             
             self.assertTrue( rules.CanStartRequest( ZERO_USAGE ) )
             self.assertTrue( rules.CanStartRequest( LOW_USAGE ) )
@@ -296,7 +296,7 @@ class TestBandwidthRules( unittest.TestCase ):
         
         rules.AddRule( HC.BANDWIDTH_TYPE_DATA, None, 10240 )
         
-        with patch.object( HydrusTime, 'GetNow', return_value = now ):
+        with mock.patch.object( HydrusTime, 'GetNow', return_value = now ):
             
             self.assertTrue( rules.CanStartRequest( ZERO_USAGE ) )
             self.assertTrue( rules.CanStartRequest( LOW_USAGE ) )
@@ -307,7 +307,7 @@ class TestBandwidthRules( unittest.TestCase ):
             self.assertTrue( rules.CanContinueDownload( HIGH_USAGE ) )
             
         
-        with patch.object( HydrusTime, 'GetNow', return_value = now_10 ):
+        with mock.patch.object( HydrusTime, 'GetNow', return_value = now_10 ):
             
             self.assertTrue( rules.CanStartRequest( ZERO_USAGE ) )
             self.assertTrue( rules.CanStartRequest( LOW_USAGE ) )
@@ -318,7 +318,7 @@ class TestBandwidthRules( unittest.TestCase ):
             self.assertTrue( rules.CanContinueDownload( HIGH_USAGE ) )
             
         
-        with patch.object( HydrusTime, 'GetNow', return_value = now_20 ):
+        with mock.patch.object( HydrusTime, 'GetNow', return_value = now_20 ):
             
             self.assertTrue( rules.CanStartRequest( ZERO_USAGE ) )
             self.assertTrue( rules.CanStartRequest( LOW_USAGE ) )
@@ -335,7 +335,7 @@ class TestBandwidthRules( unittest.TestCase ):
         
         rules.AddRule( HC.BANDWIDTH_TYPE_REQUESTS, None, 10 )
         
-        with patch.object( HydrusTime, 'GetNow', return_value = now ):
+        with mock.patch.object( HydrusTime, 'GetNow', return_value = now ):
             
             self.assertTrue( rules.CanStartRequest( ZERO_USAGE ) )
             self.assertTrue( rules.CanStartRequest( LOW_USAGE ) )
@@ -346,7 +346,7 @@ class TestBandwidthRules( unittest.TestCase ):
             self.assertTrue( rules.CanContinueDownload( HIGH_USAGE ) )
             
         
-        with patch.object( HydrusTime, 'GetNow', return_value = now_10 ):
+        with mock.patch.object( HydrusTime, 'GetNow', return_value = now_10 ):
             
             self.assertTrue( rules.CanStartRequest( ZERO_USAGE ) )
             self.assertTrue( rules.CanStartRequest( LOW_USAGE ) )
@@ -357,7 +357,7 @@ class TestBandwidthRules( unittest.TestCase ):
             self.assertTrue( rules.CanContinueDownload( HIGH_USAGE ) )
             
         
-        with patch.object( HydrusTime, 'GetNow', return_value = now_20 ):
+        with mock.patch.object( HydrusTime, 'GetNow', return_value = now_20 ):
             
             self.assertTrue( rules.CanStartRequest( ZERO_USAGE ) )
             self.assertTrue( rules.CanStartRequest( LOW_USAGE ) )
@@ -375,7 +375,7 @@ class TestBandwidthRules( unittest.TestCase ):
         rules.AddRule( HC.BANDWIDTH_TYPE_DATA, None, 10240 )
         rules.AddRule( HC.BANDWIDTH_TYPE_REQUESTS, None, 10 )
         
-        with patch.object( HydrusTime, 'GetNow', return_value = now ):
+        with mock.patch.object( HydrusTime, 'GetNow', return_value = now ):
             
             self.assertTrue( rules.CanStartRequest( ZERO_USAGE ) )
             self.assertTrue( rules.CanStartRequest( LOW_USAGE ) )
@@ -386,7 +386,7 @@ class TestBandwidthRules( unittest.TestCase ):
             self.assertTrue( rules.CanContinueDownload( HIGH_USAGE ) )
             
         
-        with patch.object( HydrusTime, 'GetNow', return_value = now_10 ):
+        with mock.patch.object( HydrusTime, 'GetNow', return_value = now_10 ):
             
             self.assertTrue( rules.CanStartRequest( ZERO_USAGE ) )
             self.assertTrue( rules.CanStartRequest( LOW_USAGE ) )
@@ -397,7 +397,7 @@ class TestBandwidthRules( unittest.TestCase ):
             self.assertTrue( rules.CanContinueDownload( HIGH_USAGE ) )
             
         
-        with patch.object( HydrusTime, 'GetNow', return_value = now_20 ):
+        with mock.patch.object( HydrusTime, 'GetNow', return_value = now_20 ):
             
             self.assertTrue( rules.CanStartRequest( ZERO_USAGE ) )
             self.assertTrue( rules.CanStartRequest( LOW_USAGE ) )
@@ -419,7 +419,7 @@ class TestBandwidthTracker( unittest.TestCase ):
         
         now = HydrusTime.GetNow()
         
-        with patch.object( HydrusTime, 'GetNow', return_value = now ):
+        with mock.patch.object( HydrusTime, 'GetNow', return_value = now ):
             
             self.assertEqual( bandwidth_tracker.GetUsage( HC.BANDWIDTH_TYPE_DATA, 0 ), 0 )
             self.assertEqual( bandwidth_tracker.GetUsage( HC.BANDWIDTH_TYPE_REQUESTS, 0 ), 0 )
@@ -469,7 +469,7 @@ class TestBandwidthTracker( unittest.TestCase ):
         
         five_secs_from_now = now + 5
         
-        with patch.object( HydrusTime, 'GetNow', return_value = five_secs_from_now ):
+        with mock.patch.object( HydrusTime, 'GetNow', return_value = five_secs_from_now ):
             
             self.assertEqual( bandwidth_tracker.GetUsage( HC.BANDWIDTH_TYPE_DATA, 0 ), 0 )
             self.assertEqual( bandwidth_tracker.GetUsage( HC.BANDWIDTH_TYPE_REQUESTS, 0 ), 0 )

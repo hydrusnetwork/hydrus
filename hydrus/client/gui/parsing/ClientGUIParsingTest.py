@@ -50,13 +50,13 @@ class TestPanel( QW.QWidget ):
         
         self._example_data_raw_description = ClientGUICommon.BetterStaticText( raw_data_panel )
         
-        self._copy_button = ClientGUICommon.BetterBitmapButton( raw_data_panel, CC.global_pixmaps().copy, self._Copy )
+        self._copy_button = ClientGUICommon.IconButton( raw_data_panel, CC.global_icons().copy, self._Copy )
         self._copy_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'Copy the current example data to the clipboard.' ) )
         
-        self._fetch_button = ClientGUICommon.BetterBitmapButton( raw_data_panel, CC.global_pixmaps().link, self._FetchFromURL )
+        self._fetch_button = ClientGUICommon.IconButton( raw_data_panel, CC.global_icons().link, self._FetchFromURL )
         self._fetch_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'Fetch data from a URL.' ) )
         
-        self._paste_button = ClientGUICommon.BetterBitmapButton( raw_data_panel, CC.global_pixmaps().paste, self._Paste )
+        self._paste_button = ClientGUICommon.IconButton( raw_data_panel, CC.global_icons().paste, self._Paste )
         self._paste_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'Paste the current clipboard data into here.' ) )
         
         self._example_data_raw_preview = QW.QPlainTextEdit( raw_data_panel )
@@ -472,10 +472,10 @@ class TestPanelPageParser( TestPanel ):
         
         self._example_data_post_conversion_description = ClientGUICommon.BetterStaticText( post_conversion_panel )
         
-        self._copy_button_post_conversion = ClientGUICommon.BetterBitmapButton( post_conversion_panel, CC.global_pixmaps().copy, self._CopyPostConversion )
+        self._copy_button_post_conversion = ClientGUICommon.IconButton( post_conversion_panel, CC.global_icons().copy, self._CopyPostConversion )
         self._copy_button_post_conversion.setToolTip( ClientGUIFunctions.WrapToolTip( 'Copy the current post conversion data to the clipboard.' ) )
         
-        self._refresh_post_conversion_button = ClientGUICommon.BetterBitmapButton( post_conversion_panel, CC.global_pixmaps().refresh, self._RefreshDataPreviews )
+        self._refresh_post_conversion_button = ClientGUICommon.IconButton( post_conversion_panel, CC.global_icons().refresh, self._RefreshDataPreviews )
         self._example_data_post_conversion_preview = QW.QPlainTextEdit( post_conversion_panel )
         self._example_data_post_conversion_preview.setReadOnly( True )
         
@@ -612,10 +612,10 @@ class TestPanelPageParserSubsidiary( TestPanelPageParser ):
         
         self._example_data_post_separation_description = ClientGUICommon.BetterStaticText( post_separation_panel )
         
-        self._copy_button_post_separation = ClientGUICommon.BetterBitmapButton( post_separation_panel, CC.global_pixmaps().copy, self._CopyPostSeparation )
+        self._copy_button_post_separation = ClientGUICommon.IconButton( post_separation_panel, CC.global_icons().copy, self._CopyPostSeparation )
         self._copy_button_post_separation.setToolTip( ClientGUIFunctions.WrapToolTip( 'Copy the current post separation data to the clipboard.' ) )
         
-        self._refresh_post_separation_button = ClientGUICommon.BetterBitmapButton( post_separation_panel, CC.global_pixmaps().refresh, self._RefreshDataPreviews )
+        self._refresh_post_separation_button = ClientGUICommon.IconButton( post_separation_panel, CC.global_icons().refresh, self._RefreshDataPreviews )
         self._example_data_post_separation_preview = QW.QPlainTextEdit( post_separation_panel )
         self._example_data_post_separation_preview.setReadOnly( True )
         

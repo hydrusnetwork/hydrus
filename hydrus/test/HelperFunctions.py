@@ -98,3 +98,38 @@ def GetFakeMediaResult( hash: bytes, mime = None ):
     
     return media_result
     
+
+class DBSideEffect( object ):
+    
+    def __init__( self ):
+        
+        self._names_to_callables = {}
+        self._names_to_results = {}
+        
+    
+    def __call__( self, name, *args, **kwargs ):
+        
+        if name in self._names_to_callables:
+            
+            return self._names_to_callables[name]( name, *args, **kwargs )
+            
+        if name in self._names_to_results:
+            
+            return self._names_to_results[ name ]
+            
+        else:
+            
+            raise Exception( f'Did not have entry for {name}!' )
+            
+        
+    
+    def AddCallable( self, name, callable ):
+        
+        self._names_to_callables[ name ] = callable
+        
+    
+    def AddResult( self, name, result ):
+        
+        self._names_to_results[ name ] = result
+        
+    

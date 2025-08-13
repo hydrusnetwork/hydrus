@@ -40,7 +40,7 @@ class EditFileImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         super().__init__( parent )
         
-        help_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().help, self._ShowHelp )
+        help_button = ClientGUICommon.IconButton( self, CC.global_icons().help, self._ShowHelp )
         
         help_hbox = ClientGUICommon.WrapInText( help_button, self, 'help for this panel -->', object_name = 'HydrusIndeterminate' )
         
@@ -565,7 +565,7 @@ class EditNoteImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         self._allow_default_selection = allow_default_selection
         self._simple_mode = simple_mode
         
-        help_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().help, self._ShowHelp )
+        help_button = ClientGUICommon.IconButton( self, CC.global_icons().help, self._ShowHelp )
         
         #
         
@@ -1050,7 +1050,7 @@ class EditServiceTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         menu_items = self._GetCogIconMenuItems()
         
-        cog_button = ClientGUIMenuButton.MenuBitmapButton( main_box, CC.global_pixmaps().cog, menu_items )
+        cog_button = ClientGUIMenuButton.MenuBitmapButton( main_box, CC.global_icons().cog, menu_items )
         
         #
         
@@ -1255,7 +1255,7 @@ class EditTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        help_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().help, self._ShowHelp )
+        help_button = ClientGUICommon.IconButton( self, CC.global_icons().help, self._ShowHelp )
         help_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'Show help regarding these tag options.' ) )
         
         #

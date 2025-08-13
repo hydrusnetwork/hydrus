@@ -1269,7 +1269,7 @@ class ReviewTestResultPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         QP.SetMinClientSize( self._data_preview, min_size )
         
-        self._data_copy_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().copy, self._CopyData )
+        self._data_copy_button = ClientGUICommon.IconButton( self, CC.global_icons().copy, self._CopyData )
         self._data_copy_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'Copy the current example data to the clipboard.' ) )
         
         self._temp_variables = QW.QPlainTextEdit( self )
@@ -1358,7 +1358,7 @@ class EditLoginScriptPanel( ClientGUIScrolledPanels.EditPanel ):
         
         menu_items.append( ( 'normal', 'open the login scripts help', 'Open the help page for login scripts in your web browser.', page_func ) )
         
-        help_button = ClientGUIMenuButton.MenuBitmapButton( self, CC.global_pixmaps().help, menu_items )
+        help_button = ClientGUIMenuButton.MenuBitmapButton( self, CC.global_icons().help, menu_items )
         
         help_hbox = ClientGUICommon.WrapInText( help_button, self, 'help for this panel -->', object_name = 'HydrusIndeterminate' )
         
