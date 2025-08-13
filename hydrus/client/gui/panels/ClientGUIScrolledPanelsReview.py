@@ -3044,7 +3044,7 @@ class ReviewLocalFileImports( ClientGUIScrolledPanels.ReviewPanel ):
         
         listctrl_panel.AddButton( 'add files', self.AddPaths )
         listctrl_panel.AddButton( 'add folder', self.AddFolder )
-        listctrl_panel.AddButton( 'add folder non-recursively', self.AddFolder( recursively = False ) )
+        listctrl_panel.AddButton( 'add folder non-recursively', lambda: self.AddFolder( recursively = False ) )
         listctrl_panel.AddButton( 'remove files', self.RemovePaths, enabled_only_on_selection = True )
         
         self._progress = ClientGUICommon.TextAndGauge( self )
