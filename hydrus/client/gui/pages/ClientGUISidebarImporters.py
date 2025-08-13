@@ -722,7 +722,7 @@ class SidebarImporterMultipleGallery( SidebarImporter ):
                     
                     num_done = i * BLOCK_SIZE
                     
-                    job_status.SetStatusText( 'Loading files: {}'.format( HydrusNumbers.ValueRangeToPrettyString( num_done + BLOCK_SIZE, num_to_do ) ) )
+                    job_status.SetStatusText( 'Loading files: {}'.format( HydrusNumbers.ValueRangeToPrettyString( num_done, num_to_do ) ) )
                     job_status.SetGauge( num_done, num_to_do )
                     
                     if not have_published_job_status and HydrusTime.TimeHasPassedFloat( start_time + 3 ):
@@ -1868,7 +1868,7 @@ class SidebarImporterMultipleWatcher( SidebarImporter ):
                     
                     num_done = i * BLOCK_SIZE
                     
-                    job_status.SetStatusText( 'Loading files: {}'.format( HydrusNumbers.ValueRangeToPrettyString( num_done + BLOCK_SIZE, num_to_do ) ) )
+                    job_status.SetStatusText( 'Loading files: {}'.format( HydrusNumbers.ValueRangeToPrettyString( num_done, num_to_do ) ) )
                     job_status.SetGauge( num_done, num_to_do )
                     
                     if not have_published_job_status and HydrusTime.TimeHasPassedFloat( start_time + 3 ):

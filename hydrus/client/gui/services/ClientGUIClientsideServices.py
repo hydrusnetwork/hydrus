@@ -1874,7 +1874,7 @@ class ReviewServicePanel( QW.QWidget ):
                     return
                     
                 
-                content_update_index_string = 'content row ' + HydrusNumbers.ValueRangeToPrettyString( c_u_p_total_weight_processed + weight, c_u_p_num_rows ) + ': '
+                content_update_index_string = 'content row ' + HydrusNumbers.ValueRangeToPrettyString( c_u_p_total_weight_processed, c_u_p_num_rows ) + ': '
                 
                 job_status.SetStatusText( content_update_index_string + 'committing' + update_speed_string )
                 
@@ -3045,7 +3045,7 @@ class ReviewServiceRepositorySubPanel( QW.QWidget ):
                                 
                             finally:
                                 
-                                job_status.SetStatusText( HydrusNumbers.ValueRangeToPrettyString( i + 1, num_to_do ) )
+                                job_status.SetStatusText( HydrusNumbers.ValueRangeToPrettyString( i, num_to_do ) )
                                 job_status.SetGauge( i, num_to_do )
                                 
                             
