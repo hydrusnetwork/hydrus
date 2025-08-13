@@ -156,7 +156,7 @@ class ReviewActionsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         self._main_notebook.addTab( self._pending_actions_panel, 'pending actions' )
         self._main_notebook.addTab( self._actioned_pairs_panel, 'actions taken' )
-        self._main_notebook.addTab( self._declined_pairs_panel, 'actions declined' )
+        self._main_notebook.addTab( self._declined_pairs_panel, 'actions denied' )
         
         vbox = QP.VBoxLayout()
         
@@ -173,9 +173,11 @@ class ReviewActionsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         self._pending_actions_pair_list.activated.connect( self._PendingRowActivated )
         self._actioned_pairs_pair_list.activated.connect( self._ActionedRowActivated )
+        self._declined_pairs_pair_list.activated.connect( self._DeclinedRowActivated )
         
         self._enter_catcher_pending = ThumbnailPairList.ListEnterCatcher( self, self._pending_actions_pair_list )
         self._enter_catcher_actioned = ThumbnailPairList.ListEnterCatcher( self, self._actioned_pairs_pair_list )
+        self._enter_catcher_declined = ThumbnailPairList.ListEnterCatcher( self, self._declined_pairs_pair_list )
         
         self._main_notebook.currentChanged.connect( self._CurrentPageChanged )
         
@@ -327,6 +329,20 @@ class ReviewActionsPanel( ClientGUIScrolledPanels.ReviewPanel ):
                 self._we_have_done_declines = False
                 
             
+        
+    
+    def _DeclinedRowActivated( self, model_index: QC.QModelIndex ):
+        
+        if not model_index.isValid():
+            
+            return
+            
+        
+        row = model_index.row()
+        
+        ( media_result_1, media_result_2 ) = self._declined_pairs_pair_list.model().GetMediaResultPair( row )
+        
+        self._ShowMediaViewer( media_result_1, media_result_2 )
         
     
     def _DenySelectedPending( self ):
