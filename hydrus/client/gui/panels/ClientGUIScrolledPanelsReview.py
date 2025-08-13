@@ -3246,7 +3246,7 @@ class ReviewLocalFileImports( ClientGUIScrolledPanels.ReviewPanel ):
                 
                 if recursively == False:
                     
-                    path = {'path': path, 'non_recursive_folder_search': True}
+                    path = {'path': dlg.GetPath(), 'non_recursive_folder_search': True}
                     
                 else:
                     
