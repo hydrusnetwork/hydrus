@@ -939,8 +939,8 @@ def OpenURLs( win: QW.QWidget, urls ):
                         return
                         
                     
-                    job_status.SetStatusText( HydrusNumbers.ValueRangeToPrettyString( i + 1, num_urls ) )
-                    job_status.SetGauge( i + 1, num_urls )
+                    job_status.SetStatusText( HydrusNumbers.ValueRangeToPrettyString( i, num_urls ) )
+                    job_status.SetGauge( i, num_urls )
                     
                 
                 ClientPaths.LaunchURLInWebBrowser( url )

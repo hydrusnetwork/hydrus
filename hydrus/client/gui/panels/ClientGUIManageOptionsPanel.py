@@ -74,7 +74,7 @@ class ShortcutsPanel( OptionsPagePanel ):
         
         super().__init__( parent )
         
-        help_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().help, self._ShowHelp )
+        help_button = ClientGUICommon.IconButton( self, CC.global_icons().help, self._ShowHelp )
         help_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'Show help regarding editing shortcuts.' ) )
         
         self._call_mouse_buttons_primary_secondary = QW.QCheckBox( self )
@@ -4624,9 +4624,9 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             media_viewer_rating_panel = ClientGUICommon.StaticBox( self, 'media viewer' )
             
             self._media_viewer_rating_icon_size_px = ClientGUICommon.BetterDoubleSpinBox( media_viewer_rating_panel, min = 1.0, max = 255.0 )
-            self._media_viewer_rating_icon_size_px.setToolTip( ClientGUIFunctions.WrapToolTip( 'Set size in pixels for like, numerical, and inc/dec rating icons for clicking on. This will be used for both width and height of the square icons. If you want to set the size of ratings icons in thumbnails, check the \'thumbnails\' options page.' ) )
-            self._media_viewer_rating_incdec_width_px = ClientGUICommon.BetterDoubleSpinBox( media_viewer_rating_panel, min = 2.0, max = 255.0 )
-            self._media_viewer_rating_incdec_width_px.setToolTip( ClientGUIFunctions.WrapToolTip( 'Set width in pixels for inc/dec rectangles in the media viewer. The height will be half of this, and it is limited to be between twice and half of the normal ratings icons sizes. If you want to set the size of ratings icons in thumbnails, check the \'thumbnails\' options page.' ) )
+            self._media_viewer_rating_icon_size_px.setToolTip( ClientGUIFunctions.WrapToolTip( 'Set size in pixels for like, numerical, and inc/dec rating icons for clicking on. This will be used for both width and height of the square icons.' ) )
+            self._media_viewer_rating_incdec_height_px = ClientGUICommon.BetterDoubleSpinBox( media_viewer_rating_panel, min = 2.0, max = 255.0 )
+            self._media_viewer_rating_incdec_height_px.setToolTip( ClientGUIFunctions.WrapToolTip( 'Set height in pixels for inc/dec rectangles in the media viewer. Width will be dynamic based on the rating. It is limited to be between twice and half of the normal ratings icons sizes.' ) )
             
             
             thumbnail_ratings_panel = ClientGUICommon.StaticBox( self, 'thumbnails' )
@@ -4638,12 +4638,12 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._draw_thumbnail_rating_background.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
             
             self._draw_thumbnail_rating_icon_size_px = ClientGUICommon.BetterDoubleSpinBox( thumbnail_ratings_panel, min = 1.0, max = thumbnail_width )
-            tt = 'This is the size of any rating icons shown in pixels. It will be square, so this is both the width and height. This only sets it for display on thumbnails, if you want to change the size of icons in the media viewer check the \'media viewer\' options page.'
+            tt = 'This is the size of any rating icons shown in pixels. It will be square, so this is both the width and height.'
             self._draw_thumbnail_rating_icon_size_px.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
             
-            self._draw_thumbnail_rating_incdec_width_px = ClientGUICommon.BetterDoubleSpinBox( thumbnail_ratings_panel, min = 2.0, max = thumbnail_width )
+            self._draw_thumbnail_rating_incdec_height_px = ClientGUICommon.BetterDoubleSpinBox( thumbnail_ratings_panel, min = 2.0, max = thumbnail_width )
             tt = 'This is the width of the inc/dec rating buttons in pixels. Height is 1/2 this. Limited to a range around the rating icon sizes.'
-            self._draw_thumbnail_rating_incdec_width_px.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
+            self._draw_thumbnail_rating_incdec_height_px.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
             
             self._draw_thumbnail_numerical_ratings_collapsed_always = QW.QCheckBox( thumbnail_ratings_panel )
             tt = 'If this is checked, all numerical ratings will show collapsed in thumbnails (\'2/10 ▲\' instead of \'▲▲▼▼▼▼▼▼▼▼\') regardless of the per-service setting.'
@@ -4655,8 +4655,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._preview_window_rating_icon_size_px = ClientGUICommon.BetterDoubleSpinBox( preview_window_rating_panel, min = 1.0, max = 255.0 )
             self._preview_window_rating_icon_size_px.setToolTip( ClientGUIFunctions.WrapToolTip( 'Set size in pixels for like and numerical rating icons for clicking on in the preview window.' ) )
             
-            self._preview_window_rating_incdec_width_px  = ClientGUICommon.BetterDoubleSpinBox( preview_window_rating_panel, min = 2.0, max = 255.0 )
-            self._preview_window_rating_incdec_width_px.setToolTip( ClientGUIFunctions.WrapToolTip( 'Set width in pixels for inc/dec rectangles in the preview window. The height will be half of this, and it is limited to be between twice and half of the normal ratings icons sizes.' ) )
+            self._preview_window_rating_incdec_height_px  = ClientGUICommon.BetterDoubleSpinBox( preview_window_rating_panel, min = 2.0, max = 255.0 )
+            self._preview_window_rating_incdec_height_px.setToolTip( ClientGUIFunctions.WrapToolTip( 'Set height in pixels for inc/dec rectangles in the preview window. Width will be dynamic based on the rating. It is limited to be between twice and half of the normal ratings icons sizes.' ) )
             
             
             manage_ratings_popup_panel = ClientGUICommon.StaticBox( self, 'dialogs' )
@@ -4664,8 +4664,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._dialog_rating_icon_size_px = ClientGUICommon.BetterDoubleSpinBox( manage_ratings_popup_panel, min = 6.0, max = 128.0 )
             self._dialog_rating_icon_size_px.setToolTip( ClientGUIFunctions.WrapToolTip( 'Set size in pixels for like and numerical rating icons for clicking on in the \'manage ratings\' dialog.' ) )
             
-            self._dialog_rating_incdec_width_px = ClientGUICommon.BetterDoubleSpinBox( manage_ratings_popup_panel, min = 12.0, max = 128.0 )
-            self._dialog_rating_incdec_width_px.setToolTip( ClientGUIFunctions.WrapToolTip( 'Set width in pixels for inc/dec rectangles in the \'manage ratings\' dialog. The height will be half of this, and it is limited to be between twice and half of the normal ratings icons sizes.' ) )
+            self._dialog_rating_incdec_height_px = ClientGUICommon.BetterDoubleSpinBox( manage_ratings_popup_panel, min = 12.0, max = 128.0 )
+            self._dialog_rating_incdec_height_px.setToolTip( ClientGUIFunctions.WrapToolTip( 'Set height in pixels for inc/dec rectangles in the \'manage ratings\' dialog.  Width will be dynamic based on the rating. It is limited to be between twice and half of the normal ratings icons sizes.' ) )
             
             #clamp inc/dec rectangles to min 0.5 and max 2x rating stars px for rating size stuff
             self._media_viewer_rating_icon_size_px.editingFinished.connect( self._icon_size_changed )
@@ -4675,25 +4675,25 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             #
             
             self._media_viewer_rating_icon_size_px.setValue( self._new_options.GetFloat( 'media_viewer_rating_icon_size_px' ) )
-            self._media_viewer_rating_incdec_width_px.setValue( self._new_options.GetFloat( 'media_viewer_rating_incdec_width_px' ) )
+            self._media_viewer_rating_incdec_height_px.setValue( self._new_options.GetFloat( 'media_viewer_rating_incdec_height_px' ) )
             
             self._draw_thumbnail_rating_background.setChecked( self._new_options.GetBoolean( 'draw_thumbnail_rating_background' ) )
             self._draw_thumbnail_numerical_ratings_collapsed_always.setChecked( self._new_options.GetBoolean( 'draw_thumbnail_numerical_ratings_collapsed_always' ) )
             self._draw_thumbnail_rating_icon_size_px.setValue( self._new_options.GetFloat( 'draw_thumbnail_rating_icon_size_px' ) )
-            self._draw_thumbnail_rating_incdec_width_px.setValue( self._new_options.GetFloat( 'thumbnail_rating_incdec_width_px' )  )
+            self._draw_thumbnail_rating_incdec_height_px.setValue( self._new_options.GetFloat( 'thumbnail_rating_incdec_height_px' )  )
             
             self._preview_window_rating_icon_size_px.setValue( self._new_options.GetFloat( 'preview_window_rating_icon_size_px' ) )
-            self._preview_window_rating_incdec_width_px.setValue( self._new_options.GetFloat( 'preview_window_rating_incdec_width_px' ) )
+            self._preview_window_rating_incdec_height_px.setValue( self._new_options.GetFloat( 'preview_window_rating_incdec_height_px' ) )
             
             self._dialog_rating_icon_size_px.setValue( self._new_options.GetFloat( 'dialog_rating_icon_size_px' ) )
-            self._dialog_rating_incdec_width_px.setValue( self._new_options.GetFloat( 'dialog_rating_incdec_width_px' ) )
+            self._dialog_rating_incdec_height_px.setValue( self._new_options.GetFloat( 'dialog_rating_incdec_height_px' ) )
             
             #
             
             rows = []
             
             rows.append( ( 'Media viewer like/dislike and numerical rating icon size:', self._media_viewer_rating_icon_size_px ) )
-            rows.append( ( 'Media viewer inc/dec rating icon width:', self._media_viewer_rating_incdec_width_px ) )
+            rows.append( ( 'Media viewer inc/dec rating icon height:', self._media_viewer_rating_incdec_height_px ) )
             
             media_viewer_rating_gridbox = ClientGUICommon.WrapInGrid( media_viewer_rating_panel, rows )
             media_viewer_rating_panel.Add( media_viewer_rating_gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
@@ -4701,7 +4701,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows = []
             
             rows.append( ( 'Preview window like/dislike and numerical rating icon size:', self._preview_window_rating_icon_size_px ) )
-            rows.append( ( 'Preview window inc/dec rating icon width:', self._preview_window_rating_incdec_width_px ) )
+            rows.append( ( 'Preview window inc/dec rating icon height:', self._preview_window_rating_incdec_height_px ) )
             
             preview_hovers_gridbox = ClientGUICommon.WrapInGrid( preview_window_rating_panel, rows )
             preview_window_rating_panel.Add( preview_hovers_gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
@@ -4709,7 +4709,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows = []
             
             rows.append( ( 'Thumbnail like/dislike and numerical rating icon size: ', self._draw_thumbnail_rating_icon_size_px ) )
-            rows.append( ( 'Thumbnail inc/dec rating width: ', self._draw_thumbnail_rating_incdec_width_px ) )
+            rows.append( ( 'Thumbnail inc/dec rating height: ', self._draw_thumbnail_rating_incdec_height_px ) )
             rows.append( ( 'Give thumbnail ratings a flat background: ', self._draw_thumbnail_rating_background ) )
             rows.append( ( 'Always draw thumbnail numerical ratings collapsed: ', self._draw_thumbnail_numerical_ratings_collapsed_always ) )
             
@@ -4719,7 +4719,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows = []
             
             rows.append( ( 'Dialogs like/dislike and numerical rating icon size:', self._dialog_rating_icon_size_px ) )
-            rows.append( ( 'Dialogs inc/dec rating width:', self._dialog_rating_incdec_width_px ) )
+            rows.append( ( 'Dialogs inc/dec rating height:', self._dialog_rating_incdec_height_px ) )
             
             manage_ratings_gridbox = ClientGUICommon.WrapInGrid( manage_ratings_popup_panel, rows )
             
@@ -4751,35 +4751,35 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             new_value = self._media_viewer_rating_icon_size_px.value()
             
-            self._media_viewer_rating_incdec_width_px.setMaximum( new_value * 2 )
-            self._media_viewer_rating_incdec_width_px.setMinimum( new_value * 0.5 )
+            self._media_viewer_rating_incdec_height_px.setMaximum( new_value * 2 )
+            self._media_viewer_rating_incdec_height_px.setMinimum( new_value * 0.5 )
             
             new_value = self._preview_window_rating_icon_size_px.value()
             
-            self._preview_window_rating_incdec_width_px.setMaximum( new_value * 2 )
-            self._preview_window_rating_incdec_width_px.setMinimum( new_value * 0.5 )
+            self._preview_window_rating_incdec_height_px.setMaximum( new_value * 2 )
+            self._preview_window_rating_incdec_height_px.setMinimum( new_value * 0.5 )
             
             new_value = self._draw_thumbnail_rating_icon_size_px.value()
             
-            self._draw_thumbnail_rating_incdec_width_px.setMaximum( new_value * 2 )
-            self._draw_thumbnail_rating_incdec_width_px.setMinimum( new_value * 0.5 )
+            self._draw_thumbnail_rating_incdec_height_px.setMaximum( new_value * 2 )
+            self._draw_thumbnail_rating_incdec_height_px.setMinimum( new_value * 0.5 )
             
         
         def UpdateOptions( self ):
             
             self._new_options.SetFloat( 'media_viewer_rating_icon_size_px', self._media_viewer_rating_icon_size_px.value() )
-            self._new_options.SetFloat( 'media_viewer_rating_incdec_width_px', self._media_viewer_rating_incdec_width_px.value() )
+            self._new_options.SetFloat( 'media_viewer_rating_incdec_height_px', self._media_viewer_rating_incdec_height_px.value() )
             
             self._new_options.SetBoolean( 'draw_thumbnail_rating_background', self._draw_thumbnail_rating_background.isChecked() )
             self._new_options.SetBoolean( 'draw_thumbnail_numerical_ratings_collapsed_always', self._draw_thumbnail_numerical_ratings_collapsed_always.isChecked() )
             self._new_options.SetFloat( 'draw_thumbnail_rating_icon_size_px', self._draw_thumbnail_rating_icon_size_px.value() )
-            self._new_options.SetFloat( 'thumbnail_rating_incdec_width_px', self._draw_thumbnail_rating_incdec_width_px.value() )
+            self._new_options.SetFloat( 'thumbnail_rating_incdec_height_px', self._draw_thumbnail_rating_incdec_height_px.value() )
             
             self._new_options.SetFloat( 'preview_window_rating_icon_size_px', self._preview_window_rating_icon_size_px.value() )
-            self._new_options.SetFloat( 'preview_window_rating_incdec_width_px', self._preview_window_rating_incdec_width_px.value() )
+            self._new_options.SetFloat( 'preview_window_rating_incdec_height_px', self._preview_window_rating_incdec_height_px.value() )
             
             self._new_options.SetFloat( 'dialog_rating_icon_size_px', self._dialog_rating_icon_size_px.value() )
-            self._new_options.SetFloat( 'dialog_rating_incdec_width_px', self._dialog_rating_incdec_width_px.value() )
+            self._new_options.SetFloat( 'dialog_rating_incdec_height_px', self._dialog_rating_incdec_height_px.value() )
             
         
     

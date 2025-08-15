@@ -657,7 +657,7 @@ class ReviewAllBandwidthPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         self._bandwidths_panel.AddButton( 'edit default bandwidth rules', self._EditDefaultBandwidthRules )
         self._bandwidths_panel.AddButton( 'reset default bandwidth rules', self._ResetDefaultBandwidthRules )
-        self._bandwidths_panel.AddBitmapButton( CC.global_pixmaps().help, self._ShowDefaultRulesHelp )
+        self._bandwidths_panel.AddIconButton( CC.global_icons().help, self._ShowDefaultRulesHelp )
         
         #
         

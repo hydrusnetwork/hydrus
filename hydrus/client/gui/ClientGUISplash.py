@@ -246,7 +246,7 @@ class FrameSplash( QW.QWidget ):
         
         self.setWindowTitle( title )
         
-        self.setWindowIcon( QG.QIcon( self._controller.frame_icon_pixmap ) )
+        self.setWindowIcon( CC.global_icons().hydrus_frame )
         
         self._my_panel = FrameSplashPanel( self, self._controller, frame_splash_status )
         

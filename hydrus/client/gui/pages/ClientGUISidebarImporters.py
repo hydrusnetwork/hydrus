@@ -146,7 +146,7 @@ class SidebarImporterHDD( SidebarImporter ):
         
         self._file_seed_cache_control = ClientGUIFileSeedCache.FileSeedCacheStatusControl( self._import_queue_panel, self._page_key )
         
-        self._pause_button = ClientGUICommon.BetterBitmapButton( self._import_queue_panel, CC.global_pixmaps().file_pause, self.Pause )
+        self._pause_button = ClientGUICommon.IconButton( self._import_queue_panel, CC.global_icons().file_pause, self.Pause )
         self._pause_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'pause/play imports' ) )
         
         self._hdd_import: ClientImportLocal.HDDImport = self._page_manager.GetVariable( 'hdd_import' )
@@ -199,11 +199,11 @@ class SidebarImporterHDD( SidebarImporter ):
         
         if paused:
             
-            ClientGUIFunctions.SetBitmapButtonBitmap( self._pause_button, CC.global_pixmaps().file_play )
+            self._pause_button.SetIconSmart( CC.global_icons().file_play )
             
         else:
             
-            ClientGUIFunctions.SetBitmapButtonBitmap( self._pause_button, CC.global_pixmaps().file_pause )
+            self._pause_button.SetIconSmart( CC.global_icons().file_pause )
             
         
         self._current_action.setText( current_action )
@@ -271,11 +271,11 @@ class SidebarImporterMultipleGallery( SidebarImporter ):
         
         self._gallery_importers_listctrl_panel.SetListCtrl( self._gallery_importers_listctrl )
         
-        self._gallery_importers_listctrl_panel.AddBitmapButton( CC.global_pixmaps().highlight, self._HighlightSelectedGalleryImport, tooltip = 'highlight', enabled_check_func = self._CanHighlight )
-        self._gallery_importers_listctrl_panel.AddBitmapButton( CC.global_pixmaps().clear_highlight, self._ClearExistingHighlightAndPanel, tooltip = 'clear highlight', enabled_check_func = self._CanClearHighlight )
-        self._gallery_importers_listctrl_panel.AddBitmapButton( CC.global_pixmaps().file_pause, self._PausePlayFiles, tooltip = 'pause/play files', enabled_only_on_selection = True )
-        self._gallery_importers_listctrl_panel.AddBitmapButton( CC.global_pixmaps().gallery_pause, self._PausePlayGallery, tooltip = 'pause/play search', enabled_only_on_selection = True )
-        self._gallery_importers_listctrl_panel.AddBitmapButton( CC.global_pixmaps().trash, self._RemoveGalleryImports, tooltip = 'remove selected', enabled_only_on_selection = True )
+        self._gallery_importers_listctrl_panel.AddIconButton( CC.global_icons().highlight, self._HighlightSelectedGalleryImport, tooltip = 'highlight', enabled_check_func = self._CanHighlight )
+        self._gallery_importers_listctrl_panel.AddIconButton( CC.global_icons().clear_highlight, self._ClearExistingHighlightAndPanel, tooltip = 'clear highlight', enabled_check_func = self._CanClearHighlight )
+        self._gallery_importers_listctrl_panel.AddIconButton( CC.global_icons().file_pause, self._PausePlayFiles, tooltip = 'pause/play files', enabled_only_on_selection = True )
+        self._gallery_importers_listctrl_panel.AddIconButton( CC.global_icons().gallery_pause, self._PausePlayGallery, tooltip = 'pause/play search', enabled_only_on_selection = True )
+        self._gallery_importers_listctrl_panel.AddIconButton( CC.global_icons().trash, self._RemoveGalleryImports, tooltip = 'remove selected', enabled_only_on_selection = True )
         
         self._gallery_importers_listctrl_panel.NewButtonRow()
         
@@ -288,7 +288,7 @@ class SidebarImporterMultipleGallery( SidebarImporter ):
         
         self._query_input = ClientGUITextInput.TextAndPasteCtrl( self._gallery_downloader_panel, self._PendQueries )
         
-        self._cog_button = ClientGUICommon.BetterBitmapButton( self._gallery_downloader_panel, CC.global_pixmaps().cog, self._ShowCogMenu )
+        self._cog_button = ClientGUICommon.IconButton( self._gallery_downloader_panel, CC.global_icons().cog, self._ShowCogMenu )
         
         self._gug_key_and_name = ClientGUIImport.GUGKeyAndNameSelector( self._gallery_downloader_panel, self._multiple_gallery_import.GetGUGKeyAndName(), update_callable = self._SetGUGKeyAndName )
         
@@ -1370,11 +1370,11 @@ class SidebarImporterMultipleWatcher( SidebarImporter ):
         
         self._watchers_listctrl_panel.SetListCtrl( self._watchers_listctrl )
         
-        self._watchers_listctrl_panel.AddBitmapButton( CC.global_pixmaps().highlight, self._HighlightSelectedWatcher, tooltip = 'highlight', enabled_check_func = self._CanHighlight )
-        self._watchers_listctrl_panel.AddBitmapButton( CC.global_pixmaps().clear_highlight, self._ClearExistingHighlightAndPanel, tooltip = 'clear highlight', enabled_check_func = self._CanClearHighlight )
-        self._watchers_listctrl_panel.AddBitmapButton( CC.global_pixmaps().file_pause, self._PausePlayFiles, tooltip = 'pause/play files', enabled_only_on_selection = True )
-        self._watchers_listctrl_panel.AddBitmapButton( CC.global_pixmaps().gallery_pause, self._PausePlayChecking, tooltip = 'pause/play checking', enabled_only_on_selection = True )
-        self._watchers_listctrl_panel.AddBitmapButton( CC.global_pixmaps().trash, self._RemoveWatchers, tooltip = 'remove selected', enabled_only_on_selection = True )
+        self._watchers_listctrl_panel.AddIconButton( CC.global_icons().highlight, self._HighlightSelectedWatcher, tooltip = 'highlight', enabled_check_func = self._CanHighlight )
+        self._watchers_listctrl_panel.AddIconButton( CC.global_icons().clear_highlight, self._ClearExistingHighlightAndPanel, tooltip = 'clear highlight', enabled_check_func = self._CanClearHighlight )
+        self._watchers_listctrl_panel.AddIconButton( CC.global_icons().file_pause, self._PausePlayFiles, tooltip = 'pause/play files', enabled_only_on_selection = True )
+        self._watchers_listctrl_panel.AddIconButton( CC.global_icons().gallery_pause, self._PausePlayChecking, tooltip = 'pause/play checking', enabled_only_on_selection = True )
+        self._watchers_listctrl_panel.AddIconButton( CC.global_icons().trash, self._RemoveWatchers, tooltip = 'remove selected', enabled_only_on_selection = True )
         self._watchers_listctrl_panel.AddButton( 'check now', self._CheckNow, enabled_only_on_selection = True )
         
         self._watchers_listctrl_panel.NewButtonRow()
@@ -2515,7 +2515,7 @@ class SidebarImporterSimpleDownloader( SidebarImporter ):
         
         self._import_queue_panel = ClientGUICommon.StaticBox( self._simple_downloader_panel, 'imports' )
         
-        self._pause_files_button = ClientGUICommon.BetterBitmapButton( self._import_queue_panel, CC.global_pixmaps().file_pause, self.PauseFiles )
+        self._pause_files_button = ClientGUICommon.IconButton( self._import_queue_panel, CC.global_icons().file_pause, self.PauseFiles )
         self._pause_files_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'pause/play files' ) )
         self._current_action = ClientGUICommon.BetterStaticText( self._import_queue_panel, ellipsize_end = True )
         self._file_seed_cache_control = ClientGUIFileSeedCache.FileSeedCacheStatusControl( self._import_queue_panel, self._page_key )
@@ -2525,7 +2525,7 @@ class SidebarImporterSimpleDownloader( SidebarImporter ):
         
         self._simple_parsing_jobs_panel = ClientGUICommon.StaticBox( self._simple_downloader_panel, 'parsing' )
         
-        self._pause_queue_button = ClientGUICommon.BetterBitmapButton( self._simple_parsing_jobs_panel, CC.global_pixmaps().gallery_pause, self.PauseQueue )
+        self._pause_queue_button = ClientGUICommon.IconButton( self._simple_parsing_jobs_panel, CC.global_icons().gallery_pause, self.PauseQueue )
         self._pause_queue_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'pause/play queue' ) )
         
         self._parser_status = ClientGUICommon.BetterStaticText( self._simple_parsing_jobs_panel, ellipsize_end = True )
@@ -2554,7 +2554,7 @@ class SidebarImporterSimpleDownloader( SidebarImporter ):
         
         menu_items.append( ( 'normal', 'edit formulae', 'Edit these parsing formulae.', self._EditFormulae ) )
         
-        self._formula_cog = ClientGUIMenuButton.MenuBitmapButton( self._simple_parsing_jobs_panel, CC.global_pixmaps().cog, menu_items )
+        self._formula_cog = ClientGUIMenuButton.MenuBitmapButton( self._simple_parsing_jobs_panel, CC.global_icons().cog, menu_items )
         
         self._RefreshFormulae()
         
@@ -2816,20 +2816,20 @@ class SidebarImporterSimpleDownloader( SidebarImporter ):
         
         if files_paused:
             
-            ClientGUIFunctions.SetBitmapButtonBitmap( self._pause_files_button, CC.global_pixmaps().file_play )
+            self._pause_files_button.SetIconSmart( CC.global_icons().file_play )
             
         else:
             
-            ClientGUIFunctions.SetBitmapButtonBitmap( self._pause_files_button, CC.global_pixmaps().file_pause )
+            self._pause_files_button.SetIconSmart( CC.global_icons().file_pause )
             
         
         if queue_paused:
             
-            ClientGUIFunctions.SetBitmapButtonBitmap( self._pause_queue_button, CC.global_pixmaps().gallery_play )
+            self._pause_queue_button.SetIconSmart( CC.global_icons().gallery_play )
             
         else:
             
-            ClientGUIFunctions.SetBitmapButtonBitmap( self._pause_queue_button, CC.global_pixmaps().gallery_pause )
+            self._pause_queue_button.SetIconSmart( CC.global_icons().gallery_pause )
             
         
         ( file_network_job, page_network_job ) = self._simple_downloader_import.GetNetworkJobs()
@@ -2917,7 +2917,7 @@ class SidebarImporterURLs( SidebarImporter ):
         
         self._import_queue_panel = ClientGUICommon.StaticBox( self._url_panel, 'imports' )
         
-        self._pause_button = ClientGUICommon.BetterBitmapButton( self._import_queue_panel, CC.global_pixmaps().file_pause, self.Pause )
+        self._pause_button = ClientGUICommon.IconButton( self._import_queue_panel, CC.global_icons().file_pause, self.Pause )
         self._pause_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'pause/play files' ) )
         
         self._file_download_control = ClientGUINetworkJobControl.NetworkJobControl( self._import_queue_panel )
@@ -3025,11 +3025,11 @@ class SidebarImporterURLs( SidebarImporter ):
         
         if paused:
             
-            ClientGUIFunctions.SetBitmapButtonBitmap( self._pause_button, CC.global_pixmaps().file_play )
+            self._pause_button.SetIconSmart( CC.global_icons().file_play )
             
         else:
             
-            ClientGUIFunctions.SetBitmapButtonBitmap( self._pause_button, CC.global_pixmaps().file_pause )
+            self._pause_button.SetIconSmart( CC.global_icons().file_pause )
             
         
         ( file_network_job, gallery_network_job ) = self._urls_import.GetNetworkJobs()

@@ -405,7 +405,7 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
             
             self._remove_tags = ClientGUICommon.BetterButton( self._tags_box_sorter, text, self._RemoveTagsButton )
             
-            self._copy_button = ClientGUICommon.BetterBitmapButton( self._tags_box_sorter, CC.global_pixmaps().copy, self._Copy )
+            self._copy_button = ClientGUICommon.IconButton( self._tags_box_sorter, CC.global_icons().copy, self._Copy )
             self._copy_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'Copy selected tags to the clipboard. If none are selected, copies all.' ) )
             
             self._show_deleted = False
@@ -446,7 +446,7 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
             width = ClientGUIFunctions.ConvertTextToPixelWidth( self._incremental_tagging_button, 5 )
             self._incremental_tagging_button.setFixedWidth( width )
             
-            self._cog_button = ClientGUIMenuButton.MenuBitmapButton( self._tags_box_sorter, CC.global_pixmaps().cog, menu_items )
+            self._cog_button = ClientGUIMenuButton.MenuBitmapButton( self._tags_box_sorter, CC.global_icons().cog, menu_items )
             
             #
             

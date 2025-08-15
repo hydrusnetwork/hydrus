@@ -62,16 +62,11 @@ def AppendMenuIconItem( menu: QW.QMenu, label: str, description: str, icon: QG.Q
     
     menu_item.setIcon( icon )
     
-    menu.addAction(menu_item)
+    menu.addAction( menu_item )
     
     BindMenuItem( menu_item, callable, *args, **kwargs )
     
     return menu_item
-    
-
-def AppendMenuBitmapItem( menu, label, description, bitmap, callable, *args, **kwargs ):
-    
-    return AppendMenuIconItem(menu, label, description, QG.QIcon( bitmap ), callable, *args, **kwargs)
     
 
 def AppendMenuCheckItem( menu, label, description, initial_value, callable, *args, **kwargs ):

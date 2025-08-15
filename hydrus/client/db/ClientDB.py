@@ -3865,6 +3865,7 @@ class DB( HydrusDB.HydrusDB ):
                 'deferred_physical_delete' : self.modules_files_storage.GetDeferredPhysicalDelete,
                 'duplicate_pair_hashes_for_filtering' : self.modules_files_duplicates_file_query.GetPotentialDuplicatePairHashesForFiltering,
                 'duplicates_auto_resolution_actioned_pairs' : self.modules_files_duplicates_auto_resolution_search.GetActionedPairs,
+                'duplicates_auto_resolution_declined_pairs' : self.modules_files_duplicates_auto_resolution_search.GetDeclinedPairs,
                 'duplicates_auto_resolution_pending_action_pairs' : self.modules_files_duplicates_auto_resolution_search.GetPendingActionPairs,
                 'duplicates_auto_resolution_resolution_pair' : self.modules_files_duplicates_auto_resolution_search.GetResolutionPair,
                 'duplicates_auto_resolution_rules_with_counts' : self.modules_files_duplicates_auto_resolution_storage.GetRulesWithCounts,
@@ -3997,6 +3998,7 @@ class DB( HydrusDB.HydrusDB ):
                 'duplicates_auto_resolution_maintenance_fix_orphan_rules' : self.modules_files_duplicates_auto_resolution_storage.MaintenanceFixOrphanRules,
                 'duplicates_auto_resolution_maintenance_fix_orphan_potential_pairs' : self.modules_files_duplicates_auto_resolution_storage.MaintenanceFixOrphanPotentialPairs,
                 'duplicates_auto_resolution_maintenance_regen_numbers' : self.modules_files_duplicates_auto_resolution_storage.MaintenanceRegenNumbers,
+                'duplicates_auto_resolution_rescind_declined_pairs' : self.modules_files_duplicates_auto_resolution_search.RescindDeclinedPairs,
                 'duplicates_auto_resolution_reset_rule_search_progress' : self.modules_files_duplicates_auto_resolution_storage.ResetRuleSearchProgress,
                 'duplicates_auto_resolution_reset_rule_test_progress' : self.modules_files_duplicates_auto_resolution_storage.ResetRuleTestProgress,
                 'duplicates_auto_resolution_reset_rule_declined' : self.modules_files_duplicates_auto_resolution_storage.ResetRuleDeclined,
@@ -8971,6 +8973,85 @@ class DB( HydrusDB.HydrusDB ):
                 message = 'Trying to update your options failed! Please let hydrus dev know!'
                 
                 self.pub_initial_message( message )
+                
+            
+        
+        if version == 633:
+            
+            try:
+                
+                new_options = self.modules_serialisable.GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_CLIENT_OPTIONS )
+                
+                thumbnail_rating_incdec_width_px = new_options.GetFloat( 'thumbnail_rating_incdec_width_px' )
+                media_viewer_rating_incdec_width_px = new_options.GetFloat( 'media_viewer_rating_incdec_width_px' )
+                preview_window_rating_incdec_width_px = new_options.GetFloat( 'preview_window_rating_incdec_width_px' )
+                dialog_rating_incdec_width_px = new_options.GetFloat( 'dialog_rating_incdec_width_px' )
+                
+                new_options.SetFloat( 'thumbnail_rating_incdec_height_px', thumbnail_rating_incdec_width_px / 2 )
+                new_options.SetFloat( 'media_viewer_rating_incdec_height_px', media_viewer_rating_incdec_width_px / 2 )
+                new_options.SetFloat( 'preview_window_rating_incdec_height_px', preview_window_rating_incdec_width_px / 2 )
+                new_options.SetFloat( 'dialog_rating_incdec_height_px', dialog_rating_incdec_width_px / 2 )
+                
+                self.modules_serialisable.SetJSONDump( new_options )
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to update your \'rating_incdec_height_px\' options failed! Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
+                
+            
+            try:
+                
+                from hydrus.client.duplicates import ClientDuplicatesAutoResolution
+                
+                # adding timestamp to a new declined table
+                
+                rule_ids = self._STL( self._Execute( 'SELECT rule_id FROM duplicate_files_auto_resolution_rules;' ) )
+                
+                status = ClientDuplicatesAutoResolution.DUPLICATE_STATUS_USER_DECLINED # 6
+                
+                for rule_id in rule_ids:
+                    
+                    original_table_name = f'duplicate_files_auto_resolution_pair_decisions_{rule_id}_{status}'
+                    
+                    if self._TableExists( original_table_name ):
+                        
+                        new_table_name = f'duplicate_files_auto_resolution_declined_{rule_id}'
+                        
+                        self._Execute( f'DROP TABLE IF EXISTS {new_table_name};' )
+                        
+                        self._Execute( f'CREATE TABLE IF NOT EXISTS {new_table_name} ( smaller_media_id INTEGER, larger_media_id INTEGER, timestamp_ms INTEGER, PRIMARY KEY ( smaller_media_id, larger_media_id ) );' )
+                        
+                        self._CreateIndex( new_table_name, [ 'larger_media_id', 'smaller_media_id' ], unique = True )
+                        self._CreateIndex( new_table_name, [ 'timestamp_ms' ] )
+                        
+                        now_ms = HydrusTime.GetNowMS()
+                        
+                        inserts = []
+                        
+                        for ( smaller_media_id, larger_media_id ) in sorted( self._Execute( f'SELECT smaller_media_id, larger_media_id FROM {original_table_name};' ).fetchall(), reverse = True ):
+                            
+                            inserts.append( ( smaller_media_id, larger_media_id, now_ms ) )
+                            
+                            now_ms -= 1
+                            
+                        
+                        self._ExecuteMany( f'INSERT OR IGNORE INTO {new_table_name} ( smaller_media_id, larger_media_id, timestamp_ms ) VALUES ( ?, ?, ? );', inserts )
+                        
+                        self._Execute( f'DROP TABLE IF EXISTS {original_table_name};' )
+                        
+                    
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Failed to update auto-resolution rule declined tables!'
+                
+                raise Exception( message ) from e
                 
             
         

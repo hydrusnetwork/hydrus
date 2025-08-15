@@ -1963,8 +1963,6 @@ class Controller( HydrusController.HydrusController ):
         
         HydrusData.Print( 'booting controller' + HC.UNICODE_ELLIPSIS )
         
-        self.frame_icon_pixmap = QG.QPixmap( HydrusStaticDir.GetStaticPath( 'hydrus_32_non-transparent.png' ) )
-        
         self.frame_splash_status = ClientGUISplash.FrameSplashStatus()
         
         self.CreateSplash( 'hydrus client booting' )

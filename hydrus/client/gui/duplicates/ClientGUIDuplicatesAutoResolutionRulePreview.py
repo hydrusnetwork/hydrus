@@ -62,9 +62,9 @@ class PreviewPanel( ClientGUICommon.StaticBox ):
         self._search_results_label.setWordWrap( True )
         self._num_to_fetch = ClientGUICommon.NoneableSpinCtrl( self._search_panel, 256, min = 1, none_phrase = 'fetch all' )
         
-        self._pause_search_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().pause, self._PausePlaySearch )
+        self._pause_search_button = ClientGUICommon.IconButton( self, CC.global_icons().pause, self._PausePlaySearch )
         
-        self._refetch_pairs_button = ClientGUICommon.BetterBitmapButton( self._search_panel, CC.global_pixmaps().refresh, self._RefetchPairs )
+        self._refetch_pairs_button = ClientGUICommon.IconButton( self._search_panel, CC.global_icons().refresh, self._RefetchPairs )
         self._refetch_pairs_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'Fetch a sample of pairs' ) )
         
         #
@@ -72,9 +72,9 @@ class PreviewPanel( ClientGUICommon.StaticBox ):
         self._pairs_still_to_test_label = ClientGUICommon.BetterStaticText( self, label = 'ready to test new pairs' )
         self._pairs_still_to_test_label.setWordWrap( True )
         
-        self._pause_testing_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().pause, self._PausePlayTesting )
+        self._pause_testing_button = ClientGUICommon.IconButton( self, CC.global_icons().pause, self._PausePlayTesting )
         
-        self._retest_pairs_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().refresh, self._RetestPairs )
+        self._retest_pairs_button = ClientGUICommon.IconButton( self, CC.global_icons().refresh, self._RetestPairs )
         self._retest_pairs_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'Retest the fetched pairs' ) )
         
         #
@@ -377,11 +377,11 @@ class PreviewPanel( ClientGUICommon.StaticBox ):
         
         if self._search_paused:
             
-            ClientGUIFunctions.SetBitmapButtonBitmap( self._pause_search_button, CC.global_pixmaps().play )
+            self._pause_search_button.SetIconSmart( CC.global_icons().play )
             
         else:
             
-            ClientGUIFunctions.SetBitmapButtonBitmap( self._pause_search_button, CC.global_pixmaps().pause )
+            self._pause_search_button.SetIconSmart( CC.global_icons().pause )
             
         
         self._DoSearchWork()
@@ -393,11 +393,11 @@ class PreviewPanel( ClientGUICommon.StaticBox ):
         
         if self._testing_paused:
             
-            ClientGUIFunctions.SetBitmapButtonBitmap( self._pause_testing_button, CC.global_pixmaps().play )
+            self._pause_testing_button.SetIconSmart( CC.global_icons().play )
             
         else:
             
-            ClientGUIFunctions.SetBitmapButtonBitmap( self._pause_testing_button, CC.global_pixmaps().pause )
+            self._pause_testing_button.SetIconSmart( CC.global_icons().pause )
             
         
         self._DoTestWork()

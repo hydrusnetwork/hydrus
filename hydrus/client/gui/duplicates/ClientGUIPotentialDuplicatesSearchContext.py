@@ -14,7 +14,6 @@ from hydrus.client.duplicates import ClientDuplicates
 from hydrus.client.duplicates import ClientPotentialDuplicatesSearchContext
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui import ClientGUIAsync
-from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui.search import ClientGUIACDropdown
 from hydrus.client.gui.widgets import ClientGUICommon
 from hydrus.client.gui.widgets import ClientGUIMenuButton
@@ -82,8 +81,8 @@ class EditPotentialDuplicatesSearchContextPanel( ClientGUICommon.StaticBox ):
         self._max_hamming_distance.setSingleStep( 2 )
         
         self._num_potential_duplicate_pairs_label = ClientGUICommon.BetterStaticText( self, ellipsize_end = True )
-        self._pause_count_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().pause, self._PausePlayCount )
-        self._refresh_dupe_counts_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().refresh, self._RefreshPotentialDuplicateIdPairsAndDistances )
+        self._pause_count_button = ClientGUICommon.IconButton( self, CC.global_icons().pause, self._PausePlayCount )
+        self._refresh_dupe_counts_button = ClientGUICommon.IconButton( self, CC.global_icons().refresh, self._RefreshPotentialDuplicateIdPairsAndDistances )
         
         #
         
@@ -297,11 +296,11 @@ class EditPotentialDuplicatesSearchContextPanel( ClientGUICommon.StaticBox ):
         
         if self._count_paused:
             
-            ClientGUIFunctions.SetBitmapButtonBitmap( self._pause_count_button, CC.global_pixmaps().play )
+            self._pause_count_button.SetIconSmart( CC.global_icons().play )
             
         else:
             
-            ClientGUIFunctions.SetBitmapButtonBitmap( self._pause_count_button, CC.global_pixmaps().pause )
+            self._pause_count_button.SetIconSmart( CC.global_icons().pause )
             
         
         self._DoCountWork()

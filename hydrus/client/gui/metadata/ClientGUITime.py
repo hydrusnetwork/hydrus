@@ -52,7 +52,7 @@ class EditCheckerOptions( ClientGUIScrolledPanels.EditPanel ):
         
         super().__init__( parent )
         
-        help_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().help, self._ShowHelp )
+        help_button = ClientGUICommon.IconButton( self, CC.global_icons().help, self._ShowHelp )
         help_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'Show help regarding these checker options.' ) )
         
         help_hbox = ClientGUICommon.WrapInText( help_button, self, 'help for this panel -->', object_name = 'HydrusIndeterminate' )
@@ -708,10 +708,10 @@ class DateTimesCtrl( QW.QWidget ):
         tt += 'Negative values are allowed!'
         self._step.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
         
-        self._copy_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().copy, self._Copy )
+        self._copy_button = ClientGUICommon.IconButton( self, CC.global_icons().copy, self._Copy )
         self._copy_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'Copy timestamp to the clipboard.' ) )
         
-        self._paste_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().paste, self._Paste )
+        self._paste_button = ClientGUICommon.IconButton( self, CC.global_icons().paste, self._Paste )
         self._paste_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'Paste a timestamp. Needs to be a simple string but can handle pretty much anything.' ) )
         
         self._now_button = ClientGUICommon.BetterButton( self, 'now', self._SetNow )

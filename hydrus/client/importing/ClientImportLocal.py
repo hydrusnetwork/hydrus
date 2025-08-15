@@ -764,10 +764,8 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
                 time_to_save = HydrusTime.GetNow() + SAVE_PERIOD
                 
             
-            gauge_num_done = num_files_imported + 1
-            
-            job_status.SetStatusText( 'importing file ' + HydrusNumbers.ValueRangeToPrettyString( gauge_num_done, num_total ) )
-            job_status.SetGauge( gauge_num_done, num_total )  
+            job_status.SetStatusText( 'importing file ' + HydrusNumbers.ValueRangeToPrettyString( num_files_imported, num_total ) )
+            job_status.SetGauge( num_files_imported, num_total )  
             
             path = file_seed.file_seed_data
             

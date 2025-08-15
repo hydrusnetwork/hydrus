@@ -231,6 +231,31 @@ class ClientDBFilesDuplicatesAutoResolutionSearch( ClientDBModule.ClientDBModule
         return media_result_pairs_with_data
         
     
+    def GetDeclinedPairs( self, rule: ClientDuplicatesAutoResolution.DuplicatesAutoResolutionRule, fetch_limit = None ):
+        
+        media_id_pairs_with_data = self.modules_files_duplicates_auto_resolution_storage.GetDeclinedPairs( rule, fetch_limit = fetch_limit )
+        
+        pairs = [ ( smaller_media_id, larger_media_id ) for ( smaller_media_id, larger_media_id, timestamp ) in media_id_pairs_with_data ]
+        
+        all_media_ids = { media_id for pair in pairs for media_id in pair }
+        
+        media_ids_to_king_hash_ids = { media_id : self.modules_files_duplicates.GetKingHashId( media_id ) for media_id in all_media_ids }
+        
+        all_hash_ids = set( media_ids_to_king_hash_ids.values() )
+        
+        media_results = self.modules_media_results.GetMediaResults( all_hash_ids )
+        
+        hash_ids_to_media_results = { media_result.GetHashId() : media_result for media_result in media_results }
+        
+        media_result_pairs_with_data = [
+            ( hash_ids_to_media_results[ media_ids_to_king_hash_ids[ smaller_media_id ] ], hash_ids_to_media_results[ media_ids_to_king_hash_ids[ larger_media_id ] ], timestamp_ms )
+            for ( smaller_media_id, larger_media_id, timestamp_ms )
+            in media_id_pairs_with_data
+        ]
+        
+        return media_result_pairs_with_data
+        
+    
     def GetPendingActionPairs( self, rule: ClientDuplicatesAutoResolution.DuplicatesAutoResolutionRule, fetch_limit = None ):
         
         hash_id_pairs = self.modules_files_duplicates_auto_resolution_storage.GetPendingActionPairs( rule, fetch_limit = fetch_limit )
@@ -245,5 +270,24 @@ class ClientDBFilesDuplicatesAutoResolutionSearch( ClientDBModule.ClientDBModule
         tables_and_columns = []
         
         return tables_and_columns
+        
+    
+    def RescindDeclinedPairs( self, rule: ClientDuplicatesAutoResolution.DuplicatesAutoResolutionRule, media_result_pairs ):
+        
+        for ( media_result_a, media_result_b ) in media_result_pairs:
+            
+            hash_id_a = media_result_a.GetHashId()
+            hash_id_b = media_result_b.GetHashId()
+            
+            media_id_a = self.modules_files_duplicates.GetMediaId( hash_id_a )
+            media_id_b = self.modules_files_duplicates.GetMediaId( hash_id_b )
+            
+            smaller_media_id = min( media_id_a, media_id_b )
+            larger_media_id = max( media_id_a, media_id_b )
+            
+            pair = ( smaller_media_id, larger_media_id )
+            
+            self.modules_files_duplicates_auto_resolution_storage.SetPairsToSimpleQueue( rule, ( pair, ), ClientDuplicatesAutoResolution.DUPLICATE_STATUS_NOT_SEARCHED )
+            
         
     

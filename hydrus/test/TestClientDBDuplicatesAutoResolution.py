@@ -3,8 +3,11 @@ import time
 import typing
 import unittest
 
+from unittest import mock
+
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusStaticDir
+from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientLocation
@@ -1025,5 +1028,54 @@ class TestClientDBDuplicatesAutoResolution( unittest.TestCase ):
         actioned_pairs_with_info = self._read( 'duplicates_auto_resolution_actioned_pairs', rule_1_read )
         
         self.assertEqual( actioned_pairs_with_info, [] )
+        
+    
+    def test_rules_semi_resolution_deny_fetch_and_rescind( self ):
+        
+        # two pairs, and our search gets both, and one tests ok--we deny it
+        
+        hashes = self._semi_resolution_setup()
+        
+        rules_we_read = self._read( 'duplicates_auto_resolution_rules_with_counts' )
+        
+        rule_1_read = rules_we_read[0]
+        
+        pending_action_pairs = self._read( 'duplicates_auto_resolution_pending_action_pairs', rule_1_read )
+        
+        [ ( media_result_1, media_result_2 ) ] = pending_action_pairs
+        
+        with mock.patch.object( HydrusTime, 'GetNowMS', return_value = 123456 ):
+            
+            self._write( 'duplicates_auto_resolution_deny_pending_pairs', rule_1_read, [ ( media_result_1, media_result_2 ) ] )
+            
+            rules_we_read = self._read( 'duplicates_auto_resolution_rules_with_counts' )
+            
+            rule_1_read = rules_we_read[0]
+            
+            self._compare_counts_cache( rule_1_read.GetCountsCacheDuplicate(), { ClientDuplicatesAutoResolution.DUPLICATE_STATUS_USER_DECLINED : 1, ClientDuplicatesAutoResolution.DUPLICATE_STATUS_MATCHES_SEARCH_FAILED_TEST : 1 } )
+            
+            #
+            
+            declined_pairs_with_info = self._read( 'duplicates_auto_resolution_declined_pairs', rule_1_read )
+            
+            [ ( read_media_result_smaller, read_media_result_larger, timestamp_ms ) ] = declined_pairs_with_info
+            
+            self.assertEqual( { read_media_result_smaller, read_media_result_larger }, { media_result_1, media_result_2 } )
+            self.assertTrue( timestamp_ms, 123456 )
+            
+        
+        #
+        
+        self._write( 'duplicates_auto_resolution_rescind_declined_pairs', rule_1_read, [ ( media_result_1, media_result_2 ) ] )
+        
+        rules_we_read = self._read( 'duplicates_auto_resolution_rules_with_counts' )
+        
+        rule_1_read = rules_we_read[0]
+        
+        self._compare_counts_cache( rule_1_read.GetCountsCacheDuplicate(), { ClientDuplicatesAutoResolution.DUPLICATE_STATUS_NOT_SEARCHED : 1, ClientDuplicatesAutoResolution.DUPLICATE_STATUS_MATCHES_SEARCH_FAILED_TEST : 1 } )
+        
+        declined_pairs_with_info = self._read( 'duplicates_auto_resolution_declined_pairs', rule_1_read )
+        
+        self.assertEqual( declined_pairs_with_info, [] )
         
     

@@ -1039,7 +1039,7 @@ class FleshOutPredicatePanel( ClientGUIScrolledPanels.EditPanel ):
             
             super().__init__( parent )
             
-            self._defaults_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().star, self._DefaultsMenu )
+            self._defaults_button = ClientGUICommon.IconButton( self, CC.global_icons().star, self._DefaultsMenu )
             self._defaults_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'Set a new default.' ) )
             
             self._predicate_panel = predicate_panel_class( self, *args )

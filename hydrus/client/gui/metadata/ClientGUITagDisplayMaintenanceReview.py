@@ -128,7 +128,7 @@ class ReviewTagDisplayMaintenancePanel( ClientGUIScrolledPanels.ReviewPanel ):
             
             self._progress = ClientGUICommon.TextAndGauge( self )
             
-            self._refresh_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().refresh, self._StartRefresh )
+            self._refresh_button = ClientGUICommon.IconButton( self, CC.global_icons().refresh, self._StartRefresh )
             
             self._go_faster_button = ClientGUICommon.BetterButton( self, 'work hard now!', self._SyncFaster )
             

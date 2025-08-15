@@ -1793,11 +1793,11 @@ class ServiceRepository( ServiceRestricted ):
                 
                 for ( i, update_hash ) in enumerate( update_hashes ):
                     
-                    status = 'update ' + HydrusNumbers.ValueRangeToPrettyString( i + 1, len( update_hashes ) )
+                    status = 'update ' + HydrusNumbers.ValueRangeToPrettyString( i, len( update_hashes ) )
                     
                     CG.client_controller.frame_splash_status.SetText( status, print_to_log = False )
                     job_status.SetStatusText( status )
-                    job_status.SetGauge( i + 1, len( update_hashes ) )
+                    job_status.SetGauge( i, len( update_hashes ) )
                     
                     with self._lock:
                         
@@ -1991,7 +1991,7 @@ class ServiceRepository( ServiceRestricted ):
                 
                 for ( definition_hash, content_types ) in definition_hashes_and_content_types:
                     
-                    progress_string = HydrusNumbers.ValueRangeToPrettyString( num_updates_done + 1, num_updates_to_do )
+                    progress_string = HydrusNumbers.ValueRangeToPrettyString( num_updates_done, num_updates_to_do )
                     
                     splash_title = '{} sync: processing updates {}'.format( self._name, progress_string )
                     
@@ -2120,7 +2120,7 @@ class ServiceRepository( ServiceRestricted ):
                 
                 for ( content_hash, content_types ) in content_hashes_and_content_types:
                     
-                    progress_string = HydrusNumbers.ValueRangeToPrettyString( num_updates_done + 1, num_updates_to_do )
+                    progress_string = HydrusNumbers.ValueRangeToPrettyString( num_updates_done, num_updates_to_do )
                     
                     splash_title = '{} sync: processing updates {}'.format( self._name, progress_string )
                     
@@ -2739,11 +2739,11 @@ class ServiceRepository( ServiceRestricted ):
                 
                 for ( i, thumbnail_hash ) in enumerate( thumbnail_hashes ):
                     
-                    status = 'thumbnail ' + HydrusNumbers.ValueRangeToPrettyString( i + 1, num_to_do )
+                    status = 'thumbnail ' + HydrusNumbers.ValueRangeToPrettyString( i, num_to_do )
                     
                     CG.client_controller.frame_splash_status.SetText( status, print_to_log = False )
                     job_status.SetStatusText( status )
-                    job_status.SetGauge( i + 1, num_to_do )
+                    job_status.SetGauge( i, num_to_do )
                     
                     with self._lock:
                         
@@ -2999,8 +2999,8 @@ class ServiceIPFS( ServiceRemote ):
                     return
                     
                 
-                job_status.SetStatusText( 'ensuring files are pinned: ' + HydrusNumbers.ValueRangeToPrettyString( i + 1, len( hashes ) ) )
-                job_status.SetGauge( i + 1, len( hashes ) )
+                job_status.SetStatusText( 'ensuring files are pinned: ' + HydrusNumbers.ValueRangeToPrettyString( i, len( hashes ) ) )
+                job_status.SetGauge( i, len( hashes ) )
                 
                 media_result = CG.client_controller.Read( 'media_result', hash )
                 

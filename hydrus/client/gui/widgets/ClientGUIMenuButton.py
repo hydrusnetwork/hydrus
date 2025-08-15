@@ -62,7 +62,7 @@ class MenuMixin( object ):
         
     
 
-class MenuBitmapButton( MenuMixin, ClientGUICommon.BetterBitmapButton ):
+class MenuBitmapButton( MenuMixin, ClientGUICommon.IconButton ):
     
     def __init__( self, parent, bitmap, menu_items ):
         

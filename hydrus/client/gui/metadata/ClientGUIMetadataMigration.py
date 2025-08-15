@@ -53,7 +53,7 @@ class EditSingleFileMetadataRouterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         menu_items.append( ( 'normal', 'open the html sidecars help', 'Open the help page for sidecars in your web browser.', page_func ) )
         
-        help_button = ClientGUIMenuButton.MenuBitmapButton( self, CC.global_pixmaps().help, menu_items )
+        help_button = ClientGUIMenuButton.MenuBitmapButton( self, CC.global_icons().help, menu_items )
         
         help_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'Show help regarding sidecars.' ) )
         

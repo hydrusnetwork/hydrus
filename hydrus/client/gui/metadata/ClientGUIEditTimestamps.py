@@ -260,10 +260,10 @@ class EditFileTimestampsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUISc
         
         menu_items.append( ( 'normal', 'all file service times', 'Copy every imported/deleted/previously imported time here for pasting in another file\'s dialog.', c ) )
         
-        self._copy_button = ClientGUIMenuButton.MenuBitmapButton( self, CC.global_pixmaps().copy, menu_items )
+        self._copy_button = ClientGUIMenuButton.MenuBitmapButton( self, CC.global_icons().copy, menu_items )
         self._copy_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'Copy timestamps to the clipboard.' ) )
         
-        self._paste_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().paste, self._Paste )
+        self._paste_button = ClientGUICommon.IconButton( self, CC.global_icons().paste, self._Paste )
         self._paste_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'Paste timestamps from another timestamps dialog.\n\nCannot be simple strings, this needs to be rich data from another dialog. It also cannot create new web domain entries if the new file does not share entries which what was copied!' ) )
         
         #

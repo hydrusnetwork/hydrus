@@ -7,6 +7,7 @@ from qtpy import QtGui as QG
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 
+from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
 from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIFunctions
@@ -485,7 +486,7 @@ class NewDialog( QP.Dialog ):
         
         self._new_options = CG.client_controller.new_options
         
-        self.setWindowIcon( QG.QIcon( CG.client_controller.frame_icon_pixmap ) )
+        self.setWindowIcon( CC.global_icons().hydrus_frame )
         
         CG.client_controller.ResetIdleTimer()
         
@@ -757,7 +758,7 @@ class Frame( QW.QWidget ):
         
         self._new_options = CG.client_controller.new_options
         
-        self.setWindowIcon( QG.QIcon( CG.client_controller.frame_icon_pixmap ) )
+        self.setWindowIcon( CC.global_icons().hydrus_frame )
         
         CG.client_controller.ResetIdleTimer()
         
@@ -785,7 +786,7 @@ class MainFrame( QW.QMainWindow ):
         
         self._new_options = CG.client_controller.new_options
         
-        self.setWindowIcon( QG.QIcon( CG.client_controller.frame_icon_pixmap ) )
+        self.setWindowIcon( CC.global_icons().hydrus_frame )
         
         self._widget_event_filter = QP.WidgetEventFilter( self )
         

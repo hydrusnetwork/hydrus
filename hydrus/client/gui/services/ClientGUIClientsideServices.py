@@ -1455,7 +1455,7 @@ class EditServiceStarRatingsSubPanel( ClientGUICommon.StaticBox ):
         
         menu_items.append( ( 'normal', 'open the ratings help', 'Open the help page for ratings.', page_func ) )
         
-        help_button = ClientGUIMenuButton.MenuBitmapButton( self, CC.global_pixmaps().help, menu_items )
+        help_button = ClientGUIMenuButton.MenuBitmapButton( self, CC.global_icons().help, menu_items )
         
         help_hbox = ClientGUICommon.WrapInText( help_button, self, 'help -->', object_name = 'HydrusIndeterminate' )
         
@@ -1729,7 +1729,7 @@ class ReviewServicePanel( QW.QWidget ):
         
         self._service_key_button = ClientGUICommon.BetterButton( self, 'copy service key', CG.client_controller.pub, 'clipboard', 'text', service.GetServiceKey().hex() )
         
-        self._refresh_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().refresh, self._RefreshButton )
+        self._refresh_button = ClientGUICommon.IconButton( self, CC.global_icons().refresh, self._RefreshButton )
         
         service_type = self._service.GetServiceType()
         
@@ -1862,12 +1862,6 @@ class ReviewServicePanel( QW.QWidget ):
             c_u_p_total_weight_processed = 0
             
             update_speed_string = ''
-            
-            content_update_index_string = 'content row ' + HydrusNumbers.ValueRangeToPrettyString( c_u_p_total_weight_processed, c_u_p_num_rows ) + ': '
-            
-            job_status.SetStatusText( content_update_index_string + 'committing' + update_speed_string )
-            
-            job_status.SetGauge( c_u_p_total_weight_processed, c_u_p_num_rows )
             
             for ( content_updates, weight ) in content_update_package.IterateContentUpdateChunks():
                 
@@ -2569,7 +2563,7 @@ class ReviewServiceRestrictedSubPanel( ClientGUICommon.StaticBox ):
         
         self._rule_widgets = []
         
-        self._network_sync_paused_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().pause, self._PausePlayNetworkSync )
+        self._network_sync_paused_button = ClientGUICommon.IconButton( self, CC.global_icons().pause, self._PausePlayNetworkSync )
         self._network_sync_paused_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'pause/play account sync' ) )
         
         self._refresh_account_button = ClientGUICommon.BetterButton( self, 'refresh account', self._RefreshAccount )
@@ -2665,11 +2659,11 @@ class ReviewServiceRestrictedSubPanel( ClientGUICommon.StaticBox ):
         
         if self._service.IsPausedNetworkSync():
             
-            ClientGUIFunctions.SetBitmapButtonBitmap( self._network_sync_paused_button, CC.global_pixmaps().play )
+            self._network_sync_paused_button.SetIconSmart( CC.global_icons().play )
             
         else:
             
-            ClientGUIFunctions.SetBitmapButtonBitmap( self._network_sync_paused_button, CC.global_pixmaps().pause )
+            self._network_sync_paused_button.SetIconSmart( CC.global_icons().pause )
             
         
         #
@@ -2832,7 +2826,7 @@ class ReviewServiceRepositorySubPanel( QW.QWidget ):
         
         self._download_progress = ClientGUICommon.TextAndGauge( self._network_panel )
         
-        self._update_downloading_paused_button = ClientGUICommon.BetterBitmapButton( self._network_panel, CC.global_pixmaps().pause, self._PausePlayUpdateDownloading )
+        self._update_downloading_paused_button = ClientGUICommon.IconButton( self._network_panel, CC.global_icons().pause, self._PausePlayUpdateDownloading )
         self._update_downloading_paused_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'pause/play update downloading' ) )
         
         self._service_info_button = ClientGUICommon.BetterButton( self._network_panel, 'fetch service info', self._FetchServiceInfo )
@@ -2851,7 +2845,7 @@ class ReviewServiceRepositorySubPanel( QW.QWidget ):
         
         self._processing_panel = ClientGUICommon.StaticBox( self, 'processing sync', can_expand = True, start_expanded = False )
         
-        self._update_processing_paused_button = ClientGUICommon.BetterBitmapButton( self._processing_panel, CC.global_pixmaps().pause, self._PausePlayUpdateProcessing )
+        self._update_processing_paused_button = ClientGUICommon.IconButton( self._processing_panel, CC.global_icons().pause, self._PausePlayUpdateProcessing )
         self._update_processing_paused_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'pause/play all update processing' ) )
         
         self._processing_definitions_progress = ClientGUICommon.TextAndGauge( self._processing_panel )
@@ -2866,7 +2860,7 @@ class ReviewServiceRepositorySubPanel( QW.QWidget ):
             
             processing_progress = ClientGUICommon.TextAndGauge( self._processing_panel )
             
-            processing_paused_button = ClientGUICommon.BetterBitmapButton( self._processing_panel, CC.global_pixmaps().pause, self._PausePlayUpdateProcessing, content_type )
+            processing_paused_button = ClientGUICommon.IconButton( self._processing_panel, CC.global_icons().pause, self._PausePlayUpdateProcessing, content_type )
             processing_paused_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'pause/play update processing for {}'.format( HC.content_type_string_lookup[ content_type ] ) ) )
             
             self._content_types_to_gauges_and_buttons[ content_type ] = ( processing_progress, processing_paused_button )
@@ -3051,8 +3045,8 @@ class ReviewServiceRepositorySubPanel( QW.QWidget ):
                                 
                             finally:
                                 
-                                job_status.SetStatusText( HydrusNumbers.ValueRangeToPrettyString( i + 1, num_to_do ) )
-                                job_status.SetGauge( i + 1, num_to_do )
+                                job_status.SetStatusText( HydrusNumbers.ValueRangeToPrettyString( i, num_to_do ) )
+                                job_status.SetGauge( i, num_to_do )
                                 
                             
                         
@@ -3165,11 +3159,11 @@ class ReviewServiceRepositorySubPanel( QW.QWidget ):
         
         if self._service.IsPausedUpdateDownloading():
             
-            ClientGUIFunctions.SetBitmapButtonBitmap( self._update_downloading_paused_button, CC.global_pixmaps().play )
+            self._update_downloading_paused_button.SetIconSmart( CC.global_icons().play )
             
         else:
             
-            ClientGUIFunctions.SetBitmapButtonBitmap( self._update_downloading_paused_button, CC.global_pixmaps().pause )
+            self._update_downloading_paused_button.SetIconSmart( CC.global_icons().pause )
             
         
         #
@@ -3185,11 +3179,11 @@ class ReviewServiceRepositorySubPanel( QW.QWidget ):
         
         if all_processing_paused:
             
-            ClientGUIFunctions.SetBitmapButtonBitmap( self._update_processing_paused_button, CC.global_pixmaps().play )
+            self._update_processing_paused_button.SetIconSmart( CC.global_icons().play )
             
         else:
             
-            ClientGUIFunctions.SetBitmapButtonBitmap( self._update_processing_paused_button, CC.global_pixmaps().pause )
+            self._update_processing_paused_button.SetIconSmart( CC.global_icons().pause )
             
         
         for ( gauge, button ) in self._content_types_to_gauges_and_buttons.values():
@@ -3203,11 +3197,11 @@ class ReviewServiceRepositorySubPanel( QW.QWidget ):
             
             if self._service.IsPausedUpdateProcessing( content_type ):
                 
-                ClientGUIFunctions.SetBitmapButtonBitmap( button, CC.global_pixmaps().play )
+                button.SetIconSmart( CC.global_icons().play )
                 
             else:
                 
-                ClientGUIFunctions.SetBitmapButtonBitmap( button, CC.global_pixmaps().pause )
+                button.SetIconSmart( CC.global_icons().pause )
                 
             
         

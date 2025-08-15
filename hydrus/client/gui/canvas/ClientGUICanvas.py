@@ -1950,7 +1950,7 @@ class CanvasPanelWithHovers( CanvasPanel ):
         # ratings
         
         RATING_ICON_SET_SIZE = round( self._new_options.GetFloat( 'preview_window_rating_icon_size_px' ) )
-        RATING_INCDEC_SET_WIDTH = round( self._new_options.GetFloat( 'preview_window_rating_incdec_width_px' ) )
+        RATING_INCDEC_SET_HEIGHT = round( self._new_options.GetFloat( 'preview_window_rating_incdec_height_px' ) )
         STAR_DX = RATING_ICON_SET_SIZE
         STAR_DY = RATING_ICON_SET_SIZE
         STAR_PAD = ClientGUIPainterShapes.PAD
@@ -1970,7 +1970,7 @@ class CanvasPanelWithHovers( CanvasPanel ):
             
             rating_state = ClientRatings.GetLikeStateFromMedia( ( self._current_media, ), service_key )
             
-            ClientGUIRatings.DrawLike( painter, like_rating_current_x, current_y, service_key, rating_state, QC.QSize( STAR_DX, STAR_DY ))
+            ClientGUIRatings.DrawLike( painter, like_rating_current_x, current_y, service_key, rating_state, QC.QSize( STAR_DX, STAR_DY ) )
             
             like_rating_current_x -= STAR_DX + STAR_PAD.width()
             
@@ -2005,9 +2005,9 @@ class CanvasPanelWithHovers( CanvasPanel ):
         
         incdec_services.reverse()
         
-        control_width = RATING_INCDEC_SET_WIDTH + 1
+        incdec_rating_current_x = my_width - ( QFRAME_PADDING + VBOX_MARGIN )
         
-        incdec_rating_current_x = my_width - ( control_width ) - ( QFRAME_PADDING + VBOX_MARGIN )
+        control_width = RATING_INCDEC_SET_HEIGHT * 2
         
         for incdec_service in incdec_services:
             
@@ -2015,14 +2015,20 @@ class CanvasPanelWithHovers( CanvasPanel ):
             
             ( rating_state, rating ) = ClientRatings.GetIncDecStateFromMedia( ( self._current_media, ), service_key )
             
-            ClientGUIRatings.DrawIncDec( painter, incdec_rating_current_x, current_y, service_key, rating_state, rating, QC.QSize( round( RATING_INCDEC_SET_WIDTH ), round( RATING_INCDEC_SET_WIDTH / 2 ) ) )
+            incdec_size = ClientGUIRatings.GetIncDecSize( RATING_INCDEC_SET_HEIGHT, rating )
             
-            incdec_rating_current_x -= control_width    #+ STAR_PAD.width() #instead of spacing these out, we will just have them pixel-adjacent in all cases
+            control_width = incdec_size.width() + 1
             
+            incdec_rating_current_x -= control_width
+            
+            ClientGUIRatings.DrawIncDec( painter, incdec_rating_current_x, current_y, service_key, rating_state, rating, incdec_size )
+            
+        
+        incdec_rating_current_x -= control_width
         
         if len( incdec_services ) > 0:
             
-            current_y += round( RATING_INCDEC_SET_WIDTH / 2 ) + round( STAR_PAD.height() / 2 ) + VBOX_SPACING
+            current_y += RATING_INCDEC_SET_HEIGHT + round( STAR_PAD.height() / 2 ) + VBOX_SPACING
             
         
         # icons
@@ -2542,7 +2548,7 @@ class CanvasWithHovers( Canvas ):
         # ratings
         
         RATING_ICON_SET_SIZE = round( self._new_options.GetFloat( 'media_viewer_rating_icon_size_px' ) )
-        RATING_INCDEC_SET_WIDTH = round( self._new_options.GetFloat( 'media_viewer_rating_incdec_width_px' ) )
+        RATING_INCDEC_SET_HEIGHT = round( self._new_options.GetFloat( 'media_viewer_rating_incdec_height_px' ) )
         STAR_DX = RATING_ICON_SET_SIZE
         STAR_DY = RATING_ICON_SET_SIZE
         STAR_PAD = ClientGUIPainterShapes.PAD
@@ -2597,9 +2603,9 @@ class CanvasWithHovers( Canvas ):
         
         incdec_services.reverse()
         
-        control_width = RATING_INCDEC_SET_WIDTH + 1
+        incdec_rating_current_x = my_width - ( QFRAME_PADDING + VBOX_MARGIN )
         
-        incdec_rating_current_x = my_width - ( control_width ) - ( QFRAME_PADDING + VBOX_MARGIN )
+        control_width = RATING_INCDEC_SET_HEIGHT * 2
         
         for incdec_service in incdec_services:
             
@@ -2607,14 +2613,20 @@ class CanvasWithHovers( Canvas ):
             
             ( rating_state, rating ) = ClientRatings.GetIncDecStateFromMedia( ( self._current_media, ), service_key )
             
-            ClientGUIRatings.DrawIncDec( painter, incdec_rating_current_x, current_y, service_key, rating_state, rating, QC.QSize( round( RATING_INCDEC_SET_WIDTH ), round( RATING_INCDEC_SET_WIDTH / 2 ) ) )
+            incdec_size = ClientGUIRatings.GetIncDecSize( RATING_INCDEC_SET_HEIGHT, rating )
             
-            incdec_rating_current_x -= control_width    #+ STAR_PAD.width() #instead of spacing these out, we will just have them pixel-adjacent in all cases
+            control_width = incdec_size.width() + 1
             
+            incdec_rating_current_x -= control_width
+            
+            ClientGUIRatings.DrawIncDec( painter, incdec_rating_current_x, current_y, service_key, rating_state, rating, incdec_size )
+            
+        
+        incdec_rating_current_x -= control_width
         
         if len( incdec_services ) > 0:
             
-            current_y += round( RATING_INCDEC_SET_WIDTH / 2 ) + round( STAR_PAD.height() / 2 ) + VBOX_SPACING
+            current_y += RATING_INCDEC_SET_HEIGHT + round( STAR_PAD.height() / 2 ) + VBOX_SPACING
             
         
         # icons
@@ -2997,7 +3009,7 @@ def THREADCommitDuplicateResults( content_update_packages: list, pairs_info: lis
             have_published_job_status = True
             
         
-        num_done = i + 1
+        num_done = i
         
         job_status.SetStatusText( f'misc file updates: {HydrusNumbers.ValueRangeToPrettyString( num_done, num_to_do )}' )
         job_status.SetGauge( num_done, num_to_do )

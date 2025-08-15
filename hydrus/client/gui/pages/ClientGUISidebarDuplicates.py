@@ -59,7 +59,7 @@ class SidebarDuplicateFilter( ClientGUISidebarCore.Sidebar ):
         #
         
         self._refresh_maintenance_status = ClientGUICommon.BetterStaticText( self._main_left_panel, ellipsize_end = True )
-        self._refresh_maintenance_button = ClientGUICommon.BetterBitmapButton( self._main_left_panel, CC.global_pixmaps().refresh, self._duplicates_manager.RefreshMaintenanceNumbers )
+        self._refresh_maintenance_button = ClientGUICommon.IconButton( self._main_left_panel, CC.global_icons().refresh, self._duplicates_manager.RefreshMaintenanceNumbers )
         
         menu_items = []
         
@@ -70,7 +70,7 @@ class SidebarDuplicateFilter( ClientGUISidebarCore.Sidebar ):
         
         menu_items.append( ( 'check', 'search for potential duplicates at the current distance during idle time/shutdown', 'Tell the client to find duplicate pairs in its normal db maintenance cycles, whether you have that set to idle or shutdown time.', check_manager ) )
         
-        self._cog_button = ClientGUIMenuButton.MenuBitmapButton( self._main_left_panel, CC.global_pixmaps().cog, menu_items )
+        self._cog_button = ClientGUIMenuButton.MenuBitmapButton( self._main_left_panel, CC.global_icons().cog, menu_items )
         
         menu_items = []
         
@@ -78,7 +78,7 @@ class SidebarDuplicateFilter( ClientGUISidebarCore.Sidebar ):
         
         menu_items.append( ( 'normal', 'open the html duplicates help', 'Open the help page for duplicates processing in your web browser.', page_func ) )
         
-        self._help_button = ClientGUIMenuButton.MenuBitmapButton( self._main_left_panel, CC.global_pixmaps().help, menu_items )
+        self._help_button = ClientGUIMenuButton.MenuBitmapButton( self._main_left_panel, CC.global_icons().help, menu_items )
         
         #
         
@@ -100,7 +100,7 @@ class SidebarDuplicateFilter( ClientGUISidebarCore.Sidebar ):
         
         self._num_searched = ClientGUICommon.TextAndGauge( self._searching_panel )
         
-        self._search_button = ClientGUICommon.BetterBitmapButton( self._searching_panel, CC.global_pixmaps().play, self._duplicates_manager.StartPotentialsSearch )
+        self._search_button = ClientGUICommon.IconButton( self._searching_panel, CC.global_icons().play, self._duplicates_manager.StartPotentialsSearch )
         
         #
         
@@ -148,12 +148,17 @@ class SidebarDuplicateFilter( ClientGUISidebarCore.Sidebar ):
         
         filter_group_mode = page_manager.GetVariable( 'filter_group_mode' )
         
-        self._filter_group_mode = QW.QCheckBox( self._filtering_panel )
+        choice_tuples = [
+            ( 'mixed pairs', False ),
+            ( 'group mode', True )
+        ]
+        
+        self._filter_group_mode = ClientGUIMenuButton.MenuChoiceButton( self, choice_tuples )
         self._filter_group_mode.setToolTip( ClientGUIFunctions.WrapToolTip( 'In group mode, each batch in the duplicate filter will include one entire group of files that are transitively related, much like you see when hitting "show some random potential duplicates". The filter will iteratively work on the group until all relationships are cleared, and then move on to another. Groups are selected randomly.' ) )
         
-        self._filter_group_mode.setChecked( filter_group_mode )
+        self._filter_group_mode.SetValue( filter_group_mode )
         
-        self._filter_group_mode.clicked.connect( self._FilterGroupModeChanged )
+        self._filter_group_mode.valueChanged.connect( self._FilterGroupModeChanged )
         
         self._launch_filter = ClientGUICommon.BetterButton( self._filtering_panel, 'launch the filter', self._LaunchFilter )
         
@@ -217,8 +222,12 @@ class SidebarDuplicateFilter( ClientGUISidebarCore.Sidebar ):
         
         self._options_panel.Add( self._edit_merge_options, CC.FLAGS_EXPAND_PERPENDICULAR )
         
-        self._filtering_panel.Add( self._potential_duplicates_sort_widget, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._filtering_panel.Add( ClientGUICommon.WrapInText( self._filter_group_mode, self._filtering_panel, 'group mode: ' ), CC.FLAGS_ON_RIGHT )
+        hbox = QP.HBoxLayout()
+        
+        QP.AddToLayout( hbox, self._potential_duplicates_sort_widget, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( hbox, self._filter_group_mode, CC.FLAGS_CENTER )
+        
+        self._filtering_panel.Add( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         self._filtering_panel.Add( self._launch_filter, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         random_filtering_panel.Add( self._media_sort_widget, CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -300,7 +309,7 @@ class SidebarDuplicateFilter( ClientGUISidebarCore.Sidebar ):
     
     def _FilterGroupModeChanged( self ):
         
-        filter_group_mode = self._filter_group_mode.isChecked()
+        filter_group_mode = self._filter_group_mode.GetValue()
         
         self._page_manager.SetVariable( 'filter_group_mode', filter_group_mode )
         
@@ -310,7 +319,7 @@ class SidebarDuplicateFilter( ClientGUISidebarCore.Sidebar ):
         potential_duplicates_search_context = self._potential_duplicates_search_context.GetValue()
         
         ( duplicate_pair_sort_type, duplicate_pair_sort_asc ) = self._potential_duplicates_sort_widget.GetValue()
-        filter_group_mode = self._filter_group_mode.isChecked()
+        filter_group_mode = self._filter_group_mode.GetValue()
         
         canvas_frame = ClientGUICanvasFrame.CanvasFrame( self.window() )
         

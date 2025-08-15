@@ -34,6 +34,10 @@ class ReviewActionsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         self._pending_action_pairs = []
         self._actioned_pairs_with_info = []
+        self._declined_pairs_with_info = []
+        
+        self._we_have_done_actions = False
+        self._we_have_done_declines = False
         
         self._main_notebook = ClientGUICommon.BetterNotebook( self )
         
@@ -41,7 +45,7 @@ class ReviewActionsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         self._pending_actions_label = ClientGUICommon.BetterStaticText( self._pending_actions_panel, 'initialising' )
         
-        self._refetch_pending_actions_button = ClientGUICommon.BetterBitmapButton( self._pending_actions_panel, CC.global_pixmaps().refresh, self._RefetchPendingActionPairs )
+        self._refetch_pending_actions_button = ClientGUICommon.IconButton( self._pending_actions_panel, CC.global_icons().refresh, self._RefetchPendingActionPairs )
         self._refetch_pending_actions_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'Refresh the pending pairs' ) )
         
         self._pending_pairs_num_to_fetch = ClientGUICommon.NoneableSpinCtrl( self._pending_actions_panel, 256, min = 1, none_phrase = 'fetch all' )
@@ -59,14 +63,29 @@ class ReviewActionsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         self._actioned_pairs_label = ClientGUICommon.BetterStaticText( self._actioned_pairs_panel, 'initialising' )
         
-        self._refetch_actioned_pairs_button = ClientGUICommon.BetterBitmapButton( self._actioned_pairs_panel, CC.global_pixmaps().refresh, self._RefetchActionedPairs )
+        self._refetch_actioned_pairs_button = ClientGUICommon.IconButton( self._actioned_pairs_panel, CC.global_icons().refresh, self._RefetchActionedPairs )
         self._refetch_actioned_pairs_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'Refresh the actioned pairs' ) )
         
         self._actioned_pairs_num_to_fetch = ClientGUICommon.NoneableSpinCtrl( self._actioned_pairs_panel, 256, min = 1, none_phrase = 'fetch all' )
         
         self._actioned_pairs_pair_list = ThumbnailPairList.ThumbnailPairListTakenAutoResolutionAction( self._actioned_pairs_panel )
         
-        self._undo_selected_button = ClientGUICommon.BetterButton( self._pending_actions_panel, 'undo', self._UndoSelectedActions )
+        self._undo_selected_actioned_button = ClientGUICommon.BetterButton( self._actioned_pairs_panel, 'undo', self._UndoSelectedActioned )
+        
+        #
+        
+        self._declined_pairs_panel = ClientGUICommon.StaticBox( self, 'denied pairs' )
+        
+        self._declined_pairs_label = ClientGUICommon.BetterStaticText( self._declined_pairs_panel, 'initialising' )
+        
+        self._refetch_declined_pairs_button = ClientGUICommon.IconButton( self._declined_pairs_panel, CC.global_icons().refresh, self._RefetchDeclinedPairs )
+        self._refetch_declined_pairs_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'Refresh the declined pairs' ) )
+        
+        self._declined_pairs_num_to_fetch = ClientGUICommon.NoneableSpinCtrl( self._declined_pairs_panel, 256, min = 1, none_phrase = 'fetch all' )
+        
+        self._declined_pairs_pair_list = ThumbnailPairList.ThumbnailPairListDeclinedAutoResolutionAction( self._declined_pairs_panel )
+        
+        self._undo_selected_declined_button = ClientGUICommon.BetterButton( self._declined_pairs_panel, 'undo', self._UndoSelectedDeclined )
         
         #
         
@@ -112,12 +131,32 @@ class ReviewActionsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         self._actioned_pairs_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         self._actioned_pairs_panel.Add( self._actioned_pairs_pair_list, CC.FLAGS_EXPAND_BOTH_WAYS )
-        self._actioned_pairs_panel.Add( self._undo_selected_button, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._actioned_pairs_panel.Add( self._undo_selected_actioned_button, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        #
+        
+        hbox = QP.HBoxLayout()
+        
+        QP.AddToLayout( hbox, self._declined_pairs_label, CC.FLAGS_CENTER_PERPENDICULAR_EXPAND_DEPTH )
+        QP.AddToLayout( hbox, self._refetch_declined_pairs_button, CC.FLAGS_CENTER )
+        
+        self._declined_pairs_panel.Add( hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        rows = []
+        
+        rows.append( ( 'only sample this many: ', self._declined_pairs_num_to_fetch ) )
+        
+        gridbox = ClientGUICommon.WrapInGrid( self, rows )
+        
+        self._declined_pairs_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        self._declined_pairs_panel.Add( self._declined_pairs_pair_list, CC.FLAGS_EXPAND_BOTH_WAYS )
+        self._declined_pairs_panel.Add( self._undo_selected_declined_button, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         #
         
         self._main_notebook.addTab( self._pending_actions_panel, 'pending actions' )
         self._main_notebook.addTab( self._actioned_pairs_panel, 'actions taken' )
+        self._main_notebook.addTab( self._declined_pairs_panel, 'actions denied' )
         
         vbox = QP.VBoxLayout()
         
@@ -134,13 +173,16 @@ class ReviewActionsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         self._pending_actions_pair_list.activated.connect( self._PendingRowActivated )
         self._actioned_pairs_pair_list.activated.connect( self._ActionedRowActivated )
+        self._declined_pairs_pair_list.activated.connect( self._DeclinedRowActivated )
         
         self._enter_catcher_pending = ThumbnailPairList.ListEnterCatcher( self, self._pending_actions_pair_list )
         self._enter_catcher_actioned = ThumbnailPairList.ListEnterCatcher( self, self._actioned_pairs_pair_list )
+        self._enter_catcher_declined = ThumbnailPairList.ListEnterCatcher( self, self._declined_pairs_pair_list )
         
         self._main_notebook.currentChanged.connect( self._CurrentPageChanged )
         
         self._RefetchPendingActionPairs()
+        self._RefetchDeclinedPairs()
         
         CG.client_controller.sub( self, 'CloseFromEditDialog', 'edit_duplicates_auto_resolution_rules_dialog_opening' )
         
@@ -239,6 +281,15 @@ class ReviewActionsPanel( ClientGUIScrolledPanels.ReviewPanel ):
                 self._RefetchPendingActionPairs()
                 
             
+            if self._main_notebook.currentWidget() == self._declined_pairs_panel:
+                
+                self._RefetchActionedPairs()
+                
+            else:
+                
+                self._we_have_done_actions = True
+                
+            
         
         original_approve_button_label = self._approve_selected_button.text()
         
@@ -262,11 +313,36 @@ class ReviewActionsPanel( ClientGUIScrolledPanels.ReviewPanel ):
             
         elif page == self._actioned_pairs_panel:
             
-            if len( self._actioned_pairs_with_info ) == 0:
+            if len( self._actioned_pairs_with_info ) == 0 or self._we_have_done_actions:
                 
                 self._RefetchActionedPairs()
                 
+                self._we_have_done_declines = False
+                
             
+        elif page == self._declined_pairs_panel:
+            
+            if len( self._declined_pairs_with_info ) == 0 or self._we_have_done_declines:
+                
+                self._RefetchDeclinedPairs()
+                
+                self._we_have_done_declines = False
+                
+            
+        
+    
+    def _DeclinedRowActivated( self, model_index: QC.QModelIndex ):
+        
+        if not model_index.isValid():
+            
+            return
+            
+        
+        row = model_index.row()
+        
+        ( media_result_1, media_result_2 ) = self._declined_pairs_pair_list.model().GetMediaResultPair( row )
+        
+        self._ShowMediaViewer( media_result_1, media_result_2 )
         
     
     def _DenySelectedPending( self ):
@@ -347,6 +423,15 @@ class ReviewActionsPanel( ClientGUIScrolledPanels.ReviewPanel ):
                 self._RefetchPendingActionPairs()
                 
             
+            if self._main_notebook.currentWidget() == self._declined_pairs_panel:
+                
+                self._RefetchDeclinedPairs()
+                
+            else:
+                
+                self._we_have_done_declines = True
+                
+            
         
         original_deny_button_label = self._deny_selected_button.text()
         
@@ -397,6 +482,36 @@ class ReviewActionsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         fetch_limit = self._actioned_pairs_num_to_fetch.GetValue()
         
         self._actioned_pairs_label.setText( f'fetching and calculating pairs{HC.UNICODE_ELLIPSIS}' )
+        
+        async_job = ClientGUIAsync.AsyncQtJob( self, work_callable, publish_callable )
+        
+        async_job.start()
+        
+    
+    def _RefetchDeclinedPairs( self ):
+        
+        def work_callable():
+            
+            declined_pairs_with_info = CG.client_controller.Read( 'duplicates_auto_resolution_declined_pairs', rule, fetch_limit = fetch_limit )
+            
+            return declined_pairs_with_info
+            
+        
+        def publish_callable( declined_pairs_with_info ):
+            
+            self._declined_pairs_with_info = declined_pairs_with_info
+            
+            self._declined_pairs_label.setText( f'Found {HydrusNumbers.ToHumanInt(len(declined_pairs_with_info))} pairs.' )
+            
+            self._declined_pairs_pair_list.SetData( self._declined_pairs_with_info )
+            
+        
+        self._declined_pairs_pair_list.SetData( [] )
+        
+        rule = self._rule
+        fetch_limit = self._declined_pairs_num_to_fetch.GetValue()
+        
+        self._declined_pairs_label.setText( f'fetching and calculating pairs{HC.UNICODE_ELLIPSIS}' )
         
         async_job = ClientGUIAsync.AsyncQtJob( self, work_callable, publish_callable )
         
@@ -471,7 +586,7 @@ class ReviewActionsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         canvas_frame.SetCanvas( canvas_window )
         
     
-    def _UndoSelectedActions( self ):
+    def _UndoSelectedActioned( self ):
         
         model = self._actioned_pairs_pair_list.model()
         indices = self._actioned_pairs_pair_list.selectedIndexes()
@@ -499,6 +614,32 @@ class ReviewActionsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         CG.client_controller.WriteSynchronous( 'dissolve_duplicates_group', all_hashes )
         
         self._RefetchActionedPairs()
+        
+    
+    def _UndoSelectedDeclined( self ):
+        
+        model = self._declined_pairs_pair_list.model()
+        indices = self._declined_pairs_pair_list.selectedIndexes()
+        
+        selected_pairs = { model.GetMediaResultPair( index.row() ) for index in indices }
+        
+        if len( selected_pairs ) == 0:
+            
+            return
+            
+        
+        message = f'Are you sure you want to undo your deny decisions for these {HydrusNumbers.ToHumanInt( len( selected_pairs ) )} pairs? They will be queued up for re-search.'
+        
+        result = ClientGUIDialogsQuick.GetYesNo( self, message )
+        
+        if result != QW.QDialog.DialogCode.Accepted:
+            
+            return
+            
+        
+        CG.client_controller.WriteSynchronous( 'duplicates_auto_resolution_rescind_declined_pairs', self._rule, selected_pairs )
+        
+        self._RefetchDeclinedPairs()
         
     
     def CloseFromEditDialog( self ):

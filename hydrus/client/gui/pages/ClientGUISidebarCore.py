@@ -169,7 +169,7 @@ class Sidebar( QW.QScrollArea ):
         self.setWidgetResizable( True )
         #self.setFrameStyle( QW.QFrame.Shape.Panel | QW.QFrame.Shadow.Sunken )
         #self.setLineWidth( 2 )
-        #self.setHorizontalScrollBarPolicy( QC.Qt.ScrollBarAlwaysOff )
+        self.setHorizontalScrollBarPolicy( QC.Qt.ScrollBarPolicy.ScrollBarAsNeeded )
         self.setVerticalScrollBarPolicy( QC.Qt.ScrollBarPolicy.ScrollBarAsNeeded )
         
         self._page_manager = page_manager

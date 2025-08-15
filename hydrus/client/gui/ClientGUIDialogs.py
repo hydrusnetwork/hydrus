@@ -2,7 +2,6 @@ import re
 
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
-from qtpy import QtGui as QG
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
@@ -43,7 +42,7 @@ class Dialog( QP.Dialog ):
         
         self._new_options = CG.client_controller.new_options
         
-        self.setWindowIcon( QG.QIcon( CG.client_controller.frame_icon_pixmap ) )
+        self.setWindowIcon( CC.global_icons().hydrus_frame )
         
         self._widget_event_filter = QP.WidgetEventFilter( self )
         

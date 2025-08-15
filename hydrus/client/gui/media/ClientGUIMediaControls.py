@@ -47,42 +47,44 @@ def SetMute( volume_type, mute ):
     
     CG.client_controller.pub( 'new_audio_mute' )
     
-class AudioMuteButton( ClientGUICommon.BetterBitmapButton ):
+
+class AudioMuteButton( ClientGUICommon.IconButton ):
     
     def __init__( self, parent, volume_type ):
         
         self._volume_type = volume_type
         
-        pixmap = self._GetCorrectPixmap()
+        icon = self._GetCorrectIcon()
         
-        super().__init__( parent, pixmap, FlipMute, self._volume_type )
+        super().__init__( parent, icon, FlipMute, self._volume_type )
         
         CG.client_controller.sub( self, 'UpdateMute', 'new_audio_mute' )
         
     
-    def _GetCorrectPixmap( self ):
+    def _GetCorrectIcon( self ):
         
         ( mute_option_name, volume_option_name ) = volume_types_to_option_names[ self._volume_type ]
         
         if CG.client_controller.new_options.GetBoolean( mute_option_name ):
             
-            pixmap = CC.global_pixmaps().mute
+            icon = CC.global_icons().mute
             
         else:
             
-            pixmap = CC.global_pixmaps().sound
+            icon = CC.global_icons().sound
             
         
-        return pixmap
+        return icon
         
     
     def UpdateMute( self ):
         
-        pixmap = self._GetCorrectPixmap()
+        icon = self._GetCorrectIcon()
         
-        ClientGUIFunctions.SetBitmapButtonBitmap( self, pixmap )
+        self.SetIconSmart( icon )
         
     
+
 class VolumeControl( QW.QWidget ):
     
     def __init__( self, parent, canvas_type, direction = 'down' ):

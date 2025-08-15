@@ -257,78 +257,7 @@ class ShortcutAwareToolTipMixin( object ):
         self._RefreshToolTip()
         
     
-class BetterBitmapButton( ShortcutAwareToolTipMixin, QW.QPushButton ):
-    
-    def __init__( self, parent, bitmap, func, *args, **kwargs ):
-        
-        super().__init__( parent )
-        
-        self.SetToolTipCallable( self.setToolTip )
-        
-        self.setIcon( QG.QIcon( bitmap ) )
-        self.setIconSize( bitmap.size() ) # if and when we move to SVG, maybe we'll do devicePixelRatio stuff here? 16x16 * dpr? 
-        #self.setSizePolicy( QW.QSizePolicy.Policy.Maximum, QW.QSizePolicy.Policy.Maximum )
-        
-        self._func = func
-        self._args = args
-        self._kwargs = kwargs
-        
-        self.clicked.connect( self.EventButton )
-        
-    
-    def EventButton( self ):
-        
-        self._func( *self._args,  **self._kwargs )
-        
-    
-class BetterBitmapWindowDragButton( BetterBitmapButton ):
-    
-    def __init__( self, parent, bitmap, func, target_window ):
-        
-        super().__init__( parent, bitmap, func )
-        
-        self._target_window = target_window
-        
-        self._original_icon = bitmap
-        
-    
-    def mousePressEvent( self, event ):
-        
-        if event.button() == QC.Qt.MouseButton.LeftButton:
-            
-            self._startDrag()
-            
-            self.setIcon( CC.global_pixmaps().move_cursor )
-            
-        elif event.button() == QC.Qt.MouseButton.RightButton:
-            
-            self._func()
-            
-        else:
-            
-            super().mousePressEvent( event )
-        
-    
-    def mouseReleaseEvent(self, event):
-        
-        if event.button() == QC.Qt.MouseButton.LeftButton:
-            
-            self.setIcon(self._original_icon)
-            
-        super().mouseReleaseEvent(event)
-        
-    
-    def _startDrag( self ):
-        
-        if self._target_window is not None:
-            
-            window_handle = self._target_window.windowHandle()
-            
-            if window_handle is not None:
-                
-                window_handle.startSystemMove()
-        
-    
+
 class BetterButton( ShortcutAwareToolTipMixin, QW.QPushButton ):
     
     def __init__( self, parent, label, func, *args, **kwargs ):
@@ -346,6 +275,10 @@ class BetterButton( ShortcutAwareToolTipMixin, QW.QPushButton ):
         self._yes_no_text = None
         
         self.clicked.connect( self.EventButton )
+        
+        # default is Minimum horizontal, but Preferred says we can go down to minSizeHint
+        # QPushButton minSizeHint is actually the same as sizeHint though, so maybe this does nothing hooray
+        self.setSizePolicy( QW.QSizePolicy.Policy.Preferred, QW.QSizePolicy.Policy.Fixed )
         
     
     def EventButton( self ):
@@ -1013,6 +946,7 @@ class BufferedWindow( QW.QWidget ):
         self._Draw( painter )
         
     
+
 class BufferedWindowIcon( BufferedWindow ):
     
     def __init__( self, parent, pixmap: QG.QPixmap, click_callable = None ):
@@ -1063,6 +997,7 @@ class BufferedWindowIcon( BufferedWindow ):
             
         
     
+
 class BusyCursor( object ):
     
     def __enter__( self ):
@@ -1309,6 +1244,63 @@ class Gauge( QW.QProgressBar ):
         self.SetValue( 0 )
         
         self._is_pulsing = True
+        
+    
+
+class IconButton( ShortcutAwareToolTipMixin, QW.QPushButton ):
+    
+    def __init__( self, parent, bitmap_or_icon, func, *args, **kwargs ):
+        
+        super().__init__( parent )
+        
+        self.SetToolTipCallable( self.setToolTip )
+        
+        if isinstance( bitmap_or_icon, QG.QPixmap ):
+            
+            icon = QG.QIcon( bitmap_or_icon )
+            icon_size = bitmap_or_icon.size()
+            
+        else:
+            
+            icon = bitmap_or_icon
+            icon_size = None # QC.QSize( 16, 16 )
+            
+        
+        self.last_icon_set = icon
+        
+        self.setIcon( icon )
+        
+        if icon_size is not None:
+            
+            self.setIconSize( icon_size ) # if and when we move to SVG, maybe we'll do devicePixelRatio stuff here? 16x16 * dpr?
+            
+        
+        #self.setSizePolicy( QW.QSizePolicy.Policy.Maximum, QW.QSizePolicy.Policy.Maximum )
+        
+        self._func = func
+        self._args = args
+        self._kwargs = kwargs
+        
+        self.clicked.connect( self.EventButton )
+        
+    
+    def EventButton( self ):
+        
+        self._func( *self._args,  **self._kwargs )
+        
+    
+    def SetIconSmart( self, icon: QG.QIcon ):
+        
+        # this is actually useful as I understand. the jump to C++ copies the icon and Qt doesn't know it is the same guy
+        
+        if icon is self.last_icon_set:
+            
+            return
+            
+        
+        self.setIcon( icon )
+        
+        self.last_icon_set = icon
         
     
 
@@ -1876,6 +1868,7 @@ class TextCatchEnterEventFilter( QC.QObject ):
         return False
         
     
+
 class TextAndGauge( QW.QWidget ):
     
     def __init__( self, parent ):
@@ -1915,3 +1908,57 @@ class TextAndGauge( QW.QWidget ):
         self._gauge.SetRange( range )
         self._gauge.SetValue( value )
         
+    
+
+class WindowDragButton( IconButton ):
+    
+    def __init__( self, parent, icon, func, target_window ):
+        
+        super().__init__( parent, icon, func )
+        
+        self._target_window = target_window
+        
+        self._original_icon = icon
+        
+    
+    def mousePressEvent( self, event ):
+        
+        if event.button() == QC.Qt.MouseButton.LeftButton:
+            
+            self._startDrag()
+            
+            self.SetIconSmart( CC.global_icons().move_cursor )
+            
+        elif event.button() == QC.Qt.MouseButton.RightButton:
+            
+            self._func()
+            
+        else:
+            
+            super().mousePressEvent( event )
+            
+        
+    
+    def mouseReleaseEvent(self, event):
+        
+        if event.button() == QC.Qt.MouseButton.LeftButton:
+            
+            self.SetIconSmart( self._original_icon )
+            
+        
+        super().mouseReleaseEvent( event )
+        
+    
+    def _startDrag( self ):
+        
+        if self._target_window is not None:
+            
+            window_handle = self._target_window.windowHandle()
+            
+            if window_handle is not None:
+                
+                window_handle.startSystemMove()
+                
+            
+        
+    

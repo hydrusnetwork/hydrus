@@ -449,27 +449,6 @@ def NotebookScreenToHitTest( notebook, screen_position ):
     return notebook.tabBar().tabAt( tab_pos )
     
 
-def SetBitmapButtonBitmap( button, bitmap ):
-    
-    # old wx stuff, but still basically relevant
-    # the button's bitmap, retrieved via GetBitmap, is not the same as the one we gave it!
-    # hence testing bitmap vs that won't work to save time on an update loop, so we'll just save it here custom
-    # this isn't a big memory deal for our purposes since they are small and mostly if not all from the GlobalPixmaps library so shared anyway
-    
-    if hasattr( button, 'last_bitmap' ):
-        
-        if button.last_bitmap == bitmap:
-            
-            return
-            
-        
-    
-    button.setIcon( QG.QIcon( bitmap ) )
-    button.setIconSize( bitmap.size() )
-    
-    button.last_bitmap = bitmap
-    
-
 def SetFocusLater( win: QW.QWidget ):
     
     CG.client_controller.CallAfterQtSafe( win, 'set focus to a window', win.setFocus, QC.Qt.FocusReason.OtherFocusReason )
