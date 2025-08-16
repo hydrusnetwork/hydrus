@@ -29,14 +29,19 @@ def GetAllFilePaths( raw_paths, do_human_sort = True, clear_out_sidecars = True 
         next_paths_to_process = []
         
         for path in paths_to_process:
-            
+
+            non_recursive_folder_search = False
+
+            if isinstance(path, dict):
+                non_recursive_folder_search = path['non_recursive_folder_search']
+                path = path['path']
+
             if HG.started_shutdown:
                 
                 raise HydrusExceptions.ShutdownException()
                 
-            
             if os.path.isdir( path ):
-                
+
                 try:
                     
                     # on Windows, some network file paths return True on isdir(). maybe something to do with path length or number of subdirs
@@ -47,20 +52,29 @@ def GetAllFilePaths( raw_paths, do_human_sort = True, clear_out_sidecars = True 
                     file_paths.append( path )
                     
                     continue
-                    
                 
-                subpaths = [ os.path.join( path, filename ) for filename in path_listdir ]
+                match non_recursive_folder_search:
+
+                    case "Too Deep":
+
+                        continue
+
+                    case False:
+
+                        subpaths = [ os.path.join( path, filename ) for filename in path_listdir ]
+
+                    case True:
+
+                        subpaths = [ {'path': os.path.join( path, filename ), 'non_recursive_folder_search': "Too Deep" } for filename in path_listdir ]
                 
                 next_paths_to_process.extend( subpaths )
-                
+
             else:
                 
                 file_paths.append( path )
                 
-            
-        
         paths_to_process = next_paths_to_process
-        
+
     
     if do_human_sort:
         

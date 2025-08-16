@@ -3044,6 +3044,7 @@ class ReviewLocalFileImports( ClientGUIScrolledPanels.ReviewPanel ):
         
         listctrl_panel.AddButton( 'add files', self.AddPaths )
         listctrl_panel.AddButton( 'add folder', self.AddFolder )
+        listctrl_panel.AddButton( 'add folder non-recursively', lambda: self.AddFolder( recursively = False ) )
         listctrl_panel.AddButton( 'remove files', self.RemovePaths, enabled_only_on_selection = True )
         
         self._progress = ClientGUICommon.TextAndGauge( self )
@@ -3237,14 +3238,20 @@ class ReviewLocalFileImports( ClientGUIScrolledPanels.ReviewPanel ):
         self._pause_event.set()
         
     
-    def AddFolder( self ):
+    def AddFolder( self, recursively = True ):
         
         with QP.DirDialog( self, 'Select a folder to add.' ) as dlg:
             
             if dlg.exec() == QW.QDialog.DialogCode.Accepted:
                 
-                path = dlg.GetPath()
-                
+                if recursively == False:
+                    
+                    path = {'path': dlg.GetPath(), 'non_recursive_folder_search': True}
+                    
+                else:
+                    
+                    path = dlg.GetPath()
+                    
                 self._AddPathsToList( ( path, ) )
                 
             
