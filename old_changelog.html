@@ -35,6 +35,44 @@
             <h1 id="changelog"><a href="#changelog">changelog</a></h1>
             <ul>
                 <li>
+                    <h2 id="version_635"><a href="#version_635">version 635</a></h2>
+                    <ul>
+                        <li><h3>misc</h3></li>
+                        <li>with help from a user, the manual `file-&gt;import files` dialog has a new 'search subdirectories' checkbox, default on, that, if off, allows you to just search the files in the base dir</li>
+                        <li>import folders now also have a checkbox for 'search subdirectories', for the same thing</li>
+                        <li>the importer 'file log' menu now offers to remove everything except unknown (i.e. unstarted) items from the queue</li>
+                        <li>the `network-&gt;data-&gt;review current network jobs` window now has auto-refresh, with custom time delta</li>
+                        <li>if the client files manager runs into a critical drive error and subs, paged importers, and import folders are paused, the `file-&gt;import and export folders-&gt;pause` menu is now correctly updated immediately to reflect this</li>
+                        <li><h3>cog icons</h3></li>
+                        <li>after various discussions about 'advanced mode', I've decided to push more on cog icon buttons to tuck away advanced settings and commands. I hope to slowly slowly migrate most 'advanced mode' stuff to cog icons and similar</li>
+                        <li>I fired up Inkscape and made a new .svg cog icon. it will draw with nice antialiasing and scale up nicely as we move to UI-scale-scaling buttons in future. please bear with my artistic skill, but I think it is ok in both light and dark modes. the recent cool thing is, if it isn't to your taste, you can now replace/edit the file yourself and put a copy in `/db/static` and hydrus will use that instead</li>
+                        <li>the file sort widget, when set to namespaces mode, now tucks the tag service selector button and tag display type selector button (previously also only visible in advanced mode), into a cog icon button</li>
+                        <li>the file collect widget now always has a cog icon. it handles tag service and tag display type selection</li>
+                        <li>the file sort widget in 'num tags' sort now has a cog icon allowing tag service selection. the current tag service of the search page no longer controls the tag service in these sorts--you set what you want</li>
+                        <li><h3>retry icon</h3></li>
+                        <li>the 'retry failed' and 'retry ignored' buttons in gallery pages, watcher pages, edit subscriptions, and edit subscription panels are now collapsed into one new menu icon button. this liberates a row of space in the downloader pages</li>
+                        <li>lists across the program will update their button 'enabled' status instantly after various advanced commands now. if you see the list text change, the buttons should update</li>
+                        <li><h3>boring stuff</h3></li>
+                        <li>wrote a nicer menu templating system (old system was all horrible tuple hardcoding)</li>
+                        <li>the scrollable menu choice buttons now all use the new templating system</li>
+                        <li>the menu icon buttons now all use the new templating system</li>
+                        <li>the menu buttons now all use the new templating system</li>
+                        <li>wrote a 'cog icon' class just to keep track of it nicely across the program</li>
+                        <li>fixed up alignment and position (cog icons will now generally always go far right) of buttons in network job widget</li>
+                        <li>secondary file sort now applies within collections</li>
+                        <li>I did some prep work for allowing customisable secondary sort on any file page, but we aren't quite there yet</li>
+                        <li>replace my ancient 'buffered window icon' widget with a simple QLabel with a pixmap, affecting: the trash and inbox icons in the media viewer top-right hover, Mr Bones, Lain, and the 'open externally' thumb-and-button widget in the media viewer</li>
+                        <li>brushed up the grammar of the various 'text-and-gauge' stuff that I moved to always be zero-indexed the other week, particularly in the subscription popups</li>
+                        <li><h3>boring url stuff</h3></li>
+                        <li>updated `URLClass` to now hold a static one-domain `URLDomainMask` and use it for all internal `netloc` tests and subdomain clipping</li>
+                        <li>added raw domain rules to the new `URLDomainMask`</li>
+                        <li>added more `URLDomainMask` unit tests for this</li>
+                        <li>added a unit test to better check discarding subdomains at the url class level</li>
+                        <li>fixed 'www'-stripping alternate-url searching for urls with more components like `www.subdomain.something.something`</li>
+                        <li>the network engine is now more tolerant of non-urls, only checking strictly when you input into downloaders. previously, any normalise call on something that didn't parse would raise an error--now it is a no-op. the client api will respond to invalid `get_url_x` and `associate_url` URL params as best it can rather than responding with 400 (while still erroring out on `add_url`), and when you export urls with a sidecar, invalid urls should be outputted ok</li>
+                    </ul>
+                </li>
+                <li>
                     <h2 id="version_634"><a href="#version_634">version 634</a></h2>
                     <ul>
                         <li><h3>hotfix</h3></li>
