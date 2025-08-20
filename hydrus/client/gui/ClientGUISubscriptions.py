@@ -261,13 +261,13 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        menu_items = []
+        menu_template_items = []
         
         page_func = HydrusData.Call( ClientGUIDialogsQuick.OpenDocumentation, self, HC.DOCUMENTATION_GETTING_STARTED_SUBSCRIPTIONS )
         
-        menu_items.append( ( 'normal', 'open the html subscriptions help', 'Open the help page for subscriptions in your web browser.', page_func ) )
+        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'open the html subscriptions help', 'Open the help page for subscriptions in your web browser.', page_func ) )
         
-        help_button = ClientGUIMenuButton.MenuBitmapButton( self, CC.global_icons().help, menu_items )
+        help_button = ClientGUIMenuButton.MenuIconButton( self, CC.global_icons().help, menu_template_items )
         
         help_hbox = ClientGUICommon.WrapInText( help_button, self, 'help for this panel -->', object_name = 'HydrusIndeterminate' )
         
@@ -302,8 +302,21 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         queries_panel.AddDeleteButton()
         queries_panel.AddSeparator()
         queries_panel.AddButton( 'pause/play', self._PausePlay, enabled_only_on_selection = True )
-        queries_panel.AddButton( 'retry failed', self._STARTRetryFailed, enabled_check_func = self._ListCtrlCanRetryFailed )
-        queries_panel.AddButton( 'retry ignored', self._STARTRetryIgnored, enabled_check_func = self._ListCtrlCanRetryIgnored )
+        
+        menu_template_items = []
+        
+        menu_template_item = ClientGUIMenuButton.MenuTemplateItemCall( 'retry ignored', 'Retry the files that were moved over for one reason or another.', self._STARTRetryIgnored )
+        menu_template_item.SetVisibleCallable( self._ListCtrlCanRetryIgnored )
+        
+        menu_template_items.append( menu_template_item )
+        
+        menu_template_item = ClientGUIMenuButton.MenuTemplateItemCall( 'retry failed', 'Retry the files that failed.', self._STARTRetryFailed )
+        menu_template_item.SetVisibleCallable( self._ListCtrlCanRetryFailed )
+        
+        menu_template_items.append( menu_template_item )
+        
+        queries_panel.AddMenuIconButton( CC.global_icons().retry, 'retry commands', menu_template_items, enabled_check_func = self._ListCtrlCanRetryAnything )
+        
         queries_panel.AddButton( 'check now', self._CheckNow, enabled_check_func = self._ListCtrlCanCheckNow )
         queries_panel.AddButton( 'reset', self._STARTReset, enabled_check_func = self._ListCtrlCanResetCache )
         
@@ -311,12 +324,12 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
             
             queries_panel.AddSeparator()
             
-            menu_items = []
+            menu_template_items = []
             
-            menu_items.append( ( 'normal', 'show', 'Show quality info.', self._STARTShowQualityInfo ) )
-            menu_items.append( ( 'normal', 'copy csv data to clipboard', 'Copy quality info to clipboard.', self._STARTCopyQualityInfo ) )
+            menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'show', 'Show quality info.', self._STARTShowQualityInfo ) )
+            menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'copy csv data to clipboard', 'Copy quality info to clipboard.', self._STARTCopyQualityInfo ) )
             
-            queries_panel.AddMenuButton( 'quality info', menu_items, enabled_check_func = self._ListCtrlHasExistingQueriesSelected )
+            queries_panel.AddMenuButton( 'quality info', menu_template_items, enabled_check_func = self._ListCtrlHasExistingQueriesSelected )
             
         
         #
@@ -997,6 +1010,11 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         return False
         
     
+    def _ListCtrlCanRetryAnything( self ):
+        
+        return self._ListCtrlCanRetryIgnored() or self._ListCtrlCanRetryFailed()
+        
+    
     def _ListCtrlCanRetryFailed( self ):
         
         for query_header in self._query_headers.GetData( only_selected = True ):
@@ -1582,13 +1600,13 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        menu_items = []
+        menu_template_items = []
         
         page_func = HydrusData.Call( ClientGUIDialogsQuick.OpenDocumentation, self, HC.DOCUMENTATION_GETTING_STARTED_SUBSCRIPTIONS )
         
-        menu_items.append( ( 'normal', 'open the html subscriptions help', 'Open the help page for subscriptions in your web browser.', page_func ) )
+        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'open the html subscriptions help', 'Open the help page for subscriptions in your web browser.', page_func ) )
         
-        help_button = ClientGUIMenuButton.MenuBitmapButton( self, CC.global_icons().help, menu_items )
+        help_button = ClientGUIMenuButton.MenuIconButton( self, CC.global_icons().help, menu_template_items )
         
         help_hbox = ClientGUICommon.WrapInText( help_button, self, 'help for this panel -->', object_name = 'HydrusIndeterminate' )
         
@@ -1618,8 +1636,21 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         self._subscriptions_panel.AddSeparator()
         
         self._subscriptions_panel.AddButton( 'pause/resume', self.PauseResume, enabled_only_on_selection = True )
-        self._subscriptions_panel.AddButton( 'retry failed', self._STARTRetryFailed, enabled_check_func = self._CanRetryFailed )
-        self._subscriptions_panel.AddButton( 'retry ignored', self._STARTRetryIgnored, enabled_check_func = self._CanRetryIgnored )
+        
+        menu_template_items = []
+        
+        menu_template_item = ClientGUIMenuButton.MenuTemplateItemCall( 'retry ignored', 'Retry the files that were moved over for one reason or another.', self._STARTRetryIgnored )
+        menu_template_item.SetVisibleCallable( self._CanRetryIgnored )
+        
+        menu_template_items.append( menu_template_item )
+        
+        menu_template_item = ClientGUIMenuButton.MenuTemplateItemCall( 'retry failed', 'Retry the files that failed.', self._STARTRetryFailed )
+        menu_template_item.SetVisibleCallable( self._CanRetryFailed )
+        
+        menu_template_items.append( menu_template_item )
+        
+        self._subscriptions_panel.AddMenuIconButton( CC.global_icons().retry, 'retry commands', menu_template_items, enabled_check_func = self._CanRetryAnything )
+        
         self._subscriptions_panel.AddButton( 'scrub delays', self.ScrubDelays, enabled_check_func = self._CanScrubDelays )
         self._subscriptions_panel.AddButton( 'check queries now', self.CheckNow, enabled_check_func = self._CanCheckNow )
         
@@ -1765,6 +1796,11 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         subscriptions = self._subscriptions.GetData( only_selected = True )
         
         return True in ( subscription.CanReset() for subscription in subscriptions )
+        
+    
+    def _CanRetryAnything( self ):
+        
+        return self._CanRetryIgnored() or self._CanRetryFailed()
         
     
     def _CanRetryFailed( self ):

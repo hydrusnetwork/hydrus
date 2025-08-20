@@ -1,12 +1,14 @@
 import collections.abc
 import re
 import sqlite3
+import typing
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 
 from hydrus.client.db import ClientDBMaster
 from hydrus.client.db import ClientDBModule
+from hydrus.client.networking import ClientNetworkingURLClass
 from hydrus.client.search import ClientNumberTest
 
 class ClientDBURLMap( ClientDBModule.ClientDBModule ):
@@ -137,18 +139,11 @@ class ClientDBURLMap( ClientDBModule.ClientDBModule ):
             
         elif rule_type in ( 'url_class', 'url_match' ):
             
-            url_class = rule
+            url_class = typing.cast( ClientNetworkingURLClass.URLClass, rule )
             
-            domain = url_class.GetDomain()
+            url_domain_mask = url_class.GetURLDomainMask()
             
-            if url_class.MatchesSubdomains():
-                
-                domain_ids = self.modules_urls.GetURLDomainAndSubdomainIds( domain )
-                
-            else:
-                
-                domain_ids = self.modules_urls.GetURLDomainAndSubdomainIds( domain, only_www_subdomains = True )
-                
+            domain_ids = self.modules_urls.GetURLDomainAndSubdomainIds( url_domain_mask )
             
             result_hash_ids = set()
             
@@ -182,8 +177,10 @@ class ClientDBURLMap( ClientDBModule.ClientDBModule ):
             
             domain = rule
             
+            url_domain_mask = ClientNetworkingURLClass.URLDomainMask( raw_domains = [ domain ], match_subdomains = True, keep_matched_subdomains = True )
+            
             # if we search for site.com, we also want artist.site.com or www.site.com or cdn2.site.com
-            domain_ids = self.modules_urls.GetURLDomainAndSubdomainIds( domain )
+            domain_ids = self.modules_urls.GetURLDomainAndSubdomainIds( url_domain_mask )
             
             with self._MakeTemporaryIntegerTable( domain_ids, 'domain_id' ) as temp_domain_table_name:
                 

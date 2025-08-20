@@ -38,7 +38,6 @@ from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.canvas import ClientGUIMPV
 from hydrus.client.gui.media import ClientGUIMediaControls
 from hydrus.client.gui.media import ClientGUIMediaVolume
-from hydrus.client.gui.widgets import ClientGUICommon
 from hydrus.client.media import ClientMedia
 from hydrus.client.media import ClientMediaResult
 
@@ -3088,6 +3087,7 @@ class EmbedButton( QW.QWidget ):
             
         
     
+
 class OpenExternallyPanel( QW.QWidget ):
     
     def __init__( self, parent, media ):
@@ -3111,12 +3111,12 @@ class OpenExternallyPanel( QW.QWidget ):
                 qt_pixmap.setDevicePixelRatio( thumbnail_dpr_percent / 100 )
                 
             
-            thumbnail_window = ClientGUICommon.BufferedWindowIcon( self, qt_pixmap )
+            if qt_pixmap.width() > OPEN_EXTERNALLY_MAX_THUMBNAIL_SIZE[0] or qt_pixmap.height() > OPEN_EXTERNALLY_MAX_THUMBNAIL_SIZE[1]:
+                
+                qt_pixmap.scaled( OPEN_EXTERNALLY_MAX_THUMBNAIL_SIZE[0], OPEN_EXTERNALLY_MAX_THUMBNAIL_SIZE[1], QC.Qt.AspectRatioMode.KeepAspectRatio, QC.Qt.TransformationMode.SmoothTransformation )
+                
             
-            thumbnail_window_width = min( thumbnail_window.width(), OPEN_EXTERNALLY_MAX_THUMBNAIL_SIZE[0] )
-            thumbnail_window_height = min( thumbnail_window.height(), OPEN_EXTERNALLY_MAX_THUMBNAIL_SIZE[1] )
-            
-            thumbnail_window.setFixedSize( thumbnail_window_width, thumbnail_window_height )
+            thumbnail_window = QW.QLabel( self, pixmap = qt_pixmap )
             
             QP.AddToLayout( vbox, thumbnail_window, CC.FLAGS_CENTER )
             

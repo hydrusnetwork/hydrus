@@ -2217,6 +2217,8 @@ ATTACH "client.mappings.db" as external_mappings;'''
             additional_service_keys_to_tags = ClientTags.ServiceKeysToTags()
             
         
+        ClientNetworkingFunctions.CheckLooksLikeAFullURL( unclean_url )
+        
         url = ClientNetworkingFunctions.EnsureURLIsEncoded( unclean_url )
         
         url = CG.client_controller.network_engine.domain_manager.NormaliseURL( url, for_server = True )
@@ -2570,6 +2572,8 @@ ATTACH "client.mappings.db" as external_mappings;'''
             windows_or_advanced_non_windows = not simple_non_windows
             
             self._menubar_file_minimise_to_system_tray.setVisible( ClientGUISystemTray.SystemTrayAvailable() and windows_or_advanced_non_windows )
+            
+            self._menubar_file_import_folders_paused.setChecked( CG.client_controller.new_options.GetBoolean( 'pause_import_folders_sync' ) )
             
         
         return ClientGUIAsync.AsyncQtUpdater( self, loading_callable, work_callable, publish_callable )
@@ -3300,7 +3304,7 @@ ATTACH "client.mappings.db" as external_mappings;'''
         
         submenu = ClientGUIMenus.GenerateMenu( i_and_e_submenu )
         
-        ClientGUIMenus.AppendMenuCheckItem( submenu, 'import folders', 'Pause the client\'s import folders.', self._controller.new_options.GetBoolean( 'pause_import_folders_sync' ), self._PausePlaySync, 'import_folders' )
+        self._menubar_file_import_folders_paused = ClientGUIMenus.AppendMenuCheckItem( submenu, 'import folders', 'Pause the client\'s import folders.', self._controller.new_options.GetBoolean( 'pause_import_folders_sync' ), self._PausePlaySync, 'import_folders' )
         ClientGUIMenus.AppendMenuCheckItem( submenu, 'export folders', 'Pause the client\'s export folders.', self._controller.new_options.GetBoolean( 'pause_export_folders_sync' ), self._PausePlaySync, 'export_folders' )
         
         ClientGUIMenus.AppendMenu( i_and_e_submenu, submenu, 'pause' )

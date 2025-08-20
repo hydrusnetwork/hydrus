@@ -50,12 +50,12 @@ class EditNodes( QW.QWidget ):
         
         self._nodes = ClientGUIListCtrl.BetterListCtrlTreeView( self, 20, model, delete_key_callback = self.Delete, activation_callback = self.Edit )
         
-        menu_items = []
+        menu_template_items = []
         
-        menu_items.append( ( 'normal', 'content node', 'A node that parses the given data for content.', self.AddContentNode ) )
-        menu_items.append( ( 'normal', 'link node', 'A node that parses the given data for a link, which it then pursues.', self.AddLinkNode ) )
+        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'content node', 'A node that parses the given data for content.', self.AddContentNode ) )
+        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'link node', 'A node that parses the given data for a link, which it then pursues.', self.AddLinkNode ) )
         
-        self._add_button = ClientGUIMenuButton.MenuButton( self, 'add', menu_items )
+        self._add_button = ClientGUIMenuButton.MenuButton( self, 'add', menu_template_items )
         
         self._copy_button = ClientGUICommon.BetterButton( self, 'copy', self.Copy )
         
@@ -880,25 +880,25 @@ class ManageParsingScriptsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         self._scripts = ClientGUIListCtrl.BetterListCtrlTreeView( self, 20, model, delete_key_callback = self.Delete, activation_callback = self.Edit )
         
-        menu_items = []
+        menu_template_items = []
         
-        menu_items.append( ( 'normal', 'file lookup script', 'A script that fetches content for a known file.', self.AddFileLookupScript ) )
+        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'file lookup script', 'A script that fetches content for a known file.', self.AddFileLookupScript ) )
         
-        self._add_button = ClientGUIMenuButton.MenuButton( self, 'add', menu_items )
+        self._add_button = ClientGUIMenuButton.MenuButton( self, 'add', menu_template_items )
         
-        menu_items = []
+        menu_template_items = []
         
-        menu_items.append( ( 'normal', 'to clipboard', 'Serialise the script and put it on your clipboard.', self.ExportToClipboard ) )
-        menu_items.append( ( 'normal', 'to png', 'Serialise the script and encode it to an image file you can easily share with other hydrus users.', self.ExportToPNG ) )
+        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'to clipboard', 'Serialise the script and put it on your clipboard.', self.ExportToClipboard ) )
+        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'to png', 'Serialise the script and encode it to an image file you can easily share with other hydrus users.', self.ExportToPNG ) )
         
-        self._export_button = ClientGUIMenuButton.MenuButton( self, 'export', menu_items )
+        self._export_button = ClientGUIMenuButton.MenuButton( self, 'export', menu_template_items )
         
-        menu_items = []
+        menu_template_items = []
         
-        menu_items.append( ( 'normal', 'from clipboard', 'Load a script from text in your clipboard.', self.ImportFromClipboard ) )
-        menu_items.append( ( 'normal', 'from png', 'Load a script from an encoded png.', self.ImportFromPNG ) )
+        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'from clipboard', 'Load a script from text in your clipboard.', self.ImportFromClipboard ) )
+        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'from png', 'Load a script from an encoded png.', self.ImportFromPNG ) )
         
-        self._import_button = ClientGUIMenuButton.MenuButton( self, 'import', menu_items )
+        self._import_button = ClientGUIMenuButton.MenuButton( self, 'import', menu_template_items )
         
         self._duplicate_button = ClientGUICommon.BetterButton( self, 'duplicate', self.Duplicate )
         

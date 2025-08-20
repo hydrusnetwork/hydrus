@@ -1528,6 +1528,45 @@ class CanvasHoverFrameTopNavigableList( CanvasHoverFrameTopNavigable ):
         QP.AddToLayout( self._top_left_hbox, self._last_button, CC.FLAGS_CENTER_PERPENDICULAR )
         
     
+
+
+class InboxIconClickFilter( QC.QObject ):
+    
+    def __init__( self, parent, click_callable ):
+        
+        super().__init__( parent )
+        
+        self._click_callable = click_callable
+        
+    
+    def eventFilter( self, watched, event ):
+        
+        try:
+            
+            if event.type() == QC.QEvent.Type.MouseButtonPress:
+                
+                event = typing.cast( QG.QMouseEvent, event )
+                
+                if event.button() == QC.Qt.MouseButton.LeftButton:
+                    
+                    self._click_callable()
+                    
+                    return True
+                    
+                
+            
+        except Exception as e:
+            
+            HydrusData.ShowException( e )
+            
+            return True
+            
+        
+        return False
+        
+    
+
+
 class CanvasHoverFrameTopRight( CanvasHoverFrame ):
     
     def __init__( self, parent, my_canvas, top_hover: CanvasHoverFrameTop, canvas_key ):
@@ -1544,8 +1583,10 @@ class CanvasHoverFrameTopRight( CanvasHoverFrame ):
         
         self._icon_panel = QW.QWidget( self )
         
-        self._trash_icon = ClientGUICommon.BufferedWindowIcon( self._icon_panel, CC.global_pixmaps().trash )
-        self._inbox_icon = ClientGUICommon.BufferedWindowIcon( self._icon_panel, CC.global_pixmaps().inbox, click_callable = self._Archive )
+        self._trash_icon = QW.QLabel( self._icon_panel, pixmap = CC.global_icons().trash.pixmap( 16, 16 ) )
+        self._inbox_icon = QW.QLabel( self._icon_panel, pixmap = CC.global_icons().inbox.pixmap( 16, 16 ) )
+        
+        self._inbox_icon.installEventFilter( InboxIconClickFilter( self, self._Archive ) )
         
         icon_hbox = QP.HBoxLayout( spacing = 0 )
         
@@ -2234,20 +2275,20 @@ class CanvasHoverFrameRightDuplicates( CanvasHoverFrame ):
         self._trash_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'send to trash' ) )
         self._trash_button.setFocusPolicy( QC.Qt.FocusPolicy.TabFocus )
         
-        menu_items = []
+        menu_template_items = []
         
-        menu_items.append( ( 'normal', 'edit duplicate metadata merge options for \'this is better\'', 'edit what content is merged when you filter files', HydrusData.Call( self._EditMergeOptions, HC.DUPLICATE_BETTER ) ) )
-        menu_items.append( ( 'normal', 'edit duplicate metadata merge options for \'same quality\'', 'edit what content is merged when you filter files', HydrusData.Call( self._EditMergeOptions, HC.DUPLICATE_SAME_QUALITY ) ) )
+        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'edit duplicate metadata merge options for \'this is better\'', 'edit what content is merged when you filter files', HydrusData.Call( self._EditMergeOptions, HC.DUPLICATE_BETTER ) ) )
+        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'edit duplicate metadata merge options for \'same quality\'', 'edit what content is merged when you filter files', HydrusData.Call( self._EditMergeOptions, HC.DUPLICATE_SAME_QUALITY ) ) )
         
         if CG.client_controller.new_options.GetBoolean( 'advanced_mode' ):
             
-            menu_items.append( ( 'normal', 'edit duplicate metadata merge options for \'alternates\' (advanced!)', 'edit what content is merged when you filter files', HydrusData.Call( self._EditMergeOptions, HC.DUPLICATE_ALTERNATE ) ) )
+            menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'edit duplicate metadata merge options for \'alternates\' (advanced!)', 'edit what content is merged when you filter files', HydrusData.Call( self._EditMergeOptions, HC.DUPLICATE_ALTERNATE ) ) )
             
         
-        menu_items.append( ( 'separator', None, None, None ) )
-        menu_items.append( ( 'normal', 'edit background lighten/darken switch intensity', 'edit how much the background will brighten or darken as you switch between the pair', self._EditBackgroundSwitchIntensity ) )
+        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemSeparator() )
+        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'edit background lighten/darken switch intensity', 'edit how much the background will brighten or darken as you switch between the pair', self._EditBackgroundSwitchIntensity ) )
         
-        self._cog_button = ClientGUIMenuButton.MenuBitmapButton( self, CC.global_icons().cog, menu_items )
+        self._cog_button = ClientGUIMenuButton.CogIconButton( self, menu_template_items )
         self._cog_button.setFocusPolicy( QC.Qt.FocusPolicy.TabFocus )
         
         close_button = ClientGUICommon.IconButton( self, CC.global_icons().stop, CG.client_controller.pub, 'canvas_close', self._canvas_key )

@@ -208,6 +208,8 @@ class EditImportFolderPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._path = QP.DirPickerCtrl( self._folder_box )
         
+        self._search_subdirectories = QW.QCheckBox( self._folder_box )
+        
         self._check_regularly = QW.QCheckBox( self._folder_box )
         
         self._period = ClientGUITime.TimeDeltaButton( self._folder_box, min = 3 * 60, days = True, hours = True, minutes = True )
@@ -298,6 +300,8 @@ class EditImportFolderPanel( ClientGUIScrolledPanels.EditPanel ):
         self._name.setText( name )
         self._path.SetPath( path )
         
+        self._search_subdirectories.setChecked( self._import_folder.GetSearchSubdirectories() )
+        
         self._check_regularly.setChecked( check_regularly )
         
         self._period.SetValue( period )
@@ -346,6 +350,7 @@ class EditImportFolderPanel( ClientGUIScrolledPanels.EditPanel ):
         
         rows.append( ( 'name: ', self._name ) )
         rows.append( ( 'folder path: ', self._path ) )
+        rows.append( ( 'search subdirectories: ', self._search_subdirectories ) )
         rows.append( ( 'currently paused (if set, will not ever do any work): ', self._paused ) )
         rows.append( ( 'check regularly?: ', self._check_regularly ) )
         rows.append( ( 'check period: ', self._period ) )
@@ -738,6 +743,10 @@ class EditImportFolderPanel( ClientGUIScrolledPanels.EditPanel ):
         metadata_routers = self._metadata_routers_button.GetValue()
         
         self._import_folder.SetMetadataRouters( metadata_routers )
+        
+        search_subdirectories = self._search_subdirectories.isChecked()
+        
+        self._import_folder.SetSearchSubdirectories( search_subdirectories )
         
         return self._import_folder
         

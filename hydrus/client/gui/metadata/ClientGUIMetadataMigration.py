@@ -47,13 +47,13 @@ class EditSingleFileMetadataRouterPanel( ClientGUIScrolledPanels.EditPanel ):
         #
         
         
-        menu_items = []
+        menu_template_items = []
         
         page_func = HydrusData.Call( ClientGUIDialogsQuick.OpenDocumentation, self, HC.DOCUMENTATION_SIDECARS )
         
-        menu_items.append( ( 'normal', 'open the html sidecars help', 'Open the help page for sidecars in your web browser.', page_func ) )
+        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'open the html sidecars help', 'Open the help page for sidecars in your web browser.', page_func ) )
         
-        help_button = ClientGUIMenuButton.MenuBitmapButton( self, CC.global_icons().help, menu_items )
+        help_button = ClientGUIMenuButton.MenuIconButton( self, CC.global_icons().help, menu_template_items )
         
         help_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'Show help regarding sidecars.' ) )
         

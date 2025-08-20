@@ -1396,6 +1396,46 @@ class MultipleGalleryImport( HydrusSerialisable.SerialisableBase ):
             
         
     
+    def FlipDoNotAllowNewDupes( self ):
+        
+        with self._lock:
+            
+            self._do_not_allow_new_dupes = not self._do_not_allow_new_dupes
+            
+            self._SerialisableChangeMade()
+            
+        
+    
+    def FlipMergeSimultaneousPendsToOneImporter( self ):
+        
+        with self._lock:
+            
+            self._merge_simultaneous_pends_to_one_importer = not self._merge_simultaneous_pends_to_one_importer
+            
+            self._SerialisableChangeMade()
+            
+        
+    
+    def FlipStartFileQueuesPaused( self ):
+        
+        with self._lock:
+            
+            self._start_file_queues_paused = not self._start_file_queues_paused
+            
+            self._SerialisableChangeMade()
+            
+        
+    
+    def FlipStartGalleryQueuesPaused( self ):
+        
+        with self._lock:
+            
+            self._start_gallery_queues_paused = not self._start_gallery_queues_paused
+            
+            self._SerialisableChangeMade()
+            
+        
+    
     def GetAPIInfoDict( self, simple ):
         
         with self._lock:

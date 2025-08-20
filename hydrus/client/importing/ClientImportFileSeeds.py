@@ -82,6 +82,8 @@ def FileURLMappingHasUntrustworthyNeighbours( hash: bytes, lookup_urls: collecti
     # if the file has--or would have, after import--multiple URLs from the same domain with the same URL Class, but those URLs are supposed to only refer to one file, then we have a dodgy spam URL mapping so we cannot trust it
     # maybe this is the correct file, but we can't trust that it is mate
     
+    lookup_urls = [ url for url in lookup_urls if ClientNetworkingFunctions.LooksLikeAFullURL( url ) ]
+    
     lookup_urls = CG.client_controller.network_engine.domain_manager.NormaliseURLs( lookup_urls )
     
     # this has probably already been done by the caller, but let's be sure
@@ -100,6 +102,8 @@ def FileURLMappingHasUntrustworthyNeighbours( hash: bytes, lookup_urls: collecti
     media_result = CG.client_controller.Read( 'media_result', hash )
     
     existing_file_urls = media_result.GetLocationsManager().GetURLs()
+    
+    existing_file_urls = [ url for url in existing_file_urls if ClientNetworkingFunctions.LooksLikeAFullURL( url ) ]
     
     # normalise to collapse http/https dupes
     existing_file_urls = CG.client_controller.network_engine.domain_manager.NormaliseURLs( existing_file_urls )
@@ -1485,6 +1489,8 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
         
         try:
             
+            ClientNetworkingFunctions.CheckLooksLikeAFullURL( self.file_seed_data )
+            
             ( url_type, match_name, can_parse, cannot_parse_reason ) = CG.client_controller.network_engine.domain_manager.GetURLParseCapability( self.file_seed_data )
             
             if url_type not in ( HC.URL_TYPE_POST, HC.URL_TYPE_FILE, HC.URL_TYPE_UNKNOWN ):
@@ -1767,7 +1773,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
             
             return False
             
-        except HydrusExceptions.VetoException as e:
+        except ( HydrusExceptions.VetoException, HydrusExceptions.URLClassException ) as e:
             
             status = CC.STATUS_VETOED
             

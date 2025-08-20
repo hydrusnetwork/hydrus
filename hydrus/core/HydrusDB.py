@@ -770,7 +770,7 @@ class HydrusDB( HydrusDBBase.DBBase ):
             
             self._Execute( 'ATTACH ":memory:" AS mem;' )
             
-        except HydrusExceptions.DBAccessException as e:
+        except HydrusExceptions.DBAccessException:
             
             raise
             

@@ -19,6 +19,7 @@ from hydrus.client.importing.options import FileImportOptions
 from hydrus.client.importing.options import NoteImportOptions
 from hydrus.client.importing.options import TagImportOptions
 from hydrus.client.metadata import ClientTags
+from hydrus.client.networking import ClientNetworkingFunctions
 from hydrus.client.networking import ClientNetworkingJobs
 
 class MultipleWatcherImport( HydrusSerialisable.SerialisableBase ):
@@ -237,6 +238,11 @@ class MultipleWatcherImport( HydrusSerialisable.SerialisableBase ):
     def AddURL( self, url, filterable_tags = None, additional_service_keys_to_tags = None ):
         
         if url == '':
+            
+            return None
+            
+        
+        if not ClientNetworkingFunctions.LooksLikeAFullURL( url ):
             
             return None
             
@@ -1750,6 +1756,11 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
     def SetURL( self, url ):
         
         if url is None:
+            
+            url = ''
+            
+        
+        if not ClientNetworkingFunctions.LooksLikeAFullURL( url ):
             
             url = ''
             

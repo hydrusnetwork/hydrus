@@ -84,6 +84,7 @@ def AppendMenuCheckItem( menu, label, description, initial_value, callable, *arg
     
     return menu_item
     
+
 def AppendMenuItem( menu, label, description, callable, *args, role: QW.QAction.MenuRole = None, **kwargs ):
     
     menu_item = QW.QAction( menu )

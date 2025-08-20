@@ -265,7 +265,7 @@ class QuickDownloadManager( ClientDaemons.ManagerWithMainLoop ):
             
             total_done = total_hashes_in_this_run - len( hashes_still_to_download_in_this_run )
             
-            job_status.SetStatusText( 'downloading files from remote services: {}'.format( HydrusNumbers.ValueRangeToPrettyString( total_done, total_hashes_in_this_run ) ) )
+            job_status.SetStatusText( 'downloading files: {}'.format( HydrusNumbers.ValueRangeToPrettyString( total_done, total_hashes_in_this_run ) ) )
             job_status.SetGauge( total_done, total_hashes_in_this_run )
             
             try:

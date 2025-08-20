@@ -148,13 +148,13 @@ class MoveMediaFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
         self._all_local_files_total_size = service_info[ HC.SERVICE_INFO_TOTAL_SIZE ]
         self._all_local_files_total_num = service_info[ HC.SERVICE_INFO_NUM_FILES ]
         
-        menu_items = []
+        menu_template_items = []
         
         page_func = HydrusData.Call( ClientGUIDialogsQuick.OpenDocumentation, self, HC.DOCUMENTATION_DATABASE_MIGRATION )
         
-        menu_items.append( ( 'normal', 'open the html migration help', 'Open the help page for database migration in your web browser.', page_func ) )
+        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'open the html migration help', 'Open the help page for database migration in your web browser.', page_func ) )
         
-        help_button = ClientGUIMenuButton.MenuBitmapButton( self, CC.global_icons().help, menu_items )
+        help_button = ClientGUIMenuButton.MenuIconButton( self, CC.global_icons().help, menu_template_items )
         
         help_hbox = ClientGUICommon.WrapInText( help_button, self, 'help for this panel -->', object_name = 'HydrusIndeterminate' )
         
@@ -1068,13 +1068,13 @@ class ReviewDownloaderImport( ClientGUIScrolledPanels.ReviewPanel ):
         
         vbox = QP.VBoxLayout()
         
-        menu_items = []
+        menu_template_items = []
         
         page_func = HydrusData.Call( ClientGUIDialogsQuick.OpenDocumentation, self, HC.DOCUMENTATION_ADDING_NEW_DOWNLOADERS )
         
-        menu_items.append( ( 'normal', 'open the easy downloader import help', 'Open the help page for easily importing downloaders in your web browser.', page_func ) )
+        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'open the easy downloader import help', 'Open the help page for easily importing downloaders in your web browser.', page_func ) )
         
-        help_button = ClientGUIMenuButton.MenuBitmapButton( self, CC.global_icons().help, menu_items )
+        help_button = ClientGUIMenuButton.MenuIconButton( self, CC.global_icons().help, menu_template_items )
         
         help_hbox = ClientGUICommon.WrapInText( help_button, self, 'help -->', object_name = 'HydrusIndeterminate' )
         
@@ -1092,7 +1092,7 @@ class ReviewDownloaderImport( ClientGUIScrolledPanels.ReviewPanel ):
         
         lain_qt_pixmap = ClientRendering.GenerateHydrusBitmap( lain_path, HC.IMAGE_JPEG ).GetQtPixmap()
         
-        win = ClientGUICommon.BufferedWindowIcon( self, lain_qt_pixmap )
+        win = QW.QLabel( self, pixmap = lain_qt_pixmap )
         
         win.setCursor( QG.QCursor( QC.Qt.CursorShape.PointingHandCursor ) )
         
@@ -2492,7 +2492,7 @@ class ReviewHowBonedAmI( ClientGUIScrolledPanels.ReviewPanel ):
         
         boned_qt_pixmap = ClientRendering.GenerateHydrusBitmap( boned_path, HC.IMAGE_JPEG ).GetQtPixmap()
         
-        self._mr_bones_image = ClientGUICommon.BufferedWindowIcon( self, boned_qt_pixmap )
+        self._mr_bones_image = QW.QLabel( self, pixmap = boned_qt_pixmap )
         
         QP.AddToLayout( vbox, self._mr_bones_image, CC.FLAGS_CENTER )
         QP.AddToLayout( vbox, self._mr_bones_text, CC.FLAGS_CENTER )
@@ -3040,11 +3040,15 @@ class ReviewLocalFileImports( ClientGUIScrolledPanels.ReviewPanel ):
         
         self._paths_list = ClientGUIListCtrl.BetterListCtrlTreeView( listctrl_panel, 12, model, delete_key_callback = self.RemovePaths )
         
+        self._search_subdirectories = QW.QCheckBox( self._paths_list )
+        self._search_subdirectories.setText( 'search subdirectories' )
+        self._search_subdirectories.setChecked( True )
+        
         listctrl_panel.SetListCtrl( self._paths_list )
         
         listctrl_panel.AddButton( 'add files', self.AddPaths )
         listctrl_panel.AddButton( 'add folder', self.AddFolder )
-        listctrl_panel.AddButton( 'add folder non-recursively', lambda: self.AddFolder( recursively = False ) )
+        listctrl_panel.AddWindow( self._search_subdirectories )
         listctrl_panel.AddButton( 'remove files', self.RemovePaths, enabled_only_on_selection = True )
         
         self._progress = ClientGUICommon.TextAndGauge( self )
@@ -3065,13 +3069,13 @@ class ReviewLocalFileImports( ClientGUIScrolledPanels.ReviewPanel ):
         
         self._import_options_button.SetFileImportOptions( file_import_options )
         
-        menu_items = []
+        menu_template_items = []
         
         check_manager = ClientGUICommon.CheckboxManagerOptions( 'do_human_sort_on_hdd_file_import_paths' )
         
-        menu_items.append( ( 'check', 'sort paths as they are added', 'If checked, paths will be sorted in a numerically human-friendly (e.g. "page 9.jpg" comes before "page 10.jpg") way.', check_manager ) )
+        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCheck( 'sort paths as they are added', 'If checked, paths will be sorted in a numerically human-friendly (e.g. "page 9.jpg" comes before "page 10.jpg") way.', check_manager ) )
         
-        self._cog_button = ClientGUIMenuButton.MenuBitmapButton( self, CC.global_icons().cog, menu_items )
+        self._cog_button = ClientGUIMenuButton.CogIconButton( self, menu_template_items )
         
         self._delete_after_success_st = ClientGUICommon.BetterStaticText( self )
         self._delete_after_success_st.setAlignment( QC.Qt.AlignmentFlag.AlignRight | QC.Qt.AlignmentFlag.AlignVCenter )
@@ -3155,7 +3159,11 @@ class ReviewLocalFileImports( ClientGUIScrolledPanels.ReviewPanel ):
             return
             
         
-        self._unparsed_paths_queue.put( paths )
+        search_subdirectories = self._search_subdirectories.isChecked()
+        
+        path_parsing_jobs = [ ClientFiles.PathParsingJob( path, search_subdirectories = search_subdirectories ) for path in paths ]
+        
+        self._unparsed_paths_queue.put( path_parsing_jobs )
         
     
     def _AddTags( self ):
@@ -3238,20 +3246,14 @@ class ReviewLocalFileImports( ClientGUIScrolledPanels.ReviewPanel ):
         self._pause_event.set()
         
     
-    def AddFolder( self, recursively = True ):
+    def AddFolder( self ):
         
         with QP.DirDialog( self, 'Select a folder to add.' ) as dlg:
             
             if dlg.exec() == QW.QDialog.DialogCode.Accepted:
                 
-                if recursively == False:
-                    
-                    path = {'path': dlg.GetPath(), 'non_recursive_folder_search': True}
-                    
-                else:
-                    
-                    path = dlg.GetPath()
-                    
+                path = dlg.GetPath()
+                
                 self._AddPathsToList( ( path, ) )
                 
             
@@ -3440,6 +3442,7 @@ class ReviewLocalFileImports( ClientGUIScrolledPanels.ReviewPanel ):
             
             message += '.'
             
+            # TODO: somehow wangle this to exclude duplicate paths. atm the list doesn't add them, but we count them as 'parsed'. we should pre-scan exclude them m8
             progress_updater.Update( message, num_files_done, num_total_paths )
             
             # status updated, lets see what work there is to do
@@ -3483,12 +3486,13 @@ class ReviewLocalFileImports( ClientGUIScrolledPanels.ReviewPanel ):
                 
                 try:
                     
-                    raw_paths = unparsed_paths_queue.get( block = False )
+                    path_parsing_jobs = list( unparsed_paths_queue.get( block = False ) )
                     
-                    ( paths, num_sidecars_this_loop ) = ClientFiles.GetAllFilePaths( raw_paths, do_human_sort = do_human_sort ) # convert any dirs to subpaths
+                    ( paths, num_sidecars_this_loop ) = ClientFiles.GetAllFilePaths( path_parsing_jobs, do_human_sort = do_human_sort )
                     
                     num_sidecars += num_sidecars_this_loop
                     unparsed_paths.extend( paths )
+                    
                     
                 except queue.Empty:
                     
@@ -3502,9 +3506,9 @@ class ReviewLocalFileImports( ClientGUIScrolledPanels.ReviewPanel ):
                 
                 try:
                     
-                    raw_paths = unparsed_paths_queue.get( timeout = 5 )
-
-                    ( paths, num_sidecars_this_loop ) = ClientFiles.GetAllFilePaths( raw_paths, do_human_sort = do_human_sort ) # convert any dirs to subpaths
+                    path_parsing_jobs = list( unparsed_paths_queue.get( timeout = 5 ) )
+                    
+                    ( paths, num_sidecars_this_loop ) = ClientFiles.GetAllFilePaths( path_parsing_jobs, do_human_sort = do_human_sort )
                     
                     num_sidecars += num_sidecars_this_loop
                     unparsed_paths.extend( paths )

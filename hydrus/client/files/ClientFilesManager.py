@@ -707,6 +707,7 @@ class ClientFilesManager( object ):
         HydrusData.ShowText( 'A critical drive error has occurred. All importers--subscriptions, import folders, and paged file import queues--have been paused. Once the issue is clear, restart the client and resume your imports under the file and network menus!' )
         
         self._controller.pub( 'notify_refresh_network_menu' )
+        self._controller.pub( 'notify_new_import_folders' )
         
     
     def _LookForFilePath( self, hash ):

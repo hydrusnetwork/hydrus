@@ -583,6 +583,7 @@ class MediaList( object ):
         self._hashes_to_collected_media = {}
         
         self._media_sort = MediaSort( ( 'system', CC.SORT_FILES_BY_FILESIZE ), CC.SORT_ASC )
+        self._secondary_media_sort = None
         self._media_collect = MediaCollect()
         
         self._sorted_media = HydrusLists.FastIndexUniqueList( [ self._GenerateMediaSingleton( media_result ) for media_result in media_results ] )
@@ -1359,26 +1360,36 @@ class MediaList( object ):
         self._tag_context = tag_context
         
     
-    def Sort( self, media_sort = None ):
+    def Sort( self, media_sort: typing.Optional[ "MediaSort" ] = None, secondary_sort: typing.Optional[ "MediaSort" ] = None ):
+        
+        # TODO: TBH, I think I should stop caching the last sort and just take params every time. that's KISS
         
         if media_sort is None:
             
             media_sort = self._media_sort
             
         
-        for media in self._collected_media:
+        if secondary_sort is None:
             
-            media.Sort( media_sort )
+            if self._secondary_media_sort is None:
+                
+                secondary_sort = CG.client_controller.new_options.GetFallbackSort()
+                
+            else:
+                
+                secondary_sort = self._secondary_media_sort
+                
             
         
         self._media_sort = media_sort
+        self._secondary_media_sort = secondary_sort
         
-        media_sort_fallback = CG.client_controller.new_options.GetFallbackSort()
+        for media in self._collected_media:
+            
+            media.Sort( media_sort = media_sort, secondary_sort = secondary_sort )
+            
         
-        media_sort_fallback.Sort( self._location_context, self._tag_context, self._sorted_media )
-        
-        # this is a stable sort, so the fallback order above will remain for equal items
-        
+        self._secondary_media_sort.Sort( self._location_context, self._tag_context, self._sorted_media )
         self._media_sort.Sort( self._location_context, self._tag_context, self._sorted_media )
         
         self._RecalcHashes()
@@ -2327,7 +2338,7 @@ class MediaSort( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def GetSortKeyAndReverse( self, location_context: ClientLocation.LocationContext, tag_context: ClientSearchTagContext.TagContext ):
+    def GetSortKeyAndReverse( self, location_context: ClientLocation.LocationContext ):
         
         ( sort_metadata, sort_data ) = self.sort_type
         
@@ -2618,7 +2629,9 @@ class MediaSort( HydrusSerialisable.SerialisableBase ):
                     
                     tags_manager = x.GetTagsManager()
                     
-                    return len( tags_manager.GetCurrentAndPending( tag_context.service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ) )
+                    # this is self.tag_context, not the given tag context
+                    
+                    return len( tags_manager.GetCurrentAndPending( self.tag_context.service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ) )
                     
                 
             elif sort_data == CC.SORT_FILES_BY_MIME:
@@ -2772,6 +2785,9 @@ class MediaSort( HydrusSerialisable.SerialisableBase ):
     
     def Sort( self, location_context: ClientLocation.LocationContext, tag_context: ClientSearchTagContext.TagContext, media_results_list: HydrusLists.FastIndexUniqueList ):
         
+        # the tag context here is that of the page overall. I removed it from GetSortKeyAndReverse when I started sucking it from the media sort here for num_tags, but maybe in future we'll want some
+        # sophisticated logic somewhere that soys 'use the page' instead of what the sort has. so don't remove it too aggressively m8
+        
         ( sort_metadata, sort_data ) = self.sort_type
         
         if sort_data == CC.SORT_FILES_BY_RANDOM:
@@ -2780,7 +2796,7 @@ class MediaSort( HydrusSerialisable.SerialisableBase ):
             
         else:
             
-            ( sort_key, reverse ) = self.GetSortKeyAndReverse( location_context, tag_context )
+            ( sort_key, reverse ) = self.GetSortKeyAndReverse( location_context )
             
             media_results_list.sort( key = sort_key, reverse = reverse )
             

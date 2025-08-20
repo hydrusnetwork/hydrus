@@ -284,10 +284,7 @@ class TestURLDomainMask( unittest.TestCase ):
     
     def test_1_basics( self ):
         
-        match_subdomains = False
-        keep_matched_subdomains = False
-        
-        url_domain_mask = ClientNetworkingURLClass.URLDomainMask( [ r'site\.com' ], match_subdomains, keep_matched_subdomains )
+        url_domain_mask = ClientNetworkingURLClass.URLDomainMask( raw_domains = [ 'site.com' ] )
         
         self.assertTrue( url_domain_mask.Matches( 'site.com' ) )
         self.assertTrue( url_domain_mask.Matches( 'www1.site.com' ) )
@@ -298,10 +295,7 @@ class TestURLDomainMask( unittest.TestCase ):
         
         #
         
-        match_subdomains = True
-        keep_matched_subdomains = False
-        
-        url_domain_mask = ClientNetworkingURLClass.URLDomainMask( [ r'site\.com' ], match_subdomains, keep_matched_subdomains )
+        url_domain_mask = ClientNetworkingURLClass.URLDomainMask( raw_domains = [ 'site.com' ], match_subdomains = True )
         
         self.assertTrue( url_domain_mask.Matches( 'site.com' ) )
         self.assertTrue( url_domain_mask.Matches( 'www1.site.com' ) )
@@ -313,10 +307,42 @@ class TestURLDomainMask( unittest.TestCase ):
         
         #
         
-        match_subdomains = True
-        keep_matched_subdomains = True
+        url_domain_mask = ClientNetworkingURLClass.URLDomainMask( raw_domains = [ 'site.com' ], match_subdomains = True, keep_matched_subdomains = True )
         
-        url_domain_mask = ClientNetworkingURLClass.URLDomainMask( [ r'site\.com' ], match_subdomains, keep_matched_subdomains )
+        self.assertTrue( url_domain_mask.Matches( 'site.com' ) )
+        self.assertTrue( url_domain_mask.Matches( 'www1.site.com' ) )
+        self.assertTrue( url_domain_mask.Matches( 'artistname.site.com' ) )
+        
+        self.assertEqual( url_domain_mask.Normalise( 'site.com' ), 'site.com' )
+        self.assertEqual( url_domain_mask.Normalise( 'www1.site.com' ), 'www1.site.com' )
+        self.assertEqual( url_domain_mask.Normalise( 'artistname.site.com' ), 'artistname.site.com' )
+        
+        #
+        
+        url_domain_mask = ClientNetworkingURLClass.URLDomainMask( domain_regexes = [ r'site\.com' ] )
+        
+        self.assertTrue( url_domain_mask.Matches( 'site.com' ) )
+        self.assertTrue( url_domain_mask.Matches( 'www1.site.com' ) )
+        self.assertFalse( url_domain_mask.Matches( 'artistname.site.com' ) )
+        
+        self.assertEqual( url_domain_mask.Normalise( 'site.com' ), 'site.com' )
+        self.assertEqual( url_domain_mask.Normalise( 'www1.site.com' ), 'site.com' )
+        
+        #
+        
+        url_domain_mask = ClientNetworkingURLClass.URLDomainMask( domain_regexes = [ r'site\.com' ], match_subdomains = True )
+        
+        self.assertTrue( url_domain_mask.Matches( 'site.com' ) )
+        self.assertTrue( url_domain_mask.Matches( 'www1.site.com' ) )
+        self.assertTrue( url_domain_mask.Matches( 'artistname.site.com' ) )
+        
+        self.assertEqual( url_domain_mask.Normalise( 'site.com' ), 'site.com' )
+        self.assertEqual( url_domain_mask.Normalise( 'www1.site.com' ), 'site.com' )
+        self.assertEqual( url_domain_mask.Normalise( 'artistname.site.com' ), 'site.com' )
+        
+        #
+        
+        url_domain_mask = ClientNetworkingURLClass.URLDomainMask( domain_regexes = [ r'site\.com' ], match_subdomains = True, keep_matched_subdomains = True )
         
         self.assertTrue( url_domain_mask.Matches( 'site.com' ) )
         self.assertTrue( url_domain_mask.Matches( 'www1.site.com' ) )
@@ -329,10 +355,7 @@ class TestURLDomainMask( unittest.TestCase ):
     
     def test_2_wildcard( self ):
         
-        match_subdomains = False
-        keep_matched_subdomains = False
-        
-        url_domain_mask = ClientNetworkingURLClass.URLDomainMask( [ r'site\.[^\.]+' ], match_subdomains, keep_matched_subdomains )
+        url_domain_mask = ClientNetworkingURLClass.URLDomainMask( domain_regexes = [ r'site\.[^\.]+' ] )
         
         self.assertTrue( url_domain_mask.Matches( 'site.com' ) )
         self.assertTrue( url_domain_mask.Matches( 'www1.site.com' ) )
@@ -344,10 +367,7 @@ class TestURLDomainMask( unittest.TestCase ):
         
         #
         
-        match_subdomains = True
-        keep_matched_subdomains = False
-        
-        url_domain_mask = ClientNetworkingURLClass.URLDomainMask( [ r'site\.[^\.]+' ], match_subdomains, keep_matched_subdomains )
+        url_domain_mask = ClientNetworkingURLClass.URLDomainMask( domain_regexes = [ r'site\.[^\.]+' ], match_subdomains = True )
         
         self.assertTrue( url_domain_mask.Matches( 'site.com' ) )
         self.assertTrue( url_domain_mask.Matches( 'www1.site.com' ) )
@@ -360,10 +380,7 @@ class TestURLDomainMask( unittest.TestCase ):
         
         #
         
-        match_subdomains = True
-        keep_matched_subdomains = True
-        
-        url_domain_mask = ClientNetworkingURLClass.URLDomainMask( [ r'site\.[^\.]+' ], match_subdomains, keep_matched_subdomains )
+        url_domain_mask = ClientNetworkingURLClass.URLDomainMask( domain_regexes = [ r'site\.[^\.]+' ], match_subdomains = True, keep_matched_subdomains = True )
         
         self.assertTrue( url_domain_mask.Matches( 'site.com' ) )
         self.assertTrue( url_domain_mask.Matches( 'www1.site.com' ) )
@@ -377,10 +394,7 @@ class TestURLDomainMask( unittest.TestCase ):
     
     def test_3_multiple( self ):
         
-        match_subdomains = False
-        keep_matched_subdomains = False
-        
-        url_domain_mask = ClientNetworkingURLClass.URLDomainMask( [ r'site\.[^\.]+', 'example.cool[^\.]+.[^\.]+' ], match_subdomains, keep_matched_subdomains )
+        url_domain_mask = ClientNetworkingURLClass.URLDomainMask( domain_regexes = [ r'site\.[^\.]+', 'example.cool[^\.]+.[^\.]+' ] )
         
         self.assertTrue( url_domain_mask.Matches( 'example.coolsite.yo' ) )
         self.assertTrue( url_domain_mask.Matches( 'www1.example.coolsite.yo' ) )
@@ -392,10 +406,7 @@ class TestURLDomainMask( unittest.TestCase ):
         
         #
         
-        match_subdomains = True
-        keep_matched_subdomains = False
-        
-        url_domain_mask = ClientNetworkingURLClass.URLDomainMask( [ r'site\.[^\.]+', 'example.cool[^\.]+.[^\.]+' ], match_subdomains, keep_matched_subdomains )
+        url_domain_mask = ClientNetworkingURLClass.URLDomainMask( domain_regexes = [ r'site\.[^\.]+', 'example.cool[^\.]+.[^\.]+' ], match_subdomains = True )
         
         self.assertTrue( url_domain_mask.Matches( 'example.coolsite.yo' ) )
         self.assertTrue( url_domain_mask.Matches( 'www1.example.coolsite.yo' ) )
@@ -408,10 +419,7 @@ class TestURLDomainMask( unittest.TestCase ):
         
         #
         
-        match_subdomains = True
-        keep_matched_subdomains = True
-        
-        url_domain_mask = ClientNetworkingURLClass.URLDomainMask( [ r'site\.[^\.]+', 'example.cool[^\.]+.[^\.]+' ], match_subdomains, keep_matched_subdomains )
+        url_domain_mask = ClientNetworkingURLClass.URLDomainMask( domain_regexes = [ r'site\.[^\.]+', 'example.cool[^\.]+.[^\.]+' ], match_subdomains = True, keep_matched_subdomains = True )
         
         self.assertTrue( url_domain_mask.Matches( 'example.coolsite.yo' ) )
         self.assertTrue( url_domain_mask.Matches( 'www1.example.coolsite.yo' ) )
@@ -422,6 +430,32 @@ class TestURLDomainMask( unittest.TestCase ):
         self.assertEqual( url_domain_mask.Normalise( 'www1.example.coolsite.yo' ), 'www1.example.coolsite.yo' )
         self.assertEqual( url_domain_mask.Normalise( 'artistname.example.coolsite.yo' ), 'artistname.example.coolsite.yo' )
         
+        #
+        
+        url_domain_mask = ClientNetworkingURLClass.URLDomainMask( raw_domains = [ 'example.com' ], domain_regexes = [ r'site\.[^\.]+', 'example.cool[^\.]+.[^\.]+' ], match_subdomains = True, keep_matched_subdomains = True )
+        
+        self.assertTrue( url_domain_mask.Matches( 'example.coolsite.yo' ) )
+        self.assertTrue( url_domain_mask.Matches( 'www1.example.coolsite.yo' ) )
+        self.assertTrue( url_domain_mask.Matches( 'artistname.example.coolsite.yo' ) )
+        self.assertFalse( url_domain_mask.Matches( 'example.coolsite.co.cx' ) )
+        
+        self.assertEqual( url_domain_mask.Normalise( 'example.coolsite.yo' ), 'example.coolsite.yo' )
+        self.assertEqual( url_domain_mask.Normalise( 'www1.example.coolsite.yo' ), 'www1.example.coolsite.yo' )
+        self.assertEqual( url_domain_mask.Normalise( 'artistname.example.coolsite.yo' ), 'artistname.example.coolsite.yo' )
+        
+        #
+        
+        url_domain_mask = ClientNetworkingURLClass.URLDomainMask( raw_domains = [ 'test1.example.com', 'test2.example.com', 'test4.example.com' ] )
+        
+        self.assertTrue( url_domain_mask.Matches( 'test1.example.com' ) )
+        self.assertTrue( url_domain_mask.Matches( 'test2.example.com' ) )
+        self.assertFalse( url_domain_mask.Matches( 'test3.example.com' ) )
+        self.assertTrue( url_domain_mask.Matches( 'test4.example.com' ) )
+        
+        self.assertEqual( url_domain_mask.Normalise( 'test1.example.com' ), 'test1.example.com' )
+        self.assertEqual( url_domain_mask.Normalise( 'test2.example.com' ), 'test2.example.com' )
+        self.assertEqual( url_domain_mask.Normalise( 'test4.example.com' ), 'test4.example.com' )
+        
     
 
 class TestURLClasses( unittest.TestCase ):
@@ -431,11 +465,10 @@ class TestURLClasses( unittest.TestCase ):
         name = 'test'
         url_type = HC.URL_TYPE_POST
         preferred_scheme = 'https'
-        netloc = 'testbooru.cx'
+        
+        url_domain_mask = ClientNetworkingURLClass.URLDomainMask( raw_domains = [ 'testbooru.cx' ] )
         
         alphabetise_get_parameters = True
-        match_subdomains = False
-        keep_matched_subdomains = False
         can_produce_multiple_files = False
         should_be_associated_with_files = True
         keep_fragment = False
@@ -465,9 +498,9 @@ class TestURLClasses( unittest.TestCase ):
         unnormalised_good_url_2 = 'https://testbooru.cx/post/page.php?s=view&id=123456'
         bad_url = 'https://wew.lad/123456'
         
-        url_class = ClientNetworkingURLClass.URLClass( name, url_type = url_type, preferred_scheme = preferred_scheme, netloc = netloc, path_components = path_components, parameters = parameters, send_referral_url = send_referral_url, referral_url_converter = referral_url_converter, gallery_index_type = gallery_index_type, gallery_index_identifier = gallery_index_identifier, gallery_index_delta = gallery_index_delta, example_url = example_url )
+        url_class = ClientNetworkingURLClass.URLClass( name, url_type = url_type, preferred_scheme = preferred_scheme, url_domain_mask = url_domain_mask, path_components = path_components, parameters = parameters, send_referral_url = send_referral_url, referral_url_converter = referral_url_converter, gallery_index_type = gallery_index_type, gallery_index_identifier = gallery_index_identifier, gallery_index_delta = gallery_index_delta, example_url = example_url )
         
-        url_class.SetURLBooleans( match_subdomains, keep_matched_subdomains, alphabetise_get_parameters, can_produce_multiple_files, should_be_associated_with_files, keep_fragment )
+        url_class.SetURLBooleans( alphabetise_get_parameters, can_produce_multiple_files, should_be_associated_with_files, keep_fragment )
         
         self.assertEqual( url_class.Matches( example_url ), True )
         self.assertEqual( url_class.Matches( bad_url ), False )
@@ -522,11 +555,11 @@ class TestURLClasses( unittest.TestCase ):
         name = 'test'
         url_type = HC.URL_TYPE_POST
         preferred_scheme = 'https'
-        netloc = 'testbooru.cx'
+        
+        url_domain_mask = ClientNetworkingURLClass.URLDomainMask( raw_domains = [ 'testbooru.cx' ] )
+        
         
         alphabetise_get_parameters = True
-        match_subdomains = False
-        keep_matched_subdomains = False
         can_produce_multiple_files = False
         should_be_associated_with_files = True
         keep_fragment = False
@@ -565,9 +598,9 @@ class TestURLClasses( unittest.TestCase ):
         
         parameters.append( p )
         
-        url_class = ClientNetworkingURLClass.URLClass( name, url_type = url_type, preferred_scheme = preferred_scheme, netloc = netloc, path_components = path_components, parameters = parameters, send_referral_url = send_referral_url, referral_url_converter = referral_url_converter, gallery_index_type = gallery_index_type, gallery_index_identifier = gallery_index_identifier, gallery_index_delta = gallery_index_delta, example_url = example_url )
+        url_class = ClientNetworkingURLClass.URLClass( name, url_type = url_type, preferred_scheme = preferred_scheme, url_domain_mask = url_domain_mask, path_components = path_components, parameters = parameters, send_referral_url = send_referral_url, referral_url_converter = referral_url_converter, gallery_index_type = gallery_index_type, gallery_index_identifier = gallery_index_identifier, gallery_index_delta = gallery_index_delta, example_url = example_url )
         
-        url_class.SetURLBooleans( match_subdomains, keep_matched_subdomains, alphabetise_get_parameters, can_produce_multiple_files, should_be_associated_with_files, keep_fragment )
+        url_class.SetURLBooleans( alphabetise_get_parameters, can_produce_multiple_files, should_be_associated_with_files, keep_fragment )
         
         unnormalised_without_pid = 'https://testbooru.cx/post/page.php?id=123456&s=view'
         unnormalised_with_pid = 'https://testbooru.cx/post/page.php?id=123456&pid=3&s=view'
@@ -587,11 +620,10 @@ class TestURLClasses( unittest.TestCase ):
         name = 'test'
         url_type = HC.URL_TYPE_POST
         preferred_scheme = 'https'
-        netloc = 'testbooru.cx'
+        
+        url_domain_mask = ClientNetworkingURLClass.URLDomainMask( raw_domains = [ 'testbooru.cx' ] )
         
         alphabetise_get_parameters = True
-        match_subdomains = False
-        keep_matched_subdomains = False
         can_produce_multiple_files = False
         should_be_associated_with_files = True
         keep_fragment = False
@@ -624,9 +656,9 @@ class TestURLClasses( unittest.TestCase ):
         
         parameters.append( p )
         
-        url_class = ClientNetworkingURLClass.URLClass( name, url_type = url_type, preferred_scheme = preferred_scheme, netloc = netloc, path_components = path_components, parameters = parameters, send_referral_url = send_referral_url, referral_url_converter = referral_url_converter, gallery_index_type = gallery_index_type, gallery_index_identifier = gallery_index_identifier, gallery_index_delta = gallery_index_delta, example_url = example_url )
+        url_class = ClientNetworkingURLClass.URLClass( name, url_type = url_type, preferred_scheme = preferred_scheme, url_domain_mask = url_domain_mask, path_components = path_components, parameters = parameters, send_referral_url = send_referral_url, referral_url_converter = referral_url_converter, gallery_index_type = gallery_index_type, gallery_index_identifier = gallery_index_identifier, gallery_index_delta = gallery_index_delta, example_url = example_url )
         
-        url_class.SetURLBooleans( match_subdomains, keep_matched_subdomains, alphabetise_get_parameters, can_produce_multiple_files, should_be_associated_with_files, keep_fragment )
+        url_class.SetURLBooleans( alphabetise_get_parameters, can_produce_multiple_files, should_be_associated_with_files, keep_fragment )
         
         unnormalised = 'https://testbooru.cx/post/page.php?id=123456&s=view'
         unnormalised_and_already_has = 'https://testbooru.cx/post/page.php?id=123456&s=view&token=hello'
@@ -650,11 +682,10 @@ class TestURLClasses( unittest.TestCase ):
         name = 'test'
         url_type = HC.URL_TYPE_POST
         preferred_scheme = 'https'
-        netloc = 'testbooru.cx'
+        
+        url_domain_mask = ClientNetworkingURLClass.URLDomainMask( raw_domains = [ 'testbooru.cx' ] )
         
         alphabetise_get_parameters = True
-        match_subdomains = False
-        keep_matched_subdomains = False
         can_produce_multiple_files = False
         should_be_associated_with_files = True
         keep_fragment = False
@@ -701,9 +732,9 @@ class TestURLClasses( unittest.TestCase ):
         
         parameters.append( p )
         
-        url_class = ClientNetworkingURLClass.URLClass( name, url_type = url_type, preferred_scheme = preferred_scheme, netloc = netloc, path_components = path_components, parameters = parameters, send_referral_url = send_referral_url, referral_url_converter = referral_url_converter, gallery_index_type = gallery_index_type, gallery_index_identifier = gallery_index_identifier, gallery_index_delta = gallery_index_delta, example_url = example_url )
+        url_class = ClientNetworkingURLClass.URLClass( name, url_type = url_type, preferred_scheme = preferred_scheme, url_domain_mask = url_domain_mask, path_components = path_components, parameters = parameters, send_referral_url = send_referral_url, referral_url_converter = referral_url_converter, gallery_index_type = gallery_index_type, gallery_index_identifier = gallery_index_identifier, gallery_index_delta = gallery_index_delta, example_url = example_url )
         
-        url_class.SetURLBooleans( match_subdomains, keep_matched_subdomains, alphabetise_get_parameters, can_produce_multiple_files, should_be_associated_with_files, keep_fragment )
+        url_class.SetURLBooleans( alphabetise_get_parameters, can_produce_multiple_files, should_be_associated_with_files, keep_fragment )
         
         unnormalised = 'https://testbooru.cx/post/page.php?id=123456&s=view'
         unnormalised_and_already_has = 'https://testbooru.cx/post/page.php?cache_reset=hello&id=123456&s=view'
@@ -727,11 +758,10 @@ class TestURLClasses( unittest.TestCase ):
         name = 'test'
         url_type = HC.URL_TYPE_POST
         preferred_scheme = 'https'
-        netloc = 'testbooru.cx'
+        
+        url_domain_mask = ClientNetworkingURLClass.URLDomainMask( raw_domains = [ 'testbooru.cx' ] )
         
         alphabetise_get_parameters = True
-        match_subdomains = False
-        keep_matched_subdomains = False
         can_produce_multiple_files = False
         should_be_associated_with_files = True
         keep_fragment = False
@@ -763,17 +793,17 @@ class TestURLClasses( unittest.TestCase ):
         
         #
         
-        url_class = ClientNetworkingURLClass.URLClass( name, url_type = url_type, preferred_scheme = preferred_scheme, netloc = netloc, path_components = path_components, parameters = parameters, send_referral_url = send_referral_url, referral_url_converter = referral_url_converter, gallery_index_type = gallery_index_type, gallery_index_identifier = gallery_index_identifier, gallery_index_delta = gallery_index_delta, example_url = example_url )
+        url_class = ClientNetworkingURLClass.URLClass( name, url_type = url_type, preferred_scheme = preferred_scheme, url_domain_mask = url_domain_mask, path_components = path_components, parameters = parameters, send_referral_url = send_referral_url, referral_url_converter = referral_url_converter, gallery_index_type = gallery_index_type, gallery_index_identifier = gallery_index_identifier, gallery_index_delta = gallery_index_delta, example_url = example_url )
         
-        url_class.SetURLBooleans( match_subdomains, keep_matched_subdomains, alphabetise_get_parameters, can_produce_multiple_files, should_be_associated_with_files, keep_fragment )
+        url_class.SetURLBooleans( alphabetise_get_parameters, can_produce_multiple_files, should_be_associated_with_files, keep_fragment )
         
         self.assertEqual( url_class.Normalise( unnormalised_good_url_2 ), good_url )
         
         alphabetise_get_parameters = False
         
-        url_class = ClientNetworkingURLClass.URLClass( name, url_type = url_type, preferred_scheme = preferred_scheme, netloc = netloc, path_components = path_components, parameters = parameters, send_referral_url = send_referral_url, referral_url_converter = referral_url_converter, gallery_index_type = gallery_index_type, gallery_index_identifier = gallery_index_identifier, gallery_index_delta = gallery_index_delta, example_url = example_url )
+        url_class = ClientNetworkingURLClass.URLClass( name, url_type = url_type, preferred_scheme = preferred_scheme, url_domain_mask = url_domain_mask, path_components = path_components, parameters = parameters, send_referral_url = send_referral_url, referral_url_converter = referral_url_converter, gallery_index_type = gallery_index_type, gallery_index_identifier = gallery_index_identifier, gallery_index_delta = gallery_index_delta, example_url = example_url )
         
-        url_class.SetURLBooleans( match_subdomains, keep_matched_subdomains, alphabetise_get_parameters, can_produce_multiple_files, should_be_associated_with_files, keep_fragment )
+        url_class.SetURLBooleans( alphabetise_get_parameters, can_produce_multiple_files, should_be_associated_with_files, keep_fragment )
         
         self.assertEqual( url_class.Normalise( unnormalised_good_url_2 ), unnormalised_good_url_2 )
         
@@ -783,11 +813,10 @@ class TestURLClasses( unittest.TestCase ):
         name = 'test'
         url_type = HC.URL_TYPE_POST
         preferred_scheme = 'https'
-        netloc = 'testbooru.cx'
+        
+        url_domain_mask = ClientNetworkingURLClass.URLDomainMask( raw_domains = [ 'testbooru.cx' ] )
         
         alphabetise_get_parameters = True
-        match_subdomains = False
-        keep_matched_subdomains = False
         can_produce_multiple_files = False
         should_be_associated_with_files = True
         keep_fragment = False
@@ -817,9 +846,9 @@ class TestURLClasses( unittest.TestCase ):
         
         send_referral_url = ClientNetworkingURLClass.SEND_REFERRAL_URL_NEVER
         
-        url_class = ClientNetworkingURLClass.URLClass( name, url_type = url_type, preferred_scheme = preferred_scheme, netloc = netloc, path_components = path_components, parameters = parameters, send_referral_url = send_referral_url, referral_url_converter = referral_url_converter, gallery_index_type = gallery_index_type, gallery_index_identifier = gallery_index_identifier, gallery_index_delta = gallery_index_delta, example_url = example_url )
+        url_class = ClientNetworkingURLClass.URLClass( name, url_type = url_type, preferred_scheme = preferred_scheme, url_domain_mask = url_domain_mask, path_components = path_components, parameters = parameters, send_referral_url = send_referral_url, referral_url_converter = referral_url_converter, gallery_index_type = gallery_index_type, gallery_index_identifier = gallery_index_identifier, gallery_index_delta = gallery_index_delta, example_url = example_url )
         
-        url_class.SetURLBooleans( match_subdomains, keep_matched_subdomains, alphabetise_get_parameters, can_produce_multiple_files, should_be_associated_with_files, keep_fragment )
+        url_class.SetURLBooleans( alphabetise_get_parameters, can_produce_multiple_files, should_be_associated_with_files, keep_fragment )
         
         self.assertEqual( url_class.GetReferralURL( good_url, referral_url ), None )
         self.assertEqual( url_class.GetReferralURL( good_url, None ), None )
@@ -836,9 +865,9 @@ class TestURLClasses( unittest.TestCase ):
         
         send_referral_url = ClientNetworkingURLClass.SEND_REFERRAL_URL_CONVERTER_IF_NONE_PROVIDED
         
-        url_class = ClientNetworkingURLClass.URLClass( name, url_type = url_type, preferred_scheme = preferred_scheme, netloc = netloc, path_components = path_components, parameters = parameters, send_referral_url = send_referral_url, referral_url_converter = referral_url_converter, gallery_index_type = gallery_index_type, gallery_index_identifier = gallery_index_identifier, gallery_index_delta = gallery_index_delta, example_url = example_url )
+        url_class = ClientNetworkingURLClass.URLClass( name, url_type = url_type, preferred_scheme = preferred_scheme, url_domain_mask = url_domain_mask, path_components = path_components, parameters = parameters, send_referral_url = send_referral_url, referral_url_converter = referral_url_converter, gallery_index_type = gallery_index_type, gallery_index_identifier = gallery_index_identifier, gallery_index_delta = gallery_index_delta, example_url = example_url )
         
-        url_class.SetURLBooleans( match_subdomains, keep_matched_subdomains, alphabetise_get_parameters, can_produce_multiple_files, should_be_associated_with_files, keep_fragment )
+        url_class.SetURLBooleans( alphabetise_get_parameters, can_produce_multiple_files, should_be_associated_with_files, keep_fragment )
         
         self.assertEqual( url_class.GetReferralURL( good_url, referral_url ), referral_url )
         self.assertEqual( url_class.GetReferralURL( good_url, None ), converted_referral_url )
@@ -847,9 +876,9 @@ class TestURLClasses( unittest.TestCase ):
         
         send_referral_url = ClientNetworkingURLClass.SEND_REFERRAL_URL_ONLY_CONVERTER
         
-        url_class = ClientNetworkingURLClass.URLClass( name, url_type = url_type, preferred_scheme = preferred_scheme, netloc = netloc, path_components = path_components, parameters = parameters, send_referral_url = send_referral_url, referral_url_converter = referral_url_converter, gallery_index_type = gallery_index_type, gallery_index_identifier = gallery_index_identifier, gallery_index_delta = gallery_index_delta, example_url = example_url )
+        url_class = ClientNetworkingURLClass.URLClass( name, url_type = url_type, preferred_scheme = preferred_scheme, url_domain_mask = url_domain_mask, path_components = path_components, parameters = parameters, send_referral_url = send_referral_url, referral_url_converter = referral_url_converter, gallery_index_type = gallery_index_type, gallery_index_identifier = gallery_index_identifier, gallery_index_delta = gallery_index_delta, example_url = example_url )
         
-        url_class.SetURLBooleans( match_subdomains, keep_matched_subdomains, alphabetise_get_parameters, can_produce_multiple_files, should_be_associated_with_files, keep_fragment )
+        url_class.SetURLBooleans( alphabetise_get_parameters, can_produce_multiple_files, should_be_associated_with_files, keep_fragment )
         
         self.assertEqual( url_class.GetReferralURL( good_url, referral_url ), converted_referral_url )
         self.assertEqual( url_class.GetReferralURL( good_url, None ), converted_referral_url )
@@ -860,11 +889,10 @@ class TestURLClasses( unittest.TestCase ):
         name = 'mega test'
         url_type = HC.URL_TYPE_POST
         preferred_scheme = 'https'
-        netloc = 'mega.nz'
+        
+        url_domain_mask = ClientNetworkingURLClass.URLDomainMask( raw_domains = [ 'mega.nz' ] )
         
         alphabetise_get_parameters = True
-        match_subdomains = False
-        keep_matched_subdomains = False
         can_produce_multiple_files = True
         should_be_associated_with_files = True
         
@@ -884,17 +912,17 @@ class TestURLClasses( unittest.TestCase ):
         
         keep_fragment = False
         
-        url_class = ClientNetworkingURLClass.URLClass( name, url_type = url_type, preferred_scheme = preferred_scheme, netloc = netloc, path_components = path_components, parameters = parameters, send_referral_url = send_referral_url, referral_url_converter = referral_url_converter, gallery_index_type = gallery_index_type, gallery_index_identifier = gallery_index_identifier, gallery_index_delta = gallery_index_delta, example_url = example_url )
+        url_class = ClientNetworkingURLClass.URLClass( name, url_type = url_type, preferred_scheme = preferred_scheme, url_domain_mask = url_domain_mask, path_components = path_components, parameters = parameters, send_referral_url = send_referral_url, referral_url_converter = referral_url_converter, gallery_index_type = gallery_index_type, gallery_index_identifier = gallery_index_identifier, gallery_index_delta = gallery_index_delta, example_url = example_url )
         
-        url_class.SetURLBooleans( match_subdomains, keep_matched_subdomains, alphabetise_get_parameters, can_produce_multiple_files, should_be_associated_with_files, keep_fragment )
+        url_class.SetURLBooleans( alphabetise_get_parameters, can_produce_multiple_files, should_be_associated_with_files, keep_fragment )
         
         self.assertEqual( url_class.Normalise( example_url ), 'https://mega.nz/file/KxJHVKhT' )
         
         keep_fragment = True
         
-        url_class = ClientNetworkingURLClass.URLClass( name, url_type = url_type, preferred_scheme = preferred_scheme, netloc = netloc, path_components = path_components, parameters = parameters, send_referral_url = send_referral_url, referral_url_converter = referral_url_converter, gallery_index_type = gallery_index_type, gallery_index_identifier = gallery_index_identifier, gallery_index_delta = gallery_index_delta, example_url = example_url )
+        url_class = ClientNetworkingURLClass.URLClass( name, url_type = url_type, preferred_scheme = preferred_scheme, url_domain_mask = url_domain_mask, path_components = path_components, parameters = parameters, send_referral_url = send_referral_url, referral_url_converter = referral_url_converter, gallery_index_type = gallery_index_type, gallery_index_identifier = gallery_index_identifier, gallery_index_delta = gallery_index_delta, example_url = example_url )
         
-        url_class.SetURLBooleans( match_subdomains, keep_matched_subdomains, alphabetise_get_parameters, can_produce_multiple_files, should_be_associated_with_files, keep_fragment )
+        url_class.SetURLBooleans( alphabetise_get_parameters, can_produce_multiple_files, should_be_associated_with_files, keep_fragment )
         
         self.assertEqual( url_class.Normalise( example_url ), example_url )
         
@@ -908,11 +936,10 @@ class TestURLClasses( unittest.TestCase ):
         name = 'test'
         url_type = HC.URL_TYPE_POST
         preferred_scheme = 'https'
-        netloc = 'testbooru.cx'
+        
+        url_domain_mask = ClientNetworkingURLClass.URLDomainMask( raw_domains = [ 'testbooru.cx' ] )
         
         alphabetise_get_parameters = True
-        match_subdomains = False
-        keep_matched_subdomains = False
         can_produce_multiple_files = False
         should_be_associated_with_files = True
         keep_fragment = False
@@ -934,9 +961,9 @@ class TestURLClasses( unittest.TestCase ):
         gallery_index_delta = 1
         example_url = 'https://testbooru.cx/post/page.php?id=123456&s=view'
         
-        url_class = ClientNetworkingURLClass.URLClass( name, url_type = url_type, preferred_scheme = preferred_scheme, netloc = netloc, path_components = path_components, parameters = parameters, send_referral_url = send_referral_url, referral_url_converter = referral_url_converter, gallery_index_type = gallery_index_type, gallery_index_identifier = gallery_index_identifier, gallery_index_delta = gallery_index_delta, example_url = example_url )
+        url_class = ClientNetworkingURLClass.URLClass( name, url_type = url_type, preferred_scheme = preferred_scheme, url_domain_mask = url_domain_mask, path_components = path_components, parameters = parameters, send_referral_url = send_referral_url, referral_url_converter = referral_url_converter, gallery_index_type = gallery_index_type, gallery_index_identifier = gallery_index_identifier, gallery_index_delta = gallery_index_delta, example_url = example_url )
         
-        url_class.SetURLBooleans( match_subdomains, keep_matched_subdomains, alphabetise_get_parameters, can_produce_multiple_files, should_be_associated_with_files, keep_fragment )
+        url_class.SetURLBooleans( alphabetise_get_parameters, can_produce_multiple_files, should_be_associated_with_files, keep_fragment )
         
         url_class.SetKeepExtraParametersForServer( False )
         
@@ -974,11 +1001,10 @@ class TestURLClasses( unittest.TestCase ):
         name = 'single value lad'
         url_type = HC.URL_TYPE_POST
         preferred_scheme = 'https'
-        netloc = 'testbooru.cx'
+        
+        url_domain_mask = ClientNetworkingURLClass.URLDomainMask( raw_domains = [ 'testbooru.cx' ] )
         
         alphabetise_get_parameters = True
-        match_subdomains = False
-        keep_matched_subdomains = False
         can_produce_multiple_files = False
         should_be_associated_with_files = True
         keep_fragment = False
@@ -1002,7 +1028,7 @@ class TestURLClasses( unittest.TestCase ):
             name,
             url_type = url_type,
             preferred_scheme = preferred_scheme,
-            netloc = netloc,
+            url_domain_mask = url_domain_mask,
             path_components = path_components,
             parameters = parameters,
             has_single_value_parameters = has_single_value_parameters,
@@ -1015,7 +1041,7 @@ class TestURLClasses( unittest.TestCase ):
             example_url = example_url
         )
         
-        url_class.SetURLBooleans( match_subdomains, keep_matched_subdomains, alphabetise_get_parameters, can_produce_multiple_files, should_be_associated_with_files, keep_fragment )
+        url_class.SetURLBooleans( alphabetise_get_parameters, can_produce_multiple_files, should_be_associated_with_files, keep_fragment )
         
         self.assertEqual( url_class.Normalise( single_value_good_url ), single_value_good_url_alphabetical_normalised )
         self.assertEqual( url_class.Normalise( single_value_good_url_multiple ), single_value_good_url_multiple_alphabetical_normalised )
@@ -1040,6 +1066,75 @@ class TestURLClasses( unittest.TestCase ):
         self.assertEqual( url_class.Matches( single_value_missing_url ), False )
         
     
+    def test_not_keeping_domain( self ):
+        
+        name = 'test'
+        url_type = HC.URL_TYPE_POST
+        preferred_scheme = 'https'
+        
+        url_domain_mask = ClientNetworkingURLClass.URLDomainMask( raw_domains = [ 'testbooru.cx' ], match_subdomains = True )
+        
+        alphabetise_get_parameters = True
+        can_produce_multiple_files = False
+        should_be_associated_with_files = True
+        keep_fragment = False
+        
+        path_components = []
+        
+        path_components.append( ( ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FIXED, match_value = 'post', example_string = 'post' ), None ) )
+        path_components.append( ( ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FIXED, match_value = 'page.php', example_string = 'page.php' ), None ) )
+        
+        parameters = []
+        
+        parameters.append( ClientNetworkingURLClass.URLClassParameterFixedName( name = 's', value_string_match = ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FIXED, match_value = 'view', example_string = 'view' ) ) )
+        parameters.append( ClientNetworkingURLClass.URLClassParameterFixedName( name = 'id', value_string_match = ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FLEXIBLE, match_value = ClientStrings.FLEXIBLE_MATCH_NUMERIC, example_string = '123456' ) ) )
+        
+        send_referral_url = ClientNetworkingURLClass.SEND_REFERRAL_URL_ONLY_IF_PROVIDED
+        referral_url_converter = None
+        gallery_index_type = None
+        gallery_index_identifier = None
+        gallery_index_delta = 1
+        example_url = 'https://testbooru.cx/post/page.php?id=123456&s=view'
+        
+        #
+        
+        good_url = 'https://testbooru.cx/post/page.php?id=123456&s=view'
+        
+        # default test
+        
+        parameters = []
+        
+        parameters.append( ClientNetworkingURLClass.URLClassParameterFixedName( name = 's', value_string_match = ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FIXED, match_value = 'view', example_string = 'view' ) ) )
+        parameters.append( ClientNetworkingURLClass.URLClassParameterFixedName( name = 'id', value_string_match = ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FLEXIBLE, match_value = ClientStrings.FLEXIBLE_MATCH_NUMERIC, example_string = '123456' ) ) )
+        
+        p = ClientNetworkingURLClass.URLClassParameterFixedName( name = 'pid', value_string_match = ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FLEXIBLE, match_value = ClientStrings.FLEXIBLE_MATCH_NUMERIC, example_string = '0' ) )
+        
+        p.SetDefaultValue( '0' )
+        
+        parameters.append( p )
+        
+        url_class = ClientNetworkingURLClass.URLClass( name, url_type = url_type, preferred_scheme = preferred_scheme, url_domain_mask = url_domain_mask, path_components = path_components, parameters = parameters, send_referral_url = send_referral_url, referral_url_converter = referral_url_converter, gallery_index_type = gallery_index_type, gallery_index_identifier = gallery_index_identifier, gallery_index_delta = gallery_index_delta, example_url = example_url )
+        
+        url_class.SetURLBooleans( alphabetise_get_parameters, can_produce_multiple_files, should_be_associated_with_files, keep_fragment )
+        
+        unnormalised_without_pid = 'https://cdn1.testbooru.cx/post/page.php?id=123456&s=view'
+        unnormalised_with_pid = 'https://cdn2.testbooru.cx/post/page.php?id=123456&pid=3&s=view'
+        normalised_keeping_pid = 'https://testbooru.cx/post/page.php?id=123456&pid=3&s=view'
+        normalised_with_inserted_pid = 'https://testbooru.cx/post/page.php?id=123456&pid=0&s=view'
+        
+        self.assertEqual( url_class.Normalise( unnormalised_without_pid ), normalised_with_inserted_pid )
+        self.assertEqual( url_class.Normalise( normalised_with_inserted_pid ), normalised_with_inserted_pid )
+        self.assertEqual( url_class.Normalise( unnormalised_with_pid ), normalised_keeping_pid )
+        self.assertEqual( url_class.Normalise( normalised_keeping_pid ), normalised_keeping_pid )
+        
+        self.assertTrue( url_class.Matches( unnormalised_without_pid ) )
+        self.assertTrue( url_class.Matches( unnormalised_with_pid ) )
+        self.assertTrue( url_class.Matches( normalised_with_inserted_pid ) )
+        self.assertTrue( url_class.Matches( normalised_keeping_pid ) )
+        self.assertTrue( url_class.Matches( good_url ) )
+        
+    
+
 class TestNetworkingEngine( unittest.TestCase ):
     
     def test_engine_shutdown_app( self ):

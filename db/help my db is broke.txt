@@ -219,6 +219,11 @@ Also, if you recover ok but still get problems, please contact me. You'll likely
 Check install_dir/help/contact.html for ways to get me.
 
 
+*** after fixing: recovering files ***
+
+When recovering a database, you may lose some data or have to resync an older thing with a newer thing. If you need to tell your database to check for files it thinks it has but are now missing--and, conversely, to check for files it has but did not know about--check out 'help my media files are broke.txt', also in the db dir, right beside this document.
+
+
 *** after fixing: recovering mappings ***
 
 Since client.mappings.db is the file most often hit by disk problems, and since recovery operations often lose some original data, recovering lost tags is often the next job after cleanup. A clone will also compact your database, so just losing a few percent probably isn't a big deal. If your file is now half as big after a clone, you probably lost 40% of your tags. If it is 97% of the original size, you probably lost nothing.

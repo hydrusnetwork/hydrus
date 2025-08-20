@@ -19,10 +19,8 @@ from hydrus.client.duplicates import ClientDuplicatesAutoResolutionComparators
 from hydrus.client.duplicates import ClientDuplicates
 from hydrus.client.files.images import ClientVisualData
 from hydrus.client.gui import ClientGUIAsync
-from hydrus.client.gui import ClientGUICore as CGC
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIFunctions
-from hydrus.client.gui import ClientGUIMenus
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.duplicates import ClientGUIDuplicatesAutoResolutionRulePreview
@@ -46,13 +44,13 @@ class EditDuplicatesAutoResolutionRulesPanel( ClientGUIScrolledPanels.EditPanel 
         
         super().__init__( parent )
         
-        menu_items = []
+        menu_template_items = []
         
         call = HydrusData.Call( ClientGUIDialogsQuick.OpenDocumentation, self, HC.DOCUMENTATION_DUPLICATES_AUTO_RESOLUTION )
         
-        menu_items.append( ( 'normal', 'open the duplicates auto-resolution help', 'Open the help page for duplicates auto-resolution in your web browser.', call ) )
+        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'open the duplicates auto-resolution help', 'Open the help page for duplicates auto-resolution in your web browser.', call ) )
         
-        help_button = ClientGUIMenuButton.MenuBitmapButton( self, CC.global_icons().help, menu_items )
+        help_button = ClientGUIMenuButton.MenuIconButton( self, CC.global_icons().help, menu_template_items )
         
         help_hbox = ClientGUICommon.WrapInText( help_button, self, 'help for this panel -->', object_name = 'HydrusIndeterminate' )
         
@@ -937,20 +935,20 @@ class ReviewDuplicatesAutoResolutionPanel( QW.QWidget ):
         
         super().__init__( parent )
         
-        menu_items = []
+        menu_template_items = []
         
         call = HydrusData.Call( ClientGUIDialogsQuick.OpenDocumentation, self, HC.DOCUMENTATION_DUPLICATES_AUTO_RESOLUTION )
         
-        menu_items.append( ( 'normal', 'open the duplicates auto-resolution help', 'Open the help page for duplicates auto-resolution in your web browser.', call ) )
+        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'open the duplicates auto-resolution help', 'Open the help page for duplicates auto-resolution in your web browser.', call ) )
         
-        help_button = ClientGUIMenuButton.MenuBitmapButton( self, CC.global_icons().help, menu_items )
+        help_button = ClientGUIMenuButton.MenuIconButton( self, CC.global_icons().help, menu_template_items )
         
         help_hbox = ClientGUICommon.WrapInText( help_button, self, 'help for this panel -->', object_name = 'HydrusIndeterminate' )
         
         #
         
         self._refresh_button = ClientGUICommon.IconButton( self, CC.global_icons().refresh, self._UpdateList )
-        self._cog_button = ClientGUICommon.IconButton( self, CC.global_icons().cog, self._ShowCogMenu )
+        self._cog_button = ClientGUIMenuButton.CogIconButton( self, self._GetCogMenuTemplateItems() )
         
         #
         
@@ -1149,6 +1147,85 @@ class ReviewDuplicatesAutoResolutionPanel( QW.QWidget ):
         self._rules_list_updater.update()
         
     
+    def _GetCogMenuTemplateItems( self ) -> list[ ClientGUIMenuButton.MenuTemplateItem ]:
+        
+        menu_template_items = []
+        
+        check_manager = ClientGUICommon.CheckboxManagerCalls(
+            lambda: self._FlipBoolean( 'duplicates_auto_resolution_during_idle' ),
+            lambda: CG.client_controller.new_options.GetBoolean( 'duplicates_auto_resolution_during_idle' )
+        )
+        
+        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCheck( 'work on these rules during idle time', 'Allow the client to work on auto-resolution rules when you are not using the program.', check_manager ) )
+        
+        check_manager = ClientGUICommon.CheckboxManagerCalls(
+            lambda: self._FlipBoolean( 'duplicates_auto_resolution_during_active' ),
+            lambda: CG.client_controller.new_options.GetBoolean( 'duplicates_auto_resolution_during_active' )
+        )
+        
+        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCheck( 'work on these rules during normal time', 'Allow the client to work on auto-resolution rules when you are using the program.', check_manager ) )
+        
+        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemSeparator() )
+        
+        def title_call_1():
+            
+            rules = self._duplicates_auto_resolution_rules.GetData( only_selected = True )
+            
+            if len( rules ) == 0:
+                
+                return 'reset search on all rules'
+                
+            else:
+                
+                return f'reset search on {HydrusNumbers.ToHumanInt( len( rules ) )} selected rules'
+                
+            
+        
+        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( title_call_1, 'Reset the search for the given rules.', self._ResetSearch ) )
+        
+        def title_call_2():
+            
+            rules = self._duplicates_auto_resolution_rules.GetData( only_selected = True )
+            
+            if len( rules ) == 0:
+                
+                return 'reset test on all rules'
+                
+            else:
+                
+                return f'reset test on {HydrusNumbers.ToHumanInt( len( rules ) )} selected rules'
+                
+            
+        
+        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( title_call_2, 'Reset the test for the given rules.', self._ResetTest ) )
+        
+        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemSeparator() )
+        
+        def title_call_3():
+            
+            rules = self._duplicates_auto_resolution_rules.GetData( only_selected = True )
+            
+            if len( rules ) == 0:
+                
+                return 'reset all denied pairs on all rules'
+                
+            else:
+                
+                return f'reset all denied pairs on {HydrusNumbers.ToHumanInt( len( rules ) )} selected rules'
+                
+            
+        
+        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( title_call_3, 'Reset all the denied pairs for the given rules.', self._ResetDeclined ) )
+        
+        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemSeparator() )
+        
+        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'maintenance: delete orphan rules', 'Scan for rules that are partly missing (probably from hard drive damage) and delete them.', self._DeleteOrphanRules ) )
+        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'maintenance: fix orphan potential pairs', 'Scan for potential pairs in your rule cache that are no longer pertinent and delete them.', self._DeleteOrphanPotentialPairs ) )
+        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'maintenance: regen cached numbers', 'Clear cached pair counts and regenerate from source.', self._RegenNumbers ) )
+        
+        return menu_template_items
+        
+    
     def _InitialiseUpdater( self ):
         
         def loading_callable():
@@ -1277,45 +1354,6 @@ class ReviewDuplicatesAutoResolutionPanel( QW.QWidget ):
             
             frame.SetPanel( panel )
             
-        
-    
-    def _ShowCogMenu( self ):
-        
-        rules = self._duplicates_auto_resolution_rules.GetData( only_selected = True )
-        
-        menu = ClientGUIMenus.GenerateMenu( self )
-        
-        ClientGUIMenus.AppendMenuCheckItem( menu, 'work on these rules during idle time', 'Allow the client to work on auto-resolution rules when you are not using the program.', CG.client_controller.new_options.GetBoolean( 'duplicates_auto_resolution_during_idle' ), self._FlipBoolean, 'duplicates_auto_resolution_during_idle' )
-        ClientGUIMenus.AppendMenuCheckItem( menu, 'work on these rules during normal time', 'Allow the client to work on auto-resolution rules when you are using the program.', CG.client_controller.new_options.GetBoolean( 'duplicates_auto_resolution_during_active' ), self._FlipBoolean, 'duplicates_auto_resolution_during_active' )
-        
-        ClientGUIMenus.AppendSeparator( menu )
-        
-        if len( rules ) == 0:
-            
-            ClientGUIMenus.AppendMenuItem( menu, f'reset search on all rules', 'Reset the search for all your rules.', self._ResetSearch )
-            ClientGUIMenus.AppendMenuItem( menu, f'reset test on all rules', 'Reset the test for all your rules.', self._ResetTest )
-            
-            ClientGUIMenus.AppendSeparator( menu )
-            
-            ClientGUIMenus.AppendMenuItem( menu, f'reset all denied pairs on all rules', 'Reset the test for all your rules.', self._ResetDeclined )
-            
-        else:
-            
-            ClientGUIMenus.AppendMenuItem( menu, f'reset search on {HydrusNumbers.ToHumanInt( len( rules ) )} selected rules', 'Reset the search for the given rules.', self._ResetSearch )
-            ClientGUIMenus.AppendMenuItem( menu, f'reset test on {HydrusNumbers.ToHumanInt( len( rules ) )} selected rules', 'Reset the search for the given rules.', self._ResetTest )
-            
-            ClientGUIMenus.AppendSeparator( menu )
-            
-            ClientGUIMenus.AppendMenuItem( menu, f'reset all denied pairs on {HydrusNumbers.ToHumanInt( len( rules ) )} selected rules', 'Reset the search for the given rules.', self._ResetDeclined )
-            
-        
-        ClientGUIMenus.AppendSeparator( menu )
-        
-        ClientGUIMenus.AppendMenuItem( menu, 'maintenance: delete orphan rules', 'Scan for rules that are partly missing (probably from hard drive damage) and delete them.', self._DeleteOrphanRules )
-        ClientGUIMenus.AppendMenuItem( menu, 'maintenance: fix orphan potential pairs', 'Scan for potential pairs in your rule cache that are no longer pertinent and delete them.', self._DeleteOrphanPotentialPairs )
-        ClientGUIMenus.AppendMenuItem( menu, 'maintenance: regen cached numbers', 'Clear cached pair counts and regenerate from source.', self._RegenNumbers )
-        
-        CGC.core().PopupMenu( self._cog_button, menu )
         
     
     def _UpdateList( self ):

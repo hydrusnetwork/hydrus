@@ -10,6 +10,7 @@ from hydrus.core import HydrusTags
 
 from hydrus.client.db import ClientDBModule
 from hydrus.client.networking import ClientNetworkingFunctions
+from hydrus.client.networking import ClientNetworkingURLClass
 
 class ClientDBMasterHashes( ClientDBModule.ClientDBModule ):
     
@@ -847,27 +848,21 @@ class ClientDBMasterURLs( ClientDBModule.ClientDBModule ):
         return domain_id
         
     
-    def GetURLDomainAndSubdomainIds( self, domain, only_www_subdomains = False ):
+    def GetURLDomainAndSubdomainIds( self, url_domain_mask: ClientNetworkingURLClass.URLDomainMask ):
         
-        domain = ClientNetworkingFunctions.RemoveWWWFromDomain( domain )
-        
-        domain_ids = set()
-        
-        domain_ids.add( self.GetURLDomainId( domain ) )
-        
-        if only_www_subdomains:
+        if url_domain_mask.NoRegexes():
             
-            search_phrase = 'www%.{}'.format( domain )
+            # OK I used to have gubbins here that did 'WHERE domain LIKE www%.domain' to be clever, but as I moved to domain mask, I realised this was not faster than just ripping everything and scanning myself
+            # IF we move to domains stored with the top country code as a searchable id, then we can un-False this section and write multiple slimmer fetches with 'where country_domain_id IN blah'
+            
+            all_domain_info = self._Execute( 'SELECT domain_id, domain FROM url_domains;' ).fetchall()
             
         else:
             
-            search_phrase = '%.{}'.format( domain )
+            all_domain_info = self._Execute( 'SELECT domain_id, domain FROM url_domains;' ).fetchall()
             
         
-        for ( domain_id, ) in self._Execute( 'SELECT domain_id FROM url_domains WHERE domain LIKE ?;', ( search_phrase, ) ):
-            
-            domain_ids.add( domain_id )
-            
+        domain_ids = { domain_id for ( domain_id, domain ) in all_domain_info if url_domain_mask.Matches( domain ) }
         
         return domain_ids
         

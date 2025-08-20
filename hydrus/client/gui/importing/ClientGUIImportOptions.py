@@ -1044,13 +1044,24 @@ class EditServiceTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        ( get_tags, get_tags_filter, self._additional_tags, self._to_new_files, self._to_already_in_inbox, self._to_already_in_archive, self._only_add_existing_tags, self._only_add_existing_tags_filter, self._get_tags_overwrite_deleted, self._additional_tags_overwrite_deleted ) = service_tag_import_options.ToTuple()
+        (
+            get_tags,
+            get_tags_filter,
+            self._additional_tags,
+            self._to_new_files,
+            self._to_already_in_inbox,
+            self._to_already_in_archive,
+            self._only_add_existing_tags,
+            self._only_add_existing_tags_filter,
+            self._get_tags_overwrite_deleted,
+            self._additional_tags_overwrite_deleted
+        ) = service_tag_import_options.ToTuple()
         
         #
         
-        menu_items = self._GetCogIconMenuItems()
+        menu_template_items = self._GetCogIconMenuItems()
         
-        cog_button = ClientGUIMenuButton.MenuBitmapButton( main_box, CC.global_icons().cog, menu_items )
+        cog_button = ClientGUIMenuButton.CogIconButton( main_box, menu_template_items )
         
         #
         
@@ -1160,42 +1171,42 @@ class EditServiceTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _GetCogIconMenuItems( self ):
         
-        menu_items = []
+        menu_template_items = []
         
         check_manager = ClientGUICommon.CheckboxManagerBoolean( self, '_to_new_files' )
         
-        menu_items.append( ( 'check', 'apply tags to new files', 'Apply tags to new files.', check_manager ) )
+        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCheck( 'apply tags to new files', 'Apply tags to new files.', check_manager ) )
         
         check_manager = ClientGUICommon.CheckboxManagerBoolean( self, '_to_already_in_inbox' )
         
-        menu_items.append( ( 'check', 'apply tags to files already in inbox', 'Apply tags to files that are already in the db and in the inbox.', check_manager ) )
+        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCheck( 'apply tags to files already in inbox', 'Apply tags to files that are already in the db and in the inbox.', check_manager ) )
         
         check_manager = ClientGUICommon.CheckboxManagerBoolean( self, '_to_already_in_archive' )
         
-        menu_items.append( ( 'check', 'apply tags to files already in archive', 'Apply tags to files that are already in the db and archived.', check_manager ) )
+        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCheck( 'apply tags to files already in archive', 'Apply tags to files that are already in the db and archived.', check_manager ) )
         
-        menu_items.append( ( 'separator', 0, 0, 0 ) )
+        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemSeparator() )
         
         if self._show_downloader_options:
             
             check_manager = ClientGUICommon.CheckboxManagerBoolean( self, '_get_tags_overwrite_deleted' )
             
-            menu_items.append( ( 'check', 'parsed tags overwrite previously deleted tags', 'Tags parsed and filtered will overwrite the deleted record.', check_manager ) )
+            menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCheck( 'parsed tags overwrite previously deleted tags', 'Tags parsed and filtered will overwrite the deleted record.', check_manager ) )
             
         
         check_manager = ClientGUICommon.CheckboxManagerBoolean( self, '_additional_tags_overwrite_deleted' )
         
-        menu_items.append( ( 'check', 'additional tags overwrite previously deleted tags', 'The manually added tags will overwrite the deleted record.', check_manager ) )
+        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCheck( 'additional tags overwrite previously deleted tags', 'The manually added tags will overwrite the deleted record.', check_manager ) )
         
-        menu_items.append( ( 'separator', 0, 0, 0 ) )
+        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemSeparator() )
         
         check_manager = ClientGUICommon.CheckboxManagerBoolean( self, '_only_add_existing_tags' )
         
-        menu_items.append( ( 'check', 'only add tags that already exist', 'Only add tags to this service if they have non-zero count.', check_manager ) )
+        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCheck( 'only add tags that already exist', 'Only add tags to this service if they have non-zero count.', check_manager ) )
         
-        menu_items.append( ( 'normal', 'set a filter for already-exist test', 'Tell the already-exist test to only work on a subset of tags.', self._EditOnlyAddExistingTagsFilter ) )
+        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'set a filter for already-exist test', 'Tell the already-exist test to only work on a subset of tags.', self._EditOnlyAddExistingTagsFilter ) )
         
-        return menu_items
+        return menu_template_items
         
     
     def _UpdateAdditionalTagsButtonLabel( self ):

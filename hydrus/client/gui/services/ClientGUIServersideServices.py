@@ -260,12 +260,12 @@ class ManageServerServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         self._services_listctrl = ClientGUIListCtrl.BetterListCtrlTreeView( self, 20, model, delete_key_callback = self._Delete, activation_callback = self._Edit )
         
-        menu_items = []
+        menu_template_items = []
         
-        menu_items.append( ( 'normal', 'tag repository', 'Create a new tag repository.', self._AddTagRepository ) )
-        menu_items.append( ( 'normal', 'file repository', 'Create a new file repository.', self._AddFileRepository ) )
+        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'tag repository', 'Create a new tag repository.', self._AddTagRepository ) )
+        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'file repository', 'Create a new file repository.', self._AddFileRepository ) )
         
-        self._add_button = ClientGUIMenuButton.MenuButton( self, 'add', menu_items )
+        self._add_button = ClientGUIMenuButton.MenuButton( self, 'add', menu_template_items )
         
         self._edit_button = ClientGUICommon.BetterButton( self, 'edit', self._Edit )
         

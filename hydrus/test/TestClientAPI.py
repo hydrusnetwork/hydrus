@@ -4222,7 +4222,7 @@ class TestClientAPI( unittest.TestCase ):
         
         HF.compare_content_update_packages( self, content_update_package, expected_content_update_package )
         
-        # normalisation - crazy url error
+        # normalisation - crazy url now causes no error
         
         TG.test_controller.ClearWrites( 'content_updates' )
         
@@ -4239,9 +4239,15 @@ class TestClientAPI( unittest.TestCase ):
         
         data = response.read()
         
-        self.assertEqual( response.status, 400 )
+        self.assertEqual( response.status, 200 )
         
-        # normalisation - crazy url ok
+        expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_URLS, HC.CONTENT_UPDATE_ADD, ( [ crazy_nonsense ], { hash } ) ) ] )
+        
+        [ ( ( content_update_package, ), kwargs ) ] = TG.test_controller.GetWrite( 'content_updates' )
+        
+        HF.compare_content_update_packages( self, content_update_package, expected_content_update_package )
+        
+        # normalisation - crazy url ok here too
         
         TG.test_controller.ClearWrites( 'content_updates' )
         

@@ -426,7 +426,7 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
             
             if not can_parse:
                 
-                raise HydrusExceptions.VetoException( 'Cannot parse {}: {}'.format( match_name, cannot_parse_reason) )
+                raise HydrusExceptions.VetoException( 'Cannot parse {}: {}'.format( match_name, cannot_parse_reason ) )
                 
             
             ( url_to_check, parser ) = CG.client_controller.network_engine.domain_manager.GetURLToFetchAndParser( gallery_url )
@@ -702,7 +702,7 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
             
             pass
             
-        except HydrusExceptions.VetoException as e:
+        except ( HydrusExceptions.VetoException, HydrusExceptions.URLClassException ) as e:
             
             status = CC.STATUS_VETOED
             

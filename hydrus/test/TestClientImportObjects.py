@@ -44,14 +44,8 @@ class TestFileSeedCache( unittest.TestCase ):
         name = 'tokensite post'
         url_type = HC.URL_TYPE_POST
         preferred_scheme = 'https'
-        netloc = 'tokensite.lad'
         
-        alphabetise_get_parameters = True
-        match_subdomains = False
-        keep_matched_subdomains = False
-        can_produce_multiple_files = False
-        should_be_associated_with_files = True
-        keep_fragment = False
+        url_domain_mask = ClientNetworkingURLClass.URLDomainMask( raw_domains = [ 'tokensite.lad' ] )
         
         path_components = []
         
@@ -72,7 +66,7 @@ class TestFileSeedCache( unittest.TestCase ):
         gallery_index_delta = 1
         example_url = 'https://tokensite.lad/post/123456?token=abcdabcdabcdabcdabcdabcdabcdabcd}'
         
-        url_class = ClientNetworkingURLClass.URLClass( name, url_type = url_type, preferred_scheme = preferred_scheme, netloc = netloc, path_components = path_components, parameters = parameters, send_referral_url = send_referral_url, referral_url_converter = referral_url_converter, gallery_index_type = gallery_index_type, gallery_index_identifier = gallery_index_identifier, gallery_index_delta = gallery_index_delta, example_url = example_url )
+        url_class = ClientNetworkingURLClass.URLClass( name, url_type = url_type, preferred_scheme = preferred_scheme, url_domain_mask = url_domain_mask, path_components = path_components, parameters = parameters, send_referral_url = send_referral_url, referral_url_converter = referral_url_converter, gallery_index_type = gallery_index_type, gallery_index_identifier = gallery_index_identifier, gallery_index_delta = gallery_index_delta, example_url = example_url )
         
         #
         

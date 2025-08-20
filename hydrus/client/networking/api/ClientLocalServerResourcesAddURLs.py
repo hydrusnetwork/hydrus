@@ -179,6 +179,7 @@ class HydrusResourceClientAPIRestrictedAddURLsGetURLFiles( HydrusResourceClientA
         return response_context
         
     
+
 class HydrusResourceClientAPIRestrictedAddURLsGetURLInfo( HydrusResourceClientAPIRestrictedAddURLs ):
     
     def _threadDoGETJob( self, request: HydrusServerRequest.HydrusRequest ):

@@ -58,18 +58,18 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         self._listctrl = ClientGUIListCtrl.BetterListCtrlTreeView( self, 25, model, delete_key_callback = self._Delete, activation_callback = self._Edit)
         
-        menu_items = []
+        menu_template_items = []
         
         for service_type in HC.ADDREMOVABLE_SERVICES:
             
             service_string = HC.service_string_lookup[ service_type ]
             
-            menu_items.append( ( 'normal', service_string, 'Add a new {}.'.format( service_string ), HydrusData.Call( self._Add, service_type ) ) )
+            menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( service_string, 'Add a new {}.'.format( service_string ), HydrusData.Call( self._Add, service_type ) ) )
             
         
         # TODO: wrap this list in a panel and improve these buttons' "enabled logic"
         
-        self._add_button = ClientGUIMenuButton.MenuButton( self, 'add', menu_items = menu_items )
+        self._add_button = ClientGUIMenuButton.MenuButton( self, 'add', menu_template_items )
         self._edit_button = ClientGUICommon.BetterButton( self, 'edit', self._Edit )
         self._delete_button = ClientGUICommon.BetterButton( self, 'delete', self._Delete )
         
@@ -1449,13 +1449,13 @@ class EditServiceStarRatingsSubPanel( ClientGUICommon.StaticBox ):
         
         super().__init__( parent, 'rating shape' )
         
-        menu_items = []
+        menu_template_items = []
         
         page_func = HydrusData.Call( ClientGUIDialogsQuick.OpenDocumentation, self, HC.DOCUMENTATION_RATINGS )
         
-        menu_items.append( ( 'normal', 'open the ratings help', 'Open the help page for ratings.', page_func ) )
+        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'open the ratings help', 'Open the help page for ratings.', page_func ) )
         
-        help_button = ClientGUIMenuButton.MenuBitmapButton( self, CC.global_icons().help, menu_items )
+        help_button = ClientGUIMenuButton.MenuIconButton( self, CC.global_icons().help, menu_template_items )
         
         help_hbox = ClientGUICommon.WrapInText( help_button, self, 'help -->', object_name = 'HydrusIndeterminate' )
         
@@ -1874,7 +1874,7 @@ class ReviewServicePanel( QW.QWidget ):
                     return
                     
                 
-                content_update_index_string = 'content row ' + HydrusNumbers.ValueRangeToPrettyString( c_u_p_total_weight_processed, c_u_p_num_rows ) + ': '
+                content_update_index_string = 'content ' + HydrusNumbers.ValueRangeToPrettyString( c_u_p_total_weight_processed, c_u_p_num_rows ) + ': '
                 
                 job_status.SetStatusText( content_update_index_string + 'committing' + update_speed_string )
                 
@@ -1978,12 +1978,12 @@ class ReviewServiceClientAPISubPanel( ClientGUICommon.StaticBox ):
         
         permissions_list_panel.SetListCtrl( self._permissions_list )
         
-        menu_items = []
+        menu_template_items = []
         
-        menu_items.append( ( 'normal', 'manually', 'Enter the details of the share manually.', self._AddManually ) )
-        menu_items.append( ( 'normal', 'from api request', 'Listen for an access permission request from an external program via the API.', self._AddFromAPI ) )
+        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'manually', 'Enter the details of the share manually.', self._AddManually ) )
+        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'from api request', 'Listen for an access permission request from an external program via the API.', self._AddFromAPI ) )
         
-        permissions_list_panel.AddMenuButton( 'add', menu_items )
+        permissions_list_panel.AddMenuButton( 'add', menu_template_items )
         permissions_list_panel.AddButton( 'edit', self._Edit, enabled_only_on_single_selection = True )
         permissions_list_panel.AddButton( 'duplicate', self._Duplicate, enabled_only_on_selection = True )
         permissions_list_panel.AddButton( 'delete', self._Delete, enabled_only_on_selection = True )
@@ -2720,23 +2720,23 @@ class ReviewServiceRestrictedSubPanel( ClientGUICommon.StaticBox ):
             self._copy_account_key_button.setEnabled( True )
             
         
-        menu_items = []
+        menu_template_items = []
         
         p_s = account_type.GetPermissionStrings()
         
         if len( p_s ) == 0:
             
-            menu_items.append( ( 'label', 'can only download', 'can only download', None ) )
+            menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemLabel( 'can only download', 'can only download' ) )
             
         else:
             
             for s in p_s:
                 
-                menu_items.append( ( 'label', s, s, None ) )
+                menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemLabel( s, s ) )
                 
             
         
-        self._permissions_button.SetMenuItems( menu_items )
+        self._permissions_button.SetMenuItems( menu_template_items )
         
     
     def _RefreshAccount( self ):
@@ -2833,11 +2833,11 @@ class ReviewServiceRepositorySubPanel( QW.QWidget ):
         
         self._sync_remote_now_button = ClientGUICommon.BetterButton( self._network_panel, 'download now', self._SyncRemoteNow )
         
-        reset_menu_items = []
+        reset_menu_template_items = []
         
-        reset_menu_items.append( ( 'normal', 'do a full metadata resync', 'Resync all update information.', self._DoAFullMetadataResync ) )
+        reset_menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'do a full metadata resync', 'Resync all update information.', self._DoAFullMetadataResync ) )
         
-        self._reset_downloading_button = ClientGUIMenuButton.MenuButton( self._network_panel, 'reset downloading', reset_menu_items )
+        self._reset_downloading_button = ClientGUIMenuButton.MenuButton( self._network_panel, 'reset downloading', reset_menu_template_items )
         
         self._export_updates_button = ClientGUICommon.BetterButton( self._network_panel, 'export updates', self._ExportUpdates )
         
@@ -2872,16 +2872,16 @@ class ReviewServiceRepositorySubPanel( QW.QWidget ):
         
         self._sync_processing_now_button = ClientGUICommon.BetterButton( self._processing_panel, 'process now', self._SyncProcessingNow )
         
-        reset_menu_items = []
+        reset_menu_template_items = []
         
-        reset_menu_items.append( ( 'normal', 'fill in definition gaps', 'Reprocess all definitions.', self._ReprocessDefinitions ) )
-        reset_menu_items.append( ( 'normal', 'fill in content gaps', 'Reprocess all content.', self._ReprocessContent ) )
-        reset_menu_items.append( ( 'separator', None, None, None ) )
-        reset_menu_items.append( ( 'normal', 'delete and reprocess specific content', 'Reset some of the repository\'s content.', self._ResetProcessing ) )
-        reset_menu_items.append( ( 'separator', None, None, None ) )
-        reset_menu_items.append( ( 'normal', 'wipe all database data and reprocess', 'Reset entire repository.', self._Reset ) )
+        reset_menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'fill in definition gaps', 'Reprocess all definitions.', self._ReprocessDefinitions ) )
+        reset_menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'fill in content gaps', 'Reprocess all content.', self._ReprocessContent ) )
+        reset_menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemSeparator() )
+        reset_menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'delete and reprocess specific content', 'Reset some of the repository\'s content.', self._ResetProcessing ) )
+        reset_menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemSeparator() )
+        reset_menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'wipe all database data and reprocess', 'Reset entire repository.', self._Reset ) )
         
-        self._reset_processing_button = ClientGUIMenuButton.MenuButton( self, 'reset processing', reset_menu_items )
+        self._reset_processing_button = ClientGUIMenuButton.MenuButton( self, 'reset processing', reset_menu_template_items )
         
         #
         
@@ -3797,14 +3797,14 @@ class ReviewServiceRatingSubPanel( ClientGUICommon.StaticBox ):
         
         self._rating_info_st = ClientGUICommon.BetterStaticText( self )
         
-        menu_items = []
+        menu_template_items = []
         
-        menu_items.append( ( 'normal', 'for deleted files', 'delete all set ratings for files that have since been deleted', HydrusData.Call(  self._ClearRatings, 'delete_for_deleted_files', 'deleted files' ) ) )
-        menu_items.append( ( 'normal', 'for all non-local files', 'delete all set ratings for files that are not in this client right now', HydrusData.Call( self._ClearRatings, 'delete_for_non_local_files', 'non-local files' ) ) )
-        menu_items.append( ( 'separator', None, None, None ) )
-        menu_items.append( ( 'normal', 'for all files', 'delete all set ratings for all files', HydrusData.Call( self._ClearRatings, 'delete_for_all_files', 'ALL FILES' ) ) )
+        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'for deleted files', 'delete all set ratings for files that have since been deleted', HydrusData.Call(  self._ClearRatings, 'delete_for_deleted_files', 'deleted files' ) ) )
+        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'for all non-local files', 'delete all set ratings for files that are not in this client right now', HydrusData.Call( self._ClearRatings, 'delete_for_non_local_files', 'non-local files' ) ) )
+        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemSeparator() )
+        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'for all files', 'delete all set ratings for all files', HydrusData.Call( self._ClearRatings, 'delete_for_all_files', 'ALL FILES' ) ) )
         
-        self._clear_deleted = ClientGUIMenuButton.MenuButton( self, 'clear ratings', menu_items )
+        self._clear_deleted = ClientGUIMenuButton.MenuButton( self, 'clear ratings', menu_template_items )
         
         #
         

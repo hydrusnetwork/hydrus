@@ -252,15 +252,15 @@ class EditFileTimestampsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUISc
         
         #
         
-        menu_items = []
+        menu_template_items = []
         
-        menu_items.append( ( 'normal', 'all times', 'Copy every time here for pasting in another file\'s dialog.', self._Copy ) )
+        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'all times', 'Copy every time here for pasting in another file\'s dialog.', self._Copy ) )
         
         c = HydrusData.Call( self._Copy, allowed_timestamp_types = ( HC.TIMESTAMP_TYPE_IMPORTED, HC.TIMESTAMP_TYPE_PREVIOUSLY_IMPORTED, HC.TIMESTAMP_TYPE_DELETED ) )
         
-        menu_items.append( ( 'normal', 'all file service times', 'Copy every imported/deleted/previously imported time here for pasting in another file\'s dialog.', c ) )
+        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'all file service times', 'Copy every imported/deleted/previously imported time here for pasting in another file\'s dialog.', c ) )
         
-        self._copy_button = ClientGUIMenuButton.MenuBitmapButton( self, CC.global_icons().copy, menu_items )
+        self._copy_button = ClientGUIMenuButton.MenuIconButton( self, CC.global_icons().copy, menu_template_items )
         self._copy_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'Copy timestamps to the clipboard.' ) )
         
         self._paste_button = ClientGUICommon.IconButton( self, CC.global_icons().paste, self._Paste )

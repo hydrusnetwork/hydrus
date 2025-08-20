@@ -902,7 +902,7 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
                     
                     x_of_y = HydrusNumbers.ValueRangeToPrettyString( index, num_to_do )
                     
-                    job_status.SetStatusText( 'Done {}'.format( x_of_y ) )
+                    job_status.SetStatusText( 'Exporting: {}'.format( x_of_y ) )
                     job_status.SetGauge( index, num_to_do )
                     
                     QP.CallAfter( qt_update_label, x_of_y )

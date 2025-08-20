@@ -383,10 +383,12 @@ class TestPredicateTesting( unittest.TestCase ):
         from hydrus.client.networking import ClientNetworkingURLClass
         from hydrus.client import ClientStrings
         
+        url_domain_mask = ClientNetworkingURLClass.URLDomainMask( raw_domains = [ 'somesite.com' ] )
+        
         url_class = ClientNetworkingURLClass.URLClass(
             'test',
             url_type = HC.URL_TYPE_POST,
-            netloc = 'somesite.com',
+            url_domain_mask = url_domain_mask,
             path_components = [
                 ( ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_ANY, example_string = '123456' ), None )
             ],
@@ -411,10 +413,12 @@ class TestPredicateTesting( unittest.TestCase ):
         
         #
         
+        url_domain_mask = ClientNetworkingURLClass.URLDomainMask( raw_domains = [ 'obscuresite.com' ] )
+        
         url_class = ClientNetworkingURLClass.URLClass(
             'test',
             url_type = HC.URL_TYPE_POST,
-            netloc = 'obscuresite.com',
+            url_domain_mask = url_domain_mask,
             path_components = [
                 ( ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_ANY, example_string = '123456' ), None )
             ],

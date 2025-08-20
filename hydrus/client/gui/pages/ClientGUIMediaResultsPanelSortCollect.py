@@ -16,7 +16,6 @@ from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIMenus
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.metadata import ClientGUITagsEditNamespaceSort
-from hydrus.client.gui.search import ClientGUISearch
 from hydrus.client.gui.widgets import ClientGUICommon
 from hydrus.client.gui.widgets import ClientGUIMenuButton
 from hydrus.client.media import ClientMedia
@@ -314,7 +313,7 @@ class MediaCollectControl( QW.QWidget ):
     
     collectChanged = QC.Signal( ClientMedia.MediaCollect )
     
-    def __init__( self, parent, media_collect = None ):
+    def __init__( self, parent, media_collect: typing.Optional[ ClientMedia.MediaCollect ] = None ):
         
         super().__init__( parent )
         
@@ -326,48 +325,31 @@ class MediaCollectControl( QW.QWidget ):
             
         
         self._media_collect = media_collect
+        self._tag_context = self._media_collect.tag_context
         
         self._collect_comboctrl = CollectComboCtrl( self, self._media_collect )
         
-        choice_tuples = [
-            ( 'collect unmatched', True ),
-            ( 'leave unmatched', False )
-        ]
+        self._cog_icon_button = ClientGUIMenuButton.CogIconButton( self, [] )
         
-        self._collect_unmatched = ClientGUIMenuButton.MenuChoiceButton( self, choice_tuples )
-        
-        width = ClientGUIFunctions.ConvertTextToPixelWidth( self._collect_unmatched, 19 )
-        
-        self._collect_unmatched.setMinimumWidth( width )
-        
-        self._tag_context_button = ClientGUISearch.TagContextButton( self, self._media_collect.tag_context, use_short_label = True )
-        
-        #
-        
-        self._collect_unmatched.SetValue( self._media_collect.collect_unmatched )
+        self._collect_unmatched = self._media_collect.collect_unmatched
         
         #
         
         hbox = QP.HBoxLayout( margin = 0 )
         
         QP.AddToLayout( hbox, self._collect_comboctrl, CC.FLAGS_EXPAND_BOTH_WAYS )
-        QP.AddToLayout( hbox, self._collect_unmatched, CC.FLAGS_CENTER_PERPENDICULAR )
-        QP.AddToLayout( hbox, self._tag_context_button, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._cog_icon_button, CC.FLAGS_CENTER_PERPENDICULAR )
         
         self.setLayout( hbox )
         
         #
         
-        self._UpdateButtonsVisible()
         self._UpdateLabel()
+        self._UpdateCogIconButton()
         
-        self._collect_unmatched.valueChanged.connect( self.CollectValuesChanged )
         self._collect_comboctrl.itemChanged.connect( self.CollectValuesChanged )
-        self._tag_context_button.valueChanged.connect( self.CollectValuesChanged )
         
         self._collect_comboctrl.installEventFilter( self )
-        
-        CG.client_controller.sub( self, 'NotifyAdvancedMode', 'notify_advanced_mode' )
         
     
     def _BroadcastCollect( self ):
@@ -375,9 +357,79 @@ class MediaCollectControl( QW.QWidget ):
         self.collectChanged.emit( self._media_collect )
         
     
-    def _UpdateButtonsVisible( self ):
+    def _UpdateCogIconButton( self ):
         
-        self._tag_context_button.setVisible( CG.client_controller.new_options.GetBoolean( 'advanced_mode' ) )
+        menu_template_items = []
+        
+        #
+        
+        services_manager = CG.client_controller.services_manager
+        
+        service_types_in_order = [ HC.LOCAL_TAG, HC.TAG_REPOSITORY, HC.COMBINED_TAG ]
+        
+        services = services_manager.GetServices( service_types_in_order )
+        
+        submenu_template_items = []
+        
+        last_seen_service_type = None
+        
+        # need this isolated for lambda scope stuff
+        def get_check_manager_lambda_1( tc ):
+            
+            return lambda: tc == self._tag_context
+            
+        
+        for service in services:
+            
+            if last_seen_service_type is not None and last_seen_service_type != service.GetServiceType():
+                
+                submenu_template_items.append( ClientGUIMenuButton.MenuTemplateItemSeparator() )
+                
+            
+            new_tag_context = self._tag_context.Duplicate()
+            
+            new_tag_context.service_key = service.GetServiceKey()
+            
+            check_manager = ClientGUICommon.CheckboxManagerCalls(
+                HydrusData.Call( self.SetTagContext, new_tag_context ),
+                get_check_manager_lambda_1( new_tag_context )
+            )
+            
+            submenu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCheck( service.GetName(), 'Filter the namespaces by this tag domain.', check_manager ) )
+            
+            last_seen_service_type = service.GetServiceType()
+            
+        
+        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemSubmenu( 'tag service', submenu_template_items ) )
+        
+        #
+        
+        # need this isolated for lambda scope stuff
+        def get_check_manager_lambda_2( tdt ):
+            
+            return lambda: tdt == self._collect_unmatched
+            
+        
+        submenu_template_items = []
+        
+        for ( label, desc, value ) in [
+            ( 'collect into one group', 'Collect files that have none of these namespaces into one group.', True ),
+            ( 'leave separate', 'Let files that have none of these namespaces stay separated.', False )
+        ]:
+            
+            check_manager = ClientGUICommon.CheckboxManagerCalls(
+                HydrusData.Call( self.SetCollectUnmatched, value ),
+                get_check_manager_lambda_2( value )
+            )
+            
+            submenu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCheck( label, desc, check_manager ) )
+            
+        
+        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemSubmenu( 'unmatched files', submenu_template_items ) )
+        
+        #
+        
+        self._cog_icon_button.SetMenuItems( menu_template_items )
         
     
     def _UpdateLabel( self ):
@@ -391,13 +443,10 @@ class MediaCollectControl( QW.QWidget ):
         
         ( namespaces, rating_service_keys, description ) = self._collect_comboctrl.GetValues()
         
+        self._media_collect = ClientMedia.MediaCollect( namespaces = namespaces, rating_service_keys = rating_service_keys, collect_unmatched = self._collect_unmatched, tag_context = self._tag_context )
+        
         self._UpdateLabel()
-        
-        collect_unmatched = self._collect_unmatched.GetValue()
-        
-        tag_context = self._tag_context_button.GetValue()
-        
-        self._media_collect = ClientMedia.MediaCollect( namespaces = namespaces, rating_service_keys = rating_service_keys, collect_unmatched = collect_unmatched, tag_context = tag_context )
+        self._UpdateCogIconButton()
         
         self._BroadcastCollect()
         
@@ -436,16 +485,6 @@ class MediaCollectControl( QW.QWidget ):
         return self._media_collect
         
     
-    def ListenForNewOptions( self ):
-        
-        CG.client_controller.sub( self, 'NotifyNewOptions', 'notify_new_options' )
-        
-    
-    def NotifyAdvancedMode( self ):
-        
-        self._UpdateButtonsVisible()
-        
-    
     def NotifyNewOptions( self ):
         
         media_collect = self._media_collect.Duplicate()
@@ -463,15 +502,15 @@ class MediaCollectControl( QW.QWidget ):
         self._media_collect = media_collect
         
         self._collect_comboctrl.blockSignals( True )
-        self._collect_unmatched.blockSignals( True )
         
         self._collect_comboctrl.SetCollectByValue( self._media_collect )
-        self._collect_unmatched.SetValue( self._media_collect.collect_unmatched )
+        self._collect_unmatched = self._media_collect.collect_unmatched
+        self._tag_context = self._media_collect.tag_context
         
         self._UpdateLabel()
+        self._UpdateCogIconButton()
         
         self._collect_comboctrl.blockSignals( False )
-        self._collect_unmatched.blockSignals( False )
         
         if do_broadcast:
             
@@ -479,6 +518,21 @@ class MediaCollectControl( QW.QWidget ):
             
         
     
+    def SetCollectUnmatched( self, value: bool ):
+        
+        self._collect_unmatched = value
+        
+        self.CollectValuesChanged()
+        
+    
+    def SetTagContext( self, tag_context: ClientSearchTagContext.TagContext ):
+        
+        self._tag_context = tag_context
+        
+        self.CollectValuesChanged()
+        
+    
+
 class MediaSortControl( QW.QWidget ):
     
     sortChanged = QC.Signal( ClientMedia.MediaSort )
@@ -492,30 +546,24 @@ class MediaSortControl( QW.QWidget ):
             media_sort = ClientMedia.MediaSort( ( 'system', CC.SORT_FILES_BY_FILESIZE ), CC.SORT_ASC )
             
         
+        self._tag_context = media_sort.tag_context
+        
         self._sort_type = ( 'system', CC.SORT_FILES_BY_FILESIZE )
         
         self._sort_type_button = ClientGUICommon.BetterButton( self, 'sort', self._SortTypeButtonClick )
-        self._sort_tag_display_type_button = ClientGUIMenuButton.MenuChoiceButton( self, [] )
         self._sort_order_choice = ClientGUIMenuButton.MenuChoiceButton( self, [] )
         
-        tag_context = ClientSearchTagContext.TagContext( service_key = CC.COMBINED_TAG_SERVICE_KEY )
-        
-        self._tag_context_button = ClientGUISearch.TagContextButton( self, tag_context, use_short_label = True )
+        self._tag_gubbins_cog_icon_button = ClientGUIMenuButton.CogIconButton( self, [] )
         
         type_width = ClientGUIFunctions.ConvertTextToPixelWidth( self._sort_type_button, 14 )
         
         self._sort_type_button.setMinimumWidth( type_width )
-        
-        tdt_width = ClientGUIFunctions.ConvertTextToPixelWidth( self._sort_tag_display_type_button, 8 )
-        
-        self._sort_tag_display_type_button.setMinimumWidth( tdt_width )
         
         asc_width = ClientGUIFunctions.ConvertTextToPixelWidth( self._sort_order_choice, 14 )
         
         self._sort_order_choice.setMinimumWidth( asc_width )
         
         self._UpdateSortTypeLabel()
-        self._UpdateButtonsVisible()
         self._UpdateAscDescLabelsAndDefault()
         
         #
@@ -523,9 +571,8 @@ class MediaSortControl( QW.QWidget ):
         hbox = QP.HBoxLayout( margin = 0 )
         
         QP.AddToLayout( hbox, self._sort_type_button, CC.FLAGS_EXPAND_BOTH_WAYS )
-        QP.AddToLayout( hbox, self._sort_tag_display_type_button, CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( hbox, self._sort_order_choice, CC.FLAGS_CENTER_PERPENDICULAR )
-        QP.AddToLayout( hbox, self._tag_context_button, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._tag_gubbins_cog_icon_button, CC.FLAGS_CENTER_PERPENDICULAR )
         
         self.setLayout( hbox )
         
@@ -540,9 +587,7 @@ class MediaSortControl( QW.QWidget ):
             self.SetSort( default_sort )
             
         
-        self._sort_tag_display_type_button.valueChanged.connect( self.EventTagDisplayTypeChoice )
         self._sort_order_choice.valueChanged.connect( self.EventSortAscChoice )
-        self._tag_context_button.valueChanged.connect( self.EventTagContextChanged )
         
     
     def _BroadcastSort( self ):
@@ -561,9 +606,7 @@ class MediaSortControl( QW.QWidget ):
             sort_order = CC.SORT_ASC
             
         
-        tag_context = self._tag_context_button.GetValue()
-        
-        media_sort = ClientMedia.MediaSort( sort_type = self._sort_type, sort_order = sort_order, tag_context = tag_context )
+        media_sort = ClientMedia.MediaSort( sort_type = self._sort_type, sort_order = sort_order, tag_context = self._tag_context )
         
         return media_sort
         
@@ -728,7 +771,7 @@ class MediaSortControl( QW.QWidget ):
         self._sort_type = sort_type
         
         self._UpdateSortTypeLabel()
-        self._UpdateButtonsVisible()
+        self._UpdateCogIconButton()
         self._UpdateAscDescLabelsAndDefault()
         
     
@@ -776,30 +819,63 @@ class MediaSortControl( QW.QWidget ):
         self._sort_order_choice.blockSignals( False )
         
     
-    def _UpdateButtonsVisible( self ):
+    def _UpdateCogIconButton( self ):
         
         ( sort_metatype, sort_data ) = self._sort_type
         
-        show_tag_button = sort_metatype == 'namespaces' and CG.client_controller.new_options.GetBoolean( 'advanced_mode' )
+        menu_template_items = []
         
-        self._tag_context_button.setVisible( show_tag_button )
+        we_are_namespaces = sort_metatype == 'namespaces'
+        we_are_num_tags = sort_metatype == 'system' and sort_data == CC.SORT_FILES_BY_NUM_TAGS
         
-        self._sort_tag_display_type_button.setVisible( show_tag_button )
-        
-    
-    def _UpdateSortTypeLabel( self ):
-        
-        example_sort = ClientMedia.MediaSort( self._sort_type, CC.SORT_ASC )
-        
-        self._sort_type_button.setText( example_sort.GetSortTypeString() )
-        
-        ( sort_metatype, sort_data ) = self._sort_type
-        
-        show_tdt = sort_metatype == 'namespaces' and CG.client_controller.new_options.GetBoolean( 'advanced_mode' )
-        
-        if show_tdt:
+        if we_are_namespaces or we_are_num_tags:
             
-            if sort_metatype == 'namespaces':
+            self._tag_gubbins_cog_icon_button.setVisible( True )
+            
+            #
+            
+            services_manager = CG.client_controller.services_manager
+            
+            service_types_in_order = [ HC.LOCAL_TAG, HC.TAG_REPOSITORY, HC.COMBINED_TAG ]
+            
+            services = services_manager.GetServices( service_types_in_order )
+            
+            submenu_template_items = []
+            
+            last_seen_service_type = None
+            
+            # need this isolated for lambda scope stuff
+            def get_check_manager_lambda_1( tc ):
+                
+                return lambda: tc == self._tag_context
+                
+            
+            for service in services:
+                
+                if last_seen_service_type is not None and last_seen_service_type != service.GetServiceType():
+                    
+                    submenu_template_items.append( ClientGUIMenuButton.MenuTemplateItemSeparator() )
+                    
+                
+                new_tag_context = self._tag_context.Duplicate()
+                
+                new_tag_context.service_key = service.GetServiceKey()
+                
+                check_manager = ClientGUICommon.CheckboxManagerCalls(
+                    HydrusData.Call( self.SetTagContext, new_tag_context ),
+                    get_check_manager_lambda_1( new_tag_context )
+                )
+                
+                submenu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCheck( service.GetName(), 'Filter the namespaces by this tag domain.', check_manager ) )
+                
+                last_seen_service_type = service.GetServiceType()
+                
+            
+            menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemSubmenu( 'tag service', submenu_template_items ) )
+            
+            #
+            
+            if we_are_namespaces:
                 
                 ( namespaces, current_tag_display_type ) = sort_data
                 
@@ -809,17 +885,42 @@ class MediaSortControl( QW.QWidget ):
                     ClientTags.TAG_DISPLAY_SINGLE_MEDIA
                 ]
                 
-                choice_tuples = [ ( ClientTags.tag_display_str_lookup[ tag_display_type ], tag_display_type ) for tag_display_type in tag_display_types ]
+                # need this isolated for lambda scope stuff
+                def get_check_manager_lambda_2( tdt ):
+                    
+                    return lambda: tdt == current_tag_display_type
+                    
                 
-                self._sort_tag_display_type_button.blockSignals( True )
+                submenu_template_items = []
                 
-                self._sort_tag_display_type_button.SetChoiceTuples( choice_tuples )
+                for tag_display_type in tag_display_types:
+                    
+                    check_manager = ClientGUICommon.CheckboxManagerCalls(
+                        HydrusData.Call( self.SetTagDisplayType, tag_display_type ),
+                        get_check_manager_lambda_2( tag_display_type )
+                    )
+                    
+                    submenu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCheck( ClientTags.tag_display_str_lookup[ tag_display_type ], 'Filter the namespaces by this tag display type.', check_manager ) )
+                    
                 
-                self._sort_tag_display_type_button.SetValue( current_tag_display_type )
-                
-                self._sort_tag_display_type_button.blockSignals( False )
+                menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemSubmenu( 'ADVANCED: tag display type', submenu_template_items ) )
                 
             
+        else:
+            
+            self._tag_gubbins_cog_icon_button.setVisible( False )
+            
+        
+        self._tag_gubbins_cog_icon_button.SetMenuItems( menu_template_items )
+        
+    
+    def _UpdateSortTypeLabel( self ):
+        
+        example_sort = ClientMedia.MediaSort( self._sort_type, CC.SORT_ASC )
+        
+        self._sort_type_button.setText( example_sort.GetSortTypeString() )
+        
+        self._UpdateCogIconButton()
         
     
     def _UpdateToolTip( self ):
@@ -840,9 +941,7 @@ class MediaSortControl( QW.QWidget ):
         
         self.setToolTip( wrapped_tt )
         self._sort_type_button.setToolTip( wrapped_tt )
-        self._sort_tag_display_type_button.setToolTip( wrapped_tt )
         self._sort_order_choice.setToolTip( wrapped_tt )
-        self._tag_context_button.setToolTip( wrapped_tt )
         
     
     def _UserChoseASort( self ):
@@ -869,41 +968,9 @@ class MediaSortControl( QW.QWidget ):
         self._BroadcastSort()
         
     
-    def EventTagContextChanged( self, tag_context: ClientSearchTagContext.TagContext ):
-        
-        self._UserChoseASort()
-        
-        self._BroadcastSort()
-        
-    
-    def EventTagDisplayTypeChoice( self ):
-        
-        ( sort_metatype, sort_data ) = self._sort_type
-        
-        if sort_metatype == 'namespaces':
-            
-            ( namespaces, current_tag_display_type ) = sort_data
-            
-            tag_display_type = self._sort_tag_display_type_button.GetValue()
-            
-            sort_data = ( namespaces, tag_display_type )
-            
-            self._SetSortType( ( sort_metatype, sort_data ) )
-            
-            self._UserChoseASort()
-            
-            self._BroadcastSort()
-            
-        
-    
     def GetSort( self ) -> ClientMedia.MediaSort:
         
         return self._GetCurrentSort()
-        
-    
-    def NotifyAdvancedMode( self ):
-        
-        self._UpdateButtonsVisible()
         
     
     def SetSort( self, media_sort: ClientMedia.MediaSort, do_sort = False ):
@@ -913,11 +980,38 @@ class MediaSortControl( QW.QWidget ):
         # put this after 'asclabels', since we may transition from one-state to two-state
         self._sort_order_choice.SetValue( media_sort.sort_order )
         
-        self._tag_context_button.SetValue( media_sort.tag_context )
+        self._tag_context = media_sort.tag_context
         
         self._UpdateToolTip()
         
         if do_sort:
+            
+            self._BroadcastSort()
+            
+        
+    
+    def SetTagContext( self, tag_context: ClientSearchTagContext.TagContext ):
+        
+        self._tag_context = tag_context
+        
+        self._UserChoseASort()
+        
+        self._BroadcastSort()
+        
+    
+    def SetTagDisplayType( self, tag_display_type: int ):
+        
+        ( sort_metatype, sort_data ) = self._sort_type
+        
+        if sort_metatype == 'namespaces':
+            
+            ( namespaces, current_tag_display_type ) = sort_data
+            
+            sort_data = ( namespaces, tag_display_type )
+            
+            self._SetSortType( ( sort_metatype, sort_data ) )
+            
+            self._UserChoseASort()
             
             self._BroadcastSort()
             

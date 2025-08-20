@@ -1,5 +1,6 @@
 import collections
 import collections.abc
+import functools
 import threading
 import time
 import typing
@@ -54,7 +55,7 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
         self._url_class_keys_to_display = set()
         self._url_class_keys_to_parser_keys = HydrusSerialisable.SerialisableBytesDictionary()
         
-        self._second_level_domains_to_url_classes = collections.defaultdict( list )
+        self._url_domain_masks_to_url_classes = collections.defaultdict( list )
         
         self._second_level_domains_to_network_infrastructure_errors = collections.defaultdict( list )
         
@@ -326,11 +327,20 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
     
     def _GetURLClass( self, url ):
         
-        domain = ClientNetworkingFunctions.ConvertURLIntoSecondLevelDomain( url )
-        
-        if domain in self._second_level_domains_to_url_classes:
+        try:
             
-            url_classes = self._second_level_domains_to_url_classes[ domain ]
+            domain = ClientNetworkingFunctions.ConvertURLIntoDomain( url )
+            
+        except HydrusExceptions.URLClassException:
+            
+            return None
+            
+        
+        url_domain_masks = self._GetURLDomainMasks( domain )
+        
+        for url_domain_mask in url_domain_masks:
+            
+            url_classes = self._url_domain_masks_to_url_classes[ url_domain_mask ]
             
             for url_class in url_classes:
                 
@@ -348,6 +358,24 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
             
         
         return None
+        
+    
+    @functools.lru_cache( 128 )
+    def _GetURLDomainMasks( self, domain ) -> list[ ClientNetworkingURLClass.URLDomainMask ]:
+        
+        url_domain_masks = []
+        
+        for url_domain_mask in self._url_domain_masks_to_url_classes.keys():
+            
+            if url_domain_mask.Matches( domain ):
+                
+                url_domain_masks.append( url_domain_mask )
+                
+            
+        
+        url_domain_masks.sort( key = lambda udm: udm.GetSortingComplexity(), reverse = True )
+        
+        return url_domain_masks
         
     
     def _GetURLToFetch( self, url: str ):
@@ -439,16 +467,16 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
     
     def _RecalcCache( self ):
         
-        self._second_level_domains_to_url_classes = collections.defaultdict( list )
+        self._GetURLDomainMasks.cache_clear()
+        
+        self._url_domain_masks_to_url_classes = collections.defaultdict( list )
         
         for url_class in self._url_classes:
             
-            domain = ClientNetworkingFunctions.ConvertDomainIntoSecondLevelDomain( url_class.GetDomain() )
-            
-            self._second_level_domains_to_url_classes[ domain ].append( url_class )
+            self._url_domain_masks_to_url_classes[ url_class.GetURLDomainMask() ].append( url_class )
             
         
-        for url_classes in self._second_level_domains_to_url_classes.values():
+        for url_classes in self._url_domain_masks_to_url_classes.values():
             
             ClientNetworkingURLClass.SortURLClassesListDescendingComplexity( url_classes )
             
@@ -1568,6 +1596,15 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
     def NormaliseURL( self, url, for_server = False ):
         
         with self._lock:
+            
+            try:
+                
+                ClientNetworkingFunctions.CheckLooksLikeAFullURL( url )
+                
+            except HydrusExceptions.URLClassException:
+                
+                return url
+                
             
             url_class = self._GetURLClass( url )
             

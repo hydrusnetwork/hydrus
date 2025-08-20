@@ -722,7 +722,7 @@ class ClientDBSimilarFiles( ClientDBModule.ClientDBModule ):
                 
                 num_done = num_to_do - len( rebalance_perceptual_hash_ids )
                 
-                text = 'rebalancing similar file metadata - ' + HydrusNumbers.ValueRangeToPrettyString( num_done, num_to_do )
+                text = 'rebalancing similar file metadata: ' + HydrusNumbers.ValueRangeToPrettyString( num_done, num_to_do )
                 
                 CG.client_controller.frame_splash_status.SetSubtext( text )
                 job_status.SetStatusText( text )

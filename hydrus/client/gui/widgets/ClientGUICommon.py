@@ -917,86 +917,6 @@ class BetterHyperLink( BetterStaticText ):
     
     link_color = QC.Property( QG.QColor, get_link_color, set_link_color )
     
-class BufferedWindow( QW.QWidget ):
-    
-    def __init__( self, *args, **kwargs ):
-        
-        super().__init__( *args )
-        
-        if 'size' in kwargs:
-            
-            size = kwargs[ 'size' ]
-            
-            if isinstance( size, QC.QSize ):
-                
-                self.setFixedSize( kwargs[ 'size' ] )
-                
-            
-        
-    
-    def _Draw( self, painter ):
-        
-        raise NotImplementedError()
-        
-    
-    def paintEvent( self, event ):
-        
-        painter = QG.QPainter( self )
-        
-        self._Draw( painter )
-        
-    
-
-class BufferedWindowIcon( BufferedWindow ):
-    
-    def __init__( self, parent, pixmap: QG.QPixmap, click_callable = None ):
-        
-        device_independant_size = pixmap.size() / pixmap.devicePixelRatio()
-        
-        super().__init__( parent, size = device_independant_size )
-        
-        self._pixmap = pixmap
-        self._click_callable = click_callable
-        
-    
-    def _Draw( self, painter ):
-        
-        background_colour = QP.GetBackgroundColour( self.parentWidget() )
-        
-        painter.setBackground( QG.QBrush( background_colour ) )
-        
-        painter.eraseRect( painter.viewport() )
-        
-        painter.setRenderHint( QG.QPainter.RenderHint.SmoothPixmapTransform, True ) # makes any scaling here due to jank thumbs look good
-        
-        device_independant_pixmap_width = self._pixmap.width() / self._pixmap.devicePixelRatio()
-        device_independant_pixmap_height = self._pixmap.height() / self._pixmap.devicePixelRatio()
-        
-        x_offset = round( ( self.width() - device_independant_pixmap_width ) / 2 )
-        y_offset = round( ( self.height() - device_independant_pixmap_height ) / 2 )
-        
-        if isinstance( self._pixmap, QG.QImage ):
-            
-            painter.drawImage( x_offset, y_offset, self._pixmap )
-            
-        else:
-            
-            painter.drawPixmap( x_offset, y_offset, self._pixmap )
-            
-        
-    
-    def mousePressEvent( self, event ):
-        
-        if self._click_callable is None:
-            
-            return BufferedWindow.mousePressEvent( self, event )
-            
-        else:
-            
-            self._click_callable()
-            
-        
-    
 
 class BusyCursor( object ):
     
@@ -1053,6 +973,7 @@ class CheckboxManagerBoolean( CheckboxManager ):
         setattr( self._obj, self._name, not value )
         
     
+
 class CheckboxManagerCalls( CheckboxManager ):
     
     def __init__( self, invert_call, value_call ):
@@ -1073,6 +994,7 @@ class CheckboxManagerCalls( CheckboxManager ):
         self._invert_call()
         
     
+
 class CheckboxManagerOptions( CheckboxManager ):
     
     def __init__( self, boolean_name ):

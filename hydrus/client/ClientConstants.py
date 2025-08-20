@@ -738,6 +738,7 @@ class GlobalIcons( object ):
         self.trash = self._GetSVGOrPNGPathIcon( 'trash' )
         
         self.refresh = self._GetSVGOrPNGPathIcon( 'refresh' )
+        self.retry = self._GetSVGOrPNGPathIcon( 'retry' )
         self.archive = self._GetSVGOrPNGPathIcon( 'archive' )
         self.to_inbox = self._GetSVGOrPNGPathIcon( 'to_inbox' )
         self.delete = self._GetSVGOrPNGPathIcon( 'trash' )

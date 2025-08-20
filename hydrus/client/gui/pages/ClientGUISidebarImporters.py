@@ -15,7 +15,6 @@ from hydrus.client import ClientLocation
 from hydrus.client import ClientPaths
 from hydrus.client import ClientThreading
 from hydrus.client.gui import ClientGUIAsync
-from hydrus.client.gui import ClientGUICore as CGC
 from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIFunctions
@@ -40,6 +39,7 @@ from hydrus.client.gui.widgets import ClientGUICommon
 from hydrus.client.gui.widgets import ClientGUIMenuButton
 from hydrus.client.gui.widgets import ClientGUITextInput
 from hydrus.client.importing import ClientImporting
+from hydrus.client.importing import ClientImportGallery
 from hydrus.client.importing import ClientImportWatchers
 from hydrus.client.importing import ClientImportLocal
 from hydrus.client.importing import ClientImportSimpleURLs
@@ -246,7 +246,7 @@ class SidebarImporterMultipleGallery( SidebarImporter ):
         self._last_time_imports_changed = 0
         self._next_update_time = 0.0
         
-        self._multiple_gallery_import = self._page_manager.GetVariable( 'multiple_gallery_import' )
+        self._multiple_gallery_import = typing.cast( ClientImportGallery.MultipleGalleryImport, self._page_manager.GetVariable( 'multiple_gallery_import' ) )
         
         self._highlighted_gallery_import = self._multiple_gallery_import.GetHighlightedGalleryImport()
         
@@ -277,10 +277,19 @@ class SidebarImporterMultipleGallery( SidebarImporter ):
         self._gallery_importers_listctrl_panel.AddIconButton( CC.global_icons().gallery_pause, self._PausePlayGallery, tooltip = 'pause/play search', enabled_only_on_selection = True )
         self._gallery_importers_listctrl_panel.AddIconButton( CC.global_icons().trash, self._RemoveGalleryImports, tooltip = 'remove selected', enabled_only_on_selection = True )
         
-        self._gallery_importers_listctrl_panel.NewButtonRow()
+        menu_template_items = []
         
-        self._gallery_importers_listctrl_panel.AddButton( 'retry failed', self._RetryFailed, enabled_check_func = self._CanRetryFailed )
-        self._gallery_importers_listctrl_panel.AddButton( 'retry ignored', self._RetryIgnored, enabled_check_func = self._CanRetryIgnored )
+        menu_template_item = ClientGUIMenuButton.MenuTemplateItemCall( 'retry ignored', 'Retry the files that were moved over for one reason or another.', self._RetryIgnored )
+        menu_template_item.SetVisibleCallable( self._CanRetryIgnored )
+        
+        menu_template_items.append( menu_template_item )
+        
+        menu_template_item = ClientGUIMenuButton.MenuTemplateItemCall( 'retry failed', 'Retry the files that failed.', self._RetryFailed )
+        menu_template_item.SetVisibleCallable( self._CanRetryFailed )
+        
+        menu_template_items.append( menu_template_item )
+        
+        self._gallery_importers_listctrl_panel.AddMenuIconButton( CC.global_icons().retry, 'retry commands', menu_template_items, enabled_check_func = self._CanRetryAnything )
         
         self._gallery_importers_listctrl.Sort()
         
@@ -288,7 +297,7 @@ class SidebarImporterMultipleGallery( SidebarImporter ):
         
         self._query_input = ClientGUITextInput.TextAndPasteCtrl( self._gallery_downloader_panel, self._PendQueries )
         
-        self._cog_button = ClientGUICommon.IconButton( self._gallery_downloader_panel, CC.global_icons().cog, self._ShowCogMenu )
+        self._cog_button = ClientGUIMenuButton.CogIconButton( self._gallery_downloader_panel, self._GetCogIconMenuTemplateItems() )
         
         self._gug_key_and_name = ClientGUIImport.GUGKeyAndNameSelector( self._gallery_downloader_panel, self._multiple_gallery_import.GetGUGKeyAndName(), update_callable = self._SetGUGKeyAndName )
         
@@ -394,6 +403,11 @@ class SidebarImporterMultipleGallery( SidebarImporter ):
         gallery_import = selected[0]
         
         return not self._ThisIsTheCurrentOrLoadingHighlight( gallery_import )
+        
+    
+    def _CanRetryAnything( self ):
+        
+        return self._CanRetryIgnored() or self._CanRetryFailed()
         
     
     def _CanRetryFailed( self ):
@@ -898,6 +912,8 @@ class SidebarImporterMultipleGallery( SidebarImporter ):
             gallery_import.RetryFailed()
             
         
+        self._gallery_importers_listctrl.UpdateDatas()
+        
     
     def _RetryIgnored( self ):
         
@@ -914,6 +930,8 @@ class SidebarImporterMultipleGallery( SidebarImporter ):
             
             gallery_import.RetryIgnored( ignored_regex = ignored_regex )
             
+        
+        self._gallery_importers_listctrl.UpdateDatas()
         
     
     def _SetGUGKeyAndName( self, gug_key_and_name ):
@@ -968,22 +986,41 @@ class SidebarImporterMultipleGallery( SidebarImporter ):
             
         
     
-    def _ShowCogMenu( self ):
+    def _GetCogIconMenuTemplateItems( self ) -> list[ ClientGUIMenuButton.MenuTemplateItem ]:
         
-        menu = ClientGUIMenus.GenerateMenu( self )
+        menu_template_items = []
         
-        start_file_queues_paused = self._multiple_gallery_import.GetStartFileQueuesPaused()
-        start_gallery_queues_paused = self._multiple_gallery_import.GetStartGalleryQueuesPaused()
-        do_not_allow_new_dupes = self._multiple_gallery_import.GetDoNotAllowNewDupes()
-        merge_simultaneous_pends_to_one_importer = self._multiple_gallery_import.GetMergeSimultaneousPendsToOneImporter()
+        check_manager = ClientGUICommon.CheckboxManagerCalls(
+            self._multiple_gallery_import.FlipStartFileQueuesPaused,
+            self._multiple_gallery_import.GetStartFileQueuesPaused
+        )
         
-        ClientGUIMenus.AppendMenuCheckItem( menu, 'start new importers\' files paused', 'Start any new importers in a file import-paused state.', start_file_queues_paused, self._multiple_gallery_import.SetStartFileQueuesPaused, not start_file_queues_paused )
-        ClientGUIMenus.AppendMenuCheckItem( menu, 'start new importers\' search paused', 'Start any new importers in a gallery search-paused state.', start_gallery_queues_paused, self._multiple_gallery_import.SetStartGalleryQueuesPaused, not start_gallery_queues_paused )
-        ClientGUIMenus.AppendSeparator( menu )
-        ClientGUIMenus.AppendMenuCheckItem( menu, 'do not allow new duplicates', 'This will discard any query/source pair you try to add that is already in the list.', do_not_allow_new_dupes, self._multiple_gallery_import.SetDoNotAllowNewDupes, not do_not_allow_new_dupes )
-        ClientGUIMenus.AppendMenuCheckItem( menu, 'bundle multiple pasted queries into one importer (advanced)', 'If you are pasting many small queries at once (such as md5 lookups), check this to smooth out the workflow.', merge_simultaneous_pends_to_one_importer, self._multiple_gallery_import.SetMergeSimultaneousPendsToOneImporter, not merge_simultaneous_pends_to_one_importer )
+        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCheck( 'start new importers\' files paused', 'Start any new importers in a file import-paused state.', check_manager ) )
         
-        CGC.core().PopupMenu( self._cog_button, menu )
+        check_manager = ClientGUICommon.CheckboxManagerCalls(
+            self._multiple_gallery_import.FlipStartGalleryQueuesPaused,
+            self._multiple_gallery_import.GetStartGalleryQueuesPaused
+        )
+        
+        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCheck( 'start new importers\' search paused', 'Start any new importers in a gallery search-paused state.', check_manager ) )
+        
+        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemSeparator() )
+        
+        check_manager = ClientGUICommon.CheckboxManagerCalls(
+            self._multiple_gallery_import.FlipDoNotAllowNewDupes,
+            self._multiple_gallery_import.GetDoNotAllowNewDupes
+        )
+        
+        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCheck( 'do not allow new duplicates', 'This will discard any query/source pair you try to add that is already in the list.', check_manager ) )
+        
+        check_manager = ClientGUICommon.CheckboxManagerCalls(
+            self._multiple_gallery_import.FlipMergeSimultaneousPendsToOneImporter,
+            self._multiple_gallery_import.GetMergeSimultaneousPendsToOneImporter
+        )
+        
+        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCheck('bundle multiple pasted queries into one importer (advanced)', 'If you are pasting many small queries at once (such as md5 lookups), check this to smooth out the workflow.', check_manager ) )
+        
+        return menu_template_items
         
     
     def _ShowSelectedImportersFileSeedCaches( self ):
@@ -1377,10 +1414,19 @@ class SidebarImporterMultipleWatcher( SidebarImporter ):
         self._watchers_listctrl_panel.AddIconButton( CC.global_icons().trash, self._RemoveWatchers, tooltip = 'remove selected', enabled_only_on_selection = True )
         self._watchers_listctrl_panel.AddButton( 'check now', self._CheckNow, enabled_only_on_selection = True )
         
-        self._watchers_listctrl_panel.NewButtonRow()
+        menu_template_items = []
         
-        self._watchers_listctrl_panel.AddButton( 'retry failed', self._RetryFailed, enabled_check_func = self._CanRetryFailed )
-        self._watchers_listctrl_panel.AddButton( 'retry ignored', self._RetryIgnored, enabled_check_func = self._CanRetryIgnored )
+        menu_template_item = ClientGUIMenuButton.MenuTemplateItemCall( 'retry ignored', 'Retry the files that were moved over for one reason or another.', self._RetryIgnored )
+        menu_template_item.SetVisibleCallable( self._CanRetryIgnored )
+        
+        menu_template_items.append( menu_template_item )
+        
+        menu_template_item = ClientGUIMenuButton.MenuTemplateItemCall( 'retry failed', 'Retry the files that failed.', self._RetryFailed )
+        menu_template_item.SetVisibleCallable( self._CanRetryFailed )
+        
+        menu_template_items.append( menu_template_item )
+        
+        self._watchers_listctrl_panel.AddMenuIconButton( CC.global_icons().retry, 'retry commands', menu_template_items, enabled_check_func = self._CanRetryAnything )
         
         self._watchers_listctrl.Sort()
         
@@ -1509,6 +1555,11 @@ class SidebarImporterMultipleWatcher( SidebarImporter ):
         watcher = selected[0]
         
         return not self._ThisIsTheCurrentOrLoadingHighlight( watcher )
+        
+    
+    def _CanRetryAnything( self ):
+        
+        return self._CanRetryIgnored() or self._CanRetryFailed()
         
     
     def _CanRetryFailed( self ):
@@ -2075,6 +2126,8 @@ class SidebarImporterMultipleWatcher( SidebarImporter ):
             watcher.RetryFailed()
             
         
+        self._watchers_listctrl.UpdateDatas()
+        
     
     def _RetryIgnored( self ):
         
@@ -2091,6 +2144,8 @@ class SidebarImporterMultipleWatcher( SidebarImporter ):
             
             watcher.RetryIgnored( ignored_regex = ignored_regex )
             
+        
+        self._watchers_listctrl.UpdateDatas()
         
     
     def _SetOptionsToWatchers( self ):
@@ -2550,11 +2605,11 @@ class SidebarImporterSimpleDownloader( SidebarImporter ):
         
         self._formulae.setMinimumWidth( formulae_width )
         
-        menu_items = []
+        menu_template_items = []
         
-        menu_items.append( ( 'normal', 'edit formulae', 'Edit these parsing formulae.', self._EditFormulae ) )
+        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'edit formulae', 'Edit these parsing formulae.', self._EditFormulae ) )
         
-        self._formula_cog = ClientGUIMenuButton.MenuBitmapButton( self._simple_parsing_jobs_panel, CC.global_icons().cog, menu_items )
+        self._formula_cog = ClientGUIMenuButton.CogIconButton( self._simple_parsing_jobs_panel, menu_template_items )
         
         self._RefreshFormulae()
         

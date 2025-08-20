@@ -61,24 +61,24 @@ class SidebarDuplicateFilter( ClientGUISidebarCore.Sidebar ):
         self._refresh_maintenance_status = ClientGUICommon.BetterStaticText( self._main_left_panel, ellipsize_end = True )
         self._refresh_maintenance_button = ClientGUICommon.IconButton( self._main_left_panel, CC.global_icons().refresh, self._duplicates_manager.RefreshMaintenanceNumbers )
         
-        menu_items = []
+        menu_template_items = []
         
-        menu_items.append( ( 'normal', 'reset potential duplicates', 'This will delete all the discovered potential duplicate pairs. All files that may have potential pairs will be queued up for similar file search again.', self._ResetUnknown ) )
-        menu_items.append( ( 'separator', 0, 0, 0 ) )
+        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'reset potential duplicates', 'This will delete all the discovered potential duplicate pairs. All files that may have potential pairs will be queued up for similar file search again.', self._ResetUnknown ) )
+        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemSeparator() )
         
         check_manager = ClientGUICommon.CheckboxManagerOptions( 'maintain_similar_files_duplicate_pairs_during_idle' )
         
-        menu_items.append( ( 'check', 'search for potential duplicates at the current distance during idle time/shutdown', 'Tell the client to find duplicate pairs in its normal db maintenance cycles, whether you have that set to idle or shutdown time.', check_manager ) )
+        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCheck( 'search for potential duplicates at the current distance during idle time/shutdown', 'Tell the client to find duplicate pairs in its normal db maintenance cycles, whether you have that set to idle or shutdown time.', check_manager ) )
         
-        self._cog_button = ClientGUIMenuButton.MenuBitmapButton( self._main_left_panel, CC.global_icons().cog, menu_items )
+        self._cog_button = ClientGUIMenuButton.CogIconButton( self._main_left_panel, menu_template_items )
         
-        menu_items = []
+        menu_template_items = []
         
         page_func = HydrusData.Call( ClientGUIDialogsQuick.OpenDocumentation, self, HC.DOCUMENTATION_DUPLICATES )
         
-        menu_items.append( ( 'normal', 'open the html duplicates help', 'Open the help page for duplicates processing in your web browser.', page_func ) )
+        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'open the html duplicates help', 'Open the help page for duplicates processing in your web browser.', page_func ) )
         
-        self._help_button = ClientGUIMenuButton.MenuBitmapButton( self._main_left_panel, CC.global_icons().help, menu_items )
+        self._help_button = ClientGUIMenuButton.MenuIconButton( self._main_left_panel, CC.global_icons().help, menu_template_items )
         
         #
         
@@ -86,14 +86,14 @@ class SidebarDuplicateFilter( ClientGUISidebarCore.Sidebar ):
         
         self._eligible_files = ClientGUICommon.BetterStaticText( self._searching_panel, ellipsize_end = True )
         
-        menu_items = []
+        menu_template_items = []
         
-        menu_items.append( ( 'normal', 'exact match', 'Search for exact matches.', HydrusData.Call( self._SetSearchDistance, CC.HAMMING_EXACT_MATCH ) ) )
-        menu_items.append( ( 'normal', 'very similar', 'Search for very similar files.', HydrusData.Call( self._SetSearchDistance, CC.HAMMING_VERY_SIMILAR ) ) )
-        menu_items.append( ( 'normal', 'similar', 'Search for similar files.', HydrusData.Call( self._SetSearchDistance, CC.HAMMING_SIMILAR ) ) )
-        menu_items.append( ( 'normal', 'speculative', 'Search for files that are probably similar.', HydrusData.Call( self._SetSearchDistance, CC.HAMMING_SPECULATIVE ) ) )
+        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'exact match', 'Search for exact matches.', HydrusData.Call( self._SetSearchDistance, CC.HAMMING_EXACT_MATCH ) ) )
+        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'very similar', 'Search for very similar files.', HydrusData.Call( self._SetSearchDistance, CC.HAMMING_VERY_SIMILAR ) ) )
+        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'similar', 'Search for similar files.', HydrusData.Call( self._SetSearchDistance, CC.HAMMING_SIMILAR ) ) )
+        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'speculative', 'Search for files that are probably similar.', HydrusData.Call( self._SetSearchDistance, CC.HAMMING_SPECULATIVE ) ) )
         
-        self._max_hamming_distance_for_potential_discovery_button = ClientGUIMenuButton.MenuButton( self._searching_panel, 'similarity', menu_items )
+        self._max_hamming_distance_for_potential_discovery_button = ClientGUIMenuButton.MenuButton( self._searching_panel, 'similarity', menu_template_items )
         
         self._max_hamming_distance_for_potential_discovery_spinctrl = ClientGUICommon.BetterSpinBox( self._searching_panel, min=0, max=64, width = 50 )
         self._max_hamming_distance_for_potential_discovery_spinctrl.setSingleStep( 2 )
@@ -106,17 +106,17 @@ class SidebarDuplicateFilter( ClientGUISidebarCore.Sidebar ):
         
         self._options_panel = ClientGUICommon.StaticBox( self._main_right_panel, 'merge options' )
         
-        menu_items = []
+        menu_template_items = []
         
-        menu_items.append( ( 'normal', 'edit duplicate metadata merge options for \'this is better\'', 'edit what content is merged when you filter files', HydrusData.Call( self._EditMergeOptions, HC.DUPLICATE_BETTER ) ) )
-        menu_items.append( ( 'normal', 'edit duplicate metadata merge options for \'same quality\'', 'edit what content is merged when you filter files', HydrusData.Call( self._EditMergeOptions, HC.DUPLICATE_SAME_QUALITY ) ) )
+        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'edit duplicate metadata merge options for \'this is better\'', 'edit what content is merged when you filter files', HydrusData.Call( self._EditMergeOptions, HC.DUPLICATE_BETTER ) ) )
+        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'edit duplicate metadata merge options for \'same quality\'', 'edit what content is merged when you filter files', HydrusData.Call( self._EditMergeOptions, HC.DUPLICATE_SAME_QUALITY ) ) )
         
         if new_options.GetBoolean( 'advanced_mode' ):
             
-            menu_items.append( ( 'normal', 'edit duplicate metadata merge options for \'alternates\' (advanced!)', 'edit what content is merged when you filter files', HydrusData.Call( self._EditMergeOptions, HC.DUPLICATE_ALTERNATE ) ) )
+            menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'edit duplicate metadata merge options for \'alternates\' (advanced!)', 'edit what content is merged when you filter files', HydrusData.Call( self._EditMergeOptions, HC.DUPLICATE_ALTERNATE ) ) )
             
         
-        self._edit_merge_options = ClientGUIMenuButton.MenuButton( self._options_panel, 'edit default duplicate metadata merge options', menu_items )
+        self._edit_merge_options = ClientGUIMenuButton.MenuButton( self._options_panel, 'edit default duplicate metadata merge options', menu_template_items )
         
         #
         

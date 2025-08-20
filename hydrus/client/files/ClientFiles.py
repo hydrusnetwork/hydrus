@@ -18,63 +18,90 @@ from hydrus.client import ClientPDFHandling # important to keep this in, even if
 
 from hydrus.client import ClientVideoHandling
 
-def GetAllFilePaths( raw_paths, do_human_sort = True, clear_out_sidecars = True ):
+class PathParsingJob( object ):
+    
+    def __init__( self, path: str, search_subdirectories: bool = True ):
+        
+        self.path = path
+        self.search_subdirectories = search_subdirectories
+        
+    
+    def GetFilePathsAndSubPathParsingJobs( self ) -> tuple[ list[ str ], list[ "PathParsingJob" ] ]:
+        
+        file_paths = []
+        sub_path_parsing_jobs = []
+        
+        if self.IsDir():
+            
+            try:
+                
+                # on Windows, some network file paths return True on isdir(). maybe something to do with path length or number of subdirs
+                path_listdir = os.listdir( self.path )
+                
+            except NotADirectoryError:
+                
+                file_paths.append( self.path )
+                
+                return ( file_paths, sub_path_parsing_jobs )
+                
+            
+            subpaths = [ os.path.join( self.path, filename ) for filename in path_listdir ]
+            
+            for subpath in subpaths:
+                
+                if os.path.isfile( subpath ):
+                    
+                    file_paths.append( subpath )
+                    
+                else:
+                    
+                    if self.search_subdirectories:
+                        
+                        sub_path_parsing_jobs.append( PathParsingJob( subpath, search_subdirectories = self.search_subdirectories ) )
+                        
+                    
+                
+            
+        else:
+            
+            file_paths.append( self.path )
+            
+        
+        return ( file_paths, sub_path_parsing_jobs )
+        
+    
+    def IsDir( self ):
+        
+        return os.path.isdir( self.path )
+        
+    
+
+def GetAllFilePaths( path_parsing_jobs: list[ PathParsingJob ], do_human_sort = True, clear_out_sidecars = True ):
     
     file_paths = []
     
-    paths_to_process = list( raw_paths )
+    jobs_to_process = list( path_parsing_jobs )
     
-    while len( paths_to_process ) > 0:
+    while len( jobs_to_process ) > 0:
         
-        next_paths_to_process = []
+        next_jobs_to_process = []
         
-        for path in paths_to_process:
-
-            non_recursive_folder_search = False
-
-            if isinstance(path, dict):
-                non_recursive_folder_search = path['non_recursive_folder_search']
-                path = path['path']
-
+        for path_parsing_job in jobs_to_process:
+            
             if HG.started_shutdown:
                 
                 raise HydrusExceptions.ShutdownException()
                 
-            if os.path.isdir( path ):
-
-                try:
-                    
-                    # on Windows, some network file paths return True on isdir(). maybe something to do with path length or number of subdirs
-                    path_listdir = os.listdir( path )
-                    
-                except NotADirectoryError:
-                    
-                    file_paths.append( path )
-                    
-                    continue
-                
-                match non_recursive_folder_search:
-
-                    case "Too Deep":
-
-                        continue
-
-                    case False:
-
-                        subpaths = [ os.path.join( path, filename ) for filename in path_listdir ]
-
-                    case True:
-
-                        subpaths = [ {'path': os.path.join( path, filename ), 'non_recursive_folder_search': "Too Deep" } for filename in path_listdir ]
-                
-                next_paths_to_process.extend( subpaths )
-
-            else:
-                
-                file_paths.append( path )
-                
-        paths_to_process = next_paths_to_process
-
+            
+            ( sub_file_paths, sub_path_parsing_jobs ) = path_parsing_job.GetFilePathsAndSubPathParsingJobs()
+            
+            file_paths.extend( sub_file_paths )
+            
+            next_jobs_to_process.extend( sub_path_parsing_jobs )
+            
+        
+        jobs_to_process = next_jobs_to_process
+        
     
     if do_human_sort:
         

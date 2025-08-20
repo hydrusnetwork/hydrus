@@ -4830,7 +4830,7 @@ def CommitArchiveDelete( deletee_location_context: ClientLocation.LocationContex
             CG.client_controller.pub( 'message', job_status )
             
         
-        job_status.SetStatusText( f'Deleting - {HydrusNumbers.ValueRangeToPrettyString( num_done, num_to_do )}' )
+        job_status.SetStatusText( f'Deleting: {HydrusNumbers.ValueRangeToPrettyString( num_done, num_to_do )}' )
         job_status.SetGauge( num_done, num_to_do )
         
         if CG.client_controller.new_options.GetBoolean( 'delete_lock_for_archived_files' ) and CG.client_controller.new_options.GetBoolean( 'delete_lock_reinbox_deletees_after_archive_delete' ):
@@ -4869,7 +4869,7 @@ def CommitArchiveDelete( deletee_location_context: ClientLocation.LocationContex
             CG.client_controller.pub( 'message', job_status )
             
         
-        job_status.SetStatusText( f'Archiving - {HydrusNumbers.ValueRangeToPrettyString( num_done, num_to_do )}' )
+        job_status.SetStatusText( f'Archiving: {HydrusNumbers.ValueRangeToPrettyString( num_done, num_to_do )}' )
         job_status.SetGauge( num_done, num_to_do )
         
         content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, block_of_kept_hashes ) )

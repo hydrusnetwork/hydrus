@@ -1239,6 +1239,9 @@ class ReviewNetworkJobs( ClientGUIScrolledPanels.ReviewPanel ):
         
         self._list_ctrl_panel.AddButton( 'refresh snapshot', self._RefreshSnapshot )
         
+        self._refresh_time_delta = ClientGUITime.NoneableTimeDeltaWidget( self._list_ctrl_panel, 0.25, 'auto-refresh', none_phrase = 'manual refresh', min = 0.05, days = False, hours = False, minutes = True, seconds = True, milliseconds = True )
+        self._refresh_time_delta.SetValue( None )
+        
         #
         
         self._list_ctrl.Sort()
@@ -1254,6 +1257,12 @@ class ReviewNetworkJobs( ClientGUIScrolledPanels.ReviewPanel ):
         
         QP.AddToLayout( vbox, st, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, self._list_ctrl_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( vbox, self._refresh_time_delta, CC.FLAGS_ON_RIGHT )
+        
+        self._refresh_time_delta.timeDeltaChanged.connect( self._RefreshTimeDeltaChanged )
+        
+        self._refresh_timer = QC.QTimer( self )
+        self._refresh_timer.timeout.connect( self._RefreshSnapshot )
         
         self.widget().setLayout( vbox )
         
@@ -1298,6 +1307,20 @@ class ReviewNetworkJobs( ClientGUIScrolledPanels.ReviewPanel ):
         job_rows = self._controller.network_engine.GetJobsSnapshot()
         
         self._list_ctrl.SetData( job_rows )
+        
+    
+    def _RefreshTimeDeltaChanged( self ):
+        
+        value = self._refresh_time_delta.GetValue()
+        
+        if value is None:
+            
+            self._refresh_timer.stop()
+            
+        else:
+            
+            self._refresh_timer.start( int( value * 1000 ) )
+            
         
     
     def _GetListCtrlMenu( self ):

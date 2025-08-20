@@ -641,6 +641,10 @@ class Controller( object ):
     
     def ImportURLFromAPI( self, url, filterable_tags, additional_service_keys_to_tags, destination_page_name, destination_page_key, show_destination_page, destination_location_context ):
         
+        from hydrus.client.networking import ClientNetworkingFunctions
+        
+        ClientNetworkingFunctions.CheckLooksLikeAFullURL( url )
+        
         normalised_url = self.network_engine.domain_manager.NormaliseURL( url, for_server = True )
         
         human_result_text = '"{}" URL added successfully.'.format( normalised_url )

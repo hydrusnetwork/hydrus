@@ -36,6 +36,7 @@ from hydrus.client.importing.options import TagImportOptions
 from hydrus.client.media import ClientMedia
 from hydrus.client.media import ClientMediaResult
 from hydrus.client.metadata import ClientContentUpdates
+from hydrus.client.networking import ClientNetworkingFunctions
 
 # TODO: ok the general plan here is to move rich panels to topical gui.xxx modules
 # this new gui.panels is going to be for basic panel template stuff
@@ -2204,6 +2205,8 @@ class EditURLsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPane
         for url in urls:
             
             try:
+                
+                ClientNetworkingFunctions.CheckLooksLikeAFullURL( url )
                 
                 normalised_url = CG.client_controller.network_engine.domain_manager.NormaliseURL( url, for_server = True )
                 

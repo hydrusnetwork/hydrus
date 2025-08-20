@@ -1970,15 +1970,15 @@ class BetterListCtrlPanel( QW.QWidget ):
     
     def AddDefaultsButton( self, defaults_callable, add_callable ):
         
-        import_menu_items = []
+        import_menu_template_items = []
         
         all_call = HydrusData.Call( self._AddAllDefaults, defaults_callable, add_callable )
         some_call = HydrusData.Call( self._AddSomeDefaults, defaults_callable, add_callable )
         
-        import_menu_items.append( ( 'normal', 'add them all', 'Load all the defaults.', all_call ) )
-        import_menu_items.append( ( 'normal', 'select from a list', 'Load some of the defaults.', some_call ) )
+        import_menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'add them all', 'Load all the defaults.', all_call ) )
+        import_menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'select from a list', 'Load some of the defaults.', some_call ) )
         
-        self.AddMenuButton( 'add defaults', import_menu_items )
+        self.AddMenuButton( 'add defaults', import_menu_template_items )
         
     
     def AddDeleteButton( self, enabled_check_func = None ):
@@ -2001,11 +2001,11 @@ class BetterListCtrlPanel( QW.QWidget ):
         self._import_add_callable = import_add_callable
         self._custom_get_callable = custom_get_callable
         
-        export_menu_items = []
+        export_menu_template_items = []
         
-        export_menu_items.append( ( 'normal', 'to clipboard', 'Serialise the selected data and put it on your clipboard.', self._ExportToClipboard ) )
-        export_menu_items.append( ( 'normal', 'to json file', 'Serialise the selected data and export to a json file.', self._ExportToJSON ) )
-        export_menu_items.append( ( 'normal', 'to png file', 'Serialise the selected data and encode it to an image file you can easily share with other hydrus users.', self._ExportToPNG ) )
+        export_menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'to clipboard', 'Serialise the selected data and put it on your clipboard.', self._ExportToClipboard ) )
+        export_menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'to json file', 'Serialise the selected data and export to a json file.', self._ExportToJSON ) )
+        export_menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'to png file', 'Serialise the selected data and encode it to an image file you can easily share with other hydrus users.', self._ExportToPNG ) )
         
         if self._custom_get_callable is None:
             
@@ -2013,18 +2013,18 @@ class BetterListCtrlPanel( QW.QWidget ):
             
             if all_objs_are_named:
                 
-                export_menu_items.append( ( 'normal', 'to pngs', 'Serialise the selected data and encode it to multiple image files you can easily share with other hydrus users.', self._ExportToPNGs ) )
+                export_menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'to pngs', 'Serialise the selected data and encode it to multiple image files you can easily share with other hydrus users.', self._ExportToPNGs ) )
                 
             
         
-        import_menu_items = []
+        import_menu_template_items = []
         
-        import_menu_items.append( ( 'normal', 'from clipboard', 'Load a data from text in your clipboard.', self._ImportFromClipboard ) )
-        import_menu_items.append( ( 'normal', 'from json files', 'Load a data from .json files.', self._ImportFromJSON ) )
-        import_menu_items.append( ( 'normal', 'from png files (you can also drag and drop pngs onto this list)', 'Load a data from an encoded png.', self._ImportFromPNG ) )
+        import_menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'from clipboard', 'Load a data from text in your clipboard.', self._ImportFromClipboard ) )
+        import_menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'from json files', 'Load a data from .json files.', self._ImportFromJSON ) )
+        import_menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'from png files (you can also drag and drop pngs onto this list)', 'Load a data from an encoded png.', self._ImportFromPNG ) )
         
-        self.AddMenuButton( 'export', export_menu_items, enabled_only_on_selection = True )
-        self.AddMenuButton( 'import', import_menu_items )
+        self.AddMenuButton( 'export', export_menu_template_items, enabled_only_on_selection = True )
+        self.AddMenuButton( 'import', import_menu_template_items )
         
         if and_duplicate_button:
             
@@ -2035,9 +2035,20 @@ class BetterListCtrlPanel( QW.QWidget ):
         self.installEventFilter( ClientGUIDragDrop.FileDropTarget( self, filenames_callable = self.ImportFromDragDrop ) )
         
     
-    def AddMenuButton( self, label, menu_items, enabled_only_on_selection = False, enabled_check_func = None ):
+    def AddMenuButton( self, label, menu_template_items: list[ ClientGUIMenuButton.MenuTemplateItem ], enabled_only_on_selection = False, enabled_check_func = None ):
         
-        button = ClientGUIMenuButton.MenuButton( self, label, menu_items )
+        button = ClientGUIMenuButton.MenuButton( self, label, menu_template_items )
+        
+        self._AddButton( button, enabled_only_on_selection = enabled_only_on_selection, enabled_check_func = enabled_check_func )
+        
+        self._UpdateButtons()
+        
+    
+    def AddMenuIconButton( self, icon: QG.QIcon, tooltip: str, menu_template_items: list[ ClientGUIMenuButton.MenuTemplateItem ], enabled_only_on_selection = False, enabled_check_func = None ):
+        
+        button = ClientGUIMenuButton.MenuIconButton( self, icon, menu_template_items )
+        
+        button.setToolTip( ClientGUIFunctions.WrapToolTip( tooltip ) )
         
         self._AddButton( button, enabled_only_on_selection = enabled_only_on_selection, enabled_check_func = enabled_check_func )
         
@@ -2052,33 +2063,6 @@ class BetterListCtrlPanel( QW.QWidget ):
     def AddWindow( self, window ):
         
         QP.AddToLayout( self._buttonbox, window, CC.FLAGS_CENTER_PERPENDICULAR )
-        
-    
-    def EventContentChanged( self, parent, first, last ):
-        
-        if not self._listctrl:
-            
-            return
-            
-        
-        self._UpdateButtons()
-        
-    
-    def EventSelectionChanged( self ):
-        
-        if not self._listctrl:
-            
-            return
-            
-        
-        try:
-            
-            self._UpdateButtons()
-            
-        except Exception as e:
-            
-            HydrusData.ShowException( e )
-            
         
     
     def ImportFromDragDrop( self, paths ):
@@ -2116,13 +2100,28 @@ class BetterListCtrlPanel( QW.QWidget ):
         
         self.setLayout( self._vbox )
         
-        self._listctrl.selectionModel().selectionChanged.connect( self.EventSelectionChanged )
+        self._listctrl.selectionModel().selectionChanged.connect( self.UpdateButtons )
         
-        self._listctrl.model().rowsInserted.connect( self.EventContentChanged )
-        self._listctrl.model().rowsRemoved.connect( self.EventContentChanged )
+        self._listctrl.model().rowsInserted.connect( self.UpdateButtons )
+        self._listctrl.model().rowsRemoved.connect( self.UpdateButtons )
+        
+        self._listctrl.columnListContentsChanged.connect( self.UpdateButtons )
         
     
     def UpdateButtons( self ):
         
-        self._UpdateButtons()
+        if not self._listctrl:
+            
+            return
+            
         
+        try:
+            
+            self._UpdateButtons()
+            
+        except Exception as e:
+            
+            HydrusData.ShowException( e )
+            
+        
+    

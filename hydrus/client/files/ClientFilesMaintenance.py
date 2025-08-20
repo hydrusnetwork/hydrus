@@ -1363,7 +1363,7 @@ class FilesMaintenanceManager( ClientDaemons.ManagerWithMainLoop ):
             
             num_jobs_done = vr_status[ 'num_jobs_done' ]
             
-            status_text = '{}'.format( HydrusNumbers.ValueRangeToPrettyString( num_jobs_done, total_num_jobs_to_do ) )
+            status_text = HydrusNumbers.ValueRangeToPrettyString( num_jobs_done, total_num_jobs_to_do )
             
             job_status.SetStatusText( status_text )
             

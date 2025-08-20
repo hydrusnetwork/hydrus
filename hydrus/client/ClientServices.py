@@ -1793,7 +1793,7 @@ class ServiceRepository( ServiceRestricted ):
                 
                 for ( i, update_hash ) in enumerate( update_hashes ):
                     
-                    status = 'update ' + HydrusNumbers.ValueRangeToPrettyString( i, len( update_hashes ) )
+                    status = HydrusNumbers.ValueRangeToPrettyString( i, len( update_hashes ) )
                     
                     CG.client_controller.frame_splash_status.SetText( status, print_to_log = False )
                     job_status.SetStatusText( status )
@@ -1993,11 +1993,11 @@ class ServiceRepository( ServiceRestricted ):
                     
                     progress_string = HydrusNumbers.ValueRangeToPrettyString( num_updates_done, num_updates_to_do )
                     
-                    splash_title = '{} sync: processing updates {}'.format( self._name, progress_string )
+                    splash_title = '{} sync: processing updates: {}'.format( self._name, progress_string )
                     
                     CG.client_controller.frame_splash_status.SetTitleText( splash_title, clear_undertexts = False, print_to_log = False )
                     
-                    status = 'processing {}'.format( progress_string )
+                    status = 'processing: {}'.format( progress_string )
                     
                     job_status.SetStatusText( status )
                     job_status.SetGauge( num_updates_done, num_updates_to_do )
@@ -2122,11 +2122,11 @@ class ServiceRepository( ServiceRestricted ):
                     
                     progress_string = HydrusNumbers.ValueRangeToPrettyString( num_updates_done, num_updates_to_do )
                     
-                    splash_title = '{} sync: processing updates {}'.format( self._name, progress_string )
+                    splash_title = '{} sync: processing updates: {}'.format( self._name, progress_string )
                     
                     CG.client_controller.frame_splash_status.SetTitleText( splash_title, clear_undertexts = False, print_to_log = False )
                     
-                    status = 'processing {}'.format( progress_string )
+                    status = 'processing: {}'.format( progress_string )
                     
                     job_status.SetStatusText( status )
                     job_status.SetGauge( num_updates_done, num_updates_to_do )
@@ -2739,7 +2739,7 @@ class ServiceRepository( ServiceRestricted ):
                 
                 for ( i, thumbnail_hash ) in enumerate( thumbnail_hashes ):
                     
-                    status = 'thumbnail ' + HydrusNumbers.ValueRangeToPrettyString( i, num_to_do )
+                    status = HydrusNumbers.ValueRangeToPrettyString( i, num_to_do )
                     
                     CG.client_controller.frame_splash_status.SetText( status, print_to_log = False )
                     job_status.SetStatusText( status )

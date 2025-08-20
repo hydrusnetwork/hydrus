@@ -473,12 +473,13 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_IMPORT_FOLDER
     SERIALISABLE_NAME = 'Import Folder'
-    SERIALISABLE_VERSION = 9
+    SERIALISABLE_VERSION = 10
     
     def __init__(
         self,
         name,
         path = '',
+        search_subdirectories = True,
         file_import_options = None,
         tag_import_options = None,
         metadata_routers: typing.Optional[ collections.abc.Collection[ ClientMetadataMigration.SingleFileMetadataRouter ] ] = None,
@@ -533,6 +534,7 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
         super().__init__( name )
         
         self._path = path
+        self._search_subdirectories = search_subdirectories
         self._file_import_options = file_import_options
         self._tag_import_options = tag_import_options
         self._metadata_routers = metadata_routers
@@ -658,7 +660,9 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
     
     def _CheckFolder( self, job_status: ClientThreading.JobStatus ):
         
-        ( all_paths, num_sidecars ) = ClientFiles.GetAllFilePaths( [ self._path ] )
+        path_parsing_job = ClientFiles.PathParsingJob( self._path, search_subdirectories = self._search_subdirectories )
+        
+        ( all_paths, num_sidecars ) = ClientFiles.GetAllFilePaths( [ path_parsing_job ] )
         
         paths_to_file_seeds = { path : ClientImportFileSeeds.FileSeed( ClientImportFileSeeds.FILE_SEED_TYPE_HDD, path ) for path in all_paths }
         
@@ -694,6 +698,7 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
         
         return (
             self._path,
+            self._search_subdirectories,
             serialisable_file_import_options,
             serialisable_tag_import_options,
             serialisable_metadata_routers,
@@ -764,7 +769,7 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
                 time_to_save = HydrusTime.GetNow() + SAVE_PERIOD
                 
             
-            job_status.SetStatusText( 'importing file ' + HydrusNumbers.ValueRangeToPrettyString( num_files_imported, num_total ) )
+            job_status.SetStatusText( 'importing: ' + HydrusNumbers.ValueRangeToPrettyString( num_files_imported, num_total ) )
             job_status.SetGauge( num_files_imported, num_total )  
             
             path = file_seed.file_seed_data
@@ -892,6 +897,7 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
         
         (
             self._path,
+            self._search_subdirectories,
             serialisable_file_import_options,
             serialisable_tag_import_options,
             serialisable_metadata_routers,
@@ -1096,6 +1102,54 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
             return ( 9, new_serialisable_info )
             
         
+        if version == 9:
+            
+            (
+                path,
+                serialisable_file_import_options,
+                serialisable_tag_import_options,
+                serialisable_metadata_routers,
+                serialisable_tag_service_keys_to_filename_tagging_options,
+                action_pairs,
+                action_location_pairs,
+                period,
+                check_regularly,
+                serialisable_file_seed_cache,
+                last_checked,
+                paused,
+                check_now,
+                last_modified_time_skip_period,
+                show_working_popup,
+                publish_files_to_popup_button,
+                publish_files_to_page
+            ) = old_serialisable_info
+            
+            search_subdirectories = True
+            
+            new_serialisable_info = (
+                path,
+                search_subdirectories,
+                serialisable_file_import_options,
+                serialisable_tag_import_options,
+                serialisable_metadata_routers,
+                serialisable_tag_service_keys_to_filename_tagging_options,
+                action_pairs,
+                action_location_pairs,
+                period,
+                check_regularly,
+                serialisable_file_seed_cache,
+                last_checked,
+                paused,
+                check_now,
+                last_modified_time_skip_period,
+                show_working_popup,
+                publish_files_to_popup_button,
+                publish_files_to_page
+            )
+            
+            return ( 10, new_serialisable_info )
+            
+        
     
     def CheckNow( self ):
         
@@ -1131,11 +1185,6 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
             
             real_file_import_options.CheckReadyToImport()
             
-            if not os.path.exists( self._path ) or not os.path.isdir( self._path ):
-                
-                raise Exception( 'Path "' + self._path + '" does not seem to exist, or is not a directory.' )
-                
-            
             pubbed_job_status = False
             
             job_status.SetStatusTitle( 'import folder - ' + self._name )
@@ -1144,6 +1193,11 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
             due_by_period = self._check_regularly and HydrusTime.TimeHasPassed( self._last_checked + self._period )
             
             if due_by_check_now or due_by_period:
+                
+                if not os.path.exists( self._path ) or not os.path.isdir( self._path ):
+                    
+                    raise Exception( 'Path "' + self._path + '" does not seem to exist, or is not a directory.' )
+                    
                 
                 if not pubbed_job_status and popup_desired:
                     
@@ -1156,19 +1210,19 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
                 
                 checked_folder = True
                 
-            
-            file_seed = self._file_seed_cache.GetNextFileSeed( CC.STATUS_UNKNOWN )
-            
-            if file_seed is not None:
+                file_seed = self._file_seed_cache.GetNextFileSeed( CC.STATUS_UNKNOWN )
                 
-                if not pubbed_job_status and popup_desired:
+                if file_seed is not None:
                     
-                    CG.client_controller.pub( 'message', job_status )
+                    if not pubbed_job_status and popup_desired:
+                        
+                        CG.client_controller.pub( 'message', job_status )
+                        
+                        pubbed_job_status = True
+                        
                     
-                    pubbed_job_status = True
+                    did_import_file_work = self._ImportFiles( job_status )
                     
-                
-                did_import_file_work = self._ImportFiles( job_status )
                 
             
         except Exception as e:
@@ -1223,6 +1277,11 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
         return list( self._metadata_routers )
         
     
+    def GetSearchSubdirectories( self ) -> bool:
+        
+        return self._search_subdirectories
+        
+    
     def Paused( self ):
         
         return self._paused
@@ -1256,6 +1315,11 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
     def SetMetadataRouters( self, metadata_routers: collections.abc.Collection[ ClientMetadataMigration.SingleFileMetadataRouter ] ):
         
         self._metadata_routers = HydrusSerialisable.SerialisableList( metadata_routers )
+        
+    
+    def SetSearchSubdirectories( self, search_subdirectories: bool ):
+        
+        self._search_subdirectories = search_subdirectories
         
     
     def SetTuple( self, name, path, file_import_options, tag_import_options, tag_service_keys_to_filename_tagging_options, actions, action_locations, period, check_regularly, paused, check_now, show_working_popup, publish_files_to_popup_button, publish_files_to_page ):

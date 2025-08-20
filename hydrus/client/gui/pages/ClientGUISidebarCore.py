@@ -194,8 +194,6 @@ class Sidebar( QW.QScrollArea ):
         
         self._media_collect_widget = ClientGUIMediaResultsPanelSortCollect.MediaCollectControl( self, media_collect = media_collect )
         
-        self._media_collect_widget.ListenForNewOptions()
-        
         if self.SHOW_COLLECT:
             
             self._media_collect_widget.collectChanged.connect( self._CollectChanged )

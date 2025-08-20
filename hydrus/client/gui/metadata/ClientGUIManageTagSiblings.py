@@ -26,6 +26,7 @@ from hydrus.client.gui.metadata import ClientGUITagActions
 from hydrus.client.gui.panels import ClientGUIScrolledPanels
 from hydrus.client.gui.search import ClientGUIACDropdown
 from hydrus.client.gui.widgets import ClientGUICommon
+from hydrus.client.gui.widgets import ClientGUIMenuButton
 from hydrus.client.metadata import ClientContentUpdates
 from hydrus.client.metadata import ClientTags
 
@@ -187,19 +188,19 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
             
             self._tag_siblings.Sort()
             
-            menu_items = []
+            menu_template_items = []
             
-            menu_items.append( ( 'normal', 'from clipboard (add new pairs and ignore pre-existing)', 'Load siblings from text in your clipboard.', HydrusData.Call( self._ImportFromClipboard, True ) ) )
-            menu_items.append( ( 'normal', 'from .txt file (add new pairs and ignore pre-existing)', 'Load siblings from a .txt file.', HydrusData.Call( self._ImportFromTXT, True ) ) )
+            menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'from clipboard (add new pairs and ignore pre-existing)', 'Load siblings from text in your clipboard.', HydrusData.Call( self._ImportFromClipboard, True ) ) )
+            menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'from .txt file (add new pairs and ignore pre-existing)', 'Load siblings from a .txt file.', HydrusData.Call( self._ImportFromTXT, True ) ) )
             
-            self._listctrl_panel.AddMenuButton( 'import', menu_items )
+            self._listctrl_panel.AddMenuButton( 'import', menu_template_items )
             
-            menu_items = []
+            menu_template_items = []
             
-            menu_items.append( ( 'normal', 'to clipboard', 'Save selected siblings to your clipboard.', self._ExportToClipboard ) )
-            menu_items.append( ( 'normal', 'to .txt file', 'Save selected siblings to a .txt file.', self._ExportToTXT ) )
+            menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'to clipboard', 'Save selected siblings to your clipboard.', self._ExportToClipboard ) )
+            menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'to .txt file', 'Save selected siblings to a .txt file.', self._ExportToTXT ) )
             
-            self._listctrl_panel.AddMenuButton( 'export', menu_items, enabled_only_on_selection = True )
+            self._listctrl_panel.AddMenuButton( 'export', menu_template_items, enabled_only_on_selection = True )
             
             ( gumpf, preview_height ) = ClientGUIFunctions.ConvertTextToPixels( self._old_siblings, ( 12, 4 ) )
             

@@ -388,6 +388,8 @@ class EditGUGPanel( ClientGUIScrolledPanels.EditPanel ):
             
             example_url = gug.GetExampleURL()
             
+            ClientNetworkingFunctions.CheckLooksLikeAFullURL( example_url )
+            
             example_url = CG.client_controller.network_engine.domain_manager.NormaliseURL( example_url, for_server = True )
             
             self._example_url.setText( example_url )
@@ -595,13 +597,13 @@ class EditGUGsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         super().__init__( parent )
         
-        menu_items = []
+        menu_template_items = []
         
         call = HydrusData.Call( ClientGUIDialogsQuick.OpenDocumentation, self, HC.DOCUMENTATION_DOWNLOADER_GUGS )
         
-        menu_items.append( ( 'normal', 'open the gugs help', 'Open the help page for gugs in your web browser.', call ) )
+        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'open the gugs help', 'Open the help page for gugs in your web browser.', call ) )
         
-        help_button = ClientGUIMenuButton.MenuBitmapButton( self, CC.global_icons().help, menu_items )
+        help_button = ClientGUIMenuButton.MenuIconButton( self, CC.global_icons().help, menu_template_items )
         
         help_hbox = ClientGUICommon.WrapInText( help_button, self, 'help for this panel -->', object_name = 'HydrusIndeterminate' )
         
@@ -739,6 +741,8 @@ class EditGUGsPanel( ClientGUIScrolledPanels.EditPanel ):
         example_url = gug.GetExampleURL()
         
         try:
+            
+            ClientNetworkingFunctions.CheckLooksLikeAFullURL( example_url )
             
             example_url = CG.client_controller.network_engine.domain_manager.NormaliseURL( example_url, for_server = True )
             
@@ -1339,7 +1343,7 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
         
         url_type = url_class.GetURLType()
         preferred_scheme = url_class.GetPreferredScheme()
-        netloc = url_class.GetNetloc()
+        url_domain_mask = url_class.GetURLDomainMask()
         path_components = url_class.GetPathComponents()
         parameters = url_class.GetParameters()
         api_lookup_converter = url_class.GetAPILookupConverter()
@@ -1581,13 +1585,21 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._preferred_scheme.SetValue( preferred_scheme )
         
-        self._netloc.setText( netloc )
+        raw_domains = url_domain_mask.GetRawDomains()
         
-        ( match_subdomains, keep_matched_subdomains, alphabetise_get_parameters, can_produce_multiple_files, should_be_associated_with_files, keep_fragment ) = url_class.GetURLBooleans()
+        if len( raw_domains ) > 0:
+            
+            self._netloc.setText( raw_domains[0] )
+            
         
-        self._alphabetise_get_parameters.setChecked( alphabetise_get_parameters )
+        match_subdomains = url_domain_mask.match_subdomains
+        keep_matched_subdomains = url_domain_mask.keep_matched_subdomains
+        
+        ( alphabetise_get_parameters, can_produce_multiple_files, should_be_associated_with_files, keep_fragment ) = url_class.GetURLBooleans()
+        
         self._match_subdomains.setChecked( match_subdomains )
         self._keep_matched_subdomains.setChecked( keep_matched_subdomains )
+        self._alphabetise_get_parameters.setChecked( alphabetise_get_parameters )
         self._can_produce_multiple_files.setChecked( can_produce_multiple_files )
         self._should_be_associated_with_files.setChecked( should_be_associated_with_files )
         self._keep_fragment.setChecked( keep_fragment )
@@ -1910,7 +1922,13 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
         name = self._name.text()
         url_type = self._url_type.GetValue()
         preferred_scheme = self._preferred_scheme.GetValue()
+        
         netloc = self._netloc.text()
+        match_subdomains = self._match_subdomains.isChecked()
+        keep_matched_subdomains = self._keep_matched_subdomains.isChecked()
+        
+        url_domain_mask = ClientNetworkingURLClass.URLDomainMask( raw_domains = [ netloc ], match_subdomains = match_subdomains, keep_matched_subdomains = keep_matched_subdomains )
+        
         path_components = self._path_components.GetData()
         parameters = self._parameters.GetData()
         has_single_value_parameters = self._has_single_value_parameters.isChecked()
@@ -1930,7 +1948,7 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
             url_class_key = url_class_key,
             url_type = url_type,
             preferred_scheme = preferred_scheme,
-            netloc = netloc,
+            url_domain_mask = url_domain_mask,
             path_components = path_components,
             parameters = parameters,
             has_single_value_parameters = has_single_value_parameters,
@@ -1945,16 +1963,12 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
             example_url = example_url
         )
         
-        match_subdomains = self._match_subdomains.isChecked()
-        keep_matched_subdomains = self._keep_matched_subdomains.isChecked()
         alphabetise_get_parameters = self._alphabetise_get_parameters.isChecked()
         can_produce_multiple_files = self._can_produce_multiple_files.isChecked()
         should_be_associated_with_files = self._should_be_associated_with_files.isChecked()
         keep_fragment = self._keep_fragment.isChecked()
         
         url_class.SetURLBooleans(
-            match_subdomains,
-            keep_matched_subdomains,
             alphabetise_get_parameters,
             can_produce_multiple_files,
             should_be_associated_with_files,
@@ -2320,13 +2334,13 @@ class EditURLClassesPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._fake_domain_manager_for_url_class_tests = None
         
-        menu_items = []
+        menu_template_items = []
         
         call = HydrusData.Call( ClientGUIDialogsQuick.OpenDocumentation, self, HC.DOCUMENTATION_DOWNLOADER_URL_CLASSES )
         
-        menu_items.append( ( 'normal', 'open the url classes help', 'Open the help page for url classes in your web browser.', call ) )
+        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'open the url classes help', 'Open the help page for url classes in your web browser.', call ) )
         
-        help_button = ClientGUIMenuButton.MenuBitmapButton( self, CC.global_icons().help, menu_items )
+        help_button = ClientGUIMenuButton.MenuIconButton( self, CC.global_icons().help, menu_template_items )
         
         help_hbox = ClientGUICommon.WrapInText( help_button, self, 'help for this panel -->', object_name = 'HydrusIndeterminate' )
         
