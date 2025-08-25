@@ -71,7 +71,7 @@ jobs:
           cd build/$(head -n 1 triple.txt)/release
           # wewmode
           # it seems signing the main exe as designated in the plist causes some sort of deep scan which fails again for our earlier non-binaries reason
-          MAIN_EXE="$(pwd)/Hydrus Network.app/Contents/MacOS/hydrus_client"
+          MAIN_EXE="Hydrus Network.app/Contents/MacOS/hydrus_client"
           echo "The path is \"$MAIN_EXE\""
           tmp_exe="$(mktemp -t hydrus_client.XXXXXX)"
           echo "The path is \"$tmp_exe\""
