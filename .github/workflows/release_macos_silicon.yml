@@ -69,10 +69,16 @@ jobs:
         run: |
           cd $GITHUB_WORKSPACE
           cd build/$(head -n 1 triple.txt)/release
+          # Sign every binary in the Contents dir. Because we are weird, MacOS dir contains non-binaries, so we have to scan for them
           find "Hydrus Network.app/Contents" -type f -print0 |
-            xargs -0 -I{} sh -c 'file -b "{}" | grep -q "Mach-O" && codesign -s - --force --timestamp=none "{}" || true'
+            while IFS= read -r -d '' f; do
+              if file -b -- "$f" | grep -q "Mach-O"; then
+                codesign -s - --force --timestamp=none -- "$f"
+              fi
+            done
+          # Now Sign the whole thing and verify it all worked
           codesign --sign - --force --timestamp=none "Hydrus Network.app"
-          codesign --verify --verbose "Hydrus Network.app"
+          codesign --verify --verbose=4 --strict --deep "Hydrus Network.app"
       -
         name: Zip it up
         run: |
