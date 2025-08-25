@@ -69,9 +69,20 @@ jobs:
         run: |
           cd $GITHUB_WORKSPACE
           cd build/$(head -n 1 triple.txt)/release
-          # Sign every binary in the Contents dir. Because we are weird, MacOS dir contains non-binaries, so we have to do them separately
+          # wewmode
+          # it seems signing the main exe as designated in the plist causes some sort of deep scan which fails again for our earlier non-binaries reason
+          MAIN_EXE="$(pwd)/Hydrus Network.app/Contents/MacOS/hydrus_client"
+          tmp_exe="$(mktemp -t hydrus_client.XXXXXX)"
+          cp -- "$EXE" "$tmp_exe"
+          echo "Signing main exe in temp space"
+          codesign -s - --force --timestamp=none --verbose=4 -- "$tmp_exe"
+          echo "Verifying main exe in temp space"
+          codesign --verify --verbose=4 --strict -- "$tmp_exe"
+          mv -f -- "$tmp_exe" "$EXE"
+          # Sign every binary in the Contents dir. Because we are weird, MacOS dir contains non-binaries, so we have to identify and sign them separately
           find "Hydrus Network.app/Contents" -type f -print0 |
             while IFS= read -r -d '' f; do
+              [ "$f" = "$EXE" ] && continue
               if file -b -- "$f" | grep -q "Mach-O"; then
                 printf 'signing %s\n' "$f"
                 codesign -s - --force --timestamp=none -- "$f"
