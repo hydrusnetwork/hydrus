@@ -72,7 +72,9 @@ jobs:
           # wewmode
           # it seems signing the main exe as designated in the plist causes some sort of deep scan which fails again for our earlier non-binaries reason
           MAIN_EXE="$(pwd)/Hydrus Network.app/Contents/MacOS/hydrus_client"
+          echo "The path is \"$MAIN_EXE\""
           tmp_exe="$(mktemp -t hydrus_client.XXXXXX)"
+          echo "The path is \"$tmp_exe\""
           cp "$MAIN_EXE" "$tmp_exe"
           echo "Signing main exe in temp space"
           codesign -s - --force --timestamp=none --verbose=4 -- "$tmp_exe"
