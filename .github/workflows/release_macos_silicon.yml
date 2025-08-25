@@ -69,16 +69,30 @@ jobs:
         run: |
           cd $GITHUB_WORKSPACE
           cd build/$(head -n 1 triple.txt)/release
-          # Sign every binary in the Contents dir. Because we are weird, MacOS dir contains non-binaries, so we have to scan for them
+          # Sign every binary in the Contents dir. Because we are weird, MacOS dir contains non-binaries, so we have to do them separately
           find "Hydrus Network.app/Contents" -type f -print0 |
             while IFS= read -r -d '' f; do
               if file -b -- "$f" | grep -q "Mach-O"; then
+                printf 'signing %s\n' "$f"
                 codesign -s - --force --timestamp=none -- "$f"
+                printf 'verifying %s\n' "$f"
+                codesign --verify --verbose=4 --strict -- "$f"
               fi
             done
           # Now Sign the whole thing and verify it all worked
+          echo "Signing the bundle"
           codesign --sign - --force --timestamp=none "Hydrus Network.app"
-          codesign --verify --verbose=4 --strict --deep "Hydrus Network.app"
+          echo "Verifying the bundle, non-deep"
+          codesign --verify --verbose=4 "Hydrus Network.app"
+          # Now another check
+          echo "Gatekeeper evaluation--this should say rejected for the self-sign but not invalid."
+          spctl_out="$(spctl -a -vv --type execute -- "Hydrus Network.app" 2>&1)" || true
+          echo "$spctl_out"
+          # Fail only if it says "invalid"
+          if printf '%s' "$spctl_out" | grep -q "invalid"; then
+            echo "Gatekeeper reports INVALID signature!"
+            exit 1
+          fi
       -
         name: Zip it up
         run: |
