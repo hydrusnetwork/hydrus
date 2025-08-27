@@ -20,7 +20,7 @@
       
       
       <link rel="icon" href="assets/favicon.svg">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.6.17">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.6.18">
     
     
       
@@ -7029,7 +7029,7 @@ Accept: application/json
 <p>You may see the same file more than once in this batch, and if you expect to process and commit these as a batch, just like the filter does, you would be wise to skip through pairs that are implicated by a previous decision. When considering whether to display the 'next' pair, you should test:</p>
 <ul>
 <li>In the current batch of decisions, has either file been manually deleted by the user?</li>
-<li>In the current batch of decisions, has either file been adjudicated as the B in a 'A is better than B' or 'A is the same as B' (or, if you are doing it, the A in a 'B is better than A')?</li>
+<li>In the current batch of decisions, has either file been adjudicated as the B in a 'A is better than B' or 'A is the same as B'?</li>
 </ul>
 <p>If either is true, you should skip the pair, since, after your current decisions are committed, that file is no longer in any potential duplicate pairs in the search you gave. The respective file is either no longer in the file domain, or it has been merged into another group (that file is no longer a king and either the potential pair no longer exists via transitive collapse or, rarely, hydrus can present you with a better comparison pair if you ask for a new batch).
 s
@@ -7140,9 +7140,8 @@ You will see significantly fewer than <code>max_num_pairs</code> as you close to
 <li>2 - set as same quality</li>
 <li>3 - set as alternates</li>
 <li>4 - set A as better</li>
-<li>7 - set B as better</li>
 </ul>
-<p>2, 4, and 7 all make the files 'duplicates' (8 under <code>/get_file_relationships</code>), which, specifically, merges the two files' duplicate groups. 'same quality' has different duplicate content merge options to the better/worse choices, but it ultimately sets something similar to A&gt;B (but see below for more complicated outcomes). You obviously don't have to use 'B is better' if you prefer just to swap the hashes. Do what works for you.</p>
+<p>2 and 4 will make the files 'duplicates' (8 under <code>/get_file_relationships</code>), which, specifically, merges the two files' duplicate groups. 'same quality' has different duplicate content merge options to the better/worse choices, but it ultimately sets something similar to A&gt;B (but see below for more complicated outcomes). Do what works for you.</p>
 <p><code>do_default_content_merge</code> sets whether the user's duplicate content merge options should be loaded and applied to the files along with the relationship. Most operations in the client do this automatically, so the user may expect it to apply, but if you want to do content merge yourself, set this to false.</p>
 <p><code>delete_a</code> and <code>delete_b</code> are booleans that select whether to delete A and/or B in the same operation as setting the relationship. You can also do this externally if you prefer.</p>
 <div class="highlight"><span class="filename">Example request body</span><pre><span></span><code><span class="p">{</span>
@@ -8308,7 +8307,7 @@ This request will also return any cookies for subdomains. The session system in 
     <span class="md-icon" title="Last update">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 13.1c-.1 0-.3.1-.4.2l-1 1 2.1 2.1 1-1c.2-.2.2-.6 0-.8l-1.3-1.3c-.1-.1-.2-.2-.4-.2m-1.9 1.8-6.1 6V23h2.1l6.1-6.1zM12.5 7v5.2l4 2.4-1 1L11 13V7zM11 21.9c-5.1-.5-9-4.8-9-9.9C2 6.5 6.5 2 12 2c5.3 0 9.6 4.1 10 9.3-.3-.1-.6-.2-1-.2s-.7.1-1 .2C19.6 7.2 16.2 4 12 4c-4.4 0-8 3.6-8 8 0 4.1 3.1 7.5 7.1 7.9l-.1.2z"/></svg>
     </span>
-    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="July 16, 2025 20:48:50 UTC">July 16, 2025</span>
+    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="August 27, 2025 21:33:03 UTC">August 27, 2025</span>
   </span>
 
     
@@ -8355,7 +8354,8 @@ This request will also return any cookies for subdomains. The session system in 
   
 </div>
       
-        <div class="md-social">
+        
+<div class="md-social">
   
     
     

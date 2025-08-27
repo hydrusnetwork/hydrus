@@ -20,7 +20,7 @@
       
       
       <link rel="icon" href="assets/favicon.svg">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.6.17">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.6.18">
     
     
       
@@ -2520,7 +2520,7 @@
 <p>If the OSes are the same (e.g. Windows to Windows), moving from one machine to another is usually pretty easy--just drag and drop the whole install from one drive to another, via a network share or USB drive--but going from one OS type to another introduces a couple of extra wrinkles.</p>
 <details class="note">
 <summary>OS Paths</summary>
-<p>Remember that Windows has paths that start with drive letters, like <code>D:\</code> and uses backslashes to split paths; but Linux and macOS all start with root <code>/</code> and use regular slashes. If your OS suddenly changes, your absolute <code>D:\hydrus_files</code> is going to be seen as a relative path by Linux and you'll end up with like <code>/home/you/hydrus/db/D:\hydrus_files</code>. There's no huge worry here--hydrus won't rush to break anything, and it'll generally just freak out that the thing doesn't exist. You just need to tell it the correct new path.</p>
+<p>Remember that Windows has paths that start with drive letters, like <code>D:\</code> and uses backslashes to split paths; but Linux and macOS all start with root <code>/</code> and use regular slashes. If your OS suddenly changes, your absolute <code>D:\hydrus_files</code> is going to be seen as a relative path by Linux and you'll end up with like <code>/home/you/hydrus/db/D:\hydrus_files</code>. There's no huge worry here--hydrus won't rush to break anything, and the worst case is generally it just freaking out that the thing doesn't exist. You just need to tell it the correct new path.</p>
 </details>
 <p>Before any system migration, make sure you:</p>
 <ul>
@@ -2532,7 +2532,7 @@
 <p>Install a fresh new hydrus on the new machine and then, using a network share or a USB drive, copy the database folder, files, and thumbnails from the old to the new. You can insert the db directly into your new <code>install_dir/db</code> folder, or if you want to set up a new <code>--db_dir</code>, put the db in that location and set up the new shortcut.</p>
 <details class="note">
 <summary>source installs</summary>
-<p>If the type of OS hasn't changed, you can usually get away with copying the whole install folder. If you run from source, however, you <em>must</em> recreate a new install dir with that OS's <code>git</code> and then build a new venv. Do not try to migrate a source installation folder!</p>
+<p>If the type of OS hasn't changed, you can usually get away with copying a built install folder around. If you run from source, however, you <em>must</em> recreate a new source install folder with that OS's <code>git</code> and then build a new venv (then obviously migrate your source db dir as needed). Do not try to migrate a source installation folder!</p>
 </details>
 <details class="note">
 <summary>macOS App</summary>
@@ -2572,7 +2572,7 @@
     <span class="md-icon" title="Last update">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 13.1c-.1 0-.3.1-.4.2l-1 1 2.1 2.1 1-1c.2-.2.2-.6 0-.8l-1.3-1.3c-.1-.1-.2-.2-.4-.2m-1.9 1.8-6.1 6V23h2.1l6.1-6.1zM12.5 7v5.2l4 2.4-1 1L11 13V7zM11 21.9c-5.1-.5-9-4.8-9-9.9C2 6.5 6.5 2 12 2c5.3 0 9.6 4.1 10 9.3-.3-.1-.6-.2-1-.2s-.7.1-1 .2C19.6 7.2 16.2 4 12 4c-4.4 0-8 3.6-8 8 0 4.1 3.1 7.5 7.1 7.9l-.1.2z"/></svg>
     </span>
-    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="July 23, 2025 20:59:31 UTC">July 23, 2025</span>
+    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="August 27, 2025 21:33:03 UTC">August 27, 2025</span>
   </span>
 
     
@@ -2617,7 +2617,8 @@
   
 </div>
       
-        <div class="md-social">
+        
+<div class="md-social">
   
     
     

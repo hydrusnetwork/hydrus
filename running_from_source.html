@@ -20,7 +20,7 @@
       
       
       <link rel="icon" href="assets/favicon.svg">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.6.17">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.6.18">
     
     
       
@@ -2685,9 +2685,9 @@
 
 
 <h1 id="running_from_source">running from source<a class="headerlink" href="#running_from_source" title="Permanent link">&para;</a></h1>
-<p>I write the client and server entirely in <a href="https://python.org">python</a>, which can run straight from source. It is getting simpler and simpler to run python programs like this, so don't be afraid of it. If none of the built packages work for you (for instance if you use Windows 8.1 or 18.04 Ubuntu (or equivalent)), it may be the only way you can get the program to run. Also, if you have a general interest in exploring the code or wish to otherwise modify the program, you will obviously need to do this.</p>
+<p>I write the client and server entirely in <a href="https://python.org">python</a>, which can run straight from source. It is getting simpler and simpler to run python programs like this, so don't be afraid of it. The program generally works better from source than from a built release. If none of the builds work for you (for instance if you use Windows 8.1 or 18.04 Ubuntu (or equivalent), and since 2025-09 any macOS situation), it may be the only way you can get the program to run. Also, if you have a general interest in exploring the code or wish to otherwise modify the program, you will obviously need to do this.</p>
 <h2 id="simple_setup_guide">Simple Setup Guide<a class="headerlink" href="#simple_setup_guide" title="Permanent link">&para;</a></h2>
-<p>There are now setup scripts that make this easy on Windows and Linux. You do not need any python experience.</p>
+<p>There are now setup scripts that make this easy. You do not need any python experience.</p>
 <h3 id="summary">Summary:<a class="headerlink" href="#summary" title="Permanent link">&para;</a></h3>
 <ol>
 <li>Get Python.</li>
@@ -2755,6 +2755,7 @@
 <code>sudo apt install python3-venv</code></p>
 </div>
 <div class="tabbed-block">
+<p><em>If you are currently on the old App and need to migrate to a source install, get a test situation running and then scroll down to the <a href="#migrating_from_an_existing_install">migrating from an existing install</a> section.</em></p>
 <p>You may not have git already, so open a new terminal and check with:</p>
 <p><code>git --version</code></p>
 <p>If you do not get a nice version back, you will want to install it, most likely with:</p>
@@ -2780,8 +2781,8 @@
 <p>We will call the base extract directory, the one with 'hydrus_client.py' in it, <code>install_dir</code>.</p>
 <div class="admonition warning">
 <p class="admonition-title">Mixed Builds</p>
-<p>Don't mix and match build extracts and source extracts. The process that runs the code gets confused if there are unexpected extra .dlls in the directory. <strong>If you need to convert between built and source releases, perform a <a href="getting_started_installing.html#clean_installs">clean install</a>.</strong>  </p>
-<p>If you are converting from one install type to another, make a backup before you start. Then, if it all goes wrong, you'll always have a safe backup to rollback to.</p>
+<p>Don't mix and match build extracts and source extracts. The process that runs the code gets confused if there are unexpected extra .dlls in the directory. You will want to set up an entirely new install situation and then move your database dir from the old to the new. <a href="#migrating_from_an_existing_install">More here</a>.  </p>
+<p><strong>If you are converting from one install type to another, make a backup before you start.</strong> Then, if it all goes wrong, you'll always have a safe backup to rollback to.</p>
 </div>
 <h4 id="built_programs">Built Programs<a class="headerlink" href="#built_programs" title="Permanent link">&para;</a></h4>
 <p>There are three special external libraries. You just have to get them and put them in the correct place:</p>
@@ -2864,7 +2865,10 @@
 <p>If you do not have permission to execute the file, do this before trying again:  </p>
 <p><code>chmod +x setup_venv.sh</code></p>
 <p>You will likely have to do the same on the other .sh files.</p>
-<p>If you like, you can run the <code>setup_desktop.sh</code> file to install an io.github.hydrusnetwork.hydrus.desktop file to your applications folder. (Or check the template in <code>install_dir/static/io.github.hydrusnetwork.hydrus.desktop</code> and do it yourself!)</p>
+<div class="admonition info">
+<p class="admonition-title">Desktop File</p>
+<p>If you like, you can later run the <code>setup_desktop.sh</code> file to install an io.github.hydrusnetwork.hydrus.desktop file to your applications folder. (Or check the template in <code>install_dir/static/io.github.hydrusnetwork.hydrus.desktop</code> and do it yourself!)</p>
+</div>
 </div>
 <div class="tabbed-block">
 <p><em>You do not need to run this as sudo, and doing so may cause some things not to work. Just regular you in a normal terminal.</em></p>
@@ -2872,7 +2876,7 @@
 <p>If you do not have permission to run the .command file, then open a terminal on the folder and enter:</p>
 <p><code>chmod +x setup_venv.command</code></p>
 <p>You will likely have to do the same on the other .command files.</p>
-<p>You may need to experiment with the advanced choices, especially if your macOS is a litle old.</p>
+<p>If your macOS is old, you may need to experiment with the advanced choices.</p>
 </div>
 </div>
 </div>
@@ -2934,7 +2938,8 @@
 </div>
 </div>
 <h3 id="have_fun">Have Fun<a class="headerlink" href="#have_fun" title="Permanent link">&para;</a></h3>
-<p>If everything boots ok, great! Have a play around with the client and make sure file imports work ok and that mpv is all correct.</p>
+<p>If everything boots ok, great! Have a play around with the client and make sure file imports work ok and, if you are not macOS, that mpv is all correct.</p>
+<p>Don't forget to create a new shortcut to your <code>hydrus_client</code> or <code>hydrus_client-user</code> launch script. If you can, set a custom icon--there are several <code>hydrus...</code> files in <code>install_dir/static</code> that are suitable.</p>
 <details class="note">
 <summary>System Qt styles</summary>
 <p>If you have a system Qt with several styles but do not see them under <code>options-&gt;style</code>, it is probably that your venv cannot "see" your system Qt.</p>
@@ -2946,25 +2951,36 @@
 <p>If you installed by extracting the source zip, you can update much like you would with the built extract: download the <a href="https://github.com/hydrusnetwork/hydrus/releases/latest">latest release</a> source zip and extract it over the top of the folder you have, overwriting the existing source files.</p>
 <p>If you get a library version error when you try to boot, run the venv setup again. It is worth doing this every 3-6 months, just to stay up to date. I mention in the release posts when there are important changes, usually right after a 'future build' test.</p>
 <h3 id="migrating_from_an_existing_install">Migrating from an Existing Install<a class="headerlink" href="#migrating_from_an_existing_install" title="Permanent link">&para;</a></h3>
-<p>Many users start out using one of the official built releases and decide to move to source. There is lots of information <a href="database_migration.html">here</a> about how to migrate the database, but for your purposes, the simple method is this:</p>
+<p>Many users start out using one of the official built releases and decide to move to source. There is a full document <a href="database_migration.html">here</a> about how to migrate a database, but for your purposes, the simple method is:</p>
 <p><strong>If you never moved your database to another place and do not use -d/--db_dir launch parameter</strong></p>
 <ol>
-<li>Follow the above guide to get the source install working in a new folder on a fresh database</li>
+<li>Follow the above guide to get the "running from source" install working in a new folder on a fresh database</li>
 <li><strong>MAKE A BACKUP OF EVERYTHING</strong></li>
-<li>Delete any test database you made from the source install's <code>db</code> directory.</li>
-<li>Move your built release's entire <code>db</code> directory to the now-clear source <code>db</code> directory.</li>
-<li>Run your source release again--it should load your old db no problem!</li>
-<li>Move things around, or update your backup routine to point to the new source install location.</li>
+<li>Delete any test database you made from the "running from source" install's <code>db</code> directory.</li>
+<li>Move your built release's entire <code>db</code> directory to the now-clear "running from source" <code>db</code> directory.</li>
+<li>Run your "running from source" install again--it should load your old db no problem!</li>
+<li>Update your backup routine to point to the new "running from source" install location.</li>
 </ol>
 <p><strong>If you moved your database to another location and use the -d/--db_dir launch parameter</strong></p>
 <ol>
-<li>Follow the above guide to get the source install working in a new folder on a fresh database (without -db_dir)</li>
+<li>Follow the above guide to get the "running from source" install working in a new folder on a fresh database (without --db_dir)</li>
 <li><strong>MAKE A BACKUP OF EVERYTHING</strong></li>
-<li>Just to be neat, delete any test database you made from the source install's <code>db</code> directory.</li>
-<li>Run the source install with --db_dir just as you would the built executable--it should load your old db no problem!</li>
+<li>Just to be neat, delete any test database you made from the "running from source" install's <code>db</code> directory.</li>
+<li>Run the "running from source" install with --db_dir just as you would the built executable--it should load your old db no problem!</li>
 </ol>
+<p><strong>If you are currently on the macOS App.</strong></p>
+<p><em>Your App's database should be in <code>~/Library/Hydrus</code> (i.e <code>/Users/[You]/Library/Hydrus</code>. You can also hit up <code>file-&gt;open-&gt;database directory</code> in the client to make sure.).</em></p>
+<ol>
+<li>Follow the above guide to get the "running from source" install working in a new folder on a fresh database.</li>
+<li><strong>MAKE A BACKUP OF EVERYTHING</strong></li>
+<li>Delete any test database you made from the "running from source" install's <code>db</code> directory.</li>
+<li>Move the contents of <code>~/Library/Hydrus</code> to your "running from source" install's <code>db</code> directory.</li>
+<li>Run your "running from source" again--it should load your old db no problem!</li>
+<li>Update your backup routine to point to the new "running from source" install location.</li>
+</ol>
+<p><em>Note that these jobs are essentially the same as making a <a href="getting_started_installing.html#clean_installs">clean install</a> in a new location.</em></p>
 <h3 id="moving_your_install_directory">Moving Your Install Directory<a class="headerlink" href="#moving_your_install_directory" title="Permanent link">&para;</a></h3>
-<p>The venv directory that holds your private copy of python contains absolute path references to itself. If you move your source install directory somewhere, trying to launch hydrus will give you an error about 'python' being missing.</p>
+<p>The venv directory holds a private copy of python, and it contains absolute path references to itself. If you move your source install directory somewhere, trying to launch hydrus will give you an error about 'python' being missing.</p>
 <p><strong>If you move your install directory, you have to build a new venv.</strong> Just double-click the setup_venv script again, and you'll be back in a couple minutes.</p>
 <p>If you want to run from source via a USB stick you will move between different computers, my setup_venv script will not be enough (a normal venv symlinks to your system python, and you have the absolute path issue); you will either have to rebuild your venv from the local python every time you move the stick or manually set up your own environment with a special embeddable version of python or self-contained environment creator like Conda's <code>constructor</code>.</p>
 <h2 id="what_you_need">Doing it Yourself<a class="headerlink" href="#what_you_need" title="Permanent link">&para;</a></h2>
@@ -3101,7 +3117,7 @@ choco install -y windows-sdk-10.0
     <span class="md-icon" title="Last update">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 13.1c-.1 0-.3.1-.4.2l-1 1 2.1 2.1 1-1c.2-.2.2-.6 0-.8l-1.3-1.3c-.1-.1-.2-.2-.4-.2m-1.9 1.8-6.1 6V23h2.1l6.1-6.1zM12.5 7v5.2l4 2.4-1 1L11 13V7zM11 21.9c-5.1-.5-9-4.8-9-9.9C2 6.5 6.5 2 12 2c5.3 0 9.6 4.1 10 9.3-.3-.1-.6-.2-1-.2s-.7.1-1 .2C19.6 7.2 16.2 4 12 4c-4.4 0-8 3.6-8 8 0 4.1 3.1 7.5 7.1 7.9l-.1.2z"/></svg>
     </span>
-    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="August 6, 2025 20:24:15 UTC">August 6, 2025</span>
+    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="August 27, 2025 21:33:03 UTC">August 27, 2025</span>
   </span>
 
     
@@ -3146,7 +3162,8 @@ choco install -y windows-sdk-10.0
   
 </div>
       
-        <div class="md-social">
+        
+<div class="md-social">
   
     
     
