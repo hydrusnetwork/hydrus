@@ -331,6 +331,11 @@ class URLDomainMask( HydrusSerialisable.SerialisableBase ):
         self._domain_regexes = tuple( sorted( domain_regexes ) )
         
     
+    def GetDomainRegexes( self ) -> list[ str ]:
+        
+        return list( self._domain_regexes )
+        
+    
     def GetRawDomains( self ) -> list[ str ]:
         
         return list( self._raw_domains )
@@ -348,6 +353,11 @@ class URLDomainMask( HydrusSerialisable.SerialisableBase ):
             
             return max( all_items )
             
+        
+    
+    def IsSingleRawDomain( self ):
+        
+        return len( self._raw_domains ) == 1 and self.NoRegexes()
         
     
     @functools.lru_cache( 128 )

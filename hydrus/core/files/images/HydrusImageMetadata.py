@@ -141,22 +141,7 @@ def GetJPEGQuantizationQualityEstimate( pil_image: PILImage.Image ):
             
             subsampling_value = GetJpegSubsamplingRaw( pil_image )
             
-            if subsampling_value == 0: # 444
-                
-                pass
-                
-            elif subsampling_value == 1: # 422
-                
-                quality = quality ** ( 1 / 0.92 )
-                
-            elif subsampling_value == 2: # 420
-                
-                quality = quality ** ( 1 / 0.85 )
-                
-            else: # who knows, but probably crazy
-                
-                quality = quality ** ( 1 / 0.75 )
-                
+            quality = quality ** ( 1 / subsampling_quality_lookup[ subsampling_value ] )
             
         except:
             
@@ -204,33 +189,47 @@ def GetJPEGQuantizationQualityEstimate( pil_image: PILImage.Image ):
     return ( 'unknown', None )
     
 
-subsampling_value_lookup = {
-    '4:4:4' : 1.00,
-    '4:2:2' : 0.93,
-    '4:2:0' : 0.83,
-    'unknown' : 0.75
+# these first three line up with PIL, so don't change them
+SUBSAMPLING_444 = 0
+SUBSAMPLING_422 = 1
+SUBSAMPLING_420 = 2
+SUBSAMPLING_UNKNOWN = 3
+SUBSAMPLING_GREYSCALE = 4
+
+# broad relative quality of a particular subsampling against another
+subsampling_quality_lookup = {
+    SUBSAMPLING_444 : 1.00,
+    SUBSAMPLING_422 : 0.93,
+    SUBSAMPLING_420 : 0.83,
+    SUBSAMPLING_UNKNOWN : 0.75,
+    SUBSAMPLING_GREYSCALE : 0.967 # through the power of experimental magic, comparing RGB vs L greyscale conversions and relative quantization table strength, I have determined this is ok
+}
+
+subsampling_str_lookup = {
+    SUBSAMPLING_444 : '4:4:4',
+    SUBSAMPLING_422 : '4:2:2',
+    SUBSAMPLING_420 : '4:2:0',
+    SUBSAMPLING_UNKNOWN : 'unknown',
+    SUBSAMPLING_GREYSCALE : 'greyscale (no subsampling)'
 }
 
 def GetJpegSubsamplingRaw( pil_image: PILImage.Image ) -> int:
+    
+    if pil_image.mode == 'L':
+        
+        return SUBSAMPLING_GREYSCALE
+        
     
     from PIL import JpegImagePlugin
     
     result = JpegImagePlugin.get_sampling( pil_image )
     
+    if result not in ( 0, 1, 2 ):
+        
+        return SUBSAMPLING_UNKNOWN
+        
+    
     return result
-    
-
-def GetJpegSubsampling( pil_image: PILImage.Image ) -> str:
-    
-    result = GetJpegSubsamplingRaw( pil_image )
-    
-    subsampling_str_lookup = {
-        0 : '4:4:4',
-        1 : '4:2:2',
-        2 : '4:2:0'
-    }
-    
-    return subsampling_str_lookup.get( result, 'unknown' )
     
 
 def HasEXIF( pil_image: PILImage.Image ) -> bool:

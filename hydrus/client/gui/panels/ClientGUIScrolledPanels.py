@@ -284,6 +284,8 @@ class EditSingleCtrlPanel( CAC.ApplicationCommandProcessorMixin, EditPanel ):
         
         self._control = control
         
+        self.setFocusProxy( self._control )
+        
         if perpendicular:
             
             flag = CC.FLAGS_EXPAND_PERPENDICULAR

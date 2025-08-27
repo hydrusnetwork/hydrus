@@ -343,13 +343,7 @@ def CookieDomainMatches( cookie, search_domain ):
     
     return matches_exactly or matches_dot or valid_subdomain
     
-def DomainEqualsAnotherForgivingWWW( test_domain, wwwable_domain ):
-    
-    # domain is either the same or starts with www. or www2. or something
-    rule = r'^(www[^\.]*\.)?' + re.escape( wwwable_domain ) + '$'
-    
-    return re.search( rule, test_domain ) is not None
-    
+
 def GetCookie( cookies, search_domain, cookie_name_string_match ):
     
     for cookie in cookies:

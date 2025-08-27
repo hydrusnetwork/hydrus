@@ -195,7 +195,7 @@ def ShowAboutWindow( win: QW.QWidget ):
         
         if HC.PLATFORM_MACOS:
             
-            message += '\n\nAlso, since you are on macOS, you should know that a common reason for Jpeg-XL not loading is that it is not bundled with their python package on macOS. Your error below probably talks about a missing .dylib or .so file. If you run from source or run the App on an intel machine, you can resolve this by opening a terminal and running "brew install jpeg-xl", and then restarting hydrus. If you run the App from a Silicon machine, I understand this will not fix you, and you should consider running from source anyway.'
+            message += '\n\nAlso, since you are on macOS, you should know that a common reason for Jpeg-XL not loading is that it is not bundled with their python package on macOS. Your error below probably talks about a missing .dylib or .so file. If you run from source, you can resolve this by opening a terminal and running "brew install jpeg-xl", and then restarting hydrus.'
             
         
         HydrusData.ShowText( message )

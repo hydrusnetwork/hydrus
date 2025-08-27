@@ -698,14 +698,14 @@ def GetDuplicateComparisonStatementsSlow( shown_media_result: ClientMediaResult.
                 
                 path = CG.client_controller.client_files_manager.GetFilePath( jpeg_hash, HC.IMAGE_JPEG )
                 
-                subsampling_string = 'unknown'
+                subsampling = HydrusImageMetadata.SUBSAMPLING_UNKNOWN
                 quality_result = ( 'unknown', None )
                 
                 try:
                     
                     raw_pil_image = HydrusImageOpening.RawOpenPILImage( path )
                     
-                    subsampling_string = HydrusImageMetadata.GetJpegSubsampling( raw_pil_image )
+                    subsampling = HydrusImageMetadata.GetJpegSubsamplingRaw( raw_pil_image )
                     
                     quality_result = HydrusImageMetadata.GetJPEGQuantizationQualityEstimate( raw_pil_image )
                     
@@ -714,33 +714,40 @@ def GetDuplicateComparisonStatementsSlow( shown_media_result: ClientMediaResult.
                     pass
                     
                 
-                hashes_to_jpeg_quality[ jpeg_hash ] = ( subsampling_string, quality_result )
+                hashes_to_jpeg_quality[ jpeg_hash ] = ( subsampling, quality_result )
                 
             
         
-        ( s_subsampling_string, ( s_label, s_jpeg_quality ) ) = hashes_to_jpeg_quality[ s_hash ]
-        ( c_subsampling_string, ( c_label, c_jpeg_quality ) ) = hashes_to_jpeg_quality[ c_hash ]
+        ( s_subsampling, ( s_label, s_jpeg_quality ) ) = hashes_to_jpeg_quality[ s_hash ]
+        ( c_subsampling, ( c_label, c_jpeg_quality ) ) = hashes_to_jpeg_quality[ c_hash ]
         
-        s_subsampling_value = HydrusImageMetadata.subsampling_value_lookup.get( s_subsampling_string, 0 )
-        c_subsampling_value = HydrusImageMetadata.subsampling_value_lookup.get( c_subsampling_string, 0 )
+        s_subsampling_quality = HydrusImageMetadata.subsampling_quality_lookup.get( s_subsampling, 0 )
+        c_subsampling_quality = HydrusImageMetadata.subsampling_quality_lookup.get( c_subsampling, 0 )
         
-        if s_subsampling_value == c_subsampling_value:
+        if s_subsampling_quality == c_subsampling_quality:
             
             score = 0
-            statement = f'both {s_subsampling_string}'
+            statement = f'both {HydrusImageMetadata.subsampling_str_lookup[ s_subsampling ]}'
             
         else:
             
-            if s_subsampling_value > c_subsampling_value:
+            if s_subsampling == HydrusImageMetadata.SUBSAMPLING_GREYSCALE or c_subsampling == HydrusImageMetadata.SUBSAMPLING_GREYSCALE:
                 
-                score = 10
+                score = 0
                 
             else:
                 
-                score = -10
+                if s_subsampling_quality > c_subsampling_quality:
+                    
+                    score = 10
+                    
+                else:
+                    
+                    score = -10
+                    
                 
             
-            statement = f'{s_subsampling_string} vs {c_subsampling_string}'
+            statement = f'{HydrusImageMetadata.subsampling_str_lookup[ s_subsampling ]} vs {HydrusImageMetadata.subsampling_str_lookup[ c_subsampling ]}'
             
         
         statements_and_scores[ 'jpeg_subsampling' ] = ( statement, score )
@@ -1431,9 +1438,6 @@ class DuplicateContentMergeOptions( HydrusSerialisable.SerialisableBase ):
         do_not_do_deletes = False,
         in_auto_resolution = False
     ) -> list[ ClientContentUpdates.ContentUpdatePackage ]:
-        
-        # small note here, if we have BETTER/WORSE distinctions in any of the settings, A is better, B is worse. if we have HC.DUPLICATE_WORSE anywhere, which sets B as better, it must be flipped beforehand to BETTER and BA -> AB
-        # TODO: since this is a crazy situation, maybe this guy should just take the duplicate action, and then it can convert to media_result_better as needed
         
         if file_deletion_reason is None:
             

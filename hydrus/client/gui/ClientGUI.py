@@ -80,6 +80,7 @@ from hydrus.client.gui.panels import ClientGUIManageOptionsPanel
 from hydrus.client.gui.panels import ClientGUIScrolledPanels
 from hydrus.client.gui.panels import ClientGUIScrolledPanelsEdit
 from hydrus.client.gui.panels import ClientGUIScrolledPanelsReview
+from hydrus.client.gui.panels import ClientGUIURLClass
 from hydrus.client.gui.parsing import ClientGUIParsing
 from hydrus.client.gui.parsing import ClientGUIParsingLegacy
 from hydrus.client.gui.services import ClientGUIClientsideServices
@@ -5016,7 +5017,7 @@ ATTACH "client.mappings.db" as external_mappings;'''
             
             url_classes = domain_manager.GetURLClasses()
             
-            panel = ClientGUIDownloaders.EditURLClassesPanel( dlg, url_classes )
+            panel = ClientGUIURLClass.EditURLClassesPanel( dlg, url_classes )
             
             dlg.SetPanel( panel )
             

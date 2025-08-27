@@ -327,7 +327,7 @@ class SidebarImporterMultipleGallery( SidebarImporter ):
         
         input_hbox = QP.HBoxLayout()
         
-        QP.AddToLayout( input_hbox, self._query_input, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( input_hbox, self._query_input, CC.FLAGS_CENTER_PERPENDICULAR_EXPAND_DEPTH )
         QP.AddToLayout( input_hbox, self._cog_button, CC.FLAGS_CENTER_PERPENDICULAR )
         
         self._gallery_downloader_panel.Add( self._gallery_importers_status_st_top, CC.FLAGS_EXPAND_PERPENDICULAR )

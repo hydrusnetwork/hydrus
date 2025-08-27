@@ -3958,10 +3958,6 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
             
             self._hashes_due_to_be_media_merged_in_this_batch.update( media_b.GetHashes() )
             
-        elif duplicate_type == HC.DUPLICATE_WORSE: # pretty sure this never happens but whatever maybe some future advanced custom action could
-            
-            self._hashes_due_to_be_media_merged_in_this_batch.update( media_a.GetHashes() )
-            
         
         if delete_a or delete_b:
             
@@ -4264,7 +4260,14 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
                         
                         CG.client_controller.pub( 'new_similar_files_potentials_search_numbers' )
                         
-                        ClientGUIDialogsMessage.ShowCritical( self, 'Hell!', 'It seems an entire batch of pairs were unable to be displayed. The duplicate filter will now close.' )
+                        HydrusData.Print( 'Rows that could not be displayed:' )
+                        
+                        for ( duplicate_type, media_a, media_b, content_update_packages, was_auto_skipped ) in self._processed_pairs:
+                            
+                            print( f'Dup: {duplicate_type}, Hashes: {media_a.GetHash().hex()}, {media_b.GetHash().hex()}' )
+                            
+                        
+                        ClientGUIDialogsMessage.ShowCritical( self, 'Hell!', 'It seems an entire batch of pairs were unable to be displayed. The duplicate filter will now close. More information has been written to the log.' )
                         
                         self.window().deleteLater()
                         

@@ -1356,7 +1356,7 @@ def PotentialPathDeviceIsConnected( path: str ):
         
     
 
-def ReadFileLikeAsBlocks( f ):
+def ReadFileLikeAsBlocks( f ) -> collections.abc.Iterator[ bytes ]:
     
     next_block = f.read( HC.READ_BLOCK_SIZE )
     

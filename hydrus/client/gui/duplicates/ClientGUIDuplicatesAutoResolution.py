@@ -448,7 +448,7 @@ class EditDuplicatesAutoResolutionRulePanel( ClientGUIScrolledPanels.EditPanel )
         
         ( action, delete_a, delete_b, duplicate_content_merge_options ) = self._edit_actions_panel.GetValue()
         
-        if action in ( HC.DUPLICATE_BETTER, HC.DUPLICATE_WORSE ) and not pair_selector.CanDetermineBetter():
+        if action == HC.DUPLICATE_BETTER and not pair_selector.CanDetermineBetter():
             
             raise HydrusExceptions.VetoException( 'Hey, you have the action set to "better/worse duplicate" but the comparison step has no way to figure out A or B! You need to add at least one step that specifies either A or B so the rule knows which way around to apply the action. If there is no easy determination, perhaps "set as same quality" is more appropriate?' )
             
@@ -476,7 +476,6 @@ class EditPairActionsWidget( ClientGUICommon.StaticBox ):
         
         for duplicate_type in [
             HC.DUPLICATE_BETTER,
-            HC.DUPLICATE_WORSE,
             HC.DUPLICATE_SAME_QUALITY,
             HC.DUPLICATE_ALTERNATE,
             HC.DUPLICATE_FALSE_POSITIVE
@@ -505,23 +504,16 @@ class EditPairActionsWidget( ClientGUICommon.StaticBox ):
         self._delete_b.setChecked( delete_b )
         self._use_default_duplicates_content_merge_options.setChecked( duplicates_content_merge_options is None )
         
-        action_to_set = action
-        
-        if action_to_set == HC.DUPLICATE_WORSE:
-            
-            action_to_set = HC.DUPLICATE_BETTER
-            
-        
         if duplicates_content_merge_options is None:
             
-            duplicates_content_merge_options = CG.client_controller.new_options.GetDuplicateContentMergeOptions( action_to_set )
+            duplicates_content_merge_options = CG.client_controller.new_options.GetDuplicateContentMergeOptions( action )
             
         else:
             
             self._custom_duplicate_content_merge_options.ExpandCollapse()
             
         
-        self._custom_duplicate_content_merge_options.SetValue( action_to_set, duplicates_content_merge_options )
+        self._custom_duplicate_content_merge_options.SetValue( action, duplicates_content_merge_options )
         
         #
         
@@ -545,20 +537,15 @@ class EditPairActionsWidget( ClientGUICommon.StaticBox ):
     
     def _UpdateActionControls( self ):
         
-        action_to_set = self._action.GetValue()
-        
-        if action_to_set == HC.DUPLICATE_WORSE:
-            
-            action_to_set = HC.DUPLICATE_BETTER
-            
+        action = self._action.GetValue()
         
         current_action = self._custom_duplicate_content_merge_options.GetDuplicateAction()
         
-        if current_action != action_to_set:
+        if current_action != action:
             
-            duplicates_content_merge_options = CG.client_controller.new_options.GetDuplicateContentMergeOptions( action_to_set )
+            duplicates_content_merge_options = CG.client_controller.new_options.GetDuplicateContentMergeOptions( action )
             
-            self._custom_duplicate_content_merge_options.SetValue( action_to_set, duplicates_content_merge_options )
+            self._custom_duplicate_content_merge_options.SetValue( action, duplicates_content_merge_options )
             
         
     

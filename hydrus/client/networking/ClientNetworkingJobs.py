@@ -1,9 +1,9 @@
 import datetime
-import io
 import os
 import typing
 
 import requests
+import tempfile
 import threading
 import traceback
 import time
@@ -14,6 +14,7 @@ from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusPaths
 from hydrus.core import HydrusThreading
 from hydrus.core import HydrusText
 from hydrus.core import HydrusTime
@@ -166,16 +167,6 @@ class NetworkJob( object ):
         self._response_server_header = None
         self._response_last_modified = None
         
-        if self._temp_path is None:
-            
-            # 100MB HTML file lmao
-            self._max_allowed_bytes = 104857600
-            
-        else:
-            
-            self._max_allowed_bytes = None
-            
-        
         self._files = None
         self._for_login = False
         
@@ -196,10 +187,9 @@ class NetworkJob( object ):
         self._encoding = 'utf-8'
         self._the_network_job_gave_an_encoding = False
         
-        self._stream_io = io.BytesIO()
+        self._stream_io = tempfile.SpooledTemporaryFile( max_size = 10 * 1048576, mode = 'w+b' )
         
-        self._error_exception = Exception( 'Exception not initialised.' ) # PyLint hint, wew
-        self._error_exception = None
+        self._error_exception: typing.Optional[ Exception ] = None
         self._error_text = None
         
         self._is_done_event = threading.Event()
@@ -230,6 +220,11 @@ class NetworkJob( object ):
         self._network_contexts = self._GenerateNetworkContexts()
         
         ( self._session_network_context, self._login_network_context ) = self._GenerateSpecificNetworkContexts()
+        
+    
+    def __del__( self ):
+        
+        self._stream_io.close()
         
     
     def _CanReattemptConnection( self ):
@@ -467,11 +462,6 @@ class NetworkJob( object ):
                 
                 if self._num_bytes_to_read is not None:
                     
-                    if self._max_allowed_bytes is not None and self._num_bytes_to_read > self._max_allowed_bytes:
-                        
-                        raise HydrusExceptions.NetworkException( 'The url, which I thought was supposed to be some small HTML/JSON-style file, was apparently {}, but the max network size for this type of job is {}! Are the URL Classes for this type of URL all correct?'.format( HydrusData.ToHumanBytes( self._num_bytes_to_read ), HydrusData.ToHumanBytes( self._max_allowed_bytes ) ) )
-                        
-                    
                     if self._file_import_options is not None:
                         
                         is_complete_file_size = True
@@ -616,11 +606,6 @@ class NetworkJob( object ):
                         
                     
                 
-                if self._max_allowed_bytes is not None and self._num_bytes_read > self._max_allowed_bytes:
-                    
-                    raise HydrusExceptions.NetworkException( 'The url, which I thought was supposed to be some small HTML/JSON-style file, exceeded the max network size for this type of job, which is {}! Are the URL Classes for this type of URL all correct?'.format( HydrusData.ToHumanBytes( self._max_allowed_bytes ) ) )
-                    
-                
                 if self._file_import_options is not None:
                     
                     is_complete_file_size = False
@@ -706,7 +691,8 @@ class NetworkJob( object ):
         
         self._encoding = 'utf-8'
         
-        self._stream_io = io.BytesIO()
+        self._stream_io.close()
+        self._stream_io = tempfile.SpooledTemporaryFile( max_size = 10 * 1048576, mode = 'w+b' )
         
         self._num_bytes_read = 0
         self._num_bytes_to_read = None
@@ -1558,8 +1544,10 @@ class NetworkJob( object ):
                             self._status_text = str( response.status_code ) + ' - ' + str( response.reason )
                             
                         
+                        stream_dest = self._stream_io
+                        
                         # don't care about 'more_to_download' here. lmao if some server ever tried to pull it off anyway
-                        self._ReadResponse( response, self._stream_io )
+                        self._ReadResponse( response, stream_dest )
                         
                         data = self.GetContentBytes()
                         
@@ -1951,6 +1939,24 @@ class NetworkJob( object ):
         return self.WILLING_TO_WAIT_ON_INVALID_LOGIN
         
     
+    def WriteContentBytesToPath( self, dest_path: str ):
+        
+        with self._lock:
+            
+            with open( dest_path, 'wb' ) as f_write:
+                
+                self._stream_io.seek( 0 )
+                
+                for block in HydrusPaths.ReadFileLikeAsBlocks( self._stream_io ):
+                    
+                    f_write.write( block )
+                    
+                
+            
+        
+    
+    
+
 class NetworkJobDownloader( NetworkJob ):
     
     def __init__( self, downloader_page_key, method, url, body = None, referral_url = None, temp_path = None ):

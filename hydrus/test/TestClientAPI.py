@@ -1690,6 +1690,88 @@ class TestClientAPI( unittest.TestCase ):
         HF.compare_content_update_packages( self, content_update_package, expected_content_update_package )
         
     
+    def _test_add_files_generate_hashes( self, connection, set_up_permissions ):
+        
+        api_permissions = set_up_permissions[ 'add_files' ]
+        
+        access_key_hex = api_permissions.GetAccessKey().hex()
+        
+        # as body
+        
+        hash = b'\xadm5\x99\xa6\xc4\x89\xa5u\xeb\x19\xc0&\xfa\xce\x97\xa9\xcdey\xe7G(\xb0\xce\x94\xa6\x01\xd22\xf3\xc3'
+        
+        f = ClientImportFiles.FileImportStatus.STATICGetUnknownStatus()
+        
+        f.hash = hash
+        
+        hydrus_png_path = HydrusStaticDir.GetStaticPath( 'hydrus.png' )
+        
+        with open( hydrus_png_path, 'rb' ) as f:
+            
+            HYDRUS_PNG_BYTES = f.read()
+            
+        
+        headers = { 'Hydrus-Client-API-Access-Key' : access_key_hex, 'Content-Type' : HC.mime_mimetype_string_lookup[ HC.APPLICATION_OCTET_STREAM ] }
+        
+        path = '/add_files/generate_hashes'
+        
+        body = HYDRUS_PNG_BYTES
+        
+        connection.request( 'POST', path, body = body, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        text = str( data, 'utf-8' )
+        
+        self.assertEqual( response.status, 200 )
+        
+        response_json = json.loads( text )
+        
+        expected_result = { 'hash' : hash.hex(), 'perceptual_hashes' : ["b44dc7b24dcb381c"] , 'pixel_hash' : 'e12db22bf8ecf1f54ae1df3f0675a34a64e0c8f0801ae816b8aaae00f5d7f4fc' }
+        
+        wash_example_json_response( expected_result )
+        
+        self.assertEqual( response_json, expected_result )
+        
+        # do hydrus png as path
+        
+        hash = b'\xadm5\x99\xa6\xc4\x89\xa5u\xeb\x19\xc0&\xfa\xce\x97\xa9\xcdey\xe7G(\xb0\xce\x94\xa6\x01\xd22\xf3\xc3'
+        
+        f = ClientImportFiles.FileImportStatus.STATICGetUnknownStatus()
+        
+        f.hash = hash
+        
+        hydrus_png_path = HydrusStaticDir.GetStaticPath( 'hydrus.png' )
+        
+        headers = { 'Hydrus-Client-API-Access-Key' : access_key_hex, 'Content-Type' : HC.mime_mimetype_string_lookup[ HC.APPLICATION_JSON ] }
+        
+        path = '/add_files/generate_hashes'
+        
+        body_dict = { 'path' : hydrus_png_path }
+        
+        body = json.dumps( body_dict )
+        
+        connection.request( 'POST', path, body = body, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        text = str( data, 'utf-8' )
+        
+        self.assertEqual( response.status, 200 )
+        
+        response_json = json.loads( text )
+        
+        expected_result = { 'hash' : hash.hex(), 'perceptual_hashes' : ["b44dc7b24dcb381c"] , 'pixel_hash' : 'e12db22bf8ecf1f54ae1df3f0675a34a64e0c8f0801ae816b8aaae00f5d7f4fc' }
+        
+        wash_example_json_response( expected_result )
+        
+        self.assertEqual( response_json, expected_result )
+        
+    
     def _test_add_notes( self, connection, set_up_permissions ):
         
         hash = os.urandom( 32 )
@@ -7696,6 +7778,7 @@ class TestClientAPI( unittest.TestCase ):
         self._test_add_files_add_file( connection, set_up_permissions )
         self._test_add_files_other_actions( connection, set_up_permissions )
         self._test_add_files_migrate_files( connection, set_up_permissions )
+        self._test_add_files_generate_hashes( connection, set_up_permissions )
         self._test_add_notes( connection, set_up_permissions )
         self._test_edit_ratings( connection, set_up_permissions )
         self._test_edit_times( connection, set_up_permissions )

@@ -1591,10 +1591,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
                         
                         try:
                             
-                            with open( temp_path, 'wb' ) as f:
-                                
-                                f.write( network_job.GetContentBytes() )
-                                
+                            network_job.WriteContentBytesToPath( temp_path )
                             
                             mime = HydrusFileHandling.GetMime( temp_path )
                             

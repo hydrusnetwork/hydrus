@@ -9055,6 +9055,70 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
+        if version == 635:
+            
+            try:
+                
+                all_local_hash_ids = self.modules_files_storage.GetCurrentHashIdsList( self.modules_services.combined_local_file_service_id )
+                
+                with self._MakeTemporaryIntegerTable( all_local_hash_ids, 'hash_id' ) as temp_hash_ids_table_name:
+                    
+                    hash_ids = self._STS( self._Execute( f'SELECT hash_id FROM {temp_hash_ids_table_name} CROSS JOIN files_info USING ( hash_id ) WHERE mime = ?;', ( HC.APPLICATION_EPUB, ) ) )
+                    self.modules_files_maintenance_queue.AddJobs( hash_ids, ClientFilesMaintenance.REGENERATE_FILE_DATA_JOB_FORCE_THUMBNAIL )
+                    
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Some metadata scanning failed to schedule! This is not super important, but hydev would be interested in seeing the error that was printed to the log.'
+                
+                self.pub_initial_message( message )
+                
+            
+            try:
+                
+                auto_resolution_rules = self.modules_serialisable.GetJSONDumpNamed( HydrusSerialisable.SERIALISABLE_TYPE_DUPLICATES_AUTO_RESOLUTION_RULE )
+                
+                from hydrus.client.duplicates import ClientDuplicatesAutoResolution
+                
+                we_did_it = False
+                
+                for rule in auto_resolution_rules:
+                    
+                    rule = typing.cast( ClientDuplicatesAutoResolution.DuplicatesAutoResolutionRule, rule )
+                    
+                    if rule.GetAction() == HC.DUPLICATE_WORSE:
+                        
+                        rule.SetAction( HC.DUPLICATE_BETTER )
+                        rule.SetOperationMode( ClientDuplicatesAutoResolution.DUPLICATES_AUTO_RESOLUTION_RULE_OPERATION_MODE_PAUSED )
+                        
+                        self.modules_serialisable.SetJSONDump( rule )
+                        
+                        HydrusData.Print( '"B is better" rule that I just flipped to "A is better" and paused: ' + rule.GetName() )
+                        
+                        we_did_it = True
+                        
+                    
+                
+                if we_did_it:
+                    
+                    message = 'Hey, it looks like you had a duplicates auto-resolution rule set to "B is better". Hydev has decided that allowing this action, which proved buggy due to maintenance debt, was not a wise idea and is rolling it back. Your rules that were set to "B is better" (written to log, if you need their names) have been paused and set to "A is better". I recommend you reconfigure things how you want, double check the "delete A/B" are set correct, and reset any "test" progress your rules have. If you have previously approved pairs for these rules in semi-automatic mode, it has probably applied the "better" the wrong way around, so you should undo its "actions taken" log too. It the rule only ever worked in automatic mode, it probably did not make any mistakes.'
+                    
+                    self.pub_initial_message( message )
+                    
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Had a problem updating duplicate auto-resolution rules! Please let hydrus dev know.'
+                
+                self.pub_initial_message( message )
+                
+            
+        
+        
         self._controller.frame_splash_status.SetTitleText( 'updated db to v{}'.format( HydrusNumbers.ToHumanInt( version + 1 ) ) )
         
         self._Execute( 'UPDATE version SET version = ?;', ( version + 1, ) )

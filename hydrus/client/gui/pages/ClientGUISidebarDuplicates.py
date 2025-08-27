@@ -58,20 +58,6 @@ class SidebarDuplicateFilter( ClientGUISidebarCore.Sidebar ):
         
         #
         
-        self._refresh_maintenance_status = ClientGUICommon.BetterStaticText( self._main_left_panel, ellipsize_end = True )
-        self._refresh_maintenance_button = ClientGUICommon.IconButton( self._main_left_panel, CC.global_icons().refresh, self._duplicates_manager.RefreshMaintenanceNumbers )
-        
-        menu_template_items = []
-        
-        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'reset potential duplicates', 'This will delete all the discovered potential duplicate pairs. All files that may have potential pairs will be queued up for similar file search again.', self._ResetUnknown ) )
-        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemSeparator() )
-        
-        check_manager = ClientGUICommon.CheckboxManagerOptions( 'maintain_similar_files_duplicate_pairs_during_idle' )
-        
-        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCheck( 'search for potential duplicates at the current distance during idle time/shutdown', 'Tell the client to find duplicate pairs in its normal db maintenance cycles, whether you have that set to idle or shutdown time.', check_manager ) )
-        
-        self._cog_button = ClientGUIMenuButton.CogIconButton( self._main_left_panel, menu_template_items )
-        
         menu_template_items = []
         
         page_func = HydrusData.Call( ClientGUIDialogsQuick.OpenDocumentation, self, HC.DOCUMENTATION_DUPLICATES )
@@ -83,6 +69,19 @@ class SidebarDuplicateFilter( ClientGUISidebarCore.Sidebar ):
         #
         
         self._searching_panel = ClientGUICommon.StaticBox( self._main_left_panel, 'finding potential duplicates' )
+        
+        self._refresh_maintenance_button = ClientGUICommon.IconButton( self._searching_panel, CC.global_icons().refresh, self._duplicates_manager.RefreshMaintenanceNumbers )
+        
+        menu_template_items = []
+        
+        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'reset potential duplicates', 'This will delete all the discovered potential duplicate pairs. All files that may have potential pairs will be queued up for similar file search again.', self._ResetUnknown ) )
+        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemSeparator() )
+        
+        check_manager = ClientGUICommon.CheckboxManagerOptions( 'maintain_similar_files_duplicate_pairs_during_idle' )
+        
+        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCheck( 'search for potential duplicates at the current distance during idle time/shutdown', 'Tell the client to find duplicate pairs in its normal db maintenance cycles, whether you have that set to idle or shutdown time.', check_manager ) )
+        
+        self._cog_button = ClientGUIMenuButton.CogIconButton( self._searching_panel, menu_template_items )
         
         self._eligible_files = ClientGUICommon.BetterStaticText( self._searching_panel, ellipsize_end = True )
         
@@ -197,22 +196,21 @@ class SidebarDuplicateFilter( ClientGUISidebarCore.Sidebar ):
         QP.AddToLayout( gridbox_2, self._num_searched, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         QP.AddToLayout( gridbox_2, self._search_button, CC.FLAGS_CENTER_PERPENDICULAR )
         
-        self._searching_panel.Add( self._eligible_files, CC.FLAGS_EXPAND_PERPENDICULAR )
+        hbox = QP.HBoxLayout()
+        
+        QP.AddToLayout( hbox, self._eligible_files, CC.FLAGS_CENTER_PERPENDICULAR_EXPAND_DEPTH )
+        QP.AddToLayout( hbox, self._refresh_maintenance_button, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._cog_button, CC.FLAGS_CENTER_PERPENDICULAR )
+        
+        self._searching_panel.Add( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         self._searching_panel.Add( distance_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         self._searching_panel.Add( gridbox_2, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
         #
         
-        hbox = QP.HBoxLayout()
-        
-        QP.AddToLayout( hbox, self._refresh_maintenance_status, CC.FLAGS_CENTER_PERPENDICULAR_EXPAND_DEPTH )
-        QP.AddToLayout( hbox, self._refresh_maintenance_button, CC.FLAGS_CENTER_PERPENDICULAR )
-        QP.AddToLayout( hbox, self._cog_button, CC.FLAGS_CENTER_PERPENDICULAR )
-        QP.AddToLayout( hbox, self._help_button, CC.FLAGS_CENTER_PERPENDICULAR )
-        
         vbox = QP.VBoxLayout()
         
-        QP.AddToLayout( vbox, hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._help_button, CC.FLAGS_ON_RIGHT )
         QP.AddToLayout( vbox, self._searching_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         vbox.addStretch( 0 )
         

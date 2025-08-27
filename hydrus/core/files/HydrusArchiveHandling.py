@@ -2,6 +2,8 @@ import collections
 import collections.abc
 import re
 import zipfile
+import os.path
+import lxml.etree as ET
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusExceptions
@@ -21,11 +23,18 @@ def ExtractSingleFileFromZip( path_to_zip, filename_to_extract, extract_into_fil
         
     
 
-def ExtractCoverPage( path_to_zip, extract_path ):
+def ExtractCoverPage( path_to_zip, extract_path, mime ):
     
     with zipfile.ZipFile( path_to_zip ) as zip_handle:
         
-        path = GetCoverPagePath( zip_handle )
+        if mime == HC.APPLICATION_EPUB:
+            
+            path = GetCoverPagePathFromEpub( zip_handle )
+            
+        else:
+            
+            path = GetCoverPagePath( zip_handle )
+            
         
         with zip_handle.open( path ) as reader:
             
@@ -47,8 +56,9 @@ def GetCoverPagePath( zip_handle: zipfile.ZipFile ):
     for path in all_file_paths:
         
         if path.startswith('__MACOSX/'):
-                
+            
             continue
+            
         
         if '.' in path:
             
@@ -61,7 +71,98 @@ def GetCoverPagePath( zip_handle: zipfile.ZipFile ):
             
         
     
-    raise HydrusExceptions.DamagedOrUnusualFileException( 'Sorry, could not find an image file in there!' )
+    raise HydrusExceptions.NoThumbnailFileException( 'Sorry, could not find an image file in there!' )
+    
+
+def GetCoverPagePathFromEpub( zip_handle: zipfile.ZipFile ):
+    
+    container_path = 'META-INF/container.xml'
+    
+    # EPUBS are indirection-hell, and it all starts with some container.xml
+    if container_path not in zip_handle.namelist():
+        
+        raise HydrusExceptions.NoThumbnailFileException( 'Missing META-INF/container.xml in EPUB.' )
+        
+    
+    # This container.xml should contain a rootfile...
+    with zip_handle.open( container_path ) as container_file:
+        
+        container_tree = ET.parse( container_file )
+        
+        rootfile = container_tree.find( './/{urn:oasis:names:tc:opendocument:xmlns:container}rootfile' )
+        
+        if rootfile is None:
+            
+            raise HydrusExceptions.NoThumbnailFileException( 'EPUB does not declare a rootfile.' )
+            
+        
+        content_opf_path = rootfile.get( 'full-path' )
+        
+    
+    if content_opf_path not in zip_handle.namelist():
+        
+        raise HydrusExceptions.NoThumbnailFileException( f'EPUB declares {content_opf_path}, but this does not exist.' )
+        
+    
+    # which then, hopefully, lists a cover image
+    with zip_handle.open( content_opf_path ) as opf_file:
+        
+        opf_tree = ET.parse( opf_file )
+        
+        cover_item = opf_tree.find( './/{http://www.idpf.org/2007/opf}item[@properties="cover-image"]' ) # EPUB 3
+        
+        if cover_item is None:
+            
+            # EPUB 2
+            
+            meta_item = opf_tree.find( './/{http://www.idpf.org/2007/opf}meta[@name="cover"]' )
+            
+            if meta_item is not None:
+                
+                meta_content_cover_name = meta_item.get( 'content' )
+                
+                cover_item = opf_tree.find( './/{http://www.idpf.org/2007/opf}item[@id="' + meta_content_cover_name + '"]' )
+                
+            
+            if cover_item is None:
+                
+                cover_item = opf_tree.find( './/{http://www.idpf.org/2007/opf}item[@id="cover"]' )
+                
+            
+        
+        if cover_item is not None:
+            
+            content_directory = os.path.dirname( content_opf_path )
+            
+            if content_directory != '':
+                
+                cover_image_path = content_directory + '/' + cover_item.get( 'href' )
+                
+            else:
+                
+                cover_image_path = cover_item.get( 'href' )
+                
+            
+            if cover_image_path not in zip_handle.namelist():
+                
+                raise HydrusExceptions.NoThumbnailFileException( f'EPUB declares {cover_image_path}, but this does not exist.' )
+                
+            
+            return cover_image_path
+            
+        else:
+            
+            raise HydrusExceptions.NoThumbnailFileException( 'Sorry, could not find a cover image in the EPUB xml!' )
+            
+        
+    
+    # We still have the option to just grab any image from the zip, i.e. GetCoverPagePath,
+    # but this can include publisher logos, ornate dropped capitals, fancy section separators...
+    #
+    # It's not like that happens a lot, but it just looks so bad when it does.
+    #
+    # It's also a consideration that there's a _specified_ difference between epubs
+    # with and without covers, and it might be nice for hydrus to display that difference well.
     
 
 def GetSingleFileFromZipBytes( path_to_zip, path_in_zip ):
@@ -169,6 +270,7 @@ def ZipLooksLikeCBZ( path_to_zip ):
             if filename.startswith('__MACOSX/'):
                 
                 continue
+                
             
             if '/' in filename:
                 

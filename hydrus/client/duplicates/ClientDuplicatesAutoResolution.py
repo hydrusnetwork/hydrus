@@ -288,14 +288,6 @@ class DuplicatesAutoResolutionRule( HydrusSerialisable.SerialisableBaseNamed ):
         delete_a = self._delete_a
         delete_b = self._delete_b
         
-        if action == HC.DUPLICATE_WORSE:
-            
-            action = HC.DUPLICATE_BETTER
-            
-            ( media_result_a, media_result_b ) = ( media_result_b, media_result_a )
-            ( delete_a, delete_b ) = ( delete_b, delete_a )
-            
-        
         if self._custom_duplicate_content_merge_options is None:
             
             duplicate_content_merge_options = CG.client_controller.new_options.GetDuplicateContentMergeOptions( action )

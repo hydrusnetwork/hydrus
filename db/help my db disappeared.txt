@@ -24,7 +24,7 @@ So, if you have a normal client install and after an update or a hard drive migr
 
 How do we figure this out? First off, check "help->about" in the client. That will show your install and database directories. Is the database directory what you expect, or has it moved? Open that location ("file->open->database directory"), and compare it to the location you thought you were using. Check your home directory. If you find your old db, think about why hydrus has moved--is the original location now read-only, did you recently alter/add/forget the db_dir launch parameter in a custom shortcut, are you using clever symlinks to host a NAS location locally, and things are a bit tangled?--then try to fix the problem. Simple is always better.
 
-For macOS Apps, the default location is "~/Library/Hydrus", and there are no fallbacks. You likely will not run into this problem unless you are messing around with the source version or the --db_dir launch parameter on the App.
+For the old macOS App, the default location is "~/Library/Hydrus", and there are no fallbacks. You likely will not run into this problem unless you are messing around with the source version or the --db_dir launch parameter on the App.
 
 
 *** Scenario Two: The database has been overwritten ***

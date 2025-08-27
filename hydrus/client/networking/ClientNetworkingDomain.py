@@ -981,7 +981,7 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
                             
                         except HydrusExceptions.URLClassException:
                             
-                            continue
+                            domain = 'unknown'
                             
                         
                         unmatched_url_tuples.append( ( domain, url ) )
@@ -994,6 +994,20 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
                     if url_class_key in self._url_class_keys_to_display:
                         
                         url_class_name = url_class.GetName()
+                        
+                        if not url_class.GetURLDomainMask().IsSingleRawDomain():
+                            
+                            try:
+                                
+                                domain = ClientNetworkingFunctions.ConvertURLIntoDomain( url )
+                                
+                            except HydrusExceptions.URLClassException:
+                                
+                                domain = 'unknown'
+                                
+                            
+                            url_class_name = f'{url_class_name} ({domain})'
+                            
                         
                         url_tuples.append( ( url_class_name, url ) )
                         

@@ -916,7 +916,7 @@ class BetterListCtrlTreeView( QW.QTreeView ):
     
     def EventShowMenu( self ):
         
-        QP.CallAfter( self._ShowRowsMenu )
+        CG.client_controller.CallAfterQtSafe( self, 'list menu show', self._ShowRowsMenu )
         
     
     def ForceHeight( self, rows ):

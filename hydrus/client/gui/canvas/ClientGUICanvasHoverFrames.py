@@ -2670,6 +2670,16 @@ class CanvasHoverFrameRightDuplicates( CanvasHoverFrame ):
                     tt = f'{statement}\n\nThis uses a custom visual inspection algorithm to try to differentiate resizes/re-encodes vs recolours/alternates. It is pretty good and you can generally trust it. On edge cases, it intentionally errs on the side of false negative.'
                     st.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
                     
+                elif name == 'jpeg_subsampling':
+                    
+                    tt = f'{statement}\n\nTo save space, jpegs can encode colour data at a lower resolution than light intensity. This is called "subsampling". You do not notice it much, but it does affect image quality, and you generally want to select the higher resolution of subsampling as the "better" of any pair. There are complicated situations where a jpeg can be subsampled and then saved again at a higher quality level (and this is one of the ways you can have a jpeg that is bloated but looks no better), but in general, know that bigger numbers are better:\n\n4:4:4 > 4:2:2 > 4:2:0.\n\nAnything that counts as "unknown" is probably worse. Truly greyscale jpegs (i.e. 8 bits per pixel) have no colour and thus no subsampling.'
+                    st.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
+                    
+                elif name == 'jpeg_quality':
+                    
+                    tt = f'{statement}\n\nThis is an estimate based on metadata within the jpeg header. It is not perfect, but it is generally reliable. It will be tricked by a low quality file that is re-saved at a higher quality level.'
+                    st.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
+                    
                 else:
                     
                     st.setToolTip( ClientGUIFunctions.WrapToolTip( statement ) )

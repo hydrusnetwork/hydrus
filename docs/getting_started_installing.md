@@ -29,16 +29,9 @@ I try to release a new version every Wednesday by 8pm EST and write an accompany
 
 === "macOS"
 
-    *   Get the App .zip. Double-click it, which should extract the App. Drag the App to your Applications.
-    *   Hydrus is an unsigned application, so you have to instruct macOS to trust it:
-        * Once Hydrus Network.app is installed in your Applications, control-click (or right-click) it and choose Open. By choosing Open, you are telling macOS that you want to bypass the security checks for that app only.
-        * If this fails, go to `Apple Menu -> System Preferences -> Security (or Security & Privacy)`. Change "Allow apps downloaded from:" to "Anywhere".
-    *   _This App has always been a little buggy. Many macOS users have better success [running from source](running_from_source.md). I encourage all macOS users to try it out._
-    *   _Also, for difficult technical reasons, the App is currently built for the Intel chipset. If you are on Apple Silicon, we again recommend you [run from source](running_from_source.md)!_
-  
-    !!! info "App Database Location"
-        Unlike a normal install of hydrus, the Hydrus App is **non-portable** and puts your database in `~/Library/Hydrus` (i.e. `/Users/[You]/Library/Hydrus`). You can update simply by replacing the old App with the new, but if you wish to backup your database, you should be looking at `~/Library/Hydrus`, not the App itself.
-  
+    * I used to have an Intel App, but unfortunately the move to Apple Silicon presented too many technical hurdles to keep going.
+    * The program has always worked better on macOS when [run from source](running_from_source.md), and this is now the only option here.
+
     !!! info "mpv on macOS"
         macOS users have no mpv support for now, so no audio, and video (which has to be rendered with the software-based native viewer) may be laggy. Sorry!
 
@@ -56,7 +49,7 @@ I try to release a new version every Wednesday by 8pm EST and write an accompany
     ??? warning "MangoHUD and MPV"
         A user notes that MangoHUD may also interfere with mpv, causing crashes.
         
-        Try `unset MANGOHUD` to remove the MangoHUD environment variable in your hydrus launch script to fix this!
+        Try `unset MANGOHUD` or `export MANGOHUD=0` to remove the MangoHUD environment variable in your hydrus launch script to fix this!
     
     !!! note "Qt compatibility"
         
@@ -107,7 +100,7 @@ I try to release a new version every Wednesday by 8pm EST and write an accompany
 
 === "From Source"
 
-    *   You can also [run from source](running_from_source.md). This is often the best way to fix compatibility problems, and it is the most pleasant way to run and update the program (you can update in five seconds!), although it requires a bit more work to set up the first time. It is not too complicated to do, though--my guide will walk you through each step.
+    *   You can also [run from source](running_from_source.md). This is often the best way to fix compatibility problems, the only way to run on macOS, and the most pleasant way to run and update the program (you can update in five seconds!), although it requires a bit more work to set up the first time. It is not too complicated to do, though--my guide will walk you through each step.
 
 By default, hydrus stores all its data—options, files, subscriptions, _everything_—entirely inside its own directory. You can extract it to a usb stick, move it from one place to another, have multiple installs for multiple purposes, wrap it all up inside an encrypted volume, whatever you like. The .exe installer writes some unavoidable uninstall registry stuff to Windows, but the 'installed' client itself will run fine if you manually move it.
 
@@ -120,7 +113,7 @@ By default, hydrus stores all its data—options, files, subscriptions, _everyth
 
 Hydrus is made by an Anon out of duct tape and string. It combines file parsing tech with lots of network and database code in unusual and powerful ways, and all through a hacked-together executable that isn't signed by any big official company.
 
-Unfortunately, we have been hit by anti-virus false positives throughout development. Every few months, one or more of the larger anti-virus programs sees some code that looks like something bad, or they run the program in a testbed and don't like something it does, and then they quarantine it. Every single instance of this so far has been a false positive. They usually go away the next week or two when the next set of definitions roll out. Some hydrus users are kind enough to report the program as a false positive to the anti-virus companies themselves, which also helps here.
+Unfortunately, we have been hit by anti-virus false positives throughout development. Every few months, one or more of the larger anti-virus programs sees some code that looks like something bad, or they run the program in a testbed and don't like something it does, and then they quarantine it. Every single instance of this so far has been a false positive. They usually go away the next week or two when the next set of definitions roll out. Some hydrus users are kind enough to report the program as a false positive to the anti-virus companies themselves, which also helps.
 
 Some users have never had the problem, some get hit regularly. The situation is obviously worse on Windows. If you try to extract the zip and hydrus_client.exe or the whole folder suddenly disappears, please check your anti-virus software.
 
@@ -141,14 +134,11 @@ To run the client:
     *   For the installer, run the Start menu shortcut it added.
     *   For the extract, run 'hydrus_client.exe' in the base directory, or make a shortcut to it.
 
-=== "macOS"
-
-    *   Run the App you installed.
-
 === "Linux"
 
-    *   Run the 'client' executable in the base directory. You may be able to double-click it, otherwise you are running `./client` from the terminal.
+    *   Run the 'client' executable in the base directory. You may be able to double-click it, otherwise you are running `./hydrus_client` from the terminal.
     *   If you experience virtual memory crashes, please review [this thorough guide](Fixing_Hydrus_Random_Crashes_Under_Linux.md) by a user.
+    *   Making a .desktop shortcut is ideal--check `install_dir/static/io.github.hydrusnetwork.hydrus.desktop` for an example template.
 
 ## Updating
 
@@ -166,7 +156,6 @@ The update process:
 * Update your install:
     1. **If you use the installer**, just download the new installer and run it. It should detect where the last install was and overwrite everything automatically.
     2. **If you use the extract**, then just extract the new version right on top of your current install and overwrite manually. *It is wise to extract it straight from the archive to your install folder.*
-    3. **If you use the macOS App**, just extract the new App from the zip and drag and drop to your Applications as normal.
     4. **If you run from source**, then run `git pull` as normal. If it has been a few months since you made your venv, or the changelog talks about a new library version specifically, you might like to run `setup_venv` again.
 * Start your client or server. It may take a few minutes to update its database. I will say in the release post if it is likely to take longer.
 

@@ -40,16 +40,6 @@ class ClientDBFilesDuplicatesSetter( ClientDBModule.ClientDBModule ):
                 self.modules_content_updates.ProcessContentUpdatePackage( content_update_package )
                 
             
-            if duplicate_type == HC.DUPLICATE_WORSE:
-                
-                # this is probably never going to run, since we are rigorous about doing this higher above, in order to get content_update_package good
-                # but we'll have it for safety!
-                
-                ( hash_a, hash_b ) = ( hash_b, hash_a )
-                
-                duplicate_type = HC.DUPLICATE_BETTER
-                
-            
             hash_id_a = self.modules_hashes_local_cache.GetHashId( hash_a )
             hash_id_b = self.modules_hashes_local_cache.GetHashId( hash_b )
             

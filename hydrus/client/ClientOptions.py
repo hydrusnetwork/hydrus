@@ -40,7 +40,8 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         from hydrus.client.gui.canvas import ClientGUIMPV
         
-        if ClientGUIMPV.MPV_IS_AVAILABLE:
+        # we may permit mpv testing in macOS, but we won't default to it even if it seems ok
+        if ClientGUIMPV.MPV_IS_AVAILABLE and not HC.PLATFORM_MACOS:
             
             video_action = CC.MEDIA_VIEWER_ACTION_SHOW_WITH_MPV
             audio_action = CC.MEDIA_VIEWER_ACTION_SHOW_WITH_MPV

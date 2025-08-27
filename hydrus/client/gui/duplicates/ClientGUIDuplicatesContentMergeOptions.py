@@ -154,7 +154,7 @@ class EditDuplicateContentMergeOptionsWidget( ClientGUICommon.StaticBox ):
                 return
                 
             
-            if self._duplicate_action in ( HC.DUPLICATE_BETTER, HC.DUPLICATE_WORSE ):
+            if self._duplicate_action == HC.DUPLICATE_BETTER:
                 
                 service = services_manager.GetService( service_key )
                 
@@ -230,7 +230,7 @@ class EditDuplicateContentMergeOptionsWidget( ClientGUICommon.StaticBox ):
                 return
                 
             
-            if self._duplicate_action in ( HC.DUPLICATE_BETTER, HC.DUPLICATE_WORSE ):
+            if self._duplicate_action == HC.DUPLICATE_BETTER:
                 
                 service = services_manager.GetService( service_key )
                 
@@ -398,7 +398,7 @@ class EditDuplicateContentMergeOptionsWidget( ClientGUICommon.StaticBox ):
         
         action = self._service_keys_to_rating_options[ service_key ]
         
-        if self._duplicate_action in ( HC.DUPLICATE_BETTER, HC.DUPLICATE_WORSE ):
+        if self._duplicate_action == HC.DUPLICATE_BETTER:
             
             service = CG.client_controller.services_manager.GetService( service_key )
             
@@ -453,7 +453,7 @@ class EditDuplicateContentMergeOptionsWidget( ClientGUICommon.StaticBox ):
         
         ( action, tag_filter ) = self._service_keys_to_tag_options[ service_key ]
         
-        if self._duplicate_action in ( HC.DUPLICATE_BETTER, HC.DUPLICATE_WORSE ):
+        if self._duplicate_action == HC.DUPLICATE_BETTER:
             
             service = CG.client_controller.services_manager.GetService( service_key )
             
@@ -573,7 +573,7 @@ class EditDuplicateContentMergeOptionsWidget( ClientGUICommon.StaticBox ):
     
     def _UpdateDuplicateTypeControls( self ):
         
-        we_better_dupe = self._duplicate_action in ( HC.DUPLICATE_BETTER, HC.DUPLICATE_WORSE )
+        we_better_dupe = self._duplicate_action == HC.DUPLICATE_BETTER
         
         note = 'Editing for "{}".'.format( HC.duplicate_type_string_lookup[ self._duplicate_action ] )
         

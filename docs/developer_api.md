@@ -2788,7 +2788,7 @@ These file hashes are all kings that are available in the given file domain. Tre
 You may see the same file more than once in this batch, and if you expect to process and commit these as a batch, just like the filter does, you would be wise to skip through pairs that are implicated by a previous decision. When considering whether to display the 'next' pair, you should test:
 
 - In the current batch of decisions, has either file been manually deleted by the user?
-- In the current batch of decisions, has either file been adjudicated as the B in a 'A is better than B' or 'A is the same as B' (or, if you are doing it, the A in a 'B is better than A')?
+- In the current batch of decisions, has either file been adjudicated as the B in a 'A is better than B' or 'A is the same as B'?
 
 If either is true, you should skip the pair, since, after your current decisions are committed, that file is no longer in any potential duplicate pairs in the search you gave. The respective file is either no longer in the file domain, or it has been merged into another group (that file is no longer a king and either the potential pair no longer exists via transitive collapse or, rarely, hydrus can present you with a better comparison pair if you ask for a new batch).
 s
@@ -2900,9 +2900,8 @@ Each Object is:
 * 2 - set as same quality
 * 3 - set as alternates
 * 4 - set A as better
-* 7 - set B as better
 
-2, 4, and 7 all make the files 'duplicates' (8 under `/get_file_relationships`), which, specifically, merges the two files' duplicate groups. 'same quality' has different duplicate content merge options to the better/worse choices, but it ultimately sets something similar to A>B (but see below for more complicated outcomes). You obviously don't have to use 'B is better' if you prefer just to swap the hashes. Do what works for you.
+2 and 4 will make the files 'duplicates' (8 under `/get_file_relationships`), which, specifically, merges the two files' duplicate groups. 'same quality' has different duplicate content merge options to the better/worse choices, but it ultimately sets something similar to A>B (but see below for more complicated outcomes). Do what works for you.
 
 `do_default_content_merge` sets whether the user's duplicate content merge options should be loaded and applied to the files along with the relationship. Most operations in the client do this automatically, so the user may expect it to apply, but if you want to do content merge yourself, set this to false.
 

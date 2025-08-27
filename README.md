@@ -4,7 +4,7 @@ The hydrus network client is a file-management application written for internet-
 
 Hydrus supports various filetypes for images, video and audio files, image project files, and more. A full list of supported filetypes is [here](https://hydrusnetwork.github.io/hydrus/filetypes.html). On the Windows and Linux builds, an MPV window is embedded to play video and audio smoothly. Some supported filetypes cannot be viewed directly in the client, such as PDF, but it is easy to launch any file with your OS's default program.
 
-I am continually working on the software and try to put out a new release every Wednesday by 8pm EST. Executable releases are available for Windows, Linux, and macOS, but the program is in python, so you can also just run it straight from the source code. I am not active here on github, but I welcome feedback of any sort on other channels and will try to get back to any pings every Saturday. 
+I am continually working on the software and try to put out a new release every Wednesday by 8pm EST. Executable releases are available for Windows and Linux, but the program is in python, so you can also just run it straight from the source code in Windows, Linux, or macOS. I am not active here on github, but I welcome feedback of any sort on other channels and will try to get back to any pings every Saturday. 
 
 The client can download files and parse tags and other metadata from a number of websites, including the popular imageboards and boorus, and some gallery sites. It can be extended to download from more locations using easily shareable user-made downloaders. It can also be set to 'subscribe' to any gallery search, repeating it every few days to keep up with new results.
 

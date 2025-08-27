@@ -190,6 +190,9 @@ class RegexInput( QW.QWidget ):
         
         self.setLayout( hbox )
         
+        self.setFocusProxy( self._regex_text )
+        self.setFocusPolicy( QC.Qt.FocusPolicy.StrongFocus )
+        
         self._regex_text.textChanged.connect( self.textChanged )
         self._regex_text.textChanged.connect( self._UpdateValidityStyle )
         
