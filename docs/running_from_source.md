@@ -342,7 +342,7 @@ Many users start out using one of the official built releases and decide to move
 1. Follow the above guide to get the "running from source" install working in a new folder on a fresh database
 2. **MAKE A BACKUP OF EVERYTHING**
 3. Delete any test database you made from the "running from source" install's `db` directory.
-4. Move your built release's entire `db` directory to the now-clear "running from source" `db` directory.
+4. Move your built release's entire `db` directory to the now-clear "running from source" install's `db` directory.
 5. Run your "running from source" install again--it should load your old db no problem!
 6. Update your backup routine to point to the new "running from source" install location.
 
@@ -361,7 +361,7 @@ _Your App's database should be in `~/Library/Hydrus` (i.e `/Users/[You]/Library/
 2. **MAKE A BACKUP OF EVERYTHING**
 3. Delete any test database you made from the "running from source" install's `db` directory.
 4. Move the contents of `~/Library/Hydrus` to your "running from source" install's `db` directory.
-5. Run your "running from source" again--it should load your old db no problem!
+5. Run your "running from source" install again--it should load your old db no problem!
 6. Update your backup routine to point to the new "running from source" install location.
 
 _Note that these jobs are essentially the same as making a [clean install](getting_started_installing.md#clean_installs) in a new location._
