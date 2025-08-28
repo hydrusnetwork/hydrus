@@ -4050,7 +4050,7 @@ Response:
 
 ### **GET `/manage_database/mr_bones`** { id="manage_database_mr_bones" }
 
-_Get the data from help->how boned am I?. This is a simple Object of numbers just for hacky advanced purposes if you want to build up some stats in the background. The numbers are the same as the dialog shows, so double check that to confirm what means what._
+_Gets the data from database->how boned am I?. This is a simple Object of numbers for advanced purposes. Useful if you want to show or record some stats. The numbers are the same as the dialog shows, so double check that to confirm what each value is for._
 
 Restricted access:
 :   YES. Manage Database permission needed.
