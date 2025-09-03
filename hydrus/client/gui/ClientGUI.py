@@ -1206,7 +1206,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
                 job_status.FinishAndDismiss( seconds = 3 )
                 
             
-            QP.CallAfter( qt_code, network_job )
+            CG.client_controller.CallAfter( self, qt_code, network_job )
             
         
         try:
@@ -3423,11 +3423,13 @@ ATTACH "client.mappings.db" as external_mappings;'''
         
         profiling = ClientGUIMenus.GenerateMenu( debug_menu )
         
-        profile_mode_message = 'If something is running slow, you can turn on profile mode to have hydrus gather information on how long many jobs take to run.'
+        profile_mode_message = '***THIS DOES NOT WORK IN PYTHON 3.12 and ABOVE FOR NOW***'
+        profile_mode_message += '\n' * 2
+        profile_mode_message += 'If something is running slow, you can turn on profile mode to have hydrus gather information on it. Most jobs are covered by this profiling mode.'
         profile_mode_message += '\n' * 2
         profile_mode_message += 'Turn the mode on, do the slow thing for a bit, and then turn it off. In your database directory will be a new profile log, which is really helpful for hydrus dev to figure out what is running slow for you and how to fix it.'
         profile_mode_message += '\n' * 2
-        profile_mode_message += 'A new Query Planner mode also makes very detailed database analysis. This is an alternate profiling mode hydev is testing.'
+        profile_mode_message += 'The Query Planner mode makes detailed database analysis of specific database queries. This is sometimes useful to hydev, but he will usually ask for it specifically.'
         profile_mode_message += '\n' * 2
         profile_mode_message += 'More information is available in the help, under \'reducing lag\'.'
         
@@ -6429,7 +6431,7 @@ ATTACH "client.mappings.db" as external_mappings;'''
             
             HydrusData.ShowText( 'Admin service initialised.' )
             
-            QP.CallAfter( ClientGUIFrames.ShowKeys, 'access', (access_key,) )
+            CG.client_controller.CallAfter( self, ClientGUIFrames.ShowKeys, 'access', ( access_key, ) )
             
             #
             
@@ -8727,7 +8729,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 
             
         
-        QP.CallAfter( self._controller.Exit )
+        CG.client_controller.CallAfter( self, self._controller.Exit )
         
     
     def TryToOpenManageServicesForAutoAccountCreation( self, service_key: bytes ):

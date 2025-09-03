@@ -787,7 +787,7 @@ class Page( QW.QWidget ):
         
         if HC.options[ 'hide_preview' ]:
             
-            QP.CallAfter( QP.Unsplit, self._search_preview_split, self._preview_panel )
+            CG.client_controller.CallAfter( self, QP.Unsplit, self._search_preview_split, self._preview_panel )
             
         
     
@@ -836,7 +836,7 @@ class Page( QW.QWidget ):
                 
                 controller.CallAfterQtSafe( self, 'setting status bar loading string', qt_code_status, status )
                 
-                QP.CallAfter( qt_code_status, status )
+                CG.client_controller.CallAfter( self, qt_code_status, status )
                 
             
             hashes_to_media_results = { media_result.GetHash() : media_result for media_result in initial_media_results }

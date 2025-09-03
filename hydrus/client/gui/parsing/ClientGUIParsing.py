@@ -1555,7 +1555,7 @@ class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
                 example_data = 'fetch failed: {}'.format( e ) + '\n' * 2 + stuff_read
                 
             
-            QP.CallAfter( qt_tidy_up, example_data, example_bytes, error )
+            CG.client_controller.CallAfter( self, qt_tidy_up, example_data, example_bytes, error )
             
         
         url = ClientNetworkingFunctions.EnsureURLIsEncoded( self._test_url.text() )

@@ -1229,12 +1229,12 @@ def GenerateTestNetworkJobPresentationContextFactory( window: QW.QWidget, networ
         
         def enter_call():
             
-            QP.CallAfter( qt_set_it, network_job )
+            CG.client_controller.CallAfter( window, qt_set_it, network_job )
             
         
         def exit_call():
             
-            QP.CallAfter( qt_set_it, None )
+            CG.client_controller.CallAfter( window, qt_set_it, None )
             
         
         return ClientImporting.NetworkJobPresentationContext( enter_call, exit_call )
@@ -1747,7 +1747,7 @@ class EditLoginScriptPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 network_engine.Shutdown()
                 
-                QP.CallAfter( clean_up, login_result )
+                CG.client_controller.CallAfter( self, clean_up, login_result )
                 
             
         

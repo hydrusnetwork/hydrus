@@ -3283,7 +3283,7 @@ class QtMediaPlayer( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
             
             #self._media_player.setParent( None )
             
-            #QP.CallAfter( self._media_player.deleteLater )
+            #CG.client_controller.CallAfter( self, self._media_player.deleteLater )
             
             #self._media_player = QM.QMediaPlayer( self )
             

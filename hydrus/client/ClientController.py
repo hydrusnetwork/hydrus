@@ -38,6 +38,7 @@ from hydrus.client.caches import ClientCaches
 from hydrus.client.db import ClientDB
 from hydrus.client.files import ClientFilesMaintenance
 from hydrus.client.files import ClientFilesManager
+from hydrus.client.gui import ClientGUICallAfter
 from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUISplash
 from hydrus.client.gui import QtPorting as QP
@@ -126,7 +127,7 @@ class App( QW.QApplication ):
         
         self.setQuitLockEnabled( False )
         
-        self.call_after_catcher = QP.CallAfterEventCatcher( self )
+        self.call_after_catcher = ClientGUICallAfter.CallAfterEventCatcher( self )
         
         self.pubsub_catcher = PubSubEventCatcher( self, self._pubsub )
         
@@ -246,7 +247,7 @@ class Controller( HydrusController.HydrusController ):
             
             self._splash = None
             
-            QP.CallAfter( qt_code, splash )
+            self.CallAfter( splash, qt_code, splash )
             
         
     
@@ -455,7 +456,7 @@ class Controller( HydrusController.HydrusController ):
         
         job_status = ClientThreading.JobStatus( cancellable = True, cancel_on_shutdown = False )
         
-        QP.CallAfter( qt_code, win, job_status )
+        self.CallAfter( win, qt_code, win, job_status )
         
         # I think in some cases with the splash screen we may actually be pushing stuff here after model shutdown
         # but I also don't want a hang, as we have seen with some GUI async job that got fired on shutdown and it seems some event queue was halted or deadlocked
@@ -492,9 +493,16 @@ class Controller( HydrusController.HydrusController ):
         raise HydrusExceptions.ShutdownException()
         
     
-    def CallAfterQtSafe( self, window, label, func, *args, **kwargs ) -> ClientThreading.QtAwareJob:
+    def CallAfter( self, qobject: QC.QObject, func, *args, **kwargs ):
         
-        return self.CallLaterQtSafe( window, 0, label, func, *args, **kwargs )
+        ClientGUICallAfter.CallAfter( qobject, func, *args, **kwargs )
+        
+    
+    def CallAfterQtSafe( self, window: QW.QWidget, label, func, *args, **kwargs ):
+        
+        # for future cleanup, I think we should merge CallAfter into this guy and rename everything here CallAfterQtSafe
+        
+        self.CallAfter( window, func, *args, **kwargs )
         
     
     def CallLaterQtSafe( self, window, initial_delay, label, func, *args, **kwargs ) -> ClientThreading.QtAwareJob:
@@ -552,7 +560,7 @@ class Controller( HydrusController.HydrusController ):
                 
                 event = QG.QCloseEvent()
                 
-                QW.QApplication.instance().postEvent( self.gui, event )
+                QW.QApplication.postEvent( self.gui, event )
                 
             else:
                 
@@ -914,13 +922,15 @@ class Controller( HydrusController.HydrusController ):
                 
             finally:
                 
-                QW.QApplication.instance().setProperty( 'exit_complete', True )
+                qapp = QW.QApplication.instance()
+                
+                qapp.setProperty( 'exit_complete', True )
                 
                 self._DestroySplash()
                 
                 self._program_is_shut_down = True
                 
-                QP.CallAfter( QW.QApplication.exit )
+                self.CallAfter( qapp, QW.QApplication.exit )
                 
             
         
@@ -1742,7 +1752,7 @@ class Controller( HydrusController.HydrusController ):
                 
             
         
-        QP.CallAfter( do_gui_refs, self.gui )
+        self.CallAfter( self.gui, do_gui_refs, self.gui )
         
     
     def PageAlive( self, page_key ):
@@ -1798,7 +1808,7 @@ class Controller( HydrusController.HydrusController ):
         
         app = typing.cast( App, QW.QApplication.instance() )
         
-        app.postEvent( app.pubsub_catcher, PubSubEvent() )
+        QW.QApplication.postEvent( app.pubsub_catcher, PubSubEvent() )
         
     
     def RefreshServices( self ):
@@ -2473,6 +2483,8 @@ class Controller( HydrusController.HydrusController ):
     
     def THREADBootEverything( self ):
         
+        qapp = QW.QApplication.instance()
+        
         try:
             
             self.CheckAlreadyRunning()
@@ -2481,7 +2493,7 @@ class Controller( HydrusController.HydrusController ):
             
             self._DestroySplash()
             
-            QP.CallAfter( QW.QApplication.exit )
+            self.CallAfter( qapp, QW.QApplication.exit )
             
             return
             
@@ -2502,13 +2514,13 @@ class Controller( HydrusController.HydrusController ):
             
             self.CleanRunningFile()
             
-            QP.CallAfter( QW.QApplication.exit )
+            self.CallAfter( qapp, QW.QApplication.exit )
             
         except HydrusExceptions.DBVersionException as e:
             
             self.BlockingSafeShowCriticalMessage( 'database version error', str( e ) )
             
-            QP.CallAfter( QW.QApplication.exit, 1 )
+            self.CallAfter( qapp, QW.QApplication.exit, 1 )
             
         except HydrusExceptions.DBAccessException as e:
             
@@ -2522,7 +2534,7 @@ class Controller( HydrusController.HydrusController ):
             
             self.BlockingSafeShowCriticalMessage( 'boot error', text )
             
-            QP.CallAfter( QW.QApplication.exit, 1 )
+            self.CallAfter( qapp, QW.QApplication.exit, 1 )
             
         except Exception as e:
             
@@ -2548,7 +2560,7 @@ class Controller( HydrusController.HydrusController ):
             
             self.BlockingSafeShowCriticalMessage( 'boot error', trace )
             
-            QP.CallAfter( QW.QApplication.exit, 1 )
+            self.CallAfter( qapp, QW.QApplication.exit, 1 )
             
         finally:
             
@@ -2627,7 +2639,7 @@ class Controller( HydrusController.HydrusController ):
                     time.sleep( 0.1 )
                     
                 
-                QP.CallAfter( CopyToClipboard )
+                self.CallAfter( self.gui, CopyToClipboard )
                 
             
             self.CallToThreadLongRunning( THREADWait )

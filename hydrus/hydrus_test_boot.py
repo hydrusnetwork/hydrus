@@ -18,7 +18,6 @@ try: locale.setlocale( locale.LC_ALL, '' )
 except: pass
 
 from hydrus.client.gui import QtInit
-from hydrus.client.gui import QtPorting as QP
 from qtpy import QtWidgets as QW
 
 from hydrus.core import HydrusConstants as HC
@@ -60,7 +59,9 @@ def boot():
         QtInit.MonkeyPatchMissingMethods()
         app = QW.QApplication( sys.argv )
         
-        app.call_after_catcher = QP.CallAfterEventCatcher( app )
+        from hydrus.client.gui import ClientGUICallAfter
+        
+        app.call_after_catcher = ClientGUICallAfter.CallAfterEventCatcher( app )
         
         try:
             
@@ -77,7 +78,7 @@ def boot():
                 controller.Run( win )
                 
             
-            QP.CallAfter( do_it )
+            controller.CallAfter( win, do_it )
             
             app.exec_()
             

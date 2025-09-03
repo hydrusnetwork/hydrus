@@ -27,6 +27,11 @@ def render_availability_line( name: str, is_ok: bool, is_module_not_found: bool,
         HydrusData.ShowText( f'Module {name} failed to import because of the following:' )
         HydrusData.ShowText( error_trace )
         
+        if name == 'mpv' and 'sio_flush' in error_trace:
+            
+            HydrusData.ShowText( 'Hey I noticed you have "sio_flush" in your mpv error text. We have been able to fix this for other users by moving them to running from source. This is not super difficult to set up, and there are several other benefits, so please check the "running from source" guide in the help!' )
+            
+        
         return f'{name}: no - error'
         
     

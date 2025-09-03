@@ -582,11 +582,11 @@ class EditServiceRemoteSubPanel( ClientGUICommon.StaticBox ):
                 
                 network_job.WaitUntilDone()
                 
-                QP.CallAfter( qt_done, 'Looks good!' )
+                CG.client_controller.CallAfter( self, qt_done, 'Looks good!' )
                 
             except HydrusExceptions.NetworkException as e:
                 
-                QP.CallAfter( qt_done, 'Problem with that address: ' + str(e) )
+                CG.client_controller.CallAfter( self, qt_done, 'Problem with that address: ' + str(e) )
                 
             
         
@@ -2355,7 +2355,7 @@ class ReviewServiceCombinedLocalFilesSubPanel( ClientGUICommon.StaticBox ):
             text = '{} files and {} thumbnails are awaiting physical deletion from file storage.'.format( HydrusNumbers.ToHumanInt( num_files ), HydrusNumbers.ToHumanInt( num_thumbnails ) )
             
         
-        QP.CallAfter( qt_code, text )
+        CG.client_controller.CallAfter( self, qt_code, text )
         
     
 class ReviewServiceFileSubPanel( ClientGUICommon.StaticBox ):
@@ -2427,7 +2427,7 @@ class ReviewServiceFileSubPanel( ClientGUICommon.StaticBox ):
             text += ' - ' + HydrusNumbers.ToHumanInt( num_deleted_files ) + ' deleted files'
             
         
-        QP.CallAfter( qt_code, text )
+        CG.client_controller.CallAfter( self, qt_code, text )
         
     
 class ReviewServiceRemoteSubPanel( ClientGUICommon.StaticBox ):
@@ -3062,7 +3062,7 @@ class ReviewServiceRepositorySubPanel( QW.QWidget ):
                 
             finally:
                 
-                QP.CallAfter( qt_done )
+                CG.client_controller.CallAfter( self, qt_done )
                 
             
         
@@ -3542,7 +3542,7 @@ class ReviewServiceRepositorySubPanel( QW.QWidget ):
         
         is_mostly_caught_up = service.IsMostlyCaughtUp()
         
-        QP.CallAfter( qt_code, num_local_updates, num_updates, content_types_to_num_processed_updates, content_types_to_num_updates, is_mostly_caught_up )
+        CG.client_controller.CallAfter( self, qt_code, num_local_updates, num_updates, content_types_to_num_processed_updates, content_types_to_num_updates, is_mostly_caught_up )
         
     
 
@@ -3698,7 +3698,7 @@ class ReviewServiceIPFSSubPanel( ClientGUICommon.StaticBox ):
                 
             finally:
                 
-                QP.CallAfter( qt_done )
+                CG.client_controller.CallAfter( self, qt_done )
                 
             
         
@@ -3734,7 +3734,7 @@ class ReviewServiceIPFSSubPanel( ClientGUICommon.StaticBox ):
                 
             finally:
                 
-                QP.CallAfter( qt_done )
+                CG.client_controller.CallAfter( self, qt_done )
                 
             
         
@@ -3781,7 +3781,7 @@ class ReviewServiceIPFSSubPanel( ClientGUICommon.StaticBox ):
         
         ipfs_shares = CG.client_controller.Read( 'service_directories', service.GetServiceKey() )
         
-        QP.CallAfter( qt_code, ipfs_shares )
+        CG.client_controller.CallAfter( self, qt_code, ipfs_shares )
         
     
 
@@ -3871,7 +3871,7 @@ class ReviewServiceRatingSubPanel( ClientGUICommon.StaticBox ):
         
         text = HydrusNumbers.ToHumanInt( num_files ) + ' files are rated'
         
-        QP.CallAfter( qt_code, text )
+        CG.client_controller.CallAfter( self, qt_code, text )
         
     
 
@@ -3954,7 +3954,7 @@ class ReviewServiceTagSubPanel( ClientGUICommon.StaticBox ):
             text += ' - ' + HydrusNumbers.ToHumanInt( num_deleted_mappings ) + ' deleted mappings'
             
         
-        QP.CallAfter( qt_code, text )
+        CG.client_controller.CallAfter( self, qt_code, text )
         
     
 
@@ -4079,7 +4079,7 @@ class ReviewServiceTrashSubPanel( ClientGUICommon.StaticBox ):
         
         num_files = service_info[ HC.SERVICE_INFO_NUM_FILES ]
         
-        QP.CallAfter( qt_code, num_files )
+        CG.client_controller.CallAfter( self, qt_code, num_files )
         
     
 class ReviewServicesPanel( ClientGUIScrolledPanels.ReviewPanel ):

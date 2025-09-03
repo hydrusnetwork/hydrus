@@ -10,6 +10,7 @@ from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusNumbers
+from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
@@ -31,6 +32,7 @@ from hydrus.client.gui.lists import ClientGUIListConstants as CGLC
 from hydrus.client.gui.lists import ClientGUIListCtrl
 from hydrus.client.gui.lists import ClientGUIListBoxes
 from hydrus.client.gui.metadata import ClientGUIMetadataConditional
+from hydrus.client.gui.metadata import ClientGUITime
 from hydrus.client.gui.panels import ClientGUIScrolledPanels
 from hydrus.client.gui.widgets import ClientGUICommon
 from hydrus.client.gui.widgets import ClientGUIMenuButton
@@ -68,7 +70,7 @@ class EditDuplicatesAutoResolutionRulesPanel( ClientGUIScrolledPanels.EditPanel 
         self._duplicates_auto_resolution_rules_panel.AddButton( 'add', self._Add )
         self._duplicates_auto_resolution_rules_panel.AddButton( 'edit', self._Edit, enabled_only_on_single_selection = True )
         self._duplicates_auto_resolution_rules_panel.AddDeleteButton()
-        #self._duplicates_auto_resolution_rules_panel.AddImportExportButtons( ( ClientDuplicatesAutoResolution.DuplicatesAutoResolutionRule, ), self._ImportRule )
+        self._duplicates_auto_resolution_rules_panel.AddImportExportButtons( ( ClientDuplicatesAutoResolution.DuplicatesAutoResolutionRule, ), self._ImportRule )
         
         #
         
@@ -198,6 +200,11 @@ class EditDuplicatesAutoResolutionRulesPanel( ClientGUIScrolledPanels.EditPanel 
     def _ImportRule( self, duplicates_auto_resolution_rule: ClientDuplicatesAutoResolution.DuplicatesAutoResolutionRule ):
         
         duplicates_auto_resolution_rule.SetNonDupeName( self._GetExistingNames(), do_casefold = True )
+        
+        # this is already sorted for the "add suggested" rules, but isn't for duplicate/clipboard/png import. we'll do it anyway to be safe and cover all situations
+        duplicates_auto_resolution_rule.SetId( ClientDuplicatesAutoResolution.NEW_RULE_SESSION_ID )
+        
+        ClientDuplicatesAutoResolution.NEW_RULE_SESSION_ID -= 1
         
         self._duplicates_auto_resolution_rules.AddData( duplicates_auto_resolution_rule, select_sort_and_scroll = True )
         
@@ -648,6 +655,32 @@ class EditPairComparatorRelativeFileinfoPanel( ClientGUIScrolledPanels.EditPanel
             self._system_predicate.addItem( predicate.ToString(), predicate )
             
         
+        self._time_panel = QW.QWidget( self )
+        
+        allowed_operators = [
+            ClientNumberTest.NUMBER_TEST_OPERATOR_LESS_THAN,
+            ClientNumberTest.NUMBER_TEST_OPERATOR_LESS_THAN_OR_EQUAL_TO,
+            ClientNumberTest.NUMBER_TEST_OPERATOR_EQUAL,
+            ClientNumberTest.NUMBER_TEST_OPERATOR_NOT_EQUAL,
+            ClientNumberTest.NUMBER_TEST_OPERATOR_GREATER_THAN,
+            ClientNumberTest.NUMBER_TEST_OPERATOR_GREATER_THAN_OR_EQUAL_TO,
+            ClientNumberTest.NUMBER_TEST_OPERATOR_APPROXIMATE_ABSOLUTE
+        ]
+        
+        self._time_number_test = ClientGUITime.NumberTestWidgetTimestamp(
+            self._time_panel,
+            allowed_operators = allowed_operators,
+            swap_in_string_for_value = 'B'
+        )
+        
+        self._time_delta = ClientGUITime.TimeDeltaWidget( self, min = - 86400 * 10000, days = True, hours = True, minutes = True, seconds = True, milliseconds = True, negative_allowed = True )
+        
+        self._time_delta.SetValue( 0 )
+        
+        #
+        
+        self._duration_panel = QW.QWidget( self )
+        
         allowed_operators = [
             ClientNumberTest.NUMBER_TEST_OPERATOR_LESS_THAN,
             ClientNumberTest.NUMBER_TEST_OPERATOR_LESS_THAN_OR_EQUAL_TO,
@@ -659,62 +692,171 @@ class EditPairComparatorRelativeFileinfoPanel( ClientGUIScrolledPanels.EditPanel
             ClientNumberTest.NUMBER_TEST_OPERATOR_APPROXIMATE_PERCENT
         ]
         
-        self._number_test = ClientGUINumberTest.NumberTestWidget(
-            self,
+        self._duration_number_test = ClientGUITime.NumberTestWidgetDuration(
+            self._duration_panel,
             allowed_operators = allowed_operators,
             swap_in_string_for_value = 'B'
         )
         
-        self._multiplier = QW.QDoubleSpinBox( self )
-        self._multiplier.setDecimals( 2 )
-        self._multiplier.setSingleStep( 0.01 )
-        self._multiplier.setMinimum( -10000 )
-        self._multiplier.setMaximum( 10000 )
+        self._duration_multiplier = QW.QDoubleSpinBox( self._duration_panel )
+        self._duration_multiplier.setDecimals( 2 )
+        self._duration_multiplier.setSingleStep( 0.01 )
+        self._duration_multiplier.setMinimum( -10000 )
+        self._duration_multiplier.setMaximum( 10000 )
         
-        self._multiplier.setMinimumWidth( ClientGUIFunctions.ConvertTextToPixelWidth( self._multiplier, 11 ) )
+        self._duration_multiplier.setMinimumWidth( ClientGUIFunctions.ConvertTextToPixelWidth( self._duration_multiplier, 11 ) )
         
-        self._delta = ClientGUICommon.BetterSpinBox( self, min = -100000000, max = 100000000 )
+        self._duration_multiplier.setValue( 1.00 )
         
-        self._delta.setMinimumWidth( ClientGUIFunctions.ConvertTextToPixelWidth( self._delta, 13 ) )
+        self._duration_delta = ClientGUITime.TimeDeltaWidget( self, min = - 86400 * 10000, minutes = True, seconds = True, milliseconds = True, negative_allowed = True )
         
-        tt = 'If you dabble with this, the unit is usually obvious, but for duration, the unit is milliseconds!'
+        self._duration_delta.SetValue( 0 )
         
-        self._delta.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
+        #
+        
+        self._normal_panel = QW.QWidget( self )
+        
+        allowed_operators = [
+            ClientNumberTest.NUMBER_TEST_OPERATOR_LESS_THAN,
+            ClientNumberTest.NUMBER_TEST_OPERATOR_LESS_THAN_OR_EQUAL_TO,
+            ClientNumberTest.NUMBER_TEST_OPERATOR_EQUAL,
+            ClientNumberTest.NUMBER_TEST_OPERATOR_NOT_EQUAL,
+            ClientNumberTest.NUMBER_TEST_OPERATOR_GREATER_THAN,
+            ClientNumberTest.NUMBER_TEST_OPERATOR_GREATER_THAN_OR_EQUAL_TO,
+            ClientNumberTest.NUMBER_TEST_OPERATOR_APPROXIMATE_ABSOLUTE,
+            ClientNumberTest.NUMBER_TEST_OPERATOR_APPROXIMATE_PERCENT
+        ]
+        
+        self._normal_number_test = ClientGUINumberTest.NumberTestWidget(
+            self._normal_panel,
+            allowed_operators = allowed_operators,
+            swap_in_string_for_value = 'B'
+        )
+        
+        self._normal_multiplier = QW.QDoubleSpinBox( self._normal_panel )
+        self._normal_multiplier.setDecimals( 2 )
+        self._normal_multiplier.setSingleStep( 0.01 )
+        self._normal_multiplier.setMinimum( -10000 )
+        self._normal_multiplier.setMaximum( 10000 )
+        
+        self._normal_multiplier.setMinimumWidth( ClientGUIFunctions.ConvertTextToPixelWidth( self._normal_multiplier, 11 ) )
+        
+        self._normal_multiplier.setValue( 1.00 )
+        
+        self._normal_delta = ClientGUICommon.BetterSpinBox( self._normal_panel, min = -100000000, max = 100000000 )
+        
+        self._normal_delta.setMinimumWidth( ClientGUIFunctions.ConvertTextToPixelWidth( self._normal_delta, 13 ) )
+        
+        self._normal_delta.setValue( 0 )
+        
+        #
         
         self._live_value_st = ClientGUICommon.BetterStaticText( self )
         
         #
         
-        self._system_predicate.SetValue( pair_comparator.GetSystemPredicate() )
-        self._number_test.SetValue( pair_comparator.GetNumberTest() )
-        self._multiplier.setValue( pair_comparator.GetMultiplier() )
-        self._delta.setValue( pair_comparator.GetDelta() )
+        self._SetValue( pair_comparator )
+        
+        #
+        
+        rows = []
+        
+        rows.append( ( 'operator: ', self._time_number_test ) )
+        rows.append( ( 'delta (optional)', self._time_delta ) )
+        
+        gridbox = ClientGUICommon.WrapInGrid( self._time_panel, rows )
+        
+        self._time_panel.setLayout( gridbox )
+        
+        #
+        
+        rows = []
+        
+        rows.append( ( 'operator: ', self._duration_number_test ) )
+        rows.append( ( 'multiplier (optional): ', self._duration_multiplier ) )
+        rows.append( ( 'delta (optional)', self._duration_delta ) )
+        
+        gridbox = ClientGUICommon.WrapInGrid( self._duration_panel, rows )
+        
+        self._duration_panel.setLayout( gridbox )
+        
+        #
+        
+        rows = []
+        
+        rows.append( ( 'operator: ', self._normal_number_test ) )
+        rows.append( ( 'multiplier (optional): ', self._normal_multiplier ) )
+        rows.append( ( 'delta (optional)', self._normal_delta ) )
+        
+        gridbox = ClientGUICommon.WrapInGrid( self._normal_panel, rows )
+        
+        self._normal_panel.setLayout( gridbox )
         
         #
         
         vbox = QP.VBoxLayout()
         
-        rows = []
-        
-        rows.append( ( 'value to test: ', self._system_predicate ) )
-        rows.append( ( 'operator: ', self._number_test ) )
-        rows.append( ( 'multiplier (optional): ', self._multiplier ) )
-        rows.append( ( 'delta (optional): ', self._delta ) )
-        
-        gridbox = ClientGUICommon.WrapInGrid( self, rows )
-        
-        QP.AddToLayout( vbox, gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        
+        QP.AddToLayout( vbox, self._system_predicate, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._time_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._duration_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._normal_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, self._live_value_st, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        vbox.addStretch( 0 )
         
         self.widget().setLayout( vbox )
         
-        self._system_predicate.currentIndexChanged.connect( self._UpdateLabel )
-        self._number_test.valueChanged.connect( self._UpdateLabel )
-        self._multiplier.valueChanged.connect( self._UpdateLabel )
-        self._delta.valueChanged.connect( self._UpdateLabel )
+        self._system_predicate.currentIndexChanged.connect( self._UpdateWidgets )
         
-        self._UpdateLabel()
+        self._time_number_test.valueChanged.connect( self._UpdateLabel )
+        self._time_delta.timeDeltaChanged.connect( self._UpdateLabel )
+        
+        self._duration_number_test.valueChanged.connect( self._UpdateLabel )
+        self._duration_multiplier.valueChanged.connect( self._UpdateLabel )
+        self._duration_delta.timeDeltaChanged.connect( self._UpdateLabel )
+        
+        self._normal_number_test.valueChanged.connect( self._UpdateLabel )
+        self._normal_multiplier.valueChanged.connect( self._UpdateLabel )
+        self._normal_delta.valueChanged.connect( self._UpdateLabel )
+        
+        self._UpdateWidgets()
+        
+    
+    def _SetValue( self, pair_comparator: ClientDuplicatesAutoResolutionComparators.PairComparatorRelativeFileInfo ):
+        
+        system_predicate = pair_comparator.GetSystemPredicate()
+        
+        self._system_predicate.SetValue( system_predicate )
+        
+        we_time_pred = system_predicate.GetType() in (
+            ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_IMPORT_TIME,
+            ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_MODIFIED_TIME,
+            ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_LAST_VIEWED_TIME,
+            ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_ARCHIVED_TIME
+        )
+        
+        we_duration_pred = system_predicate.GetType() == ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_DURATION
+        
+        if we_time_pred:
+            
+            self._time_number_test.SetValue( pair_comparator.GetNumberTest() )
+            
+            self._time_delta.SetValue( HydrusTime.SecondiseMS( pair_comparator.GetDelta() ) )
+            
+        elif we_duration_pred:
+            
+            self._duration_number_test.SetValue( pair_comparator.GetNumberTest() )
+            
+            self._duration_multiplier.setValue( pair_comparator.GetMultiplier() )
+            self._duration_delta.SetValue( HydrusTime.SecondiseMS( pair_comparator.GetDelta() ) )
+            
+        else:
+            
+            self._normal_number_test.SetValue( pair_comparator.GetNumberTest() )
+            
+            self._normal_multiplier.setValue( pair_comparator.GetMultiplier() )
+            self._normal_delta.setValue( pair_comparator.GetDelta() )
+            
         
     
     def _UpdateLabel( self ):
@@ -733,15 +875,64 @@ class EditPairComparatorRelativeFileinfoPanel( ClientGUIScrolledPanels.EditPanel
         self._live_value_st.setText( text )
         
     
+    def _UpdateWidgets( self ):
+        
+        system_predicate = self._system_predicate.GetValue()
+        
+        we_time_pred = system_predicate.GetType() in (
+            ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_IMPORT_TIME,
+            ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_MODIFIED_TIME,
+            ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_LAST_VIEWED_TIME,
+            ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_ARCHIVED_TIME
+        )
+        
+        we_duration_pred = system_predicate.GetType() == ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_DURATION
+        
+        self._time_panel.setVisible( we_time_pred )
+        
+        self._duration_panel.setVisible( we_duration_pred )
+        
+        self._normal_panel.setVisible( not ( we_time_pred or we_duration_pred ) )
+        
+        self._UpdateLabel()
+        
+    
     def GetValue( self ):
         
         system_predicate = self._system_predicate.GetValue()
         
-        number_test = self._number_test.GetValue()
-        number_test.value = 1
+        we_time_pred = system_predicate.GetType() in (
+            ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_IMPORT_TIME,
+            ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_MODIFIED_TIME,
+            ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_LAST_VIEWED_TIME,
+            ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_ARCHIVED_TIME
+        )
         
-        multiplier = self._multiplier.value()
-        delta = self._delta.value()
+        we_duration_pred = system_predicate.GetType() == ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_DURATION
+        
+        if we_time_pred:
+            
+            number_test = self._time_number_test.GetValue()
+            
+            multiplier = 1.00
+            delta = HydrusTime.MillisecondiseS( self._time_delta.GetValue() )
+            
+        elif we_duration_pred:
+            
+            number_test = self._duration_number_test.GetValue()
+            
+            multiplier = self._duration_multiplier.value()
+            delta = HydrusTime.MillisecondiseS( self._duration_delta.GetValue() )
+            
+        else:
+            
+            number_test = self._normal_number_test.GetValue()
+            
+            multiplier = self._normal_multiplier.value()
+            delta = self._normal_delta.value()
+            
+        
+        number_test.value = 1
         
         pair_comparator = ClientDuplicatesAutoResolutionComparators.PairComparatorRelativeFileInfo()
         
@@ -821,6 +1012,8 @@ class EditPairSelectorWidget( ClientGUICommon.StaticBox ):
         self._original_pair_selector = pair_selector
         
         self._comparators = ClientGUIListBoxes.AddEditDeleteListBox( self, 8, self._PairComparatorToPretty, self._Add, self._Edit )
+        
+        self._comparators.AddImportExportButtons( ( ClientDuplicatesAutoResolutionComparators.PairComparator, ) )
         
         self._comparators.AddDatas( self._original_pair_selector.GetComparators() )
         

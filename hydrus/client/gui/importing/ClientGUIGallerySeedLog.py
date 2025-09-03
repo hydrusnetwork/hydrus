@@ -305,7 +305,7 @@ class EditGallerySeedLogPanel( ClientGUIScrolledPanels.EditPanel ):
         
         CG.client_controller.sub( self, 'NotifyGallerySeedsUpdated', 'gallery_seed_log_gallery_seeds_updated' )
         
-        QP.CallAfter( self._UpdateText )
+        CG.client_controller.CallAfter( self, self._UpdateText )
         
     
     def _ConvertGallerySeedToDisplayTuple( self, gallery_seed ):

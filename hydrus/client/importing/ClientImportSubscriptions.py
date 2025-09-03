@@ -630,6 +630,9 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                             # -------------------------------------------------------
                             # ----------------------
                             
+                            # Note there's another thing to consider, with Pixiv and other multi-file-per-post sites, where the AAAAA 'already in db' are separated in the file log by child posts
+                            # I'm solving this with better culling tech
+                            
                             num_already_in_urls_we_have_seen_so_far = total_already_in_urls_for_this_sync + num_urls_already_in_file_seed_cache_in_this_call
                             most_of_our_stuff = num_master_file_seeds_at_start * 0.95
                             

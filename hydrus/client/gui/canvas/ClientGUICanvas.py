@@ -33,7 +33,6 @@ from hydrus.client.gui import ClientGUIMenus
 from hydrus.client.gui import ClientGUIRatings
 from hydrus.client.gui import ClientGUIShortcuts
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
-from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.canvas import ClientGUICanvasHoverFrames
 from hydrus.client.gui.canvas import ClientGUICanvasMedia
 from hydrus.client.gui.duplicates import ClientGUIDuplicateActions
@@ -3121,7 +3120,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
         CG.client_controller.sub( self, 'SwitchMedia', 'canvas_show_next' )
         CG.client_controller.sub( self, 'SwitchMedia', 'canvas_show_previous' )
         
-        QP.CallAfter( self._LoadNextBatchOfPairs )
+        CG.client_controller.CallAfter( self, self._LoadNextBatchOfPairs )
         
         CG.client_controller.sub( self, 'ProcessContentUpdatePackage', 'content_updates_gui' )
         CG.client_controller.sub( self, 'ProcessServiceUpdates', 'service_updates_gui' )
@@ -4353,13 +4352,6 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
             
         
     
-    def CleanBeforeDestroy( self ):
-        
-        ClientDuplicates.hashes_to_jpeg_quality = {} # clear the cache
-        
-        super().CleanBeforeDestroy()
-        
-    
     def Delete( self, canvas_key ):
         
         if self._canvas_key == canvas_key:
@@ -4911,7 +4903,7 @@ class CanvasMediaListFilterArchiveDelete( CanvasMediaList ):
         
         if first_media is not None:
             
-            QP.CallAfter( self.SetMedia, first_media ) # don't set this until we have a size > (20, 20)!
+            CG.client_controller.CallAfter( self, self.SetMedia, first_media ) # don't set this until we have a size > (20, 20)!
             
         
     
@@ -5417,7 +5409,7 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
         
         if first_media is not None:
             
-            QP.CallAfter( self.SetMedia, first_media ) # don't set this until we have a size > (20, 20)!
+            CG.client_controller.CallAfter( self, self.SetMedia, first_media ) # don't set this until we have a size > (20, 20)!
             
         
         CG.client_controller.sub( self, 'AddMediaResults', 'add_media_results' )

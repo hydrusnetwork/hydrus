@@ -51,6 +51,28 @@ number_test_operator_to_pretty_str_lookup = {
 
 number_test_str_to_operator_lookup = { value : key for ( key, value ) in number_test_operator_to_str_lookup.items() if key != NUMBER_TEST_OPERATOR_APPROXIMATE_ABSOLUTE }
 
+number_test_operator_to_timestamp_str_lookup = {
+    NUMBER_TEST_OPERATOR_LESS_THAN : 'earlier than',
+    NUMBER_TEST_OPERATOR_GREATER_THAN : 'later than',
+    NUMBER_TEST_OPERATOR_EQUAL : 'exactly the same time as',
+    NUMBER_TEST_OPERATOR_NOT_EQUAL : 'not exactly the same time as',
+    NUMBER_TEST_OPERATOR_APPROXIMATE_PERCENT : 'you should not see this',
+    NUMBER_TEST_OPERATOR_APPROXIMATE_ABSOLUTE : 'roughly the same time as',
+    NUMBER_TEST_OPERATOR_LESS_THAN_OR_EQUAL_TO : 'earlier than or exactly the same time as',
+    NUMBER_TEST_OPERATOR_GREATER_THAN_OR_EQUAL_TO : 'later than or exactly the same time as',
+}
+
+number_test_operator_to_timestamp_desc_lookup = {
+    NUMBER_TEST_OPERATOR_LESS_THAN : 'occurred earlier',
+    NUMBER_TEST_OPERATOR_GREATER_THAN : 'occurred after',
+    NUMBER_TEST_OPERATOR_EQUAL : 'occured at exactly the same millisecond',
+    NUMBER_TEST_OPERATOR_NOT_EQUAL : 'did not occur at exactly the same millisecond',
+    NUMBER_TEST_OPERATOR_APPROXIMATE_PERCENT : 'occurred at roughly the same time, within a percentage range relative to 1970 lol you should not be seing this',
+    NUMBER_TEST_OPERATOR_APPROXIMATE_ABSOLUTE : 'occurred at roughly the same time, within an absolute time delta',
+    NUMBER_TEST_OPERATOR_LESS_THAN_OR_EQUAL_TO : 'occurred earlier (or at exactly the same millisecond)',
+    NUMBER_TEST_OPERATOR_GREATER_THAN_OR_EQUAL_TO : 'occurred after (or at exactly the same millisecond)',
+}
+
 class NumberTest( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_NUMBER_TEST
@@ -60,12 +82,6 @@ class NumberTest( HydrusSerialisable.SerialisableBase ):
     def __init__( self, operator = NUMBER_TEST_OPERATOR_EQUAL, value = 1, extra_value = None ):
         
         super().__init__()
-        
-        if operator == NUMBER_TEST_OPERATOR_APPROXIMATE_PERCENT and value == 0:
-            
-            operator = NUMBER_TEST_OPERATOR_EQUAL
-            extra_value = None
-            
         
         self.operator = operator
         self.value = value
@@ -359,7 +375,7 @@ class NumberTest( HydrusSerialisable.SerialisableBase ):
         return actually_zero or less_than_one or less_than_or_equal_to_zero
         
     
-    def ToString( self, absolute_number_renderer: typing.Optional[ collections.abc.Callable ] = None, replacement_value_string: typing.Optional[ str ] = None ) -> str:
+    def ToString( self, absolute_number_renderer: typing.Optional[ collections.abc.Callable ] = None, replacement_value_string: typing.Optional[ str ] = None, use_time_operators = False ) -> str:
         
         if absolute_number_renderer is None:
             
@@ -375,7 +391,16 @@ class NumberTest( HydrusSerialisable.SerialisableBase ):
             value_string = replacement_value_string
             
         
-        result = f'{number_test_operator_to_str_lookup[ self.operator ]} {value_string}'
+        if use_time_operators:
+            
+            operator_string = number_test_operator_to_timestamp_str_lookup[ self.operator ]
+            
+        else:
+            
+            operator_string = number_test_operator_to_str_lookup[ self.operator ]
+            
+        
+        result = f'{operator_string} {value_string}'
         
         if self.operator == NUMBER_TEST_OPERATOR_APPROXIMATE_PERCENT:
             

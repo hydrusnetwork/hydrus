@@ -213,7 +213,10 @@ class AsyncQtUpdater( object ):
                 
                 if self._work_needs_to_restart and not self._calllater_waiting:
                     
-                    QP.CallAfter( self.update )
+                    if self._win is not None:
+                        
+                        CG.client_controller.CallAfter( self._win, self.update )
+                        
                     
                 
             
@@ -304,7 +307,7 @@ class FastThreadToGUIUpdater( object ):
                     
                     self._callafter_waiting = True
                     
-                    QP.CallAfter( self.QtDoIt )
+                    CG.client_controller.CallAfter( self._win, self.QtDoIt )
                     
                 
             
@@ -331,7 +334,7 @@ class FastThreadToGUIUpdater( object ):
                 
             elif not ( self._callafter_waiting or HG.view_shutdown ):
                 
-                QP.CallAfter( self.QtDoIt )
+                CG.client_controller.CallAfter( self._win, self.QtDoIt )
                 
             
         

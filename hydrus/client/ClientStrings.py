@@ -60,13 +60,15 @@ ENCODING_TYPE_UNICODE_ESCAPE = 1
 ENCODING_TYPE_HTML_ENTITIES = 2
 ENCODING_TYPE_HEX_UTF8 = 3
 ENCODING_TYPE_BASE64_UTF8 = 4
+ENCODING_TYPE_BASE64URL_UTF8 = 5
 
 encoding_type_str_lookup = {
     ENCODING_TYPE_URL_PERCENT : 'url percent encoding',
-    ENCODING_TYPE_UNICODE_ESCAPE : ' unicode escape characters',
+    ENCODING_TYPE_UNICODE_ESCAPE : 'unicode escape characters',
     ENCODING_TYPE_HTML_ENTITIES : 'html entities',
     ENCODING_TYPE_HEX_UTF8 : 'hex (utf-8)',
-    ENCODING_TYPE_BASE64_UTF8 : 'base64 (utf-8)'
+    ENCODING_TYPE_BASE64_UTF8 : 'base64 (utf-8)',
+    ENCODING_TYPE_BASE64URL_UTF8 : 'base64url (utf-8)'
 }
 
 encoding_type_legacy_to_enum_lookup = {
@@ -261,7 +263,9 @@ class StringConverter( StringProcessingStep ):
                         
                     elif encode_type == ENCODING_TYPE_UNICODE_ESCAPE:
                         
-                        s = s.encode( 'unicode-escape' ).decode( 'utf-8' )
+                        s_bytes = s.encode( 'unicode-escape' )
+                        
+                        s = str( s_bytes, 'utf-8' )
                         
                     elif encode_type == ENCODING_TYPE_HTML_ENTITIES:
                         
@@ -288,6 +292,14 @@ class StringConverter( StringProcessingStep ):
                         elif encode_type == ENCODING_TYPE_BASE64_UTF8:
                             
                             s_bytes = base64.b64encode( s_bytes )
+                            
+                            s = str( s_bytes, 'utf-8' )
+                            
+                        elif encode_type == ENCODING_TYPE_BASE64URL_UTF8:
+                            
+                            s_bytes = base64.urlsafe_b64encode( s_bytes )
+                            
+                            s_bytes = s_bytes.rstrip( b'=' )
                             
                             s = str( s_bytes, 'utf-8' )
                             
@@ -326,7 +338,15 @@ class StringConverter( StringProcessingStep ):
                             
                         elif decode_type == ENCODING_TYPE_BASE64_UTF8:
                             
-                            s_bytes = base64.b64decode( s )
+                            padding = '=' * ( -len( s ) % 4 )
+                            
+                            s_bytes = base64.b64decode( s + padding )
+                            
+                        elif decode_type == ENCODING_TYPE_BASE64URL_UTF8:
+                            
+                            padding = '=' * ( -len( s ) % 4 )
+                            
+                            s_bytes = base64.urlsafe_b64decode( s + padding )
                             
                         else:
                             
@@ -705,6 +725,8 @@ FLEXIBLE_MATCH_ALPHANUMERIC = 1
 FLEXIBLE_MATCH_NUMERIC = 2
 FLEXIBLE_MATCH_HEX = 3
 FLEXIBLE_MATCH_BASE64 = 4
+FLEXIBLE_MATCH_BASE64URL = 5
+FLEXIBLE_MATCH_BASE64_URL_ENCODED = 6
 
 DEFAULT_EXAMPLE_STRING = 'example string'
 
@@ -815,28 +837,38 @@ class StringMatch( StringProcessingStep ):
                 
                 if self._match_value == FLEXIBLE_MATCH_ALPHA:
                     
-                    r = '^[a-zA-Z]+$'
+                    r = r'^[a-zA-Z]+$'
                     fail_reason = ' had non-alpha characters'
                     
                 elif self._match_value == FLEXIBLE_MATCH_ALPHANUMERIC:
                     
-                    r = '^[a-zA-Z\\d]+$'
+                    r = r'^[a-zA-Z\d]+$'
                     fail_reason = ' had non-alphanumeric characters'
                     
                 elif self._match_value == FLEXIBLE_MATCH_NUMERIC:
                     
-                    r = '^\\d+$'
+                    r = r'^\d+$'
                     fail_reason = ' had non-numeric characters'
                     
                 elif self._match_value == FLEXIBLE_MATCH_HEX:
                     
-                    r = '^[\\da-fA-F]+$'
+                    r = r'^[\da-fA-F]+$'
                     fail_reason = ' had non-hex characters'
                     
                 elif self._match_value == FLEXIBLE_MATCH_BASE64:
                     
-                    r = '^[a-zA-Z\\d+/]+={0,2}$'
+                    r = r'^[a-zA-Z\d+/]+={0,2}$'
                     fail_reason = ' had non-base64 characters'
+                    
+                elif self._match_value == FLEXIBLE_MATCH_BASE64_URL_ENCODED:
+                    
+                    r = r'^([a-zA-Z\d]|%2B|%2F)+(%3D){0,2}$'
+                    fail_reason = ' had non-base64 (url-encoded) characters'
+                    
+                elif self._match_value == FLEXIBLE_MATCH_BASE64URL:
+                    
+                    r = r'^[a-zA-Z\d\-_]+={0,2}$'
+                    fail_reason = ' had non-base64url characters'
                     
                 else:
                     
@@ -942,7 +974,15 @@ class StringMatch( StringProcessingStep ):
                 
             elif self._match_value == FLEXIBLE_MATCH_BASE64:
                 
-                result += 'base-64 characters'
+                result += 'base64 characters'
+                
+            elif self._match_value == FLEXIBLE_MATCH_BASE64_URL_ENCODED:
+                
+                result += 'base64 (url-encoded) characters'
+                
+            elif self._match_value == FLEXIBLE_MATCH_BASE64URL:
+                
+                result += 'base64url characters'
                 
             else:
                 

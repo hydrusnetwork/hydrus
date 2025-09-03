@@ -48,7 +48,7 @@ class Dialog( QP.Dialog ):
         
         if parent is not None and position == 'center':
             
-            QP.CallAfter( QP.CenterOnWindow, parent, self )
+            CG.client_controller.CallAfter( self, QP.CenterOnWindow, parent, self )
             
         
         CG.client_controller.ResetIdleTimer()

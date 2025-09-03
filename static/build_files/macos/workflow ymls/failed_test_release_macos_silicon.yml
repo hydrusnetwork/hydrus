@@ -1,0 +1,123 @@
+name: Release-macOS-Silicon
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build-macos:
+    runs-on: macos-14
+    steps:
+      -
+        name: Checkout
+        uses: actions/checkout@v4
+      -
+        name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      -
+        name: Build docs to /help
+        run: |
+          python3 -m pip install --upgrade pip
+          python3 -m pip install --upgrade wheel
+          python3 -m pip install mkdocs-material
+          mkdocs build -d help
+      -
+        name: Install PyOxidizer
+        run: python3 -m pip install pyoxidizer==0.24.0
+      -
+        name: Download ffmpeg
+        run: |
+          cd $GITHUB_WORKSPACE
+          curl -L -o ffmpeg-macos.7z https://evermeet.cx/ffmpeg/getrelease/ffmpeg/7z
+      -
+        name: Process ffmpeg
+        run: |
+          cd $GITHUB_WORKSPACE
+          7z e ffmpeg-macos.7z -obin "ffmpeg"
+      -
+        name: Extract Version Metadata
+        id: meta
+        run: |
+          echo "version=${GITHUB_REF##*/}" >> $GITHUB_ENV
+          echo "version_short=${GITHUB_REF##*/v}" >> $GITHUB_ENV
+      -
+        name: Write version to Info.plist
+        run: |
+          cd $GITHUB_WORKSPACE
+          plutil -replace CFBundleShortVersionString -string "${{ env.version_short }}" static/build_files/macos_silicon/Info.plist
+      -
+        name: Build Hydrus
+        run: |
+          cd $GITHUB_WORKSPACE
+          cp static/build_files/macos_silicon/pyoxidizer.bzl pyoxidizer.bzl
+          cp static/build_files/macos_silicon/requirements.txt requirements.txt
+          basename $(rustc --print sysroot) | sed -e "s/^stable-//" > triple.txt
+          pyoxidizer build --release --target-triple aarch64-apple-darwin
+          cd build/$(head -n 1 triple.txt)/release
+          mkdir -p "Hydrus Network.app/Contents/MacOS"
+          mkdir -p "Hydrus Network.app/Contents/Resources"
+          mkdir -p "Hydrus Network.app/Contents/Frameworks"
+          mv install/static/icon.icns "Hydrus Network.app/Contents/Resources/icon.icns"
+          cp install/static/build_files/macos_silicon/Info.plist "Hydrus Network.app/Contents/Info.plist"
+          cp install/static/build_files/macos_silicon/running_from_app "install/running_from_app"
+          mv install/* "Hydrus Network.app/Contents/MacOS/"
+          rm -rf install
+      -
+        name: Self-Signing
+        run: |
+          cd $GITHUB_WORKSPACE
+          cd build/$(head -n 1 triple.txt)/release
+          # wewmode
+          # it seems signing the main exe as designated in the plist causes some sort of deep scan which fails again for our earlier non-binaries reason
+          MAIN_EXE="Hydrus Network.app/Contents/MacOS/hydrus_client"
+          echo "The path is \"$MAIN_EXE\""
+          tmp_exe="$(mktemp -t hydrus_client.XXXXXX)"
+          echo "The path is \"$tmp_exe\""
+          cp "$MAIN_EXE" "$tmp_exe"
+          echo "Signing main exe in temp space"
+          codesign -s - --force --timestamp=none --verbose=4 -- "$tmp_exe"
+          echo "Verifying main exe in temp space"
+          codesign --verify --verbose=4 --strict -- "$tmp_exe"
+          mv -f -- "$tmp_exe" "$MAIN_EXE"
+          # Sign every binary in the Contents dir. Because we are weird, MacOS dir contains non-binaries, so we have to identify and sign them separately
+          find "Hydrus Network.app/Contents" -type f -print0 |
+            while IFS= read -r -d '' f; do
+              [ "$f" = "$MAIN_EXE" ] && continue
+              if file -b -- "$f" | grep -q "Mach-O"; then
+                printf 'signing %s\n' "$f"
+                codesign -s - --force --timestamp=none -- "$f"
+                printf 'verifying %s\n' "$f"
+                codesign --verify --verbose=4 --strict -- "$f"
+              fi
+            done
+          # Now Sign the whole thing and verify it all worked
+          echo "Signing the bundle"
+          codesign --sign - --force --timestamp=none "Hydrus Network.app"
+          echo "Verifying the bundle, non-deep"
+          codesign --verify --verbose=4 "Hydrus Network.app"
+          # Now another check
+          echo "Gatekeeper evaluation--this should say rejected for the self-sign but not invalid."
+          spctl_out="$(spctl -a -vv --type execute -- "Hydrus Network.app" 2>&1)" || true
+          echo "$spctl_out"
+          # Fail only if it says "invalid"
+          if printf '%s' "$spctl_out" | grep -q "invalid"; then
+            echo "Gatekeeper reports INVALID signature!"
+            exit 1
+          fi
+      -
+        name: Zip it up
+        run: |
+          cd $GITHUB_WORKSPACE
+          cd build/$(head -n 1 triple.txt)/release
+          zip -r "Hydrus Network.zip" "Hydrus Network.app"
+          mv "Hydrus Network.zip" "$GITHUB_WORKSPACE/Hydrus.Network.${{ env.version_short }}.-.macOS.-.App.-.AppleSilicon.zip"
+          cd $GITHUB_WORKSPACE
+      - 
+        name: Upload Files
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: |
+            Hydrus.Network.${{ env.version_short }}.-.macOS.-.App.-.AppleSilicon.zip

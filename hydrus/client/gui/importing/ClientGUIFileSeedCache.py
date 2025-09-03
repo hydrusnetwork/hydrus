@@ -410,7 +410,7 @@ class EditFileSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
         
         CG.client_controller.sub( self, 'NotifyFileSeedsUpdated', 'file_seed_cache_file_seeds_updated' )
         
-        QP.CallAfter( self._UpdateText )
+        CG.client_controller.CallAfter( self, self._UpdateText )
         
     
     def _ConvertFileSeedToDisplayTuple( self, file_seed: ClientImportFileSeeds.FileSeed ):

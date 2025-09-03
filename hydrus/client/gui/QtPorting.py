@@ -16,9 +16,7 @@ from collections import defaultdict
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
-from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusLists
-from hydrus.core import HydrusProfiling
 from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
@@ -967,7 +965,7 @@ class TabWidgetWithDnD( QW.QTabWidget ):
                     page_key = source_notebook.GetPageKey()
                     
                 
-                CallAfter( CG.client_controller.gui.ShowPage, page_key )
+                CG.client_controller.CallAfter( self, CG.client_controller.gui.ShowPage, page_key )
                 
             
         
@@ -1346,80 +1344,6 @@ def GetBackgroundColour( widget ):
     return widget.palette().color( QG.QPalette.ColorRole.Window )
     
 
-CallAfterEventType = registerEventType()
-
-class CallAfterEvent( QC.QEvent ):
-    
-    def __init__( self, fn, *args, **kwargs ):
-        
-        super().__init__( CallAfterEventType )
-        
-        self._fn = fn
-        self._args = args
-        self._kwargs = kwargs
-        
-    
-    def Execute( self ):
-        
-        if self._fn is not None:
-            
-            self._fn( *self._args, **self._kwargs )
-            
-        
-    
-
-# TODO: CallAfter gubbins may be replaceable by QMetaObject.invokeMethod( obj, "methodname", Qt.QueuedConnection/Qt.BlockingQueuedConnection ) and such???
-
-class CallAfterEventCatcher( QC.QObject ):
-    
-    def __init__( self, parent ):
-        
-        super().__init__( parent )
-        
-        self.installEventFilter( self )
-        
-    
-    def eventFilter( self, watched, event ):
-        
-        try:
-            
-            if event.type() == CallAfterEventType and isinstance( event, CallAfterEvent ):
-                
-                if HG.profile_mode:
-                    
-                    summary = 'Profiling CallAfter Event: {}'.format( event._fn )
-                    
-                    HydrusProfiling.Profile( summary, 'event.Execute()', globals(), locals(), min_duration_ms = HG.callto_profile_min_job_time_ms )
-                    
-                else:
-                    
-                    event.Execute()
-                    
-                
-                event.accept()
-                
-                return True
-                
-            
-        except Exception as e:
-            
-            HydrusData.ShowException( e )
-            
-            return True
-            
-        
-        return False
-        
-    
-
-def CallAfter( fn, *args, **kwargs ):
-    
-    QW.QApplication.instance().postEvent( QW.QApplication.instance().call_after_catcher, CallAfterEvent( fn, *args, **kwargs ) )
-    
-    # it appears this is redundant and for Arch from the Ubuntu-built release apparently eventDispatcher() was None
-    # QW.QApplication.instance().eventDispatcher().wakeUp()
-    
-
 def ClearLayout( layout, delete_widgets = False ):
     
     while layout.count() > 0:
@@ -1585,8 +1509,8 @@ class UIActionSimulator:
         ev1 = QG.QKeyEvent( QC.QEvent.Type.KeyPress, key, QC.Qt.KeyboardModifier.NoModifier, text = text )
         ev2 = QG.QKeyEvent( QC.QEvent.Type.KeyRelease, key, QC.Qt.KeyboardModifier.NoModifier, text = text )
         
-        QW.QApplication.instance().postEvent( widget, ev1 )
-        QW.QApplication.instance().postEvent( widget, ev2 )
+        QW.QApplication.postEvent( widget, ev1 )
+        QW.QApplication.postEvent( widget, ev2 )
         
     
 

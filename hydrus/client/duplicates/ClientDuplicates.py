@@ -21,6 +21,7 @@ from hydrus.client import ClientData
 from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientThreading
 from hydrus.client import ClientTime
+from hydrus.client.caches import ClientCachesBase
 from hydrus.client.files.images import ClientVisualData
 from hydrus.client.importing.options import NoteImportOptions
 from hydrus.client.media import ClientMediaResult
@@ -57,7 +58,42 @@ SYNC_ARCHIVE_NONE = 0
 SYNC_ARCHIVE_IF_ONE_DO_BOTH = 1
 SYNC_ARCHIVE_DO_BOTH_REGARDLESS = 2
 
-hashes_to_jpeg_quality = {}
+class JpegQuality( ClientCachesBase.CacheableObject ):
+    
+    def __init__( self, subsampling, quality_label, quality ):
+        
+        self.subsampling = subsampling
+        
+        self.quality_label = quality_label
+        self.quality = quality
+        
+    
+    def GetEstimatedMemoryFootprint( self ) -> int:
+        
+        return 64 # w/e
+        
+    
+
+class JpegQualityStorage( ClientCachesBase.DataCache ):
+    
+    my_instance = None
+    
+    def __init__( self ):
+        
+        super().__init__( CG.client_controller, 'jpeg_quality', 1 * 1024 * 1024 )
+        
+    
+    @staticmethod
+    def instance() -> 'JpegQualityStorage':
+        
+        if JpegQualityStorage.my_instance is None:
+            
+            JpegQualityStorage.my_instance = JpegQualityStorage()
+            
+        
+        return JpegQualityStorage.my_instance
+        
+    
 
 def GetDuplicateComparisonScore( shown_media_result: ClientMediaResult.MediaResult, comparison_media_result: ClientMediaResult.MediaResult ):
     
@@ -690,11 +726,11 @@ def GetDuplicateComparisonStatementsSlow( shown_media_result: ClientMediaResult.
     
     if s_mime == HC.IMAGE_JPEG and c_mime == HC.IMAGE_JPEG:
         
-        global hashes_to_jpeg_quality
+        jpeg_quality_storage = JpegQualityStorage.instance()
         
         for jpeg_hash in ( s_hash, c_hash ): 
             
-            if jpeg_hash not in hashes_to_jpeg_quality:
+            if not jpeg_quality_storage.HasData( jpeg_hash ):
                 
                 path = CG.client_controller.client_files_manager.GetFilePath( jpeg_hash, HC.IMAGE_JPEG )
                 
@@ -712,26 +748,30 @@ def GetDuplicateComparisonStatementsSlow( shown_media_result: ClientMediaResult.
                 except:
                     
                     pass
-                    
                 
-                hashes_to_jpeg_quality[ jpeg_hash ] = ( subsampling, quality_result )
+                
+                ( quality_label, quality ) = quality_result
+                
+                jpeg_quality = JpegQuality( subsampling, quality_label, quality )
+                
+                jpeg_quality_storage.AddData( jpeg_hash, jpeg_quality )
                 
             
         
-        ( s_subsampling, ( s_label, s_jpeg_quality ) ) = hashes_to_jpeg_quality[ s_hash ]
-        ( c_subsampling, ( c_label, c_jpeg_quality ) ) = hashes_to_jpeg_quality[ c_hash ]
+        s_jpeg_quality = typing.cast( JpegQuality, jpeg_quality_storage.GetData( s_hash ) )
+        c_jpeg_quality = typing.cast( JpegQuality, jpeg_quality_storage.GetData( c_hash ) )
         
-        s_subsampling_quality = HydrusImageMetadata.subsampling_quality_lookup.get( s_subsampling, 0 )
-        c_subsampling_quality = HydrusImageMetadata.subsampling_quality_lookup.get( c_subsampling, 0 )
+        s_subsampling_quality = HydrusImageMetadata.subsampling_quality_lookup.get( s_jpeg_quality.subsampling, 0 )
+        c_subsampling_quality = HydrusImageMetadata.subsampling_quality_lookup.get( c_jpeg_quality.subsampling, 0 )
         
         if s_subsampling_quality == c_subsampling_quality:
             
             score = 0
-            statement = f'both {HydrusImageMetadata.subsampling_str_lookup[ s_subsampling ]}'
+            statement = f'both {HydrusImageMetadata.subsampling_str_lookup[ s_jpeg_quality.subsampling ]}'
             
         else:
             
-            if s_subsampling == HydrusImageMetadata.SUBSAMPLING_GREYSCALE or c_subsampling == HydrusImageMetadata.SUBSAMPLING_GREYSCALE:
+            if s_jpeg_quality.subsampling == HydrusImageMetadata.SUBSAMPLING_GREYSCALE or c_jpeg_quality.subsampling == HydrusImageMetadata.SUBSAMPLING_GREYSCALE:
                 
                 score = 0
                 
@@ -747,7 +787,7 @@ def GetDuplicateComparisonStatementsSlow( shown_media_result: ClientMediaResult.
                     
                 
             
-            statement = f'{HydrusImageMetadata.subsampling_str_lookup[ s_subsampling ]} vs {HydrusImageMetadata.subsampling_str_lookup[ c_subsampling ]}'
+            statement = f'{HydrusImageMetadata.subsampling_str_lookup[ s_jpeg_quality.subsampling ]} vs {HydrusImageMetadata.subsampling_str_lookup[ c_jpeg_quality.subsampling ]}'
             
         
         statements_and_scores[ 'jpeg_subsampling' ] = ( statement, score )
@@ -756,21 +796,21 @@ def GetDuplicateComparisonStatementsSlow( shown_media_result: ClientMediaResult.
         
         score = 0
         
-        if c_jpeg_quality is None or s_jpeg_quality is None or c_jpeg_quality <= 0 or s_jpeg_quality <= 0:
+        if c_jpeg_quality.quality is None or s_jpeg_quality.quality is None or c_jpeg_quality.quality <= 0 or s_jpeg_quality.quality <= 0:
             
             score = 0
             
         else:
             
-            if s_label == c_label:
+            if s_jpeg_quality.quality_label == c_jpeg_quality.quality_label:
                 
                 score = 0
-                statement = f'both {s_label} quality'
+                statement = f'both {s_jpeg_quality.quality_label} quality'
                 
             else:
                 
                 # low score is good here
-                quality_ratio = c_jpeg_quality / s_jpeg_quality
+                quality_ratio = c_jpeg_quality.quality / s_jpeg_quality.quality
                 
                 if quality_ratio > 2.0:
                     
@@ -789,7 +829,7 @@ def GetDuplicateComparisonStatementsSlow( shown_media_result: ClientMediaResult.
                     score = -duplicate_comparison_score_higher_jpeg_quality
                     
                 
-                statement = '{} vs {} jpeg quality'.format( s_label, c_label )\
+                statement = '{} vs {} jpeg quality'.format( s_jpeg_quality.quality_label, c_jpeg_quality.quality_label )
                 
             
             statements_and_scores[ 'jpeg_quality' ] = ( statement, score )

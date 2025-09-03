@@ -9,7 +9,7 @@ from hydrus.core import HydrusTime
 
 from hydrus.client import ClientApplicationCommand as CAC
 from hydrus.client import ClientConstants as CC
-
+from hydrus.client import ClientGlobals as CG
 from hydrus.client.gui import ClientGUIShortcuts
 from hydrus.client.gui import ClientGUITopLevelWindows
 from hydrus.client.gui import QtPorting as QP
@@ -42,7 +42,7 @@ class ResizingEventFilter( QC.QObject ):
                     
                     if width_larger or height_larger:
                         
-                        QP.CallAfter( parent.WidgetJustSized, width_larger, height_larger )
+                        CG.client_controller.CallAfter( parent, parent.WidgetJustSized, width_larger, height_larger )
                         
                     
                 

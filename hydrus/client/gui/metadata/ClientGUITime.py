@@ -22,6 +22,7 @@ from hydrus.client.gui.panels import ClientGUIScrolledPanels
 from hydrus.client.gui.widgets import ClientGUICommon
 from hydrus.client.gui.widgets import ClientGUINumberTest
 from hydrus.client.importing.options import ClientImportOptions
+from hydrus.client.search import ClientNumberTest
 
 # TODO: maybe break this into ClientGUITimeWidgets for gui.widgets and then shoot EditCheckerOptions off to something appropriate
 
@@ -1256,7 +1257,7 @@ class TimeDeltaWidget( QW.QWidget ):
         
         self.blockSignals( True )
         
-        self.SetValue( self._min )
+        self.SetValue( 0 )
         
         self.blockSignals( False )
         
@@ -1739,6 +1740,105 @@ class NumberTestWidgetDuration( ClientGUINumberTest.NumberTestWidget ):
     def _GenerateValueWidget( self, max: int ):
         
         widget = TimeDeltaWidget( self, min = 0, days = False, hours = True, minutes = True, seconds = True, milliseconds = True )
+        
+        widget.timeDeltaChanged.connect( self.valueChanged )
+        
+        return widget
+        
+    
+    def _GetAbsoluteValue( self ):
+        
+        return HydrusTime.MillisecondiseS( self._absolute_plus_or_minus.GetValue() )
+        
+    
+    def _SetAbsoluteValue( self, value_ms ):
+        
+        return self._absolute_plus_or_minus.SetValue( HydrusTime.SecondiseMSFloat( value_ms ) )
+        
+    
+    def _GetSubValue( self ) -> int:
+        
+        return HydrusTime.MillisecondiseS( self._value.GetValue() )
+        
+    
+    def _SetSubValue( self, value_ms ):
+        
+        return self._value.SetValue( HydrusTime.SecondiseMSFloat( value_ms ) )
+        
+    
+
+class NumberTestWidgetTimestamp( ClientGUINumberTest.NumberTestWidget ):
+    
+    VERTICAL_CHOICE = True
+    
+    def __init__(
+        self,
+        parent,
+        allowed_operators = None,
+        max = 200000,
+        unit_string = None,
+        appropriate_absolute_plus_or_minus_default = 86400 * 1000,
+        appropriate_percentage_plus_or_minus_default = 15,
+        swap_in_string_for_value = None
+    ):
+        
+        super().__init__(
+            parent,
+            allowed_operators = allowed_operators,
+            max = max,
+            unit_string = unit_string,
+            appropriate_absolute_plus_or_minus_default = appropriate_absolute_plus_or_minus_default,
+            appropriate_percentage_plus_or_minus_default = appropriate_percentage_plus_or_minus_default,
+            swap_in_string_for_value = swap_in_string_for_value
+        )
+        
+    
+    def _GenerateAbsoluteValueWidget( self, max: int ):
+        
+        widget = TimeDeltaWidget( self, min = 0, days = True, hours = True, minutes = True, seconds = True, milliseconds = True )
+        
+        widget.timeDeltaChanged.connect( self.valueChanged )
+        
+        return widget
+        
+    
+    def _GenerateChoiceTuples( self, allowed_operators ):
+        
+        choice_tuples = []
+        
+        for possible_operator in [
+            ClientNumberTest.NUMBER_TEST_OPERATOR_LESS_THAN,
+            ClientNumberTest.NUMBER_TEST_OPERATOR_LESS_THAN_OR_EQUAL_TO,
+            ClientNumberTest.NUMBER_TEST_OPERATOR_APPROXIMATE_ABSOLUTE,
+            ClientNumberTest.NUMBER_TEST_OPERATOR_EQUAL,
+            ClientNumberTest.NUMBER_TEST_OPERATOR_NOT_EQUAL,
+            ClientNumberTest.NUMBER_TEST_OPERATOR_GREATER_THAN_OR_EQUAL_TO,
+            ClientNumberTest.NUMBER_TEST_OPERATOR_GREATER_THAN
+        ]:
+            
+            if possible_operator in allowed_operators:
+                
+                text = ClientNumberTest.number_test_operator_to_timestamp_str_lookup[ possible_operator ]
+                
+                if possible_operator == ClientNumberTest.NUMBER_TEST_OPERATOR_APPROXIMATE_PERCENT:
+                    
+                    text += '%'
+                    
+                
+                tooltip = ClientNumberTest.number_test_operator_to_timestamp_desc_lookup[ possible_operator ]
+                
+                choice_tuples.append( ( text, possible_operator, tooltip ) )
+                
+            
+        
+        return choice_tuples
+        
+    
+    def _GenerateValueWidget( self, max: int ):
+        
+        # this should actually be some calendar guy, but we'll do that when we actually use it m8
+        
+        widget = TimeDeltaWidget( self, min = 0, days = True, hours = True, minutes = True, seconds = True, milliseconds = True )
         
         widget.timeDeltaChanged.connect( self.valueChanged )
         

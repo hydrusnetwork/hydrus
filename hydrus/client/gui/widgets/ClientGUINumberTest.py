@@ -12,6 +12,8 @@ class NumberTestWidget( QW.QWidget ):
     
     valueChanged = QC.Signal()
     
+    VERTICAL_CHOICE = False
+    
     def __init__(
         self,
         parent,
@@ -26,6 +28,100 @@ class NumberTestWidget( QW.QWidget ):
         super().__init__( parent )
         
         self._swap_in_string_for_value = swap_in_string_for_value
+        
+        choice_tuples = self._GenerateChoiceTuples( allowed_operators )
+        
+        self._operator = ClientGUICommon.BetterRadioBox( self, choice_tuples, vertical = self.VERTICAL_CHOICE )
+        
+        self._value_swap_in_st = ClientGUICommon.BetterStaticText( self, label = 'none' if self._swap_in_string_for_value is None else self._swap_in_string_for_value )
+        self._value = self._GenerateValueWidget( max )
+        
+        if self._swap_in_string_for_value is None:
+            
+            self._value_swap_in_st.setVisible( False )
+            
+        else:
+            
+            self._value.setVisible( False )
+            
+        
+        #
+        
+        self._absolute_plus_or_minus_panel = QW.QWidget( self )
+        
+        self._absolute_plus_or_minus = self._GenerateAbsoluteValueWidget( max )
+        
+        self._SetAbsoluteValue( appropriate_absolute_plus_or_minus_default )
+        
+        hbox = QP.HBoxLayout()
+        
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText( self._absolute_plus_or_minus_panel, label = HC.UNICODE_PLUS_OR_MINUS ), CC.FLAGS_CENTER_PERPENDICULAR )
+        
+        QP.AddToLayout( hbox, self._absolute_plus_or_minus, CC.FLAGS_CENTER_PERPENDICULAR_EXPAND_DEPTH )
+        
+        if unit_string is not None:
+            
+            QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText( self._absolute_plus_or_minus_panel, label = unit_string ), CC.FLAGS_CENTER_PERPENDICULAR )
+            
+        
+        self._absolute_plus_or_minus_panel.setLayout( hbox )
+        
+        #
+        
+        self._percent_plus_or_minus_panel = QW.QWidget( self )
+        
+        self._percent_plus_or_minus = ClientGUICommon.BetterSpinBox( self._percent_plus_or_minus_panel, min = 0, max = 10000, width = 60 )
+        
+        self._percent_plus_or_minus.setValue( appropriate_percentage_plus_or_minus_default )
+        
+        hbox = QP.HBoxLayout()
+        
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText( self._percent_plus_or_minus_panel, label = HC.UNICODE_PLUS_OR_MINUS ), CC.FLAGS_CENTER_PERPENDICULAR )
+        
+        QP.AddToLayout( hbox, self._percent_plus_or_minus, CC.FLAGS_CENTER_PERPENDICULAR_EXPAND_DEPTH )
+        
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText( self._percent_plus_or_minus_panel, label = '%' ), CC.FLAGS_CENTER_PERPENDICULAR )
+        
+        self._percent_plus_or_minus_panel.setLayout( hbox )
+        
+        #
+        
+        hbox = QP.HBoxLayout()
+        
+        QP.AddToLayout( hbox, self._operator, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._value_swap_in_st, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._value, CC.FLAGS_CENTER_PERPENDICULAR )
+        
+        if unit_string is not None:
+            
+            QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText( self, label = unit_string ), CC.FLAGS_CENTER_PERPENDICULAR )
+            
+        
+        QP.AddToLayout( hbox, self._absolute_plus_or_minus_panel, CC.FLAGS_CENTER_PERPENDICULAR_EXPAND_DEPTH )
+        QP.AddToLayout( hbox, self._percent_plus_or_minus_panel, CC.FLAGS_CENTER_PERPENDICULAR_EXPAND_DEPTH )
+        
+        hbox.addStretch( 0 )
+        
+        self.setLayout( hbox )
+        
+        self._operator.radioBoxChanged.connect( self._UpdateVisibility )
+        self._operator.radioBoxChanged.connect( self.valueChanged )
+        
+        self._percent_plus_or_minus.valueChanged.connect( self.valueChanged )
+        
+        self._UpdateVisibility()
+        
+    
+    def _GenerateAbsoluteValueWidget( self, max: int ):
+        
+        widget = ClientGUICommon.BetterSpinBox( self._absolute_plus_or_minus_panel, min = 0, max = int( max / 2 ), width = 60 )
+        
+        widget.valueChanged.connect( self.valueChanged )
+        
+        return widget
+        
+    
+    def _GenerateChoiceTuples( self, allowed_operators ):
         
         choice_tuples = []
         
@@ -55,92 +151,7 @@ class NumberTestWidget( QW.QWidget ):
                 
             
         
-        self._operator = ClientGUICommon.BetterRadioBox( self, choice_tuples )
-        
-        self._value_swap_in_st = ClientGUICommon.BetterStaticText( self, label = 'none' if self._swap_in_string_for_value is None else self._swap_in_string_for_value )
-        self._value = self._GenerateValueWidget( max )
-        
-        if self._swap_in_string_for_value is None:
-            
-            self._value_swap_in_st.setVisible( False )
-            
-        else:
-            
-            self._value.setVisible( False )
-            
-        
-        #
-        
-        self._absolute_plus_or_minus_panel = QW.QWidget( self )
-        
-        self._absolute_plus_or_minus = self._GenerateAbsoluteValueWidget( max )
-        
-        self._SetAbsoluteValue( appropriate_absolute_plus_or_minus_default )
-        
-        hbox = QP.HBoxLayout()
-        
-        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText( self._absolute_plus_or_minus_panel, label = HC.UNICODE_PLUS_OR_MINUS ), CC.FLAGS_CENTER_PERPENDICULAR )
-        
-        QP.AddToLayout( hbox, self._absolute_plus_or_minus, CC.FLAGS_CENTER_PERPENDICULAR )
-        
-        if unit_string is not None:
-            
-            QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText( self._absolute_plus_or_minus_panel, label = unit_string ), CC.FLAGS_CENTER_PERPENDICULAR )
-            
-        
-        self._absolute_plus_or_minus_panel.setLayout( hbox )
-        
-        #
-        
-        self._percent_plus_or_minus_panel = QW.QWidget( self )
-        
-        self._percent_plus_or_minus = ClientGUICommon.BetterSpinBox( self._percent_plus_or_minus_panel, min = 0, max = 10000, width = 60 )
-        
-        self._percent_plus_or_minus.setValue( appropriate_percentage_plus_or_minus_default )
-        
-        hbox = QP.HBoxLayout()
-        
-        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText( self._percent_plus_or_minus_panel, label = HC.UNICODE_PLUS_OR_MINUS ), CC.FLAGS_CENTER_PERPENDICULAR )
-        
-        QP.AddToLayout( hbox, self._percent_plus_or_minus, CC.FLAGS_CENTER_PERPENDICULAR )
-        
-        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText( self._percent_plus_or_minus_panel, label = '%' ), CC.FLAGS_CENTER_PERPENDICULAR )
-        
-        self._percent_plus_or_minus_panel.setLayout( hbox )
-        
-        #
-        
-        hbox = QP.HBoxLayout()
-        
-        QP.AddToLayout( hbox, self._operator, CC.FLAGS_CENTER_PERPENDICULAR )
-        QP.AddToLayout( hbox, self._value_swap_in_st, CC.FLAGS_CENTER_PERPENDICULAR )
-        QP.AddToLayout( hbox, self._value, CC.FLAGS_CENTER_PERPENDICULAR )
-        
-        if unit_string is not None:
-            
-            QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText( self, label = unit_string ), CC.FLAGS_CENTER_PERPENDICULAR )
-            
-        
-        QP.AddToLayout( hbox, self._absolute_plus_or_minus_panel, CC.FLAGS_CENTER_PERPENDICULAR )
-        QP.AddToLayout( hbox, self._percent_plus_or_minus_panel, CC.FLAGS_CENTER_PERPENDICULAR )
-        
-        self.setLayout( hbox )
-        
-        self._operator.radioBoxChanged.connect( self._UpdateVisibility )
-        self._operator.radioBoxChanged.connect( self.valueChanged )
-        
-        self._percent_plus_or_minus.valueChanged.connect( self.valueChanged )
-        
-        self._UpdateVisibility()
-        
-    
-    def _GenerateAbsoluteValueWidget( self, max: int ):
-        
-        widget = ClientGUICommon.BetterSpinBox( self._absolute_plus_or_minus_panel, min = 0, max = int( max / 2 ), width = 60 )
-        
-        widget.valueChanged.connect( self.valueChanged )
-        
-        return widget
+        return choice_tuples
         
     
     def _GenerateValueWidget( self, max: int ):

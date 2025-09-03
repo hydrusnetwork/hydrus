@@ -1269,19 +1269,19 @@ class TestAutocompletePredGubbins( unittest.TestCase ):
         
         #
         
-        p = ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_AGE, ( '<', 'delta', ( 1, 2, 3, 4 ) ) )
+        p = ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_IMPORT_TIME, ( '<', 'delta', ( 1, 2, 3, 4 ) ) )
         
         self.assertEqual( p.ToString(), 'system:import time: since 1 year 2 months ago' )
         self.assertEqual( p.GetNamespace(), 'system' )
         self.assertEqual( p.GetTextsAndNamespaces( render_for_user ), [ ( p.ToString(), 'namespace', p.GetNamespace() ) ] )
         
-        p = ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_AGE, ( HC.UNICODE_APPROX_EQUAL, 'delta', ( 1, 2, 3, 4 ) ) )
+        p = ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_IMPORT_TIME, ( HC.UNICODE_APPROX_EQUAL, 'delta', ( 1, 2, 3, 4 ) ) )
         
         self.assertEqual( p.ToString(), 'system:import time: around 1 year 2 months ago' )
         self.assertEqual( p.GetNamespace(), 'system' )
         self.assertEqual( p.GetTextsAndNamespaces( render_for_user ), [ ( p.ToString(), 'namespace', p.GetNamespace() ) ] )
         
-        p = ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_AGE, ( '>', 'delta', ( 1, 2, 3, 4 ) ) )
+        p = ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_IMPORT_TIME, ( '>', 'delta', ( 1, 2, 3, 4 ) ) )
         
         self.assertEqual( p.ToString(), 'system:import time: before 1 year 2 months ago' )
         self.assertEqual( p.GetNamespace(), 'system' )

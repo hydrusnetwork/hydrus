@@ -275,7 +275,6 @@ class SidebarImporterMultipleGallery( SidebarImporter ):
         self._gallery_importers_listctrl_panel.AddIconButton( CC.global_icons().clear_highlight, self._ClearExistingHighlightAndPanel, tooltip = 'clear highlight', enabled_check_func = self._CanClearHighlight )
         self._gallery_importers_listctrl_panel.AddIconButton( CC.global_icons().file_pause, self._PausePlayFiles, tooltip = 'pause/play files', enabled_only_on_selection = True )
         self._gallery_importers_listctrl_panel.AddIconButton( CC.global_icons().gallery_pause, self._PausePlayGallery, tooltip = 'pause/play search', enabled_only_on_selection = True )
-        self._gallery_importers_listctrl_panel.AddIconButton( CC.global_icons().trash, self._RemoveGalleryImports, tooltip = 'remove selected', enabled_only_on_selection = True )
         
         menu_template_items = []
         
@@ -290,6 +289,8 @@ class SidebarImporterMultipleGallery( SidebarImporter ):
         menu_template_items.append( menu_template_item )
         
         self._gallery_importers_listctrl_panel.AddMenuIconButton( CC.global_icons().retry, 'retry commands', menu_template_items, enabled_check_func = self._CanRetryAnything )
+        
+        self._gallery_importers_listctrl_panel.AddIconButton( CC.global_icons().trash, self._RemoveGalleryImports, tooltip = 'remove selected', enabled_only_on_selection = True )
         
         self._gallery_importers_listctrl.Sort()
         
@@ -1411,7 +1412,6 @@ class SidebarImporterMultipleWatcher( SidebarImporter ):
         self._watchers_listctrl_panel.AddIconButton( CC.global_icons().clear_highlight, self._ClearExistingHighlightAndPanel, tooltip = 'clear highlight', enabled_check_func = self._CanClearHighlight )
         self._watchers_listctrl_panel.AddIconButton( CC.global_icons().file_pause, self._PausePlayFiles, tooltip = 'pause/play files', enabled_only_on_selection = True )
         self._watchers_listctrl_panel.AddIconButton( CC.global_icons().gallery_pause, self._PausePlayChecking, tooltip = 'pause/play checking', enabled_only_on_selection = True )
-        self._watchers_listctrl_panel.AddIconButton( CC.global_icons().trash, self._RemoveWatchers, tooltip = 'remove selected', enabled_only_on_selection = True )
         self._watchers_listctrl_panel.AddButton( 'check now', self._CheckNow, enabled_only_on_selection = True )
         
         menu_template_items = []
@@ -1427,6 +1427,8 @@ class SidebarImporterMultipleWatcher( SidebarImporter ):
         menu_template_items.append( menu_template_item )
         
         self._watchers_listctrl_panel.AddMenuIconButton( CC.global_icons().retry, 'retry commands', menu_template_items, enabled_check_func = self._CanRetryAnything )
+        
+        self._watchers_listctrl_panel.AddIconButton( CC.global_icons().trash, self._RemoveWatchers, tooltip = 'remove selected', enabled_only_on_selection = True )
         
         self._watchers_listctrl.Sort()
         

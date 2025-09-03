@@ -1,5 +1,6 @@
 import collections
 import collections.abc
+import typing
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusNumbers
@@ -159,7 +160,7 @@ class FileSystemPredicates( object ):
                 self._common_info[ 'hashes' ].append( ( hashes, hash_type, predicate.IsInclusive() ) )
                 
             
-            if predicate_type in ( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_AGE, ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_LAST_VIEWED_TIME, ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_MODIFIED_TIME, ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_ARCHIVED_TIME ):
+            if predicate_type in ( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_IMPORT_TIME, ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_LAST_VIEWED_TIME, ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_MODIFIED_TIME, ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_ARCHIVED_TIME ):
                 
                 ( operator, age_type, age_value ) = value
                 
@@ -570,7 +571,7 @@ class FileSearchContext( HydrusSerialisable.SerialisableBase ):
     SERIALISABLE_NAME = 'File Search Context'
     SERIALISABLE_VERSION = 5
     
-    def __init__( self, location_context = None, tag_context = None, search_type = SEARCH_TYPE_AND, predicates = None ):
+    def __init__( self, location_context = None, tag_context = None, search_type = SEARCH_TYPE_AND, predicates: typing.Optional[ list[ ClientSearchPredicate.Predicate ] ] = None ):
         
         if location_context is None:
             

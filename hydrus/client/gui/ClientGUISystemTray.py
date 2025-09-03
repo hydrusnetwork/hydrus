@@ -49,7 +49,7 @@ class ClientSystemTrayIcon( QW.QSystemTrayIcon ):
         
         # if we click immediately, some users get frozen ui, I assume a mix-up with the icon being destroyed during the same click event or similar
         
-        QP.CallAfter( self._WasActivated, activation_reason )
+        CG.client_controller.CallAfter( self, self._WasActivated, activation_reason )
         
     
     def _RegenerateMenu( self ):

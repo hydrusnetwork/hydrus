@@ -32,8 +32,9 @@ from hydrus.client.caches import ClientCaches
 from hydrus.client.duplicates import ClientDuplicatesAutoResolution
 from hydrus.client.files import ClientFilesManager
 from hydrus.client.files import ClientFilesPhysical
-from hydrus.client.gui import QtPorting as QP
+from hydrus.client.gui import ClientGUICallAfter
 from hydrus.client.gui import ClientGUISplash
+from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.lists import ClientGUIListManager
 from hydrus.client.importing import ClientImportFiles
 from hydrus.client.metadata import ClientTagsHandling
@@ -415,7 +416,7 @@ class Controller( object ):
         
         job_status = ClientThreading.JobStatus( cancellable = True, cancel_on_shutdown = False )
         
-        QP.CallAfter( qt_code, win, job_status )
+        self.CallAfter( win, qt_code, win, job_status )
         
         while not job_status.IsDone():
             
@@ -455,9 +456,14 @@ class Controller( object ):
     
     CallToThreadLongRunning = CallToThread
     
+    def CallAfter( self, qobject: QC.QObject, func, *args, **kwargs ):
+        
+        ClientGUICallAfter.CallAfter( qobject, func, *args, **kwargs )
+        
+    
     def CallAfterQtSafe( self, window, label, func, *args, **kwargs ):
         
-        self.CallLaterQtSafe( window, 0, label, func, *args, **kwargs )
+        self.CallAfter( window, func, *args, **kwargs )
         
     
     def CallLater( self, initial_delay, func, *args, **kwargs ):
@@ -931,7 +937,7 @@ class Controller( object ):
                 
             finally:
                 
-                QP.CallAfter( self.win.deleteLater )
+                self.CallAfter( self.win, self.win.deleteLater )
                 
             
         

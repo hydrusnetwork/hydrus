@@ -116,7 +116,7 @@ class TestPanel( QW.QWidget ):
         
         if len( test_data.texts ) > 0:
             
-            QP.CallAfter( self._SetExampleData, test_data.texts[0] )
+            CG.client_controller.CallAfter( self, self._SetExampleData, test_data.texts[0] )
             
         
     
@@ -173,7 +173,7 @@ class TestPanel( QW.QWidget ):
                 HydrusData.ShowException( e )
                 
             
-            QP.CallAfter( qt_code, example_data, example_bytes )
+            CG.client_controller.CallAfter( self, qt_code, example_data, example_bytes )
             
         
         message = 'Enter URL to fetch data for.'

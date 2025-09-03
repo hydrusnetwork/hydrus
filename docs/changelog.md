@@ -7,6 +7,65 @@ title: Changelog
 !!! note
     This is the new changelog, only the most recent builds. For all versions, see the [old changelog](old_changelog.html).
 
+## [Version 637](https://github.com/hydrusnetwork/hydrus/releases/tag/v637)
+
+### duplicates auto-resolution
+
+* 'test A or B' comparators now support 'system:time', for the four main time system predicates (import time, modified time, last viewed time, archived time)
+* 'test A against B using file info' comparators now support the same 'system:time' stuff, so you can now mandate, say, that "A has system:import time earlier than B". I also wangled a time delta in there, so you can say 'A was imported more than three months earlier than B' if you like
+* I brushed up the comparator UI for time; instead of `<` and `=`, you'll see a vertical stack of 'earlier than', 'roughly the same time as' and so on. also, the deltas for `+/-` and the B delta are full time widgets, so you set the time you mean and don't have to care about converting to milliseconds. this all percolates to the comparator summary string too.
+* same deal for `system:duration` in that panel--it now has a time delta for the absolute `+/-` test and the B delta, and has a time-aware summary string
+* I added 'only earlier imports' variants for the 'visually similar pairs' suggested duplicates auto-resolution rules. I am sure there are many edge cases, but I feel that these are pretty good 'near-zero false positive' rules to try out
+* the 'edit duplicate auto-resolution rules' panel now has export/import/duplicate buttons
+* the 'comparison' tab of 'edit duplicate auto-resolution rule', where you edit comparators, now has export/import/duplicate buttons
+
+### duplicates
+
+* in the duplicate filter, jpeg subsampling and quality info is cached in a nicer, more thread-safe way. certain laggy calculation situations should be more stable. I am not sure if this was the source of the crashes some people have had, so if you still get them, please let me know
+
+### misc
+
+* for the new `/db/static` overwrite tech, a .png icon in the db dir now overrides an .svg in the install dir. if you chose to add it, I'll prefer it
+* the star.png used for favourites buttons is now an svg
+* the fullscreen_switch.png used in the media viewer is now an svg, and more like the typical icon for this
+* I forgot to do some metadata regen on epubs last week, so any existing epubs probably got stretched thumbnails. soon after v637 boots, your epubs should double-check their resolution ratios and regen any busted thumbs (issue #1788)
+* I overhauled one of the ways that threads can give Qt work to do, making it more Qt safe. there were about 80 calls that used this system, mostly stuff like initialising a label or focusing a button in the event loop immediately after a panel appears. fingers crossed, these will be much more stable in edge cases when, say, a dialog insta-closes before an initialising job can fire
+
+### big brain subscription logic improvement
+
+* when subscription queries compact themselves down to the (typically 250) newest URLs, they now recognise that child URLs ("Found 2 new URLs in 2 sub-posts.") should not be counted. in sites where the gallery pages have potentially high count and each gallery-parsed post URL can also each produce many files (e.g. Pixiv manga), 250 file import objects could only be, say, 21 top-level Post URLs, significantly less than the gallery page provides, and the safety checks here, which are tuned to recognise 100 contiguous Post URLs 'already in cache', were overflowing every n checks and causing some post re-downloads. hydrus should be better about recognising this situation
+* the compaction routine does this by grouping file import objects into parents, including nesting parents, and only culling on the top level. when things are confusing, it tries to fail safely in complicated situations, on the side of reducing compaction aggressision
+* if you have manga subs, they may well grow to be like 4,000 files. let me know how it all goes
+* a similar bit of logic that tests the number of items found versus the pre-gallery-sync size of the file log now uses this tech to estimate that size (previously it did some hacky referral url checking stuff)
+* thanks to the user who worked with me to figure this one out
+* this is more evidence that I should write a layer on the database level URL storage for 'subscription x saw this URL', and then we wouldn't have such a problem
+
+### base64URL
+
+* String Converters can now encode/decode with Base64URL, which is a variant of Base64 that uses `-_` instead of `+/` and where '=' padding is encoder-optional (and not added here) to make inclusion in an URL parameter simpler
+* when I _decode_ (convert from base64 to normal text) by base64 of either sort now, I add any extra `=` padding that is needed, no worries
+* String Matches can now have a 'character set' of Base64URL (`^[a-zA-Z\d\-_]+={0,2}$`) or 'Base64 (url encoded)'' (`^([a-zA-Z\d]|%2B|%2F)+(%3D){0,2}$`)
+
+### boring stuff
+
+* removed the macOS build script and such. I left the macOS build files in place and copied my various .yml workflow scripts to `static/build_files/macos`
+* fixed up some bad layout flags in the duplicates auto-resolution comparator edit panels
+* swapped the trash and retry buttons in the gallery downloader page sidebar
+* similarly moved the trash button to the end in the watcher downloader page sidebar
+* wrote unit tests for predicate value testing (i.e. for Metadata Conditionals) for import time, modified time, last viewed time, archived time
+* wrote unit tests for predicate value extracting (i.e. for relative file info comparators) for import time, modified time, last viewed time, archived time
+* wrote unit tests for the new Base64URL encode/decode and added some clever stuff to check for the `+/-_` stuff
+* wrote unit tests for the new Base64 character set filters
+* fleshed out some of my Base64 unit tests to catch a couple extra situations
+* wrote unit tests for my new query compaction parent-grouping tech and 'master url' counting routine
+* moved the 'CallAfter' thread-to-qt calling system to a new file `ClientGUICallAfter.py`, and made it safer
+* moved an overhead-heavy alternate Qt-safe CallAfter to this leaner pipeline
+* renamed `PREDICATE_TYPE_SYSTEM_AGE` to `PREDICATE_TYPE_SYSTEM_IMPORT_TIME`
+* the `NumberTest` init no longer flips from `+/-%` to `=` if the inherent 'value' is 0--this was not helping in duplicates auto-resolution, where the value is not used and in some cases initialises to 0
+* updated the predicate object so null/stub preds (which until comparators generally only appeared in memory as autocomplete dropdown system preds) can always serialise
+* if a menu item label is longer than 128 characters and thus...elides, the tooltip will no longer have doubled ampersands (generally affects urls in menus)
+* added a catch to the `help->about` error reporting; if you have "sio_flush" in an mpv import error, I now say to try running from source
+
 ## [Version 636](https://github.com/hydrusnetwork/hydrus/releases/tag/v636)
 
 ### multi-domain URL Classes
@@ -496,49 +555,3 @@ title: Changelog
 * Source venvs--
     - `numpy` moved from `>=2.0.0` to `<=2.3.1`
 * the pyinstaller bump is the most important, I think, and it should fix a bunch of dll load and OS API issues. there are no special install instructions, but let me know if you run into any trouble
-
-## [Version 627](https://github.com/hydrusnetwork/hydrus/releases/tag/v627)
-
-### misc
-
-* windows that remember position are better about saving that position on a window move. some window managers (particularly on Linux) were not recognising the previous 'window move has ended' tech, nor non-mouse moves, so I wrote something that will work more generally. let me know if any windows start positioning crazy this week during drags!
-* fixed variable framerate render timing in the native viewer for animated webp files. I messed up some logic when I first rolled this out in v620; should be working correct now (issue #1749)
-* fixed an issue where import sidecars were losing their texts' order (they were being pseudorandomly re-sorted) in the outer layer of string processing where multiple sidecar texts are combined. the sidecar pipeline now preserves original sort throughout the pipeline (issue #1746)
-* added a `TEST: Stop mpv before media transition` in an attempt to early-cancel laggy mpv when transitioning media when the current (looping and pre-buffering) media is near the end. may also help some situations with laggy storage, but we'll see. I think this mode might have some load bugs
-
-### visual duplicate detection is ready
-
-* the 'A and B are visual duplicates' system now compares spatial edge data and is better able to recognise mosaic/blur patches, minor alterations or repositions, and subtle alternates in busy areas like eye pupils. all the remaining difficult false positives I have are fixed, and the test easily catches several pairs that were previously tricky, allowing me to remove a hacky test on the colour testing side of things that was producing some false negatives
-* this test is now available as a comparator in duplicates auto-resolution rules! you can choose it to be at least 'very probably', 'almost certainly', or 'near-perfect'. I default to and recommend 'almost certainly' for now. I am still interested in seeing any new false positives you encounter
-* note that this tool is CPU heavy--expect about a second per pair tested! the UI seems to be holding up well with the delay, but I've added a new label to the preview panel to show when it is running slow and there are pairs still to be tested
-* added a new and generally cautious 'visually similar pairs - eliminate smaller' suggested rule. it does an 'A and B are almost certainly visual duplicates' test on similar filetypes, preferring an A that is larger in size and larger or equal in resolution, and is semi-automatic. if you have been following all this, please give it a go and let me know what you think
-* assuming this tech holds up, this was the last big difficult thing in my auto-resolution superjob. there is still a lot I want to do, but it'll mostly be cleaner UI, some more comparator types, a way to interact with the denied pairs log, smoother counting and pair load in more places, a way to load up a duplicate rule's pending decisions in the normal filter, richer duplicate-aware pair preview/review, that sort of thing
-
-### cleanup/docs/boring
-
-* added some notes to the 'migrate' and 'source' help regarding needing to rebuild your venv every time you move the install folder
-* added some 'better software for x' links to 'getting started with files' to ComicRackCE, Lanaragi, and Calibre
-* added a little about 'A and B are visual duplicates' to the duplicates auto-resolution help
-* the 'LabHistogram' stuff that does the new 'A and B are visual duplicates' is now renamed generally to 'VisualData', and the LabHistogram stuff is rejiggered into a subclass
-* fixed a small warning bug when the thumbnail pair list in the auto-resolution preview panel is updated to have a new rule while it is empty
-* fixed a duplicate file system bug where it wasn't able to negotiate the correct `media id` for a file when the duplicate group had an identity definition but somehow was desynced and did not list the king as a member
-* added a new 'pixel-perlfect jpegs vs pngs - except when png is smaller' alternate suggested rule that does pixel perfect jpegs and pngs but only actions when the jpeg is smaller than the png
-* wrote some unit tests for 'A and B are visual duplicates'
-* I think I silenced OpenCV's warning logspam. if you ever saw `[ WARN:44@43420.823] global grfmt_png.cpp:695 read_chunk chunk data is too large` kind of thing in your log, you shouldn't any more
-
-### future build
-
-* I am making another future build this week. This is a special build with new libraries that I would like advanced users to test out so I know they are safe to fold into the normal release.
-* in the release post, I will link to this alternate build. if you are experienced and would like to help me, please check it out
-* the new numpy version that caused trouble for Arch users also broke our build right afterwards, so this is an attempt to fix that while rolling in some security updates. updating PyInstaller more than a year to the same numpy fix they rolled out two weeks ago did not, I was surprised to discover, appear to break anything, so the builds may be significantly more stable and OS-compatible. as usual, I will be interested to know if anyone on Win 10 or any other older OS has trouble running this. as far as I can tell, a clean install is _not_ required
-* the specific changes this week are--
-* On All--
-    - `requests` moved from `2.32.3` to `2.32.4` (security fix)
-* On Linux and Windows--
-    - `PyInstaller` moved from `6.7` to `6.14.1` (handles new numpy)
-    - `setuptools` moved from `70.3.0` to `78.1.1` (security fix)
-    - `numpy` moved from `2.2.6` to `2.3.1` (lots of improvements, py 3.11+)
-* On Windows--
-    - `sqlite` dll moved from `3.45.3` to `3.50.1`
-* Source venvs--
-    - `numpy` moved from `>=2.0.0` to `<=2.3.1`

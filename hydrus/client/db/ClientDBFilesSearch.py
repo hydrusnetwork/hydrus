@@ -1436,11 +1436,11 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
             # for now we'll check current domain
             # if domain is deleted, we search deletion time
             
-            if ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_AGE in system_pred_type_to_timestamp_ranges_ms:
+            if ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_IMPORT_TIME in system_pred_type_to_timestamp_ranges_ms:
                 
                 import_timestamp_predicates = []
                 
-                timestamp_ranges_ms = system_pred_type_to_timestamp_ranges_ms[ ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_AGE ]
+                timestamp_ranges_ms = system_pred_type_to_timestamp_ranges_ms[ ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_IMPORT_TIME ]
                 
                 if '>' in timestamp_ranges_ms:
                     

@@ -1333,7 +1333,7 @@ class SidebarPetitions( ClientGUISidebarCore.Sidebar ):
                             
                             HydrusData.ShowText( 'That account id was not found!' )
                             
-                            QP.CallAfter( qt_draw, [] )
+                            CG.client_controller.CallAfter( self, qt_draw, [] )
                             
                             return
                             
@@ -1342,11 +1342,11 @@ class SidebarPetitions( ClientGUISidebarCore.Sidebar ):
                 
                 num_petition_info = response[ 'num_petitions' ]
                 
-                QP.CallAfter( qt_draw, num_petition_info )
+                CG.client_controller.CallAfter( self, qt_draw, num_petition_info )
                 
             finally:
                 
-                QP.CallAfter( qt_reset )
+                CG.client_controller.CallAfter( self, qt_reset )
                 
             
         
@@ -1626,7 +1626,7 @@ class SidebarPetitions( ClientGUISidebarCore.Sidebar ):
     
     def Start( self ):
         
-        QP.CallAfter( self._StartFetchNumPetitions )
+        CG.client_controller.CallAfter( self, self._StartFetchNumPetitions )
         
     
     def THREADPetitionFetcherAndUploader( self, work_lock: threading.Lock, service: ClientServices.ServiceRepository ):

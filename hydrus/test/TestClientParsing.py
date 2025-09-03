@@ -609,6 +609,14 @@ class TestStringConverter( unittest.TestCase ):
         string_converter = ClientStrings.StringConverter( conversions = [ ( ClientStrings.STRING_CONVERSION_ENCODE, ClientStrings.ENCODING_TYPE_BASE64_UTF8 ) ] )
         
         self.assertEqual( string_converter.Convert( 'hello world' ), 'aGVsbG8gd29ybGQ=' )
+        self.assertEqual( string_converter.Convert( '\uffff' ), '77+/' )
+        
+        #
+        
+        string_converter = ClientStrings.StringConverter( conversions = [ ( ClientStrings.STRING_CONVERSION_ENCODE, ClientStrings.ENCODING_TYPE_BASE64URL_UTF8 ) ] )
+        
+        self.assertEqual( string_converter.Convert( 'hello world' ), 'aGVsbG8gd29ybGQ' ) # never outputs '=' padding
+        self.assertEqual( string_converter.Convert( '\uffff' ), '77-_' )
         
         #
         
@@ -621,6 +629,16 @@ class TestStringConverter( unittest.TestCase ):
         string_converter = ClientStrings.StringConverter( conversions = [ ( ClientStrings.STRING_CONVERSION_DECODE, ClientStrings.ENCODING_TYPE_BASE64_UTF8 ) ] )
         
         self.assertEqual( string_converter.Convert( 'aGVsbG8gd29ybGQ=' ), 'hello world' )
+        self.assertEqual( string_converter.Convert( 'aGVsbG8gd29ybGQ' ), 'hello world' )
+        self.assertEqual( string_converter.Convert( '77+/' ), '\uffff' )
+        
+        #
+        
+        string_converter = ClientStrings.StringConverter( conversions = [ ( ClientStrings.STRING_CONVERSION_DECODE, ClientStrings.ENCODING_TYPE_BASE64URL_UTF8 ) ] )
+        
+        self.assertEqual( string_converter.Convert( 'aGVsbG8gd29ybGQ=' ), 'hello world' )
+        self.assertEqual( string_converter.Convert( 'aGVsbG8gd29ybGQ' ), 'hello world' )
+        self.assertEqual( string_converter.Convert( '77-_' ), '\uffff' )
         
         #
         
@@ -856,8 +874,28 @@ class TestStringMatch( unittest.TestCase ):
         
         self.assertTrue( base64_string_match.Matches( '123' ) )
         self.assertTrue( base64_string_match.Matches( 'abc' ) )
-        self.assertTrue( base64_string_match.Matches( 'abc123+' ) )
-        self.assertTrue( base64_string_match.Matches( 'abc123+=' ) )
+        self.assertTrue( base64_string_match.Matches( 'abc123+/' ) )
+        self.assertTrue( base64_string_match.Matches( 'abc123+/=' ) )
+        self.assertFalse( base64_string_match.Matches( 'abc123+]' ) )
+        
+        #
+        
+        base64_string_match = ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FLEXIBLE, match_value = ClientStrings.FLEXIBLE_MATCH_BASE64_URL_ENCODED )
+        
+        self.assertTrue( base64_string_match.Matches( '123' ) )
+        self.assertTrue( base64_string_match.Matches( 'abc' ) )
+        self.assertTrue( base64_string_match.Matches( 'abc123%2B%2F' ) )
+        self.assertTrue( base64_string_match.Matches( 'abc123%2B%2F%3D' ) )
+        self.assertFalse( base64_string_match.Matches( 'abc123%2B]' ) )
+        
+        #
+        
+        base64_string_match = ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FLEXIBLE, match_value = ClientStrings.FLEXIBLE_MATCH_BASE64URL )
+        
+        self.assertTrue( base64_string_match.Matches( '123' ) )
+        self.assertTrue( base64_string_match.Matches( 'abc' ) )
+        self.assertTrue( base64_string_match.Matches( 'abc123-' ) )
+        self.assertTrue( base64_string_match.Matches( 'abc123_=' ) )
         self.assertFalse( base64_string_match.Matches( 'abc123+]' ) )
         
         #

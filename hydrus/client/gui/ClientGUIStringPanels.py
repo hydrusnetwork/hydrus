@@ -723,7 +723,7 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
             tt = 'This hashes the string\'s UTF-8-decoded bytes to hexadecimal.'
             self._data_hash_function.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
             
-            for e in ( ClientStrings.ENCODING_TYPE_HEX_UTF8, ClientStrings.ENCODING_TYPE_BASE64_UTF8, ClientStrings.ENCODING_TYPE_URL_PERCENT, ClientStrings.ENCODING_TYPE_UNICODE_ESCAPE, ClientStrings.ENCODING_TYPE_HTML_ENTITIES ):
+            for e in ( ClientStrings.ENCODING_TYPE_HEX_UTF8, ClientStrings.ENCODING_TYPE_BASE64_UTF8, ClientStrings.ENCODING_TYPE_BASE64URL_UTF8, ClientStrings.ENCODING_TYPE_URL_PERCENT, ClientStrings.ENCODING_TYPE_UNICODE_ESCAPE, ClientStrings.ENCODING_TYPE_HTML_ENTITIES ):
                 
                 self._data_encoding.addItem( ClientStrings.encoding_type_str_lookup[ e ], e )
                 self._data_decoding.addItem( ClientStrings.encoding_type_str_lookup[ e ], e )
@@ -1345,7 +1345,9 @@ class EditStringMatchPanel( ClientGUIScrolledPanels.EditPanel ):
         self._match_value_flexible_input.addItem( 'alphanumeric characters (a-zA-Z0-9)', ClientStrings.FLEXIBLE_MATCH_ALPHANUMERIC )
         self._match_value_flexible_input.addItem( 'numeric characters (0-9)', ClientStrings.FLEXIBLE_MATCH_NUMERIC )
         self._match_value_flexible_input.addItem( 'hexadecimal characters (0-9a-fA-F)', ClientStrings.FLEXIBLE_MATCH_HEX )
-        self._match_value_flexible_input.addItem( 'base-64 characters (a-zA-z0-9+/, = padding)', ClientStrings.FLEXIBLE_MATCH_BASE64 )
+        self._match_value_flexible_input.addItem( 'base64 characters (a-zA-z0-9+/ with = padding)', ClientStrings.FLEXIBLE_MATCH_BASE64 )
+        self._match_value_flexible_input.addItem( 'base64url characters (a-zA-z0-9-_ optionally with = padding)', ClientStrings.FLEXIBLE_MATCH_BASE64URL )
+        self._match_value_flexible_input.addItem( 'base64 characters (url encoded) (a-zA-z0-9 %2B %2F with %3D padding)', ClientStrings.FLEXIBLE_MATCH_BASE64_URL_ENCODED )
         
         self._min_chars = ClientGUICommon.NoneableSpinCtrl( self, 16, min = 1, max = 65535, unit = 'characters', none_phrase = 'no limit' )
         self._max_chars = ClientGUICommon.NoneableSpinCtrl( self, 64, min = 1, max = 65535, unit = 'characters', none_phrase = 'no limit' )

@@ -905,6 +905,27 @@ def GetDefaultRuleSuggestions() -> list[ DuplicatesAutoResolutionRule ]:
     
     suggested_rules.append( duplicates_auto_resolution_rule )
     
+    #
+    
+    duplicates_auto_resolution_rule = duplicates_auto_resolution_rule.Duplicate()
+    
+    duplicates_auto_resolution_rule.SetName( 'visually similar pairs - eliminate smaller filesize - only earlier imports' )
+    
+    comparators = list( duplicates_auto_resolution_rule.GetPairSelector().GetComparators() )
+    
+    comparator = ClientDuplicatesAutoResolutionComparators.PairComparatorRelativeFileInfo()
+    
+    comparator.SetMultiplier( 1.00 )
+    comparator.SetDelta( 0 )
+    comparator.SetNumberTest( ClientNumberTest.NumberTest( operator = ClientNumberTest.NUMBER_TEST_OPERATOR_LESS_THAN ) )
+    comparator.SetSystemPredicate( ClientSearchPredicate.Predicate( predicate_type = ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_IMPORT_TIME ) )
+    
+    comparators.append( comparator )
+    
+    duplicates_auto_resolution_rule.GetPairSelector().SetComparators( comparators )
+    
+    suggested_rules.append( duplicates_auto_resolution_rule )
+    
     # ############
     
     location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY )
@@ -984,6 +1005,27 @@ def GetDefaultRuleSuggestions() -> list[ DuplicatesAutoResolutionRule ]:
     duplicates_auto_resolution_rule.SetDeleteInfo( False, True )
     
     #
+    
+    suggested_rules.append( duplicates_auto_resolution_rule )
+    
+    #
+    
+    duplicates_auto_resolution_rule = duplicates_auto_resolution_rule.Duplicate()
+    
+    duplicates_auto_resolution_rule.SetName( 'visually similar pairs - eliminate smaller resolution - only earlier imports' )
+    
+    comparators = list( duplicates_auto_resolution_rule.GetPairSelector().GetComparators() )
+    
+    comparator = ClientDuplicatesAutoResolutionComparators.PairComparatorRelativeFileInfo()
+    
+    comparator.SetMultiplier( 1.00 )
+    comparator.SetDelta( 0 )
+    comparator.SetNumberTest( ClientNumberTest.NumberTest( operator = ClientNumberTest.NUMBER_TEST_OPERATOR_LESS_THAN ) )
+    comparator.SetSystemPredicate( ClientSearchPredicate.Predicate( predicate_type = ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_IMPORT_TIME ) )
+    
+    comparators.append( comparator )
+    
+    duplicates_auto_resolution_rule.GetPairSelector().SetComparators( comparators )
     
     suggested_rules.append( duplicates_auto_resolution_rule )
     

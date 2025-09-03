@@ -4,6 +4,7 @@ import typing
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusSerialisable
+from hydrus.core import HydrusTime
 
 from hydrus.client.duplicates import ClientDuplicates
 from hydrus.client.files.images import ClientVisualData
@@ -152,6 +153,10 @@ class PairComparatorOneFile( PairComparator ):
             
             return self._metadata_conditional.Test( media_result_a ) or self._metadata_conditional.Test( media_result_b )
             
+        else:
+            
+            return False
+            
         
     
 
@@ -221,6 +226,15 @@ class PairComparatorRelativeFileInfo( PairComparator ):
         
         pred_string = self._system_predicate.ToString()
         
+        we_time_pred = self._system_predicate.GetType() in (
+            ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_IMPORT_TIME,
+            ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_MODIFIED_TIME,
+            ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_LAST_VIEWED_TIME,
+            ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_ARCHIVED_TIME
+        )
+        
+        we_duration_pred = self._system_predicate.GetType() == ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_DURATION
+        
         what_we_are_testing = 'B'
         
         if self._multiplier != 1.0:
@@ -228,18 +242,30 @@ class PairComparatorRelativeFileInfo( PairComparator ):
             what_we_are_testing = f'{self._multiplier:.2f}x {what_we_are_testing}'
             
         
+        if we_time_pred or we_duration_pred:
+            
+            absolute_number_renderer = lambda t: HydrusTime.TimeDeltaToPrettyTimeDelta( t / 1000 )
+            
+            delta_string = absolute_number_renderer( self._delta )
+            
+        else:
+            
+            absolute_number_renderer = None
+            delta_string = self._delta
+            
+        
         if self._delta > 0:
             
-            what_we_are_testing = f'{what_we_are_testing} +{self._delta}'
+            what_we_are_testing = f'{what_we_are_testing} +{delta_string}'
             
         elif self._delta < 0:
             
-            what_we_are_testing = f'{what_we_are_testing} {self._delta}'
+            what_we_are_testing = f'{what_we_are_testing} {delta_string}'
             
         
-        number_test_string = self._number_test.ToString( replacement_value_string = what_we_are_testing )
+        number_test_string = self._number_test.ToString( absolute_number_renderer = absolute_number_renderer, replacement_value_string = what_we_are_testing, use_time_operators = we_time_pred )
         
-        return f'A has {pred_string} {number_test_string}'
+        return f'A has "{pred_string}" {number_test_string}'
         
     
     def IsFast( self ) -> bool:

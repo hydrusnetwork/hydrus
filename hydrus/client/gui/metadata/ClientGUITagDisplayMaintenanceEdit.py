@@ -53,7 +53,7 @@ class EditTagDisplayApplication( ClientGUIScrolledPanels.EditPanel ):
             if master_service_key == default_tag_service_key:
                 
                 # Py 3.11/PyQt6 6.5.0/two tabs/total tab characters > ~12/select second tab during init = first tab disappears bug
-                QP.CallAfter( self._tag_services.setCurrentWidget, page )
+                CG.client_controller.CallAfter( self._tag_services, self._tag_services.setCurrentWidget, page )
                 
             
         

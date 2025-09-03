@@ -465,7 +465,7 @@ class PanelPredicateSystemAgeDate( PanelPredicateSystemDate ):
     
     def _GetPredicateType( self ) -> int:
         
-        return ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_AGE
+        return ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_IMPORT_TIME
         
     
     def GetDefaultPredicate( self ) -> ClientSearchPredicate.Predicate:
@@ -576,12 +576,12 @@ class PanelPredicateSystemAgeDelta( PanelPredicateSystemSingle ):
     
     def GetDefaultPredicate( self ):
         
-        return ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_AGE, ( '<', 'delta', ( 0, 0, 7, 0 ) ) )
+        return ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_IMPORT_TIME, ( '<', 'delta', ( 0, 0, 7, 0 ) ) )
         
     
     def GetPredicates( self ):
         
-        predicates = ( ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_AGE, ( self._sign.GetValue(), 'delta', (self._years.value(), self._months.value(), self._days.value(), self._hours.value() ) ) ), )
+        predicates = ( ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_IMPORT_TIME, ( self._sign.GetValue(), 'delta', (self._years.value(), self._months.value(), self._days.value(), self._hours.value() ) ) ), )
         
         return predicates
         

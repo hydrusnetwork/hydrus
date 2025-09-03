@@ -722,7 +722,7 @@ class EditDeleteFilesPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self.widget().setLayout( vbox )
         
-        QP.CallAfter( self._SetFocus )
+        CG.client_controller.CallAfter( self, self._SetFocus )
         
     
     def _GetExistingSharedFileDeletionReason( self ):

@@ -1259,34 +1259,6 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
         return self.file_seed_type == FILE_SEED_TYPE_HDD
         
     
-    def IsProbablyMasterPostURL( self ):
-        
-        if self.file_seed_type == FILE_SEED_TYPE_URL:
-            
-            if self._referral_url is not None:
-                
-                try:
-                    
-                    # if our given referral is a post url, we are most probably a multi-file url
-                    
-                    ( url_type, match_name, can_parse, cannot_parse_reason ) = CG.client_controller.network_engine.domain_manager.GetURLParseCapability( self._referral_url )
-                    
-                    if url_type == HC.URL_TYPE_POST:
-                        
-                        return False
-                        
-                    
-                except:
-                    
-                    # screw it
-                    return True
-                    
-                
-            
-        
-        return True
-        
-    
     def IsURLFileImport( self ):
         
         return self.file_seed_type == FILE_SEED_TYPE_URL
@@ -2492,6 +2464,89 @@ class FileSeedCache( HydrusSerialisable.SerialisableBase ):
         return file_seed
         
     
+    def _GetListOfParentsWithChildren( self ):
+        
+        list_of_parents_with_children: list[ list[ FileSeed ] ] = []
+        current_parent_and_children: list[ FileSeed ] = []
+        
+        num_additional_children_in_current_batch = 0
+        add_children_until_you_hit_a_parent = False
+        
+        for file_seed in self._file_seeds:
+            
+            file_seed = typing.cast( FileSeed, file_seed )
+            
+            if add_children_until_you_hit_a_parent and file_seed.status == CC.STATUS_SUCCESSFUL_AND_CHILD_FILES:
+                
+                list_of_parents_with_children.append( current_parent_and_children )
+                
+                current_parent_and_children = []
+                
+                add_children_until_you_hit_a_parent = False
+                
+            
+            current_parent_and_children.append( file_seed )
+            
+            if num_additional_children_in_current_batch > 0:
+                
+                num_additional_children_in_current_batch -= 1
+                
+            
+            if file_seed.status == CC.STATUS_SUCCESSFUL_AND_CHILD_FILES:
+                
+                note = file_seed.note
+                
+                try:
+                    
+                    # Found 2 new URLs in 3 sub-posts.
+                    result = re.search( r'(?<=^Found )\d+', note )
+                    
+                    if result is None:
+                        
+                        raise Exception()
+                        
+                    
+                    num_additional_children_in_current_batch += max( 0, int( result.group() ) )
+                    
+                except:
+                    
+                    add_children_until_you_hit_a_parent = True
+                    
+                
+            
+            if not add_children_until_you_hit_a_parent and num_additional_children_in_current_batch == 0:
+                
+                list_of_parents_with_children.append( current_parent_and_children )
+                
+                current_parent_and_children = []
+                
+            
+        
+        if len( current_parent_and_children ) > 0:
+            
+            list_of_parents_with_children.append( current_parent_and_children )
+            
+        
+        return list_of_parents_with_children
+        
+    
+    def _GetPotentiallyCompactibleFileSeeds( self, compaction_number: int ) -> list[ FileSeed ]:
+        
+        # get all the file seeds at the start of my list, excluding the n at the end of the list
+        # were things simple, this would be self._file_seeds[:-compaction_number], i.e. "abcdef"[:-2] = "abcd"
+        # HOWEVER, we need to deal with child posts. our n should discount all child posts
+        # so let's break out list into what we guess is parent posts and any children
+        # and let's try to make it failsafe, delivering smaller potentially compatible lists when it is uncertain
+        
+        list_of_parents_with_children = self._GetListOfParentsWithChildren()
+        
+        list_of_potentially_compactible_parents_with_children = list_of_parents_with_children[ : - compaction_number ]
+        
+        potentially_compactible_file_seeds = [ file_seed for potentially_compactible_parents_with_children in list_of_potentially_compactible_parents_with_children for file_seed in potentially_compactible_parents_with_children ]
+        
+        return potentially_compactible_file_seeds
+        
+    
     def _GetSerialisableInfo( self ):
         
         if not isinstance( self._file_seeds, HydrusSerialisable.SerialisableList ):
@@ -2935,7 +2990,9 @@ class FileSeedCache( HydrusSerialisable.SerialisableBase ):
                 return False
                 
             
-            for file_seed in self._file_seeds[:-compaction_number]:
+            potentially_compactible_file_seeds = self._GetPotentiallyCompactibleFileSeeds( compaction_number )
+            
+            for file_seed in potentially_compactible_file_seeds:
                 
                 if file_seed.status == CC.STATUS_UNKNOWN:
                     
@@ -2963,7 +3020,9 @@ class FileSeedCache( HydrusSerialisable.SerialisableBase ):
             
             removee_file_seeds = set()
             
-            for file_seed in self._file_seeds[:-compaction_number]:
+            potentially_compactible_file_seeds = self._GetPotentiallyCompactibleFileSeeds( compaction_number )
+            
+            for file_seed in potentially_compactible_file_seeds:
                 
                 still_to_do = file_seed.status == CC.STATUS_UNKNOWN
                 still_relevant = self._GetSourceTimestampForVelocityCalculations( file_seed ) > compact_before_this_source_time
@@ -3041,7 +3100,7 @@ class FileSeedCache( HydrusSerialisable.SerialisableBase ):
     
     def GetApproxNumMasterFileSeeds( self ):
         
-        return len( [ file_seed for file_seed in self._file_seeds if file_seed.IsProbablyMasterPostURL() ] )
+        return len( self._GetListOfParentsWithChildren() )
         
     
     def GetEarliestSourceTime( self ):

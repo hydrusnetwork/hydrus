@@ -13,7 +13,7 @@ from hydrus.test import TestGlobals as TG
 
 def DoClick( click, panel, do_delayed_ok_afterwards = False ):
     
-    QW.QApplication.instance().postEvent( panel.widget(), click )
+    QW.QApplication.postEvent( panel.widget(), click )
     
     if do_delayed_ok_afterwards:
         
@@ -22,6 +22,7 @@ def DoClick( click, panel, do_delayed_ok_afterwards = False ):
     
     QW.QApplication.processEvents()
     
+
 def GenerateClick( window, pos, click_type, click_button, modifier ):
     
     screen_pos = QC.QPointF( window.mapToGlobal( pos.toPoint() ) )

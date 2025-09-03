@@ -276,7 +276,7 @@ class RecentTagsPanel( QW.QWidget ):
             
             recent_tags = CG.client_controller.Read( 'recent_tags', service_key )
             
-            QP.CallAfter( qt_code, recent_tags )
+            CG.client_controller.CallAfter( self, qt_code, recent_tags )
             
         
         CG.client_controller.CallToThread( do_it, self._service_key )
@@ -479,7 +479,7 @@ class RelatedTagsPanel( QW.QWidget ):
             
             predicates = ClientSearchPredicate.SortPredicates( predicates )
             
-            QP.CallAfter( qt_code, predicates, num_done, num_to_do, num_skipped, total_time_took )
+            CG.client_controller.CallAfter( self, qt_code, predicates, num_done, num_to_do, num_skipped, total_time_took )
             
         
         self._related_tags.SetPredicates( [] )
@@ -664,7 +664,7 @@ class FileLookupScriptTagsPanel( QW.QWidget ):
             
             scripts = CG.client_controller.Read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_PARSE_ROOT_FILE_LOOKUP )
             
-            QP.CallAfter( qt_code )
+            CG.client_controller.CallAfter( self, qt_code )
             
         
         CG.client_controller.CallToThread( do_it )
@@ -774,7 +774,7 @@ class FileLookupScriptTagsPanel( QW.QWidget ):
         
         ClientTagSorting.SortTags( tag_sort, tags )
         
-        QP.CallAfter( qt_code, tags )
+        CG.client_controller.CallAfter( self, qt_code, tags )
         
     
 class SuggestedTagsPanel( QW.QWidget ):

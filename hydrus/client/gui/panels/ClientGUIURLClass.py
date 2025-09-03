@@ -13,6 +13,7 @@ from hydrus.core import HydrusSerialisable
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientDefaults
+from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientStrings
 from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIDialogsQuick
@@ -59,7 +60,7 @@ class EditURLClassComponentPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        st = ClientGUICommon.BetterStaticText( string_match_panel, label = 'The String Match here will test against the value in the normalised, _%-encoded_ URL. If you have "post%20images", test for that, not "post images".' )
+        st = ClientGUICommon.BetterStaticText( string_match_panel, label = 'The String Match here will test against the value in the normalised, %-encoded URL. If you have "post%20images", test for that, not "post images".' )
         st.setWordWrap( True )
         
         string_match_panel.Add( st, CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -204,7 +205,7 @@ class EditURLClassParameterFixedNamePanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        st = ClientGUICommon.BetterStaticText( value_string_match_panel, label = 'The String Match here will test against the value in the normalised, _%-encoded_ URL. If you have "type=%E3%83%9D%E3%82%B9%E3%83%88", test for that, not "ポスト".' )
+        st = ClientGUICommon.BetterStaticText( value_string_match_panel, label = 'The String Match here will test against the value in the normalised, %-encoded URL. If you have "type=%E3%83%9D%E3%82%B9%E3%83%88", test for that, not "ポスト".' )
         st.setWordWrap( True )
         
         value_string_match_panel.Add( st, CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -958,7 +959,7 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 ( new_string_match, new_default_value ) = panel.GetValue()
                 
-                QP.CallAfter( self._UpdateControls ) # seems sometimes this doesn't kick in naturally
+                CG.client_controller.CallAfter( self, self._UpdateControls ) # seems sometimes this doesn't kick in naturally
                 
                 new_row = ( new_string_match, new_default_value )
                 

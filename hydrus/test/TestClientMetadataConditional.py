@@ -1,10 +1,13 @@
+import datetime
 import unittest
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
+from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientLocation
+from hydrus.client import ClientTime
 from hydrus.client.metadata import ClientMetadataConditional
 from hydrus.client.metadata import ClientTags
 from hydrus.client.metadata import ClientContentUpdates
@@ -378,6 +381,104 @@ class TestPredicateTesting( unittest.TestCase ):
         self.assertFalse( system_predicate.TestMediaResult( fake_media_result ))
         
     
+    def test_type_times( self ):
+        
+        now = datetime.datetime.now()
+        
+        now_tuple = ( now.year, now.month, now.day, now.hour, now.minute )
+        
+        time_delta = datetime.timedelta( seconds = 86400 * 10 )
+        
+        ten_days_ago = now - time_delta
+        
+        ten_days_ago_tuple = ( ten_days_ago.year, ten_days_ago.month, ten_days_ago.day, ten_days_ago.hour, ten_days_ago.minute )
+        
+        jobs = [
+            ( ( '<', 'delta', ( 1, 1, 1, 1, ) ), 0, - ( 1000 * 86400 * 365 * 2 ) ),
+            ( ( '>', 'delta', ( 1, 1, 1, 1, ) ), - ( 1000 * 86400 * 365 * 2 ), 0 ),
+            ( ( HC.UNICODE_APPROX_EQUAL, 'delta', ( 1, 1, 1, 1, ) ), - ( ( ( ( 365 + 1 ) * 86400 ) + ( 1 * 3600 ) + ( 1 * 60 ) ) * 1000 ), 0 ),
+            ( ( '>', 'date', ten_days_ago_tuple ), 0, - 1000 * 86400 * 20 ),
+            ( ( '<', 'date', ten_days_ago_tuple ), - 1000 * 86400 * 20, 0 ),
+            #( ( '=', 'date', now_tuple ), 0, - 1000 * 86400 * 2 ),
+            #( ( HC.UNICODE_APPROX_EQUAL, 'date', now_tuple ), 0, - 1000 * 86400 * 52 ),
+        ]
+        # skipping the 'day of' and 'month either way of' date tests since that sounds like too much fun across different calendar systems for the moment
+        # maybe doable with some mock.gettime and stuff, but you'd prob want some mock locale gubbins, so let's not push our luck
+        
+        for ( predicate_value, pass_delta, fail_delta ) in jobs:
+            
+            pred = ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_IMPORT_TIME, predicate_value )
+            
+            self.assertTrue( pred.CanTestMediaResult() )
+            
+            media_result_pass = HelperFunctions.GetFakeMediaResult( HydrusData.GenerateKey(), mime = HC.IMAGE_JPEG )
+            media_result_fail = HelperFunctions.GetFakeMediaResult( HydrusData.GenerateKey(), mime = HC.IMAGE_JPEG )
+            media_result_null = HelperFunctions.GetFakeMediaResult( HydrusData.GenerateKey(), mime = HC.IMAGE_JPEG )
+            
+            media_result_pass.GetTimesManager().SetImportedTimestampMS( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, HydrusTime.GetNowMS() + pass_delta )
+            media_result_fail.GetTimesManager().SetImportedTimestampMS( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, HydrusTime.GetNowMS() + fail_delta )
+            media_result_null.GetTimesManager().ClearTime( ClientTime.TimestampData( HC.TIMESTAMP_TYPE_IMPORTED, location = CC.COMBINED_LOCAL_FILE_SERVICE_KEY ) )
+            
+            self.assertTrue( pred.TestMediaResult( media_result_pass ) )
+            self.assertFalse( pred.TestMediaResult( media_result_fail ) )
+            self.assertFalse( pred.TestMediaResult( media_result_null ) )
+            
+            #
+            
+            pred = ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_MODIFIED_TIME, predicate_value )
+            
+            self.assertTrue( pred.CanTestMediaResult() )
+            
+            media_result_pass = HelperFunctions.GetFakeMediaResult( HydrusData.GenerateKey(), mime = HC.IMAGE_JPEG )
+            media_result_fail = HelperFunctions.GetFakeMediaResult( HydrusData.GenerateKey(), mime = HC.IMAGE_JPEG )
+            media_result_null = HelperFunctions.GetFakeMediaResult( HydrusData.GenerateKey(), mime = HC.IMAGE_JPEG )
+            
+            media_result_pass.GetTimesManager().SetFileModifiedTimestampMS( HydrusTime.GetNowMS() + pass_delta )
+            media_result_fail.GetTimesManager().SetFileModifiedTimestampMS( HydrusTime.GetNowMS() + fail_delta )
+            media_result_null.GetTimesManager().ClearTime( ClientTime.TimestampData( HC.TIMESTAMP_TYPE_MODIFIED_FILE ) )
+            
+            self.assertTrue( pred.TestMediaResult( media_result_pass ) )
+            self.assertFalse( pred.TestMediaResult( media_result_fail ) )
+            self.assertFalse( pred.TestMediaResult( media_result_null ) )
+            
+            #
+            
+            pred = ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_LAST_VIEWED_TIME, predicate_value )
+            
+            self.assertTrue( pred.CanTestMediaResult() )
+            
+            media_result_pass = HelperFunctions.GetFakeMediaResult( HydrusData.GenerateKey(), mime = HC.IMAGE_JPEG )
+            media_result_fail = HelperFunctions.GetFakeMediaResult( HydrusData.GenerateKey(), mime = HC.IMAGE_JPEG )
+            media_result_null = HelperFunctions.GetFakeMediaResult( HydrusData.GenerateKey(), mime = HC.IMAGE_JPEG )
+            
+            media_result_pass.GetTimesManager().SetLastViewedTimestampMS( CC.CANVAS_MEDIA_VIEWER, HydrusTime.GetNowMS() + pass_delta )
+            media_result_fail.GetTimesManager().SetLastViewedTimestampMS( CC.CANVAS_MEDIA_VIEWER, HydrusTime.GetNowMS() + fail_delta )
+            media_result_null.GetTimesManager().ClearTime( ClientTime.TimestampData( HC.TIMESTAMP_TYPE_LAST_VIEWED, location = CC.CANVAS_MEDIA_VIEWER ) )
+            
+            self.assertTrue( pred.TestMediaResult( media_result_pass ) )
+            self.assertFalse( pred.TestMediaResult( media_result_fail ) )
+            self.assertFalse( pred.TestMediaResult( media_result_null ) )
+            
+            #
+            
+            pred = ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_ARCHIVED_TIME, predicate_value )
+            
+            self.assertTrue( pred.CanTestMediaResult() )
+            
+            media_result_pass = HelperFunctions.GetFakeMediaResult( HydrusData.GenerateKey(), mime = HC.IMAGE_JPEG )
+            media_result_fail = HelperFunctions.GetFakeMediaResult( HydrusData.GenerateKey(), mime = HC.IMAGE_JPEG )
+            media_result_null = HelperFunctions.GetFakeMediaResult( HydrusData.GenerateKey(), mime = HC.IMAGE_JPEG )
+            
+            media_result_pass.GetTimesManager().SetArchivedTimestampMS( HydrusTime.GetNowMS() + pass_delta )
+            media_result_fail.GetTimesManager().SetArchivedTimestampMS( HydrusTime.GetNowMS() + fail_delta )
+            media_result_null.GetTimesManager().ClearTime( ClientTime.TimestampData( HC.TIMESTAMP_TYPE_ARCHIVED ) )
+            
+            self.assertTrue( pred.TestMediaResult( media_result_pass ) )
+            self.assertFalse( pred.TestMediaResult( media_result_fail ) )
+            self.assertFalse( pred.TestMediaResult( media_result_null ) )
+            
+        
+    
     def test_type_url_url_class( self ):
         
         from hydrus.client.networking import ClientNetworkingURLClass
@@ -628,5 +729,45 @@ class TestPredicateValueExtraction( unittest.TestCase ):
         
         self.assertTrue( system_predicate.CanExtractValueFromMediaResult() )
         self.assertEqual( system_predicate.ExtractValueFromMediaResult( fake_media_result ), len( fake_media_result.GetLocationsManager().GetURLs() ) )
+        
+        # import time
+        
+        fake_media_result.GetTimesManager().SetImportedTimestampMS( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, 123456 )
+        
+        system_predicate = ClientSearchPredicate.Predicate( predicate_type = ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_IMPORT_TIME )
+        
+        self.assertTrue( system_predicate.CanExtractValueFromMediaResult() )
+        
+        self.assertEqual( system_predicate.ExtractValueFromMediaResult( fake_media_result ), 123456 )
+        
+        # modified time
+        
+        fake_media_result.GetTimesManager().SetDomainModifiedTimestampMS( 'example.com', 123457 )
+        
+        system_predicate = ClientSearchPredicate.Predicate( predicate_type = ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_MODIFIED_TIME )
+        
+        self.assertTrue( system_predicate.CanExtractValueFromMediaResult() )
+        
+        self.assertEqual( system_predicate.ExtractValueFromMediaResult( fake_media_result ), 123457 )
+        
+        # last viewed time
+        
+        fake_media_result.GetTimesManager().SetLastViewedTimestampMS( CC.CANVAS_MEDIA_VIEWER, 123458 )
+        
+        system_predicate = ClientSearchPredicate.Predicate( predicate_type = ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_LAST_VIEWED_TIME )
+        
+        self.assertTrue( system_predicate.CanExtractValueFromMediaResult() )
+        
+        self.assertEqual( system_predicate.ExtractValueFromMediaResult( fake_media_result ), 123458 )
+        
+        # archived time
+        
+        fake_media_result.GetTimesManager().SetArchivedTimestampMS( 123459 )
+        
+        system_predicate = ClientSearchPredicate.Predicate( predicate_type = ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_ARCHIVED_TIME )
+        
+        self.assertTrue( system_predicate.CanExtractValueFromMediaResult() )
+        
+        self.assertEqual( system_predicate.ExtractValueFromMediaResult( fake_media_result ), 123459 )
         
     

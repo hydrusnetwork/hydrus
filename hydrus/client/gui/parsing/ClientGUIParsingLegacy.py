@@ -496,7 +496,7 @@ The formula should attempt to parse full or relative urls. If the url is relativ
                 
                 parsed_urls = node.ParseURLs( job_status, data, referral_url )
                 
-                QP.CallAfter( qt_code, parsed_urls )
+                CG.client_controller.CallAfter( self, qt_code, parsed_urls )
                 
             except Exception as e:
                 
@@ -811,7 +811,7 @@ And pass that html to a number of 'parsing children' that will each look through
                 
                 parsed_post = script.Parse( job_status, data )
                 
-                QP.CallAfter( qt_code, parsed_post )
+                CG.client_controller.CallAfter( self, qt_code, parsed_post )
                 
             except Exception as e:
                 

@@ -110,7 +110,7 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
             if service_key == default_tag_service_key:
                 
                 # Py 3.11/PyQt6 6.5.0/two tabs/total tab characters > ~12/select second tab during init = first tab disappears bug
-                QP.CallAfter( self._tag_services.setCurrentWidget, page )
+                CG.client_controller.CallAfter( self._tag_services, self._tag_services.setCurrentWidget, page )
                 
             
         
@@ -127,7 +127,7 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
         
         self.widget().setLayout( vbox )
         
-        QP.CallAfter( self._tag_services.currentChanged.connect, self.EventServiceChanged )
+        CG.client_controller.CallAfter( self._tag_services, self._tag_services.currentChanged.connect, self.EventServiceChanged )
         
         if self._canvas_key is not None:
             
@@ -138,7 +138,7 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
         
         self._UpdatePageTabNames()
         
-        QP.CallAfter( self._SetSearchFocus )
+        CG.client_controller.CallAfter( self, self._SetSearchFocus )
         
     
     def _GetContentUpdatePackages( self ):
@@ -953,7 +953,7 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
                 frame.SetPanel( panel )
                 
             
-            QP.CallAfter( do_it, self._tag_service_key, hashes )
+            CG.client_controller.CallAfter( self, do_it, self._tag_service_key, hashes )
             
             self.OK()
             
