@@ -25,6 +25,8 @@ class PotentialDuplicateIdPairsAndDistances( object ):
         self._media_ids_to_other_media_ids_and_distances = collections.defaultdict( list )
         self._mapping_initialised = False
         
+        self._current_search_block_size = POTENTIAL_DUPLICATE_PAIRS_BLOCK_SIZE
+        
     
     def __len__( self ):
         
@@ -128,11 +130,26 @@ class PotentialDuplicateIdPairsAndDistances( object ):
         return self._potential_id_pairs_and_distances.__iter__()
         
     
+    def NotifyWorkTimeForAutothrottle( self, work_time: float, ideal_work_time: float ):
+        
+        minimum_block_size = int( POTENTIAL_DUPLICATE_PAIRS_BLOCK_SIZE / 10 )
+        maximum_block_size = int( POTENTIAL_DUPLICATE_PAIRS_BLOCK_SIZE * 25 )
+        
+        if work_time > ideal_work_time * 1.1:
+            
+            self._current_search_block_size = max( minimum_block_size, int( self._current_search_block_size * 0.5 ) )
+            
+        elif work_time < ideal_work_time / 1.1:
+            
+            self._current_search_block_size = min( maximum_block_size, int( self._current_search_block_size * 1.1 ) )
+            
+        
+    
     def PopBlock( self, block_size = None ):
         
         if block_size is None:
             
-            block_size = POTENTIAL_DUPLICATE_PAIRS_BLOCK_SIZE
+            block_size = self._current_search_block_size
             
         
         block_of_id_pairs_and_distances = self._potential_id_pairs_and_distances[ : block_size ]

@@ -127,17 +127,20 @@ def MimeFromOLEFile(path: str):
             # only call this once!
             metadata = ole.get_metadata()
             
-            if metadata.creating_application is not None:
+            # noinspection PyUnresolvedReferences
+            creating_application = metadata.creating_application
+            
+            if creating_application is not None:
                 
-                if metadata.creating_application.startswith(b'Microsoft Word'):
+                if creating_application.startswith(b'Microsoft Word'):
                     
                     return HC.APPLICATION_DOC
                 
-                if metadata.creating_application.startswith(b'Microsoft PowerPoint'):
+                if creating_application.startswith(b'Microsoft PowerPoint'):
                     
                     return HC.APPLICATION_PPT
                 
-                if metadata.creating_application.startswith(b'Microsoft Excel'):
+                if creating_application.startswith(b'Microsoft Excel'):
                     
                     return HC.APPLICATION_XLS
                     
@@ -167,9 +170,10 @@ def OfficeOLEDocumentWordCount( path: str ):
         
         with olefile.OleFileIO( path ) as ole:
             
+            # noinspection PyUnresolvedReferences
             num_words = ole.get_metadata().num_words
             
-    
+        
     except:
         
         num_words = None

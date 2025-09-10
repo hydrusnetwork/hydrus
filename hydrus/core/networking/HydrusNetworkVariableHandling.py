@@ -80,7 +80,7 @@ def DumpHydrusArgsToNetworkBytes( args ):
     
     return network_bytes
     
-def DumpToGETQuery( args ):
+def DumpToGETQuery( args: dict[ str, object ] ):
     
     args = dict( args )
     
@@ -123,7 +123,9 @@ def DumpToGETQuery( args ):
         
         if name in args:
             
-            args[ name ] = str( args[ name ] )
+            value = typing.cast( int, args[ name ] )
+            
+            args[ name ] = str( value )
             
         
     
@@ -131,7 +133,9 @@ def DumpToGETQuery( args ):
         
         if name in args:
             
-            args[ name ] = args[ name ].hex()
+            value = typing.cast( bytes, args[ name ] )
+            
+            args[ name ] = value.hex()
             
         
     
@@ -139,7 +143,9 @@ def DumpToGETQuery( args ):
         
         if name in args:
             
-            args[ name ] = urllib.parse.quote( args[ name ] )
+            value = typing.cast( str, args[ name ] )
+            
+            args[ name ] = urllib.parse.quote( value )
             
         
     

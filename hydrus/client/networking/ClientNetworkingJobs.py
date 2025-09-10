@@ -745,7 +745,6 @@ class NetworkJob( object ):
                 headers[ 'Range' ] = 'bytes={}-'.format( self._num_bytes_read )
                 
             
-            
             ClientNetworkingFunctions.NetworkReportMode( f'Network Jobs Referral URLs for {url}:\nGiven: {self._referral_url}\nUsed: {referral_url}' )
             
             if referral_url is not None:

@@ -14,7 +14,7 @@ from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
-from hydrus.client.gui.canvas import ClientGUICanvas
+from hydrus.client.gui.canvas import ClientGUICanvasDuplicates
 from hydrus.client.gui.canvas import ClientGUICanvasFrame
 from hydrus.client.gui.duplicates import ClientGUIDuplicatesAutoResolution
 from hydrus.client.gui.duplicates import ClientGUIDuplicatesContentMergeOptions
@@ -319,9 +319,26 @@ class SidebarDuplicateFilter( ClientGUISidebarCore.Sidebar ):
         ( duplicate_pair_sort_type, duplicate_pair_sort_asc ) = self._potential_duplicates_sort_widget.GetValue()
         filter_group_mode = self._filter_group_mode.GetValue()
         
+        if filter_group_mode:
+            
+            potential_duplicate_pair_factory = ClientGUICanvasDuplicates.PotentialDuplicatePairFactoryDBGroupMode(
+                potential_duplicates_search_context,
+                duplicate_pair_sort_type,
+                duplicate_pair_sort_asc
+            )
+            
+        else:
+            
+            potential_duplicate_pair_factory = ClientGUICanvasDuplicates.PotentialDuplicatePairFactoryDBMixed(
+                potential_duplicates_search_context,
+                duplicate_pair_sort_type,
+                duplicate_pair_sort_asc
+            )
+            
+        
         canvas_frame = ClientGUICanvasFrame.CanvasFrame( self.window() )
         
-        canvas_window = ClientGUICanvas.CanvasFilterDuplicates( canvas_frame, potential_duplicates_search_context, duplicate_pair_sort_type, duplicate_pair_sort_asc, filter_group_mode )
+        canvas_window = ClientGUICanvasDuplicates.CanvasFilterDuplicates( canvas_frame, potential_duplicate_pair_factory )
         
         canvas_window.showPairInPage.connect( self._ShowPairInPage )
         

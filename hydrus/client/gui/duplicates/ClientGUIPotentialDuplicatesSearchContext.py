@@ -202,19 +202,25 @@ class EditPotentialDuplicatesSearchContextPanel( ClientGUICommon.StaticBox ):
             
             block_of_id_pairs_and_distances = self._potential_duplicate_id_pairs_and_distances_still_to_search.PopBlock()
             
-            return ( potential_duplicates_search_context, block_of_id_pairs_and_distances, self._count_job_status )
+            return ( self._potential_duplicate_id_pairs_and_distances_still_to_search, potential_duplicates_search_context, block_of_id_pairs_and_distances, self._count_job_status )
             
         
         def work_callable( args ):
             
-            ( potential_duplicates_search_context, block_of_id_pairs_and_distances, job_status ) = args
+            ( potential_duplicate_id_pairs_and_distances_still_to_search, potential_duplicates_search_context, block_of_id_pairs_and_distances, job_status ) = args
             
             if job_status.IsCancelled():
                 
                 return ( [], job_status )
                 
             
+            start_time = HydrusTime.GetNowPrecise()
+            
             count = CG.client_controller.Read( 'potential_duplicates_count_fragmentary', potential_duplicates_search_context, block_of_id_pairs_and_distances )
+            
+            time_it_took = HydrusTime.GetNowPrecise() - start_time
+            
+            potential_duplicate_id_pairs_and_distances_still_to_search.NotifyWorkTimeForAutothrottle( time_it_took, 0.5 )
             
             return ( count, job_status )
             

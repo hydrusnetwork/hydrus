@@ -1,7 +1,16 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!-- Created with Inkscape (http://www.inkscape.org/) -->
 <svg id="svg1" width="200mm" height="200mm" version="1.1" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
- <g id="layer1">
+ <defs id="defs1">
+  <filter id="filter2" x="-.077906" y="-.10806" width="1.2045" height="1.2837" color-interpolation-filters="sRGB">
+   <feFlood id="feFlood1" flood-color="rgb(0,0,0)" flood-opacity=".49804" in="SourceGraphic" result="flood"/>
+   <feGaussianBlur id="feGaussianBlur1" in="SourceGraphic" result="blur" stdDeviation="6.000000"/>
+   <feOffset id="feOffset1" dx="0.000000" dy="0.000000" in="blur" result="offset"/>
+   <feComposite id="feComposite1" in="flood" in2="offset" operator="in" result="comp1"/>
+   <feComposite id="feComposite2" in="SourceGraphic" in2="comp1" result="comp2"/>
+  </filter>
+ </defs>
+ <g id="layer1" transform="matrix(.96813 0 0 .96813 3.249 3.0266)" filter="url(#filter2)">
   <path id="path1" d="m101.85 23.838c-41.939-2e-6 -76.131 34.192-76.131 76.131v1.6821l-5.3258-5.3263a9 9 0 0 0-6.3655-2.635 9 9 0 0 0-6.3634 2.635 9 9 0 0 0 0 12.728l20.725 20.726a9 9 0 0 0 6.3691 2.636 9 9 0 0 0 6.3691-2.636l20.726-20.726a9 9 0 0 0 0-12.728 9 9 0 0 0-6.365-2.635 9 9 0 0 0-6.3634 2.635l-5.4059 5.4059v-1.7616c0-32.211 25.92-58.131 58.131-58.131 32.211-1e-6 58.131 25.92 58.131 58.131a9 9 0 0 0 9 9 9 9 0 0 0 9-9c0-41.939-34.192-76.131-76.131-76.131z" color="#000000" fill="#139f2c" style="paint-order:stroke fill markers"/>
   <g id="g5" transform="matrix(.97491 0 0 .97491 24.579 5.69)" fill="none" stroke="#e50000" stroke-linecap="round" stroke-linejoin="round" stroke-width="18.463">
    <path id="path4" d="m127.15 112.92 42.385 42.385" style="paint-order:stroke fill markers"/>

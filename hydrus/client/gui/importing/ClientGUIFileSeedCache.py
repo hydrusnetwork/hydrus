@@ -581,6 +581,38 @@ class EditFileSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
         ClientGUIMenus.AppendMenuItem( menu, label, 'Copy all the selected sources to clipboard.', self._CopySelectedFileSeedData )
         ClientGUIMenus.AppendMenuItem( menu, 'copy notes', 'Copy all the selected notes to clipboard.', self._CopySelectedNotes )
         
+        ClientGUIMenus.AppendSeparator( menu )
+        
+        if we_are_looking_at_urls:
+            
+            open_sources_text = 'open URLs'
+            
+        else:
+            
+            open_sources_text = 'open files\' locations'
+            
+        
+        ClientGUIMenus.AppendMenuItem( menu, open_sources_text, 'Open all the selected sources in your file explorer or web browser.', self._OpenSelectedFileSeedData )
+        
+        if we_are_looking_at_urls:
+            
+            location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY )
+            
+            file_seed_datas = [ file_seed.file_seed_data for file_seed in selected_file_seeds ]
+            urls = [ file_seed_data for file_seed_data in file_seed_datas if isinstance( file_seed_data, str ) and file_seed_data.startswith( 'http' ) ]
+            
+            url_preds = [ ClientSearchPredicate.Predicate( predicate_type = ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_KNOWN_URLS, value = ( True, 'exact_match', url, f'has url {url}' ) ) for url in urls ]
+            
+            predicates = [ ClientSearchPredicate.Predicate( predicate_type = ClientSearchPredicate.PREDICATE_TYPE_OR_CONTAINER, value = url_preds ) ]
+            
+            page_name = 'url search'
+            activate_window = False
+            
+            c = HydrusData.Call( CG.client_controller.pub, 'new_page_query', location_context, initial_predicates = predicates, page_name = page_name, activate_window = activate_window )
+            
+            ClientGUIMenus.AppendMenuItem( menu, 'search for URLs', 'Open a new page with the files that share any of these selected URLs.', c )
+            
+        
         if len( selected_file_seeds ) == 1:
             
             ClientGUIMenus.AppendSeparator( menu )
@@ -621,53 +653,68 @@ class EditFileSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
                 primary_urls = sorted( selected_file_seed.GetPrimaryURLs() )
                 source_urls = sorted( selected_file_seed.GetSourceURLs() )
                 
-                nothing_interesting_going_on = normalised_url == pretty_url and request_url == normalised_url and referral_url is None and len( primary_urls ) == 0 and len( source_urls ) == 0
+                url_submenu = ClientGUIMenus.GenerateMenu( menu )
                 
-                if nothing_interesting_going_on:
+                if normalised_url != pretty_url:
+                    
+                    ClientGUIMenus.AppendMenuLabel( url_submenu, f'normalised url: {normalised_url}', copy_text = normalised_url )
+                    
+                
+                if request_url != normalised_url:
+                    
+                    ClientGUIMenus.AppendMenuLabel( url_submenu, f'request url: {request_url}', copy_text = request_url )
+                    
+                
+                url_to_fetch = CG.client_controller.network_engine.domain_manager.GetURLToFetch( request_url )
+                
+                if url_to_fetch != request_url:
+                    
+                    ClientGUIMenus.AppendMenuLabel( url_submenu, f'(API/Redirect) actual url that will be fetched: {url_to_fetch}', copy_text = url_to_fetch )
+                    
+                
+                if referral_url is not None:
+                    
+                    ClientGUIMenus.AppendMenuLabel( url_submenu, f'referral url: {referral_url}', copy_text = referral_url )
+                    
+                
+                referral_url_to_use = CG.client_controller.network_engine.domain_manager.GetReferralURL( url_to_fetch, referral_url )
+                
+                if referral_url_to_use != referral_url:
+                    
+                    ClientGUIMenus.AppendMenuLabel( url_submenu, f'(URL Class transformation) actual expected referral url: {referral_url_to_use}', copy_text = referral_url_to_use )
+                    
+                
+                if len( primary_urls ) > 0:
+                    
+                    ClientGUIMenus.AppendSeparator( url_submenu )
+                    
+                    for url in primary_urls:
+                        
+                        ClientGUIMenus.AppendMenuLabel( url_submenu, f'primary url: {url}', copy_text = url )
+                        
+                    
+                
+                if len( source_urls ) > 0:
+                    
+                    ClientGUIMenus.AppendSeparator( url_submenu )
+                    
+                    for url in source_urls:
+                        
+                        ClientGUIMenus.AppendMenuLabel( url_submenu, f'source url: {url}', copy_text = url )
+                        
+                    
+                
+                if url_submenu.isEmpty():
+                    
+                    ClientGUIMenus.DestroyMenu( url_submenu )
                     
                     ClientGUIMenus.AppendMenuLabel( menu, 'no additional urls' )
                     
                 else:
                     
-                    url_submenu = ClientGUIMenus.GenerateMenu( menu )
-                    
-                    if normalised_url != pretty_url:
-                        
-                        ClientGUIMenus.AppendMenuLabel( url_submenu, f'normalised url: {normalised_url}', copy_text = normalised_url )
-                        
-                    
-                    if request_url != normalised_url:
-                        
-                        ClientGUIMenus.AppendMenuLabel( url_submenu, f'request url: {request_url}', copy_text = request_url )
-                        
-                    
-                    if referral_url is not None:
-                        
-                        ClientGUIMenus.AppendMenuLabel( url_submenu, f'referral url: {referral_url}', copy_text = referral_url )
-                        
-                    
-                    if len( primary_urls ) > 0:
-                        
-                        ClientGUIMenus.AppendSeparator( url_submenu )
-                        
-                        for url in primary_urls:
-                            
-                            ClientGUIMenus.AppendMenuLabel( url_submenu, f'primary url: {url}', copy_text = url )
-                            
-                        
-                    
-                    if len( source_urls ) > 0:
-                        
-                        ClientGUIMenus.AppendSeparator( url_submenu )
-                        
-                        for url in source_urls:
-                            
-                            ClientGUIMenus.AppendMenuLabel( url_submenu, f'source url: {url}', copy_text = url )
-                            
-                        
-                    
                     ClientGUIMenus.AppendMenu( menu, url_submenu, 'additional urls' )
                     
+                
                 #
                 
                 headers = selected_file_seed.GetHTTPHeaders()
@@ -686,6 +733,7 @@ class EditFileSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
                         
                     
                     ClientGUIMenus.AppendMenu( menu, header_submenu, 'additional headers' )
+                    
                 
                 #
                 
@@ -711,38 +759,6 @@ class EditFileSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
                     ClientGUIMenus.AppendMenu( menu, tag_submenu, 'parsed tags' )
                     
                 
-            
-        
-        ClientGUIMenus.AppendSeparator( menu )
-        
-        if we_are_looking_at_urls:
-            
-            open_sources_text = 'open URLs'
-            
-        else:
-            
-            open_sources_text = 'open files\' locations'
-            
-        
-        ClientGUIMenus.AppendMenuItem( menu, open_sources_text, 'Open all the selected sources in your file explorer or web browser.', self._OpenSelectedFileSeedData )
-        
-        if we_are_looking_at_urls:
-            
-            location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY )
-            
-            file_seed_datas = [ file_seed.file_seed_data for file_seed in selected_file_seeds ]
-            urls = [ file_seed_data for file_seed_data in file_seed_datas if isinstance( file_seed_data, str ) and file_seed_data.startswith( 'http' ) ]
-            
-            url_preds = [ ClientSearchPredicate.Predicate( predicate_type = ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_KNOWN_URLS, value = ( True, 'exact_match', url, f'has url {url}' ) ) for url in urls ]
-            
-            predicates = [ ClientSearchPredicate.Predicate( predicate_type = ClientSearchPredicate.PREDICATE_TYPE_OR_CONTAINER, value = url_preds ) ]
-            
-            page_name = 'url search'
-            activate_window = False
-            
-            c = HydrusData.Call( CG.client_controller.pub, 'new_page_query', location_context, initial_predicates = predicates, page_name = page_name, activate_window = activate_window )
-            
-            ClientGUIMenus.AppendMenuItem( menu, 'search for URLs', 'Open a new page with the files that share any of these selected URLs.', c )
             
         
         ClientGUIMenus.AppendSeparator( menu )

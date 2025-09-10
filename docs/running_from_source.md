@@ -181,14 +181,14 @@ There are three special external libraries. You just have to get them and put th
         
     3. FFMPEG  
         
-        You should already have ffmpeg, but double-check: just type `ffmpeg` into a new terminal, and it should give a basic version response. If you don't have it, check your package manager.
+        You should already have ffmpeg, but we should double-check: just type `ffmpeg` into a new terminal, and it should give a basic version response. If you don't have it, check your package manager.
         
 
 === "macOS"
 
     1. mpv  
         
-        Unfortunately, mpv is not well supported in macOS yet. You may be able to install it in brew, but it seems to freeze the client as soon as it is loaded. Hydev is thinking about fixes here.
+        Unfortunately, mpv is not well supported in macOS yet. You may be able to install `libmpv` in brew, but it seems to freeze the client as soon as it is loaded. If `help->about` seems to suggest mpv loaded ok, I still recommend you set your `options->media playback` settings to 'show with native viewer' and not mpv. There may be macOS mpv support in future.
         
     2. SQLite3  
         
@@ -196,7 +196,9 @@ There are three special external libraries. You just have to get them and put th
         
     3. FFMPEG  
         
-        You should already have ffmpeg.
+        You should already have ffmpeg, but we should double-check: just type `ffmpeg` into a new terminal, and it should give a basic version response. If you don't have it, you are probably looking at:
+        
+        `brew install ffmpeg`
         
 
 #### Environment setup

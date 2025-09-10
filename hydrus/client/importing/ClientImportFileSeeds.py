@@ -907,19 +907,19 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
             
             try:
                 
-                ( url_to_check, parser ) = CG.client_controller.network_engine.domain_manager.GetURLToFetchAndParser( post_url )
+                url_to_fetch = CG.client_controller.network_engine.domain_manager.GetURLToFetch( post_url )
                 
             except HydrusExceptions.URLClassException:
                 
-                url_to_check = post_url
+                url_to_fetch = post_url
                 
             
         else:
             
-            url_to_check = self.file_seed_data
+            url_to_fetch = self.file_seed_data
             
         
-        network_job = network_job_factory( 'GET', url_to_check )
+        network_job = network_job_factory( 'GET', url_to_fetch )
         
         return network_job
         
@@ -1147,6 +1147,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
     def GetSourceURLs( self ):
         
         return set( self._source_urls )
+        
     
     def GetHTTPHeaders( self ) -> dict:
         
@@ -1491,26 +1492,11 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
                     
                     post_url = self.file_seed_data
                     
-                    url_for_child_referral = post_url
-                    
-                    ( url_to_check, parser ) = CG.client_controller.network_engine.domain_manager.GetURLToFetchAndParser( post_url )
+                    ( url_to_fetch, parser ) = CG.client_controller.network_engine.domain_manager.GetURLToFetchAndParser( post_url )
                     
                     status_hook( 'downloading file page' )
                     
-                    if self._referral_url is not None and self._referral_url != url_to_check:
-                        
-                        referral_url = self._referral_url
-                        
-                    elif url_to_check != post_url:
-                        
-                        referral_url = post_url
-                        
-                    else:
-                        
-                        referral_url = None
-                        
-                    
-                    network_job = network_job_factory( 'GET', url_to_check, referral_url = referral_url )
+                    network_job = network_job_factory( 'GET', url_to_fetch, referral_url = self._referral_url )
                     
                     for ( key, value ) in self._request_headers.items():
                         
@@ -1526,9 +1512,12 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
                     
                     parsing_text = network_job.GetContentText()
                     
+                    # this headache can go when I do my own 3XX redirects?
                     actual_fetched_url = network_job.GetActualFetchedURL()
                     
-                    if actual_fetched_url != url_to_check:
+                    url_for_child_referral = actual_fetched_url
+                    
+                    if actual_fetched_url != url_to_fetch:
                         
                         # we have redirected, a 3XX response
                         
@@ -1540,16 +1529,14 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
                             
                             post_url = actual_fetched_url
                             
-                            url_for_child_referral = post_url
-                            
-                            ( url_to_check, parser ) = CG.client_controller.network_engine.domain_manager.GetURLToFetchAndParser( post_url )
+                            ( url_to_fetch, parser ) = CG.client_controller.network_engine.domain_manager.GetURLToFetchAndParser( post_url )
                             
                         
                     
                     parsing_context = {}
                     
                     parsing_context[ 'post_url' ] = post_url
-                    parsing_context[ 'url' ] = url_to_check
+                    parsing_context[ 'url' ] = url_to_fetch
                     
                     parser = typing.cast( ClientParsing.PageParser, parser )
                     
@@ -1655,7 +1642,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
                                     # this could become an url class property on the post url url class
                                     override_bandwidth = CG.client_controller.new_options.GetBoolean( 'override_bandwidth_on_file_urls_from_post_urls' )
                                     
-                                    self.DownloadAndImportRawFile( file_url, file_import_options, loud_or_quiet, network_job_factory, network_job_presentation_context_factory, status_hook, override_bandwidth = override_bandwidth, spawning_url = url_to_check, forced_referral_url = url_for_child_referral, file_seed_cache = file_seed_cache )
+                                    self.DownloadAndImportRawFile( file_url, file_import_options, loud_or_quiet, network_job_factory, network_job_presentation_context_factory, status_hook, override_bandwidth = override_bandwidth, spawning_url = url_to_fetch, forced_referral_url = url_for_child_referral, file_seed_cache = file_seed_cache )
                                     
                                 
                             elif url_type == HC.URL_TYPE_POST and can_parse:

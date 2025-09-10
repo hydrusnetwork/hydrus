@@ -938,7 +938,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
             
             query_name = query_header.GetHumanName()
             
-            text_1 = f'downloading files ({HydrusNumbers.ValueRangeToPrettyString( i, num_queries )})'
+            text_1 = f'syncing files ({HydrusNumbers.ValueRangeToPrettyString( i, num_queries )})'
             query_summary_name = self._name
             
             if query_name != self._name:

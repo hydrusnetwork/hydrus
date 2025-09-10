@@ -2,7 +2,6 @@ import collections.abc
 
 from qtpy import QtWidgets as QW
 
-from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusLists
@@ -432,19 +431,15 @@ class EditGallerySeedLogPanel( ClientGUIScrolledPanels.EditPanel ):
         
         if len( selected_gallery_seeds ) == 1:
             
-            ( gallery_seed, ) = selected_gallery_seeds
+            ( selected_gallery_seed, ) = selected_gallery_seeds
             
-            url = gallery_seed.url
+            ClientGUIMenus.AppendMenuItem( menu, f'copy url', 'Copy the selected url to clipboard.', self._CopySelectedGalleryURLs )
             
-            ClientGUIMenus.AppendMenuItem( menu, f'copy "{url}"', 'Copy all the selected urls to clipboard.', self._CopySelectedGalleryURLs )
-            
-            note = gallery_seed.note
+            note = selected_gallery_seed.note
             
             if len( note ) > 0: 
                 
-                note_preview = HydrusText.GetFirstLine( gallery_seed.note ) + HC.UNICODE_ELLIPSIS
-                
-                ClientGUIMenus.AppendMenuItem( menu, f'copy "{note_preview}"', 'Copy all the selected notes to clipboard.', self._CopySelectedNotes )
+                ClientGUIMenus.AppendMenuItem( menu, f'copy note', 'Copy the selected note to clipboard.', self._CopySelectedNotes )
                 
             
         else:
@@ -457,6 +452,66 @@ class EditGallerySeedLogPanel( ClientGUIScrolledPanels.EditPanel ):
         
         ClientGUIMenus.AppendMenuItem( menu, 'open urls', 'Open all the selected urls in your web browser.', self._OpenSelectedGalleryURLs )
         
+        if len( selected_gallery_seeds ) == 1:
+            
+            ( selected_gallery_seed, ) = selected_gallery_seeds
+            
+            ClientGUIMenus.AppendSeparator( menu )
+            
+            request_url = selected_gallery_seed.url
+            
+            referral_url = selected_gallery_seed.GetReferralURL()
+            
+            url_submenu = ClientGUIMenus.GenerateMenu( menu )
+            
+            url_to_fetch = CG.client_controller.network_engine.domain_manager.GetURLToFetch( request_url )
+            
+            if url_to_fetch != request_url:
+                
+                ClientGUIMenus.AppendMenuLabel( url_submenu, f'(API/Redirect) actual url that will be fetched: {url_to_fetch}', copy_text = url_to_fetch )
+                
+            
+            if referral_url is not None:
+                
+                ClientGUIMenus.AppendMenuLabel( url_submenu, f'referral url: {referral_url}', copy_text = referral_url )
+                
+            
+            referral_url_to_use = CG.client_controller.network_engine.domain_manager.GetReferralURL( url_to_fetch, referral_url )
+            
+            if referral_url_to_use != referral_url:
+                
+                ClientGUIMenus.AppendMenuLabel( url_submenu, f'(URL Class transformation) actual expected referral url: {referral_url_to_use}', copy_text = referral_url_to_use )
+                
+            
+            if url_submenu.isEmpty():
+                
+                ClientGUIMenus.DestroyMenu( url_submenu )
+                
+                ClientGUIMenus.AppendMenuLabel( menu, 'no additional urls' )
+                
+            else:
+                
+                ClientGUIMenus.AppendMenu( menu, url_submenu, 'additional urls' )
+                
+            
+            headers = selected_gallery_seed.GetHTTPHeaders()
+            
+            if len( headers ) == 0:
+                
+                ClientGUIMenus.AppendMenuLabel( menu, 'no additional headers' )
+                
+            else:
+                
+                header_submenu = ClientGUIMenus.GenerateMenu( menu )
+                
+                for ( key, value ) in headers.items():
+                    
+                    ClientGUIMenus.AppendMenuLabel( header_submenu, key + ': ' + value )
+                    
+                
+                ClientGUIMenus.AppendMenu( menu, header_submenu, 'additional headers' )
+                
+            
         
         ClientGUIMenus.AppendSeparator( menu )
         

@@ -130,6 +130,15 @@ def GetCoverPagePathFromEpub( zip_handle: zipfile.ZipFile ):
                 
             
         
+        if cover_item is None:
+            
+            # Apple IBook
+            
+            # this can be an html file wew
+            
+            cover_item = opf_tree.find( './/{http://www.idpf.org/2007/opf}reference[@type="cover"]' )
+            
+        
         if cover_item is not None:
             
             content_directory = os.path.dirname( content_opf_path )

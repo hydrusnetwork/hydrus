@@ -1,7 +1,72 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!-- Created with Inkscape (http://www.inkscape.org/) -->
-<svg id="svg1" width="200mm" height="200mm" version="1.1" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
- <g id="layer1">
-  <path id="rect1" d="m6.0392 34.693v50.437h25.158v-29.443h38.243v-20.994zm124.52 0v20.994h38.242v29.443h25.159v-50.437zm-124.52 80.176v50.438h63.401v-20.994h-38.243v-29.443zm162.76 0v29.443h-38.242v20.994h63.401v-50.438z" fill="#333" stop-color="#000000" stroke="#ccc" stroke-linecap="round" stroke-width="10.62" style="font-variation-settings:normal;paint-order:stroke fill markers"/>
+<svg id="svg1" width="200mm" height="200mm" version="1.1" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+ <defs id="defs1">
+  <linearGradient id="linearGradient2" x1="1.2945" x2="53.555" y1="29.646" y2="81.906" gradientTransform="matrix(1.0634 0 0 1.0634 -6.3441 -6.3442)" gradientUnits="userSpaceOnUse">
+   <stop id="stop40" stop-color="#b3c0cc" offset="0"/>
+   <stop id="stop41" stop-color="#94a6b8" offset="1"/>
+  </linearGradient>
+  <linearGradient id="linearGradient4" x1="1.2945" x2="53.555" y1="29.646" y2="81.906" gradientTransform="matrix(1.0634 0 0 1.0634 -6.3441 -6.3442)" gradientUnits="userSpaceOnUse">
+   <stop id="stop9" stop-color="#94a6b8" offset="0"/>
+   <stop id="stop10" stop-color="#748ca5" offset="1"/>
+  </linearGradient>
+  <linearGradient id="linearGradient5" x1=".85537" x2="64.917" y1="110.6" y2="174.66" gradientTransform="matrix(1.0634 0 0 1.0634 -6.3441 -6.3442)" gradientUnits="userSpaceOnUse">
+   <stop id="stop47" stop-color="#b3c0cc" offset="0"/>
+   <stop id="stop48" stop-color="#94a6b8" offset="1"/>
+  </linearGradient>
+  <linearGradient id="linearGradient6" x1=".85537" x2="64.917" y1="110.6" y2="174.66" gradientTransform="matrix(1.0634 0 0 1.0634 -6.3441 -6.3442)" gradientUnits="userSpaceOnUse">
+   <stop id="stop55" stop-color="#94a6b8" offset="0"/>
+   <stop id="stop56" stop-color="#758ca4" offset="1"/>
+  </linearGradient>
+  <linearGradient id="linearGradient7" x1="139.26" x2="194.78" y1="118.92" y2="174.44" gradientTransform="matrix(1.0634 0 0 1.0634 -6.3441 -6.3442)" gradientUnits="userSpaceOnUse">
+   <stop id="stop1" stop-color="#b3c0cc" offset="0"/>
+   <stop id="stop2" stop-color="#94a6b8" offset="1"/>
+  </linearGradient>
+  <linearGradient id="linearGradient8" x1="126.75" x2="192.83" y1="29.644" y2="95.728" gradientTransform="matrix(1.0634 0 0 1.0634 -6.3441 -6.3442)" gradientUnits="userSpaceOnUse">
+   <stop id="stop45" stop-color="#b3c0cc" offset="0"/>
+   <stop id="stop46" stop-color="#94a6b8" offset="1"/>
+  </linearGradient>
+  <linearGradient id="linearGradient9" x1="126.75" x2="192.83" y1="29.644" y2="95.728" gradientTransform="matrix(1.0634 0 0 1.0634 -6.3441 -6.3442)" gradientUnits="userSpaceOnUse">
+   <stop id="stop51" stop-color="#94a6b8" offset="0"/>
+   <stop id="stop52" stop-color="#748ca5" offset="1"/>
+  </linearGradient>
+  <linearGradient id="linearGradient11" x1="139.26" x2="194.78" y1="118.92" y2="174.44" gradientTransform="matrix(1.0634 0 0 1.0634 -6.3441 -6.3442)" gradientUnits="userSpaceOnUse">
+   <stop id="stop53" stop-color="#94a6b8" offset="0"/>
+   <stop id="stop54" stop-color="#748ca5" offset="1"/>
+  </linearGradient>
+  <filter id="filter57" x="-.28042" y="-.35249" width="1.5608" height="1.705" color-interpolation-filters="sRGB">
+   <feFlood id="feFlood56" flood-color="rgb(0,0,0)" flood-opacity=".49804" in="SourceGraphic" result="flood"/>
+   <feGaussianBlur id="feGaussianBlur56" in="SourceGraphic" result="blur" stdDeviation="6.000000"/>
+   <feOffset id="feOffset56" dx="0.000000" dy="0.000000" in="blur" result="offset"/>
+   <feComposite id="feComposite56" in="flood" in2="offset" operator="in" result="comp1"/>
+   <feComposite id="feComposite57" in="SourceGraphic" in2="comp1" result="comp2"/>
+  </filter>
+  <filter id="filter59" x="-.28042" y="-.35249" width="1.5608" height="1.705" color-interpolation-filters="sRGB">
+   <feFlood id="feFlood57" flood-color="rgb(0,0,0)" flood-opacity=".49804" in="SourceGraphic" result="flood"/>
+   <feGaussianBlur id="feGaussianBlur57" in="SourceGraphic" result="blur" stdDeviation="6.000000"/>
+   <feOffset id="feOffset57" dx="0.000000" dy="0.000000" in="blur" result="offset"/>
+   <feComposite id="feComposite58" in="flood" in2="offset" operator="in" result="comp1"/>
+   <feComposite id="feComposite59" in="SourceGraphic" in2="comp1" result="comp2"/>
+  </filter>
+  <filter id="filter61" x="-.28042" y="-.35249" width="1.5608" height="1.705" color-interpolation-filters="sRGB">
+   <feFlood id="feFlood59" flood-color="rgb(0,0,0)" flood-opacity=".49804" in="SourceGraphic" result="flood"/>
+   <feGaussianBlur id="feGaussianBlur59" in="SourceGraphic" result="blur" stdDeviation="6.000000"/>
+   <feOffset id="feOffset59" dx="0.000000" dy="0.000000" in="blur" result="offset"/>
+   <feComposite id="feComposite60" in="flood" in2="offset" operator="in" result="comp1"/>
+   <feComposite id="feComposite61" in="SourceGraphic" in2="comp1" result="comp2"/>
+  </filter>
+  <filter id="filter63" x="-.28042" y="-.35249" width="1.5608" height="1.705" color-interpolation-filters="sRGB">
+   <feFlood id="feFlood61" flood-color="rgb(0,0,0)" flood-opacity=".49804" in="SourceGraphic" result="flood"/>
+   <feGaussianBlur id="feGaussianBlur61" in="SourceGraphic" result="blur" stdDeviation="6.000000"/>
+   <feOffset id="feOffset61" dx="0.000000" dy="0.000000" in="blur" result="offset"/>
+   <feComposite id="feComposite62" in="flood" in2="offset" operator="in" result="comp1"/>
+   <feComposite id="feComposite63" in="SourceGraphic" in2="comp1" result="comp2"/>
+  </filter>
+ </defs>
+ <g id="layer1" transform="matrix(.9037 0 0 .9037 9.6303 9.6303)" stroke-linecap="round" stroke-width="9.0133">
+  <path id="path5" d="m173.16 115.81v31.311h-40.668v22.326h67.423v-53.638z" fill="url(#linearGradient7)" filter="url(#filter57)" stop-color="#000000" stroke="url(#linearGradient11)" style="font-variation-settings:normal;paint-order:stroke fill markers"/>
+  <path id="path4" d="m0.078192 115.81v53.638h67.423v-22.326h-40.669v-31.311z" fill="url(#linearGradient5)" filter="url(#filter59)" stop-color="#000000" stroke="url(#linearGradient6)" style="font-variation-settings:normal;paint-order:stroke fill markers"/>
+  <path id="path3" d="m132.5 30.55v22.326h40.668v31.311h26.755v-53.637z" fill="url(#linearGradient8)" filter="url(#filter61)" stop-color="#000000" stroke="url(#linearGradient9)" style="font-variation-settings:normal;paint-order:stroke fill markers"/>
+  <path id="rect1" d="m0.078192 30.55v53.637h26.754v-31.311h40.669v-22.326z" fill="url(#linearGradient2)" filter="url(#filter63)" stop-color="#000000" stroke="url(#linearGradient4)" style="font-variation-settings:normal;paint-order:stroke fill markers"/>
  </g>
 </svg>

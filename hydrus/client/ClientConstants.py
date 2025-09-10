@@ -657,10 +657,6 @@ class GlobalPixmaps( object ):
         
         self.eight_chan = QG.QPixmap( HydrusStaticDir.GetStaticPath( '8chan.png' ) )
         
-        self.first = QG.QPixmap( HydrusStaticDir.GetStaticPath( 'first.png' ) )
-        self.previous = QG.QPixmap( HydrusStaticDir.GetStaticPath( 'previous.png' ) )
-        self.next_bmp = QG.QPixmap( HydrusStaticDir.GetStaticPath( 'next.png' ) )
-        self.last = QG.QPixmap( HydrusStaticDir.GetStaticPath( 'last.png' ) )
         self.pair = QG.QPixmap( HydrusStaticDir.GetStaticPath( 'pair.png' ) )
         
     
@@ -738,7 +734,6 @@ class GlobalIcons( object ):
         self.trash = self._GetSVGOrPNGPathIcon( 'trash' )
         
         self.refresh = self._GetSVGOrPNGPathIcon( 'refresh' )
-        self.retry = self._GetSVGOrPNGPathIcon( 'retry' )
         self.archive = self._GetSVGOrPNGPathIcon( 'archive' )
         self.to_inbox = self._GetSVGOrPNGPathIcon( 'to_inbox' )
         self.delete = self._GetSVGOrPNGPathIcon( 'trash' )
@@ -749,7 +744,6 @@ class GlobalIcons( object ):
         self.zoom_switch = self._GetSVGOrPNGPathIcon( 'zoom_switch' )
         self.zoom_cog = self._GetSVGOrPNGPathIcon( 'zoom_cog' )
         self.eye = self._GetSVGOrPNGPathIcon( 'eye' )
-        self.fullscreen_switch = self._GetSVGOrPNGPathIcon( 'fullscreen_switch' )
         self.open_externally = self._GetSVGOrPNGPathIcon( 'open_externally' )
         self.move = self._GetSVGOrPNGPathIcon( 'move' )
         self.move_cursor = self._GetSVGOrPNGPathIcon( 'move32x' )
@@ -758,7 +752,6 @@ class GlobalIcons( object ):
         self.dump_recoverable = self._GetSVGOrPNGPathIcon( 'dump_recoverable' )
         self.dump_fail = self._GetSVGOrPNGPathIcon( 'dump_fail' )
         
-        self.cog = self._GetSVGOrPNGPathIcon( 'cog' )
         self.family = self._GetSVGOrPNGPathIcon( 'family' )
         self.keyboard = self._GetSVGOrPNGPathIcon( 'keyboard' )
         self.help = self._GetSVGOrPNGPathIcon( 'help' )
@@ -784,8 +777,6 @@ class GlobalIcons( object ):
         self.lock = self._GetSVGOrPNGPathIcon( 'lock' )
         self.lock_open = self._GetSVGOrPNGPathIcon( 'lock_open' )
         
-        self.star = self._GetSVGOrPNGPathIcon( 'star' )
-        
         #self.listctrl = self._GetSVGOrPNGPathIcon( 'listctrl' )
         
         self.page_with_text = self._GetSVGOrPNGPathIcon( 'page_with_text' )
@@ -795,10 +786,6 @@ class GlobalIcons( object ):
         
         self.eight_chan = self._GetSVGOrPNGPathIcon( '8chan' )
         
-        self.first = self._GetSVGOrPNGPathIcon( 'first' )
-        self.previous = self._GetSVGOrPNGPathIcon( 'previous' )
-        self.next_bmp = self._GetSVGOrPNGPathIcon( 'next' )
-        self.last = self._GetSVGOrPNGPathIcon( 'last' )
         self.pair = self._GetSVGOrPNGPathIcon( 'pair' )
         
         self.hydrus_black_square = self._GetSVGOrPNGPathIcon( 'hydrus_black_square' )
@@ -807,6 +794,19 @@ class GlobalIcons( object ):
         self.tumblr = self._GetSVGOrPNGPathIcon( 'tumblr' )
         self.discord = self._GetSVGOrPNGPathIcon( 'discord' )
         self.patreon = self._GetSVGOrPNGPathIcon( 'patreon' )
+        
+        # svgs I've done:
+        
+        self.cog = self._GetSVGOrPNGPathIcon( 'cog' )
+        self.retry = self._GetSVGOrPNGPathIcon( 'retry' )
+        self.star = self._GetSVGOrPNGPathIcon( 'star' )
+        
+        self.position_first = self._GetSVGOrPNGPathIcon( 'position_first' )
+        self.position_previous = self._GetSVGOrPNGPathIcon( 'position_previous' )
+        self.position_next = self._GetSVGOrPNGPathIcon( 'position_next' )
+        self.position_last = self._GetSVGOrPNGPathIcon( 'position_last' )
+        
+        self.fullscreen_switch = self._GetSVGOrPNGPathIcon( 'fullscreen_switch' )
         
         self.RefreshUserIcons()
         

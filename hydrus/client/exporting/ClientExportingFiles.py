@@ -166,6 +166,13 @@ def GenerateExportFilename( destination_directory, media, terms, file_index, do_
     
     ( subdirs, true_filename ) = os.path.split( filename )
     
+    if true_filename == '':
+        
+        hash = media.GetHash()
+        
+        true_filename = hash.hex()
+        
+    
     ( subdirs_elided, filename_elided ) = HydrusPaths.ElideFilenameSafely( destination_directory, subdirs, true_filename, ext, path_character_limit, dirname_character_limit, filename_character_limit, force_ntfs_rules )
     
     if len( subdirs_elided ) > 0:

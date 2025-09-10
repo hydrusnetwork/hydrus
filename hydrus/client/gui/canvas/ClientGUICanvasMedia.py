@@ -672,6 +672,8 @@ class Animation( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
                 frame_index += round_direction
                 
             
+            frame_index = max( 0, frame_index )
+            
             if frame_index > self._media.GetNumFrames() - 1:
                 
                 frame_index = 0
@@ -793,7 +795,7 @@ class Animation( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
         
         if self._current_timestamp_ms is not None and self._video_container is not None and self._video_container.IsInitialised():
             
-            new_ts = self._current_timestamp_ms + ( direction * duration_ms )
+            new_ts = max( 0, self._current_timestamp_ms + ( direction * duration_ms ) )
             
             self.GotoTimestamp( new_ts, direction, pause_afterwards = False )
             

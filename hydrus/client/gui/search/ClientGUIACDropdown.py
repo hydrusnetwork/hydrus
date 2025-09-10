@@ -2280,7 +2280,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTagsFileSearchContext ):
         self._or_cancel.setToolTip( ClientGUIFunctions.WrapToolTip( 'Cancel OR Predicate construction.' ) )
         self._or_cancel.hide()
         
-        self._or_rewind = ClientGUICommon.IconButton( self._dropdown_window, CC.global_icons().previous, self._RewindORConstruction )
+        self._or_rewind = ClientGUICommon.IconButton( self._dropdown_window, CC.global_icons().position_previous, self._RewindORConstruction )
         self._or_rewind.setToolTip( ClientGUIFunctions.WrapToolTip( 'Rewind OR Predicate construction.' ) )
         self._or_rewind.hide()
         

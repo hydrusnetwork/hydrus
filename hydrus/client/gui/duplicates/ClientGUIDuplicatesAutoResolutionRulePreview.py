@@ -1,3 +1,4 @@
+import collections
 import typing
 
 from qtpy import QtCore as QC
@@ -10,7 +11,6 @@ from hydrus.core import HydrusNumbers
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
-from hydrus.client import ClientLocation
 from hydrus.client import ClientThreading
 from hydrus.client.duplicates import ClientDuplicates
 from hydrus.client.duplicates import ClientDuplicatesAutoResolution
@@ -19,10 +19,11 @@ from hydrus.client.gui import ClientGUIAsync
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import QtPorting as QP
-from hydrus.client.gui.canvas import ClientGUICanvas
+from hydrus.client.gui.canvas import ClientGUICanvasDuplicates
 from hydrus.client.gui.canvas import ClientGUICanvasFrame
 from hydrus.client.gui.duplicates import ThumbnailPairList
 from hydrus.client.gui.widgets import ClientGUICommon
+from hydrus.client.media import ClientMedia
 
 class PreviewPanel( ClientGUICommon.StaticBox ):
     
@@ -167,9 +168,29 @@ class PreviewPanel( ClientGUICommon.StaticBox ):
         
         row = model_index.row()
         
-        ( media_result_1, media_result_2 ) = self._fail_pairs_list.model().GetMediaResultPair( row )
+        media_result_pairs = self._fail_pairs_list.model().GetMediaResultPairsStartingAtIndex( row )
         
-        self._ShowMediaViewer( media_result_1, media_result_2 )
+        if len( media_result_pairs ) == 0:
+            
+            return
+            
+        
+        media_result_pairs = [ ( m1, m2 ) for ( m1, m2 ) in media_result_pairs if m1.GetLocationsManager().IsLocal() and m2.GetLocationsManager().IsLocal() ]
+        
+        if len( media_result_pairs ) == 0:
+            
+            ClientGUIDialogsMessage.ShowWarning( self, 'Sorry, but it seems there is nothing to show! Every pair I saw had at least one non-local file. Try refreshing the panel!' )
+            
+            return
+            
+        
+        # with a bit of jiggling I can probably deliver the real distance, but w/e for now, not important
+        
+        media_result_pairs_and_fake_distances = [ ( m1, m2, 0 ) for ( m1, m2 ) in media_result_pairs ]
+        
+        potential_duplicate_media_result_pairs_and_distances = ClientPotentialDuplicatesSearchContext.PotentialDuplicateMediaResultPairsAndDistances( media_result_pairs_and_fake_distances )
+        
+        self._ShowDuplicateFilter( potential_duplicate_media_result_pairs_and_distances )
         
     
     def _InitialisePotentialDuplicatePairs( self ):
@@ -366,9 +387,29 @@ class PreviewPanel( ClientGUICommon.StaticBox ):
         
         row = model_index.row()
         
-        ( media_result_1, media_result_2 ) = self._pass_pairs_list.model().GetMediaResultPair( row )
+        media_result_pairs = self._pass_pairs_list.model().GetMediaResultPairsStartingAtIndex( row )
         
-        self._ShowMediaViewer( media_result_1, media_result_2 )
+        if len( media_result_pairs ) == 0:
+            
+            return
+            
+        
+        media_result_pairs = [ ( m1, m2 ) for ( m1, m2 ) in media_result_pairs if m1.GetLocationsManager().IsLocal() and m2.GetLocationsManager().IsLocal() ]
+        
+        if len( media_result_pairs ) == 0:
+            
+            ClientGUIDialogsMessage.ShowWarning( self, 'Sorry, but it seems there is nothing to show! Every pair I saw had at least one non-local file. Try refreshing the panel!' )
+            
+            return
+            
+        
+        # with a bit of jiggling I can probably deliver the real distance, but w/e for now, not important
+        
+        media_result_pairs_and_fake_distances = [ ( m1, m2, 0 ) for ( m1, m2 ) in media_result_pairs ]
+        
+        potential_duplicate_media_result_pairs_and_distances = ClientPotentialDuplicatesSearchContext.PotentialDuplicateMediaResultPairsAndDistances( media_result_pairs_and_fake_distances )
+        
+        self._ShowDuplicateFilter( potential_duplicate_media_result_pairs_and_distances )
         
     
     def _PausePlaySearch( self ):
@@ -468,30 +509,26 @@ class PreviewPanel( ClientGUICommon.StaticBox ):
         self._DoTestWork()
         
     
-    def _ShowMediaViewer( self, media_result_1, media_result_2 ):
+    def _ShowDuplicateFilter( self, potential_duplicate_media_result_pairs_and_distances: ClientPotentialDuplicatesSearchContext.PotentialDuplicateMediaResultPairsAndDistances ):
         
         canvas_frame = ClientGUICanvasFrame.CanvasFrame( self.window(), set_parent = True )
         
-        page_key = HydrusData.GenerateKey()
-        location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY )
-        media_results = [ media_result_1, media_result_2 ]
+        potential_duplicate_pair_factory = ClientGUICanvasDuplicates.PotentialDuplicatePairFactoryMediaResults( potential_duplicate_media_result_pairs_and_distances )
         
-        media_results = [ mr for mr in media_results if mr.GetLocationsManager().IsLocal() ]
-        
-        if len( media_results ) == 0:
-            
-            ClientGUIDialogsMessage.ShowWarning( self, 'Sorry, but neither of those files is local (they were probably deleted), so they cannot be displayed in the media viewer!' )
-            
-            return
-            
-        
-        first_hash = media_result_1.GetHash()
-        
-        canvas_window = ClientGUICanvas.CanvasMediaListBrowser( canvas_frame, page_key, location_context, media_results, first_hash )
+        canvas_window = ClientGUICanvasDuplicates.CanvasFilterDuplicates( canvas_frame, potential_duplicate_pair_factory )
         
         canvas_window.canvasWithHoversExiting.connect( CG.client_controller.gui.NotifyMediaViewerExiting )
+        canvas_window.duplicateCanvasExitingAfterWorkDone.connect( self._RefetchPairs )
+        canvas_window.showPairInPage.connect( self._ShowPairInPage )
         
         canvas_frame.SetCanvas( canvas_window )
+        
+    
+    def _ShowPairInPage( self, media: collections.abc.Collection[ ClientMedia.MediaSingleton ] ):
+        
+        hashes = [ m.GetHash() for m in media ]
+        
+        CG.client_controller.pub( 'imported_files_to_page', hashes, 'duplicate pairs' )
         
     
     def _UpdateSearchLabels( self ):

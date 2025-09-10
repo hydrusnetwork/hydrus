@@ -125,6 +125,38 @@ class ThumbnailPairListModel( QC.QAbstractTableModel ):
         self.endInsertRows()
         
     
+    def GetMediaResultPairsStartingAtIndex( self, row: int ):
+        
+        # wraparound list fetch
+        
+        we_hit_our_index = False
+        second_half = []
+        first_half = []
+        
+        for ( i, r ) in enumerate( self._data_rows ):
+            
+            if i == row:
+                
+                we_hit_our_index = True
+                
+            
+            media_result_pair = ( r[0], r[1] )
+            
+            if we_hit_our_index:
+                
+                first_half.append( media_result_pair )
+                
+            else:
+                
+                second_half.append( media_result_pair )
+                
+            
+        
+        result = first_half + second_half
+        
+        return result
+        
+    
     def GetMediaResultPair( self, row: int ):
         
         r = self._data_rows[ row ]

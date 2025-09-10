@@ -205,6 +205,11 @@ class ImageRendererCache( object ):
         
         ( width, height ) = media_result.GetResolution()
         
+        if width is None or height is None:
+            
+            return
+            
+        
         # essentially, we are not going to prefetch giganto images any more. they can render on demand and not mess our queue
         
         image_cache_prefetch_limit_percentage = self._controller.new_options.GetInteger( 'image_cache_prefetch_limit_percentage' )

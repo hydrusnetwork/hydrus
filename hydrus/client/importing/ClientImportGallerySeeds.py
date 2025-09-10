@@ -338,16 +338,26 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
         
         try:
             
-            ( url_to_check, parser ) = CG.client_controller.network_engine.domain_manager.GetURLToFetchAndParser( self.url )
+            url_to_fetch = CG.client_controller.network_engine.domain_manager.GetURLToFetch( self.url )
             
         except HydrusExceptions.URLClassException:
             
-            url_to_check = self.url
+            url_to_fetch = self.url
             
         
-        network_job = network_job_factory( 'GET', url_to_check )
+        network_job = network_job_factory( 'GET', url_to_fetch )
         
         return network_job
+        
+    
+    def GetHTTPHeaders( self ) -> dict:
+        
+        return self._request_headers
+        
+    
+    def GetReferralURL( self ) -> str:
+        
+        return self._referral_url
         
     
     def SetReferralURL( self, referral_url ):
@@ -415,8 +425,6 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
             
             gallery_url = self.url
             
-            url_for_child_referral = gallery_url
-            
             ( url_type, match_name, can_parse, cannot_parse_reason ) = CG.client_controller.network_engine.domain_manager.GetURLParseCapability( gallery_url )
             
             if url_type not in ( HC.URL_TYPE_GALLERY, HC.URL_TYPE_WATCHABLE ):
@@ -429,26 +437,13 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
                 raise HydrusExceptions.VetoException( 'Cannot parse {}: {}'.format( match_name, cannot_parse_reason ) )
                 
             
-            ( url_to_check, parser ) = CG.client_controller.network_engine.domain_manager.GetURLToFetchAndParser( gallery_url )
+            ( url_to_fetch, parser ) = CG.client_controller.network_engine.domain_manager.GetURLToFetchAndParser( gallery_url )
             
-            gallery_urls_seen_before.add( url_to_check )
+            gallery_urls_seen_before.add( url_to_fetch )
             
             status_hook( 'downloading gallery page' )
             
-            if self._referral_url is not None and self._referral_url != url_to_check:
-                
-                referral_url = self._referral_url
-                
-            elif gallery_url != url_to_check:
-                
-                referral_url = gallery_url
-                
-            else:
-                
-                referral_url = None
-                
-            
-            network_job = network_job_factory( 'GET', url_to_check, referral_url = referral_url )
+            network_job = network_job_factory( 'GET', url_to_fetch, referral_url = self._referral_url )
             
             for ( key, value ) in self._request_headers.items():
                 
@@ -468,12 +463,15 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
             
             parsing_text = network_job.GetContentText()
             
+            # this headache can go when I do my own 3XX redirects?
             actual_fetched_url = network_job.GetActualFetchedURL()
+            
+            url_for_child_referral = actual_fetched_url
             
             status = CC.STATUS_SKIPPED
             do_parse = True
             
-            if actual_fetched_url != url_to_check:
+            if actual_fetched_url != url_to_fetch:
                 
                 ( url_type, match_name, can_parse, cannot_parse_reason ) = CG.client_controller.network_engine.domain_manager.GetURLParseCapability( actual_fetched_url )
                 
@@ -483,9 +481,7 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
                         
                         gallery_url = actual_fetched_url
                         
-                        url_for_child_referral = gallery_url
-                        
-                        ( url_to_check, parser ) = CG.client_controller.network_engine.domain_manager.GetURLToFetchAndParser( gallery_url )
+                        ( url_to_fetch, parser ) = CG.client_controller.network_engine.domain_manager.GetURLToFetchAndParser( gallery_url )
                         
                     else:
                         
@@ -518,7 +514,7 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
                 
                 parsing_context = {
                     'gallery_url' : gallery_url,
-                    'url' : url_to_check,
+                    'url' : url_to_fetch,
                     'post_index' : '0'
                 }
                 
@@ -643,13 +639,13 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
                         
                         # we have failed to parse a next page url, but we would still like one, so let's see if the url match can provide one
                         
-                        url_class = CG.client_controller.network_engine.domain_manager.GetURLClass( url_to_check )
+                        url_class = CG.client_controller.network_engine.domain_manager.GetURLClass( url_to_fetch )
                         
                         if url_class is not None and url_class.CanGenerateNextGalleryPage():
                             
                             try:
                                 
-                                next_page_url = url_class.GetNextGalleryPage( url_to_check )
+                                next_page_url = url_class.GetNextGalleryPage( url_to_fetch )
                                 
                                 note += f' - next gallery page extrapolated from url class'
                                 

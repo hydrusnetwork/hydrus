@@ -1806,6 +1806,8 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
             
             self._url_class_keys_to_parser_keys[ url_class_key ] = parser_key
             
+            return True
+            
         
     
     def RenameGUG( self, original_name, new_name ):

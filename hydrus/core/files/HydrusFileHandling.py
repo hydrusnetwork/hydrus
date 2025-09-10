@@ -143,7 +143,18 @@ def GenerateThumbnailNumPy( path, target_resolution, mime, duration_ms, num_fram
             
             cover_mime = GetMime( temp_path )
             
-            thumbnail_numpy = HydrusImageHandling.GenerateThumbnailNumPyFromStaticImagePath( temp_path, target_resolution, cover_mime )
+            if cover_mime == HC.TEXT_HTML:
+                
+                raise HydrusExceptions.NoThumbnailFileException( 'Do not support an HTML thumbnail for epubs yet!' )
+                
+            elif cover_mime == HC.IMAGE_SVG:
+                
+                thumbnail_numpy = HydrusSVGHandling.GenerateThumbnailNumPyFromSVGPath( temp_path, target_resolution )
+                
+            else:
+                
+                thumbnail_numpy = HydrusImageHandling.GenerateThumbnailNumPyFromStaticImagePath( temp_path, target_resolution, cover_mime )
+                
             
         except Exception as e:
             
