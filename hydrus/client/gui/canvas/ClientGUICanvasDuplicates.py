@@ -138,7 +138,7 @@ class PotentialDuplicatePairFactory( object ):
         pass
         
     
-    def NotifyPrepareNewBatch( self ):
+    def NotifyFetchMorePairs( self ):
         
         pass
         
@@ -223,7 +223,7 @@ class PotentialDuplicatePairFactoryDB( PotentialDuplicatePairFactory ):
         self._potential_duplicate_id_pairs_and_distances = ClientPotentialDuplicatesSearchContext.PotentialDuplicateIdPairsAndDistances( [] )
         self._potential_duplicate_id_pairs_and_distances_initialised = False
         
-        self.NotifyPrepareNewBatch()
+        self.NotifyFetchMorePairs()
         
     
     def NotifyInitialisationWorkStarted( self ):
@@ -237,7 +237,7 @@ class PotentialDuplicatePairFactoryDB( PotentialDuplicatePairFactory ):
         self._potential_duplicate_id_pairs_and_distances_fetch_started = False
         
     
-    def NotifyPrepareNewBatch( self ):
+    def NotifyFetchMorePairs( self ):
         
         self._potential_duplicate_id_pairs_and_distances_still_to_search = self._potential_duplicate_id_pairs_and_distances.Duplicate()
         
@@ -312,7 +312,7 @@ class PotentialDuplicatePairFactoryDBGroupMode( PotentialDuplicatePairFactoryDB 
                 
                 # this group is now exhausted; we need to fetch a new one
                 
-                self.NotifyPrepareNewBatch()
+                self.SelectNewGroup()
                 
             
         
@@ -349,6 +349,13 @@ class PotentialDuplicatePairFactoryDBGroupMode( PotentialDuplicatePairFactoryDB 
         found_nothing = len( self._potential_duplicate_id_pairs_and_distances_still_to_search ) == 0 and len( self._group_media_ids ) == 0
         
         return have_results or found_nothing
+        
+    
+    def SelectNewGroup( self ):
+        
+        self._group_media_ids = set()
+        
+        self.NotifyFetchMorePairs()
         
     
 
@@ -1063,7 +1070,7 @@ class CanvasFilterDuplicates( ClientGUICanvas.CanvasWithHovers ):
         
         self._loading_text = 'Loading more pairs--please wait.'
         
-        self._potential_duplicate_pair_factory.NotifyPrepareNewBatch()
+        self._potential_duplicate_pair_factory.NotifyFetchMorePairs()
         
         self.ClearMedia()
         
@@ -1465,7 +1472,7 @@ class CanvasFilterDuplicates( ClientGUICanvas.CanvasWithHovers ):
                             
                             if result == QW.QDialog.DialogCode.Accepted:
                                 
-                                self._potential_duplicate_pair_factory.NotifyCommitDone() # this resets search and will select a new group from scratch
+                                self._potential_duplicate_pair_factory.SelectNewGroup() # this resets search and will select a new group from scratch
                                 
                             
                         
