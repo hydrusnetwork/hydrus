@@ -35,6 +35,48 @@
             <h1 id="changelog"><a href="#changelog">changelog</a></h1>
             <ul>
                 <li>
+                    <h2 id="version_639"><a href="#version_639">version 639</a></h2>
+                    <ul>
+                        <li><h3>misc</h3></li>
+                        <li>`system:number of tags` and `system:tag as number` have a nicer new namespace selection widget</li>
+                        <li>fixed the duplicate filter group mode finding a new group after the previous group was resolved. I messed this up in last week's rewrite and it slipped through testing</li>
+                        <li>huge multi-column lists handle large selections much more efficiently, particularly when they have lots of buttons. all the various logic that handles 'should this accompanying button be enabled?' and so on now uses calls that work much faster when there are thousands of items selected. in my tests, a sublist with 5,000 test items now updates to a new selection in under 30ms--previously it was about a second. similarly, pasting all those items to a new list now takes about six seconds, whereas previously it was locking up for ages and ages, perhaps forever (issue #1737)</li>
+                        <li>fixed an issue where the 'move media files' dialog was saying all files were in their ideal location if the thumbnail location override was not set. this was happening because an error was being quashed over-eagerly. if this dialog has a similar problem in future, you might get some spammy reports, but it'll show. also a side thing, the 'set' button of the thumbnail location override no longer disables if you have a path set--feel free to move it to a new location in one step mate</li>
+                        <li>the system that positions windows off the topLeft corner of their parent is now more forgiving of unusual window manager frame geometry. if you kept getting 'hey I just rescued a window from ( 24, -14 )'-style popups every time you open the options off a maximised main GUI, let me know what happens now--are your dialogs appearing offscreen, auto-repositioning to (0, 0), or is everything good now?</li>
+                        <li>if you are feeling clever and can get an OR predicate into the duplicates auto-resolution 'test A or B' comparator, it now works! I'll brush up the UI in future to make it easy to enter an OR here (issue #1790)</li>
+                        <li><h3>potential duplicates discovery</h3></li>
+                        <li>I have overhauled the daemon that looks for new potential duplicate pairs. this guy no longer searches for pairs during shutdown maintenance (I'm generally trying to retire shutdown work), but you can now tell it to run in idle and/or normal time, with separate work/rest settings under `options-&gt;maintenance and processing`</li>
+                        <li>your settings here will mostly reset to defaults this week, sorry! default is to run in idle time but not active time, with some conservative work/rest ratios</li>
+                        <li>a critical section of database code that finds outstanding eligible files to perform the similar files search on is now optimised for clients with larger numbers of files. there will be a one-time CPU cost for each search distance you run at, and thereafter this thing should run like greased lightning even if you have millions of files, reducing per-job overhead for all similar files search</li>
+                        <li>when you force work through the duplicate page 'preparation' tab, it now works through a pause/play button and there is no separate work popup; it now just updates the bar in front of you</li>
+                        <li>I'm interested to know how 'run in normal time' feels for clients that have a lot of imports going on. I haven't gone for instant reaction to new files yet, but if it is idling with all other work done it'll get to any new files within about ten seconds, and the auto-resolution system _will_ react instantly to new potential duplicate pairs. might be laggy, might be cool, might be confusing as files in downloader pages are deleted before your eyes. the super ideal here would be to collapse the whole operation into the single import job and return something like 'file was duplicate' instead of 'already in db' as the import status, but we'll see how this does</li>
+                        <li>the 'reset potential search' cog-button task now resets the search for all eligible files. previously, I was trying to be cute and only reset search for files that previously found a potential pair, but the, say, ~37% filled progress bar after reset was confusing and not actually what the maintenance task wanted. KISS</li>
+                        <li><h3>profile mode</h3></li>
+                        <li>`help-&gt;debug-&gt;profiling-&gt;profile mode` now works on Python 3.12+. newer version of python are more strict about how profiling operates in a multi-threaded environment, and hydrus's profiling now obeys these rules. it turns out hydrus was always getting some _slightly_ gonk numbers here in busy multi-threaded situations, or at least many jobs were being truncated, which explains some inexplicable results I've seen over the years</li>
+                        <li>profile mode is now split into four exclusive types--client api, db, threads, and ui. the menu and html help are updated to talk about these. most users will want 'db'</li>
+                        <li>'threads' and 'client api' profiles will sometimes include a bunch of truncated 'EXCLUSIVE: (job) ran in 17ms'. this is me salvaging a difficult situation with a still-useful number. don't worry about it!</li>
+                        <li>Python 3.12+ adds some cool tools here, and I expect to expand to some 'profile everything going on mate' modes in future to capture deep Qt things my specific modes do not</li>
+                        <li>there's an ancient shortcut for 'turn profile mode on'. this now does 'db' profile mode; it'll probably do something else later, or I'll retire it</li>
+                        <li><h3>boring stuff</h3></li>
+                        <li>if you boot the client or server in a python environment that does not have the requirements.txt stuff installed, the client now recognises this and gives a nicer error saying 'hey, I think you need to reinstall/activate your venv', rather than the old 'hey you don't have yaml' error</li>
+                        <li>tweaked the client's critical boot error handling so that it shows a nicer english error message first and then the full traceback in a second dialog</li>
+                        <li>added some unit tests for OR predicates within Metadata Conditionals</li>
+                        <li>fixed a deprecated unit test call. thanks to the user who pointed this out. this is not the first time this specific thing happened, so I'm switching up my testing regime to catch this in future</li>
+                        <li><h3>boring overhauls and refactoring</h3></li>
+                        <li>wrote a new MainLoop Manager for the potential duplicates search and some maintenance and numbers caching</li>
+                        <li>overhauled the potential duplicates search tree maintenance call to have less overhead and be happier working in tiny chunks. it is now continually maintained throughout search work</li>
+                        <li>wrote a count cache for the shape search store for the new daemon (previously it counted manually); it is updated as the underlying store changes</li>
+                        <li>hooked up new notification paths for new shape search counts or brance rebalancing work. these paths are simple and comprehensive, so the new guy should be a bit more reliable for unusual file maintenance jobs and so on that may alter the search space a little</li>
+                        <li>added some safety code to the new similar files search daemon to stop an infinite loop if the search record store has non-searchable items for some reason</li>
+                        <li>cleaned up the Duplicates Page Sidebar maintenance page a bunch. there was just a ton of cruft to go through</li>
+                        <li>to untangle some imports, moved duplicate score and visual duplicates gubbins out of `ClientDuplicates.py` to a new `ClientDuplicatesComparisonStatements.py`</li>
+                        <li>collected pretty much all the profiling and query planner gubbins like start time and job count and printing tech from `HydrusController.py` and `HydrusGlobals.py` to `HydrusProfiling.py`. I cleaned a bunch of it up along the way</li>
+                        <li>brushed up some of the database migration help r.e. missing locations and the pre-boot repair dialog</li>
+                        <li>the core `CallAfter` method used by many thread-to-Qt comms is a tiny bit more stable/thread-safe</li>
+                        <li>misc linting work, including clearing out some legacy unresolved references</li>
+                    </ul>
+                </li>
+                <li>
                     <h2 id="version_638"><a href="#version_638">version 638</a></h2>
                     <ul>
                         <li><h3>misc</h3></li>
