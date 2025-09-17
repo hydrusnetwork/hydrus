@@ -120,8 +120,12 @@ try:
     
     HydrusStaticDir.USE_USER_STATIC_DIR = not result.no_user_static_dir
     
-    HG.profile_mode = result.profile_mode
-    HG.profile_start_time = HydrusTime.GetNow()
+    if result.profile_mode:
+        
+        from hydrus.core import HydrusProfiling
+        
+        HydrusProfiling.StartProfileMode( 'db' )
+        
     
     if result.temp_dir is not None:
         

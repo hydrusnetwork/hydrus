@@ -1002,6 +1002,12 @@ class CheckboxManagerOptions( CheckboxManager ):
         super().__init__()
         
         self._boolean_name = boolean_name
+        self._additional_notify_calls = []
+        
+    
+    def AddNotifyCall( self, func ):
+        
+        self._additional_notify_calls.append( func )
         
     
     def GetCurrentValue( self ):
@@ -1024,6 +1030,11 @@ class CheckboxManagerOptions( CheckboxManager ):
         
         CG.client_controller.pub( 'checkbox_manager_inverted' )
         CG.client_controller.pub( 'notify_new_menu_option' )
+        
+        for func in self._additional_notify_calls:
+            
+            func()
+            
         
     
 
@@ -1223,6 +1234,80 @@ class IconButton( ShortcutAwareToolTipMixin, QW.QPushButton ):
         self.setIcon( icon )
         
         self.last_icon_set = icon
+        
+    
+
+class NamespaceWidget( QW.QWidget ):
+    
+    def __init__( self, parent ):
+        
+        super().__init__( parent )
+        
+        # think about updating to this to have ':' for 'namespaced', but either optionall or (ideally) all users of it would need to support that too
+        
+        choice_tuples = [
+            ( 'any namespace', '*' ),
+            ( 'unnamespaced', '' ),
+            ( 'namespace', 'specific' )
+        ]
+        
+        self._selector = BetterRadioBox( self, choice_tuples, vertical = True )
+        
+        self._namespace = QW.QLineEdit( self )
+        
+        self._namespace.setPlaceholderText( 'e.g. character' )
+        self._namespace.setToolTip( ClientGUIFunctions.WrapToolTip( 'No trailing colon. Wildcards are ok!' ) )
+        
+        vbox = QP.VBoxLayout( margin = 0 )
+        
+        QP.AddToLayout( vbox, self._selector, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( vbox, self._namespace, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        self.setLayout( vbox )
+        
+        self._selector.radioBoxChanged.connect( self._UpdateControls )
+        
+        self.SetValue( '*' )
+        
+    
+    def _UpdateControls( self ):
+        
+        value = self._selector.GetValue()
+        
+        self._namespace.setEnabled( value == 'specific' )
+        
+    
+    def GetValue( self ):
+        
+        value = self._selector.GetValue()
+        
+        if value in ( '', '*' ):
+            
+            return value
+            
+        
+        return self._namespace.text()
+        
+    
+    def SetValue( self, value ):
+        
+        if value is None:
+            
+            value = '*'
+            
+        
+        if value in ( '', '*' ):
+            
+            self._selector.SetValue( value )
+            
+        else:
+            
+            self._selector.SetValue( 'specific' )
+            
+            self._namespace.setText( value )
+            
+        
+        self._UpdateControls()
         
     
 

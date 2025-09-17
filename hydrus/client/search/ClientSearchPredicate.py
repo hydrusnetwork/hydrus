@@ -381,6 +381,7 @@ PREDICATE_TYPES_WE_CAN_TEST_ON_MEDIA_RESULTS = [
     PREDICATE_TYPE_SYSTEM_MODIFIED_TIME,
     PREDICATE_TYPE_SYSTEM_LAST_VIEWED_TIME,
     PREDICATE_TYPE_SYSTEM_ARCHIVED_TIME,
+    PREDICATE_TYPE_OR_CONTAINER,
 ]
 
 # this has useful order
@@ -874,6 +875,13 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
         
     
     def CanTestMediaResult( self ) -> bool:
+        
+        if self._predicate_type == PREDICATE_TYPE_OR_CONTAINER:
+            
+            predicates = self._value
+            
+            return False not in [ predicate.CanTestMediaResult() for predicate in predicates ]
+            
         
         return self._predicate_type in PREDICATE_TYPES_WE_CAN_TEST_ON_MEDIA_RESULTS
         
@@ -1598,6 +1606,12 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                 
                 return not we_found_it
                 
+            
+        elif self._predicate_type == PREDICATE_TYPE_OR_CONTAINER:
+            
+            predicates = self._value
+            
+            return True in ( predicate.TestMediaResult( media_result ) for predicate in predicates )
             
         else:
             

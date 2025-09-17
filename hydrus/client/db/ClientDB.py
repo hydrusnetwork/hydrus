@@ -2563,13 +2563,6 @@ class DB( HydrusDB.HydrusDB ):
             jobs_to_do.append( 'analyze ' + HydrusNumbers.ToHumanInt( len( names_to_analyze ) ) + ' table_names' )
             
         
-        similar_files_due = self.modules_similar_files.MaintenanceDue()
-        
-        if similar_files_due:
-            
-            jobs_to_do.append( 'similar files work' )
-            
-        
         return jobs_to_do
         
     
@@ -4016,7 +4009,8 @@ class DB( HydrusDB.HydrusDB ):
                 'missing_archive_timestamps_legacy_fillin' : self.modules_files_inbox.FillInMissingLegacyArchiveTimestamps,
                 'process_repository_definitions' : self.modules_repositories.ProcessRepositoryDefinitions,
                 'push_recent_tags' : self.modules_recent_tags.PushRecentTags,
-                'regenerate_similar_files' : self.modules_similar_files.RegenerateTree,
+                'regenerate_similar_files_tree' : self.modules_similar_files.RegenerateTree,
+                'regenerate_similar_files_search_count_numbers' : self.modules_similar_files.RegenerateSearchCacheNumbers,
                 'regenerate_tag_siblings_and_parents_cache' : self.modules_tag_display.RegenerateTagSiblingsAndParentsCache,
                 'register_shutdown_work' : self.modules_db_maintenance.RegisterShutdownWork,
                 'relocate_client_files' : self.modules_files_physical_storage.RelocateClientFiles,
@@ -4248,7 +4242,7 @@ class DB( HydrusDB.HydrusDB ):
         
         #
         
-        self.modules_similar_files = ClientDBSimilarFiles.ClientDBSimilarFiles( self._c, self.modules_services, self.modules_hashes, self.modules_files_storage )
+        self.modules_similar_files = ClientDBSimilarFiles.ClientDBSimilarFiles( self._c, self._cursor_transaction_wrapper, self.modules_services, self.modules_hashes, self.modules_files_storage )
         
         self._modules.append( self.modules_similar_files )
         
@@ -4890,44 +4884,18 @@ class DB( HydrusDB.HydrusDB ):
         self.modules_similar_files.ResetSearch( hash_ids )
         
     
-    def _PerceptualHashesSearchForPotentialDuplicates( self, search_distance, maintenance_mode = HC.MAINTENANCE_FORCED, job_status = None, stop_time = None, work_time_float = None ):
+    def _PerceptualHashesSearchForPotentialDuplicates( self, search_distance: int, work_time_float: typing.Optional[ float ] = None ):
         
         time_started_float = HydrusTime.GetNowFloat()
         
         num_done = 0
         still_work_to_do = True
         
-        group_of_hash_ids = self._STL( self._Execute( 'SELECT hash_id FROM shape_search_cache WHERE searched_distance IS NULL or searched_distance < ?;', ( search_distance, ) ).fetchmany( 10 ) )
+        group_of_hash_ids = self.modules_similar_files.GetSomeHashIdsToSimilarSearch( search_distance, 10 )
         
         while len( group_of_hash_ids ) > 0:
             
-            text = 'searching potential duplicates: {}'.format( HydrusNumbers.ToHumanInt( num_done ) )
-            
-            CG.client_controller.frame_splash_status.SetSubtext( text )
-            
             for ( i, hash_id ) in enumerate( group_of_hash_ids ):
-                
-                if work_time_float is not None and HydrusTime.TimeHasPassedFloat( time_started_float + work_time_float ):
-                    
-                    return ( still_work_to_do, num_done )
-                    
-                
-                if job_status is not None:
-                    
-                    ( i_paused, should_stop ) = job_status.WaitIfNeeded()
-                    
-                    if should_stop:
-                        
-                        return ( still_work_to_do, num_done )
-                        
-                    
-                
-                should_stop = CG.client_controller.ShouldStopThisWork( maintenance_mode, stop_time = stop_time )
-                
-                if should_stop:
-                    
-                    return ( still_work_to_do, num_done )
-                    
                 
                 media_id = self.modules_files_duplicates.GetMediaId( hash_id )
                 
@@ -4935,12 +4903,17 @@ class DB( HydrusDB.HydrusDB ):
                 
                 self.modules_files_duplicates.AddPotentialDuplicates( media_id, potential_duplicate_media_ids_and_distances )
                 
-                self._Execute( 'UPDATE shape_search_cache SET searched_distance = ? WHERE hash_id = ?;', ( search_distance, hash_id ) )
+                self.modules_similar_files.SetSearchStatus( hash_id, search_distance )
                 
                 num_done += 1
                 
+                if work_time_float is not None and HydrusTime.TimeHasPassedFloat( time_started_float + work_time_float ):
+                    
+                    return ( still_work_to_do, num_done )
+                    
+                
             
-            group_of_hash_ids = self._STL( self._Execute( 'SELECT hash_id FROM shape_search_cache WHERE searched_distance IS NULL or searched_distance < ?;', ( search_distance, ) ).fetchmany( 10 ) )
+            group_of_hash_ids = self.modules_similar_files.GetSomeHashIdsToSimilarSearch( search_distance, 10 )
             
         
         still_work_to_do = False
@@ -9197,6 +9170,18 @@ class DB( HydrusDB.HydrusDB ):
                 message = 'Trying to update some downloader objects failed! Please let hydrus dev know!'
                 
                 self.pub_initial_message( message )
+                
+            
+        
+        if version == 638:
+            
+            if not self._TableExists( 'main.shape_search_cache_numbers' ):
+                
+                self._Execute( 'UPDATE shape_search_cache SET searched_distance = ? WHERE searched_distance IS NULL;', ( -1, ) )
+                
+                self._Execute( 'CREATE TABLE IF NOT EXISTS shape_search_cache_numbers ( searched_distance INTEGER PRIMARY KEY, count INTEGER );' )
+                
+                self._Execute( 'INSERT INTO shape_search_cache_numbers ( searched_distance, count ) SELECT searched_distance, COUNT( * ) FROM shape_search_cache GROUP BY searched_distance;' )
                 
             
         

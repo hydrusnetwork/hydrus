@@ -574,7 +574,7 @@ def TimestampMSToPrettyTime( timestamp_ms: typing.Optional[ int ], in_utc = Fals
     return DateTimeToPrettyTime( dt, include_24h_time = include_24h_time, include_milliseconds = include_milliseconds )
     
 
-def TimestampToPrettyTime( timestamp: typing.Optional[ int ], in_utc = False, include_24h_time = True ) -> str:
+def TimestampToPrettyTime( timestamp: typing.Optional[ float ], in_utc = False, include_24h_time = True ) -> str:
     
     if timestamp is None:
         

@@ -7,6 +7,7 @@
 
 import collections.abc
 import os
+import typing
 
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
@@ -79,7 +80,9 @@ class LabelledSlider( QW.QWidget ):
         
         super().__init__( parent )
         
-        self.setLayout( VBoxLayout( spacing = 2 ) )
+        vbox = VBoxLayout( spacing = 2 )
+        
+        self.setLayout( vbox )
         
         top_layout = HBoxLayout( spacing = 2 )
         
@@ -95,10 +98,10 @@ class LabelledSlider( QW.QWidget ):
         top_layout.addWidget( self._slider )
         top_layout.addWidget( self._max_label )
         
-        self.layout().addLayout( top_layout )
-        self.layout().addWidget( self._value_label )
+        vbox.addLayout( top_layout )
+        vbox.addWidget( self._value_label )
         self._value_label.setAlignment( QC.Qt.AlignmentFlag.AlignVCenter | QC.Qt.AlignmentFlag.AlignHCenter )
-        self.layout().setAlignment( self._value_label, QC.Qt.AlignmentFlag.AlignHCenter )
+        vbox.setAlignment( self._value_label, QC.Qt.AlignmentFlag.AlignHCenter )
         
         self._slider.valueChanged.connect( self._UpdateLabels )
         self._slider.valueChanged.connect( self.valueChanged )
@@ -115,6 +118,7 @@ class LabelledSlider( QW.QWidget ):
     def GetValue( self ):
         
         return self._slider.value()
+        
     
     def SetInterval( self, interval ):
         
@@ -1734,7 +1738,9 @@ class PasswordEntryDialog( Dialog ):
         self._password = QW.QLineEdit( self )
         self._password.setEchoMode( QW.QLineEdit.EchoMode.Password )
         
-        self.setLayout( QW.QVBoxLayout() )
+        vbox = QW.QVBoxLayout()
+        
+        self.setLayout( vbox )
         
         entry_layout = QW.QHBoxLayout()
         
@@ -1747,8 +1753,8 @@ class PasswordEntryDialog( Dialog ):
         button_layout.addWidget( self._cancel_button )
         button_layout.addWidget( self._ok_button )
         
-        self.layout().addLayout( entry_layout )
-        self.layout().addLayout( button_layout )
+        vbox.addLayout( entry_layout )
+        vbox.addLayout( button_layout )
         
 
     def GetValue( self ):
@@ -2006,6 +2012,8 @@ class WidgetEventFilter ( QC.QObject ):
             
             if type == QC.QEvent.Type.MouseButtonDblClick:
                 
+                event = typing.cast( QG.QMouseEvent, event )
+                
                 if event.button() == QC.Qt.MouseButton.LeftButton:
                     
                     event_killed = event_killed or self._ExecuteCallbacks( 'EVT_LEFT_DCLICK', event )
@@ -2017,6 +2025,8 @@ class WidgetEventFilter ( QC.QObject ):
                 
             elif type == QC.QEvent.Type.MouseButtonPress:
                 
+                event = typing.cast( QG.QMouseEvent, event )
+                
                 if event.buttons() & QC.Qt.MouseButton.LeftButton: event_killed = event_killed or self._ExecuteCallbacks( 'EVT_LEFT_DOWN', event )
                 
                 if event.buttons() & QC.Qt.MouseButton.MiddleButton: event_killed = event_killed or self._ExecuteCallbacks( 'EVT_MIDDLE_DOWN', event )
@@ -2024,6 +2034,8 @@ class WidgetEventFilter ( QC.QObject ):
                 if event.buttons() & QC.Qt.MouseButton.RightButton: event_killed = event_killed or self._ExecuteCallbacks( 'EVT_RIGHT_DOWN', event )
                 
             elif type == QC.QEvent.Type.MouseButtonRelease:
+                
+                event = typing.cast( QG.QMouseEvent, event )
                 
                 if event.buttons() & QC.Qt.MouseButton.LeftButton: event_killed = event_killed or self._ExecuteCallbacks( 'EVT_LEFT_UP', event )
                 

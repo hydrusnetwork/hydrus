@@ -372,23 +372,13 @@ class ClientDBFilesDuplicates( ClientDBModule.ClientDBModule ):
     
     def DeleteAllPotentialDuplicatePairs( self ):
         
-        media_ids = set()
-        
-        for ( smaller_media_id, larger_media_id ) in self._Execute( 'SELECT smaller_media_id, larger_media_id FROM potential_duplicate_pairs;' ):
-            
-            media_ids.add( smaller_media_id )
-            media_ids.add( larger_media_id )
-            
-        
-        hash_ids = self.GetDuplicatesHashIds( media_ids )
-        
         self._Execute( 'DELETE FROM potential_duplicate_pairs;' )
         
         self._NotifyChangeToPotentialDuplicatePairs()
         
         self.modules_files_duplicates_auto_resolution_storage.DeleteAllPotentialDuplicatePairs()
         
-        self.modules_similar_files.ResetSearch( hash_ids )
+        self.modules_similar_files.ResetSearchForAll()
         
     
     def DeletePotentialDuplicates( self, pairs ):

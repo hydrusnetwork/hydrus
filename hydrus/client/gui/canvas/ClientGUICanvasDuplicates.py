@@ -19,6 +19,7 @@ from hydrus.client import ClientLocation
 from hydrus.client import ClientServices
 from hydrus.client import ClientThreading
 from hydrus.client.duplicates import ClientDuplicates
+from hydrus.client.duplicates import ClientDuplicatesComparisonStatements
 from hydrus.client.duplicates import ClientPotentialDuplicatesSearchContext
 from hydrus.client.gui import ClientGUIAsync
 from hydrus.client.gui import ClientGUIDialogsMessage
@@ -1316,7 +1317,7 @@ class CanvasFilterDuplicates( ClientGUICanvas.CanvasWithHovers ):
         
         ( media_result_1, media_result_2 ) = self._batch_of_pairs_to_process[ self._current_pair_index ]
         
-        self._current_pair_score = ClientDuplicates.GetDuplicateComparisonScore( media_result_1, media_result_2 )
+        self._current_pair_score = ClientDuplicatesComparisonStatements.GetDuplicateComparisonScore( media_result_1, media_result_2 )
         
         if self._current_pair_score > 0:
             

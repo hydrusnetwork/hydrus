@@ -3274,13 +3274,23 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._maintain_similar_files_duplicate_pairs_during_idle = QW.QCheckBox( self._duplicates_panel )
             
-            self._potential_duplicates_search_work_time = ClientGUITime.TimeDeltaWidget( self._duplicates_panel, min = 0.1, seconds = True, milliseconds = True )
-            tt = 'DO NOT CHANGE UNLESS YOU KNOW WHAT YOU ARE DOING. Potential search operates on a work-rest cycle. This setting determines how long it should work for in each work packet. Actual work time will normally be a little larger than this, and on large databases the minimum work time may be upwards of several seconds.'
-            self._potential_duplicates_search_work_time.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
+            self._maintain_similar_files_duplicate_pairs_during_active = QW.QCheckBox( self._duplicates_panel )
             
-            self._potential_duplicates_search_rest_percentage = ClientGUICommon.BetterSpinBox( self._duplicates_panel, min = 0, max = 100000 )
+            self._potential_duplicates_search_work_time_idle = ClientGUITime.TimeDeltaWidget( self._duplicates_panel, min = 0.1, seconds = True, milliseconds = True )
+            tt = 'DO NOT CHANGE UNLESS YOU KNOW WHAT YOU ARE DOING. Potential search operates on a work-rest cycle. This setting determines how long it should work for in each work packet. Actual work time will normally be a little larger than this, and on large databases the minimum work time may be upwards of several seconds.'
+            self._potential_duplicates_search_work_time_idle.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
+            
+            self._potential_duplicates_search_rest_percentage_idle = ClientGUICommon.BetterSpinBox( self._duplicates_panel, min = 0, max = 100000 )
             tt = 'DO NOT CHANGE UNLESS YOU KNOW WHAT YOU ARE DOING. Potential search operates on a work-rest cycle. This setting determines how long it should wait before starting a new work packet, as a percentage of the last work time.'
-            self._potential_duplicates_search_rest_percentage.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
+            self._potential_duplicates_search_rest_percentage_idle.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
+            
+            self._potential_duplicates_search_work_time_active = ClientGUITime.TimeDeltaWidget( self._duplicates_panel, min = 0.1, seconds = True, milliseconds = True )
+            tt = 'DO NOT CHANGE UNLESS YOU KNOW WHAT YOU ARE DOING. Potential search operates on a work-rest cycle. This setting determines how long it should work for in each work packet. Actual work time will normally be a little larger than this, and on large databases the minimum work time may be upwards of several seconds.'
+            self._potential_duplicates_search_work_time_active.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
+            
+            self._potential_duplicates_search_rest_percentage_active = ClientGUICommon.BetterSpinBox( self._duplicates_panel, min = 0, max = 100000 )
+            tt = 'DO NOT CHANGE UNLESS YOU KNOW WHAT YOU ARE DOING. Potential search operates on a work-rest cycle. This setting determines how long it should wait before starting a new work packet, as a percentage of the last work time.'
+            self._potential_duplicates_search_rest_percentage_active.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
             
             #
             
@@ -3363,8 +3373,12 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._tag_display_processing_rest_percentage_work_hard.setValue( self._new_options.GetInteger( 'tag_display_processing_rest_percentage_work_hard' ) )
             
             self._maintain_similar_files_duplicate_pairs_during_idle.setChecked( self._new_options.GetBoolean( 'maintain_similar_files_duplicate_pairs_during_idle' ) )
-            self._potential_duplicates_search_work_time.SetValue( HydrusTime.SecondiseMSFloat( self._new_options.GetInteger( 'potential_duplicates_search_work_time_ms' ) ) )
-            self._potential_duplicates_search_rest_percentage.setValue( self._new_options.GetInteger( 'potential_duplicates_search_rest_percentage' ) )
+            self._maintain_similar_files_duplicate_pairs_during_active.setChecked( self._new_options.GetBoolean( 'maintain_similar_files_duplicate_pairs_during_active' ) )
+            
+            self._potential_duplicates_search_work_time_idle.SetValue( HydrusTime.SecondiseMSFloat( self._new_options.GetInteger( 'potential_duplicates_search_work_time_ms_idle' ) ) )
+            self._potential_duplicates_search_rest_percentage_idle.setValue( self._new_options.GetInteger( 'potential_duplicates_search_rest_percentage_idle' ) )
+            self._potential_duplicates_search_work_time_active.SetValue( HydrusTime.SecondiseMSFloat( self._new_options.GetInteger( 'potential_duplicates_search_work_time_ms_active' ) ) )
+            self._potential_duplicates_search_rest_percentage_active.setValue( self._new_options.GetInteger( 'potential_duplicates_search_rest_percentage_active' ) )
             
             self._deferred_table_delete_work_time_idle.SetValue( HydrusTime.SecondiseMSFloat( self._new_options.GetInteger( 'deferred_table_delete_work_time_ms_idle' ) ) )
             self._deferred_table_delete_rest_percentage_idle.setValue( self._new_options.GetInteger( 'deferred_table_delete_rest_percentage_idle' ) )
@@ -3503,15 +3517,18 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             #
             
-            message = 'The search for potential duplicate file pairs (as on the duplicates page) can keep up to date automatically in idle time and shutdown.'
+            message = 'The discovery of new potential duplicate file pairs (as on the duplicates page, preparation tab) can run automatically.'
             
             self._duplicates_panel.Add( ClientGUICommon.BetterStaticText( self._duplicates_panel, label = message ), CC.FLAGS_EXPAND_PERPENDICULAR )
             
             rows = []
             
-            rows.append( ( 'Search for potential duplicates in idle time/shutdown: ', self._maintain_similar_files_duplicate_pairs_during_idle ) )
-            rows.append( ( '"Idle" ideal work packet time: ', self._potential_duplicates_search_work_time ) )
-            rows.append( ( '"Idle" rest time percentage: ', self._potential_duplicates_search_rest_percentage ) )
+            rows.append( ( 'Search for potential duplicates in "idle" time: ', self._maintain_similar_files_duplicate_pairs_during_idle ) )
+            rows.append( ( '"Idle" ideal work packet time: ', self._potential_duplicates_search_work_time_idle ) )
+            rows.append( ( '"Idle" rest time percentage: ', self._potential_duplicates_search_rest_percentage_idle ) )
+            rows.append( ( 'Search for potential duplicates in "normal" time: ', self._maintain_similar_files_duplicate_pairs_during_active ) )
+            rows.append( ( '"Normal" ideal work packet time: ', self._potential_duplicates_search_work_time_active ) )
+            rows.append( ( '"Normal" rest time percentage: ', self._potential_duplicates_search_rest_percentage_active ) )
             
             gridbox = ClientGUICommon.WrapInGrid( self._duplicates_panel, rows )
             
@@ -3617,38 +3634,41 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._new_options.SetInteger( 'file_maintenance_active_throttle_files', file_maintenance_active_throttle_files )
             self._new_options.SetInteger( 'file_maintenance_active_throttle_time_delta', file_maintenance_active_throttle_time_delta )
             
-            self._new_options.SetInteger( 'repository_processing_work_time_ms_very_idle', int( self._repository_processing_work_time_very_idle.GetValue() * 1000 ) )
+            self._new_options.SetInteger( 'repository_processing_work_time_ms_very_idle', HydrusTime.MillisecondiseS( self._repository_processing_work_time_very_idle.GetValue() ) )
             self._new_options.SetInteger( 'repository_processing_rest_percentage_very_idle', self._repository_processing_rest_percentage_very_idle.value() )
             
-            self._new_options.SetInteger( 'repository_processing_work_time_ms_idle', int( self._repository_processing_work_time_idle.GetValue() * 1000 ) )
+            self._new_options.SetInteger( 'repository_processing_work_time_ms_idle', HydrusTime.MillisecondiseS( self._repository_processing_work_time_idle.GetValue() ) )
             self._new_options.SetInteger( 'repository_processing_rest_percentage_idle', self._repository_processing_rest_percentage_idle.value() )
             
-            self._new_options.SetInteger( 'repository_processing_work_time_ms_normal', int( self._repository_processing_work_time_normal.GetValue() * 1000 ) )
+            self._new_options.SetInteger( 'repository_processing_work_time_ms_normal', HydrusTime.MillisecondiseS( self._repository_processing_work_time_normal.GetValue() ) )
             self._new_options.SetInteger( 'repository_processing_rest_percentage_normal', self._repository_processing_rest_percentage_normal.value() )
             
             self._new_options.SetBoolean( 'tag_display_maintenance_during_idle', self._tag_display_maintenance_during_idle.isChecked() )
             self._new_options.SetBoolean( 'tag_display_maintenance_during_active', self._tag_display_maintenance_during_active.isChecked() )
             
-            self._new_options.SetInteger( 'tag_display_processing_work_time_ms_idle', int( self._tag_display_processing_work_time_idle.GetValue() * 1000 ) )
+            self._new_options.SetInteger( 'tag_display_processing_work_time_ms_idle', HydrusTime.MillisecondiseS( self._tag_display_processing_work_time_idle.GetValue() ) )
             self._new_options.SetInteger( 'tag_display_processing_rest_percentage_idle', self._tag_display_processing_rest_percentage_idle.value() )
             
-            self._new_options.SetInteger( 'tag_display_processing_work_time_ms_normal', int( self._tag_display_processing_work_time_normal.GetValue() * 1000 ) )
+            self._new_options.SetInteger( 'tag_display_processing_work_time_ms_normal', HydrusTime.MillisecondiseS( self._tag_display_processing_work_time_normal.GetValue() ) )
             self._new_options.SetInteger( 'tag_display_processing_rest_percentage_normal', self._tag_display_processing_rest_percentage_normal.value() )
             
-            self._new_options.SetInteger( 'tag_display_processing_work_time_ms_work_hard', int( self._tag_display_processing_work_time_work_hard.GetValue() * 1000 ) )
+            self._new_options.SetInteger( 'tag_display_processing_work_time_ms_work_hard', HydrusTime.MillisecondiseS( self._tag_display_processing_work_time_work_hard.GetValue() ) )
             self._new_options.SetInteger( 'tag_display_processing_rest_percentage_work_hard', self._tag_display_processing_rest_percentage_work_hard.value() )
             
             self._new_options.SetBoolean( 'maintain_similar_files_duplicate_pairs_during_idle', self._maintain_similar_files_duplicate_pairs_during_idle.isChecked() )
-            self._new_options.SetInteger( 'potential_duplicates_search_work_time_ms', int( self._potential_duplicates_search_work_time.GetValue() * 1000 ) )
-            self._new_options.SetInteger( 'potential_duplicates_search_rest_percentage', self._potential_duplicates_search_rest_percentage.value() )
+            self._new_options.SetInteger( 'potential_duplicates_search_work_time_ms_idle', HydrusTime.MillisecondiseS( self._potential_duplicates_search_work_time_idle.GetValue() ) )
+            self._new_options.SetInteger( 'potential_duplicates_search_rest_percentage_idle', self._potential_duplicates_search_rest_percentage_idle.value() )
+            self._new_options.SetBoolean( 'maintain_similar_files_duplicate_pairs_during_active', self._maintain_similar_files_duplicate_pairs_during_active.isChecked() )
+            self._new_options.SetInteger( 'potential_duplicates_search_work_time_ms_active', HydrusTime.MillisecondiseS( self._potential_duplicates_search_work_time_active.GetValue() ) )
+            self._new_options.SetInteger( 'potential_duplicates_search_rest_percentage_active', self._potential_duplicates_search_rest_percentage_active.value() )
             
-            self._new_options.SetInteger( 'deferred_table_delete_work_time_ms_idle', int( self._deferred_table_delete_work_time_idle.GetValue() * 1000 ) )
+            self._new_options.SetInteger( 'deferred_table_delete_work_time_ms_idle', HydrusTime.MillisecondiseS( self._deferred_table_delete_work_time_idle.GetValue() ) )
             self._new_options.SetInteger( 'deferred_table_delete_rest_percentage_idle', self._deferred_table_delete_rest_percentage_idle.value() )
             
-            self._new_options.SetInteger( 'deferred_table_delete_work_time_ms_normal', int( self._deferred_table_delete_work_time_normal.GetValue() * 1000 ) )
+            self._new_options.SetInteger( 'deferred_table_delete_work_time_ms_normal', HydrusTime.MillisecondiseS( self._deferred_table_delete_work_time_normal.GetValue() ) )
             self._new_options.SetInteger( 'deferred_table_delete_rest_percentage_normal', self._deferred_table_delete_rest_percentage_normal.value() )
             
-            self._new_options.SetInteger( 'deferred_table_delete_work_time_ms_work_hard', int( self._deferred_table_delete_work_time_work_hard.GetValue() * 1000 ) )
+            self._new_options.SetInteger( 'deferred_table_delete_work_time_ms_work_hard', HydrusTime.MillisecondiseS( self._deferred_table_delete_work_time_work_hard.GetValue() ) )
             self._new_options.SetInteger( 'deferred_table_delete_rest_percentage_work_hard', self._deferred_table_delete_rest_percentage_work_hard.value() )
             
         

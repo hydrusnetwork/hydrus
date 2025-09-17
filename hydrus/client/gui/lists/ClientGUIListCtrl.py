@@ -430,6 +430,11 @@ class HydrusListItemModel( QC.QAbstractItemModel ):
         
         sort_data_has_changed = False
         
+        if len( datas ) == 0:
+            
+            return sort_data_has_changed 
+            
+        
         try:
             
             existing_sort_logical_index = CGLC.column_list_column_type_logical_position_lookup[ self._column_list_type ][ self._sort_column_type ]
@@ -742,9 +747,29 @@ class BetterListCtrlTreeView( QW.QTreeView ):
         return height
         
     
-    def _GetSelectedIndices( self ) -> list[ int ]:
+    def _GetSelectedIndicesIterator( self ) -> typing.Iterator[ int ]:
         
-        return sorted( ( index.row() for index in self.selectionModel().selectedRows() ) )
+        # selectedRows() is quite expensive, so let's peer into the underlying gubbins
+        
+        selection = self.selectionModel().selection()
+        
+        selected_row_ranges = []
+        
+        # this guy is iterable (it is a subclass of QList), trust me linterbros
+        for selection_range in selection:
+            
+            typing.cast( QC.QItemSelectionRange, selection_range )
+            
+            selected_row_ranges.append( ( selection_range.top(), selection_range.bottom() + 1 ) )
+            
+        
+        # we are assuming no overlapping ranges because we are in rowSelection mode!
+        
+        selected_row_ranges.sort()
+        
+        selected_rows_iterator = ( row_index for row_indices in ( range( top, bottom ) for ( top, bottom ) in selected_row_ranges ) for row_index in row_indices )
+        
+        return selected_rows_iterator
         
     
     def _PreserveSelectionRestore( self ):
@@ -946,7 +971,7 @@ class BetterListCtrlTreeView( QW.QTreeView ):
         
         if only_selected:
             
-            indices = self._GetSelectedIndices()
+            indices = list( self._GetSelectedIndicesIterator() )
             
             return self.model().GetData( indices = indices )
             
@@ -958,11 +983,11 @@ class BetterListCtrlTreeView( QW.QTreeView ):
     
     def GetTopSelectedData( self ) -> typing.Optional[ typing.Any ]:
         
-        indices = self._GetSelectedIndices()
+        indices_iter = self._GetSelectedIndicesIterator()
         
-        if len( indices ) > 0:
+        try:
             
-            top_index = min( indices )
+            top_index = next( indices_iter )
             
             result = self.model().GetData( ( top_index, ) )
             
@@ -970,6 +995,10 @@ class BetterListCtrlTreeView( QW.QTreeView ):
                 
                 return result[ 0 ]
                 
+            
+        except StopIteration:
+            
+            return None
             
         
         return None
@@ -989,12 +1018,26 @@ class BetterListCtrlTreeView( QW.QTreeView ):
     
     def HasOneSelected( self ):
         
-        return len( self.selectionModel().selectedRows() ) == 1
+        rows_seen = set()
+        
+        indices_iter = self._GetSelectedIndicesIterator()
+        
+        for index in indices_iter:
+            
+            rows_seen.add( index )
+            
+            if len( rows_seen ) > 1:
+                
+                break
+                
+            
+        
+        return len( rows_seen ) == 1
         
     
     def HasSelected( self ):
         
-        return len( self.selectionModel().selectedRows() ) > 0
+        return self.selectionModel().hasSelection()
         
     
     def minimumSizeHint( self ):
@@ -1393,6 +1436,11 @@ class BetterListCtrlTreeView( QW.QTreeView ):
         else:
             
             datas = self.GetData()
+            
+        
+        if len( datas ) == 0:
+            
+            return False
             
         
         sort_data_has_changed = self.model().UpdateDatas( datas, check_for_changed_sort_data = check_for_changed_sort_data )

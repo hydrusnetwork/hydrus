@@ -7,6 +7,55 @@ title: Changelog
 !!! note
     This is the new changelog, only the most recent builds. For all versions, see the [old changelog](old_changelog.html).
 
+## [Version 639](https://github.com/hydrusnetwork/hydrus/releases/tag/v639)
+
+### misc
+
+* `system:number of tags` and `system:tag as number` have a nicer new namespace selection widget
+* fixed the duplicate filter group mode finding a new group after the previous group was resolved. I messed this up in last week's rewrite and it slipped through testing
+* huge multi-column lists handle large selections much more efficiently, particularly when they have lots of buttons. all the various logic that handles 'should this accompanying button be enabled?' and so on now uses calls that work much faster when there are thousands of items selected. in my tests, a sublist with 5,000 test items now updates to a new selection in under 30ms--previously it was about a second. similarly, pasting all those items to a new list now takes about six seconds, whereas previously it was locking up for ages and ages, perhaps forever (issue #1737)
+* fixed an issue where the 'move media files' dialog was saying all files were in their ideal location if the thumbnail location override was not set. this was happening because an error was being quashed over-eagerly. if this dialog has a similar problem in future, you might get some spammy reports, but it'll show. also a side thing, the 'set' button of the thumbnail location override no longer disables if you have a path set--feel free to move it to a new location in one step mate
+* the system that positions windows off the topLeft corner of their parent is now more forgiving of unusual window manager frame geometry. if you kept getting 'hey I just rescued a window from ( 24, -14 )'-style popups every time you open the options off a maximised main GUI, let me know what happens now--are your dialogs appearing offscreen, auto-repositioning to (0, 0), or is everything good now?
+* if you are feeling clever and can get an OR predicate into the duplicates auto-resolution 'test A or B' comparator, it now works! I'll brush up the UI in future to make it easy to enter an OR here (issue #1790)
+
+### potential duplicates discovery
+
+* I have overhauled the daemon that looks for new potential duplicate pairs. this guy no longer searches for pairs during shutdown maintenance (I'm generally trying to retire shutdown work), but you can now tell it to run in idle and/or normal time, with separate work/rest settings under `options->maintenance and processing`
+* your settings here will mostly reset to defaults this week, sorry! default is to run in idle time but not active time, with some conservative work/rest ratios
+* a critical section of database code that finds outstanding eligible files to perform the similar files search on is now optimised for clients with larger numbers of files. there will be a one-time CPU cost for each search distance you run at, and thereafter this thing should run like greased lightning even if you have millions of files, reducing per-job overhead for all similar files search
+* when you force work through the duplicate page 'preparation' tab, it now works through a pause/play button and there is no separate work popup; it now just updates the bar in front of you
+* I'm interested to know how 'run in normal time' feels for clients that have a lot of imports going on. I haven't gone for instant reaction to new files yet, but if it is idling with all other work done it'll get to any new files within about ten seconds, and the auto-resolution system _will_ react instantly to new potential duplicate pairs. might be laggy, might be cool, might be confusing as files in downloader pages are deleted before your eyes. the super ideal here would be to collapse the whole operation into the single import job and return something like 'file was duplicate' instead of 'already in db' as the import status, but we'll see how this does
+* the 'reset potential search' cog-button task now resets the search for all eligible files. previously, I was trying to be cute and only reset search for files that previously found a potential pair, but the, say, ~37% filled progress bar after reset was confusing and not actually what the maintenance task wanted. KISS
+
+### profile mode
+
+* `help->debug->profiling->profile mode` now works on Python 3.12+. newer version of python are more strict about how profiling operates in a multi-threaded environment, and hydrus's profiling now obeys these rules. it turns out hydrus was always getting some _slightly_ gonk numbers here in busy multi-threaded situations, or at least many jobs were being truncated, which explains some inexplicable results I've seen over the years
+* profile mode is now split into four exclusive types--client api, db, threads, and ui. the menu and html help are updated to talk about these. most users will want 'db'
+* 'threads' and 'client api' profiles will sometimes include a bunch of truncated 'EXCLUSIVE: (job) ran in 17ms'. this is me salvaging a difficult situation with a still-useful number. don't worry about it!
+* Python 3.12+ adds some cool tools here, and I expect to expand to some 'profile everything going on mate' modes in future to capture deep Qt things my specific modes do not
+* there's an ancient shortcut for 'turn profile mode on'. this now does 'db' profile mode; it'll probably do something else later, or I'll retire it
+
+### boring stuff
+
+* if you boot the client or server in a python environment that does not have the requirements.txt stuff installed, the client now recognises this and gives a nicer error saying 'hey, I think you need to reinstall/activate your venv', rather than the old 'hey you don't have yaml' error
+* tweaked the client's critical boot error handling so that it shows a nicer english error message first and then the full traceback in a second dialog
+* added some unit tests for OR predicates within Metadata Conditionals
+* fixed a deprecated unit test call. thanks to the user who pointed this out. this is not the first time this specific thing happened, so I'm switching up my testing regime to catch this in future
+
+### boring overhauls and refactoring
+
+* wrote a new MainLoop Manager for the potential duplicates search and some maintenance and numbers caching
+* overhauled the potential duplicates search tree maintenance call to have less overhead and be happier working in tiny chunks. it is now continually maintained throughout search work
+* wrote a count cache for the shape search store for the new daemon (previously it counted manually); it is updated as the underlying store changes
+* hooked up new notification paths for new shape search counts or brance rebalancing work. these paths are simple and comprehensive, so the new guy should be a bit more reliable for unusual file maintenance jobs and so on that may alter the search space a little
+* added some safety code to the new similar files search daemon to stop an infinite loop if the search record store has non-searchable items for some reason
+* cleaned up the Duplicates Page Sidebar maintenance page a bunch. there was just a ton of cruft to go through
+* to untangle some imports, moved duplicate score and visual duplicates gubbins out of `ClientDuplicates.py` to a new `ClientDuplicatesComparisonStatements.py`
+* collected pretty much all the profiling and query planner gubbins like start time and job count and printing tech from `HydrusController.py` and `HydrusGlobals.py` to `HydrusProfiling.py`. I cleaned a bunch of it up along the way
+* brushed up some of the database migration help r.e. missing locations and the pre-boot repair dialog
+* the core `CallAfter` method used by many thread-to-Qt comms is a tiny bit more stable/thread-safe
+* misc linting work, including clearing out some legacy unresolved references
+
 ## [Version 638](https://github.com/hydrusnetwork/hydrus/releases/tag/v638)
 
 ### misc
@@ -456,59 +505,3 @@ title: Changelog
 * fixed a client api test that could sometimes fail due to a thread taking too long to work
 * `help->about` now says the system architecture (e.g. x86_64, arm64, aarch64)
 * `help->about` has better wordwrap (we noticed it gets super wide if your install dir is long etc..)
-
-## [Version 629](https://github.com/hydrusnetwork/hydrus/releases/tag/v629)
-
-### misc
-
-* fixed the regression where the top-right hover window was not showing in the archive/delete or duplicate filters (issue #1755)
-* fixed some volume/rating rendering stuff in the filters, too
-* the new '3/5' numerical ratings texts are now drawn in the normal text colour for your stylesheet, not from the rating colours
-* you can now select the 'aggregate modified time' as the source timestamp when setting up a sidecar export. this is the reasonable minimum of all known modified times and what you generally see in the UI when it only shows one modified time
-* if you try to import a Canon RAW CR3, it is no longer recognised in the initial path scanning routine as an mp4. many still images that ffmpeg can somewhat parse but isn't sure on should be fixed here--I was reading back the ffmpeg output badly and falling to a 'generic mp4?' assumption (issue #1756)
-* the optional library lines in `help->about` now say a little more than just True/False, and the process by which this dialog says 'hey, mpv failed to import for this reason' on window launch is now generalised, recognises the difference between a module not being available and an actual error during import, and covers mpv, QtCharts, QtPDF, dateparser, dateutil, and psutil
-* fixed 'collapse pages to the right' page tab actions, which were typo-broken in recent refactoring
-
-### duplicates
-
-* fixed an issue where the duplicates auto-resolution system would work way too hard and not take long enough breaks in many cases. it was notifying itself there was new work due _while_ doing work, leading it to keep waking itself up as soon as it went to sleep. it now ignores these signals while it is doing work. you will generally see the system working much slower from now on. let me know how this goes--now the clock behind all this isn't busted, it needs a re-tuning and/or options regarding how hard it wants to work, and we may want to bring back 'work hard' mode
-* the 'A and B are visual duplicates' test has a more sophisticated edge-detection routine. it can now detect paler watermarks or other artist edits by tiling the images' average edge differences and calculating a skew metric to notice unusual regional shifts
-* the duplicates auto-resolution system (and the database maintenance manager) now force breaks of at least 250ms between each job when things are busy
-* the duplicates auto-resolution system now runs with significantly less overhead any time it needs to consult rules
-* the list on the main duplicates filter 'auto-resolution' tab updates itself significantly faster now, only needing to hit the database on rule edits or the refresh button
-* rules are now better at reporting if they are doing work in this list. they'll say 'waiting' (want to work but settings say no working right now) and 'working' (taking available work slots right now) a lot more now. also instead of 'idle', they now say 'done'
-* the 'test' phase of a duplicates auto-resolution rule, which is CPU expensive for 'A and B are visual duplicates', now occurs outside the database transaction
-* fixed the 'work on these rules during idle time' cog menu, which was wired up to the 'do search for potential duplicates in idle time' options boolean due to a typo
-* the 'edit rules' dialog is now much more aggressive at interrupting and pausing ongoing work so it can launch
-
-### more invalid export path fixes
-
-* the new routine that elides subdirectory names generated by a export filename pattern is now careful to trim the directory name of leading/trailing whitespace. previously, when you were unlucky enough to get elided to `tag, tag, tag, `, the export operation would fail in Windows and simply be ugly everywhere else. the base filename is stripped of whitespace too, so you won't get `tag, tag, tag .jpeg` any more (issue #1751 again)
-* it now also removes periods from the end of windows file/dirnames, which it turns out are also not allowed
-* it now also excludes some windows reserved names like 'AUX' and 'COM1'
-
-### AVIF
-
-* the Pillow guys released the 11.3 that adds nice native AVIF support. all builds will fold this in and it should all just work. users who run from source might like to rebuild their venvs this week. this fixes some bugs we had with the interim plugin library, including one with unusual rotation (issue #1728)
-* in the v629 update, all AVIFs are scheduled for: a metadata rescan, the 'has exif/icc profile/other human-readable embedded metadata?' checks, and forced thumb, pixel hash, and phash regen (there are several legacy issues from this saga to catch up on)
-* the code that imports the heif, avif, and jpegxl plugin libraries now asks Pillow if it can do the respective thing (turns out it has a nice call for this) before importing the plugin, making for a much more natural and foolproof update process as we go forward here
-* the `help->about` window now shows if you have heif, avif, or jpegxl support natively in Pillow or via a plugin
-
-### dateparser fixes
-
-* dateparser, which we use to do the 'easy date parse' solution, updated to `1.2.2` and suddenly wouldn't import correct in the Linux and Windows builds (maybe macOS too, not sure, but it seems to have been a PyInstaller issue), breaking a bunch of cool date parsing
-* I have rolled back dateparser to `1.2.1` in all requirements files and it should import again ok in v629 builds. to check, you can see it under `help->about`
-* it looks like the new version had additional locale issues, too, or it aggravated an older known one. computers that are in locales where the local time is strictly 24-hour, such as Polish or Russian, were having trouble parsing any date with AM/PM info, even when I told dateparser 'hey, if that failed, just do it in EN mate'. the program now initialises dateparser right at the very start of the program, before other imports sink their teeth into app locale, and this appears to fix dateparser's timezone cache initialisation. thanks to the user who figured this out!
-* the 'easy date parse' system now has a fallback to dateutil's very good parser if dateparser fails
-* all the above addresses issue #1754
-
-### cleanup/boring stuff
-
-* fixed a deprecated Pillow fromarray mode param
-* think I fixed an issue with Arch running the Ubuntu-built release relating to a bad 'wakeUp' call in some event dispatching code
-* added some painter save/restore stuff to ensure 'draw rating here' calls are non-destructive to painter state
-* auto-resolution rules' counts are now updated at the object on any change and do not have to be reloaded when a daemon wants to consult them. also made it more thread-safe
-* added some sidecar modified timestamp unit tests
-* added unit tests for the new export path stuff, and improved my path unit tests to better work on any OS
-* deleted the old integrated 'do duplicates auto-resolution work' db code
-* removed the 'TEST: stop mpv on media transitions' option. this test failed and caused other bugs, but I have some other ideas I'm going to play with

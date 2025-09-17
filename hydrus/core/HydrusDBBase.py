@@ -9,6 +9,7 @@ import sqlite3
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusPaths
+from hydrus.core import HydrusProfiling
 from hydrus.core import HydrusPSUtil
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusTemp
@@ -433,13 +434,11 @@ class DBBase( object ):
     
     def _Execute( self, query, *query_args ) -> sqlite3.Cursor:
         
-        if HG.query_planner_mode and query not in HG.queries_planned:
+        if HydrusProfiling.query_planner_mode and query not in HydrusProfiling.queries_planned:
             
             plan_lines = self._c.execute( 'EXPLAIN QUERY PLAN {}'.format( query ), *query_args ).fetchall()
             
-            HG.query_planner_query_count += 1
-            
-            HG.controller.PrintQueryPlan( query, plan_lines )
+            HydrusProfiling.PrintQueryPlan( query, plan_lines )
             
         
         return self._c.execute( query, *query_args )
@@ -454,7 +453,7 @@ class DBBase( object ):
     
     def _ExecuteMany( self, query, args_iterator ):
         
-        if HG.query_planner_mode and query not in HG.queries_planned:
+        if HydrusProfiling.query_planner_mode and query not in HydrusProfiling.queries_planned:
             
             args_iterator = list( args_iterator )
             
@@ -462,9 +461,7 @@ class DBBase( object ):
                 
                 plan_lines = self._c.execute( 'EXPLAIN QUERY PLAN {}'.format( query ), args_iterator[0] ).fetchall()
                 
-                HG.query_planner_query_count += 1
-                
-                HG.controller.PrintQueryPlan( query, plan_lines )
+                HydrusProfiling.PrintQueryPlan( query, plan_lines )
                 
             
         

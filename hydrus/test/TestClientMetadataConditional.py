@@ -654,6 +654,34 @@ class TestPredicateTesting( unittest.TestCase ):
         self.assertTrue( system_predicate.TestMediaResult( fake_media_result ) )
         
     
+    def test_type_or( self ):
+        
+        pred = ClientSearchPredicate.Predicate(
+            ClientSearchPredicate.PREDICATE_TYPE_OR_CONTAINER,
+            [
+                ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_WIDTH, ClientNumberTest.NumberTest.STATICCreateFromCharacters( '<', 200 ) ),
+                ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HEIGHT, ClientNumberTest.NumberTest.STATICCreateFromCharacters( '<', 200 ) )
+            ]
+        )
+        
+        self.assertTrue( pred.CanTestMediaResult() )
+        
+        media_result_pass_1 = HelperFunctions.GetFakeMediaResult( HydrusData.GenerateKey(), mime = HC.IMAGE_JPEG )
+        media_result_pass_2 = HelperFunctions.GetFakeMediaResult( HydrusData.GenerateKey(), mime = HC.IMAGE_JPEG )
+        media_result_fail = media_result_pass_1.Duplicate()
+        
+        media_result_pass_1.GetFileInfoManager().width = 195
+        media_result_pass_1.GetFileInfoManager().height = 205
+        media_result_pass_2.GetFileInfoManager().width = 195
+        media_result_pass_2.GetFileInfoManager().height = 205
+        media_result_fail.GetFileInfoManager().width = 205
+        media_result_fail.GetFileInfoManager().height = 205
+        
+        self.assertTrue( pred.TestMediaResult( media_result_pass_1 ) )
+        self.assertTrue( pred.TestMediaResult( media_result_pass_2 ) )
+        self.assertFalse( pred.TestMediaResult( media_result_fail ) )
+        
+    
 
 class TestPredicateValueExtraction( unittest.TestCase ):
     
@@ -716,7 +744,7 @@ class TestPredicateValueExtraction( unittest.TestCase ):
         
         num = system_predicate.ExtractValueFromMediaResult( fake_media_result )
         
-        self.assertNotEquals( num, 0 )
+        self.assertNotEqual( num, 0 )
         self.assertEqual( num, len( fake_media_result.GetTagsManager().GetCurrentAndPending( CC.COMBINED_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ) ) )
         
         # num_urls

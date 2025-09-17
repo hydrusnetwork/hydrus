@@ -645,6 +645,7 @@ class QtAwareJob( HydrusThreading.SingleJob ):
             self.Work()
             
         
+        # yo if you change this, alter how profile_mode (ui) works
         CG.client_controller.CallAfter( self._window, qt_code )
         
     
@@ -696,6 +697,7 @@ class QtAwareRepeatingJob( HydrusThreading.RepeatingJob ):
     
     def _BootWorker( self ):
         
+        # yo if you change this, alter how profile_mode (ui) works
         CG.client_controller.CallAfter( self._window, self._QTWork )
         
     

@@ -208,7 +208,7 @@ class ReviewActionsPanel( ClientGUIScrolledPanels.ReviewPanel ):
     def _ApproveSelectedPending( self ):
         
         model = self._pending_actions_pair_list.model()
-        indices = self._pending_actions_pair_list.selectedIndexes()
+        indices = self._pending_actions_pair_list.selectionModel().selectedRows()
         
         selected_pairs = [ model.GetMediaResultPair( index.row() ) for index in indices ]
         
@@ -352,7 +352,7 @@ class ReviewActionsPanel( ClientGUIScrolledPanels.ReviewPanel ):
     def _DenySelectedPending( self ):
         
         model = self._pending_actions_pair_list.model()
-        indices = self._pending_actions_pair_list.selectedIndexes()
+        indices = self._pending_actions_pair_list.selectionModel().selectedRows()
         
         selected_pairs = [ model.GetMediaResultPair( index.row() ) for index in indices ]
         
@@ -635,7 +635,7 @@ class ReviewActionsPanel( ClientGUIScrolledPanels.ReviewPanel ):
     def _UndoSelectedActioned( self ):
         
         model = self._actioned_pairs_pair_list.model()
-        indices = self._actioned_pairs_pair_list.selectedIndexes()
+        indices = self._actioned_pairs_pair_list.selectionModel().selectedRows()
         
         selected_pairs = { model.GetMediaResultPair( index.row() ) for index in indices }
         
@@ -665,7 +665,7 @@ class ReviewActionsPanel( ClientGUIScrolledPanels.ReviewPanel ):
     def _UndoSelectedDeclined( self ):
         
         model = self._declined_pairs_pair_list.model()
-        indices = self._declined_pairs_pair_list.selectedIndexes()
+        indices = self._declined_pairs_pair_list.selectionModel().selectedRows()
         
         selected_pairs = { model.GetMediaResultPair( index.row() ) for index in indices }
         

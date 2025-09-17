@@ -3423,9 +3423,7 @@ ATTACH "client.mappings.db" as external_mappings;'''
         
         profiling = ClientGUIMenus.GenerateMenu( debug_menu )
         
-        profile_mode_message = '***THIS DOES NOT WORK IN PYTHON 3.12 and ABOVE FOR NOW***'
-        profile_mode_message += '\n' * 2
-        profile_mode_message += 'If something is running slow, you can turn on profile mode to have hydrus gather information on it. Most jobs are covered by this profiling mode.'
+        profile_mode_message = 'If something is running slow, you can turn on a profile mode to have hydrus gather information on it. You probably want "db" profile mode, but if it seems to be lag related to dialog spawning or similar, you might like to try the "ui" mode.'
         profile_mode_message += '\n' * 2
         profile_mode_message += 'Turn the mode on, do the slow thing for a bit, and then turn it off. In your database directory will be a new profile log, which is really helpful for hydrus dev to figure out what is running slow for you and how to fix it.'
         profile_mode_message += '\n' * 2
@@ -3434,8 +3432,11 @@ ATTACH "client.mappings.db" as external_mappings;'''
         profile_mode_message += 'More information is available in the help, under \'reducing lag\'.'
         
         ClientGUIMenus.AppendMenuItem( profiling, 'what is this?', 'Show profile info.', ClientGUIDialogsMessage.ShowInformation, self, profile_mode_message )
-        ClientGUIMenus.AppendMenuCheckItem( profiling, 'profile mode', 'Run detailed \'profiles\'.', HG.profile_mode, CG.client_controller.FlipProfileMode )
-        ClientGUIMenus.AppendMenuCheckItem( profiling, 'query planner mode', 'Run detailed \'query plans\'.', HG.query_planner_mode, CG.client_controller.FlipQueryPlannerMode )
+        self._profile_mode_client_api_menu_item = ClientGUIMenus.AppendMenuCheckItem( profiling, 'profile mode (client api)', 'Run detailed \'profiles\' on Client API jobs.', HydrusProfiling.IsProfileMode( 'client_api' ), self.FlipProfileMode, 'client_api' )
+        self._profile_mode_db_menu_item = ClientGUIMenus.AppendMenuCheckItem( profiling, 'profile mode (db)', 'Run detailed \'profiles\' on db jobs.', HydrusProfiling.IsProfileMode( 'db' ), self.FlipProfileMode, 'db' )
+        self._profile_mode_threads_menu_item = ClientGUIMenus.AppendMenuCheckItem( profiling, 'profile mode (threads)', 'Run detailed \'profiles\' on background threaded tasks.', HydrusProfiling.IsProfileMode( 'threads' ), self.FlipProfileMode, 'threads' )
+        self._profile_mode_ui_menu_item = ClientGUIMenus.AppendMenuCheckItem( profiling, 'profile mode (ui)', 'Run detailed \'profiles\' on some Qt jobs.', HydrusProfiling.IsProfileMode( 'ui' ), self.FlipProfileMode, 'ui' )
+        ClientGUIMenus.AppendMenuCheckItem( profiling, 'query planner mode', 'Run detailed \'query plans\'.', HydrusProfiling.query_planner_mode, CG.client_controller.FlipQueryPlannerMode )
         
         ClientGUIMenus.AppendMenu( debug_menu, profiling, 'profiling' )
         
@@ -5419,7 +5420,7 @@ ATTACH "client.mappings.db" as external_mappings;'''
         
         if result == QW.QDialog.DialogCode.Accepted:
             
-            self._controller.Write( 'regenerate_similar_files' )
+            self._controller.Write( 'regenerate_similar_files_tree' )
             
         
     
@@ -7366,16 +7367,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 
                 try:
                     
-                    if HG.profile_mode:
-                        
-                        summary = 'Profiling animation timer: ' + repr( window )
-                        
-                        HydrusProfiling.Profile( summary, 'window.TIMERAnimationUpdate()', globals(), locals(), min_duration_ms = HG.ui_timer_profile_min_job_time_ms )
-                        
-                    else:
-                        
-                        window.TIMERAnimationUpdate()
-                        
+                    window.TIMERAnimationUpdate()
                     
                 except Exception:
                     
@@ -7434,6 +7426,16 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         self._UpdateSystemTrayIcon()
         
         self._menu_updater_network.update()
+        
+    
+    def FlipProfileMode( self, name ):
+        
+        HydrusProfiling.FlipProfileMode( name )
+        
+        self._profile_mode_client_api_menu_item.setChecked( HydrusProfiling.IsProfileMode( 'client_api' ) )
+        self._profile_mode_db_menu_item.setChecked( HydrusProfiling.IsProfileMode( 'db' ) )
+        self._profile_mode_threads_menu_item.setChecked( HydrusProfiling.IsProfileMode( 'threads' ) )
+        self._profile_mode_ui_menu_item.setChecked( HydrusProfiling.IsProfileMode( 'ui' ) )
         
     
     def FlipSubscriptionsPaused( self ):
@@ -7960,7 +7962,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 
             elif action == CAC.SIMPLE_GLOBAL_PROFILE_MODE_FLIP:
                 
-                CG.client_controller.FlipProfileMode()
+                self.FlipProfileMode( 'db' )
                 
             elif action == CAC.SIMPLE_GLOBAL_FORCE_ANIMATION_SCANBAR_SHOW:
                 
@@ -8307,16 +8309,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         if page is not None:
             
-            if HG.profile_mode:
-                
-                summary = 'Profiling page timer: ' + repr( page )
-                
-                HydrusProfiling.Profile( summary, 'page.REPEATINGPageUpdate()', globals(), locals(), min_duration_ms = HG.ui_timer_profile_min_job_time_ms )
-                
-            else:
-                
-                page.REPEATINGPageUpdate()
-                
+            page.REPEATINGPageUpdate()
             
         
         if len( self._pending_modal_job_statuses ) > 0:
@@ -8355,16 +8348,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
             try:
                 
-                if HG.profile_mode:
-                    
-                    summary = 'Profiling ui update timer: ' + repr( window )
-                    
-                    HydrusProfiling.Profile( summary, 'window.TIMERUIUpdate()', globals(), locals(), min_duration_ms = HG.ui_timer_profile_min_job_time_ms )
-                    
-                else:
-                    
-                    window.TIMERUIUpdate()
-                    
+                window.TIMERUIUpdate()
                 
             except Exception as e:
                 

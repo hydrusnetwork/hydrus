@@ -249,7 +249,7 @@ def PopulateGallerySeedLogButton( win: QW.QWidget, menu: QW.QMenu, gallery_seed_
         ClientGUIMenus.AppendMenuItem( submenu, 'from clipboard', 'Import new urls to this list from the clipboard.', ImportFromClipboard, win, gallery_seed_log, can_generate_more_pages )
         ClientGUIMenus.AppendMenuItem( submenu, 'from png', 'Import new urls to this list from a png file.', ImportFromPNG, win, gallery_seed_log, can_generate_more_pages )
         
-        ClientGUIMenus.AppendMenu( menu, submenu, 'import new urls' )
+        ClientGUIMenus.AppendMenu( menu, submenu, 'ADVANCED: import new urls' )
         
     
     if len( selected_gallery_seeds ) > 0:

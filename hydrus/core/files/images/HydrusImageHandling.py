@@ -86,6 +86,7 @@ if not PIL_HAS_AVIF:
                 
                 try:
                     
+                    # noinspection PyUnresolvedReferences
                     from pillow_heif import register_avif_opener
                     
                     register_avif_opener(thumbnails=False) # this is now deprecated 2024-04, pillow_heif 0.22.0

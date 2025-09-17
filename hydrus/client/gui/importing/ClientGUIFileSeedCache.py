@@ -354,7 +354,7 @@ def PopulateFileSeedCacheMenu( win: QW.QWidget, menu: QW.QMenu, file_seed_cache:
     ClientGUIMenus.AppendMenuItem( submenu, 'from clipboard', 'Import new urls or paths to this list from the clipboard.', ImportFromClipboard, win, file_seed_cache )
     ClientGUIMenus.AppendMenuItem( submenu, 'from png', 'Import new urls or paths to this list from a png file.', ImportFromPNG, win, file_seed_cache )
     
-    ClientGUIMenus.AppendMenu( menu, submenu, 'import new sources' )
+    ClientGUIMenus.AppendMenu( menu, submenu, 'ADVANCED: import new sources' )
     
     if len( selected_file_seeds ) > 0 or file_seed_cache.IsURLFileSeeds():
         

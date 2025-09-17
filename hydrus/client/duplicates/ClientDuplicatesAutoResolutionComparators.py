@@ -6,7 +6,7 @@ from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTime
 
-from hydrus.client.duplicates import ClientDuplicates
+from hydrus.client.duplicates import ClientDuplicatesComparisonStatements
 from hydrus.client.files.images import ClientVisualData
 from hydrus.client.media import ClientMediaResult
 from hydrus.client.metadata import ClientMetadataConditional 
@@ -454,15 +454,15 @@ class PairComparatorRelativeVisualDuplicates( PairComparator ):
         
         if media_result_a.GetMime() in HC.IMAGES and media_result_b.GetMime() in HC.IMAGES:
             
-            visual_data_a = ClientDuplicates.GetVisualData( media_result_a )
-            visual_data_b = ClientDuplicates.GetVisualData( media_result_b )
+            visual_data_a = ClientDuplicatesComparisonStatements.GetVisualData( media_result_a )
+            visual_data_b = ClientDuplicatesComparisonStatements.GetVisualData( media_result_b )
             
             ( simple_seems_good, simple_result, simple_score_statement ) = ClientVisualData.FilesAreVisuallySimilarSimple( visual_data_a, visual_data_b )
             
             if simple_seems_good:
                 
-                visual_data_tiled_a = ClientDuplicates.GetVisualDataTiled( media_result_a )
-                visual_data_tiled_b = ClientDuplicates.GetVisualDataTiled( media_result_b )
+                visual_data_tiled_a = ClientDuplicatesComparisonStatements.GetVisualDataTiled( media_result_a )
+                visual_data_tiled_b = ClientDuplicatesComparisonStatements.GetVisualDataTiled( media_result_b )
                 
                 ( regional_seems_good, regional_result, regional_score_statement ) = ClientVisualData.FilesAreVisuallySimilarRegional( visual_data_tiled_a, visual_data_tiled_b )
                 

@@ -184,6 +184,8 @@ class Controller( object ):
         self.run_finished = False
         self.was_successful = False
         
+        self.call_after_catcher = ClientGUICallAfter.CallAfterEventCatcher( QW.QApplication.instance() )
+        
         self._test_db = None
         
         self.db_dir = tempfile.mkdtemp()
@@ -458,7 +460,7 @@ class Controller( object ):
     
     def CallAfter( self, qobject: QC.QObject, func, *args, **kwargs ):
         
-        ClientGUICallAfter.CallAfter( qobject, func, *args, **kwargs )
+        ClientGUICallAfter.CallAfter( self.call_after_catcher, qobject, func, *args, **kwargs )
         
     
     def CallAfterQtSafe( self, window, label, func, *args, **kwargs ):

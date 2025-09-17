@@ -42,7 +42,6 @@ import_folders_running = False
 export_folders_running = False
 
 boot_with_network_traffic_paused_command_line = False
-profile_mode = False
 
 db_profile_min_job_time_ms = 16
 callto_profile_min_job_time_ms = 10
@@ -52,16 +51,6 @@ pubsub_profile_min_job_time_ms = 5
 ui_timer_profile_min_job_time_ms = 5
 
 macos_antiflicker_test = False
-
-query_planner_mode = False
-
-query_planner_start_time = 0
-query_planner_query_count = 0
-queries_planned = set()
-profile_start_time = 0
-profile_slow_count = 0
-profile_fast_count = 0
-profile_counter_lock = threading.Lock()
 
 canvas_tile_outline_mode = False
 

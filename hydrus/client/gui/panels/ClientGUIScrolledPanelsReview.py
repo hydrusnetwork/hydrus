@@ -1026,14 +1026,12 @@ class MoveMediaFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
             
             self._thumbnails_location.setText( 'none set' )
             
-            self._thumbnails_location_set.setEnabled( True )
             self._thumbnails_location_clear.setEnabled( False )
             
         else:
             
             self._thumbnails_location.setText( self._ideal_thumbnails_base_location_override.path )
             
-            self._thumbnails_location_set.setEnabled( False )
             self._thumbnails_location_clear.setEnabled( True )
             
         

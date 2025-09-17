@@ -516,6 +516,11 @@ class HydrusController( object ):
         return self._managers[ name ]
         
     
+    def GetName( self ):
+        
+        return self._name
+        
+    
     def GetThreadPoolBusyStatus( self ):
         
         if HydrusTime.TimeHasPassed( self._thread_pool_busy_status_text_new_check_time ):
@@ -681,70 +686,6 @@ class HydrusController( object ):
         HydrusTemp.CleanUpOldTempPaths()
         
         self._MaintainCallToThreads()
-        
-    
-    def PrintProfile( self, summary, profile_text = None ):
-        
-        pretty_timestamp = time.strftime( '%Y-%m-%d %H-%M-%S', time.localtime( HG.profile_start_time ) )
-        
-        profile_log_filename = '{} profile - {}.log'.format( self._name, pretty_timestamp )
-        
-        profile_log_path = os.path.join( self.db_dir, profile_log_filename )
-        
-        with open( profile_log_path, 'a', encoding = 'utf-8' ) as f:
-            
-            prefix = time.strftime( '%Y-%m-%d %H:%M:%S: ' )
-            
-            f.write( prefix + summary )
-            
-            if profile_text is not None:
-                
-                f.write( '\n\n' )
-                f.write( profile_text )
-                
-            
-        
-    
-    def PrintQueryPlan( self, query, plan_lines ):
-        
-        if query in HG.queries_planned:
-            
-            return
-            
-        
-        HG.queries_planned.add( query )
-        
-        pretty_timestamp = time.strftime( '%Y-%m-%d %H-%M-%S', time.localtime( HG.query_planner_start_time ) )
-        
-        query_planner_log_filename = '{} query planner - {}.log'.format( self._name, pretty_timestamp )
-        
-        query_planner_log_path = os.path.join( self.db_dir, query_planner_log_filename )
-        
-        with open( query_planner_log_path, 'a', encoding = 'utf-8' ) as f:
-            
-            prefix = time.strftime( '%Y-%m-%d %H:%M:%S: ' )
-            
-            if ' ' in query:
-                
-                first_word = query.split( ' ', 1 )[0]
-                
-            else:
-                
-                first_word = 'unknown'
-                
-            
-            f.write( prefix + first_word )
-            f.write( '\n' )
-            f.write( query )
-            
-            if len( plan_lines ) > 0:
-                
-                f.write( '\n' )
-                f.write( '\n'''.join( ( str( p ) for p in plan_lines ) ) )
-                
-            
-            f.write( '\n\n' )
-            
         
     
     def Read( self, action, *args, **kwargs ):

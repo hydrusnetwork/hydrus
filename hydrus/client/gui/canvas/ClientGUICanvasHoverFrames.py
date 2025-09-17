@@ -17,7 +17,7 @@ from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientData
 from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientLocation
-from hydrus.client.duplicates import ClientDuplicates
+from hydrus.client.duplicates import ClientDuplicatesComparisonStatements
 from hydrus.client.gui import ClientGUIAsync
 from hydrus.client.gui import ClientGUIDragDrop
 from hydrus.client.gui import ClientGUICore as CGC
@@ -2565,7 +2565,7 @@ class CanvasHoverFrameRightDuplicates( CanvasHoverFrame ):
             
             ( current_media_result, comparison_media_result ) = args
             
-            ( statements_and_scores, they_are_pixel_duplicates ) = ClientDuplicates.GetDuplicateComparisonStatementsFast( current_media_result, comparison_media_result )
+            ( statements_and_scores, they_are_pixel_duplicates ) = ClientDuplicatesComparisonStatements.GetDuplicateComparisonStatementsFast( current_media_result, comparison_media_result )
             
             return ( statements_and_scores, they_are_pixel_duplicates )
             
@@ -2611,7 +2611,7 @@ class CanvasHoverFrameRightDuplicates( CanvasHoverFrame ):
             
             ( current_media_result, comparison_media_result, they_are_pixel_duplicates ) = args
             
-            statements_and_scores = ClientDuplicates.GetDuplicateComparisonStatementsSlow( current_media_result, comparison_media_result, they_are_pixel_duplicates )
+            statements_and_scores = ClientDuplicatesComparisonStatements.GetDuplicateComparisonStatementsSlow( current_media_result, comparison_media_result, they_are_pixel_duplicates )
             
             return statements_and_scores
             

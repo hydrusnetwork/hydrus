@@ -75,7 +75,7 @@ Disallows the 'custom assets' override that lets files in `db_dir/static` overri
 
 ##**`--profile_mode`**
 
-This starts the program with 'Profile Mode' turned on, which captures the performance of boot functions. This is also a way to get Profile Mode on the server, although support there is very limited.
+This starts the program with 'Profile Mode' turned on, which captures the performance of boot functions. This is also a way to get Profile Mode on the server, although support there is very limited. Since Profile Mode is now split into different types, note this specifically turns on "db" Profile Mode.
 
 # client-specific arguments
 

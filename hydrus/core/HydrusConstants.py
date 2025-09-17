@@ -4,6 +4,7 @@ import sqlite3
 import sys
 import typing
 
+# if you ever remove this, don't forget it is in HydrusBoot as the third party library check
 import yaml
 
 # old method of getting frozen dir, doesn't work for symlinks looks like:
@@ -112,7 +113,7 @@ options = {}
 # Misc
 
 NETWORK_VERSION = 20
-SOFTWARE_VERSION = 638
+SOFTWARE_VERSION = 639
 CLIENT_API_VERSION = 80
 
 SERVER_THUMBNAIL_DIMENSIONS = ( 200, 200 )

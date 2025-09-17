@@ -53,11 +53,11 @@ class CallAfterEventCatcher( QC.QObject ):
             
             if event.type() == CallAfterEventType and isinstance( event, CallAfterEvent ):
                 
-                if HG.profile_mode:
+                if HydrusProfiling.IsProfileMode( 'ui' ):
                     
                     summary = 'Profiling CallAfter Event: {}'.format( event.GetCall() )
                     
-                    HydrusProfiling.Profile( summary, 'event.Execute()', globals(), locals(), min_duration_ms = HG.callto_profile_min_job_time_ms )
+                    HydrusProfiling.Profile( summary, HydrusData.Call( event.Execute ), min_duration_ms = HG.callto_profile_min_job_time_ms )
                     
                 else:
                     
@@ -82,11 +82,11 @@ class CallAfterEventCatcher( QC.QObject ):
         
     
 
-def CallAfter( qobject: QC.QObject, func, *args, **kwargs ):
+def CallAfter( call_after_catcher: QC.QObject, qobject: QC.QObject, func, *args, **kwargs ):
     
     call = HydrusData.Call( func, *args, **kwargs )
     
-    QW.QApplication.postEvent( QW.QApplication.instance().call_after_catcher, CallAfterEvent( qobject, call ) )
+    QW.QApplication.postEvent( call_after_catcher, CallAfterEvent( qobject, call ) )
     
     # it appears this is redundant and for Arch from the Ubuntu-built release apparently eventDispatcher() was None
     # QW.QApplication.instance().eventDispatcher().wakeUp()

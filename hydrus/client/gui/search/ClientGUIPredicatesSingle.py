@@ -1933,9 +1933,7 @@ class PanelPredicateSystemNumTags( PanelPredicateSystemSingle ):
         
         super().__init__( parent )
         
-        self._namespace = QW.QLineEdit( self )
-        self._namespace.setPlaceholderText( 'Leave empty for unnamespaced, \'*\' for all namespaces' )
-        self._namespace.setToolTip( ClientGUIFunctions.WrapToolTip( 'Leave empty for unnamespaced, \'*\' for all namespaces. Other wildcards also supported.' ) )
+        self._namespace = ClientGUICommon.NamespaceWidget( self )
         
         choices = ['<',HC.UNICODE_APPROX_EQUAL,'=','>']
         
@@ -1954,7 +1952,7 @@ class PanelPredicateSystemNumTags( PanelPredicateSystemSingle ):
             namespace = '*'
             
         
-        self._namespace.setText( namespace )
+        self._namespace.SetValue( namespace )
         
         self._sign.SetValue( sign )
         
@@ -1987,7 +1985,7 @@ class PanelPredicateSystemNumTags( PanelPredicateSystemSingle ):
     
     def GetPredicates( self ):
         
-        ( namespace, operator, value ) = ( self._namespace.text(), self._sign.GetValue(), self._num_tags.value() )
+        ( namespace, operator, value ) = ( self._namespace.GetValue(), self._sign.GetValue(), self._num_tags.value() )
         
         predicate = None
         
@@ -2016,6 +2014,7 @@ class PanelPredicateSystemNumTags( PanelPredicateSystemSingle ):
         return predicates
         
     
+
 class PanelPredicateSystemNumNotes( PanelPredicateSystemSingle ):
     
     def __init__( self, parent, predicate ):
@@ -3192,7 +3191,7 @@ class PanelPredicateSystemTagAsNumber( PanelPredicateSystemSingle ):
         
         super().__init__( parent )
         
-        self._namespace = QW.QLineEdit( self )
+        self._namespace = ClientGUICommon.NamespaceWidget( self )
         
         choices = [ '<', HC.UNICODE_APPROX_EQUAL, '>' ]
         
@@ -3206,10 +3205,7 @@ class PanelPredicateSystemTagAsNumber( PanelPredicateSystemSingle ):
         
         ( namespace, sign, num ) = predicate.GetValue()
         
-        self._namespace.setText( namespace )
-        self._namespace.setPlaceholderText( 'Leave empty for unnamespaced, \'*\' for all namespaces' )
-        self._namespace.setToolTip( ClientGUIFunctions.WrapToolTip( 'Leave empty for unnamespaced, \'*\' for all namespaces. Other wildcards also supported.' ) )
-        
+        self._namespace.SetValue( namespace )
         self._sign.SetValue( sign )
         self._num.setValue( num )
         
@@ -3238,7 +3234,7 @@ class PanelPredicateSystemTagAsNumber( PanelPredicateSystemSingle ):
     
     def GetPredicates( self ):
         
-        predicates = ( ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_TAG_AS_NUMBER, ( self._namespace.text(), self._sign.GetValue(), self._num.value() ) ), )
+        predicates = ( ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_TAG_AS_NUMBER, ( self._namespace.GetValue(), self._sign.GetValue(), self._num.value() ) ), )
         
         return predicates
         

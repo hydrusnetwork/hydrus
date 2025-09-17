@@ -144,6 +144,11 @@ class ManagerWithMainLoop( object ):
         self._controller.sub( self, 'Wake', 'wake_daemons' )
         
     
+    def __str__( self ):
+        
+        return f'MainLoop: {self.GetName()}'
+        
+    
     def _CheckShutdown( self ):
         
         if HydrusThreading.IsThreadShuttingDown() or self._shutdown or self._serious_error_encountered:

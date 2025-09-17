@@ -61,8 +61,6 @@ def boot():
         
         from hydrus.client.gui import ClientGUICallAfter
         
-        app.call_after_catcher = ClientGUICallAfter.CallAfterEventCatcher( app )
-        
         try:
             
             # we run the tests on the Qt thread atm

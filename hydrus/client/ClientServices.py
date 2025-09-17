@@ -11,7 +11,6 @@ import typing
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
-from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusLists
 from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusSerialisable
@@ -1680,11 +1679,6 @@ class ServiceRepository( ServiceRestricted ):
         
         CG.client_controller.frame_splash_status.SetText( popup_message, print_to_log = False )
         job_status.SetStatusText( popup_message, 2 )
-        
-        if HG.profile_mode:
-            
-            CG.client_controller.PrintProfile( popup_message )
-            
         
     
     def _SyncDownloadMetadata( self ):

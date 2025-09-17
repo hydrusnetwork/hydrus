@@ -46,6 +46,7 @@ class FileDuplicatesManager( object ):
         return self.dupe_statuses_to_count[ dupe_type ]
         
     
+
 class FileInfoManager( object ):
     
     def __init__(

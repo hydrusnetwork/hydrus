@@ -59,7 +59,7 @@ try:
     argparser.add_argument( '--no_db_temp_files', action='store_true', help = 'run db temp operations entirely in memory' )
     argparser.add_argument( '--boot_debug', action='store_true', help = 'print additional bootup information to the log' )
     argparser.add_argument( '--no_user_static_dir', action='store_true', help = 'do not allow a static dir in the db dir to override the install static dir contents' )
-    argparser.add_argument( '--profile_mode', action='store_true', help = 'start the program with profile mode on, capturing boot performance' )
+    argparser.add_argument( '--profile_mode', action='store_true', help = 'start the program with profile mode (db) on, capturing boot performance' )
     argparser.add_argument( '--pause_network_traffic', action='store_true', help = 'start the program with all new network traffic paused' )
     argparser.add_argument( '--win_qt_darkmode_test', action='store_true', help = 'Windows only: Try Qt\'s automatic darkmode recognition.' )
     argparser.add_argument( '--no_wal', action='store_true', help = 'OBSOLETE: run using TRUNCATE db journaling' )
@@ -123,8 +123,12 @@ try:
     
     HydrusStaticDir.USE_USER_STATIC_DIR = not result.no_user_static_dir
     
-    HG.profile_mode = result.profile_mode
-    HG.profile_start_time = HydrusTime.GetNow()
+    if result.profile_mode:
+        
+        from hydrus.core import HydrusProfiling
+        
+        HydrusProfiling.StartProfileMode( 'db' )
+        
     
     HG.boot_with_network_traffic_paused_command_line = result.pause_network_traffic
     
@@ -156,7 +160,7 @@ except Exception as e:
     
     import traceback
     
-    error_trace = str( e ) + '\n\n' + traceback.format_exc()
+    error_trace = str( e ) + '\n\nFull error follows:\n\n' + traceback.format_exc()
     
     try:
         
@@ -205,7 +209,8 @@ except Exception as e:
         
         from hydrus.client.gui import ClientGUIDialogsMessage
         
-        ClientGUIDialogsMessage.ShowCritical( None, title, error_trace )
+        ClientGUIDialogsMessage.ShowCritical( None, title, str( e ) )
+        ClientGUIDialogsMessage.ShowCritical( None, title, 'Here is the full error:\n\n' + traceback.format_exc() )
         
     except:
         

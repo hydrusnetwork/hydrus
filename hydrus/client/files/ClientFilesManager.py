@@ -442,7 +442,7 @@ class ClientFilesManager( object ):
             
             ( ideal_media_base_locations, ideal_thumbnail_override_base_location ) = self._controller.Read( 'ideal_client_files_locations' )
             
-            if False in ( base_location.PathExists() for base_location in ideal_media_base_locations ) or not ideal_thumbnail_override_base_location.PathExists():
+            if False in ( base_location.PathExists() for base_location in ideal_media_base_locations ) or ( ideal_thumbnail_override_base_location is not None and not ideal_thumbnail_override_base_location.PathExists() ):
                 
                 return None
                 
@@ -677,7 +677,11 @@ class ClientFilesManager( object ):
             
             return None
             
-        except:
+        except Exception as e:
+            
+            HydrusData.ShowText( 'Hey while calculating a potential rebalance job for the file migration system, I encountered this error. Please forward to hydev! Anonymising paths is fine, I just need to see the code.' )
+            
+            HydrusData.ShowException( e, do_wait = False )
             
             return None
             

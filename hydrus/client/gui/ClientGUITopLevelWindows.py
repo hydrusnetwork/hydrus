@@ -17,6 +17,10 @@ from hydrus.client.gui import QtPorting as QP
 CHILD_POSITION_PADDING = 24
 FUZZY_PADDING = 10
 
+# saw a ( 24, -14 ) child position off a top-left corner, which means the frameGeometry topleft was ( 0, -38 )????
+# let's see what happens if we forgive such madness
+FORGIVE_FRAME_GUBBINS_FUZZY_PADDING = 40
+
 def GetSafePosition( position: QC.QPoint, frame_key ):
     
     if CG.client_controller.new_options.GetBoolean( 'disable_get_safe_position_test' ):
@@ -27,7 +31,7 @@ def GetSafePosition( position: QC.QPoint, frame_key ):
     # some window managers size the windows just off screen to cut off borders
     # so choose a test position that's a little more lenient
     
-    fuzzy_point = QC.QPoint( FUZZY_PADDING, FUZZY_PADDING )
+    fuzzy_point = QC.QPoint( FORGIVE_FRAME_GUBBINS_FUZZY_PADDING, FORGIVE_FRAME_GUBBINS_FUZZY_PADDING )
     
     test_position = position + fuzzy_point
     
@@ -228,6 +232,9 @@ def SaveTLWSizeAndPosition( tlw: QW.QWidget, frame_key ):
     
     # I am informed that tlw.frameGeometry().topLeft() will account for a macOS system bar at the top
     # tlw.pos() grabs from the client area, not the screen area
+    
+    # Note this important information about frameGeometry in X11 from https://doc.qt.io/qt-6/application-windows.html#window-geometry
+    # "Basic rule: There's always one user who uses a window manager that breaks your assumption, and who will complain to you."
     
     ( safe_position, position_message ) = GetSafePosition( tlw.frameGeometry().topLeft(), frame_key )
     
