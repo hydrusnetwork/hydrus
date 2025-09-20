@@ -739,6 +739,11 @@ class MediaList( object ):
             return None
             
         
+        if len( self._sorted_media ) == 1:
+            
+            return media
+            
+        
         curr_index = self._sorted_media.index( media )
         
         self._media_index_history.append( curr_index )
