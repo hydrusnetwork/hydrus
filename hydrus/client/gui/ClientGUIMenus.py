@@ -18,7 +18,7 @@ from hydrus.client.gui import ClientGUIFunctions
 
 HG.last_mouse_click_button = QC.Qt.MouseButton.LeftButton
 
-def AddLastClickMemory( menu: QW.QMenu ):
+def AddLastClickMemory( gui_item ):
     
     class _ClickMemoryFilter( QC.QObject ):
         
@@ -34,10 +34,10 @@ def AddLastClickMemory( menu: QW.QMenu ):
             return False
             
         
-
-    filter_obj = _ClickMemoryFilter(menu)
     
-    menu.installEventFilter(filter_obj)
+    filter_obj = _ClickMemoryFilter( gui_item )
+    
+    gui_item.installEventFilter( filter_obj )
     
     return filter_obj
     

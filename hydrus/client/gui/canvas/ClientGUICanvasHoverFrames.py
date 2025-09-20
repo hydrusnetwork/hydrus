@@ -1527,19 +1527,13 @@ class CanvasHoverFrameTopNavigableList( CanvasHoverFrameTopNavigable ):
         
         QP.AddToLayout( self._top_left_hbox, self._last_button, CC.FLAGS_CENTER_PERPENDICULAR )
         
-        self._random_button = ClientGUICommon.IconButton(
-            self,
-            CC.global_icons().position_random,
-            self.sendApplicationCommand.emit,
-            CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_VIEW_RANDOM )
-        )
+        self._random_button = ClientGUICommon.IconButtonMultiClickable( self, CC.global_icons().position_random, lambda:self.sendApplicationCommand.emit( CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_VIEW_RANDOM ) ), lambda:self.sendApplicationCommand.emit( CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_UNDO_RANDOM ) ) )
         
-        self._random_button.SetToolTipWithShortcuts( 'random', CAC.SIMPLE_VIEW_RANDOM )
+        self._random_button.setToolTip( 'random - right click to undo showing random media' )
         self._random_button.setFocusPolicy( QC.Qt.FocusPolicy.TabFocus )
+        ClientGUIMenus.AddLastClickMemory( self._random_button )
         
-        self._random_hbox = QP.HBoxLayout()
-        QP.AddToLayout( self._random_hbox, self._random_button, CC.FLAGS_CENTER )
-        QP.AddToLayout( self._top_left_hbox, self._random_hbox, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( self._top_left_hbox, self._random_button, CC.FLAGS_CENTER_PERPENDICULAR )
         
     
 

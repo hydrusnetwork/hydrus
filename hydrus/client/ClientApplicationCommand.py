@@ -196,6 +196,7 @@ SIMPLE_OPEN_OPTIONS = 183
 SIMPLE_DUPLICATE_MEDIA_CLEAR_INTERNAL_FALSE_POSITIVES = 184
 SIMPLE_CLOSE_MEDIA_VIEWER_AND_FOCUS_TAB_AND_FOCUS_MEDIA = 185
 SIMPLE_VIEW_RANDOM = 186
+SIMPLE_UNDO_RANDOM = 187
 
 REARRANGE_THUMBNAILS_TYPE_FIXED = 0
 REARRANGE_THUMBNAILS_TYPE_COMMAND = 1
@@ -384,6 +385,7 @@ simple_enum_to_str_lookup = {
     SIMPLE_VIEW_NEXT : 'media navigation: next',
     SIMPLE_VIEW_PREVIOUS : 'media navigation: previous',
     SIMPLE_VIEW_RANDOM : 'media navigation: random',
+    SIMPLE_UNDO_RANDOM : 'media navigation: undo random',
     SIMPLE_ZOOM_IN : 'zoom: in',
     SIMPLE_ZOOM_OUT : 'zoom: out',
     SIMPLE_ZOOM_TO_PERCENTAGE : 'zoom: set to percentage',
@@ -545,6 +547,7 @@ legacy_simple_str_to_enum_lookup = {
     'view_next' : SIMPLE_VIEW_NEXT,
     'view_previous' : SIMPLE_VIEW_PREVIOUS,
     'view_random' : SIMPLE_VIEW_RANDOM,
+    'undo_random' : SIMPLE_UNDO_RANDOM,
     'zoom_in' : SIMPLE_ZOOM_IN,
     'zoom_out' : SIMPLE_ZOOM_OUT
 }

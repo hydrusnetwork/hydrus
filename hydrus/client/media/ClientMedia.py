@@ -592,6 +592,8 @@ class MediaList( object ):
         self._singleton_media = set( self._sorted_media )
         self._collected_media = set()
         
+        self._media_index_history = []
+        
         self._RecalcHashes()
         
     
@@ -737,17 +739,31 @@ class MediaList( object ):
             return None
             
         
-        previous_index = self._sorted_media.index( media ) - 1
+        curr_index = self._sorted_media.index( media )
+        
+        self._media_index_history.append( curr_index )
         
         while True:
             
-            index = random.randrange( len( self._sorted_media ) )
+            random_index = random.randrange( len( self._sorted_media ) )
             
-            if index != previous_index:
+            if random_index != curr_index:
                 
-                return self._sorted_media[ index ]
+                return self._sorted_media[ random_index ]
                 
             
+        
+    
+    def _UndoRandom( self, media ):
+        
+        if len ( self._media_index_history ) == 0:
+            
+            return media
+            
+        
+        recent_index = self._media_index_history.pop()
+         
+        return self._sorted_media[ recent_index ]
         
     
     def _HasHashes( self, hashes ):
@@ -1178,6 +1194,16 @@ class MediaList( object ):
     def GetPrevious( self, media ):
         
         return self._GetPrevious( media )
+        
+    
+    def GetRandom( self, media ):
+        
+        return self._GetRandom( media )
+        
+    
+    def UndoRandom( self, media ):
+        
+        return self._UndoRandom( media )
         
     
     def GetSelectedMedia( self ):
