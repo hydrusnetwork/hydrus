@@ -551,7 +551,8 @@ legacy_simple_str_to_enum_lookup = {
     'view_random' : SIMPLE_VIEW_RANDOM,
     'undo_random' : SIMPLE_UNDO_RANDOM,
     'zoom_in' : SIMPLE_ZOOM_IN,
-    'zoom_out' : SIMPLE_ZOOM_OUT
+    'zoom_out' : SIMPLE_ZOOM_OUT,
+    'focus_media_thumbnail' : SIMPLE_FOCUS_TAB_AND_MEDIA
 }
 
 APPLICATION_COMMAND_TYPE_SIMPLE = 0
