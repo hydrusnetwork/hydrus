@@ -3580,9 +3580,9 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
             
             new_page.PageShown()
             
-            self._page_nav_history.pop( new_page.GetPageKey(), None )                                   #so that insert moves our new page to the top of history if it was in it before
-            self._page_nav_history[ new_page.GetPageKey() ] = new_page.GetNameForMenu( elide = False )
-            
+        
+        self._page_nav_history.pop( self.GetCurrentMediaPage().GetPageKey(), None )   #so that insert moves our new page to the top of history if it was in it before
+        self._page_nav_history[ self.GetCurrentMediaPage().GetPageKey() ] = self.GetCurrentMediaPage().GetNameForMenu( elide = False )
         
         CG.client_controller.gui.RefreshStatusBar()
         CG.client_controller.gui.RefreshPageHistoryMenu()
