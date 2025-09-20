@@ -6988,6 +6988,11 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         for i, ( page_key, page_name ) in enumerate( reversed( self._notebook.GetHistory() ) ):
             
+            if i > 99: #let's set a maximum size of history to be displayed in the menu
+                
+                break
+                
+            
             history_menuitem = ClientGUIMenus.AppendMenuItem( self._page_nav_history_menu, '{}: {}'.format( i + 1, page_name ), 'Activate this tab from your viewing history.', lambda page_key=page_key: CG.client_controller.gui.ShowPage( page_key ) )
             
             if i == 0:
