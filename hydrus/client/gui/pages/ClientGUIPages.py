@@ -454,7 +454,7 @@ class Page( QW.QWidget ):
         return self._page_manager.GetPageName()
         
     
-    def GetNameForMenu( self ) -> str:
+    def GetNameForMenu( self, elide = True ) -> str:
         
         name_for_menu = self.GetName()
         
@@ -470,7 +470,7 @@ class Page( QW.QWidget ):
             name_for_menu = '{} - {}'.format( name_for_menu, HydrusNumbers.ValueRangeToPrettyString( num_value, num_range ) )
             
         
-        return HydrusText.ElideText( name_for_menu, 32, elide_center = True )
+        return HydrusText.ElideText( name_for_menu, 32, elide_center = True ) if elide else name_for_menu
         
     
     def GetNumFileSummary( self ):
@@ -1013,6 +1013,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         self.setTabPosition( directions_for_notebook_tabs[ direction ] )
         
         self._page_key = CG.client_controller.AcquirePageKey()
+        self._page_nav_history = collections.OrderedDict()
         
         self._name = name
         
@@ -1180,6 +1181,8 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         page_key = page.GetPageKey()
         
         self._closed_pages.append( ( index, page_key ) )
+        
+        self._page_nav_history.pop( page_key, None )
         
         self.removeTab( index )
         
@@ -2497,6 +2500,11 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         return hashes
         
     
+    def GetHistory( self ):
+        
+        return self._page_nav_history.items()
+        
+    
     def GetMediaPages( self, only_my_level = False ):
         
         return self._GetMediaPages( only_my_level )
@@ -2507,7 +2515,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         return self._name
         
     
-    def GetNameForMenu( self ) -> str:
+    def GetNameForMenu( self, elide = True ) -> str:
         
         name_for_menu = self.GetName()
         
@@ -2523,7 +2531,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
             name_for_menu = '{} - {}'.format( name_for_menu, HydrusNumbers.ValueRangeToPrettyString( num_value, num_range ) )
             
         
-        return HydrusText.ElideText( name_for_menu, 32, elide_center = True )
+        return HydrusText.ElideText( name_for_menu, 32, elide_center = True ) if elide else name_for_menu
         
     
     def GetNumFileSummary( self ):
@@ -3572,8 +3580,12 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
             
             new_page.PageShown()
             
+            self._page_nav_history.pop( new_page.GetPageKey(), None )                                   #so that insert moves our new page to the top of history if it was in it before
+            self._page_nav_history[ new_page.GetPageKey() ] = new_page.GetNameForMenu( elide = False )
+            
         
         CG.client_controller.gui.RefreshStatusBar()
+        CG.client_controller.gui.RefreshPageHistoryMenu()
         
         self._previous_page_index = index
         

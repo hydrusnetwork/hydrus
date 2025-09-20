@@ -3695,6 +3695,14 @@ ATTACH "client.mappings.db" as external_mappings;'''
         
         ClientGUIMenus.AppendSeparator( menu )
         
+        self._page_nav_history_menu = ClientGUIMenus.GenerateMenu( menu )
+        
+        ClientGUIMenus.AppendMenuLabel( self._page_nav_history_menu, 'no tab history', 'Your page history is currently empty.', None, True )
+        
+        ClientGUIMenus.AppendMenu( menu, self._page_nav_history_menu, 'history' )
+        
+        ClientGUIMenus.AppendSeparator( menu )
+        
         ClientGUIMenus.AppendMenuItem( menu, 'refresh', 'If the current page has a search, refresh it.', self._RefreshCurrentPage )
         
         splitter_menu = ClientGUIMenus.GenerateMenu( menu )
@@ -6974,6 +6982,24 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         ClientGUIMenus.SetMenuItemLabel( self._menubar_pages_session_weight, 'total session weight: {}'.format( HydrusNumbers.ToHumanInt( total_active_weight ) ) )
         
     
+    def _UpdateMenuPagesHistory( self ):
+        
+        self._page_nav_history_menu.clear()
+        
+        for i, ( page_key, page_name ) in enumerate( reversed( self._notebook.GetHistory() ) ):
+            
+            history_menuitem = ClientGUIMenus.AppendMenuItem( self._page_nav_history_menu, '{}: {}'.format( i + 1, page_name ), 'Activate this tab from your viewing history.', lambda page_key=page_key: CG.client_controller.gui.ShowPage( page_key ) )
+            
+            if i == 0:
+                
+                font = history_menuitem.font()
+                font.setBold(True)
+                history_menuitem.setFont(font)
+                
+            
+        
+    
+    
     def _UpdateSystemTrayIcon( self, currently_booting = False ):
         
         if not ClientGUISystemTray.SystemTrayAvailable() or ( not (HC.PLATFORM_WINDOWS or HC.PLATFORM_MACOS ) and not CG.client_controller.new_options.GetBoolean( 'advanced_mode' ) ):
@@ -8127,6 +8153,11 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
         
         page.RefreshQuery()
+        
+    
+    def RefreshPageHistoryMenu( self ):
+        
+        self._UpdateMenuPagesHistory()
         
     
     def RefreshStatusBar( self ):
