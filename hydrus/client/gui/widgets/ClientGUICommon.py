@@ -1243,8 +1243,8 @@ class IconButtonMultiClickable( IconButton ):
         
         super().__init__( parent, icon, func )
         
+        self._left_click_func = func
         self._right_click_func = right_click_func
-        
         self._middle_click_func = middle_click_func
         
     
@@ -1260,7 +1260,7 @@ class IconButtonMultiClickable( IconButton ):
             
         else:
             
-            super().mousePressEvent( event )
+            self._left_click_func()
             
         
     

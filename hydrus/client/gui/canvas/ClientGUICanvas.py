@@ -2939,6 +2939,12 @@ class CanvasWithHovers( Canvas ):
                 
                 self._TryToCloseWindow()
                 
+            elif action == CAC.SIMPLE_FOCUS_TAB_AND_MEDIA:
+                
+                self._TryToShowPageThatLaunchedUs()
+                
+                self._TryToShowMediaThatLaunchedUs()
+                
             elif action == CAC.SIMPLE_SWITCH_BETWEEN_FULLSCREEN_BORDERLESS_AND_REGULAR_FRAMED_WINDOW:
                 
                 self.parentWidget().FullscreenSwitch()

@@ -966,12 +966,8 @@ class CanvasHoverFrameTop( CanvasHoverFrame ):
         open_externally.SetToolTipWithShortcuts( 'open externally', CAC.SIMPLE_OPEN_FILE_IN_EXTERNAL_PROGRAM )
         open_externally.setFocusPolicy( QC.Qt.FocusPolicy.TabFocus )
         
-        # TODO: Rework this to an IconButton etc..
-        drag_button = QW.QPushButton( self )
-        drag_button.setIcon( CC.global_icons().drag )
-        drag_button.setIconSize( QC.QSize( 16, 16 ) )
+        drag_button = ClientGUICommon.IconButtonMultiClickable( self, CC.global_icons().drag, self.DragButtonHit, lambda:self.sendApplicationCommand.emit( CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_FOCUS_TAB_AND_MEDIA ) ) )
         drag_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'drag from here to export file' ) )
-        drag_button.pressed.connect( self.DragButtonHit )
         drag_button.setFocusPolicy( QC.Qt.FocusPolicy.TabFocus )
         
         close = ClientGUICommon.IconButton( self, CC.global_icons().stop, CG.client_controller.pub, 'canvas_close', self._canvas_key )
@@ -1531,7 +1527,6 @@ class CanvasHoverFrameTopNavigableList( CanvasHoverFrameTopNavigable ):
         
         self._random_button.setToolTip( 'random - right click to undo showing random media' )
         self._random_button.setFocusPolicy( QC.Qt.FocusPolicy.TabFocus )
-        ClientGUIMenus.AddLastClickMemory( self._random_button )
         
         QP.AddToLayout( self._top_left_hbox, self._random_button, CC.FLAGS_CENTER_PERPENDICULAR )
         

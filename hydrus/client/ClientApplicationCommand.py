@@ -197,6 +197,7 @@ SIMPLE_DUPLICATE_MEDIA_CLEAR_INTERNAL_FALSE_POSITIVES = 184
 SIMPLE_CLOSE_MEDIA_VIEWER_AND_FOCUS_TAB_AND_FOCUS_MEDIA = 185
 SIMPLE_VIEW_RANDOM = 186
 SIMPLE_UNDO_RANDOM = 187
+SIMPLE_FOCUS_TAB_AND_MEDIA = 188
 
 REARRANGE_THUMBNAILS_TYPE_FIXED = 0
 REARRANGE_THUMBNAILS_TYPE_COMMAND = 1
@@ -261,6 +262,7 @@ simple_enum_to_str_lookup = {
     SIMPLE_CLOSE_MEDIA_VIEWER : 'close media viewer',
     SIMPLE_CLOSE_MEDIA_VIEWER_AND_FOCUS_TAB : 'close media viewer and focus the tab the media came from, if possible',
     SIMPLE_CLOSE_MEDIA_VIEWER_AND_FOCUS_TAB_AND_FOCUS_MEDIA : 'close media viewer and focus the tab the media came from, if possible, and focus the media',
+    SIMPLE_FOCUS_TAB_AND_MEDIA : 'focus the tab the media came from, if possible, and focus the media',
     SIMPLE_CLOSE_PAGE : 'close page',
     LEGACY_SIMPLE_COPY_BMP : 'copy bmp of image',
     LEGACY_SIMPLE_COPY_LITTLE_BMP : 'copy small bmp of image for quick source lookups',
