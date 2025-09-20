@@ -730,6 +730,26 @@ class MediaList( object ):
             
         
     
+    def _GetRandom( self, media ):
+        
+        if len( self._sorted_media ) == 0 or media is None:
+            
+            return None
+            
+        
+        previous_index = self._sorted_media.index( media ) - 1
+        
+        while True:
+            
+            index = random.randrange( len( self._sorted_media ) )
+            
+            if index != previous_index:
+                
+                return self._sorted_media[ index ]
+                
+            
+        
+    
     def _HasHashes( self, hashes ):
         
         for hash in hashes:

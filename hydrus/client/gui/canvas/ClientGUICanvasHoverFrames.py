@@ -1527,6 +1527,20 @@ class CanvasHoverFrameTopNavigableList( CanvasHoverFrameTopNavigable ):
         
         QP.AddToLayout( self._top_left_hbox, self._last_button, CC.FLAGS_CENTER_PERPENDICULAR )
         
+        self._random_button = ClientGUICommon.IconButton(
+            self,
+            CC.global_icons().position_random,
+            self.sendApplicationCommand.emit,
+            CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_VIEW_RANDOM )
+        )
+        
+        self._random_button.SetToolTipWithShortcuts( 'random', CAC.SIMPLE_VIEW_RANDOM )
+        self._random_button.setFocusPolicy( QC.Qt.FocusPolicy.TabFocus )
+        
+        self._random_hbox = QP.HBoxLayout()
+        QP.AddToLayout( self._random_hbox, self._random_button, CC.FLAGS_CENTER )
+        QP.AddToLayout( self._top_left_hbox, self._random_hbox, CC.FLAGS_CENTER_PERPENDICULAR )
+        
     
 
 

@@ -3150,6 +3150,11 @@ class CanvasMediaList( CanvasWithHovers ):
         self.SetMedia( self._media_list.GetPrevious( self._current_media ) )
         
     
+    def _ShowRandom( self ):
+        
+        self.SetMedia( self._media_list.GetRandom( self._current_media ) )
+        
+    
     def _StartSlideshow( self, interval: float ):
         
         pass
@@ -3750,6 +3755,12 @@ class CanvasMediaListNavigable( CanvasMediaList ):
             elif action == CAC.SIMPLE_VIEW_NEXT:
                 
                 self._ShowNext()
+                
+                self.userChangedMedia.emit()
+                
+            elif action == CAC.SIMPLE_VIEW_RANDOM:
+                
+                self._ShowRandom()
                 
                 self.userChangedMedia.emit()
                 
