@@ -195,6 +195,9 @@ SIMPLE_RESIZE_WINDOW_TO_MEDIA_ZOOMED_VIEWER_CENTER = 182
 SIMPLE_OPEN_OPTIONS = 183
 SIMPLE_DUPLICATE_MEDIA_CLEAR_INTERNAL_FALSE_POSITIVES = 184
 SIMPLE_CLOSE_MEDIA_VIEWER_AND_FOCUS_TAB_AND_FOCUS_MEDIA = 185
+SIMPLE_VIEW_RANDOM = 186
+SIMPLE_UNDO_RANDOM = 187
+SIMPLE_FOCUS_TAB_AND_MEDIA = 188
 
 REARRANGE_THUMBNAILS_TYPE_FIXED = 0
 REARRANGE_THUMBNAILS_TYPE_COMMAND = 1
@@ -259,6 +262,7 @@ simple_enum_to_str_lookup = {
     SIMPLE_CLOSE_MEDIA_VIEWER : 'close media viewer',
     SIMPLE_CLOSE_MEDIA_VIEWER_AND_FOCUS_TAB : 'close media viewer and focus the tab the media came from, if possible',
     SIMPLE_CLOSE_MEDIA_VIEWER_AND_FOCUS_TAB_AND_FOCUS_MEDIA : 'close media viewer and focus the tab the media came from, if possible, and focus the media',
+    SIMPLE_FOCUS_TAB_AND_MEDIA : 'focus the tab the media came from, if possible, and focus the media',
     SIMPLE_CLOSE_PAGE : 'close page',
     LEGACY_SIMPLE_COPY_BMP : 'copy bmp of image',
     LEGACY_SIMPLE_COPY_LITTLE_BMP : 'copy small bmp of image for quick source lookups',
@@ -382,6 +386,8 @@ simple_enum_to_str_lookup = {
     SIMPLE_VIEW_LAST : 'media navigation: last',
     SIMPLE_VIEW_NEXT : 'media navigation: next',
     SIMPLE_VIEW_PREVIOUS : 'media navigation: previous',
+    SIMPLE_VIEW_RANDOM : 'media navigation: random',
+    SIMPLE_UNDO_RANDOM : 'media navigation: undo random',
     SIMPLE_ZOOM_IN : 'zoom: in',
     SIMPLE_ZOOM_OUT : 'zoom: out',
     SIMPLE_ZOOM_TO_PERCENTAGE : 'zoom: set to percentage',
@@ -542,8 +548,11 @@ legacy_simple_str_to_enum_lookup = {
     'view_last' : SIMPLE_VIEW_LAST,
     'view_next' : SIMPLE_VIEW_NEXT,
     'view_previous' : SIMPLE_VIEW_PREVIOUS,
+    'view_random' : SIMPLE_VIEW_RANDOM,
+    'undo_random' : SIMPLE_UNDO_RANDOM,
     'zoom_in' : SIMPLE_ZOOM_IN,
-    'zoom_out' : SIMPLE_ZOOM_OUT
+    'zoom_out' : SIMPLE_ZOOM_OUT,
+    'focus_media_thumbnail' : SIMPLE_FOCUS_TAB_AND_MEDIA
 }
 
 APPLICATION_COMMAND_TYPE_SIMPLE = 0

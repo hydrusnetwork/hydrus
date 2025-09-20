@@ -2939,6 +2939,12 @@ class CanvasWithHovers( Canvas ):
                 
                 self._TryToCloseWindow()
                 
+            elif action == CAC.SIMPLE_FOCUS_TAB_AND_MEDIA:
+                
+                self._TryToShowPageThatLaunchedUs()
+                
+                self._TryToShowMediaThatLaunchedUs()
+                
             elif action == CAC.SIMPLE_SWITCH_BETWEEN_FULLSCREEN_BORDERLESS_AND_REGULAR_FRAMED_WINDOW:
                 
                 self.parentWidget().FullscreenSwitch()
@@ -3148,6 +3154,16 @@ class CanvasMediaList( CanvasWithHovers ):
     def _ShowPrevious( self ):
         
         self.SetMedia( self._media_list.GetPrevious( self._current_media ) )
+        
+    
+    def _ShowRandom( self ):
+        
+        self.SetMedia( self._media_list.GetRandom( self._current_media ) )
+        
+    
+    def _UndoRandom( self ):
+        
+        self.SetMedia( self._media_list.UndoRandom( self._current_media ) )
         
     
     def _StartSlideshow( self, interval: float ):
@@ -3750,6 +3766,18 @@ class CanvasMediaListNavigable( CanvasMediaList ):
             elif action == CAC.SIMPLE_VIEW_NEXT:
                 
                 self._ShowNext()
+                
+                self.userChangedMedia.emit()
+                
+            elif action == CAC.SIMPLE_VIEW_RANDOM:
+                
+                self._ShowRandom()
+                
+                self.userChangedMedia.emit()
+                
+            elif action == CAC.SIMPLE_UNDO_RANDOM:
+                
+                self._UndoRandom()
                 
                 self.userChangedMedia.emit()
                 

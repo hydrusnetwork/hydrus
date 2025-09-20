@@ -454,7 +454,7 @@ class Page( QW.QWidget ):
         return self._page_manager.GetPageName()
         
     
-    def GetNameForMenu( self ) -> str:
+    def GetNameForMenu( self, elide = True ) -> str:
         
         name_for_menu = self.GetName()
         
@@ -470,7 +470,7 @@ class Page( QW.QWidget ):
             name_for_menu = '{} - {}'.format( name_for_menu, HydrusNumbers.ValueRangeToPrettyString( num_value, num_range ) )
             
         
-        return HydrusText.ElideText( name_for_menu, 32, elide_center = True )
+        return HydrusText.ElideText( name_for_menu, 32, elide_center = True ) if elide else name_for_menu
         
     
     def GetNumFileSummary( self ):
@@ -2507,7 +2507,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         return self._name
         
     
-    def GetNameForMenu( self ) -> str:
+    def GetNameForMenu( self, elide = True ) -> str:
         
         name_for_menu = self.GetName()
         
@@ -2523,7 +2523,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
             name_for_menu = '{} - {}'.format( name_for_menu, HydrusNumbers.ValueRangeToPrettyString( num_value, num_range ) )
             
         
-        return HydrusText.ElideText( name_for_menu, 32, elide_center = True )
+        return HydrusText.ElideText( name_for_menu, 32, elide_center = True ) if elide else name_for_menu
         
     
     def GetNumFileSummary( self ):
@@ -3574,6 +3574,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
             
         
         CG.client_controller.gui.RefreshStatusBar()
+        CG.client_controller.gui.RefreshPageHistoryMenu()
         
         self._previous_page_index = index
         
@@ -3703,3 +3704,67 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         
         pass
         
+    
+
+class PagesHistory( collections.OrderedDict ):
+    
+    def __init__( self ):
+        
+        collections.OrderedDict.__init__( self )
+        
+    
+    def AddPage( self, page: Page ):
+        
+        page_key = page.GetPageKey()
+        page_name = page.GetNameForMenu( elide = False )
+        
+        self.AddEntry( page_key, page_name )
+        
+    
+    def AddEntry( self, page_key: bytes, page_name: str ):
+        
+        if page_key in self:
+            
+            self.pop( page_key )
+            
+        
+        self[ page_key ] = page_name
+        
+    
+    def CleanPages( self, existing_pages_list ):
+        
+        for page_key in list( self.keys() ):
+            
+            if page_key not in existing_pages_list:
+                
+                self.pop( page_key )
+                
+            
+        
+    
+    def GetHistory( self ):
+        
+        return list( self.items() )
+        
+    
+    def RemoveEntry( self, page: Page ):
+        
+        self.RemoveEntry( page.GetPageKey() )
+        
+    
+    def RemoveEntry( self, page_key: bytes ):
+        
+        if page_key in self:
+            
+            self.pop( page_key )
+            
+        
+    
+    def TriggerEntry( self, page_key: bytes ):
+        
+        if page_key in self:
+            
+            CG.client_controller.gui.ShowPage( page_key )
+            
+        
+    

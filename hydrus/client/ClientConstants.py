@@ -805,6 +805,7 @@ class GlobalIcons( object ):
         self.position_previous = self._GetSVGOrPNGPathIcon( 'position_previous' )
         self.position_next = self._GetSVGOrPNGPathIcon( 'position_next' )
         self.position_last = self._GetSVGOrPNGPathIcon( 'position_last' )
+        self.position_random = self._GetSVGOrPNGPathIcon( 'position_random' )
         
         self.fullscreen_switch = self._GetSVGOrPNGPathIcon( 'fullscreen_switch' )
         
