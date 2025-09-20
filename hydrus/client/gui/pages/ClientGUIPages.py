@@ -1013,7 +1013,6 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         self.setTabPosition( directions_for_notebook_tabs[ direction ] )
         
         self._page_key = CG.client_controller.AcquirePageKey()
-        self._page_nav_history = collections.OrderedDict()
         
         self._name = name
         
@@ -1181,8 +1180,6 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         page_key = page.GetPageKey()
         
         self._closed_pages.append( ( index, page_key ) )
-        
-        self._page_nav_history.pop( page_key, None )
         
         self.removeTab( index )
         
@@ -2500,11 +2497,6 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         return hashes
         
     
-    def GetHistory( self ):
-        
-        return self._page_nav_history.items()
-        
-    
     def GetMediaPages( self, only_my_level = False ):
         
         return self._GetMediaPages( only_my_level )
@@ -3580,9 +3572,6 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
             
             new_page.PageShown()
             
-            self._page_nav_history.pop( self.GetCurrentMediaPage().GetPageKey(), None )   #so that insert moves our new page to the top of history if it was in it before
-            self._page_nav_history[ self.GetCurrentMediaPage().GetPageKey() ] = self.GetCurrentMediaPage().GetNameForMenu( elide = False )
-            
         
         CG.client_controller.gui.RefreshStatusBar()
         CG.client_controller.gui.RefreshPageHistoryMenu()
@@ -3715,3 +3704,67 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         
         pass
         
+    
+
+class PagesHistory( collections.OrderedDict ):
+    
+    def __init__( self ):
+        
+        collections.OrderedDict.__init__( self )
+        
+    
+    def AddPage( self, page: Page ):
+        
+        page_key = page.GetPageKey()
+        page_name = page.GetNameForMenu( elide = False )
+        
+        self.AddEntry( page_key, page_name )
+        
+    
+    def AddEntry( self, page_key: bytes, page_name: str ):
+        
+        if page_key in self:
+            
+            self.pop( page_key )
+            
+        
+        self[ page_key ] = page_name
+        
+    
+    def CleanPages( self, existing_pages_list ):
+        
+        for page_key in list( self.keys() ):
+            
+            if page_key not in existing_pages_list:
+                
+                self.pop( page_key )
+                
+            
+        
+    
+    def GetHistory( self ):
+        
+        return list( self.items() )
+        
+    
+    def RemoveEntry( self, page: Page ):
+        
+        self.RemoveEntry( page.GetPageKey() )
+        
+    
+    def RemoveEntry( self, page_key: bytes ):
+        
+        if page_key in self:
+            
+            self.pop( page_key )
+            
+        
+    
+    def TriggerEntry( self, page_key: bytes ):
+        
+        if page_key in self:
+            
+            CG.client_controller.gui.ShowPage( page_key )
+            
+        
+    

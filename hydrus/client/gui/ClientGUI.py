@@ -500,6 +500,8 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         
         self._notebook = ClientGUIPages.PagesNotebook( self, 'top page notebook' )
         
+        self._page_nav_history = ClientGUIPages.PagesHistory()
+        
         self._currently_uploading_pending = set()
         
         self._last_clipboard_watched_text = ''
@@ -2318,6 +2320,7 @@ ATTACH "client.mappings.db" as external_mappings;'''
         self._menu_updater_undo = self._InitialiseMenubarGetMenuUpdaterUndo()
         
         self._menu_updater_pages_count = ClientGUIAsync.FastThreadToGUIUpdater( self, self._UpdateMenuPagesCount )
+        self._menu_updater_pages_history = ClientGUIAsync.FastThreadToGUIUpdater( self, self._UpdateMenuPagesHistory )
         
         self._boned_updater = self._InitialiseMenubarGetBonesUpdater()
         self._file_history_updater = self._InitialiseMenubarGetFileHistoryUpdater()
@@ -6986,7 +6989,16 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         self._page_nav_history_menu.clear()
         
-        for i, ( page_key, page_name ) in enumerate( reversed( self._notebook.GetHistory() ) ):
+        low_page = self._notebook.GetCurrentMediaPage()
+        
+        self.RefreshPageHistoryMenuClean()
+        
+        if low_page is not None:
+            
+            self._page_nav_history.AddPage( low_page )
+            
+        
+        for i, ( page_key, page_name ) in enumerate( reversed( self._page_nav_history.GetHistory() ) ):
             
             if i > 99: #let's set a maximum size of history to be displayed in the menu
                 
@@ -7782,6 +7794,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         self._controller.ClosePageKeys( page.GetPageKeys() )
         
+        self._menu_updater_pages_history.Update()
         self._menu_updater_pages.update()
         self._menu_updater_undo.update()
         
@@ -8162,7 +8175,14 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     
     def RefreshPageHistoryMenu( self ):
         
-        self._UpdateMenuPagesHistory()
+        self._menu_updater_pages_history.Update()
+        
+    
+    def RefreshPageHistoryMenuClean( self ):
+        
+        open_pages = self._notebook.GetPageKeys()
+        
+        self._page_nav_history.CleanPages( open_pages )
         
     
     def RefreshStatusBar( self ):
