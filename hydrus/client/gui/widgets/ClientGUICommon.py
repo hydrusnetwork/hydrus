@@ -1239,7 +1239,7 @@ class IconButton( ShortcutAwareToolTipMixin, QW.QPushButton ):
 
 class IconButtonMultiClickable( IconButton ):
     
-    def __init__( self, parent, icon, func, right_click_func, middle_click_func = None ):
+    def __init__( self, parent, icon, func, right_click_func = None, middle_click_func = None ):
         
         super().__init__( parent, icon, func )
         
@@ -1250,7 +1250,7 @@ class IconButtonMultiClickable( IconButton ):
     
     def mousePressEvent( self, event ):
         
-        if event.button() == QC.Qt.MouseButton.RightButton:
+        if event.button() == QC.Qt.MouseButton.RightButton and self._right_click_func is not None:
             
             self._right_click_func()
             
