@@ -84,7 +84,7 @@ class ClientDBFilesDuplicatesAutoResolutionSearch( ClientDBModule.ClientDBModule
         self.modules_files_duplicates_auto_resolution_storage.SetPairsToSimpleQueue( rule, ( ( smaller_media_id, larger_media_id), ), ClientDuplicatesAutoResolution.DUPLICATE_STATUS_MATCHES_SEARCH_FAILED_TEST )
         
     
-    def CommitResolutionPairPassed( self, rule: ClientDuplicatesAutoResolution.DuplicatesAutoResolutionRule, result ) -> bool:
+    def CommitResolutionPairPassed( self, rule: ClientDuplicatesAutoResolution.DuplicatesAutoResolutionRule, result ):
         
         # result is ( action, hash_a, hash_b, content_update_packages )
         

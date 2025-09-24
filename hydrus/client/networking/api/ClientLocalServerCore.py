@@ -37,6 +37,7 @@ from hydrus.client.search import ClientSearchTagContext
 
 # if a variable name isn't defined here, a GET with it won't work
 CLIENT_API_INT_PARAMS = {
+    'duplicate_pair_sort_type',
     'file_id',
     'file_sort_type',
     'potentials_search_type',
@@ -90,9 +91,11 @@ CLIENT_API_JSON_PARAMS = {
     'include_blurhash',
     'create_new_file_ids',
     'detailed_url_information',
+    'duplicate_pair_sort_asc',
     'hide_service_keys_tags',
     'simple',
     'file_sort_asc',
+    'group_mode',
     'return_hashes',
     'return_file_ids',
     'include_thumbnail_filetype',

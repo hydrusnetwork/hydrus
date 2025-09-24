@@ -394,7 +394,7 @@ class TestURLDomainMask( unittest.TestCase ):
     
     def test_3_multiple( self ):
         
-        url_domain_mask = ClientNetworkingURLClass.URLDomainMask( domain_regexes = [ r'site\.[^\.]+', 'example.cool[^\.]+.[^\.]+' ] )
+        url_domain_mask = ClientNetworkingURLClass.URLDomainMask( domain_regexes = [ r'site\.[^\.]+', r'example.cool[^\.]+.[^\.]+' ] )
         
         self.assertTrue( url_domain_mask.Matches( 'example.coolsite.yo' ) )
         self.assertTrue( url_domain_mask.Matches( 'www1.example.coolsite.yo' ) )
@@ -406,7 +406,7 @@ class TestURLDomainMask( unittest.TestCase ):
         
         #
         
-        url_domain_mask = ClientNetworkingURLClass.URLDomainMask( domain_regexes = [ r'site\.[^\.]+', 'example.cool[^\.]+.[^\.]+' ], match_subdomains = True )
+        url_domain_mask = ClientNetworkingURLClass.URLDomainMask( domain_regexes = [ r'site\.[^\.]+', r'example.cool[^\.]+.[^\.]+' ], match_subdomains = True )
         
         self.assertTrue( url_domain_mask.Matches( 'example.coolsite.yo' ) )
         self.assertTrue( url_domain_mask.Matches( 'www1.example.coolsite.yo' ) )
@@ -419,7 +419,7 @@ class TestURLDomainMask( unittest.TestCase ):
         
         #
         
-        url_domain_mask = ClientNetworkingURLClass.URLDomainMask( domain_regexes = [ r'site\.[^\.]+', 'example.cool[^\.]+.[^\.]+' ], match_subdomains = True, keep_matched_subdomains = True )
+        url_domain_mask = ClientNetworkingURLClass.URLDomainMask( domain_regexes = [ r'site\.[^\.]+', r'example.cool[^\.]+.[^\.]+' ], match_subdomains = True, keep_matched_subdomains = True )
         
         self.assertTrue( url_domain_mask.Matches( 'example.coolsite.yo' ) )
         self.assertTrue( url_domain_mask.Matches( 'www1.example.coolsite.yo' ) )
@@ -432,7 +432,7 @@ class TestURLDomainMask( unittest.TestCase ):
         
         #
         
-        url_domain_mask = ClientNetworkingURLClass.URLDomainMask( raw_domains = [ 'example.com' ], domain_regexes = [ r'site\.[^\.]+', 'example.cool[^\.]+.[^\.]+' ], match_subdomains = True, keep_matched_subdomains = True )
+        url_domain_mask = ClientNetworkingURLClass.URLDomainMask( raw_domains = [ 'example.com' ], domain_regexes = [ r'site\.[^\.]+', r'example.cool[^\.]+.[^\.]+' ], match_subdomains = True, keep_matched_subdomains = True )
         
         self.assertTrue( url_domain_mask.Matches( 'example.coolsite.yo' ) )
         self.assertTrue( url_domain_mask.Matches( 'www1.example.coolsite.yo' ) )

@@ -1361,10 +1361,17 @@ class ScriptManagementControl( QW.QWidget ):
         
         menu = ClientGUIMenus.GenerateMenu( self )
         
+        open_submenu = ClientGUIMenus.GenerateMenu( menu )
+        copy_submenu = ClientGUIMenus.GenerateMenu( menu )
+        
         for url in urls:
             
-            ClientGUIMenus.AppendMenuItem( menu, url, 'launch this url in your browser', ClientPaths.LaunchURLInWebBrowser, url )
+            ClientGUIMenus.AppendMenuItem( open_submenu, url, 'launch this url in your browser', ClientPaths.LaunchURLInWebBrowser, url )
+            ClientGUIMenus.AppendMenuItem( copy_submenu, url, 'copy this url to your clipboard', CG.client_controller.pub, 'clipboard', 'text', url )
             
+        
+        ClientGUIMenus.AppendMenu( menu, open_submenu, 'open' )
+        ClientGUIMenus.AppendMenu( menu, copy_submenu, 'copy' )
         
         CGC.core().PopupMenu( self, menu )
         

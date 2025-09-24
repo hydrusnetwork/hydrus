@@ -1,4 +1,3 @@
-import collections.abc
 import typing
 
 from qtpy import QtWidgets as QW
@@ -26,7 +25,7 @@ from hydrus.client.search import ClientSearchPredicate
 
 # TODO: This guy shares a bunch with the Read dude, so figure out a shared superclass that has include current/pending and such! 
 # FileSearchContext isn't all there is
-class AutoCompleteDropdownMetadataConditional( ClientGUIACDropdown.AutoCompleteDropdownTagsFileSearchContext ):
+class AutoCompleteDropdownMetadataConditional( ClientGUIACDropdown.AutocompleteDropdownTagsFileSearchContextORCapable ):
     
     def __init__( self, parent: QW.QWidget, file_search_context: ClientSearchFileSearchContext.FileSearchContext ):
         
@@ -36,9 +35,10 @@ class AutoCompleteDropdownMetadataConditional( ClientGUIACDropdown.AutoCompleteD
         location_context = file_search_context.GetLocationContext()
         tag_context = file_search_context.GetTagContext()
         
-        self._page_key = HydrusData.GenerateKey()
+        page_key = HydrusData.GenerateKey()
+        for_metadata_conditional = True
         
-        super().__init__( parent, location_context, tag_context, file_search_context )
+        super().__init__( parent, location_context, tag_context, file_search_context, page_key, for_metadata_conditional )
         
         self._location_context_button.setVisible( False )
         self._tag_context_button.setVisible( False )
@@ -69,6 +69,12 @@ class AutoCompleteDropdownMetadataConditional( ClientGUIACDropdown.AutoCompleteD
         QP.AddToLayout( button_hbox_1, self._include_current_tags, CC.FLAGS_EXPAND_BOTH_WAYS )
         QP.AddToLayout( button_hbox_1, self._include_pending_tags, CC.FLAGS_EXPAND_BOTH_WAYS )
         
+        sync_button_hbox = QP.HBoxLayout()
+        
+        QP.AddToLayout( sync_button_hbox, self._or_basic, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( sync_button_hbox, self._or_cancel, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( sync_button_hbox, self._or_rewind, CC.FLAGS_CENTER_PERPENDICULAR )
+        
         button_hbox_2 = QP.HBoxLayout()
         
         QP.AddToLayout( button_hbox_2, self._location_context_button, CC.FLAGS_EXPAND_BOTH_WAYS )
@@ -77,6 +83,7 @@ class AutoCompleteDropdownMetadataConditional( ClientGUIACDropdown.AutoCompleteD
         vbox = QP.VBoxLayout()
         
         QP.AddToLayout( vbox, button_hbox_1, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        QP.AddToLayout( vbox, sync_button_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         QP.AddToLayout( vbox, button_hbox_2, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         QP.AddToLayout( vbox, self._dropdown_notebook, CC.FLAGS_EXPAND_BOTH_WAYS )
         
@@ -86,15 +93,6 @@ class AutoCompleteDropdownMetadataConditional( ClientGUIACDropdown.AutoCompleteD
         
         self._include_current_tags.valueChanged.connect( self._tag_context_button.SetIncludeCurrent )
         self._include_pending_tags.valueChanged.connect( self._tag_context_button.SetIncludePending )
-        
-    
-    def _BroadcastChoices( self, predicates: collections.abc.Collection[ ClientSearchPredicate.Predicate ], shift_down ):
-        
-        predicates = [ predicate for predicate in predicates if predicate.CanTestMediaResult() ]
-        
-        self._predicates_listbox.EnterPredicates( self._page_key, predicates )
-        
-        self._ClearInput()
         
     
     def _BroadcastCurrentInputFromEnterKey( self, shift_down ):
@@ -209,13 +207,6 @@ class AutoCompleteDropdownMetadataConditional( ClientGUIACDropdown.AutoCompleteD
             
         
     
-    def _SetupTopListBox( self ):
-        
-        self._predicates_listbox = ClientGUIACDropdown.ListBoxTagsActiveSearchPredicates( self, self._page_key, self._file_search_context )
-        
-        QP.AddToLayout( self._main_vbox, self._predicates_listbox, CC.FLAGS_EXPAND_BOTH_WAYS_SHY )
-        
-    
     def _NotifyPredicatesBoxChanged( self ):
         
         predicates = self._predicates_listbox.GetPredicates()
@@ -282,6 +273,11 @@ class AutoCompleteDropdownMetadataConditional( ClientGUIACDropdown.AutoCompleteD
             results = parsed_autocomplete_text.GetValidSystemPredicates()
             
             results = [ predicate for predicate in results if predicate.CanTestMediaResult() ]
+            
+        
+        if self._under_construction_or_predicate is not None:
+            
+            ClientGUIACDropdown.PutAtTopOfMatches( results, self._under_construction_or_predicate )
             
         
         CG.client_controller.CallAfterQtSafe( self, 'Metadata Conditional Results Generation', self.SetFetchedResults, job_status, parsed_autocomplete_text, self._results_cache, results )

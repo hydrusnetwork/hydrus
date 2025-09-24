@@ -1,5 +1,6 @@
 import collections.abc
 
+from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
 
 from hydrus.core import HydrusConstants as HC
@@ -8,7 +9,9 @@ from hydrus.core import HydrusNumbers
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
+from hydrus.client import ClientLocation
 from hydrus.client.duplicates import ClientPotentialDuplicatesManager
+from hydrus.client.duplicates import ClientPotentialDuplicatesPairFactory
 from hydrus.client.gui import ClientGUIAsync
 from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIDialogsQuick
@@ -27,28 +30,311 @@ from hydrus.client.gui.panels import ClientGUIScrolledPanels
 from hydrus.client.gui.widgets import ClientGUICommon
 from hydrus.client.gui.widgets import ClientGUIMenuButton
 from hydrus.client.media import ClientMedia
+from hydrus.client.search import ClientSearchTagContext
 
-class SidebarDuplicateFilter( ClientGUISidebarCore.Sidebar ):
+class FilterPanel( QW.QWidget ):
     
-    SHOW_COLLECT = False
+    locationChanged = QC.Signal( ClientLocation.LocationContext )
+    tagContextChanged = QC.Signal( ClientSearchTagContext.TagContext )
+    setCurrentMediaAs = QC.Signal( int )
+    showPotentialDupes = QC.Signal( list )
+    setPageState = QC.Signal( int )
+    showPairInPage = QC.Signal( list )
     
-    def __init__( self, parent, page, page_manager: ClientGUIPageManager.PageManager ):
+    def __init__( self, parent: QW.QWidget, page_manager: ClientGUIPageManager.PageManager, media_sort_widget, make_tags_box_callable ):
         
-        super().__init__( parent, page, page_manager )
+        super().__init__( parent )
+        
+        self._page_manager = page_manager
+        self._page_key = self._page_manager.GetVariable( 'page_key' )
         
         new_options = CG.client_controller.new_options
         
+        self._options_panel = ClientGUICommon.StaticBox( self, 'merge options' )
+        
+        menu_template_items = []
+        
+        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'edit duplicate metadata merge options for \'this is better\'', 'edit what content is merged when you filter files', HydrusData.Call( self._EditMergeOptions, HC.DUPLICATE_BETTER ) ) )
+        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'edit duplicate metadata merge options for \'same quality\'', 'edit what content is merged when you filter files', HydrusData.Call( self._EditMergeOptions, HC.DUPLICATE_SAME_QUALITY ) ) )
+        
+        if new_options.GetBoolean( 'advanced_mode' ):
+            
+            menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'edit duplicate metadata merge options for \'alternates\' (advanced!)', 'edit what content is merged when you filter files', HydrusData.Call( self._EditMergeOptions, HC.DUPLICATE_ALTERNATE ) ) )
+            
+        
+        self._edit_merge_options = ClientGUIMenuButton.MenuButton( self._options_panel, 'edit default duplicate metadata merge options', menu_template_items )
+        
         #
         
-        self._main_notebook = ClientGUICommon.BetterNotebook( self )
+        potential_duplicates_search_context = self._page_manager.GetVariable( 'potential_duplicates_search_context' )
         
-        # TODO: make these two panels into their own classes and rewire everything into panel signals
-        self._main_left_panel = QW.QWidget( self._main_notebook )
-        self._main_right_panel = QW.QWidget( self._main_notebook )
+        if self._page_manager.HasVariable( 'synchronised' ):
+            
+            synchronised = self._page_manager.GetVariable( 'synchronised' )
+            
+        else:
+            
+            synchronised = True
+            
         
-        self._duplicates_auto_resolution_panel = ClientGUIDuplicatesAutoResolution.ReviewDuplicatesAutoResolutionPanel( self )
+        self._potential_duplicates_search_context = ClientGUIPotentialDuplicatesSearchContext.EditPotentialDuplicatesSearchContextPanel( self, potential_duplicates_search_context, synchronised = synchronised, page_key = self._page_key )
+        
+        self._potential_duplicates_search_context.valueChanged.connect( self._PotentialDuplicatesSearchContextChanged )
         
         #
+        
+        self._filtering_panel = ClientGUICommon.StaticBox( self, 'duplicate filter' )
+        
+        duplicate_pair_sort_type = page_manager.GetVariable( 'duplicate_pair_sort_type' )
+        duplicate_pair_sort_asc = page_manager.GetVariable( 'duplicate_pair_sort_asc' )
+        
+        self._potential_duplicates_sort_widget = ClientGUIPotentialDuplicatesSearchContext.PotentialDuplicatesSortWidget( self._filtering_panel, duplicate_pair_sort_type, duplicate_pair_sort_asc )
+        
+        self._potential_duplicates_sort_widget.valueChanged.connect( self._PotentialDuplicatesSortChanged )
+        
+        filter_group_mode = page_manager.GetVariable( 'filter_group_mode' )
+        
+        choice_tuples = [
+            ( 'mixed pairs', False ),
+            ( 'group mode', True )
+        ]
+        
+        self._filter_group_mode = ClientGUIMenuButton.MenuChoiceButton( self, choice_tuples )
+        self._filter_group_mode.setToolTip( ClientGUIFunctions.WrapToolTip( 'In group mode, each batch in the duplicate filter will include one entire group of files that are transitively related, much like you see when hitting "show some random potential duplicates". The filter will iteratively work on the group until all relationships are cleared, and then move on to another. Groups are selected randomly.' ) )
+        
+        self._filter_group_mode.SetValue( filter_group_mode )
+        
+        self._filter_group_mode.valueChanged.connect( self._FilterGroupModeChanged )
+        
+        self._launch_filter = ClientGUICommon.BetterButton( self._filtering_panel, 'launch the filter', self._LaunchFilter )
+        
+        #
+        
+        random_filtering_panel = ClientGUICommon.StaticBox( self, 'quick and dirty processing' )
+        
+        self._show_some_dupes = ClientGUICommon.BetterButton( random_filtering_panel, 'show some random potential duplicates', self.ShowRandomPotentialDupes )
+        tt = 'This will randomly select a file in the current pair search and show you all the directly or transitively potential files that are also in the same domain. Sometimes this will just be a pair, others it might be a hundred alternates, but they should all look similar.'
+        self._show_some_dupes.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
+        
+        self._set_random_as_same_quality_button = ClientGUICommon.BetterButton( random_filtering_panel, 'set current media as duplicates of the same quality', self._SetCurrentMediaAs, HC.DUPLICATE_SAME_QUALITY )
+        self._set_random_as_alternates_button = ClientGUICommon.BetterButton( random_filtering_panel, 'set current media as all related alternates', self._SetCurrentMediaAs, HC.DUPLICATE_ALTERNATE )
+        self._set_random_as_false_positives_button = ClientGUICommon.BetterButton( random_filtering_panel, 'set current media as not related/false positive', self._SetCurrentMediaAs, HC.DUPLICATE_FALSE_POSITIVE )
+        
+        #
+        
+        self._options_panel.Add( self._edit_merge_options, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        hbox = QP.HBoxLayout()
+        
+        QP.AddToLayout( hbox, self._potential_duplicates_sort_widget, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( hbox, self._filter_group_mode, CC.FLAGS_CENTER )
+        
+        self._filtering_panel.Add( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        self._filtering_panel.Add( self._launch_filter, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        random_filtering_panel.Add( media_sort_widget, CC.FLAGS_EXPAND_PERPENDICULAR )
+        # random_filtering_panel.Add( self._media_collect_widget, CC.FLAGS_EXPAND_PERPENDICULAR ) # hidden for now
+        random_filtering_panel.Add( self._show_some_dupes, CC.FLAGS_EXPAND_PERPENDICULAR )
+        random_filtering_panel.Add( self._set_random_as_same_quality_button, CC.FLAGS_EXPAND_PERPENDICULAR )
+        random_filtering_panel.Add( self._set_random_as_alternates_button, CC.FLAGS_EXPAND_PERPENDICULAR )
+        random_filtering_panel.Add( self._set_random_as_false_positives_button, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        vbox = QP.VBoxLayout()
+        
+        QP.AddToLayout( vbox, self._options_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._potential_duplicates_search_context, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._filtering_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, random_filtering_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        make_tags_box_callable( vbox )
+        
+        self.setLayout( vbox )
+        
+        #
+        
+        CG.client_controller.sub( self, 'NotifyNewPotentialsSearchNumbers', 'new_similar_files_potentials_search_numbers' )
+        
+        self._potential_duplicates_search_context.restartedSearch.connect( self._NotifyPotentialsSearchStarted )
+        self._potential_duplicates_search_context.thisSearchDefinitelyHasNoPairs.connect( self._NotifyPotentialsSearchDefinitelyHasNoPairs )
+        
+    
+    def _EditMergeOptions( self, duplicate_type ):
+        
+        new_options = CG.client_controller.new_options
+        
+        duplicate_content_merge_options = new_options.GetDuplicateContentMergeOptions( duplicate_type )
+        
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit duplicate merge options' ) as dlg:
+            
+            panel = ClientGUIScrolledPanels.EditSingleCtrlPanel( dlg )
+            
+            ctrl = ClientGUIDuplicatesContentMergeOptions.EditDuplicateContentMergeOptionsWidget( panel, duplicate_type, duplicate_content_merge_options )
+            
+            panel.SetControl( ctrl )
+            
+            dlg.SetPanel( panel )
+            
+            if dlg.exec() == QW.QDialog.DialogCode.Accepted:
+                
+                duplicate_content_merge_options = ctrl.GetValue()
+                
+                new_options.SetDuplicateContentMergeOptions( duplicate_type, duplicate_content_merge_options )
+                
+            
+        
+    
+    def _FilterGroupModeChanged( self ):
+        
+        filter_group_mode = self._filter_group_mode.GetValue()
+        
+        self._page_manager.SetVariable( 'filter_group_mode', filter_group_mode )
+        
+    
+    def _LaunchFilter( self ):
+        
+        potential_duplicates_search_context = self._potential_duplicates_search_context.GetValue()
+        
+        ( duplicate_pair_sort_type, duplicate_pair_sort_asc ) = self._potential_duplicates_sort_widget.GetValue()
+        filter_group_mode = self._filter_group_mode.GetValue()
+        
+        if filter_group_mode:
+            
+            potential_duplicate_pair_factory = ClientPotentialDuplicatesPairFactory.PotentialDuplicatePairFactoryDBGroupMode(
+                potential_duplicates_search_context,
+                duplicate_pair_sort_type,
+                duplicate_pair_sort_asc
+            )
+            
+        else:
+            
+            no_more_than = CG.client_controller.new_options.GetInteger( 'duplicate_filter_max_batch_size' )
+            
+            potential_duplicate_pair_factory = ClientPotentialDuplicatesPairFactory.PotentialDuplicatePairFactoryDBMixed(
+                potential_duplicates_search_context,
+                duplicate_pair_sort_type,
+                duplicate_pair_sort_asc,
+                no_more_than
+            )
+            
+        
+        canvas_frame = ClientGUICanvasFrame.CanvasFrame( self.window() )
+        
+        canvas_window = ClientGUICanvasDuplicates.CanvasFilterDuplicates( canvas_frame, potential_duplicate_pair_factory )
+        
+        canvas_window.showPairInPage.connect( self.showPairInPage )
+        
+        canvas_window.canvasWithHoversExiting.connect( CG.client_controller.gui.NotifyMediaViewerExiting )
+        
+        canvas_frame.SetCanvas( canvas_window )
+        
+    
+    def _NotifyPotentialsSearchStarted( self ):
+        
+        self._launch_filter.setEnabled( True )
+        self._show_some_dupes.setEnabled( True )
+        
+    
+    def _NotifyPotentialsSearchDefinitelyHasNoPairs( self ):
+        
+        self._launch_filter.setEnabled( False )
+        self._show_some_dupes.setEnabled( False )
+        
+    
+    def _PotentialDuplicatesSearchContextChanged( self ):
+        
+        potential_duplicates_search_context = self._potential_duplicates_search_context.GetValue()
+        
+        self._page_manager.SetVariable( 'potential_duplicates_search_context', potential_duplicates_search_context )
+        
+        synchronised = self._potential_duplicates_search_context.IsSynchronised()
+        
+        self._page_manager.SetVariable( 'synchronised', synchronised )
+        
+        self.locationChanged.emit( potential_duplicates_search_context.GetFileSearchContext1().GetLocationContext() )
+        self.tagContextChanged.emit( potential_duplicates_search_context.GetFileSearchContext1().GetTagContext() )
+        
+    
+    def _PotentialDuplicatesSortChanged( self ):
+        
+        ( duplicate_pair_sort_type, duplicate_pair_sort_asc ) = self._potential_duplicates_sort_widget.GetValue()
+        
+        self._page_manager.SetVariable( 'duplicate_pair_sort_type', duplicate_pair_sort_type )
+        self._page_manager.SetVariable( 'duplicate_pair_sort_asc', duplicate_pair_sort_asc )
+        
+    
+    def _SetCurrentMediaAs( self, duplicate_type ):
+        
+        self.setCurrentMediaAs.emit( duplicate_type )
+        
+    
+    def NotifyNewPotentialsSearchNumbers( self ):
+        
+        self._potential_duplicates_search_context.NotifyNewDupePairs()
+        
+    
+    def PageHidden( self ):
+        
+        self._potential_duplicates_search_context.PageHidden()
+        
+    
+    def PageShown( self ):
+        
+        self._potential_duplicates_search_context.PageShown()
+        
+    
+    def RefreshDuplicateNumbers( self ):
+        
+        self._potential_duplicates_search_context.NotifyNewDupePairs()
+        
+    
+    def ShowRandomPotentialDupes( self ):
+        
+        def work_callable():
+            
+            hashes = CG.client_controller.Read( 'random_potential_duplicate_hashes', potential_duplicates_search_context )
+            
+            return hashes
+            
+        
+        def publish_callable( hashes ):
+            
+            self._show_some_dupes.setEnabled( True )
+            
+            self.setPageState.emit( CC.PAGE_STATE_NORMAL )
+            
+            if len( hashes ) == 0:
+                
+                ClientGUIDialogsMessage.ShowInformation( self, 'No potential files in this search!' )
+                
+                self._potential_duplicates_search_context.NotifyNewDupePairs()
+                
+            else:
+                
+                self.showPotentialDupes.emit( hashes )
+                
+            
+        
+        self._show_some_dupes.setEnabled( False )
+        
+        self.setPageState.emit( CC.PAGE_STATE_SEARCHING )
+        
+        potential_duplicates_search_context = self._potential_duplicates_search_context.GetValue()
+        
+        ClientGUIAsync.AsyncQtJob( self, work_callable, publish_callable ).start()
+        
+    
+    def REPEATINGPageUpdate( self ):
+        
+        self._potential_duplicates_search_context.REPEATINGPageUpdate()
+        
+    
+
+class PreparationPanel( QW.QWidget ):
+    
+    pageTabNameChanged = QC.Signal( str )
+    
+    def __init__( self, parent: QW.QWidget ):
+        
+        super().__init__( parent )
         
         menu_template_items = []
         
@@ -56,11 +342,11 @@ class SidebarDuplicateFilter( ClientGUISidebarCore.Sidebar ):
         
         menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'open the html duplicates help', 'Open the help page for duplicates processing in your web browser.', page_func ) )
         
-        self._help_button = ClientGUIMenuButton.MenuIconButton( self._main_left_panel, CC.global_icons().help, menu_template_items )
+        self._help_button = ClientGUIMenuButton.MenuIconButton( self, CC.global_icons().help, menu_template_items )
         
         #
         
-        self._searching_panel = ClientGUICommon.StaticBox( self._main_left_panel, 'finding potential duplicates' )
+        self._searching_panel = ClientGUICommon.StaticBox( self, 'finding potential duplicates' )
         
         self._refresh_maintenance_button = ClientGUICommon.IconButton( self._searching_panel, CC.global_icons().refresh, self._RefreshMaintenanceNumbers )
         
@@ -121,86 +407,6 @@ class SidebarDuplicateFilter( ClientGUISidebarCore.Sidebar ):
         
         #
         
-        self._options_panel = ClientGUICommon.StaticBox( self._main_right_panel, 'merge options' )
-        
-        menu_template_items = []
-        
-        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'edit duplicate metadata merge options for \'this is better\'', 'edit what content is merged when you filter files', HydrusData.Call( self._EditMergeOptions, HC.DUPLICATE_BETTER ) ) )
-        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'edit duplicate metadata merge options for \'same quality\'', 'edit what content is merged when you filter files', HydrusData.Call( self._EditMergeOptions, HC.DUPLICATE_SAME_QUALITY ) ) )
-        
-        if new_options.GetBoolean( 'advanced_mode' ):
-            
-            menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'edit duplicate metadata merge options for \'alternates\' (advanced!)', 'edit what content is merged when you filter files', HydrusData.Call( self._EditMergeOptions, HC.DUPLICATE_ALTERNATE ) ) )
-            
-        
-        self._edit_merge_options = ClientGUIMenuButton.MenuButton( self._options_panel, 'edit default duplicate metadata merge options', menu_template_items )
-        
-        #
-        
-        potential_duplicates_search_context = page_manager.GetVariable( 'potential_duplicates_search_context' )
-        
-        if self._page_manager.HasVariable( 'synchronised' ):
-            
-            synchronised = self._page_manager.GetVariable( 'synchronised' )
-            
-        else:
-            
-            synchronised = True
-            
-        
-        self._potential_duplicates_search_context = ClientGUIPotentialDuplicatesSearchContext.EditPotentialDuplicatesSearchContextPanel( self, potential_duplicates_search_context, synchronised = synchronised, page_key = self._page_key )
-        
-        self._potential_duplicates_search_context.valueChanged.connect( self._PotentialDuplicatesSearchContextChanged )
-        
-        #
-        
-        self._filtering_panel = ClientGUICommon.StaticBox( self._main_right_panel, 'duplicate filter' )
-        
-        duplicate_pair_sort_type = page_manager.GetVariable( 'duplicate_pair_sort_type' )
-        duplicate_pair_sort_asc = page_manager.GetVariable( 'duplicate_pair_sort_asc' )
-        
-        self._potential_duplicates_sort_widget = ClientGUIPotentialDuplicatesSearchContext.PotentialDuplicatesSortWidget( self._filtering_panel, duplicate_pair_sort_type, duplicate_pair_sort_asc )
-        
-        self._potential_duplicates_sort_widget.valueChanged.connect( self._PotentialDuplicatesSortChanged )
-        
-        filter_group_mode = page_manager.GetVariable( 'filter_group_mode' )
-        
-        choice_tuples = [
-            ( 'mixed pairs', False ),
-            ( 'group mode', True )
-        ]
-        
-        self._filter_group_mode = ClientGUIMenuButton.MenuChoiceButton( self, choice_tuples )
-        self._filter_group_mode.setToolTip( ClientGUIFunctions.WrapToolTip( 'In group mode, each batch in the duplicate filter will include one entire group of files that are transitively related, much like you see when hitting "show some random potential duplicates". The filter will iteratively work on the group until all relationships are cleared, and then move on to another. Groups are selected randomly.' ) )
-        
-        self._filter_group_mode.SetValue( filter_group_mode )
-        
-        self._filter_group_mode.valueChanged.connect( self._FilterGroupModeChanged )
-        
-        self._launch_filter = ClientGUICommon.BetterButton( self._filtering_panel, 'launch the filter', self._LaunchFilter )
-        
-        #
-        
-        random_filtering_panel = ClientGUICommon.StaticBox( self._main_right_panel, 'quick and dirty processing' )
-        
-        self._show_some_dupes = ClientGUICommon.BetterButton( random_filtering_panel, 'show some random potential duplicates', self._ShowRandomPotentialDupes )
-        tt = 'This will randomly select a file in the current pair search and show you all the directly or transitively potential files that are also in the same domain. Sometimes this will just be a pair, others it might be a hundred alternates, but they should all look similar.'
-        self._show_some_dupes.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
-        
-        self._set_random_as_same_quality_button = ClientGUICommon.BetterButton( random_filtering_panel, 'set current media as duplicates of the same quality', self._SetCurrentMediaAs, HC.DUPLICATE_SAME_QUALITY )
-        self._set_random_as_alternates_button = ClientGUICommon.BetterButton( random_filtering_panel, 'set current media as all related alternates', self._SetCurrentMediaAs, HC.DUPLICATE_ALTERNATE )
-        self._set_random_as_false_positives_button = ClientGUICommon.BetterButton( random_filtering_panel, 'set current media as not related/false positive', self._SetCurrentMediaAs, HC.DUPLICATE_FALSE_POSITIVE )
-        
-        #
-        
-        self._main_notebook.addTab( self._main_left_panel, 'preparation' )
-        self._main_notebook.addTab( self._main_right_panel, 'filtering' )
-        self._main_notebook.addTab( self._duplicates_auto_resolution_panel, 'auto-resolution' )
-        
-        self._main_notebook.setCurrentWidget( self._main_right_panel )
-        
-        #
-        
         distance_hbox = QP.HBoxLayout()
         
         QP.AddToLayout( distance_hbox, ClientGUICommon.BetterStaticText(self._searching_panel,label='search distance: '), CC.FLAGS_CENTER_PERPENDICULAR )
@@ -231,106 +437,17 @@ class SidebarDuplicateFilter( ClientGUISidebarCore.Sidebar ):
         QP.AddToLayout( vbox, self._searching_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         vbox.addStretch( 0 )
         
-        self._main_left_panel.setLayout( vbox )
-        
-        #
-        
-        self._options_panel.Add( self._edit_merge_options, CC.FLAGS_EXPAND_PERPENDICULAR )
-        
-        hbox = QP.HBoxLayout()
-        
-        QP.AddToLayout( hbox, self._potential_duplicates_sort_widget, CC.FLAGS_EXPAND_BOTH_WAYS )
-        QP.AddToLayout( hbox, self._filter_group_mode, CC.FLAGS_CENTER )
-        
-        self._filtering_panel.Add( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        self._filtering_panel.Add( self._launch_filter, CC.FLAGS_EXPAND_PERPENDICULAR )
-        
-        random_filtering_panel.Add( self._media_sort_widget, CC.FLAGS_EXPAND_PERPENDICULAR )
-        # random_filtering_panel.Add( self._media_collect_widget, CC.FLAGS_EXPAND_PERPENDICULAR ) # hidden for now
-        random_filtering_panel.Add( self._show_some_dupes, CC.FLAGS_EXPAND_PERPENDICULAR )
-        random_filtering_panel.Add( self._set_random_as_same_quality_button, CC.FLAGS_EXPAND_PERPENDICULAR )
-        random_filtering_panel.Add( self._set_random_as_alternates_button, CC.FLAGS_EXPAND_PERPENDICULAR )
-        random_filtering_panel.Add( self._set_random_as_false_positives_button, CC.FLAGS_EXPAND_PERPENDICULAR )
-        
-        vbox = QP.VBoxLayout()
-        
-        QP.AddToLayout( vbox, self._options_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-        QP.AddToLayout( vbox, self._potential_duplicates_search_context, CC.FLAGS_EXPAND_PERPENDICULAR )
-        QP.AddToLayout( vbox, self._filtering_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-        QP.AddToLayout( vbox, random_filtering_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._MakeCurrentSelectionTagsBox( vbox )
-        
-        self._main_right_panel.setLayout( vbox )
+        self.setLayout( vbox )
         
         #
         
         self._maintenance_status_updater = self._InitialiseMaintenanceStatusUpdater()
         
-        vbox = QP.VBoxLayout()
-        
-        QP.AddToLayout( vbox, self._main_notebook, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
-        
-        self.widget().setLayout( vbox )
-        
         CG.client_controller.sub( self, 'NotifyNewMaintenanceNumbers', 'new_similar_files_maintenance_numbers' )
-        CG.client_controller.sub( self, 'NotifyNewPotentialsSearchNumbers', 'new_similar_files_potentials_search_numbers' )
         
         self._max_hamming_distance_for_potential_discovery_spinctrl.valueChanged.connect( self.MaxHammingDistanceForPotentialDiscoveryChanged )
         
-        self._potential_duplicates_search_context.restartedSearch.connect( self._NotifyPotentialsSearchStarted )
-        self._potential_duplicates_search_context.thisSearchDefinitelyHasNoPairs.connect( self._NotifyPotentialsSearchDefinitelyHasNoPairs )
-        
-        self._main_notebook.currentChanged.connect( self._CurrentPageChanged )
-        
-        self._CurrentPageChanged()
-        
         self._maintenance_status_updater.update()
-        
-    
-    def _CurrentPageChanged( self ):
-        
-        page = self._main_notebook.currentWidget()
-        
-        if page == self._main_right_panel:
-            
-            self._potential_duplicates_search_context.PageShown()
-            
-        else:
-            
-            self._potential_duplicates_search_context.PageHidden()
-            
-        
-    
-    def _EditMergeOptions( self, duplicate_type ):
-        
-        new_options = CG.client_controller.new_options
-        
-        duplicate_content_merge_options = new_options.GetDuplicateContentMergeOptions( duplicate_type )
-        
-        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit duplicate merge options' ) as dlg:
-            
-            panel = ClientGUIScrolledPanels.EditSingleCtrlPanel( dlg )
-            
-            ctrl = ClientGUIDuplicatesContentMergeOptions.EditDuplicateContentMergeOptionsWidget( panel, duplicate_type, duplicate_content_merge_options )
-            
-            panel.SetControl( ctrl )
-            
-            dlg.SetPanel( panel )
-            
-            if dlg.exec() == QW.QDialog.DialogCode.Accepted:
-                
-                duplicate_content_merge_options = ctrl.GetValue()
-                
-                new_options.SetDuplicateContentMergeOptions( duplicate_type, duplicate_content_merge_options )
-                
-            
-        
-    
-    def _FilterGroupModeChanged( self ):
-        
-        filter_group_mode = self._filter_group_mode.GetValue()
-        
-        self._page_manager.SetVariable( 'filter_group_mode', filter_group_mode )
         
     
     def _InitialiseMaintenanceStatusUpdater( self ):
@@ -400,79 +517,10 @@ class SidebarDuplicateFilter( ClientGUISidebarCore.Sidebar ):
                 self._num_searched.SetValue( 'All potential duplicates found at this distance.', total_num_files, total_num_files )
                 
             
-            self._main_notebook.setTabText( 0, page_name )
+            self.pageTabNameChanged.emit( page_name )
             
         
         return ClientGUIAsync.AsyncQtUpdater( self, loading_callable, work_callable, publish_callable )
-        
-    
-    def _LaunchFilter( self ):
-        
-        potential_duplicates_search_context = self._potential_duplicates_search_context.GetValue()
-        
-        ( duplicate_pair_sort_type, duplicate_pair_sort_asc ) = self._potential_duplicates_sort_widget.GetValue()
-        filter_group_mode = self._filter_group_mode.GetValue()
-        
-        if filter_group_mode:
-            
-            potential_duplicate_pair_factory = ClientGUICanvasDuplicates.PotentialDuplicatePairFactoryDBGroupMode(
-                potential_duplicates_search_context,
-                duplicate_pair_sort_type,
-                duplicate_pair_sort_asc
-            )
-            
-        else:
-            
-            potential_duplicate_pair_factory = ClientGUICanvasDuplicates.PotentialDuplicatePairFactoryDBMixed(
-                potential_duplicates_search_context,
-                duplicate_pair_sort_type,
-                duplicate_pair_sort_asc
-            )
-            
-        
-        canvas_frame = ClientGUICanvasFrame.CanvasFrame( self.window() )
-        
-        canvas_window = ClientGUICanvasDuplicates.CanvasFilterDuplicates( canvas_frame, potential_duplicate_pair_factory )
-        
-        canvas_window.showPairInPage.connect( self._ShowPairInPage )
-        
-        canvas_window.canvasWithHoversExiting.connect( CG.client_controller.gui.NotifyMediaViewerExiting )
-        
-        canvas_frame.SetCanvas( canvas_window )
-        
-    
-    def _NotifyPotentialsSearchStarted( self ):
-        
-        self._launch_filter.setEnabled( True )
-        self._show_some_dupes.setEnabled( True )
-        
-    
-    def _NotifyPotentialsSearchDefinitelyHasNoPairs( self ):
-        
-        self._launch_filter.setEnabled( False )
-        self._show_some_dupes.setEnabled( False )
-        
-    
-    def _PotentialDuplicatesSearchContextChanged( self ):
-        
-        potential_duplicates_search_context = self._potential_duplicates_search_context.GetValue()
-        
-        self._page_manager.SetVariable( 'potential_duplicates_search_context', potential_duplicates_search_context )
-        
-        synchronised = self._potential_duplicates_search_context.IsSynchronised()
-        
-        self._page_manager.SetVariable( 'synchronised', synchronised )
-        
-        self.locationChanged.emit( potential_duplicates_search_context.GetFileSearchContext1().GetLocationContext() )
-        self.tagContextChanged.emit( potential_duplicates_search_context.GetFileSearchContext1().GetTagContext() )
-        
-    
-    def _PotentialDuplicatesSortChanged( self ):
-        
-        ( duplicate_pair_sort_type, duplicate_pair_sort_asc ) = self._potential_duplicates_sort_widget.GetValue()
-        
-        self._page_manager.SetVariable( 'duplicate_pair_sort_type', duplicate_pair_sort_type )
-        self._page_manager.SetVariable( 'duplicate_pair_sort_asc', duplicate_pair_sort_asc )
         
     
     def _RefreshMaintenanceNumbers( self ):
@@ -530,74 +578,11 @@ class SidebarDuplicateFilter( ClientGUISidebarCore.Sidebar ):
             
         
     
-    def _SetCurrentMediaAs( self, duplicate_type ):
-        
-        media_panel = self._page.GetMediaResultsPanel()
-        
-        change_made = media_panel.SetDuplicateStatusForAll( duplicate_type )
-        
-        if change_made:
-            
-            self._ShowRandomPotentialDupes()
-            
-        
-    
     def _SetSearchDistance( self, value ):
         
         self._max_hamming_distance_for_potential_discovery_spinctrl.setValue( value )
         
         self._maintenance_status_updater.update()
-        
-    
-    def _ShowPairInPage( self, media: collections.abc.Collection[ ClientMedia.MediaSingleton ] ):
-        
-        media_results = [ m.GetMediaResult() for m in media ]
-        
-        self._page.GetMediaResultsPanel().AddMediaResults( self._page_key, media_results )
-        
-    
-    def _ShowPotentialDupes( self, hashes ):
-        
-        if len( hashes ) > 0:
-            
-            media_results = CG.client_controller.Read( 'media_results', hashes, sorted = True )
-            
-        else:
-            
-            media_results = []
-            
-        
-        panel = ClientGUIMediaResultsPanelThumbnails.MediaResultsPanelThumbnails( self._page, self._page_key, self._page_manager, media_results )
-        
-        panel.SetEmptyPageStatusOverride( 'no dupes found' )
-        
-        # panel.Collect( self._media_collect_widget.GetValue() ) hidden for now
-        
-        panel.Sort( self._media_sort_widget.GetSort() )
-        
-        self._page.SwapMediaResultsPanel( panel )
-        
-        self._page_state = CC.PAGE_STATE_NORMAL
-        
-    
-    def _ShowRandomPotentialDupes( self ):
-        
-        potential_duplicates_search_context = self._potential_duplicates_search_context.GetValue()
-        
-        self._page_state = CC.PAGE_STATE_SEARCHING
-        
-        hashes = CG.client_controller.Read( 'random_potential_duplicate_hashes', potential_duplicates_search_context )
-        
-        if len( hashes ) == 0:
-            
-            ClientGUIDialogsMessage.ShowInformation( self, 'No potential files in this search!' )
-            
-            self._potential_duplicates_search_context.NotifyNewDupePairs()
-            
-        else:
-            
-            self._ShowPotentialDupes( hashes )
-            
         
     
     def _StartWorkingHard( self ):
@@ -658,12 +643,103 @@ class SidebarDuplicateFilter( ClientGUISidebarCore.Sidebar ):
     
     def NotifyNewMaintenanceNumbers( self ):
         
+        # note this thing is basically instant and we want the page name update so we are fine to call it even when we are not visible
         self._maintenance_status_updater.update()
         
     
-    def NotifyNewPotentialsSearchNumbers( self ):
+    def REPEATINGPageUpdate( self ):
         
-        self._potential_duplicates_search_context.NotifyNewDupePairs()
+        self._UpdateSearchStatus()
+        
+    
+
+class SidebarDuplicateFilter( ClientGUISidebarCore.Sidebar ):
+    
+    SHOW_COLLECT = False
+    
+    def __init__( self, parent, page, page_manager: ClientGUIPageManager.PageManager ):
+        
+        super().__init__( parent, page, page_manager )
+        
+        #
+        
+        self._main_notebook = ClientGUICommon.BetterNotebook( self )
+        
+        self._preparation_panel = PreparationPanel( self._main_notebook )
+        self._filter_panel = FilterPanel( self._main_notebook, self._page_manager, self._media_sort_widget, self._MakeCurrentSelectionTagsBox )
+        self._duplicates_auto_resolution_panel = ClientGUIDuplicatesAutoResolution.ReviewDuplicatesAutoResolutionPanel( self._main_notebook )
+        
+        #
+        
+        self._main_notebook.addTab( self._preparation_panel, 'preparation' )
+        self._main_notebook.addTab( self._filter_panel, 'filtering' )
+        self._main_notebook.addTab( self._duplicates_auto_resolution_panel, 'auto-resolution' )
+        
+        self._main_notebook.setCurrentWidget( self._filter_panel )
+        
+        #
+        
+        vbox = QP.VBoxLayout()
+        
+        QP.AddToLayout( vbox, self._main_notebook, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        
+        self.widget().setLayout( vbox )
+        
+        self._main_notebook.currentChanged.connect( self._CurrentPageChanged )
+        
+        self._CurrentPageChanged()
+        
+        self._preparation_panel.pageTabNameChanged.connect( self._RenamePreparationTabName )
+        
+        self._filter_panel.locationChanged.connect( self.locationChanged )
+        self._filter_panel.tagContextChanged.connect( self.tagContextChanged )
+        self._filter_panel.setCurrentMediaAs.connect( self._SetCurrentMediaAs )
+        self._filter_panel.showPotentialDupes.connect( self.ShowPotentialDupes )
+        self._filter_panel.setPageState.connect( self._SetPageState )
+        self._filter_panel.showPairInPage.connect( self._ShowPairInPage )
+        
+    
+    def _CurrentPageChanged( self ):
+        
+        page = self._main_notebook.currentWidget()
+        
+        if page == self._filter_panel:
+            
+            self._filter_panel.PageShown()
+            
+        else:
+            
+            self._filter_panel.PageHidden()
+            
+        
+    
+    def _RenamePreparationTabName( self, page_name: str ):
+        
+        self._main_notebook.setTabText( 0, page_name )
+        
+    
+    def _SetCurrentMediaAs( self, duplicate_type ):
+        
+        media_panel = self._page.GetMediaResultsPanel()
+        
+        change_made = media_panel.SetDuplicateStatusForAll( duplicate_type )
+        
+        if change_made:
+            
+            self._filter_panel.ShowRandomPotentialDupes()
+            
+        
+    
+    def _SetPageState( self, page_state: int ):
+        
+        self._page_state = page_state
+        
+    
+    def _ShowPairInPage( self, media: collections.abc.Collection[ ClientMedia.MediaSingleton ] ):
+        
+        media_results = [ m.GetMediaResult() for m in media ]
+        
+        self._page.GetMediaResultsPanel().AddMediaResults( self._page_key, media_results )
         
     
     def PageHidden( self ):
@@ -672,9 +748,9 @@ class SidebarDuplicateFilter( ClientGUISidebarCore.Sidebar ):
         
         page = self._main_notebook.currentWidget()
         
-        if page == self._main_right_panel:
+        if page == self._filter_panel:
             
-            self._potential_duplicates_search_context.PageHidden()
+            self._filter_panel.PageHidden()
             
         
     
@@ -684,29 +760,50 @@ class SidebarDuplicateFilter( ClientGUISidebarCore.Sidebar ):
         
         page = self._main_notebook.currentWidget()
         
-        if page == self._main_right_panel:
+        if page == self._filter_panel:
             
-            self._potential_duplicates_search_context.PageShown()
+            self._filter_panel.PageShown()
             
-        
-    
-    def RefreshDuplicateNumbers( self ):
-        
-        self._potential_duplicates_search_context.NotifyNewDupePairs()
         
     
     def RefreshQuery( self ):
         
-        self._potential_duplicates_search_context.NotifyNewDupePairs()
+        self._filter_panel.RefreshDuplicateNumbers()
+        
+    
+    def ShowPotentialDupes( self, hashes ):
+        
+        if len( hashes ) > 0:
+            
+            media_results = CG.client_controller.Read( 'media_results', hashes, sorted = True )
+            
+        else:
+            
+            media_results = []
+            
+        
+        panel = ClientGUIMediaResultsPanelThumbnails.MediaResultsPanelThumbnails( self._page, self._page_key, self._page_manager, media_results )
+        
+        panel.SetEmptyPageStatusOverride( 'no dupes found' )
+        
+        # panel.Collect( self._media_collect_widget.GetValue() ) hidden for now
+        
+        panel.Sort( self._media_sort_widget.GetSort() )
+        
+        self._page.SwapMediaResultsPanel( panel )
         
     
     def REPEATINGPageUpdate( self ):
         
-        if self._main_notebook.currentWidget() == self._main_left_panel:
-            
-            self._UpdateSearchStatus()
-            
+        current_page = self._main_notebook.currentWidget()
         
-        self._potential_duplicates_search_context.REPEATINGPageUpdate()
+        if current_page == self._preparation_panel:
+            
+            self._preparation_panel.REPEATINGPageUpdate()
+            
+        elif current_page == self._filter_panel:
+            
+            self._filter_panel.REPEATINGPageUpdate()
+            
         
     

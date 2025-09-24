@@ -21,6 +21,7 @@ from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientLocation
 from hydrus.client import ClientPaths
 from hydrus.client import ClientServices
+from hydrus.client import ClientThreading
 from hydrus.client.files import ClientFilesMaintenance
 from hydrus.client.gui import ClientGUIDialogsManage
 from hydrus.client.gui import ClientGUIDialogsMessage
@@ -259,10 +260,31 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.Liste
         
         def do_it( content_update_packages ):
             
-            for content_update_package in content_update_packages:
+            display_time = HydrusTime.GetNow() + 3
+            message_pubbed = False
+            
+            job_status = ClientThreading.JobStatus() # not cancellable, this stuff isn't a nice mix
+            
+            job_status.SetStatusTitle( 'deleting files' )
+            # no text, the content update packages are not always a nice mix
+            
+            num_to_do = len( content_update_packages )
+            
+            for ( i, content_update_package ) in enumerate( content_update_packages ):
+                
+                job_status.SetGauge( i, num_to_do )
+                
+                if not message_pubbed and HydrusTime.TimeHasPassed( display_time ):
+                    
+                    CG.client_controller.pub( 'message', job_status )
+                    
+                    message_pubbed = True
+                    
                 
                 CG.client_controller.WriteSynchronous( 'content_updates', content_update_package )
                 
+            
+            job_status.FinishAndDismiss()
             
         
         CG.client_controller.CallToThread( do_it, content_update_packages )

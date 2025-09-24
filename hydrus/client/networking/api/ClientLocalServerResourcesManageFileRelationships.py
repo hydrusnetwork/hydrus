@@ -8,6 +8,8 @@ from hydrus.client import ClientAPI
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientLocation
+from hydrus.client.duplicates import ClientDuplicates
+from hydrus.client.duplicates import ClientPotentialDuplicatesPairFactory
 from hydrus.client.metadata import ClientContentUpdates
 from hydrus.client.networking.api import ClientLocalServerCore
 from hydrus.client.networking.api import ClientLocalServerResources
@@ -68,7 +70,59 @@ class HydrusResourceClientAPIRestrictedManageFileRelationshipsGetPotentialPairs(
         
         max_num_pairs = request.parsed_request_args.GetValue( 'max_num_pairs', int, default_value = CG.client_controller.new_options.GetInteger( 'duplicate_filter_max_batch_size' ) )
         
-        filtering_pairs_hashes = CG.client_controller.Read( 'duplicate_pair_hashes_for_filtering', potential_duplicates_search_context, max_num_pairs = max_num_pairs )
+        duplicate_pair_sort_type = request.parsed_request_args.GetValue( 'duplicate_pair_sort_type', int, default_value = ClientDuplicates.DUPE_PAIR_SORT_MAX_FILESIZE )
+        duplicate_pair_sort_asc = request.parsed_request_args.GetValue( 'duplicate_pair_sort_asc', bool, default_value = False )
+        
+        group_mode = request.parsed_request_args.GetValue( 'group_mode', bool, default_value = False )
+        
+        if group_mode:
+            
+            pair_factory = ClientPotentialDuplicatesPairFactory.PotentialDuplicatePairFactoryDBGroupMode(
+                potential_duplicates_search_context,
+                duplicate_pair_sort_type,
+                duplicate_pair_sort_asc
+            )
+            
+        else:
+            
+            pair_factory = ClientPotentialDuplicatesPairFactory.PotentialDuplicatePairFactoryDBMixed(
+                potential_duplicates_search_context,
+                duplicate_pair_sort_type,
+                duplicate_pair_sort_asc,
+                max_num_pairs
+            )
+            
+        
+        if pair_factory.InitialisationWorkNeeded():
+            
+            pair_factory.NotifyInitialisationWorkStarted()
+            
+            pair_factory.DoInitialisationWork()
+            
+            pair_factory.NotifyInitialisationWorkFinished()
+            
+        
+        if not pair_factory.InitialisationWorkLooksGood():
+            
+            filtering_pairs_hashes = []
+            
+        else:
+            
+            pair_factory.NotifyFetchMorePairs()
+            
+            while not pair_factory.SearchWorkIsDone():
+                
+                pair_factory.DoSearchWork()
+                
+            
+            pair_factory.SortPairs()
+            
+            media_result_pairs_and_distances = pair_factory.GetPotentialDuplicateMediaResultPairsAndDistances()
+            
+            media_result_pairs = media_result_pairs_and_distances.GetPairs()
+            
+            filtering_pairs_hashes = [ ( mr_1.GetHash(), mr_2.GetHash() ) for ( mr_1, mr_2 ) in media_result_pairs ]
+            
         
         body_dict = { 'potential_duplicate_pairs' : [ ( hash_1.hex(), hash_2.hex() ) for ( hash_1, hash_2 ) in filtering_pairs_hashes ] }
         

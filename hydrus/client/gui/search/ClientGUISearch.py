@@ -62,7 +62,7 @@ FLESH_OUT_SYSTEM_PRED_TYPES = {
     ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_FILE_VIEWING_STATS
 }
 
-def EditPredicates( widget: QW.QWidget, predicates: collections.abc.Collection[ ClientSearchPredicate.Predicate ], empty_file_search_context: typing.Optional[ ClientSearchFileSearchContext.FileSearchContext ] = None ) -> list[ ClientSearchPredicate.Predicate ]:
+def EditPredicates( widget: QW.QWidget, predicates: collections.abc.Collection[ ClientSearchPredicate.Predicate ], empty_file_search_context: typing.Optional[ ClientSearchFileSearchContext.FileSearchContext ] = None, for_metadata_conditional: bool = False ) -> list[ ClientSearchPredicate.Predicate ]:
     
     ( editable_predicates, only_invertible_predicates, non_editable_predicates ) = GetEditablePredicates( predicates )
     
@@ -91,7 +91,7 @@ def EditPredicates( widget: QW.QWidget, predicates: collections.abc.Collection[ 
         
         with ClientGUITopLevelWindowsPanels.DialogEdit( window, title ) as dlg:
             
-            panel = EditPredicatesPanel( dlg, predicates, empty_file_search_context = empty_file_search_context )
+            panel = EditPredicatesPanel( dlg, predicates, empty_file_search_context = empty_file_search_context, for_metadata_conditional = for_metadata_conditional )
             
             dlg.SetPanel( panel )
             
@@ -111,6 +111,7 @@ def EditPredicates( widget: QW.QWidget, predicates: collections.abc.Collection[ 
     
     raise HydrusExceptions.CancelledException()
     
+
 def FilterAndConvertLabelPredicates( predicates: collections.abc.Collection[ ClientSearchPredicate.Predicate ] ) -> list[ ClientSearchPredicate.Predicate ]:
     
     good_predicates = []
@@ -195,7 +196,7 @@ def GetEditablePredicates( predicates: collections.abc.Collection[ ClientSearchP
 
 class EditPredicatesPanel( ClientGUIScrolledPanels.EditPanel ):
     
-    def __init__( self, parent, predicates: collections.abc.Collection[ ClientSearchPredicate.Predicate ], empty_file_search_context: typing.Optional[ ClientSearchFileSearchContext.FileSearchContext ] = None ):
+    def __init__( self, parent, predicates: collections.abc.Collection[ ClientSearchPredicate.Predicate ], empty_file_search_context: typing.Optional[ ClientSearchFileSearchContext.FileSearchContext ] = None, for_metadata_conditional: bool = False ):
         
         super().__init__( parent )
         
@@ -229,7 +230,7 @@ class EditPredicatesPanel( ClientGUIScrolledPanels.EditPanel ):
             
             if predicate_type == ClientSearchPredicate.PREDICATE_TYPE_OR_CONTAINER:
                 
-                self._editable_pred_panels.append( ClientGUIPredicatesOR.ORPredicateControl( self, predicate, empty_file_search_context = empty_file_search_context ) )
+                self._editable_pred_panels.append( ClientGUIPredicatesOR.ORPredicateControl( self, predicate, empty_file_search_context = empty_file_search_context, for_metadata_conditional = for_metadata_conditional ) )
                 
             elif predicate_type in ( ClientSearchPredicate.PREDICATE_TYPE_TAG, ClientSearchPredicate.PREDICATE_TYPE_NAMESPACE, ClientSearchPredicate.PREDICATE_TYPE_WILDCARD ):
                 

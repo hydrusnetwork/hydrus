@@ -1162,7 +1162,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
             
             if result == 'file':
                 
-                with QP.FileDialog( self, 'select where to save content', default_filename = 'result.html', acceptMode = QW.QFileDialog.AcceptMode.AcceptSave, fileMode = QW.QFileDialog.FileMode.AnyFile ) as f_dlg:
+                with QP.FileDialog( self, 'select where to save content', default_filename = 'output.txt', acceptMode = QW.QFileDialog.AcceptMode.AcceptSave, fileMode = QW.QFileDialog.FileMode.AnyFile ) as f_dlg:
                     
                     if f_dlg.exec() == QW.QDialog.DialogCode.Accepted:
                         
@@ -3551,6 +3551,8 @@ ATTACH "client.mappings.db" as external_mappings;'''
         ClientGUIMenus.AppendMenuItem( tests, 'run the ui test', 'Run hydrus_dev\'s weekly UI Test. Guaranteed to work and not mess up your session, ha ha.', self._RunUITest )
         ClientGUIMenus.AppendMenuItem( tests, 'run the client api test', 'Run hydrus_dev\'s weekly Client API Test. Guaranteed to work and not mess up your session, ha ha.', self._RunClientAPITest )
         ClientGUIMenus.AppendMenuItem( tests, 'run the server test on fresh server', 'This will try to initialise an already running server.', self._RunServerTest )
+        ClientGUIMenus.AppendSeparator( tests )
+        ClientGUIMenus.AppendMenuItem( tests, 'run the visual duplicates tuning suite', 'Run some stats on some example files using the visual duplicates system.', self._RunVisualDuplicatesTuningSuite )
         ClientGUIMenus.AppendSeparator( tests )
         ClientGUIMenus.AppendMenuCheckItem( tests, 'fake petition mode', 'Fill the petition panels with fake local data for testing.', HG.fake_petition_mode, self._SwitchBoolean, 'fake_petition_mode' )
         ClientGUIMenus.AppendSeparator( tests )
@@ -6493,6 +6495,29 @@ ATTACH "client.mappings.db" as external_mappings;'''
             
         
     
+    def _RunVisualDuplicatesTuningSuite( self ):
+        
+        text = 'Turn back, do not proceed, click "no" NOW.'
+        
+        result = ClientGUIDialogsQuick.GetYesNo( self, text )
+        
+        if result != QW.QDialog.DialogCode.Accepted:
+            
+            return
+            
+        
+        from hydrus.client.files.images import ClientVisualDataTuningSuite
+        
+        test_dir = QW.QFileDialog.getExistingDirectory( self, '', '' )
+        
+        if test_dir == '':
+            
+            return
+            
+        
+        ClientVisualDataTuningSuite.RunTuningSuite( test_dir )
+        
+    
     def _SaveSplitterPositions( self ):
         
         page = self._notebook.GetCurrentMediaPage()
@@ -7005,13 +7030,13 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 break
                 
             
-            history_menuitem = ClientGUIMenus.AppendMenuItem( self._page_nav_history_menu, '{}: {}'.format( i + 1, page_name ), 'Activate this tab from your viewing history.', lambda page_key=page_key: CG.client_controller.gui.ShowPage( page_key ) )
+            history_menuitem = ClientGUIMenus.AppendMenuItem( self._page_nav_history_menu, '{}: {}'.format( i + 1, page_name ), 'Activate this tab from your viewing history.', CG.client_controller.gui.ShowPage, page_key )
             
             if i == 0:
                 
                 font = history_menuitem.font()
-                font.setBold(True)
-                history_menuitem.setFont(font)
+                font.setBold( True )
+                history_menuitem.setFont( font )
                 
             
         

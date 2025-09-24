@@ -1214,6 +1214,10 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             batches_panel = ClientGUICommon.StaticBox( self, 'duplicate filter batches' )
             
             self._duplicate_filter_max_batch_size = ClientGUICommon.BetterSpinBox( batches_panel, min = 5, max = 1024 )
+            self._duplicate_filter_max_batch_size.setToolTip( ClientGUIFunctions.WrapToolTip( 'In group mode you always see the whole group, which in some cases can be 1,000+ items.' ) )
+            
+            self._duplicate_filter_auto_commit_batch_size = ClientGUICommon.NoneableSpinCtrl( batches_panel, 1, min = 1, max = 50, none_phrase = 'no, always confirm' )
+            self._duplicate_filter_auto_commit_batch_size.setToolTip( ClientGUIFunctions.WrapToolTip( 'When you are dealing with numerous 1/1 size batches/groups, it can get annoying to click through the confirm every time. This will auto-confirm any batch with this many decisions of fewer, assuming no manual skips.' ) )
             
             colours_panel = ClientGUICommon.StaticBox( self, 'colours' )
             
@@ -1244,6 +1248,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._duplicate_comparison_score_has_audio.setValue( self._new_options.GetInteger( 'duplicate_comparison_score_has_audio' ) )
             
             self._duplicate_filter_max_batch_size.setValue( self._new_options.GetInteger( 'duplicate_filter_max_batch_size' ) )
+            self._duplicate_filter_auto_commit_batch_size.SetValue( self._new_options.GetNoneableInteger( 'duplicate_filter_auto_commit_batch_size' ) )
             
             self._duplicate_background_switch_intensity_a.SetValue( self._new_options.GetNoneableInteger( 'duplicate_background_switch_intensity_a' ) )
             self._duplicate_background_switch_intensity_b.SetValue( self._new_options.GetNoneableInteger( 'duplicate_background_switch_intensity_b' ) )
@@ -1300,7 +1305,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             rows = []
             
-            rows.append( ( 'Max size of duplicate filter pair batches:', self._duplicate_filter_max_batch_size ) )
+            rows.append( ( 'Max size of duplicate filter pair batches (in mixed mode):', self._duplicate_filter_max_batch_size ) )
+            rows.append( ( 'Auto-commit completed batches of this size or smaller:', self._duplicate_filter_auto_commit_batch_size ) )
             
             gridbox = ClientGUICommon.WrapInGrid( batches_panel, rows )
             
@@ -1355,6 +1361,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._new_options.SetInteger( 'duplicate_comparison_score_has_audio', self._duplicate_comparison_score_has_audio.value() )
             
             self._new_options.SetInteger( 'duplicate_filter_max_batch_size', self._duplicate_filter_max_batch_size.value() )
+            
+            self._new_options.SetNoneableInteger( 'duplicate_filter_auto_commit_batch_size', self._duplicate_filter_auto_commit_batch_size.GetValue() )
             
             self._new_options.SetNoneableInteger( 'duplicate_background_switch_intensity_a', self._duplicate_background_switch_intensity_a.GetValue() )
             self._new_options.SetNoneableInteger( 'duplicate_background_switch_intensity_b', self._duplicate_background_switch_intensity_b.GetValue() )
@@ -3270,27 +3278,51 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             #
             
-            self._duplicates_panel = ClientGUICommon.StaticBox( self, 'potential duplicates search', can_expand = True, start_expanded = False )
+            self._potential_duplicates_panel = ClientGUICommon.StaticBox( self, 'potential duplicates search', can_expand = True, start_expanded = False )
             
-            self._maintain_similar_files_duplicate_pairs_during_idle = QW.QCheckBox( self._duplicates_panel )
+            self._maintain_similar_files_duplicate_pairs_during_idle = QW.QCheckBox( self._potential_duplicates_panel )
             
-            self._maintain_similar_files_duplicate_pairs_during_active = QW.QCheckBox( self._duplicates_panel )
+            self._maintain_similar_files_duplicate_pairs_during_active = QW.QCheckBox( self._potential_duplicates_panel )
             
-            self._potential_duplicates_search_work_time_idle = ClientGUITime.TimeDeltaWidget( self._duplicates_panel, min = 0.1, seconds = True, milliseconds = True )
+            self._potential_duplicates_search_work_time_idle = ClientGUITime.TimeDeltaWidget( self._potential_duplicates_panel, min = 0.02, seconds = True, milliseconds = True )
             tt = 'DO NOT CHANGE UNLESS YOU KNOW WHAT YOU ARE DOING. Potential search operates on a work-rest cycle. This setting determines how long it should work for in each work packet. Actual work time will normally be a little larger than this, and on large databases the minimum work time may be upwards of several seconds.'
             self._potential_duplicates_search_work_time_idle.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
             
-            self._potential_duplicates_search_rest_percentage_idle = ClientGUICommon.BetterSpinBox( self._duplicates_panel, min = 0, max = 100000 )
+            self._potential_duplicates_search_rest_percentage_idle = ClientGUICommon.BetterSpinBox( self._potential_duplicates_panel, min = 0, max = 100000 )
             tt = 'DO NOT CHANGE UNLESS YOU KNOW WHAT YOU ARE DOING. Potential search operates on a work-rest cycle. This setting determines how long it should wait before starting a new work packet, as a percentage of the last work time.'
             self._potential_duplicates_search_rest_percentage_idle.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
             
-            self._potential_duplicates_search_work_time_active = ClientGUITime.TimeDeltaWidget( self._duplicates_panel, min = 0.1, seconds = True, milliseconds = True )
+            self._potential_duplicates_search_work_time_active = ClientGUITime.TimeDeltaWidget( self._potential_duplicates_panel, min = 0.02, seconds = True, milliseconds = True )
             tt = 'DO NOT CHANGE UNLESS YOU KNOW WHAT YOU ARE DOING. Potential search operates on a work-rest cycle. This setting determines how long it should work for in each work packet. Actual work time will normally be a little larger than this, and on large databases the minimum work time may be upwards of several seconds.'
             self._potential_duplicates_search_work_time_active.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
             
-            self._potential_duplicates_search_rest_percentage_active = ClientGUICommon.BetterSpinBox( self._duplicates_panel, min = 0, max = 100000 )
+            self._potential_duplicates_search_rest_percentage_active = ClientGUICommon.BetterSpinBox( self._potential_duplicates_panel, min = 0, max = 100000 )
             tt = 'DO NOT CHANGE UNLESS YOU KNOW WHAT YOU ARE DOING. Potential search operates on a work-rest cycle. This setting determines how long it should wait before starting a new work packet, as a percentage of the last work time.'
             self._potential_duplicates_search_rest_percentage_active.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
+            
+            #
+            
+            self._duplicates_auto_resolution_panel = ClientGUICommon.StaticBox( self, 'duplicates auto-resolution', can_expand = True, start_expanded = False )
+            
+            self._duplicates_auto_resolution_during_idle = QW.QCheckBox( self._duplicates_auto_resolution_panel )
+            
+            self._duplicates_auto_resolution_during_active = QW.QCheckBox( self._duplicates_auto_resolution_panel )
+            
+            self._duplicates_auto_resolution_work_time_idle = ClientGUITime.TimeDeltaWidget( self._duplicates_auto_resolution_panel, min = 0.1, seconds = True, milliseconds = True )
+            tt = 'DO NOT CHANGE UNLESS YOU KNOW WHAT YOU ARE DOING. Duplicates auto-resolution operates on a work-rest cycle. This setting determines how long it should work for in each work packet. Actual work time will normally be a little larger than this, and when it hits large files it may be upwards of several seconds.'
+            self._duplicates_auto_resolution_work_time_idle.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
+            
+            self._duplicates_auto_resolution_rest_percentage_idle = ClientGUICommon.BetterSpinBox( self._duplicates_auto_resolution_panel, min = 0, max = 100000 )
+            tt = 'DO NOT CHANGE UNLESS YOU KNOW WHAT YOU ARE DOING. Duplicates auto-resolution operates on a work-rest cycle. This setting determines how long it should wait before starting a new work packet, as a percentage of the last work time.'
+            self._duplicates_auto_resolution_rest_percentage_idle.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
+            
+            self._duplicates_auto_resolution_work_time_active = ClientGUITime.TimeDeltaWidget( self._duplicates_auto_resolution_panel, min = 0.1, seconds = True, milliseconds = True )
+            tt = 'DO NOT CHANGE UNLESS YOU KNOW WHAT YOU ARE DOING. Duplicates auto-resolution operates on a work-rest cycle. This setting determines how long it should work for in each work packet. Actual work time will normally be a little larger than this, and when it hits large files it may be upwards of several seconds.'
+            self._duplicates_auto_resolution_work_time_active.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
+            
+            self._duplicates_auto_resolution_rest_percentage_active = ClientGUICommon.BetterSpinBox( self._duplicates_auto_resolution_panel, min = 0, max = 100000 )
+            tt = 'DO NOT CHANGE UNLESS YOU KNOW WHAT YOU ARE DOING. Duplicates auto-resolution operates on a work-rest cycle. This setting determines how long it should wait before starting a new work packet, as a percentage of the last work time.'
+            self._duplicates_auto_resolution_rest_percentage_active.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
             
             #
             
@@ -3379,6 +3411,14 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._potential_duplicates_search_rest_percentage_idle.setValue( self._new_options.GetInteger( 'potential_duplicates_search_rest_percentage_idle' ) )
             self._potential_duplicates_search_work_time_active.SetValue( HydrusTime.SecondiseMSFloat( self._new_options.GetInteger( 'potential_duplicates_search_work_time_ms_active' ) ) )
             self._potential_duplicates_search_rest_percentage_active.setValue( self._new_options.GetInteger( 'potential_duplicates_search_rest_percentage_active' ) )
+            
+            self._duplicates_auto_resolution_during_idle.setChecked( self._new_options.GetBoolean( 'duplicates_auto_resolution_during_idle' ) )
+            self._duplicates_auto_resolution_during_active.setChecked( self._new_options.GetBoolean( 'duplicates_auto_resolution_during_active' ) )
+            
+            self._duplicates_auto_resolution_work_time_idle.SetValue( HydrusTime.SecondiseMSFloat( self._new_options.GetInteger( 'duplicates_auto_resolution_work_time_ms_idle' ) ) )
+            self._duplicates_auto_resolution_rest_percentage_idle.setValue( self._new_options.GetInteger( 'duplicates_auto_resolution_rest_percentage_idle' ) )
+            self._duplicates_auto_resolution_work_time_active.SetValue( HydrusTime.SecondiseMSFloat( self._new_options.GetInteger( 'duplicates_auto_resolution_work_time_ms_active' ) ) )
+            self._duplicates_auto_resolution_rest_percentage_active.setValue( self._new_options.GetInteger( 'duplicates_auto_resolution_rest_percentage_active' ) )
             
             self._deferred_table_delete_work_time_idle.SetValue( HydrusTime.SecondiseMSFloat( self._new_options.GetInteger( 'deferred_table_delete_work_time_ms_idle' ) ) )
             self._deferred_table_delete_rest_percentage_idle.setValue( self._new_options.GetInteger( 'deferred_table_delete_rest_percentage_idle' ) )
@@ -3519,7 +3559,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             message = 'The discovery of new potential duplicate file pairs (as on the duplicates page, preparation tab) can run automatically.'
             
-            self._duplicates_panel.Add( ClientGUICommon.BetterStaticText( self._duplicates_panel, label = message ), CC.FLAGS_EXPAND_PERPENDICULAR )
+            self._potential_duplicates_panel.Add( ClientGUICommon.BetterStaticText( self._potential_duplicates_panel, label = message ), CC.FLAGS_EXPAND_PERPENDICULAR )
             
             rows = []
             
@@ -3530,9 +3570,28 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows.append( ( '"Normal" ideal work packet time: ', self._potential_duplicates_search_work_time_active ) )
             rows.append( ( '"Normal" rest time percentage: ', self._potential_duplicates_search_rest_percentage_active ) )
             
-            gridbox = ClientGUICommon.WrapInGrid( self._duplicates_panel, rows )
+            gridbox = ClientGUICommon.WrapInGrid( self._potential_duplicates_panel, rows )
             
-            self._duplicates_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            self._potential_duplicates_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            
+            #
+            
+            message = 'The search, testing, and resolution work of duplicates auto-resolution rules (as on the duplicates page, auto-resolution tab) runs automatically in the background.'
+            
+            self._duplicates_auto_resolution_panel.Add( ClientGUICommon.BetterStaticText( self._duplicates_auto_resolution_panel, label = message ), CC.FLAGS_EXPAND_PERPENDICULAR )
+            
+            rows = []
+            
+            rows.append( ( 'Work duplicates auto-resolution in "idle" time: ', self._duplicates_auto_resolution_during_idle ) )
+            rows.append( ( '"Idle" ideal work packet time: ', self._duplicates_auto_resolution_work_time_idle ) )
+            rows.append( ( '"Idle" rest time percentage: ', self._duplicates_auto_resolution_rest_percentage_idle ) )
+            rows.append( ( 'Work duplicates auto-resolution in "normal" time: ', self._duplicates_auto_resolution_during_active ) )
+            rows.append( ( '"Normal" ideal work packet time: ', self._duplicates_auto_resolution_work_time_active ) )
+            rows.append( ( '"Normal" rest time percentage: ', self._duplicates_auto_resolution_rest_percentage_active ) )
+            
+            gridbox = ClientGUICommon.WrapInGrid( self._duplicates_auto_resolution_panel, rows )
+            
+            self._duplicates_auto_resolution_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
             #
             
@@ -3561,7 +3620,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             QP.AddToLayout( vbox, self._file_maintenance_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
             QP.AddToLayout( vbox, self._repository_processing_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
             QP.AddToLayout( vbox, self._tag_display_processing_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-            QP.AddToLayout( vbox, self._duplicates_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+            QP.AddToLayout( vbox, self._potential_duplicates_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+            QP.AddToLayout( vbox, self._duplicates_auto_resolution_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
             QP.AddToLayout( vbox, self._deferred_table_delete_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
             vbox.addStretch( 0 )
             
@@ -3661,6 +3721,13 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._new_options.SetBoolean( 'maintain_similar_files_duplicate_pairs_during_active', self._maintain_similar_files_duplicate_pairs_during_active.isChecked() )
             self._new_options.SetInteger( 'potential_duplicates_search_work_time_ms_active', HydrusTime.MillisecondiseS( self._potential_duplicates_search_work_time_active.GetValue() ) )
             self._new_options.SetInteger( 'potential_duplicates_search_rest_percentage_active', self._potential_duplicates_search_rest_percentage_active.value() )
+            
+            self._new_options.SetBoolean( 'duplicates_auto_resolution_during_idle', self._duplicates_auto_resolution_during_idle.isChecked() )
+            self._new_options.SetInteger( 'duplicates_auto_resolution_work_time_ms_idle', HydrusTime.MillisecondiseS( self._duplicates_auto_resolution_work_time_idle.GetValue() ) )
+            self._new_options.SetInteger( 'duplicates_auto_resolution_rest_percentage_idle', self._duplicates_auto_resolution_rest_percentage_idle.value() )
+            self._new_options.SetBoolean( 'duplicates_auto_resolution_during_active', self._duplicates_auto_resolution_during_active.isChecked() )
+            self._new_options.SetInteger( 'duplicates_auto_resolution_work_time_ms_active', HydrusTime.MillisecondiseS( self._duplicates_auto_resolution_work_time_active.GetValue() ) )
+            self._new_options.SetInteger( 'duplicates_auto_resolution_rest_percentage_active', self._duplicates_auto_resolution_rest_percentage_active.value() )
             
             self._new_options.SetInteger( 'deferred_table_delete_work_time_ms_idle', HydrusTime.MillisecondiseS( self._deferred_table_delete_work_time_idle.GetValue() ) )
             self._new_options.SetInteger( 'deferred_table_delete_rest_percentage_idle', self._deferred_table_delete_rest_percentage_idle.value() )

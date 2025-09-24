@@ -872,6 +872,7 @@ class SubscriptionQueryHeader( HydrusSerialisable.SerialisableBase ):
         return self._query_log_container_status == LOG_CONTAINER_UNSYNCED
         
     
+
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_SUBSCRIPTION_QUERY_HEADER ] = SubscriptionQueryHeader
 
 def GenerateQueryHeadersStatus( query_headers: collections.abc.Iterable[ SubscriptionQueryHeader ] ):

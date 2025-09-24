@@ -550,9 +550,9 @@ def SplitIteratorIntoAutothrottledChunks( iterator, starting_n, precise_time_to_
         
         yield chunk
         
-        work_time = HydrusTime.GetNowPrecise() - time_work_started
+        actual_work_period = HydrusTime.GetNowPrecise() - time_work_started
         
-        items_per_second = n / work_time
+        items_per_second = n / actual_work_period
         
         time_remaining = precise_time_to_stop - HydrusTime.GetNowPrecise()
         
@@ -642,12 +642,12 @@ def SplitMappingIteratorIntoAutothrottledChunks( iterator, starting_n, precise_t
             
             yield chunk
             
-            work_time = HydrusTime.GetNowPrecise() - time_work_started
+            actual_work_period = HydrusTime.GetNowPrecise() - time_work_started
             
             chunk_weight = 0
             chunk = []
             
-            items_per_second = n / work_time
+            items_per_second = n / actual_work_period
             
             time_remaining = precise_time_to_stop - HydrusTime.GetNowPrecise()
             

@@ -111,7 +111,10 @@ class JobStatus( object ):
         
         with self._variable_lock:
             
-            self._urls.append( url )
+            if url not in self._urls:
+                
+                self._urls.append( url )
+                
             
         
     

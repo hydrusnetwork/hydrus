@@ -767,7 +767,7 @@ class MediaList( object ):
             
         
         recent_index = self._media_index_history.pop()
-         
+        
         return self._sorted_media[ recent_index ]
         
     
@@ -826,6 +826,8 @@ class MediaList( object ):
                 self._hashes_to_singleton_media[ hash ] = m
                 
             
+        
+        self._media_index_history = []
         
     
     def _RemoveMediaByHashes( self, hashes ):

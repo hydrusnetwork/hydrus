@@ -739,6 +739,19 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
             
             result_404 = True
             
+        except HydrusExceptions.BadRequestException:
+            
+            status = CC.STATUS_VETOED
+            note = '400'
+            
+            self.SetStatus( status, note = note )
+            
+            status_hook( '400' )
+            
+            time.sleep( 2 )
+            
+            result_404 = True
+            
         except Exception as e:
             
             status = CC.STATUS_ERROR

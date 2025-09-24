@@ -7,6 +7,71 @@ title: Changelog
 !!! note
     This is the new changelog, only the most recent builds. For all versions, see the [old changelog](old_changelog.html).
 
+## [Version 640](https://github.com/hydrusnetwork/hydrus/releases/tag/v640)
+
+### new navigation features
+
+* thanks to a user, we have some neat new UI tech--
+* in a normal 'previous/next' media viewer, there is now a 'show random' button in the top-right hover. this jumps to a random position in the list. you can right-click this button to walk back, too! the 'media navigation:random/undo random' shortcut actions are settable under the 'media viewer - normal browser' shortcut set. note this is true random, not shuffle
+* the Main GUI's `pages` menu now has a 'history' submenu that shows which pages you were last navigated to! if you have a giganto session, see how it feels to work with. I think I'd like to have some page navigation shortcuts tied to this
+* a new shortcut action, `focus the tab the media came from, if possible, and focus the media`, which appears in the 'all' media viewes, 'normal browser', and 'media viewers' shortcut sets, now lets you focus the spawning page of this media viewer and the media you are currently looking at. this is in complement to recent 'show page/media' settings recently added on media viewer close for users who regularly use multiple simultaneous media viewers; this does the same, but it leaves the media viewer open and does not switch focus away. in a secret feature, right-clicking the 'drag media' button triggers this command
+
+### duplicates
+
+* added a 'auto-commit completed batches of this size or smaller' setting to `options->duplicates`, for the filter. if you finish the current batch without any manual skips, and the number of actions you made is equal to or less than this, it'll just confirm and load the next batch. the default value here is 1--let's see if that makes going through 1/1 batches in group mode a little nicer
+* 'show some random potential pairs' is now an asynchronous job. it won't block the UI any more. while it is working, the button will be disabled
+* after last week's 'potential duplicates discovery search' overhaul did not bring the house down, I have made it so any new file import will wake the daemon instantly if it can A) work now, and B) there are fewer than 50 files remaining in the search queue. thus, if you are synced on potential dupe discovery, you are going to see new imports searched for potentials and then actioned by auto-resolution rules within moments. again, let's see how this feels IRL. it feels like we need better discoverability of when files are deleted, but I'm of two minds about how to do it
+* the visual duplicates detector is slightly better at determining RGB hue-shifts as alternates
+
+### duplicates auto-resolution
+
+* the duplicates auto-resolution daemon now has customisable work/rest settings like the other daemons under `options->maintenance and processing`. this was all hardcoded before
+* the 'test A or B' comparator's edit panel now has nice OR UI. the autocomplete dropdown responds to shft+enter, has explicit OR/cancel-OR/rewind-OR buttons, and any 'edit OR' sub-dialog will have similarly limited system predicate support
+* added two new hardcoded comparators: `A and B have the same "has exif" value` and `A and B have the same "has icc profile" value`. these match if A and B are both True or both False--useful if you don't want to accidentally promote a 'bare' file over one with extra metadata
+* added a new 'OR Comparator' type. it holds a list of comparators and returns True if any are True
+* I have overhauled the suggested rules--
+    - the `A >= 1.1x B blah` is now `A > 1.0x B` in all cases. IRL feedback suggests this padding was neither helpful nor needed
+    - the `visually similar pairs - eliminate smaller resolution` and `visually similar pairs - eliminate smaller filesize` suggested rules are merged into `visually similar pairs` that tests `A > 1.0x B num_pixels OR A > 1.0x B filesize` (while still checking A has bigger or equal filesize, width, and height to be careful)
+    - the `pixel-perfect pairs - eliminate bloat` suggested rule is renamed to `pixel-perfect pairs`
+    - `pixel-perfect pairs` and `visually similar pairs` no longer exclude files with exif or icc data either in search or from B--instead they have comparators that say `both A and B have the same "has exif/icc profile" value OR B does not have exif/icc profile` (i.e. Yes/Yes, Yes/No, No/No, but not No/Yes). users who care deeply about EXIF or ICC Profiles may wish to edit, but this is a reasonably safe compromise that will work for most
+* if you have already deployed the suggested rules, have a think about if you want to change to the new defaults. if you do, although it is finicky, I recommend editing your rule in-place to reflect the suggested one, and then you'll keep your rule history (to do this, load up the suggested rule, check its new search and update the old rule to look like that, then export/import the comparators via clipboard, then delete the suggested rule again). note of course that if you change file search and comparators, your rules will reset their search and test status, which for the 'visually similar' rules could mean a lot of reset work! I don't think I'll adjust the logic of the suggested rules much more--although I guess I'll drop the 'no transparency' predicate when visual dupes can handle it better--but I do expect to tweak the 'visual duplicates' algorithm further, so I expect to encourage one more beta-tester test reset in the coming months
+
+### downloader stuff
+
+* fixed an issue with url class matching priority; domains were all being sorted with equal value after the recent URLDomainMask work. the correct behaviour is longer domains are matched first
+* subscriptions are better about cancelling pending file work. if there are multiple queries with pending file downloads but the system has to stop before they are all done (this happens a lot when the sub is bandwidth choked), the overseer subscription call is new more aware of the stop reason and will skip checking (and loading/saving!!) the remaining queries for their (instantly failing) thoughts
+* the routine that says 'hey record bandwidth for the original spawning domain if that differs from the file URL's domain' now works on file import objects that create multiple child import objects, such as pixiv multi-file posts. this tech ensures that bandwidth wait logic lines up across domains when a site stores files on an external CDN
+* when a gallery url gets a 400 response from the server, the result is now 'ignored', with note '400', just like 403/404 handling. previously, this counted as a full error and was registered as a domain network error, which was causing trouble for those sites that give 400 for the overflow gallery page
+* if the downloader grabs and tries to import an HTML file, the error note is more helpful. also, it catches JSON with the same hook now too
+
+### misc
+
+* when you delete lots of thumbs at once, the job now works in batches of 16 files (was 64 previously), and a popup with a progress gauge now appears after three seconds
+* in the manage tags dialog, the 'file lookup' tag suggestion box's link button now shows any 3XX redirected GET URL the script ran across (e.g. if the MD5 gallery lookup was redirected to a Post URL), and you can now choose to open or copy (previously it just did open)
+* export folders have two new checkboxes--'overwrite all sidecars on next run' and 'always overwrite all sidecars' to help control sidecar regen. some text scares you away from setting 'always do it' on a short period export folder  (issue #1801)
+* the default period for an export folder is now 24 hours (previously 1 hour, which seems a little keen compared to how we ended up generally using these guys)
+* all the close-page confirmation yes/no dialogs use the grammar 'Close "name"?'. previously they were a patchwork of different language that generally didn't say the name of the page
+
+### client api
+
+* `/manage_file_relationships/get_potential_pairs` has a new parameter, `group_mode`, a bool, optional, default `false`, that switches to group mode. in this mode, `max_num_pairs` is ignored; you get the whole thing
+* `/manage_file_relationships/get_potential_pairs` has two more new parameters, `duplicate_pair_sort_type` and `duplicate_pair_sort_asc`, both optional, defaulting to 'filesize of larger file--largest first', to handle the new pair sort. they are an int enum and a bool
+* updated the help to talk about these
+* wrote unit tests for these
+* the Client API is now version 81
+
+### boring stuff
+
+* I did the first half of a debug-level testing suite that will programatically tune the visual duplicates system. it eats a bunch of example files, generates various jpeg quality subsampling, and resize duplicates, and also makes some fake alternates with watermarks, artist corrections, and colour swaps. the second half will run these files against each other and profile how the internal variables of visual duplicates respond to the wider and more precisely defined range of differences, allowing us to choose better tuning coefficients and automating what I was previously doing manually fingers crossed, this will improve the confidence of visual duplicates, including across subsampling differences (it is bad at this atm), and make future tweaks or 'now we can handle an alpha channel' tech easier to pull off
+* updated/added unit tests for client api potential pair searching when: there are no special params; there is a search space; there is a min number of rows set; there is a specific sort set; group mode is on
+* wrote up unit tests for the new exif, icc profile, and OR auto-resolution comparators
+* fixed up some imperfect regexes in the unit tests
+* wrote a widget for editing a list of comparators; the selector and comparator OR panels now use this
+* broke the duplicate filtering page into nicer panel classes. there's still a bit of Qt Signal mess under the hood, but the preparation and filtering tabs are no longer all mixed into the same place
+* if a dupe filter page does not find pairs to show in the 'show some random pairs' button, the page state (used mostly in client api reporting atm) is now correctly reset from 'loading' to 'normal'
+* renamed a bunch of patchwork 'work_time'/'time_it_took' variables in my different daemons to 'actual/expected_work_period'
+* the mixed duplicate pair factory now takes its 'no more than' value during init, decoupling it from the options
+
 ## [Version 639](https://github.com/hydrusnetwork/hydrus/releases/tag/v639)
 
 ### misc
@@ -445,63 +510,3 @@ title: Changelog
 * the 'delay reason' label on the edit subscription panel now has proper wrap and eliding, so if that guy gets a gigantic error text, it'll now fit better
 * forced subscription popups a little wider by default
 * added another note from a user about mpv in the Linux install help, this time about MangoHUD. I think we might want a separate page regarding Linux environment tweaks and fixes
-
-## [Version 630](https://github.com/hydrusnetwork/hydrus/releases/tag/v630)
-
-### Linux laggy mpv issue
-
-* I've been chasing down a Linux specific problem recently where mpv would lag out for a second when trying to transition media when it was near to the end of the media. it seemed to be some re-loop buffering issue but I couldn't figure it out. the recent failed 'TEST: stop mpv before transition' was a shot at this
-* I figured out that it was caused by the audio normalisation pass triggered by the `af=lavfi=[loudnorm=I=-16:TP=-3:LRA=4]` line in the default mpv.conf. audio stuff like this has caused Linux other problems before. it is now commented out for all new users
-* If you are a Linux user, please go to your db dir and check your mpv.conf. edit that line out if it exists.
-* I am going to play with `af=dynaudnorm`, which is supposedly far less CPU intensive. feel free to try your own things too and let me know what works, and we'll figure out better defaults!
-
-### misc
-
-* if you have wanted to map shift+tab to a shortcut and it hasn't worked, please try it again! hydrus now recognises 'backtab', which it seems some/many situations produce on a shift+tab input. it'll likely say 'shift+backtab', but whatever--it'll catch _something_ stable now
-* fixed some weird logic with the 're-focus original search page' and 'tell original search page to select exit media' options that trigger on media viewer close under `options->media viewer->window`. they now work independently
-* when you upload tag data to a tag repository, the prepare routine now checks that the tags are valid (no crazy/broken characters, etc..). if not, it abandons the job and tells you how to fix invalid tags
-* fixed some mouse autohide behaviour in the media viewer when various dialogs are open. child windows are detected more reliably and various 'I should unhide now' events fire properly
-* added a note to `options->media playback` about the mpv.conf in the db dir--this basically wasn't documented anywhere, previously--adding that this file is reloaded on every options dialog ok
-* I confidently attempted to rework the 'add folder' button in the 'import files' window to be an 'add folders' button, allowing directory multi-select, and I was stunned to discover this is simply not doable in a multiplat way using stock path-picker dialogs. I feel like I am going crazy and will revisit this
-* wrote a guide and to-do list for migrating from one OS to another under https://hydrusnetwork.github.io/hydrus/database_migration.html#to_new_OS
-
-### default downloaders
-
-* thanks to a user, the pixiv downloader now fetches a 'series' and 'chapter' tag for those paged manga works that have that data set. I wonder if the 'series' here is more akin to what we'd call 'title', but I'm not familiar enough with pixiv to know what is more common, so let me know how it shakes out IRL
-
-### more export filename rules
-
-* if you are on non-Windows but an export directory filesystem is "ntfs", "exfat", "vfat", "msdos", "fat", "fat32", "cifs" (almost always ntfs underlying), "smbfs", "fuseblk" or any of those but prepended with "fuse.", ntfs naming rules (no colons, shorter filename limits etc...) are now applied (was formerly just "ntfs" or "exfat")
-* a checkbox under `options->exporting` now allows you to always apply ntfs naming rules. use if you have an NFS share that is NTFS underlying, or you are subdir-translating from an export dir that is non-ntfs to a mountpoint that is
-* when an export filename pattern includes subdirectory generation, the subdirs' max length is now determined by the max path characters allowed for this system and the pre-existing prefix directory length, while leaving a reasonable numbers of characters for the actual filename. they'll squeeze down to fit all normal situations (previously windows subdirs were hacked to a 64 char limit)
-* filenames and dirnames are now sanitised as they are elided. everything is done through one clean combined call, so there are fewer chances for surprises here
-* some eliding and sanitising rules are more failsafe in edge cases. instead of raising an exception, you'll get 'empty' or 'truncated'
-* two new optional integer values are added to `options->exporting`, for overriding max path length and clipping max dirname length. check the tooltips for more info, but this is basically to test ntfs-extended modes that have their own limits. _caveat emptor_
-* I updated the unit tests here to cover the changes
-
-### duplicates
-
-* the manual duplicate filter's pair fetch routine has been rewritten using the new low-latency fast-cancel tech I developed for auto-resolution. it should be able to fetch pairs to work on a good bit faster in all cases, and the worst case for difficult searches is much better. when it is loading new pairs, you get a running status update on the background of the filter media viewer
-* the pairs it loads follow a smarter decision logic, showing you more from the same group while saving you more time
-* the pairs are now sorted, hopefully with bigger files first, and the same file over and over. let me know what you think of it! I'll be adding options here, but it is tricky!
-* when the duplicate filter commits work, it now does so more asynchronously. if working a mid-filter commit, the UI no longer locks and the background now updates with status text showing progress of the commit; if happening when you close out the filter, it now happens in the background but will make a popup with status if it takes longer than a second to complete. the timing of the 'refresh dupe numbers' call that hits the sidebar is better aligned to refresh once all this work is flushed
-* the default duplicate filter batch size is reduced from 250 to 100
-* auto-resolution rules that have pending approve/deny items now say their status is 'queued' (previously 'done'). maybe 'ready' or another word is better--let me know if you can think of one. 'awaiting approval' feels too long
-
-### duplicate filter boring/advanced stuff
-
-* the manual duplicate filter's pair fetch database routine no longer does any shaping of the pair queue. it previously tried to auto-filter certain pairs that would be implicated by previous decisions and tried to first give you pairs with certain properties, but the implementation was never too clean and it was often simply confusing on the front end. the UI level now takes full responsibility for this
-* the manual duplicate filter is more careful about which pairs it will auto-skip, and in many cases this will let you process an entire group--alternates and all--in one run, rather than that situation where you get lots of bitty '1/2', '1/1' micro-batches at the end of a particular search. now, rather than insisting that every batch commit only include pairs of unique files, it now tracks which files are mergees by the current batch decisions and auto-skips those. so, it might present to you (A, B), and if you say A is a better duplicate than B (causing B to be merged into A), it can still present you with (A, C), but if (B, D) or (E, B) is pending, you still won't see them (since B is no longer a king, and the proper pair, which will be recalculated after the commit, is (A, D) or (A, E). in reality though, (A, D) and (A, E) are probably already in the queue due to transitive similarity, so if we can sort them together, we'll probably clear everything in one batch)
-* I played around with different types of pair sort for the manual filter. this gets complicated in a couple of ways and what I thought would be useful often had a clear downside in my test data. for now, duplicate filter pairs will explicitly come by largest max filesize first, with largest min filesize as secondary sort. you'll see a lot more of the same big file matched up against other files, in descending order, and fewer low quality files matched against other low quality. let me know how it goes with IRL data, and I will add explicit options here so we can test more stuff. I tried a 'show me the most/least similar first' approach, but what that actually means beyond sorting by the discovered search distance is unclear--I can try for ~1.0 pair filesize ratio, but this seems to flood me with alternates first, which is not ideal for decision logic. if we want clear duplicates first, maybe we want to have the highest file ratio first? this max filesize first seems like a 'least worst' for now at least
-* I am planning a checkbox that will let you focus on entire potential groups one at a time (seeing the same basic files over and over until there are no potentials that 'look like that' any more), which may itself benefit from an exact sort
-* there's a third sort question about whether you want the same reliable order of pairs on every launch, continuing where you left off, or if you want to jump about a bit. today's low-latency fetch tech will fetch the same stuff over and over unless the numbers get big and/or refreshed. this question will be more important when I do the grouping, so I think this'll be another checkbox
-* I updated the Client API help to talk about kings and `/manage_file_relationships/get_potential_pairs` given the modern tech that has been rolling out this year and this week. all my duplicates stuff now always returns kings, so you don't have to bother about that so much any more, and the filter now presents you with a raw batch that is simpler and cleaner but you may want to institute your own auto-skip tests as I have. it isn't a big deal, and you may already have something similar, but I've figured out, I think, simple and optimal rules, so please check it out yourself
-* I wrote a class to handle the 'potential duplicate pairs and their distances' list that is thrown around in all the new dupe fetch code, both up and down the pipeline and in the fragmentary fetch slices. this class now handles the iterating, randomising, block popping, distance sorting, and now potential-group-mapping-and-filtering jobs internally and in one location
-
-### other boring stuff
-
-* now we know the new `11.3.0` version of Pillow adds native AVIF support in all the builds and source situations we work on, `pillow-avif-plugin` is removed from all requirements.txts and the pyproject.toml
-* if the network request for an expected html/json file is over 100MB, the error message now says more about what went wrong (probably URL Class crossed-wires)
-* fixed a client api test that could sometimes fail due to a thread taking too long to work
-* `help->about` now says the system architecture (e.g. x86_64, arm64, aarch64)
-* `help->about` has better wordwrap (we noticed it gets super wide if your install dir is long etc..)

@@ -174,6 +174,7 @@ class Sidebar( QW.QScrollArea ):
         
         self._page_manager = page_manager
         
+        # page here should be a data object not the UI widget, or an interface, to provide the various 'Get/AppendMediaResults' and such. the future version of MediaList
         self._page = page
         self._page_key = self._page_manager.GetVariable( 'page_key' )
         

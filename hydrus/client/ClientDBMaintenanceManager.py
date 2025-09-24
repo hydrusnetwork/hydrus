@@ -48,7 +48,7 @@ class DatabaseMaintenanceManager( ClientDaemons.ManagerWithMainLoop ):
         return True
         
     
-    def _GetWaitPeriod( self, work_period: float, time_it_took: float, still_work_to_do: bool ):
+    def _GetWaitPeriod( self, expected_work_period: float, actual_work_period: float, still_work_to_do: bool ):
         
         if not still_work_to_do:
             
@@ -68,9 +68,9 @@ class DatabaseMaintenanceManager( ClientDaemons.ManagerWithMainLoop ):
             rest_ratio = CG.client_controller.new_options.GetInteger( 'deferred_table_delete_rest_percentage_normal' ) / 100
             
         
-        reasonable_work_time = min( 5 * work_period, time_it_took )
+        reasonable_work_period = min( 5 * expected_work_period, actual_work_period )
         
-        return reasonable_work_time * rest_ratio
+        return reasonable_work_period * rest_ratio
         
     
     def _GetWorkPeriod( self ):
@@ -130,14 +130,12 @@ class DatabaseMaintenanceManager( ClientDaemons.ManagerWithMainLoop ):
             with self._lock:
                 
                 able_to_work = self._AbleToDoBackgroundMaintenance()
-                work_period = self._GetWorkPeriod()
+                expected_work_period = self._GetWorkPeriod()
                 
-            
-            time_it_took = 1.0
             
             if able_to_work:
                 
-                time_to_stop = HydrusTime.GetNowFloat() + work_period
+                time_to_stop = HydrusTime.GetNowFloat() + expected_work_period
                 
                 start_time = HydrusTime.GetNowFloat()
                 
@@ -162,12 +160,16 @@ class DatabaseMaintenanceManager( ClientDaemons.ManagerWithMainLoop ):
                     self._controller.pub( 'notify_deferred_delete_database_maintenance_work_complete' )
                     
                 
-                time_it_took = HydrusTime.GetNowFloat() - start_time
+                actual_work_period = HydrusTime.GetNowFloat() - start_time
                 
-            
-            with self._lock:
+                with self._lock:
+                    
+                    wait_period = self._GetWaitPeriod( expected_work_period, actual_work_period, still_work_to_do )
+                    
                 
-                wait_period = self._GetWaitPeriod( work_period, time_it_took, still_work_to_do )
+            else:
+                
+                wait_period = 600
                 
             
             FORCED_WAIT_PERIOD = 0.25

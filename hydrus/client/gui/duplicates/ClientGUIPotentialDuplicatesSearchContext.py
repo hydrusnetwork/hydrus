@@ -218,9 +218,9 @@ class EditPotentialDuplicatesSearchContextPanel( ClientGUICommon.StaticBox ):
             
             count = CG.client_controller.Read( 'potential_duplicates_count_fragmentary', potential_duplicates_search_context, block_of_id_pairs_and_distances )
             
-            time_it_took = HydrusTime.GetNowPrecise() - start_time
+            actual_work_period = HydrusTime.GetNowPrecise() - start_time
             
-            potential_duplicate_id_pairs_and_distances_still_to_search.NotifyWorkTimeForAutothrottle( time_it_took, 0.5 )
+            potential_duplicate_id_pairs_and_distances_still_to_search.NotifyWorkTimeForAutothrottle( actual_work_period, 0.5 )
             
             return ( count, job_status )
             

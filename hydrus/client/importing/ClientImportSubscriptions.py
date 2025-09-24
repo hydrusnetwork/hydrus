@@ -1061,14 +1061,14 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                         HydrusData.ShowText( 'Query "' + query_name + '" can do no more file work due to running out of unknown urls.' )
                         
                     
-                    break
+                    break # not a cancel, a simple break to stop
                     
                 
                 if job_status.IsCancelled():
                     
                     self._DelayWork( 300, 'recently cancelled' )
                     
-                    break
+                    raise HydrusExceptions.CancelledException( 'User Cancelled!' )
                     
                 
                 p1 = not self._CanDoWorkNow()
@@ -1112,7 +1112,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                             
                         
                     
-                    break
+                    raise HydrusExceptions.CancelledException( 'Stopping work early!' )
                     
                 
                 try:

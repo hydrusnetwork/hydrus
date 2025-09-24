@@ -736,11 +736,11 @@ class ClientDBSimilarFiles( ClientDBModule.ClientDBModule ):
         return []
         
     
-    def MaintainTree( self, work_time_float = None ):
+    def MaintainTree( self, work_period = None ):
         
-        if work_time_float is not None:
+        if work_period is not None:
             
-            stop_time = HydrusTime.GetNowFloat() + work_time_float
+            stop_time = HydrusTime.GetNowFloat() + work_period
             
         else:
             

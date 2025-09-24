@@ -70,6 +70,7 @@ class PotentialDuplicatesMaintenanceManager( ClientDaemons.ManagerWithMainLoop )
         self._i_triggered_a_numbers_regen_last_cycle = False
         
         CG.client_controller.sub( self, 'NotifyNewBranchMaintenanceWork', 'notify_new_shape_search_branch_maintenance_work' )
+        CG.client_controller.sub( self, 'NotifyNewFileImported', 'notify_new_file_imported' )
         
     
     def _DoMainLoop( self ):
@@ -85,9 +86,9 @@ class PotentialDuplicatesMaintenanceManager( ClientDaemons.ManagerWithMainLoop )
             
             if self._need_to_rebalance_tree.is_set():
                 
-                work_time = 0.1
+                expected_work_period = 0.1
                 
-                still_maintenance_work_to_do = CG.client_controller.WriteSynchronous( 'maintain_similar_files_tree', work_time_float = work_time )
+                still_maintenance_work_to_do = CG.client_controller.WriteSynchronous( 'maintain_similar_files_tree', work_period = expected_work_period )
                 
                 if not still_maintenance_work_to_do:
                     
@@ -105,17 +106,17 @@ class PotentialDuplicatesMaintenanceManager( ClientDaemons.ManagerWithMainLoop )
             
             if work_permitted and work_to_do:
                 
-                work_time = self._GetWorkTime()
+                expected_work_period = self._GetWorkPeriod()
                 
                 start_time = HydrusTime.GetNowPrecise()
                 
                 search_distance = CG.client_controller.new_options.GetInteger( 'similar_files_duplicate_pairs_search_distance' )
                 
-                ( still_search_work_to_do, num_done ) = CG.client_controller.WriteSynchronous( 'maintain_similar_files_search_for_potential_duplicates', search_distance, work_time_float = work_time )
+                ( still_search_work_to_do, num_done ) = CG.client_controller.WriteSynchronous( 'maintain_similar_files_search_for_potential_duplicates', search_distance, work_period = expected_work_period )
                 
                 total_time_took = HydrusTime.GetNowPrecise() - start_time
                 
-                wait_time = self._GetRestTime( work_time, total_time_took )
+                wait_time = self._GetRestTime( expected_work_period, total_time_took )
                 
                 if num_done > 0:
                     
@@ -164,7 +165,7 @@ class PotentialDuplicatesMaintenanceManager( ClientDaemons.ManagerWithMainLoop )
             
         
     
-    def _GetRestTime( self, expected_work_time, actual_work_time ):
+    def _GetRestTime( self, expected_work_period, actual_work_period ):
         
         if self._work_hard.is_set():
             
@@ -180,18 +181,18 @@ class PotentialDuplicatesMaintenanceManager( ClientDaemons.ManagerWithMainLoop )
             rest_ratio = CG.client_controller.new_options.GetInteger( 'potential_duplicates_search_rest_percentage_active' ) / 100
             
         
-        if actual_work_time > expected_work_time * 10:
+        if actual_work_period > expected_work_period * 10:
             
             # if suddenly a job blats the user for ten seconds or _ten minutes_ during normal time, we are going to take a big break
             rest_ratio *= 30
             
         
-        reasonable_work_time = min( 5 * expected_work_time, actual_work_time )
+        reasonable_work_period = min( 5 * expected_work_period, actual_work_period )
         
-        return reasonable_work_time * rest_ratio
+        return reasonable_work_period * rest_ratio
         
     
-    def _GetWorkTime( self ):
+    def _GetWorkPeriod( self ):
         
         if self._work_hard.is_set():
             
@@ -235,16 +236,11 @@ class PotentialDuplicatesMaintenanceManager( ClientDaemons.ManagerWithMainLoop )
     
     def _WorkToDo( self ):
         
-        # it is important that this guy only check this work. do not hang new work here
-        
         search_distance = CG.client_controller.new_options.GetInteger( 'similar_files_duplicate_pairs_search_distance' )
         
         similar_files_maintenance_status = PotentialDuplicatesMaintenanceNumbersStore.instance().GetMaintenanceNumbers()
         
-        with self._lock:
-            
-            there_is_stuff_to_search = True in ( count > 0 for ( distance_searched_at, count ) in similar_files_maintenance_status.items() if distance_searched_at < search_distance )
-            
+        there_is_stuff_to_search = True in ( count > 0 for ( distance_searched_at, count ) in similar_files_maintenance_status.items() if distance_searched_at < search_distance )
         
         return there_is_stuff_to_search
         
@@ -262,6 +258,25 @@ class PotentialDuplicatesMaintenanceManager( ClientDaemons.ManagerWithMainLoop )
     def NotifyNewBranchMaintenanceWork( self ):
         
         self._need_to_rebalance_tree.set()
+        
+    
+    def NotifyNewFileImported( self ):
+        
+        # right, we don't want to go crazy here and spam-wake the queue on any import
+        # but if we can work now and there isn't a huge outstanding, let's stay up to date mate
+        if self._WorkPermitted():
+            
+            search_distance = CG.client_controller.new_options.GetInteger( 'similar_files_duplicate_pairs_search_distance' )
+            
+            similar_files_maintenance_status = PotentialDuplicatesMaintenanceNumbersStore.instance().GetMaintenanceNumbers()
+            
+            total_outstanding = sum( ( count for ( distance_searched_at, count ) in similar_files_maintenance_status.items() if distance_searched_at < search_distance ) )
+            
+            if total_outstanding < 50:
+                
+                self.Wake()
+                
+            
         
     
     def SetWorkHard( self, work_hard: bool ):

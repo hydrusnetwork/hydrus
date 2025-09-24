@@ -323,7 +323,7 @@ class Page( QW.QWidget ):
             
         except HydrusExceptions.VetoException as e:
             
-            message = '{} Are you sure you want to close it?'.format( str( e ) )
+            message = f'Close "{self.GetName()}"?\n\n{e}'
             
             result = ClientGUIDialogsQuick.GetYesNo( self, message )
             
@@ -337,7 +337,7 @@ class Page( QW.QWidget ):
         
         if not user_was_asked and CG.client_controller.new_options.GetBoolean( 'confirm_all_page_closes' ):
             
-            message = 'Are you sure you want to close this page?'
+            message = f'Close "{self.GetName()}"?'
             
             result = ClientGUIDialogsQuick.GetYesNo( self, message )
             
@@ -2223,7 +2223,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
             
             statement = ConvertReasonsAndPagesToStatement( reasons_and_pages )
             
-            message = 'Are you sure you want to close this page of pages?'
+            message = f'Close "{self.GetName()}"?'
             message += '\n' * 2
             message += statement
             
@@ -2235,7 +2235,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         
         if not user_was_asked and CG.client_controller.new_options.GetBoolean( 'confirm_all_page_closes' ) and not for_session_close:
             
-            message = 'Are you sure you want to close this page of pages?'
+            message = f'Close "{self.GetName()}"?'
             
             num_pages_held = self.GetNumPagesHeld()
             

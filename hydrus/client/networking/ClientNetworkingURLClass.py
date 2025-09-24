@@ -345,7 +345,7 @@ class URLDomainMask( HydrusSerialisable.SerialisableBase ):
         
         all_items = [ len( raw_domain ) for raw_domain in self._raw_domains ] + [ len( domain_regex ) for domain_regex in self._domain_regexes ]
         
-        if len( all_items ):
+        if len( all_items ) == 0:
             
             return 10
             

@@ -814,6 +814,11 @@ class ListBoxTagsStringsAC( ClientGUIListBoxes.ListBoxTagsStrings ):
         
     
 
+# TODO: this gubbins remains a huge mess. when does a result fetch job start? when is the input cleared? how does focus work?
+# we need to decouple!
+# first order of business is sucking the results generation out to a results factory
+# also want to do 'broadcastchoices' and such through signals, not direct calls
+
 class AutoCompleteDropdown( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
     
     movePageLeft = QC.Signal()
@@ -2141,11 +2146,32 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
 
 class AutoCompleteDropdownTagsFileSearchContext( AutoCompleteDropdownTags ):
     
-    def __init__( self, parent: QW.QWidget, location_context: ClientLocation.LocationContext, tag_context: ClientSearchTagContext.TagContext, file_search_context: ClientSearchFileSearchContext.FileSearchContext ):
+    def __init__(
+        self,
+        parent: QW.QWidget,
+        location_context: ClientLocation.LocationContext,
+        tag_context: ClientSearchTagContext.TagContext,
+        file_search_context: ClientSearchFileSearchContext.FileSearchContext
+    ):
         
         self._file_search_context = file_search_context.Duplicate()
         
         super().__init__( parent, location_context, tag_context )
+        
+    
+    def _BroadcastChoices( self, predicates, shift_down ):
+        
+        raise NotImplementedError()
+        
+    
+    def _GetCurrentBroadcastTextPredicate( self ) -> typing.Optional[ ClientSearchPredicate.Predicate ]:
+        
+        raise NotImplementedError()
+        
+    
+    def _BroadcastCurrentInputFromEnterKey( self, shift_down ):
+        
+        raise NotImplementedError()
         
     
     def _TagContextJustChanged( self, tag_context: ClientSearchTagContext.TagContext ):
@@ -2171,7 +2197,239 @@ class AutoCompleteDropdownTagsFileSearchContext( AutoCompleteDropdownTags ):
         
     
 
-class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTagsFileSearchContext ):
+class AutocompleteDropdownTagsFileSearchContextORCapable( AutoCompleteDropdownTagsFileSearchContext ):
+    
+    def __init__(
+        self,
+        parent: QW.QWidget,
+        location_context: ClientLocation.LocationContext,
+        tag_context: ClientSearchTagContext.TagContext,
+        file_search_context: ClientSearchFileSearchContext.FileSearchContext,
+        page_key: bytes, # remove me, I shouldn't be here
+        for_metadata_conditional: bool # also not great!!
+    ):
+        
+        self._page_key = page_key
+        self._for_metadata_conditional = for_metadata_conditional
+        
+        super().__init__( parent, location_context, tag_context, file_search_context )
+        
+        self._under_construction_or_predicate = None
+        
+        self._or_basic = ClientGUICommon.BetterButton( self._dropdown_window, 'OR', self._CreateNewOR )
+        self._or_basic.setToolTip( ClientGUIFunctions.WrapToolTip( 'Create a new empty OR predicate in the dialog.' ) )
+        
+        self._or_cancel = ClientGUICommon.IconButton( self._dropdown_window, CC.global_icons().delete, self._CancelORConstruction )
+        self._or_cancel.setToolTip( ClientGUIFunctions.WrapToolTip( 'Cancel OR Predicate construction.' ) )
+        self._or_cancel.hide()
+        
+        self._or_rewind = ClientGUICommon.IconButton( self._dropdown_window, CC.global_icons().position_previous, self._RewindORConstruction )
+        self._or_rewind.setToolTip( ClientGUIFunctions.WrapToolTip( 'Rewind OR Predicate construction.' ) )
+        self._or_rewind.hide()
+        
+    
+    def _BroadcastCurrentInputFromEnterKey( self, shift_down ):
+        
+        raise NotImplementedError()
+        
+    
+    def _BroadcastChoices( self, predicates, shift_down ):
+        
+        or_pred_in_broadcast = self._under_construction_or_predicate is not None and self._under_construction_or_predicate in predicates
+        
+        if shift_down:
+            
+            if self._under_construction_or_predicate is None:
+                
+                self._under_construction_or_predicate = ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_OR_CONTAINER, value = predicates )
+                
+            else:
+                
+                if or_pred_in_broadcast:
+                    
+                    predicates.remove( self._under_construction_or_predicate )
+                    
+                
+                or_preds = list( self._under_construction_or_predicate.GetValue() )
+                
+                or_preds.extend( [ predicate for predicate in predicates if predicate not in or_preds ] )
+                
+                self._under_construction_or_predicate = ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_OR_CONTAINER, value = or_preds )
+                
+            
+        else:
+            
+            if or_pred_in_broadcast:
+                
+                or_preds = list( self._under_construction_or_predicate.GetValue() )
+                
+                if len( or_preds ) == 1:
+                    
+                    predicates.remove( self._under_construction_or_predicate )
+                    
+                    predicates.extend( or_preds )
+                    
+                
+            elif self._under_construction_or_predicate is not None:
+                
+                or_preds = list( self._under_construction_or_predicate.GetValue() )
+                
+                or_preds.extend( [ predicate for predicate in predicates if predicate not in or_preds ] )
+                
+                predicates = { ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_OR_CONTAINER, value = or_preds ) }
+                
+            
+            self._under_construction_or_predicate = None
+            
+            self._predicates_listbox.EnterPredicates( self._page_key, predicates )
+            
+        
+        self._UpdateORButtons()
+        
+        self._ClearInput()
+        
+    
+    def _CancelORConstruction( self ):
+        
+        self._under_construction_or_predicate = None
+        
+        self._UpdateORButtons()
+        
+        self._ClearInput()
+        
+        ClientGUIFunctions.SetFocusLater( self._text_ctrl )
+        
+    
+    def _CreateNewOR( self ):
+        
+        predicates = { ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_OR_CONTAINER, value = [] ) }
+        
+        try:
+            
+            empty_file_search_context = self._file_search_context.Duplicate()
+            
+            empty_file_search_context.SetPredicates( [] )
+            
+            predicates = ClientGUISearch.EditPredicates( self, predicates, empty_file_search_context = empty_file_search_context, for_metadata_conditional = self._for_metadata_conditional )
+            
+        except HydrusExceptions.CancelledException:
+            
+            ClientGUIFunctions.SetFocusLater( self._text_ctrl )
+            
+            return
+            
+        
+        shift_down = False
+        
+        self._BroadcastChoices( predicates, shift_down )
+        
+        ClientGUIFunctions.SetFocusLater( self._text_ctrl )
+        
+    
+    def _GetCurrentBroadcastTextPredicate( self ) -> typing.Optional[ ClientSearchPredicate.Predicate ]:
+        
+        raise NotImplementedError()
+        
+    
+    def _HandleEscape( self ):
+        
+        if self._under_construction_or_predicate is not None and self._text_ctrl.text() == '':
+            
+            or_preds = self._under_construction_or_predicate.GetValue()
+            
+            if len( or_preds ) > 1:
+                
+                self._RewindORConstruction()
+                
+            else:
+                
+                self._CancelORConstruction()
+                
+            
+            return True
+            
+        else:
+            
+            return super()._HandleEscape()
+            
+        
+    
+    def _RewindORConstruction( self ):
+        
+        if self._under_construction_or_predicate is not None:
+            
+            or_preds = self._under_construction_or_predicate.GetValue()
+            
+            if len( or_preds ) <= 1:
+                
+                self._CancelORConstruction()
+                
+                return
+                
+            
+            or_preds = or_preds[:-1]
+            
+            self._under_construction_or_predicate = ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_OR_CONTAINER, value = or_preds )
+            
+        
+        self._UpdateORButtons()
+        
+        self._ClearInput()
+        
+        ClientGUIFunctions.SetFocusLater( self._text_ctrl )
+        
+    
+    def _SetupTopListBox( self ):
+        
+        # TODO: this call shouldn't be here, but it was convenient when doing metadata conditional OR support rewrite
+        #  rewangle predicates_listbox stuff out of the OR subclass, make the broadcastchoices stuff a QC.Signal, clean it all up 
+        
+        self._predicates_listbox = ListBoxTagsActiveSearchPredicates( self, self._page_key, self._file_search_context, self._for_metadata_conditional )
+        
+        QP.AddToLayout( self._main_vbox, self._predicates_listbox, CC.FLAGS_EXPAND_BOTH_WAYS_SHY )
+        
+    
+    def _UpdateORButtons( self ):
+        
+        if self._under_construction_or_predicate is None:
+            
+            if self._or_cancel.isVisible():
+                
+                self._or_cancel.hide()
+                
+            
+            if self._or_rewind.isVisible():
+                
+                self._or_rewind.hide()
+                
+            
+        else:
+            
+            or_preds = self._under_construction_or_predicate.GetValue()
+            
+            if len( or_preds ) > 1:
+                
+                if not self._or_rewind.isVisible():
+                    
+                    self._or_rewind.show()
+                    
+                
+            else:
+                
+                if self._or_rewind.isVisible():
+                    
+                    self._or_rewind.hide()
+                    
+                
+            
+            if not self._or_cancel.isVisible():
+                
+                self._or_cancel.show()
+            
+        
+    
+
+class AutoCompleteDropdownTagsRead( AutocompleteDropdownTagsFileSearchContextORCapable ):
     
     searchChanged = QC.Signal( ClientSearchFileSearchContext.FileSearchContext )
     searchCancelled = QC.Signal()
@@ -2196,12 +2454,8 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTagsFileSearchContext ):
         show_lock_search_button = False
     ):
         
-        self._page_key = page_key
-        
         # make a dupe here so we know that any direct changes we make to this guy will not affect other copies around
         file_search_context = file_search_context.Duplicate()
-        
-        self._under_construction_or_predicate = None
         
         location_context = file_search_context.GetLocationContext()
         tag_context = file_search_context.GetTagContext()
@@ -2218,8 +2472,9 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTagsFileSearchContext ):
         self._media_collect_widget = media_collect_widget
         
         self._media_callable = media_callable
+        for_metadata_conditional = False
         
-        super().__init__( parent, location_context, tag_context, file_search_context )
+        super().__init__( parent, location_context, tag_context, file_search_context, page_key, for_metadata_conditional )
         
         self._location_context_button.SetOnlyLocalFileDomainsAllowed( only_allow_local_file_domains )
         self._location_context_button.SetOnlyAllMyFilesDomainsAllowed( only_allow_all_my_files_domains )
@@ -2260,14 +2515,6 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTagsFileSearchContext ):
         self._search_pause_play = ClientGUICommon.OnOffButton( self._dropdown_window, on_label = 'searching immediately', off_label = 'search paused', start_on = synchronised )
         self._search_pause_play.setToolTip( ClientGUIFunctions.WrapToolTip( 'select whether to renew the search as soon as a new predicate is entered' ) )
         
-        self._or_basic = ClientGUICommon.BetterButton( self._dropdown_window, 'OR', self._CreateNewOR )
-        self._or_basic.setToolTip( ClientGUIFunctions.WrapToolTip( 'Create a new empty OR predicate in the dialog.' ) )
-        
-        if not CG.client_controller.new_options.GetBoolean( 'advanced_mode' ):
-            
-            self._or_basic.hide()
-            
-        
         self._or_advanced = ClientGUICommon.BetterButton( self._dropdown_window, 'advanced', self._AdvancedORInput )
         self._or_advanced.setToolTip( ClientGUIFunctions.WrapToolTip( 'You can paste complicated predicate strings in here and it will parse into proper logic.' ) )
         
@@ -2275,14 +2522,6 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTagsFileSearchContext ):
             
             self._or_advanced.hide()
             
-        
-        self._or_cancel = ClientGUICommon.IconButton( self._dropdown_window, CC.global_icons().delete, self._CancelORConstruction )
-        self._or_cancel.setToolTip( ClientGUIFunctions.WrapToolTip( 'Cancel OR Predicate construction.' ) )
-        self._or_cancel.hide()
-        
-        self._or_rewind = ClientGUICommon.IconButton( self._dropdown_window, CC.global_icons().position_previous, self._RewindORConstruction )
-        self._or_rewind.setToolTip( ClientGUIFunctions.WrapToolTip( 'Rewind OR Predicate construction.' ) )
-        self._or_rewind.hide()
         
         button_hbox_1 = QP.HBoxLayout()
         
@@ -2351,62 +2590,6 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTagsFileSearchContext ):
         ClientGUIFunctions.SetFocusLater( self._text_ctrl )
         
     
-    def _BroadcastChoices( self, predicates, shift_down ):
-        
-        or_pred_in_broadcast = self._under_construction_or_predicate is not None and self._under_construction_or_predicate in predicates
-        
-        if shift_down:
-            
-            if self._under_construction_or_predicate is None:
-                
-                self._under_construction_or_predicate = ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_OR_CONTAINER, value = predicates )
-                
-            else:
-                
-                if or_pred_in_broadcast:
-                    
-                    predicates.remove( self._under_construction_or_predicate )
-                    
-                
-                or_preds = list( self._under_construction_or_predicate.GetValue() )
-                
-                or_preds.extend( [ predicate for predicate in predicates if predicate not in or_preds ] )
-                
-                self._under_construction_or_predicate = ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_OR_CONTAINER, value = or_preds )
-                
-            
-        else:
-            
-            if or_pred_in_broadcast:
-                
-                or_preds = list( self._under_construction_or_predicate.GetValue() )
-                
-                if len( or_preds ) == 1:
-                    
-                    predicates.remove( self._under_construction_or_predicate )
-                    
-                    predicates.extend( or_preds )
-                    
-                
-            elif self._under_construction_or_predicate is not None:
-                
-                or_preds = list( self._under_construction_or_predicate.GetValue() )
-                
-                or_preds.extend( [ predicate for predicate in predicates if predicate not in or_preds ] )
-                
-                predicates = { ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_OR_CONTAINER, value = or_preds ) }
-                
-            
-            self._under_construction_or_predicate = None
-            
-            self._predicates_listbox.EnterPredicates( self._page_key, predicates )
-            
-        
-        self._UpdateORButtons()
-        
-        self._ClearInput()
-        
-    
     def _BroadcastCurrentInputFromEnterKey( self, shift_down ):
         
         current_broadcast_predicate = self._GetCurrentBroadcastTextPredicate()
@@ -2415,15 +2598,6 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTagsFileSearchContext ):
             
             self._BroadcastChoices( { current_broadcast_predicate }, shift_down )
             
-        
-    
-    def _CancelORConstruction( self ):
-        
-        self._under_construction_or_predicate = None
-        
-        self._UpdateORButtons()
-        
-        self._ClearInput()
         
     
     def _ClearSearch( self ):
@@ -2462,32 +2636,6 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTagsFileSearchContext ):
         self.tagContextChanged.emit( self._tag_context_button.GetValue() )
         
         self._SignalNewSearchState()
-        
-    
-    def _CreateNewOR( self ):
-        
-        predicates = { ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_OR_CONTAINER, value = [] ) }
-        
-        try:
-            
-            empty_file_search_context = self._file_search_context.Duplicate()
-            
-            empty_file_search_context.SetPredicates( [] )
-            
-            predicates = ClientGUISearch.EditPredicates( self, predicates, empty_file_search_context = empty_file_search_context )
-            
-        except HydrusExceptions.CancelledException:
-            
-            ClientGUIFunctions.SetFocusLater( self._text_ctrl )
-            
-            return
-            
-        
-        shift_down = False
-        
-        self._BroadcastChoices( predicates, shift_down )
-        
-        ClientGUIFunctions.SetFocusLater( self._text_ctrl )
         
     
     def _FavouriteSearchesMenu( self ):
@@ -2561,29 +2709,6 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTagsFileSearchContext ):
         else:
             
             return None
-            
-        
-    
-    def _HandleEscape( self ):
-        
-        if self._under_construction_or_predicate is not None and self._text_ctrl.text() == '':
-            
-            or_preds = self._under_construction_or_predicate.GetValue()
-            
-            if len( or_preds ) > 1:
-                
-                self._RewindORConstruction()
-                
-            else:
-                
-                self._CancelORConstruction()
-                
-            
-            return True
-            
-        else:
-            
-            return AutoCompleteDropdown._HandleEscape( self )
             
         
     
@@ -2747,29 +2872,6 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTagsFileSearchContext ):
             
         
     
-    def _RewindORConstruction( self ):
-        
-        if self._under_construction_or_predicate is not None:
-            
-            or_preds = self._under_construction_or_predicate.GetValue()
-            
-            if len( or_preds ) <= 1:
-                
-                self._CancelORConstruction()
-                
-                return
-                
-            
-            or_preds = or_preds[:-1]
-            
-            self._under_construction_or_predicate = ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_OR_CONTAINER, value = or_preds )
-            
-        
-        self._UpdateORButtons()
-        
-        self._ClearInput()
-        
-    
     def _SaveFavouriteSearch( self ):
         
         foldername = None
@@ -2798,13 +2900,6 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTagsFileSearchContext ):
         search_row = ( foldername, name, file_search_context, synchronised, media_sort, media_collect )
         
         self._ManageFavouriteSearches( favourite_search_row_to_save = search_row )
-        
-    
-    def _SetupTopListBox( self ):
-        
-        self._predicates_listbox = ListBoxTagsActiveSearchPredicates( self, self._page_key, self._file_search_context )
-        
-        QP.AddToLayout( self._main_vbox, self._predicates_listbox, CC.FLAGS_EXPAND_BOTH_WAYS_SHY )
         
     
     def _NotifyPredicatesBoxChanged( self ):
@@ -2898,45 +2993,6 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTagsFileSearchContext ):
             
         
         return it_changed
-        
-    
-    def _UpdateORButtons( self ):
-        
-        if self._under_construction_or_predicate is None:
-            
-            if self._or_cancel.isVisible():
-                
-                self._or_cancel.hide()
-                
-            
-            if self._or_rewind.isVisible():
-                
-                self._or_rewind.hide()
-                
-            
-        else:
-            
-            or_preds = self._under_construction_or_predicate.GetValue()
-            
-            if len( or_preds ) > 1:
-                
-                if not self._or_rewind.isVisible():
-                    
-                    self._or_rewind.show()
-                    
-                
-            else:
-                
-                if self._or_rewind.isVisible():
-                    
-                    self._or_rewind.hide()
-                    
-                
-            
-            if not self._or_cancel.isVisible():
-                
-                self._or_cancel.show()
-            
         
     
     def GetPredicates( self ) -> set[ ClientSearchPredicate.Predicate ]:
@@ -3036,7 +3092,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTagsFileSearchContext ):
 
 class ListBoxTagsActiveSearchPredicates( ClientGUIListBoxes.ListBoxTagsPredicates ):
     
-    def __init__( self, parent: AutoCompleteDropdownTagsFileSearchContext, page_key, file_search_context: ClientSearchFileSearchContext.FileSearchContext ):
+    def __init__( self, parent: AutocompleteDropdownTagsFileSearchContextORCapable, page_key, file_search_context: ClientSearchFileSearchContext.FileSearchContext, for_metadata_conditional: bool ):
         
         super().__init__( parent, height_num_chars = 6 )
         
@@ -3045,6 +3101,7 @@ class ListBoxTagsActiveSearchPredicates( ClientGUIListBoxes.ListBoxTagsPredicate
         self._page_key = page_key
         
         self._file_search_context = file_search_context
+        self._for_metadata_conditional = for_metadata_conditional
         
         initial_predicates = self._file_search_context.GetPredicates()
         
@@ -3138,7 +3195,7 @@ class ListBoxTagsActiveSearchPredicates( ClientGUIListBoxes.ListBoxTagsPredicate
             
             empty_file_search_context.SetPredicates( [] )
             
-            edited_predicates = set( ClientGUISearch.EditPredicates( self, predicates, empty_file_search_context = empty_file_search_context ) )
+            edited_predicates = set( ClientGUISearch.EditPredicates( self, predicates, empty_file_search_context = empty_file_search_context, for_metadata_conditional = self._for_metadata_conditional ) )
             
         except HydrusExceptions.CancelledException:
             
@@ -3187,7 +3244,7 @@ class ListBoxTagsActiveSearchPredicates( ClientGUIListBoxes.ListBoxTagsPredicate
                 
                 empty_file_search_context.SetPredicates( or_based_predicates )
                 
-                or_based_predicates = ClientGUISearch.EditPredicates( self, or_based_predicates, empty_file_search_context = empty_file_search_context )
+                or_based_predicates = ClientGUISearch.EditPredicates( self, or_based_predicates, empty_file_search_context = empty_file_search_context, for_metadata_conditional = self._for_metadata_conditional )
                 
             except HydrusExceptions.CancelledException:
                 

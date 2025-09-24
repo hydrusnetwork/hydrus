@@ -529,6 +529,60 @@ HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIAL
 
 def GetDefaultRuleSuggestions() -> list[ DuplicatesAutoResolutionRule ]:
     
+    one_file_comparator = ClientDuplicatesAutoResolutionComparators.PairComparatorOneFile()
+    
+    one_file_comparator.SetLookingAt( ClientDuplicatesAutoResolutionComparators.LOOKING_AT_B )
+    
+    file_search_context_mc = ClientSearchFileSearchContext.FileSearchContext(
+        predicates = [
+            ClientSearchPredicate.Predicate( predicate_type = ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HAS_EXIF, value = False ),
+        ]
+    )
+    
+    metadata_conditional = ClientMetadataConditional.MetadataConditional()
+    
+    metadata_conditional.SetFileSearchContext( file_search_context_mc )
+    
+    one_file_comparator.SetMetadataConditional( metadata_conditional )
+    
+    hardcoded_comparator = ClientDuplicatesAutoResolutionComparators.PairComparatorRelativeHardcoded( hardcoded_type = ClientDuplicatesAutoResolutionComparators.HARDCODED_COMPARATOR_TYPE_HAS_EXIF_SAME )
+    
+    smart_exif_comparator = ClientDuplicatesAutoResolutionComparators.PairComparatorOR(
+        [
+            one_file_comparator,
+            hardcoded_comparator
+        ]
+    )
+    
+    #
+    
+    one_file_comparator = ClientDuplicatesAutoResolutionComparators.PairComparatorOneFile()
+    
+    one_file_comparator.SetLookingAt( ClientDuplicatesAutoResolutionComparators.LOOKING_AT_B )
+    
+    file_search_context_mc = ClientSearchFileSearchContext.FileSearchContext(
+        predicates = [
+            ClientSearchPredicate.Predicate( predicate_type = ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HAS_ICC_PROFILE, value = False ),
+        ]
+    )
+    
+    metadata_conditional = ClientMetadataConditional.MetadataConditional()
+    
+    metadata_conditional.SetFileSearchContext( file_search_context_mc )
+    
+    one_file_comparator.SetMetadataConditional( metadata_conditional )
+    
+    hardcoded_comparator = ClientDuplicatesAutoResolutionComparators.PairComparatorRelativeHardcoded( hardcoded_type = ClientDuplicatesAutoResolutionComparators.HARDCODED_COMPARATOR_TYPE_HAS_ICC_PROFILE_SAME )
+    
+    smart_icc_profile_comparator = ClientDuplicatesAutoResolutionComparators.PairComparatorOR(
+        [
+            one_file_comparator,
+            hardcoded_comparator
+        ]
+    )
+    
+    #
+    
     suggested_rules = []
     
     # ############
@@ -771,8 +825,6 @@ def GetDefaultRuleSuggestions() -> list[ DuplicatesAutoResolutionRule ]:
     
     predicates = [
         ClientSearchPredicate.Predicate( predicate_type = ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_MIME, value = ( HC.GENERAL_IMAGE, ) ),
-        ClientSearchPredicate.Predicate( predicate_type = ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HAS_EXIF, value = False ),
-        ClientSearchPredicate.Predicate( predicate_type = ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HAS_ICC_PROFILE, value = False ),
         ClientSearchPredicate.Predicate( predicate_type = ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HEIGHT, value = ClientNumberTest.NumberTest.STATICCreateFromCharacters( '>', 128 ) ),
         ClientSearchPredicate.Predicate( predicate_type = ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_WIDTH, value = ClientNumberTest.NumberTest.STATICCreateFromCharacters( '>', 128 ) )
     ]
@@ -789,7 +841,7 @@ def GetDefaultRuleSuggestions() -> list[ DuplicatesAutoResolutionRule ]:
     potential_duplicates_search_context.SetPixelDupesPreference( ClientDuplicates.SIMILAR_FILES_PIXEL_DUPES_REQUIRED )
     potential_duplicates_search_context.SetMaxHammingDistance( 0 )
     
-    duplicates_auto_resolution_rule = DuplicatesAutoResolutionRule( 'pixel-perfect pairs - eliminate bloat' )
+    duplicates_auto_resolution_rule = DuplicatesAutoResolutionRule( 'pixel-perfect pairs' )
     
     duplicates_auto_resolution_rule.SetPotentialDuplicatesSearchContext( potential_duplicates_search_context )
     
@@ -810,6 +862,10 @@ def GetDefaultRuleSuggestions() -> list[ DuplicatesAutoResolutionRule ]:
     
     comparators.append( comparator )
     
+    comparators.append( smart_exif_comparator )
+    
+    comparators.append( smart_icc_profile_comparator )
+    
     selector.SetComparators( comparators )
     
     duplicates_auto_resolution_rule.SetPairSelector( selector )
@@ -829,8 +885,6 @@ def GetDefaultRuleSuggestions() -> list[ DuplicatesAutoResolutionRule ]:
     
     predicates = [
         ClientSearchPredicate.Predicate( predicate_type = ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_MIME, value = ( HC.GENERAL_IMAGE, ) ),
-        ClientSearchPredicate.Predicate( predicate_type = ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HAS_EXIF, value = False ),
-        ClientSearchPredicate.Predicate( predicate_type = ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HAS_ICC_PROFILE, value = False ),
         ClientSearchPredicate.Predicate( predicate_type = ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HEIGHT, value = ClientNumberTest.NumberTest.STATICCreateFromCharacters( '>', 128 ) ),
         ClientSearchPredicate.Predicate( predicate_type = ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_WIDTH, value = ClientNumberTest.NumberTest.STATICCreateFromCharacters( '>', 128 ) ),
         ClientSearchPredicate.Predicate( predicate_type = ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HAS_TRANSPARENCY, value = False )
@@ -848,7 +902,7 @@ def GetDefaultRuleSuggestions() -> list[ DuplicatesAutoResolutionRule ]:
     potential_duplicates_search_context.SetPixelDupesPreference( ClientDuplicates.SIMILAR_FILES_PIXEL_DUPES_EXCLUDED )
     potential_duplicates_search_context.SetMaxHammingDistance( 0 )
     
-    duplicates_auto_resolution_rule = DuplicatesAutoResolutionRule( 'visually similar pairs - eliminate smaller filesize' )
+    duplicates_auto_resolution_rule = DuplicatesAutoResolutionRule( 'visually similar pairs' )
     
     duplicates_auto_resolution_rule.SetMaxPendingPairs( 128 )
     duplicates_auto_resolution_rule.SetPotentialDuplicatesSearchContext( potential_duplicates_search_context )
@@ -861,11 +915,34 @@ def GetDefaultRuleSuggestions() -> list[ DuplicatesAutoResolutionRule ]:
     
     comparators.append( comparator )
     
+    filesize_comparator = ClientDuplicatesAutoResolutionComparators.PairComparatorRelativeFileInfo()
+    
+    filesize_comparator.SetMultiplier( 1.00 )
+    filesize_comparator.SetDelta( 0 )
+    filesize_comparator.SetNumberTest( ClientNumberTest.NumberTest( operator = ClientNumberTest.NUMBER_TEST_OPERATOR_GREATER_THAN ) )
+    filesize_comparator.SetSystemPredicate( ClientSearchPredicate.Predicate( predicate_type = ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_SIZE ) )
+    
+    num_pixels_comparator = ClientDuplicatesAutoResolutionComparators.PairComparatorRelativeFileInfo()
+    
+    num_pixels_comparator.SetMultiplier( 1.00 )
+    num_pixels_comparator.SetDelta( 0 )
+    num_pixels_comparator.SetNumberTest( ClientNumberTest.NumberTest( operator = ClientNumberTest.NUMBER_TEST_OPERATOR_GREATER_THAN ) )
+    num_pixels_comparator.SetSystemPredicate( ClientSearchPredicate.Predicate( predicate_type = ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_NUM_PIXELS ) )
+    
+    comparator = ClientDuplicatesAutoResolutionComparators.PairComparatorOR(
+        [
+            filesize_comparator,
+            num_pixels_comparator
+        ]
+    )
+    
+    comparators.append( comparator )
+    
     comparator = ClientDuplicatesAutoResolutionComparators.PairComparatorRelativeFileInfo()
     
-    comparator.SetMultiplier( 1.10 )
+    comparator.SetMultiplier( 1.00 )
     comparator.SetDelta( 0 )
-    comparator.SetNumberTest( ClientNumberTest.NumberTest( operator = ClientNumberTest.NUMBER_TEST_OPERATOR_GREATER_THAN ) )
+    comparator.SetNumberTest( ClientNumberTest.NumberTest( operator = ClientNumberTest.NUMBER_TEST_OPERATOR_GREATER_THAN_OR_EQUAL_TO ) )
     comparator.SetSystemPredicate( ClientSearchPredicate.Predicate( predicate_type = ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_SIZE ) )
     
     comparators.append( comparator )
@@ -892,108 +969,9 @@ def GetDefaultRuleSuggestions() -> list[ DuplicatesAutoResolutionRule ]:
     
     comparators.append( comparator )
     
-    selector.SetComparators( comparators )
+    comparators.append( smart_exif_comparator )
     
-    duplicates_auto_resolution_rule.SetPairSelector( selector )
-    
-    #
-    
-    duplicates_auto_resolution_rule.SetAction( HC.DUPLICATE_BETTER )
-    duplicates_auto_resolution_rule.SetDeleteInfo( False, True )
-    
-    #
-    
-    suggested_rules.append( duplicates_auto_resolution_rule )
-    
-    #
-    
-    duplicates_auto_resolution_rule = duplicates_auto_resolution_rule.Duplicate()
-    
-    duplicates_auto_resolution_rule.SetName( 'visually similar pairs - eliminate smaller filesize - only earlier imports' )
-    
-    comparators = list( duplicates_auto_resolution_rule.GetPairSelector().GetComparators() )
-    
-    comparator = ClientDuplicatesAutoResolutionComparators.PairComparatorRelativeFileInfo()
-    
-    comparator.SetMultiplier( 1.00 )
-    comparator.SetDelta( 0 )
-    comparator.SetNumberTest( ClientNumberTest.NumberTest( operator = ClientNumberTest.NUMBER_TEST_OPERATOR_LESS_THAN ) )
-    comparator.SetSystemPredicate( ClientSearchPredicate.Predicate( predicate_type = ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_IMPORT_TIME ) )
-    
-    comparators.append( comparator )
-    
-    duplicates_auto_resolution_rule.GetPairSelector().SetComparators( comparators )
-    
-    suggested_rules.append( duplicates_auto_resolution_rule )
-    
-    # ############
-    
-    location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY )
-    
-    predicates = [
-        ClientSearchPredicate.Predicate( predicate_type = ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_MIME, value = ( HC.GENERAL_IMAGE, ) ),
-        ClientSearchPredicate.Predicate( predicate_type = ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HAS_EXIF, value = False ),
-        ClientSearchPredicate.Predicate( predicate_type = ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HAS_ICC_PROFILE, value = False ),
-        ClientSearchPredicate.Predicate( predicate_type = ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HEIGHT, value = ClientNumberTest.NumberTest.STATICCreateFromCharacters( '>', 128 ) ),
-        ClientSearchPredicate.Predicate( predicate_type = ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_WIDTH, value = ClientNumberTest.NumberTest.STATICCreateFromCharacters( '>', 128 ) ),
-        ClientSearchPredicate.Predicate( predicate_type = ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HAS_TRANSPARENCY, value = False )
-    ]
-    
-    file_search_context_1 = ClientSearchFileSearchContext.FileSearchContext(
-        location_context = location_context,
-        predicates = predicates
-    )
-    
-    potential_duplicates_search_context = ClientPotentialDuplicatesSearchContext.PotentialDuplicatesSearchContext()
-    
-    potential_duplicates_search_context.SetFileSearchContext1( file_search_context_1 )
-    potential_duplicates_search_context.SetDupeSearchType( ClientDuplicates.DUPE_SEARCH_BOTH_FILES_MATCH_ONE_SEARCH )
-    potential_duplicates_search_context.SetPixelDupesPreference( ClientDuplicates.SIMILAR_FILES_PIXEL_DUPES_EXCLUDED )
-    potential_duplicates_search_context.SetMaxHammingDistance( 0 )
-    
-    duplicates_auto_resolution_rule = DuplicatesAutoResolutionRule( 'visually similar pairs - eliminate smaller resolution' )
-    
-    duplicates_auto_resolution_rule.SetMaxPendingPairs( 128 )
-    duplicates_auto_resolution_rule.SetPotentialDuplicatesSearchContext( potential_duplicates_search_context )
-    
-    selector = ClientDuplicatesAutoResolutionComparators.PairSelector()
-    
-    comparators = []
-    
-    comparator = ClientDuplicatesAutoResolutionComparators.PairComparatorRelativeVisualDuplicates( acceptable_confidence = ClientVisualData.VISUAL_DUPLICATES_RESULT_ALMOST_CERTAINLY )
-    
-    comparators.append( comparator )
-    
-    comparator = ClientDuplicatesAutoResolutionComparators.PairComparatorRelativeFileInfo()
-    
-    comparator.SetMultiplier( 1.00 )
-    comparator.SetDelta( 0 )
-    comparator.SetNumberTest( ClientNumberTest.NumberTest( operator = ClientNumberTest.NUMBER_TEST_OPERATOR_GREATER_THAN ) )
-    comparator.SetSystemPredicate( ClientSearchPredicate.Predicate( predicate_type = ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_SIZE ) )
-    
-    comparators.append( comparator )
-    
-    comparator = ClientDuplicatesAutoResolutionComparators.PairComparatorRelativeFileInfo()
-    
-    comparator.SetMultiplier( 1.10 )
-    comparator.SetDelta( 0 )
-    comparator.SetNumberTest( ClientNumberTest.NumberTest( operator = ClientNumberTest.NUMBER_TEST_OPERATOR_GREATER_THAN_OR_EQUAL_TO ) )
-    comparator.SetSystemPredicate( ClientSearchPredicate.Predicate( predicate_type = ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_WIDTH ) )
-    
-    comparators.append( comparator )
-    
-    comparator = ClientDuplicatesAutoResolutionComparators.PairComparatorRelativeFileInfo()
-    
-    comparator.SetMultiplier( 1.10 )
-    comparator.SetDelta( 0 )
-    comparator.SetNumberTest( ClientNumberTest.NumberTest( operator = ClientNumberTest.NUMBER_TEST_OPERATOR_GREATER_THAN_OR_EQUAL_TO ) )
-    comparator.SetSystemPredicate( ClientSearchPredicate.Predicate( predicate_type = ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HEIGHT ) )
-    
-    comparators.append( comparator )
-    
-    comparator = ClientDuplicatesAutoResolutionComparators.PairComparatorRelativeHardcoded( hardcoded_type = ClientDuplicatesAutoResolutionComparators.HARDCODED_COMPARATOR_TYPE_FILETYPE_SAME )
-    
-    comparators.append( comparator )
+    comparators.append( smart_icc_profile_comparator )
     
     selector.SetComparators( comparators )
     
@@ -1012,7 +990,7 @@ def GetDefaultRuleSuggestions() -> list[ DuplicatesAutoResolutionRule ]:
     
     duplicates_auto_resolution_rule = duplicates_auto_resolution_rule.Duplicate()
     
-    duplicates_auto_resolution_rule.SetName( 'visually similar pairs - eliminate smaller resolution - only earlier imports' )
+    duplicates_auto_resolution_rule.SetName( 'visually similar pairs - only earlier imports' )
     
     comparators = list( duplicates_auto_resolution_rule.GetPairSelector().GetComparators() )
     
@@ -1100,8 +1078,7 @@ class DuplicatesAutoResolutionManager( ClientDaemons.ManagerWithMainLoop ):
             
             still_work_to_do = False
             
-            work_period = 0.25
-            time_it_took = 1.0
+            expected_work_period = self._GetWorkPeriod()
             
             if able_to_work:
                 
@@ -1113,7 +1090,7 @@ class DuplicatesAutoResolutionManager( ClientDaemons.ManagerWithMainLoop ):
                     
                     try:
                         
-                        still_work_to_do = self._WorkRules( work_period )
+                        still_work_to_do = self._WorkRules( expected_work_period )
                         
                     except HydrusExceptions.DataMissing as e:
                         
@@ -1135,28 +1112,32 @@ class DuplicatesAutoResolutionManager( ClientDaemons.ManagerWithMainLoop ):
                         HydrusData.ShowText( message )
                         
                     
-                    time_it_took = HydrusTime.GetNowFloat() - start_time
+                    actual_work_period = HydrusTime.GetNowFloat() - start_time
                     
                 
                 CG.client_controller.pub( 'notify_duplicates_auto_resolution_work_complete' )
                 
-            
-            with self._lock:
+                with self._lock:
+                    
+                    wait_time = self._GetRestTime( expected_work_period, actual_work_period, still_work_to_do )
+                    
                 
-                wait_period = self._GetWaitPeriod( work_period, time_it_took, still_work_to_do )
+            else:
+                
+                wait_time = 10
                 
             
             FORCED_WAIT_PERIOD = 0.25
             
-            if wait_period > FORCED_WAIT_PERIOD:
+            if wait_time > FORCED_WAIT_PERIOD:
                 
                 # forced wait when lots going on
                 time.sleep( FORCED_WAIT_PERIOD )
                 
-                wait_period -= FORCED_WAIT_PERIOD
+                wait_time -= FORCED_WAIT_PERIOD
                 
             
-            self._wake_event.wait( wait_period )
+            self._wake_event.wait( wait_time )
             
             self._wake_event.clear()
             
@@ -1183,7 +1164,7 @@ class DuplicatesAutoResolutionManager( ClientDaemons.ManagerWithMainLoop ):
         return rules
         
     
-    def _GetWaitPeriod( self, work_period: float, time_it_took: float, still_work_to_do: bool ):
+    def _GetWaitPeriod( self, expected_work_period: float, actual_work_period: float, still_work_to_do: bool ):
         
         if len( self._working_hard_rules ) > 0:
             
@@ -1204,14 +1185,63 @@ class DuplicatesAutoResolutionManager( ClientDaemons.ManagerWithMainLoop ):
             rest_ratio = 5
             
         
-        reasonable_work_time = min( 20 * work_period, time_it_took )
+        reasonable_work_period = min( 20 * expected_work_period, actual_work_period )
         
-        return reasonable_work_time * rest_ratio
+        return reasonable_work_period * rest_ratio
         
     
-    def _WorkRules( self, allowed_work_time: float ):
+    def _GetRestTime( self, expected_work_period: float, actual_work_period: float, still_work_to_do: bool ):
         
-        time_to_stop = HydrusTime.GetNowFloat() + allowed_work_time
+        if len( self._working_hard_rules ) > 0:
+            
+            return 0.1
+            
+        
+        if not still_work_to_do:
+            
+            return 600
+            
+        
+        if self._controller.CurrentlyIdle():
+            
+            rest_ratio = CG.client_controller.new_options.GetInteger( 'duplicates_auto_resolution_rest_percentage_idle' ) / 100
+            
+        else:
+            
+            rest_ratio = CG.client_controller.new_options.GetInteger( 'duplicates_auto_resolution_rest_percentage_active' ) / 100
+            
+        
+        if actual_work_period > expected_work_period * 10:
+            
+            # if suddenly a job blats the user for ten seconds or _ten minutes_ during normal time, we are going to take a big break
+            rest_ratio *= 30
+            
+        
+        reasonable_work_period = min( 5 * expected_work_period, actual_work_period )
+        
+        return reasonable_work_period * rest_ratio
+        
+    
+    def _GetWorkPeriod( self ):
+        
+        if len( self._working_hard_rules ) > 0:
+            
+            return 0.5
+            
+        
+        if self._controller.CurrentlyIdle():
+            
+            return HydrusTime.SecondiseMSFloat( CG.client_controller.new_options.GetInteger( 'duplicates_auto_resolution_work_time_ms_idle' ) )
+            
+        else:
+            
+            return HydrusTime.SecondiseMSFloat( CG.client_controller.new_options.GetInteger( 'duplicates_auto_resolution_work_time_ms_active' ) )
+            
+        
+    
+    def _WorkRules( self, allowed_work_period: float ):
+        
+        time_to_stop = HydrusTime.GetNowFloat() + allowed_work_period
         
         still_work_to_do = False
         

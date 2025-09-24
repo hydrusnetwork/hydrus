@@ -130,16 +130,16 @@ class PotentialDuplicateIdPairsAndDistances( object ):
         return self._potential_id_pairs_and_distances.__iter__()
         
     
-    def NotifyWorkTimeForAutothrottle( self, work_time: float, ideal_work_time: float ):
+    def NotifyWorkTimeForAutothrottle( self, actual_work_period: float, ideal_work_period: float ):
         
         minimum_block_size = int( POTENTIAL_DUPLICATE_PAIRS_BLOCK_SIZE / 10 )
         maximum_block_size = int( POTENTIAL_DUPLICATE_PAIRS_BLOCK_SIZE * 25 )
         
-        if work_time > ideal_work_time * 1.1:
+        if actual_work_period > ideal_work_period * 1.1:
             
             self._current_search_block_size = max( minimum_block_size, int( self._current_search_block_size * 0.5 ) )
             
-        elif work_time < ideal_work_time / 1.1:
+        elif actual_work_period < ideal_work_period / 1.1:
             
             self._current_search_block_size = min( maximum_block_size, int( self._current_search_block_size * 1.1 ) )
             

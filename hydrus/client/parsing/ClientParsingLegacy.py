@@ -455,6 +455,13 @@ class ParseRootFileLookup( HydrusSerialisable.SerialisableBaseNamed ):
                 
             
         
+        if self._query_type == HC.GET:
+            
+            actual_fetched_url = network_job.GetActualFetchedURL()
+            
+            job_status.AddURL( actual_fetched_url )
+            
+        
         if job_status.IsCancelled():
             
             raise HydrusExceptions.CancelledException( 'Job was cancelled.' )

@@ -2762,6 +2762,9 @@ Arguments (in percent-encoded JSON):
     *   `pixel_duplicates`: (optional, integer, default 1, regarding whether the pairs should be pixel duplicates)
     *   `max_hamming_distance`: (optional, integer, default 4, the max 'search distance' of the pairs)
     *   `max_num_pairs`: (optional, integer, defaults to client's option, how many pairs to get in a batch)
+    *   `group_mode`: (optional, bool, defaults to false, whether to be in "mixed" or "group mode")
+    *   `duplicate_pair_sort_type`: (optional, integer, defaults to 'filesize of larger file')
+    *   `duplicate_pair_sort_asc`: (optional, bool, defaults to false)
 
 ``` title="Example request"
 /manage_file_relationships/get_potential_pairs?tag_service_key_1=c1ba23c60cda1051349647a151321d43ef5894aacdfb4b4e333d6c4259d56c5f&tags_1=%5B%22dupes_to_process%22%2C%20%22system%3Awidth%3C400%22%5D&potentials_search_type=1&pixel_duplicates=2&max_hamming_distance=0&max_num_pairs=50
@@ -2769,7 +2772,18 @@ Arguments (in percent-encoded JSON):
 
 The search arguments work the same as [/manage\_file\_relationships/get\_potentials\_count](#manage_file_relationships_get_potentials_count).
 
-`max_num_pairs` is simple and just caps how many pairs you get.
+`max_num_pairs` is simple and just caps how many pairs you get in mixed mode.
+
+In `group_mode=true`, the pairs will all be related to each other, just like setting 'group mode' in the client. `max_num_pairs` is ignored in this mode--you get the whole group. In some fun situations, this can be a group of size 2,700!
+
+`duplicate_pair_sort_type` and `duplicate_pair_sort_asc` control the order of the pairs given. This is still somewhat experimental, and I may add new ones or rework the "similarity" one because it doesn't work too well, but they are currently (with True/False 'asc' values after):
+
+* 0 - "filesize of larger file" (smallest first/largest first)
+* 1 - "similarity (distance/filesize ratio)"  (most similar first/least similar first)
+* 2 - "filesize of smaller file" (smallest first/largest first)
+* 4 - "random" (N/A)
+
+I think the default, "filesize of larger file -- largest first" works the best. Maybe try random.
 
 Response:
 :   A JSON Object listing a batch of hash pairs.
@@ -2791,7 +2805,7 @@ You may see the same file more than once in this batch, and if you expect to pro
 - In the current batch of decisions, has either file been adjudicated as the B in a 'A is better than B' or 'A is the same as B'?
 
 If either is true, you should skip the pair, since, after your current decisions are committed, that file is no longer in any potential duplicate pairs in the search you gave. The respective file is either no longer in the file domain, or it has been merged into another group (that file is no longer a king and either the potential pair no longer exists via transitive collapse or, rarely, hydrus can present you with a better comparison pair if you ask for a new batch).
-s
+
 You will see significantly fewer than `max_num_pairs` as you close to the last available pairs, and when there are none left, you will get an empty list.
 
 ### **GET `/manage_file_relationships/get_random_potentials`** { id="manage_file_relationships_get_random_potentials" }

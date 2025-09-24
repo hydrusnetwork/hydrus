@@ -638,6 +638,125 @@ class EditPairComparatorOneFilePanel( ClientGUIScrolledPanels.EditPanel ):
         
     
 
+class EditComparatorList( ClientGUIListBoxes.AddEditDeleteListBox ):
+    
+    def __init__( self, parent: QW.QWidget ):
+        
+        super().__init__( parent, 8, self._PairComparatorToPretty, self._AddComparator, self._EditComparator )
+        
+        self.AddImportExportButtons( ( ClientDuplicatesAutoResolutionComparators.PairComparator, ) )
+        
+    
+    def _AddComparator( self ):
+        
+        choice_tuples = [
+            ( 'test A or B', ClientDuplicatesAutoResolutionComparators.PairComparatorOneFile(), 'A comparator that tests one file at a time using system predicates.' ),
+            ( 'test A against B using file info', ClientDuplicatesAutoResolutionComparators.PairComparatorRelativeFileInfo(), 'A comparator that performs a number test on the width, filesize, etc.. of A vs B.' ),
+            ( 'test if A and B are visual duplicates', ClientDuplicatesAutoResolutionComparators.PairComparatorRelativeVisualDuplicates( acceptable_confidence = ClientVisualData.VISUAL_DUPLICATES_RESULT_ALMOST_CERTAINLY ), 'A comparator that examines the differences in the images\' shape and colour to determine if they are visual duplicates.' )
+        ]
+        
+        additional_comparators = [
+            ( ClientDuplicatesAutoResolutionComparators.PairComparatorRelativeHardcoded( hardcoded_type = ClientDuplicatesAutoResolutionComparators.HARDCODED_COMPARATOR_TYPE_FILETYPE_SAME ), 'A comparator that tests if the two files share the same filetype.' ),
+            ( ClientDuplicatesAutoResolutionComparators.PairComparatorRelativeHardcoded( hardcoded_type = ClientDuplicatesAutoResolutionComparators.HARDCODED_COMPARATOR_TYPE_FILETYPE_DIFFERS ), 'A comparator that tests if the two files have different filetype.' ),
+            ( ClientDuplicatesAutoResolutionComparators.PairComparatorRelativeHardcoded( hardcoded_type = ClientDuplicatesAutoResolutionComparators.HARDCODED_COMPARATOR_TYPE_HAS_EXIF_SAME ), 'A comparator that tests if the two files either both have or both do not have some amount of EXIF data.' ),
+            ( ClientDuplicatesAutoResolutionComparators.PairComparatorRelativeHardcoded( hardcoded_type = ClientDuplicatesAutoResolutionComparators.HARDCODED_COMPARATOR_TYPE_HAS_ICC_PROFILE_SAME ), 'A comparator that tests if the two files either both have or both do not have some amount of ICC Profile data.' ),
+        ]
+        
+        choice_tuples.extend(
+            ( ( comparator.GetSummary(), comparator, description ) for ( comparator, description ) in additional_comparators )
+        )
+        
+        choice_tuples.append(
+            ( 'OR Comparator', ClientDuplicatesAutoResolutionComparators.PairComparatorOR( [] ), 'A comparator that tests an OR of several sub-comparators.' )
+        )
+        
+        try:
+            
+            comparator = ClientGUIDialogsQuick.SelectFromListButtons( self, 'Which type of comparator?', choice_tuples )
+            
+        except HydrusExceptions.CancelledException:
+            
+            raise
+            
+        
+        return self._EditComparator( comparator )
+        
+    
+    def _EditComparator( self, comparator: ClientDuplicatesAutoResolutionComparators.PairComparator ):
+        
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit comparator' ) as dlg:
+            
+            if isinstance( comparator, ClientDuplicatesAutoResolutionComparators.PairComparatorOneFile ):
+                
+                panel = EditPairComparatorOneFilePanel( dlg, comparator )
+                
+            elif isinstance( comparator, ClientDuplicatesAutoResolutionComparators.PairComparatorRelativeFileInfo ):
+                
+                panel = EditPairComparatorRelativeFileinfoPanel( dlg, comparator )
+                
+            elif isinstance( comparator, ClientDuplicatesAutoResolutionComparators.PairComparatorRelativeVisualDuplicates ):
+                
+                panel = EditPairComparatorRelativeVisualDuplicatesPanel( dlg, comparator )
+                
+            elif isinstance( comparator, ClientDuplicatesAutoResolutionComparators.PairComparatorOR ):
+                
+                panel = EditPairComparatorOR( dlg, comparator )
+                
+            elif isinstance( comparator, ClientDuplicatesAutoResolutionComparators.PairComparatorRelativeHardcoded ):
+                
+                return comparator
+                
+            
+            dlg.SetPanel( panel )
+            
+            if dlg.exec() == QW.QDialog.DialogCode.Accepted:
+                
+                edited_comparator = panel.GetValue()
+                
+                return edited_comparator
+                
+            else:
+                
+                raise HydrusExceptions.VetoException()
+                
+            
+        
+    
+    def _PairComparatorToPretty( self, pair_comparator: ClientDuplicatesAutoResolutionComparators.PairComparator ):
+        
+        return pair_comparator.GetSummary()
+        
+    
+
+class EditPairComparatorOR( ClientGUIScrolledPanels.EditPanel ):
+    
+    def __init__( self, parent, pair_comparator: ClientDuplicatesAutoResolutionComparators.PairComparatorOR ):
+        
+        super().__init__( parent )
+        
+        self._comparators = EditComparatorList( self )
+        
+        self._comparators.AddDatas( pair_comparator.GetComparators() )
+        
+        #
+        
+        vbox = QP.VBoxLayout()
+        
+        QP.AddToLayout( vbox, self._comparators, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        self.widget().setLayout( vbox )
+        
+    
+    def GetValue( self ):
+        
+        comparators = self._comparators.GetData()
+        
+        pair_comparator = ClientDuplicatesAutoResolutionComparators.PairComparatorOR( comparators )
+        
+        return pair_comparator
+        
+    
+
 class EditPairComparatorRelativeFileinfoPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def __init__( self, parent, pair_comparator: ClientDuplicatesAutoResolutionComparators.PairComparatorRelativeFileInfo ):
@@ -1011,88 +1130,11 @@ class EditPairSelectorWidget( ClientGUICommon.StaticBox ):
         
         self._original_pair_selector = pair_selector
         
-        self._comparators = ClientGUIListBoxes.AddEditDeleteListBox( self, 8, self._PairComparatorToPretty, self._Add, self._Edit )
-        
-        self._comparators.AddImportExportButtons( ( ClientDuplicatesAutoResolutionComparators.PairComparator, ) )
+        self._comparators = EditComparatorList( self )
         
         self._comparators.AddDatas( self._original_pair_selector.GetComparators() )
         
         self.Add( self._comparators, CC.FLAGS_EXPAND_BOTH_WAYS )
-        
-    
-    def _Add( self ):
-        
-        choice_tuples = [
-            ( 'test A or B', ClientDuplicatesAutoResolutionComparators.PairComparatorOneFile(), 'A comparator that tests one file at a time using system predicates.' ),
-            ( 'test A against B using file info', ClientDuplicatesAutoResolutionComparators.PairComparatorRelativeFileInfo(), 'A comparator that performs a number test on the width, filesize, etc.. of A vs B.' ),
-            ( 'test if A and B are visual duplicates', ClientDuplicatesAutoResolutionComparators.PairComparatorRelativeVisualDuplicates( acceptable_confidence = ClientVisualData.VISUAL_DUPLICATES_RESULT_ALMOST_CERTAINLY ), 'A comparator that examines the differences in the images\' shape and colour to determine if they are visual duplicates.' )
-        ]
-        
-        additional_comparators = []
-        
-        comparator = ClientDuplicatesAutoResolutionComparators.PairComparatorRelativeHardcoded( hardcoded_type = ClientDuplicatesAutoResolutionComparators.HARDCODED_COMPARATOR_TYPE_FILETYPE_SAME )
-        
-        additional_comparators.append( comparator )
-        
-        comparator = ClientDuplicatesAutoResolutionComparators.PairComparatorRelativeHardcoded( hardcoded_type = ClientDuplicatesAutoResolutionComparators.HARDCODED_COMPARATOR_TYPE_FILETYPE_DIFFERS )
-        
-        additional_comparators.append( comparator )
-        
-        choice_tuples.extend(
-            ( ( comparator.GetSummary(), comparator, comparator.GetSummary() ) for comparator in additional_comparators )
-        )
-        
-        try:
-            
-            comparator = ClientGUIDialogsQuick.SelectFromListButtons( self, 'Which type of comparator?', choice_tuples )
-            
-        except HydrusExceptions.CancelledException:
-            
-            raise
-            
-        
-        return self._Edit( comparator )
-        
-    
-    def _Edit( self, comparator: ClientDuplicatesAutoResolutionComparators.PairComparator ):
-        
-        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit comparator' ) as dlg:
-            
-            if isinstance( comparator, ClientDuplicatesAutoResolutionComparators.PairComparatorOneFile ):
-                
-                panel = EditPairComparatorOneFilePanel( dlg, comparator )
-                
-            elif isinstance( comparator, ClientDuplicatesAutoResolutionComparators.PairComparatorRelativeFileInfo ):
-                
-                panel = EditPairComparatorRelativeFileinfoPanel( dlg, comparator )
-                
-            elif isinstance( comparator, ClientDuplicatesAutoResolutionComparators.PairComparatorRelativeVisualDuplicates ):
-                
-                panel = EditPairComparatorRelativeVisualDuplicatesPanel( dlg, comparator )
-                
-            elif isinstance( comparator, ClientDuplicatesAutoResolutionComparators.PairComparatorRelativeHardcoded ):
-                
-                return comparator
-                
-            
-            dlg.SetPanel( panel )
-            
-            if dlg.exec() == QW.QDialog.DialogCode.Accepted:
-                
-                edited_comparator = panel.GetValue()
-                
-                return edited_comparator
-                
-            else:
-                
-                raise HydrusExceptions.VetoException()
-                
-            
-        
-    
-    def _PairComparatorToPretty( self, pair_comparator: ClientDuplicatesAutoResolutionComparators.PairComparator ):
-        
-        return pair_comparator.GetSummary()
         
     
     def GetValue( self ) -> ClientDuplicatesAutoResolutionComparators.PairSelector:
