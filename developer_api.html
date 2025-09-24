@@ -7006,13 +7006,25 @@ Accept: application/json
 <li><code>pixel_duplicates</code>: (optional, integer, default 1, regarding whether the pairs should be pixel duplicates)</li>
 <li><code>max_hamming_distance</code>: (optional, integer, default 4, the max 'search distance' of the pairs)</li>
 <li><code>max_num_pairs</code>: (optional, integer, defaults to client's option, how many pairs to get in a batch)</li>
+<li><code>group_mode</code>: (optional, bool, defaults to false, whether to be in "mixed" or "group mode")</li>
+<li><code>duplicate_pair_sort_type</code>: (optional, integer, defaults to 'filesize of larger file')</li>
+<li><code>duplicate_pair_sort_asc</code>: (optional, bool, defaults to false)</li>
 </ul>
 </dd>
 </dl>
 <div class="highlight"><span class="filename">Example request</span><pre><span></span><code>/manage_file_relationships/get_potential_pairs?tag_service_key_1=c1ba23c60cda1051349647a151321d43ef5894aacdfb4b4e333d6c4259d56c5f&amp;tags_1=%5B%22dupes_to_process%22%2C%20%22system%3Awidth%3C400%22%5D&amp;potentials_search_type=1&amp;pixel_duplicates=2&amp;max_hamming_distance=0&amp;max_num_pairs=50
 </code></pre></div>
 <p>The search arguments work the same as <a href="#manage_file_relationships_get_potentials_count">/manage_file_relationships/get_potentials_count</a>.</p>
-<p><code>max_num_pairs</code> is simple and just caps how many pairs you get.</p>
+<p><code>max_num_pairs</code> is simple and just caps how many pairs you get in mixed mode.</p>
+<p>In <code>group_mode=true</code>, the pairs will all be related to each other, just like setting 'group mode' in the client. <code>max_num_pairs</code> is ignored in this mode--you get the whole group. In some fun situations, this can be a group of size 2,700!</p>
+<p><code>duplicate_pair_sort_type</code> and <code>duplicate_pair_sort_asc</code> control the order of the pairs given. This is still somewhat experimental, and I may add new ones or rework the "similarity" one because it doesn't work too well, but they are currently (with True/False 'asc' values after):</p>
+<ul>
+<li>0 - "filesize of larger file" (smallest first/largest first)</li>
+<li>1 - "similarity (distance/filesize ratio)"  (most similar first/least similar first)</li>
+<li>2 - "filesize of smaller file" (smallest first/largest first)</li>
+<li>4 - "random" (N/A)</li>
+</ul>
+<p>I think the default, "filesize of larger file -- largest first" works the best. Maybe try random.</p>
 <dl>
 <dt>Response:</dt>
 <dd>A JSON Object listing a batch of hash pairs.
@@ -7031,9 +7043,8 @@ Accept: application/json
 <li>In the current batch of decisions, has either file been manually deleted by the user?</li>
 <li>In the current batch of decisions, has either file been adjudicated as the B in a 'A is better than B' or 'A is the same as B'?</li>
 </ul>
-<p>If either is true, you should skip the pair, since, after your current decisions are committed, that file is no longer in any potential duplicate pairs in the search you gave. The respective file is either no longer in the file domain, or it has been merged into another group (that file is no longer a king and either the potential pair no longer exists via transitive collapse or, rarely, hydrus can present you with a better comparison pair if you ask for a new batch).
-s
-You will see significantly fewer than <code>max_num_pairs</code> as you close to the last available pairs, and when there are none left, you will get an empty list.</p>
+<p>If either is true, you should skip the pair, since, after your current decisions are committed, that file is no longer in any potential duplicate pairs in the search you gave. The respective file is either no longer in the file domain, or it has been merged into another group (that file is no longer a king and either the potential pair no longer exists via transitive collapse or, rarely, hydrus can present you with a better comparison pair if you ask for a new batch).</p>
+<p>You will see significantly fewer than <code>max_num_pairs</code> as you close to the last available pairs, and when there are none left, you will get an empty list.</p>
 <h3 id="manage_file_relationships_get_random_potentials"><strong>GET <code>/manage_file_relationships/get_random_potentials</code></strong><a class="headerlink" href="#manage_file_relationships_get_random_potentials" title="Permanent link">&para;</a></h3>
 <p><em>Get some random potentially duplicate file hashes. Exactly the same as the 'show some random potential dupes' button in the duplicate processing page.</em></p>
 <dl>
@@ -8307,7 +8318,7 @@ This request will also return any cookies for subdomains. The session system in 
     <span class="md-icon" title="Last update">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 13.1c-.1 0-.3.1-.4.2l-1 1 2.1 2.1 1-1c.2-.2.2-.6 0-.8l-1.3-1.3c-.1-.1-.2-.2-.4-.2m-1.9 1.8-6.1 6V23h2.1l6.1-6.1zM12.5 7v5.2l4 2.4-1 1L11 13V7zM11 21.9c-5.1-.5-9-4.8-9-9.9C2 6.5 6.5 2 12 2c5.3 0 9.6 4.1 10 9.3-.3-.1-.6-.2-1-.2s-.7.1-1 .2C19.6 7.2 16.2 4 12 4c-4.4 0-8 3.6-8 8 0 4.1 3.1 7.5 7.1 7.9l-.1.2z"/></svg>
     </span>
-    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="September 13, 2025 21:08:32 UTC">September 13, 2025</span>
+    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="September 24, 2025 20:32:57 UTC">September 24, 2025</span>
   </span>
 
     
