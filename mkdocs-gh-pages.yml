@@ -18,6 +18,7 @@ plugins:
         'help/client_api.md': 'client_api.md'
         'help/contact.md': 'contact.md'
         'help/database_migration.md': 'database_migration.md'
+        'help/database_merging.md': 'database_merging.md'
         'help/downloader_completion.md': 'downloader_completion.md'
         'help/downloader_gugs.md': 'downloader_gugs.md'
         'help/downloader_intro.md': 'downloader_intro.md'

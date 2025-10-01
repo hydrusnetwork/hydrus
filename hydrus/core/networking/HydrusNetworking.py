@@ -377,7 +377,7 @@ class BandwidthTracker( HydrusSerialisable.SerialisableBase ):
     def _GetCurrentDateTime( self ):
         
         # keep getnow in here for the moment to aid in testing, which patches it to do time shifting
-        return datetime.datetime.utcfromtimestamp( HydrusTime.GetNow() )
+        return datetime.datetime.fromtimestamp( HydrusTime.GetNow(), datetime.UTC )
         
     
     def _GetWindowAndCounter( self, bandwidth_type, time_delta ):
@@ -458,6 +458,10 @@ class BandwidthTracker( HydrusSerialisable.SerialisableBase ):
             elif bandwidth_type == HC.BANDWIDTH_TYPE_REQUESTS:
                 
                 return self._months_requests[ month_time ]
+                
+            else:
+                
+                raise NotImplementedError( 'Unknown bandiwidth type!' )
                 
             
         
@@ -630,7 +634,7 @@ class BandwidthTracker( HydrusSerialisable.SerialisableBase ):
             
             for ( month_time, usage ) in list(self._months_bytes.items()):
                 
-                month_dt = datetime.datetime.utcfromtimestamp( month_time )
+                month_dt = datetime.datetime.fromtimestamp( month_time, datetime.UTC )
                 
                 # this generates zero-padded month, to keep this lexicographically sortable at the gui level
                 date_str = month_dt.strftime( '%Y-%m' )

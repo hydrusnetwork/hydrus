@@ -1558,7 +1558,21 @@ class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
             CG.client_controller.CallAfter( self, qt_tidy_up, example_data, example_bytes, error )
             
         
-        url = ClientNetworkingFunctions.EnsureURLIsEncoded( self._test_url.text() )
+        raw_url = self._test_url.text().strip()
+        
+        if raw_url == '':
+            
+            example_urls = self._example_urls.GetData()
+            
+            if len( example_urls ) > 0:
+                
+                self._test_url.setText( example_urls[0] )
+                
+            
+            return
+            
+        
+        url = ClientNetworkingFunctions.EnsureURLIsEncoded( raw_url )
         referral_url = self._test_referral_url.text()
         
         if referral_url == '':

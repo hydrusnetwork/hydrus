@@ -277,11 +277,6 @@ class ImageRenderer( ClientCachesBase.CacheableObject ):
             # old recovery code, before the ErrorImage
             # I think move to show a nice 'check integrity' button when a file errors, so the user can kick it off, and we avoid the popup spam
             '''
-            # (if image failed to render)
-            m = 'There was a problem rendering the image with hash {}! It may be damaged.'.format(
-                self._hash.hex()
-            )
-            
             m += '\n' * 2
             m += 'Jobs to check its integrity and metadata have been scheduled. If it is damaged, it may be redownloaded or removed from the client completely. If it is not damaged, it may be fixed automatically or further action may be required.'
             
@@ -293,19 +288,26 @@ class ImageRenderer( ClientCachesBase.CacheableObject ):
             
             if not self._render_failed:
                 
-                my_resolution_size = QC.QSize( self._resolution[0], self._resolution[1] )
-                my_numpy_size = QC.QSize( self._numpy_image.shape[1], self._numpy_image.shape[0] )
+                my_expected_size = ( self._resolution[0], self._resolution[1] )
+                my_numpy_size = ( self._numpy_image.shape[1], self._numpy_image.shape[0] )
                 
-                if my_resolution_size != my_numpy_size:
+                expectation_rotated = ( self._resolution[1], self._resolution[0] )
+                
+                hash_hex = self._hash.hex()
+                
+                if my_expected_size != my_numpy_size:
                     
-                    m = 'There was a problem rendering the image with hash {}! Hydrus thinks its resolution is {}, but it was actually {}.'.format(
-                        self._hash.hex(),
-                        my_resolution_size,
-                        my_numpy_size
-                    )
+                    if my_numpy_size == expectation_rotated:
+                        
+                        m = f'There was a problem rendering the image with hash {hash_hex}! Hydrus thought its resolution would be {my_expected_size}, but it looks like we rendered it to the rotated value of {my_numpy_size}. This happens sometimes with weirder rotation metadata where support changes over time.'
+                        
+                    else:
+                        
+                        m = f'There was a problem rendering the image with hash {hash_hex}! Hydrus thought its resolution would be {my_expected_size}, but it actually rendered to {my_numpy_size}. This is an odd situation.'
+                        
                     
                     m += '\n' * 2
-                    m += 'You may see some black squares in the image. A metadata regeneration has been scheduled, so with luck the image will fix itself soon.'
+                    m += 'You may see some black squares in the image. A metadata regeneration has been scheduled, so with luck it will fix itself soon. If the file is still broken, hydev would like to see it!'
                     
                     HydrusData.ShowText( m )
                     

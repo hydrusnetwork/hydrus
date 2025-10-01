@@ -198,6 +198,8 @@ SIMPLE_CLOSE_MEDIA_VIEWER_AND_FOCUS_TAB_AND_FOCUS_MEDIA = 185
 SIMPLE_VIEW_RANDOM = 186
 SIMPLE_UNDO_RANDOM = 187
 SIMPLE_FOCUS_TAB_AND_MEDIA = 188
+SIMPLE_DUPLICATE_FILTER_APPROVE_AUTO_RESOLUTION = 189
+SIMPLE_DUPLICATE_FILTER_DENY_AUTO_RESOLUTION = 190
 
 REARRANGE_THUMBNAILS_TYPE_FIXED = 0
 REARRANGE_THUMBNAILS_TYPE_COMMAND = 1
@@ -286,6 +288,8 @@ simple_enum_to_str_lookup = {
     SIMPLE_DUPLICATE_FILTER_SKIP : 'duplicate filter: skip',
     SIMPLE_DUPLICATE_FILTER_THIS_IS_BETTER_AND_DELETE_OTHER : 'duplicate filter: this is better, delete other',
     SIMPLE_DUPLICATE_FILTER_THIS_IS_BETTER_BUT_KEEP_BOTH : 'duplicate filter: this is better, keep both',
+    SIMPLE_DUPLICATE_FILTER_APPROVE_AUTO_RESOLUTION : 'duplicate filter: approve auto-resolution pair',
+    SIMPLE_DUPLICATE_FILTER_DENY_AUTO_RESOLUTION : 'duplicate filter: deny auto-resolution pair',
     SIMPLE_DUPLICATE_MEDIA_SET_ALTERNATE : 'file relationships: set files as alternates',
     SIMPLE_DUPLICATE_MEDIA_SET_ALTERNATE_COLLECTIONS : 'file relationships: set collects as separate alternate groups',
     SIMPLE_DUPLICATE_MEDIA_SET_CUSTOM : 'file relationships: do custom action',

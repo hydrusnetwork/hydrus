@@ -195,6 +195,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             'pause_all_gallery_searches' : False,
             'popup_message_force_min_width' : False,
             'always_show_iso_time' : False,
+            'do_not_do_chmod_mode' : False,
             'confirm_multiple_local_file_services_move' : True,
             'confirm_multiple_local_file_services_copy' : True,
             'use_advanced_file_deletion_dialog' : False,

@@ -356,15 +356,15 @@ class PreparationPanel( QW.QWidget ):
         
         submenu_template_items = []
         
-        check_manager = ClientGUICommon.CheckboxManagerOptions( 'maintain_similar_files_duplicate_pairs_during_active' )
-        check_manager.AddNotifyCall( CG.client_controller.potential_duplicates_manager.Wake )
-        
-        submenu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCheck( 'during normal time', 'Tell the client to find potential duplicate pairs all the time.', check_manager ) )
-        
         check_manager = ClientGUICommon.CheckboxManagerOptions( 'maintain_similar_files_duplicate_pairs_during_idle' )
         check_manager.AddNotifyCall( CG.client_controller.potential_duplicates_manager.Wake )
         
         submenu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCheck( 'during idle time', 'Tell the client to find potential duplicate pairs in its normal idle time maintenance.', check_manager ) )
+        
+        check_manager = ClientGUICommon.CheckboxManagerOptions( 'maintain_similar_files_duplicate_pairs_during_active' )
+        check_manager.AddNotifyCall( CG.client_controller.potential_duplicates_manager.Wake )
+        
+        submenu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCheck( 'during normal time', 'Tell the client to find potential duplicate pairs all the time.', check_manager ) )
         
         menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemSubmenu( 'search for potential duplicates', submenu_template_items ) )
         

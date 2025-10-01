@@ -929,27 +929,72 @@ def retry_blocking_io_call( func, *args, **kwargs ):
         
     
 
-def safe_copy2( source, dest ):
+DO_NOT_DO_CHMOD_MODE = False
+
+def CopyTimes( source, dest ):
     
-    mtime = os.path.getmtime( source )
-    
-    if FileModifiedTimeIsOk( mtime ):
+    try:
         
-        try:
+        st = os.stat( source )
+        
+        os.utime( dest, ( st.st_atime, st.st_mtime ) )
+        
+        return True
+        
+    except:
+        
+        return False
+        
+    
+
+def safe_copy2( source_path, dest_path ):
+    
+    mtime = os.path.getmtime( source_path )
+    
+    try_to_copy_modified_time = FileModifiedTimeIsOk( mtime )
+    
+    if DO_NOT_DO_CHMOD_MODE:
+        
+        retry_blocking_io_call( shutil.copyfile, source_path, dest_path )
+        
+        if try_to_copy_modified_time:
             
-            # this overwrites on conflict without hassle
-            retry_blocking_io_call( shutil.copy2, source, dest )
-            
-        except PermissionError:
-            
-            HydrusData.Print( f'Failed to copy2 metadata from {source} to {dest}! mtime was {HydrusTime.TimestampToPrettyTime( mtime )}' )
-            
-            retry_blocking_io_call( shutil.copy, source, dest )
+            retry_blocking_io_call( CopyTimes, source_path, dest_path )
             
         
     else:
         
-        retry_blocking_io_call( shutil.copy, source, dest )
+        if try_to_copy_modified_time:
+            
+            try:
+                
+                # this overwrites on conflict without hassle
+                retry_blocking_io_call( shutil.copy2, source_path, dest_path )
+                
+                return
+                
+            except PermissionError:
+                
+                try_to_copy_modified_time = False
+                
+            
+        
+        if not try_to_copy_modified_time:
+            
+            retry_blocking_io_call( shutil.copy, source_path, dest_path )
+            
+        
+    
+
+def safe_copystat( source_path, dest_path ):
+    
+    if DO_NOT_DO_CHMOD_MODE:
+        
+        retry_blocking_io_call( CopyTimes, source_path, dest_path )
+        
+    else:
+        
+        retry_blocking_io_call( shutil.copystat, source_path, dest_path )
         
     
 
@@ -1066,7 +1111,7 @@ def MergeTree( source: str, dest: str, text_update_hook = None ):
                 
                 MakeSureDirectoryExists( dest_path )
                 
-                retry_blocking_io_call( shutil.copystat, source_path, dest_path )
+                safe_copystat( source_path, dest_path )
                 
             
             for filename in filenames:
@@ -1215,7 +1260,7 @@ def MirrorTree( source: str, dest: str, text_update_hook = None, is_cancelled_ho
             
             MakeSureDirectoryExists( dest_path )
             
-            retry_blocking_io_call( shutil.copystat, source_path, dest_path )
+            safe_copystat( source_path, dest_path )
             
         
         for filename in filenames:
@@ -1401,15 +1446,21 @@ def RecyclePath( path ):
                         
                     else:
                         
-                        HydrusData.Print( f'I keep getting the 0x80270021 error when trying to recycle {path}!' )
+                        HydrusData.Print( f'I keep getting the 0x80270021 error when trying to recycle "{path}"!' )
                         
+                        HydrusData.PrintException( e, do_wait = False )
+                        
+                    
+                elif isinstance( e, OSError ) and 'Errno 36' in str( e ):
+                    
+                    HydrusData.Print( f'Could not recycle "{path}" because a filename would be too long! (maybe Linux .trashinfo?)' )
                     
                 else:
                     
-                    HydrusData.Print( 'Trying to recycle {path} created this error:' )
+                    HydrusData.Print( f'Trying to recycle "{path}" created this error:' )
                     
-                
-                HydrusData.PrintException( e, do_wait = False )
+                    HydrusData.PrintException( e, do_wait = False )
+                    
                 
                 HydrusData.Print( 'I will fully delete it instead.' )
                 
@@ -1466,7 +1517,22 @@ def SanitizeFilename( filename: str, force_ntfs_rules: bool ) -> str:
     return clean_filename
     
 
+try:
+    
+    PROCESS_UMASK = os.umask( 0o022 )
+    os.umask( PROCESS_UMASK )
+    
+except:
+    
+    PROCESS_UMASK = 0o022
+    
+
 def TryToGiveFileNicePermissionBits( path ):
+    
+    if DO_NOT_DO_CHMOD_MODE:
+        
+        return
+        
     
     if not os.path.exists( path ):
         
@@ -1488,17 +1554,7 @@ def TryToGiveFileNicePermissionBits( path ):
             
             # typically guarantee 644 for regular files m8, but now we also take umask into account
             
-            try:
-                
-                umask = os.umask( 0o022 )
-                os.umask( umask )
-                
-            except:
-                
-                umask = 0o022
-                
-            
-            desired_bits = ( stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IROTH ) & ~umask
+            desired_bits = ( stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IROTH ) & ~PROCESS_UMASK
             
         
         if not ( desired_bits & current_bits ) == desired_bits:
@@ -1511,7 +1567,13 @@ def TryToGiveFileNicePermissionBits( path ):
         HydrusData.Print( 'Wanted to add read and write permission to "{}", but had an error: {}'.format( path, str( e ) ) )
         
     
+
 def TryToMakeFileWriteable( path ):
+    
+    if DO_NOT_DO_CHMOD_MODE:
+        
+        return
+        
     
     if not os.path.exists( path ):
         

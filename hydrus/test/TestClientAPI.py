@@ -5368,6 +5368,9 @@ class TestClientAPI( unittest.TestCase ):
             mr_1.GetFileInfoManager().size = random.randint( 500, 50000 )
             mr_2.GetFileInfoManager().size = random.randint( 500, 50000 )
             
+            if mr_1.GetFileInfoManager().size == mr_2.GetFileInfoManager().size:
+                mr_2.GetFileInfoManager().size = mr_1.GetFileInfoManager().size + 1
+            
             mr_1.GetFileInfoManager().hash_id = hash_id
             hash_id += 1
             
@@ -5407,6 +5410,7 @@ class TestClientAPI( unittest.TestCase ):
         hashes_we_got_back = [ ( bytes.fromhex( hash_hex_1 ), bytes.fromhex( hash_hex_2 ) ) for ( hash_hex_1, hash_hex_2 ) in hashes_we_got_back_hex ]
         
         test_potential_duplicate_media_result_pairs_and_distances_duplicate.Sort( ClientDuplicates.DUPE_PAIR_SORT_MAX_FILESIZE, False )
+        test_potential_duplicate_media_result_pairs_and_distances_duplicate.ABPairsUsingFastComparisonScore()
         
         hashes_we_expect = [ ( mr_1.GetHash(), mr_2.GetHash() ) for ( mr_1, mr_2 ) in test_potential_duplicate_media_result_pairs_and_distances_duplicate.GetPairs() ]
         
@@ -5438,6 +5442,10 @@ class TestClientAPI( unittest.TestCase ):
         
         # get pairs with params
         
+        test_potential_duplicate_media_result_pairs_and_distances = ClientPotentialDuplicatesSearchContext.PotentialDuplicateMediaResultPairsAndDistances( test_mr_pairs_and_distances )
+        
+        test_potential_duplicate_media_result_pairs_and_distances_duplicate = test_potential_duplicate_media_result_pairs_and_distances.Duplicate()
+        
         TG.test_controller.SetRead( 'potential_duplicate_id_pairs_and_distances', test_potential_duplicate_id_pairs_and_distances )
         
         TG.test_controller.SetRead( 'potential_duplicate_media_result_pairs_and_distances_fragmentary', test_potential_duplicate_media_result_pairs_and_distances )
@@ -5468,6 +5476,7 @@ class TestClientAPI( unittest.TestCase ):
         hashes_we_got_back = [ ( bytes.fromhex( hash_hex_1 ), bytes.fromhex( hash_hex_2 ) ) for ( hash_hex_1, hash_hex_2 ) in hashes_we_got_back_hex ]
         
         test_potential_duplicate_media_result_pairs_and_distances_duplicate.Sort( ClientDuplicates.DUPE_PAIR_SORT_MAX_FILESIZE, False )
+        test_potential_duplicate_media_result_pairs_and_distances_duplicate.ABPairsUsingFastComparisonScore()
         
         hashes_we_expect = [ ( mr_1.GetHash(), mr_2.GetHash() ) for ( mr_1, mr_2 ) in test_potential_duplicate_media_result_pairs_and_distances_duplicate.GetPairs() ]
         
@@ -5498,6 +5507,10 @@ class TestClientAPI( unittest.TestCase ):
         self.assertEqual( max_hamming_distance, test_max_hamming_distance )
         
         # get pairs with max num
+        
+        test_potential_duplicate_media_result_pairs_and_distances = ClientPotentialDuplicatesSearchContext.PotentialDuplicateMediaResultPairsAndDistances( test_mr_pairs_and_distances )
+        
+        test_potential_duplicate_media_result_pairs_and_distances_duplicate = test_potential_duplicate_media_result_pairs_and_distances.Duplicate()
         
         TG.test_controller.SetRead( 'potential_duplicate_id_pairs_and_distances', test_potential_duplicate_id_pairs_and_distances )
         
@@ -5534,6 +5547,7 @@ class TestClientAPI( unittest.TestCase ):
         self.assertEqual( len( hashes_we_got_back ), test_max_num_pairs )
         
         test_potential_duplicate_media_result_pairs_and_distances_duplicate.Sort( ClientDuplicates.DUPE_PAIR_SORT_MAX_FILESIZE, False )
+        test_potential_duplicate_media_result_pairs_and_distances_duplicate.ABPairsUsingFastComparisonScore()
         
         hashes_we_expect = [ ( mr_1.GetHash(), mr_2.GetHash() ) for ( mr_1, mr_2 ) in test_potential_duplicate_media_result_pairs_and_distances_duplicate.GetPairs() ]
         
@@ -5570,6 +5584,10 @@ class TestClientAPI( unittest.TestCase ):
         self.assertEqual( max_hamming_distance, test_max_hamming_distance )
         
         # now sort them
+        
+        test_potential_duplicate_media_result_pairs_and_distances = ClientPotentialDuplicatesSearchContext.PotentialDuplicateMediaResultPairsAndDistances( test_mr_pairs_and_distances )
+        
+        test_potential_duplicate_media_result_pairs_and_distances_duplicate = test_potential_duplicate_media_result_pairs_and_distances.Duplicate()
         
         TG.test_controller.SetRead( 'potential_duplicate_id_pairs_and_distances', test_potential_duplicate_id_pairs_and_distances )
         
@@ -5608,6 +5626,7 @@ class TestClientAPI( unittest.TestCase ):
         self.assertEqual( len( hashes_we_got_back ), test_max_num_pairs )
         
         test_potential_duplicate_media_result_pairs_and_distances_duplicate.Sort( ClientDuplicates.DUPE_PAIR_SORT_MIN_FILESIZE, True )
+        test_potential_duplicate_media_result_pairs_and_distances_duplicate.ABPairsUsingFastComparisonScore()
         
         hashes_we_expect = [ ( mr_1.GetHash(), mr_2.GetHash() ) for ( mr_1, mr_2 ) in test_potential_duplicate_media_result_pairs_and_distances_duplicate.GetPairs() ]
         
@@ -5735,6 +5754,7 @@ class TestClientAPI( unittest.TestCase ):
         self.assertEqual( len( hashes_we_got_back ), 5 )
         
         test_potential_duplicate_media_result_pairs_and_distances_duplicate.Sort( ClientDuplicates.DUPE_PAIR_SORT_MIN_FILESIZE, True )
+        test_potential_duplicate_media_result_pairs_and_distances_duplicate.ABPairsUsingFastComparisonScore()
         
         hashes_we_expect = [ ( mr_1.GetHash(), mr_2.GetHash() ) for ( mr_1, mr_2 ) in test_potential_duplicate_media_result_pairs_and_distances_duplicate.GetPairs() ]
         

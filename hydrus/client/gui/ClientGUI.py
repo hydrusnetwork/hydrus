@@ -96,6 +96,56 @@ from hydrus.client.parsing import ClientParsing
 
 MENU_ORDER = [ 'file', 'undo', 'pages', 'database', 'network', 'services', 'tags', 'pending', 'help' ]
 
+def CrashTheProgram( win: QW.QWidget ):
+    
+    def crashtime_nice():
+        
+        os.abort()
+        
+    
+    def crashtime_not_nice():
+        
+        for i in range( 100 ):
+            
+            CG.client_controller.gui.repaint()
+            
+            time.sleep( 0.1 )
+            
+        
+    
+    message = 'u wot mate I\'ll hook u in the gabber'
+    
+    yes_tuples = []
+    
+    yes_tuples.append( ( 'nice crash', True ) )
+    yes_tuples.append( ( 'not a nice crash', False ) )
+    
+    try:
+        
+        result = ClientGUIDialogsQuick.GetYesYesNo( win, message, yes_tuples = yes_tuples, no_label = 'forget it' )
+        
+    except HydrusExceptions.CancelledException:
+        
+        return
+        
+    
+    if result:
+        
+        crashtime_nice()
+        
+    else:
+        
+        CG.client_controller.CallToThread( crashtime_not_nice )
+        
+    
+
+def TurnOffCrashReporting():
+    
+    from hydrus.core import HydrusLogger
+    
+    HydrusLogger.turn_off_faulthandler()
+    
+
 def GetTagServiceKeyForMaintenance( win: QW.QWidget ):
     
     tag_services = CG.client_controller.services_manager.GetServices( HC.REAL_TAG_SERVICES )
@@ -3558,6 +3608,10 @@ ATTACH "client.mappings.db" as external_mappings;'''
         ClientGUIMenus.AppendSeparator( tests )
         ClientGUIMenus.AppendMenuItem( tests, 'do self-sigterm', 'Test a sigterm call for fast, non-ui-originating shutdown.', CG.client_controller.DoSelfSigterm )
         ClientGUIMenus.AppendMenuItem( tests, 'do self-sigterm (fake)', 'Test a sigterm call for fast, non-ui-originating shutdown.', CG.client_controller.DoSelfSigtermFake )
+        ClientGUIMenus.AppendSeparator( tests )
+        ClientGUIMenus.AppendMenuItem( tests, 'turn off faulthandler crash logging', 'Disable the python crash logging so you can use WER or Linux Dumps for your own debugging situation.', TurnOffCrashReporting )
+        ClientGUIMenus.AppendSeparator( tests )
+        ClientGUIMenus.AppendMenuItem( tests, 'induce a program crash', 'Crash the program to test a crash dumping/debugging routine.', CrashTheProgram, self )
         
         ClientGUIMenus.AppendMenu( debug_menu, tests, 'tests, do not touch' )
         

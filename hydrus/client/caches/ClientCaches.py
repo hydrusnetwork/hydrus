@@ -157,7 +157,7 @@ class ImageRendererCache( object ):
             
         
     
-    def GetImageRenderer( self, media_result: ClientMediaResult.MediaResult ) -> ClientRendering.ImageRenderer:
+    def GetImageRenderer( self, media_result: ClientMediaResult.MediaResult, this_is_for_metadata_alone = False ) -> ClientRendering.ImageRenderer:
         
         hash = media_result.GetHash()
         
@@ -167,7 +167,7 @@ class ImageRendererCache( object ):
         
         if result is None:
             
-            image_renderer = ClientRendering.ImageRenderer( media_result )
+            image_renderer = ClientRendering.ImageRenderer( media_result, this_is_for_metadata_alone = this_is_for_metadata_alone )
             
             # we are no longer going to let big lads flush the whole cache. they can render on demand
             

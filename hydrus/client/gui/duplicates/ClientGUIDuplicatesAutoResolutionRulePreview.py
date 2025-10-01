@@ -149,6 +149,8 @@ class PreviewPanel( ClientGUICommon.StaticBox ):
         self._num_to_fetch.valueChanged.connect( self._DoSearchWork )
         self._num_to_fetch.valueChanged.connect( self._DoTestWork )
         
+        CG.client_controller.sub( self, '_RefetchPairs', 'notify_duplicate_filter_non_blocking_commit_complete' )
+        
     
     def _DoSearchWork( self ):
         
@@ -176,7 +178,7 @@ class PreviewPanel( ClientGUICommon.StaticBox ):
             return
             
         
-        media_result_pairs = [ ( m1, m2 ) for ( m1, m2 ) in media_result_pairs if m1.GetLocationsManager().IsLocal() and m2.GetLocationsManager().IsLocal() ]
+        media_result_pairs = [ ( m_a, m_b ) for ( m_a, m_b ) in media_result_pairs if m_a.GetLocationsManager().IsLocal() and m_b.GetLocationsManager().IsLocal() ]
         
         if len( media_result_pairs ) == 0:
             
@@ -187,7 +189,7 @@ class PreviewPanel( ClientGUICommon.StaticBox ):
         
         # with a bit of jiggling I can probably deliver the real distance, but w/e for now, not important
         
-        media_result_pairs_and_fake_distances = [ ( m1, m2, 0 ) for ( m1, m2 ) in media_result_pairs ]
+        media_result_pairs_and_fake_distances = [ ( m_a, m_b, 0 ) for ( m_a, m_b ) in media_result_pairs ]
         
         potential_duplicate_media_result_pairs_and_distances = ClientPotentialDuplicatesSearchContext.PotentialDuplicateMediaResultPairsAndDistances( media_result_pairs_and_fake_distances )
         
@@ -519,7 +521,6 @@ class PreviewPanel( ClientGUICommon.StaticBox ):
         canvas_window = ClientGUICanvasDuplicates.CanvasFilterDuplicates( canvas_frame, potential_duplicate_pair_factory )
         
         canvas_window.canvasWithHoversExiting.connect( CG.client_controller.gui.NotifyMediaViewerExiting )
-        canvas_window.duplicateCanvasExitingAfterWorkDone.connect( self._RefetchPairs )
         canvas_window.showPairInPage.connect( self._ShowPairInPage )
         
         canvas_frame.SetCanvas( canvas_window )

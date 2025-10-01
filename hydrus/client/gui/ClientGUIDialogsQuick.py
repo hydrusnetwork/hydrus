@@ -18,7 +18,7 @@ from hydrus.client.gui.panels import ClientGUIScrolledPanelsEdit
 from hydrus.client.gui.panels import ClientGUIScrolledPanelsSelectFromList
 from hydrus.client.gui.panels import ClientGUIScrolledPanelsTextEntry
 
-def EnterText( win: QW.QWidget, message: str, default = '', placeholder = None, allow_blank = False, suggestions = None, max_chars = None, password_entry = False, min_char_width = 72 ):
+def EnterText( win: QW.QWidget, message: str, default = '', placeholder = None, allow_blank = False, suggestions = None, max_chars = None, password_entry = False, min_char_width = 72 ) -> str:
     
     title = 'Enter Text'
     

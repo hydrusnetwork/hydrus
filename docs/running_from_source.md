@@ -550,3 +550,5 @@ I use Windows and Linux, but I have much more experience with Windows, and the p
 My coding style is unusual and unprofessional. Everything is pretty much hacked together. I'm constantly throwing new code together and then cleaning and overhauling it down the line. If you are interested in how things work, please do look through the source and ask me if you don't understand something.
 
 I work strictly alone, however. While I am very interested in bug reports or suggestions for good libraries to use, I am not looking for pull requests or suggestions on refactoring. I know a lot of things are a mess. Everything I do is [WTFPL](https://github.com/sirkris/WTFPL/blob/master/WTFPL.md), so feel free to fork and play around with things on your end as much as you like.
+
+[This DeepWiki AI Crawl](https://deepwiki.com/hydrusnetwork/hydrus) of the Hydrus Github repository is not totally comprehensive, but I was impressed with how generally accurate it is. It attributes more thought on my part than actually happened, hahaha, but you might like to check it if you want to poke around.

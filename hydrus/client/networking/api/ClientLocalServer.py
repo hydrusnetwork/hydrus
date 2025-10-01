@@ -1,4 +1,4 @@
-from twisted.web.resource import NoResource
+from twisted.web.pages import notFound
 
 from hydrus.core.networking import HydrusServer
 
@@ -49,7 +49,7 @@ class HydrusServiceClientAPI( HydrusClientService ):
         root.putChild( b'get_services', ClientLocalServerResourcesAccess.HydrusResourceClientAPIRestrictedGetServices( self._service, self._client_requests_domain ) )
         root.putChild( b'get_service', ClientLocalServerResourcesAccess.HydrusResourceClientAPIRestrictedGetService( self._service, self._client_requests_domain ) )
         
-        add_files = NoResource()
+        add_files = notFound()
         
         root.putChild( b'add_files', add_files )
         
@@ -62,13 +62,13 @@ class HydrusServiceClientAPI( HydrusClientService ):
         add_files.putChild( b'unarchive_files', ClientLocalServerResourcesAddFiles.HydrusResourceClientAPIRestrictedAddFilesUnarchiveFiles( self._service, self._client_requests_domain ) )
         add_files.putChild( b'generate_hashes', ClientLocalServerResourcesAddFiles.HydrusResourceClientAPIRestrictedAddFilesGenerateHashes( self._service, self._client_requests_domain ) )
         
-        edit_ratings = NoResource()
+        edit_ratings = notFound()
         
         root.putChild( b'edit_ratings', edit_ratings )
         
         edit_ratings.putChild( b'set_rating', ClientLocalServerResourcesEditRatings.HydrusResourceClientAPIRestrictedEditRatingsSetRating( self._service, self._client_requests_domain ) )
         
-        edit_times = NoResource()
+        edit_times = notFound()
         
         root.putChild( b'edit_times', edit_times )
         
@@ -76,7 +76,7 @@ class HydrusServiceClientAPI( HydrusClientService ):
         edit_times.putChild( b'increment_file_viewtime', ClientLocalServerResourcesEditFileViewingStatistics.HydrusResourceClientAPIRestrictedEditFileViewingStatisticsIncrementFileViewingStatistics( self._service, self._client_requests_domain ) )
         edit_times.putChild( b'set_file_viewtime', ClientLocalServerResourcesEditFileViewingStatistics.HydrusResourceClientAPIRestrictedEditFileViewingStatisticsSetFileViewingStatistics( self._service, self._client_requests_domain ) )
         
-        add_tags = NoResource()
+        add_tags = notFound()
         
         root.putChild( b'add_tags', add_tags )
         
@@ -87,7 +87,7 @@ class HydrusServiceClientAPI( HydrusClientService ):
         add_tags.putChild( b'get_favourite_tags', ClientLocalServerResourcesManageFavouriteTags.HydrusResourceClientAPIRestrictedManageFavouriteTagsGetFavouriteTags( self._service, self._client_requests_domain ) )
         add_tags.putChild( b'set_favourite_tags', ClientLocalServerResourcesManageFavouriteTags.HydrusResourceClientAPIRestrictedManageFavouriteTagsSetFavouriteTags( self._service, self._client_requests_domain ) )
         
-        add_urls = NoResource()
+        add_urls = notFound()
         
         root.putChild( b'add_urls', add_urls )
         
@@ -96,7 +96,7 @@ class HydrusServiceClientAPI( HydrusClientService ):
         add_urls.putChild( b'add_url', ClientLocalServerResourcesAddURLs.HydrusResourceClientAPIRestrictedAddURLsImportURL( self._service, self._client_requests_domain ) )
         add_urls.putChild( b'associate_url', ClientLocalServerResourcesAddURLs.HydrusResourceClientAPIRestrictedAddURLsAssociateURL( self._service, self._client_requests_domain ) )
         
-        get_files = NoResource()
+        get_files = notFound()
         
         root.putChild( b'get_files', get_files )
         
@@ -110,21 +110,21 @@ class HydrusServiceClientAPI( HydrusClientService ):
         get_files.putChild( b'thumbnail_path', ClientLocalServerResourcesGetFiles.HydrusResourceClientAPIRestrictedGetFilesGetThumbnailPath( self._service, self._client_requests_domain) )
         get_files.putChild( b'render', ClientLocalServerResourcesGetFiles.HydrusResourceClientAPIRestrictedGetFilesGetRenderedFile( self._service, self._client_requests_domain) )
         
-        add_notes = NoResource()
+        add_notes = notFound()
         
         root.putChild( b'add_notes', add_notes )
         
         add_notes.putChild( b'set_notes', ClientLocalServerResourcesAddNotes.HydrusResourceClientAPIRestrictedAddNotesSetNotes( self._service, self._client_requests_domain ) )
         add_notes.putChild( b'delete_notes', ClientLocalServerResourcesAddNotes.HydrusResourceClientAPIRestrictedAddNotesDeleteNotes( self._service, self._client_requests_domain ) )
         
-        manage_cookies = NoResource()
+        manage_cookies = notFound()
         
         root.putChild( b'manage_cookies', manage_cookies )
         
         manage_cookies.putChild( b'get_cookies', ClientLocalServerResourcesManageCookies.HydrusResourceClientAPIRestrictedManageCookiesGetCookies( self._service, self._client_requests_domain ) )
         manage_cookies.putChild( b'set_cookies', ClientLocalServerResourcesManageCookies.HydrusResourceClientAPIRestrictedManageCookiesSetCookies( self._service, self._client_requests_domain ) )
         
-        manage_database = NoResource()
+        manage_database = notFound()
         
         root.putChild( b'manage_database', manage_database )
         
@@ -134,7 +134,7 @@ class HydrusServiceClientAPI( HydrusClientService ):
         manage_database.putChild( b'lock_off', ClientLocalServerResourcesManageDatabase.HydrusResourceClientAPIRestrictedManageDatabaseLockOff( self._service, self._client_requests_domain ) )
         manage_database.putChild( b'mr_bones', ClientLocalServerResourcesManageDatabase.HydrusResourceClientAPIRestrictedManageDatabaseMrBones( self._service, self._client_requests_domain ) )
         
-        manage_services = NoResource()
+        manage_services = notFound()
         
         root.putChild( b'manage_services', manage_services )
         
@@ -142,7 +142,7 @@ class HydrusServiceClientAPI( HydrusClientService ):
         manage_services.putChild( b'commit_pending', ClientLocalServerResourcesManageServices.HydrusResourceClientAPIRestrictedManageServicesCommitPending( self._service, self._client_requests_domain ) )
         manage_services.putChild( b'forget_pending', ClientLocalServerResourcesManageServices.HydrusResourceClientAPIRestrictedManageServicesForgetPending( self._service, self._client_requests_domain ) )
         
-        manage_file_relationships = NoResource()
+        manage_file_relationships = notFound()
         
         root.putChild( b'manage_file_relationships', manage_file_relationships )
         
@@ -154,7 +154,7 @@ class HydrusServiceClientAPI( HydrusClientService ):
         manage_file_relationships.putChild( b'set_file_relationships', ClientLocalServerResourcesManageFileRelationships.HydrusResourceClientAPIRestrictedManageFileRelationshipsSetRelationships( self._service, self._client_requests_domain ) )
         manage_file_relationships.putChild( b'set_kings', ClientLocalServerResourcesManageFileRelationships.HydrusResourceClientAPIRestrictedManageFileRelationshipsSetKings( self._service, self._client_requests_domain ) )
         
-        manage_headers = NoResource()
+        manage_headers = notFound()
         
         root.putChild( b'manage_headers', manage_headers )
         
@@ -162,7 +162,7 @@ class HydrusServiceClientAPI( HydrusClientService ):
         manage_headers.putChild( b'get_headers', ClientLocalServerResourcesManageCookies.HydrusResourceClientAPIRestrictedManageCookiesGetHeaders( self._service, self._client_requests_domain ) )
         manage_headers.putChild( b'set_headers', ClientLocalServerResourcesManageCookies.HydrusResourceClientAPIRestrictedManageCookiesSetHeaders( self._service, self._client_requests_domain ) )
         
-        manage_pages = NoResource()
+        manage_pages = notFound()
         
         root.putChild( b'manage_pages', manage_pages )
         
@@ -172,7 +172,7 @@ class HydrusServiceClientAPI( HydrusClientService ):
         manage_pages.putChild( b'get_page_info', ClientLocalServerResourcesManagePages.HydrusResourceClientAPIRestrictedManagePagesGetPageInfo( self._service, self._client_requests_domain ) )
         manage_pages.putChild( b'refresh_page', ClientLocalServerResourcesManagePages.HydrusResourceClientAPIRestrictedManagePagesRefreshPage( self._service, self._client_requests_domain ) )
         
-        manage_popups = NoResource()
+        manage_popups = notFound()
         
         root.putChild( b'manage_popups', manage_popups )
         

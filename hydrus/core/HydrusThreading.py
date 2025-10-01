@@ -478,6 +478,7 @@ class THREADCallToThread( DAEMON ):
             
         
     
+
 class JobScheduler( threading.Thread ):
     
     def __init__( self, controller: "HG.HydrusController.HydrusController" ):

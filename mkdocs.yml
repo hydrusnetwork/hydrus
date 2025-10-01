@@ -35,6 +35,7 @@ nav:
     - advanced.md
     - reducing_lag.md
     - database_migration.md
+    - database_merging.md
     - custom_assets.md
     - launch_arguments.md
     - ipfs.md

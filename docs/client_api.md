@@ -24,33 +24,37 @@ Once the API is running, go to its entry in _services->review services_. Each ex
 
 ### Browser Add-on
 
-* [Hydrus Companion](https://gitgud.io/prkc/hydrus-companion): a Chrome/Firefox extension for hydrus that allows easy download queueing as you browse and advanced login support
+* [Hydrus Companion](https://gitgud.io/prkc/hydrus-companion): A Chrome/Firefox extension for hydrus that allows easy download queueing as you browse and advanced login support.
 
 ### Client Browsing
 
-* [Hydrus Web](https://github.com/floogulinc/hydrus-web): a web client for hydrus (allows phone browsing of hydrus)
-* [Hyshare](https://github.com/floogulinc/hyshare): a way to share small galleries with friends--a replacement for the old 'local booru' system
-* [Hydra Vista](https://github.com/konkrotte/hydravista): a macOS client for hydrus
-* [LoliSnatcher](https://github.com/NO-ob/LoliSnatcher_Droid): a booru client for Android that can talk to hydrus
-* [Anime Boxes](https://www.animebox.es/): a booru browser, now supports adding your client as a Hydrus Server
-* [FlipFlip](https://ififfy.github.io/flipflip/#/): an advanced slideshow interface, now supports hydrus as a source
-* [Hydrus Archive Delete](https://gitgud.io/koto/hydrus-archive-delete): Archive/Delete filter in your web browser
+* [Hydrus Web](https://github.com/floogulinc/hydrus-web): A web client for hydrus with an advanced but also phone-friendly interface.
+* [Hydrui](https://hydrui.dev) [(Repo)](https://github.com/hydrui/hydrui): A web client for hydrus with an interface similar to the regular client.
+* [Hybooru](https://github.com/funmaker/Hybooru): A read-only booru-like web wrapper for hydrus.
+* [Anime Boxes](https://www.animebox.es/): A booru browser, now supports adding your client as a Hydrus Server.
+* [LoliSnatcher](https://github.com/NO-ob/LoliSnatcher_Droid): A booru client for Android that can talk to hydrus.
+* [Hyshare](https://github.com/floogulinc/hyshare): A way to share small galleries with friends--a replacement for the old 'local booru' system.
+* [Hydra Vista](https://github.com/konkrotte/hydravista): A macOS client for hydrus.
+* [FlipFlip](https://ififfy.github.io/flipflip/#/): An advanced slideshow interface, now supports hydrus as a source.
+* [Hydrus Archive Delete](https://gitgud.io/koto/hydrus-archive-delete): Archive/Delete filter in your web browser.
 
 ### Advanced Downloading
 
-* [hydownloader](https://gitgud.io/thatfuckingbird/hydownloader): Hydrus-like download system based on gallery-dl
+* [hydownloader](https://gitgud.io/thatfuckingbird/hydownloader): Hydrus-like download system based on gallery-dl. It solves many advanced problems the native downloader cannot handle.
 
 ### Auto-taggers
 
-* [hydrus-dd](https://gitgud.io/koto/hydrus-dd): DeepDanbooru tagging for Hydrus
-* [wd-e621-hydrus-tagger](https://github.com/Garbevoir/wd-e621-hydrus-tagger): More AI tagging, with more models
+* [hydrus-dd](https://gitgud.io/koto/hydrus-dd): DeepDanbooru tagging for Hydrus.
+* [wd-e621-hydrus-tagger](https://github.com/Garbevoir/wd-e621-hydrus-tagger): More AI tagging, with more models.
 
 ### Misc
 
-* [Hydrus Video Deduplicator](https://github.com/hydrusvideodeduplicator/hydrus-video-deduplicator): Discovers duplicate videos in your client and queues them for the duplicate filter 
+* [Hydrus Video Deduplicator](https://github.com/hydrusvideodeduplicator/hydrus-video-deduplicator): Discovers duplicate videos in your client and queues them for the duplicate filter. 
 * [tagrank](https://github.com/matjojo/tagrank): Shows you comparison images and cleverly ranks your favourite tag.
-* [hyextract](https://github.com/floogulinc/hyextract): Extract archives from Hydrus and reimport with tags and URL associations
-* [Send to Hydrus](https://github.com/Wyrrrd/send-to-hydrus): send URLs from your Android device to your client
-* [Iwara-Hydrus](https://github.com/GoAwayNow/Iwara-Hydrus): a userscript to simplify sending Iwara videos to Hydrus Network
+* [hyextract](https://github.com/floogulinc/hyextract): Extract archives from Hydrus and reimport with tags and URL associations.
+* [Send to Hydrus](https://github.com/Wyrrrd/send-to-hydrus): Send URLs from your Android device to your client.
+* [Iwara-Hydrus](https://github.com/GoAwayNow/Iwara-Hydrus): A userscript to simplify sending Iwara videos to Hydrus Network.
 * [dolphin-hydrus-actions](https://gitgud.io/prkc/dolphin-hydrus-actions): Adds Hydrus right-click context menu actions to Dolphin file manager.
 * [more projects on github](https://github.com/stars/hydrusnetwork/lists/hydrus-related-projects)
+
+_If you create a tool that uses the Client API, let me know if/when you are willing to share it, and I'll add it here!_ 

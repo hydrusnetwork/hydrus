@@ -7,7 +7,91 @@ from hydrus.core import HydrusTime
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientLocation
+from hydrus.client.duplicates import ClientDuplicatesAutoResolution
 from hydrus.client.duplicates import ClientPotentialDuplicatesSearchContext
+from hydrus.client.media import ClientMediaResult
+from hydrus.client.metadata import ClientContentUpdates
+
+class DuplicatePairDecision( object ):
+    
+    def __init__( self, media_result_a: ClientMediaResult.MediaResult, media_result_b: ClientMediaResult.MediaResult ):
+        
+        self.media_result_a = media_result_a
+        self.media_result_b = media_result_b
+        
+    
+    def HasWorkToDo( self ):
+        
+        return True
+        
+    
+
+class DuplicatePairDecisionSkip( DuplicatePairDecision ):
+    
+    def HasWorkToDo( self ):
+        
+        return False
+        
+    
+
+class DuplicatePairDecisionSkipManual( DuplicatePairDecisionSkip ):
+    
+    pass
+    
+
+class DuplicatePairDecisionSkipAuto( DuplicatePairDecisionSkip ):
+    
+    pass
+    
+
+class DuplicatePairDecisionDuplicatesAction( DuplicatePairDecision ):
+    
+    def __init__(
+        self,
+        media_result_a: ClientMediaResult.MediaResult,
+        media_result_b: ClientMediaResult.MediaResult,
+        duplicate_type: int,
+        content_update_packages: list[ ClientContentUpdates.ContentUpdatePackage ]
+    ):
+        
+        self.duplicate_type = duplicate_type
+        self.content_update_packages = content_update_packages
+        
+        super().__init__( media_result_a, media_result_b )
+        
+    
+
+class DuplicatePairDecisionDeletion( DuplicatePairDecision ):
+    
+    def __init__(
+        self,
+        media_result_a: ClientMediaResult.MediaResult,
+        media_result_b: ClientMediaResult.MediaResult,
+        content_update_packages: list[ ClientContentUpdates.ContentUpdatePackage ]
+    ):
+        
+        # I seem to remember we had a place where it would have been useful to consult this action for which files were hit. maybe we want to push the content update package generation down or preserve a/b deletion bools here?
+        
+        self.content_update_packages = content_update_packages
+        
+        super().__init__( media_result_a, media_result_b )
+        
+    
+
+class DuplicatePairDecisionApproveDeny( DuplicatePairDecision ):
+    
+    def __init__(
+        self,
+        media_result_a: ClientMediaResult.MediaResult,
+        media_result_b: ClientMediaResult.MediaResult,
+        approved: bool
+    ):
+        
+        self.approved = approved
+        
+        super().__init__( media_result_a, media_result_b )
+        
+    
 
 class PotentialDuplicatePairFactory( object ):
     
@@ -19,6 +103,11 @@ class PotentialDuplicatePairFactory( object ):
     def DoSearchWork( self, *args ) -> bool:
         
         return True
+        
+    
+    def GetFirstSecondLabels( self ):
+        
+        return ( 'File One', 'File Two' )
         
     
     def GetLocationContext( self ) -> ClientLocation.LocationContext:
@@ -76,7 +165,7 @@ class PotentialDuplicatePairFactory( object ):
         return True
         
     
-    def SortPairs( self ):
+    def SortAndABPairs( self ):
         
         pass
         
@@ -172,9 +261,11 @@ class PotentialDuplicatePairFactoryDB( PotentialDuplicatePairFactory ):
         self._fetched_media_result_pairs_and_distances = ClientPotentialDuplicatesSearchContext.PotentialDuplicateMediaResultPairsAndDistances( [] )
         
     
-    def SortPairs( self ):
+    def SortAndABPairs( self ):
         
         self._fetched_media_result_pairs_and_distances.Sort( self._duplicate_pair_sort_type, self._duplicate_pair_sort_asc )
+        
+        self._fetched_media_result_pairs_and_distances.ABPairsUsingFastComparisonScore()
         
     
 
@@ -355,6 +446,11 @@ class PotentialDuplicatePairFactoryMediaResults( PotentialDuplicatePairFactory )
         self._potential_duplicate_media_result_pairs_and_distances = potential_duplicate_media_result_pairs_and_distances
         
     
+    def GetFirstSecondLabels( self ):
+        
+        return ( 'A', 'B' )
+        
+    
     def GetLocationContext( self ) -> ClientLocation.LocationContext:
         
         return ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY )
@@ -368,5 +464,27 @@ class PotentialDuplicatePairFactoryMediaResults( PotentialDuplicatePairFactory )
     def NotifyCommitDone( self ):
         
         self._potential_duplicate_media_result_pairs_and_distances = ClientPotentialDuplicatesSearchContext.PotentialDuplicateMediaResultPairsAndDistances( [] )
+        
+    
+    def SortAndABPairs( self ):
+        
+        # leaving this as pass just so I can comment
+        # not only is the sort pre-defined, but the AB order is also!
+        pass
+        
+    
+
+class PotentialDuplicatePairFactoryAutoResolutionReview( PotentialDuplicatePairFactoryMediaResults ):
+    
+    def __init__( self, potential_duplicate_media_result_pairs_and_distances: ClientPotentialDuplicatesSearchContext.PotentialDuplicateMediaResultPairsAndDistances, auto_resolution_rule: ClientDuplicatesAutoResolution.DuplicatesAutoResolutionRule ):
+        
+        self._auto_resolution_rule = auto_resolution_rule
+        
+        super().__init__( potential_duplicate_media_result_pairs_and_distances )
+        
+    
+    def GetRule( self ):
+        
+        return self._auto_resolution_rule
         
     

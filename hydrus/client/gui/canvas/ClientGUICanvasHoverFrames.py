@@ -2266,11 +2266,13 @@ class CanvasHoverFrameRightDuplicates( CanvasHoverFrame ):
     
     showPairInPage = QC.Signal()
     
-    def __init__( self, parent: QW.QWidget, my_canvas: QW.QWidget, canvas_key: bytes ):
+    def __init__( self, parent: QW.QWidget, my_canvas: QW.QWidget, canvas_key: bytes, show_approve_deny = False ):
         
         super().__init__( parent, my_canvas, canvas_key )
         
         self._always_on_top = True
+        
+        self._show_approve_deny = show_approve_deny
         
         self._current_index_string = ''
         
@@ -2321,6 +2323,16 @@ class CanvasHoverFrameRightDuplicates( CanvasHoverFrame ):
         command_button_vbox = QP.VBoxLayout()
         
         dupe_boxes = []
+        
+        if self._show_approve_deny:
+            
+            dupe_commands = []
+            
+            dupe_commands.append( ( 'approve', 'Approve this pair for the original auto-resolution rule.', CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_FILTER_APPROVE_AUTO_RESOLUTION ) ) )
+            dupe_commands.append( ( 'deny', 'Deny this pair for the original auto-resolution rule.', CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_FILTER_DENY_AUTO_RESOLUTION ) ) )
+            
+            dupe_boxes.append( ( 'auto-resolution', dupe_commands ) )
+            
         
         dupe_commands = []
         

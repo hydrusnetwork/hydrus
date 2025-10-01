@@ -5,6 +5,21 @@ import time
 
 from hydrus.core import HydrusConstants as HC
 
+# this guy catches crashes and dumps all thread stacks to original stderr or the stable file handle you pass to it
+# I am informed it has zero overhead but it will pre-empt or otherwise mess around with other dump creators
+import faulthandler
+
+DO_FAULTHANDLER_STUFF = False
+
+def turn_off_faulthandler():
+    
+    global DO_FAULTHANDLER_STUFF
+    
+    DO_FAULTHANDLER_STUFF = False
+    
+    faulthandler.disable()
+    
+
 class HydrusLogger( object ):
     
     def __init__( self, db_dir, prefix ):
@@ -54,6 +69,11 @@ class HydrusLogger( object ):
     
     def _CloseLog( self ) -> None:
         
+        if DO_FAULTHANDLER_STUFF:
+            
+            faulthandler.disable()
+            
+        
         self._log_file.close()
         
     
@@ -77,6 +97,11 @@ class HydrusLogger( object ):
         is_new_file = not os.path.exists( self._log_path )
         
         self._log_file = open( self._log_path, 'a', encoding = 'utf-8' )
+        
+        if DO_FAULTHANDLER_STUFF:
+            
+            faulthandler.enable( file = self._log_file, all_threads = True )
+            
         
         if is_new_file:
             

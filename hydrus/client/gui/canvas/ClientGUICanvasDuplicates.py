@@ -7,7 +7,6 @@ from qtpy import QtWidgets as QW
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
-from hydrus.core import HydrusLists
 from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusTime
 
@@ -16,6 +15,7 @@ from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientServices
 from hydrus.client import ClientThreading
+from hydrus.client.duplicates import ClientDuplicatesAutoResolution
 from hydrus.client.duplicates import ClientDuplicates
 from hydrus.client.duplicates import ClientDuplicatesComparisonStatements
 from hydrus.client.duplicates import ClientPotentialDuplicatesPairFactory
@@ -32,7 +32,46 @@ from hydrus.client.gui.panels import ClientGUIScrolledPanelsCommitFiltering
 from hydrus.client.media import ClientMedia
 from hydrus.client.metadata import ClientContentUpdates
 
-def THREADCommitDuplicateResults( content_update_packages: list, pairs_info: list ):
+def CommitDecision(
+    potential_duplicate_pair_factory: ClientPotentialDuplicatesPairFactory.PotentialDuplicatePairFactory,
+    duplicate_pair_decision: ClientPotentialDuplicatesPairFactory.DuplicatePairDecision
+):
+    
+    if isinstance( duplicate_pair_decision, ClientPotentialDuplicatesPairFactory.DuplicatePairDecisionDeletion ):
+        
+        content_update_packages = duplicate_pair_decision.content_update_packages
+        
+        if len( content_update_packages ) > 0:
+            
+            for content_update_package in content_update_packages:
+                
+                CG.client_controller.WriteSynchronous( 'content_updates', content_update_package )
+                
+            
+        
+    elif isinstance( potential_duplicate_pair_factory, ClientPotentialDuplicatesPairFactory.PotentialDuplicatePairFactoryAutoResolutionReview ) and isinstance( duplicate_pair_decision, ClientPotentialDuplicatesPairFactory.DuplicatePairDecisionApproveDeny ):
+        
+        rule = potential_duplicate_pair_factory.GetRule()
+        
+        ClientDuplicatesAutoResolution.ActionAutoResolutionReviewPairs( rule, ( duplicate_pair_decision, ) )
+        
+    elif isinstance( duplicate_pair_decision, ClientPotentialDuplicatesPairFactory.DuplicatePairDecisionDuplicatesAction ):
+        
+        info_tuple = (
+            duplicate_pair_decision.duplicate_type,
+            duplicate_pair_decision.media_result_a.GetHash(),
+            duplicate_pair_decision.media_result_b.GetHash(),
+            duplicate_pair_decision.content_update_packages
+        )
+        
+        CG.client_controller.WriteSynchronous( 'duplicate_pair_status', ( info_tuple, ) )
+        
+    
+
+def THREADCommitDuplicatePairDecisions(
+    potential_duplicate_pair_factory: ClientPotentialDuplicatesPairFactory.PotentialDuplicatePairFactory,
+    duplicate_pair_decisions: list[ ClientPotentialDuplicatesPairFactory.DuplicatePairDecision ]
+):
     
     start_time = HydrusTime.GetNowFloat()
     
@@ -41,9 +80,9 @@ def THREADCommitDuplicateResults( content_update_packages: list, pairs_info: lis
     
     job_status.SetStatusTitle( 'committing duplicate decisions' )
     
-    num_to_do = len( content_update_packages )
+    num_to_do = len( duplicate_pair_decisions )
     
-    for ( i, content_update_package ) in enumerate( content_update_packages ):
+    for ( i, duplicate_pair_decision ) in enumerate( duplicate_pair_decisions ):
         
         if not have_published_job_status and HydrusTime.TimeHasPassedFloat( start_time + 1 ):
             
@@ -54,30 +93,16 @@ def THREADCommitDuplicateResults( content_update_packages: list, pairs_info: lis
         
         num_done = i
         
-        job_status.SetStatusText( f'misc file updates: {HydrusNumbers.ValueRangeToPrettyString( num_done, num_to_do )}' )
-        job_status.SetGauge( num_done, num_to_do )
-        
-        CG.client_controller.WriteSynchronous( 'content_updates', content_update_package )
-        
-    
-    for ( num_done, num_to_do, block_of_pair_infos ) in HydrusLists.SplitListIntoChunksRich( pairs_info, 4 ):
-        
-        if not have_published_job_status and HydrusTime.TimeHasPassedFloat( start_time + 1 ):
-            
-            CG.client_controller.pub( 'message', job_status )
-            
-            have_published_job_status = True
-            
-        
         job_status.SetStatusText( f'decisions: {HydrusNumbers.ValueRangeToPrettyString( num_done, num_to_do )}' )
         job_status.SetGauge( num_done, num_to_do )
         
-        CG.client_controller.WriteSynchronous( 'duplicate_pair_status', block_of_pair_infos )
+        CommitDecision( potential_duplicate_pair_factory, duplicate_pair_decision )
         
     
     job_status.FinishAndDismiss()
     
     CG.client_controller.pub( 'new_similar_files_potentials_search_numbers' )
+    CG.client_controller.pub( 'notify_duplicate_filter_non_blocking_commit_complete' )
     
 
 class CanvasFilterDuplicates( ClientGUICanvas.CanvasWithHovers ):
@@ -85,7 +110,6 @@ class CanvasFilterDuplicates( ClientGUICanvas.CanvasWithHovers ):
     CANVAS_TYPE = CC.CANVAS_MEDIA_VIEWER_DUPLICATES
     
     showPairInPage = QC.Signal( list )
-    duplicateCanvasExitingAfterWorkDone = QC.Signal()
     
     def __init__( self, parent, potential_duplicate_pair_factory: ClientPotentialDuplicatesPairFactory.PotentialDuplicatePairFactory ):
         
@@ -95,9 +119,18 @@ class CanvasFilterDuplicates( ClientGUICanvas.CanvasWithHovers ):
         
         super().__init__( parent, location_context )
         
+        self._loading_text = 'initialising'
+        self._current_pair_score = 0
+        self._force_maintain_pan_and_zoom = True
+        
+        self._batch_of_pairs_to_process = []
+        self._current_pair_index = 0
+        self._duplicate_pair_decisions: list[ ClientPotentialDuplicatesPairFactory.DuplicatePairDecision ] = []
+        self._hashes_due_to_be_deleted_in_this_batch = set()
+        self._hashes_due_to_be_media_merged_in_this_batch = set()
+        
         self._num_items_to_commit = 0
-        self._content_update_packages_we_are_committing = []
-        self._pair_infos_we_are_committing = []
+        self._duplicate_pair_decisions_we_are_committing = []
         
         self._search_work_updater = self._InitialiseSearchWorkUpdater()
         
@@ -105,9 +138,9 @@ class CanvasFilterDuplicates( ClientGUICanvas.CanvasWithHovers ):
         
         self._canvas_type = CC.CANVAS_MEDIA_VIEWER_DUPLICATES
         
-        self._has_made_changes = False
+        show_approve_deny = isinstance( potential_duplicate_pair_factory, ClientPotentialDuplicatesPairFactory.PotentialDuplicatePairFactoryAutoResolutionReview )
         
-        self._duplicates_right_hover = ClientGUICanvasHoverFrames.CanvasHoverFrameRightDuplicates( self, self, self._canvas_key )
+        self._duplicates_right_hover = ClientGUICanvasHoverFrames.CanvasHoverFrameRightDuplicates( self, self, self._canvas_key, show_approve_deny = show_approve_deny )
         
         self.mediaChanged.connect( self._duplicates_right_hover.SetMedia )
         self.mediaCleared.connect( self._duplicates_right_hover.ClearMedia )
@@ -125,18 +158,6 @@ class CanvasFilterDuplicates( ClientGUICanvas.CanvasWithHovers ):
         
         self._my_shortcuts_handler.AddWindowToFilter( self._duplicates_right_hover )
         
-        self._force_maintain_pan_and_zoom = True
-        
-        self._current_pair_score = 0
-        
-        self._loading_text = 'initialising'
-        
-        self._batch_of_pairs_to_process = []
-        self._current_pair_index = 0
-        self._processed_pairs = []
-        self._hashes_due_to_be_deleted_in_this_batch = set()
-        self._hashes_due_to_be_media_merged_in_this_batch = set()
-        
         self._media_list = ClientMedia.MediaList( location_context, [] )
         
         self._my_shortcuts_handler.AddShortcuts( 'media_viewer_browser' )
@@ -147,10 +168,52 @@ class CanvasFilterDuplicates( ClientGUICanvas.CanvasWithHovers ):
         CG.client_controller.sub( self, 'SwitchMedia', 'canvas_show_next' )
         CG.client_controller.sub( self, 'SwitchMedia', 'canvas_show_previous' )
         
-        CG.client_controller.CallAfter( self, self._LoadNextBatchOfPairs )
-        
         CG.client_controller.sub( self, 'ProcessContentUpdatePackage', 'content_updates_gui' )
         CG.client_controller.sub( self, 'ProcessServiceUpdates', 'service_updates_gui' )
+        
+        CG.client_controller.CallAfter( self, self._LoadNextBatchOfPairs )
+        
+    
+    def _ApproveDenyAutoResolutionPair( self, approved: bool ):
+        
+        if self._current_media is None:
+            
+            return
+            
+        
+        if not isinstance( self._potential_duplicate_pair_factory, ClientPotentialDuplicatesPairFactory.PotentialDuplicatePairFactoryAutoResolutionReview ):
+            
+            return
+            
+        
+        ( media_result_1, media_result_2 ) = self._batch_of_pairs_to_process[ self._current_pair_index ]
+        
+        ( media_result_a, media_result_b ) = ( media_result_1, media_result_2 )
+        
+        rule = self._potential_duplicate_pair_factory.GetRule()
+        
+        duplicate_type = rule.GetAction()
+        
+        if duplicate_type in ( HC.DUPLICATE_BETTER, HC.DUPLICATE_SAME_QUALITY ):
+            
+            self._hashes_due_to_be_media_merged_in_this_batch.add( media_result_a.GetHash() )
+            
+        
+        ( delete_a, delete_b ) = rule.GetDeleteInfo()
+        
+        if delete_a:
+            
+            self._hashes_due_to_be_deleted_in_this_batch.add( media_result_a.GetHash() )
+            
+        
+        if delete_b:
+            
+            self._hashes_due_to_be_deleted_in_this_batch.add( media_result_b.GetHash() )
+            
+        
+        duplicate_pair_decision = ClientPotentialDuplicatesPairFactory.DuplicatePairDecisionApproveDeny( media_result_a, media_result_b, approved )
+        
+        self._ShowNextPair( duplicate_pair_decision )
         
     
     def _CommitProcessed( self, blocking = True ):
@@ -159,46 +222,18 @@ class CanvasFilterDuplicates( ClientGUICanvas.CanvasWithHovers ):
         self._media_list = ClientMedia.MediaList( self._location_context, [] )
         
         self._num_items_to_commit = 0
-        self._content_update_packages_we_are_committing = []
-        self._pair_infos_we_are_committing = []
         
         self._potential_duplicate_pair_factory.NotifyCommitDone()
         
-        for ( duplicate_type, media_a, media_b, content_update_packages, was_auto_skipped ) in self._processed_pairs:
-            
-            if duplicate_type is None:
-                
-                if len( content_update_packages ) > 0:
-                    
-                    for content_update_package in content_update_packages:
-                        
-                        self._content_update_packages_we_are_committing.append( content_update_package )
-                        
-                    
-                
-                continue
-                
-            
-            if was_auto_skipped:
-                
-                continue
-                
-            
-            hash_a = media_a.GetHash()
-            hash_b = media_b.GetHash()
-            
-            self._pair_infos_we_are_committing.append( ( duplicate_type, hash_a, hash_b, content_update_packages ) )
-            
+        self._duplicate_pair_decisions_we_are_committing = [ decision for decision in self._duplicate_pair_decisions if decision.HasWorkToDo() ]
         
-        self._processed_pairs = []
+        self._duplicate_pair_decisions = []
         self._hashes_due_to_be_deleted_in_this_batch = set()
         self._hashes_due_to_be_media_merged_in_this_batch = set()
         
-        self._num_items_to_commit = len( self._content_update_packages_we_are_committing ) + len( self._pair_infos_we_are_committing )
+        self._num_items_to_commit = len( self._duplicate_pair_decisions_we_are_committing )
         
         if self._num_items_to_commit > 0:
-            
-            self._has_made_changes = True
             
             if blocking:
                 
@@ -206,11 +241,10 @@ class CanvasFilterDuplicates( ClientGUICanvas.CanvasWithHovers ):
                 
             else:
                 
-                CG.client_controller.CallToThread( THREADCommitDuplicateResults, self._content_update_packages_we_are_committing, self._pair_infos_we_are_committing )
+                CG.client_controller.CallToThread( THREADCommitDuplicatePairDecisions, self._potential_duplicate_pair_factory, self._duplicate_pair_decisions_we_are_committing )
                 
                 self._num_items_to_commit = 0
-                self._content_update_packages_we_are_committing = []
-                self._pair_infos_we_are_committing = []
+                self._duplicate_pair_decisions_we_are_committing = []
                 
             
         
@@ -222,7 +256,7 @@ class CanvasFilterDuplicates( ClientGUICanvas.CanvasWithHovers ):
     
     def _CurrentlyCommitting( self ):
         
-        return len( self._content_update_packages_we_are_committing ) + len( self._pair_infos_we_are_committing ) > 0
+        return len( self._duplicate_pair_decisions_we_are_committing ) > 0 
         
     
     def _Delete( self, media = None, reason = None, file_service_key = None ):
@@ -263,6 +297,10 @@ class CanvasFilterDuplicates( ClientGUICanvas.CanvasWithHovers ):
             
             default_reason = 'Deleted manually in Duplicate Filter, along with its potential duplicate.'
             
+        else:
+            
+            raise NotImplementedError( 'Unknown delete command!' )
+            
         
         content_update_packages = []
         
@@ -293,16 +331,11 @@ class CanvasFilterDuplicates( ClientGUICanvas.CanvasWithHovers ):
                 self._hashes_due_to_be_deleted_in_this_batch.update( m.GetHashes() )
                 
             
-            was_auto_skipped = False
+            ( media_result_1, media_result_2 ) = self._batch_of_pairs_to_process[ self._current_pair_index ]
             
-            ( media_result_a, media_result_b ) = self._batch_of_pairs_to_process[ self._current_pair_index ]
+            duplicate_pair_decision = ClientPotentialDuplicatesPairFactory.DuplicatePairDecisionDeletion( media_result_1, media_result_2, content_update_packages )
             
-            media_a = ClientMedia.MediaSingleton( media_result_a )
-            media_b = ClientMedia.MediaSingleton( media_result_b )
-            
-            process_tuple = ( None, media_a, media_b, content_update_packages, was_auto_skipped )
-            
-            self._ShowNextPair( process_tuple )
+            self._ShowNextPair( duplicate_pair_decision )
             
         
         return deleted
@@ -420,7 +453,9 @@ class CanvasFilterDuplicates( ClientGUICanvas.CanvasWithHovers ):
             
         else:
             
-            current_media_label = f'File One' if self._current_media == self._media_list.GetFirst() else f'File Two'
+            ( first_label, second_label ) = self._potential_duplicate_pair_factory.GetFirstSecondLabels()
+            
+            current_media_label = first_label if self._current_media == self._media_list.GetFirst() else second_label
             
             progress = self._current_pair_index + 1
             total = len( self._batch_of_pairs_to_process )
@@ -462,17 +497,17 @@ class CanvasFilterDuplicates( ClientGUICanvas.CanvasWithHovers ):
     
     def _GetNumAutoSkips( self ):
         
-        return len( [ 1 for ( duplicate_type, media_a, media_b, content_update_packages, was_auto_skipped ) in self._processed_pairs if was_auto_skipped ] )
+        return len( [ 1 for duplicate_pair_decision in self._duplicate_pair_decisions if isinstance( duplicate_pair_decision, ClientPotentialDuplicatesPairFactory.DuplicatePairDecisionSkipAuto ) ] )
         
     
     def _GetNumCommittableDecisions( self ):
         
-        return len( [ 1 for ( duplicate_type, media_a, media_b, content_update_packages, was_auto_skipped ) in self._processed_pairs if duplicate_type is not None ] )
+        return len( [ 1 for duplicate_pair_decision in self._duplicate_pair_decisions if isinstance( duplicate_pair_decision, ( ClientPotentialDuplicatesPairFactory.DuplicatePairDecisionDuplicatesAction, ClientPotentialDuplicatesPairFactory.DuplicatePairDecisionApproveDeny ) ) ] )
         
     
     def _GetNumCommittableDeletes( self ):
         
-        return len( [ 1 for ( duplicate_type, media_a, media_b, content_update_packages, was_auto_skipped ) in self._processed_pairs if duplicate_type is None and len( content_update_packages ) > 0 ] )
+        return len( [ 1 for duplicate_pair_decision in self._duplicate_pair_decisions if isinstance( duplicate_pair_decision, ClientPotentialDuplicatesPairFactory.DuplicatePairDecisionDeletion ) ] )
         
     
     def _GetNumRemainingDecisions( self ):
@@ -554,7 +589,7 @@ class CanvasFilterDuplicates( ClientGUICanvas.CanvasWithHovers ):
         
         def pre_work_callable():
             
-            num_work_to_do = len( self._content_update_packages_we_are_committing ) + len( self._pair_infos_we_are_committing )
+            num_work_to_do = len( self._duplicate_pair_decisions_we_are_committing )
             
             if num_work_to_do == 0:
                 
@@ -570,31 +605,22 @@ class CanvasFilterDuplicates( ClientGUICanvas.CanvasWithHovers ):
             
             NUM_DECISIONS_IN_BLOCK = 4
             
-            block_of_content_update_packages = self._content_update_packages_we_are_committing[ : NUM_DECISIONS_IN_BLOCK ]
+            block_of_duplicate_pair_decisions = self._duplicate_pair_decisions_we_are_committing[ : NUM_DECISIONS_IN_BLOCK ]
             
-            self._content_update_packages_we_are_committing = self._content_update_packages_we_are_committing[ NUM_DECISIONS_IN_BLOCK : ]
-            
-            block_of_pair_infos = self._pair_infos_we_are_committing[ : NUM_DECISIONS_IN_BLOCK ]
-            
-            self._pair_infos_we_are_committing = self._pair_infos_we_are_committing[ NUM_DECISIONS_IN_BLOCK : ]
+            self._duplicate_pair_decisions_we_are_committing = self._duplicate_pair_decisions_we_are_committing[ NUM_DECISIONS_IN_BLOCK : ]
             
             self.update()
             
-            return ( block_of_content_update_packages, block_of_pair_infos )
+            return ( self._potential_duplicate_pair_factory, block_of_duplicate_pair_decisions )
             
         
         def work_callable( args ):
             
-            ( block_of_content_update_packages, block_of_pair_infos ) = args
+            ( potential_duplicate_pair_factory, block_of_duplicate_pair_decisions ) = args
             
-            for content_update_package in block_of_content_update_packages:
+            for duplicate_pair_decision in block_of_duplicate_pair_decisions:
                 
-                CG.client_controller.WriteSynchronous( 'content_updates', content_update_package )
-                
-            
-            if len( block_of_pair_infos ) > 0:
-                
-                CG.client_controller.WriteSynchronous( 'duplicate_pair_status', block_of_pair_infos )
+                CommitDecision( potential_duplicate_pair_factory, duplicate_pair_decision )
                 
             
             return 1
@@ -602,7 +628,7 @@ class CanvasFilterDuplicates( ClientGUICanvas.CanvasWithHovers ):
         
         def publish_callable( result ):
             
-            if len( self._content_update_packages_we_are_committing ) + len( self._pair_infos_we_are_committing ) == 0:
+            if len( self._duplicate_pair_decisions_we_are_committing ) == 0:
                 
                 self._LoadNextBatchOfPairs()
                 
@@ -615,34 +641,6 @@ class CanvasFilterDuplicates( ClientGUICanvas.CanvasWithHovers ):
             
         
         return ClientGUIAsync.AsyncQtUpdater( self, loading_callable, work_callable, publish_callable, pre_work_callable = pre_work_callable )
-        
-    
-    def _PresentFactoryPairs( self ):
-        
-        self._potential_duplicate_pair_factory.SortPairs()
-        
-        media_result_pairs_and_distances = self._potential_duplicate_pair_factory.GetPotentialDuplicateMediaResultPairsAndDistances()
-        
-        if len( media_result_pairs_and_distances ) == 0:
-            
-            skip_message = isinstance( self._potential_duplicate_pair_factory, ClientPotentialDuplicatesPairFactory.PotentialDuplicatePairFactoryMediaResults )
-            
-            if not skip_message:
-                
-                ClientGUIDialogsMessage.ShowInformation( self, 'All pairs have been filtered!' )
-                
-            
-            CG.client_controller.pub( 'new_similar_files_potentials_search_numbers' )
-            
-            self._TryToCloseWindow()
-            
-        else:
-            
-            self._batch_of_pairs_to_process = media_result_pairs_and_distances.GetPairs()
-            self._current_pair_index = 0
-            
-            self._ShowCurrentPair()
-            
         
     
     def _InitialiseSearchWorkUpdater( self ):
@@ -709,7 +707,7 @@ class CanvasFilterDuplicates( ClientGUICanvas.CanvasWithHovers ):
             
         
         self._batch_of_pairs_to_process = []
-        self._processed_pairs = []
+        self._duplicate_pair_decisions = []
         self._hashes_due_to_be_deleted_in_this_batch = set()
         self._hashes_due_to_be_media_merged_in_this_batch = set()
         
@@ -796,6 +794,34 @@ class CanvasFilterDuplicates( ClientGUICanvas.CanvasWithHovers ):
             
         
     
+    def _PresentFactoryPairs( self ):
+        
+        self._potential_duplicate_pair_factory.SortAndABPairs()
+        
+        media_result_pairs_and_distances = self._potential_duplicate_pair_factory.GetPotentialDuplicateMediaResultPairsAndDistances()
+        
+        if len( media_result_pairs_and_distances ) == 0:
+            
+            skip_message = isinstance( self._potential_duplicate_pair_factory, ClientPotentialDuplicatesPairFactory.PotentialDuplicatePairFactoryMediaResults )
+            
+            if not skip_message:
+                
+                ClientGUIDialogsMessage.ShowInformation( self, 'All pairs have been filtered!' )
+                
+            
+            CG.client_controller.pub( 'new_similar_files_potentials_search_numbers' )
+            
+            self._TryToCloseWindow()
+            
+        else:
+            
+            self._batch_of_pairs_to_process = media_result_pairs_and_distances.GetPairs()
+            self._current_pair_index = 0
+            
+            self._ShowCurrentPair()
+            
+        
+    
     def _ProcessPair( self, duplicate_type, delete_a = False, delete_b = False, duplicate_content_merge_options = None ):
         
         if self._current_media is None:
@@ -819,8 +845,6 @@ class CanvasFilterDuplicates( ClientGUICanvas.CanvasWithHovers ):
         
         media_a = self._current_media
         media_b = typing.cast( ClientMedia.MediaSingleton, self._media_list.GetNext( media_a ) )
-        
-        was_auto_skipped = False
         
         if duplicate_type in ( HC.DUPLICATE_BETTER, HC.DUPLICATE_SAME_QUALITY ):
             
@@ -867,25 +891,25 @@ class CanvasFilterDuplicates( ClientGUICanvas.CanvasWithHovers ):
         
         content_update_packages = duplicate_content_merge_options.ProcessPairIntoContentUpdatePackages( media_a.GetMediaResult(), media_b.GetMediaResult(), delete_a = delete_a, delete_b = delete_b, file_deletion_reason = file_deletion_reason )
         
-        process_tuple = ( duplicate_type, media_a, media_b, content_update_packages, was_auto_skipped )
+        duplicate_pair_decision = ClientPotentialDuplicatesPairFactory.DuplicatePairDecisionDuplicatesAction(
+            media_a.GetMediaResult(),
+            media_b.GetMediaResult(),
+            duplicate_type,
+            content_update_packages
+        )
         
-        self._ShowNextPair( process_tuple )
+        self._ShowNextPair( duplicate_pair_decision )
         
     
     def _RecoverAfterMediaUpdate( self ):
         
         if len( self._media_list ) < 2 and len( self._batch_of_pairs_to_process ) > self._current_pair_index:
             
-            was_auto_skipped = True
+            ( media_result_1, media_result_2 ) = self._batch_of_pairs_to_process[ self._current_pair_index ]
             
-            ( media_result_a, media_result_b ) = self._batch_of_pairs_to_process[ self._current_pair_index ]
+            duplicate_pair_decision = ClientPotentialDuplicatesPairFactory.DuplicatePairDecisionSkipAuto( media_result_1, media_result_2 )
             
-            media_a = ClientMedia.MediaSingleton( media_result_a )
-            media_b = ClientMedia.MediaSingleton( media_result_b )
-            
-            process_tuple = ( None, media_a, media_b, [], was_auto_skipped )
-            
-            self._ShowNextPair( process_tuple )
+            self._ShowNextPair( duplicate_pair_decision )
             
         else:
             
@@ -902,7 +926,7 @@ class CanvasFilterDuplicates( ClientGUICanvas.CanvasWithHovers ):
         
         def test_we_can_pop():
             
-            if len( self._processed_pairs ) == 0:
+            if len( self._duplicate_pair_decisions ) == 0:
                 
                 # the first one shouldn't be auto-skipped, so if it was and now we can't pop, something weird happened
                 
@@ -922,23 +946,25 @@ class CanvasFilterDuplicates( ClientGUICanvas.CanvasWithHovers ):
             
             while True:
                 
+                # rewind back through all our auto-skips until we get to something human
+                
                 if not test_we_can_pop():
                     
                     return False
                     
                 
-                ( duplicate_type, media_a, media_b, content_update_packages, was_auto_skipped ) = self._processed_pairs.pop()
+                duplicate_pair_decision = self._duplicate_pair_decisions.pop()
                 
                 self._current_pair_index -= 1
                 
-                if not was_auto_skipped:
+                if not isinstance( duplicate_pair_decision, ClientPotentialDuplicatesPairFactory.DuplicatePairDecisionSkipAuto ):
                     
                     break
                     
                 
             
             # only want this for the one that wasn't auto-skipped
-            for m in ( media_a, media_b ):
+            for m in ( duplicate_pair_decision.media_result_a, duplicate_pair_decision.media_result_a ):
                 
                 hash = m.GetHash()
                 
@@ -959,22 +985,12 @@ class CanvasFilterDuplicates( ClientGUICanvas.CanvasWithHovers ):
             return
             
         
+        # better file first is now handled by the pair factory; we used to do it here
         ( media_result_1, media_result_2 ) = self._batch_of_pairs_to_process[ self._current_pair_index ]
         
-        self._current_pair_score = ClientDuplicatesComparisonStatements.GetDuplicateComparisonScore( media_result_1, media_result_2 )
+        self._current_pair_score = ClientDuplicatesComparisonStatements.GetDuplicateComparisonScoreFast( media_result_1, media_result_2 )
         
-        if self._current_pair_score > 0:
-            
-            media_results_with_better_first = ( media_result_1, media_result_2 )
-            
-        else:
-            
-            self._current_pair_score = - self._current_pair_score
-            
-            media_results_with_better_first = ( media_result_2, media_result_1 )
-            
-        
-        self._media_list = ClientMedia.MediaList( self._location_context, media_results_with_better_first )
+        self._media_list = ClientMedia.MediaList( self._location_context, ( media_result_1, media_result_2 ) )
         
         # reset zoom gubbins
         self.SetMedia( None )
@@ -992,7 +1008,7 @@ class CanvasFilterDuplicates( ClientGUICanvas.CanvasWithHovers ):
         self._media_container.show()
         
     
-    def _ShowNextPair( self, process_tuple: tuple ):
+    def _ShowNextPair( self, duplicate_pair_decision: ClientPotentialDuplicatesPairFactory.DuplicatePairDecision ):
         
         if not self._HaveFetchedPairsToWork():
             
@@ -1016,25 +1032,25 @@ class CanvasFilterDuplicates( ClientGUICanvas.CanvasWithHovers ):
         
         def pair_is_good( pair ):
             
-            ( media_result_a, media_result_b ) = pair
+            ( media_result_1, media_result_2 ) = pair
             
-            hash_a = media_result_a.GetHash()
-            hash_b = media_result_b.GetHash()
+            hash_1 = media_result_1.GetHash()
+            hash_2 = media_result_2.GetHash()
             
-            if hash_a in self._hashes_due_to_be_media_merged_in_this_batch or hash_b in self._hashes_due_to_be_media_merged_in_this_batch:
+            if hash_1 in self._hashes_due_to_be_media_merged_in_this_batch or hash_2 in self._hashes_due_to_be_media_merged_in_this_batch:
                 
                 return False
                 
             
-            if hash_a in self._hashes_due_to_be_deleted_in_this_batch or hash_b in self._hashes_due_to_be_deleted_in_this_batch:
+            if hash_1 in self._hashes_due_to_be_deleted_in_this_batch or hash_2 in self._hashes_due_to_be_deleted_in_this_batch:
                 
                 return False
                 
             
-            media_a = ClientMedia.MediaSingleton( media_result_a )
-            media_b = ClientMedia.MediaSingleton( media_result_b )
+            media_1 = ClientMedia.MediaSingleton( media_result_1 )
+            media_2 = ClientMedia.MediaSingleton( media_result_2 )
             
-            if not ClientMedia.CanDisplayMedia( media_a ) or not ClientMedia.CanDisplayMedia( media_b ):
+            if not ClientMedia.CanDisplayMedia( media_1 ) or not ClientMedia.CanDisplayMedia( media_2 ):
                 
                 return False
                 
@@ -1044,7 +1060,7 @@ class CanvasFilterDuplicates( ClientGUICanvas.CanvasWithHovers ):
         
         #
         
-        self._processed_pairs.append( process_tuple )
+        self._duplicate_pair_decisions.append( duplicate_pair_decision )
         
         self._current_pair_index += 1
         
@@ -1068,7 +1084,7 @@ class CanvasFilterDuplicates( ClientGUICanvas.CanvasWithHovers ):
                         num_auto_skips = self._GetNumAutoSkips()
                         
                         # we want to carefully test that there were no manual skips
-                        if num_committable + num_deletable <= just_do_it_threshold and num_committable + num_deletable + num_auto_skips == len( self._processed_pairs ):
+                        if num_committable + num_deletable <= just_do_it_threshold and num_committable + num_deletable + num_auto_skips == len( self._duplicate_pair_decisions ):
                             
                             just_do_it = True
                             
@@ -1124,17 +1140,7 @@ class CanvasFilterDuplicates( ClientGUICanvas.CanvasWithHovers ):
                     
                     # nothing to commit, so let's see if we have a big problem here or if user just skipped all
                     
-                    we_saw_a_non_auto_skip = False
-                    
-                    for ( duplicate_type, media_a, media_b, content_update_packages, was_auto_skipped ) in self._processed_pairs:
-                        
-                        if not was_auto_skipped:
-                            
-                            we_saw_a_non_auto_skip = True
-                            
-                            break
-                            
-                        
+                    we_saw_a_non_auto_skip = True in ( not isinstance( duplicate_pair_decision, ClientPotentialDuplicatesPairFactory.DuplicatePairDecisionSkipAuto ) for duplicate_pair_decision in self._duplicate_pair_decisions )
                     
                     if we_saw_a_non_auto_skip:
                         
@@ -1156,9 +1162,9 @@ class CanvasFilterDuplicates( ClientGUICanvas.CanvasWithHovers ):
                         
                         HydrusData.Print( 'Rows that could not be displayed:' )
                         
-                        for ( duplicate_type, media_a, media_b, content_update_packages, was_auto_skipped ) in self._processed_pairs:
+                        for duplicate_pair_decision in self._duplicate_pair_decisions:
                             
-                            print( f'Dup: {duplicate_type}, Hashes: {media_a.GetHash().hex()}, {media_b.GetHash().hex()}' )
+                            print( f'Dup: {duplicate_pair_decision}, Hashes: {duplicate_pair_decision.media_result_a.GetHash().hex()}, {duplicate_pair_decision.media_result_b.GetHash().hex()}' )
                             
                         
                         ClientGUIDialogsMessage.ShowCritical( self, 'Hell!', 'It seems an entire batch of pairs were unable to be displayed. The duplicate filter will now close. More information has been written to the log.' )
@@ -1174,9 +1180,9 @@ class CanvasFilterDuplicates( ClientGUICanvas.CanvasWithHovers ):
                 return
                 
             
-            current_pair = self._batch_of_pairs_to_process[ self._current_pair_index ]
+            ( media_result_1, media_result_2 ) = self._batch_of_pairs_to_process[ self._current_pair_index ]
             
-            if pair_is_good( current_pair ):
+            if pair_is_good( ( media_result_1, media_result_2 ) ):
                 
                 self._ShowCurrentPair()
                 
@@ -1184,9 +1190,9 @@ class CanvasFilterDuplicates( ClientGUICanvas.CanvasWithHovers ):
                 
             else:
                 
-                was_auto_skipped = True
+                duplicate_pair_decision = ClientPotentialDuplicatesPairFactory.DuplicatePairDecisionSkipAuto( media_result_1, media_result_2 )
                 
-                self._processed_pairs.append( ( None, None, None, [], was_auto_skipped ) )
+                self._duplicate_pair_decisions.append( duplicate_pair_decision )
                 
                 self._current_pair_index += 1
                 
@@ -1210,16 +1216,11 @@ class CanvasFilterDuplicates( ClientGUICanvas.CanvasWithHovers ):
             return
             
         
-        was_auto_skipped = False
-
-        ( media_result_a, media_result_b ) = self._batch_of_pairs_to_process[ self._current_pair_index ]
+        ( media_result_1, media_result_2 ) = self._batch_of_pairs_to_process[ self._current_pair_index ]
         
-        media_a = ClientMedia.MediaSingleton( media_result_a )
-        media_b = ClientMedia.MediaSingleton( media_result_b )
+        duplicate_pair_decision = ClientPotentialDuplicatesPairFactory.DuplicatePairDecisionSkipManual( media_result_1, media_result_2 )
         
-        process_tuple = ( None, media_a, media_b, [], was_auto_skipped )
-        
-        self._ShowNextPair( process_tuple )
+        self._ShowNextPair( duplicate_pair_decision )
         
     
     def _SwitchMedia( self ):
@@ -1245,16 +1246,6 @@ class CanvasFilterDuplicates( ClientGUICanvas.CanvasWithHovers ):
             
             self._Archive()
             
-        
-    
-    def CleanBeforeDestroy( self ):
-        
-        if self._has_made_changes:
-            
-            self.duplicateCanvasExitingAfterWorkDone.emit()
-            
-        
-        super().CleanBeforeDestroy()
         
     
     def Delete( self, canvas_key ):
@@ -1332,6 +1323,12 @@ class CanvasFilterDuplicates( ClientGUICanvas.CanvasWithHovers ):
                 
                 self._SwitchMedia()
                 
+            elif action in ( CAC.SIMPLE_DUPLICATE_FILTER_APPROVE_AUTO_RESOLUTION, CAC.SIMPLE_DUPLICATE_FILTER_DENY_AUTO_RESOLUTION ):
+                
+                approved = action == CAC.SIMPLE_DUPLICATE_FILTER_APPROVE_AUTO_RESOLUTION
+                
+                self._ApproveDenyAutoResolutionPair( approved )
+                
             else:
                 
                 command_processed = False
@@ -1364,9 +1361,9 @@ class CanvasFilterDuplicates( ClientGUICanvas.CanvasWithHovers ):
         self._RecoverAfterMediaUpdate()
         
     
-    def SetMedia( self, media ):
+    def SetMedia( self, media, start_paused = None ):
         
-        super().SetMedia( media )
+        super().SetMedia( media, start_paused = start_paused )
         
         if media is not None:
             

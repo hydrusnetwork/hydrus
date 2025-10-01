@@ -115,7 +115,7 @@ class HydrusResourceClientAPIRestrictedManageFileRelationshipsGetPotentialPairs(
                 pair_factory.DoSearchWork()
                 
             
-            pair_factory.SortPairs()
+            pair_factory.SortAndABPairs()
             
             media_result_pairs_and_distances = pair_factory.GetPotentialDuplicateMediaResultPairsAndDistances()
             

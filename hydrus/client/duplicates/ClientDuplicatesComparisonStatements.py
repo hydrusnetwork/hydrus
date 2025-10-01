@@ -23,7 +23,7 @@ COMPLEX_COMPARISON_FILETYPES.update( HC.IMAGE_PROJECT_FILES )
 COMPLEX_COMPARISON_FILETYPES.update( HC.APPLICATIONS )
 COMPLEX_COMPARISON_FILETYPES.update( HC.ARCHIVES )
 
-def GetDuplicateComparisonScore( shown_media_result: ClientMediaResult.MediaResult, comparison_media_result: ClientMediaResult.MediaResult ):
+def GetDuplicateComparisonScoreFast( shown_media_result: ClientMediaResult.MediaResult, comparison_media_result: ClientMediaResult.MediaResult ):
     
     ( statements_and_scores, they_are_pixel_duplicates ) = GetDuplicateComparisonStatementsFast( shown_media_result, comparison_media_result )
     

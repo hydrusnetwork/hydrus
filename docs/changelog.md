@@ -7,6 +7,66 @@ title: Changelog
 !!! note
     This is the new changelog, only the most recent builds. For all versions, see the [old changelog](old_changelog.html).
 
+## [Version 641](https://github.com/hydrusnetwork/hydrus/releases/tag/v641)
+
+### Client API projects
+
+* this past week, a user launched Hydrui, a new web portal for the Client API. it looks nice! repo: https://github.com/hydrui/hydrui / main site: https://hydrui.dev/
+* a couple months ago, another user created 'hydrus-automate', a system that automatically applies metadata according to customisable rules like "all files with tag x should be sent to local file service y". repo: https://github.com/Zspaghetti/hydrus-automate
+* I added both of these to the Client API help landing page and brushed up the links and descriptions there. also linked Hybooru, https://github.com/funmaker/Hybooru , a booru style read-only web wrapper for the client, which was until now only in the Docker readme
+
+### important crash reporting update
+
+* **EDIT: In further testing, this mode conflicted with mpv and _causes_ crashes within seconds of normal playback. this mode is disabled for now, I will work on it more next week**
+* in a stroke of luck, I discovered a nice way to gather data during a crash (i.e. when the entire program halts immediately, no error popup etc..). if your boot gets as far as creating your client/server .log file, then any full on crash will now write the current stack for all open threads to the log file. hooray!
+* so, if you suffer from regular crashes, please check your log files--there will now be a bunch of stuff in there. I am very interested in seeing it as it will help me to figure out what I did wrong
+* the new crash handler code (using `faulthandler`) may interfere with other OS-level crash reporting or dumping, so if you happen to want to use WER or Linux Dumps to catch a particular crash, you can turn this guy off under `help->debug->tests do not touch->turn off faulthandler crash logging`
+
+### merging clients
+
+* I have written some help for how to merge a client into another. this has always been a patchwork process that I would talk about in an ad-hoc way, so now we have somewhere to point people that I can keep hanging things off as various problems are solved: https://hydrusnetwork.github.io/hydrus/database_merging.html
+* I recall seeing some user(s) posting scripts that would do Client API timestamp migration or sidecar generations or similar. if you know of this, please link me to them or post them or whatever, and I'll integrate them into this document
+
+### duplicates auto-resolution
+
+* important fix: the duplicate-filter-like media viewers that launch from the duplicates auto-resolution preview and preview thumbnail pair lists now order their files same as the list does!! previously, the duplicate filter tech that tries to put the higher scoring file as 'File One' was still kicking in and, for some rules, presenting some pairs in the opposite order. sorry for the trouble, and thank you for the reports. also, the 'File One/Two' labels here are now, correctly, 'A/B' for these filters
+* the duplicate-filter-like media viewer that launches from the 'review' auto-resolution panel's thumbnail pair list now has 'approve/deny' buttons on the right-hand duplicate hover window. these plug into the actual rule, and there's a couple neat things where the filter is clever enough to perform the filter's cleverer 'ok that file in the upcoming pair was deleted/merged in a previous decision; let's auto-skip it' tech on the batch
+* added `duplicate filter: approve/deny auto-resolution pair` to the 'duplicate filter' shortcut set
+* after saying "I don't expect to change the suggested rules again much" last week, I am changing the 'pixel-perfect pairs' rule to select for `A > B filesize`. previously it was `A < B filesize`. after looking at my and users' IRL test feedback, I think going for the larger file will tend to select for the original more frequently (CDNs tend to strip rather than add extraneous file header info, which is the only difference with pixel-perfect pairs) and that's what we should focus on. going for the smaller file only tends to save a handful of KB on average. although saving space is nice, we are already saving ~50% filesize in duplicate processing, so let's spend a few KB to hit the original version of files more often
+* I also removed the `A filesize > B OR A num_pixels > B` comparator from the 'visually similar pairs' suggested rule. I was trying to be too clever--the three `>=` filesize, width, height rules cover the same question in a logically better and more KISS way
+* brand new duplicates auto-resolution rules (when you click 'add') now start with `[ system:filetype is image, system:width > 128, system:height>128 ]`, and max search distance of 0
+* if an auto-resolution rule is not semi-automatic, loading up the 'review' window defaults to the 'actions taken' page
+* if an auto-resolution visual duplicates comparator test results in a rendering error, it no longer interrupts the user with a popup
+* I gave the duplicates auto-resolution help another full pass: https://hydrusnetwork.github.io/hydrus/advanced_duplicates_auto_resolution.html
+* I am close to launching this whole system for all users and the next few weeks will aggressively triage the remaining todo so we can hone in on a v1.0
+
+### misc
+
+* when you use a shortcut to apply a tag, like/dislike, numerical, or inc/dec rating to many thumbnails using a shortcut, this job is now split into smaller batches (e.g. of 64 files). if it takes more than three seconds, a popup with a progress gauge will appear (issue #1807)
+* when an image fails to render, the error text is a little better and there's a special catch for 'seems like our rotation understanding changed' situations
+* the 'test parsing' panels in the edit parsing UI now do nothing if you enter a blank URL after clicking the 'fetch data from an url' 'link' button
+* the upper 'fetch test data from url' panel that appears in the 'edit page parser' version of this test panel, if the URL input is blank, will fetch the current example urls and put the top one in, just like how the dialog initialises
+* added a link to the DeepWiki AI crawl of the Hydrus Repo https://deepwiki.com/hydrusnetwork/hydrus to the help, just as a reference. I ran into this by accident this week and was quite impressed. it isn't comprehensive and attributes more thought on my part than actually happened, but pretty much everything it says is correct
+* improved error handling when a file recycle fails and added a briefer catch for 'filename too long' errors (happens for me in Linux when a tweet screenshot with a full filename is deleted after import, and Linux tries to add a .trashinfo suffix)
+* under `options->files and trash`, you can now set an 'ADVANCED: do not use chmod' mode. if you have an ACL-backed storage system, you may be getting errors or audit logspam from when hydrus copies the permission bits to newly imported files. set this mode and you'll use different copy paths that only copy file contents and try to copy access/modified time over
+
+### boring stuff
+
+* I have added a couple ways to induce a crash to `help->debug->tests do not touch->induce a program crash`. one just calls `os.abort`, the other spams an immediate GUI repaint from a worker thread
+* updated some deprecated twisted 404 Resources in the hydrus client api server setup
+* when potential duplicate search contexts give a summary string, the '(not) pixel duplicates' part is now at the front, before file search info
+* when potential duplicate search contexts give a summary string, they now say their max hamming search distance if not set to require pixel duplicates
+* wrote a new class to handle the 'I have made a decision in the duplicate filter' action and associated pipelines. previously it was a hacky and ugly tuple doing four different jobs
+* this new pipeline has a bunch of action and commit logic to handle a new 'approve/deny' decision as related to auto-resolution review panel, which now produces a rule-aware pair factory
+* general cleanup for the duplicate filter now we don't have so many crazy tuples
+* updated the duplicate filter commit pipeline to use the new decision object in many more places, simplifying it significantly
+* also renamed a lot of the gubbins around here to use the new 'duplicate pair decision' nomenclature. it was all a mess before
+* removed a 'I'm done with work after exiting' signal from the duplicates filter that was firing at the wrong time; replaced it with a pubsub from the actual thread that does the work. it still seems like the 'review' auto-resolution panel is not reacting to this signal correctly, nor 'undo approved action', so there's a bit more to do here
+* cleaned up some deprecated datetime utc calls and a subprocess connections call
+* the umask fetch when we try to give a file nice permission bits is now thread safe
+* the duplicate 'preparation' tab cog icon now lists 'idle time/normal time' like everything else, not 'normal time/idle time'
+* fixed a one-in-a-hundred chance of a duplicate file test unit test failing because of unlucky random number selection
+
 ## [Version 640](https://github.com/hydrusnetwork/hydrus/releases/tag/v640)
 
 ### new navigation features
@@ -468,45 +528,3 @@ title: Changelog
 * `options->media viewer hovers` now has a label at the top saying what a hover is lol
 * moved some list code from `HydrusData` to `HydrusLists`
 * to reduce confusion, the 'verify https traffic' DEBUG checkbox in `options->connection` is inverted to be 'do not verify'
-
-## [Version 631](https://github.com/hydrusnetwork/hydrus/releases/tag/v631)
-
-### custom static assets
-
-* you can now override any of the files in `install_dir/static` by creating a replacement in `db_dir/static`! it works like a lot of vidya modding folders do, where the program consults your user folder before falling back to the install's default whenever it loads an asset. If you want a custom splash image (`static/hydrus_splash.png`), go for it!
-* routines like 'what QSS stylesheets are available?' and 'what rating SVGs are available?' and (less significant) the various 'what should our default downloaders be?' check both possible locations to create their lists, preferring (if there are filename conflicts) what it finds in your user dir
-* I now explicitly recommend that custom QSS or SVGs go in this directory rather than editing the install dir. it lets you have a completely read-only install and means you don't have to worry about overwrites or clears if you update or git resync or whatever. this puts us one step closer to not having a crazy install environment, hooray
-* a new `--no_user_static_dir` launch parameter disables this mode, if you need to do quick debug
-* I wrote some simple help for this here: https://hydrusnetwork.github.io/hydrus/custom_assets.html
-
-### misc
-
-* I fixed some issues with the 'hover windows show/hide better' """improvements""" from last week. the child window testing logic was slightly dodgy and hover windows were not showing at all when there were two media viewers open. I simplified it and cleared out the unhelpful behaviour. the mouse hide/show should interact with dialogs a bit better now too
-* search pages that start with 'include current/pending tags' turned off will now initialise correctly in this state. previously, the buttons were displaying 'off', as intended, but the internal search object was starting True/True always, so a bare F5 refresh was giving the wrong results and hitting the buttons the first time was not triggering a 'new search state, need to refresh' call since the button was just aligning on that first click with what the internal object already thought
-* hydrus has _better_ duration/framerate parsing on videos that ffmpeg cannot report a good duration on. if, say, ffmpeg thinks the video is 40ms long but we just manually counted 400 frames, it now trusts its fps number more than the duration (previously it always trusted the duration)
-* added a new shortcut command that does 'close media viewer and focus the tab the media came from, if possible, and focus the media'. same as the related command, but it forces the media focus if you have that not set under `options->media viewer`
-* the 'review session cookies' and sub-panel now have 'export to clipboard' and 'import from clipboard' buttons. there's some domain filtering here that ensures cookies only go in the slot they are supposed to
-* the 'expires' section in the edit cookie dialog works better--it now boots with the existing value, and the max settable time is 200 years
-
-### duplicates
-
-* the duplicates filter page sidebar now only disables 'launch the filter' and 'show some random potential pairs' if the search is A) complete and B) found nothing. previously, it was disabling until it found at least one pair, which is technically great but annoying in practice
-* if you have 'After duplicate filter, ensure deletees are inboxed before delete' on, this now also applies to manual file deletes within the filter
-
-### complicated url-spawning metadata propagation issue
-
-* there are two ways an url file import job can create child jobs--one, by parsing multiple 'posts' with separate metadata using a subsidiary page parser, as in a watcher; the other, by parsing multiple urls within one post with a normal page parser. until now, these routines created their child objects with different, ad-hoc code. most of the 'my downloader that works like this doesn't get the tags/parent url/whatever assocated to this child down the chain' bugs were due to this
-* this situation is now remedied. both routines now use the same shared call to create children. referral urls are set up correct; the parent url is added as an associable url; parsed http headers are passed along correctly; source time is passed down; and tags, notes and parsed primary/source urls, which were all working correct before, are still passed down (issue #1763)
-* I've done the same for gallery objects creating child gallery or file imports. they had similar but lesser issues
-* there are still a couple of issues in the pipeline regarding gallery urls that use multiple tiers of subsidiary page parsers. I am thinking about how to sort it out
-
-### boring stuff
-
-* renamed the 'confirm when closing a non-empty downloader page' in the options to _importer_ page. this applies to all importers, including hard drive import pages (issue #1764)
-* the 'regen total pending count' database maintenance job now asks you to choose a repo or ipfs service. previously it was asking you to choose from every service
-* if a database is missing critical tables and thus non-functional, it now reports the specific table names
-* rejiggered my 'eliding label' sizeHint code to talk to Qt layouts better
-* the top hover window now has fixed width and will no longer overflow. at very small sizes, the buttons will shrink and overflowing text will behave better
-* the 'delay reason' label on the edit subscription panel now has proper wrap and eliding, so if that guy gets a gigantic error text, it'll now fit better
-* forced subscription popups a little wider by default
-* added another note from a user about mpv in the Linux install help, this time about MangoHUD. I think we might want a separate page regarding Linux environment tweaks and fixes

@@ -171,14 +171,6 @@ And a costume change:
 
 None of these are duplicates, but they are obviously related. The duplicate search will notice they are similar, so we should let the client know they are 'alternate'.
 
-Here's a subtler case:
-
-[![](images/dupe_alternate_boxer_a.jpg)](images/dupe_alternate_boxer_a.jpg) [![](images/dupe_alternate_boxer_b.jpg)](images/dupe_alternate_boxer_b.jpg)
-
-These two files are very similar, but try opening both in separate tabs and then flicking back and forth: the second's glove-string is further into the mouth and has improved chin shading, a more refined eye shape, and shaved pubic hair. It is simple to spot these differences in the client's duplicate filter when you scroll back and forth.
-
-I believe the second is an improvement on the first by the same artist, so it is a WIP alternate. You might also consider it a 'better' improvement.
-
 Here are three files you might or might not consider to be alternates:
 
 [![](images/dupe_alternate_1.jpg)](images/dupe_alternate_1.jpg)

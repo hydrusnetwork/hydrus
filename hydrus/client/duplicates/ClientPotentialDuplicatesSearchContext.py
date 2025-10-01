@@ -179,6 +179,31 @@ class PotentialDuplicateMediaResultPairsAndDistances( object ):
         return len( self._potential_media_result_pairs_and_distances )
         
     
+    def ABPairsUsingFastComparisonScore( self ):
+        
+        from hydrus.client.duplicates import ClientDuplicatesComparisonStatements
+        
+        new_potential_media_result_pairs_and_distances = []
+        
+        for ( media_result_1, media_result_2, distance ) in self._potential_media_result_pairs_and_distances:
+            
+            pair_score_12 = ClientDuplicatesComparisonStatements.GetDuplicateComparisonScoreFast( media_result_1, media_result_2 )
+            
+            if pair_score_12 > 0:
+                
+                new_tuple = ( media_result_1, media_result_2, distance )
+                
+            else:
+                
+                new_tuple = ( media_result_2, media_result_1, distance )
+                
+            
+            new_potential_media_result_pairs_and_distances.append( new_tuple )
+            
+        
+        self._potential_media_result_pairs_and_distances = new_potential_media_result_pairs_and_distances
+        
+    
     def AppendRow( self, row ):
         
         self._potential_media_result_pairs_and_distances.append( row )
@@ -383,31 +408,36 @@ class PotentialDuplicatesSearchContext( HydrusSerialisable.SerialisableBase ):
     
     def GetSummary( self ) -> str:
         
-        if self._dupe_search_type == ClientDuplicates.DUPE_SEARCH_BOTH_FILES_MATCH_DIFFERENT_SEARCHES:
-            
-            search_string = f'files matching [{self._file_search_context_1.GetSummary()}] and [{self._file_search_context_2.GetSummary()}]'
-            
-        elif self._dupe_search_type == ClientDuplicates.DUPE_SEARCH_BOTH_FILES_MATCH_ONE_SEARCH:
-            
-            search_string = f'both files matching [{self._file_search_context_1.GetSummary()}]'
-            
-        else:
-            
-            search_string = f'one file matching [{self._file_search_context_1.GetSummary()}]'
-            
-        
-        pixel_dupes_string = ''
+        components = []
         
         if self._pixel_dupes_preference == ClientDuplicates.SIMILAR_FILES_PIXEL_DUPES_REQUIRED:
             
-            pixel_dupes_string = ', pixel duplicates'
+            components.append( 'pixel duplicates' )
             
         elif self._pixel_dupes_preference == ClientDuplicates.SIMILAR_FILES_PIXEL_DUPES_EXCLUDED:
             
-            pixel_dupes_string = ', not pixel duplicates'
+            components.append( 'not pixel duplicates' )
             
         
-        return search_string + pixel_dupes_string
+        if self._dupe_search_type == ClientDuplicates.DUPE_SEARCH_BOTH_FILES_MATCH_DIFFERENT_SEARCHES:
+            
+            components.append( f'files matching [{self._file_search_context_1.GetSummary()}] and [{self._file_search_context_2.GetSummary()}]' )
+            
+        elif self._dupe_search_type == ClientDuplicates.DUPE_SEARCH_BOTH_FILES_MATCH_ONE_SEARCH:
+            
+            components.append( f'both files matching [{self._file_search_context_1.GetSummary()}]' )
+            
+        else:
+            
+            components.append( f'one file matching [{self._file_search_context_1.GetSummary()}]' )
+            
+        
+        if self._pixel_dupes_preference != ClientDuplicates.SIMILAR_FILES_PIXEL_DUPES_REQUIRED:
+            
+            components.append( f'max search distance: {self._max_hamming_distance}' )
+            
+        
+        return ', '.join( components )
         
     
     def OptimiseForSearch( self ):

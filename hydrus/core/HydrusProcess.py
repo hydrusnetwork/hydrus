@@ -46,7 +46,7 @@ def GetSiblingProcessPorts( db_path, instance ):
                     
                     p = HydrusPSUtil.psutil.Process( pid )
                     
-                    for conn in p.connections():
+                    for conn in p.net_connections():
                         
                         if conn.status == 'LISTEN':
                             

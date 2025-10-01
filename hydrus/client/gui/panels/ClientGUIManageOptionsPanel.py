@@ -1772,6 +1772,9 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._trash_max_age = ClientGUICommon.NoneableSpinCtrl( self, 72, none_phrase = 'no age limit', min = 0, max = 8640 )
             self._trash_max_size = ClientGUICommon.NoneableSpinCtrl( self, 2048, none_phrase = 'no size limit', min = 0, max = 20480 )
             
+            self._do_not_do_chmod_mode = QW.QCheckBox( self )
+            self._do_not_do_chmod_mode.setToolTip( ClientGUIFunctions.WrapToolTip( 'CAREFUL. When hydrus copies files around, it preserves or sets permission bits. If you are on ACL-backed storage, e.g. via NFSv4 with ACL set, chmod is going to raise errors and/or audit logspam. You can try stopping all chmod here--hydrus will use differing copy calls that only copy the file contents and try to preserve access/modified times.' ) )
+            
             delete_lock_panel = ClientGUICommon.StaticBox( self, 'delete lock' )
             
             self._delete_lock_for_archived_files = QW.QCheckBox( delete_lock_panel )
@@ -1825,6 +1828,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._trash_max_age.SetValue( HC.options[ 'trash_max_age' ] )
             self._trash_max_size.SetValue( HC.options[ 'trash_max_size' ] )
             
+            self._do_not_do_chmod_mode.setChecked( self._new_options.GetBoolean( 'do_not_do_chmod_mode' ) )
+            
             self._delete_lock_for_archived_files.setChecked( self._new_options.GetBoolean( 'delete_lock_for_archived_files' ) )
             self._delete_lock_reinbox_deletees_after_archive_delete.setChecked( self._new_options.GetBoolean( 'delete_lock_reinbox_deletees_after_archive_delete' ) )
             self._delete_lock_reinbox_deletees_after_duplicate_filter.setChecked( self._new_options.GetBoolean( 'delete_lock_reinbox_deletees_after_duplicate_filter' ) )
@@ -1861,6 +1866,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows.append( ( 'Remove files from view when they are moved to another local file domain: ', self._remove_local_domain_moved_files ) )
             rows.append( ( 'Number of hours a file can be in the trash before being deleted: ', self._trash_max_age ) )
             rows.append( ( 'Maximum size of trash (MB): ', self._trash_max_size ) )
+            rows.append( ( 'ADVANCED: Do not do chmod when copying files', self._do_not_do_chmod_mode ) )
             
             gridbox = ClientGUICommon.WrapInGrid( self, rows )
             
@@ -1966,6 +1972,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._new_options.SetBoolean( 'remove_local_domain_moved_files', self._remove_local_domain_moved_files.isChecked() )
             HC.options[ 'trash_max_age' ] = self._trash_max_age.GetValue()
             HC.options[ 'trash_max_size' ] = self._trash_max_size.GetValue()
+            
+            self._new_options.SetBoolean( 'do_not_do_chmod_mode', self._do_not_do_chmod_mode.isChecked() )
             
             self._new_options.SetBoolean( 'only_show_delete_from_all_local_domains_when_filtering', self._only_show_delete_from_all_local_domains_when_filtering.isChecked() )
             

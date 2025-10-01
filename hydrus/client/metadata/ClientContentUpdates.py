@@ -40,6 +40,9 @@ def ConvertClientToServerUpdateToContentUpdates( client_to_server_update: Hydrus
 
 class ContentUpdate( object ):
     
+    # TODO: for all content types, we should have the ability to gauge weight (or a similar "processing weight" for the content type) and split into smaller update batches
+    # rather than doing it all at the level of GetContentUpdatesForAppliedContentApplicationCommandRatingsIncDec and friends, we should be able to make a gonk content update wherever and then break it up here, agnostic of content type
+    
     def __init__( self, data_type, action, row, reason = None ):
         
         self._data_type = data_type

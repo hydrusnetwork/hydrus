@@ -7,6 +7,7 @@ import typing
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusLists
 from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTime
@@ -61,6 +62,38 @@ duplicates_auto_resolution_rule_operation_mode_str_lookup = {
 }
 
 NEW_RULE_SESSION_ID = -1
+
+def ActionAutoResolutionReviewPairs( rule: "DuplicatesAutoResolutionRule", decisions, status_hook = None ):
+    
+    approve_pairs = [ ( decision.media_result_a, decision.media_result_b ) for decision in decisions if decision.approved ]
+    deny_pairs = [ ( decision.media_result_a, decision.media_result_b ) for decision in decisions if not decision.approved ]
+    
+    for ( num_done, num_to_do, chunk ) in HydrusLists.SplitListIntoChunksRich( approve_pairs, 4 ):
+        
+        message = f'approving: {HydrusNumbers.ValueRangeToPrettyString( num_done, num_to_do )}'
+        
+        if status_hook is not None:
+            
+            status_hook( message )
+            
+        
+        # this is safe to run on a bunch of related pairs like AB, AC, DB--the db figures that out
+        CG.client_controller.WriteSynchronous( 'duplicates_auto_resolution_approve_pending_pairs', rule, chunk )
+        
+    
+    for ( num_done, num_to_do, chunk ) in HydrusLists.SplitListIntoChunksRich( deny_pairs, 4 ):
+        
+        message = f'denying: {HydrusNumbers.ValueRangeToPrettyString( num_done, num_to_do )}'
+        
+        if status_hook is not None:
+            
+            status_hook( message )
+            
+        
+        # this is safe to run on a bunch of related pairs like AB, AC, DB--the db figures that out
+        CG.client_controller.WriteSynchronous( 'duplicates_auto_resolution_deny_pending_pairs', rule, chunk )
+        
+    
 
 class DuplicatesAutoResolutionRule( HydrusSerialisable.SerialisableBaseNamed ):
     
@@ -853,7 +886,7 @@ def GetDefaultRuleSuggestions() -> list[ DuplicatesAutoResolutionRule ]:
     
     comparator.SetMultiplier( 1.00 )
     comparator.SetDelta( 0 )
-    comparator.SetNumberTest( ClientNumberTest.NumberTest( operator = ClientNumberTest.NUMBER_TEST_OPERATOR_LESS_THAN ) )
+    comparator.SetNumberTest( ClientNumberTest.NumberTest( operator = ClientNumberTest.NUMBER_TEST_OPERATOR_GREATER_THAN ) )
     comparator.SetSystemPredicate( ClientSearchPredicate.Predicate( predicate_type = ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_SIZE ) )
     
     comparators.append( comparator )
@@ -912,29 +945,6 @@ def GetDefaultRuleSuggestions() -> list[ DuplicatesAutoResolutionRule ]:
     comparators = []
     
     comparator = ClientDuplicatesAutoResolutionComparators.PairComparatorRelativeVisualDuplicates( acceptable_confidence = ClientVisualData.VISUAL_DUPLICATES_RESULT_ALMOST_CERTAINLY )
-    
-    comparators.append( comparator )
-    
-    filesize_comparator = ClientDuplicatesAutoResolutionComparators.PairComparatorRelativeFileInfo()
-    
-    filesize_comparator.SetMultiplier( 1.00 )
-    filesize_comparator.SetDelta( 0 )
-    filesize_comparator.SetNumberTest( ClientNumberTest.NumberTest( operator = ClientNumberTest.NUMBER_TEST_OPERATOR_GREATER_THAN ) )
-    filesize_comparator.SetSystemPredicate( ClientSearchPredicate.Predicate( predicate_type = ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_SIZE ) )
-    
-    num_pixels_comparator = ClientDuplicatesAutoResolutionComparators.PairComparatorRelativeFileInfo()
-    
-    num_pixels_comparator.SetMultiplier( 1.00 )
-    num_pixels_comparator.SetDelta( 0 )
-    num_pixels_comparator.SetNumberTest( ClientNumberTest.NumberTest( operator = ClientNumberTest.NUMBER_TEST_OPERATOR_GREATER_THAN ) )
-    num_pixels_comparator.SetSystemPredicate( ClientSearchPredicate.Predicate( predicate_type = ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_NUM_PIXELS ) )
-    
-    comparator = ClientDuplicatesAutoResolutionComparators.PairComparatorOR(
-        [
-            filesize_comparator,
-            num_pixels_comparator
-        ]
-    )
     
     comparators.append( comparator )
     

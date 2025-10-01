@@ -14,10 +14,12 @@ from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
+from hydrus.client import ClientLocation
 from hydrus.client import ClientThreading
 from hydrus.client.duplicates import ClientDuplicatesAutoResolution
 from hydrus.client.duplicates import ClientDuplicatesAutoResolutionComparators
 from hydrus.client.duplicates import ClientDuplicates
+from hydrus.client.duplicates import ClientPotentialDuplicatesSearchContext
 from hydrus.client.files.images import ClientVisualData
 from hydrus.client.gui import ClientGUIAsync
 from hydrus.client.gui import ClientGUIDialogsQuick
@@ -38,6 +40,7 @@ from hydrus.client.gui.widgets import ClientGUICommon
 from hydrus.client.gui.widgets import ClientGUIMenuButton
 from hydrus.client.gui.widgets import ClientGUINumberTest
 from hydrus.client.search import ClientNumberTest
+from hydrus.client.search import ClientSearchFileSearchContext
 from hydrus.client.search import ClientSearchPredicate
 
 class EditDuplicatesAutoResolutionRulesPanel( ClientGUIScrolledPanels.EditPanel ):
@@ -105,7 +108,27 @@ class EditDuplicatesAutoResolutionRulesPanel( ClientGUIScrolledPanels.EditPanel 
         
         duplicates_auto_resolution_rule = ClientDuplicatesAutoResolution.DuplicatesAutoResolutionRule( name )
         
-        # TODO: set some good defaults
+        location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY )
+        
+        predicates = [
+            ClientSearchPredicate.Predicate( predicate_type = ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_MIME, value = ( HC.GENERAL_IMAGE, ) ),
+            ClientSearchPredicate.Predicate( predicate_type = ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HEIGHT, value = ClientNumberTest.NumberTest.STATICCreateFromCharacters( '>', 128 ) ),
+            ClientSearchPredicate.Predicate( predicate_type = ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_WIDTH, value = ClientNumberTest.NumberTest.STATICCreateFromCharacters( '>', 128 ) ),
+        ]
+        
+        file_search_context_1 = ClientSearchFileSearchContext.FileSearchContext(
+            location_context = location_context,
+            predicates = predicates
+        )
+        
+        potential_duplicates_search_context = ClientPotentialDuplicatesSearchContext.PotentialDuplicatesSearchContext()
+        
+        potential_duplicates_search_context.SetFileSearchContext1( file_search_context_1 )
+        potential_duplicates_search_context.SetDupeSearchType( ClientDuplicates.DUPE_SEARCH_BOTH_FILES_MATCH_ONE_SEARCH )
+        potential_duplicates_search_context.SetPixelDupesPreference( ClientDuplicates.SIMILAR_FILES_PIXEL_DUPES_ALLOWED )
+        potential_duplicates_search_context.SetMaxHammingDistance( 0 )
+        
+        duplicates_auto_resolution_rule.SetPotentialDuplicatesSearchContext( potential_duplicates_search_context )
         
         with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit rule' ) as dlg:
             

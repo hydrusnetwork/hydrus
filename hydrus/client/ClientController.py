@@ -1152,6 +1152,10 @@ class Controller( HydrusController.HydrusController ):
         
         HydrusTime.ALWAYS_SHOW_ISO_TIME_ON_DELTA_CALL = self.new_options.GetBoolean( 'always_show_iso_time' )
         
+        from hydrus.core import HydrusPaths
+        
+        HydrusPaths.DO_NOT_DO_CHMOD_MODE = self.new_options.GetBoolean( 'do_not_do_chmod_mode' )
+        
     
     def InitModel( self ):
         

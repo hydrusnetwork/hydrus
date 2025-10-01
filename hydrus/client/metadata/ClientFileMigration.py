@@ -46,7 +46,7 @@ def DoMoveOrDuplicateLocalFiles( dest_service_key: bytes, action: int, media_res
     
     job_status.SetStatusTitle( title )
     
-    BLOCK_SIZE = 64
+    BLOCK_SIZE = 16
     
     pauser = HydrusThreading.BigJobPauser()
     

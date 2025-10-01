@@ -83,7 +83,7 @@ def ApplyContentApplicationCommandToMedia( win: QW.QWidget, command: CAC.Applica
             
             tag = value
             
-            content_updates = GetContentUpdatesForAppliedContentApplicationCommandTags( win, service_key, service_type, action, media, tag )
+            content_updates = GetContentUpdatesForAppliedContentApplicationCommandTags( win, service_key, service_type, action, media, tag, BLOCK_SIZE = 64 )
             
         elif service_type in HC.RATINGS_SERVICES:
             
@@ -97,7 +97,7 @@ def ApplyContentApplicationCommandToMedia( win: QW.QWidget, command: CAC.Applica
                     
                     rating = value
                     
-                    content_updates = GetContentUpdatesForAppliedContentApplicationCommandRatingsSetFlip( service_key, action, media, rating )
+                    content_updates = GetContentUpdatesForAppliedContentApplicationCommandRatingsSetFlip( service_key, action, media, rating, BLOCK_SIZE = 256 )
                     
                 
             elif action in ( HC.CONTENT_UPDATE_INCREMENT, HC.CONTENT_UPDATE_DECREMENT ):
@@ -106,11 +106,11 @@ def ApplyContentApplicationCommandToMedia( win: QW.QWidget, command: CAC.Applica
                     
                     one_star_value = service.GetOneStarValue()
                     
-                    content_updates = GetContentUpdatesForAppliedContentApplicationCommandRatingsNumericalIncDec( service_key, one_star_value, action, media )
+                    content_updates = GetContentUpdatesForAppliedContentApplicationCommandRatingsNumericalIncDec( service_key, one_star_value, action, media, BLOCK_SIZE = 256 )
                     
                 elif service_type == HC.LOCAL_RATING_INCDEC:
                     
-                    content_updates = GetContentUpdatesForAppliedContentApplicationCommandRatingsIncDec( service_key, action, media )
+                    content_updates = GetContentUpdatesForAppliedContentApplicationCommandRatingsIncDec( service_key, action, media, BLOCK_SIZE = 256 )
                     
                 
             else:
@@ -123,10 +123,35 @@ def ApplyContentApplicationCommandToMedia( win: QW.QWidget, command: CAC.Applica
             return False
             
         
-        if len( content_updates ) > 0:
+        def do_it():
             
-            CG.client_controller.Write( 'content_updates', ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( service_key, content_updates ) )
+            job_status = ClientThreading.JobStatus()
             
+            job_status.SetStatusTitle( f'setting {command.ToString()}' )
+            
+            start_time = HydrusTime.GetNowFloat()
+            have_pubbed_message = False
+            
+            num_to_do = len( content_updates )
+            
+            for ( i, content_update ) in enumerate( content_updates ):
+                
+                if not have_pubbed_message and HydrusTime.TimeHasPassedFloat( start_time + 3 ):
+                    
+                    CG.client_controller.pub( 'message', job_status )
+                    
+                    have_pubbed_message = True
+                    
+                
+                job_status.SetGauge( i, num_to_do )
+                
+                CG.client_controller.WriteSynchronous( 'content_updates', ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( service_key, content_update ) )
+                
+            
+            job_status.FinishAndDismiss()
+            
+        
+        CG.client_controller.CallToThread( do_it )
         
     
     return True
@@ -492,7 +517,7 @@ def ExportFiles( win: QW.QWidget, medias: collections.abc.Collection[ ClientMedi
         
     
 
-def GetContentUpdatesForAppliedContentApplicationCommandRatingsSetFlip( service_key: bytes, action: int, media: collections.abc.Collection[ ClientMedia.MediaSingleton ], rating: typing.Optional[ float ] ):
+def GetContentUpdatesForAppliedContentApplicationCommandRatingsSetFlip( service_key: bytes, action: int, media: collections.abc.Collection[ ClientMedia.MediaSingleton ], rating: typing.Optional[ float ], BLOCK_SIZE = None ):
     
     hashes = set()
     
@@ -522,23 +547,32 @@ def GetContentUpdatesForAppliedContentApplicationCommandRatingsSetFlip( service_
     
     if can_set:
         
-        row = ( rating, hashes )
+        thing_to_set = rating
         
     elif can_unset:
         
-        row = ( None, hashes )
+        thing_to_set = None
         
     else:
         
         return []
         
     
-    content_updates = [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, row ) ]
+    if BLOCK_SIZE is None:
+        
+        rows = [ ( thing_to_set, hashes ) ]
+        
+    else:
+        
+        rows = [ ( thing_to_set, block_of_hashes ) for block_of_hashes in HydrusLists.SplitListIntoChunks( list( hashes ), BLOCK_SIZE ) ]
+        
+    
+    content_updates = [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, row ) for row in rows ]
     
     return content_updates
     
 
-def GetContentUpdatesForAppliedContentApplicationCommandRatingsIncDec( service_key: bytes, action: int, media: collections.abc.Collection[ ClientMedia.MediaSingleton ] ):
+def GetContentUpdatesForAppliedContentApplicationCommandRatingsIncDec( service_key: bytes, action: int, media: collections.abc.Collection[ ClientMedia.MediaSingleton ], BLOCK_SIZE = None ):
     
     if action == HC.CONTENT_UPDATE_INCREMENT:
         
@@ -566,12 +600,28 @@ def GetContentUpdatesForAppliedContentApplicationCommandRatingsIncDec( service_k
         ratings_to_hashes[ new_rating ].add( m.GetHash() )
         
     
-    content_updates = [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( rating, hashes ) ) for ( rating, hashes ) in ratings_to_hashes.items() ]
+    all_content_updates = []
     
-    return content_updates
+    for ( rating, hashes ) in ratings_to_hashes.items():
+        
+        if BLOCK_SIZE is None:
+            
+            rows = [ ( rating, hashes ) ]
+            
+        else:
+            
+            rows = [ ( rating, block_of_hashes ) for block_of_hashes in HydrusLists.SplitListIntoChunks( list( hashes ), BLOCK_SIZE ) ]
+            
+        
+        content_updates = [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, row ) for row in rows ]
+        
+        all_content_updates.extend( content_updates )
+        
+    
+    return all_content_updates
     
 
-def GetContentUpdatesForAppliedContentApplicationCommandRatingsNumericalIncDec( service_key: bytes, one_star_value: float, action: int, media: collections.abc.Collection[ ClientMedia.MediaSingleton ] ):
+def GetContentUpdatesForAppliedContentApplicationCommandRatingsNumericalIncDec( service_key: bytes, one_star_value: float, action: int, media: collections.abc.Collection[ ClientMedia.MediaSingleton ], BLOCK_SIZE = None ):
     
     if action == HC.CONTENT_UPDATE_INCREMENT:
         
@@ -613,12 +663,28 @@ def GetContentUpdatesForAppliedContentApplicationCommandRatingsNumericalIncDec( 
             
         
     
-    content_updates = [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( rating, hashes ) ) for ( rating, hashes ) in ratings_to_hashes.items() ]
+    all_content_updates = []
     
-    return content_updates
+    for ( rating, hashes ) in ratings_to_hashes.items():
+        
+        if BLOCK_SIZE is None:
+            
+            rows = [ ( rating, hashes ) ]
+            
+        else:
+            
+            rows = [ ( rating, block_of_hashes ) for block_of_hashes in HydrusLists.SplitListIntoChunks( list( hashes ), BLOCK_SIZE ) ]
+            
+        
+        content_updates = [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, row ) for row in rows ]
+        
+        all_content_updates.extend( content_updates )
+        
+    
+    return all_content_updates
     
 
-def GetContentUpdatesForAppliedContentApplicationCommandTags( win: QW.QWidget, service_key: bytes, service_type: int, action: int, media: collections.abc.Collection[ ClientMedia.MediaSingleton ], tag: str ):
+def GetContentUpdatesForAppliedContentApplicationCommandTags( win: QW.QWidget, service_key: bytes, service_type: int, action: int, media: collections.abc.Collection[ ClientMedia.MediaSingleton ], tag: str, BLOCK_SIZE = None ):
     
     hashes = set()
     
@@ -626,8 +692,6 @@ def GetContentUpdatesForAppliedContentApplicationCommandTags( win: QW.QWidget, s
         
         hashes.add( m.GetHash() )
         
-    
-    rows = [ ( tag, hashes ) ]
     
     can_add = False
     can_pend = False
@@ -725,6 +789,15 @@ def GetContentUpdatesForAppliedContentApplicationCommandTags( win: QW.QWidget, s
             
             return []
             
+        
+    
+    if BLOCK_SIZE is None:
+        
+        rows = [ ( tag, hashes ) ]
+        
+    else:
+        
+        rows = [ ( tag, block_of_hashes ) for block_of_hashes in HydrusLists.SplitListIntoChunks( list( hashes ), BLOCK_SIZE ) ]
         
     
     content_updates = [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, content_update_action, row, reason = reason ) for row in rows ]
