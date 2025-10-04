@@ -2,6 +2,8 @@ import datetime
 import numpy
 import struct
 
+from hydrus.core import HydrusDateTime
+
 def make_icc_header( profile_size: int ) -> bytes:
     
     # Here's how Qt does it: https://codebrowser.dev/qt6/qtbase/src/gui/painting/qicc.cpp.html#484
@@ -12,7 +14,7 @@ def make_icc_header( profile_size: int ) -> bytes:
     # ONE OPTION HERE IS JUST TO HAVE A HOOK THAT LOADS IT FROM QT QColorSpace
     # we could compare the icc profile from the jxl with the png one Qt generates. there still seems to be a pixel hash difference, but if the icc profile is the same, no worries about that
     
-    now = datetime.datetime.now( datetime.UTC )
+    now = HydrusDateTime.nowutc()
     
     # b'\x00\x00\xF6\xD6',              # Rendering intent (0 = perceptual)
     # b'2.1\x00',                       # Profile version (v2.1.0)

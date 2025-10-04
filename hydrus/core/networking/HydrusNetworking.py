@@ -12,6 +12,7 @@ urllib3.disable_warnings( InsecureRequestWarning ) # stopping log-moaning when r
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
+from hydrus.core import HydrusDateTime
 from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusPSUtil
 from hydrus.core import HydrusSerialisable
@@ -377,7 +378,7 @@ class BandwidthTracker( HydrusSerialisable.SerialisableBase ):
     def _GetCurrentDateTime( self ):
         
         # keep getnow in here for the moment to aid in testing, which patches it to do time shifting
-        return datetime.datetime.fromtimestamp( HydrusTime.GetNow(), datetime.UTC )
+        return HydrusDateTime.fromtimestamputc( HydrusTime.GetNow() )
         
     
     def _GetWindowAndCounter( self, bandwidth_type, time_delta ):
@@ -634,7 +635,7 @@ class BandwidthTracker( HydrusSerialisable.SerialisableBase ):
             
             for ( month_time, usage ) in list(self._months_bytes.items()):
                 
-                month_dt = datetime.datetime.fromtimestamp( month_time, datetime.UTC )
+                month_dt = HydrusDateTime.fromtimestamputc( month_time )
                 
                 # this generates zero-padded month, to keep this lexicographically sortable at the gui level
                 date_str = month_dt.strftime( '%Y-%m' )
