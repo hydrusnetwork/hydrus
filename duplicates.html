@@ -2560,7 +2560,13 @@
 <h1 id="intro">duplicates<a class="headerlink" href="#intro" title="Permanent link">&para;</a></h1>
 <p>As files are shared on the internet, they are often resized, cropped, converted to a different format, altered by the original or a new artist, or turned into a template and reinterpreted over and over and over. Even if you have a very restrictive importing workflow, your client is almost certainly going to get some <strong>duplicates</strong>. Some will be interesting alternate versions that you want to keep, and others will be thumbnails and other low-quality garbage you accidentally imported and would rather delete. Along the way, it would be nice to merge your ratings and tags to the better files so you don't lose any work.</p>
 <p>Finding and processing duplicates within a large collection is impossible to do by hand, so I have written a system to do the heavy lifting for you. It currently works on still images, but an extension for gifs and video is planned.</p>
-<p>Hydrus finds <em>potential</em> duplicates using a search algorithm that compares images by their shape. Once these pairs of potentials are found, they are presented to you through a filter like the archive/delete filter to determine their exact relationship and if you want to make a further action, such as deleting the 'worse' file of a pair. All of your decisions build up in the database to form logically consistent groups of duplicates and 'alternate' relationships that can be used to infer future information. For instance, if you say that file A is a duplicate of B and B is a duplicate of C, A and C are automatically recognised as duplicates as well.</p>
+<p>Hydrus finds pairs of <em>potential</em> duplicates using a search algorithm that compares images by their shape. Once these pairs are found, they are presented to you through a filter like the archive/delete filter to determine their exact relationship and if you want to make a further action, such as deleting the 'worse' file of a pair. All of your decisions build up in the database to form logically consistent groups of duplicates and 'alternate' relationships that can be used to infer future information. For instance, if you say that file A is a duplicate of B and B is a duplicate of C, A and C are automatically recognised as duplicates as well.</p>
+<p>Note that 'potential duplicates' are not the same as 'duplicates'.</p>
+<ul>
+<li><em>Potential duplicates</em> are pairs of files that could be duplicates; most likely hydrus has determined look very similar to each other during its background potential duplicate discovery work.</li>
+<li><em>Duplicates</em> are pairs or larger groups of files that you have confirmed are different quality or resolution copies of the same source file.</li>
+</ul>
+<p>When you are using the systems described on this page, you will usually be preparing queues of 'potential duplicate' pairs to  process into confirmed 'duplicates' or 'alternates'. Setting a firm file relationship will remove an existing 'potential duplicates' relationships they have; similarly, files that currently <em>are</em> duplicates or alternates cannot be set anew as 'potential duplicates'--the question has been resolved.</p>
 <p>This all starts on--</p>
 <h2 id="duplicates_page">the duplicates processing page<a class="headerlink" href="#duplicates_page" title="Permanent link">&para;</a></h2>
 <p>On the normal 'new page' selection window, hit <em>special-&gt;duplicates processing</em>. This will open this page:</p>
@@ -2708,7 +2714,7 @@
     <span class="md-icon" title="Last update">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 13.1c-.1 0-.3.1-.4.2l-1 1 2.1 2.1 1-1c.2-.2.2-.6 0-.8l-1.3-1.3c-.1-.1-.2-.2-.4-.2m-1.9 1.8-6.1 6V23h2.1l6.1-6.1zM12.5 7v5.2l4 2.4-1 1L11 13V7zM11 21.9c-5.1-.5-9-4.8-9-9.9C2 6.5 6.5 2 12 2c5.3 0 9.6 4.1 10 9.3-.3-.1-.6-.2-1-.2s-.7.1-1 .2C19.6 7.2 16.2 4 12 4c-4.4 0-8 3.6-8 8 0 4.1 3.1 7.5 7.1 7.9l-.1.2z"/></svg>
     </span>
-    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="October 1, 2025 21:05:10 UTC">October 1, 2025</span>
+    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="October 8, 2025 20:13:16 UTC">October 8, 2025</span>
   </span>
 
     
