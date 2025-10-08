@@ -873,6 +873,9 @@ class DBCursorTransactionWrapper( DBBase ):
     
     def TimeToCommit( self ):
         
-        return self._in_transaction and self._transaction_contains_writes and ( HydrusTime.TimeHasPassed( self._transaction_start_time + self._transaction_commit_period ) or self._committing_as_soon_as_possible )
+        p1 = self._committing_as_soon_as_possible
+        p2 = self._transaction_contains_writes and HydrusTime.TimeHasPassed( self._transaction_start_time + self._transaction_commit_period )
+        
+        return self._in_transaction and ( p1 or p2 )
         
     

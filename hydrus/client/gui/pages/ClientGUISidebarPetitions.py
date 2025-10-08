@@ -1245,11 +1245,6 @@ class SidebarPetitions( ClientGUISidebarCore.Sidebar ):
             
             def qt_draw( petition_count_rows ):
                 
-                if not self or not QP.isValid( self ):
-                    
-                    return
-                    
-                
                 num_petitions_currently_listed = len( self._petitions_summary_list.GetData() )
                 
                 old_petition_types_to_count = self._petition_types_to_count
@@ -1276,11 +1271,6 @@ class SidebarPetitions( ClientGUISidebarCore.Sidebar ):
                 
             
             def qt_reset():
-                
-                if not self or not QP.isValid( self ):
-                    
-                    return
-                    
                 
                 self._refresh_num_petitions_button.setText( 'refresh counts' )
                 
@@ -1333,7 +1323,7 @@ class SidebarPetitions( ClientGUISidebarCore.Sidebar ):
                             
                             HydrusData.ShowText( 'That account id was not found!' )
                             
-                            CG.client_controller.CallAfter( self, qt_draw, [] )
+                            CG.client_controller.CallAfterQtSafe( self, qt_draw, [] )
                             
                             return
                             
@@ -1342,11 +1332,11 @@ class SidebarPetitions( ClientGUISidebarCore.Sidebar ):
                 
                 num_petition_info = response[ 'num_petitions' ]
                 
-                CG.client_controller.CallAfter( self, qt_draw, num_petition_info )
+                CG.client_controller.CallAfterQtSafe( self, qt_draw, num_petition_info )
                 
             finally:
                 
-                CG.client_controller.CallAfter( self, qt_reset )
+                CG.client_controller.CallAfterQtSafe( self, qt_reset )
                 
             
         
@@ -1626,7 +1616,7 @@ class SidebarPetitions( ClientGUISidebarCore.Sidebar ):
     
     def Start( self ):
         
-        CG.client_controller.CallAfter( self, self._StartFetchNumPetitions )
+        CG.client_controller.CallAfterQtSafe( self, self._StartFetchNumPetitions )
         
     
     def THREADPetitionFetcherAndUploader( self, work_lock: threading.Lock, service: ClientServices.ServiceRepository ):

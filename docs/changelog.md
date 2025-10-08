@@ -7,6 +7,68 @@ title: Changelog
 !!! note
     This is the new changelog, only the most recent builds. For all versions, see the [old changelog](old_changelog.html).
 
+## [Version 642](https://github.com/hydrusnetwork/hydrus/releases/tag/v642)
+
+### misc
+
+* pushed a hotfix to source master to fix an issue with users running from source in python 3.10 or earlier. the deprecated `datetime` calls I updated are still needed in older python!
+* fixed an issue with 'send all pages down from here and to the right', and a couple of similar commands, which were failing with 'PagesNotebook already deleted' errors when the pages being moved had been previously moved from another place that was now deleted (a parent reference wasn't being updated correctly) (issue #1880)
+* the 'edit subscription' dialog list now lists the name/query column as 'display_name (query_text)' for any queries with a display name
+* when you paste queries into a sub, if any existing conflicting queries have a 'display name' different to their query text, you'll now see them reported in the dialogs as this same 'display name (query text)''. also, the part that asks about reviving DEAD queries now sorts the list it shows you
+* fixed an issue where a drag and drop export (in fact any file DnD initiated from within hydrus) would fail if you had the 'copy files to temp folder...' option set and you had a DnD export filename pattern that produced a path separator (e.g. a slash or backslash from `{tags}`). now the subfolders will be created within your temp dir just like how an Export Folder or manual export does it. I won't include that folder in the DnD yet--it just won't error and you'll get the same final filenames as before. maybe we can revisit this one day and DnD the whole subfolder(s)(?), so let me know how it goes
+* the `locations->add to` menu no longer appears for files that are in the trash. in fact, you'll probably not see a `locations` menu at all for trashed files
+* similarly, the central code that mediates all 'move/duplicate file to new local file location' actions now silently ignores files that are not in 'all my files' (i.e. stuff in the trash)
+* removed some 'if there was a big bump of work, take a big break' logic from my tag display and duplicate file daemons. it was a nice idea, but it misfired a lot and there was no feedback. I'm pretty sure this thing was causing auto-resolution to take inexplicable breaks, so let's see how it feels now
+* fixed some update signals in the auto-resolution review panel; if you have done some actions, switching to 'actions taken' tab will now correctly trigger an update; if you undo some actions, switching to 'pending actions' will trigger an update; undoing actions taken no longer triggers a no-op update of the 'actions taken' list (the log remains, even if undone); undoing actions taken triggers a numbers reset notification and wakes the potential duplicate discovery daemon, so the UI will quickly reflect the new 99.9% search status, and, if everything is caught up and good to work, trigger a very quick re-search and re-auto-resolution queueing-up of the undone file
+* added `help->debug->report modes->idle report mode`, which talks about various 'idle mode' checks, like "IDLE MODE - Blocked: Last mouse move was 41 seconds ago.". it gets pretty spammy, so hover your mouse over the popup toaster 'dismiss all' button and click without moving or launch the program from terminal and watch stdout
+
+### crash reporting
+
+* last week, I tried to roll out an on-by-default crash reporting mode. unfortunately, I discovered late that it wouldn't play nice with mpv. I couldn't fix ithe issue fully, so this mode is now available but default off. you turn it on via `help->debug->debug modes`
+* if you have regular crashes, please give it a go and we'll see what we learn. the only proviso is you absolutely cannot load up mpv and scrub through its seekbar while it is on or you'll just get a crash within seconds. a popup moans about this whenever you turn the mode on
+
+### mpv updates
+
+* _tl;dr: I wrote a thing for mpv and would like some advanced users to test it_
+* last week's failed crash-handling exposed some ways I am being rude to mpv. I'm interrogating its properties and giving it commands from the Qt thread, and the mpv mainloop appears to be occasionally bugging out as a result. `faulthandler` was seeing the serious exception inside the mpv dll and thinking it was a crash and pre-empting the dll's exception handling. so, I wrote a new interface that, instead of interrogating mpv for its pause and video position sixty times a second for the seekbar, now asks mpv to notify us when those things change when it is happy to do so. the transfer of data to Qt is also all thread safe
+* I do not know how well this new interface works with different mpv api versions, so it isn't on by default yet. if you are an advanced user, please hit up `options->media playback` and _uncheck_ the new `LEGACY DEBUG: Use legacy mpv communication method` checkbox. restart the client if you have instantiated any mpv windows. if pause and seek clicks all work and the seekbar updates to follow what you do, that's great. if it errors out or the seekbar stays at the 0 position, let me know please, and if you know it, let me know your mpv version. if this guy works out for anything but the weirdest and oldest mpv, I'll switch that option around to off for everyone and the old legacy interface will be the debug for odd situations
+* unfortunately while this new polite communication method reduces the crashes with the new crash reporting tool, it doesn't stop them completely particularly when the seekbar is spammed with a drag. it seems some part of the wrapper library's event loop still causes the heavy exception inside the dll, I think probably because of overlapping events before an interrupt completes. oh well. hopefully I can revisit this in future
+* I fixed a multi-player issue with the mpv crash handler that dealt with certain serious mpv loadfile errors (when the program pops up a 'MPV-crasher' dialog and button). it was not properly halting and reporting when you were looking at the problem file with an mpv window other than the first one created (mpv windows are re-used, and so typically meant this reporter had a 50% or 67% chance of continuing to play the problem file)
+
+### visual duplicates tuning
+
+* _tl;dr: visual duplicates works a little better. I still trust and recommend it at "almost certainly" confidence_
+* I completed my visual duplicates tuning suite. this is something I have tucked away in the debug menu that lets me load up some files, programmatically generate 'good' and 'bad' duplicates of various sizes and qualities and with fake watermarks and so on, and then test them against each other with the algorithm so I can get a results at a wider range and faster than me doing it manually with print statements and my IDE's debugger
+* the results were fairly successful, and I have retuned my algorithm to produce fewer false negatives while, I think, not introducing new false positives--
+    - the simple quick scan is now more forgiving. more true duplicates will be allowed into the slower, more accurate test
+    - I made the edge map test more forgiving, allowing more true duplicates to hit the tile tests. almost all true negatives are being caught at this stage
+    - the tile tests are tuned to allow more 'probably duplicates' results. the 'almost certainly' tests were all good
+* I am not sure if I want to pursue this work further to get a confidence level between 'probably' and 'almost certainly'. I will have a think about this
+* I still plan to add transparency capability to this algorithm in future
+* the algorithm is particularly vulnerable to severe resizes. images of similar size but different quality or subsampling are pretty doable, but anything that resizes to lower than 75% original dimensions has a pretty high false negative ratio
+* I was not sucessful at re-weighting my algorithm to consider 444 vs 420 subsampling differences. there appears to be no easy linear translation
+* I was able to produce a couple of false positives if I pushed it. these were generally a pair of ~60% resizes, at 60 jpeg quality, of a busy image, where one had a 25% alpha watermark. I am ok with failure at this level
+* there are more mathematical options here, but I believe the next significant version of this would be an AI model. a lot of this is fuzzy and organic and involves many weighting coefficients derived through observing real world data, so I believe we would be looking at a simple model that eats the edge maps and tile data and learns with a not dissimilar tuning suite generating synthetic data. I probably do not have time for this, but if we ever end up getting TensorFlow or a similar library into hydrus, and perhaps if we want to categorise different types of alternates, I may have a serious think. alternately, we may end up farming this job out to an exe call or similar, and then it can be anything by anyone
+* as always, if you come across any false positives (files that are not duplicates that show up as dupes, which at this stage likely means very subtle watermarks or alternates), I'd love to see them
+* also, I triaged my remaining auto-resolution work in prep for a 1.0 release for all users. we're looking at four medium size jobs--removing potential pairs from rules when at least one file is manually deleted; some tag-based comparators; faster search when the hit rate is very low; and transparency in the visual duplicates test--and then about a dozen small jobs like a jpeg quality comparator, nicer pause for auto-resolution rules, and some metadata merge option tweaks
+
+### advanced test stuff
+
+### updated the 'test' versions for users who run from source
+
+* `opencv` is updated from `4.11.0.86` to `4.12.0.88`
+* `PySide6` is updated from `6.9.1` to `6.9.3`
+* I expect to do a 'future test' build next week
+
+### boring stuff
+
+* after the new event queueing code proved fine, merged the 110-odd `CallAfter` and `CallAfterQtSafe` calls together and ditched the old job-label system
+* removed 50-odd now-redundant `IsValid` checks in the callafter callables
+* fixed a potential crash in the login script test UI-reporting system
+* cleaned up some of the 'move pages' code and deleted old stuff I no longer use
+* added a couple of notes about 'potential duplicates' and similar looking files to the help and 'system:similar to' edit panel. also wrote some tooltips for the 'search distance' spin widgets and made them step 2
+* the UI test now boots the review services panel. this guy has a bunch of stuff going on, including bandwidth calendar reports, and would have caught the datetime hotfix
+
 ## [Version 641](https://github.com/hydrusnetwork/hydrus/releases/tag/v641)
 
 ### Client API projects
@@ -472,59 +534,3 @@ title: Changelog
 * refactored my hacky old inter-thread progress-gauge tracking to nicer calls on the shared status object
 * fixed a GUG unit test that failed after the recent %20 thing. I think I last-minute changed the default value for that setting, after doing my main testing
 * wrote a 'URLDomainMask' object to handle the future multi-domain URL Class update. lots to do up and down the pipeline to get this guy inserted, but the whole system will eventually support multiple regex domains per URL CLass. also wrote some unit tests for it
-
-## [Version 632](https://github.com/hydrusnetwork/hydrus/releases/tag/v632)
-
-### hotfix last week
-
-* I did a v631a hotfix last week that fixed a looping network job(!!) under the particular conditions where a Post URL A1) used subsidiary parsers and failed to parse any URLs or, A2) did not parse anything generally, and B) had a certain environment, I think most probably ffmpeg version, that judged the respective html/json to _not_ be potentially importable. I am very sorry for this problem and I thank the users who reported it and helped me test
-* I added additional safety checks to the file and gallery import objects to stop this type of error happening again. if an import job works and produces no status change, it will now auto-veto with an appropriate note
-
-### misc
-
-* the 'show the top-right hover window in the preview viewer' option has worked out well, and I like it a lot, so it is now default 'on' for all new users. also, all existing users will get it flipped to 'on' on update. if you tried it and decided you didn't like it already, sorry! hit up `options->media viewer hovers` to hide it again
-* the 'page lock' system now correctly removes files when you remove them from _inside_ a collection (hitting 'remove' from a child media viewer looking inside the collection)
-* the 'manage url classes' dialog's test text box is now much faster. it only needs to do CPU work on the first character you type, rather than being sluggish every time
-* the 'manage url classes' dialog's test text box no longer steals focus from the text box on a match. you can now easily keep typing to discover a more specific url class
-* added a DEBUG checkbox to `options->downloading` to turn off the legacy `%20` replacement in GUG generation (pasting `skirt%20blue_eyes` is interpreted as `skirt blue_eyes` when pasting query texts). all existing users will get this set on; all new users will get it set off. it isn't a huge deal, but if you need this off, try it out and let me know how it goes. like with the double-slash option beside it, I might quietly flip everyone to off in a year
-
-### move-merge files
-
-* the file 'locations' submenu now summarises which locations your files are currently in in the top row, in a flyout submenu
-* the file 'locations' submenu now lists 'move (merge)' and 'move (strict)' actions separately. the 'strict' was the previous behaviour, and it only moves if the file is not already in the destination
-* the shortcut command that handles local file domain add/move stuff allows this new move-merge action. existing shortcuts will have the 'if not already in destination', but perhaps you'll want the other, 'even if already in destination'
-* this 'locations' menu stuff now shows the number of files to be added/move-merged/strict-moved
-* this went through multiple reworks and namings. I'm still not totally happy with the verbiage and workflow, but it is powerful and clearly allows the various commands we want. I tried having a yes/no dialog that asked you whether you wanted a strict move or a move-merge, but it wasn't nice in its own way. I tried merging the two menus, but it make the eyes glaze over. I thought about removing the strict move entirely, but I'm not ready for that. in the end I went with a clear verb-first approach with separate submenus. let me know what you think with IRL situations and if you can think of something better than 'strict'/'merge' that isn't too long so it fits nicely in a menu
-
-### duplicates
-
-* you can now set the pair sort for the manual duplicate filter! I've got 'filesize of larger file', 'filesize of smaller file', 'similarity (distance/filesize ratio)', and 'random' to start. have a play with them, let me know what you think, and what others you'd like
-* in the duplicate filter, if either file is an image project file (e.g. PSD), or somehow an application/archive, the 'psd vs jpg' line now has a score of -100, either way around. should pop out a bit more now
-* the 'show some random potential duplicates' button now works on the fast fetch system. it builds its results far quicker than before in all typical situations, and in general worst-case performance is very much improved
-* the 'show some random potential duplicates' button now delivers what I will be calling an entire 'group' of potential pairs. previously, it selected a master file and showed you every file potential to it; now we chase down everything that those potentials are potential to, and so on, until we have everything that is transitively potential in one blob. should let you see more fuzzy (alternate) groups in one go. there's a little voodoo going on here, so let me know if you get any interesting results
-* the 'show some random potential duplicates' button now sorts the returned group according to a normal file sort widget, which is embedded just above the button. this guy works like a normal sort widget and will save and re-sort whatever is in the current page on changes; it is just in a different location. not sure I like it, but we'll see how it goes
-* the 'x potential pairs searched' part of the new duplicate pair iterative fast-fetch system is now pre-filtered to the current file domain. pairs that are in deleted domains and stuff are no longer confusing things, and a search of 'system:everything' should now always come back with a 100% count. also, if you search in a small local file domain, let's say it only has 3,000 pairs of your total of 500,000, any duplicate search now only has to iterate over that 3,000 every time. a little extra CPU is required to figure this out in the pre-search phase, but I think it pays off. let me know how it is IRL
-* the comparison statements and scores in the duplicate hover window on the right are now split into fast and slow loading and are loaded and displayed in two separate jobs, so a laggy visual dupes test won't hold the rest up. for now, slow means the jpeg quality comparison and visual dupes test
-* 'they are visual duplicates' results now deliver -10 score if they are not duplicates on the simple scan and -5 if they are not duplicate on the detailed scan (and thus get red instead of blue text). I can't deliver a positive score here since this test does not reveal which of A or B is better, but on a negative we can bias the score to say they aren't dupes
-
-### duplicates auto-resolution
-
-* 'test A or B' comparators now support `system:tag (advanced)`, so you can test for the presence/absence of a tag on a specific domain. I hacked this in a little and 'current domain' will be 'all known tags' for now; It'd be nice to show that better in UI
-* 'test A vs B' comparators now support `system:number of tags`. no namespace support yet, and it is locked to 'all known tags' and 'including parents and siblings', but you can do a basic 'A has more tags than B'
-
-### duplicates boring/cleanup
-
-* pair sorting now happens outside of the database and thus doesn't lag things in edge cases
-* pair sorting now works wholly over the entire batch fetched in the duplicate filter (previously, each separate search block was sorted, so in sparse results you'd get a sawtooth sort)
-* wrote a 'media result pairs and distances' object to hold the results of a rich potential duplicate pairs fetch. this complements the recent 'id pairs and distances' object from a couple weeks ago. this thing holds all the data needed to sort pairs and handles that all internally
-* the 'show some random potential pairs' routine was completely rewritten to use the new tech. it is KISS now, and the old ad-hoc garbage with its multiple layers of king hash filtering and  'comparison_preferred_hash_ids' hackery dackery doo is deleted
-* wrote some _fairly fast and good worst time performance_ file-domain pair-filtering code and expanded the pair-ids-and-distances cache to offer different answers for specific location contexts and rewangled the potential duplicate search context panel and the auto-resolution preview panel to re-initialise their base pair cache any time the location context changes
-* added unit tests for the new tag-based auto-resolution comparators
-
-### boring/cleanup
-
-* thanks to a user, the way `system:limit` randomly samples with complicated sorts is made more clear in https://hydrusnetwork.github.io/hydrus/getting_started_searching.html
-* brushed up the `server.html` help, clearing out some old things and adding a note about the update period from the FAQ
-* `options->media viewer hovers` now has a label at the top saying what a hover is lol
-* moved some list code from `HydrusData` to `HydrusLists`
-* to reduce confusion, the 'verify https traffic' DEBUG checkbox in `options->connection` is inverted to be 'do not verify'

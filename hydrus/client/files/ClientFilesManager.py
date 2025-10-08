@@ -4,6 +4,7 @@ import os
 import random
 import threading
 import time
+import typing
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
@@ -36,7 +37,7 @@ class ClientFilesManager( object ):
         # the locks for the sub-locations, broken into related umbrella groups
         self._prefix_umbrellas_to_rwlocks = collections.defaultdict( ClientThreading.FileRWLock )
         
-        self._prefix_umbrellas_to_client_files_subfolders = collections.defaultdict( list )
+        self._prefix_umbrellas_to_client_files_subfolders: collections.defaultdict[ str, list[ ClientFilesPhysical.FilesStorageSubfolder ] ] = collections.defaultdict( list )
         self._shortest_prefix = 2
         self._longest_prefix = 2
         
@@ -620,11 +621,9 @@ class ClientFilesManager( object ):
                         
                         file_prefix_umbrella = 'f' + thumbnail_prefix_umbrella[1:]
                         
-                        subfolders = None
-                        
                         if file_prefix_umbrella in self._prefix_umbrellas_to_client_files_subfolders:
                             
-                            subfolders = self._prefix_umbrellas_to_client_files_subfolders[ file_prefix_umbrella ]
+                            file_subfolders = self._prefix_umbrellas_to_client_files_subfolders[ file_prefix_umbrella ]
                             
                         else:
                             
@@ -632,27 +631,29 @@ class ClientFilesManager( object ):
                             # We need to better deal with t43 trying to find its place in f431, and t431 to f43, which means triggering splits or whatever (when we get to that code)
                             # Update: Yeah I've now moved to prefix_umbrellas, and this looks even crazier
                             
+                            file_subfolders = None
+                            
                             for ( possible_file_prefix_umbrella, possible_subfolders ) in self._prefix_umbrellas_to_client_files_subfolders.items():
                                 
                                 if possible_file_prefix_umbrella.startswith( file_prefix_umbrella ) or file_prefix_umbrella.startswith( possible_file_prefix_umbrella ):
                                     
-                                    subfolders = possible_subfolders
+                                    file_subfolders = possible_subfolders
                                     
                                     break
                                     
                                 
                             
-                        
-                        if subfolders is None:
+                            if file_subfolders is None:
+                                
+                                # this shouldn't ever fire, and by the time I expect to split subfolders, all this code will work different anyway
+                                # no way it could possibly go wrong
+                                raise Exception( 'Had a problem trying to find a thumbnail migration location due to split subfolders! Let hydev know!' )
+                                
                             
-                            # this shouldn't ever fire, and by the time I expect to split subfolders, all this code will work different anyway
-                            # no way it could possibly go wrong
-                            raise Exception( 'Had a problem trying to find a thumnail migration location due to split subfolders! Let hydev know!' )
-                            
                         
-                        subfolder = subfolders[0]
+                        file_subfolder = file_subfolders[0]
                         
-                        correct_base_location = subfolder.base_location
+                        correct_base_location = file_subfolder.base_location
                         
                     else:
                         

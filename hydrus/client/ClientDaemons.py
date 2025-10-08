@@ -129,6 +129,11 @@ class ManagerWithMainLoop( object ):
     
     def __init__( self, controller: "CG.ClientController.Controller", pre_loop_wait_time: int ):
         
+        # TODO: move work_time/rest_time into this superclass
+        # maybe some methods that can be overridden to get current rest time ratio and stuff in the subclasses
+        # but otherwise this guy should take more responsibility for the mainloop code, and the subclasses should basically only implement 'dojob()' for the loop proper
+        # one logical implementation!
+        
         self._controller = controller
         
         self._pre_loop_wait_time = pre_loop_wait_time

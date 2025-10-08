@@ -317,8 +317,12 @@ def FilesAreVisuallySimilarRegionalEdgeMapRaw( edge_map_1: EdgeMap, edge_map_2: 
 
 EDGE_PERFECT_MAX_POINT_DIFFERENCE = 3
 EDGE_VERY_GOOD_MAX_POINT_DIFFERENCE = 11
-EDGE_MAX_POINT_DIFFERENCE = 15
+EDGE_MAX_POINT_DIFFERENCE = 19
 EDGE_RUBBISH_MIN_POINT_DIFFERENCE = 45
+
+# 2025-10 OK after tuning, we see:
+# bumping up from 15 to 19
+# good bit of overlap, with some false positives at 11 or so, oh well
 
 # and here we have some numbers from experimentation. some stand out starkly
 
@@ -330,8 +334,12 @@ EDGE_RUBBISH_MIN_POINT_DIFFERENCE = 45
 # 1400 = yep clear correction
 EDGE_TILE_PERFECT_MAX_SKEW = 0
 EDGE_TILE_VERY_GOOD_MAX_SKEW = 5
-EDGE_TILE_MAX_SKEW = 15
+EDGE_TILE_MAX_SKEW = 16.5
 EDGE_TILE_RUBBISH_MIN_SKEW = 200
+
+# 2025-10 OK after tuning, we see:
+# very rare a false positive lower than 17. sometimes a crazy one at 0.34 when very low quality and it is all fuzz
+# lots of false negatives with skew > 22, 40, 50
 
 def FilesAreVisuallySimilarRegionalEdgeMap( edge_map_1: EdgeMap, edge_map_2: EdgeMap ):
     
@@ -450,11 +458,13 @@ WD_PERFECT_MAX_MEAN = 0.0001
 WD_PERFECT_MAX_VARIANCE = 0.000001
 WD_PERFECT_MAX_SKEW_PULL = 1.5
 
-# some future ideas:
+# 2025-10 Tuning Suite Updates!
+# REGIONAL_SCORES are great. 0.01 is a very good number
+# MEAN is ok, difficult compromise, lots of overlay. 0.003 is ok though
+# VARIANCE is no particularly useful tbh. useful for figuring out alts I guess. lots and lots of overlap though
+# SKEW PULL is good at detects alts very well. numbers are great
 
-# set up a really nice test suite with lots of good example pairs and perform some sort of multi-factor analysis on these output weights
-    # then, instead of doing separate bools, have coefficients (or more complicated weights) that we multiply the inputs by to make a total weight and test against one threshold value
-    # this would be far more precise than bool gubbins, but we'd have to do research and do it right
+# some future ideas:
 
 # we could adjust our skew detection for how skewed the original file is. jpeg artifacts are focused around borders
     # if a tile has a lot of borders (messy hair) but the rest of the image is simple, we get a relatively high skew despite low mean and such
@@ -568,25 +578,33 @@ def FilesAreVisuallySimilarSimple( visual_data_1: VisualData, visual_data_2: Vis
     ( interesting_tile, lab_score ) = GetVisualDataWassersteinDistanceScore( visual_data_1.lab_histograms, visual_data_2.lab_histograms )
     
     # experimentally, I generally find that most are < 0.0008, but a couple of high-quality-range jpeg pairs are 0.0018
-    # so, let's allow this thing to examine deeper on this range of things but otherwise quickly discard
-    # a confident negative result but less confident positive result is the way around we want
+    # so, let's allow this thing to examine deeper on this range of things but otherwise quickly discard (setting it at 0.003)
+    # this guy tests if we should look closer, so we never want this guy to false negative!!
     
-    they_are_similar = lab_score < 0.003
+    # UPDATE 2025-10: After running the tuning suite, I see 0.0092 max score, so I am raising this to 0.01
+    # many bad pairs are 0.014, so no worries, we are still achieving something with this fast simple call
     
     if not interesting_tile:
+        
+        they_are_similar = False
         
         statement = f'too simple to compare'
         result = VISUAL_DUPLICATES_RESULT_NOT
         
-    elif they_are_similar:
-        
-        statement = f'probably visual duplicates'
-        result = VISUAL_DUPLICATES_RESULT_PROBABLY
-        
     else:
         
-        statement = f'not visual duplicates'
-        result = VISUAL_DUPLICATES_RESULT_NOT
+        they_are_similar = lab_score < 0.01
+        
+        if they_are_similar:
+            
+            statement = f'probably visual duplicates'
+            result = VISUAL_DUPLICATES_RESULT_PROBABLY
+            
+        else:
+            
+            statement = f'not visual duplicates'
+            result = VISUAL_DUPLICATES_RESULT_NOT
+            
         
     
     return ( they_are_similar, result, statement )
@@ -635,7 +653,7 @@ def GenerateEdgeMapNumPy( rgb_numpy_image: numpy.ndarray ) -> EdgeMap:
     return EdgeMap( edge_map_r, edge_map_g, edge_map_b )
     
 
-def GenerateImageVisualDataNumPy( numpy_image: numpy.ndarray, cache_key: object ) -> VisualData:
+def GenerateImageVisualDataNumPy( numpy_image: numpy.ndarray ) -> VisualData:
     
     ( width, height ) = ( numpy_image.shape[1], numpy_image.shape[0] )
     
@@ -681,7 +699,7 @@ def GenerateImageVisualDataNumPy( numpy_image: numpy.ndarray, cache_key: object 
     return VisualData( resolution, had_alpha, lab_histograms )
     
 
-def GenerateImageVisualDataTiledNumPy( numpy_image: numpy.ndarray, cache_key: object ) -> VisualDataTiled:
+def GenerateImageVisualDataTiledNumPy( numpy_image: numpy.ndarray ) -> VisualDataTiled:
     
     ( width, height ) = ( numpy_image.shape[1], numpy_image.shape[0] )
     

@@ -5,6 +5,7 @@ def nowutc():
     
     if sys.version_info < ( 3, 11 ):
         
+        # noinspection PyDeprecation
         return datetime.datetime.utcnow()
         
     else:
@@ -17,6 +18,7 @@ def fromtimestamputc( timestamp ):
     
     if sys.version_info < ( 3, 11 ):
         
+        # noinspection PyDeprecation
         return datetime.datetime.utcfromtimestamp( timestamp )
         
     else:

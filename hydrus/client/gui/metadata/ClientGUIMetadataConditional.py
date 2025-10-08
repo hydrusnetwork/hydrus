@@ -280,7 +280,7 @@ class AutoCompleteDropdownMetadataConditional( ClientGUIACDropdown.AutocompleteD
             ClientGUIACDropdown.PutAtTopOfMatches( results, self._under_construction_or_predicate )
             
         
-        CG.client_controller.CallAfterQtSafe( self, 'Metadata Conditional Results Generation', self.SetFetchedResults, job_status, parsed_autocomplete_text, self._results_cache, results )
+        CG.client_controller.CallAfterQtSafe( self, self.SetFetchedResults, job_status, parsed_autocomplete_text, self._results_cache, results )
         
     
     def GetPredicates( self ) -> set[ ClientSearchPredicate.Predicate ]:

@@ -56,13 +56,28 @@ def ConvertNumSeedsToWeight( num_seeds: int ) -> int:
     return num_seeds * 20
     
 
+def GetParentNotebook( widget: QW.QWidget ):
+    
+    parent = widget.parentWidget()
+    
+    while not isinstance( parent, PagesNotebook ):
+        
+        if parent is None:
+            
+            return None
+            
+        
+        parent = parent.parentWidget()
+        
+    
+    return parent
+    
+
 class Page( QW.QWidget ):
     
     def __init__( self, parent: QW.QWidget, page_manager: ClientGUIPageManager.PageManager, initial_hashes ):
         
         super().__init__( parent )
-        
-        self._parent_notebook = parent
         
         self._page_key = CG.client_controller.AcquirePageKey()
         
@@ -516,11 +531,6 @@ class Page( QW.QWidget ):
             
         
     
-    def GetParentNotebook( self ):
-        
-        return self._parent_notebook
-        
-    
     def GetPrettyStatusForStatusBar( self ):
         
         return self._pretty_status
@@ -787,7 +797,7 @@ class Page( QW.QWidget ):
         
         if HC.options[ 'hide_preview' ]:
             
-            CG.client_controller.CallAfter( self, QP.Unsplit, self._search_preview_split, self._preview_panel )
+            CG.client_controller.CallAfterQtSafe( self, QP.Unsplit, self._search_preview_split, self._preview_panel )
             
         
     
@@ -834,9 +844,9 @@ class Page( QW.QWidget ):
                 
                 status = f'Loading initial files{HC.UNICODE_ELLIPSIS} {HydrusNumbers.ValueRangeToPrettyString( len( initial_media_results ), len( initial_hashes ) )}'
                 
-                controller.CallAfterQtSafe( self, 'setting status bar loading string', qt_code_status, status )
+                controller.CallAfterQtSafe( self, qt_code_status, status )
                 
-                CG.client_controller.CallAfter( self, qt_code_status, status )
+                CG.client_controller.CallAfterQtSafe( self, qt_code_status, status )
                 
             
             hashes_to_media_results = { media_result.GetHash() : media_result for media_result in initial_media_results }
@@ -862,7 +872,7 @@ class Page( QW.QWidget ):
                 
             
             # do this 'after' so on a long session setup, it all boots once session loaded
-            CG.client_controller.CallAfterQtSafe( self, 'starting page controller', self._sidebar.Start )
+            CG.client_controller.CallAfterQtSafe( self, self._sidebar.Start )
             
             self._initialised = True
             self._initial_hashes = []
@@ -887,7 +897,7 @@ class Page( QW.QWidget ):
         else:
             
             # do this 'after' so on a long session setup, it all boots once session loaded
-            CG.client_controller.CallAfterQtSafe( self, 'starting page controller', self._sidebar.Start )
+            CG.client_controller.CallAfterQtSafe( self, self._sidebar.Start )
             
             self._initialised = True
             
@@ -991,7 +1001,7 @@ def ShowReasonsAndPagesConfirmationDialog( win: QW.QWidget, reasons_and_pages, m
                 ClientGUIReviewWindowsQuick.OpenListButtons( win, 'Go To Page', choice_tuples )
                 
             
-            CG.client_controller.CallAfterQtSafe( win, 'creating show pages list', spawn_this_guy )
+            CG.client_controller.CallAfterQtSafe( win, spawn_this_guy )
             
         
         raise HydrusExceptions.VetoException()
@@ -1005,8 +1015,6 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
     def __init__( self, parent: QW.QWidget, name ):
         
         super().__init__( parent )
-        
-        self._parent_notebook = parent
         
         direction = CG.client_controller.new_options.GetInteger( 'notebook_tab_alignment' )
         
@@ -1047,42 +1055,6 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         
         self.tabBar().installEventFilter( self )
         self.installEventFilter( self )
-        
-    
-    def _RefreshPageNamesAfterDnD( self, page_widget, source_widget ):
-        
-        if hasattr( page_widget, 'GetPageKey' ):
-            
-            CG.client_controller.pub( 'refresh_page_name', page_widget.GetPageKey() )
-            
-        
-        source_notebook = source_widget.parentWidget()
-        
-        if hasattr( source_notebook, 'GetPageKey' ):
-            
-            CG.client_controller.pub( 'refresh_page_name', source_notebook.GetPageKey() )
-            
-        
-    
-    def _UpdateOptions( self ):
-        
-        if CG.client_controller.new_options.GetBoolean( 'elide_page_tab_names' ):
-            
-            self.tabBar().setElideMode( QC.Qt.TextElideMode.ElideMiddle )
-            
-        else:
-            
-            self.tabBar().setElideMode( QC.Qt.TextElideMode.ElideNone )
-            
-        
-        direction = CG.client_controller.new_options.GetInteger( 'notebook_tab_alignment' )
-        
-        self.setTabPosition( directions_for_notebook_tabs[ direction ] )
-        
-    
-    def _UpdatePreviousPageIndex( self ):
-        
-        self._previous_page_index = self.currentIndex()
         
     
     def _ChooseNewPage( self, insertion_index = None ):
@@ -1215,7 +1187,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
                 
             
         
-        self._UpdatePreviousPageIndex()
+        self.UpdatePreviousPageIndex()
         
         return True
         
@@ -1513,17 +1485,24 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         return None
         
     
-    def _MovePage( self, page, dest_notebook, insertion_tab_index, follow_dropped_page = False ):
+    def _MovePage( self, page, dest_notebook: "PagesNotebook", insertion_tab_index, follow_dropped_page = False ):
         
-        source_notebook = page.GetParentNotebook()
+        source_notebook = GetParentNotebook( page )
         
-        for ( index, p ) in enumerate( source_notebook._GetPages() ):
+        if source_notebook is None:
+            
+            return
+            
+        
+        source_notebook = typing.cast( PagesNotebook, source_notebook )
+        
+        for ( index, p ) in enumerate( source_notebook.GetPages() ):
             
             if p == page:
                 
                 source_notebook.removeTab( index )
                 
-                source_notebook._UpdatePreviousPageIndex()
+                source_notebook.UpdatePreviousPageIndex()
                 
                 break
                 
@@ -1548,21 +1527,6 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
             
         
         CG.client_controller.pub( 'refresh_page_name', page.GetPageKey() )
-        
-    
-    def _MovePages( self, pages, dest_notebook ):
-        
-        insertion_tab_index = dest_notebook.GetNumPagesHeld( only_my_level = True )
-        
-        for page in pages:
-            
-            if page.GetParentNotebook() != dest_notebook:
-                
-                self._MovePage( page, dest_notebook, insertion_tab_index )
-                
-                insertion_tab_index += 1
-                
-            
         
     
     def _RefreshPageName( self, index ):
@@ -1775,7 +1739,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
             
             self.removeTab( page_index )
             
-            self._UpdatePreviousPageIndex()
+            self.UpdatePreviousPageIndex()
             
             self.insertTab( new_page_index, page, name )
             if page_is_selected: self.setCurrentIndex( new_page_index )
@@ -2119,7 +2083,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
             
             self.removeTab( 0 )
             
-            self._UpdatePreviousPageIndex()
+            self.UpdatePreviousPageIndex()
             
         
         for page in ordered_pages:
@@ -2133,6 +2097,37 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
                 self.setCurrentIndex( self.count() - 1 )
                 
             
+        
+    
+    def _RefreshPageNamesAfterDnD( self, page_widget, source_widget ):
+        
+        if hasattr( page_widget, 'GetPageKey' ):
+            
+            CG.client_controller.pub( 'refresh_page_name', page_widget.GetPageKey() )
+            
+        
+        source_notebook = GetParentNotebook( source_widget )
+        
+        if source_notebook is not None and hasattr( source_notebook, 'GetPageKey' ):
+            
+            CG.client_controller.pub( 'refresh_page_name', source_notebook.GetPageKey() )
+            
+        
+    
+    def _UpdateOptions( self ):
+        
+        if CG.client_controller.new_options.GetBoolean( 'elide_page_tab_names' ):
+            
+            self.tabBar().setElideMode( QC.Qt.TextElideMode.ElideMiddle )
+            
+        else:
+            
+            self.tabBar().setElideMode( QC.Qt.TextElideMode.ElideNone )
+            
+        
+        direction = CG.client_controller.new_options.GetInteger( 'notebook_tab_alignment' )
+        
+        self.setTabPosition( directions_for_notebook_tabs[ direction ] )
         
     
     def AppendGUISession( self, session: ClientGUISession.GUISessionContainer ):
@@ -2751,11 +2746,6 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
             
         
         return page_keys
-        
-    
-    def GetParentNotebook( self ):
-        
-        return self._parent_notebook
         
     
     def GetPages( self ):
@@ -3698,6 +3688,11 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
                 break
                 
             
+        
+    
+    def UpdatePreviousPageIndex( self ):
+        
+        self._previous_page_index = self.currentIndex()
         
     
     def REPEATINGPageUpdate( self ):

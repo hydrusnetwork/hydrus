@@ -45,11 +45,6 @@ class AsyncQtJob( object ):
         
         def qt_deliver_result( result ):
             
-            if not QP.isValid( self._win ):
-                
-                return
-                
-            
             self._publish_callable( result )
             
         
@@ -144,6 +139,8 @@ class AsyncQtUpdater( object ):
         
         def qt_deliver_result( result ):
             
+            # feels like there is a more elegant way to handle this, that the blocking call should raise deadwindow or something
+            # if we were to do that, then all blockingtoqt calls would have to handle that
             if self._win is None or not QP.isValid( self._win ):
                 
                 self._win = None
@@ -215,7 +212,7 @@ class AsyncQtUpdater( object ):
                     
                     if self._win is not None:
                         
-                        CG.client_controller.CallAfter( self._win, self.update )
+                        CG.client_controller.CallAfterQtSafe( self._win, self.update )
                         
                     
                 
@@ -307,7 +304,7 @@ class FastThreadToGUIUpdater( object ):
                     
                     self._callafter_waiting = True
                     
-                    CG.client_controller.CallAfter( self._win, self.QtDoIt )
+                    CG.client_controller.CallAfterQtSafe( self._win, self.QtDoIt )
                     
                 
             
@@ -334,7 +331,7 @@ class FastThreadToGUIUpdater( object ):
                 
             elif not ( self._callafter_waiting or HG.view_shutdown ):
                 
-                CG.client_controller.CallAfter( self._win, self.QtDoIt )
+                CG.client_controller.CallAfterQtSafe( self._win, self.QtDoIt )
                 
             
         

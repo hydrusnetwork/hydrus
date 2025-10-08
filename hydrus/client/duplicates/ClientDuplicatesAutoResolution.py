@@ -1137,7 +1137,7 @@ class DuplicatesAutoResolutionManager( ClientDaemons.ManagerWithMainLoop ):
                 wait_time = 10
                 
             
-            FORCED_WAIT_PERIOD = 0.25
+            FORCED_WAIT_PERIOD = 0.1
             
             if wait_time > FORCED_WAIT_PERIOD:
                 
@@ -1219,12 +1219,6 @@ class DuplicatesAutoResolutionManager( ClientDaemons.ManagerWithMainLoop ):
         else:
             
             rest_ratio = CG.client_controller.new_options.GetInteger( 'duplicates_auto_resolution_rest_percentage_active' ) / 100
-            
-        
-        if actual_work_period > expected_work_period * 10:
-            
-            # if suddenly a job blats the user for ten seconds or _ten minutes_ during normal time, we are going to take a big break
-            rest_ratio *= 30
             
         
         reasonable_work_period = min( 5 * expected_work_period, actual_work_period )

@@ -1212,11 +1212,6 @@ def GenerateTestNetworkJobPresentationContextFactory( window: QW.QWidget, networ
         
         def qt_set_it( nj ):
             
-            if not QP.isValid( window ):
-                
-                return
-                
-            
             if nj is None:
                 
                 network_job_control.ClearNetworkJob()
@@ -1229,12 +1224,12 @@ def GenerateTestNetworkJobPresentationContextFactory( window: QW.QWidget, networ
         
         def enter_call():
             
-            CG.client_controller.CallAfter( window, qt_set_it, network_job )
+            CG.client_controller.CallAfterQtSafe( window, qt_set_it, network_job )
             
         
         def exit_call():
             
-            CG.client_controller.CallAfter( window, qt_set_it, None )
+            CG.client_controller.CallAfterQtSafe( window, qt_set_it, None )
             
         
         return ClientImporting.NetworkJobPresentationContext( enter_call, exit_call )
@@ -1690,20 +1685,12 @@ class EditLoginScriptPanel( ClientGUIScrolledPanels.EditPanel ):
         
         def qt_add_result( test_result ):
             
-            if not self or not QP.isValid( self ):
-                
-                return
-                
-            
             self._test_listctrl.AddData( test_result )
             
         
+        qt_add_result_callable = lambda s: CG.client_controller.CallAfterQtSafe( self, qt_add_result, s )
+        
         def clean_up( final_result ):
-            
-            if not self or not QP.isValid( self ):
-                
-                return
-                
             
             ClientGUIDialogsMessage.ShowInformation( self, final_result )
             
@@ -1734,7 +1721,7 @@ class EditLoginScriptPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 network_context = ClientNetworkingContexts.NetworkContext.STATICGenerateForDomain( domain )
                 
-                login_result = login_script.Start( network_engine, network_context, credentials, network_job_presentation_context_factory = network_job_presentation_context_factory, test_result_callable = qt_add_result )
+                login_result = login_script.Start( network_engine, network_context, credentials, network_job_presentation_context_factory = network_job_presentation_context_factory, test_result_callable = qt_add_result_callable )
                 
             except Exception as e:
                 
@@ -1747,7 +1734,7 @@ class EditLoginScriptPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 network_engine.Shutdown()
                 
-                CG.client_controller.CallAfter( self, clean_up, login_result )
+                CG.client_controller.CallAfterQtSafe( self, clean_up, login_result )
                 
             
         

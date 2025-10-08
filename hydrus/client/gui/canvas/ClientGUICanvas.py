@@ -3359,7 +3359,7 @@ class CanvasMediaListFilterArchiveDelete( CanvasMediaList ):
         
         if first_media is not None:
             
-            CG.client_controller.CallAfter( self, self.SetMedia, first_media ) # don't set this until we have a size > (20, 20)!
+            CG.client_controller.CallAfterQtSafe( self, self.SetMedia, first_media ) # don't set this until we have a size > (20, 20)!
             
         
     
@@ -3877,7 +3877,7 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
         
         if first_media is not None:
             
-            CG.client_controller.CallAfter( self, self.SetMedia, first_media ) # don't set this until we have a size > (20, 20)!
+            CG.client_controller.CallAfterQtSafe( self, self.SetMedia, first_media ) # don't set this until we have a size > (20, 20)!
             
         
         CG.client_controller.sub( self, 'AddMediaResults', 'add_media_results' )

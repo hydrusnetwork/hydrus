@@ -51,7 +51,7 @@ class ReviewTagDisplayMaintenancePanel( ClientGUIScrolledPanels.ReviewPanel ):
             
             if service_key == default_tag_service_key:
                 
-                CG.client_controller.CallAfter( self._tag_services, self._tag_services.setCurrentWidget, page )
+                CG.client_controller.CallAfterQtSafe( self._tag_services, self._tag_services.setCurrentWidget, page )
                 
             
         

@@ -169,9 +169,9 @@ def ShutdownSiblingInstance( db_dir ):
 
 class Controller( HydrusController.HydrusController ):
     
-    def __init__( self, db_dir ):
+    def __init__( self, db_dir, logger ):
         
-        super().__init__( db_dir )
+        super().__init__( db_dir, logger )
         
         self._name = 'server'
         

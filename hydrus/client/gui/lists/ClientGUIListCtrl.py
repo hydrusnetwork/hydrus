@@ -613,7 +613,7 @@ class BetterListCtrlTreeView( QW.QTreeView ):
         self.header().setContextMenuPolicy( QC.Qt.ContextMenuPolicy.CustomContextMenu )
         self.header().customContextMenuRequested.connect( self._ShowHeaderMenu )
         
-        CG.client_controller.CallAfterQtSafe( self, 'initialising multi-column list widths', self._InitialiseColumnWidths )
+        CG.client_controller.CallAfterQtSafe( self, self._InitialiseColumnWidths )
         
         CG.client_controller.sub( self, 'NotifySettingsUpdated', 'reset_all_listctrl_status' )
         CG.client_controller.sub( self, 'NotifySettingsUpdated', 'reset_listctrl_status' )
@@ -941,7 +941,7 @@ class BetterListCtrlTreeView( QW.QTreeView ):
     
     def EventShowMenu( self ):
         
-        CG.client_controller.CallAfterQtSafe( self, 'list menu show', self._ShowRowsMenu )
+        CG.client_controller.CallAfterQtSafe( self, self._ShowRowsMenu )
         
     
     def ForceHeight( self, rows ):

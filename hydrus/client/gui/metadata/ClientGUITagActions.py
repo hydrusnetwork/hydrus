@@ -529,7 +529,7 @@ class TagPairActionContext( object ):
             
             for ( win, c ) in self._notify_callables:
                 
-                CG.client_controller.CallAfterQtSafe( win, 'showing pair updates', c )
+                CG.client_controller.CallAfterQtSafe( win, c )
                 
             
             self._notify_new_tags_info.set()
@@ -552,7 +552,7 @@ class TagPairActionContext( object ):
                 self._notify_new_tags_info.clear()
                 
             
-            CG.client_controller.CallAfterQtSafe( widget, 'add tag pairs (after preload)', do_it_qt )
+            CG.client_controller.CallAfterQtSafe( widget, do_it_qt )
             
         
         def do_it_qt():
@@ -887,7 +887,7 @@ class TagPairActionContext( object ):
                     
                     for ( win, c ) in self._notify_callables:
                         
-                        CG.client_controller.CallAfterQtSafe( win, 'showing tag pair updates', c )
+                        CG.client_controller.CallAfterQtSafe( win, c )
                         
                     
                     self._notify_new_tags_info.set()

@@ -649,7 +649,7 @@ class QtAwareJob( HydrusThreading.SingleJob ):
             
         
         # yo if you change this, alter how profile_mode (ui) works
-        CG.client_controller.CallAfter( self._window, qt_code )
+        CG.client_controller.CallAfterQtSafe( self._window, qt_code )
         
     
     def _MyWindowDead( self ):
@@ -701,7 +701,7 @@ class QtAwareRepeatingJob( HydrusThreading.RepeatingJob ):
     def _BootWorker( self ):
         
         # yo if you change this, alter how profile_mode (ui) works
-        CG.client_controller.CallAfter( self._window, self._QTWork )
+        CG.client_controller.CallAfterQtSafe( self._window, self._QTWork )
         
     
     def _MyWindowDead( self ):

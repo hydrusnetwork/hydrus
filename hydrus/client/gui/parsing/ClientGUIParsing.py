@@ -1502,11 +1502,6 @@ class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
             
             def qt_tidy_up( example_data, example_bytes, error ):
                 
-                if not self or not QP.isValid( self ):
-                    
-                    return
-                    
-                
                 example_parsing_context = self._test_panel.GetExampleParsingContext()
                 
                 example_parsing_context[ 'url' ] = url
@@ -1555,7 +1550,7 @@ class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
                 example_data = 'fetch failed: {}'.format( e ) + '\n' * 2 + stuff_read
                 
             
-            CG.client_controller.CallAfter( self, qt_tidy_up, example_data, example_bytes, error )
+            CG.client_controller.CallAfterQtSafe( self, qt_tidy_up, example_data, example_bytes, error )
             
         
         raw_url = self._test_url.text().strip()

@@ -251,7 +251,7 @@ def boot():
             
             from hydrus.client import ClientController
             
-            controller = ClientController.Controller( db_dir )
+            controller = ClientController.Controller( db_dir, logger )
             
             controller.Run()
             

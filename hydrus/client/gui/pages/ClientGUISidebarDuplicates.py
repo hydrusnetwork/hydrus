@@ -346,7 +346,7 @@ class PreparationPanel( QW.QWidget ):
         
         #
         
-        self._searching_panel = ClientGUICommon.StaticBox( self, 'finding potential duplicates' )
+        self._searching_panel = ClientGUICommon.StaticBox( self, 'potential duplicate pair discovery' )
         
         self._refresh_maintenance_button = ClientGUICommon.IconButton( self._searching_panel, CC.global_icons().refresh, self._RefreshMaintenanceNumbers )
         
@@ -393,6 +393,7 @@ class PreparationPanel( QW.QWidget ):
         self._max_hamming_distance_for_potential_discovery_button = ClientGUIMenuButton.MenuButton( self._searching_panel, 'similarity', menu_template_items )
         
         self._max_hamming_distance_for_potential_discovery_spinctrl = ClientGUICommon.BetterSpinBox( self._searching_panel, min=0, max=64, width = 50 )
+        self._max_hamming_distance_for_potential_discovery_spinctrl.setToolTip( ClientGUIFunctions.WrapToolTip( 'The max "hamming distance" allowed in the search. The higher you go, the slower the search and the more false positives.' ) )
         self._max_hamming_distance_for_potential_discovery_spinctrl.setSingleStep( 2 )
         
         self._num_searched = ClientGUICommon.TextAndGauge( self._searching_panel )

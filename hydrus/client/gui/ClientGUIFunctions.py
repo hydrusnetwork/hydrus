@@ -451,7 +451,7 @@ def NotebookScreenToHitTest( notebook, screen_position ):
 
 def SetFocusLater( win: QW.QWidget ):
     
-    CG.client_controller.CallAfterQtSafe( win, 'set focus to a window', win.setFocus, QC.Qt.FocusReason.OtherFocusReason )
+    CG.client_controller.CallAfterQtSafe( win, win.setFocus, QC.Qt.FocusReason.OtherFocusReason )
     
 
 def TLWIsActive( window ):

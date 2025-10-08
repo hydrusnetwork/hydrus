@@ -42,7 +42,7 @@ class ResizingEventFilter( QC.QObject ):
                     
                     if width_larger or height_larger:
                         
-                        CG.client_controller.CallAfter( parent, parent.WidgetJustSized, width_larger, height_larger )
+                        CG.client_controller.CallAfterQtSafe( parent, parent.WidgetJustSized, width_larger, height_larger )
                         
                     
                 

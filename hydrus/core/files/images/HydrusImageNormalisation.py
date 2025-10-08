@@ -249,8 +249,8 @@ def NormaliseNumPyImageToUInt8( numpy_image: numpy.ndarray ):
         #numpy_image = cv2.normalize( numpy_image, None, 0, 255, cv2.NORM_MINMAX, dtype = cv2.CV_8U )
         
         # this is hacky and is applying some crazy old-school flickr HDR to minmax our range, but it basically works
-        min_value = numpy.min( numpy_image )
-        max_value = numpy.max( numpy_image )
+        min_value = float( numpy.min( numpy_image ) )
+        max_value = float( numpy.max( numpy_image ) )
         
         if min_value > 0:
             

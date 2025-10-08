@@ -65,7 +65,7 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
             if service_key == default_tag_service_key:
                 
                 # Py 3.11/PyQt6 6.5.0/two tabs/total tab characters > ~12/select second tab during init = first tab disappears bug
-                CG.client_controller.CallAfter( self._tag_services, self._tag_services.setCurrentWidget, page )
+                CG.client_controller.CallAfterQtSafe( self._tag_services, self._tag_services.setCurrentWidget, page )
                 
             
         
@@ -145,7 +145,7 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
         
         if current_page is not None:
             
-            CG.client_controller.CallAfterQtSafe( current_page, 'setting page focus', current_page.SetTagBoxFocus )
+            CG.client_controller.CallAfterQtSafe( current_page, current_page.SetTagBoxFocus )
             
         
     
@@ -737,11 +737,6 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
             def publish_callable( result ):
                 
                 service_keys_to_work_to_do = result
-                
-                if not self or not QP.isValid( self ):
-                    
-                    return
-                    
                 
                 looking_good = True
                 

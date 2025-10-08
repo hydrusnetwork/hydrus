@@ -393,18 +393,9 @@ class Controller( object ):
             
             try:
                 
-                if win is not None and not QP.isValid( win ):
-                    
-                    raise HydrusExceptions.QtDeadWindowException('Parent Window was destroyed before Qt command was called!')
-                    
-                
                 result = func( *args, **kwargs )
                 
                 job_status.SetVariable( 'result', result )
-                
-            except ( HydrusExceptions.QtDeadWindowException, HydrusExceptions.DBCredentialsException, HydrusExceptions.ShutdownException ) as e:
-                
-                job_status.SetErrorException( e )
                 
             except Exception as e:
                 
@@ -418,7 +409,7 @@ class Controller( object ):
         
         job_status = ClientThreading.JobStatus( cancellable = True, cancel_on_shutdown = False )
         
-        self.CallAfter( win, qt_code, win, job_status )
+        self.CallAfterQtSafe( win, qt_code, win, job_status )
         
         while not job_status.IsDone():
             
@@ -458,14 +449,9 @@ class Controller( object ):
     
     CallToThreadLongRunning = CallToThread
     
-    def CallAfter( self, qobject: QC.QObject, func, *args, **kwargs ):
+    def CallAfterQtSafe( self, qobject: QC.QObject, func, *args, **kwargs ):
         
         ClientGUICallAfter.CallAfter( self.call_after_catcher, qobject, func, *args, **kwargs )
-        
-    
-    def CallAfterQtSafe( self, window, label, func, *args, **kwargs ):
-        
-        self.CallAfter( window, func, *args, **kwargs )
         
     
     def CallLater( self, initial_delay, func, *args, **kwargs ):
@@ -939,7 +925,7 @@ class Controller( object ):
                 
             finally:
                 
-                self.CallAfter( self.win, self.win.deleteLater )
+                self.CallAfterQtSafe( self.win, self.win.deleteLater )
                 
             
         

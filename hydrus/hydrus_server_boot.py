@@ -205,7 +205,7 @@ def boot():
                 
                 threading.Thread( target = target, name = 'twisted', kwargs = { 'installSignalHandlers' : 0 } ).start()
                 
-                controller = ServerController.Controller( db_dir )
+                controller = ServerController.Controller( db_dir, logger )
                 
                 controller.Run()
                 

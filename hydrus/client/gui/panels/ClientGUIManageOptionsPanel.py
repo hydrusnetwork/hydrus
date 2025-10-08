@@ -4163,6 +4163,9 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._always_loop_animations = QW.QCheckBox( media_panel )
             self._always_loop_animations.setToolTip( ClientGUIFunctions.WrapToolTip( 'Some GIFS and APNGs have metadata specifying how many times they should be played, usually 1. Uncheck this to obey that number.' ) )
             
+            self._use_legacy_mpv_mediator = QW.QCheckBox( media_panel )
+            self._use_legacy_mpv_mediator.setToolTip( ClientGUIFunctions.WrapToolTip( 'ADVANCED USERS, please try turning this off! Use this if mpv errors out or does not show seekbar progress on any load. This would probably happen because you had an older mpv version. If you have opened any mpv windows, restart the client to take effect.' ) )
+            
             self._mpv_loop_playlist_instead_of_file = QW.QCheckBox( media_panel )
             self._mpv_loop_playlist_instead_of_file.setToolTip( ClientGUIFunctions.WrapToolTip( 'Try this if you get "too many events queued" error in mpv.' ) )
             
@@ -4247,6 +4250,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._animation_start_position.setValue( int( HC.options['animation_start_position'] * 100.0 ) )
             self._always_loop_animations.setChecked( self._new_options.GetBoolean( 'always_loop_gifs' ) )
+            self._use_legacy_mpv_mediator.setChecked( self._new_options.GetBoolean( 'use_legacy_mpv_mediator' ) )
             self._mpv_loop_playlist_instead_of_file.setChecked( self._new_options.GetBoolean( 'mpv_loop_playlist_instead_of_file' ) )
             self._do_not_setgeometry_on_an_mpv.setChecked( self._new_options.GetBoolean( 'do_not_setgeometry_on_an_mpv' ) )
             self._draw_transparency_checkerboard_media_canvas.setChecked( self._new_options.GetBoolean( 'draw_transparency_checkerboard_media_canvas' ) )
@@ -4294,6 +4298,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows.append( ( 'Preview Viewer default zoom:', self._preview_default_zoom_type_override ) )
             rows.append( ( 'Start animations this % in:', self._animation_start_position ) )
             rows.append( ( 'Always Loop Animations:', self._always_loop_animations ) )
+            rows.append( ( 'LEGACY DEBUG: Use legacy mpv communication method:', self._use_legacy_mpv_mediator ) )
             rows.append( ( 'DEBUG: Loop Playlist instead of Loop File in mpv:', self._mpv_loop_playlist_instead_of_file ) )
             rows.append( ( 'LINUX DEBUG: Do not allow combined setGeometry on mpv window:', self._do_not_setgeometry_on_an_mpv ) )
             rows.append( ( 'Draw image transparency as checkerboard:', self._draw_transparency_checkerboard_media_canvas ) )
@@ -4538,6 +4543,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             HC.options[ 'animation_start_position' ] = self._animation_start_position.value() / 100.0
             self._new_options.SetBoolean( 'always_loop_gifs', self._always_loop_animations.isChecked() )
+            self._new_options.SetBoolean( 'use_legacy_mpv_mediator', self._use_legacy_mpv_mediator.isChecked() )
             self._new_options.SetBoolean( 'mpv_loop_playlist_instead_of_file', self._mpv_loop_playlist_instead_of_file.isChecked() )
             self._new_options.SetBoolean( 'do_not_setgeometry_on_an_mpv', self._do_not_setgeometry_on_an_mpv.isChecked() )
             self._new_options.SetBoolean( 'draw_transparency_checkerboard_media_canvas', self._draw_transparency_checkerboard_media_canvas.isChecked() )

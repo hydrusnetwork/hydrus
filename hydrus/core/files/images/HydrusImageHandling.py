@@ -72,6 +72,7 @@ if not PIL_HAS_AVIF:
     
     try:
         
+        # noinspection PyUnresolvedReferences
         import pillow_avif
         
         AVIF_PLUGIN_OK = True

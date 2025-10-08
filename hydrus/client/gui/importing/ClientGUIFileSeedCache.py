@@ -410,7 +410,7 @@ class EditFileSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
         
         CG.client_controller.sub( self, 'NotifyFileSeedsUpdated', 'file_seed_cache_file_seeds_updated' )
         
-        CG.client_controller.CallAfter( self, self._UpdateText )
+        CG.client_controller.CallAfterQtSafe( self, self._UpdateText )
         
     
     def _ConvertFileSeedToDisplayTuple( self, file_seed: ClientImportFileSeeds.FileSeed ):
@@ -1111,11 +1111,6 @@ class FileSeedCacheStatusControl( QW.QFrame ):
         
     
     def SetFileSeedCache( self, file_seed_cache ):
-        
-        if not self or not QP.isValid( self ):
-            
-            return
-            
         
         self._file_seed_cache = file_seed_cache
         

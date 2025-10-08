@@ -315,6 +315,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             'remove_leading_url_double_slashes' : False,
             'always_apply_ntfs_export_filename_rules' : False,
             'replace_percent_twenty_with_space_in_gug_input' : False,
+            'use_legacy_mpv_mediator' : True,
         }
         
         #

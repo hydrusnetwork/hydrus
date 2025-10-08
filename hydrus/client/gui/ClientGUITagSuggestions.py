@@ -255,28 +255,23 @@ class RecentTagsPanel( QW.QWidget ):
     
     def _RefreshRecentTags( self ):
         
-        def do_it( service_key ):
+        def qt_code( recent_tags ):
             
-            def qt_code( recent_tags ):
+            self._last_fetched_tags = recent_tags
+            
+            self._UpdateTagDisplay()
+            
+            if len( self._recent_tags.GetTags() ) > 0:
                 
-                if not self or not QP.isValid( self ):
-                    
-                    return
-                    
+                self._recent_tags.SelectTopItem()
                 
-                self._last_fetched_tags = recent_tags
-                
-                self._UpdateTagDisplay()
-                
-                if len( self._recent_tags.GetTags() ) > 0:
-                    
-                    self._recent_tags.SelectTopItem()
-                    
-                
+            
+        
+        def do_it( service_key ):
             
             recent_tags = CG.client_controller.Read( 'recent_tags', service_key )
             
-            CG.client_controller.CallAfter( self, qt_code, recent_tags )
+            CG.client_controller.CallAfterQtSafe( self, qt_code, recent_tags )
             
         
         CG.client_controller.CallToThread( do_it, self._service_key )
@@ -401,11 +396,6 @@ class RelatedTagsPanel( QW.QWidget ):
             
             def qt_code( predicates, num_done, num_to_do, num_skipped, total_time_took ):
                 
-                if not self or not QP.isValid( self ):
-                    
-                    return
-                    
-                
                 if num_skipped == 0:
                     
                     tags_s = 'tags'
@@ -479,7 +469,7 @@ class RelatedTagsPanel( QW.QWidget ):
             
             predicates = ClientSearchPredicate.SortPredicates( predicates )
             
-            CG.client_controller.CallAfter( self, qt_code, predicates, num_done, num_to_do, num_skipped, total_time_took )
+            CG.client_controller.CallAfterQtSafe( self, qt_code, predicates, num_done, num_to_do, num_skipped, total_time_took )
             
         
         self._related_tags.SetPredicates( [] )
@@ -633,11 +623,6 @@ class FileLookupScriptTagsPanel( QW.QWidget ):
             
             def qt_code():
                 
-                if not self or not QP.isValid( self ):
-                    
-                    return
-                    
-                
                 script_names_to_scripts = { script.GetName() : script for script in scripts }
                 
                 for ( name, script ) in list(script_names_to_scripts.items()):
@@ -664,7 +649,7 @@ class FileLookupScriptTagsPanel( QW.QWidget ):
             
             scripts = CG.client_controller.Read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_PARSE_ROOT_FILE_LOOKUP )
             
-            CG.client_controller.CallAfter( self, qt_code )
+            CG.client_controller.CallAfterQtSafe( self, qt_code )
             
         
         CG.client_controller.CallToThread( do_it )
@@ -756,11 +741,6 @@ class FileLookupScriptTagsPanel( QW.QWidget ):
         
         def qt_code( tags ):
             
-            if not self or not QP.isValid( self ):
-                
-                return
-                
-            
             self._SetTags( tags )
             
             self._have_fetched = True
@@ -774,7 +754,7 @@ class FileLookupScriptTagsPanel( QW.QWidget ):
         
         ClientTagSorting.SortTags( tag_sort, tags )
         
-        CG.client_controller.CallAfter( self, qt_code, tags )
+        CG.client_controller.CallAfterQtSafe( self, qt_code, tags )
         
     
 class SuggestedTagsPanel( QW.QWidget ):

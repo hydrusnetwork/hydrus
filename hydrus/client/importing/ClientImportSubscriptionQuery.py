@@ -503,6 +503,18 @@ class SubscriptionQueryHeader( HydrusSerialisable.SerialisableBase ):
         return self._display_name
         
     
+    def GetFullHumanName( self ):
+        
+        if self._display_name is None:
+            
+            return self._query_text
+            
+        else:
+            
+            return f'{self._display_name} ({self._query_text})'
+            
+        
+    
     def GetHumanName( self ):
         
         return self._GetHumanName()

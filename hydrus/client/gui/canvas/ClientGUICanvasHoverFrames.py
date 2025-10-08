@@ -2328,7 +2328,7 @@ class CanvasHoverFrameRightDuplicates( CanvasHoverFrame ):
             
             dupe_commands = []
             
-            dupe_commands.append( ( 'approve', 'Approve this pair for the original auto-resolution rule.', CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_FILTER_APPROVE_AUTO_RESOLUTION ) ) )
+            dupe_commands.append( ( 'approve', 'Approve this pair for the original auto-resolution rule. It applies AB, as originally intended by the rule, not according to which file you are currently looking at.', CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_FILTER_APPROVE_AUTO_RESOLUTION ) ) )
             dupe_commands.append( ( 'deny', 'Deny this pair for the original auto-resolution rule.', CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_FILTER_DENY_AUTO_RESOLUTION ) ) )
             
             dupe_boxes.append( ( 'auto-resolution', dupe_commands ) )

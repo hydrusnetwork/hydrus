@@ -304,7 +304,7 @@ class EditGallerySeedLogPanel( ClientGUIScrolledPanels.EditPanel ):
         
         CG.client_controller.sub( self, 'NotifyGallerySeedsUpdated', 'gallery_seed_log_gallery_seeds_updated' )
         
-        CG.client_controller.CallAfter( self, self._UpdateText )
+        CG.client_controller.CallAfterQtSafe( self, self._UpdateText )
         
     
     def _ConvertGallerySeedToDisplayTuple( self, gallery_seed ):
@@ -796,11 +796,6 @@ class GallerySeedLogStatusControl( QW.QFrame ):
         
     
     def SetGallerySeedLog( self, gallery_seed_log ):
-        
-        if not self or not QP.isValid( self ):
-            
-            return
-            
         
         self._gallery_seed_log = gallery_seed_log
         

@@ -43,6 +43,7 @@ class ReviewActionsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         self._we_have_done_actions = False
         self._we_have_done_declines = False
+        self._we_have_done_undos = False
         
         self._main_notebook = ClientGUICommon.BetterNotebook( self )
         
@@ -259,7 +260,7 @@ class ReviewActionsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         def work_callable():
             
-            wrapped_status_hook = lambda message: CG.client_controller.CallAfterQtSafe( self, 'approve pairs status hook', status_hook, message )
+            wrapped_status_hook = lambda message: CG.client_controller.CallAfterQtSafe( self, status_hook, message )
             
             ClientDuplicatesAutoResolution.ActionAutoResolutionReviewPairs(
                 rule,
@@ -325,9 +326,11 @@ class ReviewActionsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         if page == self._pending_actions_panel:
             
-            if len( self._pending_action_pairs ) == 0:
+            if len( self._pending_action_pairs ) == 0 or self._we_have_done_undos:
                 
                 self._RefetchPendingActionPairs()
+                
+                self._we_have_done_undos
                 
             
         elif page == self._actioned_pairs_panel:
@@ -336,7 +339,7 @@ class ReviewActionsPanel( ClientGUIScrolledPanels.ReviewPanel ):
                 
                 self._RefetchActionedPairs()
                 
-                self._we_have_done_declines = False
+                self._we_have_done_actions = False
                 
             
         elif page == self._declined_pairs_panel:
@@ -411,7 +414,7 @@ class ReviewActionsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         def work_callable():
             
-            wrapped_status_hook = lambda message: CG.client_controller.CallAfterQtSafe( self, 'deny pairs status hook', status_hook, message )
+            wrapped_status_hook = lambda message: CG.client_controller.CallAfterQtSafe( self, status_hook, message )
             
             ClientDuplicatesAutoResolution.ActionAutoResolutionReviewPairs(
                 rule,
@@ -668,7 +671,7 @@ class ReviewActionsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         all_hashes = set( itertools.chain.from_iterable( [ ( media_result_1.GetHash(), media_result_2.GetHash() ) for ( media_result_1, media_result_2 ) in selected_pairs ] ) )
         
-        message = f'Are you sure you want to undo the auto-resolution actions covering these {HydrusNumbers.ToHumanInt( len( all_hashes ) )} files? This is a serious action.\n\nThe only way to do this reliably is to completely dissolve the respective duplicate group(s), which may undo many other decisions. All the files in the duplicate group(s) (not just what you selected) will be queued up for search in the potential duplicates system once more. Any files that are in trash will be undeleted. This action will not remove the entries from this audit log nor undo any content merge.'
+        message = f'Are you sure you want to undo the auto-resolution actions covering these {HydrusNumbers.ToHumanInt( len( all_hashes ) )} files? This is a serious action and will reset all the duplicate file relationships these files have.\n\nThe only way to do this reliably is to completely dissolve the respective duplicate group(s), which may undo many other decisions. All the files in the duplicate group(s) (not just what you selected) will be queued up for search in the potential duplicates system once more. Any files that are in trash will be undeleted. This action will not remove the entries from this audit log nor undo any content merge.'
         
         result = ClientGUIDialogsQuick.GetYesNo( self, message )
         
@@ -681,7 +684,9 @@ class ReviewActionsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         CG.client_controller.WriteSynchronous( 'dissolve_duplicates_group', all_hashes )
         
-        self._RefetchActionedPairs()
+        self._we_have_done_undos = True
+        
+        # don't do a 'refresh actioned' thing here--the entries will not be removed!
         
     
     def _UndoSelectedDeclined( self ):
@@ -706,6 +711,8 @@ class ReviewActionsPanel( ClientGUIScrolledPanels.ReviewPanel ):
             
         
         CG.client_controller.WriteSynchronous( 'duplicates_auto_resolution_rescind_declined_pairs', self._rule, selected_pairs )
+        
+        self._we_have_done_undos = True
         
         self._RefetchDeclinedPairs()
         

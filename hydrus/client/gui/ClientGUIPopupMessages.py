@@ -915,7 +915,7 @@ class PopupMessageManager( QW.QFrame ):
             # for whatever reason, self._message_vbox.activate does not cause the vbox.sizeHint to be recalculated at this point. it just sits at the last value unless original was (0,0)?!?
             # so we'll do it callafter. it works
             
-            CG.client_controller.CallAfter( self, self.MakeSureEverythingFits )
+            CG.client_controller.CallAfterQtSafe( self, self.MakeSureEverythingFits )
             
         
     
@@ -1018,11 +1018,6 @@ class PopupMessageManager( QW.QFrame ):
         
     
     def _OKToAlterUI( self ):
-
-        if not QP.isValid( self ):
-            
-            return False
-            
         
         main_gui = self.window()
         

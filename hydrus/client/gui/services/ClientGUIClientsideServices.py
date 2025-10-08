@@ -545,11 +545,6 @@ class EditServiceRemoteSubPanel( ClientGUICommon.StaticBox ):
         
         def qt_done( message ):
             
-            if not self or not QP.isValid( self ):
-                
-                return
-                
-            
             ClientGUIDialogsMessage.ShowInformation( self, message )
             
             self._test_address_button.setEnabled( True )
@@ -582,11 +577,11 @@ class EditServiceRemoteSubPanel( ClientGUICommon.StaticBox ):
                 
                 network_job.WaitUntilDone()
                 
-                CG.client_controller.CallAfter( self, qt_done, 'Looks good!' )
+                CG.client_controller.CallAfterQtSafe( self, qt_done, 'Looks good!' )
                 
             except HydrusExceptions.NetworkException as e:
                 
-                CG.client_controller.CallAfter( self, qt_done, 'Problem with that address: ' + str(e) )
+                CG.client_controller.CallAfterQtSafe( self, qt_done, 'Problem with that address: ' + str(e) )
                 
             
         
@@ -1009,19 +1004,6 @@ class EditServiceRestrictedSubPanel( ClientGUICommon.StaticBox ):
         
         credentials = self.GetCredentials()
         service_type = self._service_type
-        
-        def qt_done( message ):
-            
-            if not self or not QP.isValid( self ):
-                
-                return
-                
-            
-            ClientGUIDialogsMessage.ShowInformation( self, message )
-            
-            self._test_credentials_button.setEnabled( True )
-            self._test_credentials_button.setText( 'test access key' )
-            
         
         def work_callable():
             
@@ -1935,11 +1917,6 @@ class ReviewServiceSubPanel( ClientGUICommon.StaticBox ):
     
     def _Refresh( self ):
         
-        if not self or not QP.isValid( self ):
-            
-            return
-            
-        
         name = self._service.GetName()
         service_type = self._service.GetServiceType()
         
@@ -1958,6 +1935,7 @@ class ReviewServiceSubPanel( ClientGUICommon.StaticBox ):
             
         
     
+
 class ReviewServiceClientAPISubPanel( ClientGUICommon.StaticBox ):
     
     def __init__( self, parent, service ):
@@ -2215,11 +2193,6 @@ class ReviewServiceClientAPISubPanel( ClientGUICommon.StaticBox ):
     
     def _Refresh( self ):
         
-        if not self or not QP.isValid( self ):
-            
-            return
-            
-        
         port = self._service.GetPort()
         
         if port is None:
@@ -2314,11 +2287,6 @@ class ReviewServiceCombinedLocalFilesSubPanel( ClientGUICommon.StaticBox ):
     
     def _Refresh( self ):
         
-        if not self or not QP.isValid( self ):
-            
-            return
-            
-        
         CG.client_controller.CallToThread( self.THREADFetchInfo, self._service )
         
     
@@ -2336,11 +2304,6 @@ class ReviewServiceCombinedLocalFilesSubPanel( ClientGUICommon.StaticBox ):
         
         def qt_code( text ):
             
-            if not self or not QP.isValid( self ):
-                
-                return
-                
-            
             self._deferred_delete_status.setText( text )
             
         
@@ -2355,7 +2318,7 @@ class ReviewServiceCombinedLocalFilesSubPanel( ClientGUICommon.StaticBox ):
             text = '{} files and {} thumbnails are awaiting physical deletion from file storage.'.format( HydrusNumbers.ToHumanInt( num_files ), HydrusNumbers.ToHumanInt( num_thumbnails ) )
             
         
-        CG.client_controller.CallAfter( self, qt_code, text )
+        CG.client_controller.CallAfterQtSafe( self, qt_code, text )
         
     
 class ReviewServiceFileSubPanel( ClientGUICommon.StaticBox ):
@@ -2383,11 +2346,6 @@ class ReviewServiceFileSubPanel( ClientGUICommon.StaticBox ):
     
     def _Refresh( self ):
         
-        if not self or not QP.isValid( self ):
-            
-            return
-            
-        
         CG.client_controller.CallToThread( self.THREADFetchInfo, self._service )
         
     
@@ -2404,11 +2362,6 @@ class ReviewServiceFileSubPanel( ClientGUICommon.StaticBox ):
     def THREADFetchInfo( self, service ):
         
         def qt_code( text ):
-            
-            if not self or not QP.isValid( self ):
-                
-                return
-                
             
             self._file_info_st.setText( text )
             
@@ -2427,7 +2380,7 @@ class ReviewServiceFileSubPanel( ClientGUICommon.StaticBox ):
             text += ' - ' + HydrusNumbers.ToHumanInt( num_deleted_files ) + ' deleted files'
             
         
-        CG.client_controller.CallAfter( self, qt_code, text )
+        CG.client_controller.CallAfterQtSafe( self, qt_code, text )
         
     
 class ReviewServiceRemoteSubPanel( ClientGUICommon.StaticBox ):
@@ -2469,11 +2422,6 @@ class ReviewServiceRemoteSubPanel( ClientGUICommon.StaticBox ):
         
     
     def _Refresh( self ):
-        
-        if not self or not QP.isValid( self ):
-            
-            return
-            
         
         credentials = self._service.GetCredentials()
         
@@ -2611,11 +2559,6 @@ class ReviewServiceRestrictedSubPanel( ClientGUICommon.StaticBox ):
         
     
     def _Refresh( self ):
-        
-        if not self or not QP.isValid( self ):
-            
-            return
-            
         
         account = self._service.GetAccount()
         
@@ -2988,11 +2931,6 @@ class ReviewServiceRepositorySubPanel( QW.QWidget ):
         
         def qt_done():
             
-            if not self or not QP.isValid( self ):
-                
-                return
-                
-            
             self._export_updates_button.setText( 'export updates' )
             self._export_updates_button.setEnabled( True )
             
@@ -3062,7 +3000,7 @@ class ReviewServiceRepositorySubPanel( QW.QWidget ):
                 
             finally:
                 
-                CG.client_controller.CallAfter( self, qt_done )
+                CG.client_controller.CallAfterQtSafe( self, qt_done )
                 
             
         
@@ -3146,11 +3084,6 @@ class ReviewServiceRepositorySubPanel( QW.QWidget ):
         
     
     def _Refresh( self ):
-        
-        if not self or not QP.isValid( self ):
-            
-            return
-            
         
         self._sync_remote_now_button.setEnabled( False )
         self._sync_processing_now_button.setEnabled( False )
@@ -3458,11 +3391,6 @@ class ReviewServiceRepositorySubPanel( QW.QWidget ):
         
         def qt_code( num_local_updates, num_updates, content_types_to_num_processed_updates, content_types_to_num_updates, is_mostly_caught_up ):
             
-            if not self or not QP.isValid( self ):
-                
-                return
-                
-            
             download_text = 'downloaded {}'.format( HydrusNumbers.ValueRangeToPrettyString( num_local_updates, num_updates ) )
             
             self._download_progress.SetValue( download_text, num_local_updates, num_updates )
@@ -3542,7 +3470,7 @@ class ReviewServiceRepositorySubPanel( QW.QWidget ):
         
         is_mostly_caught_up = service.IsMostlyCaughtUp()
         
-        CG.client_controller.CallAfter( self, qt_code, num_local_updates, num_updates, content_types_to_num_processed_updates, content_types_to_num_updates, is_mostly_caught_up )
+        CG.client_controller.CallAfterQtSafe( self, qt_code, num_local_updates, num_updates, content_types_to_num_processed_updates, content_types_to_num_updates, is_mostly_caught_up )
         
     
 
@@ -3627,11 +3555,6 @@ class ReviewServiceIPFSSubPanel( ClientGUICommon.StaticBox ):
     
     def _Refresh( self ):
         
-        if not self or not QP.isValid( self ):
-            
-            return
-            
-        
         CG.client_controller.CallToThread( self.THREADFetchInfo, self._service )
         
     
@@ -3673,11 +3596,6 @@ class ReviewServiceIPFSSubPanel( ClientGUICommon.StaticBox ):
         
         def qt_done():
             
-            if not self or not QP.isValid( self ):
-                
-                return
-                
-            
             self._ipfs_shares_panel.setEnabled( True )
             
         
@@ -3698,7 +3616,7 @@ class ReviewServiceIPFSSubPanel( ClientGUICommon.StaticBox ):
                 
             finally:
                 
-                CG.client_controller.CallAfter( self, qt_done )
+                CG.client_controller.CallAfterQtSafe( self, qt_done )
                 
             
         
@@ -3712,11 +3630,6 @@ class ReviewServiceIPFSSubPanel( ClientGUICommon.StaticBox ):
     def _Unpin( self ):
         
         def qt_done():
-            
-            if not self or not QP.isValid( self ):
-                
-                return
-                
             
             self._ipfs_shares_panel.setEnabled( True )
             
@@ -3734,7 +3647,7 @@ class ReviewServiceIPFSSubPanel( ClientGUICommon.StaticBox ):
                 
             finally:
                 
-                CG.client_controller.CallAfter( self, qt_done )
+                CG.client_controller.CallAfterQtSafe( self, qt_done )
                 
             
         
@@ -3769,11 +3682,6 @@ class ReviewServiceIPFSSubPanel( ClientGUICommon.StaticBox ):
         
         def qt_code( ipfs_shares ):
             
-            if not self or not QP.isValid( self ):
-                
-                return
-                
-            
             # list of ( multihash, num_files, total_size, note )
             
             self._ipfs_shares.SetData( ipfs_shares )
@@ -3781,7 +3689,7 @@ class ReviewServiceIPFSSubPanel( ClientGUICommon.StaticBox ):
         
         ipfs_shares = CG.client_controller.Read( 'service_directories', service.GetServiceKey() )
         
-        CG.client_controller.CallAfter( self, qt_code, ipfs_shares )
+        CG.client_controller.CallAfterQtSafe( self, qt_code, ipfs_shares )
         
     
 
@@ -3857,11 +3765,6 @@ class ReviewServiceRatingSubPanel( ClientGUICommon.StaticBox ):
         
         def qt_code( text ):
             
-            if not self or not QP.isValid( self ):
-                
-                return
-                
-            
             self._rating_info_st.setText( text )
             
         
@@ -3871,7 +3774,7 @@ class ReviewServiceRatingSubPanel( ClientGUICommon.StaticBox ):
         
         text = HydrusNumbers.ToHumanInt( num_files ) + ' files are rated'
         
-        CG.client_controller.CallAfter( self, qt_code, text )
+        CG.client_controller.CallAfterQtSafe( self, qt_code, text )
         
     
 
@@ -3931,11 +3834,6 @@ class ReviewServiceTagSubPanel( ClientGUICommon.StaticBox ):
         
         def qt_code( text ):
             
-            if not self or not QP.isValid( self ):
-                
-                return
-                
-            
             self._tag_info_st.setText( text )
             
         
@@ -3954,7 +3852,7 @@ class ReviewServiceTagSubPanel( ClientGUICommon.StaticBox ):
             text += ' - ' + HydrusNumbers.ToHumanInt( num_deleted_mappings ) + ' deleted mappings'
             
         
-        CG.client_controller.CallAfter( self, qt_code, text )
+        CG.client_controller.CallAfterQtSafe( self, qt_code, text )
         
     
 
@@ -4066,11 +3964,6 @@ class ReviewServiceTrashSubPanel( ClientGUICommon.StaticBox ):
         
         def qt_code( num_files ):
             
-            if not self or not QP.isValid( self ):
-                
-                return
-                
-            
             self._clear_trash.setEnabled( num_files > 0 )
             self._undelete_all.setEnabled( num_files > 0 )
             
@@ -4079,7 +3972,7 @@ class ReviewServiceTrashSubPanel( ClientGUICommon.StaticBox ):
         
         num_files = service_info[ HC.SERVICE_INFO_NUM_FILES ]
         
-        CG.client_controller.CallAfter( self, qt_code, num_files )
+        CG.client_controller.CallAfterQtSafe( self, qt_code, num_files )
         
     
 class ReviewServicesPanel( ClientGUIScrolledPanels.ReviewPanel ):

@@ -959,7 +959,7 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 ( new_string_match, new_default_value ) = panel.GetValue()
                 
-                CG.client_controller.CallAfter( self, self._UpdateControls ) # seems sometimes this doesn't kick in naturally
+                CG.client_controller.CallAfterQtSafe( self, self._UpdateControls ) # seems sometimes this doesn't kick in naturally
                 
                 new_row = ( new_string_match, new_default_value )
                 

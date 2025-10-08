@@ -223,6 +223,11 @@ def GetLocalFileActionServiceKeys( media: collections.abc.Collection[ ClientMedi
         
         locations_manager = m.GetLocationsManager()
         
+        if CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY not in locations_manager.GetCurrent():
+            
+            continue
+            
+        
         current = locations_manager.GetCurrent()
         
         if locations_manager.IsLocal():

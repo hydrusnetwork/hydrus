@@ -766,7 +766,7 @@ def GetVisualData( media_result: ClientMediaResult.MediaResult ) -> ClientVisual
         
         numpy_image = image_renderer.GetNumPyImage()
         
-        visual_data = ClientVisualData.GenerateImageVisualDataNumPy( numpy_image, hash )
+        visual_data = ClientVisualData.GenerateImageVisualDataNumPy( numpy_image )
         
         visual_data_cache.AddData( hash, visual_data )
         
@@ -796,7 +796,7 @@ def GetVisualDataTiled( media_result: ClientMediaResult.MediaResult ) -> ClientV
         
         numpy_image = image_renderer.GetNumPyImage()
         
-        visual_data_tiled = ClientVisualData.GenerateImageVisualDataTiledNumPy( numpy_image, hash )
+        visual_data_tiled = ClientVisualData.GenerateImageVisualDataTiledNumPy( numpy_image )
         
         visual_data_tiled_cache.AddData( hash, visual_data_tiled )
         

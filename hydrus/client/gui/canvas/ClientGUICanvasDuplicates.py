@@ -171,7 +171,7 @@ class CanvasFilterDuplicates( ClientGUICanvas.CanvasWithHovers ):
         CG.client_controller.sub( self, 'ProcessContentUpdatePackage', 'content_updates_gui' )
         CG.client_controller.sub( self, 'ProcessServiceUpdates', 'service_updates_gui' )
         
-        CG.client_controller.CallAfter( self, self._LoadNextBatchOfPairs )
+        CG.client_controller.CallAfterQtSafe( self, self._LoadNextBatchOfPairs )
         
     
     def _ApproveDenyAutoResolutionPair( self, approved: bool ):

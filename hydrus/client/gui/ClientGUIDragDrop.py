@@ -157,6 +157,12 @@ def DoFileExportDragDrop( drag_object: QG.QDrag, page_key, media, alt_down ):
             
             dnd_path = os.path.join( this_dnd_temp_dir, filename )
             
+            # YO, filename may include a pathsep according to various export filename rules. there are a couple ways we could handle this, but let's just follow the general rules of Export Folders and manual exports
+            
+            path_dir = os.path.dirname( dnd_path )
+            
+            HydrusPaths.MakeSureDirectoryExists( path_dir )
+            
             HydrusPaths.MirrorFile( original_path, dnd_path )
             
             dnd_paths.append( dnd_path )
@@ -279,7 +285,7 @@ class FileDropTarget( QC.QObject ):
                 
                 if page_key is not None:
                     
-                    CG.client_controller.CallAfter( self, self._media_callable, page_key, hashes )  # callafter so we can terminate dnd event now
+                    CG.client_controller.CallAfterQtSafe( self, self._media_callable, page_key, hashes )  # callafter so we can terminate dnd event now
                     
                 
             
@@ -302,7 +308,7 @@ class FileDropTarget( QC.QObject ):
                 page_key = bytes.fromhex( encoded_page_key )
                 hashes = [ bytes.fromhex( encoded_hash ) for encoded_hash in encoded_hashes ]
 
-                CG.client_controller.CallAfter( self, self._media_callable, page_key, hashes )  # callafter so we can terminate dnd event now
+                CG.client_controller.CallAfterQtSafe( self, self._media_callable, page_key, hashes )  # callafter so we can terminate dnd event now
                 
 
             result = QC.Qt.DropAction.MoveAction
@@ -351,7 +357,7 @@ class FileDropTarget( QC.QObject ):
                 
                 if len( paths ) > 0:
                     
-                    CG.client_controller.CallAfter( self, self._filenames_callable, paths ) # callafter to terminate dnd event now
+                    CG.client_controller.CallAfterQtSafe( self, self._filenames_callable, paths ) # callafter to terminate dnd event now
                     
                 
             
@@ -372,7 +378,7 @@ class FileDropTarget( QC.QObject ):
                             continue
                             
                         
-                        CG.client_controller.CallAfter( self, self._url_callable, url ) # callafter to terminate dnd event now
+                        CG.client_controller.CallAfterQtSafe( self, self._url_callable, url ) # callafter to terminate dnd event now
                         
                     
                 

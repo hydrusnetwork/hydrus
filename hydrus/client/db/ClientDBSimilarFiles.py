@@ -798,6 +798,9 @@ class ClientDBSimilarFiles( ClientDBModule.ClientDBModule ):
         
         self._Execute( 'INSERT INTO shape_search_cache_numbers ( searched_distance, count ) SELECT searched_distance, COUNT( * ) FROM shape_search_cache GROUP BY searched_distance;' )
         
+        self._cursor_transaction_wrapper.pub_after_job( 'notify_new_shape_search_cache_numbers' )
+        self._cursor_transaction_wrapper.pub_after_job( 'notify_file_potential_search_reset' )
+        
     
     def RegenerateTree( self ):
         

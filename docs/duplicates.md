@@ -8,7 +8,14 @@ As files are shared on the internet, they are often resized, cropped, converted 
 
 Finding and processing duplicates within a large collection is impossible to do by hand, so I have written a system to do the heavy lifting for you. It currently works on still images, but an extension for gifs and video is planned.
 
-Hydrus finds _potential_ duplicates using a search algorithm that compares images by their shape. Once these pairs of potentials are found, they are presented to you through a filter like the archive/delete filter to determine their exact relationship and if you want to make a further action, such as deleting the 'worse' file of a pair. All of your decisions build up in the database to form logically consistent groups of duplicates and 'alternate' relationships that can be used to infer future information. For instance, if you say that file A is a duplicate of B and B is a duplicate of C, A and C are automatically recognised as duplicates as well.
+Hydrus finds pairs of _potential_ duplicates using a search algorithm that compares images by their shape. Once these pairs are found, they are presented to you through a filter like the archive/delete filter to determine their exact relationship and if you want to make a further action, such as deleting the 'worse' file of a pair. All of your decisions build up in the database to form logically consistent groups of duplicates and 'alternate' relationships that can be used to infer future information. For instance, if you say that file A is a duplicate of B and B is a duplicate of C, A and C are automatically recognised as duplicates as well.
+
+Note that 'potential duplicates' are not the same as 'duplicates'.
+
+- _Potential duplicates_ are pairs of files that could be duplicates; most likely hydrus has determined look very similar to each other during its background potential duplicate discovery work.
+- _Duplicates_ are pairs or larger groups of files that you have confirmed are different quality or resolution copies of the same source file.
+
+When you are using the systems described on this page, you will usually be preparing queues of 'potential duplicate' pairs to  process into confirmed 'duplicates' or 'alternates'. Setting a firm file relationship will remove an existing 'potential duplicates' relationships they have; similarly, files that currently _are_ duplicates or alternates cannot be set anew as 'potential duplicates'--the question has been resolved.
 
 This all starts on--
 

@@ -40,11 +40,6 @@ class IPFSDaemonStatusAndInteractionPanel( ClientGUICommon.StaticBox ):
         
         def qt_clean_up( result, is_running ):
             
-            if not self or not QP.isValid( self ):
-                
-                return
-                
-            
             self._running_status.setText( result )
             
             self._is_running = is_running
@@ -73,7 +68,7 @@ class IPFSDaemonStatusAndInteractionPanel( ClientGUICommon.StaticBox ):
                 
             finally:
                 
-                CG.client_controller.CallAfter( self, qt_clean_up, result, is_running )
+                CG.client_controller.CallAfterQtSafe( self, qt_clean_up, result, is_running )
                 
             
         

@@ -398,18 +398,6 @@ class TagDisplayMaintenanceManager( ClientDaemons.ManagerWithMainLoop ):
                 
                 rest_ratio = CG.client_controller.new_options.GetInteger( 'tag_display_processing_rest_percentage_normal' ) / 100
                 
-                if actual_work_period > expected_work_period * 10:
-                    
-                    # if suddenly a job blats the user for ten seconds or _ten minutes_ during normal time, we are going to take a big break
-                    rest_ratio *= 5
-                    
-                
-            
-        
-        if actual_work_period > expected_work_period * 10:
-            
-            # if suddenly a job blats the user for ten seconds or _ten minutes_ during normal time, we are going to take a big break
-            rest_ratio *= 30
             
         
         reasonable_work_period = min( 5 * expected_work_period, actual_work_period )

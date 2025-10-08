@@ -10,6 +10,7 @@ from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
 from qtpy import QtGui as QG
 
+from hydrus.client.gui.pages.ClientGUIPages import PagesNotebook
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusEnvironment
@@ -137,13 +138,6 @@ def CrashTheProgram( win: QW.QWidget ):
         
         CG.client_controller.CallToThread( crashtime_not_nice )
         
-    
-
-def TurnOffCrashReporting():
-    
-    from hydrus.core import HydrusLogger
-    
-    HydrusLogger.turn_off_faulthandler()
     
 
 def GetTagServiceKeyForMaintenance( win: QW.QWidget ):
@@ -1187,11 +1181,6 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         
         def qt_code( network_job ):
             
-            if not self or not QP.isValid( self ):
-                
-                return
-                
-            
             content = network_job.GetContentBytes()
             
             text = 'Request complete. Length of response is ' + HydrusData.ToHumanBytes( len( content ) ) + '.'
@@ -1258,7 +1247,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
                 job_status.FinishAndDismiss( seconds = 3 )
                 
             
-            CG.client_controller.CallAfter( self, qt_code, network_job )
+            CG.client_controller.CallAfterQtSafe( self, qt_code, network_job )
             
         
         try:
@@ -1839,7 +1828,7 @@ QMenuBar::item { padding: 2px 8px; margin: 0px; }'''
                 return
                 
             
-            CG.client_controller.CallAfterQtSafe( self, 'missing archive times reporter', qt_present_results, job_status, num_missing_legacy, num_missing_import )
+            CG.client_controller.CallAfterQtSafe( self, qt_present_results, job_status, num_missing_legacy, num_missing_import )
             
         
         def qt_present_results( job_status, num_missing_legacy, num_missing_import ):
@@ -1963,6 +1952,16 @@ QMenuBar::item { padding: 2px 8px; margin: 0px; }'''
             
         
     
+    def _FlipCrashReporting( self ):
+        
+        CG.client_controller.logger.FlipCrashReporting()
+        
+        if CG.client_controller.logger.CurrentlyCrashReporting():
+            
+            HydrusData.ShowText( 'DO NOT PLAY ANYTHING WITH MPV WHILE CRASH REPORTING IS ON--IT WILL CAUSE A FAKE CRASH!' )
+            
+        
+
     def _FlipMinimiseRestore( self ):
         
         if not self._currently_minimised_to_system_tray:
@@ -3471,6 +3470,10 @@ ATTACH "client.mappings.db" as external_mappings;'''
         ClientGUIMenus.AppendMenuCheckItem( debug_modes, 'force idle mode', 'Make the client consider itself idle and fire all maintenance routines right now. This may hang the gui for a while.', HG.force_idle_mode, self._SwitchBoolean, 'force_idle_mode' )
         ClientGUIMenus.AppendMenuItem( debug_modes, 'simulate a wake from sleep', 'Tell the controller to pretend that it just woke up from sleep.', self._controller.SimulateWakeFromSleepEvent )
         ClientGUIMenus.AppendMenuCheckItem( debug_modes, 'thumbnail debug mode', 'Show some thumbnail debug info.', HG.thumbnail_debug_mode, self._SwitchBoolean, 'thumbnail_debug_mode' )
+        ClientGUIMenus.AppendSeparator( debug_modes )
+        crash_reporting_on = CG.client_controller.logger.CurrentlyCrashReporting()
+        ClientGUIMenus.AppendMenuCheckItem( debug_modes, 'use faulthandler to log crashes', 'Enable python crash logging. Note this will disable Windows Error Reporting or Linux Dumps, and it does not play well with mpv.', crash_reporting_on, self._FlipCrashReporting )
+        
         
         ClientGUIMenus.AppendMenu( debug_menu, debug_modes, 'debug modes' )
         
@@ -3506,6 +3509,7 @@ ATTACH "client.mappings.db" as external_mappings;'''
         ClientGUIMenus.AppendMenuCheckItem( report_modes, 'file sort report mode', 'Have the file sorter spam you with sort key results.', HG.file_sort_report_mode, self._SwitchBoolean, 'file_sort_report_mode' )
         ClientGUIMenus.AppendMenuCheckItem( report_modes, 'gui report mode', 'Have the gui report inside information, where supported.', HG.gui_report_mode, self._SwitchBoolean, 'gui_report_mode' )
         ClientGUIMenus.AppendMenuCheckItem( report_modes, 'hover window report mode', 'Have the hover windows report their show/hide logic.', HG.hover_window_report_mode, self._SwitchBoolean, 'hover_window_report_mode' )
+        ClientGUIMenus.AppendMenuCheckItem( report_modes, 'idle report mode', 'Make popups about idle mode on/off decisions.', HG.idle_report_mode, self._SwitchBoolean, 'idle_report_mode' )
         ClientGUIMenus.AppendMenuCheckItem( report_modes, 'media load report mode', 'Have the client report media load information, where supported.', HG.media_load_report_mode, self._SwitchBoolean, 'media_load_report_mode' )
         ClientGUIMenus.AppendMenuCheckItem( report_modes, 'mpv report mode', 'Have the client report significant mpv debug information.', HG.mpv_report_mode, self._SwitchBoolean, 'mpv_report_mode' )
         ClientGUIMenus.AppendMenuCheckItem( report_modes, 'network report mode', 'Have the network engine report new jobs.', HG.network_report_mode, self._SwitchBoolean, 'network_report_mode' )
@@ -3609,7 +3613,7 @@ ATTACH "client.mappings.db" as external_mappings;'''
         ClientGUIMenus.AppendMenuItem( tests, 'do self-sigterm', 'Test a sigterm call for fast, non-ui-originating shutdown.', CG.client_controller.DoSelfSigterm )
         ClientGUIMenus.AppendMenuItem( tests, 'do self-sigterm (fake)', 'Test a sigterm call for fast, non-ui-originating shutdown.', CG.client_controller.DoSelfSigtermFake )
         ClientGUIMenus.AppendSeparator( tests )
-        ClientGUIMenus.AppendMenuItem( tests, 'turn off faulthandler crash logging', 'Disable the python crash logging so you can use WER or Linux Dumps for your own debugging situation.', TurnOffCrashReporting )
+        
         ClientGUIMenus.AppendSeparator( tests )
         ClientGUIMenus.AppendMenuItem( tests, 'induce a program crash', 'Crash the program to test a crash dumping/debugging routine.', CrashTheProgram, self )
         
@@ -5897,6 +5901,8 @@ ATTACH "client.mappings.db" as external_mappings;'''
         
         frame.SetPanel( panel )
         
+        return frame
+        
     
     def _ReviewTagDisplayMaintenance( self ):
         
@@ -6260,6 +6266,15 @@ ATTACH "client.mappings.db" as external_mappings;'''
     
     def _RunUITest( self ):
         
+        def qt_review_services():
+            
+            frame = self._ReviewServices()
+            
+            t = 1.0
+            
+            CG.client_controller.CallLaterQtSafe( self, t, 'test job', frame.deleteLater )
+            
+        
         def qt_open_pages():
             
             page_of_pages = self._notebook.NewPagesNotebook( on_deepest_notebook = False, select_page = True )
@@ -6434,6 +6449,10 @@ ATTACH "client.mappings.db" as external_mappings;'''
             
             # pages
             
+            CG.client_controller.CallBlockingToQt( self, qt_review_services )
+            
+            time.sleep( 3 )
+            
             page_of_pages = CG.client_controller.CallBlockingToQt( self, qt_open_pages )
             
             time.sleep( 4 )
@@ -6499,7 +6518,7 @@ ATTACH "client.mappings.db" as external_mappings;'''
             
             HydrusData.ShowText( 'Admin service initialised.' )
             
-            CG.client_controller.CallAfter( self, ClientGUIFrames.ShowKeys, 'access', ( access_key, ) )
+            CG.client_controller.CallAfterQtSafe( self, ClientGUIFrames.ShowKeys, 'access', ( access_key, ) )
             
             #
             
@@ -6570,6 +6589,8 @@ ATTACH "client.mappings.db" as external_mappings;'''
             
         
         ClientVisualDataTuningSuite.RunTuningSuite( test_dir )
+        
+        HydrusData.ShowText( 'Tuning suite done!' )
         
     
     def _SaveSplitterPositions( self ):
@@ -6919,6 +6940,10 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         elif name == 'hover_window_report_mode':
             
             HG.hover_window_report_mode = not HG.hover_window_report_mode
+            
+        elif name == 'idle_report_mode':
+            
+            HG.idle_report_mode = not HG.idle_report_mode
             
         elif name == 'media_load_report_mode':
             
@@ -8018,9 +8043,12 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 
                 if page is not None:
                     
-                    parent = page.GetParentNotebook()
+                    parent = page.parentWidget()
                     
-                    parent.RefreshAllPages()
+                    if isinstance( parent, PagesNotebook ):
+                        
+                        parent.RefreshAllPages()
+                        
                     
                 
             elif action == CAC.SIMPLE_NEW_PAGE:
@@ -8288,7 +8316,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     
     def RegisterCanvasFrameReference( self, frame ):
         
-        self._canvas_frames = [ fr for fr in self._canvas_frames if QP.isValid( fr ) ]
+        self.MaintainCanvasFrameReferences()
         
         self._canvas_frames.append( frame )
         
@@ -8848,7 +8876,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 
             
         
-        CG.client_controller.CallAfter( self, self._controller.Exit )
+        CG.client_controller.CallAfterQtSafe( self, self._controller.Exit )
         
     
     def TryToOpenManageServicesForAutoAccountCreation( self, service_key: bytes ):

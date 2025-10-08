@@ -76,7 +76,7 @@ def boot():
                 controller.Run( win )
                 
             
-            controller.CallAfter( win, do_it )
+            controller.CallAfterQtSafe( win, do_it )
             
             app.exec_()
             

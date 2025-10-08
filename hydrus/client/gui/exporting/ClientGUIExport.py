@@ -719,7 +719,7 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         if do_export_and_then_quit:
             
-            CG.client_controller.CallAfterQtSafe( self, 'doing export before dialog quit', self._DoExport, True )
+            CG.client_controller.CallAfterQtSafe( self, self._DoExport, True )
             
         
     
@@ -876,26 +876,16 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         def qt_update_label( text ):
             
-            if not QP.isValid( self ) or not QP.isValid( self._export ) or not self._export:
-                
-                return
-                
-            
             self._export.setText( text )
             
         
         def qt_done( quit_afterwards ):
             
-            if not QP.isValid( self ) or not QP.isValid( self._export ) or not self._export:
-                
-                return
-                
-            
             self._export.setEnabled( True )
             
             if quit_afterwards:
                 
-                CG.client_controller.CallAfter( self, self.parentWidget().close )
+                CG.client_controller.CallAfterQtSafe( self, self.parentWidget().close )
                 
             
         
@@ -929,7 +919,7 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
                     job_status.SetStatusText( 'Exporting: {}'.format( x_of_y ) )
                     job_status.SetGauge( index, num_to_do )
                     
-                    CG.client_controller.CallAfter( self, qt_update_label, x_of_y )
+                    CG.client_controller.CallAfterQtSafe( self, qt_update_label, x_of_y )
                     
                     hash = media.GetHash()
                     mime = media.GetMime()
@@ -987,14 +977,7 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
                     
                 except Exception as e:
                     
-                    if QP.isValid( self ):
-                        
-                        win = self
-                        
-                    else:
-                        
-                        win = CG.client_controller.GetMainTLW()
-                        
+                    win = CG.client_controller.GetMainTLW()
                     
                     HydrusData.PrintException( e, do_wait = False )
                     
@@ -1008,7 +991,7 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
             
             if not job_status.IsCancelled() and delete_afterwards:
                 
-                CG.client_controller.CallAfter( self, qt_update_label, 'deleting' )
+                CG.client_controller.CallAfterQtSafe( self, qt_update_label, 'deleting' )
                 
                 actually_done_media_results = [ m.GetMediaResult() for m in actually_done_ok ]
                 
@@ -1029,13 +1012,13 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
             
             job_status.FinishAndDismiss( 5 )
             
-            CG.client_controller.CallAfter( self, qt_update_label, 'done!' )
+            CG.client_controller.CallAfterQtSafe( self, qt_update_label, 'done!' )
             
             time.sleep( 1 )
             
-            CG.client_controller.CallAfter( self, qt_update_label, 'export' )
+            CG.client_controller.CallAfterQtSafe( self, qt_update_label, 'export' )
             
-            CG.client_controller.CallAfter( self, qt_done, quit_afterwards )
+            CG.client_controller.CallAfterQtSafe( self, qt_done, quit_afterwards )
             
         
         CG.client_controller.CallToThread( do_it, directory, metadata_routers, delete_afterwards, export_symlinks, quit_afterwards, self._media_to_number_indices )

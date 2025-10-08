@@ -516,11 +516,13 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 ( query_header, query_log_container ) = panel.GetValue()
                 
-                query_text = query_header.GetQueryText()
+                query_text_lower = query_header.GetQueryText().lower()
                 
-                if query_text in self._GetCurrentQueryTexts():
+                lower_query_texts_to_human_names = self._GetCurrentLowerQueryTextsToHumanNames()
+                
+                if query_text_lower in lower_query_texts_to_human_names:
                     
-                    ClientGUIDialogsMessage.ShowWarning( self, f'You already have a query for "{query_text}", so nothing new has been added.' )
+                    ClientGUIDialogsMessage.ShowWarning( self, f'You already have a query for "{lower_query_texts_to_human_names[ query_text_lower ]}", so nothing new has been added.' )
                     
                     return
                     
@@ -608,7 +610,7 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         paused = query_header.IsPaused()
         checker_status = query_header.GetCheckerStatus()
         
-        name = query_header.GetHumanName()
+        name = query_header.GetFullHumanName()
         pretty_name = name
         
         if paused:
@@ -683,7 +685,7 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         paused = query_header.IsPaused()
         checker_status = query_header.GetCheckerStatus()
         
-        name = query_header.GetHumanName()
+        name = query_header.GetFullHumanName()
         
         file_seed_cache_status = query_header.GetFileSeedCacheStatus()
         
@@ -842,9 +844,13 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 edited_query_text = edited_query_header.GetQueryText()
                 
-                if edited_query_text != old_query_header.GetQueryText() and edited_query_text in self._GetCurrentQueryTexts():
+                edited_query_text_lower = edited_query_text.lower()
+                
+                lower_query_texts_to_human_names = self._GetCurrentLowerQueryTextsToHumanNames()
+                
+                if edited_query_text != old_query_header.GetQueryText() and edited_query_text_lower in lower_query_texts_to_human_names:
                     
-                    ClientGUIDialogsMessage.ShowWarning( self, f'You already have a query for "{edited_query_text}"! The edit you just made will not be saved.' )
+                    ClientGUIDialogsMessage.ShowWarning( self, f'You already have a query for "{lower_query_texts_to_human_names[ edited_query_text_lower ]}"! The edit you just made will not be saved.' )
                     
                     return
                     
@@ -857,16 +863,28 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         
         
     
-    def _GetCurrentQueryTexts( self ):
+    def _GetCurrentLowerQueryTextsToHumanNames( self ):
         
-        query_strings = set()
+        # lower, not casefold; let's not get too clever here
+        
+        lower_query_texts_to_human_names = dict()
         
         for query_header in self._query_headers.GetData():
             
-            query_strings.add( query_header.GetQueryText() )
+            query_text_lower = query_header.GetQueryText().lower()
+            query_human_name = query_header.GetFullHumanName()
+            
+            if query_text_lower in lower_query_texts_to_human_names:
+                
+                lower_query_texts_to_human_names[ query_text_lower ] += ', ' + query_human_name
+                
+            else:
+                
+                lower_query_texts_to_human_names[ query_text_lower ] = query_human_name
+                
             
         
-        return query_strings
+        return lower_query_texts_to_human_names
         
     
     def _GetSelectedExistingQueries( self ):
@@ -1050,7 +1068,7 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _PasteQueries( self ):
         
-        message = 'This will add new queries by pulling them from your clipboard. It assumes they are currently in your clipboard and newline separated. Queries that are already in the subscription (with any combination of upper/lower case) will not be duplicated, but if they are DEAD, they will be revived. Is that ok?'
+        message = 'This will add new queries by pulling them from your clipboard. It assumes they are currently in your clipboard and newline separated. Queries that are already in the subscription (with any combination of upper/lower case) will not be duplicated, but if they are DEAD, they can be revived. Sound good?'
         
         result = ClientGUIDialogsQuick.GetYesNo( self, message )
         
@@ -1090,19 +1108,20 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
             return
             
         
-        # use lower, not casefold; let's not get too clever here
-        current_query_texts_lower = { query_text.lower() for query_text in self._GetCurrentQueryTexts() }
+        lower_query_texts_to_human_names = self._GetCurrentLowerQueryTextsToHumanNames()
         
-        already_existing_query_texts = set()
+        already_existing_query_header_texts = set()
+        already_existing_human_names = set()
         new_query_texts = set()
         
         for query_text in pasted_query_texts:
             
             query_text_lower = query_text.lower()
             
-            if query_text_lower in current_query_texts_lower:
+            if query_text_lower in lower_query_texts_to_human_names:
                 
-                already_existing_query_texts.add( query_text )
+                already_existing_query_header_texts.add( query_text_lower )
+                already_existing_human_names.add( lower_query_texts_to_human_names[ query_text_lower ] )
                 
             else:
                 
@@ -1112,24 +1131,24 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         
         revive_dead = True
         
-        DEAD_query_headers = { query_header for query_header in self._query_headers.GetData() if query_header.GetQueryText() in already_existing_query_texts and query_header.IsDead() }
+        DEAD_query_headers = { query_header for query_header in self._query_headers.GetData() if query_header.GetQueryText().lower() in already_existing_query_header_texts and query_header.IsDead() }
         
-        already_existing_query_texts = sorted( already_existing_query_texts, key = HydrusText.HumanTextSortKey )
+        already_existing_human_names = sorted( already_existing_human_names, key = HydrusText.HumanTextSortKey )
         new_query_texts = sorted( new_query_texts, key = HydrusText.HumanTextSortKey )
         
         #
         
         paste_message_components = []
         
-        if len( already_existing_query_texts ) > 0:
+        if len( already_existing_human_names ) > 0:
             
-            paste_message_components.append( f'The queries{HydrusText.ConvertManyStringsToNiceInsertableHumanSummary(already_existing_query_texts)}were already in the subscription.' )
+            paste_message_components.append( f'The queries{HydrusText.ConvertManyStringsToNiceInsertableHumanSummary(already_existing_human_names)}were already in the subscription.' )
             
             if len( DEAD_query_headers ) > 0:
                 
-                DEAD_query_header_texts = [ query_header.GetQueryText() for query_header in DEAD_query_headers ]
+                DEAD_human_names = sorted( [ query_header.GetFullHumanName() for query_header in DEAD_query_headers ], key = HydrusText.HumanTextSortKey )
                 
-                DEAD_revive_message = f'Some of the queries you pasted already exist in the subscription but are DEAD. Do you want to revive them? They are:{HydrusText.ConvertManyStringsToNiceInsertableHumanSummary(DEAD_query_header_texts)}'
+                DEAD_revive_message = f'Some of the queries you pasted already exist in the subscription but are DEAD. Do you want to revive them? They are:{HydrusText.ConvertManyStringsToNiceInsertableHumanSummary(DEAD_human_names)}'
                 
                 result = ClientGUIDialogsQuick.GetYesNo( self, DEAD_revive_message )
                 
@@ -1137,7 +1156,7 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
                     
                     revive_dead = True
                     
-                    paste_message_components.append( f'The DEAD queries{HydrusText.ConvertManyStringsToNiceInsertableHumanSummary(DEAD_query_header_texts)}were revived.' )
+                    paste_message_components.append( f'The DEAD queries{HydrusText.ConvertManyStringsToNiceInsertableHumanSummary(DEAD_human_names)}were revived.' )
                     
                 else:
                     
@@ -1388,7 +1407,7 @@ class EditSubscriptionQueryPanel( ClientGUIScrolledPanels.EditPanel ):
         
         name_panel = ClientGUICommon.StaticBox( self, 'query and name' )
         
-        self._display_name = ClientGUICommon.NoneableTextCtrl( name_panel, '', placeholder_text = 'my subscription', none_phrase = 'use query text' )
+        self._display_name = ClientGUICommon.NoneableTextCtrl( name_panel, '', placeholder_text = 'query name', none_phrase = 'use query text' )
         self._query_text = QW.QLineEdit( name_panel )
         
         #

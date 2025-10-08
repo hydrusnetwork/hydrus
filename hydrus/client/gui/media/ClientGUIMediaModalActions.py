@@ -809,7 +809,7 @@ def MoveOrDuplicateLocalFiles( win: QW.QWidget, dest_service_key: bytes, action:
     
     dest_service_name = CG.client_controller.services_manager.GetName( dest_service_key )
     
-    applicable_media = [ m for m in media if m.GetLocationsManager().IsLocal() and m.GetMime() not in HC.HYDRUS_UPDATE_FILES ]
+    applicable_media = [ m for m in media if CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY in m.GetLocationsManager().GetCurrent() and m.GetMime() not in HC.HYDRUS_UPDATE_FILES ]
     
     if action == HC.CONTENT_UPDATE_MOVE:
         

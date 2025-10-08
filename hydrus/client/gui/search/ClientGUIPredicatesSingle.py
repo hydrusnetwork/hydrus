@@ -2697,6 +2697,8 @@ class PanelPredicateSystemSimilarToData( PanelPredicateSystemSingle ):
         self._perceptual_hashes.setMaximumHeight( init_height )
         
         self._max_hamming = ClientGUICommon.BetterSpinBox( self, max=256, width = 60 )
+        self._max_hamming.setSingleStep( 2 )
+        self._max_hamming.setToolTip( ClientGUIFunctions.WrapToolTip( 'The max "hamming distance" allowed in the search. The higher you go, the slower the search and the more false positives.' ) )
         
         #
         
@@ -2735,7 +2737,11 @@ class PanelPredicateSystemSimilarToData( PanelPredicateSystemSingle ):
         
         big_vbox = QP.VBoxLayout()
         
-        st = ClientGUICommon.BetterStaticText( self, label = 'Use this if you want to look up a file without needing to import it. Just copy its file path or image data to your clipboard and paste, and hydrus will figure out the hash data.' )
+        label = 'Use this if you want to look up a file without needing to import it. Just copy its file path or image data to your clipboard and paste, and hydrus will figure out the search hash data.'
+        label += '\n\n'
+        label += 'You only need one hash, but allowing both is fine and will add files that match either. Pixel hash is very fast and always returns exact pixel matches. Perceptual hash is the same "looks similar to" system used in "potential duplicates" discovery and the "files" mode of this predicate and uses the 0/2/4/8 "search distance".'
+        
+        st = ClientGUICommon.BetterStaticText( self, label = label )
         
         st.setWordWrap( True )
         st.setAlignment( QC.Qt.AlignmentFlag.AlignCenter )
@@ -2911,6 +2917,8 @@ class PanelPredicateSystemSimilarToFiles( PanelPredicateSystemSingle ):
         self._hashes.setMaximumHeight( init_height )
         
         self._max_hamming = ClientGUICommon.BetterSpinBox( self, max=256, width = 60 )
+        self._max_hamming.setSingleStep( 2 )
+        self._max_hamming.setToolTip( ClientGUIFunctions.WrapToolTip( 'The max "hamming distance" allowed in the search. The higher you go, the slower the search and the more false positives.' ) )
         
         #
         
@@ -2937,7 +2945,7 @@ class PanelPredicateSystemSimilarToFiles( PanelPredicateSystemSingle ):
         
         hbox.addStretch( 0 )
         
-        st = ClientGUICommon.BetterStaticText( self, label = 'This searches for files that look like each other within your database, just like in the duplicates system. It uses the SHA256 hash. Paste the files\' hash(es) here, and the results will look like any of them.' )
+        st = ClientGUICommon.BetterStaticText( self, label = 'This searches for files that look like each other within your database, just like in the duplicates system. It uses the SHA256 hash and will find all similar-looking files of any of the hashes you paste, regardless of whether they are currently set as potential duplicates, duplicates, alternates, or false positive.' )
         
         st.setWordWrap( True )
         st.setAlignment( QC.Qt.AlignmentFlag.AlignCenter )

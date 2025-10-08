@@ -11,6 +11,7 @@ from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusDB
 from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusLogger
 from hydrus.core import HydrusPaths
 from hydrus.core import HydrusProcess
 from hydrus.core import HydrusPubSub
@@ -21,7 +22,7 @@ from hydrus.core.networking import HydrusNATPunch
 
 class HydrusController( object ):
     
-    def __init__( self, db_dir ):
+    def __init__( self, db_dir: str, logger: HydrusLogger.HydrusLogger ):
         
         super().__init__()
         
@@ -33,8 +34,9 @@ class HydrusController( object ):
         self._i_own_running_file = False
         
         self.db_dir = db_dir
+        self.logger = logger
         
-        self.db: typing.Optional[ HydrusDB.HydrusDB ] = None
+        self.db = None
         
         pubsub_valid_callable = self._GetPubsubValidCallable()
         

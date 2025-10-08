@@ -722,7 +722,7 @@ class EditDeleteFilesPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self.widget().setLayout( vbox )
         
-        CG.client_controller.CallAfter( self, self._SetFocus )
+        CG.client_controller.CallAfterQtSafe( self, self._SetFocus )
         
     
     def _GetExistingSharedFileDeletionReason( self ):
@@ -1453,11 +1453,11 @@ class EditFileNotesPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolle
         
         if CG.client_controller.new_options.GetBoolean( 'start_note_editing_at_end' ):
             
-            CG.client_controller.CallAfterQtSafe( control, 'moving cursor to end', control.moveCursor, QG.QTextCursor.MoveOperation.End )
+            CG.client_controller.CallAfterQtSafe( control, control.moveCursor, QG.QTextCursor.MoveOperation.End )
             
         else:
             
-            CG.client_controller.CallAfterQtSafe( control, 'moving cursor to start', control.moveCursor, QG.QTextCursor.MoveOperation.Start )
+            CG.client_controller.CallAfterQtSafe( control, control.moveCursor, QG.QTextCursor.MoveOperation.Start )
             
         
         self._UpdateButtons()

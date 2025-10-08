@@ -70,7 +70,8 @@ class PotentialDuplicatesMaintenanceManager( ClientDaemons.ManagerWithMainLoop )
         self._i_triggered_a_numbers_regen_last_cycle = False
         
         CG.client_controller.sub( self, 'NotifyNewBranchMaintenanceWork', 'notify_new_shape_search_branch_maintenance_work' )
-        CG.client_controller.sub( self, 'NotifyNewFileImported', 'notify_new_file_imported' )
+        CG.client_controller.sub( self, 'WakeIfCaughtUp', 'notify_new_file_imported' )
+        CG.client_controller.sub( self, 'WakeIfCaughtUp', 'notify_file_potential_search_reset' )
         
     
     def _DoMainLoop( self ):
@@ -181,12 +182,6 @@ class PotentialDuplicatesMaintenanceManager( ClientDaemons.ManagerWithMainLoop )
             rest_ratio = CG.client_controller.new_options.GetInteger( 'potential_duplicates_search_rest_percentage_active' ) / 100
             
         
-        if actual_work_period > expected_work_period * 10:
-            
-            # if suddenly a job blats the user for ten seconds or _ten minutes_ during normal time, we are going to take a big break
-            rest_ratio *= 30
-            
-        
         reasonable_work_period = min( 5 * expected_work_period, actual_work_period )
         
         return reasonable_work_period * rest_ratio
@@ -260,7 +255,7 @@ class PotentialDuplicatesMaintenanceManager( ClientDaemons.ManagerWithMainLoop )
         self._need_to_rebalance_tree.set()
         
     
-    def NotifyNewFileImported( self ):
+    def WakeIfCaughtUp( self ):
         
         # right, we don't want to go crazy here and spam-wake the queue on any import
         # but if we can work now and there isn't a huge outstanding, let's stay up to date mate

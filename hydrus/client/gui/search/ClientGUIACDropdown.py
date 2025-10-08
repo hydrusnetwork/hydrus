@@ -176,7 +176,7 @@ def ReadFetch(
             
             AppendLoadingPredicate( matches, 'loading system predicates' )
             
-            CG.client_controller.CallAfterQtSafe( win, 'read a/c exact match results', prefetch_callable, job_status, matches, parsed_autocomplete_text )
+            CG.client_controller.CallAfterQtSafe( win, prefetch_callable, job_status, matches, parsed_autocomplete_text )
             
             cache_valid = isinstance( results_cache, ClientSearchAutocomplete.PredicateResultsCacheSystem )
             
@@ -283,7 +283,7 @@ def ReadFetch(
                     
                     AppendLoadingPredicate( exact_match_matches, 'loading full results' )
                     
-                    CG.client_controller.CallAfterQtSafe( win, 'read a/c exact match results', prefetch_callable, job_status, exact_match_matches, parsed_autocomplete_text )
+                    CG.client_controller.CallAfterQtSafe( win, prefetch_callable, job_status, exact_match_matches, parsed_autocomplete_text )
                     
                     #
                     
@@ -322,7 +322,7 @@ def ReadFetch(
                 
                 AppendLoadingPredicate( matches, 'calculating results' )
                 
-                CG.client_controller.CallAfterQtSafe( win, 'read a/c exact match results', prefetch_callable, job_status, matches, parsed_autocomplete_text )
+                CG.client_controller.CallAfterQtSafe( win, prefetch_callable, job_status, matches, parsed_autocomplete_text )
                 
                 # it is possible that media will change between calls to this, so don't cache it
                 
@@ -397,7 +397,7 @@ def ReadFetch(
                 
                 AppendLoadingPredicate( prefetch_matches, 'loading sibling data' )
                 
-                CG.client_controller.CallAfterQtSafe( win, 'read a/c exact match results', prefetch_callable, job_status, prefetch_matches, parsed_autocomplete_text )
+                CG.client_controller.CallAfterQtSafe( win, prefetch_callable, job_status, prefetch_matches, parsed_autocomplete_text )
                 
                 #
                 
@@ -451,7 +451,7 @@ def ReadFetch(
         return
         
     
-    CG.client_controller.CallAfterQtSafe( win, 'read a/c full results', results_callable, job_status, parsed_autocomplete_text, results_cache, matches )
+    CG.client_controller.CallAfterQtSafe( win, results_callable, job_status, parsed_autocomplete_text, results_cache, matches )
     
 
 def PutAtTopOfMatches( matches: collections.abc.MutableSequence[ ClientSearchPredicate.Predicate ], predicate: ClientSearchPredicate.Predicate, insert_if_does_not_exist: bool = True ):
@@ -579,7 +579,7 @@ def WriteFetch(
                 
                 AppendLoadingPredicate( exact_match_matches, 'loading full results' )
                 
-                CG.client_controller.CallAfterQtSafe( win, 'write a/c exact match results', prefetch_callable, job_status, exact_match_matches, parsed_autocomplete_text )
+                CG.client_controller.CallAfterQtSafe( win, prefetch_callable, job_status, exact_match_matches, parsed_autocomplete_text )
                 
                 if job_status.IsCancelled():
                     
@@ -619,7 +619,7 @@ def WriteFetch(
     
     InsertTagPredicates( matches, display_tag_service_key, parsed_autocomplete_text, allow_auto_wildcard_conversion )
     
-    CG.client_controller.CallAfterQtSafe( win, 'write a/c full results', results_callable, job_status, parsed_autocomplete_text, results_cache, matches )
+    CG.client_controller.CallAfterQtSafe( win, results_callable, job_status, parsed_autocomplete_text, results_cache, matches )
     
 
 class ListBoxTagsPredicatesAC( ClientGUIListBoxes.ListBoxTagsPredicates ):

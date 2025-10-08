@@ -136,9 +136,10 @@ def FilterAndConvertLabelPredicates( predicates: collections.abc.Collection[ Cli
     
     return good_predicates
     
+
 def FleshOutPredicates( widget: QW.QWidget, predicates: collections.abc.Collection[ ClientSearchPredicate.Predicate ] ) -> list[ ClientSearchPredicate.Predicate ]:
     
-    window = None
+    window = widget.window()
     
     predicates = FilterAndConvertLabelPredicates( predicates )
     
@@ -150,14 +151,6 @@ def FleshOutPredicates( widget: QW.QWidget, predicates: collections.abc.Collecti
         predicate_type = predicate.GetType()
         
         if value is None and predicate_type in FLESH_OUT_SYSTEM_PRED_TYPES:
-            
-            if window is None:
-                
-                if QP.isValid( widget ):
-                    
-                    window = widget.window()
-                    
-                
             
             from hydrus.client.gui import ClientGUITopLevelWindowsPanels
             
@@ -185,6 +178,7 @@ def FleshOutPredicates( widget: QW.QWidget, predicates: collections.abc.Collecti
     
     return good_predicates
     
+
 def GetEditablePredicates( predicates: collections.abc.Collection[ ClientSearchPredicate.Predicate ] ):
     
     editable_predicates = [ predicate for predicate in predicates if predicate.IsEditable() ]
