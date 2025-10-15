@@ -3180,6 +3180,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._idle_period = ClientGUICommon.NoneableSpinCtrl( self._idle_panel, 30, min = 1, max = 1000, multiplier = 60, unit = 'minutes', none_phrase = 'ignore normal browsing' )
             self._idle_mouse_period = ClientGUICommon.NoneableSpinCtrl( self._idle_panel, 10, min = 1, max = 1000, multiplier = 60, unit = 'minutes', none_phrase = 'ignore mouse movements' )
+            self._idle_mouse_period.setToolTip( ClientGUIFunctions.WrapToolTip( 'This applies to mouse movements anywhere in your system, not just over the hydrus window.' ) )
             self._idle_mode_client_api_timeout = ClientGUICommon.NoneableSpinCtrl( self._idle_panel, 5, min = 1, max = 1000, multiplier = 60, unit = 'minutes', none_phrase = 'ignore client api' )
             self._system_busy_cpu_percent = ClientGUICommon.BetterSpinBox( self._idle_panel, min = 5, max = 99 )
             self._system_busy_cpu_count = ClientGUICommon.NoneableSpinCtrl( self._idle_panel, 1, min = 1, max = 64, unit = 'cores', none_phrase = 'ignore cpu usage' )
@@ -3443,7 +3444,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             rows.append( ( 'Run maintenance jobs when the client is idle and the system is not otherwise busy: ', self._idle_normal ) )
             rows.append( ( 'Permit idle mode if no general browsing activity has occurred in the past: ', self._idle_period ) )
-            rows.append( ( 'Permit idle mode if the mouse has not been moved in the past: ', self._idle_mouse_period ) )
+            rows.append( ( 'Permit idle mode if your mouse cursor has not been moved in the past: ', self._idle_mouse_period ) )
             rows.append( ( 'Permit idle mode if no Client API requests in the past: ', self._idle_mode_client_api_timeout ) )
             
             hbox = QP.HBoxLayout()

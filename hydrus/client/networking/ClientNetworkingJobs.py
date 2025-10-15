@@ -48,6 +48,8 @@ def ConvertStatusCodeAndDataIntoExceptionInfo( status_code, data, is_hydrus_serv
         
     elif status_code == 403:
         
+        print_long_error_text = False
+        
         eclass = HydrusExceptions.InsufficientCredentialsException
         
     elif status_code == 404:
@@ -88,9 +90,13 @@ def ConvertStatusCodeAndDataIntoExceptionInfo( status_code, data, is_hydrus_serv
         
         eclass = HydrusExceptions.BandwidthException
         
-    elif status_code == 502:
+        print_long_error_text = False
+        
+    elif status_code in ( 502, 522 ):
         
         eclass = HydrusExceptions.ShouldReattemptNetworkException
+        
+        print_long_error_text = False
         
     elif status_code == 503:
         
@@ -102,6 +108,8 @@ def ConvertStatusCodeAndDataIntoExceptionInfo( status_code, data, is_hydrus_serv
             
             eclass = HydrusExceptions.ShouldReattemptNetworkException
             
+        
+        print_long_error_text = False
         
     elif status_code >= 500:
         
@@ -272,7 +280,7 @@ class NetworkJob( object ):
                 
                 try:
                     
-                    last_modified_time = ClientTime.ParseDate( last_modified_string )
+                    last_modified_time = int( ClientTime.ParseDate( last_modified_string ) )
                     
                     if ClientTime.TimestampIsSensible( last_modified_time ):
                         
@@ -1592,7 +1600,7 @@ class NetworkJob( object ):
                                 
                                 try:
                                     
-                                    timestamp = ClientTime.ParseDate( retry_after )
+                                    timestamp = int( ClientTime.ParseDate( retry_after ) )
                                     
                                     num_seconds_to_wait = min( max( 60, timestamp - HydrusTime.GetNow() ), 86400 )
                                     

@@ -60,6 +60,7 @@ def DateTimeToTimestamp( dt: datetime.datetime ) -> int:
                 hour = dt.hour,
                 minute = dt.minute,
                 second = dt.second,
+                microsecond = dt.microsecond,
                 tzinfo = my_current_timezone
             )
             
@@ -76,7 +77,7 @@ def DateTimeToTimestamp( dt: datetime.datetime ) -> int:
     return timestamp
     
 
-def DateTimeToTimestampMS( dt: datetime.datetime ) -> int:
+def DateTimeToTimestampMS( dt: datetime.datetime ) -> float:
     
     return MillisecondiseS( DateTimeToTimestamp( dt ) ) + ( dt.microsecond // 1000 )
     

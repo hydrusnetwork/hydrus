@@ -882,14 +882,41 @@ def GetDefaultRuleSuggestions() -> list[ DuplicatesAutoResolutionRule ]:
     
     comparators = []
     
-    comparator = ClientDuplicatesAutoResolutionComparators.PairComparatorRelativeFileInfo()
+    filesize_greater_than_comparator = ClientDuplicatesAutoResolutionComparators.PairComparatorRelativeFileInfo()
     
-    comparator.SetMultiplier( 1.00 )
-    comparator.SetDelta( 0 )
-    comparator.SetNumberTest( ClientNumberTest.NumberTest( operator = ClientNumberTest.NUMBER_TEST_OPERATOR_GREATER_THAN ) )
-    comparator.SetSystemPredicate( ClientSearchPredicate.Predicate( predicate_type = ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_SIZE ) )
+    filesize_greater_than_comparator.SetMultiplier( 1.00 )
+    filesize_greater_than_comparator.SetDelta( 0 )
+    filesize_greater_than_comparator.SetNumberTest( ClientNumberTest.NumberTest( operator = ClientNumberTest.NUMBER_TEST_OPERATOR_GREATER_THAN ) )
+    filesize_greater_than_comparator.SetSystemPredicate( ClientSearchPredicate.Predicate( predicate_type = ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_SIZE ) )
     
-    comparators.append( comparator )
+    filesize_equal_comparator = ClientDuplicatesAutoResolutionComparators.PairComparatorRelativeFileInfo()
+    
+    filesize_equal_comparator.SetMultiplier( 1.00 )
+    filesize_equal_comparator.SetDelta( 0 )
+    filesize_equal_comparator.SetNumberTest( ClientNumberTest.NumberTest( operator = ClientNumberTest.NUMBER_TEST_OPERATOR_EQUAL ) )
+    filesize_equal_comparator.SetSystemPredicate( ClientSearchPredicate.Predicate( predicate_type = ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_SIZE ) )
+    
+    imported_earlier_comparator = ClientDuplicatesAutoResolutionComparators.PairComparatorRelativeFileInfo()
+    
+    imported_earlier_comparator.SetMultiplier( 1.00 )
+    imported_earlier_comparator.SetDelta( 0 )
+    imported_earlier_comparator.SetNumberTest( ClientNumberTest.NumberTest( operator = ClientNumberTest.NUMBER_TEST_OPERATOR_LESS_THAN ) )
+    imported_earlier_comparator.SetSystemPredicate( ClientSearchPredicate.Predicate( predicate_type = ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_IMPORT_TIME ) )
+    
+    and_comparator = ClientDuplicatesAutoResolutionComparators.PairComparatorAND(
+        [
+            filesize_equal_comparator,
+            imported_earlier_comparator
+        ]
+    )
+    
+    or_comparator = ClientDuplicatesAutoResolutionComparators.PairComparatorOR(
+        [
+            filesize_greater_than_comparator,
+            and_comparator
+        ]
+    )
+    comparators.append( or_comparator )
     
     comparator = ClientDuplicatesAutoResolutionComparators.PairComparatorRelativeHardcoded( hardcoded_type = ClientDuplicatesAutoResolutionComparators.HARDCODED_COMPARATOR_TYPE_FILETYPE_SAME )
     
@@ -952,7 +979,7 @@ def GetDefaultRuleSuggestions() -> list[ DuplicatesAutoResolutionRule ]:
     
     comparator.SetMultiplier( 1.00 )
     comparator.SetDelta( 0 )
-    comparator.SetNumberTest( ClientNumberTest.NumberTest( operator = ClientNumberTest.NUMBER_TEST_OPERATOR_GREATER_THAN_OR_EQUAL_TO ) )
+    comparator.SetNumberTest( ClientNumberTest.NumberTest( operator = ClientNumberTest.NUMBER_TEST_OPERATOR_GREATER_THAN ) )
     comparator.SetSystemPredicate( ClientSearchPredicate.Predicate( predicate_type = ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_SIZE ) )
     
     comparators.append( comparator )

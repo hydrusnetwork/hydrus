@@ -396,7 +396,7 @@ class StringConverter( StringProcessingStep ):
                     
                 elif conversion_type == STRING_CONVERSION_DATEPARSER_DECODE:
                     
-                    timestamp = ClientTime.ParseDate( s )
+                    timestamp = int( ClientTime.ParseDate( s ) )
                     
                     s = str( timestamp )
                     

@@ -2845,6 +2845,11 @@ class CanvasHoverFrameTags( CanvasHoverFrame ):
             
         
     
+    def GetListBoxFont( self ):
+        
+        return self._tags.font()
+        
+    
     def ProcessContentUpdatePackage( self, content_update_package: ClientContentUpdates.ContentUpdatePackage ):
         
         if self._current_media is not None:

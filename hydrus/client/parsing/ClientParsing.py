@@ -203,7 +203,7 @@ def RenderJSONParseRule( rule ):
 
 class ParsingTestData( object ):
     
-    def __init__( self, parsing_context, texts ):
+    def __init__( self, parsing_context: dict, texts: collections.abc.Collection[ str ] ):
         
         self.parsing_context = parsing_context
         self.texts = texts

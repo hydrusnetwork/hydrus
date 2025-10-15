@@ -428,11 +428,11 @@ def GetFileInfo( path, mime = None, ok_to_look_for_hydrus_updates = False ):
         
         if mime == HC.TEXT_HTML:
             
-            raise HydrusExceptions.UnsupportedFileException( 'Looks like HTML -- maybe the client needs to be taught how to recognise this URL, or parse it?' )
+            raise HydrusExceptions.UnsupportedFileException( 'Looks like HTML -- maybe the client needs to be taught how to recognise this URL and then parse it?' )
             
         elif mime == HC.APPLICATION_JSON:
             
-            raise HydrusExceptions.UnsupportedFileException( 'Looks like JSON -- maybe the client needs to be taught how to recognise this URL, or parse it?' )
+            raise HydrusExceptions.UnsupportedFileException( 'Looks like JSON -- maybe the client needs to be taught how to recognise this URL and then parse it?' )
             
         elif mime == HC.APPLICATION_UNKNOWN:
             
@@ -604,12 +604,11 @@ def GetFileInfo( path, mime = None, ok_to_look_for_hydrus_updates = False ):
             HydrusData.PrintException( e )
             
         
-    # must be before VIEWABLE_ANIMATIONS
-    elif mime == HC.ANIMATION_UGOIRA:
+    elif mime == HC.ANIMATION_UGOIRA: # must be before VIEWABLE_ANIMATIONS
         
         ( ( width, height ), duration_ms, num_frames ) = HydrusUgoiraHandling.GetUgoiraProperties( path )
         
-    elif mime in HC.VIDEO or mime in HC.HEIF_TYPE_SEQUENCES or mime == HC.IMAGE_AVIF_SEQUENCE:
+    elif mime in HC.VIDEO or mime in HC.HEIF_TYPE_SEQUENCES or mime in ( HC.IMAGE_AVIF_SEQUENCE, HC.ANIMATION_JXL ):
         
         ( ( width, height ), duration_ms, num_frames, has_audio ) = HydrusVideoHandling.GetFFMPEGVideoProperties( path )
         
@@ -694,7 +693,7 @@ headers_and_mime = [
     ( ( ( [0], [b'BM'] ), ), HC.IMAGE_BMP ),
     ( ( ( [0], [b'\x00\x00\x01\x00', b'\x00\x00\x02\x00'] ), ), HC.IMAGE_ICON ),
     ( ( ( [0], [b'qoif'] ), ), HC.IMAGE_QOI ),
-    ( ( ( [0], [b'\xFF\x0A', b'\0\0\0\x0CJXL \x0D\x0A\x87\x0A'] ), ), HC.IMAGE_JXL ),
+    ( ( ( [0], [b'\xFF\x0A', b'\0\0\0\x0CJXL \x0D\x0A\x87\x0A'] ), ), HC.UNDETERMINED_JXL ),
     ( ( ( [0], [b'CWS', b'FWS', b'ZWS'] ), ), HC.APPLICATION_FLASH ),
     ( ( ( [0], [b'FLV'] ), ), HC.VIDEO_FLV ),
     ( ( ( [0], [b'%PDF'] ), ), HC.APPLICATION_PDF ),
@@ -876,6 +875,17 @@ def GetMime( path, ok_to_look_for_hydrus_updates = False ):
                 else:
                     
                     return HC.IMAGE_GIF
+                    
+                
+            elif mime == HC.UNDETERMINED_JXL:
+                
+                if HydrusVideoHandling.FileIsAnimated( path ):
+                    
+                    return HC.ANIMATION_JXL
+                    
+                else:
+                    
+                    return HC.IMAGE_JXL
                     
                 
             elif mime == HC.UNDETERMINED_WEBP:

@@ -84,6 +84,15 @@ class EditPotentialDuplicatesSearchContextPanel( ClientGUICommon.StaticBox ):
         self._pause_count_button = ClientGUICommon.IconButton( self, CC.global_icons().pause, self._PausePlayCount )
         self._refresh_dupe_counts_button = ClientGUICommon.IconButton( self, CC.global_icons().refresh, self._RefreshPotentialDuplicateIdPairsAndDistances )
         
+        menu_template_items = []
+        
+        check_manager = ClientGUICommon.CheckboxManagerOptions( 'potential_duplicate_pairs_search_context_panel_stops_to_estimate' )
+        check_manager.AddNotifyCall( self.NotifyCountOptionsChanged )
+        
+        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCheck( 'state an estimate of final count after 1,000 pairs matched', 'You can choose to have this panel produce an exact count every time, or stop early and estimate.', check_manager ) )
+        
+        self._cog_button = ClientGUIMenuButton.CogIconButton( self, menu_template_items )
+        
         #
         
         self._dupe_search_type.SetValue( potential_duplicates_search_context.GetDupeSearchType() )
@@ -127,6 +136,7 @@ class EditPotentialDuplicatesSearchContextPanel( ClientGUICommon.StaticBox ):
         QP.AddToLayout( text_and_button_hbox, self._num_potential_duplicate_pairs_label, CC.FLAGS_CENTER_PERPENDICULAR_EXPAND_DEPTH )
         QP.AddToLayout( text_and_button_hbox, self._pause_count_button, CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( text_and_button_hbox, self._refresh_dupe_counts_button, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( text_and_button_hbox, self._cog_button, CC.FLAGS_CENTER_PERPENDICULAR )
         
         self.Add( text_and_button_hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
         
@@ -187,6 +197,13 @@ class EditPotentialDuplicatesSearchContextPanel( ClientGUICommon.StaticBox ):
         def pre_work_callable():
             
             if not self._AllGoodToDoCountWork():
+                
+                raise HydrusExceptions.CancelledException()
+                
+            
+            if self._num_potential_duplicate_pairs >= 1000 and CG.client_controller.new_options.GetBoolean( 'potential_duplicate_pairs_search_context_panel_stops_to_estimate' ):
+                
+                self._UpdateCountLabel()
                 
                 raise HydrusExceptions.CancelledException()
                 
@@ -352,23 +369,59 @@ class EditPotentialDuplicatesSearchContextPanel( ClientGUICommon.StaticBox ):
         
         if not self._potential_duplicate_id_pairs_and_distances_initialised:
             
-            self._num_potential_duplicate_pairs_label.setText( f'initialising{HC.UNICODE_ELLIPSIS}' )
+            text = f'initialising{HC.UNICODE_ELLIPSIS}'
             
         elif len( self._potential_duplicate_id_pairs_and_distances ) == 0:
             
-            self._num_potential_duplicate_pairs_label.setText( f'no potential pairs in this file domain!' )
-            
-        elif len( self._potential_duplicate_id_pairs_and_distances_still_to_search ) == 0:
-            
-            self._num_potential_duplicate_pairs_label.setText( f'{HydrusNumbers.ToHumanInt(len( self._potential_duplicate_id_pairs_and_distances))} pairs searched; {HydrusNumbers.ToHumanInt( self._num_potential_duplicate_pairs )} matched' )
+            text = f'no potential pairs in this file domain!'
             
         else:
             
-            value = len( self._potential_duplicate_id_pairs_and_distances ) - len( self._potential_duplicate_id_pairs_and_distances_still_to_search )
-            range = len( self._potential_duplicate_id_pairs_and_distances )
+            if self._num_potential_duplicate_pairs >= 1000 and CG.client_controller.new_options.GetBoolean( 'potential_duplicate_pairs_search_context_panel_stops_to_estimate' ):
+                
+                if len( self._potential_duplicate_id_pairs_and_distances_still_to_search ) == 0:
+                    
+                    text = f'{HydrusNumbers.ToHumanInt(len( self._potential_duplicate_id_pairs_and_distances ))} pairs; {HydrusNumbers.ToHumanInt( self._num_potential_duplicate_pairs )} match'
+                    
+                else:
+                    
+                    value = len( self._potential_duplicate_id_pairs_and_distances ) - len( self._potential_duplicate_id_pairs_and_distances_still_to_search )
+                    range = len( self._potential_duplicate_id_pairs_and_distances )
+                    
+                    estimate = int( self._num_potential_duplicate_pairs ) * ( range / value )
+                    
+                    estimate_base = estimate
+                    estimate_base_multiplier = 1
+                    
+                    # cut 25,123 to 25,000
+                    while len( str( estimate_base ) ) > 2:
+                        
+                        estimate_base = int( estimate_base / 10 )
+                        estimate_base_multiplier *= 10
+                        
+                    
+                    estimate = estimate_base * estimate_base_multiplier
+                    
+                    text = f'{HydrusNumbers.ToHumanInt(len( self._potential_duplicate_id_pairs_and_distances ))} pairs; ~{HydrusNumbers.ToHumanInt( estimate )} match'
+                    
+                
+            else:
+                
+                if len( self._potential_duplicate_id_pairs_and_distances_still_to_search ) == 0:
+                    
+                    text = f'{HydrusNumbers.ToHumanInt(len( self._potential_duplicate_id_pairs_and_distances))} pairs searched; {HydrusNumbers.ToHumanInt( self._num_potential_duplicate_pairs )} match'
+                    
+                else:
+                    
+                    value = len( self._potential_duplicate_id_pairs_and_distances ) - len( self._potential_duplicate_id_pairs_and_distances_still_to_search )
+                    range = len( self._potential_duplicate_id_pairs_and_distances )
+                    
+                    text = f'{HydrusNumbers.ValueRangeToPrettyString(value, range)} pairs searched; {HydrusNumbers.ToHumanInt( self._num_potential_duplicate_pairs )} match{HC.UNICODE_ELLIPSIS}'
+                    
+                
             
-            self._num_potential_duplicate_pairs_label.setText( f'{HydrusNumbers.ValueRangeToPrettyString(value, range)} pairs searched; {HydrusNumbers.ToHumanInt( self._num_potential_duplicate_pairs )} matched{HC.UNICODE_ELLIPSIS}' )
-            
+        
+        self._num_potential_duplicate_pairs_label.setText( text )
         
     
     def DupeSearchTypeChanged( self ):
@@ -408,6 +461,11 @@ class EditPotentialDuplicatesSearchContextPanel( ClientGUICommon.StaticBox ):
     def MaxHammingDistanceChanged( self ):
         
         self._BroadcastValueChanged()
+        
+    
+    def NotifyCountOptionsChanged( self ):
+        
+        self._DoCountWork()
         
     
     def NotifyNewDupePairs( self ):

@@ -1916,6 +1916,16 @@ class TagsManager( object ):
             
         
     
+    def GetNumDeletedMappings( self, tag_context: ClientSearchTagContext.TagContext, tag_display_type ):
+        
+        with self._lock:
+            
+            service_keys_to_statuses_to_tags = self._GetServiceKeysToStatusesToTags( tag_display_type )
+            
+            return len( service_keys_to_statuses_to_tags[ tag_context.service_key ][ HC.CONTENT_STATUS_DELETED ] )
+            
+        
+    
     def GetNumTags( self, tag_context: ClientSearchTagContext.TagContext, tag_display_type ):
         
         with self._lock:

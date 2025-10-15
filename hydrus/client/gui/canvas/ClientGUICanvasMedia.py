@@ -1194,7 +1194,7 @@ class AnimationBar( QW.QWidget ):
         painter.drawRect( 0, 0, my_width - 1, my_height - 1 )
         
     
-    def _ScanToCurrentMousePos( self ):
+    def _ScanToCurrentMousePos( self, precise = True ):
         
         my_width = self.size().width()
         
@@ -1221,7 +1221,7 @@ class AnimationBar( QW.QWidget ):
             
             time_index_ms = int( proportion * self._duration_ms )
             
-            self._media_window.Seek( time_index_ms )
+            self._media_window.Seek( time_index_ms, precise = precise )
             
         
     
@@ -1258,7 +1258,7 @@ class AnimationBar( QW.QWidget ):
                 return
                 
             
-            self._ScanToCurrentMousePos()
+            self._ScanToCurrentMousePos( precise = False )
             
         
     
@@ -1280,7 +1280,7 @@ class AnimationBar( QW.QWidget ):
         
         self._currently_in_a_drag = True
         
-        self._ScanToCurrentMousePos()
+        self._ScanToCurrentMousePos( precise = True )
         
     
     def mouseReleaseEvent( self, event ):
@@ -1298,6 +1298,9 @@ class AnimationBar( QW.QWidget ):
                 
             
             self._currently_in_a_drag = False
+            
+            # have this if you want to play around with the 'non-precise on drag', but in the first test it didn't work out nice IRL
+            # self._ScanToCurrentMousePos( precise = True )
             
         
     
@@ -3374,7 +3377,7 @@ class QtMediaPlayer( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
         return command_processed
         
     
-    def Seek( self, position_ms ):
+    def Seek( self, position_ms, precise = True ):
         
         self._media_player.setPosition( position_ms )
         

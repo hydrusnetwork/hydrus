@@ -36,6 +36,7 @@ from hydrus.client.gui.lists import ClientGUIListBoxesData
 from hydrus.client.gui.widgets import ClientGUICommon
 from hydrus.client.gui.widgets import ClientGUIMenuButton
 from hydrus.client.media import ClientMedia
+from hydrus.client.media import ClientMediaResult
 from hydrus.client.metadata import ClientTags
 from hydrus.client.metadata import ClientTagSorting
 from hydrus.client.search import ClientSearchPredicate
@@ -3357,6 +3358,8 @@ class ListBoxTags( ListBox ):
         selected_copyable_tag_strings_with_parents = self._GetCopyableTagStrings( COPY_SELECTED_TAGS, include_parents = True )
         selected_copyable_tag_strings_with_collapsed_ors = self._GetCopyableTagStrings( COPY_SELECTED_TAGS, collapse_ors = True )
         
+        selection_string = ''
+        
         if len( selected_copyable_tag_strings ) > 0:
             
             if len( selected_copyable_tag_strings ) == 1:
@@ -4720,7 +4723,7 @@ class ListBoxTagsStringsAddRemove( ListBoxTagsStrings ):
             ctrl_down = modifier == ClientGUIShortcuts.SHORTCUT_MODIFIER_CTRL
             shift_down = modifier == ClientGUIShortcuts.SHORTCUT_MODIFIER_SHIFT
             
-            action_occurred = self._Activate( ctrl_down, shift_down )
+            self._Activate( ctrl_down, shift_down )
             
         else:
             
@@ -5008,7 +5011,7 @@ class ListBoxTagsMedia( ListBoxTagsDisplayCapable ):
         self.IncrementTagsByMediaResults( media_results )
         
     
-    def IncrementTagsByMediaResults( self, media_results ):
+    def IncrementTagsByMediaResults( self, media_results: collections.abc.Collection[ ClientMediaResult.MediaResult ] ):
         
         if not isinstance( media_results, set ):
             
@@ -5050,7 +5053,7 @@ class ListBoxTagsMedia( ListBoxTagsDisplayCapable ):
         self.SetTagsByMediaResults( media_results )
         
     
-    def SetTagsByMediaResults( self, media_results ):
+    def SetTagsByMediaResults( self, media_results: collections.abc.Collection[ ClientMediaResult.MediaResult ] ):
         
         if not isinstance( media_results, set ):
             
@@ -5080,7 +5083,7 @@ class ListBoxTagsMedia( ListBoxTagsDisplayCapable ):
         self.SetTagsByMediaResultsFromMediaResultsPanel( media_results, tags_changed, capped_due_to_setting )
         
     
-    def SetTagsByMediaResultsFromMediaResultsPanel( self, media_results, tags_changed, capped_due_to_setting ):
+    def SetTagsByMediaResultsFromMediaResultsPanel( self, media_results: collections.abc.Collection[ ClientMediaResult.MediaResult ], tags_changed, capped_due_to_setting ):
         
         self.cappedDueToSetting.emit( capped_due_to_setting )
         
@@ -5176,6 +5179,8 @@ class ListBoxTagsMedia( ListBoxTagsDisplayCapable ):
         elif show_type == 'petitioned': self._show_petitioned = value
         
         self._UpdateTerms()
+        
+        self._DataHasChanged()
         
     
     def ForceTagRecalc( self ):

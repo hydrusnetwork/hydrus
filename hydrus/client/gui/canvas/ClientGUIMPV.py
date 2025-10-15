@@ -79,17 +79,18 @@ def GetClientAPIVersionString():
         
     '''
 
-def EmergencyDumpOutGlobal( probably_crashy, too_many_events_queued, reason ):
+def EmergencyDumpOutGlobal( probably_crashy, reason ):
     
     # this is Qt thread so we can talk to this guy no prob
-    MPVEmergencyDumpOutSignaller.instance().emergencyDumpOut.emit( probably_crashy, too_many_events_queued, reason )
+    MPVEmergencyDumpOutSignaller.instance().emergencyDumpOut.emit( probably_crashy, reason )
     
 
 def log_message_is_fine_bro( message ):
     
     return True in (
         'rescan-external-files' in message,
-        'LZW decode failed' in message # borked gif headers
+        'LZW decode failed' in message, # borked gif headers
+        'Too many events queued' in message # used to be a problem, now no longer a big deal with the async mediator
     )
     
 
@@ -105,8 +106,12 @@ def log_handler( loglevel, component, message ):
     
     if loglevel == 'error':
         
+        if 'Too many events queued' in message:
+            
+            return
+            
+        
         probably_crashy_tests = []
-        too_many_events_queued_tests = []
         
         if 'ffmpeg' in component:
             
@@ -115,21 +120,10 @@ def log_handler( loglevel, component, message ):
                 'Error splitting the input' in message
             ]
             
-        elif False:
-            
-            # this is the core of the 'too many events' error hook that gave us false positive problems
-            # at the moment, this error will propagate to dumpout and be logged as a generic error, but maybe we'll want to silence it in the end as a 'fine bro' message
-            # instead of catching the logspam, attack the original problem!
-            
-            too_many_events_queued_tests = [
-                'Too many events queued' in message
-            ]
-            
         
         probably_crashy = True in probably_crashy_tests
-        too_many_events_queued = True in too_many_events_queued_tests
         
-        CG.client_controller.CallBlockingToQt( CG.client_controller.gui, EmergencyDumpOutGlobal, probably_crashy, too_many_events_queued, f'{component}: {message}' )
+        CG.client_controller.CallBlockingToQt( CG.client_controller.gui, EmergencyDumpOutGlobal, probably_crashy, f'{component}: {message}' )
         
     
     HydrusData.DebugPrint( '[MPV {}] {}: {}'.format( loglevel, component, message ) )
@@ -137,7 +131,7 @@ def log_handler( loglevel, component, message ):
 
 class MPVEmergencyDumpOutSignaller( QC.QObject ):
     
-    emergencyDumpOut = QC.Signal( bool, bool, str )
+    emergencyDumpOut = QC.Signal( bool, str )
     my_instance = None
     
     def __init__( self ):
@@ -202,6 +196,16 @@ class MPVFileSeekedEvent( QC.QEvent ):
         
     
 
+MPVPlaybackRestartedType = QP.registerEventType()
+
+class MPVPlaybackRestarted( QC.QEvent ):
+    
+    def __init__( self ):
+        
+        super().__init__( MPVPlaybackRestartedType )
+        
+    
+
 LOCALE_IS_SET = False
 
 class MPVMediator( object ):
@@ -241,12 +245,17 @@ class MPVMediator( object ):
         raise NotImplementedError()
         
     
+    def NotifySeekComplete( self ):
+        
+        pass
+        
+    
     def ResetForNewMedia( self, paused: bool ):
         
         raise NotImplementedError()
         
     
-    def Seek( self, time_pos ):
+    def Seek( self, time_pos, precise = True ):
         
         raise NotImplementedError()
         
@@ -359,9 +368,14 @@ class MPVMediatorRude( MPVMediator ):
         pass
         
     
-    def Seek( self, time_pos ):
+    def Seek( self, time_pos, precise = True ):
         
-        self._mpv_player.seek( time_pos, reference = 'absolute', precision = 'exact' )
+        # this is a nice idea but it feels awful in practise
+        # precision = 'exact' if precise else 'keyframes'
+        
+        precision = 'exact'
+        
+        self._mpv_player.seek( time_pos, reference = 'absolute', precision = precision )
         
     
     def SetPaused( self, value: bool ):
@@ -381,6 +395,9 @@ class MPVMediatorPolite( MPVMediator ):
         
         self._lock = threading.Lock()
         self._properties = {}
+        
+        self._waiting_on_a_seek = False
+        self._seek_time_and_precise_to_do_after_current_seek_done = None
         
         self.ResetForNewMedia( True )
         
@@ -497,6 +514,30 @@ class MPVMediatorPolite( MPVMediator ):
             
         
     
+    def NotifySeekComplete( self ):
+        
+        with self._lock:
+            
+            self._waiting_on_a_seek = False
+            
+            if self._seek_time_and_precise_to_do_after_current_seek_done is not None:
+                
+                ( seek_time, precise ) = self._seek_time_and_precise_to_do_after_current_seek_done
+                
+                self._seek_time_and_precise_to_do_after_current_seek_done = None
+                
+            else:
+                
+                ( seek_time, precise ) = ( None, None )
+                
+            
+        
+        if seek_time is not None:
+            
+            self.Seek( seek_time, precise = precise )
+            
+        
+    
     def ResetForNewMedia( self, paused: bool ):
         
         self._properties = {
@@ -506,12 +547,34 @@ class MPVMediatorPolite( MPVMediator ):
             'playlist' : []
         }
         
+        self._waiting_on_a_seek = False
+        self._seek_time_and_precise_to_do_after_current_seek_done = None
+        
     
-    def Seek( self, time_pos ):
+    def Seek( self, time_pos, precise = True ):
         
         # TODO: Update this guy to be Fast-Seek and End-Seek (sent on mouse-up), and make Fast-Seek do 'keyframes' instead of 'exact'
         
-        self._mpv_player.command_async( 'seek', time_pos, 'absolute', 'exact' )
+        with self._lock:
+            
+            if self._waiting_on_a_seek:
+                
+                self._seek_time_and_precise_to_do_after_current_seek_done = ( time_pos, precise )
+                
+                return
+                
+            
+        
+        # I tried using the callback here to catch when the seek was 'done', but catching/notifying on the 'playback restarted' event is what we actually wanted
+        
+        # this is a nice idea but it feels awful in practise
+        # precision = 'exact' if precise else 'keyframes'
+        
+        precision = 'exact'
+        
+        self._mpv_player.command_async( 'seek', time_pos, 'absolute', precision )
+        
+        self._waiting_on_a_seek = True
         
     
     def SetPaused( self, value: bool ):
@@ -700,6 +763,10 @@ class MPVWidget( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
                 
                 QW.QApplication.postEvent( self, MPVFileSeekedEvent() )
                 
+            elif event_type == mpv.MpvEventID.PLAYBACK_RESTART:
+                
+                QW.QApplication.postEvent( self, MPVPlaybackRestarted() )
+                
             elif event_type == mpv.MpvEventID.FILE_LOADED:
                 
                 QW.QApplication.postEvent( self, MPVFileLoadedEvent() )
@@ -740,6 +807,8 @@ class MPVWidget( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
                 return True
                 
             elif event.type() == MPVFileSeekedEventType:
+                
+                # a seek has been started, not finished
                 
                 if not self._file_header_is_loaded:
                     
@@ -792,6 +861,13 @@ class MPVWidget( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
                 
                 return True
                 
+            elif event.type() == MPVPlaybackRestartedType:
+                
+                # a seek is now complete and mpv has loaded up the frame
+                
+                self._mpv_mediator.NotifySeekComplete()
+                
+                
             elif event.type() == MPVShutdownEventType:
                 
                 self.setVisible( False )
@@ -811,7 +887,7 @@ class MPVWidget( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
         return False
         
     
-    def EmergencyDumpOut( self, probably_crashy, too_many_events_queued, reason ):
+    def EmergencyDumpOut( self, probably_crashy, reason ):
         
         # we had to rewrite this thing due to some threading/loop/event issues at the lower mpv level
         # it now broadcasts to all mpv widgets, so we could unload all on very serious errors, but for now I've hacked in the problem widget handle so we'll only do it for us right now
@@ -823,23 +899,20 @@ class MPVWidget( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
             return
             
         
-        if too_many_events_queued:
-            # I replaced this with the _number_of_restarts_this_second stuff in the eventFilter on seek spam
-            # TODO: If we have no further use for this, you can delete it from the whole dump-out chain mate
-            
-            return
-            
-        
         media_line = '\n\nIf you have multiple mpv windows playing media, you may see multiple versions of this message. Only one is correct. For this player, the hash is: {}'.format( original_media.GetHash().hex() )
         
-        if probably_crashy or too_many_events_queued:
+        if probably_crashy:
+            
+            if HG.mpv_allow_crashy_files:
+                
+                HydrusData.ShowText( 'This file would have triggered the crash handling now.' )
+                
+                return
+                
             
             self._mpv_mediator.ForceStop()
             
             self.ClearMedia()
-            
-        
-        if probably_crashy:
             
             global damaged_file_hashes
             
@@ -868,20 +941,6 @@ class MPVWidget( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
                 job_status = ClientThreading.JobStatus()
                 
                 job_status.SetFiles( [ original_media.GetHash() ], 'MPV-crasher' )
-                
-                CG.client_controller.pub( 'message', job_status )
-                
-            elif too_many_events_queued:
-                
-                message = f'Sorry, this media appears to have choked MPV! To avoid instability, I have unloaded it! You can try to load it again, but if it fails over and over, please send it to hydev for more testing. If this error happens when the file loops, you might like to try the Playlist-Loop DEBUG checkbox in "options->media playback". The specific errors should be written to the log.{media_line}'
-                
-                HydrusData.DebugPrint( message )
-                
-                ClientGUIDialogsMessage.ShowCritical( self, 'Error', f'{message}\n\nThe first error was:\n\n{reason}' )
-                
-                job_status = ClientThreading.JobStatus()
-                
-                job_status.SetFiles( [ original_media.GetHash() ], 'MPV-choker' )
                 
                 CG.client_controller.pub( 'message', job_status )
                 
@@ -1088,7 +1147,7 @@ class MPVWidget( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
         return command_processed
         
     
-    def Seek( self, time_index_ms ):
+    def Seek( self, time_index_ms, precise = True ):
         
         if self._currently_in_media_load_error_state:
             
@@ -1118,7 +1177,7 @@ class MPVWidget( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
         
         try:
             
-            self._mpv_mediator.Seek( time_index_s )
+            self._mpv_mediator.Seek( time_index_s, precise = precise )
             
         except:
             
@@ -1210,7 +1269,7 @@ class MPVWidget( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
         
         global damaged_file_hashes
         
-        if media is not None and media.GetHash() in damaged_file_hashes:
+        if media is not None and media.GetHash() in damaged_file_hashes and not HG.mpv_allow_crashy_files:
             
             self.ClearMedia()
             

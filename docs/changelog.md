@@ -7,6 +7,65 @@ title: Changelog
 !!! note
     This is the new changelog, only the most recent builds. For all versions, see the [old changelog](old_changelog.html).
 
+## [Version 643](https://github.com/hydrusnetwork/hydrus/releases/tag/v643)
+
+### future build
+
+* I am making another future build this week. This is a special build with new libraries that I would like advanced users to test out so I know they are safe to fold into the normal release.
+* in the release post, I will link to this alternate build. if you are experienced and would like to help me, please check it out
+* In my tests, _neither_ of these required a clean install. Linux users might like to do one anyway, since this week is a big shift for them, particularly if it has been a while or you are on an odd flavour
+* the specific changes this week are--
+* Linux built runner from `Ubuntu 22.04` to `Ubuntu 24.04`
+* Linux built mpv from `libmpv1` to `libmpv2`
+* Windows built sqlite from `3.50.1` to `3.50.4`
+* `opencv-python-headless` from `4.10.0.84` to `4.11.0.86`
+* `PySide6` from `6.8.2.1` to `6.8.3`
+* I was going to do dateparser `1.2.1` to `1.2.2`, but there was a pyinstaller problem. we'll try again another time
+
+### misc
+
+* animated jxl is now supported! as previously, hydrus handles this with a new 'animated jxl' filetype. mpv wasn't super happy with the jxl files I was playing with, so I'm only enabling this for the hydrus ffmpeg-powered native viewer for now, like animated webp. all existing jxls will be queued for a rescan on update, so you don't have to do anything. performance is not amazing, and there's no variable frame rate support, and I'm afraid the tests here add yet more time to the jxl import process, but it does work. I'll keep checking in future for nicer (native Pillow etc..) solutions here. I looked at parsing jxls manually, like we do for quick png/apng differentiation and parsing num_frames etc..., but jxl appears to be pretty wewmode internally (issue #1881)
+* in the 'edit times' dialog, when editing an individual time, the 'paste' button now eats milliseconds correctly whether you post a raw timestamp like `1738783297.299` or a datestring like `2025-10-10T12:00:00.123+02:00` (issue #1884)
+* the manage tags dialog has a new "deleted mappings" text-and-icon that appears below the paste/cog icons if there are deleted mappings. it'll say "3 deleted mappings" and show you an eye icon. click the eye to show/hide deleted mappings. this display setting is now remembered through dialog open/close and is no longer accessible through the cog menu. this is an experiment, and I am open to doing more display options here to finally get on top of some finicky workflows
+* hitting 'show deleted' in the manage tags dialog now redraws the list immediately; previously, it wouldn't actually show until the list incidentally repainted itself otherwise, e.g. after a click
+* 403 (forbidden), and 509, 529, 502, and 522 network errors (bandwidth and gateway problems) no longer spam the log with so much server response text
+* fixed some Qt crashes related to PDF import
+* fixed some Qt crashes related to SVG import
+* updated the 'eye' icon to svg. I'm actually happy with it; I even added a caruncle
+* added an 'eye_closed' svg icon
+* I think I figured out the 'list of tags in the media viewer background has a different line height than the hover window' bug that hit some Linux flavours
+
+### duplicates
+
+* by default, the client now searches for potential duplicates in normal time. this code now has such low per-file overhead that it isn't a bother
+* 'potential duplicate pairs search' panels, such as in the duplicate page or the auto-resolution rule edit panel, now, by default, state an _estimate_ of the matching count once they have found 1,000 matches. for instance, it might say "513,547 pairs; ~210,000 match". it makes the estimate once it has found 1,000 matches and obviously stops working a lot faster this way. a new cog button let's you switch back to the old 'always precise' behaviour. let me know how this feels with IRL data!
+* I examined making 'apply alternates/false positive to many files at once' work in a sane way (atm it applies to all internal pair combinations, so millions of relationships when you reach a single group of thousands of files), and it is not possible with the current file relationship storage. one solution I had discussed with users as a mid-way stopgap might have legs, but I think it is still insufficient. I have made a plan to improve this but will not do it in the push to finish auto-resolution. sounds like 2026
+
+### duplicates auto-resolution
+
+* added a 'AND' comparator type. this works like the OR one and allows you to clause a bunch of different comparator types together within a OR collection. I know some users have wanted to try something like `(A filesize > B AND A imported earlier B) OR (A filesize > 1.2x B AND A imported after B)` within the same expensive 'visual duplicates' rule. I think it is a little awkward, but have a think and see how it goes
+* some more small tweaks for the suggested rules--
+* - the 'visually similar pairs' rule now has `A filesize > B` rather than `>=` because the dialog won't ok without a definitive way to arrange A and B, hahaha. since a non-pixel-dupe visually similar pair of exactly the same size is unlikely, I'm fine not catching them here
+* - the 'pixel-perfect pairs' rule now has `( A filesize > B ) OR ( A filesize = B AND A imported earlier B )`. previously, it just had `A filesize > B`. I have discovered that pixel perfect duplicates of exactly equal filesize are not uncommon (I particularly encountered it with some imagemagick resizes of the same original files done several years apart on different OSes, where I assume the only difference is some version enum in the file header), so I wanted a tie-breaker clause for them
+* the auto-resolution help is now updated to talk about this
+* an empty OR or AND comparator now gives an appropriate summary string
+* I explored making resolution rules work on their queues in a more random order, but I backed off when I couldn't make it fast. there's a way to make this happen, but not a simple one, so I'll back burner it for now. the rules pull pairs in an order according to SQLite's whim, which often produces pairs featuring the same file in a row, which you may have seen in the pending action log. this is fine in some ways but it wasn't intentional and does give some minor headaches. unfortunately the most important thing about this guy is he runs with very low per-file overhead, so I'll leave things as they are for now
+
+### mpv
+
+* the new mpv interface is now turned on for all users. thanks to those who tested different situations for me. you should notice that mpv is slightly less laggy and generally more stable
+* if you have a very old version of mpv and video suddenly throws a bunch of errors about `command_async`, please check `options->media playback->LEGACY DEBUG: Use legacy mpv communication method`
+* I also updated this new code to be more polite about seek-scrubbing. if a new seek command comes in while a previous seek command is still working, it now waits until mpv is done and and then sends the most recent seek command received. it is now quite difficult to produce the 'too many events queued' error by scrubbing
+* as the 'too many events queued' error is rare and no longer big deal, it'll no longer spam to the log
+* I experimented with 'do a faster keyframe seek while dragging, and only an exact seek when mouse down/up', but it felt pretty bad with the low-latency keyframe seek caret bouncing around as you dragged, sometimes to the start of the video. I'd rather spend the CPU and have a nice experience
+* added 'allow crashy files in mpv' to `help->debug->debug modes`. this disables the handler that would catch problems here and allows loading of files previously put on the blacklist. I notice that with the new async interface, I can't really get mpv to crash any more and while even totally whack files will spam the log, visually they'll just flitter between the first two frames or whatever. maybe we'll make this guy less strict in future
+
+### boring stuff
+
+* tweaked some database migration help
+* clarified in the options that the 'idle mouse' setting is global, not just mouse over the hydrus window
+* cleaned up some canvas painter handling to do nicer save/restore within draw methods
+
 ## [Version 642](https://github.com/hydrusnetwork/hydrus/releases/tag/v642)
 
 ### misc
@@ -24,7 +83,7 @@ title: Changelog
 
 ### crash reporting
 
-* last week, I tried to roll out an on-by-default crash reporting mode. unfortunately, I discovered late that it wouldn't play nice with mpv. I couldn't fix ithe issue fully, so this mode is now available but default off. you turn it on via `help->debug->debug modes`
+* last week, I tried to roll out an on-by-default crash reporting mode. unfortunately, I discovered late that it wouldn't play nice with mpv. I couldn't fix the issue fully, so this mode is now available but default off. you turn it on via `help->debug->debug modes`
 * if you have regular crashes, please give it a go and we'll see what we learn. the only proviso is you absolutely cannot load up mpv and scrub through its seekbar while it is on or you'll just get a crash within seconds. a popup moans about this whenever you turn the mode on
 
 ### mpv updates
@@ -53,9 +112,7 @@ title: Changelog
 * also, I triaged my remaining auto-resolution work in prep for a 1.0 release for all users. we're looking at four medium size jobs--removing potential pairs from rules when at least one file is manually deleted; some tag-based comparators; faster search when the hit rate is very low; and transparency in the visual duplicates test--and then about a dozen small jobs like a jpeg quality comparator, nicer pause for auto-resolution rules, and some metadata merge option tweaks
 
 ### advanced test stuff
-
-### updated the 'test' versions for users who run from source
-
+* updated the 'test' versions for users who run from source--
 * `opencv` is updated from `4.11.0.86` to `4.12.0.88`
 * `PySide6` is updated from `6.9.1` to `6.9.3`
 * I expect to do a 'future test' build next week
@@ -494,43 +551,3 @@ title: Changelog
 ### macos news
 
 * the Github 'runner' that we use to make the macOS build is being retired soon. I played around with the newer 'macos-14' runner, which finally leaps us from Intel to Apple Silicon, and had some but not total success. the main App is going to be moving to Apple Silicon, but I think we'll be able to offer an Intel compatibility version too. there's still stuff to figure out, but I hope for a public test soon
-
-## [Version 633](https://github.com/hydrusnetwork/hydrus/releases/tag/v633)
-
-### duplicates group mode
-
-* the duplicate filter now has a 'group mode', which will cause it to load one group of files that are all potentially related at a time. you'll process the entire group until there are no potential pairs left, and then a new group will be selected. if new potential pairs are added as a result of the first pass of dupe merges, you'll be given those to process, over and over, until there is nothing left, but for the most part, I think you will be able to process a whole group in one pass. it'll be interesting to see how it shakes out IRL
-* if you manually skip all the pairs in a group, you will be asked if you want to change group
-* if you know the duplicate filter, please give this a go. I think it might be annoyingly 'bitty' with groups of size 1, so I may bundle smaller groups together to make it all smoother, but if I do that I may want a slightly different x/y label presentation. I really like this when it works well, so once we are happy, I may make this the default behaviour for new dupe pages
-* as a side thing, I believe I deserve an award for 'density of ugly UI' here for the checkbox, which has a right-border misaligned with the buttons above and below, the text, which isn't properly vertically centered on the checkbox, and the whole widget overall, which refused to center align how I wanted in the first place. this is another reminder to clean up some of my ancient layout tools, which often fail when I mix different widgets and layouts together. and maybe I should just make the thing a scrolling button like I do for file and tag sort stuff
-
-### duplicates
-
-* the duplicate filter comparison statements now include jpeg subsampling (444, 422, 420), with a little score weighting too. if you don't know, subsampling is a sort of 'data density' in how the image is drawn with light and colour. much like with jpeg quality, you can usually assume that bigger numbers are better, with 444 the gold standard
-* the jpeg quality comparison line in the duplicate filter now considers subsampling. it is a little complicated since this is all hacky and there's a curve going on behind the scenes, but a `4:2:0` jpeg will get 0.85 the 'arithmetic power', and a `4:2:2` will get 0.92, of a `4:4:4`'s, which works out to dropping one or two 'high quality' to 'medium quality' qualitative bands, but I may have been too aggressive. thanks to a user who pointed out that quantization tables do not change with different subsampling levels
-* several duplicate filter comparison statements are no longer hidden if there is no difference. for instance, if both files have the same jpeg quality, you now get a blue (0 score) line saying 'both are medium high quality'. having dynamic hiding here to maximise useful data was a decent idea, but, rather than streamlining the experience, it usually just increased cognitive load by bouncing the lines around and made successive similar pairs more difficult to track. similarly affected are: resolution, num_tags, and import timestamp; and has_audio, has_transparency, has_exif, and has icc profile (if either does)
-* when two files are set duplicate and their metadata merged using the duplicate merge options, the url timestamps are now synced when both files have an url from the same domain, that being the destination gets the reasonable earlier timestamp of itself and the source. previously, the timestamp was only synced if the destination did not have an url in that domain already
-
-### window positioning
-
-* absent a saved record, media viewers now declare an ideal initial size of 1280x720. previously, this was alternately 240x180 or 0x0, and so when your media viewers were set not to remember their previous size, they were making some crazy small or completely hidden windows (issue #1768)
-* media viewers are now correctly hooked up to the main gui when they do topleft/center parent initial positioning and gravity based parent sizing
-
-### misc
-
-* all subscription popups have an additional progress gauge for the queries. this should stabilise the width of sub popups, also
-* all datetime widgets (e.g. under 'manage times') now have a 'now' button, beside the 'paste', to set the time to now
-* the 'retry ignored' file log buttons now offer to retry 403s
-* `help->about` now has boot time in relative and absolute terms
-* added an ADVANCED checkbox to `options->media viewer` that lets you focus the main gui only when you exit a media viewer with a page/thumb 'focusing' action. useful if you use multiple viewers and are thinking about the focus stack
-* fixed the default export path in `options->exporting` from saving incorrectly if the dialog was saved with it on a blank value. it was saving as the path of the db directory; now it should stay blank, and the export files dialog will default to `~/hydrus_export`
-* wrote a section on loading your system Qt styles in the `running from source` help. a user seems to have figured out how to do it. if you have python experience and also have this problem, have a look and let me know how it goes. I'm going to _see_ if I can adapt my 'setup_venv' script to auto-detect the situation and optionally install the venv differently (issue #1767)
-
-### boring stuff
-
-* deleted a bunch of old and no-longer-hooked-up nitter url classes from the defaults
-* reduced some unbalanced lag in the 'deny auto-resolution pairs' command in semi-automatic rules, with more than 4 pairs being denied at once
-* refactored much of my old list chunking to a richer progress-tracking call
-* refactored my hacky old inter-thread progress-gauge tracking to nicer calls on the shared status object
-* fixed a GUG unit test that failed after the recent %20 thing. I think I last-minute changed the default value for that setting, after doing my main testing
-* wrote a 'URLDomainMask' object to handle the future multi-domain URL Class update. lots to do up and down the pipeline to get this guy inserted, but the whole system will eventually support multiple regex domains per URL CLass. also wrote some unit tests for it
