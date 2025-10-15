@@ -530,18 +530,23 @@ class PairComparatorOR( PairComparator ):
         self._sub_comparators = HydrusSerialisable.SerialisableList( sorted( self._sub_comparators, key = lambda sc: sc.GetSummary() ) )
         
     
-    def GetComparators( self ):
-        
-        return self._sub_comparators
-        
-    
     def CanDetermineBetter( self ) -> bool:
         
         # let's be strict to stay safe
         return len( self._sub_comparators ) > 0 and False not in ( sub_comparator.CanDetermineBetter() for sub_comparator in self._sub_comparators )
         
     
+    def GetComparators( self ):
+        
+        return self._sub_comparators
+        
+    
     def GetSummary( self ):
+        
+        if len( self._sub_comparators ) == 0:
+            
+            return 'Empty OR Comparator - will always fail'
+            
         
         return '(' + ') OR ('.join( ( sub_comparator.GetSummary() for sub_comparator in self._sub_comparators ) ) + ')'
         
@@ -573,6 +578,94 @@ class PairComparatorOR( PairComparator ):
     
 
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_DUPLICATES_AUTO_RESOLUTION_PAIR_COMPARATOR_OR ] = PairComparatorOR
+
+class PairComparatorAND( PairComparator ):
+    
+    SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_DUPLICATES_AUTO_RESOLUTION_PAIR_COMPARATOR_AND
+    SERIALISABLE_NAME = 'Duplicates Auto-Resolution Pair Comparator - AND'
+    SERIALISABLE_VERSION = 1
+    
+    def __init__( self, sub_comparators: collections.abc.Collection[ PairComparator ] = None ):
+        """
+        This guy holds other comparators and does an OR of them. 
+        """
+        
+        if sub_comparators is None:
+            
+            sub_comparators = []
+            
+        
+        super().__init__()
+        
+        self._sub_comparators = HydrusSerialisable.SerialisableList( sub_comparators )
+        
+        self._SortComparators()
+        
+    
+    def _GetSerialisableInfo( self ):
+        
+        return self._sub_comparators.GetSerialisableTuple()
+        
+    
+    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
+        
+        self._sub_comparators = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_info )
+        
+        self._SortComparators()
+        
+    
+    def _SortComparators( self ):
+        
+        # maybe one day we sort for speed, but for now let's just be stable
+        
+        self._sub_comparators = HydrusSerialisable.SerialisableList( sorted( self._sub_comparators, key = lambda sc: sc.GetSummary() ) )
+        
+    
+    def CanDetermineBetter( self ) -> bool:
+        
+        return len( self._sub_comparators ) > 0 and True in ( sub_comparator.CanDetermineBetter() for sub_comparator in self._sub_comparators )
+        
+    
+    def GetComparators( self ):
+        
+        return self._sub_comparators
+        
+    
+    def GetSummary( self ):
+        
+        if len( self._sub_comparators ) == 0:
+            
+            return 'Empty AND Comparator - will always fail'
+            
+        
+        return ', '.join( ( sub_comparator.GetSummary() for sub_comparator in self._sub_comparators ) )
+        
+    
+    def IsFast( self ) -> bool:
+        
+        return False not in ( sub_comparator.IsFast() for sub_comparator in self._sub_comparators )
+        
+    
+    def OrderDoesNotMatter( self ):
+        
+        return False not in ( sub_comparator.OrderDoesNotMatter() for sub_comparator in self._sub_comparators )
+        
+    
+    def Test( self, media_result_a: ClientMediaResult.MediaResult, media_result_b: ClientMediaResult.MediaResult ) -> bool:
+        
+        for sub_comparator in self._sub_comparators:
+            
+            if not sub_comparator.Test( media_result_a, media_result_b ):
+                
+                return False
+                
+            
+        
+        return len( self._sub_comparators ) > 0
+        
+    
+
+HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_DUPLICATES_AUTO_RESOLUTION_PAIR_COMPARATOR_AND ] = PairComparatorAND
 
 class PairSelector( HydrusSerialisable.SerialisableBase ):
     

@@ -113,7 +113,7 @@ options = {}
 # Misc
 
 NETWORK_VERSION = 20
-SOFTWARE_VERSION = 642
+SOFTWARE_VERSION = 643
 CLIENT_API_VERSION = 81
 
 SERVER_THUMBNAIL_DIMENSIONS = ( 200, 200 )
@@ -772,6 +772,8 @@ ANIMATION_WEBP = 83
 UNDETERMINED_WEBP = 84
 IMAGE_JXL = 85
 APPLICATION_PAINT_DOT_NET = 86
+UNDETERMINED_JXL = 87
+ANIMATION_JXL = 88
 APPLICATION_OCTET_STREAM = 100
 APPLICATION_UNKNOWN = 101
 
@@ -805,6 +807,7 @@ SEARCHABLE_MIMES = {
     IMAGE_AVIF_SEQUENCE,
     IMAGE_BMP,
     IMAGE_JXL,
+    ANIMATION_JXL,
     ANIMATION_UGOIRA,
     APPLICATION_FLASH,
     VIDEO_AVI,
@@ -865,8 +868,8 @@ IMAGES = [
     IMAGE_PNG,
     IMAGE_GIF,
     IMAGE_WEBP,
-    IMAGE_AVIF,
     IMAGE_JXL,
+    IMAGE_AVIF,
     IMAGE_BMP,
     IMAGE_HEIC,
     IMAGE_HEIF,
@@ -879,6 +882,7 @@ ANIMATIONS = [
     ANIMATION_GIF,
     ANIMATION_APNG,
     ANIMATION_WEBP,
+    ANIMATION_JXL,
     IMAGE_AVIF_SEQUENCE,
     IMAGE_HEIC_SEQUENCE,
     IMAGE_HEIF_SEQUENCE,
@@ -889,6 +893,7 @@ VIEWABLE_ANIMATIONS = [
     ANIMATION_GIF,
     ANIMATION_APNG,
     ANIMATION_WEBP,
+    ANIMATION_JXL,
     IMAGE_AVIF_SEQUENCE,
     IMAGE_HEIC_SEQUENCE,
     IMAGE_HEIF_SEQUENCE,
@@ -1020,6 +1025,7 @@ MIMES_THAT_WE_CAN_CHECK_FOR_TRANSPARENCY = {
     ANIMATION_GIF,
     ANIMATION_APNG,
     ANIMATION_WEBP,
+    ANIMATION_JXL,
     IMAGE_AVIF_SEQUENCE,
     IMAGE_HEIF_SEQUENCE,
     IMAGE_HEIC_SEQUENCE
@@ -1043,10 +1049,10 @@ MIMES_WITH_THUMBNAILS = set( IMAGES ).union( ANIMATIONS ).union( VIDEO ).union( 
 MIMES_THAT_ALWAYS_HAVE_GOOD_RESOLUTION = set( IMAGES ).union( ANIMATIONS ).union( VIDEO )
 
 FILES_THAT_CAN_HAVE_ICC_PROFILE = { IMAGE_BMP, IMAGE_JPEG, IMAGE_JXL, IMAGE_TIFF, IMAGE_PNG, IMAGE_GIF, APPLICATION_PSD, IMAGE_AVIF }.union( PIL_HEIF_MIMES )
-FILES_THAT_CAN_HAVE_EXIF = { IMAGE_JPEG, IMAGE_JXL, IMAGE_TIFF, IMAGE_PNG, IMAGE_WEBP, ANIMATION_APNG, ANIMATION_WEBP, IMAGE_AVIF }.union( PIL_HEIF_MIMES )
+FILES_THAT_CAN_HAVE_EXIF = { IMAGE_JPEG, IMAGE_JXL, IMAGE_TIFF, IMAGE_PNG, IMAGE_WEBP, ANIMATION_JXL, ANIMATION_APNG, ANIMATION_WEBP, IMAGE_AVIF }.union( PIL_HEIF_MIMES )
 
 # images and animations that PIL can handle
-FILES_THAT_CAN_HAVE_HUMAN_READABLE_EMBEDDED_METADATA = { IMAGE_JPEG, IMAGE_JXL, IMAGE_PNG, IMAGE_BMP, IMAGE_WEBP, IMAGE_TIFF, IMAGE_ICON, IMAGE_GIF, IMAGE_AVIF, ANIMATION_GIF, ANIMATION_APNG, ANIMATION_WEBP }
+FILES_THAT_CAN_HAVE_HUMAN_READABLE_EMBEDDED_METADATA = { IMAGE_JPEG, IMAGE_JXL, IMAGE_PNG, IMAGE_BMP, IMAGE_WEBP, IMAGE_TIFF, IMAGE_ICON, IMAGE_GIF, IMAGE_AVIF, ANIMATION_JXL, ANIMATION_GIF, ANIMATION_APNG, ANIMATION_WEBP }
 FILES_THAT_CAN_HAVE_HUMAN_READABLE_EMBEDDED_METADATA.update( PIL_HEIF_MIMES )
 FILES_THAT_CAN_HAVE_HUMAN_READABLE_EMBEDDED_METADATA.add( APPLICATION_PDF )
 
@@ -1076,7 +1082,7 @@ mime_enum_lookup = {
     'image/heic-sequence' : IMAGE_HEIC_SEQUENCE,
     'image/avif' : IMAGE_AVIF,
     'image/avif-sequence' : IMAGE_AVIF_SEQUENCE,
-    'image/jxl' : IMAGE_JXL,
+    'image/jxl' : IMAGE_JXL, # could also be animated jxl
     'image/vnd.microsoft.icon' : IMAGE_ICON,
     'image' : IMAGES,
     'application/x-shockwave-flash' : APPLICATION_FLASH,
@@ -1171,6 +1177,7 @@ mime_string_lookup = {
     IMAGE_AVIF : 'avif',
     IMAGE_AVIF_SEQUENCE : 'avif sequence',
     IMAGE_JXL : 'jxl',
+    ANIMATION_JXL : 'animated jxl',
     ANIMATION_UGOIRA : 'ugoira',
     APPLICATION_CBZ : 'cbz',
     APPLICATION_FLASH : 'flash',
@@ -1231,6 +1238,7 @@ mime_string_lookup = {
     UNDETERMINED_PNG : 'png or apng',
     UNDETERMINED_OLE : 'ole file',
     UNDETERMINED_WEBP : 'webp with or without animation',
+    UNDETERMINED_JXL : 'jxl with or without animation',
     APPLICATION_UNKNOWN : 'unknown filetype',
     GENERAL_APPLICATION : 'application',
     GENERAL_APPLICATION_ARCHIVE : 'archive',
@@ -1264,6 +1272,7 @@ mime_mimetype_string_lookup = {
     IMAGE_AVIF: 'image/avif',
     IMAGE_AVIF_SEQUENCE: 'image/avif-sequence',
     IMAGE_JXL: 'image/jxl',
+    ANIMATION_JXL : 'image/jxl',
     ANIMATION_UGOIRA : 'application/zip',
     APPLICATION_FLASH : 'application/x-shockwave-flash',
     APPLICATION_OCTET_STREAM : 'application/octet-stream',
@@ -1334,6 +1343,7 @@ mime_mimetype_string_lookup[ UNDETERMINED_WM ] = '{} or {}'.format( mime_mimetyp
 mime_mimetype_string_lookup[ UNDETERMINED_MP4 ] = '{} or {}'.format( mime_mimetype_string_lookup[ AUDIO_MP4 ], mime_mimetype_string_lookup[ VIDEO_MP4 ] )
 mime_mimetype_string_lookup[ UNDETERMINED_PNG ] = '{} or {}'.format( mime_mimetype_string_lookup[ IMAGE_PNG ], mime_mimetype_string_lookup[ ANIMATION_APNG ] )
 mime_mimetype_string_lookup[ UNDETERMINED_WEBP ] = 'image/webp, static or animated'
+mime_mimetype_string_lookup[ UNDETERMINED_WEBP ] = 'image/jxl, static or animated'
 
 mime_ext_lookup = {
     APPLICATION_HYDRUS_CLIENT_COLLECTION : '.collection',
@@ -1356,6 +1366,7 @@ mime_ext_lookup = {
     IMAGE_AVIF: '.avif',
     IMAGE_AVIF_SEQUENCE: '.avifs',
     IMAGE_JXL : '.jxl',
+    ANIMATION_JXL : '.jxl',
     ANIMATION_UGOIRA : '.zip',
     APPLICATION_CBZ : '.cbz',   
     APPLICATION_FLASH : '.swf',

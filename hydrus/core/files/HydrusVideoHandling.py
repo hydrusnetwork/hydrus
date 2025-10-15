@@ -13,6 +13,20 @@ from hydrus.core import HydrusTime
 from hydrus.core.files import HydrusAudioHandling
 from hydrus.core.files import HydrusFFMPEG
 
+def FileIsAnimated( path ):
+    
+    try:
+        
+        ( resolution, duration_in_ms, num_frames, has_audio ) = GetFFMPEGVideoProperties( path )
+        
+        return num_frames > 1
+        
+    except:
+        
+        return False
+        
+    
+
 # bits of this were originally cribbed from moviepy
 def GetFFMPEGInfoLines( path, count_frames_manually = False, only_first_second = False ):
     

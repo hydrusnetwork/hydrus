@@ -138,7 +138,7 @@ def GetAPNGDurationMS( apng_bytes: bytes ) -> float:
     
     total_duration_s = 0
     
-    CRAZY_FALLBCAK_FRAME_DURATION_S = 0.1
+    CRAZY_FALLBACK_FRAME_DURATION_S = 0.1
     MIN_FRAME_DURATION_S = 0.001
     
     for ( chunk_name, chunk_data ) in chunks:
@@ -150,7 +150,7 @@ def GetAPNGDurationMS( apng_bytes: bytes ) -> float:
             
             if delay_denominator == 0:
                 
-                duration_s = CRAZY_FALLBCAK_FRAME_DURATION_S
+                duration_s = CRAZY_FALLBACK_FRAME_DURATION_S
                 
             else:
                 

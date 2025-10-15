@@ -302,7 +302,7 @@ class HydrusResourceClientAPIRestrictedGetFilesGetRenderedFile( HydrusResourceCl
             max_age = 86400 * 365
             
             body = HydrusImageHandling.GenerateFileBytesForRenderAPI( numpy_image, format, quality )
-        
+            
         elif media_result.GetMime() == HC.ANIMATION_UGOIRA:
             
             if 'render_format' in request.parsed_request_args:
@@ -338,10 +338,11 @@ class HydrusResourceClientAPIRestrictedGetFilesGetRenderedFile( HydrusResourceCl
                 
                 # frame timing could change with notes!
                 max_age = 3600
-        
+            
         else:
             
             raise HydrusExceptions.BadRequestException('Requested file is not an image!')
+            
         
         is_attachment = request.parsed_request_args.GetValue( 'download', bool, default_value = False )
 

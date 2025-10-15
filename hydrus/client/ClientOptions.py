@@ -87,6 +87,8 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         media_view[ HC.ANIMATION_WEBP ] = ( CC.MEDIA_VIEWER_ACTION_SHOW_WITH_NATIVE, media_start_paused, media_start_with_embed, CC.MEDIA_VIEWER_ACTION_SHOW_WITH_NATIVE, preview_start_paused, preview_start_with_embed, gif_zoom_info )
         
+        media_view[ HC.ANIMATION_JXL ] = ( CC.MEDIA_VIEWER_ACTION_SHOW_WITH_NATIVE, media_start_paused, media_start_with_embed, CC.MEDIA_VIEWER_ACTION_SHOW_WITH_NATIVE, preview_start_paused, preview_start_with_embed, gif_zoom_info )
+        
         media_view[ HC.ANIMATION_UGOIRA ] = ( CC.MEDIA_VIEWER_ACTION_SHOW_WITH_NATIVE, media_start_paused, media_start_with_embed, CC.MEDIA_VIEWER_ACTION_SHOW_WITH_NATIVE, preview_start_paused, preview_start_with_embed, gif_zoom_info )
         
         return media_view
@@ -151,7 +153,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             'only_show_delete_from_all_local_domains_when_filtering' : False,
             'use_system_ffmpeg' : False,
             'elide_page_tab_names' : True,
-            'maintain_similar_files_duplicate_pairs_during_active' : False,
+            'maintain_similar_files_duplicate_pairs_during_active' : True,
             'maintain_similar_files_duplicate_pairs_during_idle' : True,
             'show_namespaces' : True,
             'show_number_namespaces' : True,
@@ -315,7 +317,9 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             'remove_leading_url_double_slashes' : False,
             'always_apply_ntfs_export_filename_rules' : False,
             'replace_percent_twenty_with_space_in_gug_input' : False,
-            'use_legacy_mpv_mediator' : True,
+            'use_legacy_mpv_mediator' : False,
+            'potential_duplicate_pairs_search_context_panel_stops_to_estimate' : True,
+            'manage_tags_show_deleted_mappings' : False
         }
         
         #

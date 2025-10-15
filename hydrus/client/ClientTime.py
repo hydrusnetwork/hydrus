@@ -59,7 +59,7 @@ def CalendarDelta( dt: datetime.datetime, month_delta = 0, day_delta = 0 ) -> da
         
     
 
-def ParseDate( date_string: str ):
+def ParseDate( date_string: str ) -> float:
     
     if not DATEUTIL_OK and not DATEPARSER_OK:
         
@@ -84,7 +84,7 @@ def ParseDate( date_string: str ):
                 dt = dateparser.parse( date_string, languages = ['en'] )
                 
             
-            return HydrusTime.DateTimeToTimestamp( dt )
+            return HydrusTime.SecondiseMSFloat( HydrusTime.DateTimeToTimestampMS( dt ) )
             
         except:
             
@@ -106,7 +106,7 @@ def ParseDate( date_string: str ):
                 dt = dateutil.parser.parse( date_string, ignoretz = True )
                 
             
-            return HydrusTime.DateTimeToTimestamp( dt )
+            return HydrusTime.SecondiseMSFloat( HydrusTime.DateTimeToTimestampMS( dt ) )
             
         except:
             

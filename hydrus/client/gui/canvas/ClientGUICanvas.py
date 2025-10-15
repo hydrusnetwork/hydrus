@@ -2408,299 +2408,328 @@ class CanvasWithHovers( Canvas ):
         
         # tags on the top left
         
-        original_pen = painter.pen()
-        
-        tags_manager = self._current_media.GetTagsManager()
-        
-        current = tags_manager.GetCurrent( CC.COMBINED_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_SINGLE_MEDIA )
-        pending = tags_manager.GetPending( CC.COMBINED_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_SINGLE_MEDIA )
-        petitioned = tags_manager.GetPetitioned( CC.COMBINED_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_SINGLE_MEDIA )
-        
-        tags_i_want_to_display = set()
-        
-        tags_i_want_to_display.update( current )
-        tags_i_want_to_display.update( pending )
-        tags_i_want_to_display.update( petitioned )
-        
-        tags_i_want_to_display = list( tags_i_want_to_display )
-        
-        tag_sort = CG.client_controller.new_options.GetDefaultTagSort( CC.TAG_PRESENTATION_MEDIA_VIEWER )
-        
-        ClientTagSorting.SortTags( tag_sort, tags_i_want_to_display )
-        
-        namespace_colours = HC.options[ 'namespace_colours' ]
+        painter.save()
         
         try:
             
-            QFRAME_PADDING = self._right_notes_hover.frameWidth()
+            font = self._tags_hover.GetListBoxFont()
             
-        except:
+            painter.setFont( font )
             
-            QFRAME_PADDING = 2
+            tags_manager = self._current_media.GetTagsManager()
             
-        
-        current_y = QFRAME_PADDING + 3
-        
-        x = QFRAME_PADDING + 5
-        
-        for tag in tags_i_want_to_display:
+            current = tags_manager.GetCurrent( CC.COMBINED_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_SINGLE_MEDIA )
+            pending = tags_manager.GetPending( CC.COMBINED_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_SINGLE_MEDIA )
+            petitioned = tags_manager.GetPetitioned( CC.COMBINED_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_SINGLE_MEDIA )
             
-            display_string = ClientTags.RenderTag( tag, True )
+            tags_i_want_to_display = set()
             
-            if tag in pending:
+            tags_i_want_to_display.update( current )
+            tags_i_want_to_display.update( pending )
+            tags_i_want_to_display.update( petitioned )
+            
+            tags_i_want_to_display = list( tags_i_want_to_display )
+            
+            tag_sort = CG.client_controller.new_options.GetDefaultTagSort( CC.TAG_PRESENTATION_MEDIA_VIEWER )
+            
+            ClientTagSorting.SortTags( tag_sort, tags_i_want_to_display )
+            
+            namespace_colours = HC.options[ 'namespace_colours' ]
+            
+            try:
                 
-                display_string += ' (+)'
+                QFRAME_PADDING = self._right_notes_hover.frameWidth()
                 
-            
-            if tag in petitioned:
+            except:
                 
-                display_string += ' (-)'
-                
-            
-            ( namespace, subtag ) = HydrusTags.SplitTag( tag )
-            
-            if namespace in namespace_colours:
-                
-                ( r, g, b ) = namespace_colours[ namespace ]
-                
-            else:
-                
-                ( r, g, b ) = namespace_colours[ None ]
+                QFRAME_PADDING = 2
                 
             
-            painter.setPen( QG.QPen( QG.QColor( r, g, b ) ) )
+            current_y = QFRAME_PADDING + 3
             
-            ( text_size, display_string ) = ClientGUIFunctions.GetTextSizeFromPainter( painter, display_string )
+            x = QFRAME_PADDING + 5
             
-            ClientGUIFunctions.DrawText( painter, x, current_y, display_string )
+            text_height = painter.fontMetrics().height()
             
-            current_y += text_size.height()
+            for tag in tags_i_want_to_display:
+                
+                display_string = ClientTags.RenderTag( tag, True )
+                
+                if tag in pending:
+                    
+                    display_string += ' (+)'
+                    
+                
+                if tag in petitioned:
+                    
+                    display_string += ' (-)'
+                    
+                
+                ( namespace, subtag ) = HydrusTags.SplitTag( tag )
+                
+                if namespace in namespace_colours:
+                    
+                    ( r, g, b ) = namespace_colours[ namespace ]
+                    
+                else:
+                    
+                    ( r, g, b ) = namespace_colours[ None ]
+                    
+                
+                painter.setPen( QG.QPen( QG.QColor( r, g, b ) ) )
+                
+                ( text_size, display_string ) = ClientGUIFunctions.GetTextSizeFromPainter( painter, display_string )
+                
+                ClientGUIFunctions.DrawText( painter, x, current_y, display_string )
+                
+                current_y += text_height # use this instead of 'text_size' because that's how the listboxtags we are mirroring does it
+                
             
-        
-        painter.setPen( original_pen )
+        finally:
+            
+            painter.restore()
+            
         
     
     def _DrawTopMiddle( self, painter: QG.QPainter ):
         
-        my_size = self.size()
+        painter.save()
         
-        my_width = my_size.width()
-        my_height = my_size.height()
-        
-        # top-middle
-        
-        pen_colour = self.GetColour( CC.COLOUR_MEDIA_TEXT )
-        
-        painter.setPen( QG.QPen( pen_colour ) )
-        
-        current_y = 3
-        
-        title_string = self._current_media.GetTitleString()
-        
-        if len( title_string ) > 0:
+        try:
             
-            ( text_size, title_string ) = ClientGUIFunctions.GetTextSizeFromPainter( painter, title_string )
+            my_size = self.size()
             
-            ClientGUIFunctions.DrawText( painter, ( my_width - text_size.width() ) // 2, current_y, title_string )
+            my_width = my_size.width()
+            my_height = my_size.height()
+            
+            # top-middle
+            
+            pen_colour = self.GetColour( CC.COLOUR_MEDIA_TEXT )
+            
+            painter.setPen( QG.QPen( pen_colour ) )
+            
+            current_y = 3
+            
+            title_string = self._current_media.GetTitleString()
+            
+            if len( title_string ) > 0:
+                
+                ( text_size, title_string ) = ClientGUIFunctions.GetTextSizeFromPainter( painter, title_string )
+                
+                ClientGUIFunctions.DrawText( painter, ( my_width - text_size.width() ) // 2, current_y, title_string )
+                
+                current_y += text_size.height() + 3
+                
+            
+            info_string = self._GetInfoString()
+            
+            ( text_size, info_string ) = ClientGUIFunctions.GetTextSizeFromPainter( painter, info_string )
+            
+            ClientGUIFunctions.DrawText( painter, ( my_width - text_size.width() ) // 2, current_y, info_string )
             
             current_y += text_size.height() + 3
             
-        
-        info_string = self._GetInfoString()
-        
-        ( text_size, info_string ) = ClientGUIFunctions.GetTextSizeFromPainter( painter, info_string )
-        
-        ClientGUIFunctions.DrawText( painter, ( my_width - text_size.width() ) // 2, current_y, info_string )
-        
-        current_y += text_size.height() + 3
-        
-        self._DrawAdditionalTopMiddleInfo( painter, current_y )
+            self._DrawAdditionalTopMiddleInfo( painter, current_y )
+            
+        finally:
+            
+            painter.restore()
+            
         
     
     def _DrawTopRight( self, painter: QG.QPainter ) -> int:
         
-        my_size = self.size()
-        
-        my_width = my_size.width()
-        my_height = my_size.height()
+        painter.save()
         
         try:
             
-            QFRAME_PADDING = self._top_right_hover.frameWidth()
+            my_size = self.size()
             
-            ( VBOX_SPACING, VBOX_MARGIN ) = self._top_right_hover.GetVboxSpacingAndMargin()
+            my_width = my_size.width()
+            my_height = my_size.height()
             
-        except:
+            try:
+                
+                QFRAME_PADDING = self._top_right_hover.frameWidth()
+                
+                ( VBOX_SPACING, VBOX_MARGIN ) = self._top_right_hover.GetVboxSpacingAndMargin()
+                
+            except:
+                
+                QFRAME_PADDING = 2
+                ( VBOX_SPACING, VBOX_MARGIN ) = ( 2, 2 )
+                
             
-            QFRAME_PADDING = 2
-            ( VBOX_SPACING, VBOX_MARGIN ) = ( 2, 2 )
+            current_y = QFRAME_PADDING + VBOX_MARGIN + round( ClientGUIPainterShapes.PAD_PX / 2 )
             
-        
-        current_y = QFRAME_PADDING + VBOX_MARGIN + round( ClientGUIPainterShapes.PAD_PX / 2 )
-        
-        # ratings
-        
-        RATING_ICON_SET_SIZE = round( self._new_options.GetFloat( 'media_viewer_rating_icon_size_px' ) )
-        RATING_INCDEC_SET_HEIGHT = round( self._new_options.GetFloat( 'media_viewer_rating_incdec_height_px' ) )
-        STAR_DX = RATING_ICON_SET_SIZE
-        STAR_DY = RATING_ICON_SET_SIZE
-        STAR_PAD = ClientGUIPainterShapes.PAD
-        
-        services_manager = CG.client_controller.services_manager
-        
-        
-        like_services = services_manager.GetServices( ( HC.LOCAL_RATING_LIKE, ) )
-        
-        like_services.reverse()
-        
-        like_rating_current_x = my_width - ( STAR_DX + round( STAR_PAD.width() / 2 ) ) - ( QFRAME_PADDING + VBOX_MARGIN )
-        
-        for like_service in like_services:
+            # ratings
             
-            service_key = like_service.GetServiceKey()
+            RATING_ICON_SET_SIZE = round( self._new_options.GetFloat( 'media_viewer_rating_icon_size_px' ) )
+            RATING_INCDEC_SET_HEIGHT = round( self._new_options.GetFloat( 'media_viewer_rating_incdec_height_px' ) )
+            STAR_DX = RATING_ICON_SET_SIZE
+            STAR_DY = RATING_ICON_SET_SIZE
+            STAR_PAD = ClientGUIPainterShapes.PAD
             
-            rating_state = ClientRatings.GetLikeStateFromMedia( ( self._current_media, ), service_key )
+            services_manager = CG.client_controller.services_manager
             
-            ClientGUIRatings.DrawLike( painter, like_rating_current_x, current_y, service_key, rating_state, QC.QSize( STAR_DX, STAR_DY ))
             
-            like_rating_current_x -= STAR_DX + STAR_PAD.width()
+            like_services = services_manager.GetServices( ( HC.LOCAL_RATING_LIKE, ) )
             
-        
-        if len( like_services ) > 0:
+            like_services.reverse()
             
-            current_y += STAR_DY + STAR_PAD.height() + VBOX_SPACING
+            like_rating_current_x = my_width - ( STAR_DX + round( STAR_PAD.width() / 2 ) ) - ( QFRAME_PADDING + VBOX_MARGIN )
             
-        
-        
-        numerical_services = services_manager.GetServices( ( HC.LOCAL_RATING_NUMERICAL, ) )
-        
-        for numerical_service in numerical_services:
+            for like_service in like_services:
+                
+                service_key = like_service.GetServiceKey()
+                
+                rating_state = ClientRatings.GetLikeStateFromMedia( ( self._current_media, ), service_key )
+                
+                ClientGUIRatings.DrawLike( painter, like_rating_current_x, current_y, service_key, rating_state, QC.QSize( STAR_DX, STAR_DY ))
+                
+                like_rating_current_x -= STAR_DX + STAR_PAD.width()
+                
             
-            service_key = numerical_service.GetServiceKey()
+            if len( like_services ) > 0:
+                
+                current_y += STAR_DY + STAR_PAD.height() + VBOX_SPACING
+                
             
-            custom_pad = numerical_service.GetCustomPad()
             
-            ( rating_state, rating ) = ClientRatings.GetNumericalStateFromMedia( ( self._current_media, ), service_key )
+            numerical_services = services_manager.GetServices( ( HC.LOCAL_RATING_NUMERICAL, ) )
             
-            numerical_width = ClientGUIRatings.GetNumericalWidth( service_key, RATING_ICON_SET_SIZE, custom_pad, False, rating_state, rating )
+            for numerical_service in numerical_services:
+                
+                service_key = numerical_service.GetServiceKey()
+                
+                custom_pad = numerical_service.GetCustomPad()
+                
+                ( rating_state, rating ) = ClientRatings.GetNumericalStateFromMedia( ( self._current_media, ), service_key )
+                
+                numerical_width = ClientGUIRatings.GetNumericalWidth( service_key, RATING_ICON_SET_SIZE, custom_pad, False, rating_state, rating )
+                
+                current_x = my_width - numerical_width - ( QFRAME_PADDING + VBOX_MARGIN ) + round( STAR_PAD.width() / 2 )
+                
+                ClientGUIRatings.DrawNumerical( painter, current_x, current_y, service_key, rating_state, rating, size = QC.QSize( STAR_DX, STAR_DY ), pad_px = custom_pad )
+                
+                current_y += STAR_DY + STAR_PAD.height() + VBOX_SPACING
+                
             
-            current_x = my_width - numerical_width - ( QFRAME_PADDING + VBOX_MARGIN ) + round( STAR_PAD.width() / 2 )
             
-            ClientGUIRatings.DrawNumerical( painter, current_x, current_y, service_key, rating_state, rating, size = QC.QSize( STAR_DX, STAR_DY ), pad_px = custom_pad )
+            incdec_services = services_manager.GetServices( ( HC.LOCAL_RATING_INCDEC, ) )
             
-            current_y += STAR_DY + STAR_PAD.height() + VBOX_SPACING
+            incdec_services.reverse()
             
-        
-        
-        incdec_services = services_manager.GetServices( ( HC.LOCAL_RATING_INCDEC, ) )
-        
-        incdec_services.reverse()
-        
-        incdec_rating_current_x = my_width - ( QFRAME_PADDING + VBOX_MARGIN )
-        
-        control_width = RATING_INCDEC_SET_HEIGHT * 2
-        
-        for incdec_service in incdec_services:
+            incdec_rating_current_x = my_width - ( QFRAME_PADDING + VBOX_MARGIN )
             
-            service_key = incdec_service.GetServiceKey()
+            control_width = RATING_INCDEC_SET_HEIGHT * 2
             
-            ( rating_state, rating ) = ClientRatings.GetIncDecStateFromMedia( ( self._current_media, ), service_key )
-            
-            incdec_size = ClientGUIRatings.GetIncDecSize( RATING_INCDEC_SET_HEIGHT, rating )
-            
-            control_width = incdec_size.width() + 1
+            for incdec_service in incdec_services:
+                
+                service_key = incdec_service.GetServiceKey()
+                
+                ( rating_state, rating ) = ClientRatings.GetIncDecStateFromMedia( ( self._current_media, ), service_key )
+                
+                incdec_size = ClientGUIRatings.GetIncDecSize( RATING_INCDEC_SET_HEIGHT, rating )
+                
+                control_width = incdec_size.width() + 1
+                
+                incdec_rating_current_x -= control_width
+                
+                ClientGUIRatings.DrawIncDec( painter, incdec_rating_current_x, current_y, service_key, rating_state, rating, incdec_size )
+                
             
             incdec_rating_current_x -= control_width
             
-            ClientGUIRatings.DrawIncDec( painter, incdec_rating_current_x, current_y, service_key, rating_state, rating, incdec_size )
-            
-        
-        incdec_rating_current_x -= control_width
-        
-        if len( incdec_services ) > 0:
-            
-            current_y += RATING_INCDEC_SET_HEIGHT + round( STAR_PAD.height() / 2 ) + VBOX_SPACING
-            
-        
-        # icons
-        
-        icons_to_show = []
-        
-        if self._current_media.GetLocationsManager().IsTrashed():
-            
-            icons_to_show.append( CC.global_pixmaps().trash )
-            
-        
-        if self._current_media.HasInbox():
-            
-            icons_to_show.append( CC.global_pixmaps().inbox )
-            
-        
-        if len( icons_to_show ) > 0:
-            
-            current_y += VBOX_MARGIN
-            
-            icon_x = - ( QFRAME_PADDING + VBOX_MARGIN )
-            
-            for icon in icons_to_show:
+            if len( incdec_services ) > 0:
                 
-                painter.drawPixmap( my_width + icon_x - ( 16 + VBOX_SPACING ), current_y, icon )
-                
-                icon_x -= 16 + VBOX_SPACING
+                current_y += RATING_INCDEC_SET_HEIGHT + round( STAR_PAD.height() / 2 ) + VBOX_SPACING
                 
             
-            # this appears to be correct for the wrong reasons
+            # icons
             
-            current_y += 16 + VBOX_SPACING
+            icons_to_show = []
             
-            current_y += VBOX_MARGIN
-            
-        
-        pen_colour = self.GetColour( CC.COLOUR_MEDIA_TEXT )
-        
-        painter.setPen( QG.QPen( pen_colour ) )
-        
-        # location strings
-        
-        location_strings = self._current_media.GetLocationsManager().GetLocationStrings()
-        
-        for location_string in location_strings:
-            
-            ( text_size, location_string ) = ClientGUIFunctions.GetTextSizeFromPainter( painter, location_string )
-            
-            ClientGUIFunctions.DrawText( painter, my_width - ( text_size.width() + QFRAME_PADDING + VBOX_MARGIN ), current_y, location_string )
-            
-            current_y += text_size.height()
-            
-        
-        # urls
-        
-        urls = self._current_media.GetLocationsManager().GetURLs()
-        
-        url_tuples = CG.client_controller.network_engine.domain_manager.ConvertURLsToMediaViewerTuples( urls )
-        
-        if len( url_tuples ) > 0:
-            
-            current_y += VBOX_MARGIN
-            
-            for ( display_string, url ) in url_tuples:
+            if self._current_media.GetLocationsManager().IsTrashed():
                 
-                ( text_size, display_string ) = ClientGUIFunctions.GetTextSizeFromPainter( painter, display_string )
-                
-                ClientGUIFunctions.DrawText( painter, my_width - ( text_size.width() + QFRAME_PADDING + VBOX_MARGIN ), current_y, display_string )
-                
-                current_y += text_size.height() + VBOX_SPACING
+                icons_to_show.append( CC.global_pixmaps().trash )
                 
             
-            # again this appears to be correct but for the wrong reasons
-            # flying completely by my pants here
+            if self._current_media.HasInbox():
+                
+                icons_to_show.append( CC.global_pixmaps().inbox )
+                
             
-            current_y -= VBOX_MARGIN
+            if len( icons_to_show ) > 0:
+                
+                current_y += VBOX_MARGIN
+                
+                icon_x = - ( QFRAME_PADDING + VBOX_MARGIN )
+                
+                for icon in icons_to_show:
+                    
+                    painter.drawPixmap( my_width + icon_x - ( 16 + VBOX_SPACING ), current_y, icon )
+                    
+                    icon_x -= 16 + VBOX_SPACING
+                    
+                
+                # this appears to be correct for the wrong reasons
+                
+                current_y += 16 + VBOX_SPACING
+                
+                current_y += VBOX_MARGIN
+                
             
-        
-        current_y += VBOX_MARGIN + QFRAME_PADDING
-        
-        return current_y
+            pen_colour = self.GetColour( CC.COLOUR_MEDIA_TEXT )
+            
+            painter.setPen( QG.QPen( pen_colour ) )
+            
+            # location strings
+            
+            location_strings = self._current_media.GetLocationsManager().GetLocationStrings()
+            
+            for location_string in location_strings:
+                
+                ( text_size, location_string ) = ClientGUIFunctions.GetTextSizeFromPainter( painter, location_string )
+                
+                ClientGUIFunctions.DrawText( painter, my_width - ( text_size.width() + QFRAME_PADDING + VBOX_MARGIN ), current_y, location_string )
+                
+                current_y += text_size.height()
+                
+            
+            # urls
+            
+            urls = self._current_media.GetLocationsManager().GetURLs()
+            
+            url_tuples = CG.client_controller.network_engine.domain_manager.ConvertURLsToMediaViewerTuples( urls )
+            
+            if len( url_tuples ) > 0:
+                
+                current_y += VBOX_MARGIN
+                
+                for ( display_string, url ) in url_tuples:
+                    
+                    ( text_size, display_string ) = ClientGUIFunctions.GetTextSizeFromPainter( painter, display_string )
+                    
+                    ClientGUIFunctions.DrawText( painter, my_width - ( text_size.width() + QFRAME_PADDING + VBOX_MARGIN ), current_y, display_string )
+                    
+                    current_y += text_size.height() + VBOX_SPACING
+                    
+                
+                # again this appears to be correct but for the wrong reasons
+                # flying completely by my pants here
+                
+                current_y -= VBOX_MARGIN
+                
+            
+            current_y += VBOX_MARGIN + QFRAME_PADDING
+            
+            return current_y
+            
+        finally:
+            
+            painter.restore()
+            
         
     
     def _GenerateHoverTopFrame( self ):

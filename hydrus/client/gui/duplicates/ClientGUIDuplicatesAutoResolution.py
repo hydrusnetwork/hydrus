@@ -693,6 +693,10 @@ class EditComparatorList( ClientGUIListBoxes.AddEditDeleteListBox ):
             ( 'OR Comparator', ClientDuplicatesAutoResolutionComparators.PairComparatorOR( [] ), 'A comparator that tests an OR of several sub-comparators.' )
         )
         
+        choice_tuples.append(
+            ( 'AND Comparator', ClientDuplicatesAutoResolutionComparators.PairComparatorAND( [] ), 'A comparator that tests an AND of several sub-comparators. Use when you need to mix several different comparators within an OR.' )
+        )
+        
         try:
             
             comparator = ClientGUIDialogsQuick.SelectFromListButtons( self, 'Which type of comparator?', choice_tuples )
@@ -707,7 +711,36 @@ class EditComparatorList( ClientGUIListBoxes.AddEditDeleteListBox ):
     
     def _EditComparator( self, comparator: ClientDuplicatesAutoResolutionComparators.PairComparator ):
         
-        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit comparator' ) as dlg:
+        if isinstance( comparator, ClientDuplicatesAutoResolutionComparators.PairComparatorOneFile ):
+            
+            title = 'edit one-file comparator'
+            
+        elif isinstance( comparator, ClientDuplicatesAutoResolutionComparators.PairComparatorRelativeFileInfo ):
+            
+            title = 'edit relative comparator'
+            
+        elif isinstance( comparator, ClientDuplicatesAutoResolutionComparators.PairComparatorRelativeVisualDuplicates ):
+            
+            title = 'edit visual duplicates comparator'
+            
+        elif isinstance( comparator, ClientDuplicatesAutoResolutionComparators.PairComparatorOR ):
+            
+            title = 'edit OR comparator'
+            
+        elif isinstance( comparator, ClientDuplicatesAutoResolutionComparators.PairComparatorAND ):
+            
+            title = 'edit AND comparator'
+            
+        elif isinstance( comparator, ClientDuplicatesAutoResolutionComparators.PairComparatorRelativeHardcoded ):
+            
+            return comparator
+            
+        else:
+            
+            raise NotImplementedError( 'Unknown comparator type!' )
+            
+        
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, title ) as dlg:
             
             if isinstance( comparator, ClientDuplicatesAutoResolutionComparators.PairComparatorOneFile ):
                 
@@ -725,9 +758,13 @@ class EditComparatorList( ClientGUIListBoxes.AddEditDeleteListBox ):
                 
                 panel = EditPairComparatorOR( dlg, comparator )
                 
-            elif isinstance( comparator, ClientDuplicatesAutoResolutionComparators.PairComparatorRelativeHardcoded ):
+            elif isinstance( comparator, ClientDuplicatesAutoResolutionComparators.PairComparatorAND ):
                 
-                return comparator
+                panel = EditPairComparatorAND( dlg, comparator )
+                
+            else:
+                
+                raise NotImplementedError( 'Unknown comparator type!' )
                 
             
             dlg.SetPanel( panel )
@@ -748,6 +785,35 @@ class EditComparatorList( ClientGUIListBoxes.AddEditDeleteListBox ):
     def _PairComparatorToPretty( self, pair_comparator: ClientDuplicatesAutoResolutionComparators.PairComparator ):
         
         return pair_comparator.GetSummary()
+        
+    
+
+class EditPairComparatorAND( ClientGUIScrolledPanels.EditPanel ):
+    
+    def __init__( self, parent, pair_comparator: ClientDuplicatesAutoResolutionComparators.PairComparatorAND ):
+        
+        super().__init__( parent )
+        
+        self._comparators = EditComparatorList( self )
+        
+        self._comparators.AddDatas( pair_comparator.GetComparators() )
+        
+        #
+        
+        vbox = QP.VBoxLayout()
+        
+        QP.AddToLayout( vbox, self._comparators, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        self.widget().setLayout( vbox )
+        
+    
+    def GetValue( self ):
+        
+        comparators = self._comparators.GetData()
+        
+        pair_comparator = ClientDuplicatesAutoResolutionComparators.PairComparatorAND( comparators )
+        
+        return pair_comparator
         
     
 

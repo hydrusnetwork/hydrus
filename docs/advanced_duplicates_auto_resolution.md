@@ -171,7 +171,9 @@ And now for the real meat:
 
 What's going on here?
 
-- **A is larger than B** - When two files are pixel-perfect duplicates, the larger filesize is probably the more original. The file header might be interesting, like an AI prompt or EXIF information, or it might be rubbish, like a 189KB XML document defining brushes and layers that was carried over from some PSD conversion, but either way the file is very probably more original, and, as makes sense, we lose less data by deleting the smaller.
+- **OR comparison**  
+    - **A is larger than B** - When two files are pixel-perfect duplicates, the larger filesize is probably the more original. The file header might be interesting, like an AI prompt or EXIF information, or it might be rubbish, like a 189KB XML document defining brushes and layers that was carried over from some PSD conversion, but either way the file is very probably more original, and, as makes sense, we lose less data by deleting the smaller.
+    - **A is the same filesize as B and A was imported earlier than** - Sometimes, pixel-perfect duplicates are exactly the same filesize. I have seen this with successive conversions of an original file using different versions of imagemagick. I assume the file header simply has a different version enum somewhere. We want a tie-breaker, so we'll go with the earlier import.
 - **filetype the same** - A jpeg/png pixel pair has special rules, and so would a jpeg/jpeg xl, or a gif/tiff. Let's not get too clever and just compare like with like.
 - **EXIF** - This logic block is ugly, but it means "Do not allow an AB pair where A has no EXIF but B does have EXIF". We don't want to accidentally delete a B with EXIF.
 - **ICC Profile** - Same deal as EXIF. ICC Profiles are tricky because many IRL examples are inserted stubs. They don't always always point to originality. Let's be careful anyway.
@@ -196,15 +198,15 @@ Now the comparators:
 
 [![](images/duplicates_auto_resolution_visually_similar_comparators.png)](images/duplicates_auto_resolution_visually_similar_comparators.png)
 
-- **A and B are almost certainly visual duplicates** - My algorithm has several confidence levels. You can change it if you like. I am still working on it, but I trust it at 'almost certainly' confidence.
-- **A is larger or equal to B** - We want bigger files. (We'll also accept equal-size files, even though that is extremely rare.)
-- **A is taller or equal to B** - We want bigger files, but we'll definitely accept the same resolution too.
-- **A is wider or equal to B** - We want bigger files, but we'll definitely accept the same resolution too.
-- **A was imported earlier than B** - This is optional, depending on which suggested rule you add. It acts as another safety barrier. I'm an old guy with many old files, and I like it and recommend it.
+- **A and B are almost certainly visual duplicates** - My algorithm has several confidence levels. You can change it if you like.
+- **A is larger to B** - We want bigger files.
+- **A is taller or equal to B** - We want bigger files, but we'll accept the same resolution too.
+- **A is wider or equal to B** - We want bigger files, but we'll accept the same resolution too.
+- **A was imported earlier than B** - This is optional, depending on which suggested rule you add. It acts as another safety barrier. I'm an old guy with many old and original files, so I like it and recommend it.
 
 Note that a visual duplicates calculation is CPU expensive--often a second of time for each pair actioned. Be careful where you deploy it--don't have it operate on five different rules at a similar files search distance of 12, for instance!
 
-I am still tuning this tool, but I consider it ready for automatic mode at 'almost certainly' confidence. If you discover any false positive pairs at any distance, I am very interested in seeing them!
+This tool can be trusted in fully automatic rules at 'almost certainly' confidence. If you discover any false positive pairs at any distance, I am very interested in seeing them!
 
 !!! info "incidence"
     In my testing, you will encounter one of these pairs every ~100 files you import. Having a rule here is heavy work, but it will clear out many boring duplicate pairs, about 5-10% of all potential duplicates at 0 search distance.

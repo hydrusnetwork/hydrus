@@ -35,6 +35,56 @@
             <h1 id="changelog"><a href="#changelog">changelog</a></h1>
             <ul>
                 <li>
+                    <h2 id="version_643"><a href="#version_643">version 643</a></h2>
+                    <ul>
+                        <li><h3>future build</h3></li>
+                        <li>I am making another future build this week. This is a special build with new libraries that I would like advanced users to test out so I know they are safe to fold into the normal release.</li>
+                        <li>in the release post, I will link to this alternate build. if you are experienced and would like to help me, please check it out</li>
+                        <li>In my tests, _neither_ of these required a clean install. Linux users might like to do one anyway, since this week is a big shift for them, particularly if it has been a while or you are on an odd flavour</li>
+                        <li>the specific changes this week are--</li>
+                        <li>Linux built runner from `Ubuntu 22.04` to `Ubuntu 24.04`</li>
+                        <li>Linux built mpv from `libmpv1` to `libmpv2`</li>
+                        <li>Windows built sqlite from `3.50.1` to `3.50.4`</li>
+                        <li>`opencv-python-headless` from `4.10.0.84` to `4.11.0.86`</li>
+                        <li>`PySide6` from `6.8.2.1` to `6.8.3`</li>
+                        <li>I was going to do dateparser `1.2.1` to `1.2.2`, but there was a pyinstaller problem. we'll try again another time</li>
+                        <li><h3>misc</h3></li>
+                        <li>animated jxl is now supported! as previously, hydrus handles this with a new 'animated jxl' filetype. mpv wasn't super happy with the jxl files I was playing with, so I'm only enabling this for the hydrus ffmpeg-powered native viewer for now, like animated webp. all existing jxls will be queued for a rescan on update, so you don't have to do anything. performance is not amazing, and there's no variable frame rate support, and I'm afraid the tests here add yet more time to the jxl import process, but it does work. I'll keep checking in future for nicer (native Pillow etc..) solutions here. I looked at parsing jxls manually, like we do for quick png/apng differentiation and parsing num_frames etc..., but jxl appears to be pretty wewmode internally (issue #1881)</li>
+                        <li>in the 'edit times' dialog, when editing an individual time, the 'paste' button now eats milliseconds correctly whether you post a raw timestamp like `1738783297.299` or a datestring like `2025-10-10T12:00:00.123+02:00` (issue #1884)</li>
+                        <li>the manage tags dialog has a new "deleted mappings" text-and-icon that appears below the paste/cog icons if there are deleted mappings. it'll say "3 deleted mappings" and show you an eye icon. click the eye to show/hide deleted mappings. this display setting is now remembered through dialog open/close and is no longer accessible through the cog menu. this is an experiment, and I am open to doing more display options here to finally get on top of some finicky workflows</li>
+                        <li>hitting 'show deleted' in the manage tags dialog now redraws the list immediately; previously, it wouldn't actually show until the list incidentally repainted itself otherwise, e.g. after a click</li>
+                        <li>403 (forbidden), and 509, 529, 502, and 522 network errors (bandwidth and gateway problems) no longer spam the log with so much server response text</li>
+                        <li>fixed some Qt crashes related to PDF import</li>
+                        <li>fixed some Qt crashes related to SVG import</li>
+                        <li>updated the 'eye' icon to svg. I'm actually happy with it; I even added a caruncle</li>
+                        <li>added an 'eye_closed' svg icon</li>
+                        <li>I think I figured out the 'list of tags in the media viewer background has a different line height than the hover window' bug that hit some Linux flavours</li>
+                        <li><h3>duplicates</h3></li>
+                        <li>by default, the client now searches for potential duplicates in normal time. this code now has such low per-file overhead that it isn't a bother</li>
+                        <li>'potential duplicate pairs search' panels, such as in the duplicate page or the auto-resolution rule edit panel, now, by default, state an _estimate_ of the matching count once they have found 1,000 matches. for instance, it might say "513,547 pairs; ~210,000 match". it makes the estimate once it has found 1,000 matches and obviously stops working a lot faster this way. a new cog button let's you switch back to the old 'always precise' behaviour. let me know how this feels with IRL data!</li>
+                        <li>I examined making 'apply alternates/false positive to many files at once' work in a sane way (atm it applies to all internal pair combinations, so millions of relationships when you reach a single group of thousands of files), and it is not possible with the current file relationship storage. one solution I had discussed with users as a mid-way stopgap might have legs, but I think it is still insufficient. I have made a plan to improve this but will not do it in the push to finish auto-resolution. sounds like 2026</li>
+                        <li><h3>duplicates auto-resolution</h3></li>
+                        <li>added a 'AND' comparator type. this works like the OR one and allows you to clause a bunch of different comparator types together within a OR collection. I know some users have wanted to try something like `(A filesize &gt; B AND A imported earlier B) OR (A filesize &gt; 1.2x B AND A imported after B)` within the same expensive 'visual duplicates' rule. I think it is a little awkward, but have a think and see how it goes</li>
+                        <li>some more small tweaks for the suggested rules--</li>
+                        <li>- the 'visually similar pairs' rule now has `A filesize &gt; B` rather than `&gt;=` because the dialog won't ok without a definitive way to arrange A and B, hahaha. since a non-pixel-dupe visually similar pair of exactly the same size is unlikely, I'm fine not catching them here</li>
+                        <li>- the 'pixel-perfect pairs' rule now has `( A filesize &gt; B ) OR ( A filesize = B AND A imported earlier B )`. previously, it just had `A filesize &gt; B`. I have discovered that pixel perfect duplicates of exactly equal filesize are not uncommon (I particularly encountered it with some imagemagick resizes of the same original files done several years apart on different OSes, where I assume the only difference is some version enum in the file header), so I wanted a tie-breaker clause for them</li>
+                        <li>the auto-resolution help is now updated to talk about this</li>
+                        <li>an empty OR or AND comparator now gives an appropriate summary string</li>
+                        <li>I explored making resolution rules work on their queues in a more random order, but I backed off when I couldn't make it fast. there's a way to make this happen, but not a simple one, so I'll back burner it for now. the rules pull pairs in an order according to SQLite's whim, which often produces pairs featuring the same file in a row, which you may have seen in the pending action log. this is fine in some ways but it wasn't intentional and does give some minor headaches. unfortunately the most important thing about this guy is he runs with very low per-file overhead, so I'll leave things as they are for now</li>
+                        <li><h3>mpv</h3></li>
+                        <li>the new mpv interface is now turned on for all users. thanks to those who tested different situations for me. you should notice that mpv is slightly less laggy and generally more stable</li>
+                        <li>if you have a very old version of mpv and video suddenly throws a bunch of errors about `command_async`, please check `options-&gt;media playback-&gt;LEGACY DEBUG: Use legacy mpv communication method`</li>
+                        <li>I also updated this new code to be more polite about seek-scrubbing. if a new seek command comes in while a previous seek command is still working, it now waits until mpv is done and and then sends the most recent seek command received. it is now quite difficult to produce the 'too many events queued' error by scrubbing</li>
+                        <li>as the 'too many events queued' error is rare and no longer big deal, it'll no longer spam to the log</li>
+                        <li>I experimented with 'do a faster keyframe seek while dragging, and only an exact seek when mouse down/up', but it felt pretty bad with the low-latency keyframe seek caret bouncing around as you dragged, sometimes to the start of the video. I'd rather spend the CPU and have a nice experience</li>
+                        <li>added 'allow crashy files in mpv' to `help-&gt;debug-&gt;debug modes`. this disables the handler that would catch problems here and allows loading of files previously put on the blacklist. I notice that with the new async interface, I can't really get mpv to crash any more and while even totally whack files will spam the log, visually they'll just flitter between the first two frames or whatever. maybe we'll make this guy less strict in future</li>
+                        <li><h3>boring stuff</h3></li>
+                        <li>tweaked some database migration help</li>
+                        <li>clarified in the options that the 'idle mouse' setting is global, not just mouse over the hydrus window</li>
+                        <li>cleaned up some canvas painter handling to do nicer save/restore within draw methods</li>
+                    </ul>
+                </li>
+                <li>
                     <h2 id="version_642"><a href="#version_642">version 642</a></h2>
                     <ul>
                         <li><h3>misc</h3></li>
@@ -49,7 +99,7 @@
                         <li>fixed some update signals in the auto-resolution review panel; if you have done some actions, switching to 'actions taken' tab will now correctly trigger an update; if you undo some actions, switching to 'pending actions' will trigger an update; undoing actions taken no longer triggers a no-op update of the 'actions taken' list (the log remains, even if undone); undoing actions taken triggers a numbers reset notification and wakes the potential duplicate discovery daemon, so the UI will quickly reflect the new 99.9% search status, and, if everything is caught up and good to work, trigger a very quick re-search and re-auto-resolution queueing-up of the undone file</li>
                         <li>added `help-&gt;debug-&gt;report modes-&gt;idle report mode`, which talks about various 'idle mode' checks, like "IDLE MODE - Blocked: Last mouse move was 41 seconds ago.". it gets pretty spammy, so hover your mouse over the popup toaster 'dismiss all' button and click without moving or launch the program from terminal and watch stdout</li>
                         <li><h3>crash reporting</h3></li>
-                        <li>last week, I tried to roll out an on-by-default crash reporting mode. unfortunately, I discovered late that it wouldn't play nice with mpv. I couldn't fix ithe issue fully, so this mode is now available but default off. you turn it on via `help-&gt;debug-&gt;debug modes`</li>
+                        <li>last week, I tried to roll out an on-by-default crash reporting mode. unfortunately, I discovered late that it wouldn't play nice with mpv. I couldn't fix the issue fully, so this mode is now available but default off. you turn it on via `help-&gt;debug-&gt;debug modes`</li>
                         <li>if you have regular crashes, please give it a go and we'll see what we learn. the only proviso is you absolutely cannot load up mpv and scrub through its seekbar while it is on or you'll just get a crash within seconds. a popup moans about this whenever you turn the mode on</li>
                         <li><h3>mpv updates</h3></li>
                         <li>_tl;dr: I wrote a thing for mpv and would like some advanced users to test it_</li>
@@ -73,7 +123,7 @@
                         <li>as always, if you come across any false positives (files that are not duplicates that show up as dupes, which at this stage likely means very subtle watermarks or alternates), I'd love to see them</li>
                         <li>also, I triaged my remaining auto-resolution work in prep for a 1.0 release for all users. we're looking at four medium size jobs--removing potential pairs from rules when at least one file is manually deleted; some tag-based comparators; faster search when the hit rate is very low; and transparency in the visual duplicates test--and then about a dozen small jobs like a jpeg quality comparator, nicer pause for auto-resolution rules, and some metadata merge option tweaks</li>
                         <li><h3>advanced test stuff</h3></li>
-                        <li><h3>updated the 'test' versions for users who run from source</h3></li>
+                        <li>updated the 'test' versions for users who run from source--</li>
                         <li>`opencv` is updated from `4.11.0.86` to `4.12.0.88`</li>
                         <li>`PySide6` is updated from `6.9.1` to `6.9.3`</li>
                         <li>I expect to do a 'future test' build next week</li>

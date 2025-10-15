@@ -75,6 +75,8 @@ pubsub_report_mode = False
 daemon_report_mode = False
 mpv_report_mode = False
 
+mpv_allow_crashy_files = False
+
 fake_petition_mode = False
 
 force_idle_mode = False

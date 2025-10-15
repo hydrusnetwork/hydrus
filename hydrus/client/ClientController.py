@@ -438,6 +438,11 @@ class Controller( HydrusController.HydrusController ):
                 
             
         
+        if self.AmInTheMainQtThread():
+            
+            return func( *args, **kwargs )
+            
+        
         job_status = ClientThreading.JobStatus( cancellable = True, cancel_on_shutdown = False )
         
         self.CallAfterQtSafe( win, qt_code, win, job_status )

@@ -931,14 +931,27 @@ class BusyCursor( object ):
     
 class CheckboxManager( object ):
     
+    def __init__( self ):
+        
+        self._additional_notify_calls = []
+        
+    
     def GetCurrentValue( self ):
         
         raise NotImplementedError()
         
     
+    def AddNotifyCall( self, func ):
+        
+        self._additional_notify_calls.append( func )
+        
+    
     def Invert( self ):
         
-        raise NotImplementedError()
+        for func in self._additional_notify_calls:
+            
+            func()
+            
         
     
 class CheckboxManagerBoolean( CheckboxManager ):
@@ -972,6 +985,8 @@ class CheckboxManagerBoolean( CheckboxManager ):
         
         setattr( self._obj, self._name, not value )
         
+        super().Invert()
+        
     
 
 class CheckboxManagerCalls( CheckboxManager ):
@@ -993,6 +1008,8 @@ class CheckboxManagerCalls( CheckboxManager ):
         
         self._invert_call()
         
+        super().Invert()
+        
     
 
 class CheckboxManagerOptions( CheckboxManager ):
@@ -1002,12 +1019,6 @@ class CheckboxManagerOptions( CheckboxManager ):
         super().__init__()
         
         self._boolean_name = boolean_name
-        self._additional_notify_calls = []
-        
-    
-    def AddNotifyCall( self, func ):
-        
-        self._additional_notify_calls.append( func )
         
     
     def GetCurrentValue( self ):
@@ -1031,10 +1042,7 @@ class CheckboxManagerOptions( CheckboxManager ):
         CG.client_controller.pub( 'checkbox_manager_inverted' )
         CG.client_controller.pub( 'notify_new_menu_option' )
         
-        for func in self._additional_notify_calls:
-            
-            func()
-            
+        super().Invert()
         
     
 

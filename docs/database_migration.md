@@ -21,13 +21,13 @@ A hydrus client consists of three components:
     
 2.  **the actual SQLite database**
     
-    The client stores all its preferences and current state and knowledge _about_ files--like file size and resolution, tags, ratings, inbox status, and so on and on--in a handful of SQLite database files, defaulting to _install_dir/db_. Depending on the size of your client, these might total 1MB in size or be as much as 10GB.
+    The client stores all of your settings and its current knowledge _about_ files--like file size and resolution, tags, ratings, inbox status, and so on and on--in a handful of SQLite database files, defaulting to _install_dir/db_. Everything you have ever set is in here. Depending on the amount of metadata your client is tracking, these files might total 1MB or upwards of 100GB.
     
     In order to perform a search or to fetch or process tags, the client has to interact with these files in many small bursts, which means it is best if these files are on a drive with low latency. An SSD is ideal, but a regularly-defragged HDD with a reasonable amount of free space also works well.
     
 3.  **your media files**
     
-    All of your jpegs and webms and so on (and their thumbnails) are stored in a single complicated directory that is by default at _install\_dir/db/client\_files_. All the files are named by their hash and stored in efficient hash-based subdirectories. In general, it is not navigable by humans, but it works very well for the fast access from a giant pool of files the client needs to do to manage your media.
+    All of your actual jpegs and webms and so on (and their thumbnails) are stored in a single complicated directory that is by default at _install\_dir/db/client\_files_. All the files are named by their hash and stored in efficient hash-based subdirectories. In general, it is not navigable by humans, but it works very well for the fast access from a giant pool of files the client needs to do to manage your media.
     
     Thumbnails tend to be fetched dozens at a time, and very randomly, so it is, again, ideal if they are stored on an SSD. Your regular media files--which on many clients total hundreds of GB--are usually fetched one at a time for human consumption and do not benefit from the expensive low-latency of an SSD. They are best stored on a cheap HDD, and, if desired, also work well across a network file system.
     
@@ -142,9 +142,9 @@ You should now have _something_ like this (let's say the D drive is the fast SSD
 
 ## moving to a new machine { id="to_new_OS" }
 
-The hydrus database is completely portable. As well as moving it about within the same system, you can move your whole hydrus client to another computer quite easily. It all runs on Windows/Linux/macOS with no big modifications needed. The only thing you need to watch out for are the paths the database uses to talk to other parts of the system--for instance the location of an Export Folder.
+The hydrus database is completely portable. Everything that makes your client your client is stored within what I have described above--there are no settings stored in a conf file somewhere in your OS. As well as moving your hydrus client around the same system, you can move it to another computer quite easily. You are generally looking at creating a new install and then moving your "db" folder from the old location to the new. It all jumps between Windows/Linux/macOS with no big modifications needed. The one thing you do need to check is the paths the database uses to talk to other parts of the local hard drive--for instance the location of an Export Folder.
 
-If the OSes are the same (e.g. Windows to Windows), moving from one machine to another is usually pretty easy--just drag and drop the whole install from one drive to another, via a network share or USB drive--but going from one OS type to another introduces a couple of extra wrinkles.
+If the OSes are the same (e.g. Windows to Windows), moving from one machine to another is usually pretty easy. Going from one OS type to another, however, introduces a couple of extra wrinkles.
 
 ??? note "OS Paths"
     Remember that Windows has paths that start with drive letters, like `D:\` and uses backslashes to split paths; but Linux and macOS all start with root `/` and use regular slashes. If your OS suddenly changes, your absolute `D:\hydrus_files` is going to be seen as a relative path by Linux and you'll end up with like `/home/you/hydrus/db/D:\hydrus_files`. There's no huge worry here--hydrus won't rush to break anything, and the worst case is generally it just freaking out that the thing doesn't exist. You just need to tell it the correct new path.
@@ -159,7 +159,7 @@ Before any system migration, make sure you:
 Install a fresh new hydrus on the new machine and then, using a network share or a USB drive, copy the database folder, files, and thumbnails from the old to the new. You can insert the db directly into your new `install_dir/db` folder, or if you want to set up a new `--db_dir`, put the db in that location and set up the new shortcut.
 
 ??? note "source installs"
-    If the type of OS hasn't changed, you can usually get away with copying a built install folder around. If you run from source, however, you _must_ recreate a new source install folder with that OS's `git` and then build a new venv (then obviously migrate your source db dir as needed). Do not try to migrate a source installation folder!
+    If the type of OS hasn't changed, you can sometimes get away with copying a built install folder around. If you run from source, however, you _must_ recreate a new source install folder with that OS's `git` and then build a new venv (then obviously migrate your original db dir as needed). Do not try to migrate an entire source installation folder!
 
 ??? note "macOS App"
     If you are moving to or from the macOS App, recall that the App cannot store the hydrus db inside it, so the correct 'default' location (i.e. without `--db_dir`), analogous to `install_dir/db` on other installs, is `~/Library/Hydrus`. You can always go `file->open->database directory` on any running client to find out where it is currently running from.
@@ -176,7 +176,7 @@ Then:
 - edit your export folders to point at the correct locations
 - unpause import/export folders
 
-Then you should be good! Let me know if you run into any trouble.
+Then you should be good! If it all went wrong, revert to your backup and let me know, and I'll help you figure it out.
 
 ## p.s. running multiple clients { id="multiple_clients" }
 
