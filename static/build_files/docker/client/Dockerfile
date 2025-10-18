@@ -1,4 +1,4 @@
-FROM alpine:3.19
+FROM alpine:3.22
 
 ARG UID
 ARG GID
@@ -7,12 +7,14 @@ HEALTHCHECK --interval=20s --timeout=10s --retries=3 --start-period=30s CMD ! su
 ENTRYPOINT ["/bin/sh", "/opt/hydrus/static/build_files/docker/client/entrypoint.sh"]
 LABEL git="https://github.com/hydrusnetwork/hydrus"
 
-RUN apk --no-cache add fvwm x11vnc xvfb supervisor opencv mpv mpv-libs ffmpeg jq libheif \
+RUN apk --no-cache add fvwm tigervnc xvfb supervisor opencv mpv mpv-libs ffmpeg jq libheif shadow \
  openssl nodejs patch font-noto font-noto-emoji font-noto-cjk \
- py3-pyside6 py3-beautifulsoup4 py3-pillow py3-numpy py3-openssl py3-cryptography py3-pip py3-opencv py3-lxml py3-chardet \
- py3-psutil py3-pysocks py3-requests py3-twisted py3-yaml py3-lz4 py3-html5lib py3-dateutil py3-qtpy py3-mpv py3-service_identity
-RUN apk --no-cache add build-base python3-dev fribidi-dev harfbuzz-dev jpeg-dev lcms2-dev openjpeg-dev libjpeg-turbo-dev libheif-dev
-RUN pip install --break-system-packages Send2Trash cbor2 Pympler pillow-heif dateparser
+ py3-pyside6 py3-beautifulsoup4 py3-pillow py3-numpy py3-openssl py3-cryptography py3-pip py3-opencv py3-lxml py3-chardet py3-send2trash py3-cbor2 \
+ py3-psutil py3-pysocks py3-requests py3-twisted py3-yaml py3-lz4 py3-html5lib py3-dateutil py3-qtpy py3-mpv py3-service_identity py3-parsing py3-olefile \
+ build-base libavif-dev libheif-dev libjxl-dev python3-dev freetype-dev fribidi-dev lcms2-dev libimagequant-dev libjpeg-turbo-dev libpng-dev libwebp-dev libxcb-dev openjpeg-dev py3-gpep517 py3-setuptools py3-wheel python3-dev tiff-dev zlib-dev
+
+RUN python3 -m venv /opt/venv --system-site-packages
+RUN /opt/venv/bin/pip install dateparser Pympler pillow-avif-plugin pillow-heif pillow-jxl-plugin
 
 RUN set -xe \
     && mkdir -p /opt/hydrus \

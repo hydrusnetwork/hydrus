@@ -1,10 +1,9 @@
-FROM alpine:3.19
+FROM alpine:3.22
 
 ARG UID
 ARG GID
 
-RUN apk --no-cache add py3-psutil py3-requests py3-twisted py3-yaml py3-lz4 ffmpeg py3-pillow py3-numpy py3-openssl py3-cryptography py3-service_identity py3-opencv py3-pip py3-twisted openssl su-exec
-RUN pip install --break-system-packages Send2Trash
+RUN apk --no-cache add py3-psutil py3-requests py3-twisted py3-yaml py3-lz4 ffmpeg py3-pillow py3-numpy py3-lxml py3-openssl py3-cryptography py3-service_identity py3-opencv py3-pip py3-twisted py3-send2trash openssl su-exec shadow
 
 RUN set -xe \
     && mkdir -p /opt/hydrus \
