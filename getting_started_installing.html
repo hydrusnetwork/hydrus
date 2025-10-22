@@ -1497,6 +1497,29 @@
   
   
     <li class="md-nav__item">
+      <a href="running_from_source.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Running From Source
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="docker.html" class="md-nav__link">
         
   
@@ -1526,29 +1549,6 @@
   
   <span class="md-ellipsis">
     Running In Wine
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="running_from_source.html" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    Running From Source
     
   </span>
   
@@ -1640,29 +1640,6 @@
   
   
     <li class="md-nav__item">
-      <a href="downloader_gugs.html" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    Gallery URL Generators
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
       <a href="downloader_url_classes.html" class="md-nav__link">
         
   
@@ -1699,10 +1676,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_15_4" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_15_3" >
         
           
-          <label class="md-nav__link" for="__nav_3_15_4" id="__nav_3_15_4_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_3_15_3" id="__nav_3_15_3_label" tabindex="0">
             
   
   
@@ -1715,8 +1692,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_3_15_4_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_3_15_4">
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_3_15_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_15_3">
             <span class="md-nav__icon md-icon"></span>
             Parsers
           </label>
@@ -1765,10 +1742,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_15_4_2" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_15_3_2" >
         
           
-          <label class="md-nav__link" for="__nav_3_15_4_2" id="__nav_3_15_4_2_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_3_15_3_2" id="__nav_3_15_3_2_label" tabindex="0">
             
   
   
@@ -1781,8 +1758,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="4" aria-labelledby="__nav_3_15_4_2_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_3_15_4_2">
+        <nav class="md-nav" data-md-level="4" aria-labelledby="__nav_3_15_3_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_15_3_2">
             <span class="md-nav__icon md-icon"></span>
             Components
           </label>
@@ -1885,10 +1862,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_15_4_3" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_15_3_3" >
         
           
-          <label class="md-nav__link" for="__nav_3_15_4_3" id="__nav_3_15_4_3_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_3_15_3_3" id="__nav_3_15_3_3_label" tabindex="0">
             
   
   
@@ -1901,8 +1878,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="4" aria-labelledby="__nav_3_15_4_3_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_3_15_4_3">
+        <nav class="md-nav" data-md-level="4" aria-labelledby="__nav_3_15_3_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_15_3_3">
             <span class="md-nav__icon md-icon"></span>
             Walkthroughs
           </label>
@@ -1988,6 +1965,29 @@
           </ul>
         </nav>
       
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="downloader_gugs.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Gallery URL Generators
+    
+  </span>
+  
+
+      </a>
     </li>
   
 
@@ -2570,7 +2570,7 @@
 <summary>Wayland (and MPV)</summary>
 <p>Unfortunately, hydrus has several bad bugs in Wayland. The mpv window will often not embed properly into the media viewer, menus and windows may position on the wrong screen, and the taskbar icon may not work at all. <a href="running_from_source.html">Running from source</a> may improve the situation, but some of these issues seem to be intractable for now.</p>
 <p>User testing suggests that the best solution for now is just to launch the program in X11, and I now encourage this for all Wayland users. Launching with the environment variable <code>QT_QPA_PLATFORM=xcb</code> (e.g. by putting <code>export QT_QPA_PLATFORM=xcb</code> in a boot script that launches <code>hydrus_client</code>) should do it. The 'xcb' should force X11.</p>
-<p>It does not work for everyone, though. If it fails, another user says setting <code>WAYLAND_DISPLAY=</code> (as in setting it to nothing), which forces hydrus (and its embedded mpv windows) to use Xwayland, is another solution. You might need to do <code>sudo apt install xwayland</code> first.</p>
+<p>It does not work for everyone, though. If it fails, another user says setting <code>WAYLAND_DISPLAY=</code> (as in setting it to nothing) or unsetting it entirely with <code>unset WAYLAND_DISPLAY</code>, which forces hydrus (and its embedded mpv windows) to use Xwayland, is another solution. You might need to do <code>sudo apt install xwayland</code> first.</p>
 <p>I expect to revisit this question in future versions of Qt and Wayland--we'll see if the situation stabilises.</p>
 </details>
 <details class="warning">
@@ -2598,7 +2598,7 @@
 <li>Get the .tag.gz. Extract it somewhere useful and create shortcuts to 'hydrus_client' and 'hydrus_server' as you like. The build is made on Ubuntu, so if you run something else, compatibility is hit and miss.</li>
 <li>If you have problems running the Ubuntu build, <a href="running_from_source.html">running from source</a> is usually an improvement, and it is easy to set up these days.</li>
 <li>You might need to get 'libmpv1' or 'libmpv2' to get mpv working and playing video/audio. This is the mpv <em>library</em>, not the necessarily the player. Check <em>help-&gt;about</em> to see if it is available--if not, see if you can get it like so:<ul>
-<li><code>apt install libmpv1</code> or <code>apt install libmpv2</code></li>
+<li><code>sudo apt install libmpv1</code> or <code>sudo apt install libmpv2</code></li>
 <li>Use <em>options-&gt;media</em> to set your audio/video/animations to 'show using mpv' once you have it installed.</li>
 <li>If the about window provides you an mpv error popup like this:<br />
 <div class="highlight"><pre><span></span><code>OSError: /lib/x86_64-linux-gnu/libgio-2.0.so.0: undefined symbol: g_module_open_full
@@ -2849,7 +2849,7 @@ Almost every OS you can name.</p>
     <span class="md-icon" title="Last update">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 13.1c-.1 0-.3.1-.4.2l-1 1 2.1 2.1 1-1c.2-.2.2-.6 0-.8l-1.3-1.3c-.1-.1-.2-.2-.4-.2m-1.9 1.8-6.1 6V23h2.1l6.1-6.1zM12.5 7v5.2l4 2.4-1 1L11 13V7zM11 21.9c-5.1-.5-9-4.8-9-9.9C2 6.5 6.5 2 12 2c5.3 0 9.6 4.1 10 9.3-.3-.1-.6-.2-1-.2s-.7.1-1 .2C19.6 7.2 16.2 4 12 4c-4.4 0-8 3.6-8 8 0 4.1 3.1 7.5 7.1 7.9l-.1.2z"/></svg>
     </span>
-    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="August 27, 2025 21:33:03 UTC">August 27, 2025</span>
+    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="October 22, 2025 21:40:53 UTC">October 22, 2025</span>
   </span>
 
     
