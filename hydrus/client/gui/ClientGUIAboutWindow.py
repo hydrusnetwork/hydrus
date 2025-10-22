@@ -53,7 +53,6 @@ def ShowAboutWindow( win: QW.QWidget ):
     from hydrus.core import HydrusTemp
     from hydrus.core import HydrusText
     from hydrus.core import HydrusTime
-    from hydrus.core.files import HydrusFileHandling
     from hydrus.core.files import HydrusOLEHandling
     from hydrus.core.files import HydrusFFMPEG
     from hydrus.core.files.images import HydrusImageHandling
@@ -312,7 +311,6 @@ def ShowAboutWindow( win: QW.QWidget ):
     availability_lines.append( render_availability_line( 'pympler', HydrusMemory.PYMPLER_OK, not HydrusMemory.PYMPLER_OK, '' ) )
     availability_lines.append( render_availability_line( 'pyopenssl', HydrusEncryption.OPENSSL_OK, not HydrusEncryption.OPENSSL_OK, '' ) )
     availability_lines.append( render_availability_line( 'show-in-file-manager', ClientPaths.SHOW_IN_FILE_MANAGER_OK, not ClientPaths.SHOW_IN_FILE_MANAGER_OK, '' ) )
-    availability_lines.append( render_availability_line( 'speedcopy (experimental test)', HydrusFileHandling.SPEEDCOPY_OK, not HydrusFileHandling.SPEEDCOPY_OK, '' ) )
     
     description_availability = '\n'.join( availability_lines )
     

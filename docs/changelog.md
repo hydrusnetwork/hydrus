@@ -7,6 +7,106 @@ title: Changelog
 !!! note
     This is the new changelog, only the most recent builds. For all versions, see the [old changelog](old_changelog.html).
 
+## [Version 644](https://github.com/hydrusnetwork/hydrus/releases/tag/v644)
+
+### new libraries
+
+* the 'future build' test last week went well with the exception that some Linux flavours were unable to load mpv. I am folding these updates into the normal builds--
+* Linux built runner from Ubuntu 22.04 to Ubuntu 24.04
+* Linux built mpv from libmpv1 to libmpv2
+* Windows built sqlite from 3.50.1 to 3.50.4
+* opencv-python-headless from 4.10.0.84 to 4.11.0.86
+* PySide6 (Qt) from 6.8.2.1 to 6.8.3
+* if you are a Linux user and cannot load mpv in today's build, please move to running from source (I recommend all Linux users do this these days!): https://hydrusnetwork.github.io/hydrus/running_from_source.html
+
+### docker package
+
+* thanks to a user, the Docker package is updated from Alpine `3.19` to `3.22`. `x11vnc` is replaced with the more unicode-capable `tigervnc`, and several other issues, including some permission stuff and the `lxml` import bug on the server, are fixed (issue #1785)
+* if you have any trouble, let me know and I'll pass it on to the guy who manages this
+
+### misc
+
+* the new 'show deleted mappings' eye icon stuff in manage tags now properly syncs across the different service pages of all manage tags dialogs that are open. if you click it somewhere, it now updates everywhere
+* added `all paged importer work` to `network->pause` and clarified the three more specific pause-paged-work options. I noticed at the last minute that these guys don't wake the downloaders when unpaused (if you don't want to wait like ten minutes, atm you have to jog each downloader awake by manually poking them with their own pause/resume etc..), I'll fix this next week
+* when a large page is loading during session initialisation and it says 'initialising' in the page tab, the status bar text where it says 'Loading initial files... x/y' is now preserved through a page hide/show cycle. when you switch to a still-initialising page, the status bar should now say something sensible (previously it was resetting to 'no search done yet' kind of thing on every page show until the next batch of ~~64 files~~ now 100 files came in)
+* fixed a crash when a thumbnail suffers a certain critical load-processing failure. it now shows the hydrus fallback thumb and gives you popups
+
+### ui optimisation
+
+* the session weight in the 'pages' menu is now only recalculated on menu open or while the menu is open (it now has a dirty flag). this guy can really add up when a lot of stuff is going on
+* same deal with the page history submenu. I KISSed some stuff here too
+* when a file search is loading, the media results are now loaded in batches of 100 rather than 256. I also fetch them in file_id order, which I'm testing to see if it saves a little time (close ids _should_ share index branches, reducing cache I/O)
+* on many types of page status update, the GUI is now only hit with a 'update the status bar' call if this is the current page. this was hitting a busy session load a bunch
+
+* filename parsing: 
+* I completely overhauled the background worker and data objects that kick in when you drop files on the program and the window appears to parse them all
+* all paths that fail (zero size, missing, currently in use, bad filetype, Thumbs.db, seems to be a sidecar) are now listed with their failure reason
+* the cog button to set whether paths within folders be added in the 'human-sorted' way (ordering 'page 3' before 'page 11') is removed. paths are now always added this way
+* the paths sent to import or tag are now all sorted according to the #, which is just the order they were parsed. this way preserves some nice folder structure. previously I think it was sending whatever the current list sort was, which sounds good but it wasn't obvious that was happening
+* paths are now processed in more granular, faster blocks
+* remaining issues: although sidecars are now listed, they are now sorted at the top of the directory structure they parse from. also, we don't have a nice 'retry' menu action, which would be nice to retry currently-in-use or missing results. let me know if you notice anything else IRL
+
+### file operations
+
+* many file operations are now a lot more efficient, with fewer disk hits per job. I hope that export folders and other 'lots of fast individual file work' jobs will now be a good bit quicker
+* file-merge operations now bundle their various file property checks into far fewer disk hits
+* same for file-mirror operations
+* same for dir-merge operations
+* same for dir-mirror operations
+* the 'same size/modified time' check in all file mirror/merge operations now re-uses a previous disk hit and is essentially instant
+* all the 'ensure file is writable' checks are faster. there's still a slow 'file is writable?'' check however
+* the 'ensure file is writable' checks on files before delete or overwrite now only occur on Windows. it doesn't matter elsewhere. I think there may be a problem now when doing stuff from Linux on read-only files a Windows network share, but the problem of read-only files appearing in the first place is mostly a legacy issue, so whatever. if you have a weird setup, let me know if you run into any trouble
+* fixed an issue where on Windows a file-merge operation would fail if the destination differed from the source but was read-only
+* when mirroring a directory, the 'delete surplus files from dest' work now happens failsafely at the end, after all other copies went ok, rather than interleaved
+* the delete and recycle file calls now check for symlinks properly and delete only the symlink, not the resolved target. this was true previously in almost all cases by accident, but now it is explicit
+
+### image transparency
+
+* **on update, you will get a popup saying 'hey you have 12,345 files with transparency, want me to recheck them?'. I recommend saying yes**
+* in hydrus, if a file being loaded has completely opaque or completely transparent alpha channel, I discard that alpha channel, deeming it useless. this also determines the 'has transparency' metadata on files. I had an opportunity to closely examine a bunch of real-world transparency-having pngs while doing the visual duplicates work this week, and I decided to soften my 'this transparency is useless' test to cover more situations. Where a value of 255 is 'completely opaque', I encountered one IRL file that had 560k pixels at 255, 442k at 254, 20k at 253, 243 at 252, and 22 at 251. another had a spackling of 1 or 2 pixels of alpha 208, 209, 222, 224, 225, 227, 235, 236, 238, 247, 249, 250, 251, 252, 253, and 254, and many similar situations. we've also long had many images with just one fully transparent pixel in a corner. this data is essentially invisible unless you are looking for it, and it is not useful to carry forward and tell the user about. thus, the rule going forward is now that an alpha channel needs a mix of values, specifically at least `2 * ( width + height )` or `0.5% num_pixels, rounding up to 1` pixels, whichever amount is smaller, not in the `>=251` top band and, in a separate test, not in the `<=4` bottom band. the minimum interesting state is now something like a one-pixel border of visible transparency or opacity around the file, and anything less than that is discarded as an artifact of an anti-aliasing algorithm or a funny brush setting
+* the 'eye' icon in the media viewer top hover now lets you flip the 'transparency as checkerboard' options for the normal and duplicate filter media viewers on and off
+* the 'eye' icon also lets you draw a neon greenscreen instead of checkerboard. this setting is available otherwise under `options->media playback`
+* these three actions are also now available under the 'media viewers - all' and 'media viewers - duplicate filter' shortcut sets
+
+### duplicates
+
+* setting duplicate relationships via the buttons in the normal duplicates page, or by a normal thumbnail menu/shortcut action, or by Client API, will now trigger a 'refresh count' call in the duplicates page
+* I think this might be painful IRL with lots of new 'initialising' loading time, so let me know how it feels. I strongly suspect I'll want to revisit how smart the refresh/update calls are here
+
+### duplicates search math
+
+* the new 'n pairs; ~x match' count estimate uses richer statistical math (Wilson Intervals) to now be better than ~2.5% imprecise 95% of the time. it adapts to hitrate and total population size. previously, it just stopped when `x>=1000` on a not-totally-random sample, which was apparently giving 95% confidence of better than 6.2% imprecision at high hitrates and much worse at low
+* when the new incremental duplicate pair search works, there are now two sampling strategies. if we are doing a full, non-estimate count, the sample is sorted (to keep db index access at high throughput) and then randomised in large blocks to smooth out count-rate. in the other cases, being estimated count, duplicate filter fetch, 'get random pairs', and the auto-resolution rule preview panel, which can all end early, I now randomise far more granularily, ignoring sort entirely, emphasising a reliable hit-rate and early exit
+
+### duplicates auto-resolution
+
+* added 'pixel-perfect gifs vs pngs' as a static-gif complement to the jpegs vs pngs rule. I noticed a bunch of these in my IRL client. before you ask, yes ladies, I am single and available
+* I updated my visual duplicates testing suite to do some alpha tests and profiled a number of transparent files against it
+* the visual duplicates algorithm will now accept and test pairs where both files have transparency. the test is intended to be fairly forgiving and just makes sure the respective alpha channels match up closely. if you encounter false negatives here with `(transparency does not match)` reason in the duplicate filter, I'd be very interested in seeing them (issue #1798)
+* if only one file has an interesting alpha channel, then those files are still counted as not visual duplicates
+* the 'visual duplicates' suggested auto-resolution rule no longer excludes transparent files
+* the 'visual duplicates - only earlier imports' suggested auto-resolution rule is now `A has "system:import time" earlier than B + 7 days`. just a little safety padding that ensures that files that _were_ all imported at the same time don't fail a test due to your subscription for the nice version hitting five hours after the worse
+* I do not plan to make any more changes to the suggested rules. maybe we'll add something like the +7 days padding somewhere, or maybe the transparency test has some issue, but if you have been testing this system for me, I think the suggested rules are pretty good now
+* I _thiiink_ the 'rescan transparency' job is going to reset affected files' status in potential duplicates. fingers crossed, when a file is determined to not actually be transparent after all, it'll get searched against similar looking files again and the auto-resolution rules will give it a re-go without the user having to touch anything. let's see how it goes
+
+### ugoiras
+
+* ugoiras with external duration (from a note text or simulated) now have the 'duration' icon in their thumbnails. this is also true of a collection that contains external duration ugoiras
+* the way this stuff is handled and calculated behind the scenes is cleaned up a bit
+* ugoiras with only one frame no longer get any external duration checks
+
+### boring stuff
+
+* added the Wayland env info to the Linux 'running from source' help
+* added some stuff about `pacman` to the Linux 'running from source' help and reworked the 'which python you need' stuff into the three guides better
+* sudo'd all my `apt install` lines in the help
+* added some stuff about environment variables to `hydrus_client.sh`
+* after a user suggestion, reordered the 'making a downloader' help to be URL Class, Parser, GUG (previously GUG was at the start, but it isn't the best initial stepping stone)
+* gave the 'making a downloader' help a very light pass in some places
+* fixed some dialog yes/no stuff in the database update code which was failing to fire with recent stricter UI validity rules
+* I deleted the `speedcopy` test code and removed its entry from `help->about`. it didn't do quite what we wanted and there hasn't been any action on it
+* reworked the old thread loop that used to spawn for local file parsing to the newer async updater-worker I've been using in a bunch of places
+
 ## [Version 643](https://github.com/hydrusnetwork/hydrus/releases/tag/v643)
 
 ### future build
@@ -45,8 +145,8 @@ title: Changelog
 
 * added a 'AND' comparator type. this works like the OR one and allows you to clause a bunch of different comparator types together within a OR collection. I know some users have wanted to try something like `(A filesize > B AND A imported earlier B) OR (A filesize > 1.2x B AND A imported after B)` within the same expensive 'visual duplicates' rule. I think it is a little awkward, but have a think and see how it goes
 * some more small tweaks for the suggested rules--
-* - the 'visually similar pairs' rule now has `A filesize > B` rather than `>=` because the dialog won't ok without a definitive way to arrange A and B, hahaha. since a non-pixel-dupe visually similar pair of exactly the same size is unlikely, I'm fine not catching them here
-* - the 'pixel-perfect pairs' rule now has `( A filesize > B ) OR ( A filesize = B AND A imported earlier B )`. previously, it just had `A filesize > B`. I have discovered that pixel perfect duplicates of exactly equal filesize are not uncommon (I particularly encountered it with some imagemagick resizes of the same original files done several years apart on different OSes, where I assume the only difference is some version enum in the file header), so I wanted a tie-breaker clause for them
+    - the 'visually similar pairs' rule now has `A filesize > B` rather than `>=` because the dialog won't ok without a definitive way to arrange A and B, hahaha. since a non-pixel-dupe visually similar pair of exactly the same size is unlikely, I'm fine not catching them here
+    - the 'pixel-perfect pairs' rule now has `( A filesize > B ) OR ( A filesize = B AND A imported earlier B )`. previously, it just had `A filesize > B`. I have discovered that pixel perfect duplicates of exactly equal filesize are not uncommon (I particularly encountered it with some imagemagick resizes of the same original files done several years apart on different OSes, where I assume the only difference is some version enum in the file header), so I wanted a tie-breaker clause for them
 * the auto-resolution help is now updated to talk about this
 * an empty OR or AND comparator now gives an appropriate summary string
 * I explored making resolution rules work on their queues in a more random order, but I backed off when I couldn't make it fast. there's a way to make this happen, but not a simple one, so I'll back burner it for now. the rules pull pairs in an order according to SQLite's whim, which often produces pairs featuring the same file in a row, which you may have seen in the pending action log. this is fine in some ways but it wasn't intentional and does give some minor headaches. unfortunately the most important thing about this guy is he runs with very low per-file overhead, so I'll leave things as they are for now
@@ -504,50 +604,3 @@ title: Changelog
 * added a unit test to better check discarding subdomains at the url class level
 * fixed 'www'-stripping alternate-url searching for urls with more components like `www.subdomain.something.something`
 * the network engine is now more tolerant of non-urls, only checking strictly when you input into downloaders. previously, any normalise call on something that didn't parse would raise an error--now it is a no-op. the client api will respond to invalid `get_url_x` and `associate_url` URL params as best it can rather than responding with 400 (while still erroring out on `add_url`), and when you export urls with a sidecar, invalid urls should be outputted ok
-
-## [Version 634](https://github.com/hydrusnetwork/hydrus/releases/tag/v634)
-
-### hotfix
-
-* I screwed up with a couple of bad typos in v633, and a couple bad bits of logic in the previous two weeks, so I ended up fixing it on Saturday and putting out a v633a hotfix. the full problems were--
-* export folders doing work (issue #1775)
-* setting forced filetypes
-* the 'repair missing locations' pre-boot dialog
-* the migrate files dialog when a path did not exist
-* some weird webms
-* sorry for the trouble and hassle--it looks like I just had some bad weeks recently and this just slipped through linting and my tests. I particularly regret export folders, since that isn't some super rare system, and I have written some a nicer unit tests to ensure they don't get hit by another stupid mistake like this
-
-### inc/dec ratings
-
-* thanks to a user, inc/dec ratings now grow to be as wide as they need to! this affects numbers over 999. their size options are now based on height rather than width (issue #1759)
-
-### duplicates
-
-* if the two 'jpeg quality' statements have the same label, e.g. 'high quality vs high quality', the score is now 0. previously, if the behind the scenes quality scores were 728 vs 731, it'd colour green and give points, which was confusing and over-confident
-* last week's ugly 'group mode' checkbox in the duplicates sidebar is now a scrollable menu button
-
-### duplicates auto-resolution
-
-* the deny list is now available in a new tab in the 'review rule' panel, beside the 'actions taken' tab. it'll show the n most recent denied pairs, and you can undo specific pairs, which puts them back in the search queue
-* tracking denied timestamps is new tech, so all existing denied pairs will get fake timestamps of 'now minus a few ms' on update
-* the review panel now auto-updates the 'actioned' or 'denied' lists after you do actions or denies in the queue panel and then switch tabs
-
-### ui
-
-* I cleaned up some hacky sizing flags and minimum width calculations and several UI areas can now compress to a smaller space. this particularly affects the normal page sidebar--you should be able to make most quite a bit thinner, although for something with a multi-column list you'll need to manually shrink the columns yourself to get it to go down (issue #1769)
-* almost all of the icons across the program (atm basically everything except what is drawn to thumbnails and the top-right hover) are now loaded `name.svg` first, `name.png` second. I do not use any svgs yet, but I am planning a migration, and this 'try to load an svg if it exists' is a base for testing. users who have been playing around with custom icons using the new `db/static` system are invited to put some svg icons in there and see what happens. as I do this migration, we are going to have to figure out a new sizing system based on visual units like current font size character height, rather than the fixed old (16x16) raster stuff
-* a new `debug->gui actions->reload icon cache` forces the pixmap and icon caches to reload from disk, including your static dir stuff. it'll only affect _new_ widgets though
-
-### boring stuff
-
-* harmonised mismatched status text vs progress gauge display across the program. when you have a popup or similar that says 'working jobs: 3/5', this now means that three jobs are complete and it is working on the fourth. the progress gauge underneath will, similarly, now be at 60%. I accidentally showed 100% progress on the last job with the subscription query progress bar last week and noticed how off it looked, and when I looked at how I did it across the program, I noticed I was ad-hoc all over the place. I tried making it so '3/5' meant the third job was being worked on and having the gauge still be 40%, but I wasn't totally happy. everything now runs on the same system of 'report num_done' when there is both text and a gauge. I am open to revisiting it, perhaps just in certain places where the grammar is now odd; let me know how you find it
-* progress labels no longer say x/y when x is greater than y--they'll now cap at y/y. a couple of odd situations, like uploading pending content while new content is coming in, could cause this--now it'll just cap at 100% for a little extra bit
-* made the 'get free disk space for this path' checks safe for all possible disk errors
-* wrote some unit tests for the new auto-resolution deny timestamp and rescind stuff
-* reworded some 'declined' text in auto-resolution to all be a clear singular 'denied'
-* replaced my old `mock` calls and dev requirements.txt stuff with `unittest.mock`--this stuff has been built into python for ages now
-* as a test, migrated one of my unit tests to use `mock` instead of some hacky db wrapper stuff I do; strong success
-
-### macos news
-
-* the Github 'runner' that we use to make the macOS build is being retired soon. I played around with the newer 'macos-14' runner, which finally leaps us from Intel to Apple Silicon, and had some but not total success. the main App is going to be moving to Apple Silicon, but I think we'll be able to offer an Intel compatibility version too. there's still stuff to figure out, but I hope for a public test soon

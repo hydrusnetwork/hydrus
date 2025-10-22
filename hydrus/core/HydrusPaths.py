@@ -1,18 +1,16 @@
 import collections.abc
 import functools
 import os
-import time
-import typing
-
 import re
-
 import send2trash
 import shlex
 import shutil
 import stat
 import subprocess
 import threading
+import time
 import traceback
+import typing
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
@@ -21,6 +19,29 @@ from hydrus.core import HydrusProcess
 from hydrus.core import HydrusPSUtil
 from hydrus.core import HydrusThreading
 from hydrus.core import HydrusTime
+
+def stat_is_file( path_stat: os.stat_result ):
+    
+    return stat.S_ISREG( path_stat.st_mode )
+    
+
+def stat_is_symlink( path_stat: os.stat_result ):
+    
+    return stat.S_ISLNK( path_stat.st_mode )
+    
+
+def stat_is_dir( path_stat: os.stat_result ):
+    
+    return stat.S_ISDIR( path_stat.st_mode )
+    
+
+def stat_is_samefile( source_stat: os.stat_result, dest_stat: os.stat_result ):
+    """
+    This guy replicates os.path.samefile but with the stat calls ready aforehand.
+    """
+    
+    return source_stat.st_dev == dest_stat.st_dev and source_stat.st_ino == dest_stat.st_ino
+    
 
 def AppendPathUntilNoConflicts( path ):
     
@@ -117,13 +138,55 @@ def DeletePath( path ) -> bool:
         HydrusData.ShowText( ''.join( traceback.format_stack() ) )
         
     
-    if os.path.lexists( path ):
+    try:
         
-        TryToMakeFileWriteable( path )
+        path_stat_nofollow = os.stat( path, follow_symlinks = False ) # this is the stat on the path as-is. if it is a symlink, we looking at it, not where it points
+        
+    except FileNotFoundError:
+        
+        return True
+        
+    
+    if stat_is_symlink( path_stat_nofollow ):
+        
+        # ok we have been given a dir or file that actually exists elsewhere. we don't want to delete that guy, we want to delete this link
         
         try:
             
-            if os.path.isdir( path ):
+            # synonym for os.remove
+            # be it file or dir symlink, we remove it like this
+            os.unlink( path )
+            
+        except Exception as e:
+            
+            if 'Error 32' in str( e ):
+                
+                # file in use by another process
+                
+                HydrusData.DebugPrint( 'Trying to delete ' + path + ' failed because it was in use by another process.' )
+                
+            else:
+                
+                HydrusData.ShowText( 'Trying to delete ' + path + ' caused the following error:' )
+                HydrusData.ShowException( e )
+                
+            
+            return False
+            
+        
+    else:
+        
+        path_stat = path_stat_nofollow
+        
+        if HC.PLATFORM_WINDOWS:
+            
+            # this can be needed on a Windows device
+            TryToMakeFileWriteable( path, path_stat )
+            
+        
+        try:
+            
+            if stat_is_dir( path_stat ):
                 
                 shutil.rmtree( path )
                 
@@ -151,6 +214,16 @@ def DeletePath( path ) -> bool:
         
     
     return True
+    
+
+def DestStatHasSameSizeAndDateAsSource( source_stat: os.stat_result, dest_stat: os.stat_result ):
+    
+    # this is a critical section of code so we moved it to just consider previously fetched stats. all the 'does dest exist?' stuff is implied by what you need to call this guy, hooray
+    
+    same_size = source_stat.st_size == dest_stat.st_size
+    same_modified_time = int( source_stat.st_mtime ) == int( dest_stat.st_mtime )
+    
+    return same_size and same_modified_time
     
 
 def DirectoryIsWriteable( path ):
@@ -562,6 +635,7 @@ def FigureOutDBDir( arg_db_dir: str ):
 
 def FileisWriteable( path: str ):
     
+    # this is a sophisticated multi-plat method and cannot be replaced with a simple stat_result test
     return os.access( path, os.W_OK )
     
 
@@ -1005,32 +1079,56 @@ def MergeFile( source, dest ) -> bool:
     :return: Whether an actual move happened.
     """
     
-    if not os.path.exists( source ):
+    try:
+        
+        source_stat = os.stat( source )
+        
+    except FileNotFoundError:
         
         raise Exception( f'Cannot file-merge "{source}" to "{dest}"--the source does not exist!' )
         
     
-    if os.path.isdir( source ):
+    if stat_is_dir( source_stat ):
         
         raise Exception( f'Cannot file-merge "{source}" to "{dest}"--the source is a directory, not a file!' )
         
     
-    if os.path.isdir( dest ):
+    try:
         
-        raise Exception( f'Cannot file-merge "{source}" to "{dest}"--the destination is a directory, not a file!' )
+        dest_stat = os.stat( dest )
         
-    
-    if os.path.exists( source ) and os.path.exists( dest ) and os.path.samefile( source, dest ):
+    except FileNotFoundError:
         
-        # maybe this should just return, but we don't want the parent caller deleting the source or anything, so bleh
-        raise Exception( f'Woah, "{source}" and "{dest}" are the same file!' )
+        dest_stat = None
         
     
-    if PathsHaveSameSizeAndDate( source, dest ):
+    if dest_stat is not None:
         
-        DeletePath( source )
+        # dest exists!
         
-        return False
+        if stat_is_dir( dest_stat ):
+            
+            raise Exception( f'Cannot file-merge "{source}" to "{dest}"--the destination is a directory, not a file!' )
+            
+        
+        if stat_is_samefile( source_stat, dest_stat ):
+            
+            # one might think this should just return, but we don't want the parent caller deleting the source parent dir or anything, so we'll say responsibility for that situation is not here
+            raise Exception( f'Woah, "{source}" and "{dest}" are the same file!' )
+            
+        
+        if DestStatHasSameSizeAndDateAsSource( source_stat, dest_stat ):
+            
+            DeletePath( source )
+            
+            return False
+            
+        
+        if HC.PLATFORM_WINDOWS:
+            
+            # this can be needed on a Windows device
+            TryToMakeFileWriteable( dest, dest_stat )
+            
         
     
     # this overwrites on conflict without hassle
@@ -1044,53 +1142,50 @@ def MergeTree( source: str, dest: str, text_update_hook = None ):
     Moves everything in the source to the dest using fast MergeFile tech.
     """
     
-    if not os.path.exists( source ):
+    try:
+        
+        source_stat = os.stat( source )
+        
+    except FileNotFoundError:
         
         raise Exception( f'Cannot directory-merge "{source}" to "{dest}"--the source does not exist!' )
         
     
-    if os.path.isfile( source ):
+    if stat_is_file( source_stat ):
         
         raise Exception( f'Cannot directory-merge "{source}" to "{dest}"--the source is a file, not a directory!' )
         
     
-    if os.path.isfile( dest ):
+    try:
         
-        raise Exception( f'Cannot directory-merge "{source}" to "{dest}"--the destination is a file, not a directory!' )
+        dest_stat = os.stat( dest )
         
-    
-    if os.path.exists( source ) and os.path.exists( dest ) and os.path.samefile( source, dest ):
+    except FileNotFoundError:
         
-        # maybe this should just return, but we don't want the parent caller deleting the source or anything, so bleh
-        raise Exception( f'Woah, "{source}" and "{dest}" are the same directory!' )
+        dest_stat = None
         
     
-    pauser = HydrusThreading.BigJobPauser()
-    
-    if not os.path.exists( dest ):
+    if dest_stat is not None:
         
-        # ok, nothing to merge, so simple move operation
+        # dest exists!
         
-        try:
+        if stat_is_file( dest_stat ):
             
-            retry_blocking_io_call( shutil.move, source, dest, copy_function = safe_copy2 )
-            
-        except OSError:
-            
-            # if there were read only files in source and this was partition to partition, the copy2 goes ok but the subsequent source unlink fails
-            # so, if it seems this has happened, let's just try a walking mergetree, which should be able to deal with these readonlies on a file-by-file basis
-            if os.path.exists( dest ):
-                
-                MergeTree( source, dest, text_update_hook = text_update_hook )
-                
+            raise Exception( f'Cannot directory-merge "{source}" to "{dest}"--the destination is a file, not a directory!' )
             
         
-    else:
+        if stat_is_samefile( source_stat, dest_stat ):
+            
+            # one might think this should just return, but we don't want the parent caller deleting the source parent dir or anything, so we'll say responsibility for that situation is not here
+            raise Exception( f'Woah, "{source}" and "{dest}" are the same directory!' )
+            
         
         # ok we have a populated dest, let's merge cleverly
         
         # I had a thing here that tried to optimise if dest existed but was empty, but it wasn't neat
         # also this guy used to do mergefile; now it does mirrorfile so as not to delete the source until the merge is done
+        
+        pauser = HydrusThreading.BigJobPauser()
         
         for ( root, dirnames, filenames ) in os.walk( source ):
             
@@ -1123,16 +1218,35 @@ def MergeTree( source: str, dest: str, text_update_hook = None ):
                 
                 try:
                     
+                    # not Merge; we only want to delete from source once we know everything worked out
                     MirrorFile( source_path, dest_path )
                     
                 except Exception as e:
                     
-                    raise Exception( f'While trying to merge "{source}" into the already-existing "{dest}", moving "{source_path}" to "{dest_path}" failed!' ) from e
+                    raise Exception( f'While trying to merge "{source}" into the already-existing "{dest}", mirroring "{source_path}" to "{dest_path}" failed!' ) from e
                     
                 
             
         
         DeletePath( source )
+        
+    else:
+        
+        # ok, nothing to merge, so simple move operation
+        
+        try:
+            
+            retry_blocking_io_call( shutil.move, source, dest, copy_function = safe_copy2 )
+            
+        except OSError:
+            
+            # if there were read only files in source and this was partition to partition, the copy2 goes ok but the subsequent source unlink fails
+            # so, if it seems this has happened, let's just try a walking mergetree, which should be able to deal with these readonlies on a file-by-file basis
+            if os.path.exists( dest ):
+                
+                MergeTree( source, dest, text_update_hook = text_update_hook )
+                
+            
         
     
 
@@ -1143,63 +1257,83 @@ def MirrorFile( source, dest ) -> bool:
     :return: Whether an actual file copy/overwrite happened.
     """
     
-    if not os.path.exists( source ):
+    try:
+        
+        source_stat = os.stat( source )
+        
+    except FileNotFoundError:
         
         raise Exception( f'Cannot file-mirror "{source}" to "{dest}"--the source does not exist!' )
         
     
-    if os.path.isdir( source ):
+    if stat_is_dir( source_stat ):
         
         raise Exception( f'Cannot file-mirror "{source}" to "{dest}"--the source is a directory, not a file!' )
         
     
-    if os.path.isdir( dest ):
+    try:
         
-        raise Exception( f'Cannot file-mirror "{source}" to "{dest}"--the destination is a directory, not a file!' )
+        dest_stat = os.stat( dest )
+        
+    except FileNotFoundError:
+        
+        dest_stat = None
         
     
-    if os.path.exists( source ) and os.path.exists( dest ) and os.path.samefile( source, dest ):
+    if dest_stat is not None:
         
-        return False
+        # dest exists!
+        
+        if stat_is_dir( dest_stat ):
+            
+            raise Exception( f'Cannot file-mirror "{source}" to "{dest}"--the destination is a directory, not a file!' )
+            
+        
+        if stat_is_samefile( source_stat, dest_stat ):
+            
+            return False
+            
+        
+        if DestStatHasSameSizeAndDateAsSource( source_stat, dest_stat ):
+            
+            return False
+            
+        
+        if HC.PLATFORM_WINDOWS:
+            
+            # this can be needed on a Windows device
+            TryToMakeFileWriteable( dest, dest_stat )
+            
         
     
-    if PathsHaveSameSizeAndDate( source, dest ):
+    try:
         
-        return False
+        safe_copy2( source, dest )
         
-    else:
+    except Exception as e:
         
-        try:
+        from hydrus.core import HydrusTemp
+        
+        if isinstance( e, OSError ) and 'Errno 28' in str( e ) and dest.startswith( HydrusTemp.GetCurrentTempDir() ):
             
-            TryToMakeFileWriteable( dest )
+            message = 'The recent failed file copy looks like it was because your temporary folder ran out of disk space!'
+            message += '\n' * 2
+            message += 'This folder is normally on your system drive, so either free up space on that or use the "--temp_dir" launch command to tell hydrus to use a different location for the temporary folder. (Check the advanced help for more info!)'
+            message += '\n' * 2
+            message += 'If your system drive appears to have space but your temp folder still maxed out, then there are probably special rules about how big a file we are allowed to put in there. Use --temp_dir.'
             
-            safe_copy2( source, dest )
-            
-        except Exception as e:
-            
-            from hydrus.core import HydrusTemp
-            
-            if isinstance( e, OSError ) and 'Errno 28' in str( e ) and dest.startswith( HydrusTemp.GetCurrentTempDir() ):
+            if HC.PLATFORM_LINUX:
                 
-                message = 'The recent failed file copy looks like it was because your temporary folder ran out of disk space!'
-                message += '\n' * 2
-                message += 'This folder is normally on your system drive, so either free up space on that or use the "--temp_dir" launch command to tell hydrus to use a different location for the temporary folder. (Check the advanced help for more info!)'
-                message += '\n' * 2
-                message += 'If your system drive appears to have space but your temp folder still maxed out, then there are probably special rules about how big a file we are allowed to put in there. Use --temp_dir.'
-                
-                if HC.PLATFORM_LINUX:
-                    
-                    message += ' You are also on Linux, where these temp dir rules are not uncommon!'
-                    
-                
-                HydrusData.ShowText( message )
+                message += ' You are also on Linux, where these temp dir rules are not uncommon!'
                 
             
-            raise
+            HydrusData.ShowText( message )
             
         
-        return True
+        raise
         
+    
+    return True
     
 
 def MirrorTree( source: str, dest: str, text_update_hook = None, is_cancelled_hook = None ):
@@ -1208,29 +1342,49 @@ def MirrorTree( source: str, dest: str, text_update_hook = None, is_cancelled_ho
     It deletes surplus stuff in the dest!
     """
     
-    if not os.path.exists( source ):
+    try:
+        
+        source_stat = os.stat( source )
+        
+    except FileNotFoundError:
         
         raise Exception( f'Cannot directory-mirror "{source}" to "{dest}"--the source does not exist!' )
         
     
-    if os.path.isfile( source ):
+    if stat_is_file( source_stat ):
         
         raise Exception( f'Cannot directory-mirror "{source}" to "{dest}"--the source is a file, not a directory!' )
         
     
-    if os.path.isfile( dest ):
+    try:
         
-        raise Exception( f'Cannot directory-mirror "{source}" to "{dest}"--the destination is a file, not a directory!' )
+        dest_stat = os.stat( dest )
+        
+    except FileNotFoundError:
+        
+        dest_stat = None
         
     
-    if os.path.exists( source ) and os.path.exists( dest ) and os.path.samefile( source, dest ):
+    if dest_stat is not None:
         
-        return
+        # dest exists!
+        
+        if stat_is_file( dest_stat ):
+            
+            raise Exception( f'Cannot directory-mirror "{source}" to "{dest}"--the destination is a file, not a directory!' )
+            
+        
+        if stat_is_samefile( source_stat, dest_stat ):
+            
+            return
+            
         
     
     pauser = HydrusThreading.BigJobPauser()
     
     MakeSureDirectoryExists( dest )
+    
+    deletee_paths = set()
     
     for ( root, dirnames, filenames ) in os.walk( source ):
         
@@ -1279,16 +1433,18 @@ def MirrorTree( source: str, dest: str, text_update_hook = None, is_cancelled_ho
                 
             except Exception as e:
                 
-                raise Exception( f'While trying to mirror "{source}" into "{dest}", moving "{source_path}" to "{dest_path}" failed!' ) from e
+                raise Exception( f'While trying to mirror "{source}" into "{dest}", copying "{source_path}" to "{dest_path}" failed!' ) from e
                 
             
         
-        for dest_path in surplus_dest_paths:
-            
-            pauser.Pause()
-            
-            DeletePath( dest_path )
-            
+        deletee_paths.update( surplus_dest_paths )
+        
+    
+    for deletee_path in deletee_paths:
+        
+        pauser.Pause()
+        
+        DeletePath( deletee_path )
         
     
 
@@ -1328,21 +1484,7 @@ def OpenFileLocation( path ):
     
     thread.start()
     
-def PathsHaveSameSizeAndDate( path1, path2 ):
-    
-    if os.path.exists( path1 ) and os.path.exists( path2 ):
-        
-        same_size = os.path.getsize( path1 ) == os.path.getsize( path2 )
-        same_modified_time = int( os.path.getmtime( path1 ) ) == int( os.path.getmtime( path2 ) )
-        
-        if same_size and same_modified_time:
-            
-            return True
-            
-        
-    
-    return False
-    
+
 def PathIsFree( path ):
     
     if not os.path.exists( path ):
@@ -1424,51 +1566,63 @@ def RecyclePath( path ):
     
     MAX_NUM_ATTEMPTS = 3
     
-    if os.path.lexists( path ):
+    try:
         
-        TryToMakeFileWriteable( path )
+        path_stat_nofollow = os.stat( path, follow_symlinks = False ) # this is the stat on the path as-is. if it is a symlink, we looking at it, not where it points
         
-        for i in range( MAX_NUM_ATTEMPTS ):
+    except FileNotFoundError:
+        
+        return
+        
+    
+    # we don't care if this is a link or a file; send2trash just deletes the link if it is one
+    
+    if HC.PLATFORM_WINDOWS:
+        
+        # this can be needed on a Windows device
+        TryToMakeFileWriteable( path, path_stat_nofollow )
+        
+    
+    for i in range( MAX_NUM_ATTEMPTS ):
+        
+        try:
             
-            try:
+            send2trash.send2trash( path )
+            
+        except Exception as e:
+            
+            if getattr( e, 'winerror', None ) == -2144927711: # 0x80270021, mystery error that can be for many things but could be about sharing violation parallel access blah or megalag from a huge trash
                 
-                send2trash.send2trash( path )
-                
-            except Exception as e:
-                
-                if getattr( e, 'winerror', None ) == -2144927711: # 0x80270021, mystery error that can be for many things but could be about sharing violation parallel access blah or megalag from a huge trash
+                if i < MAX_NUM_ATTEMPTS - 1:
                     
-                    if i < MAX_NUM_ATTEMPTS - 1:
-                        
-                        time.sleep( 0.5 )
-                        
-                        continue
-                        
-                    else:
-                        
-                        HydrusData.Print( f'I keep getting the 0x80270021 error when trying to recycle "{path}"!' )
-                        
-                        HydrusData.PrintException( e, do_wait = False )
-                        
+                    time.sleep( 0.5 )
                     
-                elif isinstance( e, OSError ) and 'Errno 36' in str( e ):
-                    
-                    HydrusData.Print( f'Could not recycle "{path}" because a filename would be too long! (maybe Linux .trashinfo?)' )
+                    continue
                     
                 else:
                     
-                    HydrusData.Print( f'Trying to recycle "{path}" created this error:' )
+                    HydrusData.Print( f'I keep getting the 0x80270021 error when trying to recycle "{path}"!' )
                     
                     HydrusData.PrintException( e, do_wait = False )
                     
                 
-                HydrusData.Print( 'I will fully delete it instead.' )
+            elif isinstance( e, OSError ) and 'Errno 36' in str( e ):
                 
-                DeletePath( path )
+                HydrusData.Print( f'Could not recycle "{path}" because a filename would be too long! (maybe Linux .trashinfo?)' )
+                
+            else:
+                
+                HydrusData.Print( f'Trying to recycle "{path}" created this error:' )
+                
+                HydrusData.PrintException( e, do_wait = False )
                 
             
-            break
+            HydrusData.Print( 'I will fully delete it instead.' )
             
+            DeletePath( path )
+            
+        
+        break
         
     
 
@@ -1568,14 +1722,9 @@ def TryToGiveFileNicePermissionBits( path ):
         
     
 
-def TryToMakeFileWriteable( path ):
+def TryToMakeFileWriteable( path: str, path_stat: os.stat_result ):
     
     if DO_NOT_DO_CHMOD_MODE:
-        
-        return
-        
-    
-    if not os.path.exists( path ):
         
         return
         
@@ -1587,13 +1736,11 @@ def TryToMakeFileWriteable( path ):
     
     try:
         
-        stat_result = os.stat( path )
-        
-        current_bits = stat_result.st_mode
+        current_bits = path_stat.st_mode
         
         if HC.PLATFORM_WINDOWS:
             
-            # this is actually the same value as S_IWUSR, but let's not try to second guess ourselves
+            # this is actually the same value as S_IWUSR, but let's not try to second-guess ourselves
             desired_bits = stat.S_IREAD | stat.S_IWRITE
             
         else:

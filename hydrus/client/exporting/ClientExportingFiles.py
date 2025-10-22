@@ -592,7 +592,7 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
         
         media_results = []
         
-        CHUNK_SIZE = 256
+        CHUNK_SIZE = 64
         
         for ( num_done, num_to_do, block_of_hash_ids ) in HydrusLists.SplitListIntoChunksRich( query_hash_ids, CHUNK_SIZE ):
             
@@ -656,15 +656,6 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
             
             try:
                 
-                source_path = client_files_manager.GetFilePath( hash, mime )
-                
-            except HydrusExceptions.FileMissingException:
-                
-                raise Exception( f'A file to be exported, hash "{hash.hex()}", was missing! You should run "missing file" file maintenance (under database->file maintenance->manage scheduled jobs) to check if any other files in your export folder\'s search--or your whole database--are also missing.' )
-                
-            
-            try:
-                
                 filename = GenerateExportFilename( self._path, media_result, terms, i + 1 )
                 
             except:
@@ -691,6 +682,19 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
                 
             
             if dest_path not in sync_paths:
+                
+                try:
+                    
+                    # IMPORTANT: this call is actually pretty expensive when you are doing like 10k of them regularly
+                    # Unfortunately we need to do a disk hit to check size/modified time, but let's save what time we can
+                    # TODO: perhaps we can have an option regarding how often we do this. maybe we only do the full time/size check versus existence check every week etc.., or indeed never
+                    
+                    source_path = client_files_manager.GetFilePath( hash, mime )
+                    
+                except HydrusExceptions.FileMissingException:
+                    
+                    raise Exception( f'A file to be exported, hash "{hash.hex()}", was missing! You should run "missing file" file maintenance (under database->file maintenance->manage scheduled jobs) to check if any other files in your export folder\'s search--or your whole database--are also missing.' )
+                    
                 
                 if self._export_symlinks:
                     

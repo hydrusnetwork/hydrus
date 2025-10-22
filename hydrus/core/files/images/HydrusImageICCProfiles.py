@@ -1,4 +1,3 @@
-import datetime
 import numpy
 import struct
 

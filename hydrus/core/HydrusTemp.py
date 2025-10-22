@@ -2,6 +2,7 @@ import os
 import tempfile
 import threading
 
+from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusPaths
@@ -30,9 +31,15 @@ def CleanUpTempPath( os_file_handle, temp_path ):
             
         
     
-    HydrusPaths.TryToMakeFileWriteable( temp_path )
-    
     try:
+        
+        if HC.PLATFORM_WINDOWS:
+            
+            path_stat = os.stat( temp_path )
+            
+            # this can be needed on a Windows device
+            HydrusPaths.TryToMakeFileWriteable( temp_path, path_stat )
+            
         
         os.remove( temp_path )
         

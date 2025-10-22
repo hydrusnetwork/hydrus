@@ -116,7 +116,13 @@ class TestServer( unittest.TestCase ):
         
         for path in ( cls._ssl_cert_path, cls._ssl_key_path ):
             
-            HydrusPaths.TryToMakeFileWriteable( path )
+            if HC.PLATFORM_WINDOWS:
+                
+                path_stat = os.stat( path )
+                
+                # this can be needed on a Windows device
+                HydrusPaths.TryToMakeFileWriteable( path, path_stat )
+                
             
             os.unlink( path )
             

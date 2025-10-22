@@ -206,7 +206,7 @@ class ParsingTestData( object ):
     def __init__( self, parsing_context: dict, texts: collections.abc.Collection[ str ] ):
         
         self.parsing_context = parsing_context
-        self.texts = texts
+        self.texts = list( texts )
         
     
     def LooksLikeHTML( self ):

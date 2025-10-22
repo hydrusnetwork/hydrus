@@ -14,7 +14,7 @@ from hydrus.client.media import ClientMediaResult
 from hydrus.client.search import ClientSearchFileSearchContext
 from hydrus.client.search import ClientSearchPredicate
 
-POTENTIAL_DUPLICATE_PAIRS_BLOCK_SIZE = 4096
+POTENTIAL_DUPLICATE_PAIRS_BLOCK_SIZE_GUIDELINE = 4096
 
 class PotentialDuplicateIdPairsAndDistances( object ):
     
@@ -25,7 +25,7 @@ class PotentialDuplicateIdPairsAndDistances( object ):
         self._media_ids_to_other_media_ids_and_distances = collections.defaultdict( list )
         self._mapping_initialised = False
         
-        self._current_search_block_size = POTENTIAL_DUPLICATE_PAIRS_BLOCK_SIZE
+        self._current_search_block_size = POTENTIAL_DUPLICATE_PAIRS_BLOCK_SIZE_GUIDELINE
         
     
     def __len__( self ):
@@ -87,7 +87,7 @@ class PotentialDuplicateIdPairsAndDistances( object ):
     
     def IterateBlocks( self ):
         
-        for block in HydrusLists.SplitListIntoChunks( self._potential_id_pairs_and_distances, POTENTIAL_DUPLICATE_PAIRS_BLOCK_SIZE ):
+        for block in HydrusLists.SplitListIntoChunks( self._potential_id_pairs_and_distances, POTENTIAL_DUPLICATE_PAIRS_BLOCK_SIZE_GUIDELINE ):
             
             yield PotentialDuplicateIdPairsAndDistances( block )
             
@@ -132,8 +132,8 @@ class PotentialDuplicateIdPairsAndDistances( object ):
     
     def NotifyWorkTimeForAutothrottle( self, actual_work_period: float, ideal_work_period: float ):
         
-        minimum_block_size = int( POTENTIAL_DUPLICATE_PAIRS_BLOCK_SIZE / 10 )
-        maximum_block_size = int( POTENTIAL_DUPLICATE_PAIRS_BLOCK_SIZE * 25 )
+        minimum_block_size = int( POTENTIAL_DUPLICATE_PAIRS_BLOCK_SIZE_GUIDELINE / 10 )
+        maximum_block_size = int( POTENTIAL_DUPLICATE_PAIRS_BLOCK_SIZE_GUIDELINE * 25 )
         
         if actual_work_period > ideal_work_period * 1.1:
             
@@ -161,9 +161,20 @@ class PotentialDuplicateIdPairsAndDistances( object ):
         return PotentialDuplicateIdPairsAndDistances( block_of_id_pairs_and_distances )
         
     
-    def RandomiseBlocks( self ):
+    def RandomiseForFastSearch( self ):
         
-        self._potential_id_pairs_and_distances = HydrusLists.RandomiseListByChunks( self._potential_id_pairs_and_distances, POTENTIAL_DUPLICATE_PAIRS_BLOCK_SIZE )
+        # this ensures all the ids are lined up
+        self._potential_id_pairs_and_distances.sort()
+        
+        # this ensures we still have a decent random selection within that
+        self._potential_id_pairs_and_distances = HydrusLists.RandomiseListByChunks( self._potential_id_pairs_and_distances, POTENTIAL_DUPLICATE_PAIRS_BLOCK_SIZE_GUIDELINE )
+        
+    
+    def RandomiseForRichEstimate( self ):
+        
+        # we want hits early and thus are going for a very fine-grained randomisation
+        # I'd just do random.shuffle but it is a bit slow at n=1 tbh
+        self._potential_id_pairs_and_distances = HydrusLists.RandomiseListByChunks( self._potential_id_pairs_and_distances, 32 )
         
     
 
@@ -214,14 +225,6 @@ class PotentialDuplicateMediaResultPairsAndDistances( object ):
         return PotentialDuplicateMediaResultPairsAndDistances( self._potential_media_result_pairs_and_distances )
         
     
-    def IterateBlocks( self ):
-        
-        for block in HydrusLists.SplitListIntoChunks( self._potential_media_result_pairs_and_distances, POTENTIAL_DUPLICATE_PAIRS_BLOCK_SIZE ):
-            
-            yield PotentialDuplicateMediaResultPairsAndDistances( block )
-            
-        
-    
     def IteratePairs( self ):
         
         for ( media_result_1, media_result_2, distance ) in self._potential_media_result_pairs_and_distances:
@@ -243,20 +246,6 @@ class PotentialDuplicateMediaResultPairsAndDistances( object ):
     def GetRows( self ):
         
         return list( self._potential_media_result_pairs_and_distances )
-        
-    
-    def PopBlock( self ):
-        
-        block_of_media_result_pairs_and_distances = self._potential_media_result_pairs_and_distances[ : POTENTIAL_DUPLICATE_PAIRS_BLOCK_SIZE ]
-        
-        self._potential_media_result_pairs_and_distances = self._potential_media_result_pairs_and_distances[ POTENTIAL_DUPLICATE_PAIRS_BLOCK_SIZE : ]
-        
-        return PotentialDuplicateMediaResultPairsAndDistances( block_of_media_result_pairs_and_distances )
-        
-    
-    def RandomiseBlocks( self ):
-        
-        self._potential_media_result_pairs_and_distances = HydrusLists.RandomiseListByChunks( self._potential_media_result_pairs_and_distances, POTENTIAL_DUPLICATE_PAIRS_BLOCK_SIZE )
         
     
     def Sort( self, duplicate_pair_sort_type: int, sort_asc: bool ):
@@ -377,8 +366,8 @@ class PotentialDuplicatesSearchContext( HydrusSerialisable.SerialisableBase ):
         
         ( serialisable_file_search_context_1, serialisable_file_search_context_2, self._dupe_search_type, self._pixel_dupes_preference, self._max_hamming_distance ) = serialisable_info
         
-        self._file_search_context_1 = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_file_search_context_1 )
-        self._file_search_context_2 = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_file_search_context_2 )
+        self._file_search_context_1: ClientSearchFileSearchContext.FileSearchContext = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_file_search_context_1 )
+        self._file_search_context_2: ClientSearchFileSearchContext.FileSearchContext = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_file_search_context_2 )
         
     
     def GetDupeSearchType( self ) -> int:
@@ -450,9 +439,7 @@ class PotentialDuplicatesSearchContext( HydrusSerialisable.SerialisableBase ):
             
             if self._file_search_context_1.IsJustSystemEverything() or self._file_search_context_1.HasNoPredicates():
                 
-                f = self._file_search_context_1
-                self._file_search_context_1 = self._file_search_context_2
-                self._file_search_context_2 = f
+                ( self._file_search_context_2, self._file_search_context_1 ) = ( self._file_search_context_1, self._file_search_context_2 )
                 
                 self._dupe_search_type = ClientDuplicates.DUPE_SEARCH_ONE_FILE_MATCHES_ONE_SEARCH
                 
@@ -468,12 +455,12 @@ class PotentialDuplicatesSearchContext( HydrusSerialisable.SerialisableBase ):
         self._dupe_search_type = value
         
     
-    def SetFileSearchContext1( self, value: ClientSearchFileSearchContext ):
+    def SetFileSearchContext1( self, value: ClientSearchFileSearchContext.FileSearchContext ):
         
         self._file_search_context_1 = value
         
     
-    def SetFileSearchContext2( self, value : ClientSearchFileSearchContext ):
+    def SetFileSearchContext2( self, value: ClientSearchFileSearchContext.FileSearchContext ):
         
         self._file_search_context_2 = value
         

@@ -1649,6 +1649,8 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.Liste
             
             CG.client_controller.WriteSynchronous( 'duplicate_pair_status', pair_info )
             
+            CG.client_controller.pub( 'new_similar_files_potentials_search_numbers' )
+            
             return True
             
         

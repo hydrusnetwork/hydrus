@@ -2092,7 +2092,7 @@ class EditStringTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
             
             if len( test_data.texts ) > 0:
                 
-                self._example_string.setText( list( test_data.texts )[0] )
+                self._example_string.setText( test_data.texts[0] )
                 
             
         

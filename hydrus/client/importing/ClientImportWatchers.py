@@ -1930,6 +1930,11 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
                 raise HydrusExceptions.VetoException( 'paused' )
                 
             
+            if CG.client_controller.new_options.GetBoolean( 'pause_all_paged_importers' ):
+                
+                raise HydrusExceptions.VetoException( 'all paged importers are paused! hit network->pause to resume!' )
+                
+            
             if CG.client_controller.new_options.GetBoolean( 'pause_all_watcher_checkers' ):
                 
                 raise HydrusExceptions.VetoException( 'all checkers are paused! hit network->pause to resume!' )

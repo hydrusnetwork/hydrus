@@ -4,7 +4,6 @@ import os
 import random
 import threading
 import time
-import typing
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData

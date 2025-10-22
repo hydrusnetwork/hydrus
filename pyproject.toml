@@ -1,6 +1,6 @@
 [project]
 name = "hydrus"
-version = "v643"
+version = "v644"
 description = "A personal booru-style media tagger"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -71,20 +71,20 @@ mpv-test = [
     "mpv==1.0.7",
 ]
 opencv-new = [
-    "opencv-python-headless==4.10.0.84",
+    "opencv-python-headless==4.11.0.86",
 ]
 opencv-old = [
     "opencv-python-headless==4.8.1.78",
 ]
 opencv-test = [
-    "opencv-python-headless==4.11.0.86",
+    "opencv-python-headless==4.12.0.88",
 ]
 other-future = [
 ]
 other-normal = [
 ]
 qt6-new = [
-    "pyside6==6.8.2.1",
+    "pyside6==6.8.3",
     "qtpy==2.4.3",
 ]
 qt6-new-pyqt6 = [
@@ -97,6 +97,6 @@ qt6-older = [
     "qtpy==2.3.1",
 ]
 qt6-test = [
-    "pyside6==6.9.1",
+    "pyside6==6.9.3",
     "qtpy==2.4.3",
 ]

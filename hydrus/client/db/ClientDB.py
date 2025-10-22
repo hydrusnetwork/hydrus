@@ -7465,7 +7465,7 @@ class DB( HydrusDB.HydrusDB ):
                     
                     from hydrus.client.gui import ClientGUIDialogsQuick
                     
-                    result = ClientGUIDialogsQuick.GetYesNo( None, message, title = 'Re-do permissions update?', yes_label = 'yes, re-run the update', no_label = 'no, I checked everything in "review services" already' )
+                    result = ClientGUIDialogsQuick.GetYesNo( CG.client_controller.GetMainTLW(), message, title = 'Re-do permissions update?', yes_label = 'yes, re-run the update', no_label = 'no, I checked everything in "review services" already' )
                     
                     return result == QW.QDialog.DialogCode.Accepted
                     
@@ -7495,7 +7495,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 if len( underpermitted_yet_set_to_permits_everything ) > 0:
                     
-                    do_permissions_stuff = self._controller.CallBlockingToQt( None, ask_what_to_do_permissions_stuff_593 )
+                    do_permissions_stuff = self._controller.CallBlockingToQt( CG.client_controller.GetMainTLW(), ask_what_to_do_permissions_stuff_593 )
                     
                     if do_permissions_stuff:
                         
@@ -7620,12 +7620,12 @@ class DB( HydrusDB.HydrusDB ):
                         
                         from hydrus.client.gui import ClientGUIDialogsQuick
                         
-                        result = ClientGUIDialogsQuick.GetYesNo( None, message, title = 'Reset modified dates?', yes_label = 'do it', no_label = 'do not do it' )
+                        result = ClientGUIDialogsQuick.GetYesNo( CG.client_controller.GetMainTLW(), message, title = 'Reset modified dates?', yes_label = 'do it', no_label = 'do not do it' )
                         
                         return result == QW.QDialog.DialogCode.Accepted
                         
                     
-                    do_it = self._controller.CallBlockingToQt( None, ask_what_to_do_false_positive_modified_dates )
+                    do_it = self._controller.CallBlockingToQt( CG.client_controller.GetMainTLW(), ask_what_to_do_false_positive_modified_dates )
                     
                     if do_it:
                         
@@ -8048,10 +8048,10 @@ class DB( HydrusDB.HydrusDB ):
                             
                             from hydrus.client.gui import ClientGUIDialogsMessage
                             
-                            ClientGUIDialogsMessage.ShowInformation( None, message )
+                            ClientGUIDialogsMessage.ShowInformation( CG.client_controller.GetMainTLW(), message )
                             
                         
-                        self._controller.CallBlockingToQt( None, notify_deleting_auto_resolution_rules )
+                        self._controller.CallBlockingToQt( CG.client_controller.GetMainTLW(), notify_deleting_auto_resolution_rules )
                         
                     
                     self._Execute( 'CREATE TABLE IF NOT EXISTS main.duplicate_files_auto_resolution_rules ( rule_id INTEGER PRIMARY KEY );' )
@@ -8896,6 +8896,52 @@ class DB( HydrusDB.HydrusDB ):
                 HydrusData.PrintException( e )
                 
                 message = 'Some JXL-scanning failed to schedule! This is not super important, but hydev would be interested in seeing the error that was printed to the log.'
+                
+                self.pub_initial_message( message )
+                
+            
+        
+        if version == 643:
+            
+            def ask_what_to_do_transparency_recheck_644( num_transparent_files ):
+                
+                message = f'Hey, I have changed how I detect transparency in files. Files that only have a barely-noticeable handful of 98% opaque pixels are now considered non-transparent. You have {HydrusNumbers.ToHumanInt(num_transparent_files)} images and animations that are currently considered as having transparency. Do you want to schedule a transparency-rescan for all of them to clear out the previous false positives?'
+                message += '\n' * 2
+                message += 'I recommend you say yes unless the number here is truly huge and you do not want hydrus to be eventually loading all those files (e.g. if your files are stored in the cloud and you need to keep bandwidth usage down).'
+                
+                from hydrus.client.gui import ClientGUIDialogsQuick
+                
+                result = ClientGUIDialogsQuick.GetYesNo( CG.client_controller.GetMainTLW(), message, title = 'Re-do transparency check?', yes_label = 'yes, re-scan these files', no_label = 'no, do not do it' )
+                
+                return result == QW.QDialog.DialogCode.Accepted
+                
+            
+            try:
+                
+                all_local_hash_ids = self.modules_files_storage.GetCurrentHashIdsList( self.modules_services.combined_local_file_service_id )
+                
+                with self._MakeTemporaryIntegerTable( all_local_hash_ids, 'hash_id' ) as temp_hash_ids_table_name:
+                    
+                    mimes_we_want = HC.MIMES_THAT_WE_CAN_CHECK_FOR_TRANSPARENCY
+                    
+                    hash_ids = self._STS( self._Execute( 'SELECT hash_id FROM {} CROSS JOIN files_info USING ( hash_id ) CROSS JOIN has_transparency USING ( hash_id ) WHERE mime IN {};'.format( temp_hash_ids_table_name, HydrusLists.SplayListForDB( mimes_we_want ) ) ) )
+                    
+                    if len( hash_ids ) > 0:
+                        
+                        do_transparency_recheck = self._controller.CallBlockingToQt( CG.client_controller.GetMainTLW(), ask_what_to_do_transparency_recheck_644, len( hash_ids ) )
+                        
+                        if do_transparency_recheck:
+                            
+                            self.modules_files_maintenance_queue.AddJobs( hash_ids, ClientFilesMaintenance.REGENERATE_FILE_DATA_JOB_FILE_HAS_TRANSPARENCY )
+                            
+                        
+                    
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Some transparency scanning failed to schedule! This is not super important, but hydev would be interested in seeing the error that was printed to the log.'
                 
                 self.pub_initial_message( message )
                 

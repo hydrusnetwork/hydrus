@@ -4,7 +4,7 @@ title: Running From Source
 
 # running from source
 
-I write the client and server entirely in [python](https://python.org), which can run straight from source. It is getting simpler and simpler to run python programs like this, so don't be afraid of it. The program generally works better from source than from a built release. If none of the builds work for you (for instance if you use Windows 8.1 or 18.04 Ubuntu (or equivalent), and since 2025-09 any macOS situation), it may be the only way you can get the program to run. Also, if you have a general interest in exploring the code or wish to otherwise modify the program, you will obviously need to do this.
+I write the client and server entirely in [python](https://python.org), which can run straight from source. It is getting simpler and simpler to run python programs like this, so don't be afraid of it. The program generally works better (better UI compatibility and mpv support) from source than from a built release. If none of the builds work for you (for instance if you use Windows 8.1 or 18.04 Ubuntu (or equivalent), and since 2025-09 any macOS situation), it may be the only way you can get the program to run. Also, if you have a general interest in exploring the code or wish to otherwise modify the program, you will obviously need to do this.
 
 ## Simple Setup Guide
 
@@ -60,12 +60,18 @@ There are now setup scripts that make this easy. You do not need any python expe
         I can't promise anything though. The requirements.txt isn't perfect, and something else may break in future! You may like to think about setting up a Linux instance.
         
 
-    Then you will need to install Python. Get 3.11 or 3.12 [here](https://www.python.org/downloads/windows/). During the install process, make sure it has something like 'Add Python to PATH' checked. This makes Python available everywhere in Windows.  
+    If you do not know that you have Python, you probably do not. Let's check--right-click on any folder and select 'open in terminal' and copy/paste the following:
     
-    If you want to test it, then, _after installation is complete_, right-click on any folder and select 'open in terminal' and copy/paste the following:
+    `python --version`
     
-    `python --version`  
-    `python -m pip --version`  
+    If you get some nice python version information, you have python. Hydrus should be fine with Python 3.10-3.13. If you are on an even newer python, that may be ok, but select the 'advanced' setup later on and choose the '(t)est' options. If you are stuck on something older, try the same thing, but with the '(o)lder' options (but I can't promise it will work!).
+    
+    If you don't have python, we need to get it. Try 3.12 [here](https://www.python.org/downloads/windows/). During the install process, make sure it has something like 'Add Python to PATH' checked. This makes Python available everywhere in Windows.  
+    
+    Once it is installed, then, _after installation is totally complete_, open up a new terminal (It needs to be a new terminal to catch your updated PATH) and copy/paste the following:
+    
+    `python --version`
+    `python -m pip --version`
     `python -m venv --help`
     
     If all these lines produce good output (no errors), you are good to go!
@@ -76,20 +82,24 @@ There are now setup scripts that make this easy. You do not need any python expe
     
     `git --version`
     
-    If you do not get a nice version back, you will want to install it, most likely with:
+    If you do not get a nice answer, you will want to install it. If you are on Debian/Ubuntu/Mint, you'll most likely be using `apt`, like this:
     
-    `apt install git`
+    `sudo apt install git`
     
-    You should already have a fairly new python. Ideally, you want at least 3.10. You can find out what version you have just by opening a new terminal and typing `python3` or `python`.
+    If you are in the Arch family, you may be on `pacman`. In this case, where I might say in this help to do `sudo apt install package`, you are probably looking at `sudo pacman -S package`, so:
+    
+    `sudo pacman -S git`
+    
+    You should already have a fairly new python. Hydrus should be fine with Python 3.10-3.13. If you are on an even newer python, that may be ok, but select the 'advanced' setup later on and choose the '(t)est' options. If you are stuck on something older, try the same thing, but with the '(o)lder' options (but I can't promise it will work!). You can find out what version you have just by opening a new terminal and typing `python3` or `python`.
     
     You are going to need `pip` and `venv`. These are often bundled with a python install, but not always with a system python. Open a terminal and try these two lines:
     
-    `python3 -m pip --version`  
+    `python3 -m pip --version`
     `python3 -m venv --help`
     
     If it complains about either, you will need to install them. Try this:
     
-    `sudo apt install python3-pip`  
+    `sudo apt install python3-pip`
     `sudo apt install python3-venv`
 
 === "macOS"
@@ -104,7 +114,7 @@ There are now setup scripts that make this easy. You do not need any python expe
     
     `brew install git`
     
-    You should already have a fairly new python. Ideally, you want at least 3.10. You can find out what version you have just by opening a new terminal and typing `python3` or `python`.
+    You should already have a fairly new python. Hydrus should be fine with Python 3.10-3.13. If you are on an even newer python, that may be ok, but select the 'advanced' setup later on and choose the '(t)est' options. If you are stuck on something older, try the same thing, but with the '(o)lder' options (but I can't promise it will work!). You can find out what version you have just by opening a new terminal and typing `python3` or `python`.
     
     You are going to need `pip` and `venv`. These are often bundled with a python install, but not always with a system python. Open a terminal and try these two lines:
     
@@ -112,8 +122,6 @@ There are now setup scripts that make this easy. You do not need any python expe
     `python3 -m venv --help`
     
     If it complains about either, you will need to install them. You do not want to fight with your system python, so you should investigate `brew install python` to install a separate python just for your username.
-
-Hydrus should be fine with Python 3.10-3.13. If you are on an even newer python, that may be ok, but select the 'advanced' setup later on and choose the '(t)est' options. If you are stuck on something older, try the same thing, but with the '(o)lder' options (but I can't promise it will work!).
 
 **Then, get the hydrus source.** It is best to get it with Git: make a new folder somewhere, open a terminal in it, and then paste:
 
@@ -170,7 +178,7 @@ There are three special external libraries. You just have to get them and put th
         
         Linux can provide what we need in a couple of different ways. It is important that we get `libmpv`, rather than just the `mpv` player. Some Linux installs of mpv do also bring libmpv, but others do not. If your package manager provides mpv and it says it comes with libmpv, you are probably good just to get that.
         
-        Otherwise, try just running `apt install libmpv1` or `apt install libmpv2` in a new terminal. You can also try `apt show libmpv2` to see any current version. Or, if you use a different package manager, try searching `libmpv`, `libmpv1`, `libmpv2`, or again, just `mpv` on that.
+        Otherwise, try just running `sudo apt install libmpv1` or `sudo apt install libmpv2` in a new terminal. You can also try `apt show libmpv2` to see any current version. Or, if you use a different package manager, try searching `libmpv`, `libmpv1`, `libmpv2`, or again, just `mpv` on that.
         
         1. If you have earlier than 0.34.1, you will be looking at running the 'advanced' setup in the next section and selecting the 'old' mpv.
         2. If you have 0.34.1 or later, you can run the normal setup script.
@@ -278,6 +286,15 @@ Then run the 'setup_help' script to build the help. This isn't necessary, but it
         
         If you still have trouble with the default Qt6 version, try running setup_venv again and choose a different version. There are several to choose from, including (w)riting a custom version. Check the advanced requirements.txts files in `install_dir/static/requirements/advanced` for more info, and you can also work off this list: [PySide6](https://pypi.org/project/PySide6/#history)
         
+    
+    ??? warning "Wayland (and MPV)"
+        Unfortunately, hydrus has several bad bugs in Wayland. The mpv window will often not embed properly into the media viewer, menus and windows may position on the wrong screen, and the taskbar icon may not work at all.
+        
+        User testing suggests that the best solution for now is just to launch the program in X11, and I now encourage this for all Wayland users. Launching with the environment variable `QT_QPA_PLATFORM=xcb` (e.g. by putting `export QT_QPA_PLATFORM=xcb` in a copy of `hydrus_client.sh` called `hydrus_client-user.sh`) should do it. The 'xcb' should force X11.
+        
+        It does not work for everyone, though. If it fails, another user says that also setting `WAYLAND_DISPLAY=` (as in setting it to nothing) or unsetting it entirely with `unset WAYLAND_DISPLAY`, which forces hydrus (and its embedded mpv windows) to use Xwayland, is another solution. You might need to do `sudo apt install xwayland` first.
+        
+        I expect to revisit this question in future versions of Qt and Wayland--we'll see if the situation stabilises.
     
     Run 'hydrus_client.sh' to start the client. Don't forget to set `chmod +x hydrus_client.sh` if you need it.
     
@@ -461,9 +478,9 @@ For Windows, the dll builds are [here](https://sourceforge.net/projects/mpv-play
 
 If you are on Linux, you can usually get `libmpv` like so:
 
-`apt install libmpv1`  
+`sudo apt install libmpv1`  
 -or-  
-`apt install libmpv2`
+`sudo apt install libmpv2`
 
 On macOS, you should be able to get it with `brew install mpv`, but you are likely to find mpv crashes the program when it tries to load. Hydev is working on this, but it will probably need a completely different render API.
 
@@ -477,7 +494,7 @@ On Windows, get the 64-bit sqlite3.dll [here](https://www.sqlite.org/download.ht
 
 You _may_ be able to update your SQLite on Linux or macOS with:
 
-* `apt install libsqlite3-dev`
+* `sudo apt install libsqlite3-dev`
 * (activate your venv)
 * `python -m pip install pysqlite3`
 

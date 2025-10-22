@@ -168,9 +168,9 @@ class ClientDBFilesDuplicatesFileSearch( ClientDBModule.ClientDBModule ):
         
         pair_results = []
         
-        for block_of_potential_duplicate_paris_and_distances in potential_duplicate_id_pairs_and_distances.IterateBlocks():
+        for block_of_potential_duplicate_id_pairs_and_distances in potential_duplicate_id_pairs_and_distances.IterateBlocks():
             
-            potential_duplicate_media_result_pairs_and_distances = self.GetPotentialDuplicateMediaResultPairsAndDistancesFragmentary( potential_duplicates_search_context, block_of_potential_duplicate_paris_and_distances )
+            potential_duplicate_media_result_pairs_and_distances = self.GetPotentialDuplicateMediaResultPairsAndDistancesFragmentary( potential_duplicates_search_context, block_of_potential_duplicate_id_pairs_and_distances )
             
             potential_duplicate_media_result_pairs_and_distances.Sort( ClientDuplicates.DUPE_PAIR_SORT_MAX_FILESIZE, False )
             
@@ -213,7 +213,7 @@ class ClientDBFilesDuplicatesFileSearch( ClientDBModule.ClientDBModule ):
         
         potential_duplicate_id_pairs_and_distances = self.modules_files_duplicates.GetPotentialDuplicateIdPairsAndDistances( potential_duplicates_search_context.GetFileSearchContext1().GetLocationContext() )
         
-        potential_duplicate_id_pairs_and_distances.RandomiseBlocks()
+        potential_duplicate_id_pairs_and_distances.RandomiseForRichEstimate()
         
         master_media_id = None
         

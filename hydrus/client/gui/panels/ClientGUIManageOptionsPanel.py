@@ -4176,6 +4176,9 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._draw_transparency_checkerboard_media_canvas = QW.QCheckBox( media_panel )
             self._draw_transparency_checkerboard_media_canvas.setToolTip( ClientGUIFunctions.WrapToolTip( 'If unchecked, will fill in with the normal background colour. Does not apply to MPV.' ) )
             
+            self._draw_transparency_checkerboard_as_greenscreen = QW.QCheckBox( media_panel )
+            self._draw_transparency_checkerboard_as_greenscreen.setToolTip( ClientGUIFunctions.WrapToolTip( 'Instead of a checkerboard pattern, draw a bright green colour.' ) )
+            
             self._media_zooms = QW.QLineEdit( media_panel )
             self._media_zooms.setToolTip( ClientGUIFunctions.WrapToolTip( 'This is a bit hacky, but whatever you have here, in comma-separated floats, will be what the program steps through as you zoom a media up and down.' ) )
             self._media_zooms.textChanged.connect( self.EventZoomsChanged )
@@ -4255,6 +4258,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._mpv_loop_playlist_instead_of_file.setChecked( self._new_options.GetBoolean( 'mpv_loop_playlist_instead_of_file' ) )
             self._do_not_setgeometry_on_an_mpv.setChecked( self._new_options.GetBoolean( 'do_not_setgeometry_on_an_mpv' ) )
             self._draw_transparency_checkerboard_media_canvas.setChecked( self._new_options.GetBoolean( 'draw_transparency_checkerboard_media_canvas' ) )
+            self._draw_transparency_checkerboard_as_greenscreen.setChecked( self._new_options.GetBoolean( 'draw_transparency_checkerboard_as_greenscreen' ) )
             
             media_zooms = self._new_options.GetMediaZooms()
             
@@ -4303,6 +4307,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows.append( ( 'DEBUG: Loop Playlist instead of Loop File in mpv:', self._mpv_loop_playlist_instead_of_file ) )
             rows.append( ( 'LINUX DEBUG: Do not allow combined setGeometry on mpv window:', self._do_not_setgeometry_on_an_mpv ) )
             rows.append( ( 'Draw image transparency as checkerboard:', self._draw_transparency_checkerboard_media_canvas ) )
+            rows.append( ( '--Instead of checkerboard, use a bright greenscreen:', self._draw_transparency_checkerboard_as_greenscreen ) )
             
             gridbox = ClientGUICommon.WrapInGrid( media_panel, rows )
             
@@ -4548,6 +4553,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._new_options.SetBoolean( 'mpv_loop_playlist_instead_of_file', self._mpv_loop_playlist_instead_of_file.isChecked() )
             self._new_options.SetBoolean( 'do_not_setgeometry_on_an_mpv', self._do_not_setgeometry_on_an_mpv.isChecked() )
             self._new_options.SetBoolean( 'draw_transparency_checkerboard_media_canvas', self._draw_transparency_checkerboard_media_canvas.isChecked() )
+            self._new_options.SetBoolean( 'draw_transparency_checkerboard_as_greenscreen', self._draw_transparency_checkerboard_as_greenscreen.isChecked() )
             
             try:
                 

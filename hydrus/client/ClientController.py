@@ -1131,6 +1131,11 @@ class Controller( HydrusController.HydrusController ):
         return ( dirs_that_allow_internal_work, dirs_that_cannot_be_touched )
         
     
+    def GetSplash( self ):
+        
+        return self._splash
+        
+    
     def InitClientFilesManager( self ):
         
         def qt_code( missing_subfolders ):

@@ -690,6 +690,73 @@ def GetDefaultRuleSuggestions() -> list[ DuplicatesAutoResolutionRule ]:
     location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY )
     
     predicates = [
+        ClientSearchPredicate.Predicate( predicate_type = ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_MIME, value = ( HC.IMAGE_GIF, ) ),
+        ClientSearchPredicate.Predicate( predicate_type = ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HEIGHT, value = ClientNumberTest.NumberTest.STATICCreateFromCharacters( '>', 128 ) ),
+        ClientSearchPredicate.Predicate( predicate_type = ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_WIDTH, value = ClientNumberTest.NumberTest.STATICCreateFromCharacters( '>', 128 ) )
+    ]
+    
+    file_search_context_1 = ClientSearchFileSearchContext.FileSearchContext(
+        location_context = location_context,
+        predicates = predicates
+    )
+    
+    predicates = [
+        ClientSearchPredicate.Predicate( predicate_type = ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_MIME, value = ( HC.IMAGE_PNG, ) ),
+        ClientSearchPredicate.Predicate( predicate_type = ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HEIGHT, value = ClientNumberTest.NumberTest.STATICCreateFromCharacters( '>', 128 ) ),
+        ClientSearchPredicate.Predicate( predicate_type = ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_WIDTH, value = ClientNumberTest.NumberTest.STATICCreateFromCharacters( '>', 128 ) )
+    ]
+    
+    file_search_context_2 = ClientSearchFileSearchContext.FileSearchContext(
+        location_context = location_context,
+        predicates = predicates
+    )
+    
+    potential_duplicates_search_context = ClientPotentialDuplicatesSearchContext.PotentialDuplicatesSearchContext()
+    
+    potential_duplicates_search_context.SetFileSearchContext1( file_search_context_1 )
+    potential_duplicates_search_context.SetFileSearchContext2( file_search_context_2 )
+    potential_duplicates_search_context.SetDupeSearchType( ClientDuplicates.DUPE_SEARCH_BOTH_FILES_MATCH_DIFFERENT_SEARCHES )
+    potential_duplicates_search_context.SetPixelDupesPreference( ClientDuplicates.SIMILAR_FILES_PIXEL_DUPES_REQUIRED )
+    potential_duplicates_search_context.SetMaxHammingDistance( 0 )
+    
+    duplicates_auto_resolution_rule = DuplicatesAutoResolutionRule( 'pixel-perfect gifs vs pngs' )
+    
+    duplicates_auto_resolution_rule.SetPotentialDuplicatesSearchContext( potential_duplicates_search_context )
+    
+    selector = ClientDuplicatesAutoResolutionComparators.PairSelector()
+    
+    comparator = ClientDuplicatesAutoResolutionComparators.PairComparatorOneFile()
+    
+    comparator.SetLookingAt( ClientDuplicatesAutoResolutionComparators.LOOKING_AT_A )
+    
+    file_search_context_mc = ClientSearchFileSearchContext.FileSearchContext(
+        predicates = [ ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_MIME, value = ( HC.IMAGE_GIF, ) ) ]
+    )
+    
+    metadata_conditional = ClientMetadataConditional.MetadataConditional()
+    
+    metadata_conditional.SetFileSearchContext( file_search_context_mc )
+    
+    comparator.SetMetadataConditional( metadata_conditional )
+    
+    selector.SetComparators( [ comparator ] )
+    
+    duplicates_auto_resolution_rule.SetPairSelector( selector )
+    
+    #
+    
+    duplicates_auto_resolution_rule.SetAction( HC.DUPLICATE_BETTER )
+    duplicates_auto_resolution_rule.SetDeleteInfo( False, True )
+    
+    #
+    
+    suggested_rules.append( duplicates_auto_resolution_rule )
+    
+    # ############
+    
+    location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY )
+    
+    predicates = [
         ClientSearchPredicate.Predicate( predicate_type = ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_MIME, value = ( HC.IMAGE_JPEG, ) ),
         ClientSearchPredicate.Predicate( predicate_type = ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HEIGHT, value = ClientNumberTest.NumberTest.STATICCreateFromCharacters( '>', 128 ) ),
         ClientSearchPredicate.Predicate( predicate_type = ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_WIDTH, value = ClientNumberTest.NumberTest.STATICCreateFromCharacters( '>', 128 ) )
@@ -733,6 +800,86 @@ def GetDefaultRuleSuggestions() -> list[ DuplicatesAutoResolutionRule ]:
     
     file_search_context_mc = ClientSearchFileSearchContext.FileSearchContext(
         predicates = [ ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_MIME, value = ( HC.IMAGE_JPEG, ) ) ]
+    )
+    
+    metadata_conditional = ClientMetadataConditional.MetadataConditional()
+    
+    metadata_conditional.SetFileSearchContext( file_search_context_mc )
+    
+    comparator.SetMetadataConditional( metadata_conditional )
+    
+    comparators.append( comparator )
+    
+    comparator = ClientDuplicatesAutoResolutionComparators.PairComparatorRelativeFileInfo()
+    
+    comparator.SetMultiplier( 1.00 )
+    comparator.SetDelta( 0 )
+    comparator.SetNumberTest( ClientNumberTest.NumberTest( operator = ClientNumberTest.NUMBER_TEST_OPERATOR_LESS_THAN ) )
+    comparator.SetSystemPredicate( ClientSearchPredicate.Predicate( predicate_type = ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_SIZE ) )
+    
+    comparators.append( comparator )
+    
+    selector.SetComparators( comparators )
+    
+    duplicates_auto_resolution_rule.SetPairSelector( selector )
+    
+    #
+    
+    duplicates_auto_resolution_rule.SetAction( HC.DUPLICATE_BETTER )
+    duplicates_auto_resolution_rule.SetDeleteInfo( False, True )
+    
+    #
+    
+    suggested_rules.append( duplicates_auto_resolution_rule )
+    
+    # ############
+    
+    location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY )
+    
+    predicates = [
+        ClientSearchPredicate.Predicate( predicate_type = ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_MIME, value = ( HC.IMAGE_GIF, ) ),
+        ClientSearchPredicate.Predicate( predicate_type = ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HEIGHT, value = ClientNumberTest.NumberTest.STATICCreateFromCharacters( '>', 128 ) ),
+        ClientSearchPredicate.Predicate( predicate_type = ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_WIDTH, value = ClientNumberTest.NumberTest.STATICCreateFromCharacters( '>', 128 ) )
+    ]
+    
+    file_search_context_1 = ClientSearchFileSearchContext.FileSearchContext(
+        location_context = location_context,
+        predicates = predicates
+    )
+    
+    predicates = [
+        ClientSearchPredicate.Predicate( predicate_type = ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_MIME, value = ( HC.IMAGE_PNG, ) ),
+        ClientSearchPredicate.Predicate( predicate_type = ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HEIGHT, value = ClientNumberTest.NumberTest.STATICCreateFromCharacters( '>', 128 ) ),
+        ClientSearchPredicate.Predicate( predicate_type = ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_WIDTH, value = ClientNumberTest.NumberTest.STATICCreateFromCharacters( '>', 128 ) )
+    ]
+    
+    file_search_context_2 = ClientSearchFileSearchContext.FileSearchContext(
+        location_context = location_context,
+        predicates = predicates
+    )
+    
+    potential_duplicates_search_context = ClientPotentialDuplicatesSearchContext.PotentialDuplicatesSearchContext()
+    
+    potential_duplicates_search_context.SetFileSearchContext1( file_search_context_1 )
+    potential_duplicates_search_context.SetFileSearchContext2( file_search_context_2 )
+    potential_duplicates_search_context.SetDupeSearchType( ClientDuplicates.DUPE_SEARCH_BOTH_FILES_MATCH_DIFFERENT_SEARCHES )
+    potential_duplicates_search_context.SetPixelDupesPreference( ClientDuplicates.SIMILAR_FILES_PIXEL_DUPES_REQUIRED )
+    potential_duplicates_search_context.SetMaxHammingDistance( 0 )
+    
+    duplicates_auto_resolution_rule = DuplicatesAutoResolutionRule( 'pixel-perfect gifs vs pngs - except when png is smaller' )
+    
+    duplicates_auto_resolution_rule.SetPotentialDuplicatesSearchContext( potential_duplicates_search_context )
+    
+    selector = ClientDuplicatesAutoResolutionComparators.PairSelector()
+    
+    comparators = []
+    
+    comparator = ClientDuplicatesAutoResolutionComparators.PairComparatorOneFile()
+    
+    comparator.SetLookingAt( ClientDuplicatesAutoResolutionComparators.LOOKING_AT_A )
+    
+    file_search_context_mc = ClientSearchFileSearchContext.FileSearchContext(
+        predicates = [ ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_MIME, value = ( HC.IMAGE_GIF, ) ) ]
     )
     
     metadata_conditional = ClientMetadataConditional.MetadataConditional()
@@ -946,8 +1093,7 @@ def GetDefaultRuleSuggestions() -> list[ DuplicatesAutoResolutionRule ]:
     predicates = [
         ClientSearchPredicate.Predicate( predicate_type = ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_MIME, value = ( HC.GENERAL_IMAGE, ) ),
         ClientSearchPredicate.Predicate( predicate_type = ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HEIGHT, value = ClientNumberTest.NumberTest.STATICCreateFromCharacters( '>', 128 ) ),
-        ClientSearchPredicate.Predicate( predicate_type = ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_WIDTH, value = ClientNumberTest.NumberTest.STATICCreateFromCharacters( '>', 128 ) ),
-        ClientSearchPredicate.Predicate( predicate_type = ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HAS_TRANSPARENCY, value = False )
+        ClientSearchPredicate.Predicate( predicate_type = ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_WIDTH, value = ClientNumberTest.NumberTest.STATICCreateFromCharacters( '>', 128 ) )
     ]
     
     file_search_context_1 = ClientSearchFileSearchContext.FileSearchContext(
@@ -1034,7 +1180,7 @@ def GetDefaultRuleSuggestions() -> list[ DuplicatesAutoResolutionRule ]:
     comparator = ClientDuplicatesAutoResolutionComparators.PairComparatorRelativeFileInfo()
     
     comparator.SetMultiplier( 1.00 )
-    comparator.SetDelta( 0 )
+    comparator.SetDelta( 1000 * 86400 * 7 )
     comparator.SetNumberTest( ClientNumberTest.NumberTest( operator = ClientNumberTest.NUMBER_TEST_OPERATOR_LESS_THAN ) )
     comparator.SetSystemPredicate( ClientSearchPredicate.Predicate( predicate_type = ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_IMPORT_TIME ) )
     

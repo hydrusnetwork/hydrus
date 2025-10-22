@@ -30,5 +30,3 @@ When you are making a parser, consider this checklist (you might want to copy/ha
 *   Is the file hash available anywhere?
 *   Is a source/post time available?
 *   Is a source URL available? Is it good quality, or does it often just point to an artist's base twitter profile? If you pull it from text or a tooltip, is it clipped for longer URLs?
-
-[Taken a break? Now let's put it all together ---->](downloader_completion.md)
