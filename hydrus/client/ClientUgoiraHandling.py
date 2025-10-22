@@ -111,14 +111,14 @@ def GetFrameDurationsMSFromNote( media: ClientMediaResult.MediaResult ):
     return None
     
 
-def HasFrameTimesNote( media: ClientMediaResult.MediaResult ):
+def HasFrameTimesNote( media_result: ClientMediaResult.MediaResult ):
     
-    if not media.HasNotes():
+    if not media_result.HasNotes():
         
         return False
         
     
-    names_to_notes = media.GetNotesManager().GetNamesToNotes()
+    names_to_notes = media_result.GetNotesManager().GetNamesToNotes()
     
     return 'ugoira json' in names_to_notes or 'ugoira frame delay array' in names_to_notes
     

@@ -427,6 +427,11 @@ class Media( object ):
         raise NotImplementedError()
         
     
+    def HasSimulatedDuration( self ) -> bool:
+        
+        raise NotImplementedError()
+        
+    
     def HasStaticImages( self ) -> bool:
         
         raise NotImplementedError()
@@ -1484,6 +1489,8 @@ class MediaCollection( MediaList, Media ):
         self._locations_manager = None
         self._file_viewing_stats_manager = None
         
+        self._has_simulated_duration = False
+        
         self._internals_dirty = False
         
         self._RecalcInternals()
@@ -1675,6 +1682,8 @@ class MediaCollection( MediaList, Media ):
         if duration_sum > 0: self._duration = duration_sum
         else: self._duration = None
         
+        self._has_simulated_duration = True in ( media.HasSimulatedDuration() for media in self._sorted_media )
+        
         self._has_audio = True in ( media.HasAudio() for media in self._sorted_media )
         
         self._has_notes = True in ( media.HasNotes() for media in self._sorted_media )
@@ -1860,6 +1869,11 @@ class MediaCollection( MediaList, Media ):
     def HasDuration( self ):
         
         return self._duration is not None
+        
+    
+    def HasSimulatedDuration( self ) -> bool:
+        
+        return self._has_simulated_duration
         
     
     def HasStaticImages( self ):
@@ -2085,6 +2099,11 @@ class MediaSingleton( Media ):
     def HasDuration( self ):
         
         return self._media_result.HasDuration()
+        
+    
+    def HasSimulatedDuration( self ) -> bool:
+        
+        return self._media_result.HasSimulatedDuration()
         
     
     def HasStaticImages( self ):

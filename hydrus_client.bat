@@ -24,7 +24,7 @@ IF ERRORLEVEL 1 (
 	
 )
 
-REM You can copy this file to 'hydrus_client-user.bat' and add in your own launch parameters here if you like, and a git pull won't overwrite the file.
+REM You can copy this file to 'hydrus_client-user.bat' and add in your own launch parameters here if you like. A git pull won't overwrite that filename.
 REM Just tack new params on like this:
 REM start "" "pythonw" hydrus_client.pyw -d="E:\hydrus"
 

@@ -1356,7 +1356,7 @@ class Canvas( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
                 self._media_container.ZoomToZoomPercent( new_zoom )
                 
             elif action == CAC.SIMPLE_ZOOM_TO_PERCENTAGE_CENTER:
-                                                        
+                
                 new_zoom = command.GetSimpleData()
                 
                 self._media_container.ZoomToZoomPercent( new_zoom, zoom_center_type_override = ClientGUICanvasMedia.ZOOM_CENTERPOINT_VIEWER_CENTER )
@@ -1368,6 +1368,28 @@ class Canvas( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
                 from hydrus.core.files.images import HydrusImageNormalisation
                 
                 HydrusImageNormalisation.SetDoICCProfileNormalisation( result )
+                
+            elif action in ( CAC.SIMPLE_FLIP_TRANSPARENCY_CHECKERBOARD_MEDIA_VIEWER, CAC.SIMPLE_FLIP_TRANSPARENCY_CHECKERBOARD_MEDIA_VIEWER_DUPLICATE_FILTER, CAC.SIMPLE_FLIP_TRANSPARENCY_CHECKERBOARD_GREENSCREEN ):
+                
+                if action == CAC.SIMPLE_FLIP_TRANSPARENCY_CHECKERBOARD_MEDIA_VIEWER:
+                    
+                    CG.client_controller.new_options.FlipBoolean( 'draw_transparency_checkerboard_media_canvas' )
+                    
+                elif action == CAC.SIMPLE_FLIP_TRANSPARENCY_CHECKERBOARD_MEDIA_VIEWER_DUPLICATE_FILTER:
+                    
+                    CG.client_controller.new_options.FlipBoolean( 'draw_transparency_checkerboard_media_canvas_duplicates' )
+                    
+                elif action == CAC.SIMPLE_FLIP_TRANSPARENCY_CHECKERBOARD_GREENSCREEN:
+                    
+                    CG.client_controller.new_options.FlipBoolean( 'draw_transparency_checkerboard_as_greenscreen' )
+                    
+                else:
+                    
+                    raise Exception( 'Unknown action!' )
+                    
+                
+                CG.client_controller.pub( 'clear_image_cache' )
+                CG.client_controller.pub( 'clear_image_tile_cache' )
                 
             else:
                 

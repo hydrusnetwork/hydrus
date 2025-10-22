@@ -660,11 +660,9 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
     
     def _CheckFolder( self, job_status: ClientThreading.JobStatus ):
         
-        path_parsing_job = ClientFiles.PathParsingJob( self._path, search_subdirectories = self._search_subdirectories )
+        ( file_paths, sidecar_paths ) = ClientFiles.GetAllFilePaths( self._path, self._search_subdirectories )
         
-        ( all_paths, num_sidecars ) = ClientFiles.GetAllFilePaths( [ path_parsing_job ] )
-        
-        paths_to_file_seeds = { path : ClientImportFileSeeds.FileSeed( ClientImportFileSeeds.FILE_SEED_TYPE_HDD, path ) for path in all_paths }
+        paths_to_file_seeds = { path : ClientImportFileSeeds.FileSeed( ClientImportFileSeeds.FILE_SEED_TYPE_HDD, path ) for path in file_paths }
         
         new_paths = [ path for ( path, file_seed ) in paths_to_file_seeds.items() if not self._file_seed_cache.HasFileSeed( file_seed ) ]
         

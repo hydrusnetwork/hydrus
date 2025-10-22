@@ -138,6 +138,48 @@ class MediaResult( object ):
         return ( self._file_info_manager.width, self._file_info_manager.height )
         
     
+    def GetSimulatedDurationMSAndSource( self ):
+        
+        if self._file_info_manager.mime == HC.ANIMATION_UGOIRA:
+            
+            num_frames = self._file_info_manager.num_frames
+            
+            if num_frames is not None and num_frames > 1:
+                
+                from hydrus.client import ClientUgoiraHandling
+                
+                if ClientUgoiraHandling.HasFrameTimesNote( self ):
+                    
+                    try:
+                        
+                        # this is more work than we'd normally want to do, but prettyinfolines is called on a per-file basis so I think we are good. a tiny no-latency json load per human click is fine
+                        # we'll see how it goes
+                        frame_durations_ms = ClientUgoiraHandling.GetFrameDurationsMSFromNote( self )
+                        
+                        if frame_durations_ms is not None:
+                            
+                            note_duration_ms = sum( frame_durations_ms )
+                            
+                            return ( note_duration_ms, 'note-based' )
+                            
+                        
+                    except:
+                        
+                        return ( 0, 'unknown note-based duration' )
+                        
+                    
+                else:
+                    
+                    simulated_duration_ms = num_frames * ClientUgoiraHandling.UGOIRA_DEFAULT_FRAME_DURATION_MS
+                    
+                    return ( simulated_duration_ms, 'speculated' )
+                    
+                
+            
+        
+        return ( 0, 'unknown simulated duration request' )
+        
+    
     def GetSize( self ):
         
         return self._file_info_manager.size
@@ -163,6 +205,21 @@ class MediaResult( object ):
         duration_ms = self._file_info_manager.duration_ms
         
         return duration_ms is not None and duration_ms > 0
+        
+    
+    def HasSimulatedDuration( self ) -> bool:
+        
+        if not self.HasDuration():
+            
+            if self._file_info_manager.mime == HC.ANIMATION_UGOIRA:
+                
+                num_frames = self._file_info_manager.num_frames
+                
+                return num_frames is not None and num_frames > 1
+                
+            
+        
+        return False
         
     
     def HasNotes( self ):

@@ -5,6 +5,7 @@ from qtpy import QtWidgets as QW
 from qtpy import QtGui as QG
 
 from hydrus.core import HydrusConstants as HC
+from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusLists
@@ -2286,7 +2287,19 @@ class Thumbnail( Selectable ):
         
         painter.fillRect( thumbnail_border, thumbnail_border, width - ( thumbnail_border * 2 ), height - ( thumbnail_border * 2 ), media_panel_background_colour )
         
-        raw_thumbnail_qt_image = thumbnail_hydrus_bmp.GetQtImage()
+        try:
+            
+            raw_thumbnail_qt_image = thumbnail_hydrus_bmp.GetQtImage()
+            
+        except Exception as e:
+            
+            HydrusData.ShowText( f'Failed to render thumbnail for file {media.GetDisplayMedia().GetHash().hex()}!' )
+            HydrusData.ShowException( e, do_wait = False )
+            
+            thumbnail_hydrus_bmp = CG.client_controller.thumbnails_cache.GetHydrusPlaceholderThumbnail()
+            
+            raw_thumbnail_qt_image = thumbnail_hydrus_bmp.GetQtImage()
+            
         
         thumbnail_dpr_percent = new_options.GetInteger( 'thumbnail_dpr_percent' )
         
@@ -2666,7 +2679,7 @@ class Thumbnail( Selectable ):
             
             icons_to_draw.append( CC.global_pixmaps().sound )
             
-        elif media.HasDuration():
+        elif media.HasDuration() or media.HasSimulatedDuration():
             
             icons_to_draw.append( CC.global_pixmaps().play )
             

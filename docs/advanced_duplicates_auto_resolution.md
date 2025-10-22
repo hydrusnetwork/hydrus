@@ -154,7 +154,11 @@ I strongly recommend you stay on semi-automatic to start. If you have tuned them
 
 ## now what?
 
-Once you have played with easy jpg/png pixel duplicates and have a feel for the UI, let's look at the other suggested rules. Try adding them, and browse through their options.
+Once you have played with easy jpg/png pixel duplicates and have a feel for the UI, let's look at the other suggested rules. Try adding them just to browse through their settings.
+
+### pixel-perfect gifs vs pngs
+
+Everything we said about jpegs vs pngs works for static gifs too.
 
 ### pixel-perfect pairs
 
@@ -185,14 +189,13 @@ Note we don't have to compare resolution because pixel-perfect files always have
 
 ### visually similar pairs
 
-I wrote an algorithm specifically for this auto-resolution system that renders the two images and inspects them with a lot of math to determine if they are "visual duplicates". You may have seen it in the manual duplicate filter too. Imagine it as a much more precise version of the original similar file search that populates the "potential duplicates" queue. It ignores compression artifacts or resizes but will notice artist corrections, watermarks, or recolours. Because we want to trust it to make automatic decisions, the algorithm is intended to be as very confident when it does say "yes they are visual duplicates", so I have tuned it to err on the side of a false negative (it sometimes says that a pair of files are not duplicates when they actually are, but it will very rarely say that two files are duplicates when they are not). It is hacky voodoo, but it works pretty good!
+I wrote an algorithm specifically for this auto-resolution system that renders the two images and inspects them with a lot of math to determine if they are "visual duplicates". You have probably seen it in the manual duplicate filter already. Imagine it as a much smarter version of the original similar file search that populates the "potential duplicates" queue. It tries to ignore compression artifacts or resizes but will detect artist corrections, watermarks, or recolours. Because we want to trust it to make automatic decisions, the algorithm is intended to be as very confident when it does say "yes they are visual duplicates", so I have tuned it to err on the side of a false negative (it sometimes says that a pair of files are not duplicates when they actually are, but it will very rarely say that two files are duplicates when they are not). It is hacky voodoo, but it works pretty good!
 
 The 'visually similar pairs' suggested rules use this tool. Let's first look at the search:
 
 - **must not be pixel dupes** - We don't care about pixel dupes, so we'll exclude them
 - **maximum search distance: 0** - Let's stick with 'exact match' for now. The visual duplicates algorithm is not going to get many hits at higher search distances.
 - **system:filetype is image** - Again, this is important, just leave it in there like the width/height tests.
-- **system:no transparency** - The algorithm doesn't support transparency yet, so including these files is just wasted work.
 
 Now the comparators:
 
@@ -202,16 +205,21 @@ Now the comparators:
 - **A is larger to B** - We want bigger files.
 - **A is taller or equal to B** - We want bigger files, but we'll accept the same resolution too.
 - **A is wider or equal to B** - We want bigger files, but we'll accept the same resolution too.
-- **A was imported earlier than B** - This is optional, depending on which suggested rule you add. It acts as another safety barrier. I'm an old guy with many old and original files, so I like it and recommend it.
+- **A was imported earlier than B + 7 days** - This is optional, depending on which suggested rule you add. It acts as another safety barrier to make sure you aren't removing a nine year old original with some unintentionally bloated re-encode from yesterday. The +7 days buffer is to ensure that we aren't too strict about a group of files that _were_ all imported at the same time. I'm an old guy with many old and original files, so I like and recommend this rule.
 
 Note that a visual duplicates calculation is CPU expensive--often a second of time for each pair actioned. Be careful where you deploy it--don't have it operate on five different rules at a similar files search distance of 12, for instance!
 
 This tool can be trusted in fully automatic rules at 'almost certainly' confidence. If you discover any false positive pairs at any distance, I am very interested in seeing them!
 
+!!! info "transparency"
+    The visual duplicates test can handle pairs of files with transparency. It isn't super strict, but it will ensure the the two files' alpha channels line up closely. Note that hydrus already discards transparency data for files that have non-obvious transparency (e.g. one pixel in the corner, or a scatter of 99% opaque pixels due to an anti-aliasing artifact)--when we are talking transparency, we are hopefully talking about something a human will notice.
+    
+    If only one file of the pair has transparency, these are counted as 'not visual duplicates'. If they still look the same to you, try changing your media viewer background colour!
+
 !!! info "incidence"
     In my testing, you will encounter one of these pairs every ~100 files you import. Having a rule here is heavy work, but it will clear out many boring duplicate pairs, about 5-10% of all potential duplicates at 0 search distance.
     
-    As I improve the tool's confidence across differing jpeg subsampling and wider ranges of jpeg encoding quality, the percentage of easy duplicates it will cover will only increase.
+    If I can improve the visual duplicates test's accuracy, the percentage of easy duplicates it will cover will increase.
 
 ## future
 

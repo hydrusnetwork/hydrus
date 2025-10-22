@@ -1,3 +1,5 @@
+import math
+
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
 
@@ -41,6 +43,7 @@ class EditPotentialDuplicatesSearchContextPanel( ClientGUICommon.StaticBox ):
         
         self._count_job_status = ClientThreading.JobStatus( cancellable = True )
         self._potential_duplicate_id_pairs_and_distances_still_to_search = ClientPotentialDuplicatesSearchContext.PotentialDuplicateIdPairsAndDistances( [] )
+        self._estimate_confidence_reached = False
         
         self._num_potential_duplicate_pairs = 0
         
@@ -89,7 +92,7 @@ class EditPotentialDuplicatesSearchContextPanel( ClientGUICommon.StaticBox ):
         check_manager = ClientGUICommon.CheckboxManagerOptions( 'potential_duplicate_pairs_search_context_panel_stops_to_estimate' )
         check_manager.AddNotifyCall( self.NotifyCountOptionsChanged )
         
-        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCheck( 'state an estimate of final count after 1,000 pairs matched', 'You can choose to have this panel produce an exact count every time, or stop early and estimate.', check_manager ) )
+        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCheck( 'try to state an estimate of final count rather than counting everything', 'You can choose to have this panel produce an exact count every time, or stop early and estimate.', check_manager ) )
         
         self._cog_button = ClientGUIMenuButton.CogIconButton( self, menu_template_items )
         
@@ -201,7 +204,7 @@ class EditPotentialDuplicatesSearchContextPanel( ClientGUICommon.StaticBox ):
                 raise HydrusExceptions.CancelledException()
                 
             
-            if self._num_potential_duplicate_pairs >= 1000 and CG.client_controller.new_options.GetBoolean( 'potential_duplicate_pairs_search_context_panel_stops_to_estimate' ):
+            if self._WeAreDoingACountEstimateAndHaveEnough():
                 
                 self._UpdateCountLabel()
                 
@@ -289,7 +292,14 @@ class EditPotentialDuplicatesSearchContextPanel( ClientGUICommon.StaticBox ):
             # ok randomise the order we'll do this guy, but only at the block level
             # we'll preserve order each block came in since we'll then keep db-proximal indices close together on each actual block fetch
             
-            potential_duplicate_id_pairs_and_distances.RandomiseBlocks()
+            if CG.client_controller.new_options.GetBoolean( 'potential_duplicate_pairs_search_context_panel_stops_to_estimate' ):
+                
+                potential_duplicate_id_pairs_and_distances.RandomiseForRichEstimate()
+                
+            else:
+                
+                potential_duplicate_id_pairs_and_distances.RandomiseForFastSearch()
+                
             
             return potential_duplicate_id_pairs_and_distances
             
@@ -350,6 +360,7 @@ class EditPotentialDuplicatesSearchContextPanel( ClientGUICommon.StaticBox ):
         self._count_job_status = ClientThreading.JobStatus( cancellable = True )
         
         self._potential_duplicate_id_pairs_and_distances_still_to_search = self._potential_duplicate_id_pairs_and_distances.Duplicate()
+        self._estimate_confidence_reached = False
         
         self._DoCountWork()
         
@@ -377,7 +388,7 @@ class EditPotentialDuplicatesSearchContextPanel( ClientGUICommon.StaticBox ):
             
         else:
             
-            if self._num_potential_duplicate_pairs >= 1000 and CG.client_controller.new_options.GetBoolean( 'potential_duplicate_pairs_search_context_panel_stops_to_estimate' ):
+            if self._WeAreDoingACountEstimateAndHaveEnough():
                 
                 if len( self._potential_duplicate_id_pairs_and_distances_still_to_search ) == 0:
                     
@@ -422,6 +433,98 @@ class EditPotentialDuplicatesSearchContextPanel( ClientGUICommon.StaticBox ):
             
         
         self._num_potential_duplicate_pairs_label.setText( text )
+        
+    
+    def _WeAreDoingACountEstimateAndHaveEnough( self ):
+        
+        if not CG.client_controller.new_options.GetBoolean( 'potential_duplicate_pairs_search_context_panel_stops_to_estimate' ):
+            
+            return False
+            
+        
+        # this is mostly AI vomit, but I'm generally there. 95% of <2.5%, simple as
+        
+        Z_CONFIDENCE = 1.9599639845 # 95% confidence
+        REL_ERROR  = 0.025 # 2.5% error
+        
+        def finite_population_correction( n: int, N: int ) -> float:
+            """FPC multiplier for standard errors; 1 if N is None or n==0."""
+            
+            if n <= 1:
+                
+                return 1.0
+                
+            
+            return math.sqrt((N - n) / (N - 1))
+            
+        
+        def wilson_ci( x: int, n: int, z: float ) -> tuple[float, float]:
+            """Wilson interval for p, clipped to [0,1]."""
+            
+            if n <= 0:
+                
+                return (0.0, 1.0)
+                
+            
+            phat = x / n
+            z2 = z*z
+            denom = 1 + z2/n
+            center = phat + z2/(2*n)
+            adj = z * math.sqrt(phat*(1-phat)/n + z2/(4*n*n))
+            lo = max(0.0, (center - adj)/denom)
+            hi = min(1.0, (center + adj)/denom)
+            
+            return ( lo, hi )
+            
+        
+        def wilson_ci_with_fpc( x: int, n: int, z: float, N: int ) -> tuple[float, float]:
+            """Apply FPC by shrinking the Wilson half-width (approximation)."""
+            
+            ( lo, hi ) = wilson_ci( x, n, z )
+            mid = 0.5*(lo + hi)
+            half = 0.5*(hi - lo)
+            half *= finite_population_correction(n, N)
+            
+            return ( max( 0.0, mid - half ), min( 1.0, mid + half ) )
+            
+        
+        def relative_halfwidth_from_counts( x: int, n: int, N: int ) -> float:
+            """
+            Returns rel_halfwidth where that is halfwidth / phat.
+            If x==0 or n==0, rel_halfwidth is math.inf.
+            """
+            
+            z = Z_CONFIDENCE
+            ( lo, hi ) = wilson_ci_with_fpc( x, n, z, N )
+            phat = x/n if n > 0 else 0.0
+            half = 0.5*(hi - lo)
+            rel = half / phat if phat > 0 else math.inf
+            
+            return rel
+            
+        
+        x = int( self._num_potential_duplicate_pairs )
+        n = len( self._potential_duplicate_id_pairs_and_distances ) - len( self._potential_duplicate_id_pairs_and_distances_still_to_search )
+        N = len( self._potential_duplicate_id_pairs_and_distances )
+        
+        if n == N or self._estimate_confidence_reached:
+            
+            return True
+            
+        
+        rel = relative_halfwidth_from_counts( x, n, N )
+        
+        should_stop = rel <= REL_ERROR
+        
+        if should_stop:
+            
+            self._estimate_confidence_reached = True
+            
+        
+        return should_stop
+        
+        # old way lol
+        # return self._num_potential_duplicate_pairs >= 1000
         
     
     def DupeSearchTypeChanged( self ):
@@ -470,6 +573,12 @@ class EditPotentialDuplicatesSearchContextPanel( ClientGUICommon.StaticBox ):
     
     def NotifyNewDupePairs( self ):
         
+        # TODO: more evidence it would be nice to media result all duplicate relations
+        # ok this guy is called every time we set dupes anywhere and it sucks since it has to reinitialise the id cache
+        # sooooooo... why not have a whole content update pipeline for duplicate relations and then we just edit our initial/matching stores here on actual updates?
+        # I'm not sure if we can be that smart, but when media results are aware of duplicate relationships, I'll bet we can do something
+        # we could even, earlier than that, have a 'now potential duplicate pair (media_id, media_id)' pubsub that this guy just watches for. we'd integrate it into the master store, update 'to search', and go
+        # or maybe the pair factory watches it and we just get a 'hey wake up' signal later
         self._RefreshPotentialDuplicateIdPairsAndDistances()
         
     

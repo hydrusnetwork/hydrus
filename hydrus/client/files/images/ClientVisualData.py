@@ -1,7 +1,10 @@
+import typing
+
 import numpy
 
 import cv2
 
+from hydrus.core.files.images import HydrusImageColours
 from hydrus.core.files.images import HydrusImageHandling
 from hydrus.core.files.images import HydrusImageNormalisation
 
@@ -72,17 +75,22 @@ class LabHistograms( ClientCachesBase.CacheableObject ):
 
 class VisualData( ClientCachesBase.CacheableObject ):
     
-    def __init__( self, resolution, had_alpha: bool, lab_histograms: LabHistograms ):
+    def __init__( self, resolution, lab_histograms: LabHistograms, alpha_hist: typing.Optional[ numpy.ndarray ] = None ):
         
         self.resolution = resolution
-        self.had_alpha = had_alpha
         self.lab_histograms = lab_histograms
+        self.alpha_hist = alpha_hist
         
     
     def GetEstimatedMemoryFootprint( self ) -> int:
         
         # float32
         return self.lab_histograms.GetEstimatedMemoryFootprint()
+        
+    
+    def HasAlpha( self ):
+        
+        return self.alpha_hist is not None
         
     
     def IsInteresting( self ):
@@ -194,26 +202,25 @@ result_str_lookup = {
     VISUAL_DUPLICATES_RESULT_NEAR_PERFECT : 'near-perfect visual duplicates',
 }
 
+def BlurChannelNumPy( numpy_image_channel: numpy.ndarray, sigmaX ):
+    
+    return cv2.GaussianBlur( numpy_image_channel, ( 0, 0 ), sigmaX = sigmaX )
+    
+
 def BlurRGBNumPy( numpy_image: numpy.ndarray, sigmaX ):
     
     return numpy.stack(
-        [ cv2.GaussianBlur( numpy_image[ ..., i ], (0, 0), sigmaX = sigmaX ) for i in range( 3 ) ],
+        [ BlurChannelNumPy( numpy_image[ ..., i ], sigmaX ) for i in range( 3 ) ],
         axis = -1
     )
     
 
 def FilesAreVisuallySimilarRegional( lab_tile_hist_1: VisualDataTiled, lab_tile_hist_2: VisualDataTiled ):
     
-    if lab_tile_hist_1.had_alpha or lab_tile_hist_2.had_alpha:
+    # alpha is tested at the simple stage, not here
+    if lab_tile_hist_1.had_alpha ^ lab_tile_hist_2.had_alpha:
         
-        if lab_tile_hist_1.had_alpha and lab_tile_hist_2.had_alpha:
-            
-            message = 'cannot determine visual duplicates\n(they have transparency)'
-            
-        else:
-            
-            message = 'not visual duplicates\n(one has transparency)'
-            
+        message = 'not visual duplicates\n(one has transparency)'
         
         return ( False, VISUAL_DUPLICATES_RESULT_NOT, message )
         
@@ -549,20 +556,6 @@ def FilesAreVisuallySimilarSimple( visual_data_1: VisualData, visual_data_2: Vis
     # if I do not scale images to be the same size, this guy falls over!
     # I guess the INTER_AREA or something is doing an implicit gaussian of some sort and my tuned numbers assume that
     
-    if visual_data_1.had_alpha or visual_data_2.had_alpha:
-        
-        if visual_data_1.had_alpha and visual_data_2.had_alpha:
-            
-            message = 'cannot determine visual duplicates\n(they have transparency)'
-            
-        else:
-            
-            message = 'not visual duplicates\n(one has transparency)'
-            
-        
-        return ( False, VISUAL_DUPLICATES_RESULT_NOT, message )
-        
-    
     if FilesHaveDifferentRatio( visual_data_1.resolution, visual_data_2.resolution ):
         
         return ( False, VISUAL_DUPLICATES_RESULT_NOT, 'not visual duplicates\n(different ratio)' )
@@ -571,6 +564,26 @@ def FilesAreVisuallySimilarSimple( visual_data_1: VisualData, visual_data_2: Vis
     if visual_data_1.ResolutionIsTooLow() or visual_data_2.ResolutionIsTooLow():
         
         return ( False, VISUAL_DUPLICATES_RESULT_NOT, 'cannot determine visual duplicates\n(too low resolution)' )
+        
+    
+    if visual_data_1.HasAlpha() and visual_data_2.HasAlpha():
+        
+        alpha_score = GetHistogramNormalisedWassersteinDistance( visual_data_1.alpha_hist, visual_data_2.alpha_hist )
+        
+        # tuning suite generally found that dupes had no score exceeding 0.001569
+        # we don't want to be crazy strict here, just catch very different alpha masks
+        if alpha_score > 0.005:
+            
+            message = 'not visual duplicates\n(transparency does not match)'
+            
+            return ( False, VISUAL_DUPLICATES_RESULT_NOT, message )
+            
+        
+    elif visual_data_1.HasAlpha() ^ visual_data_2.HasAlpha():
+        
+        message = 'not visual duplicates\n(one has transparency)'
+        
+        return ( False, VISUAL_DUPLICATES_RESULT_NOT, message )
         
     
     # this is useful to rule out easy false positives, but as expected it suffers from lack of fine resolution
@@ -661,8 +674,28 @@ def GenerateImageVisualDataNumPy( numpy_image: numpy.ndarray ) -> VisualData:
     
     numpy_image_rgb = HydrusImageNormalisation.StripOutAnyAlphaChannel( numpy_image )
     
-    # TODO: add an alpha histogram or something and an alpha comparison
-    had_alpha = numpy_image.shape != numpy_image_rgb.shape
+    alpha_hist = None
+    
+    has_alpha = numpy_image.shape != numpy_image_rgb.shape
+    
+    if has_alpha:
+        
+        alpha_channel = HydrusImageColours.GetNumPyAlphaChannel( numpy_image )
+        
+        if JPEG_ARTIFACT_BLUR_FOR_PROCESSING:
+            
+            alpha_channel = BlurChannelNumPy( alpha_channel, JPEG_ARTIFACT_GAUSSIAN_SIGMA_AT_100_ZOOM )
+            
+        
+        if NORMALISE_SCALE_FOR_LAB_HISTOGRAM_PROCESSING:
+            
+            alpha_channel = cv2.resize( alpha_channel, LAB_HISTOGRAM_NORMALISED_RESOLUTION, interpolation = cv2.INTER_AREA )
+            
+        
+        ( alpha_hist, alpha_gubbins ) = numpy.histogram( alpha_channel, bins = LAB_HISTOGRAM_NUM_BINS, range = ( 0, 255 ), density = True )
+        
+        alpha_hist = alpha_hist.astype( numpy.float32 )
+        
     
     #numpy_image_gray = cv2.cvtColor( numpy_image_rgb, cv2.COLOR_RGB2GRAY )
     
@@ -696,7 +729,7 @@ def GenerateImageVisualDataNumPy( numpy_image: numpy.ndarray ) -> VisualData:
     
     lab_histograms = LabHistograms( l_hist.astype( numpy.float32 ), a_hist.astype( numpy.float32 ), b_hist.astype( numpy.float32 ) )
     
-    return VisualData( resolution, had_alpha, lab_histograms )
+    return VisualData( resolution, lab_histograms, alpha_hist = alpha_hist )
     
 
 def GenerateImageVisualDataTiledNumPy( numpy_image: numpy.ndarray ) -> VisualDataTiled:

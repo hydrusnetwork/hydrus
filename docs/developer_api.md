@@ -618,6 +618,14 @@ Arguments (in JSON):
 Response:
 :   200 and no content.
 
+!!! note "Careful"
+    `all my files` and `all local files` are different!
+    
+    - Deleting from `all my files` sends files straight to the trash, no matter how many local file services they are in.
+    - Deleting from `all local files` removes files from the trash and triggers an immediate physical delete.
+    
+    Check [here](advanced_multiple_local_file_services.md#meta_file_domains) for more info.
+
 If you specify a file service, the file will only be deleted from that location. Only local file domains are allowed (so you can't delete from a file repository or unpin from ipfs yet), or the umbrella `all my files` and `all local files` domains. It defaults to `all my files`, which will delete from all local services (i.e. force sending to trash). Sending `all local files` on a file already in the trash will trigger a physical file delete. 
 
 ### **POST `/add_files/undelete_files`** { id="add_files_undelete_files" }

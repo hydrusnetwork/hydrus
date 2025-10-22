@@ -76,11 +76,38 @@ class PathParsingJob( object ):
         
     
 
-def GetAllFilePaths( path_parsing_jobs: list[ PathParsingJob ], do_human_sort = True, clear_out_sidecars = True ):
+def has_sidecar_ext( p ):
+    
+    return True in ( p.endswith( ext ) for ext in [ '.txt', '.json', '.xml' ] )
+    
+
+def get_comparable_sidecar_prefix( p ):
+    
+    ( path_dir, path_basename ) = os.path.split( p )
+    
+    if '.' in path_basename:
+        
+        path_basename_with_no_ext_guaranteed = path_basename.split( '.', 1 )[0]
+        
+    else:
+        
+        path_basename_with_no_ext_guaranteed = path_basename
+        
+    
+    return os.path.join( path_dir, path_basename_with_no_ext_guaranteed )
+    
+
+def GetAllFilePaths( path: str, search_subdirectories: bool, clear_out_sidecars = True, comparable_sidecar_prefixes = None ):
+    
+    if comparable_sidecar_prefixes is None:
+        
+        comparable_sidecar_prefixes = set()
+        
     
     file_paths = []
+    sidecar_paths = []
     
-    jobs_to_process = list( path_parsing_jobs )
+    jobs_to_process = [ PathParsingJob( path, search_subdirectories ) ]
     
     while len( jobs_to_process ) > 0:
         
@@ -103,54 +130,36 @@ def GetAllFilePaths( path_parsing_jobs: list[ PathParsingJob ], do_human_sort = 
         jobs_to_process = next_jobs_to_process
         
     
-    if do_human_sort:
-        
-        HydrusText.HumanTextSort( file_paths )
-        
+    HydrusText.HumanTextSort( file_paths )
     
-    num_files_with_sidecars = len( file_paths )
+    for file_path in file_paths:
+        
+        if not has_sidecar_ext( file_path ):
+            
+            comparable_sidecar_prefixes.add( get_comparable_sidecar_prefix( file_path ) )
+            
+        
     
     if clear_out_sidecars:
         
-        exts = [ '.txt', '.json', '.xml' ]
+        undifferentiated_file_paths = file_paths
         
-        def has_sidecar_ext( p ):
-            
-            if True in ( p.endswith( ext ) for ext in exts ):
-                
-                return True
-                
-            
-            return False
-            
+        file_paths = []
         
-        def get_base_prefix_component( p ):
+        for path in undifferentiated_file_paths:
             
-            base_prefix = os.path.basename( p )
-            
-            if '.' in base_prefix:
+            if has_sidecar_ext( path ) and get_comparable_sidecar_prefix( path ) in comparable_sidecar_prefixes:
                 
-                base_prefix = base_prefix.split( '.', 1 )[0]
+                sidecar_paths.append( path )
+                
+            else:
+                
+                file_paths.append( path )
                 
             
-            return base_prefix
-            
-        
-        # let's get all the 'Image123' in our 'path/to/Image123.jpg' list
-        all_non_ext_prefix_components = { get_base_prefix_component( file_path ) for file_path in file_paths if not has_sidecar_ext( file_path ) }
-        
-        def looks_like_a_sidecar( p ):
-            
-            # if we have Image123.txt, that's probably a sidecar!
-            return has_sidecar_ext( p ) and get_base_prefix_component( p ) in all_non_ext_prefix_components
-            
-        
-        file_paths = [ path for path in file_paths if not looks_like_a_sidecar( path ) ]
         
     
-    num_sidecars = num_files_with_sidecars - len( file_paths )
-    
-    return ( file_paths, num_sidecars )
+    return ( file_paths, sidecar_paths )
     
 
 def HasHumanReadableEmbeddedMetadata( path, mime, human_file_description = None ):

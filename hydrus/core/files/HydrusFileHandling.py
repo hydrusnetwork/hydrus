@@ -30,26 +30,6 @@ from hydrus.core.files import HydrusOLEHandling
 from hydrus.core.files.images import HydrusImageHandling
 from hydrus.core.networking import HydrusNetwork
 
-try:
-    
-    # noinspection PyUnresolvedReferences
-    import speedcopy
-    
-    speedcopy.patch_copyfile()
-    
-    SPEEDCOPY_OK = True
-    
-except Exception as speedcopy_e:
-    
-    if not isinstance( speedcopy_e, ImportError ):
-        
-        HydrusData.Print( 'Failed to initialise speedcopy:' )
-        HydrusData.PrintException( speedcopy_e )
-        
-    
-    SPEEDCOPY_OK = False
-    
-
 mimes_to_default_thumbnail_paths = collections.defaultdict( lambda: HydrusStaticDir.GetStaticPath( 'hydrus.png' ) )
 
 def InitialiseMimesToDefaultThumbnailPaths():

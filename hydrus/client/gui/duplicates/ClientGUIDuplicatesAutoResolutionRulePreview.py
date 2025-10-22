@@ -214,7 +214,7 @@ class PreviewPanel( ClientGUICommon.StaticBox ):
             # ok randomise the order we'll do this guy, but only at the block level
             # we'll preserve order each block came in since we'll then keep db-proximal indices close together on each actual block fetch
             
-            potential_duplicate_id_pairs_and_distances.RandomiseBlocks()
+            potential_duplicate_id_pairs_and_distances.RandomiseForRichEstimate()
             
             return potential_duplicate_id_pairs_and_distances
             

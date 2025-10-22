@@ -516,6 +516,8 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
             
             self._tags_box.tagsSelected.connect( self._suggested_tags.SetSelectedTags )
             
+            CG.client_controller.sub( self, '_UpdateShowDeleted', 'notify_options_manage_tags_show_deleted_mappings' )
+            
         
         def _EnterTags( self, tags, only_add = False, only_remove = False, forced_reason = None ):
             
@@ -941,7 +943,7 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
             
             CG.client_controller.new_options.FlipBoolean( 'manage_tags_show_deleted_mappings' )
             
-            self._UpdateShowDeleted()
+            CG.client_controller.pub( 'notify_options_manage_tags_show_deleted_mappings' )
             
         
         def _MigrateTags( self ):

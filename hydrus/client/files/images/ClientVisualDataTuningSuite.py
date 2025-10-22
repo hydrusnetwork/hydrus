@@ -7,12 +7,10 @@ from PIL import Image as PILImage
 from PIL import ImageDraw as PILDraw
 
 from hydrus.core import HydrusConstants as HC
-from hydrus.core import HydrusData
 from hydrus.core import HydrusPaths
 from hydrus.core.files.images import HydrusImageHandling
 
 from hydrus.client import ClientGlobals as CG
-from hydrus.client.duplicates import ClientDuplicatesComparisonStatements
 from hydrus.client.files.images import ClientVisualData
 
 pil_subsampling_lookup = {
@@ -21,7 +19,7 @@ pil_subsampling_lookup = {
     420 : '4:2:0'
 }
 
-def save_file( pil_image, out_dir, base_filename, suffix, original = False ):
+def save_file_jpeg( pil_image, out_dir, base_filename, suffix, original = False ):
     
     if original:
         
@@ -50,11 +48,288 @@ def save_file( pil_image, out_dir, base_filename, suffix, original = False ):
     return ( base_filename, dest_path, suffix, quality, subsampling, visual_data, visual_data_tiled )
     
 
-NUM_TO_DO = 5
+def save_file_png( pil_image, out_dir, base_filename, suffix ):
+    
+    dest_filename = f'{base_filename}_{suffix}.png'
+    
+    dest_path = os.path.join( out_dir, dest_filename )
+    
+    pil_image.save( dest_path, 'PNG' )
+    
+    # got to load so we can get subsampling and quality differences!!
+    numpy_image = HydrusImageHandling.GenerateNumPyImage( dest_path, HC.IMAGE_PNG, force_pil = True )
+    
+    visual_data = ClientVisualData.GenerateImageVisualDataNumPy( numpy_image )
+    
+    return ( base_filename, dest_path, suffix, visual_data )
+    
+
+NUM_TO_DO = 2
 
 def PercentileValue( some_numbers, percentile ):
     
     return float( sorted( some_numbers )[ int( len( some_numbers ) * percentile ) ] )
+    
+
+def RunTuningSuiteAlpha( test_dir: str ):
+    
+    out_dir = os.path.join( test_dir, 'out' )
+    
+    # clear out last test
+    if os.path.exists( out_dir ):
+        
+        HydrusPaths.DeletePath( out_dir )
+        
+    
+    reports = []
+    
+    source_filenames = os.listdir( test_dir )
+    
+    HydrusPaths.MakeSureDirectoryExists( out_dir )
+    
+    for source_filename in source_filenames:
+        
+        source_path = os.path.join( test_dir, source_filename )
+        
+        pil_image = HydrusImageHandling.GeneratePILImage( source_path )
+        
+        ( width, height ) = pil_image.size
+        
+        good_paths = set()
+        
+        correction_paths = set()
+        watermark_paths = set()
+        recolour_paths = set()
+        
+        ( base_filename, jpeg_gumpf ) = source_filename.rsplit( '.', 1 )
+        
+        good_paths.add( save_file_png( pil_image, out_dir, base_filename, 'original' ) )
+        
+        scale = random.randint( 90, 95 ) / 100
+        
+        pil_image_smaller = pil_image.resize( ( round( width * scale ), round( height * scale ) ), PILImage.Resampling.LANCZOS )
+        
+        good_paths.add( save_file_png( pil_image_smaller, out_dir, base_filename, 'bit_smaller' ) )
+        
+        #
+        
+        scale = random.randint( 80, 90 ) / 100
+        
+        pil_image_smaller = pil_image.resize( ( round( width * scale ), round( height * scale ) ), PILImage.Resampling.LANCZOS )
+        
+        good_paths.add( save_file_png( pil_image_smaller, out_dir, base_filename, 'even_smaller' ) )
+        
+        #
+        
+        # ok let's draw a soft grey line over our image to be a correction
+        
+        canvas = PILImage.new( 'RGBA', pil_image.size, ( 255, 255, 255, 0 ) )
+        
+        draw = PILDraw.Draw( canvas )
+        
+        x1 = random.randint( int( width / 4 ), int( width / 2 ) )
+        y1 = random.randint( int( height / 4 ), int( height / 2 ) )
+        x2 = x1 + random.randint( int( width / 16 ), int( width / 12 ) )
+        y2 = y1 + random.randint( int( height / 16 ), int( height / 12 ) )
+        
+        line_width = int( width / 200 )
+        
+        draw.line( ( x1, y1, x2, y2 ), fill = ( 128, 128, 128, 128 ), width = line_width )
+        
+        pil_image_correction = PILImage.alpha_composite( pil_image, canvas )
+        
+        del draw
+        
+        correction_paths.add( save_file_png( pil_image_correction, out_dir, base_filename, 'correction' ) )
+        
+        #
+        
+        # and now a box to be our watermark
+        
+        canvas = PILImage.new( 'RGBA', pil_image.size, ( 255, 255, 255, 0 ) )
+        
+        draw = PILDraw.Draw( canvas )
+        
+        x1 = random.randint( int( width / 4 ), int( width / 2 ) )
+        y1 = random.randint( int( height / 4 ), int( height / 2 ) )
+        x2 = x1 + random.randint( int( width / 20 ), int( width / 10 ) )
+        y2 = y1 + random.randint( int( height / 20 ), int( height / 10 ) )
+        
+        line_width = int( width / 50 )
+        
+        draw.rectangle( ( x1, y1, x2, y2 ), outline = ( 128, 128, 128, 64 ), width = line_width )
+        
+        pil_image_watermark = PILImage.alpha_composite( pil_image, canvas )
+        
+        del draw
+        
+        watermark_paths.add( save_file_png( pil_image_watermark, out_dir, base_filename, 'watermark' ) )
+        
+        #
+        
+        ( r, g, b, a ) = pil_image.split()
+        
+        recoloured_pil_image = PILImage.merge( 'RGBA', ( b, g, r, a ) )
+        
+        recolour_paths.add( save_file_png( recoloured_pil_image, out_dir, base_filename, 'recolour' ) )
+        
+        #
+        
+        good_paths_sorted = sorted( good_paths, key = lambda big_tuple: big_tuple[2] )
+        
+        all_good_pairs = list( itertools.combinations( good_paths_sorted, 2 ) )
+        
+        all_bad_paths = list( correction_paths )
+        all_bad_paths.extend( watermark_paths )
+        all_bad_paths.extend( recolour_paths )
+        
+        all_bad_pairs = list( itertools.product( all_bad_paths, good_paths_sorted ) )
+        
+        #
+        
+        def render_simple_image_to_report_string( base_filename, suffix_1, visual_data_1: ClientVisualData.VisualData, suffix_2, visual_data_2: ClientVisualData.VisualData ):
+            
+            components = []
+            
+            if visual_data_1.resolution == visual_data_2.resolution:
+                
+                components.append( f'{visual_data_1.resolution[0]}x{visual_data_1.resolution[1]}' )
+                
+            else:
+                
+                components.append( f'{visual_data_1.resolution[0]}x{visual_data_1.resolution[1]} vs {visual_data_2.resolution[0]}x{visual_data_2.resolution[1]}' )
+                
+            
+            return f'{base_filename} ({suffix_1} vs {suffix_2}): ' + ', '.join( components )
+            
+        
+        #
+        
+        report = 'Good pairs:\n\n'
+        
+        #
+        
+        simple_score_spam = []
+        simple_false_negatives = []
+        
+        alpha_scores = []
+        
+        lab_scores = []
+        
+        for (
+                ( base_filename_1, path_1, suffix_1, visual_data_1 ),
+                ( base_filename_2, path_2, suffix_2, visual_data_2 )
+        ) in all_good_pairs:
+            
+            pair_str = render_simple_image_to_report_string( base_filename_1, suffix_1, visual_data_1, suffix_2, visual_data_2 )
+            
+            if visual_data_1.HasAlpha() and visual_data_2.HasAlpha():
+                
+                alpha_score = ClientVisualData.GetHistogramNormalisedWassersteinDistance( visual_data_1.alpha_hist, visual_data_2.alpha_hist )
+                
+                alpha_scores.append( alpha_score )
+                
+            
+            ( interesting_tile, lab_score ) = ClientVisualData.GetVisualDataWassersteinDistanceScore( visual_data_1.lab_histograms, visual_data_2.lab_histograms )
+            
+            lab_scores.append( lab_score )
+            
+            ( simple_seems_good, simple_result, simple_score_statement ) = ClientVisualData.FilesAreVisuallySimilarSimple( visual_data_1, visual_data_2 )
+            
+            if not simple_seems_good:
+                
+                simple_false_negatives.append( f'Got a FALSE NEGATIVE simple test on: {pair_str}: {lab_score}' )
+                
+            
+        
+        report += 'Simple Scores:\n\n'
+        report += 'We never want to see a false negative here!\n\n'
+        
+        if len( alpha_scores ) > 0:
+            
+            report += f'Mean alpha score: {float( numpy.mean( alpha_scores ) )}\n'
+            report += f'95th percentile alpha score: {PercentileValue( alpha_scores, 0.95 )}\n'
+            report += f'Max alpha score: {max( alpha_scores )} (We want to set the threshold to be over this)\n\n'
+            
+        
+        report += f'Mean simple score: {float( numpy.mean( lab_scores ) )}\n'
+        report += f'95th percentile simple score: {PercentileValue( lab_scores, 0.95 )}\n'
+        report += f'Max simple score: {max( lab_scores )} (We want to set the threshold to be over this)\n\n'
+        
+        report += '\n'.join( simple_score_spam ) + '\n\n'
+        report += '\n'.join( simple_false_negatives ) + '\n\n'
+        
+        #
+        
+        report += 'Bad pairs:\n\n'
+        
+        #
+        
+        simple_score_spam = []
+        simple_false_positives = []
+        
+        alpha_scores = []
+        
+        lab_scores = []
+        
+        for (
+                ( base_filename_1, path_1, suffix_1, visual_data_1 ),
+                ( base_filename_2, path_2, suffix_2, visual_data_2 )
+        ) in all_bad_pairs:
+            
+            pair_str = render_simple_image_to_report_string( base_filename_1, suffix_1, visual_data_1, suffix_2, visual_data_2 )
+            
+            if visual_data_1.HasAlpha() and visual_data_2.HasAlpha():
+                
+                alpha_score = ClientVisualData.GetHistogramNormalisedWassersteinDistance( visual_data_1.alpha_hist, visual_data_2.alpha_hist )
+                
+                alpha_scores.append( alpha_score )
+                
+            
+            ( interesting_tile, lab_score ) = ClientVisualData.GetVisualDataWassersteinDistanceScore( visual_data_1.lab_histograms, visual_data_2.lab_histograms )
+            
+            lab_scores.append( lab_score )
+            
+            ( simple_seems_good, simple_result, simple_score_statement ) = ClientVisualData.FilesAreVisuallySimilarSimple( visual_data_1, visual_data_2 )
+            
+            if simple_seems_good:
+                
+                simple_false_positives.append( f'Got a false positive simple test on: {pair_str}: {lab_score}' )
+                
+            
+        
+        report += 'Simple Scores:\n\n'
+        report += 'A false positive here is ok. Pairs with extremely low simple scores are worthy of more investigation.\n\n'
+        
+        if len( alpha_scores ) > 0:
+            
+            report += f'Min alpha score: {min( alpha_scores )}\n'
+            report += f'5th percentile alpha score: {PercentileValue( alpha_scores, 0.05 )}\n'
+            report += f'Mean alpha score: {float( numpy.mean( alpha_scores ) )}\n'
+            report += f'Max alpha score: {max( alpha_scores )}\n\n'
+            
+        
+        report += f'Min simple score: {min( lab_scores )}\n'
+        report += f'5th percentile simple score: {PercentileValue( lab_scores, 0.05 )}\n'
+        report += f'Mean simple score: {float( numpy.mean( lab_scores ) )}\n'
+        report += f'Max simple score: {max( lab_scores )}\n\n'
+        
+        report += '\n'.join( simple_score_spam ) + '\n\n'
+        report += '\n'.join( simple_false_positives ) + '\n\n'
+        
+        #
+        
+        reports.append( report )
+        
+    
+    db_dir = CG.client_controller.GetDBDir()
+    
+    log_path = os.path.join( db_dir, 'visual_tuning.log' )
+    
+    with open( log_path, 'w', encoding = 'utf-8' ) as f:
+        
+        f.write( '\n\n'.join( reports ) )
+        
     
 
 def RunTuningSuite( test_dir: str ):
@@ -89,27 +364,27 @@ def RunTuningSuite( test_dir: str ):
         
         ( base_filename, jpeg_gumpf ) = source_filename.rsplit( '.', 1 )
         
-        good_paths.add( save_file( pil_image, out_dir, base_filename, 'original', original = True ) )
+        good_paths.add( save_file_jpeg( pil_image, out_dir, base_filename, 'original', original = True ) )
         
         for i in range( NUM_TO_DO ):
             
-            good_paths.add( save_file( pil_image, out_dir, base_filename, 'resave' ) )
+            good_paths.add( save_file_jpeg( pil_image, out_dir, base_filename, 'resave' ) )
             
             #
             
             scale = random.randint( 90, 95 ) / 100
             
-            pil_image_smaller = pil_image.resize( ( int( width * scale ), int( height * scale ) ), PILImage.Resampling.LANCZOS )
+            pil_image_smaller = pil_image.resize( ( round( width * scale ), round( height * scale ) ), PILImage.Resampling.LANCZOS )
             
-            good_paths.add( save_file( pil_image_smaller, out_dir, base_filename, 'bit_smaller' ) )
+            good_paths.add( save_file_jpeg( pil_image_smaller, out_dir, base_filename, 'bit_smaller' ) )
             
             #
             
             scale = random.randint( 80, 90 ) / 100
             
-            pil_image_smaller = pil_image.resize( ( int( width * scale ), int( height * scale ) ), PILImage.Resampling.LANCZOS )
+            pil_image_smaller = pil_image.resize( ( round( width * scale ), round( height * scale ) ), PILImage.Resampling.LANCZOS )
             
-            good_paths.add( save_file( pil_image_smaller, out_dir, base_filename, 'even_smaller' ) )
+            good_paths.add( save_file_jpeg( pil_image_smaller, out_dir, base_filename, 'even_smaller' ) )
             
             #
             
@@ -136,7 +411,7 @@ def RunTuningSuite( test_dir: str ):
             
             pil_image_correction = pil_image_rgba.convert( 'RGB' )
             
-            correction_paths.add( save_file( pil_image_correction, out_dir, base_filename, 'correction' ) )
+            correction_paths.add( save_file_jpeg( pil_image_correction, out_dir, base_filename, 'correction' ) )
             
             #
             
@@ -163,7 +438,7 @@ def RunTuningSuite( test_dir: str ):
             
             pil_image_watermark = pil_image_rgba.convert( 'RGB' )
             
-            watermark_paths.add( save_file( pil_image_watermark, out_dir, base_filename, 'watermark' ) )
+            watermark_paths.add( save_file_jpeg( pil_image_watermark, out_dir, base_filename, 'watermark' ) )
             
             #
             
@@ -171,7 +446,7 @@ def RunTuningSuite( test_dir: str ):
             
             recoloured_pil_image = PILImage.merge( 'RGB', ( b, g, r ) )
             
-            recolour_paths.add( save_file( recoloured_pil_image, out_dir, base_filename, 'recolour' ) )
+            recolour_paths.add( save_file_jpeg( recoloured_pil_image, out_dir, base_filename, 'recolour' ) )
             
         
         #
@@ -265,6 +540,7 @@ def RunTuningSuite( test_dir: str ):
         
         report += 'Simple Scores:\n\n'
         report += 'We never want to see a false negative here!\n\n'
+        
         report += f'Mean simple score: {float( numpy.mean( lab_scores ) )}\n'
         report += f'95th percentile simple score: {PercentileValue( lab_scores, 0.95 )}\n'
         report += f'Max simple score: {max( lab_scores )} (We want to set the threshold to be over this)\n\n'
@@ -478,9 +754,10 @@ def RunTuningSuite( test_dir: str ):
         
         report += 'Simple Scores:\n\n'
         report += 'A false positive here is ok. Pairs with extremely low simple scores are worthy of more investigation.\n\n'
+        
         report += f'Min simple score: {min( lab_scores )}\n'
+        report += f'5th percentile simple score: {PercentileValue( lab_scores, 0.05 )}\n'
         report += f'Mean simple score: {float( numpy.mean( lab_scores ) )}\n'
-        report += f'95th percentile simple score: {PercentileValue( lab_scores, 0.95 )}\n'
         report += f'Max simple score: {max( lab_scores )}\n\n'
         
         if len( lab_scores_444_420 ) > 0:
@@ -665,16 +942,7 @@ def RunTuningSuite( test_dir: str ):
         f.write( '\n\n'.join( reports ) )
         
     
-    
-    # run the good files against each other and the bad files. nice fat sample. record the different variables
-    # in the first stage, report ranges of the variables for each class of True/False match 'all watermarks had skew >blah'
-    # break the 444/442/440 differences out so we can see if there is a common subsampling coefficient we can insert
-    # I guess ideally in a future run the differences across subsampling will be normalised and we'd see no difference in future runs
-    # save this to a log file in the dir
-    
     # future:
     # in a future stage, we may wish to attempt a 'logistic regression' and have weighted coefficients on these, or a sample of them for which it is appropriate, to create a more powerful weighted score
     # might be nice to break the Lab channels into this reporting too, somehow. atm I make a wasserstein score on a 0.6, 0.2, 0.2 weighting or something. we should examine that!
-    
-    pass
     

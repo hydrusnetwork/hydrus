@@ -42,7 +42,7 @@ I try to release a new version every Wednesday by 8pm EST and write an accompany
         
         User testing suggests that the best solution for now is just to launch the program in X11, and I now encourage this for all Wayland users. Launching with the environment variable `QT_QPA_PLATFORM=xcb` (e.g. by putting `export QT_QPA_PLATFORM=xcb` in a boot script that launches `hydrus_client`) should do it. The 'xcb' should force X11.
         
-        It does not work for everyone, though. If it fails, another user says setting `WAYLAND_DISPLAY= ` (as in setting it to nothing), which forces hydrus (and its embedded mpv windows) to use Xwayland, is another solution. You might need to do `sudo apt install xwayland` first.
+        It does not work for everyone, though. If it fails, another user says setting `WAYLAND_DISPLAY=` (as in setting it to nothing) or unsetting it entirely with `unset WAYLAND_DISPLAY`, which forces hydrus (and its embedded mpv windows) to use Xwayland, is another solution. You might need to do `sudo apt install xwayland` first.
         
         I expect to revisit this question in future versions of Qt and Wayland--we'll see if the situation stabilises.
     
@@ -73,7 +73,7 @@ I try to release a new version every Wednesday by 8pm EST and write an accompany
     *   Get the .tag.gz. Extract it somewhere useful and create shortcuts to 'hydrus_client' and 'hydrus_server' as you like. The build is made on Ubuntu, so if you run something else, compatibility is hit and miss.
     *   If you have problems running the Ubuntu build, [running from source](running_from_source.md) is usually an improvement, and it is easy to set up these days.
     *   You might need to get 'libmpv1' or 'libmpv2' to get mpv working and playing video/audio. This is the mpv _library_, not the necessarily the player. Check _help->about_ to see if it is available--if not, see if you can get it like so:
-        * `apt install libmpv1` or `apt install libmpv2`
+        * `sudo apt install libmpv1` or `sudo apt install libmpv2`
         * Use _options->media_ to set your audio/video/animations to 'show using mpv' once you have it installed.
         * If the about window provides you an mpv error popup like this:  
     ```

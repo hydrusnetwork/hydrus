@@ -77,6 +77,7 @@ from hydrus.client.gui.pages import ClientGUIPageManager
 from hydrus.client.gui.pages import ClientGUIPages
 from hydrus.client.gui.pages import ClientGUIPagesCore
 from hydrus.client.gui.pages import ClientGUISession
+from hydrus.client.gui.panels import ClientGUILocalFileImports
 from hydrus.client.gui.panels import ClientGUIManageOptionsPanel
 from hydrus.client.gui.panels import ClientGUIScrolledPanels
 from hydrus.client.gui.panels import ClientGUIScrolledPanelsEdit
@@ -522,6 +523,9 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         
         self._statusbar_thread_updater = ClientGUIAsync.FastThreadToGUIUpdater( self._statusbar, self.RefreshStatusBar )
         self._statusbar_db_thread_updater = ClientGUIAsync.FastThreadToGUIUpdater( self._statusbar, self.RefreshStatusBarDB )
+        
+        self._pages_count_dirty = True
+        self._pages_history_dirty = True
         
         self._canvas_frames = [] # Keep references to canvas frames so they won't get garbage collected (canvas frames don't have a parent)
         
@@ -2126,7 +2130,7 @@ ATTACH "client.mappings.db" as external_mappings;'''
         
         frame = ClientGUITopLevelWindowsPanels.FrameThatTakesScrollablePanel( self, 'review files to import' )
         
-        panel = ClientGUIScrolledPanelsReview.ReviewLocalFileImports( frame, paths )
+        panel = ClientGUILocalFileImports.ReviewLocalFileImports( frame, paths )
         
         frame.SetPanel( panel )
         
@@ -2364,6 +2368,10 @@ ATTACH "client.mappings.db" as external_mappings;'''
             self._DoMenuBarStyleHack()
             
         
+        # TODO: This is all an ugly mess!
+        # we want a unified system that updates menu presence and labels all the time and contents only on menu open/change-during-open
+        # look at the pages count/history stuff for a basic dirty-bit example. make that nice, generalise it, and convert all this gubbins to that
+        
         self._menu_updater_file = self._InitialiseMenubarGetMenuUpdaterFile()
         self._menu_updater_database = self._InitialiseMenubarGetMenuUpdaterDatabase()
         self._menu_updater_network = self._InitialiseMenubarGetMenuUpdaterNetwork()
@@ -2373,8 +2381,8 @@ ATTACH "client.mappings.db" as external_mappings;'''
         self._menu_updater_tags = self._InitialiseMenubarGetMenuUpdaterTags()
         self._menu_updater_undo = self._InitialiseMenubarGetMenuUpdaterUndo()
         
-        self._menu_updater_pages_count = ClientGUIAsync.FastThreadToGUIUpdater( self, self._UpdateMenuPagesCount )
-        self._menu_updater_pages_history = ClientGUIAsync.FastThreadToGUIUpdater( self, self._UpdateMenuPagesHistory )
+        self._menu_updater_set_pages_count_dirty = ClientGUIAsync.FastThreadToGUIUpdater( self, self._SetPagesCountDirty )
+        self._menu_updater_set_pages_history_dirty = ClientGUIAsync.FastThreadToGUIUpdater( self, self._SetPagesHistoryDirty )
         
         self._boned_updater = self._InitialiseMenubarGetBonesUpdater()
         self._file_history_updater = self._InitialiseMenubarGetFileHistoryUpdater()
@@ -2415,9 +2423,12 @@ ATTACH "client.mappings.db" as external_mappings;'''
                 
             elif name == 'pages':
                 
-                ( menu, label ) = self._InitialiseMenuInfoPages()
+                ( self._pages_menu, label ) = self._InitialiseMenuInfoPages()
                 
-                self.ReplaceMenu( name, menu, label )
+                self._pages_menu.aboutToShow.connect( self._UpdateMenuPagesCountIfDirty )
+                self._pages_menu.aboutToShow.connect( self._UpdateMenuPagesHistoryIfDirty )
+                
+                self.ReplaceMenu( name, self._pages_menu, label )
                 
                 self._menu_updater_pages.update()
                 
@@ -2692,7 +2703,7 @@ ATTACH "client.mappings.db" as external_mappings;'''
         
         def publish_callable( result ):
             
-            self._UpdateMenuPagesCount()
+            self._pages_count_dirty = True
             
             #
             
@@ -3614,6 +3625,7 @@ ATTACH "client.mappings.db" as external_mappings;'''
         ClientGUIMenus.AppendMenuItem( tests, 'run the server test on fresh server', 'This will try to initialise an already running server.', self._RunServerTest )
         ClientGUIMenus.AppendSeparator( tests )
         ClientGUIMenus.AppendMenuItem( tests, 'run the visual duplicates tuning suite', 'Run some stats on some example files using the visual duplicates system.', self._RunVisualDuplicatesTuningSuite )
+        ClientGUIMenus.AppendMenuItem( tests, 'run the visual duplicates tuning suite (alpha)', 'Run some stats on some example files using the visual duplicates system, this time for pngs with alpha.', self._RunVisualDuplicatesTuningSuiteAlpha )
         ClientGUIMenus.AppendSeparator( tests )
         ClientGUIMenus.AppendMenuCheckItem( tests, 'fake petition mode', 'Fill the petition panels with fake local data for testing.', HG.fake_petition_mode, self._SwitchBoolean, 'fake_petition_mode' )
         ClientGUIMenus.AppendSeparator( tests )
@@ -3655,9 +3667,13 @@ ATTACH "client.mappings.db" as external_mappings;'''
         
         ClientGUIMenus.AppendSeparator( submenu )
         
-        self._menubar_network_paged_import_queues_paused = ClientGUIMenus.AppendMenuCheckItem( submenu, 'paged file import queues', 'Pause all file import queues.', self._controller.new_options.GetBoolean( 'pause_all_file_queues' ), self._controller.new_options.FlipBoolean, 'pause_all_file_queues' )
-        ClientGUIMenus.AppendMenuCheckItem( submenu, 'gallery searches', 'Pause all gallery imports\' searching.', self._controller.new_options.GetBoolean( 'pause_all_gallery_searches' ), self._controller.new_options.FlipBoolean, 'pause_all_gallery_searches' )
-        ClientGUIMenus.AppendMenuCheckItem( submenu, 'watcher checkers', 'Pause all watchers\' checking.', self._controller.new_options.GetBoolean( 'pause_all_watcher_checkers' ), self._controller.new_options.FlipBoolean, 'pause_all_watcher_checkers' )
+        self._menubar_network_pause_all_paged_importers = ClientGUIMenus.AppendMenuCheckItem( submenu, 'all paged importer work', 'Pause all file/search/check work in paged importers.', self._controller.new_options.GetBoolean( 'pause_all_paged_importers' ), self._controller.new_options.FlipBoolean, 'pause_all_paged_importers' )
+        
+        ClientGUIMenus.AppendSeparator( submenu )
+        
+        self._menubar_network_paged_import_queues_paused = ClientGUIMenus.AppendMenuCheckItem( submenu, 'paged file importing', 'Pause all file import queues in pages.', self._controller.new_options.GetBoolean( 'pause_all_file_queues' ), self._controller.new_options.FlipBoolean, 'pause_all_file_queues' )
+        ClientGUIMenus.AppendMenuCheckItem( submenu, 'paged gallery searching', 'Pause all gallery imports\' searching in pages.', self._controller.new_options.GetBoolean( 'pause_all_gallery_searches' ), self._controller.new_options.FlipBoolean, 'pause_all_gallery_searches' )
+        ClientGUIMenus.AppendMenuCheckItem( submenu, 'paged watcher checking', 'Pause all watchers\' checking, obviously in pages.', self._controller.new_options.GetBoolean( 'pause_all_watcher_checkers' ), self._controller.new_options.FlipBoolean, 'pause_all_watcher_checkers' )
         
         ClientGUIMenus.AppendMenu( menu, submenu, 'pause' )
         
@@ -6600,6 +6616,31 @@ ATTACH "client.mappings.db" as external_mappings;'''
         HydrusData.ShowText( 'Tuning suite done!' )
         
     
+    def _RunVisualDuplicatesTuningSuiteAlpha( self ):
+        
+        text = 'Turn back, do not proceed, click "no" NOW.'
+        
+        result = ClientGUIDialogsQuick.GetYesNo( self, text )
+        
+        if result != QW.QDialog.DialogCode.Accepted:
+            
+            return
+            
+        
+        from hydrus.client.files.images import ClientVisualDataTuningSuite
+        
+        test_dir = QW.QFileDialog.getExistingDirectory( self, '', '' )
+        
+        if test_dir == '':
+            
+            return
+            
+        
+        ClientVisualDataTuningSuite.RunTuningSuiteAlpha( test_dir )
+        
+        HydrusData.ShowText( 'Tuning suite done!' )
+        
+    
     def _SaveSplitterPositions( self ):
         
         page = self._notebook.GetCurrentMediaPage()
@@ -6714,6 +6755,26 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         if page is not None:
             
             page.SetMediaFocus()
+            
+        
+    
+    def _SetPagesCountDirty( self ):
+        
+        self._pages_count_dirty = True
+        
+        if self._pages_menu.isVisible():
+            
+            self._UpdateMenuPagesCountIfDirty()
+            
+        
+    
+    def _SetPagesHistoryDirty( self ):
+        
+        self._pages_history_dirty = True
+        
+        if self._pages_menu.isVisible():
+            
+            self._UpdateMenuPagesHistoryIfDirty()
             
         
     
@@ -7071,59 +7132,60 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         self._controller.pub( 'notify_new_pages' )
         
     
-    def _UpdateMenuPagesCount( self ):
+    def _UpdateMenuPagesCountIfDirty( self ):
         
-        (
-            total_active_page_count,
-            total_active_num_hashes,
-            total_active_num_seeds,
-            total_closed_page_count,
-            total_closed_num_hashes,
-            total_closed_num_seeds
-        ) = self.GetTotalPageCounts()
-        
-        total_active_weight = ClientGUIPages.ConvertNumHashesAndSeedsToWeight( total_active_num_hashes, total_active_num_seeds )
-        
-        if total_active_weight > 10000000 and self._controller.new_options.GetBoolean( 'show_session_size_warnings' ) and not self._have_shown_session_size_warning:
+        if self._pages_count_dirty:
             
-            self._have_shown_session_size_warning = True
+            (
+                total_active_page_count,
+                total_active_num_hashes,
+                total_active_num_seeds,
+                total_closed_page_count,
+                total_closed_num_hashes,
+                total_closed_num_seeds
+            ) = self.GetTotalPageCounts()
             
-            HydrusData.ShowText( 'Your session weight is {}, which is pretty big! To keep your UI lag-free, please try to close some pages or clear some finished downloaders!'.format( HydrusNumbers.ToHumanInt( total_active_weight ) ) )
+            total_active_weight = ClientGUIPages.ConvertNumHashesAndSeedsToWeight( total_active_num_hashes, total_active_num_seeds )
             
-        
-        ClientGUIMenus.SetMenuItemLabel( self._menubar_pages_page_count, '{} pages open'.format( HydrusNumbers.ToHumanInt( total_active_page_count ) ) )
-        
-        ClientGUIMenus.SetMenuItemLabel( self._menubar_pages_session_weight, 'total session weight: {}'.format( HydrusNumbers.ToHumanInt( total_active_weight ) ) )
+            if total_active_weight > 10000000 and self._controller.new_options.GetBoolean( 'show_session_size_warnings' ) and not self._have_shown_session_size_warning:
+                
+                self._have_shown_session_size_warning = True
+                
+                HydrusData.ShowText( 'Your session weight is {}, which is pretty big! To keep your UI lag-free, please try to close some pages or clear some finished downloaders!'.format( HydrusNumbers.ToHumanInt( total_active_weight ) ) )
+                
+            
+            ClientGUIMenus.SetMenuItemLabel( self._menubar_pages_page_count, '{} pages open'.format( HydrusNumbers.ToHumanInt( total_active_page_count ) ) )
+            
+            ClientGUIMenus.SetMenuItemLabel( self._menubar_pages_session_weight, 'total session weight: {}'.format( HydrusNumbers.ToHumanInt( total_active_weight ) ) )
+            
+            self._pages_count_dirty = False
+            
         
     
-    def _UpdateMenuPagesHistory( self ):
+    def _UpdateMenuPagesHistoryIfDirty( self ):
         
-        self._page_nav_history_menu.clear()
-        
-        low_page = self._notebook.GetCurrentMediaPage()
-        
-        self.RefreshPageHistoryMenuClean()
-        
-        if low_page is not None:
+        if self._pages_history_dirty:
             
-            self._page_nav_history.AddPage( low_page )
+            self._page_nav_history_menu.clear()
             
-        
-        for i, ( page_key, page_name ) in enumerate( reversed( self._page_nav_history.GetHistory() ) ):
-            
-            if i > 99: #let's set a maximum size of history to be displayed in the menu
+            for i, ( page_key, page_name ) in enumerate( reversed( self._page_nav_history.GetHistory() ) ):
                 
-                break
+                if i > 99: #let's set a maximum size of history to be displayed in the menu
+                    
+                    break
+                    
+                
+                history_menuitem = ClientGUIMenus.AppendMenuItem( self._page_nav_history_menu, '{}: {}'.format( i + 1, page_name ), 'Activate this tab from your viewing history.', CG.client_controller.gui.ShowPage, page_key )
+                
+                if i == 0:
+                    
+                    font = history_menuitem.font()
+                    font.setBold( True )
+                    history_menuitem.setFont( font )
+                    
                 
             
-            history_menuitem = ClientGUIMenus.AppendMenuItem( self._page_nav_history_menu, '{}: {}'.format( i + 1, page_name ), 'Activate this tab from your viewing history.', CG.client_controller.gui.ShowPage, page_key )
-            
-            if i == 0:
-                
-                font = history_menuitem.font()
-                font.setBold( True )
-                history_menuitem.setFont( font )
-                
+            self._pages_history_dirty = False
             
         
     
@@ -7905,7 +7967,11 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         self._controller.ClosePageKeys( page.GetPageKeys() )
         
-        self._menu_updater_pages_history.Update()
+        open_pages = self._notebook.GetPageKeys()
+        self._page_nav_history.CleanPages( open_pages )
+        
+        self._menu_updater_set_pages_history_dirty.Update()
+        
         self._menu_updater_pages.update()
         self._menu_updater_undo.update()
         
@@ -7949,7 +8015,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     
     def NotifyNewPagesCount( self ):
         
-        self._menu_updater_pages_count.Update()
+        self._menu_updater_set_pages_count_dirty.Update()
         
     
     def NotifyNewPending( self ):
@@ -8287,16 +8353,16 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         page.RefreshQuery()
         
     
-    def RefreshPageHistoryMenu( self ):
+    def NotifyPageJustChanged( self ):
         
-        self._menu_updater_pages_history.Update()
+        current_page = self._notebook.GetCurrentMediaPage()
         
-    
-    def RefreshPageHistoryMenuClean( self ):
+        if current_page is not None:
+            
+            self._page_nav_history.AddPage( current_page )
+            
         
-        open_pages = self._notebook.GetPageKeys()
-        
-        self._page_nav_history.CleanPages( open_pages )
+        self._menu_updater_set_pages_history_dirty.Update()
         
     
     def RefreshStatusBar( self ):

@@ -41,12 +41,11 @@ nav:
     - ipfs.md
     - server.md
     - Alternate Installations:
+      - running_from_source.md
       - docker.md
       - wine.md
-      - running_from_source.md
     - Downloader Creation:
       - Introduction: downloader_intro.md
-      - downloader_gugs.md
       - downloader_url_classes.md
       - Parsers:
         - Overview: downloader_parsers.md
@@ -58,6 +57,7 @@ nav:
           - downloader_parsers_full_example_gallery_page.md
           - downloader_parsers_full_example_file_page.md
           - downloader_parsers_full_example_api.md
+      - downloader_gugs.md
       - downloader_completion.md
       - downloader_sharing.md
       - downloader_login.md

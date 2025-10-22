@@ -591,7 +591,7 @@ class SidebarQuery( ClientGUISidebarCore.Sidebar ):
             self.ShowFinishedQuery( query_job_status, media_results )
             
         
-        QUERY_CHUNK_SIZE = 256
+        QUERY_CHUNK_SIZE = 100
         
         CG.client_controller.file_viewing_stats_manager.Flush()
         
@@ -601,6 +601,11 @@ class SidebarQuery( ClientGUISidebarCore.Sidebar ):
             
             return
             
+        
+        # it is a good bet that ids that are close to each other will search faster than those that are all over the place, so let's query them in order
+        # the query_hash_ids were just sorted according to any overarching sort, but this'll be re-done once they are sent to the media panel so no worries
+        # if it proves a problem, we can reassemble this after fetch with media result hash ids
+        query_hash_ids = sorted( query_hash_ids )
         
         media_results = []
         

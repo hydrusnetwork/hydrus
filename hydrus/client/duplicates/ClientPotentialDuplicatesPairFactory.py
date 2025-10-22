@@ -194,9 +194,8 @@ class PotentialDuplicatePairFactoryDB( PotentialDuplicatePairFactory ):
         
         potential_duplicate_id_pairs_and_distances: ClientPotentialDuplicatesSearchContext.PotentialDuplicateIdPairsAndDistances = CG.client_controller.Read( 'potential_duplicate_id_pairs_and_distances', location_context )
         
-        # ok randomise the order we'll do this guy, but only at the block level
-        # we'll preserve order each block came in since we'll then keep db-proximal indices close together on each actual block fetch
-        potential_duplicate_id_pairs_and_distances.RandomiseBlocks()
+        # in both cases we are stopping early, so let's go for a rich mix rather than fast full search
+        potential_duplicate_id_pairs_and_distances.RandomiseForRichEstimate()
         
         self._potential_duplicate_id_pairs_and_distances = potential_duplicate_id_pairs_and_distances
         

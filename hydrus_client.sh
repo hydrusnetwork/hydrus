@@ -14,7 +14,7 @@ if ! source venv/bin/activate; then
     exit 1
 fi
 
-# You can copy this file to 'hydrus_client-user.sh' and add in your own launch parameters here if you like, and a git pull won't overwrite the file.
+# You can copy this file to 'hydrus_client-user.sh' and add in your own launch parameters here if you like. A git pull won't overwrite that filename.
 # Just tack new hardcoded params on like this:
 #
 # python hydrus_client.py -d="/path/to/hydrus/db" "$@"
@@ -24,6 +24,15 @@ fi
 # ./hydrus_client.sh -d="/path/to/hydrus/db"
 #
 # --depending on your needs!
+#
+# Also, if you need to put environment variables in this script, do it like this (before the program is booted!):
+#
+# export QT_QPA_PLATFORM=xcb
+# export WAYLAND_DISPLAY=
+#
+# To unset an env, do this:
+#
+# unset WAYLAND_DISPLAY
 
 python hydrus_client.py "$@"
 

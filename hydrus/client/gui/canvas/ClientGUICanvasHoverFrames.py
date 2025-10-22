@@ -1235,6 +1235,9 @@ class CanvasHoverFrameTop( CanvasHoverFrame ):
         ClientGUIMenus.AppendSeparator( menu )
         
         ClientGUIMenus.AppendMenuCheckItem( menu, 'apply image ICC Profile colour adjustments', 'Set whether images with ICC Profiles should have them applied. This may be useful to flip back and forth if you are in the duplicate filter.', new_options.GetBoolean( 'do_icc_profile_normalisation' ), self.sendApplicationCommand.emit, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_FLIP_ICC_PROFILE_APPLICATION ) )
+        ClientGUIMenus.AppendMenuCheckItem( menu, 'draw transparency as checkerboard in media viewer', 'Set whether to draw transparency as something that stands out more.', new_options.GetBoolean( 'draw_transparency_checkerboard_media_canvas' ), self.sendApplicationCommand.emit, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_FLIP_TRANSPARENCY_CHECKERBOARD_MEDIA_VIEWER ) )
+        ClientGUIMenus.AppendMenuCheckItem( menu, 'draw transparency as checkerboard in media viewer (duplicate filter)', 'Set whether to draw transparency as something that stands out more in the duplicate filter.', new_options.GetBoolean( 'draw_transparency_checkerboard_media_canvas_duplicates' ), self.sendApplicationCommand.emit, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_FLIP_TRANSPARENCY_CHECKERBOARD_MEDIA_VIEWER_DUPLICATE_FILTER ) )
+        ClientGUIMenus.AppendMenuCheckItem( menu, 'instead of checkerboard, use a bright greenscreen', 'Set whether to draw transparency as something that stands out more.', new_options.GetBoolean( 'draw_transparency_checkerboard_as_greenscreen' ), self.sendApplicationCommand.emit, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_FLIP_TRANSPARENCY_CHECKERBOARD_GREENSCREEN ) )
         
         CGC.core().PopupMenu( self, menu )
         

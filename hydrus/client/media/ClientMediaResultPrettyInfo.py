@@ -9,7 +9,6 @@ from hydrus.core import HydrusTime
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientData
 from hydrus.client import ClientGlobals as CG
-from hydrus.client import ClientUgoiraHandling
 from hydrus.client.media import ClientMediaResult
 from hydrus.client.media import ClientMediaResultPrettyInfoObjects
 
@@ -74,37 +73,11 @@ def GetPrettyMediaResultInfoLines( media_result: ClientMediaResult.MediaResult, 
         
         info_string += f', {HydrusTime.MillisecondsDurationToPrettyTime( duration_ms )}'
         
-    elif mime == HC.ANIMATION_UGOIRA:
+    elif media_result.HasSimulatedDuration():
         
-        if ClientUgoiraHandling.HasFrameTimesNote( media_result ):
-            
-            try:
-                
-                # this is more work than we'd normally want to do, but prettyinfolines is called on a per-file basis so I think we are good. a tiny no-latency json load per human click is fine
-                # we'll see how it goes
-                frame_durations_ms = ClientUgoiraHandling.GetFrameDurationsMSFromNote( media_result )
-                
-                if frame_durations_ms is not None:
-                    
-                    note_duration_ms = sum( frame_durations_ms )
-                    
-                    info_string += f', {HydrusTime.MillisecondsDurationToPrettyTime( note_duration_ms )} (note-based)'
-                    
-                
-            except:
-                
-                info_string += f', unknown note-based duration'
-                
-            
-        else:
-            
-            if num_frames is not None:
-                
-                simulated_duration_ms = num_frames * ClientUgoiraHandling.UGOIRA_DEFAULT_FRAME_DURATION_MS
-                
-                info_string += f', {HydrusTime.MillisecondsDurationToPrettyTime( simulated_duration_ms )} (speculated)'
-                
-            
+        ( simulated_duration_ms, source_string ) = media_result.GetSimulatedDurationMSAndSource()
+        
+        info_string += f', {HydrusTime.MillisecondsDurationToPrettyTime( simulated_duration_ms )} ({source_string})'
         
     
     if num_frames is not None:

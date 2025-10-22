@@ -6,6 +6,8 @@ title: Making a Downloader
 
 !!! caution
 	Creating custom downloaders is only for advanced users who understand HTML or JSON. Beware! If you are simply looking for how to add new downloaders, please head over [here](adding_new_downloaders.md).
+    
+    Also this help is pretty old. The basics are unchanged, but the screenshots are out of date! Good luck!
 
 ## this system { id="intro" }
 
@@ -27,9 +29,9 @@ In hydrus, a downloader is one of:
 :   This takes a URL that it will check in timed intervals, parsing it for new URLs that it then queues up to be downloaded. It typically stops checking after the 'file velocity' (such as '1 new file per day') drops below a certain level. It is mostly for watching imageboard threads.
 
 **Simple Downloader**
-:   This takes a URL one-time and parses it for direct file URLs. This is a miscellaneous system for certain simple gallery types and some testing/'I just need the third <img> tag's _src_ on this one page' jobs.
+:   This takes a URL one-time and parses it for direct file URLs. This is a miscellaneous system for certain simple gallery types and some testing/'I just need the third `<img>` tag's `src` on this one page' jobs.
 
-The system currently supports HTML and JSON parsing. XML should be fine under the HTML parser--it isn't strict about checking types and all that.
+The system currently supports HTML and JSON parsing. XML should be fine under the HTML parser--it isn't strict.
 
 ## what does a downloader do? { id="pipeline" }
 
@@ -43,8 +45,8 @@ The Gallery Downloader is the most complicated downloader and uses all the possi
 
 So we have three components:
 
-*   [**Gallery URL Generator (GUG):**](downloader_gugs.md) faces the user and converts text input into initialising Gallery URLs.
 *   [**URL Class:**](downloader_url_classes.md) identifies URLs and informs the client how to deal with them.
 *   [**Parser:**](downloader_parsers.md) converts data from URLs into hydrus-understandable metadata.
+*   [**Gallery URL Generator (GUG):**](downloader_gugs.md) faces the user and converts text input into initialising Gallery URLs.
 
 URL downloaders and watchers do not need the Gallery URL Generator, as their input _is_ an URL. And simple downloaders also have an explicit 'just download it and parse it with this simple rule' action, so they do not use URL Classes (or even full-fledged Page Parsers) either.

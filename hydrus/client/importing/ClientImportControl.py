@@ -16,6 +16,11 @@ def CheckImporterCanDoFileWorkBecausePaused( paused: bool, file_seed_cache: Clie
         raise HydrusExceptions.VetoException( 'paused' )
         
     
+    if CG.client_controller.new_options.GetBoolean( 'pause_all_paged_importers' ):
+        
+        raise HydrusExceptions.VetoException( 'all paged importers are paused! hit network->pause to resume!' )
+        
+    
     if CG.client_controller.new_options.GetBoolean( 'pause_all_file_queues' ):
         
         raise HydrusExceptions.VetoException( 'all file import queues are paused! hit network->pause to resume!' )
@@ -51,6 +56,11 @@ def CheckImporterCanDoGalleryWorkBecausePaused( paused: bool, gallery_seed_log: 
     if paused:
         
         raise HydrusExceptions.VetoException( 'paused' )
+        
+    
+    if CG.client_controller.new_options.GetBoolean( 'pause_all_paged_importers' ):
+        
+        raise HydrusExceptions.VetoException( 'all paged importers are paused! hit network->pause to resume!' )
         
     
     if CG.client_controller.new_options.GetBoolean( 'pause_all_gallery_searches' ):

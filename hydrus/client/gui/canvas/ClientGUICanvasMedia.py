@@ -547,53 +547,64 @@ class Animation( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
         
         if self._background_colour_generator.CanDoTransparencyCheckerboard() and self._media is not None and self._media.GetFileInfoManager().has_transparency:
             
-            light_grey = QG.QColor( 237, 237, 237 )
-            dark_grey = QG.QColor( 222, 222, 222 )
-            
-            painter.setBackground( QG.QBrush( light_grey ) )
-            
-            painter.eraseRect( painter.viewport() )
-            
-            # 16x16 boxes, light grey in top right
-            BOX_LENGTH = int( 16 * self.devicePixelRatio() )
-            
-            painter_width = painter.viewport().width()
-            painter_height = painter.viewport().height()
-            
-            num_cols = painter_width // BOX_LENGTH
-            
-            if painter_width % BOX_LENGTH > 0:
+            if CG.client_controller.new_options.GetBoolean( 'draw_transparency_checkerboard_as_greenscreen' ):
                 
-                num_cols += 1
+                neon_greenscreen = QG.QColor( 34, 255, 0 )
                 
-            
-            num_rows = painter_height // BOX_LENGTH
-            
-            if painter_height % BOX_LENGTH > 0:
+                painter.setBackground( QG.QBrush( neon_greenscreen ) )
                 
-                num_rows += 1
+                painter.eraseRect( painter.viewport() )
                 
-            
-            painter.setBrush( QG.QBrush( dark_grey ) )
-            painter.setPen( QG.QPen( QC.Qt.PenStyle.NoPen ) )
-            
-            for y_index in range( num_rows ):
+            else:
                 
-                for x_index in range( num_cols ):
+                light_grey = QG.QColor( 237, 237, 237 )
+                dark_grey = QG.QColor( 222, 222, 222 )
+                
+                painter.setBackground( QG.QBrush( light_grey ) )
+                
+                painter.eraseRect( painter.viewport() )
+                
+                # 16x16 boxes, light grey in top right
+                BOX_LENGTH = int( 16 * self.devicePixelRatio() )
+                
+                painter_width = painter.viewport().width()
+                painter_height = painter.viewport().height()
+                
+                num_cols = painter_width // BOX_LENGTH
+                
+                if painter_width % BOX_LENGTH > 0:
                     
-                    if ( x_index + y_index ) % 2 == 1:
-                        
-                        rect = QC.QRect( x_index * BOX_LENGTH, y_index * BOX_LENGTH, BOX_LENGTH, BOX_LENGTH )
-                        
-                        if painter.viewport().intersects( rect ):
-                            
-                            painter.drawRect( rect )
-                            
-                        
+                    num_cols += 1
                     
                 
-            
-            self._have_drawn_background_once = True
+                num_rows = painter_height // BOX_LENGTH
+                
+                if painter_height % BOX_LENGTH > 0:
+                    
+                    num_rows += 1
+                    
+                
+                painter.setBrush( QG.QBrush( dark_grey ) )
+                painter.setPen( QG.QPen( QC.Qt.PenStyle.NoPen ) )
+                
+                for y_index in range( num_rows ):
+                    
+                    for x_index in range( num_cols ):
+                        
+                        if ( x_index + y_index ) % 2 == 1:
+                            
+                            rect = QC.QRect( x_index * BOX_LENGTH, y_index * BOX_LENGTH, BOX_LENGTH, BOX_LENGTH )
+                            
+                            if painter.viewport().intersects( rect ):
+                                
+                                painter.drawRect( rect )
+                                
+                            
+                        
+                    
+                
+                self._have_drawn_background_once = True
+                
             
             return
             
@@ -3588,65 +3599,76 @@ class StaticImage( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
         
         if self._background_colour_generator.CanDoTransparencyCheckerboard() and self._media is not None and self._media.GetFileInfoManager().has_transparency:
             
-            light_grey = QG.QColor( 237, 237, 237 )
-            dark_grey = QG.QColor( 222, 222, 222 )
-            
-            painter.setBackground( QG.QBrush( light_grey ) )
-            
-            painter.eraseRect( painter.viewport() )
-            
-            # 16x16 boxes, light grey in top right
-            BOX_LENGTH = int( 16 * self.devicePixelRatio() )
-            
-            # there's a way to do this with viewports or transforms or something, but I don't know mate
-            if topLeftOffset is None:
+            if CG.client_controller.new_options.GetBoolean( 'draw_transparency_checkerboard_as_greenscreen' ):
                 
-                rectTopLeftAdjust = QC.QPoint( 0, 0 )
+                neon_greenscreen = QG.QColor( 34, 255, 0 )
+                
+                painter.setBackground( QG.QBrush( neon_greenscreen ) )
+                
+                painter.eraseRect( painter.viewport() )
                 
             else:
                 
-                x = topLeftOffset.x() % ( BOX_LENGTH * 2 )
-                y = topLeftOffset.y() % ( BOX_LENGTH * 2 )
+                light_grey = QG.QColor( 237, 237, 237 )
+                dark_grey = QG.QColor( 222, 222, 222 )
                 
-                x_adjust = - x if x > 0 else 0
-                y_adjust = - y if y > 0 else 0
+                painter.setBackground( QG.QBrush( light_grey ) )
                 
-                rectTopLeftAdjust = QC.QPoint( x_adjust, y_adjust )
+                painter.eraseRect( painter.viewport() )
                 
-            
-            painter_width = painter.viewport().width() + abs( rectTopLeftAdjust.x() )
-            painter_height = painter.viewport().height() + abs( rectTopLeftAdjust.y() )
-            
-            num_cols = painter_width // BOX_LENGTH
-            
-            if painter_width % BOX_LENGTH > 0:
+                # 16x16 boxes, light grey in top right
+                BOX_LENGTH = int( 16 * self.devicePixelRatio() )
                 
-                num_cols += 1
-                
-            
-            num_rows = painter_height // BOX_LENGTH
-            
-            if painter_height % BOX_LENGTH > 0:
-                
-                num_rows += 1
-                
-            
-            painter.setBrush( QG.QBrush( dark_grey ) )
-            painter.setPen( QG.QPen( QC.Qt.PenStyle.NoPen ) )
-            
-            for y_index in range( num_rows ):
-                
-                for x_index in range( num_cols ):
+                # there's a way to do this with viewports or transforms or something, but I don't know mate
+                if topLeftOffset is None:
                     
-                    if ( x_index + y_index ) % 2 == 1:
+                    rectTopLeftAdjust = QC.QPoint( 0, 0 )
+                    
+                else:
+                    
+                    x = topLeftOffset.x() % ( BOX_LENGTH * 2 )
+                    y = topLeftOffset.y() % ( BOX_LENGTH * 2 )
+                    
+                    x_adjust = - x if x > 0 else 0
+                    y_adjust = - y if y > 0 else 0
+                    
+                    rectTopLeftAdjust = QC.QPoint( x_adjust, y_adjust )
+                    
+                
+                painter_width = painter.viewport().width() + abs( rectTopLeftAdjust.x() )
+                painter_height = painter.viewport().height() + abs( rectTopLeftAdjust.y() )
+                
+                num_cols = painter_width // BOX_LENGTH
+                
+                if painter_width % BOX_LENGTH > 0:
+                    
+                    num_cols += 1
+                    
+                
+                num_rows = painter_height // BOX_LENGTH
+                
+                if painter_height % BOX_LENGTH > 0:
+                    
+                    num_rows += 1
+                    
+                
+                painter.setBrush( QG.QBrush( dark_grey ) )
+                painter.setPen( QG.QPen( QC.Qt.PenStyle.NoPen ) )
+                
+                for y_index in range( num_rows ):
+                    
+                    for x_index in range( num_cols ):
                         
-                        rect = QC.QRect( x_index * BOX_LENGTH, y_index * BOX_LENGTH, BOX_LENGTH, BOX_LENGTH )
-                        
-                        rect.moveTo( rect.topLeft() + rectTopLeftAdjust )
-                        
-                        if painter.viewport().intersects( rect ):
+                        if ( x_index + y_index ) % 2 == 1:
                             
-                            painter.drawRect( rect )
+                            rect = QC.QRect( x_index * BOX_LENGTH, y_index * BOX_LENGTH, BOX_LENGTH, BOX_LENGTH )
+                            
+                            rect.moveTo( rect.topLeft() + rectTopLeftAdjust )
+                            
+                            if painter.viewport().intersects( rect ):
+                                
+                                painter.drawRect( rect )
+                                
                             
                         
                     

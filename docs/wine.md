@@ -23,7 +23,6 @@ Installation process:
 2. Download the latest hydrus .zip file.
 3. Unpack it with your chosen zip file opener, in the chosen folder. Do not need to be in the wine folder.
 4. Run it with wine, either though the file manager, or though the terminal.
-5. For Flash support install the IE version through wine.
 
 ---
 

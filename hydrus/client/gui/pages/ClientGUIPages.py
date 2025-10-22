@@ -96,6 +96,7 @@ class Page( QW.QWidget ):
         self._pre_initialisation_media_results = []
         
         self._pretty_status = ''
+        self._pretty_status_override = ''
         
         self._management_media_split = QW.QSplitter( self )
         self._management_media_split.setOrientation( QC.Qt.Orientation.Horizontal )
@@ -219,11 +220,21 @@ class Page( QW.QWidget ):
         self._current_session_page_container_timestamp = HydrusTime.GetNow()
         
     
-    def _SetPrettyStatus( self, status: str ):
+    def _SetPrettyStatus( self, status: str, override = False ):
         
-        self._pretty_status = status
+        if override:
+            
+            self._pretty_status_override = status
+            
+        else:
+            
+            self._pretty_status = status
+            
         
-        CG.client_controller.gui.SetStatusBarDirty()
+        if self.isVisible():
+            
+            CG.client_controller.gui.SetStatusBarDirty()
+            
         
     
     def _SwapMediaResultsPanel( self, new_panel: ClientGUIMediaResultsPanel.MediaResultsPanel ):
@@ -533,7 +544,14 @@ class Page( QW.QWidget ):
     
     def GetPrettyStatusForStatusBar( self ):
         
-        return self._pretty_status
+        if self._pretty_status_override != '':
+            
+            return self._pretty_status_override
+            
+        else:
+            
+            return self._pretty_status
+            
         
     
     def GetSerialisablePage( self, only_changed_page_data, about_to_save ):
@@ -823,10 +841,7 @@ class Page( QW.QWidget ):
         
         def qt_code_status( status ):
             
-            if not self._initialised:
-                
-                self._SetPrettyStatus( status )
-                
+            self._SetPrettyStatus( status, override = True )
             
         
         controller = CG.client_controller
@@ -836,15 +851,13 @@ class Page( QW.QWidget ):
             
             initial_media_results = []
             
-            for ( num_done, num_to_do, group_of_initial_hashes ) in HydrusLists.SplitListIntoChunksRich( initial_hashes, 64 ):
+            for ( num_done, num_to_do, group_of_initial_hashes ) in HydrusLists.SplitListIntoChunksRich( initial_hashes, 100 ):
                 
                 more_media_results = controller.Read( 'media_results', group_of_initial_hashes )
                 
                 initial_media_results.extend( more_media_results )
                 
                 status = f'Loading initial files{HC.UNICODE_ELLIPSIS} {HydrusNumbers.ValueRangeToPrettyString( len( initial_media_results ), len( initial_hashes ) )}'
-                
-                controller.CallAfterQtSafe( self, qt_code_status, status )
                 
                 CG.client_controller.CallAfterQtSafe( self, qt_code_status, status )
                 
@@ -858,7 +871,7 @@ class Page( QW.QWidget ):
         
         def publish_callable( media_results ):
             
-            self._SetPrettyStatus( '' )
+            self._SetPrettyStatus( '', override = True )
             
             media_panel = ClientGUIMediaResultsPanelThumbnails.MediaResultsPanelThumbnails( self, self._page_key, self._page_manager, media_results )
             
@@ -3564,7 +3577,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
             
         
         CG.client_controller.gui.RefreshStatusBar()
-        CG.client_controller.gui.RefreshPageHistoryMenu()
+        CG.client_controller.gui.NotifyPageJustChanged()
         
         self._previous_page_index = index
         
@@ -3713,11 +3726,6 @@ class PagesHistory( collections.OrderedDict ):
         page_key = page.GetPageKey()
         page_name = page.GetNameForMenu( elide = False )
         
-        self.AddEntry( page_key, page_name )
-        
-    
-    def AddEntry( self, page_key: bytes, page_name: str ):
-        
         if page_key in self:
             
             self.pop( page_key )
@@ -3726,40 +3734,16 @@ class PagesHistory( collections.OrderedDict ):
         self[ page_key ] = page_name
         
     
-    def CleanPages( self, existing_pages_list ):
+    def CleanPages( self, existing_page_keys: set[ bytes ] ):
         
-        for page_key in list( self.keys() ):
+        for page_key in set( self.keys() ).difference( existing_page_keys ):
             
-            if page_key not in existing_pages_list:
-                
-                self.pop( page_key )
-                
+            self.pop( page_key )
             
         
     
     def GetHistory( self ):
         
         return list( self.items() )
-        
-    
-    def RemoveEntry( self, page: Page ):
-        
-        self.RemoveEntry( page.GetPageKey() )
-        
-    
-    def RemoveEntry( self, page_key: bytes ):
-        
-        if page_key in self:
-            
-            self.pop( page_key )
-            
-        
-    
-    def TriggerEntry( self, page_key: bytes ):
-        
-        if page_key in self:
-            
-            CG.client_controller.gui.ShowPage( page_key )
-            
         
     
