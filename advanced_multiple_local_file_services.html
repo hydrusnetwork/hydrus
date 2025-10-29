@@ -2444,15 +2444,15 @@
 <p>If you are in <em>help-&gt;advanced mode</em>, your file search file domain selectors will see 'all known files'. This domain is similar to 'all known tags', but it is not useful for normal browsing. It represents not filtering your tag services by any file list, fetching all tagged file results regardless of what your client knows about them.</p>
 <p>If you search 'all known files'/'PTR', you can search all the files the PTR knows about, the vast majority of which you will likely never import. The client will show these files with a default hydrus thumbnail and offer very limited information about them. For file searches, this search domain is only useful for debug and janitorial purposes. You cannot combine 'all known files' with 'all known tags'. It also has limited sibling/parent support.</p>
 <p>You can search for deleted files under 'multiple domains' too. These may or may not still be in your client, so they might get the hydrus icon again. You won't need to do this much, but it can be super useful for some maintenance operations like 'I know I deleted this file by accident, what was its URL so I can find it again?'.</p>
-<p>Another service is 'all local files'. This is a larger version of 'all my files'. It essentially means 'all the files on your hard disk', which strictly means the union of all the files in your local file domains ('my files' and any others you create, i.e. the 'all my files' domain), 'repository updates' (which stores update files for hydrus repository sync), and 'trash'. This search can be useful for some advanced maintenance jobs.</p>
-<p>If you select 'repository updates' specifically, you can inspect this advanced domain, but I recommend you not touch it! Otherwise, if you search 'all local files', repository files are usually hidden from view.</p>
+<p>Another service is 'hydrus local file storage'. This is a larger version of 'all my files'. It essentially means 'all the files on your hard disk', which strictly means the union of all the files in your local file domains ('my files' and any others you create, i.e. the 'all my files' domain), 'repository updates' (which stores update files for hydrus repository sync), and 'trash'. This search can be useful for some advanced maintenance jobs.</p>
+<p>If you select 'repository updates' specifically, you can inspect this advanced domain, but I recommend you not touch it! Otherwise, if you search 'hydrus local file storage', repository files are usually hidden from view.</p>
 <p>Your client looks a bit like this:</p>
 <pre class="mermaid"><code>graph TB
-  A[all local files] --- B[repository updates]
+  A[hydrus local file storage] --- B[repository updates]
   A --- C[all my files]
   C --- D[local file domains]
   A --- E[trash]</code></pre>
-<p>Repository files, your media, and the trash are actually mutually exclusive. When a file is imported, it is added to 'all local files' and either repository updates or 'all my files' and one or more local file domains. When it is deleted from all of those, it is taken from 'all my files' and moved to trash. When trashed files are cleared, the files are removed from 'trash' and then 'all local files' and thus your hard disk.</p>
+<p>Repository files, your media, and the trash are actually mutually exclusive. When a file is imported, it is added to 'hydrus local file storage' and either repository updates or 'all my files' and one or more local file domains. When it is deleted from all of those, it is taken from 'all my files' and moved to trash. When trashed files are cleared, the files are removed from 'trash' and then 'hydrus local file storage' and thus your hard disk.</p>
 <h2 id="advanced">more advanced usage<a class="headerlink" href="#advanced" title="Permanent link">&para;</a></h2>
 <div class="admonition warning">
 <p class="admonition-title">Warning</p>
@@ -2500,7 +2500,7 @@
     <span class="md-icon" title="Last update">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 13.1c-.1 0-.3.1-.4.2l-1 1 2.1 2.1 1-1c.2-.2.2-.6 0-.8l-1.3-1.3c-.1-.1-.2-.2-.4-.2m-1.9 1.8-6.1 6V23h2.1l6.1-6.1zM12.5 7v5.2l4 2.4-1 1L11 13V7zM11 21.9c-5.1-.5-9-4.8-9-9.9C2 6.5 6.5 2 12 2c5.3 0 9.6 4.1 10 9.3-.3-.1-.6-.2-1-.2s-.7.1-1 .2C19.6 7.2 16.2 4 12 4c-4.4 0-8 3.6-8 8 0 4.1 3.1 7.5 7.1 7.9l-.1.2z"/></svg>
     </span>
-    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="June 4, 2025 20:18:37 UTC">June 4, 2025</span>
+    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="October 29, 2025 20:59:55 UTC">October 29, 2025</span>
   </span>
 
     

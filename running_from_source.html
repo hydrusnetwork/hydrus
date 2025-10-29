@@ -2887,7 +2887,7 @@
 <p>Double-click <code>setup_venv.bat</code>.</p>
 </div>
 <div class="tabbed-block">
-<p><em>You do not need to run this as sudo, and doing so may cause some things not to work. Just regular you in a normal terminal.</em></p>
+<p><em>You do not need to run the setup script as sudo, and doing so may cause some things not to work. Just regular you in a normal terminal.</em></p>
 <p>The file is <code>setup_venv.sh</code>. You may be able to double-click it. If not, open a terminal in the folder and type:  </p>
 <p><code>./setup_venv.sh</code></p>
 <p>If you do not have permission to execute the file, do this before trying again:  </p>
@@ -2899,18 +2899,19 @@
 </div>
 </div>
 <div class="tabbed-block">
-<p><em>You do not need to run this as sudo, and doing so may cause some things not to work. Just regular you in a normal terminal.</em></p>
+<p><em>You do not need to run the setup script as sudo, and doing so may cause some things not to work. Just regular you.</em></p>
 <p>Double-click <code>setup_venv.command</code>.</p>
-<p>If you do not have permission to run the .command file, then open a terminal on the folder and enter:</p>
+<p>If you do not have permission to run the .command file, open a terminal on the folder and enter:</p>
 <p><code>chmod +x setup_venv.command</code></p>
+<p>You likely also need this to tell Gatekeeper you are ok running it:</p>
+<p><code>sudo xattr -rd com.apple.quarantine setup_venv.command</code></p>
 <p>You will likely have to do the same on the other .command files.</p>
-<p>If your macOS is old, you may need to experiment with the advanced choices.</p>
 </div>
 </div>
 </div>
-<p>The setup will ask you some questions. Just type the letters it asks for and hit enter. Most users are looking at the (s)imple setup, but if your situation is unusual, try the (a)dvanced, which will walk you through the main decisions. Once ready, it should take a minute to download its packages and a couple minutes to install them. Do not close it until it is finished installing everything and says 'Done!'. If it seems like it hung, just give it time to finish.</p>
-<p>If something messes up, or you want to make a different decision, just run the setup script again and it will reinstall everything. Everything these scripts do ends up in the 'venv' directory, so you can also just delete that folder to 'uninstall' the venv. It should <em>just work</em> on most normal computers, but let me know if you have any trouble.</p>
-<p>Then run the 'setup_help' script to build the help. This isn't necessary, but it is nice to have it built locally. You can run this again at any time to rebuild the current help.</p>
+<p>The setup will ask you some questions. Just type the letters it asks for and hit enter. Most users are looking at the (s)imple setup, but if your situation is unusual (e.g. very old/new python), try the (a)dvanced, which will walk you through the main decisions. Once ready, it should take a minute to download its packages and a couple minutes to install them. Do not close it until it is finished installing everything and says 'Done!'. If it seems like it hung, just give it time to finish.</p>
+<p>If something messes up, or you want to make a different decision, just run the setup script again and it will clear out and reinstall everything. Everything these scripts do ends up in the 'venv' directory, so you can also just delete that folder to 'uninstall' the venv. It should <em>just work</em> on most normal computers, but let me know if you have any trouble.</p>
+<p>Then run the 'setup_help' script to build the help. This isn't necessary, but it is nice to have it built locally. You can run this again at any time to update to the current help.</p>
 <h4 id="running_it_1">Running it<a class="headerlink" href="#running_it_1" title="Permanent link">&para;</a></h4>
 <div class="tabbed-set tabbed-alternate" data-tabs="4:3"><input checked="checked" id="__tabbed_4_1" name="__tabbed_4" type="radio" /><input id="__tabbed_4_2" name="__tabbed_4" type="radio" /><input id="__tabbed_4_3" name="__tabbed_4" type="radio" /><div class="tabbed-labels"><label for="__tabbed_4_1">Windows</label><label for="__tabbed_4_2">Linux</label><label for="__tabbed_4_3">macOS</label></div>
 <div class="tabbed-content">
@@ -2942,10 +2943,10 @@
 <p>It does not work for everyone, though. If it fails, another user says that also setting <code>WAYLAND_DISPLAY=</code> (as in setting it to nothing) or unsetting it entirely with <code>unset WAYLAND_DISPLAY</code>, which forces hydrus (and its embedded mpv windows) to use Xwayland, is another solution. You might need to do <code>sudo apt install xwayland</code> first.</p>
 <p>I expect to revisit this question in future versions of Qt and Wayland--we'll see if the situation stabilises.</p>
 </details>
-<p>Run 'hydrus_client.sh' to start the client. Don't forget to set <code>chmod +x hydrus_client.sh</code> if you need it.</p>
+<p>Run 'hydrus_client.sh' to start the client. Don't forget to <code>chmod +x hydrus_client.sh</code> if you need it.</p>
 </div>
 <div class="tabbed-block">
-<p>Run 'hydrus_client.command' to start the client. Don't forget to set <code>chmod +x hydrus_client.command</code> if you need it.</p>
+<p>Run 'hydrus_client.command' to start the client. Don't forget to <code>chmod +x hydrus_client.command</code> and <code>sudo xattr -rd com.apple.quarantine hydrus_client.command</code> if you need it.</p>
 </div>
 </div>
 </div>
@@ -2973,8 +2974,8 @@
 </div>
 </div>
 <h3 id="have_fun">Have Fun<a class="headerlink" href="#have_fun" title="Permanent link">&para;</a></h3>
-<p>If everything boots ok, great! Have a play around with the client and make sure file imports work ok and, if you are not macOS, that mpv is all correct.</p>
-<p>Don't forget to create a new shortcut to your <code>hydrus_client</code> or <code>hydrus_client-user</code> launch script. If you can, set a custom icon--there are several <code>hydrus...</code> files in <code>install_dir/static</code> that are suitable.</p>
+<p>If everything boots ok, great! Have a play around with the client and make sure file imports work ok and, if you are not macOS, that mpv is all correct. Hitting <code>help-&gt;about</code> will show if the optional libraries are all available and will give you error popups detailing any problems.</p>
+<p>Don't forget to create a nice shortcut to your <code>hydrus_client</code> or <code>hydrus_client-user</code> launch script. If you can, set a custom icon--there are several <code>hydrus...</code> files in <code>install_dir/static</code> that are suitable.</p>
 <details class="note">
 <summary>System Qt styles</summary>
 <p>If you have a system Qt with several styles but do not see them under <code>options-&gt;style</code>, it is probably that your venv cannot "see" your system Qt.</p>
@@ -2983,7 +2984,7 @@
 </details>
 <h3 id="simple_updating_guide">Simple Updating Guide<a class="headerlink" href="#simple_updating_guide" title="Permanent link">&para;</a></h3>
 <p>Updating is simple. If you installed with <code>git</code>, it takes about three seconds: just close the client, open the base install directory in a terminal, and type <code>git pull</code>. I have added easy 'git_pull' scripts to the install directory for your convenience (on Windows, just double-click 'git_pull.bat'). </p>
-<p>If you installed by extracting the source zip, you can update much like you would with the built extract: download the <a href="https://github.com/hydrusnetwork/hydrus/releases/latest">latest release</a> source zip and extract it over the top of the folder you have, overwriting the existing source files.</p>
+<p>If you installed by extracting the source zip, update just as you would with the built extract: download the <a href="https://github.com/hydrusnetwork/hydrus/releases/latest">latest release</a> source zip and extract it over the top of the folder you have, overwriting the existing source files.</p>
 <p>If you get a library version error when you try to boot, run the venv setup again. It is worth doing this every 3-6 months, just to stay up to date. I mention in the release posts when there are important changes, usually right after a 'future build' test.</p>
 <h3 id="migrating_from_an_existing_install">Migrating from an Existing Install<a class="headerlink" href="#migrating_from_an_existing_install" title="Permanent link">&para;</a></h3>
 <p>Many users start out using one of the official built releases and decide to move to source. There is a full document <a href="database_migration.html">here</a> about how to migrate a database, but for your purposes, the simple method is:</p>
@@ -3153,7 +3154,7 @@ choco install -y windows-sdk-10.0
     <span class="md-icon" title="Last update">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 13.1c-.1 0-.3.1-.4.2l-1 1 2.1 2.1 1-1c.2-.2.2-.6 0-.8l-1.3-1.3c-.1-.1-.2-.2-.4-.2m-1.9 1.8-6.1 6V23h2.1l6.1-6.1zM12.5 7v5.2l4 2.4-1 1L11 13V7zM11 21.9c-5.1-.5-9-4.8-9-9.9C2 6.5 6.5 2 12 2c5.3 0 9.6 4.1 10 9.3-.3-.1-.6-.2-1-.2s-.7.1-1 .2C19.6 7.2 16.2 4 12 4c-4.4 0-8 3.6-8 8 0 4.1 3.1 7.5 7.1 7.9l-.1.2z"/></svg>
     </span>
-    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="October 22, 2025 21:40:53 UTC">October 22, 2025</span>
+    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="October 29, 2025 20:59:55 UTC">October 29, 2025</span>
   </span>
 
     

@@ -4558,8 +4558,8 @@ Accept: application/json
 </ul>
 <p>You can play around with this yourself by clicking 'multiple locations' in the client with <em>help-&gt;advanced mode</em> on.</p>
 <p>In extreme edge cases, these two can be mixed by populating both A and B selective, making a larger union of both current and deleted file records.</p>
-<p>Please note that unions can be very very computationally expensive. If you can achieve what you want with a single file_service_key, two queries in a row with different service keys, or an umbrella like <code>all my files</code> or <code>all local files</code>, please do. Otherwise, let me know what is running slow and I'll have a look at it.</p>
-<p>'deleted from all local files' includes all files that have been physically deleted (i.e. deleted from the trash) and not available any more for fetch file/thumbnail requests. 'deleted from all my files' includes all of those physically deleted files <em>and</em> the trash. If a file is deleted with the special 'do not leave a deletion record' command, then it won't show up in a 'deleted from file domain' search!</p>
+<p>Please note that unions can be very very computationally expensive. If you can achieve what you want with a single file_service_key, two queries in a row with different service keys, or an umbrella like <code>all my files</code> or <code>hydrus local file storage</code>, please do. Otherwise, let me know what is running slow and I'll have a look at it.</p>
+<p>'deleted from hydrus local file storage' includes all files that have been physically deleted (i.e. deleted from the trash) and not available any more for fetch file/thumbnail requests. 'deleted from all my files' includes all of those physically deleted files <em>and</em> the trash. If a file is deleted with the special 'do not leave a deletion record' command, then it won't show up in a 'deleted from file domain' search!</p>
 <p>'all known files' is a tricky domain. It converts much of the search tech to ignore where files actually are and look at the accompanying tag domain (e.g. all the files that have been tagged), and can sometimes be very expensive.</p>
 <p>Also, if you have the option to set both file and tag domains, you cannot enter 'all known files'/'all known tags'. It is too complicated to support, sorry!</p>
 <h3 id="legacy_service_name_parameters"><strong>legacy service_name parameters</strong><a class="headerlink" href="#legacy_service_name_parameters" title="Permanent link">&para;</a></h3>
@@ -4605,7 +4605,7 @@ Accept: application/json
 <span class="w">    </span><span class="nt">&quot;type_pretty&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;hydrus file repository&quot;</span>
 <span class="w">  </span><span class="p">},</span>
 <span class="w">  </span><span class="nt">&quot;616c6c206c6f63616c2066696c6573&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="nt">&quot;name&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;all local files&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;name&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;hydrus local file storage&quot;</span><span class="p">,</span>
 <span class="w">    </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">15</span><span class="p">,</span>
 <span class="w">    </span><span class="nt">&quot;type_pretty&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;virtual combined local file service&quot;</span>
 <span class="w">  </span><span class="p">},</span>
@@ -4672,7 +4672,7 @@ Accept: application/json
 <li>12 - the local booru -- you can ignore this</li>
 <li>13 - IPFS</li>
 <li>14 - trash</li>
-<li>15 - all local files -- all files on hard disk ('all my files' + updates + trash) </li>
+<li>15 - hydrus local file storage -- all files on hard disk ('all my files' + updates + trash) </li>
 <li>17 - file notes</li>
 <li>18 - Client API</li>
 <li>19 - deleted from anywhere -- you can ignore this</li>
@@ -4988,7 +4988,7 @@ Accept: application/json
 <span class="w">  </span><span class="nt">&quot;path&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;E:\\to_import\\ayanami.jpg&quot;</span>
 <span class="p">}</span>
 </code></pre></div>
-<p>If you include a <a href="#parameters_file_domain">file domain</a>, it can only include 'local' file domains (by default on a new client this would just be "my files"), but you can send multiple to import to more than one location at once. Asking to import to 'all local files', 'all my files', 'trash', 'repository updates', or a file repository/ipfs will give you 400.</p>
+<p>If you include a <a href="#parameters_file_domain">file domain</a>, it can only include 'local' file domains (by default on a new client this would just be "my files"), but you can send multiple to import to more than one location at once. Asking to import to 'hydrus local file storage', 'all my files', 'trash', 'repository updates', or a file repository/ipfs will give you 400.</p>
 <dl>
 <dt>Arguments (as bytes):</dt>
 <dd>You can alternately just send the file's raw bytes as the entire POST body. In this case, you cannot send any other parameters, so you will be left with the default import file domain.</dd>
@@ -5043,14 +5043,14 @@ Accept: application/json
 </dl>
 <div class="admonition note">
 <p class="admonition-title">Careful</p>
-<p><code>all my files</code> and <code>all local files</code> are different!</p>
+<p><code>all my files</code> and <code>hydrus local file storage</code> are different!</p>
 <ul>
 <li>Deleting from <code>all my files</code> sends files straight to the trash, no matter how many local file services they are in.</li>
-<li>Deleting from <code>all local files</code> removes files from the trash and triggers an immediate physical delete.</li>
+<li>Deleting from <code>hydrus local file storage</code> removes files from the trash and triggers an immediate physical delete.</li>
 </ul>
 <p>Check <a href="advanced_multiple_local_file_services.html#meta_file_domains">here</a> for more info.</p>
 </div>
-<p>If you specify a file service, the file will only be deleted from that location. Only local file domains are allowed (so you can't delete from a file repository or unpin from ipfs yet), or the umbrella <code>all my files</code> and <code>all local files</code> domains. It defaults to <code>all my files</code>, which will delete from all local services (i.e. force sending to trash). Sending <code>all local files</code> on a file already in the trash will trigger a physical file delete. </p>
+<p>If you specify a file service, the file will only be deleted from that location. Only local file domains are allowed (so you can't delete from a file repository or unpin from ipfs yet), or the umbrella <code>all my files</code> and <code>hydrus local file storage</code> domains. It defaults to <code>all my files</code>, which will delete from all local services (i.e. force sending to trash). Sending <code>hydrus local file storage</code> on a file already in the trash will trigger a physical file delete. </p>
 <h3 id="add_files_undelete_files"><strong>POST <code>/add_files/undelete_files</code></strong><a class="headerlink" href="#add_files_undelete_files" title="Permanent link">&para;</a></h3>
 <p><em>Tell the client to restore files that were previously deleted to their old file service(s).</em></p>
 <dl>
@@ -5079,7 +5079,7 @@ Accept: application/json
 <dd>200 and no content.</dd>
 </dl>
 <p>This is the reverse of a delete_files--restoring files back to where they came from. If you specify a file service, the files will only be undeleted to there (if they have a delete record, otherwise this is nullipotent). The default, 'all my files', undeletes to all local file services for which there are deletion records.</p>
-<p>This operation will only occur on files that are currently in your file store (i.e. in 'all local files', and maybe, but not necessarily, in 'trash'). You cannot 'undelete' something you do not have!</p>
+<p>This operation will only occur on files that are currently in your file store (i.e. in 'hydrus local file storage', and maybe, but not necessarily, in 'trash'). You cannot 'undelete' something you do not have!</p>
 <h3 id="add_files_clear_file_deletion_record"><strong>POST <code>/add_files/clear_file_deletion_record</code></strong><a class="headerlink" href="#add_files_clear_file_deletion_record" title="Permanent link">&para;</a></h3>
 <p><em>Tell the client to forget that it once deleted files.</em></p>
 <dl>
@@ -5106,7 +5106,7 @@ Accept: application/json
 <dt>Response:</dt>
 <dd>200 and no content.</dd>
 </dl>
-<p>This is the same as the advanced deletion option of the same basic name. It will erase the record that a file has been physically deleted (i.e. it only applies to deletion records in the 'all local files' domain). A file that no longer has a 'all local files' deletion record will pass a 'exclude previously deleted files' check in a <em>file import options</em>.</p>
+<p>This is the same as the advanced deletion option of the same basic name. It will erase the record that a file has been physically deleted (i.e. it only applies to deletion records in the 'hydrus local file storage' domain). A file that no longer has a 'hydrus local file storage' deletion record will pass a 'exclude previously deleted files' check in a <em>file import options</em>.</p>
 <h3 id="add_files_migrate_files"><strong>POST <code>/add_files/migrate_files</code></strong><a class="headerlink" href="#add_files_migrate_files" title="Permanent link">&para;</a></h3>
 <p><em>Copy files from one local file domain to another.</em></p>
 <dl>
@@ -8350,7 +8350,7 @@ This request will also return any cookies for subdomains. The session system in 
     <span class="md-icon" title="Last update">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 13.1c-.1 0-.3.1-.4.2l-1 1 2.1 2.1 1-1c.2-.2.2-.6 0-.8l-1.3-1.3c-.1-.1-.2-.2-.4-.2m-1.9 1.8-6.1 6V23h2.1l6.1-6.1zM12.5 7v5.2l4 2.4-1 1L11 13V7zM11 21.9c-5.1-.5-9-4.8-9-9.9C2 6.5 6.5 2 12 2c5.3 0 9.6 4.1 10 9.3-.3-.1-.6-.2-1-.2s-.7.1-1 .2C19.6 7.2 16.2 4 12 4c-4.4 0-8 3.6-8 8 0 4.1 3.1 7.5 7.1 7.9l-.1.2z"/></svg>
     </span>
-    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="October 22, 2025 21:40:53 UTC">October 22, 2025</span>
+    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="October 29, 2025 20:59:55 UTC">October 29, 2025</span>
   </span>
 
     

@@ -1134,6 +1134,15 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#tldr" class="md-nav__link">
+    <span class="md-ellipsis">
+      tl;dr
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#philosophy" class="md-nav__link">
     <span class="md-ellipsis">
       philosophy
@@ -2418,6 +2427,15 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#tldr" class="md-nav__link">
+    <span class="md-ellipsis">
+      tl;dr
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#philosophy" class="md-nav__link">
     <span class="md-ellipsis">
       philosophy
@@ -2581,7 +2599,7 @@
 
   <h1>Filtering Duplicates Automatically</h1>
 
-<p><strong>Hey, this is all for a system that is close to launching but still has some rough edges. If you are new to hydrus, please come back in a few months!</strong></p>
+<p><strong>Hey, this is all for a system that is close to launching but still has a couple rough edges. If you are new to hydrus, please come back soon!</strong></p>
 <h2 id="the_problem_with_duplicates_processing">the problem with duplicates processing<a class="headerlink" href="#the_problem_with_duplicates_processing" title="Permanent link">&para;</a></h2>
 <p>The duplicates filter can get pretty tedious. Pairs that are obvious resizes or pixel duplicates are easy to resolve but boring to work through.</p>
 <p>If only there were some way to automate common decisions! Hydrus could solve these trivial duplicates in the background using a certain decision logic, leaving us with less, more interesting work to do.</p>
@@ -2595,6 +2613,8 @@
 <p>Resolving duplicates is a highly subjective issue. Maybe you think EXIF data is the best, or maybe you always want it gone. Maybe you never want to delete low quality files, or always merge URLs, or set an artist correction as a duplicate instead of an alternate. People simply differ.</p>
 <p>This system has templated quick-start suggestions, but they are not mandatory. I have made general decisions that will work for many users, but if you care, you should double-check anything before starting it. The whole system is highly configurable, and you are encouraged to set it up exactly as you want. Everything is off by default!</p>
 </div>
+<h2 id="tldr">tl;dr<a class="headerlink" href="#tldr" title="Permanent link">&para;</a></h2>
+<p>If you just want to do this, open up a new duplicates page, go to the <code>auto-resolution</code> tab, hit <code>edit rules</code>, then, from the <code>add suggested</code> button, add <code>pixel-perfect jpegs and pngs</code>, <code>pixel-perfect pairs</code>, and <code>visually similar pairs</code>. Edit each rule and change it from 'semi-automatic' to 'fully automatic'. Save it all and never look at this page again.</p>
 <h2 id="philosophy">philosophy<a class="headerlink" href="#philosophy" title="Permanent link">&para;</a></h2>
 <p><strong>This system is designed mostly for setting simple and clear "A is better than B" duplicate actions. I do not recommend trying to set up "alternates" rules or anything else overly clever at this stage--it is too easy to make a mistake.</strong></p>
 <p>Generally speaking, for most situations, the original versions of files are better than derived copies. When a file is converted, the best case is only that the data is preserved losslessly. Most of the time, a little entropy is added. A scaling down will decimate pixels, a new compression pass will add subtle visual artifacts, and creating the new file header might strip or malform previously interesting additional metadata like EXIF. The conversions a file has passed through in its lifetime is a downward slope of ever-decreasing quality. </p>
@@ -2760,7 +2780,7 @@
     <span class="md-icon" title="Last update">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 13.1c-.1 0-.3.1-.4.2l-1 1 2.1 2.1 1-1c.2-.2.2-.6 0-.8l-1.3-1.3c-.1-.1-.2-.2-.4-.2m-1.9 1.8-6.1 6V23h2.1l6.1-6.1zM12.5 7v5.2l4 2.4-1 1L11 13V7zM11 21.9c-5.1-.5-9-4.8-9-9.9C2 6.5 6.5 2 12 2c5.3 0 9.6 4.1 10 9.3-.3-.1-.6-.2-1-.2s-.7.1-1 .2C19.6 7.2 16.2 4 12 4c-4.4 0-8 3.6-8 8 0 4.1 3.1 7.5 7.1 7.9l-.1.2z"/></svg>
     </span>
-    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="October 22, 2025 21:40:53 UTC">October 22, 2025</span>
+    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="October 29, 2025 20:59:55 UTC">October 29, 2025</span>
   </span>
 
     

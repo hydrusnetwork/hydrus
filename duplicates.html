@@ -1029,11 +1029,11 @@
         <li class="md-nav__item">
   <a href="#duplicates_examples" class="md-nav__link">
     <span class="md-ellipsis">
-      more information and examples
+      examples and discussion
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="more information and examples">
+    <nav class="md-nav" aria-label="examples and discussion">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -1042,6 +1042,21 @@
       better/worse
     </span>
   </a>
+  
+    <nav class="md-nav" aria-label="better/worse">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#saving_disk_space" class="md-nav__link">
+    <span class="md-ellipsis">
+      saving disk space
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
         
@@ -1081,6 +1096,15 @@
   <a href="#auto-resolution" class="md-nav__link">
     <span class="md-ellipsis">
       auto-resolution
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#videos" class="md-nav__link">
+    <span class="md-ellipsis">
+      videos
     </span>
   </a>
   
@@ -2467,11 +2491,11 @@
         <li class="md-nav__item">
   <a href="#duplicates_examples" class="md-nav__link">
     <span class="md-ellipsis">
-      more information and examples
+      examples and discussion
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="more information and examples">
+    <nav class="md-nav" aria-label="examples and discussion">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -2480,6 +2504,21 @@
       better/worse
     </span>
   </a>
+  
+    <nav class="md-nav" aria-label="better/worse">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#saving_disk_space" class="md-nav__link">
+    <span class="md-ellipsis">
+      saving disk space
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
         
@@ -2519,6 +2558,15 @@
   <a href="#auto-resolution" class="md-nav__link">
     <span class="md-ellipsis">
       auto-resolution
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#videos" class="md-nav__link">
+    <span class="md-ellipsis">
+      videos
     </span>
   </a>
   
@@ -2597,18 +2645,10 @@
 <p><strong>Duplicate</strong> files are of <strong>the exact same thing</strong>. They may be different resolutions, file formats, encoding quality, or one might even have watermark, but they are fundamentally different views on the exact same art. As you can see with the buttons, you can select one file as the 'better' or say they are about the same. If the files are basically the same, there is no point stressing about which is 0.2% better--just click 'they are the same'. For better/worse pairs, you might have reason to keep both, but most of the time I recommend you delete the worse.</p>
 <p>You can customise the shortcuts under <em>file-&gt;options-&gt;shortcuts-&gt;duplicate_filter</em>. The defaults are:</p>
 <ul>
-<li>
-<p>Left-click: <strong>this is better, delete the other</strong>.</p>
-</li>
-<li>
-<p>Right-click: <strong>they are related alternates</strong>.</p>
-</li>
-<li>
-<p>Middle-click: <strong>Go back one decision.</strong></p>
-</li>
-<li>
-<p>Enter/Escape: <strong>Stop filtering.</strong></p>
-</li>
+<li>Left-click: <strong>this is better, delete the other</strong>.</li>
+<li>Right-click: <strong>they are related alternates</strong>.</li>
+<li>Middle-click: <strong>Go back one decision.</strong></li>
+<li>Enter/Escape: <strong>Stop filtering.</strong></li>
 </ul>
 <h2 id="duplicates_merging">merging metadata<a class="headerlink" href="#duplicates_merging" title="Permanent link">&para;</a></h2>
 <p>If two duplicates have different metadata like tags or archive status, you probably want to merge them. Cancel out of the filter and click the 'edit default duplicate metadata merge options' button:</p>
@@ -2623,33 +2663,40 @@
 <p>I expect future versions of the system to also auto-resolve easy duplicate pairs, such as clearing out pixel-for-pixel png versions of jpgs.</p>
 <h2 id="game_cgs">game cgs<a class="headerlink" href="#game_cgs" title="Permanent link">&para;</a></h2>
 <p>If you import a lot of game CGs, which frequently have dozens or hundreds of alternates, I recommend you set them as alternates by selecting them all and setting the status through the thumbnail right-click menu. The duplicate filter, being limited to pairs, needs to compare all new members of an alternate group to all other members once to verify they are not duplicates. This is not a big deal for alternates with three or four members, but game CGs provide an overwhelming edge case. Setting a group of thumbnails as alternate 'fixes' their alternate status immediately, discounting the possibility of any internate duplicates, and provides an easy way out of this situation.</p>
-<h2 id="duplicates_examples">more information and examples<a class="headerlink" href="#duplicates_examples" title="Permanent link">&para;</a></h2>
+<h2 id="duplicates_examples">examples and discussion<a class="headerlink" href="#duplicates_examples" title="Permanent link">&para;</a></h2>
 <h3 id="duplicates_examples_better_worse">better/worse<a class="headerlink" href="#duplicates_examples_better_worse" title="Permanent link">&para;</a></h3>
-<p>Which of two files is better? Here are some common reasons:</p>
+<p>Which of two files is better? We generally want to aim for what is "Original" over anything else. Original files tend to have a mix of these traits:</p>
 <ul>
-<li>higher resolution</li>
-<li>better image quality</li>
-<li>png over jpg for screenshots</li>
-<li>jpg over png for busy images</li>
-<li>jpg over png for pixel-for-pixel duplicates</li>
-<li>a better crop</li>
-<li>no watermark or site-frame or undesired blemish</li>
-<li>has been tagged by other people, so is likely to be the more 'popular'</li>
+<li>Older</li>
+<li>Higher resolution</li>
+<li>Better image quality</li>
+<li>PNG over Jpeg for screenshots</li>
+<li>Jpeg over PNG for anything else, particularly pixel-for-pixel duplicates</li>
+<li>A wider/fuller crop</li>
+<li>No watermark or site-frame or undesired blemish</li>
+<li>Has been tagged by other people, so is likely to be the more 'popular'</li>
 </ul>
-<p>However these are not hard rules--sometimes a file has a larger resolution or filesize due to a bad upscaling or encoding decision by the person who 'reinterpreted' it. You really have to look at it and decide for yourself.</p>
+<p>However these are not hard rules--sometimes a file has a larger resolution or filesize due to a bad upscaling or encoding decision by the person who 'reinterpreted' it. Sometimes you imported the true original version of a file only two days ago. You sometimes have to look at it and decide for yourself.</p>
 <p>Here is a good example of a better/worse pair:</p>
 <p><a href="images/dupe_better_1.png"><img alt="" src="images/dupe_better_1.png" /></a> <a href="images/dupe_better_2.jpg"><img alt="" src="images/dupe_better_2.jpg" /></a></p>
-<p>The first image is better because it is a png (pixel-perfect pngs are always better than jpgs for screenshots of applications--note how obvious the jpg's encoding artifacts are on the flat colour background) and it has a slightly higher (original) resolution, making it less blurry. I presume the second went through some FunnyJunk-tier trash meme site to get automatically cropped to 960px height and converted to the significantly smaller jpeg. Whatever happened, let's drop the second and keep the first.</p>
+<p>The first image is better because it is a png (pngs are always better than jpgs for screenshots of applications--note how obvious the jpg's encoding artifacts look on the flat colour background) and it has a slightly higher (original) resolution, making it less blurry. I presume the second went through some FunnyJunk-tier trash meme site to get automatically cropped to 960px height and converted to the significantly smaller jpeg. Whatever happened, let's drop the second and keep the first.</p>
 <p>When both files are jpgs, differences in quality are very common and often significant:</p>
 <p><a href="images/dupes_better_sg_a.jpg"><img alt="" src="images/dupes_better_sg_a.jpg" /></a> <a href="images/dupes_better_sg_b.jpg"><img alt="" src="images/dupes_better_sg_b.jpg" /></a></p>
-<p>Again, this is mostly due to some online service resizing and lowering quality to ease on their bandwidth costs. There is usually no reason to keep the lower quality version.</p>
+<p>Again, this is most often due to some online service resizing and lowering quality to ease on their bandwidth costs. There is usually no reason to keep the lower quality version.</p>
+<h4 id="saving_disk_space">saving disk space<a class="headerlink" href="#saving_disk_space" title="Permanent link">&para;</a></h4>
+<p>It is nice to save disk space, and many people start filtering duplicates with this idea in mind. I did too. Why not consider a 208KB file as better than a 214KB that looks exactly the same? Don't we want to optimise? Having since dug into the nitty gritty of many IRL situations, I now believe that we should make the opposite decision.</p>
+<p>There are many variables that affect duplicate decisions, and filesize is one of the most reliable and easy to think about it. 4KB is 4KB, and we are familiar with the idea, whereas a file header block might have rich EXIF data or just some old Adobe xml brush descriptions, something that might only be useful one in a thousand times. It is tempting to save the reliable, well-known variable, since it has quantifiable value, but the exact opposite is true--we should sacrifice some reliable (and inexpensive!) disk space in order to preserve the variable unknown. Files tend to lose their internal metadata over time, so choosing to save it brings us more in line with the idea of keeping 'originals', too.</p>
+<p>Most importantly, disk space is cheap in a way that humans do not intuitively understand. If we always chose to select the smaller of two same-quality files 100,000 times, and if we saved an impressive 20KB average, that still only adds up to 2GB. If you think that's a lot of disk space, look up how much an 8TB drive costs and divide it by 4000.</p>
+<p>Moreover, we are <em>already</em> saving a bunch of disk space when we delete the 'worse' file. The question of whether to delete 49.5% of the pair's total size or 51.5% is nothing to fuss over, so choose the one that has other value, known or potential.</p>
+<p>So, beyond edge-cases, I recommend you consider the question of saving disk space done and err on the side of preserving original metadata. Larger, older, nicer quality files is the way to go.</p>
 <h3 id="duplicates_examples_same">same quality duplicates<a class="headerlink" href="#duplicates_examples_same" title="Permanent link">&para;</a></h3>
-<p>When are two files the same quality? A good rule of thumb is if you scroll between them and see no obvious differences, and the comparison statements do not suggest anything significant, just set them as same quality.</p>
+<p><em>I generally do not recommend you set "same quality" unless you really want to keep both files. If you can't tell the difference, pick the one that is older or has the larger filesize.</em></p>
+<p>When are two files the same quality? A good rule of thumb is if you scroll between them and see no obvious differences, and the comparison statements do not suggest anything significant, you can tell the system to set them as the same quality.</p>
 <p>Here are two same quality duplicates:</p>
 <p><a href="images/dupe_exact_match_1.png"><img alt="" src="images/dupe_exact_match_1.png" /></a> <a href="images/dupe_exact_match_2.png"><img alt="" src="images/dupe_exact_match_2.png" /></a></p>
 <p>There is no obvious different between those two. The filesize is significantly different, so I suspect the smaller is a lossless png optimisation, but in the grand scheme of things, that doesn't matter so much. Many of the big content providers--Facebook, Google, Cloudflare--automatically 'optimise' the data that goes through their networks in order to save bandwidth. Although jpegs are often a slaughterhouse, with pngs it is usually harmless.</p>
 <p>Given the filesize, you might decide that these are actually a better/worse pair--but if the larger image had tags and was the 'canonical' version on most boorus, the decision might not be so clear. You can choose better/worse and delete one randomly, but sometimes you may just want to keep both without a firm decision on which is best, so just set 'same quality' and move on. Your time is more valuable than a few dozen KB.</p>
-<p>Sometimes, you will see pixel-for-pixel duplicate jpegs of very slightly different size, such as 787KB vs 779KB. The smaller of these is usually an exact duplicate that has had its internal metadata (e.g. EXIF tags) stripped by a program or website CDN. They are same quality unless you have a strong opinion on whether having internal metadata in a file is useful.</p>
+<p>Sometimes, you will see pixel-for-pixel duplicate jpegs of very slightly different size, such as 787KB vs 779KB. The smaller of these is usually an exact duplicate that has had its internal metadata (e.g. EXIF tags) stripped by a program or website CDN. You can consider them same quality, but it is simplest and best to keep the larger.</p>
 <h3 id="duplicates_examples_alternates">alternates<a class="headerlink" href="#duplicates_examples_alternates" title="Permanent link">&para;</a></h3>
 <p>As I wrote above, hydrus's alternates system in not yet properly ready. It is important to have a basic 'alternates' relationship for now, but it is a holding area until we have a workflow to apply 'WIP'- or 'recolour'-type labels and present that information nicely in the media viewer.</p>
 <p>Alternates are not of exactly the same thing, but one is variant of the other or they are both descended from a common original. The precise definition is up to you, but it generally means something like:</p>
@@ -2681,6 +2728,9 @@
 <p><a href="images/dupe_garbage.png"><img alt="" src="images/dupe_garbage.png" /></a></p>
 <h2 id="auto-resolution">auto-resolution<a class="headerlink" href="#auto-resolution" title="Permanent link">&para;</a></h2>
 <p>I do not recommend rushing into this, but once you are comfortable with the duplicates system and know what you want out of it, there is now a system that allows for <a href="advanced_duplicates_auto_resolution.html">automating simple duplicate-processing</a>.</p>
+<h2 id="videos">videos<a class="headerlink" href="#videos" title="Permanent link">&para;</a></h2>
+<p>If and when you get comfortable with the Client API, check out this program which can queue up similar videos in your potential pairs:</p>
+<p><a href="https://github.com/hydrusvideodeduplicator/hydrus-video-deduplicator">https://github.com/hydrusvideodeduplicator/hydrus-video-deduplicator</a></p>
 <h2 id="duplicates_advanced">the duplicates system<a class="headerlink" href="#duplicates_advanced" title="Permanent link">&para;</a></h2>
 <p><em>(advanced nonsense, you can skip this section. tl;dr: duplicate file groups keep track of their best quality file, sometimes called the King)</em></p>
 <p>Hydrus achieves duplicate transitivity by treating duplicate files as groups. Although you action pairs, if you set (A duplicate B), that creates a group (A,B). Subsequently setting (B duplicate C) extends the group to be (A,B,C), and so (A duplicate C) is transitively implied.</p>
@@ -2714,7 +2764,7 @@
     <span class="md-icon" title="Last update">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 13.1c-.1 0-.3.1-.4.2l-1 1 2.1 2.1 1-1c.2-.2.2-.6 0-.8l-1.3-1.3c-.1-.1-.2-.2-.4-.2m-1.9 1.8-6.1 6V23h2.1l6.1-6.1zM12.5 7v5.2l4 2.4-1 1L11 13V7zM11 21.9c-5.1-.5-9-4.8-9-9.9C2 6.5 6.5 2 12 2c5.3 0 9.6 4.1 10 9.3-.3-.1-.6-.2-1-.2s-.7.1-1 .2C19.6 7.2 16.2 4 12 4c-4.4 0-8 3.6-8 8 0 4.1 3.1 7.5 7.1 7.9l-.1.2z"/></svg>
     </span>
-    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="October 8, 2025 20:13:16 UTC">October 8, 2025</span>
+    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="October 29, 2025 20:59:55 UTC">October 29, 2025</span>
   </span>
 
     
