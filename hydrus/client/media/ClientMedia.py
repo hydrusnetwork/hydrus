@@ -1008,11 +1008,21 @@ class MediaList( object ):
         
         d[ 'hash_ids' ] = [ m.GetMediaResult().GetHashId() for m in flat_media ]
         
+        selected_media = self.GetSelectedMedia()
+        flat_selected_media = FlattenMedia(selected_media)
+        
+        d[ 'num_files_selected' ] = len(flat_selected_media)
+        d[ 'hash_ids_selected' ] = [ m.GetMediaResult().GetHashId() for m in flat_selected_media ]
+        
         if not simple:
             
             hashes = self.GetHashes( ordered = True )
             
             d[ 'hashes' ] = [ hash.hex() for hash in hashes ]
+            
+            selected_hashes = [ m.GetHash() for m in flat_selected_media ]
+            
+            d[ 'hashes_selected' ] = [ hash.hex() for hash in selected_hashes ]
             
         
         return d
