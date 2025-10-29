@@ -4251,6 +4251,7 @@ class DB( HydrusDB.HydrusDB ):
         
         self.modules_files_duplicates_auto_resolution_storage = ClientDBFilesDuplicatesAutoResolutionStorage.ClientDBFilesDuplicatesAutoResolutionStorage(
             self._c,
+            self._cursor_transaction_wrapper,
             self.modules_services,
             self.modules_db_maintenance,
             self.modules_serialisable

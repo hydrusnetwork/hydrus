@@ -4,6 +4,7 @@ import sqlite3
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
+from hydrus.core import HydrusDBBase
 from hydrus.core import HydrusLists
 from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusSerialisable
@@ -65,11 +66,13 @@ class ClientDBFilesDuplicatesAutoResolutionStorage( ClientDBModule.ClientDBModul
     def __init__(
         self,
         cursor: sqlite3.Cursor,
+        cursor_transaction_wrapper: HydrusDBBase.DBCursorTransactionWrapper,
         modules_services: ClientDBServices.ClientDBMasterServices,
         modules_db_maintenance: ClientDBMaintenance.ClientDBMaintenance,
         modules_serialisable: ClientDBSerialisable.ClientDBSerialisable
     ):
         
+        self._cursor_transaction_wrapper = cursor_transaction_wrapper
         self.modules_services = modules_services
         self.modules_db_maintenance = modules_db_maintenance
         self.modules_serialisable = modules_serialisable
@@ -699,7 +702,7 @@ class ClientDBFilesDuplicatesAutoResolutionStorage( ClientDBModule.ClientDBModul
         
         if any_added:
             
-            CG.client_controller.duplicates_auto_resolution_manager.WakeIfNotWorking()
+            self._cursor_transaction_wrapper.pub_after_job( 'wake_duplicates_auto_resolution_manager_if_not_working' )
             
         
     
@@ -739,7 +742,7 @@ class ClientDBFilesDuplicatesAutoResolutionStorage( ClientDBModule.ClientDBModul
         
         if any_removed:
             
-            CG.client_controller.duplicates_auto_resolution_manager.WakeIfNotWorking()
+            self._cursor_transaction_wrapper.pub_after_job( 'wake_duplicates_auto_resolution_manager_if_not_working' )
             
         
     
@@ -775,7 +778,7 @@ class ClientDBFilesDuplicatesAutoResolutionStorage( ClientDBModule.ClientDBModul
         
         if any_removed:
             
-            CG.client_controller.duplicates_auto_resolution_manager.WakeIfNotWorking()
+            self._cursor_transaction_wrapper.pub_after_job( 'wake_duplicates_auto_resolution_manager_if_not_working' )
             
         
     
@@ -861,7 +864,7 @@ class ClientDBFilesDuplicatesAutoResolutionStorage( ClientDBModule.ClientDBModul
             self._UpdateRuleCount( rule_id, status_to_set, num_added )
             
         
-        CG.client_controller.duplicates_auto_resolution_manager.WakeIfNotWorking()
+        self._cursor_transaction_wrapper.pub_after_job( 'wake_duplicates_auto_resolution_manager_if_not_working' )
         
     
     def SetRules( self, rules_to_set: collections.abc.Collection[ ClientDuplicatesAutoResolution.DuplicatesAutoResolutionRule ], master_potential_duplicate_pairs_table_name = 'potential_duplicate_pairs' ):

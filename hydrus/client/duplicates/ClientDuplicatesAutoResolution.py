@@ -1212,6 +1212,8 @@ class DuplicatesAutoResolutionManager( ClientDaemons.ManagerWithMainLoop ):
         
         self._edit_work_lock = threading.Lock()
         
+        CG.client_controller.sub( self, 'WakeIfNotWorking', 'wake_duplicates_auto_resolution_manager_if_not_working' )
+        
     
     def _AbleToWork( self ) -> bool:
         
