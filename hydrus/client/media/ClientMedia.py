@@ -1009,9 +1009,9 @@ class MediaList( object ):
         d[ 'hash_ids' ] = [ m.GetMediaResult().GetHashId() for m in flat_media ]
         
         selected_media = self.GetSelectedMedia()
-        flat_selected_media = FlattenMedia(selected_media)
+        flat_selected_media = FlattenMedia( selected_media )
         
-        d[ 'num_files_selected' ] = len(flat_selected_media)
+        d[ 'num_files_selected' ] = len( flat_selected_media )
         d[ 'hash_ids_selected' ] = [ m.GetMediaResult().GetHashId() for m in flat_selected_media ]
         
         if not simple:
